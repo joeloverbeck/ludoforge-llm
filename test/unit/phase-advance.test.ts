@@ -8,6 +8,7 @@ import {
   asPhaseId,
   asPlayerId,
   asTriggerId,
+  terminalResult,
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
@@ -200,5 +201,20 @@ describe('phase advancement', () => {
     const state = createState({ currentPhase: asPhaseId('p1') });
 
     assert.throws(() => advanceToDecisionPoint(def, state), /STALL_LOOP_DETECTED/);
+  });
+
+  it('does not auto-advance when current state is terminal with zero legal moves', () => {
+    const def: GameDef = {
+      ...createBaseDef(),
+      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+    const state = createState({ currentPhase: asPhaseId('p1') });
+
+    const next = advanceToDecisionPoint(def, state);
+
+    assert.equal(terminalResult(def, next)?.type, 'draw');
+    assert.equal(next.currentPhase, state.currentPhase);
+    assert.equal(next.turnCount, state.turnCount);
+    assert.equal(next.activePlayer, state.activePlayer);
   });
 });

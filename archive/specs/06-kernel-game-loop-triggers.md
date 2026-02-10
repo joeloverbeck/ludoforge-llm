@@ -1,6 +1,6 @@
 # Spec 06: Kernel — Game Loop & Triggers
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0 (critical path)
 **Complexity**: L
 **Dependencies**: Spec 03, Spec 04, Spec 05
@@ -388,3 +388,16 @@ test/unit/phase-advance.test.ts  # NEW
 test/integration/game-loop.test.ts     # NEW — full multi-turn game test
 test/integration/determinism.test.ts   # NEW — determinism verification
 ```
+
+## Outcome
+
+- **Completion date**: 2026-02-10
+- **What changed**:
+  - Implemented the game-loop kernel modules in `src/kernel/` for initial state creation, legal move enumeration, move application, trigger dispatch, terminal detection, phase/turn advancement, and action usage tracking.
+  - Exported the game-loop APIs via `src/kernel/index.ts`.
+  - Added unit coverage for these components in `test/unit/`.
+  - Added integration coverage for loop progression and deterministic replay in `test/integration/`.
+- **Deviations from original plan**:
+  - Determinism integration test was implemented as `test/integration/determinism-full.test.ts` instead of the planned `test/integration/determinism.test.ts`.
+- **Verification results**:
+  - `npm run test` passed on 2026-02-10 (`246` tests, `0` failures).

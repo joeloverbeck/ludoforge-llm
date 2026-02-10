@@ -19,6 +19,7 @@ Implement the compiler that lowers a parsed `GameSpecDoc` into an executable `Ga
 - Zone addressing normalization: `"hand:each"` → per-player zone expansion
 - Player selector normalization: string-based actor specs → typed `PlayerSel`
 - AST canonicalization: spec-level shorthand → kernel-level AST nodes
+- Spatial topology diagnostics pass-through from Spec 07 (`grid/hex` input validation + adjacency validation)
 - Compiler contract enforcement (brainstorming section 4)
 - LLM-friendly diagnostic generation with path, suggestion, contextSnippet, alternatives
 - MissingCapability diagnostic for unsupported features
@@ -71,10 +72,17 @@ interface CompilerContext {
 
 #### Board Generation Macros
 
-- `grid(rows, cols)`: Expand into zone definitions using `generateGrid` from Spec 07. Replace the macro in the zones section with the generated ZoneDefs.
-- `hex(radius)`: Expand into zone definitions using `generateHex` from Spec 07. Replace the macro with generated ZoneDefs.
+- `grid(rows, cols)`: Expand into zone definitions using `generateGrid` from Spec 07. Replace the macro node with generated `ZoneDef[]`.
+- `hex(radius)`: Expand into zone definitions using `generateHex` from Spec 07. Replace the macro node with generated `ZoneDef[]`.
+- Macro parameters must be validated at expansion time:
+  - `grid`: integer `rows >= 1`, integer `cols >= 1`
+  - `hex`: integer `radius >= 0`
+- Invalid parameters produce diagnostics and block compilation output (`gameDef: null`).
+- Expansion order is deterministic:
+  - `grid`: row-major zone generation order from Spec 07
+  - `hex`: deterministic coordinate iteration order from Spec 07
 
-Detection: Look for zone definitions with special `type: "grid"` or `type: "hex"` markers (or a dedicated macro syntax in the spec format).
+Detection contract: macro nodes MUST be explicit in `GameSpecDoc` (no heuristic detection). The parser (Spec 08a) is responsible for producing explicit macro-tagged nodes.
 
 #### draw:each (per-player expansion)
 
@@ -161,8 +169,9 @@ Or, if a discard destination is specified, use `chooseN` for player-driven disca
 10. **Compile end conditions**: Convert each condition and result
 11. **Compile scoring**: If present
 12. **Compile setup**: Convert setup effects to `EffectAST[]`
-13. **Validate output**: Run `validateGameDef` on compiled result. If errors, add to diagnostics.
-14. **Return**: `{ gameDef, diagnostics }`
+13. **Validate spatial topology**: Run Spec 07 adjacency validation on compiled zones and append diagnostics.
+14. **Validate output**: Run `validateGameDef` on compiled result. If errors, add to diagnostics.
+15. **Return**: `{ gameDef, diagnostics }`
 
 If compilation encounters errors that prevent producing a valid GameDef, return `gameDef: null` with error diagnostics.
 
@@ -246,6 +255,7 @@ Convert spec-level effect/condition shorthand into kernel AST nodes:
 8. Board generation macros produce correct zone adjacency (as tested in Spec 07)
 9. Compiled GameDef is deterministic — same spec input → same GameDef output
 10. Per-player zone expansion produces correct number of zones (players.max zones per player-owned zone)
+11. Invalid board macro parameters always produce blocking diagnostics
 
 ## Required Tests
 
@@ -259,6 +269,8 @@ Convert spec-level effect/condition shorthand into kernel AST nodes:
 **Macro expansion**:
 - `grid(3,3)` in zones → 9 ZoneDefs with adjacency after expansion
 - `hex(1)` in zones → 7 ZoneDefs with adjacency
+- `grid(0,3)` → blocking diagnostic with path + suggestion
+- `hex(-1)` → blocking diagnostic with path + suggestion
 - `draw:each` → expanded to forEach over players
 - `refillToSize` → expanded to draw with correct count
 
@@ -312,6 +324,7 @@ Convert spec-level effect/condition shorthand into kernel AST nodes:
 - [ ] MissingCapability diagnostics generated for unsupported features
 - [ ] Output GameDef passes validateGameDef
 - [ ] Compilation is deterministic
+- [ ] Invalid `grid`/`hex` parameters produce blocking diagnostics
 - [ ] Full pipeline (parse → validate → expand → compile → validate) works end-to-end
 
 ## Files to Create/Modify

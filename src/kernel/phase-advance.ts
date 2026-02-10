@@ -2,6 +2,7 @@ import { asPlayerId } from './branded.js';
 import { resetPhaseUsage, resetTurnUsage } from './action-usage.js';
 import { legalMoves } from './legal-moves.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
+import { terminalResult } from './terminal.js';
 import type { GameDef, GameState, TriggerEvent } from './types.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
@@ -92,7 +93,7 @@ export const advanceToDecisionPoint = (def: GameDef, state: GameState): GameStat
   let nextState = state;
   let advances = 0;
 
-  while (legalMoves(def, nextState).length === 0) {
+  while (terminalResult(def, nextState) === null && legalMoves(def, nextState).length === 0) {
     if (advances >= maxAutoAdvancesPerMove) {
       throw new Error(`STALL_LOOP_DETECTED: exceeded maxAutoAdvancesPerMove=${maxAutoAdvancesPerMove}`);
     }

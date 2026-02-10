@@ -9,28 +9,65 @@
 
 ## Overview
 
-Implement the spatial layer: zones serve double duty as containers (for tokens/cards) AND spatial nodes in a graph topology. This enables route building, area control, piece movement, and tile placement without a separate Board type. This spec extends Spec 04 (spatial queries/conditions), Spec 05 (moveTokenAdjacent effect), and provides board generation macros (grid, hex) used by the compiler (Spec 08b).
+Implement the spatial layer: zones serve double duty as containers (for tokens/cards) and spatial nodes in a graph topology. This enables route building, area control, piece movement, and tile placement without a separate board type.
+
+This spec extends:
+- Spec 04: spatial queries/conditions
+- Spec 05: `moveTokenAdjacent`
+- Spec 08b: board generation macros (`grid`, `hex`)
+
+This revision hardens the spatial contract for deterministic behavior, bounded execution, and cross-spec consistency.
 
 ## Scope
 
 ### In Scope
-- Adjacency graph construction from ZoneDef `adjacentTo` arrays
-- Adjacency graph validation (symmetry check)
+- Adjacency graph construction from `ZoneDef.adjacentTo`
+- Adjacency graph normalization and validation
+- Spatial query implementations: `adjacentZones`, `tokensInAdjacentZones`, `connectedZones`
 - Spatial condition implementations: `adjacent`, `connected`
 - Spatial effect implementation: `moveTokenAdjacent`
-- Spatial query implementations: `adjacentZones`, `tokensInAdjacentZones`, `connectedZones`
-- Bounded graph traversal (BFS) for `connectedZones`
-- Board generation macros: `grid(rows, cols)` → 4-connected zones, `hex(radius)` → 6-connected zones
+- Bounded BFS traversal for `connectedZones`
+- Deterministic ordering rules for all spatial query outputs
+- Compiler-facing board generation macros: `grid(rows, cols)` and `hex(radius)`
+- Spatial diagnostics for malformed topologies and invalid destinations
 
 ### Out of Scope
-- Named directions (N/S/E/W) — implicit from adjacency is sufficient
-- Rotation / symmetry detection
-- Complex geometry (triangular, star graphs)
-- Unbounded pathfinding (use bounded `forEach` over adjacency instead)
-- Line-of-sight / visibility graphs
-- Continuous space / coordinate-based movement
+- Named compass directions (`N/S/E/W`) as engine primitives
+- Rotation/symmetry detection
+- Weighted edges
+- Line-of-sight and visibility graphs
+- Continuous coordinates/geometry physics
 - Multi-level boards (Z-axis)
-- Edge weights / weighted adjacency
+- General shortest-path APIs
+
+## Cross-Spec Contract Updates
+
+### Required type/schema delta (to align with spatial conditions)
+
+Spec 07 requires extending `ConditionAST` with two spatial operators. This is a post-completion contract patch against the Spec 02 type/schema baseline:
+
+```typescript
+type ConditionAST =
+  | { readonly op: 'and'; readonly args: readonly ConditionAST[] }
+  | { readonly op: 'or'; readonly args: readonly ConditionAST[] }
+  | { readonly op: 'not'; readonly arg: ConditionAST }
+  | {
+      readonly op: '==' | '!=' | '<' | '<=' | '>' | '>=';
+      readonly left: ValueExpr;
+      readonly right: ValueExpr;
+    }
+  | { readonly op: 'in'; readonly item: ValueExpr; readonly set: ValueExpr }
+  | { readonly op: 'adjacent'; readonly left: ZoneSel; readonly right: ZoneSel }
+  | {
+      readonly op: 'connected';
+      readonly from: ZoneSel;
+      readonly to: ZoneSel;
+      readonly via?: ConditionAST;
+      readonly maxDepth?: number;
+    };
+```
+
+`schemas.ts` must mirror this union exactly.
 
 ## Key Types & Interfaces
 
@@ -39,290 +76,285 @@ Implement the spatial layer: zones serve double duty as containers (for tokens/c
 ```typescript
 interface AdjacencyGraph {
   readonly neighbors: Readonly<Record<string, readonly ZoneId[]>>;
-  // neighbors[zoneId] → list of adjacent zone IDs
+  readonly zoneCount: number;
 }
 
-// Build adjacency graph from zone definitions
 function buildAdjacencyGraph(zones: readonly ZoneDef[]): AdjacencyGraph;
 
-// Validate graph consistency (symmetry check)
-function validateAdjacency(
-  graph: AdjacencyGraph,
-  zones: readonly ZoneDef[]
-): readonly Diagnostic[];
+function validateAdjacency(graph: AdjacencyGraph, zones: readonly ZoneDef[]): readonly Diagnostic[];
 ```
 
-### Spatial Queries (extending Spec 04)
+### Spatial Query APIs (Spec 04 extension)
 
 ```typescript
-// Get zones adjacent to the given zone
-function queryAdjacentZones(
-  graph: AdjacencyGraph,
-  zone: ZoneId
-): readonly ZoneId[];
+interface ConnectedQueryOptions {
+  readonly includeStart?: boolean; // default false
+  readonly maxDepth?: number; // default zoneCount - 1
+}
 
-// Get all tokens in zones adjacent to the given zone
+function queryAdjacentZones(graph: AdjacencyGraph, zone: ZoneId): readonly ZoneId[];
+
 function queryTokensInAdjacentZones(
   graph: AdjacencyGraph,
   state: GameState,
-  zone: ZoneId
+  zone: ZoneId,
 ): readonly Token[];
 
-// Get all zones reachable from the given zone within bounded traversal
 function queryConnectedZones(
   graph: AdjacencyGraph,
   state: GameState,
   zone: ZoneId,
+  evalCtx: EvalContext,
   via?: ConditionAST,
-  maxDepth?: number  // default: total zone count (bounded by graph size)
+  options?: ConnectedQueryOptions,
 ): readonly ZoneId[];
 ```
 
-### Spatial Conditions (extending Spec 04)
+### Spatial Condition APIs
 
 ```typescript
-// Check if zone A is adjacent to zone B
 function evalAdjacentCondition(
   graph: AdjacencyGraph,
-  zoneA: ZoneId,
-  zoneB: ZoneId
+  left: ZoneId,
+  right: ZoneId,
 ): boolean;
 
-// Check if zone A is connected to zone B (optionally via path satisfying condition)
 function evalConnectedCondition(
   graph: AdjacencyGraph,
   state: GameState,
-  zoneA: ZoneId,
-  zoneB: ZoneId,
+  from: ZoneId,
+  to: ZoneId,
+  evalCtx: EvalContext,
   via?: ConditionAST,
-  ctx?: EvalContext
+  maxDepth?: number,
 ): boolean;
 ```
 
-### Spatial Effects (extending Spec 05)
+### Spatial Effect API (Spec 05 extension)
 
 ```typescript
-// Move token to an adjacent zone
 function applyMoveTokenAdjacent(
-  effect: { moveTokenAdjacent: { token: TokenSel; from: ZoneSel; direction?: string } },
+  effect: {
+    moveTokenAdjacent: {
+      token: TokenSel;
+      from: ZoneSel;
+      direction?: string; // destination zone id or bound move-param name (e.g. "$to")
+    };
+  },
   ctx: EffectContext,
-  graph: AdjacencyGraph
 ): EffectResult;
 ```
 
-### Board Generation Macros
+### Board Macro APIs (Spec 08b dependency)
 
 ```typescript
-// Generate a grid of zones with 4-connectivity
 function generateGrid(rows: number, cols: number): readonly ZoneDef[];
-
-// Generate hex-grid zones with 6-connectivity
 function generateHex(radius: number): readonly ZoneDef[];
 ```
 
 ## Implementation Requirements
 
-### Adjacency Graph Construction
+### Adjacency graph build + normalize
 
-`buildAdjacencyGraph(zones)`:
-1. For each zone with `adjacentTo` defined, add edges
-2. Store as a `Record<ZoneId, ZoneId[]>`
-3. Zones without `adjacentTo` have empty neighbor lists (isolated nodes)
+`buildAdjacencyGraph(zones)` must:
+1. Build a full entry in `neighbors` for every zone ID (isolated zones map to `[]`).
+2. Treat adjacency as undirected in runtime semantics by normalizing edge pairs:
+   - If `A -> B` exists or `B -> A` exists in `ZoneDef`, both `A` and `B` include each other in the graph.
+3. Remove duplicate neighbor IDs.
+4. Reject self-loop edges (`A -> A`) via validation diagnostic.
+5. Sort each neighbor list lexicographically for deterministic traversal.
 
-`validateAdjacency(graph, zones)`:
-1. For each zone A that lists zone B as adjacent, verify B also lists A
-2. If asymmetric: produce warning diagnostic with path and suggestion to add missing edge
-3. Verify all referenced zone IDs in `adjacentTo` actually exist in the zone list
-4. If dangling reference: produce error diagnostic with alternatives (fuzzy match)
+Rationale: runtime behavior remains deterministic and symmetric even when author input is partially asymmetric.
 
-### connectedZones — Bounded BFS
+### Adjacency validation diagnostics
 
-`queryConnectedZones(graph, state, startZone, via?, maxDepth?)`:
+`validateAdjacency(graph, zones)` must emit:
+- `SPATIAL_DANGLING_ZONE_REF` (`error`): `adjacentTo` references unknown zone ID.
+- `SPATIAL_ASYMMETRIC_EDGE_NORMALIZED` (`warning`): only one direction specified; runtime normalized to both directions.
+- `SPATIAL_SELF_LOOP` (`error`): zone references itself.
+- `SPATIAL_DUPLICATE_NEIGHBOR` (`warning`): duplicate neighbor declarations in `adjacentTo`.
 
-1. Initialize BFS queue with `startZone`, visited set with `startZone`
-2. Set `maxDepth` to `min(maxDepth ?? zones.length, zones.length)` — always bounded by graph size
-3. BFS loop:
-   - Dequeue zone
-   - For each neighbor not in visited:
-     - If `via` condition present: evaluate condition with neighbor zone in context. Skip if false.
-     - Add neighbor to visited and queue
-   - Track depth; stop when depth exceeds `maxDepth`
-4. Return all visited zones (excluding start zone, or including — document the choice)
+Diagnostics include path, message, and suggestion.
 
-**Termination guarantee**: BFS visits each zone at most once. Graph size is finite. Depth is bounded. Therefore `connectedZones` always terminates.
+### Query semantics and ordering
 
-### moveTokenAdjacent
+`adjacentZones(zone)`:
+- Returns normalized neighbor list from graph (`ZoneId[]`), already lexicographically sorted.
 
-`applyMoveTokenAdjacent(effect, ctx, graph)`:
+`tokensInAdjacentZones(zone)`:
+- Traversal order: adjacent zones in `adjacentZones` order.
+- For each adjacent zone, tokens are returned in that zone's existing token order.
 
-1. Resolve `token` from bindings
-2. Resolve `from` zone
-3. Determine destination:
-   - If `direction` specified: look up direction as neighbor index or zone ID
-   - If no direction: destination must be resolved from move params (agent chose adjacent zone)
-4. Validate destination is in `graph.neighbors[from]` — error if not adjacent
-5. Remove token from source, add to destination
-6. Return new state
+`connectedZones(zone, via?, options?)`:
+- BFS over normalized graph.
+- Default `includeStart = false`.
+- Default `maxDepth = graph.zoneCount - 1`.
+- Depth is edge distance from `start`.
+- `maxDepth = 0` returns `[]` unless `includeStart = true`.
+- `via` is evaluated on candidate destination zone before enqueue.
+- `via` evaluation context adds/overwrites binding `$zone` with candidate `ZoneId`.
+- Neighbor visitation order is the sorted neighbor order in graph.
+- Returned zones are BFS discovery order (deterministic).
 
-### Board Generation: grid(rows, cols)
+All spatial query outputs must obey Spec 04 `maxQueryResults` limits.
 
-Generate `rows * cols` zones with 4-connected adjacency:
+### Spatial conditions
 
-1. Zone naming: `cell_R_C` where R is row (0-indexed), C is column (0-indexed)
-2. Adjacency: each cell connects to up/down/left/right neighbors (if they exist)
-   - `cell_R_C` → `cell_{R-1}_C` (up, if R > 0)
-   - `cell_R_C` → `cell_{R+1}_C` (down, if R < rows-1)
-   - `cell_R_C` → `cell_R_{C-1}` (left, if C > 0)
-   - `cell_R_C` → `cell_R_{C+1}` (right, if C < cols-1)
-3. All zones: `owner: 'none'`, `visibility: 'public'`, `ordering: 'set'`
-4. Adjacency is symmetric by construction
+`adjacent(left, right)`:
+- Resolves both `ZoneSel` operands to exactly one concrete zone each.
+- Returns true iff `right` is in normalized neighbor set of `left`.
 
-**Neighbor counts**:
-- Corner: 2 neighbors
-- Edge: 3 neighbors
-- Interior: 4 neighbors
+`connected(from, to, via?, maxDepth?)`:
+- Resolves `from` and `to` to single concrete zones.
+- Uses same traversal semantics as `connectedZones`.
+- Returns true iff `to` appears in reachable set under bounds/filter.
 
-### Board Generation: hex(radius)
+### `moveTokenAdjacent` destination semantics
 
-Generate hex-grid zones with 6-connected adjacency using axial coordinates:
+`applyMoveTokenAdjacent(effect, ctx)` must:
+1. Resolve `token` and `from`.
+2. Resolve destination from `direction`:
+   - If omitted: fail with `SPATIAL_DESTINATION_REQUIRED`.
+   - If string starts with `$`: treat as move-param/binding name and resolve to `ZoneId`.
+   - Otherwise treat as concrete destination `ZoneId`.
+3. Verify destination is adjacent to `from` in normalized graph.
+4. Move token from source to destination preserving single-token movement rules from `moveToken`.
+5. Emit `tokenEntered` event for destination zone (parity with other movement effects).
 
-1. Use axial coordinate system (q, r) where center is (0, 0)
-2. Generate all hexes within `radius` of center: `|q| <= radius && |r| <= radius && |q + r| <= radius`
-3. Zone naming: `hex_Q_R` (with negative values: `hex_n1_2` for q=-1, r=2)
-4. Adjacency: each hex connects to 6 neighbors:
-   - (q+1, r), (q-1, r)
-   - (q, r+1), (q, r-1)
-   - (q+1, r-1), (q-1, r+1)
-5. Only include neighbors that exist in the grid
-6. All zones: `owner: 'none'`, `visibility: 'public'`, `ordering: 'set'`
+No numeric neighbor-index semantics are allowed.
 
-**Zone count formula**: `3 * radius * (radius + 1) + 1` for radius >= 0
+### Spatial context threading
 
-### Integration with Existing Specs
+`AdjacencyGraph` is immutable and derived from `GameDef.zones`. Build it once per `GameDef` load and thread it through:
+- `EvalContext`
+- `EffectContext`
 
-**Spec 04 extension**: Replace the `SpatialNotImplementedError` stubs in `evalQuery` with calls to the spatial query functions. The integration point is the `evalQuery` function — it needs access to the `AdjacencyGraph` (passed via `EvalContext` or a parallel parameter).
+Do not rebuild per query/effect.
 
-**Spec 05 extension**: Replace the `SpatialNotImplementedError` stub in `applyEffect` for `moveTokenAdjacent` with the actual implementation. The `AdjacencyGraph` must be accessible from the `EffectContext`.
+### Board macro constraints
 
-**Context threading**: The `AdjacencyGraph` is built once from the GameDef (during `initialState` or on first use) and cached. It does not change during gameplay. Thread it through `EvalContext` and `EffectContext`:
+`grid(rows, cols)`:
+- Inputs must be integers with `rows >= 1`, `cols >= 1`.
+- Zone IDs use `cell_{row}_{col}` (row-major generation order).
+- Adjacency is 4-connected and symmetric by construction.
+- Generated zones default to `owner: 'none'`, `visibility: 'public'`, `ordering: 'set'`.
 
-```typescript
-// Extended context (add to existing EvalContext/EffectContext)
-interface SpatialContext {
-  readonly adjacencyGraph: AdjacencyGraph;
-}
-```
+`hex(radius)`:
+- Input must be integer with `radius >= 0`.
+- Axial coordinates `(q, r)` with membership rule `|q| <= radius && |r| <= radius && |q + r| <= radius`.
+- Zone ID format: `hex_<q>_<r>`, where negatives are encoded as `n` prefix (e.g. `hex_n1_2`).
+- 6-neighbor axial adjacency.
+- Zone count formula: `3 * radius * (radius + 1) + 1`.
+- Same default zone attributes as grid.
+
+Macro expansion must fail with diagnostics on invalid inputs.
 
 ## Invariants
 
-1. Adjacency graph is undirected: if A adjacent to B, then B adjacent to A (validated at load time)
-2. `adjacentZones` query returns exactly the zones listed in the zone's `adjacentTo` array
-3. `connectedZones` traversal terminates within bounded depth (always <= total zone count)
-4. `connectedZones` never visits same zone twice (BFS visited set)
-5. `moveTokenAdjacent` only moves to adjacent zones (rejects non-adjacent destinations)
-6. `grid(R, C)` produces exactly `R * C` zones with correct 4-connectivity
-7. `hex(radius)` produces exactly `3 * radius * (radius + 1) + 1` zones with correct 6-connectivity
-8. Board macros produce valid ZoneDef arrays (all `adjacentTo` references are valid zone IDs)
-9. All adjacency constructed by macros is symmetric (no validation warnings)
-10. Isolated zones (no `adjacentTo`) have empty neighbor lists, not missing entries
+1. `AdjacencyGraph.neighbors` contains every zone ID exactly once as a key.
+2. Runtime adjacency is symmetric after normalization.
+3. No query returns zone IDs not present in `GameDef.zones`.
+4. Spatial query outputs are deterministic for identical input state.
+5. `connectedZones` terminates for all valid inputs.
+6. `connectedZones` never returns duplicates.
+7. `moveTokenAdjacent` rejects non-adjacent destinations.
+8. `moveTokenAdjacent` emits `tokenEntered` for successful moves.
+9. `grid(R, C)` returns exactly `R * C` zones with valid symmetric 4-connectivity.
+10. `hex(radius)` returns exactly `3 * radius * (radius + 1) + 1` zones with valid symmetric 6-connectivity.
+11. Spatial query cardinality is bounded by `maxQueryResults`.
+12. Macro outputs contain no dangling adjacency references.
 
 ## Required Tests
 
 ### Unit Tests
 
-**Adjacency graph**:
-- Build graph from 3 zones with mutual adjacency → correct neighbors
-- Build graph from zone with no adjacentTo → empty neighbor list
-- Validate symmetric adjacency → no warnings
-- Validate asymmetric adjacency (A→B but not B→A) → warning diagnostic
-- Validate dangling reference (zone references nonexistent zone) → error diagnostic
+**Adjacency graph and validation**:
+- Symmetric input graph builds expected neighbors.
+- Asymmetric input is normalized at runtime and emits warning.
+- Dangling zone reference emits error.
+- Self-loop emits error.
+- Duplicate neighbor declaration emits warning and de-duplicates runtime graph.
+- Zone with no `adjacentTo` has `[]` neighbors.
 
 **Spatial conditions**:
-- `adjacent(A, B)` where A and B are adjacent → true
-- `adjacent(A, C)` where A and C are not adjacent → false
-- `connected(A, C)` where A-B-C path exists → true
-- `connected(A, D)` where no path exists → false
-- `connected(A, C, via)` where path exists but via condition fails → false
+- `adjacent` true/false cases.
+- `connected` true/false cases.
+- `connected` with `via` filter success and failure.
+- `connected` with `maxDepth` boundary behavior.
 
-**connectedZones**:
-- Linear graph A-B-C-D: from A → returns [B, C, D]
-- Linear graph A-B-C-D: from A, maxDepth=1 → returns [B]
-- Graph with cycle A-B-C-A: from A → returns [B, C] (no duplicates)
-- Disconnected graph: from A → only returns connected component
-- Empty adjacency: from A → returns [] (just start zone, or empty)
+**Spatial queries**:
+- `adjacentZones` deterministic sorted output.
+- `tokensInAdjacentZones` preserves zone-then-token order.
+- `connectedZones` cycle handling (no duplicates).
+- `connectedZones` include/exclude start behavior.
+- `connectedZones` maxDepth behavior (`0`, `1`, full).
+- `connectedZones` with `via` filter and `$zone` binding.
+- Spatial queries enforce `maxQueryResults`.
 
-**tokensInAdjacentZones**:
-- Zone A has neighbors B, C; B has 2 tokens, C has 1 → returns 3 tokens
+**`moveTokenAdjacent`**:
+- Success path for adjacent destination.
+- Reject non-adjacent destination.
+- Reject missing destination (`direction` omitted).
+- Destination from `$` binding resolves correctly.
+- Emits `tokenEntered` event on success.
 
-**moveTokenAdjacent**:
-- Move token from A to adjacent B → token in B, removed from A
-- Move token from A to non-adjacent C → error thrown
-- Move token from A when A has no neighbors → error (no valid destination)
-
-**grid(3, 3)** (9 zones):
-- Produces 9 zones named cell_0_0 through cell_2_2
-- Corner cell_0_0 has exactly 2 neighbors: cell_0_1, cell_1_0
-- Edge cell_0_1 has exactly 3 neighbors: cell_0_0, cell_0_2, cell_1_1
-- Center cell_1_1 has exactly 4 neighbors
-- All adjacencies are symmetric
-
-**grid(1, 1)**: Single zone with no neighbors
-
-**grid(2, 3)**: 6 zones with correct connectivity
-
-**hex(0)**: 1 zone (center only), no neighbors
-
-**hex(1)**: 7 zones, center has 6 neighbors, outer ring each has 3 neighbors
-
-**hex(2)**: 19 zones with correct 6-connectivity
+**Board macros**:
+- `grid(3,3)` topology and naming.
+- `grid(1,1)` single isolated node.
+- `hex(0)`, `hex(1)`, `hex(2)` counts and core adjacency.
+- Invalid params: `grid(0,3)`, `grid(2,-1)`, `hex(-1)`, non-integer inputs -> diagnostics.
 
 ### Integration Tests
 
-- Build grid(3,3), place tokens on several cells, run `connectedZones` from corner → correct reachable set
-- Build hex(2), verify `tokensInAdjacentZones` for center zone returns tokens from all 6 neighbors
+- Spatial query + condition evaluation through `evalQuery`/`evalCondition` with context-threaded graph.
+- `moveTokenAdjacent` through `applyEffect` updates state and emits events consumed by trigger dispatch.
+- Compiler `grid`/`hex` expansion followed by `validateGameDef` has zero spatial errors on valid inputs.
 
 ### Property Tests
 
-- For any `grid(R, C)` where R,C >= 1: all adjacencies are symmetric
-- For any `grid(R, C)`: zone count equals R * C
-- For any `hex(radius)` where radius >= 0: zone count equals `3 * radius * (radius + 1) + 1`
-- For any `hex(radius)`: all adjacencies are symmetric
-- `connectedZones` from any zone returns a subset of all zones (no invented zones)
-- `connectedZones` never contains duplicates
+- For generated `grid(R,C)` (`R,C >= 1`): symmetric adjacency and valid refs.
+- For generated `hex(radius)` (`radius >= 0`): symmetric adjacency and valid refs.
+- For any valid graph/start zone: `connectedZones` output has unique members and is subset of all zones.
+- Spatial query determinism: repeated evaluation yields identical output ordering.
 
 ### Golden Tests
 
-- `grid(3, 3)` → expected zone definitions with exact adjacency lists
-- `hex(1)` → expected 7 zone definitions with exact adjacency lists
+- `grid(3,3)` exact zone list + adjacency lists.
+- `hex(1)` exact zone list + adjacency lists.
 
 ## Acceptance Criteria
 
-- [ ] Adjacency graph builds correctly from ZoneDefs
-- [ ] Asymmetric adjacency detected and reported as warning
-- [ ] Dangling adjacency references detected and reported as error
-- [ ] `adjacent` condition works correctly
-- [ ] `connected` condition works with optional `via` filter
-- [ ] `connectedZones` BFS terminates and handles cycles
-- [ ] `moveTokenAdjacent` validates adjacency before moving
-- [ ] `grid(R, C)` produces correct 4-connected zones
-- [ ] `hex(radius)` produces correct 6-connected zones
-- [ ] Spatial stubs from Spec 04/05 are replaced with real implementations
-- [ ] `AdjacencyGraph` is accessible from evaluation and effect contexts
-- [ ] All macro-generated adjacency is symmetric (no validation warnings on macro output)
+- [ ] Spatial query/effect stubs are fully replaced.
+- [ ] Spatial condition AST operators are defined in runtime types and schemas.
+- [ ] Runtime adjacency normalization + diagnostics behavior is implemented as specified.
+- [ ] All spatial queries have deterministic ordering and respect cardinality bounds.
+- [ ] `connectedZones` semantics (includeStart/maxDepth/via) are documented and tested.
+- [ ] `moveTokenAdjacent` destination semantics are unambiguous and tested.
+- [ ] `moveTokenAdjacent` emits `tokenEntered` events.
+- [ ] `AdjacencyGraph` is built once and threaded via contexts.
+- [ ] `grid` and `hex` validate inputs and generate valid symmetric topologies.
+- [ ] Macro-generated spatial topologies pass `validateGameDef`.
 
 ## Files to Create/Modify
 
 ```
-src/kernel/spatial.ts            # NEW — adjacency graph, spatial queries, spatial conditions
-src/kernel/board-macros.ts       # NEW — grid and hex generation macros
-src/kernel/eval-query.ts         # MODIFY — replace spatial stubs with real implementations
-src/kernel/effects.ts            # MODIFY — replace moveTokenAdjacent stub
-src/kernel/eval-context.ts       # MODIFY — add AdjacencyGraph to context types
-src/kernel/effect-context.ts     # MODIFY — add AdjacencyGraph to context types
-src/kernel/index.ts              # MODIFY — re-export spatial APIs
-test/unit/spatial.test.ts        # NEW — adjacency graph and spatial query tests
-test/unit/board-macros.test.ts   # NEW — grid and hex generation tests
-test/unit/spatial-conditions.test.ts   # NEW — adjacent/connected condition tests
-test/unit/spatial-effects.test.ts      # NEW — moveTokenAdjacent tests
-test/integration/spatial-game.test.ts  # NEW — spatial model in game context
+src/kernel/spatial.ts                   # NEW — graph build/validate + spatial query/condition helpers
+src/kernel/eval-query.ts                # MODIFY — replace spatial query stubs
+src/kernel/eval-condition.ts            # MODIFY — add adjacent/connected condition operators
+src/kernel/effects.ts                   # MODIFY — replace moveTokenAdjacent stub and emit tokenEntered
+src/kernel/eval-context.ts              # MODIFY — thread adjacencyGraph in EvalContext
+src/kernel/effect-context.ts            # MODIFY — thread adjacencyGraph in EffectContext
+src/kernel/types.ts                     # MODIFY — add spatial condition AST variants
+src/kernel/schemas.ts                   # MODIFY — add spatial condition schema variants
+src/cnl/expand-macros.ts                # MODIFY — invoke generateGrid/generateHex with validation
+src/cnl/compiler.ts                     # MODIFY — surface spatial diagnostics from macro expansion
+src/kernel/index.ts                     # MODIFY — export spatial APIs
+
+# tests
+test/unit/spatial-graph.test.ts
+test/unit/spatial-queries.test.ts
+test/unit/spatial-conditions.test.ts
+test/unit/spatial-effects.test.ts
+test/unit/board-macros.test.ts
+test/integration/spatial-kernel-integration.test.ts
 ```

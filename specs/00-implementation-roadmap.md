@@ -105,10 +105,13 @@ This is the longest dependency chain and determines minimum time-to-MVP.
 - `expandMacros(doc)` expands `grid()`, `hex()`, and compiler sugar
 - `compileGameSpecToGameDef(doc)` produces valid GameDef JSON
 - Spatial conditions/effects/queries work with zone adjacency
+- Spatial query semantics are deterministic and bounded (`maxQueryResults`)
+- Spatial macros reject invalid params with blocking diagnostics
 - Full pipeline: Markdown -> parse -> validate -> expand -> compile -> validateGameDef passes
 
 **Integration points**:
 - Spec 07 extends Spec 04 (spatial queries), Spec 05 (moveTokenAdjacent), Spec 06 (spatial triggers)
+- Spec 07 also extends runtime ConditionAST/schema with `adjacent`/`connected` operators
 - Spec 08a produces GameSpecDoc consumed by Spec 08b
 - Spec 08b uses Spec 07's board macros (grid, hex) and outputs GameDef validated by Spec 02
 
@@ -185,7 +188,7 @@ All type definitions live in Spec 02. Other specs import and use these types but
 | Spec 04 | Spec 05, 06, 07 | `evalCondition`, `evalValue`, `evalQuery` |
 | Spec 05 | Spec 06 | `applyEffect`, `applyEffects` |
 | Spec 06 | Spec 09, 10 | `initialState(def, seed, playerCount?)`, `legalMoves`, `applyMove` (returns `{ state, triggerFirings }`), `terminalResult` |
-| Spec 07 | Spec 08b | `buildAdjacencyGraph`, `generateGrid`, `generateHex` |
+| Spec 07 | Spec 04, 05, 08b | `buildAdjacencyGraph`, `validateAdjacency`, spatial query/condition helpers, `generateGrid`, `generateHex` |
 | Spec 08a | Spec 08b | `parseGameSpec`, `validateGameSpec`, `GameSpecDoc` |
 | Spec 08b | Spec 12 | `expandMacros`, `compileGameSpecToGameDef` |
 | Spec 09 | Spec 10 | `Agent.chooseMove` (returns `{ move, rng }`), `RandomAgent`, `GreedyAgent` |
@@ -210,6 +213,7 @@ All type definitions live in Spec 02. Other specs import and use these types but
 | Incomplete state hash coverage (phase/turn/order/action usage omitted) causing false loop/stall signals | High | Medium | Spec 03 requires hash coverage for all legal-move-relevant state and canonical feature encoding | 03, 06, 10, 11 |
 | forEach/query interaction edge cases | Medium | Medium | Extensive property testing; fuzzing with random GameDefs | 04, 05, 06 |
 | Unbounded query cardinality causing legal-move/forEach explosion | High | Medium | Spec 04 enforces `maxQueryResults` guard and deterministic ordering; Spec 05 enforces cumulative `maxEffectOps` and `forEach.limit`; Spec 06 evaluates param products lazily and short-circuits with diagnostics | 04, 05, 06 |
+| Spatial semantics ambiguity (adjacency normalization, traversal ordering, destination selection) causing non-reproducible behavior | High | Medium | Spec 07 now fixes normalization/order/depth contracts and requires golden/property tests for deterministic outputs | 07, 08b |
 | YAML 1.2 parser edge cases with LLM output | Medium | High | Build comprehensive linter for 20 known failure modes; golden tests from real LLM output | 08a |
 | Compiler diagnostic quality insufficient for LLM self-correction | High | Medium | Test diagnostics against real LLM error patterns; iterate on suggestion quality | 08b |
 | GreedyAgent lookahead performance for high branching factor | Low | Medium | Cap lookahead depth; use evaluation heuristic without full simulation | 09 |

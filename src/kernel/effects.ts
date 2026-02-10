@@ -5,9 +5,11 @@ import {
   SpatialNotImplementedError,
   effectNotImplementedError,
 } from './effect-error.js';
+import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
-import { resolvePlayerSel } from './resolve-selectors.js';
-import type { EffectAST } from './types.js';
+import { nextInt } from './prng.js';
+import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
+import type { EffectAST, Token } from './types.js';
 
 interface EffectBudgetState {
   remaining: number;
@@ -314,6 +316,291 @@ const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknown }>, c
   };
 };
 
+const resolveZoneTokens = (
+  ctx: EffectContext,
+  zoneId: string,
+  effectType: 'moveToken' | 'moveAll' | 'draw' | 'shuffle',
+  field: 'from' | 'to' | 'zone',
+): readonly Token[] => {
+  const zoneTokens = ctx.state.zones[zoneId];
+  if (zoneTokens === undefined) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Zone state not found for selector result: ${zoneId}`, {
+      effectType,
+      field,
+      zoneId,
+      availableZoneIds: Object.keys(ctx.state.zones).sort(),
+    });
+  }
+
+  return zoneTokens;
+};
+
+const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string): string => {
+  const bindings = resolveEffectBindings(ctx);
+  const boundValue = bindings[tokenBinding];
+  if (boundValue === undefined) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token binding not found: ${tokenBinding}`, {
+      effectType: 'moveToken',
+      tokenBinding,
+      availableBindings: Object.keys(bindings).sort(),
+    });
+  }
+
+  if (typeof boundValue === 'string') {
+    return boundValue;
+  }
+
+  if (typeof boundValue === 'object' && boundValue !== null && 'id' in boundValue && typeof boundValue.id === 'string') {
+    return boundValue.id;
+  }
+
+  throw new EffectRuntimeError('EFFECT_RUNTIME', `Token binding ${tokenBinding} must resolve to Token or TokenId`, {
+    effectType: 'moveToken',
+    tokenBinding,
+    actualType: typeof boundValue,
+    value: boundValue,
+  });
+};
+
+interface TokenOccurrence {
+  readonly zoneId: string;
+  readonly index: number;
+  readonly token: Token;
+}
+
+const findTokenOccurrences = (ctx: EffectContext, tokenId: string): readonly TokenOccurrence[] => {
+  const occurrences: TokenOccurrence[] = [];
+
+  for (const [zoneId, tokens] of Object.entries(ctx.state.zones)) {
+    for (let index = 0; index < tokens.length; index += 1) {
+      const token = tokens[index];
+      if (token?.id === tokenId) {
+        occurrences.push({ zoneId, index, token });
+      }
+    }
+  }
+
+  return occurrences;
+};
+
+const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown }>, ctx: EffectContext): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const fromZoneId = String(resolveSingleZoneSel(effect.moveToken.from, evalCtx));
+  const toZoneId = String(resolveSingleZoneSel(effect.moveToken.to, evalCtx));
+  const sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'moveToken', 'from');
+  const destinationTokens = resolveZoneTokens(ctx, toZoneId, 'moveToken', 'to');
+
+  const tokenId = resolveBoundTokenId(ctx, effect.moveToken.token);
+  const occurrences = findTokenOccurrences(ctx, tokenId);
+
+  if (occurrences.length === 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token not found in any zone: ${tokenId}`, {
+      effectType: 'moveToken',
+      tokenId,
+      fromZoneId,
+    });
+  }
+
+  if (occurrences.length > 1) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token appears in multiple zones: ${tokenId}`, {
+      effectType: 'moveToken',
+      tokenId,
+      zones: occurrences.map((occurrence) => occurrence.zoneId).sort(),
+    });
+  }
+
+  const occurrence = occurrences[0]!;
+  if (occurrence.zoneId !== fromZoneId) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token is not in resolved from zone: ${tokenId}`, {
+      effectType: 'moveToken',
+      tokenId,
+      expectedFrom: fromZoneId,
+      actualZone: occurrence.zoneId,
+    });
+  }
+
+  const sourceAfter = [...sourceTokens.slice(0, occurrence.index), ...sourceTokens.slice(occurrence.index + 1)];
+  const destinationBase = fromZoneId === toZoneId ? sourceAfter : destinationTokens;
+  const position = effect.moveToken.position ?? 'top';
+
+  let insertionIndex = 0;
+  let nextRng = ctx.rng;
+  if (position === 'bottom') {
+    insertionIndex = destinationBase.length;
+  } else if (position === 'random') {
+    if (destinationBase.length > 0) {
+      const [randomIndex, advancedRng] = nextInt(ctx.rng, 0, destinationBase.length);
+      insertionIndex = randomIndex;
+      nextRng = advancedRng;
+    }
+  }
+
+  const destinationAfter = [
+    ...destinationBase.slice(0, insertionIndex),
+    occurrence.token,
+    ...destinationBase.slice(insertionIndex),
+  ];
+
+  if (fromZoneId === toZoneId) {
+    return {
+      state: {
+        ...ctx.state,
+        zones: {
+          ...ctx.state.zones,
+          [fromZoneId]: destinationAfter,
+        },
+      },
+      rng: nextRng,
+    };
+  }
+
+  return {
+    state: {
+      ...ctx.state,
+      zones: {
+        ...ctx.state.zones,
+        [fromZoneId]: sourceAfter,
+        [toZoneId]: destinationAfter,
+      },
+    },
+    rng: nextRng,
+  };
+};
+
+const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>, ctx: EffectContext): EffectResult => {
+  const count = effect.draw.count;
+  if (!Number.isSafeInteger(count) || count < 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'draw.count must be a non-negative integer', {
+      effectType: 'draw',
+      count,
+    });
+  }
+
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const fromZoneId = String(resolveSingleZoneSel(effect.draw.from, evalCtx));
+  const toZoneId = String(resolveSingleZoneSel(effect.draw.to, evalCtx));
+
+  const sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'draw', 'from');
+  resolveZoneTokens(ctx, toZoneId, 'draw', 'to');
+
+  if (count === 0 || sourceTokens.length === 0 || fromZoneId === toZoneId) {
+    return { state: ctx.state, rng: ctx.rng };
+  }
+
+  const moveCount = Math.min(count, sourceTokens.length);
+  const movedTokens = sourceTokens.slice(0, moveCount);
+  const sourceAfter = sourceTokens.slice(moveCount);
+  const destinationTokens = ctx.state.zones[toZoneId]!;
+  const destinationAfter = [...movedTokens, ...destinationTokens];
+
+  return {
+    state: {
+      ...ctx.state,
+      zones: {
+        ...ctx.state.zones,
+        [fromZoneId]: sourceAfter,
+        [toZoneId]: destinationAfter,
+      },
+    },
+    rng: ctx.rng,
+  };
+};
+
+const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unknown }>, ctx: EffectContext): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const fromZoneId = String(resolveSingleZoneSel(effect.moveAll.from, evalCtx));
+  const toZoneId = String(resolveSingleZoneSel(effect.moveAll.to, evalCtx));
+  const sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'moveAll', 'from');
+  const destinationTokens = resolveZoneTokens(ctx, toZoneId, 'moveAll', 'to');
+
+  if (fromZoneId === toZoneId || sourceTokens.length === 0) {
+    return { state: ctx.state, rng: ctx.rng };
+  }
+
+  let movedTokens: readonly Token[] = sourceTokens;
+  let sourceAfter: readonly Token[] = [];
+
+  if (effect.moveAll.filter !== undefined) {
+    const filteredMoved: Token[] = [];
+    const filteredRemaining: Token[] = [];
+    const baseBindings = resolveEffectBindings(ctx);
+
+    for (const token of sourceTokens) {
+      const filterEvalCtx = {
+        ...ctx,
+        bindings: {
+          ...baseBindings,
+          $token: token,
+        },
+      };
+
+      if (evalCondition(effect.moveAll.filter, filterEvalCtx)) {
+        filteredMoved.push(token);
+      } else {
+        filteredRemaining.push(token);
+      }
+    }
+
+    movedTokens = filteredMoved;
+    sourceAfter = filteredRemaining;
+  }
+
+  if (movedTokens.length === 0) {
+    return { state: ctx.state, rng: ctx.rng };
+  }
+
+  if (effect.moveAll.filter === undefined) {
+    sourceAfter = [];
+  }
+
+  const destinationAfter = [...movedTokens, ...destinationTokens];
+
+  return {
+    state: {
+      ...ctx.state,
+      zones: {
+        ...ctx.state.zones,
+        [fromZoneId]: sourceAfter,
+        [toZoneId]: destinationAfter,
+      },
+    },
+    rng: ctx.rng,
+  };
+};
+
+const applyShuffle = (effect: Extract<EffectAST, { readonly shuffle: unknown }>, ctx: EffectContext): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const zoneId = String(resolveSingleZoneSel(effect.shuffle.zone, evalCtx));
+  const zoneTokens = resolveZoneTokens(ctx, zoneId, 'shuffle', 'zone');
+
+  if (zoneTokens.length <= 1) {
+    return { state: ctx.state, rng: ctx.rng };
+  }
+
+  const shuffledTokens = [...zoneTokens];
+  let nextRng = ctx.rng;
+  for (let index = shuffledTokens.length - 1; index > 0; index -= 1) {
+    const [swapIndex, advancedRng] = nextInt(nextRng, 0, index);
+    nextRng = advancedRng;
+    if (swapIndex !== index) {
+      const temp = shuffledTokens[index]!;
+      shuffledTokens[index] = shuffledTokens[swapIndex]!;
+      shuffledTokens[swapIndex] = temp;
+    }
+  }
+
+  return {
+    state: {
+      ...ctx.state,
+      zones: {
+        ...ctx.state.zones,
+        [zoneId]: shuffledTokens,
+      },
+    },
+    rng: nextRng,
+  };
+};
+
 const dispatchEffect = (effect: EffectAST, ctx: EffectContext): EffectResult => {
   if ('setVar' in effect) {
     return applySetVar(effect, ctx);
@@ -321,6 +608,22 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext): EffectResult => 
 
   if ('addVar' in effect) {
     return applyAddVar(effect, ctx);
+  }
+
+  if ('moveToken' in effect) {
+    return applyMoveToken(effect, ctx);
+  }
+
+  if ('moveAll' in effect) {
+    return applyMoveAll(effect, ctx);
+  }
+
+  if ('draw' in effect) {
+    return applyDraw(effect, ctx);
+  }
+
+  if ('shuffle' in effect) {
+    return applyShuffle(effect, ctx);
   }
 
   if ('moveTokenAdjacent' in effect) {

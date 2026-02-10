@@ -74,11 +74,10 @@ const addVarEffect: EffectAST = {
   },
 };
 
-const moveTokenEffect: EffectAST = {
-  moveToken: {
-    token: '$token',
-    from: 'deck:none',
-    to: 'hand:actor',
+const createTokenEffect: EffectAST = {
+  createToken: {
+    type: 'card',
+    zone: 'deck:none',
   },
 };
 
@@ -112,11 +111,11 @@ describe('effects runtime foundation', () => {
     });
   });
 
-  it('applies dispatcher in list order and reports the first failing effect kind', () => {
+  it('applies dispatcher in list order and reports the first unimplemented effect kind', () => {
     const ctx = makeCtx({ maxEffectOps: 10 });
 
-    assert.throws(() => applyEffects([setVarEffect, addVarEffect, moveTokenEffect], ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_NOT_IMPLEMENTED') && error.message.includes('moveToken');
+    assert.throws(() => applyEffects([setVarEffect, addVarEffect, createTokenEffect], ctx), (error: unknown) => {
+      return isEffectErrorCode(error, 'EFFECT_NOT_IMPLEMENTED') && error.message.includes('createToken');
     });
   });
 

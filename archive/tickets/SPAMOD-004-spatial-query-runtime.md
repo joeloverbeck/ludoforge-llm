@@ -1,11 +1,18 @@
 # SPAMOD-004 - Spatial Query Runtime (`adjacentZones`, `tokensInAdjacentZones`, `connectedZones`)
 
-**Status**: Proposed  
+**Status**: ✅ COMPLETED  
 **Spec**: `specs/07-spatial-model.md`  
 **Depends on**: `SPAMOD-001`, `SPAMOD-002`, `SPAMOD-003`
 
 ## Goal
-Replace spatial query stubs with deterministic implementations, including bounded BFS semantics and query cardinality enforcement.
+Replace remaining spatial query stubs with deterministic implementations, including bounded BFS semantics and query cardinality enforcement.
+
+## Assumption Reassessment (2026-02-10)
+- `AdjacencyGraph` construction and adjacency diagnostics are already implemented in `src/kernel/spatial.ts`.
+- `EvalContext` already threads `adjacencyGraph`.
+- Spatial query schemas/types for `adjacentZones`, `tokensInAdjacentZones`, and `connectedZones` already exist.
+- `test/unit/spatial-graph.test.ts` already exists and covers graph normalization/diagnostics behavior.
+- Primary gap is runtime evaluation: `evalQuery` still throws `SPATIAL_NOT_IMPLEMENTED` for spatial query variants, and spatial query helper functions are not yet present.
 
 ## Scope
 - Implement query helpers in `spatial.ts`:
@@ -51,3 +58,15 @@ Replace spatial query stubs with deterministic implementations, including bounde
 - `connectedZones` always terminates and never returns duplicates.
 - No spatial query returns zone IDs not present in `GameDef.zones`.
 
+## Outcome
+- Completion date: 2026-02-10
+- Implemented:
+  - Added `queryAdjacentZones`, `queryTokensInAdjacentZones`, and `queryConnectedZones` to `src/kernel/spatial.ts`.
+  - Replaced spatial query stubs in `src/kernel/eval-query.ts` with concrete runtime dispatch and `maxQueryResults` enforcement.
+  - Added `test/unit/spatial-queries.test.ts` and updated `test/unit/eval-query.test.ts` to validate concrete spatial behavior.
+- Deviations from original plan:
+  - No adjacency graph/diagnostic changes were needed because those were already implemented and covered by existing tests.
+- Verification:
+  - `npm run build`
+  - `node --test dist/test/unit/eval-query.test.js dist/test/unit/spatial-queries.test.js`
+  - `npm test`

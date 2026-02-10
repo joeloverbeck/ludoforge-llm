@@ -21,11 +21,41 @@ const makeDef = (): GameDef => ({
   globalVars: [],
   perPlayerVars: [],
   zones: [
-    { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
-    { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' },
-    { id: asZoneId('hand:1'), owner: 'player', visibility: 'owner', ordering: 'stack' },
-    { id: asZoneId('bench:1'), owner: 'player', visibility: 'public', ordering: 'queue' },
-    { id: asZoneId('tableau:2'), owner: 'player', visibility: 'public', ordering: 'set' },
+    {
+      id: asZoneId('deck:none'),
+      owner: 'none',
+      visibility: 'hidden',
+      ordering: 'stack',
+      adjacentTo: [asZoneId('hand:1'), asZoneId('hand:0')],
+    },
+    {
+      id: asZoneId('hand:0'),
+      owner: 'player',
+      visibility: 'owner',
+      ordering: 'stack',
+      adjacentTo: [asZoneId('deck:none'), asZoneId('bench:1')],
+    },
+    {
+      id: asZoneId('hand:1'),
+      owner: 'player',
+      visibility: 'owner',
+      ordering: 'stack',
+      adjacentTo: [asZoneId('deck:none')],
+    },
+    {
+      id: asZoneId('bench:1'),
+      owner: 'player',
+      visibility: 'public',
+      ordering: 'queue',
+      adjacentTo: [asZoneId('hand:0'), asZoneId('tableau:2')],
+    },
+    {
+      id: asZoneId('tableau:2'),
+      owner: 'player',
+      visibility: 'public',
+      ordering: 'set',
+      adjacentTo: [asZoneId('bench:1')],
+    },
   ],
   tokenTypes: [],
   setup: [],
@@ -47,7 +77,7 @@ const makeState = (): GameState => ({
   playerCount: 3,
   zones: {
     'deck:none': [makeToken('deck-1'), makeToken('deck-2')],
-    'hand:0': [makeToken('hand-0')],
+    'hand:0': [makeToken('hand-0'), makeToken('hand-0b')],
     'hand:1': [makeToken('hand-1')],
     'bench:1': [],
     'tableau:2': [],
@@ -61,15 +91,18 @@ const makeState = (): GameState => ({
   actionUsage: {},
 });
 
-const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => ({
-  def: makeDef(),
-  adjacencyGraph: buildAdjacencyGraph([]),
-  state: makeState(),
-  activePlayer: asPlayerId(2),
-  actorPlayer: asPlayerId(1),
-  bindings: {},
-  ...overrides,
-});
+const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
+  const def = makeDef();
+  return {
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    state: makeState(),
+    activePlayer: asPlayerId(2),
+    actorPlayer: asPlayerId(1),
+    bindings: {},
+    ...overrides,
+  };
+};
 
 describe('evalQuery', () => {
   it('returns tokensInZone in state container order and without mutating zone arrays', () => {
@@ -108,29 +141,37 @@ describe('evalQuery', () => {
     assert.deepEqual(evalQuery({ query: 'zones', filter: { owner: 'actor' } }, ctx), ['bench:1', 'hand:1']);
   });
 
-  it('throws SPATIAL_NOT_IMPLEMENTED for all spatial query variants', () => {
+  it('evaluates spatial query variants with deterministic ordering', () => {
     const ctx = makeCtx();
 
-    assert.throws(
-      () => evalQuery({ query: 'adjacentZones', zone: 'deck:none' }, ctx),
-      (error: unknown) =>
-        isEvalErrorCode(error, 'SPATIAL_NOT_IMPLEMENTED') &&
-        typeof error.message === 'string' &&
-        error.message.includes('adjacentZones'),
+    assert.deepEqual(evalQuery({ query: 'adjacentZones', zone: 'deck:none' }, ctx), [
+      asZoneId('hand:0'),
+      asZoneId('hand:1'),
+    ]);
+    assert.deepEqual(
+      evalQuery({ query: 'tokensInAdjacentZones', zone: 'deck:none' }, ctx).map((token) => (token as Token).id),
+      [asTokenId('hand-0'), asTokenId('hand-0b'), asTokenId('hand-1')],
     );
-    assert.throws(
-      () => evalQuery({ query: 'tokensInAdjacentZones', zone: 'deck:none' }, ctx),
-      (error: unknown) =>
-        isEvalErrorCode(error, 'SPATIAL_NOT_IMPLEMENTED') &&
-        typeof error.message === 'string' &&
-        error.message.includes('tokensInAdjacentZones'),
-    );
-    assert.throws(
-      () => evalQuery({ query: 'connectedZones', zone: 'deck:none' }, ctx),
-      (error: unknown) =>
-        isEvalErrorCode(error, 'SPATIAL_NOT_IMPLEMENTED') &&
-        typeof error.message === 'string' &&
-        error.message.includes('connectedZones'),
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'connectedZones',
+          zone: 'deck:none',
+          via: {
+            op: 'in',
+            item: { ref: 'binding', name: '$zone' },
+            set: { ref: 'binding', name: '$allowed' },
+          },
+        },
+        {
+          ...ctx,
+          bindings: {
+            ...ctx.bindings,
+            $allowed: [asZoneId('hand:0'), asZoneId('bench:1')],
+          },
+        },
+      ),
+      [asZoneId('hand:0'), asZoneId('bench:1')],
     );
   });
 
@@ -139,6 +180,10 @@ describe('evalQuery', () => {
 
     assert.throws(
       () => evalQuery({ query: 'intsInRange', min: 1, max: 10 }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'QUERY_BOUNDS_EXCEEDED'),
+    );
+    assert.throws(
+      () => evalQuery({ query: 'adjacentZones', zone: 'deck:none' }, makeCtx({ maxQueryResults: 1 })),
       (error: unknown) => isEvalErrorCode(error, 'QUERY_BOUNDS_EXCEEDED'),
     );
   });

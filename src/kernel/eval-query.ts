@@ -1,7 +1,8 @@
 import { getMaxQueryResults, type EvalContext } from './eval-context.js';
-import { missingVarError, queryBoundsExceededError, spatialNotImplementedError } from './eval-error.js';
+import { missingVarError, queryBoundsExceededError } from './eval-error.js';
 import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
+import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
 import type { OptionsQuery, Token } from './types.js';
 
 type QueryResult = Token | number | string | PlayerId | ZoneId;
@@ -91,10 +92,35 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       return zones;
     }
 
-    case 'adjacentZones':
-    case 'tokensInAdjacentZones':
-    case 'connectedZones':
-      throw spatialNotImplementedError(`Spatial query is not implemented: ${query.query}`, { query });
+    case 'adjacentZones': {
+      const zoneId = resolveSingleZoneSel(query.zone, ctx);
+      const zones = queryAdjacentZones(ctx.adjacencyGraph, zoneId);
+      assertWithinBounds(zones.length, query, maxQueryResults);
+      return zones;
+    }
+
+    case 'tokensInAdjacentZones': {
+      const zoneId = resolveSingleZoneSel(query.zone, ctx);
+      const tokens = queryTokensInAdjacentZones(ctx.adjacencyGraph, ctx.state, zoneId);
+      assertWithinBounds(tokens.length, query, maxQueryResults);
+      return tokens;
+    }
+
+    case 'connectedZones': {
+      const zoneId = resolveSingleZoneSel(query.zone, ctx);
+      const options =
+        query.includeStart === undefined && query.maxDepth === undefined
+          ? undefined
+          : {
+              ...(query.includeStart === undefined ? {} : { includeStart: query.includeStart }),
+              ...(query.maxDepth === undefined ? {} : { maxDepth: query.maxDepth }),
+            };
+      const zones = queryConnectedZones(ctx.adjacencyGraph, ctx.state, zoneId, ctx, query.via, {
+        ...options,
+      });
+      assertWithinBounds(zones.length, query, maxQueryResults);
+      return zones;
+    }
 
     default: {
       const _exhaustive: never = query;

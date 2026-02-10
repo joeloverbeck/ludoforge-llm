@@ -1,10 +1,17 @@
 import type { Diagnostic } from './diagnostics.js';
 import type { ZoneId } from './branded.js';
-import type { ZoneDef } from './types.js';
+import { evalCondition } from './eval-condition.js';
+import type { EvalContext } from './eval-context.js';
+import type { ConditionAST, GameState, Token, ZoneDef } from './types.js';
 
 export interface AdjacencyGraph {
   readonly neighbors: Readonly<Record<string, readonly ZoneId[]>>;
   readonly zoneCount: number;
+}
+
+export interface ConnectedQueryOptions {
+  readonly includeStart?: boolean;
+  readonly maxDepth?: number;
 }
 
 export function buildAdjacencyGraph(zones: readonly ZoneDef[]): AdjacencyGraph {
@@ -115,4 +122,103 @@ export function validateAdjacency(graph: AdjacencyGraph, zones: readonly ZoneDef
   });
 
   return diagnostics;
+}
+
+function getNeighbors(graph: AdjacencyGraph, zone: ZoneId): readonly ZoneId[] {
+  return graph.neighbors[String(zone)] ?? [];
+}
+
+function normalizeMaxDepth(maxDepth: number | undefined, graph: AdjacencyGraph): number {
+  if (maxDepth === undefined) {
+    return Math.max(0, graph.zoneCount - 1);
+  }
+
+  if (!Number.isFinite(maxDepth)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor(maxDepth));
+}
+
+function evaluateVia(
+  via: ConditionAST | undefined,
+  candidateZone: ZoneId,
+  state: GameState,
+  evalCtx: EvalContext,
+): boolean {
+  if (via === undefined) {
+    return true;
+  }
+
+  return evalCondition(via, {
+    ...evalCtx,
+    state,
+    bindings: {
+      ...evalCtx.bindings,
+      $zone: candidateZone,
+    },
+  });
+}
+
+export function queryAdjacentZones(graph: AdjacencyGraph, zone: ZoneId): readonly ZoneId[] {
+  return [...getNeighbors(graph, zone)];
+}
+
+export function queryTokensInAdjacentZones(
+  graph: AdjacencyGraph,
+  state: GameState,
+  zone: ZoneId,
+): readonly Token[] {
+  const tokens: Token[] = [];
+  for (const neighborZone of getNeighbors(graph, zone)) {
+    const zoneTokens = state.zones[String(neighborZone)] ?? [];
+    tokens.push(...zoneTokens);
+  }
+  return tokens;
+}
+
+export function queryConnectedZones(
+  graph: AdjacencyGraph,
+  state: GameState,
+  zone: ZoneId,
+  evalCtx: EvalContext,
+  via?: ConditionAST,
+  options?: ConnectedQueryOptions,
+): readonly ZoneId[] {
+  const includeStart = options?.includeStart ?? false;
+  const maxDepth = normalizeMaxDepth(options?.maxDepth, graph);
+
+  const discovered: ZoneId[] = [];
+  const visited = new Set<ZoneId>([zone]);
+  const queue: Array<{ readonly zone: ZoneId; readonly depth: number }> = [{ zone, depth: 0 }];
+  let cursor = 0;
+
+  if (includeStart) {
+    discovered.push(zone);
+  }
+
+  while (cursor < queue.length) {
+    const entry = queue[cursor];
+    cursor += 1;
+
+    if (entry === undefined || entry.depth >= maxDepth) {
+      continue;
+    }
+
+    for (const neighborZone of getNeighbors(graph, entry.zone)) {
+      if (visited.has(neighborZone)) {
+        continue;
+      }
+
+      if (!evaluateVia(via, neighborZone, state, evalCtx)) {
+        continue;
+      }
+
+      visited.add(neighborZone);
+      discovered.push(neighborZone);
+      queue.push({ zone: neighborZone, depth: entry.depth + 1 });
+    }
+  }
+
+  return discovered;
 }

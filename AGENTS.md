@@ -1,25 +1,31 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-This repository is currently specification-first.
+This repository contains both implementation code and design artifacts.
+- `src/`: TypeScript source modules (`kernel`, `cnl`, `agents`, `sim`, `cli`).
+- `schemas/`: JSON schema artifacts (`GameDef`, `Trace`, `EvalReport`).
+- `test/`: `unit`, `integration`, `e2e`, plus `fixtures`, `memory`, and `performance`.
 - `specs/`: canonical implementation specs (`00` roadmap through `14` evolution pipeline).
-- `brainstorming/`: early design references and exploratory notes.
-- `README.md`: short project summary.
-- `CLAUDE.md`: implementation constraints, planned architecture, and testing expectations.
-
-When code is scaffolded, follow the planned layout in `CLAUDE.md`:
-`src/kernel`, `src/cnl`, `src/agents`, `src/sim`, `src/cli`, plus top-level `schemas/` and `test/`.
+- `tickets/`: active implementation tickets.
+- `archive/`: completed or retired `tickets`, `specs`, `brainstorming`, and reports.
+- `brainstorming/`, `README.md`, `CLAUDE.md`: design context and constraints.
 
 ## Build, Test, and Development Commands
-At present, most contributions are Markdown/spec edits. Useful commands:
+Primary workflow commands:
+- `npm run build`: compile TypeScript with `tsc`.
+- `npm run clean`: remove `dist/`.
+- `npm run lint`: run ESLint.
+- `npm run typecheck`: run `tsc --noEmit`.
+- `npm test`: run unit + integration tests (via compiled output in `dist/`).
+- `npm run test:all`: run unit + integration + e2e tests.
+- `npm run test:unit`: run only unit tests.
+- `npm run test:integration`: run only integration tests.
+- `npm run test:e2e`: run only e2e tests.
+
+Useful repo-navigation commands:
 - `rg --files`: list tracked files quickly.
 - `rg "Spec [0-9]+" specs/`: find spec references.
 - `git log --oneline`: review recent commit style.
-
-Post-scaffold (planned TypeScript workflow):
-- `npm run build`: compile TypeScript with `tsc`.
-- `npm test`: run full test suite (via prebuilt output).
-- `npm run typecheck`: run `tsc --noEmit`.
 
 ## Coding Style & Naming Conventions
 For documentation updates:
@@ -27,21 +33,26 @@ For documentation updates:
 - Keep spec filenames numeric and ordered (example: `specs/08b-game-spec-compiler.md`).
 - Preserve deterministic terminology (`GameDef`, `GameSpecDoc`, `GameTrace`) exactly.
 
-For future TypeScript code (as defined in project docs):
+For TypeScript code:
 - strict TypeScript, immutable state updates, side-effect-free kernel logic.
 - prefer feature/domain-oriented modules over broad utility dumps.
+- keep schema/type changes synchronized across `src/kernel`, `schemas/`, and tests.
 
 ## Testing Guidelines
-Current work should include consistency checks:
+For docs/spec/ticket changes:
 - verify cross-spec references and dependency links.
 - ensure roadmap and individual specs do not conflict.
 
-After scaffolding, place tests under `test/unit`, `test/integration`, and `test/e2e`; run with `npm test` or targeted `node --test dist/test/unit/<file>.js`.
+For code changes:
+- place tests in the relevant `test/` domain (`unit`, `integration`, or `e2e`).
+- run targeted tests when possible (example: `node --test dist/test/unit/<file>.test.js`).
+- run at least `npm test` before finalizing; use `npm run test:all` when behavior spans CLI/pipeline flows.
 
 ## Commit & Pull Request Guidelines
-Follow the existing commit pattern visible in history:
+Keep commit subjects short and imperative. Common patterns in this repo include:
 - `docs: add Spec 12 — CLI`
-- `docs: refine Spec 00 dependency graph`
+- `Implemented CORTYPSCHVAL-008`
+- `Added linting.`
 
 PRs should include:
 - a clear summary of changed files and why.
@@ -59,7 +70,7 @@ When asked to archive a ticket, spec, or brainstorming document:
    - `**Status**: ⏸️ DEFERRED` - Postponed for later
    - `**Status**: 🚫 NOT IMPLEMENTED` - Started but abandoned
 
-2. **Add an Outcome section** at the bottom (for completed tickets):
+2. **Add an Outcome section** at the bottom (for completed items):
    - Completion date
    - What was actually changed
    - Any deviations from the original plan

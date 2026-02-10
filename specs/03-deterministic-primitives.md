@@ -18,8 +18,8 @@ Implement the deterministic foundation for the entire kernel: a seedable PRNG an
 - PRNG interface: create, nextInt, serialize, deserialize, fork
 - Integer-only arithmetic (no floating point in PRNG output)
 - Zobrist hashing with 64-bit XOR-based incremental updates
-- Zobrist table generation from GameDef feature names
-- Zobrist hash update functions for token movement and variable changes
+- Zobrist key-space generation from canonicalized GameDef features
+- Zobrist hash update functions for token placement, variables, and turn/phase/action metadata
 - Determinism enforcement utilities (forbidden API detection helpers)
 - Test helpers: `assertDeterministic`, `assertStateRoundTrip`
 
@@ -39,6 +39,8 @@ interface Rng {
 }
 
 interface RngState {
+  readonly algorithm: 'pcg-dxsm-128' | 'xoshiro256ss';
+  readonly version: 1;
   readonly state: readonly bigint[];
   // PCG-DXSM: 2 elements [state, increment]
   // xoshiro256**: 4 elements [s0, s1, s2, s3]
@@ -51,16 +53,21 @@ function createRng(seed: bigint): Rng;
 function nextInt(rng: Rng, min: number, max: number): [number, Rng];
 
 // Serialize PRNG state for storage in GameState
-function serializeRng(rng: Rng): RngState;
+function serialize(rng: Rng): RngState;
 
 // Restore PRNG from serialized state
-function deserializeRng(state: RngState): Rng;
+function deserialize(state: RngState): Rng;
 
 // Fork into two independent streams (for lookahead without affecting main game)
-function forkRng(rng: Rng): [Rng, Rng];
+function fork(rng: Rng): [Rng, Rng];
 ```
 
 **Critical**: `nextInt` returns an integer in the closed range `[min, max]`. No floating-point intermediate. Use rejection sampling or modular arithmetic with bias correction to avoid modulo bias.
+
+Validation rules for `nextInt`:
+- Throw `RangeError` when `min > max`
+- Throw `RangeError` when either bound is not a safe integer
+- Throw `RangeError` when `max - min + 1` exceeds `Number.MAX_SAFE_INTEGER`
 
 **`nextFloat` is FORBIDDEN**: The kernel uses integer-only arithmetic. If a uniform selection from N items is needed, use `nextInt(rng, 0, N - 1)`.
 
@@ -68,34 +75,45 @@ function forkRng(rng: Rng): [Rng, Rng];
 
 ```typescript
 interface ZobristTable {
-  readonly tokenZone: Readonly<Record<string, Readonly<Record<string, bigint>>>>;
-  // tokenZone[tokenType][zoneId] → random bitstring
-  readonly varValue: Readonly<Record<string, readonly bigint[]>>;
-  // varValue[varName][value - min] → random bitstring (for bounded integer vars)
+  readonly seed: bigint;
+  readonly fingerprint: string;
 }
+
+type ZobristFeature =
+  | { kind: 'tokenPlacement'; tokenId: TokenId; zoneId: ZoneId; slot: number }
+  | { kind: 'globalVar'; varName: string; value: number }
+  | { kind: 'perPlayerVar'; playerId: PlayerId; varName: string; value: number }
+  | { kind: 'activePlayer'; playerId: PlayerId }
+  | { kind: 'currentPhase'; phaseId: string }
+  | { kind: 'turnCount'; value: number }
+  | { kind: 'actionUsage'; actionId: string; scope: 'turn' | 'phase' | 'game'; count: number };
 
 // Generate Zobrist table deterministically from GameDef features
 function createZobristTable(def: GameDef): ZobristTable;
 
+// Deterministically map a feature tuple to a 64-bit key
+function zobristKey(table: ZobristTable, feature: ZobristFeature): bigint;
+
 // Compute full hash of a GameState from scratch
 function computeFullHash(table: ZobristTable, state: GameState): bigint;
 
-// Incremental update: token moved from one zone to another
-function updateHashTokenMove(
+// Incremental update helper: XOR out previous feature and XOR in next feature
+function updateHashFeatureChange(
   hash: bigint,
   table: ZobristTable,
-  tokenType: string,
-  fromZone: ZoneId,
-  toZone: ZoneId
+  previous: ZobristFeature,
+  next: ZobristFeature
 ): bigint;
 
-// Incremental update: variable value changed
-function updateHashVarChange(
+// Convenience wrapper for token move/update operations
+function updateHashTokenPlacement(
   hash: bigint,
   table: ZobristTable,
-  varName: string,
-  oldValue: number,
-  newValue: number
+  tokenId: TokenId,
+  fromZone: ZoneId,
+  fromSlot: number,
+  toZone: ZoneId,
+  toSlot: number
 ): bigint;
 ```
 
@@ -137,6 +155,11 @@ If PCG-DXSM proves too complex for BigInt performance, fall back to xoshiro256**
 - Period: 2^256 - 1
 - Caveat: weak low-order bits (use upper bits for range reduction)
 
+**Algorithm freeze requirement**:
+- Choose exactly one algorithm for MVP and freeze it (default: `pcg-dxsm-128`)
+- Persist `algorithm` + `version` in serialized RNG state
+- Golden vectors must pin behavior for that algorithm/version pair
+
 ### Integer Range Generation (No Modulo Bias)
 
 To generate uniform integers in `[min, max]`:
@@ -144,24 +167,35 @@ To generate uniform integers in `[min, max]`:
 2. Use Lemire's nearly-divisionless method or rejection sampling
 3. Never use `value % range` (introduces bias when range doesn't divide 2^64)
 4. Convert BigInt result to Number only after range reduction (avoid precision loss)
+5. Reject invalid ranges (`min > max`, non-safe bounds, overflowed range) with `RangeError`
 
 ### Zobrist Hashing
 
 **Table generation**:
-1. Create a separate PRNG from a seed derived from GameDef feature names (e.g., hash of sorted token type IDs + zone IDs + var names)
-2. For each `(tokenType, zoneId)` pair: generate a random 64-bit bitstring
-3. For each `(varName, possibleValue)` pair: generate a random 64-bit bitstring
-4. Store in ZobristTable
+1. Canonicalize relevant GameDef features into a deterministic fingerprint string:
+   - Sort and encode zone IDs, action IDs, phase IDs, global/per-player var defs, and declared token types
+   - Use stable separators and explicit field names (no JSON object key-order dependence)
+2. Derive `table.seed` from this fingerprint (stable 64-bit non-cryptographic hash is sufficient)
+3. Use keyed feature hashing (`zobristKey`) so dynamic domains (token IDs, slot indices, action usage counts) do not require precomputed infinite tables
+4. Optional memoization cache is allowed, but key derivation must be deterministic and pure
 
 **Incremental updates**:
-- Token move from zone A to zone B: `hash ^= table.tokenZone[type][A] ^ table.tokenZone[type][B]`
-- Variable change from old to new: `hash ^= table.varValue[name][old - min] ^ table.varValue[name][new - min]`
-- Both are O(1) operations
+- Token move/reorder: XOR out old token placement feature (`tokenId`, `fromZone`, `fromSlot`) and XOR in new placement feature (`tokenId`, `toZone`, `toSlot`)
+- Variable change: XOR out old feature and XOR in new feature (global/per-player)
+- Turn metadata changes (`activePlayer`, `currentPhase`, `turnCount`, `actionUsage` counters): same XOR-out/XOR-in pattern
+- Single-field updates remain O(1); bulk effects (for example `shuffle`, `moveAll`) are O(changed-features)
 
 **Full hash computation** (for verification):
-- XOR all active `(tokenType, zoneId)` bitstrings for every token in every zone
-- XOR all `(varName, currentValue)` bitstrings for every variable
+- XOR token placement features for every token at every slot in every zone
+- XOR global variable features for every global variable
+- XOR per-player variable features for every player variable
+- XOR scalar state features: `activePlayer`, `currentPhase`, `turnCount`
+- XOR action-usage features (`turn`, `phase`, `game` counters)
 - Used for initial hash and verification; NOT for per-move updates
+
+**Coverage requirement**:
+- Any change that can affect legal move generation, effect evaluation, trigger behavior, or terminal detection must be represented in hash features.
+- This explicitly includes token identity and zone order, not only token type/count.
 
 **64-bit representation in JavaScript**:
 - Use `BigInt` for Zobrist hashes (native 64-bit support)
@@ -173,29 +207,31 @@ To generate uniform integers in `[min, max]`:
 Provide utility functions / documentation for enforcing determinism across the kernel:
 
 **Forbidden API list** (to be enforced by code review and optionally ESLint rules):
-- `Math.random()` — use seedable PRNG
-- `Date.now()`, `performance.now()` — no time-dependent behavior
-- `Map`/`Set` iteration in critical paths — use sorted arrays
-- `Object.keys()`/`Object.entries()` without sorting — property order not guaranteed for integer-like keys
-- `JSON.stringify()` for hashing — key order not guaranteed
+- `Math.random()` - use seedable PRNG
+- `Date.now()`, `performance.now()` - no time-dependent behavior
+- `Object.keys()`/`Object.entries()` without sorting - unsafe for hash-sensitive iteration
+- `JSON.stringify()` for hashing - key order is not a canonical hash contract
 
 **Required patterns**:
 - Integer-only arithmetic: `Math.trunc(a / b)` for division
-- Sorted iteration: always sort arrays of zone IDs, player IDs before iterating
+- Sorted iteration: always sort zone IDs, player IDs, var names, action IDs, phase IDs, and any derived key lists before iterating
 - Deterministic serialization: use sorted keys when serializing state
 
 ## Invariants
 
 1. Same seed always produces same sequence: `nextInt(createRng(42n), 0, 100)` is identical across calls
-2. PRNG state is serializable: `deserializeRng(serializeRng(rng))` produces identical next values
+2. PRNG state is serializable: `deserialize(serialize(rng))` produces identical next values
 3. Fork produces independent streams: modifying one fork doesn't affect the other
-4. Zobrist hash updates are O(1): single XOR out + XOR in per token move or var change
+4. Zobrist hash updates are XOR-incremental and local: single-field updates are O(1)
 5. Zobrist hash is deterministic: same GameDef + same state = same hash (regardless of how state was reached)
 6. No floating-point arithmetic anywhere in this module
 7. `Math.random()` is never called (enforced by review)
 8. `nextInt(rng, min, max)` always returns value in `[min, max]` inclusive
 9. `nextInt` has no modulo bias (uniform distribution across range)
 10. Zobrist table is deterministically derived from GameDef (same def = same table)
+11. Token multiplicity is preserved: two same-type tokens in one zone do not cancel in hash
+12. Zone ordering differences produce different hashes
+13. Changes to `activePlayer`, `currentPhase`, `turnCount`, or `actionUsage` change the hash
 
 ## Required Tests
 
@@ -203,32 +239,37 @@ Provide utility functions / documentation for enforcing determinism across the k
 
 - PRNG produces deterministic sequence for seed 42: first 10 values match golden reference
 - PRNG produces different sequences for different seeds (seed 42 vs seed 43)
-- PRNG serialize/deserialize round-trip: generate 5 values, serialize, deserialize, generate 5 more — matches generating 10 from original
-- PRNG fork: fork at step 5, advance both forks 5 steps — sequences differ from each other and from un-forked sequence
+- PRNG serialize/deserialize round-trip: generate 5 values, serialize, deserialize, generate 5 more - matches generating 10 from original
+- PRNG fork: fork at step 5, advance both forks 5 steps - sequences differ from each other and from un-forked sequence
 - `nextInt(rng, 0, 0)` always returns 0
 - `nextInt(rng, 5, 5)` always returns 5
 - `nextInt(rng, 0, 1)` returns both 0 and 1 over 100 calls
-- Zobrist: compute full hash, move token A→B, verify incremental hash matches recomputed full hash
+- `nextInt` invalid inputs (`min > max`, non-safe bounds, overflowed range) throw `RangeError`
+- Zobrist: compute full hash, move token A->B with slot change, verify incremental hash matches recomputed full hash
 - Zobrist: set variable from 3 to 5, verify incremental hash matches recomputed full hash
-- Zobrist: two different paths to same state produce same hash (move A→B→C vs move A→C then token appears)
+- Zobrist: same token multiset but different zone order yields different hash
+- Zobrist: two same-type tokens in same zone produce stable non-cancelling hash contribution (distinct token IDs)
+- Zobrist: changing activePlayer/phase/actionUsage changes hash and incremental update matches recompute
+- Zobrist: two different paths to same state produce same hash
 - Zobrist: different states produce different hashes (with high probability)
 - Zobrist table for same GameDef always produces identical table
+- Zobrist table is identical for semantically equal GameDefs with different declaration order (canonicalization test)
 
 ### Integration Tests
 
-- Full determinism test: create GameDef, init state with seed 42, apply 20 random moves using PRNG for agent choices, record state hash at each step. Repeat — hashes match at every step.
+- Full determinism test: create GameDef, init state with seed 42, apply 20 random moves using PRNG for agent choices, record state hash at each step. Repeat - hashes match at every step.
 
 ### Property Tests
 
 - For any seed and any `(min, max)` where `min <= max`, `nextInt` returns value in `[min, max]`
-- For any seed, `deserializeRng(serializeRng(createRng(seed)))` produces identical sequence as `createRng(seed)`
+- For any seed, `deserialize(serialize(createRng(seed)))` produces identical sequence as `createRng(seed)`
 - For any valid GameState, `computeFullHash(table, state)` is deterministic (call twice, same result)
 - For 1000 random `nextInt(rng, 0, 9)` calls, each value 0-9 appears at least 50 times (rough uniformity check)
 
 ### Golden Tests
 
-- Seed 42n → first 5 `nextInt(rng, 0, 999)` values match hardcoded expected array
-- Known GameDef + known state → expected Zobrist hash value
+- Seed 42n -> first 5 `nextInt(rng, 0, 999)` values match hardcoded expected array
+- Known GameDef + known state -> expected Zobrist hash value
 
 ## Acceptance Criteria
 
@@ -239,6 +280,7 @@ Provide utility functions / documentation for enforcing determinism across the k
 - [ ] `nextInt` produces uniform distribution (no modulo bias)
 - [ ] Zobrist incremental updates match full recomputation
 - [ ] Zobrist hash is deterministic for same GameDef + same state
+- [ ] Zobrist hash includes token identity + zone order + turn/phase/action metadata
 - [ ] All forbidden APIs (`Math.random`, `Date.now`, etc.) are absent from this module
 - [ ] Test helpers (`assertDeterministic`, `assertRngRoundTrip`) are exported and documented
 - [ ] BigInt serialization to/from JSON works (hex string format)
@@ -246,12 +288,12 @@ Provide utility functions / documentation for enforcing determinism across the k
 ## Files to Create/Modify
 
 ```
-src/kernel/prng.ts               # NEW — PRNG implementation (PCG-DXSM or xoshiro256**)
-src/kernel/zobrist.ts            # NEW — Zobrist hashing implementation
-src/kernel/determinism.ts        # NEW — determinism enforcement utilities and test helpers
-src/kernel/index.ts              # MODIFY — re-export PRNG and Zobrist APIs
-test/unit/prng.test.ts           # NEW — PRNG unit tests
-test/unit/zobrist.test.ts        # NEW — Zobrist hashing tests
-test/unit/determinism.test.ts    # NEW — determinism helper tests
-test/integration/determinism-full.test.ts  # NEW — full determinism integration test
+src/kernel/prng.ts               # NEW - PRNG implementation (PCG-DXSM or xoshiro256**)
+src/kernel/zobrist.ts            # NEW - Zobrist hashing implementation
+src/kernel/determinism.ts        # NEW - determinism enforcement utilities and test helpers
+src/kernel/index.ts              # MODIFY - re-export PRNG and Zobrist APIs
+test/unit/prng.test.ts           # NEW - PRNG unit tests
+test/unit/zobrist.test.ts        # NEW - Zobrist hashing tests
+test/unit/determinism.test.ts    # NEW - determinism helper tests
+test/integration/determinism-full.test.ts  # NEW - full determinism integration test
 ```

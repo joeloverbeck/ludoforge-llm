@@ -177,7 +177,7 @@ All type definitions live in Spec 02. Other specs import and use these types but
 | Producer | Consumer | API |
 |----------|----------|-----|
 | Spec 03 | Spec 05, 06 | `createRng`, `nextInt`, `serialize`, `deserialize`, `fork` |
-| Spec 03 | Spec 06 | Zobrist hash: `initHash`, `updateHash` |
+| Spec 03 | Spec 06 | Zobrist hash: `createZobristTable`, `zobristKey`, `computeFullHash`, `updateHashFeatureChange`, `updateHashTokenPlacement` |
 | Spec 04 | Spec 05, 06, 07 | `evalCondition`, `evalValue`, `evalQuery` |
 | Spec 05 | Spec 06 | `applyEffect`, `applyEffects` |
 | Spec 06 | Spec 09, 10 | `initialState(def, seed, playerCount?)`, `legalMoves`, `applyMove` (returns `{ state, triggerFirings }`), `terminalResult` |
@@ -203,6 +203,7 @@ All type definitions live in Spec 02. Other specs import and use these types but
 |------|----------|------------|------------|----------------|
 | PCG-DXSM TypeScript implementation complexity | Medium | Medium | Fall back to xoshiro256** which has simpler implementation | 03 |
 | 64-bit Zobrist hashing in JS (no native 64-bit ints) | High | High | Use BigInt or two 32-bit integers; benchmark for performance impact | 03, 06 |
+| Incomplete state hash coverage (phase/turn/order/action usage omitted) causing false loop/stall signals | High | Medium | Spec 03 requires hash coverage for all legal-move-relevant state and canonical feature encoding | 03, 06, 10, 11 |
 | forEach/query interaction edge cases | Medium | Medium | Extensive property testing; fuzzing with random GameDefs | 04, 05, 06 |
 | YAML 1.2 parser edge cases with LLM output | Medium | High | Build comprehensive linter for 20 known failure modes; golden tests from real LLM output | 08a |
 | Compiler diagnostic quality insufficient for LLM self-correction | High | Medium | Test diagnostics against real LLM error patterns; iterate on suggestion quality | 08b |

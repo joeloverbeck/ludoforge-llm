@@ -8,6 +8,7 @@ import type {
   Reference,
   ValueExpr,
 } from './types.js';
+import { buildAdjacencyGraph, validateAdjacency } from './spatial.js';
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
 
@@ -696,26 +697,8 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
     });
   });
 
-  def.zones.forEach((zone, zoneIndex) => {
-    zone.adjacentTo?.forEach((adjacentZoneId, adjacentIndex) => {
-      const adjacentZone = def.zones.find((entry) => entry.id === adjacentZoneId);
-      if (!adjacentZone) {
-        return;
-      }
-
-      if (adjacentZone.adjacentTo?.includes(zone.id)) {
-        return;
-      }
-
-      diagnostics.push({
-        code: 'ZONE_ADJACENCY_ASYMMETRIC',
-        path: `zones[${zoneIndex}].adjacentTo[${adjacentIndex}]`,
-        severity: 'warning',
-        message: `Zone "${zone.id}" lists "${adjacentZoneId}" in adjacentTo, but the reverse edge is missing.`,
-        suggestion: `Add "${zone.id}" to "${adjacentZoneId}" adjacentTo for a symmetric graph.`,
-      });
-    });
-  });
+  const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  diagnostics.push(...validateAdjacency(adjacencyGraph, def.zones));
 
   def.turnStructure.phases.forEach((phase, phaseIndex) => {
     phase.onEnter?.forEach((effect, effectIndex) => {

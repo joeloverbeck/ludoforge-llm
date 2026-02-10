@@ -271,7 +271,7 @@ describe('validateGameDef constraints and warnings', () => {
     );
   });
 
-  it('warns on asymmetric adjacency declarations', () => {
+  it('warns on asymmetric adjacency declarations with spatial diagnostics', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
@@ -282,14 +282,27 @@ describe('validateGameDef constraints and warnings', () => {
     } as unknown as GameDef;
 
     const diagnostics = validateGameDef(def);
-    assert.ok(
-      diagnostics.some(
-        (diag) =>
-          diag.code === 'ZONE_ADJACENCY_ASYMMETRIC' &&
-          diag.path === 'zones[0].adjacentTo[0]' &&
-          diag.severity === 'warning',
-      ),
-    );
+    const diagnostic = diagnostics.find((diag) => diag.code === 'SPATIAL_ASYMMETRIC_EDGE_NORMALIZED');
+    assert.ok(diagnostic);
+    assert.equal(diagnostic.path, 'zones[0].adjacentTo[0]');
+    assert.equal(diagnostic.severity, 'warning');
+    assert.equal(typeof diagnostic.message, 'string');
+    assert.equal(typeof diagnostic.suggestion, 'string');
+  });
+
+  it('reports dangling adjacency references with spatial diagnostics', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [{ ...base.zones[0], adjacentTo: ['missing:none'] }, base.zones[1]],
+    } as unknown as GameDef;
+
+    const diagnostic = validateGameDef(def).find((diag) => diag.code === 'SPATIAL_DANGLING_ZONE_REF');
+    assert.ok(diagnostic);
+    assert.equal(diagnostic.path, 'zones[0].adjacentTo[0]');
+    assert.equal(diagnostic.severity, 'error');
+    assert.equal(typeof diagnostic.message, 'string');
+    assert.equal(typeof diagnostic.suggestion, 'string');
   });
 
   it('reports ownership mismatch for :none selector targeting player-owned zone', () => {

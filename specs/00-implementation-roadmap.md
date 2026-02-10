@@ -79,10 +79,12 @@ This is the longest dependency chain and determines minimum time-to-MVP.
 
 **Verification criteria**:
 - `initialState(gameDef, seed, playerCount?)` produces valid GameState
-- `legalMoves(gameDef, state)` returns enumerable moves
+- `legalMoves(gameDef, state)` returns enumerable moves in deterministic/stable order
 - `applyMove(gameDef, state, move)` returns `{ state, triggerFirings }` with updated Zobrist hash in `state`
 - Same seed + same moves = identical state hashes at every step
 - Trigger chains capped at maxTriggerDepth
+- Trigger/event cascade order is deterministic and reproducible
+- Empty decision points auto-advance to next decision state or fail with deterministic stall diagnostic
 - `terminalResult` detects win/loss/draw conditions
 
 **Integration points**:
@@ -91,6 +93,7 @@ This is the longest dependency chain and determines minimum time-to-MVP.
 - Spec 04's evaluators are called by Spec 05 (forEach queries, if conditions) and Spec 06 (preconditions, end conditions)
 - Spec 04 must enforce deterministic query ordering, scalar-selector cardinality checks, and query boundedness guards to prevent downstream combinatorial blowups in Specs 05-06
 - Spec 05's effect interpreter is called by Spec 06 (move application, trigger dispatch)
+- Spec 06 owns deterministic decision progression semantics (ordering, no-legal-move progression, stall guards) consumed by Specs 09-10
 
 ### Milestone 2: Spatial + Compilation
 **Specs**: 07, 08a, 08b

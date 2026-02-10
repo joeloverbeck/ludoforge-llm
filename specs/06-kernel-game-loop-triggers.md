@@ -11,6 +11,8 @@
 
 Implement the game loop — the orchestrator that ties together state initialization, legal move enumeration, move application, trigger dispatch, and terminal detection. This is the heart of the kernel: it initializes games from GameDefs, tells agents what moves are available, applies chosen moves (costs then effects), fires triggered effects with depth limiting, detects game-ending conditions, and advances phases/turns. All operations are deterministic and produce incrementally updated Zobrist hashes.
 
+This spec also defines deterministic ordering guarantees (move order, trigger order, event cascade order), atomicity guarantees (apply or fail with no state mutation), and a no-legal-move policy so simulations cannot deadlock on empty decision points.
+
 ## Scope
 
 ### In Scope
@@ -22,6 +24,8 @@ Implement the game loop — the orchestrator that ties together state initializa
 - Phase/turn advancement logic
 - Zobrist hash maintenance (incremental updates after every state change)
 - Action usage tracking (per-turn, per-phase, per-game limits)
+- Deterministic ordering guarantees for legal move enumeration and trigger/event processing
+- No-legal-move progression policy (auto-advance with stall guard)
 
 ### Out of Scope
 - Simulation loop (Spec 10 — calls these functions in a loop with agents)
@@ -49,7 +53,7 @@ function terminalResult(def: GameDef, state: GameState): TerminalResult | null;
 
 interface ApplyMoveResult {
   readonly state: GameState;
-  readonly triggerFirings: readonly TriggerFiring[];
+  readonly triggerFirings: readonly TriggerLogEntry[];
 }
 ```
 
@@ -64,8 +68,8 @@ function dispatchTriggers(
   event: TriggerEvent,
   depth: number,
   maxDepth: number,
-  triggerLog: TriggerFiring[]
-): { state: GameState; rng: Rng; triggerLog: TriggerFiring[] };
+  triggerLog: TriggerLogEntry[]
+): { state: GameState; rng: Rng; triggerLog: TriggerLogEntry[] };
 
 // Advance to next phase or next turn
 function advancePhase(
@@ -89,6 +93,27 @@ function enumerateParamDomains(
   state: GameState,
   actorPlayer: PlayerId
 ): readonly Record<string, unknown>[];
+
+// Advance state until next decision point (or terminal), skipping empty phases/turns
+function advanceToDecisionPoint(
+  def: GameDef,
+  state: GameState
+): GameState;
+
+interface TriggerFiring {
+  readonly kind: 'fired';
+  readonly triggerId: string;
+  readonly event: TriggerEvent;
+  readonly depth: number;
+}
+
+interface TriggerTruncated {
+  readonly kind: 'truncated';
+  readonly event: TriggerEvent;
+  readonly depth: number;
+}
+
+type TriggerLogEntry = TriggerFiring | TriggerTruncated;
 ```
 
 ## Implementation Requirements
@@ -109,9 +134,9 @@ function enumerateParamDomains(
 10. Set `turnCount` to 0
 11. Initialize `actionUsage` as empty records
 12. Apply `def.setup` effects via `applyEffects` (this populates zones with initial tokens, etc.)
-13. Compute initial Zobrist hash via `computeFullHash`
+13. Dispatch `turnStart` trigger for first player
 14. Dispatch `phaseEnter` trigger for initial phase
-15. Dispatch `turnStart` trigger for first player
+15. Compute initial Zobrist hash via `computeFullHash` after setup + initial triggers are fully applied
 16. Return complete GameState
 
 ### legalMoves(def, state)
@@ -132,43 +157,62 @@ For each action in `def.actions`:
    - If `action.pre` is not null, evaluate via `evalCondition`
    - Include only combinations where precondition holds (or pre is null)
 6. **Build Move**: For each valid combination, create `Move { actionId, params }`
+7. **Deterministic ordering**: Return moves in stable order:
+   - Actions in `def.actions` definition order
+   - Parameter bindings in deterministic product order (parameter declaration order, each domain's deterministic query order from Spec 04)
+   - Canonical parameter key order in serialized move payload
 
 **Performance note**: If cartesian product is large, evaluate preconditions lazily (filter during generation, not after full enumeration).
 
 ### applyMove(def, state, move)
 
-1. **Validate**: Confirm move is in `legalMoves(def, state)`. If not, throw descriptive error.
+1. **Validate**: Confirm move is legal using `validateMove` (equivalent to membership in `legalMoves`, but without requiring full materialization when avoidable). If not, throw descriptive error.
 2. **Look up action**: Find `ActionDef` by `move.actionId`
-3. **Build context**: Create EffectContext with move params as bindings
-4. **Apply costs**: `applyEffects(action.cost, ctx)` — deduct resources
-5. **Apply effects**: `applyEffects(action.effects, ctx)` — execute main effects
-6. **Update action usage**: Increment `actionUsage[action.id]` counters
-7. **Dispatch trigger**: `dispatchTriggers(def, state, rng, { type: 'actionResolved', action: move.actionId }, 0, maxDepth, [])`
-8. **Update Zobrist hash**: Incrementally update hash based on all state deltas (variable changes, token movements)
-9. **Check phase advancement**: If action indicates end-of-phase, advance phase
-10. **Check turn advancement**: If all phases complete, advance turn (next player, reset per-turn usage, dispatch turnEnd/turnStart triggers)
+3. **Atomic execution boundary**: Start from immutable input state; all updates are applied to derived snapshots only. On any error, return no state mutation.
+4. **Build context**: Create EffectContext with move params as bindings
+5. **Apply costs**: `applyEffects(action.cost, ctx)` — deduct resources
+6. **Apply effects**: `applyEffects(action.effects, ctx)` — execute main effects
+7. **Update action usage**: Increment `actionUsage[action.id]` counters
+8. **Dispatch trigger**: `dispatchTriggers(def, state, rng, { type: 'actionResolved', action: move.actionId }, 0, maxDepth, [])`
+9. **Advance progression**: Apply phase/turn transitions, then `advanceToDecisionPoint` to skip empty phases/turns deterministically
+10. **Update Zobrist hash**: Maintain incrementally across all deltas; optional debug assertion compares against `computeFullHash`
 11. Return `{ state: newState, triggerFirings }`
+
+**No-legal-move policy**:
+- The kernel must not leave the game at a non-terminal state with zero legal moves and no automatic progression path.
+- `advanceToDecisionPoint` repeatedly advances phase/turn when `legalMoves(def, state).length === 0` and game is non-terminal.
+- Guard with `maxAutoAdvancesPerMove = (playerCount * phaseCount) + 1`; if exceeded, throw deterministic `STALL_LOOP_DETECTED` error.
 
 ### dispatchTriggers(def, state, rng, event, depth, maxDepth, triggerLog)
 
-1. If `depth >= maxDepth`: return state as-is. Log truncation: `[TRUNCATED at depth {depth}]`. No partial effects.
+`depth` semantics:
+- Root event starts at `depth = 0` and is always evaluated.
+- A recursively emitted event is processed at `depth + 1`.
+- If processing would exceed `maxDepth`, that emitted event is not processed and a truncation log entry is recorded.
+
+1. If processing event would exceed `maxDepth`: return state as-is and append `TriggerTruncated`. No partial effects.
 2. For each trigger in `def.triggers`:
    - Match event type: does `trigger.event` match the dispatched event?
    - If trigger has `match` condition: evaluate against current state. Skip if false.
    - If trigger has `when` condition: evaluate against current state. Skip if false.
 3. For each matched trigger (in definition order):
    - Apply `trigger.effects` via `applyEffects`
-   - Record `TriggerFiring { triggerId, event, depth }`
+   - Record `TriggerFiring { kind: 'fired', triggerId, event, depth }`
    - Check if trigger effects produce new events (e.g., `tokenEntered` from moveToken)
    - Recursively dispatch new events at `depth + 1`
 4. Return accumulated state + rng + triggerLog
 
 **Cascade detection**: When effects move tokens, this may produce `tokenEntered` events. These are dispatched recursively at `depth + 1`. The depth limit prevents infinite cascades.
 
+**Event ordering contract**:
+- Trigger matching order is `def.triggers` definition order.
+- Within a trigger, emitted events are dispatched in emission order.
+- Cascade traversal is depth-first and deterministic (stable across runs with same seed and move sequence).
+
 **Truncation behavior**: When depth limit is reached:
 - State is returned as-is at truncation point
 - No partial effects from the truncated trigger
-- Full chain is logged in triggerLog
+- Full chain is logged in `triggerLog` using typed entries (`fired`/`truncated`)
 - The `TRIGGER_DEPTH_EXCEEDED` degeneracy flag is detectable from the trace
 
 ### terminalResult(def, state)
@@ -202,6 +246,10 @@ For each action in `def.actions`:
 6. Dispatch `turnStart` trigger for new active player
 7. Dispatch `phaseEnter` trigger for first phase
 
+**Ordering consistency rule**:
+- At every new turn boundary (including initial state), trigger order is `turnStart` then `phaseEnter(firstPhase)`.
+- At intra-turn phase changes, order is `phaseExit(old)` then `phaseEnter(new)`.
+
 ## Invariants
 
 1. `initialState` produces deterministic state for any given seed
@@ -211,7 +259,7 @@ For each action in `def.actions`:
 5. `applyMove` on an illegal move throws descriptive error with move details and reason
 6. Trigger depth never exceeds `maxTriggerDepth` — truncation, not crash
 7. Trigger truncation returns state as-is at truncation point (no partial effects from truncated trigger)
-8. Trigger truncation logs full chain including `[TRUNCATED at depth N]`
+8. Trigger truncation logs full chain with typed `TriggerTruncated` entries
 9. Same seed + same move sequence = identical `stateHash` at every step (determinism)
 10. `terminalResult` evaluates end conditions in definition order (first match wins)
 11. Zobrist hash is updated incrementally after every state change
@@ -219,6 +267,10 @@ For each action in `def.actions`:
 13. Active player advances according to `turnStructure.activePlayerOrder`
 14. Per-turn action usage counters reset at turn boundaries
 15. Per-phase action usage counters reset at phase boundaries
+16. `legalMoves` output ordering is stable for identical state
+17. Trigger/event processing order is deterministic and stable
+18. `applyMove` is atomic: either full success or no state mutation
+19. Non-terminal states eventually reach a decision point via `advanceToDecisionPoint` or throw `STALL_LOOP_DETECTED`
 
 ## Required Tests
 
@@ -239,6 +291,7 @@ For each action in `def.actions`:
 - Param domains enumerate correctly: tokensInZone returns right tokens, intsInRange returns right range
 - Action limits respected: "once per turn" action already used → not in legal moves
 - Empty legal moves: all actions preconditions fail → empty array
+- Stable ordering: same state yields byte-identical move list order across runs
 
 **applyMove**:
 - Cost deducted: action costs 3 money, player had 5 → now has 2
@@ -253,8 +306,10 @@ For each action in `def.actions`:
 - Trigger with `match` condition: fires only on matching event details
 - Non-matching trigger does not fire
 - Cascading triggers: trigger A fires, produces event, trigger B fires (depth 2)
-- Depth limit reached: state preserved, chain logged with TRUNCATED marker
+- Depth limit reached: state preserved, chain logged with `TriggerTruncated` entry
 - Depth limit at 1: only first-level triggers fire
+- Truncation log entry uses typed `TriggerTruncated` metadata (event + depth)
+- Emitted events dispatch in deterministic depth-first order
 
 **terminalResult**:
 - Win condition met → returns win result with correct player
@@ -270,6 +325,9 @@ For each action in `def.actions`:
 - Per-phase usage counters reset on new phase
 - Round-robin: player 0 → 1 → 2 → 0
 - Phase triggers fire: phaseExit then phaseEnter
+- Initial trigger order is turnStart then phaseEnter
+- No-legal-move state auto-advances deterministically to next decision point
+- Stall guard throws `STALL_LOOP_DETECTED` when auto-advance bound is exceeded
 
 ### Integration Tests
 
@@ -292,6 +350,7 @@ For each action in `def.actions`:
 ### Determinism Tests
 
 - Same seed + 50 random moves (chosen by index into legalMoves using PRNG) = identical state hash sequence on two independent runs
+- Same seed + same move sequence = identical `triggerFirings` entries (including truncation entries)
 
 ## Acceptance Criteria
 
@@ -305,6 +364,9 @@ For each action in `def.actions`:
 - [ ] Action usage limits are tracked and enforced per-turn/per-phase/per-game
 - [ ] Same seed + same moves = identical state hash at every step
 - [ ] Random play for 1000 turns on any valid GameDef never crashes
+- [ ] `legalMoves` ordering is deterministic and stable
+- [ ] Trigger/event cascade order is deterministic and documented
+- [ ] Empty decision points auto-advance safely or fail with deterministic stall error
 
 ## Files to Create/Modify
 

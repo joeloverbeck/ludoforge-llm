@@ -1,3 +1,1 @@
-// Module: cnl
-// Implementation added by subsequent specs.
-export {};
+export * from './expand-macros.js';

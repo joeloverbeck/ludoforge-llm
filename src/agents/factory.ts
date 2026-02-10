@@ -1,4 +1,5 @@
 import type { Agent } from '../kernel/types.js';
+import { RandomAgent } from './random-agent.js';
 
 export type AgentType = 'random' | 'greedy';
 
@@ -11,7 +12,7 @@ const createUnimplementedAgent = (agentName: string): Agent => ({
 export const createAgent = (type: AgentType): Agent => {
   switch (type) {
     case 'random':
-      return createUnimplementedAgent('RandomAgent');
+      return new RandomAgent();
     case 'greedy':
       return createUnimplementedAgent('GreedyAgent');
     default:

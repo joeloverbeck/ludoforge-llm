@@ -2,11 +2,54 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { createAgent, parseAgentSpec } from '../../../src/agents/index.js';
+import { asActionId, asPhaseId, asPlayerId, createRng, type GameDef, type GameState, type Move } from '../../../src/kernel/index.js';
+
+const defStub: GameDef = {
+  metadata: { id: 'agents-factory', players: { min: 2, max: 2 } },
+  constants: {},
+  globalVars: [],
+  perPlayerVars: [],
+  zones: [],
+  tokenTypes: [],
+  setup: [],
+  turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+  actions: [],
+  triggers: [],
+  endConditions: [],
+};
+
+const stateStub: GameState = {
+  globalVars: {},
+  perPlayerVars: {},
+  playerCount: 2,
+  zones: {},
+  nextTokenOrdinal: 0,
+  currentPhase: asPhaseId('main'),
+  activePlayer: asPlayerId(0),
+  turnCount: 0,
+  rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
+  stateHash: 0n,
+  actionUsage: {},
+};
+
+const moveStub: Move = { actionId: asActionId('only'), params: {} };
 
 describe('agents factory API shape', () => {
   it("createAgent('random') returns an object with chooseMove", () => {
     const agent = createAgent('random');
     assert.equal(typeof agent.chooseMove, 'function');
+  });
+
+  it("createAgent('random') chooseMove returns the only legal move", () => {
+    const agent = createAgent('random');
+    const result = agent.chooseMove({
+      def: defStub,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: [moveStub],
+      rng: createRng(1n),
+    });
+    assert.deepEqual(result.move, moveStub);
   });
 
   it("createAgent('greedy') returns an object with chooseMove", () => {

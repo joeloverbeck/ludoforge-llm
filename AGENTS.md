@@ -22,6 +22,7 @@ Primary workflow commands:
 - `npm run build`: compile TypeScript with `tsc`.
 - `npm run clean`: remove `dist/`.
 - `npm run lint`: run ESLint.
+- `npm run lint:fix`: run ESLint with autofix.
 - `npm run typecheck`: run `tsc --noEmit`.
 - `npm test`: run unit + integration tests (via compiled output in `dist/`).
 - `npm run test:all`: run unit + integration + e2e tests.
@@ -53,6 +54,7 @@ For docs/spec/ticket changes:
 For code changes:
 - place tests in the relevant `test/` domain (`unit`, `integration`, or `e2e`).
 - run targeted tests when possible (example: `node --test dist/test/unit/<file>.test.js`).
+- if running `node --test` directly, run `npm run build` first so `dist/` is up to date.
 - run at least `npm test` before finalizing; use `npm run test:all` when behavior spans CLI/pipeline flows.
 
 ## Commit & Pull Request Guidelines
@@ -88,5 +90,6 @@ When asked to archive a ticket, spec, or brainstorming document:
    - `archive/specs/` - Design specifications
    - `archive/brainstorming/` - Brainstorming documents
    - `archive/reports/` - Reports
+   - If the destination archive subfolder does not exist yet, create it first.
 
 4. **Delete the original** from `tickets/`, `specs/`, `brainstorming/`, or `reports/`

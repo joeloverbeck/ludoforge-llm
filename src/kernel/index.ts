@@ -1,6 +1,7 @@
 export * from './branded.js';
 export * from './determinism.js';
 export * from './diagnostics.js';
+export * from './eval-condition.js';
 export * from './eval-context.js';
 export * from './eval-error.js';
 export * from './eval-query.js';

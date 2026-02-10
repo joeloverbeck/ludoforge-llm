@@ -13,7 +13,7 @@ This is the **full programming spec** for a minimal, flexible system where:
 - **Deterministic**: same seed + same actions = same result.
 - **Enumerable**: legal moves must be listable (no “free text” moves).
 - **Finite**: all choices are bounded (choose tokens from a zone, ints from a range, enums).
-- **Bounded iteration only**: `forEach` over finite collections, `repeat N` with compile-time bounds, no general recursion, trigger chains capped at depth K (default 5). Provably terminating — equivalent to primitive recursive functions.
+- **Bounded iteration only**: `forEach` over finite collections, `repeat N` with compile-time bounds, no general recursion, trigger chains capped at depth K (default 5). Provably terminating — restricted to primitive recursive patterns (a strict subset: only iteration over known-size collections, not all bounded loops). Note: spatial traversal queries (`connectedZones`) require explicit depth bounds to maintain this guarantee.
 - **Small instruction set**: mechanics emerge from composition, not bespoke primitives.
 
 ## 1) Artifacts (inputs/outputs)
@@ -29,6 +29,8 @@ A **structured DSL embedded in Markdown with fenced YAML blocks**. Not "Controll
 - **Section-order-independent parsing**: identify blocks by keys, not position
 - Build a **spec linter** for the 20 most common LLM YAML mistakes (unquoted colons, indentation errors, mixed escape contexts)
 - Design **error messages that LLMs can use for self-correction** (machine-readable diagnostics, not just human-readable)
+
+**Parser recommendation**: Use the [`yaml`](https://github.com/eemeli/yaml) npm package (eemeli/yaml), NOT `js-yaml`. Most YAML parsers in the npm ecosystem still implement YAML 1.1 behavior by default. `js-yaml`'s "strict mode" doesn't fully implement YAML 1.2 schema-specific tag resolution restrictions. The `eemeli/yaml` package is the only widely-used Node.js library with true YAML 1.2 compliance, including correct `core` schema handling (no implicit boolean coercion of bare `yes`/`no`/`on`/`off`).
 
 **Required sections**
 - Metadata
@@ -134,6 +136,12 @@ interface MechanicBundle {
 **Starter bundle library** (~20-30 bundles):
 deck-building core, worker placement, auction (ascending), market row, area majority scoring, engine building (trigger chain), push-your-luck loop, resource conversion, set collection, tech tree, open draft, hand management, variable powers, route building (spatial), territory control (spatial).
 
+**Versioning and compatibility** (post-MVP):
+- Bundle versions use semver. Breaking changes (renamed actions, changed parameter types) require major version bumps.
+- Cross-bundle composition: when mechanic A from bundle 1 uses mechanic B from bundle 2, the compiler resolves dependencies via `requires` declarations and validates that connected effects/triggers are type-compatible.
+- Namespace collision resolution: bundle IDs prefix all names (`bundleId.actionId`). If two bundles define the same name after prefixing (unlikely but possible with nested requires), the compiler emits a `NamespaceCollision` diagnostic and rejects the composition.
+- **Note**: This mechanic bundle approach is novel — no published system uses composable mechanic patches for LLM-driven game evolution. Ludii's ludeme composition is the closest analog but is designed for human authoring, not LLM mutation.
+
 **Mutation operators** (for LLM evolution):
 - Bundle swap: replace one bundle with another
 - Parameter tweak: adjust constants within ranges
@@ -235,6 +243,11 @@ Minimal event model:
 - `tokenEntered(zoneId, tokenId)` — for spatial/zone-based triggers
 
 **Trigger depth limit**: `maxTriggerDepth` (default: 5) in GameDef metadata. Cascading triggers (trigger A fires trigger B fires trigger C...) are capped at this depth. Exceeding the limit raises a runtime diagnostic, not a crash — the chain is truncated and logged.
+
+**Boundary behavior when depth is exceeded**:
+- The state is returned as-is at the point of truncation (no partial effects from the truncated trigger)
+- The diagnostic includes the **full trigger chain** that was attempted (e.g., `tokenEntered:market → restock → tokenEntered:deck → ... [TRUNCATED at depth 5]`)
+- The `EvalReport` flags games that frequently hit depth limits (`TRIGGER_DEPTH_EXCEEDED` degeneracy flag) — this signals either a design flaw in the game or an insufficient depth limit
 
 API:
 - `dispatch(event, ctx): void`
@@ -353,6 +366,8 @@ TRIVIAL_WIN (wins in < K turns)
 
 STALL (no meaningful state change for N turns)
 
+TRIGGER_DEPTH_EXCEEDED (trigger chain hit maxTriggerDepth limit)
+
 Outputs:
 
 EvalReport { metrics, flags, highlights }
@@ -443,7 +458,7 @@ type Effect =
   | { if: { when: Condition, then: Effect[], else?: Effect[] } }
   | { forEach: { bind: string, over: OptionsQuery, effects: Effect[], limit?: number } }
   //   forEach iterates over a finite, bounded collection. Default limit: 100.
-  //   Provably terminating: equivalent to loop unrolling over a known-size collection.
+  //   Provably terminating: restricted to primitive recursive patterns (iteration over known-size collections).
 
   // Named intermediates (readability, deduplication)
   | { let: { bind: string, value: ValueExpr, in: Effect[] } }
@@ -507,11 +522,26 @@ Every choose must have enumerable options.
 Any macro sugar is expanded at compile-time into kernel primitives.
 
 **LLM-friendly diagnostics** — the compiler's error messages are the critical feedback signal for the LLM evolution loop. They must be machine-readable and actionable:
-- Not just `"error at line 5"` but `"action 'buy' references zone 'shop' which does not exist; available zones are: deck, hand, market"`
+- Not just `"error at line 5"` but `"action 'buy' references zone 'shop' which does not exist; did you mean 'market'? Available zones: deck, hand, market"`
 - Include the **path** to the error (section, action, effect index)
-- Include **available alternatives** when a reference fails
+- Include **available alternatives** when a reference fails, with fuzzy-match suggestions
 - Include **type mismatch details** when expressions don't typecheck
+- Include **context snippets**: 2-3 lines of the original spec around the error location
 - Format as structured JSON for programmatic consumption
+
+**Structured diagnostic format**:
+```ts
+interface Diagnostic {
+  path: string;          // e.g. "actions[2].effects[0].moveToken.from"
+  severity: "error" | "warning" | "info";
+  message: string;       // human-readable description
+  suggestion?: string;   // concrete fix suggestion (e.g. "replace 'shop' with 'market'")
+  contextSnippet?: string; // 2-3 lines of spec around the error
+  alternatives?: string[]; // valid options when a reference fails
+}
+```
+
+**RAG-assisted correction** (post-MVP): Store historical error→fix pairs from evolution runs. When the same error pattern recurs, retrieve the previously successful fix and include it in the diagnostic's `suggestion` field. This retrieval-augmented approach to error correction has shown high success rates for syntax errors in code generation (AutoDebugger, 2023).
 
 If something is not representable, compiler emits a **MissingCapability** diagnostic with:
 - where it appears (section path)
@@ -578,6 +608,10 @@ These are deferred — not needed for MVP spatial support:
 - Rotation / symmetry detection
 - Complex geometry (triangular, star graphs)
 - Distance / unbounded pathfinding as kernel primitives (use bounded `forEach` over adjacency instead)
+- **Line-of-sight**: Not supported (common in wargames, dungeon crawlers — would require ray-casting or visibility graphs)
+- **Continuous space**: Model is discrete zones only (no coordinate-based movement or distance calculations)
+- **Multi-level boards**: Vertical adjacency not addressed (Z-axis stacking, 3D board layouts)
+- **Edge weights**: No weighted edges for movement cost differentiation (all adjacencies are uniform cost)
 
 ---
 
@@ -593,13 +627,31 @@ Design for **MAP-Elites** (quality-diversity algorithm) from the start. Pure opt
 | Average branching factor | Mean legal moves per turn | 1–50 |
 | Mechanic count | Number of distinct mechanics used | 1–15 |
 
+**Behavior characterization interface**: Each game maps to an archive cell via:
+```ts
+type BehaviorCharacterization = {
+  avgGameLength: number;       // discretized into bins
+  avgBranchingFactor: number;  // discretized into bins
+  mechanicCount: number;       // integer count
+};
+```
+
+**Enhancement: CMA-ME** (Covariance Matrix Adaptation MAP-Elites, Fontaine et al. GECCO 2020): For continuous behavior spaces, CMA-ME doubles standard MAP-Elites performance by using covariance matrix adaptation to generate solutions that both improve quality and explore new archive cells. Consider CMA-ME when behavior dimensions are continuous-valued (as `avgGameLength` and `avgBranchingFactor` are).
+
+**Secondary diversity objective**: Complement MAP-Elites with novelty search — penalize games whose behavior characterization is too similar to existing archive occupants. This pushes exploration toward under-represented regions of the design space.
+
 ### 6.2 Generate-verify-feedback cycle
 
 ```
 LLM generates game spec → compile → [errors? feed back to LLM → regenerate] → run with bots → evaluate → fitness scores → select/mutate → next generation
 ```
 
-Iterative refinement (generate → compile → feed errors back → regenerate) achieves 2–5x higher success than single-shot generation. The compiler's error messages are the critical link — invest heavily in diagnostic quality.
+Iterative refinement (generate → compile → feed errors back → regenerate) improves success rates over single-shot generation, though gains are task-dependent and subject to diminishing returns. Self-Refine (Madaan et al., 2023) reports ~20% absolute improvement on reasoning tasks; code generation studies show ~13% improvement with iterative feedback. Literature suggests 3-5 refinement iterations are typically sufficient — beyond that, returns diminish significantly. The compiler's error messages are the critical link — invest heavily in diagnostic quality.
+
+**LLM generation guardrails**:
+- **Hallucination handling**: LLM-generated board games have high error rates (~50% in Boardwalk, 2024). The compiler's constraint validation is the primary defense — validate every generated spec exhaustively before simulation.
+- **Temperature / sampling**: Document the sampling strategy for reproducible evolution runs. Use deterministic decoding (temperature=0 or fixed seed) for baseline runs; higher temperature for diversity exploration.
+- **Iteration budget**: Cap refinement at 5 iterations per generation step. If a spec doesn't compile after 5 attempts, discard and regenerate from scratch.
 
 ### 6.3 Seed population
 
@@ -637,9 +689,14 @@ Do NOT cold-start from random LLM output. Create **5–10 hand-crafted game spec
 - Action entropy (diversity of choices)
 - Balance (first-player win rate near 50%)
 - Skill gradient (random vs. greedy agent win rate difference)
-- Drama (lead changes per game)
+- Drama: `drama = count(leadChanges) / gameLengthTurns` (normalized lead changes per game)
 - Game length mean and variance
-- Player interaction frequency
+- Player interaction frequency: `interaction = count(effectsTargetingOtherPlayers) / totalEffects`
+- Replayability diversity: variance in game trajectories across different seeds (how different are successive games?)
+- Decision depth: count of turns where `legalMoves.length > 1` and choice affects game outcome
+- Dominant strategy detection: flag if a single action sequence wins >80% of games
+
+**Human evaluation gate** (post-MVP): Automated metrics miss human quality perception — a game can be balanced and diverse yet still feel boring. Plan for human evaluation of top MAP-Elites candidates. ("It might be balanced, but is it actually good?" remains an open problem in automated game design.)
 
 **Tier 3: Diversity Dimensions** (for MAP-Elites archive placement)
 - Average branching factor
@@ -655,11 +712,13 @@ Aggregate compiler diagnostics across evolution runs. Frequently-requested capab
 
 ### 6.7 Model collapse mitigation
 
-Over many generations, LLM mutations may converge to a narrow design style. Mitigations:
-- MAP-Elites maintains diversity by design
+Over many generations, LLM mutations may converge to a narrow design style (Nature, 2024: recursive training on LLM-generated data causes model collapse via a two-stage process — early tails vanish, then variance collapses). Mitigations:
+- MAP-Elites maintains diversity by design (archive structure prevents monoculture)
 - Periodically inject random restarts (new seeds from different LLM prompts)
 - Use different LLM prompting strategies for different lineages
 - Rotate fitness weight emphasis across generations
+- **Ground truth anchoring**: Always include the hand-crafted seed examples (Section 6.3) in the population — they serve as diversity anchors that prevent total collapse toward a single design idiom
+- **The generate-verify pipeline itself helps**: because each game must compile and pass hard filters, the LLM cannot drift into degenerate output patterns without being caught and corrected
 
 ### 6.8 Round-trip compilation (recommended)
 
@@ -671,10 +730,15 @@ Implement `GameDef → Game Spec` decompilation. This enables richer mutation: t
 
 ### 7.1 Seedable PRNG
 
-Use **xoshiro256\*\*** or **PCG** — NOT `Math.random()`. The PRNG must be:
+Use a well-vetted seedable PRNG — NOT `Math.random()`. Recommended options:
+- **PCG** (specifically PCG-DXSM, the 2022+ variant): Strong statistical properties, compact state, well-analyzed. Preferred choice.
+- **xoshiro256\*\***: Fast and widely used, but has a known invertible output function (O'Neill, 2018 critique) and weak low-order bits. Acceptable for game simulation (non-cryptographic) but PCG is the more modern recommendation.
+
+For game simulation, either is acceptable — the key requirements are:
 - Seedable (same seed → same sequence)
 - Serializable (RNG state stored in GameState, not just the initial seed)
 - Fast (millions of calls per second)
+- **Not cryptographic**: Neither is suitable for security-sensitive applications, but game simulation doesn't require this
 
 ### 7.2 RNG state in GameState
 
@@ -690,12 +754,33 @@ Implement XOR-based incremental state hashing for:
 - Replay verification (compare state hashes at each step)
 - Determinism testing (same seed + same moves = same hash at every step)
 
+**Implementation details**:
+- Use **64-bit** Zobrist hashing (collision probability becomes significant at ~2^32 distinct positions — sufficient for game simulation, not cryptographic)
+- **Seeding strategy**: Generate random bitstrings deterministically from a seed derived from the GameDef's feature names (token types, zones, variables). This ensures the same game definition always produces the same Zobrist table.
+- **Variable-sized zones**: Assign one random bitstring per `(tokenType, zoneId)` pair. When a token moves from zone A to zone B, XOR out the `(tokenType, A)` bitstring and XOR in the `(tokenType, B)` bitstring — O(1) incremental update.
+- **Variable state**: Also hash variable values using bitstrings per `(variableName, value)` pair. For integer variables with bounded ranges, pre-generate bitstrings for each possible value.
+
 ### 7.4 State hash in logs
 
 Every `MoveLog` entry includes the state hash. This enables:
 - O(1) determinism verification
 - Efficient trace comparison
 - Debugging divergent replays
+
+### 7.5 Determinism enforcement patterns
+
+The kernel must produce bit-identical results across platforms. These patterns are mandatory:
+
+- **Integer-only arithmetic**: The kernel MUST NOT use floating-point math. All game values are integers. Division, if needed, uses integer division (`Math.trunc(a / b)`). This avoids cross-platform IEEE 754 rounding differences.
+- **Forbidden APIs**: The following are banned in kernel code:
+  - `Math.random()` — use the seeded PRNG exclusively
+  - `Date.now()`, `performance.now()` — no time-dependent behavior
+  - `Map` / `Set` iteration (insertion order is guaranteed in ES2015+ but avoid reliance on it in critical paths — use sorted arrays for deterministic ordering)
+  - `Object.keys()` / `Object.entries()` without explicit sorting — property enumeration order is implementation-dependent for integer-like keys
+  - `JSON.stringify()` for hashing — key order is not guaranteed across engines
+- **State serialization round-trip**: Every `GameState` must satisfy `deepEquals(deserialize(serialize(state)), state)`. This is a mandatory test for every state transition.
+- **RNG state is mandatory**: The full PRNG state (not just the initial seed) is part of `GameState`. This is not optional — forking, saving, and restoring states all depend on it.
+- **TypeScript compile-time enforcement**: Use `readonly` on all GameState fields, `as const` for literal types, and branded types (e.g., `type PlayerId = number & { __brand: 'PlayerId' }`) to catch mutation and type confusion at compile time.
 
 ---
 
@@ -733,7 +818,7 @@ To run bots on LLM game specs, you must implement:
 4. **GameDef schema + semantic validation**
 
 5. **Kernel** (with expanded primitive set):
-   - state init (seedable PRNG: xoshiro256** or PCG, NOT Math.random())
+   - state init (seedable PRNG: PCG-DXSM preferred or xoshiro256**, NOT Math.random())
    - legal move enumeration (including spatial queries)
    - condition eval (including aggregates: sum, count, min, max)
    - effect apply (including `forEach`, `moveAll`, `let`, extended `PlayerSel`)
@@ -774,3 +859,49 @@ Once MVP exists, then you can add:
 - Complex geometry (triangular, star graphs) — zone adjacency handles all needed topologies
 
 Those arrive only when a promising prototype forces them, via MissingCapability aggregation.
+
+---
+
+## Appendix A) Comparison with Existing Systems
+
+LudoForge occupies a distinct niche: it is designed *for LLM generation*, while other systems were designed for human authoring or AI research.
+
+| Aspect | LudoForge | Ludii | OpenSpiel | GVGAI | PuzzleScript |
+|--------|-----------|-------|-----------|-------|--------------|
+| **Focus** | Board game evolution via LLMs | Universal game description & AI | Multi-agent AI research | Video game AI research | Puzzle game authoring |
+| **Format** | YAML DSL in Markdown | Ludeme composition (Java-like) | C++ procedural API | VGDL (text DSL) | Declarative pixel rules |
+| **Expressiveness** | Board game subset (intentionally bounded) | Universal (proven Turing-complete for combinatorial games, Soemers et al. 2024) | Universal (arbitrary C++) | Video game subset | Puzzle subset |
+| **LLM-friendly** | Yes (primary design goal) | No (complex nested syntax) | No (C++ API) | Partial (simple text format) | No (pixel-level rules) |
+| **Evolution support** | MAP-Elites (first-class) | Researched (Browne 2011, Ludi) | Not primary focus | Not primary focus | Not supported |
+| **Determinism** | Mandatory (seeded PRNG, Zobrist hashing) | Yes | Yes | Yes | Yes |
+| **Spatial model** | Board-as-graph (zone adjacency) | Rich (board/container/piece hierarchy) | Game-specific | Grid-based | Grid-based |
+
+**Key differentiator**: LudoForge optimizes for the LLM→compile→simulate→evaluate loop. YAML+Markdown is 15-56% more token-efficient than JSON and has 30-50% fewer parsing failures in LLM output. The bounded instruction set prevents LLMs from generating uncompilable or non-terminating games.
+
+---
+
+## Appendix B) Key References
+
+Papers and sources that validate the design decisions in this specification:
+
+1. **Fontaine, M. et al.** "Covariance Matrix Adaptation for the Rapid Illumination of Behavior Space" (CMA-ME). GECCO 2020. — Validates MAP-Elites approach for quality-diversity optimization.
+
+2. **Fontaine, M. & Nikolaidis, S.** "Differentiable Quality Diversity" (DQD). NeurIPS 2021. — Extensions to MAP-Elites for continuous optimization.
+
+3. **Soemers, D. et al.** "Ludii as a General Game System" (universality proof). IEEE CoG 2024. — Validates game description languages for universal game representation; zone-based models proven sufficient.
+
+4. **Lanctot, M. et al.** "OpenSpiel: A Framework for Reinforcement Learning in Games." arXiv 2019. — Reference for multi-agent game simulation architecture.
+
+5. **Shumailov, I. et al.** "AI models collapse when trained on recursively generated data." Nature 2024. — Validates model collapse concern; justifies diversity preservation in evolution pipeline.
+
+6. **Todd, G. et al.** "Boardwalk: LLM-Based Board Game Generation." arXiv 2024-2025. — Reports ~50% error rate in LLM-generated board games; validates need for compiler-driven error feedback.
+
+7. **Bjork, S. & Holopainen, J.** *Patterns in Game Design.* Charles River Media, 2004. — Source for 200+ game design patterns; basis for mechanic bundle library.
+
+8. **Madaan, A. et al.** "Self-Refine: Iterative Refinement with Self-Feedback." NeurIPS 2023. — Reports ~20% improvement from iterative refinement (not 2-5x); informs generate-verify-feedback cycle expectations.
+
+9. **Li, Z. et al.** "AutoDebugger: Automated Debugging via LLM-based Multi-Agent Synergy." arXiv 2023. — Validates RAG-based error correction approach for compiler diagnostics.
+
+10. **Ryan, C. et al.** "Grammatical Evolution." 1998. — Precedent for grammar-based evolution of game mechanics.
+
+11. **O'Neill, M.E.** "PCG: A Family of Simple Fast Space-Efficient Statistically Good Algorithms for Random Number Generation." 2014 (PCG-DXSM variant, 2022). — PRNG recommendation and xoshiro256** critique.

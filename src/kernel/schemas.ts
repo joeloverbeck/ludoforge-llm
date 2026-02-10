@@ -506,6 +506,12 @@ export const TerminalResultSchema = z.union([
   z.object({ type: z.literal('score'), ranking: z.array(PlayerScoreSchema) }).strict(),
 ]);
 
+export const SimulationStopReasonSchema = z.union([
+  z.literal('terminal'),
+  z.literal('maxTurns'),
+  z.literal('noLegalMoves'),
+]);
+
 export const GameTraceSchema = z
   .object({
     gameDefId: StringSchema,
@@ -514,6 +520,7 @@ export const GameTraceSchema = z
     finalState: GameStateSchema,
     result: TerminalResultSchema.nullable(),
     turnsCount: NumberSchema,
+    stopReason: SimulationStopReasonSchema,
   })
   .strict();
 

@@ -96,6 +96,7 @@ const validGameTrace = {
   finalState: validGameState,
   result: { type: 'draw' },
   turnsCount: 1,
+  stopReason: 'terminal',
 } as const;
 
 const validEvalReport = {
@@ -181,6 +182,27 @@ describe('top-level runtime schemas', () => {
 
     assert.equal(result.success, false);
     assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'finalState.nextTokenOrdinal'));
+  });
+
+  it('fails GameTrace missing stopReason with actionable path', () => {
+    const invalidTrace = { ...validGameTrace } as Record<string, unknown>;
+    delete invalidTrace.stopReason;
+
+    const result = GameTraceSchema.safeParse(invalidTrace);
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'stopReason'));
+  });
+
+  it('accepts all allowed stopReason literals', () => {
+    for (const stopReason of ['terminal', 'maxTurns', 'noLegalMoves'] as const) {
+      const result = GameTraceSchema.safeParse({
+        ...validGameTrace,
+        stopReason,
+      });
+
+      assert.equal(result.success, true);
+    }
   });
 
   it('fails malformed top-level EvalReport with actionable nested path', () => {

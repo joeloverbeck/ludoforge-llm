@@ -96,6 +96,7 @@ const validRuntimeTrace: GameTrace = {
   },
   result: { type: 'draw' },
   turnsCount: 1,
+  stopReason: 'terminal',
 };
 
 describe('json schema artifacts', () => {

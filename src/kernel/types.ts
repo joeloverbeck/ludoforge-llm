@@ -389,6 +389,8 @@ export type TerminalResult =
   | { readonly type: 'draw' }
   | { readonly type: 'score'; readonly ranking: readonly PlayerScore[] };
 
+export type SimulationStopReason = 'terminal' | 'maxTurns' | 'noLegalMoves';
+
 export interface GameTrace {
   readonly gameDefId: string;
   readonly seed: number;
@@ -396,6 +398,7 @@ export interface GameTrace {
   readonly finalState: GameState;
   readonly result: TerminalResult | null;
   readonly turnsCount: number;
+  readonly stopReason: SimulationStopReason;
 }
 
 export interface Metrics {

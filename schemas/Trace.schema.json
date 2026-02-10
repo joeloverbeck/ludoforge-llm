@@ -4,7 +4,7 @@
   "title": "SerializedGameTrace",
   "type": "object",
   "additionalProperties": false,
-  "required": ["gameDefId", "seed", "moves", "finalState", "result", "turnsCount"],
+  "required": ["gameDefId", "seed", "moves", "finalState", "result", "turnsCount", "stopReason"],
   "properties": {
     "gameDefId": { "type": "string" },
     "seed": { "type": "number" },
@@ -19,7 +19,10 @@
         { "type": "null" }
       ]
     },
-    "turnsCount": { "type": "number" }
+    "turnsCount": { "type": "number" },
+    "stopReason": {
+      "enum": ["terminal", "maxTurns", "noLegalMoves"]
+    }
   },
   "definitions": {
     "hexBigInt": {

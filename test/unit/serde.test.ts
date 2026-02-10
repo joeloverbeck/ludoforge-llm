@@ -48,6 +48,7 @@ const traceFixture: GameTrace = {
   finalState: gameStateFixture,
   result: { type: 'draw' },
   turnsCount: 2,
+  stopReason: 'terminal',
 };
 
 describe('kernel bigint serialization codecs', () => {
@@ -89,6 +90,7 @@ describe('kernel bigint serialization codecs', () => {
     assert.equal(deserialized.finalState.stateHash, traceFixture.finalState.stateHash);
     assert.deepEqual(deserialized.finalState.rng.state, traceFixture.finalState.rng.state);
     assert.equal(deserialized.finalState.nextTokenOrdinal, traceFixture.finalState.nextTokenOrdinal);
+    assert.equal(deserialized.stopReason, traceFixture.stopReason);
   });
 
   it('rejects invalid hex values with deterministic error text', () => {

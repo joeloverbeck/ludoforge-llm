@@ -27,5 +27,6 @@
     "actionUsage": {}
   },
   "result": { "type": "draw" },
-  "turnsCount": 1
+  "turnsCount": 1,
+  "stopReason": "terminal"
 }

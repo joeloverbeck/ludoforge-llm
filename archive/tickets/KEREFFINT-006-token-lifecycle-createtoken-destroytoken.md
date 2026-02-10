@@ -1,11 +1,17 @@
 # KEREFFINT-006 - Token Lifecycle (`createToken`, `destroyToken`)
 
-**Status**: Proposed
+**Status**: ✅ COMPLETED
 **Spec**: `specs/05-kernel-effect-interpreter.md`
 **Depends on**: `KEREFFINT-001`, `KEREFFINT-005`
 
 ## Goal
 Implement token creation and destruction with deterministic ID generation, strict location validation, and safe prop evaluation.
+
+## Reassessed Baseline (2026-02-10)
+- `src/kernel/effects.ts` currently implements: `setVar`, `addVar`, `moveToken`, `moveAll`, `draw`, `shuffle`, and `moveTokenAdjacent` stub behavior.
+- `createToken` and `destroyToken` are currently routed to `EFFECT_NOT_IMPLEMENTED`.
+- `test/unit/effects-runtime.test.ts` currently asserts that `createToken` is not implemented.
+- No dedicated lifecycle unit test file exists yet.
 
 ## Scope
 - Implement `createToken` effect:
@@ -20,10 +26,11 @@ Implement token creation and destruction with deterministic ID generation, stric
   - throw if missing or found in multiple zones
   - remove token from exactly one zone
 - Add runtime errors with clear context for invalid lifecycle operations.
+- Update runtime foundation test assumptions now that `createToken` is implemented.
 
 ## File List Expected To Touch
 - `src/kernel/effects.ts`
-- `src/kernel/effect-error.ts`
+- `test/unit/effects-runtime.test.ts`
 - `test/unit/effects-lifecycle.test.ts` (new)
 
 ## Out Of Scope
@@ -50,3 +57,10 @@ Implement token creation and destruction with deterministic ID generation, stric
 - `destroyToken` decreases total token count by exactly one.
 - Lifecycle operations do not mutate unrelated zones/variables.
 
+## Outcome
+- Completed: 2026-02-10
+- Implemented `createToken` and `destroyToken` in `src/kernel/effects.ts` with deterministic `nextTokenOrdinal`-based IDs, evaluated create props via `evalValue`, strict destroy cardinality checks, and contextual runtime errors.
+- Added `test/unit/effects-lifecycle.test.ts` covering successful create/destroy flows plus edge/error cases (invalid prop expression, missing token, duplicate token across zones).
+- Updated `test/unit/effects-runtime.test.ts` to keep dispatcher/not-implemented coverage aligned with the new baseline (now asserting `if` is the first unimplemented handler in-sequence).
+- Deviation from original plan: `src/kernel/effect-error.ts` did not require changes; existing error types were sufficient.
+- Verification: `npm test` passes, including the new lifecycle unit suite.

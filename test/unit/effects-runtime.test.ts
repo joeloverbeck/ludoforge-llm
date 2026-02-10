@@ -75,10 +75,10 @@ const addVarEffect: EffectAST = {
   },
 };
 
-const createTokenEffect: EffectAST = {
-  createToken: {
-    type: 'card',
-    zone: 'deck:none',
+const ifEffect: EffectAST = {
+  if: {
+    when: { op: '==', left: 1, right: 1 },
+    then: [],
   },
 };
 
@@ -115,8 +115,8 @@ describe('effects runtime foundation', () => {
   it('applies dispatcher in list order and reports the first unimplemented effect kind', () => {
     const ctx = makeCtx({ maxEffectOps: 10 });
 
-    assert.throws(() => applyEffects([setVarEffect, addVarEffect, createTokenEffect], ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_NOT_IMPLEMENTED') && error.message.includes('createToken');
+    assert.throws(() => applyEffects([setVarEffect, addVarEffect, ifEffect], ctx), (error: unknown) => {
+      return isEffectErrorCode(error, 'EFFECT_NOT_IMPLEMENTED') && error.message.includes('if');
     });
   });
 

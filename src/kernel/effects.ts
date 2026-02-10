@@ -5,6 +5,7 @@ import {
   SpatialNotImplementedError,
   effectNotImplementedError,
 } from './effect-error.js';
+import { asTokenId } from './branded.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { nextInt } from './prng.js';
@@ -319,7 +320,7 @@ const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknown }>, c
 const resolveZoneTokens = (
   ctx: EffectContext,
   zoneId: string,
-  effectType: 'moveToken' | 'moveAll' | 'draw' | 'shuffle',
+  effectType: 'moveToken' | 'moveAll' | 'draw' | 'shuffle' | 'createToken',
   field: 'from' | 'to' | 'zone',
 ): readonly Token[] => {
   const zoneTokens = ctx.state.zones[zoneId];
@@ -335,12 +336,12 @@ const resolveZoneTokens = (
   return zoneTokens;
 };
 
-const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string): string => {
+const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string, effectType: 'moveToken' | 'destroyToken'): string => {
   const bindings = resolveEffectBindings(ctx);
   const boundValue = bindings[tokenBinding];
   if (boundValue === undefined) {
     throw new EffectRuntimeError('EFFECT_RUNTIME', `Token binding not found: ${tokenBinding}`, {
-      effectType: 'moveToken',
+      effectType,
       tokenBinding,
       availableBindings: Object.keys(bindings).sort(),
     });
@@ -355,7 +356,7 @@ const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string): string =
   }
 
   throw new EffectRuntimeError('EFFECT_RUNTIME', `Token binding ${tokenBinding} must resolve to Token or TokenId`, {
-    effectType: 'moveToken',
+    effectType,
     tokenBinding,
     actualType: typeof boundValue,
     value: boundValue,
@@ -390,7 +391,7 @@ const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown
   const sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'moveToken', 'from');
   const destinationTokens = resolveZoneTokens(ctx, toZoneId, 'moveToken', 'to');
 
-  const tokenId = resolveBoundTokenId(ctx, effect.moveToken.token);
+  const tokenId = resolveBoundTokenId(ctx, effect.moveToken.token, 'moveToken');
   const occurrences = findTokenOccurrences(ctx, tokenId);
 
   if (occurrences.length === 0) {
@@ -464,6 +465,80 @@ const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown
       },
     },
     rng: nextRng,
+  };
+};
+
+const applyCreateToken = (effect: Extract<EffectAST, { readonly createToken: unknown }>, ctx: EffectContext): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const zoneId = String(resolveSingleZoneSel(effect.createToken.zone, evalCtx));
+  const zoneTokens = resolveZoneTokens(ctx, zoneId, 'createToken', 'zone');
+
+  const ordinal = ctx.state.nextTokenOrdinal;
+  if (!Number.isSafeInteger(ordinal) || ordinal < 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'nextTokenOrdinal must be a non-negative safe integer', {
+      effectType: 'createToken',
+      nextTokenOrdinal: ordinal,
+    });
+  }
+
+  const evaluatedProps: Record<string, number | string | boolean> = {};
+  if (effect.createToken.props !== undefined) {
+    for (const [propName, valueExpr] of Object.entries(effect.createToken.props)) {
+      evaluatedProps[propName] = evalValue(valueExpr, evalCtx);
+    }
+  }
+
+  const createdToken: Token = {
+    id: asTokenId(`tok_${effect.createToken.type}_${ordinal}`),
+    type: effect.createToken.type,
+    props: evaluatedProps,
+  };
+
+  return {
+    state: {
+      ...ctx.state,
+      zones: {
+        ...ctx.state.zones,
+        [zoneId]: [createdToken, ...zoneTokens],
+      },
+      nextTokenOrdinal: ordinal + 1,
+    },
+    rng: ctx.rng,
+  };
+};
+
+const applyDestroyToken = (effect: Extract<EffectAST, { readonly destroyToken: unknown }>, ctx: EffectContext): EffectResult => {
+  const tokenId = resolveBoundTokenId(ctx, effect.destroyToken.token, 'destroyToken');
+  const occurrences = findTokenOccurrences(ctx, tokenId);
+
+  if (occurrences.length === 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token not found in any zone: ${tokenId}`, {
+      effectType: 'destroyToken',
+      tokenId,
+    });
+  }
+
+  if (occurrences.length > 1) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token appears in multiple zones: ${tokenId}`, {
+      effectType: 'destroyToken',
+      tokenId,
+      zones: occurrences.map((occurrence) => occurrence.zoneId).sort(),
+    });
+  }
+
+  const occurrence = occurrences[0]!;
+  const sourceTokens = ctx.state.zones[occurrence.zoneId]!;
+  const zoneAfter = [...sourceTokens.slice(0, occurrence.index), ...sourceTokens.slice(occurrence.index + 1)];
+
+  return {
+    state: {
+      ...ctx.state,
+      zones: {
+        ...ctx.state.zones,
+        [occurrence.zoneId]: zoneAfter,
+      },
+    },
+    rng: ctx.rng,
   };
 };
 
@@ -624,6 +699,14 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext): EffectResult => 
 
   if ('shuffle' in effect) {
     return applyShuffle(effect, ctx);
+  }
+
+  if ('createToken' in effect) {
+    return applyCreateToken(effect, ctx);
+  }
+
+  if ('destroyToken' in effect) {
+    return applyDestroyToken(effect, ctx);
   }
 
   if ('moveTokenAdjacent' in effect) {

@@ -7,6 +7,7 @@ type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 
 export interface ConditionLoweringContext {
   readonly ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>;
+  readonly bindingScope?: readonly string[];
 }
 
 export interface ConditionLoweringResult<TValue> {
@@ -424,6 +425,21 @@ function lowerReference(
       return missingCapability(path, 'tokenProp reference', source, ['{ ref: "tokenProp", token: string, prop: string }']);
     case 'binding':
       if (typeof source.name === 'string') {
+        if (context.bindingScope !== undefined && !context.bindingScope.includes(source.name)) {
+          return {
+            value: null,
+            diagnostics: [
+              {
+                code: 'CNL_COMPILER_BINDING_UNBOUND',
+                path: `${path}.name`,
+                severity: 'error',
+                message: `Unbound binding reference "${source.name}".`,
+                suggestion: 'Use a binding declared by action params or an in-scope effect binder.',
+                alternatives: rankBindingAlternatives(source.name, context.bindingScope),
+              },
+            ],
+          };
+        }
         return {
           value: { ref: 'binding', name: source.name },
           diagnostics: [],
@@ -477,6 +493,43 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value);
+}
+
+function rankBindingAlternatives(name: string, inScope: readonly string[]): readonly string[] {
+  return [...new Set(inScope)]
+    .sort((left, right) => {
+      const leftDistance = levenshteinDistance(name, left);
+      const rightDistance = levenshteinDistance(name, right);
+      if (leftDistance !== rightDistance) {
+        return leftDistance - rightDistance;
+      }
+      return left.localeCompare(right);
+    })
+    .slice(0, 5);
+}
+
+function levenshteinDistance(left: string, right: string): number {
+  const width = right.length + 1;
+  const dp = new Array<number>((left.length + 1) * width);
+  for (let row = 0; row <= left.length; row += 1) {
+    dp[row * width] = row;
+  }
+  for (let col = 0; col <= right.length; col += 1) {
+    dp[col] = col;
+  }
+
+  for (let row = 1; row <= left.length; row += 1) {
+    for (let col = 1; col <= right.length; col += 1) {
+      const substitutionCost = left[row - 1] === right[col - 1] ? 0 : 1;
+      const offset = row * width + col;
+      const insertion = (dp[offset - 1] ?? Number.MAX_SAFE_INTEGER) + 1;
+      const deletion = (dp[offset - width] ?? Number.MAX_SAFE_INTEGER) + 1;
+      const substitution = (dp[offset - width - 1] ?? Number.MAX_SAFE_INTEGER) + substitutionCost;
+      dp[offset] = Math.min(insertion, deletion, substitution);
+    }
+  }
+
+  return dp[left.length * width + right.length] ?? Number.MAX_SAFE_INTEGER;
 }
 
 function formatValue(value: unknown): string {

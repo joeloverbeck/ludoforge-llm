@@ -9,6 +9,7 @@ import {
   createRng,
   initialState,
   legalMoves,
+  nextInt,
   type ActionDef,
   type EndCondition,
   type GameDef,
@@ -61,6 +62,13 @@ const choose = (def: GameDef, seed = 5n) => {
 };
 
 describe('GreedyAgent core', () => {
+  it('rejects non-positive maxMovesToEvaluate config', () => {
+    assert.throws(
+      () => new GreedyAgent({ maxMovesToEvaluate: 0 }),
+      /GreedyAgent maxMovesToEvaluate must be a positive safe integer/,
+    );
+  });
+
   it('throws descriptive error when legalMoves is empty', () => {
     const def = createDef([]);
     const state = initialState(def, 1, 2);
@@ -140,5 +148,47 @@ describe('GreedyAgent core', () => {
 
     assert.deepEqual(first, second);
   });
-});
 
+  it('breaks equal-score ties via nextInt and advances rng exactly once', () => {
+    const def = createDef([
+      createAction('a', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
+      createAction('b', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
+    ]);
+    const state = initialState(def, 14, 2);
+    const moves = legalMoves(def, state);
+    const rng = createRng(123n);
+    const [expectedIndex, expectedRng] = nextInt(rng, 0, moves.length - 1);
+    const agent = new GreedyAgent();
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: moves,
+      rng,
+    });
+
+    assert.equal(result.move.actionId, moves[expectedIndex]?.actionId);
+    assert.deepEqual(result.rng, expectedRng);
+  });
+
+  it('does not draw tie-break rng when no tie exists', () => {
+    const def = createDef([
+      createAction('best', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } }]),
+      createAction('worse', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
+    ]);
+    const state = initialState(def, 6, 2);
+    const moves = legalMoves(def, state);
+    const rng = createRng(77n);
+    const agent = new GreedyAgent();
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: moves,
+      rng,
+    });
+
+    assert.equal(result.move.actionId, asActionId('best'));
+    assert.equal(result.rng, rng);
+  });
+});

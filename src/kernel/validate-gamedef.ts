@@ -114,17 +114,24 @@ const pushMissingReferenceDiagnostic = (
   });
 };
 
-const parseZoneIdFromSelector = (zoneSelector: string): string => {
-  return zoneSelector;
-};
-
-const parseZoneSelectorQualifier = (zoneSelector: string): string | null => {
+const parseZoneSelector = (
+  zoneSelector: string,
+): {
+  base: string;
+  qualifier: string | null;
+} => {
   const separatorIndex = zoneSelector.lastIndexOf(':');
   if (separatorIndex < 0 || separatorIndex === zoneSelector.length - 1) {
-    return null;
+    return {
+      base: zoneSelector,
+      qualifier: null,
+    };
   }
 
-  return zoneSelector.slice(separatorIndex + 1);
+  return {
+    base: zoneSelector.slice(0, separatorIndex),
+    qualifier: zoneSelector.slice(separatorIndex + 1),
+  };
 };
 
 type ValidationContext = {
@@ -198,17 +205,7 @@ const validateReference = (
   }
 
   if (reference.ref === 'zoneCount') {
-    const zoneId = parseZoneIdFromSelector(reference.zone);
-    if (!context.zoneNames.has(zoneId)) {
-      pushMissingReferenceDiagnostic(
-        diagnostics,
-        'REF_ZONE_MISSING',
-        `${path}.zone`,
-        `Unknown zone \"${zoneId}\".`,
-        zoneId,
-        context.zoneCandidates,
-      );
-    }
+    validateZoneSelector(diagnostics, reference.zone, `${path}.zone`, context);
   }
 };
 
@@ -285,11 +282,9 @@ const validateZoneSelector = (
   path: string,
   context: ValidationContext,
 ): void => {
-  const zoneId = parseZoneIdFromSelector(zoneSelector);
-
-  if (context.zoneNames.has(zoneId)) {
-    const owner = context.zoneOwners.get(zoneId);
-    const qualifier = parseZoneSelectorQualifier(zoneSelector);
+  if (context.zoneNames.has(zoneSelector)) {
+    const owner = context.zoneOwners.get(zoneSelector);
+    const qualifier = parseZoneSelector(zoneSelector).qualifier;
 
     if (owner !== undefined && qualifier !== null) {
       if (qualifier === 'none' && owner !== 'none') {
@@ -297,16 +292,16 @@ const validateZoneSelector = (
           code: 'ZONE_SELECTOR_OWNERSHIP_INVALID',
           path,
           severity: 'error',
-          message: `Selector "${zoneSelector}" uses :none, but zone "${zoneId}" is owner "${owner}".`,
-          suggestion: `Use a selector that targets a player-owned zone, or change "${zoneId}" owner to "none".`,
+          message: `Selector "${zoneSelector}" uses :none, but zone "${zoneSelector}" is owner "${owner}".`,
+          suggestion: `Use a selector that targets a player-owned zone, or change "${zoneSelector}" owner to "none".`,
         });
       } else if (qualifier !== 'none' && owner !== 'player') {
         diagnostics.push({
           code: 'ZONE_SELECTOR_OWNERSHIP_INVALID',
           path,
           severity: 'error',
-          message: `Selector "${zoneSelector}" is owner-qualified, but zone "${zoneId}" is owner "${owner}".`,
-          suggestion: `Use :none for unowned zones, or change "${zoneId}" owner to "player".`,
+          message: `Selector "${zoneSelector}" is owner-qualified, but zone "${zoneSelector}" is owner "${owner}".`,
+          suggestion: `Use :none for unowned zones, or change "${zoneSelector}" owner to "player".`,
         });
       }
     }
@@ -314,14 +309,51 @@ const validateZoneSelector = (
     return;
   }
 
-  pushMissingReferenceDiagnostic(
-    diagnostics,
-    'REF_ZONE_MISSING',
-    path,
-    `Unknown zone \"${zoneId}\".`,
-    zoneId,
-    context.zoneCandidates,
-  );
+  const { base, qualifier } = parseZoneSelector(zoneSelector);
+  const baseMatches = context.zoneCandidates.filter((candidate) => candidate.startsWith(`${base}:`));
+
+  if (baseMatches.length === 0) {
+    pushMissingReferenceDiagnostic(
+      diagnostics,
+      'REF_ZONE_MISSING',
+      path,
+      `Unknown zone \"${zoneSelector}\".`,
+      zoneSelector,
+      context.zoneCandidates,
+    );
+    return;
+  }
+
+  if (qualifier === null) {
+    return;
+  }
+
+  const hasUnownedVariant = baseMatches.some((candidate) => context.zoneOwners.get(candidate) === 'none');
+  const hasPlayerOwnedVariant = baseMatches.some((candidate) => context.zoneOwners.get(candidate) === 'player');
+
+  if (qualifier === 'none') {
+    if (!hasUnownedVariant) {
+      diagnostics.push({
+        code: 'ZONE_SELECTOR_OWNERSHIP_INVALID',
+        path,
+        severity: 'error',
+        message: `Selector "${zoneSelector}" uses :none, but zone base "${base}" is player-owned.`,
+        suggestion: `Use a selector that targets a player-owned zone, or change "${base}" owner to "none".`,
+      });
+    }
+    return;
+  }
+
+  if (!hasPlayerOwnedVariant) {
+    diagnostics.push({
+      code: 'ZONE_SELECTOR_OWNERSHIP_INVALID',
+      path,
+      severity: 'error',
+      message: `Selector "${zoneSelector}" is owner-qualified, but zone base "${base}" is unowned.`,
+      suggestion: `Use :none for unowned zones, or change "${base}" owner to "player".`,
+    });
+    return;
+  }
 };
 
 const validateOptionsQuery = (

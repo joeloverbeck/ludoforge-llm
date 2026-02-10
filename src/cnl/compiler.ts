@@ -11,20 +11,16 @@ import type {
   EffectAST,
   EndCondition,
   LimitDef,
-  OptionsQuery,
   ParamDef,
   PhaseDef,
-  PlayerSel,
-  ScoringDef,
   TokenTypeDef,
   TriggerDef,
   TriggerEvent,
   TurnStructure,
-  ValueExpr,
   VariableDef,
 } from '../kernel/types.js';
 import { validateGameDef } from '../kernel/validate-gamedef.js';
-import { lowerConditionNode, lowerQueryNode, lowerValueNode } from './compile-conditions.js';
+import { lowerConditionNode, lowerQueryNode } from './compile-conditions.js';
 import { lowerEffectArray } from './compile-effects.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { materializeZoneDefs } from './compile-zones.js';

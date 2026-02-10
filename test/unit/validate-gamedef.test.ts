@@ -74,6 +74,38 @@ describe('validateGameDef reference checks', () => {
     assert.equal(typeof missingZone.suggestion, 'string');
   });
 
+  it('accepts binding-qualified zone selectors for player-owned zone bases', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        ...base.zones,
+        { id: 'hand:0', owner: 'player', visibility: 'owner', ordering: 'set' },
+        { id: 'hand:1', owner: 'player', visibility: 'owner', ordering: 'set' },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              forEach: {
+                bind: '$p',
+                over: { query: 'players' },
+                effects: [{ draw: { from: 'deck:none', to: 'hand:$p', count: 1 } }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.path === 'actions[0].effects[0].forEach.effects[0].draw.to'),
+      false,
+    );
+  });
+
   it('reports undefined gvar references', () => {
     const base = createValidGameDef();
     const def = {

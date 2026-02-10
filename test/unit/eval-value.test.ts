@@ -168,4 +168,18 @@ describe('evalValue', () => {
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
+
+  it('throws TYPE_MISMATCH for non-safe arithmetic operands', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () => evalValue({ op: '+', left: Number.MAX_SAFE_INTEGER + 1, right: 0 }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+
+    assert.throws(
+      () => evalValue({ op: '+', left: Number.POSITIVE_INFINITY, right: 1 }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
 });

@@ -99,6 +99,10 @@ test/
 - **Error handling**: Always handle errors with descriptive messages. Use Zod for input validation at system boundaries.
 - **Kernel purity**: The `kernel/` module must be pure and side-effect free. All state transitions return new state objects.
 
+## Coding Guidelines
+
+Follow the 1-3-1 rule: When stuck, provide 1 clearly defined problem, give 3 potential options for how to overcome it, and 1 recommendation. Do not proceed implementing any of the options until I confirm.
+
 ## Skill Invocation (MANDATORY)
 
 When a slash command (e.g., `/superpowers:execute-plan`) expands to an instruction like "Invoke the superpowers:executing-plans skill", you MUST call the `Skill` tool with the referenced skill name BEFORE taking any other action. The `<command-name>` tag means the *command wrapper* was loaded, NOT the skill itself. The skill content is only available after you call the Skill tool.

@@ -38,6 +38,10 @@ For TypeScript code:
 - prefer feature/domain-oriented modules over broad utility dumps.
 - keep schema/type changes synchronized across `src/kernel`, `schemas/`, and tests.
 
+## Coding Guidelines
+
+Follow the 1-3-1 rule: When stuck, provide 1 clearly defined problem, give 3 potential options for how to overcome it, and 1 recommendation. Do not proceed implementing any of the options until I confirm.
+
 ## Testing Guidelines
 For docs/spec/ticket changes:
 - verify cross-spec references and dependency links.

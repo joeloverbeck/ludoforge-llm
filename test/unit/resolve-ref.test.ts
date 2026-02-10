@@ -109,8 +109,12 @@ describe('resolveRef', () => {
 
     assert.equal(resolveRef({ ref: 'tokenProp', token: '$card', prop: 'cost' }, ctx), 9);
 
-    assert.throws(() => resolveRef({ ref: 'tokenProp', token: '$missing', prop: 'cost' }, ctx), (error: unknown) =>
-      isEvalErrorCode(error, 'MISSING_BINDING'),
+    assert.throws(
+      () => resolveRef({ ref: 'tokenProp', token: '$missing', prop: 'cost' }, ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'MISSING_BINDING') &&
+        typeof error.message === 'string' &&
+        error.message.includes('availableBindings'),
     );
 
     assert.throws(() => resolveRef({ ref: 'tokenProp', token: '$card', prop: 'missingProp' }, ctx), (error: unknown) =>

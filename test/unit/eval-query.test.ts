@@ -110,15 +110,24 @@ describe('evalQuery', () => {
 
     assert.throws(
       () => evalQuery({ query: 'adjacentZones', zone: 'deck:none' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'SPATIAL_NOT_IMPLEMENTED'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'SPATIAL_NOT_IMPLEMENTED') &&
+        typeof error.message === 'string' &&
+        error.message.includes('adjacentZones'),
     );
     assert.throws(
       () => evalQuery({ query: 'tokensInAdjacentZones', zone: 'deck:none' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'SPATIAL_NOT_IMPLEMENTED'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'SPATIAL_NOT_IMPLEMENTED') &&
+        typeof error.message === 'string' &&
+        error.message.includes('tokensInAdjacentZones'),
     );
     assert.throws(
       () => evalQuery({ query: 'connectedZones', zone: 'deck:none' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'SPATIAL_NOT_IMPLEMENTED'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'SPATIAL_NOT_IMPLEMENTED') &&
+        typeof error.message === 'string' &&
+        error.message.includes('connectedZones'),
     );
   });
 

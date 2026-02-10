@@ -1,5 +1,96 @@
+import { asPlayerId } from './branded.js';
+import { applyEffects } from './effects.js';
+import { createRng } from './prng.js';
+import { dispatchTriggers } from './trigger-dispatch.js';
 import type { GameDef, GameState } from './types.js';
+import { computeFullHash, createZobristTable } from './zobrist.js';
 
-export const initialState = (_def: GameDef, _seed: number, _playerCount?: number): GameState => {
-  throw new Error('initialState is not implemented in KERGAMLOOTRI-001');
+const DEFAULT_MAX_TRIGGER_DEPTH = 8;
+
+export const initialState = (def: GameDef, seed: number, playerCount?: number): GameState => {
+  const resolvedPlayerCount = resolvePlayerCount(def, playerCount);
+  const initialPhase = resolveInitialPhase(def);
+  const rng = createRng(BigInt(seed));
+
+  const baseState: GameState = {
+    globalVars: Object.fromEntries(def.globalVars.map((variable) => [variable.name, variable.init])),
+    perPlayerVars: Object.fromEntries(
+      Array.from({ length: resolvedPlayerCount }, (_, player) => [
+        String(player),
+        Object.fromEntries(def.perPlayerVars.map((variable) => [variable.name, variable.init])),
+      ]),
+    ),
+    playerCount: resolvedPlayerCount,
+    zones: Object.fromEntries(def.zones.map((zone) => [String(zone.id), []])),
+    nextTokenOrdinal: 0,
+    currentPhase: initialPhase,
+    activePlayer: asPlayerId(0),
+    turnCount: 0,
+    rng: rng.state,
+    stateHash: 0n,
+    actionUsage: {},
+  };
+
+  const setupResult = applyEffects(def.setup, {
+    def,
+    state: baseState,
+    rng,
+    activePlayer: baseState.activePlayer,
+    actorPlayer: baseState.activePlayer,
+    bindings: {},
+    moveParams: {},
+  });
+  const maxDepth = def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
+  const turnStartResult = dispatchTriggers(
+    def,
+    setupResult.state,
+    setupResult.rng,
+    { type: 'turnStart' },
+    0,
+    maxDepth,
+    [],
+  );
+  const phaseEnterResult = dispatchTriggers(
+    def,
+    turnStartResult.state,
+    turnStartResult.rng,
+    { type: 'phaseEnter', phase: initialPhase },
+    0,
+    maxDepth,
+    turnStartResult.triggerLog,
+  );
+  const stateWithRng = {
+    ...phaseEnterResult.state,
+    rng: phaseEnterResult.rng.state,
+  };
+  const table = createZobristTable(def);
+
+  return {
+    ...stateWithRng,
+    stateHash: computeFullHash(table, stateWithRng),
+  };
+};
+
+const resolvePlayerCount = (def: GameDef, playerCount: number | undefined): number => {
+  const resolved = playerCount ?? def.metadata.players.min;
+  if (!Number.isSafeInteger(resolved)) {
+    throw new RangeError(`playerCount must be a safe integer, received ${String(resolved)}`);
+  }
+
+  const min = def.metadata.players.min;
+  const max = def.metadata.players.max;
+  if (resolved < min || resolved > max) {
+    throw new RangeError(`playerCount ${resolved} is out of range [${min}, ${max}]`);
+  }
+
+  return resolved;
+};
+
+const resolveInitialPhase = (def: GameDef): GameState['currentPhase'] => {
+  const initialPhase = def.turnStructure.phases.at(0)?.id;
+  if (initialPhase === undefined) {
+    throw new Error('initialState requires at least one phase in turnStructure.phases');
+  }
+
+  return initialPhase;
 };

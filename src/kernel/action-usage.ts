@@ -1,9 +1,29 @@
 import type { GameState } from './types.js';
 
-export const resetTurnUsage = (_state: GameState): GameState => {
-  throw new Error('resetTurnUsage is not implemented in KERGAMLOOTRI-001');
+export const resetTurnUsage = (state: GameState): GameState => {
+  const actionUsage = Object.fromEntries(
+    Object.entries(state.actionUsage).map(([actionId, usage]) => [
+      actionId,
+      { ...usage, turnCount: 0 },
+    ]),
+  );
+
+  return {
+    ...state,
+    actionUsage,
+  };
 };
 
-export const resetPhaseUsage = (_state: GameState): GameState => {
-  throw new Error('resetPhaseUsage is not implemented in KERGAMLOOTRI-001');
+export const resetPhaseUsage = (state: GameState): GameState => {
+  const actionUsage = Object.fromEntries(
+    Object.entries(state.actionUsage).map(([actionId, usage]) => [
+      actionId,
+      { ...usage, phaseCount: 0 },
+    ]),
+  );
+
+  return {
+    ...state,
+    actionUsage,
+  };
 };

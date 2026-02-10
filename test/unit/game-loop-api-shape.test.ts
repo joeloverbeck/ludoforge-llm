@@ -63,24 +63,30 @@ describe('game-loop API shape', () => {
     assert.equal(typeof resetPhaseUsage, 'function');
     assert.equal(typeof terminalResult, 'function');
 
-    assert.throws(() => initialState(gameDefStub, 1), /not implemented/i);
-    assert.throws(() => legalMoves(gameDefStub, gameStateStub), /not implemented/i);
+    const initial = initialState(gameDefStub, 1);
+    assert.equal(initial.playerCount, 2);
+    assert.equal(initial.activePlayer, asPlayerId(0));
+    assert.equal(initial.currentPhase, asPhaseId('main'));
+    assert.equal(typeof initial.stateHash, 'bigint');
+
+    assert.deepEqual(legalMoves(gameDefStub, gameStateStub), []);
     assert.throws(() => applyMove(gameDefStub, gameStateStub, moveStub), /not implemented/i);
-    assert.throws(
-      () =>
-        dispatchTriggers(
-          gameDefStub,
-          gameStateStub,
-          { state: gameStateStub.rng },
-          { type: 'turnStart' },
-          0,
-          8,
-          [],
-        ),
-      /not implemented/i,
+
+    const dispatchResult = dispatchTriggers(
+      gameDefStub,
+      gameStateStub,
+      { state: gameStateStub.rng },
+      { type: 'turnStart' },
+      0,
+      8,
+      [],
     );
-    assert.throws(() => resetTurnUsage(gameStateStub), /not implemented/i);
-    assert.throws(() => resetPhaseUsage(gameStateStub), /not implemented/i);
+    assert.equal(dispatchResult.state, gameStateStub);
+    assert.equal(dispatchResult.rng.state, gameStateStub.rng);
+    assert.deepEqual(dispatchResult.triggerLog, []);
+
+    assert.deepEqual(resetTurnUsage(gameStateStub).actionUsage, gameStateStub.actionUsage);
+    assert.deepEqual(resetPhaseUsage(gameStateStub).actionUsage, gameStateStub.actionUsage);
     assert.throws(() => terminalResult(gameDefStub, gameStateStub), /not implemented/i);
   });
 

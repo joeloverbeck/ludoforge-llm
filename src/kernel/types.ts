@@ -281,6 +281,30 @@ export interface GameDef {
   readonly scoring?: ScoringDef;
 }
 
+export interface ZobristTable {
+  readonly seed: bigint;
+  readonly fingerprint: string;
+}
+
+export type ZobristFeature =
+  | { readonly kind: 'tokenPlacement'; readonly tokenId: TokenId; readonly zoneId: ZoneId; readonly slot: number }
+  | { readonly kind: 'globalVar'; readonly varName: string; readonly value: number }
+  | {
+      readonly kind: 'perPlayerVar';
+      readonly playerId: PlayerId;
+      readonly varName: string;
+      readonly value: number;
+    }
+  | { readonly kind: 'activePlayer'; readonly playerId: PlayerId }
+  | { readonly kind: 'currentPhase'; readonly phaseId: PhaseId }
+  | { readonly kind: 'turnCount'; readonly value: number }
+  | {
+      readonly kind: 'actionUsage';
+      readonly actionId: ActionId;
+      readonly scope: 'turn' | 'phase' | 'game';
+      readonly count: number;
+    };
+
 export interface ActionUsageRecord {
   readonly turnCount: number;
   readonly phaseCount: number;

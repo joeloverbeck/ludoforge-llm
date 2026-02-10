@@ -1,9 +1,15 @@
 # DETPRI-004 - Zobrist Table Canonicalization and Feature Keying
 
-**Status**: Planned
+**Status**: ✅ COMPLETED
 
 ## Goal
 Implement deterministic Zobrist table creation from canonicalized `GameDef` features and stable keyed mapping from `ZobristFeature` tuples to 64-bit keys.
+
+## Reassessed Assumptions (2026-02-10)
+- `src/kernel/zobrist.ts` does not exist yet in the repository and must be created in this ticket.
+- No Zobrist unit tests currently exist; this ticket must introduce the base test coverage.
+- Dedicated canonicalization fixtures (`test/fixtures/gamedef/zobrist-canonicalization-a.json` / `-b.json`) are not required for this scope; equivalent-order tests can be expressed directly in unit tests.
+- `computeFullHash` and incremental update helpers are intentionally deferred to `DETPRI-005`.
 
 ## Scope
 - Add deterministic fingerprint canonicalization for hash-relevant `GameDef` fields.
@@ -15,11 +21,9 @@ Implement deterministic Zobrist table creation from canonicalized `GameDef` feat
 - `src/kernel/types.ts`
 - `src/kernel/index.ts`
 - `test/unit/zobrist-table.test.ts`
-- `test/fixtures/gamedef/zobrist-canonicalization-a.json`
-- `test/fixtures/gamedef/zobrist-canonicalization-b.json`
 
 ## Implementation Notes
-- Canonicalization must explicitly sort IDs/names (zones, phases, actions, vars, token declarations).
+- Canonicalization must explicitly sort declarations and key lists (zones, phases, actions, vars, token declarations).
 - Avoid JSON key-order dependence for fingerprint creation.
 - Feature encoding must include explicit field labels and separators.
 - Hash representation remains BigInt 64-bit compatible.
@@ -43,3 +47,17 @@ Implement deterministic Zobrist table creation from canonicalized `GameDef` feat
 - Canonicalization order is explicit and stable.
 - Hash/key representation remains integer-only BigInt.
 - No mutable global cache is required for correctness.
+
+## Outcome
+- **Completed on**: 2026-02-10
+- **What changed**:
+  - Added `src/kernel/zobrist.ts` with deterministic `createZobristTable(def)` and `zobristKey(table, feature)` implementation.
+  - Added `ZobristTable` and `ZobristFeature` types in `src/kernel/types.ts`.
+  - Re-exported Zobrist API from `src/kernel/index.ts`.
+  - Added `test/unit/zobrist-table.test.ts` covering deterministic table creation, declaration-order canonicalization, representative feature key separation, and key determinism.
+- **Deviations from original plan**:
+  - Did not add JSON fixture files for canonicalization permutations; equivalent-order coverage is implemented directly in unit tests.
+  - Scope remained intentionally limited to table/keying only; full-state hashing and incremental update helpers stay in `DETPRI-005`.
+- **Verification**:
+  - `npm run test:unit` passed.
+  - `npm test` passed.

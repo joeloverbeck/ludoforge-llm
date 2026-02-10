@@ -26,6 +26,16 @@ const requireStateWords = (state: readonly bigint[]): [bigint, bigint] => {
   return [first, second];
 };
 
+const requirePcgStateContract = (rng: Rng): [bigint, bigint] => {
+  const { algorithm, version, state } = rng.state;
+
+  if (algorithm !== 'pcg-dxsm-128' || version !== 1) {
+    throw new RangeError(`Unsupported RNG state contract: ${algorithm}@v${version}`);
+  }
+
+  return requireStateWords(state);
+};
+
 const ensureOdd = (value: bigint): bigint => value | 1n;
 
 const dxsm = (state128: bigint): bigint => {
@@ -53,13 +63,8 @@ export const createRng = (seed: bigint): Rng => {
 };
 
 export const stepRng = (rng: Rng): readonly [bigint, Rng] => {
-  const { algorithm, version, state } = rng.state;
-
-  if (algorithm !== 'pcg-dxsm-128' || version !== 1) {
-    throw new RangeError(`Unsupported RNG state contract: ${algorithm}@v${version}`);
-  }
-
-  const [lcgState, increment] = requireStateWords(state);
+  const { algorithm, version } = rng.state;
+  const [lcgState, increment] = requirePcgStateContract(rng);
   const maskedState = mask128(lcgState);
   const maskedIncrement = ensureOdd(mask128(increment));
 
@@ -76,6 +81,37 @@ export const stepRng = (rng: Rng): readonly [bigint, Rng] => {
       },
     },
   ] as const;
+};
+
+export const serialize = (rng: Rng): Rng['state'] => {
+  const [lcgState, increment] = requirePcgStateContract(rng);
+
+  return {
+    algorithm: 'pcg-dxsm-128',
+    version: 1,
+    state: [mask128(lcgState), ensureOdd(mask128(increment))],
+  };
+};
+
+export const deserialize = (state: Rng['state']): Rng => {
+  const rng = { state };
+  const [lcgState, increment] = requirePcgStateContract(rng);
+
+  return {
+    state: {
+      algorithm: 'pcg-dxsm-128',
+      version: 1,
+      state: [mask128(lcgState), ensureOdd(mask128(increment))],
+    },
+  };
+};
+
+export const fork = (rng: Rng): readonly [Rng, Rng] => {
+  // Use two deterministic draws from a local cursor so parent remains unchanged.
+  const [leftSeed, afterLeft] = stepRng(rng);
+  const [rightSeed] = stepRng(afterLeft);
+
+  return [createRng(mask128(leftSeed ^ SEED_MIX)), createRng(mask128(rightSeed ^ (SEED_MIX << 1n)))] as const;
 };
 
 export const nextInt = (rng: Rng, min: number, max: number): readonly [number, Rng] => {

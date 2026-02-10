@@ -3,39 +3,40 @@
 **Status**: Draft
 **Priority**: P1 (required for MVP)
 **Complexity**: M
-**Dependencies**: Spec 06, Spec 09
+**Dependencies**: Spec 03, Spec 06, Spec 09
 **Estimated effort**: 2-3 days
 **Source sections**: Brainstorming sections 2.4A, 2.4B, 1.4
 
 ## Overview
 
-Implement the simulation runner that orchestrates full game playthroughs: initialize state, loop through turns (agents choose from legal moves, kernel applies moves), log every step as a `MoveLog` entry with state hashes and deltas, and produce a complete `GameTrace` at termination. The simulator is the bridge between the kernel (Spec 06) and evaluation (Spec 11). It also provides the primary determinism verification mechanism — identical seeds must produce identical traces.
+Implement the simulation runner that orchestrates full game playthroughs: initialize state, loop through turns (agents choose from legal moves, kernel applies moves), log every step as a `MoveLog` entry with state hashes and deltas, and produce a complete `GameTrace` at termination.
+
+The simulator is the bridge between the kernel (Spec 06) and evaluation (Spec 11). It is also a core determinism boundary: same `GameDef` + seed + agent implementations must produce byte-identical serialized traces.
 
 ## Scope
 
 ### In Scope
 - `runGame(def, seed, agents, maxTurns, playerCount?)` — main simulation loop
-- MoveLog construction: stateHash, player, move, deltas, triggerFirings
-- GameTrace construction: metadata, moves, finalState, result, turnsCount
+- `runGames(def, seeds, agents, maxTurns, playerCount?)` — batch simulation
+- `MoveLog` construction: `stateHash`, `player`, `move`, `legalMoveCount`, `deltas`, `triggerFirings`
+- `GameTrace` construction: metadata, move logs, final state, terminal result, turns count
 - Delta computation between pre-move and post-move states
-- Turn cap enforcement (maxTurns)
-- Per-agent RNG threading (agent randomness isolated from game RNG)
-- Batch simulation: `runGames(def, seeds, agents, maxTurns, playerCount?)` for multiple runs
+- Turn-cap enforcement (`maxTurns`)
+- Deterministic per-agent RNG threading (separate from game RNG)
+- Deterministic trace ordering and deterministic delta path ordering
 
 ### Out of Scope
 - Agent implementations (Spec 09 — consumed here)
 - Kernel implementation (Spec 06 — consumed here)
-- Metrics computation from traces (Spec 11)
-- Degeneracy detection (Spec 11)
-- Trace file I/O and serialization format (Spec 12 CLI handles file output)
-- Interactive replay (Spec 12 CLI)
+- Metrics/degeneracy computation (Spec 11)
+- Trace file I/O and transport format (Spec 12 handles file output)
+- Interactive replay UX (Spec 12)
 
 ## Key Types & Interfaces
 
 ### Public API
 
 ```typescript
-// Run a single game to completion (or maxTurns)
 function runGame(
   def: GameDef,
   seed: number,
@@ -44,7 +45,6 @@ function runGame(
   playerCount?: number
 ): GameTrace;
 
-// Run multiple games with different seeds
 function runGames(
   def: GameDef,
   seeds: readonly number[],
@@ -54,257 +54,251 @@ function runGames(
 ): readonly GameTrace[];
 ```
 
-### MoveLog (from Spec 02 types)
+### MoveLog and GameTrace
+
+Use Spec 02 type contracts with one required amendment for simulator termination semantics:
 
 ```typescript
+type SimulationStopReason = 'terminal' | 'maxTurns' | 'noLegalMoves';
+
 interface MoveLog {
-  readonly stateHash: bigint;       // Zobrist hash AFTER move applied
+  readonly stateHash: bigint;
   readonly player: PlayerId;
   readonly move: Move;
-  readonly legalMoveCount: number;  // number of legal moves before the chosen move
+  readonly legalMoveCount: number;
   readonly deltas: readonly StateDelta[];
-  readonly triggerFirings: readonly TriggerFiring[];
+  readonly triggerFirings: readonly TriggerLogEntry[];
 }
-```
 
-### StateDelta
-
-```typescript
-interface StateDelta {
-  readonly path: string;    // e.g. "globalVars.threat", "zones.hand:0", "perPlayerVars.0.money"
-  readonly before: unknown; // value before move
-  readonly after: unknown;  // value after move
-}
-```
-
-### GameTrace (from Spec 02 types)
-
-```typescript
 interface GameTrace {
   readonly gameDefId: string;
   readonly seed: number;
   readonly moves: readonly MoveLog[];
   readonly finalState: GameState;
-  readonly result: TerminalResult | null; // null if maxTurns reached without terminal
+  readonly result: TerminalResult | null;
   readonly turnsCount: number;
+  readonly stopReason: SimulationStopReason;
 }
 ```
+
+## Contract Corrections (Required)
+
+These corrections align Spec 10 to the roadmap/API contracts and existing kernel behavior:
+
+1. Trace serialization is provided by `src/kernel/serde.ts` (`serializeTrace`, `deserializeTrace`).
+2. `applyMove` already returns `{ state, triggerFirings }`; no Spec 10 change to kernel API is required.
+3. `MoveLog.triggerFirings` type is `TriggerLogEntry[]` (not `TriggerFiring[]` only).
+4. `turnsCount` must be `finalState.turnCount`; it is not guaranteed to equal `moves.length`.
+5. `GameTrace` must include `stopReason` so evaluator degeneracy checks can distinguish max-turn exits from no-legal-move stalls.
 
 ## Implementation Requirements
 
-### runGame Main Loop
+### Input Validation
 
+`runGame` must fail fast with descriptive errors when:
+- `seed` is not a safe integer.
+- `maxTurns` is not a safe integer or is negative.
+- `agents.length !== resolvedPlayerCount`.
+
+`resolvedPlayerCount` is the value from `initialState(def, seed, playerCount).playerCount`.
+
+### Main Loop
+
+```text
+runGame(def, seed, agents, maxTurns, playerCount?):
+  state = initialState(def, seed, playerCount)
+  resolvedPlayerCount = state.playerCount
+  validate agents length
+
+  initialize per-player agent RNG streams deterministically from seed
+  moveLogs = []
+
+  loop:
+    result = terminalResult(def, state)
+    if result !== null: break
+
+    if moveLogs.length >= maxTurns: break
+
+    legal = legalMoves(def, state)
+    if legal.length === 0: break
+
+    player = state.activePlayer
+    agent = agents[player]
+    selection = agent.chooseMove({ def, state, playerId: player, legalMoves: legal, rng: agentRng[player] })
+    agentRng[player] = selection.rng
+
+    preState = state
+    applyResult = applyMove(def, state, selection.move)
+    state = applyResult.state
+
+    deltas = computeDeltas(preState, state)
+    append MoveLog { stateHash, player, move, legalMoveCount, deltas, triggerFirings }
+
+  return {
+    gameDefId: def.metadata.id,
+    seed,
+    moves: moveLogs,
+    finalState: state,
+    result: terminalResult(def, state),
+    turnsCount: state.turnCount,
+    stopReason
+  }
 ```
-function runGame(def, seed, agents, maxTurns, playerCount?):
-  1. state = initialState(def, seed, playerCount)
-  2. resolvedPlayerCount = state.playerCount
-  3. assert agents.length === resolvedPlayerCount
-  4. Initialize per-player RNG streams:
-       agentRngByPlayer[p] = createRng(BigInt(seed) ^ (BigInt(p + 1) * 0x9e3779b97f4a7c15n))
-       for p in [0..resolvedPlayerCount-1]
-  5. moveLogs = []
-  6. turnCount = 0
 
-  7. LOOP:
-     a. result = terminalResult(def, state)
-     b. if result !== null → BREAK (game over)
-     c. if turnCount >= maxTurns → BREAK (turn cap)
+### Agent Boundary Rules
 
-     d. moves = legalMoves(def, state)
-     e. if moves.length === 0 → BREAK (no legal moves — stall)
-
-     f. activePlayer = state.activePlayer
-     g. agent = agents[activePlayer]
-
-     h. selection = agent.chooseMove({
-          def, state, playerId: activePlayer,
-          legalMoves: moves, rng: agentRngByPlayer[activePlayer]
-        })
-     i. chosenMove = selection.move
-     j. agentRngByPlayer[activePlayer] = selection.rng
-
-     k. preState = state
-     l. applyResult = applyMove(def, state, chosenMove)
-        state = applyResult.state
-        // applyMove handles: cost, effects, triggers, hash update, phase/turn advance
-
-     m. deltas = computeDeltas(preState, state)
-     n. triggerFirings = applyResult.triggerFirings
-
-     o. moveLogs.push({
-          stateHash: state.stateHash,
-          player: activePlayer,
-          move: chosenMove,
-          legalMoveCount: moves.length,
-          deltas,
-          triggerFirings
-        })
-
-     p. turnCount = state.turnCount
-
-  8. Return GameTrace {
-       gameDefId: def.metadata.id,
-       seed,
-       moves: moveLogs,
-       finalState: state,
-       result: terminalResult(def, state),
-       turnsCount: turnCount
-     }
-```
+- Simulator is authoritative on legality: chosen move is validated by `applyMove`; illegal selections throw with context.
+- Agent RNG state is threaded only through `agent.chooseMove` return value.
+- Agent RNG and game RNG must remain fully isolated.
 
 ### Agent RNG Strategy
 
-The simulation uses separate RNG streams:
-1. **Game RNG**: Part of GameState, used by kernel effects (shuffle, random positioning). Deterministic based on seed + moves.
-2. **Agent RNG(s)**: One stream per player, initialized deterministically from the run seed and threaded through agent calls via `{ move, rng }`.
+Use one deterministic stream per player:
 
-This separation ensures that:
-- Agent randomness never mutates game RNG state
-- Agent streams are deterministic and replayable
-- Same seed + same move sequence = same game RNG outcomes
+```typescript
+agentRngByPlayer[p] = createRng(BigInt(seed) ^ (BigInt(p + 1) * 0x9e3779b97f4a7c15n));
+```
+
+Requirements:
+- Same seed and same agents produce the same per-player RNG progression.
+- Agent randomness must not mutate `GameState.rng`.
 
 ### Delta Computation
 
-`computeDeltas(preState, postState)`:
+`computeDeltas(preState, postState)` must be deterministic and path-stable.
 
-Compare pre-move and post-move states to identify all changes:
+Tracked fields:
+- `globalVars.<name>`
+- `perPlayerVars.<playerId>.<name>`
+- `zones.<zoneId>`
+- `currentPhase`
+- `activePlayer`
+- `turnCount`
 
-1. **Global variables**: For each var, if `pre.globalVars[name] !== post.globalVars[name]`, record delta
-2. **Per-player variables**: For each player + var, compare values
-3. **Zones**: For each zone, compare token arrays:
-   - Tokens added to zone → delta with `before: null, after: tokenId`
-   - Tokens removed from zone → delta with `before: tokenId, after: null`
-   - Token order changed → delta with before/after arrays
-4. **Phase/turn**: If currentPhase or activePlayer changed, record delta
-5. **Turn count**: If turnCount changed, record delta
+Intentional exclusions:
+- `rng` (engine-internal random state)
+- `stateHash` (already logged separately)
 
-Deltas use dot-path notation for the `path` field:
-- `"globalVars.threat"` → global variable change
-- `"perPlayerVars.0.money"` → player 0's money changed
-- `"zones.deck"` → deck zone contents changed
-- `"currentPhase"` → phase changed
-- `"activePlayer"` → active player changed
+Zone delta encoding:
+- For `zones.<zoneId>`, store token-id arrays only (`before`/`after` arrays of token IDs).
+- Do not emit one delta per index; one zone-level delta per changed zone keeps logs stable and bounded.
 
-### Trigger Firing Extraction
+Deterministic ordering:
+- Emit deltas sorted lexicographically by `path`.
 
-Trigger firings are returned by Spec 06's `applyMove` result and copied directly into `MoveLog.triggerFirings`.
+### Hash Consistency
+
+`MoveLog.stateHash` must equal `postState.stateHash` from `applyMove`.
+
+Debug/invariant test requirement:
+- In tests, recompute hash via `computeFullHash(createZobristTable(def), postState)` and assert equality.
+
+### No-Legal-Move Semantics
+
+If `legalMoves(def, state).length === 0` and `terminalResult(def, state) === null`, simulation ends with:
+- `result: null`
+- `finalState` and `turnsCount` from that stalled decision state
+- `stopReason: 'noLegalMoves'`
+
+No synthetic/no-op move should be logged.
 
 ### Batch Simulation
 
-`runGames(def, seeds, agents, maxTurns, playerCount?)`:
+`runGames` behavior:
+- Runs are independent, deterministic, and returned in the same order as `seeds`.
+- Empty `seeds` input returns `[]`.
+- Implementation may execute sequentially for MVP; parallel execution is optional later but must preserve deterministic output order.
 
-- Run `runGame` for each seed independently
-- Each run is fully independent (different seed → different RNG stream)
-- Return array of GameTrace in same order as seeds
-- No parallelism required (sequential execution is deterministic)
+### Serialization Contract
 
-### BigInt Serialization
-
-`GameTrace` contains `bigint` values (stateHash). Use Spec 02 serialization codecs:
+Use existing kernel serde APIs:
 - `serializeTrace(trace): SerializedGameTrace`
 - `deserializeTrace(json): GameTrace`
-- CLI (Spec 12) handles JSON stringification of serialized DTOs
 
-```typescript
-function serializeTrace(trace: GameTrace): SerializedGameTrace {
-  return serializeTraceDto(trace);
-}
-```
+No new simulator-local serialization module is needed.
 
 ## Invariants
 
-1. Simulation terminates: either terminal condition met OR maxTurns reached OR no legal moves
-2. Every MoveLog has a stateHash (Zobrist hash of state after move)
-3. Same seed + same agents (same types) = identical GameTrace (determinism)
-4. `GameTrace.turnsCount` matches actual number of turns simulated
-5. `GameTrace.result` is non-null only if a terminal condition was met (null for maxTurns timeout or stall)
-6. All moves in trace are legal (validated by `applyMove` at each step)
-7. Deltas accurately reflect state changes (computable from consecutive states)
-8. Agent RNG streams are separate from game RNG — agent randomness doesn't pollute game state
-9. `runGames` produces independent traces (different seeds → different games)
-10. Trace serialization round-trips correctly (serialize → deserialize → identical trace)
+1. A run terminates via terminal condition, `maxTurns`, or no-legal-move stall.
+2. Every logged move has a valid post-move `stateHash`.
+3. Same `def` + seed + agents yields deterministic trace output.
+4. `turnsCount` equals `finalState.turnCount`.
+5. `result !== null` only when terminal condition is met.
+6. All logged moves were legal at selection time.
+7. Deltas are deterministic and accurately represent tracked state changes.
+8. Agent RNG streams are isolated from game RNG.
+9. `runGames` preserves input seed order.
+10. Trace serde round-trip is lossless for BigInt/hash fields.
+11. `stopReason` is exact:
+   - `'terminal'` iff `result !== null`
+   - `'maxTurns'` iff `result === null` and move cap reached
+   - `'noLegalMoves'` iff `result === null` and legal-move set is empty
 
 ## Required Tests
 
 ### Unit Tests
 
-**Single-turn game**:
-- Game that ends after 1 move → trace has 1 MoveLog entry, result is non-null
-
-**Multi-turn game**:
-- Run 5-turn game → trace has correct number of MoveLog entries
-
-**Terminal detection**:
-- Game reaches win condition at turn 7 → result reflects winner, turnsCount = 7
-
-**MaxTurns cap**:
-- Game with no end condition, maxTurns=10 → trace has 10 entries, result is null
-
-**No legal moves**:
-- Game state where no moves are legal → simulation stops, trace records up to that point
-
-**Delta computation**:
-- Move that changes 1 global var → exactly 1 delta with correct path/before/after
-- Move that changes 2 per-player vars → 2 deltas
-- Move that moves a token between zones → delta for source zone and destination zone
-- Move that changes phase → delta for currentPhase
-
-**State hashes**:
-- Every MoveLog.stateHash matches independently computed `computeFullHash` on the corresponding state
-
-**Agent RNG threading**:
-- Two runs with same seed but different agent types → game state hashes differ (agents make different choices) while game RNG remains isolated
-- Two runs with same seed and same agent type → identical traces
-
-**Serialization**:
-- `deserializeTrace(serializeTrace(trace))` produces identical trace (round-trip)
-- BigInt stateHash survives serialization
+- Single-turn terminal game produces 1 `MoveLog` and non-null `result`.
+- Multi-turn game produces expected move count and deterministic move ordering.
+- `maxTurns=0` returns immediately with zero moves.
+- `maxTurns` cap truncates run with `result: null` when no terminal met.
+- No-legal-move state exits cleanly with no synthetic move.
+- Stop reason is correct for terminal, max-turn, and no-legal-move exits.
+- Input validation: invalid `seed`, invalid `maxTurns`, and mismatched agent count throw.
+- Delta computation:
+  - one global var change emits one delta path
+  - per-player var changes emit correct player-scoped paths
+  - token movement updates both affected zones at zone-level paths
+  - phase/player/turn transitions emit correct deltas
+  - output ordering is path-sorted and deterministic
+- Hash integrity: each logged hash matches independent full-hash recomputation.
+- Agent RNG isolation:
+  - same seed + same agents -> identical traces
+  - same seed + different agents -> trace divergence without RNG cross-contamination
+- Serde round-trip via kernel `serializeTrace`/`deserializeTrace` is exact.
 
 ### Integration Tests
 
-**Full game with 2 RandomAgents**:
-- 50 turns, verify trace integrity (all MoveLog entries have valid stateHash, deltas are consistent)
-
-**Determinism**:
-- Run same game twice with seed 42 → traces are identical (byte-level comparison after serialization)
-
-**Batch simulation**:
-- `runGames` with 5 different seeds → 5 independent traces, all different
+- Full game run with two random agents: trace schema-valid and internally consistent.
+- Determinism: same setup run twice yields byte-identical serialized traces.
+- `runGames` over multiple seeds returns traces in seed order.
 
 ### Property Tests
 
-- For any valid GameDef + seed, `runGame` terminates (within maxTurns)
-- Every MoveLog in a trace has non-empty deltas OR is a no-op move (which shouldn't happen with properly designed games)
-- `turnsCount` equals `moves.length` (each turn produces exactly one MoveLog)
+- For any valid input and finite `maxTurns`, `runGame` terminates.
+- Logged move count is `<= maxTurns`.
+- Every `MoveLog.legalMoveCount >= 1`.
+- `turnsCount` equals `finalState.turnCount` (not `moves.length`).
 
 ### Golden Tests
 
-- Known GameDef + seed 42 + RandomAgents + maxTurns=20 → expected trace (stateHash sequence matches)
+- Known `GameDef` + fixed agents + seed produces expected state-hash sequence.
 
 ## Acceptance Criteria
 
-- [ ] `runGame` produces complete GameTrace for any valid GameDef
-- [ ] Simulation terminates via terminal condition, maxTurns, or no legal moves
-- [ ] Every MoveLog has stateHash matching independently computed hash
-- [ ] Deltas accurately reflect pre/post state differences
-- [ ] Same seed + same agents = identical trace (determinism verified)
-- [ ] Agent RNG threaded correctly (isolated from game RNG)
-- [ ] `runGames` produces independent traces for different seeds
-- [ ] Trace serialization handles BigInt round-trip
-- [ ] maxTurns cap works correctly
-- [ ] No legal moves scenario handled gracefully
+- [ ] `runGame` produces a complete `GameTrace` for valid inputs.
+- [ ] Termination semantics are correct for terminal, cap, and no-legal-move cases.
+- [ ] Every `MoveLog.stateHash` is consistent with kernel hashing.
+- [ ] Deltas are correct, deterministic, and path-sorted.
+- [ ] Determinism verified for same seed/setup.
+- [ ] Agent RNG is correctly isolated from game RNG.
+- [ ] `runGames` produces independent traces in seed order.
+- [ ] Trace serde round-trips via kernel serde functions.
+- [ ] Validation errors are descriptive and fail fast.
+- [ ] `GameTrace.stopReason` is present and correct for every run.
 
 ## Files to Create/Modify
 
-```
-src/sim/simulator.ts             # NEW — runGame and runGames implementation
-src/sim/delta.ts                 # NEW — computeDeltas state comparison
-src/sim/trace-serialization.ts   # NEW — serializeTrace / deserializeTrace
-src/sim/index.ts                 # MODIFY — re-export simulator APIs
-src/kernel/apply-move.ts         # MODIFY — extend return type to include triggerFirings
-test/unit/simulator.test.ts      # NEW — simulation loop tests
-test/unit/delta.test.ts          # NEW — delta computation tests
-test/unit/trace-serialization.test.ts  # NEW — serialization round-trip tests
-test/integration/sim-full-game.test.ts # NEW — full game simulation tests
-test/integration/sim-determinism.test.ts # NEW — determinism verification
+```text
+src/sim/simulator.ts                  # NEW — runGame/runGames implementation
+src/sim/delta.ts                      # NEW — deterministic computeDeltas
+src/sim/index.ts                      # MODIFY — re-export simulator APIs
+src/kernel/types.ts                   # MODIFY — add GameTrace.stopReason + SimulationStopReason
+src/kernel/schemas.ts                 # MODIFY — add schema support for stopReason
+src/kernel/serde.ts                   # MODIFY — include stopReason in trace serde round-trip
+test/unit/sim/simulator.test.ts       # NEW — simulation loop and validation tests
+test/unit/sim/delta.test.ts           # NEW — delta computation and ordering tests
+test/integration/sim/simulator.test.ts # NEW — determinism and batch integration tests
+test/unit/schemas-top-level.test.ts   # MODIFY — trace schema expectations for stopReason
+test/unit/serde.test.ts               # MODIFY — trace serde expectations for stopReason
 ```

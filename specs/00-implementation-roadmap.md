@@ -124,7 +124,7 @@ This is the longest dependency chain and determines minimum time-to-MVP.
 
 **Verification criteria**:
 - RandomAgent and GreedyAgent choose legal moves deterministically
-- `runGame` produces complete GameTrace with state hashes
+- `runGame` produces complete GameTrace with state hashes and explicit stop reason (`terminal`/`maxTurns`/`noLegalMoves`)
 - `computeMetrics` returns all 7 metrics from trace data
 - `detectDegeneracy` checks all 6 flags
 - All 5 CLI commands work: spec:lint, spec:compile, run, eval, replay
@@ -196,7 +196,7 @@ All type definitions live in Spec 02. Other specs import and use these types but
 | Spec 08a | Spec 08b | `parseGameSpec`, `validateGameSpec`, `GameSpecDoc` |
 | Spec 08b | Spec 12 | `expandMacros`, `compileGameSpecToGameDef` |
 | Spec 09 | Spec 10 | `Agent.chooseMove` (returns `{ move, rng }`), `RandomAgent`, `GreedyAgent` |
-| Spec 10 | Spec 11, 12 | `runGame`, `GameTrace` |
+| Spec 10 | Spec 11, 12 | `runGame`, `GameTrace` (includes deterministic `stopReason`) |
 | Spec 11 | Spec 12, 14 | `computeMetrics`, `detectDegeneracy`, `generateEvalReport` |
 
 ### Shared Infrastructure

@@ -92,6 +92,16 @@ interface EvalReport {
 }
 ```
 
+### Required Trace Field from Spec 10
+
+Degeneracy detection relies on the Spec 10 `GameTrace` amendment:
+
+```typescript
+type SimulationStopReason = 'terminal' | 'maxTurns' | 'noLegalMoves';
+```
+
+`GameTrace.stopReason` is required to deterministically detect `NO_LEGAL_MOVES` without re-simulation.
+
 ## Implementation Requirements
 
 ### computeMetrics
@@ -210,12 +220,11 @@ Implementation: Use a Set<bigint> for O(n) scan per trace.
 
 ```
 For each trace:
-  If any MoveLog entry has legalMoveCount === 0 (before terminal)
-  OR if trace ended without terminal result and moves array is shorter than maxTurns
+  If trace.stopReason === 'noLegalMoves'
   → NO_LEGAL_MOVES
 
-Note: `legalMoveCount` is required by Spec 02/10; treat absence as invalid trace data.
-(trace ended early without terminal result).
+Without an explicit stop reason in GameTrace, treat this as best-effort only and avoid false positives.
+Legacy traces without `stopReason` should skip `NO_LEGAL_MOVES` detection rather than guess.
 ```
 
 #### DOMINANT_ACTION
@@ -251,10 +260,8 @@ Note: Identical stateHash with different moves means the move had no effect — 
 ```
 For each trace:
   Scan all MoveLog.triggerFirings
-  If any triggerFiring has depth >= maxTriggerDepth (from GameDef metadata)
+  If any trigger log entry has kind === 'truncated'
   → TRIGGER_DEPTH_EXCEEDED
-
-Alternative: Check for truncation markers in trigger chains.
 ```
 
 ### generateEvalReport
@@ -282,7 +289,7 @@ interface MoveLog {
   readonly player: PlayerId;
   readonly move: Move;
   readonly deltas: readonly StateDelta[];
-  readonly triggerFirings: readonly TriggerFiring[];
+  readonly triggerFirings: readonly TriggerLogEntry[];
   readonly legalMoveCount: number; // number of legal moves available this turn
 }
 ```
@@ -319,16 +326,16 @@ interface MoveLog {
 **detectDegeneracy**:
 - Trace with repeated state hash → LOOP_DETECTED
 - Trace with no repeated hashes → LOOP_DETECTED not flagged
-- Trace with 0-move turn → NO_LEGAL_MOVES
-- All turns have moves → NO_LEGAL_MOVES not flagged
+- Trace marked with stop reason `noLegalMoves` → NO_LEGAL_MOVES
+- Trace with stop reason `maxTurns` → NO_LEGAL_MOVES not flagged
 - Trace where same action used 85% of time → DOMINANT_ACTION (with default threshold 0.8)
 - Trace where most-used action is 70% → DOMINANT_ACTION not flagged
 - 3-turn game with terminal result → TRIVIAL_WIN (with threshold 5)
 - 10-turn game → TRIVIAL_WIN not flagged
 - 10 consecutive identical state hashes → STALL
 - No consecutive identical hashes → STALL not flagged
-- Trigger firing at max depth → TRIGGER_DEPTH_EXCEEDED
-- All triggers within depth → TRIGGER_DEPTH_EXCEEDED not flagged
+- Trigger log contains `kind: truncated` entry → TRIGGER_DEPTH_EXCEEDED
+- No truncation entries → TRIGGER_DEPTH_EXCEEDED not flagged
 - Healthy game trace → zero degeneracy flags
 
 **Custom config**:

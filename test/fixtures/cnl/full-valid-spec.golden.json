@@ -1,0 +1,80 @@
+{
+  "expectedDoc": {
+    "metadata": {
+      "id": "fixture-valid",
+      "players": {
+        "min": 2,
+        "max": 4
+      }
+    },
+    "constants": {
+      "handLimit": 7
+    },
+    "globalVars": null,
+    "perPlayerVars": null,
+    "zones": [
+      {
+        "id": "deck",
+        "owner": "none",
+        "visibility": "hidden",
+        "ordering": "stack"
+      }
+    ],
+    "tokenTypes": null,
+    "setup": null,
+    "turnStructure": {
+      "phases": [
+        {
+          "id": "main"
+        }
+      ],
+      "activePlayerOrder": "roundRobin"
+    },
+    "actions": [
+      {
+        "id": "draw",
+        "actor": {
+          "currentPlayer": true
+        },
+        "phase": "main",
+        "params": [],
+        "pre": null,
+        "cost": [],
+        "effects": [],
+        "limits": []
+      }
+    ],
+    "triggers": null,
+    "endConditions": [
+      {
+        "when": {
+          "op": ">=",
+          "left": 1,
+          "right": 999
+        },
+        "result": {
+          "type": "draw"
+        }
+      }
+    ]
+  },
+  "requiredSourceMapAnchors": [
+    "metadata.id",
+    "metadata.players.min",
+    "zones[0].id",
+    "turnStructure.phases[0].id",
+    "actions[0].id",
+    "endConditions[0].result.type"
+  ],
+  "expectedParseDiagnosticCodes": [
+    "CNL_YAML_002",
+    "CNL_YAML_010",
+    "CNL_YAML_010",
+    "CNL_YAML_004",
+    "CNL_YAML_018",
+    "CNL_YAML_009",
+    "CNL_YAML_009",
+    "CNL_YAML_009",
+    "CNL_YAML_009"
+  ]
+}

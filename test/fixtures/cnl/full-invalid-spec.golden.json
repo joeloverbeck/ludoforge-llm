@@ -1,0 +1,141 @@
+{
+  "expectedCombinedDiagnostics": [
+    {
+      "code": "CNL_YAML_002",
+      "path": "yaml.block.0.indentation",
+      "severity": "warning",
+      "message": "Inconsistent indentation detected (mixed 2-space and 4-space levels)."
+    },
+    {
+      "code": "CNL_YAML_010",
+      "path": "yaml.block.0.line.7",
+      "severity": "warning",
+      "message": "Potential bare multi-line scalar detected without | or >.",
+      "suggestion": "Use | or > for multi-line scalar values."
+    },
+    {
+      "code": "CNL_YAML_018",
+      "path": "yaml.block.0.line.12",
+      "severity": "warning",
+      "message": "Mixed flow-style and block-style YAML detected."
+    },
+    {
+      "code": "CNL_YAML_009",
+      "path": "yaml.block.0.line.12",
+      "severity": "warning",
+      "message": "Unescaped special characters in unquoted scalar value."
+    },
+    {
+      "code": "CNL_YAML_010",
+      "path": "yaml.block.0.line.15",
+      "severity": "warning",
+      "message": "Potential bare multi-line scalar detected without | or >."
+    },
+    {
+      "code": "CNL_YAML_009",
+      "path": "yaml.block.0.line.18",
+      "severity": "warning",
+      "message": "Unescaped special characters in unquoted scalar value."
+    },
+    {
+      "code": "CNL_YAML_009",
+      "path": "yaml.block.0.line.20",
+      "severity": "warning",
+      "message": "Unescaped special characters in unquoted scalar value."
+    },
+    {
+      "code": "CNL_YAML_009",
+      "path": "yaml.block.0.line.21",
+      "severity": "warning",
+      "message": "Unescaped special characters in unquoted scalar value."
+    },
+    {
+      "code": "CNL_YAML_009",
+      "path": "yaml.block.0.line.22",
+      "severity": "warning",
+      "message": "Unescaped special characters in unquoted scalar value."
+    },
+    {
+      "code": "CNL_YAML_004",
+      "path": "yaml.block.0.line.25",
+      "severity": "warning",
+      "message": "Boolean-like string is unquoted."
+    },
+    {
+      "code": "CNL_VALIDATOR_ACTION_REQUIRED_FIELD_MISSING",
+      "path": "doc.actions.0.actor",
+      "severity": "error",
+      "message": "Action field \"actor\" is required."
+    },
+    {
+      "code": "CNL_VALIDATOR_ACTION_EFFECTS_SHAPE_INVALID",
+      "path": "doc.actions.0.effects",
+      "severity": "error",
+      "message": "Action field \"effects\" must be an array."
+    },
+    {
+      "code": "CNL_VALIDATOR_REFERENCE_MISSING",
+      "path": "doc.actions.0.phase",
+      "severity": "error",
+      "message": "Unknown phase \"mian\"."
+    },
+    {
+      "code": "CNL_VALIDATOR_UNKNOWN_KEY",
+      "path": "doc.endConditions.0.reslt",
+      "severity": "warning",
+      "message": "Unknown key \"reslt\" in end condition.",
+      "suggestion": "Did you mean \"result\"?",
+      "alternatives": [
+        "result"
+      ]
+    },
+    {
+      "code": "CNL_VALIDATOR_IDENTIFIER_INVALID",
+      "path": "doc.metadata.id",
+      "severity": "error",
+      "message": "metadata id must be a non-empty string."
+    },
+    {
+      "code": "CNL_VALIDATOR_METADATA_PLAYERS_MIN_GT_MAX",
+      "path": "doc.metadata.players",
+      "severity": "error",
+      "message": "metadata.players.min must be <= metadata.players.max."
+    },
+    {
+      "code": "CNL_VALIDATOR_METADATA_PLAYERS_MIN_TOO_LOW",
+      "path": "doc.metadata.players.min",
+      "severity": "error",
+      "message": "metadata.players.min must be >= 1."
+    },
+    {
+      "code": "CNL_VALIDATOR_TURN_STRUCTURE_ORDER_INVALID",
+      "path": "doc.turnStructure.activePlayerOrder",
+      "severity": "error",
+      "message": "turnStructure.activePlayerOrder must be \"roundRobin\" or \"fixed\"."
+    },
+    {
+      "code": "CNL_VALIDATOR_TURN_STRUCTURE_PHASES_INVALID",
+      "path": "doc.turnStructure.phases",
+      "severity": "error",
+      "message": "turnStructure.phases must be a non-empty array."
+    },
+    {
+      "code": "CNL_VALIDATOR_ENUM_VALUE_INVALID",
+      "path": "doc.zones.0.ordering",
+      "severity": "error",
+      "message": "zone field \"ordering\" must be one of: stack, queue, set."
+    },
+    {
+      "code": "CNL_VALIDATOR_ENUM_VALUE_INVALID",
+      "path": "doc.zones.0.owner",
+      "severity": "error",
+      "message": "zone field \"owner\" must be one of: none, player."
+    },
+    {
+      "code": "CNL_VALIDATOR_ENUM_VALUE_INVALID",
+      "path": "doc.zones.0.visibility",
+      "severity": "error",
+      "message": "zone field \"visibility\" must be one of: public, owner, hidden."
+    }
+  ]
+}

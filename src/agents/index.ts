@@ -1,3 +1,1 @@
-// Module: agents
-// Implementation added by subsequent specs.
-export {};
+export * from './factory.js';

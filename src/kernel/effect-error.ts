@@ -2,7 +2,9 @@ export type EffectErrorCode =
   | 'EFFECT_RUNTIME'
   | 'EFFECT_NOT_IMPLEMENTED'
   | 'EFFECT_BUDGET_EXCEEDED'
-  | 'SPATIAL_NOT_IMPLEMENTED';
+  | 'SPATIAL_NOT_IMPLEMENTED'
+  | 'SPATIAL_DESTINATION_REQUIRED'
+  | 'SPATIAL_DESTINATION_NOT_ADJACENT';
 
 export type EffectErrorContext = Readonly<Record<string, unknown>>;
 

@@ -4,13 +4,14 @@ import { describe, it } from 'node:test';
 import {
   buildAdjacencyGraph,
   EffectBudgetExceededError,
-  SpatialNotImplementedError,
   applyEffect,
   applyEffects,
   asPhaseId,
   asPlayerId,
+  asZoneId,
   createRng,
   getMaxEffectOps,
+  isEffectErrorCode,
   type EffectAST,
   type EffectContext,
   type GameDef,
@@ -22,7 +23,10 @@ const makeDef = (): GameDef => ({
   constants: {},
   globalVars: [{ name: 'x', type: 'int', init: 0, min: 0, max: 10 }],
   perPlayerVars: [],
-  zones: [],
+  zones: [
+    { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+    { id: asZoneId('adjacent:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('board:none')] },
+  ],
   tokenTypes: [],
   setup: [],
   turnStructure: {
@@ -38,7 +42,10 @@ const makeState = (): GameState => ({
   globalVars: { x: 0 },
   perPlayerVars: {},
   playerCount: 2,
-  zones: {},
+  zones: {
+    'board:none': [],
+    'adjacent:none': [],
+  },
   nextTokenOrdinal: 0,
   currentPhase: asPhaseId('main'),
   activePlayer: asPlayerId(0),
@@ -50,7 +57,7 @@ const makeState = (): GameState => ({
 
 const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   def: makeDef(),
-  adjacencyGraph: buildAdjacencyGraph([]),
+  adjacencyGraph: buildAdjacencyGraph(makeDef().zones),
   state: makeState(),
   rng: createRng(7n),
   activePlayer: asPlayerId(0),
@@ -143,12 +150,11 @@ describe('effects runtime foundation', () => {
     });
   });
 
-  it('throws SpatialNotImplementedError for moveTokenAdjacent', () => {
+  it('throws SPATIAL_DESTINATION_REQUIRED for moveTokenAdjacent without direction', () => {
     const ctx = makeCtx({ maxEffectOps: 5 });
 
     assert.throws(() => applyEffects([moveTokenAdjacentEffect], ctx), (error: unknown) => {
-      assert.ok(error instanceof SpatialNotImplementedError);
-      return true;
+      return isEffectErrorCode(error, 'SPATIAL_DESTINATION_REQUIRED');
     });
   });
 

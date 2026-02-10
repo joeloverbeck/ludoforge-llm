@@ -2,7 +2,6 @@ import { getMaxEffectOps, type EffectContext, type EffectResult } from './effect
 import {
   EffectBudgetExceededError,
   EffectRuntimeError,
-  SpatialNotImplementedError,
   effectNotImplementedError,
 } from './effect-error.js';
 import { asTokenId } from './branded.js';
@@ -406,6 +405,47 @@ const findTokenOccurrences = (ctx: EffectContext, tokenId: string): readonly Tok
   return occurrences;
 };
 
+const resolveMoveTokenAdjacentDestination = (
+  direction: string | undefined,
+  ctx: EffectContext,
+): string => {
+  if (direction === undefined) {
+    throw new EffectRuntimeError('SPATIAL_DESTINATION_REQUIRED', 'moveTokenAdjacent.direction is required', {
+      effectType: 'moveTokenAdjacent',
+      availableBindings: Object.keys(resolveEffectBindings(ctx)).sort(),
+    });
+  }
+
+  if (!direction.startsWith('$')) {
+    return direction;
+  }
+
+  const bindings = resolveEffectBindings(ctx);
+  const boundDestination = bindings[direction];
+  if (boundDestination === undefined) {
+    throw new EffectRuntimeError('SPATIAL_DESTINATION_REQUIRED', `moveTokenAdjacent destination binding not found: ${direction}`, {
+      effectType: 'moveTokenAdjacent',
+      direction,
+      availableBindings: Object.keys(bindings).sort(),
+    });
+  }
+
+  if (typeof boundDestination !== 'string') {
+    throw new EffectRuntimeError(
+      'EFFECT_RUNTIME',
+      `moveTokenAdjacent destination binding ${direction} must resolve to ZoneId string`,
+      {
+        effectType: 'moveTokenAdjacent',
+        direction,
+        actualType: typeof boundDestination,
+        value: boundDestination,
+      },
+    );
+  }
+
+  return boundDestination;
+};
+
 const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const fromZone = resolveSingleZoneSel(effect.moveToken.from, evalCtx);
@@ -492,6 +532,37 @@ const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown
     rng: nextRng,
     emittedEvents: [{ type: 'tokenEntered', zone: toZone }],
   };
+};
+
+const applyMoveTokenAdjacent = (
+  effect: Extract<EffectAST, { readonly moveTokenAdjacent: unknown }>,
+  ctx: EffectContext,
+): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const fromZone = resolveSingleZoneSel(effect.moveTokenAdjacent.from, evalCtx);
+  const fromZoneId = String(fromZone);
+  const toZoneId = resolveMoveTokenAdjacentDestination(effect.moveTokenAdjacent.direction, ctx);
+  const adjacentZones = ctx.adjacencyGraph.neighbors[fromZoneId] ?? [];
+
+  if (!adjacentZones.some((zoneId) => String(zoneId) === toZoneId)) {
+    throw new EffectRuntimeError('SPATIAL_DESTINATION_NOT_ADJACENT', 'moveTokenAdjacent destination is not adjacent', {
+      effectType: 'moveTokenAdjacent',
+      fromZoneId,
+      toZoneId,
+      adjacentZones,
+    });
+  }
+
+  return applyMoveToken(
+    {
+      moveToken: {
+        token: effect.moveTokenAdjacent.token,
+        from: effect.moveTokenAdjacent.from,
+        to: toZoneId,
+      },
+    },
+    ctx,
+  );
 };
 
 const applyCreateToken = (effect: Extract<EffectAST, { readonly createToken: unknown }>, ctx: EffectContext): EffectResult => {
@@ -902,6 +973,10 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
     return applyMoveAll(effect, ctx);
   }
 
+  if ('moveTokenAdjacent' in effect) {
+    return applyMoveTokenAdjacent(effect, ctx);
+  }
+
   if ('draw' in effect) {
     return applyDraw(effect, ctx);
   }
@@ -936,13 +1011,6 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 
   if ('chooseN' in effect) {
     return applyChooseN(effect, ctx);
-  }
-
-  if ('moveTokenAdjacent' in effect) {
-    throw new SpatialNotImplementedError('Spatial effect is not implemented: moveTokenAdjacent', {
-      effectType: 'moveTokenAdjacent',
-      effect,
-    });
   }
 
   throw effectNotImplementedError(effectTypeOf(effect), { effect });

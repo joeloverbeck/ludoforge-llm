@@ -3,13 +3,13 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
-  SpatialNotImplementedError,
   applyEffect,
   asPhaseId,
   asPlayerId,
   asTokenId,
   asZoneId,
   createRng,
+  isEffectErrorCode,
   nextInt,
   type EffectContext,
   type GameDef,
@@ -25,7 +25,7 @@ const makeDef = (): GameDef => ({
   zones: [
     { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
     { id: asZoneId('discard:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
-    { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+    { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('discard:none')] },
   ],
   tokenTypes: [],
   setup: [],
@@ -61,7 +61,7 @@ const makeState = (): GameState => ({
 
 const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   def: makeDef(),
-  adjacencyGraph: buildAdjacencyGraph([]),
+  adjacencyGraph: buildAdjacencyGraph(makeDef().zones),
   state: makeState(),
   rng: createRng(123n),
   activePlayer: asPlayerId(0),
@@ -71,7 +71,7 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   ...overrides,
 });
 
-describe('effects moveAll, shuffle, and spatial stub', () => {
+describe('effects moveAll and shuffle', () => {
   it('moveAll without filter moves all tokens and preserves source order', () => {
     const ctx = makeCtx();
 
@@ -196,15 +196,12 @@ describe('effects moveAll, shuffle, and spatial stub', () => {
     assert.equal(singleResult.rng, ctx.rng);
   });
 
-  it('moveTokenAdjacent throws SpatialNotImplementedError with effect context', () => {
+  it('moveTokenAdjacent without direction throws SPATIAL_DESTINATION_REQUIRED', () => {
     const ctx = makeCtx();
     const effect = { moveTokenAdjacent: { token: '$token', from: 'board:none' } } as const;
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
-      assert.ok(error instanceof SpatialNotImplementedError);
-      assert.equal(error.context?.effectType, 'moveTokenAdjacent');
-      assert.deepEqual(error.context?.effect, effect);
-      return true;
+      return isEffectErrorCode(error, 'SPATIAL_DESTINATION_REQUIRED');
     });
   });
 });

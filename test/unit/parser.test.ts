@@ -47,6 +47,24 @@ describe('parseGameSpec API shape', () => {
     assert.ok(result.diagnostics.every((diagnostic) => diagnostic.severity !== 'error'));
   });
 
+  it('anchors nested canonical metadata paths in sourceMap.byPath', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'metadata:',
+      '  id: game',
+      '  players:',
+      '    min: 2',
+      '    max: 4',
+      '```',
+    ].join('\n'));
+
+    assert.ok(result.sourceMap.byPath['metadata'] !== undefined);
+    assert.ok(result.sourceMap.byPath['metadata.id'] !== undefined);
+    assert.ok(result.sourceMap.byPath['metadata.players'] !== undefined);
+    assert.ok(result.sourceMap.byPath['metadata.players.min'] !== undefined);
+    assert.ok(result.sourceMap.byPath['metadata.players.max'] !== undefined);
+  });
+
   it('surfaces YAML lint diagnostics from fenced YAML blocks', () => {
     const result = parseGameSpec('```yaml\nmetadata:  \n  id: on\n```');
 
@@ -181,6 +199,38 @@ describe('parseGameSpec API shape', () => {
     );
   });
 
+  it('anchors appended list entries using canonical merged indexes', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'actions:',
+      '  - id: a1',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      '```',
+      '```yaml',
+      'actions:',
+      '  - id: a2',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      '```',
+    ].join('\n'));
+
+    assert.ok(result.sourceMap.byPath['actions[0].id'] !== undefined);
+    assert.ok(result.sourceMap.byPath['actions[1].id'] !== undefined);
+    assert.equal(result.sourceMap.byPath['actions[0].id']?.blockIndex, 0);
+    assert.equal(result.sourceMap.byPath['actions[1].id']?.blockIndex, 1);
+  });
+
   it('emits ambiguity diagnostics when fallback cannot resolve uniquely', () => {
     const result = parseGameSpec([
       '```yaml',
@@ -209,6 +259,32 @@ describe('parseGameSpec API shape', () => {
     assert.equal(result.diagnostics[2]?.code, 'CNL_PARSER_DIAGNOSTICS_TRUNCATED');
     assert.equal(result.diagnostics[2]?.path, 'parser.diagnostics');
     assert.equal(result.diagnostics[2]?.severity, 'warning');
+  });
+
+  it('produces deterministic sourceMap output for identical markdown input', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: game-a',
+      '  players:',
+      '    min: 2',
+      '    max: 4',
+      'actions:',
+      '  - id: a1',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      '```',
+    ].join('\n');
+
+    const first = parseGameSpec(markdown);
+    const second = parseGameSpec(markdown);
+
+    assert.deepEqual(first.sourceMap.byPath, second.sourceMap.byPath);
   });
 
   it('returns a limit diagnostic when maxInputBytes is exceeded', () => {

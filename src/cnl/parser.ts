@@ -5,7 +5,7 @@ import {
   type CanonicalSectionKey,
   resolveSectionsFromBlock,
 } from './section-identifier.js';
-import type { GameSpecSourceMap } from './source-map.js';
+import type { GameSpecSourceMap, SourceSpan } from './source-map.js';
 import { lintYamlHardening } from './yaml-linter.js';
 
 export interface ParseGameSpecResult {
@@ -122,15 +122,19 @@ export function parseGameSpec(markdown: string, options: ParseGameSpecOptions = 
     }
 
     for (const resolved of resolution.resolved) {
-      mergeSection(doc, resolved.section, resolved.value, diagnostics);
-      if (sourceMapByPath[resolved.section] === undefined) {
-        sourceMapByPath[resolved.section] = {
-          blockIndex: index,
-          markdownLineStart: block.markdownLineStart,
-          markdownColStart: 1,
-          markdownLineEnd: block.markdownLineEnd,
-          markdownColEnd: 1,
-        };
+      const anchoredPaths = mergeSection(doc, resolved.section, resolved.value, diagnostics);
+      const span: SourceSpan = {
+        blockIndex: index,
+        markdownLineStart: block.markdownLineStart,
+        markdownColStart: 1,
+        markdownLineEnd: block.markdownLineEnd,
+        markdownColEnd: 1,
+      };
+
+      for (const anchoredPath of anchoredPaths) {
+        if (sourceMapByPath[anchoredPath] === undefined) {
+          sourceMapByPath[anchoredPath] = span;
+        }
       }
     }
   }
@@ -197,17 +201,14 @@ function mergeSection(
   section: CanonicalSectionKey,
   value: unknown,
   diagnostics: Diagnostic[],
-): void {
+): readonly string[] {
   switch (section) {
     case 'metadata':
-      mergeSingletonMetadata(doc, value, diagnostics);
-      return;
+      return mergeSingletonMetadata(doc, section, value, diagnostics);
     case 'constants':
-      mergeSingletonConstants(doc, value, diagnostics);
-      return;
+      return mergeSingletonConstants(doc, section, value, diagnostics);
     case 'turnStructure':
-      mergeSingletonTurnStructure(doc, value, diagnostics);
-      return;
+      return mergeSingletonTurnStructure(doc, section, value, diagnostics);
     case 'globalVars':
     case 'perPlayerVars':
     case 'zones':
@@ -216,12 +217,16 @@ function mergeSection(
     case 'actions':
     case 'triggers':
     case 'endConditions':
-      mergeListSection(doc, section, value);
-      return;
+      return mergeListSection(doc, section, value);
   }
 }
 
-function mergeSingletonMetadata(doc: GameSpecDoc, value: unknown, diagnostics: Diagnostic[]): void {
+function mergeSingletonMetadata(
+  doc: GameSpecDoc,
+  section: 'metadata',
+  value: unknown,
+  diagnostics: Diagnostic[],
+): readonly string[] {
   if (doc.metadata !== null) {
     diagnostics.push({
       code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
@@ -229,13 +234,19 @@ function mergeSingletonMetadata(doc: GameSpecDoc, value: unknown, diagnostics: D
       severity: 'warning',
       message: 'Duplicate singleton section "metadata" ignored; first definition wins.',
     });
-    return;
+    return [];
   }
 
   (doc as MutableGameSpecDoc).metadata = asObjectOrNull(value) as MutableGameSpecDoc['metadata'];
+  return buildAnchoredPaths(section, value);
 }
 
-function mergeSingletonConstants(doc: GameSpecDoc, value: unknown, diagnostics: Diagnostic[]): void {
+function mergeSingletonConstants(
+  doc: GameSpecDoc,
+  section: 'constants',
+  value: unknown,
+  diagnostics: Diagnostic[],
+): readonly string[] {
   if (doc.constants !== null) {
     diagnostics.push({
       code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
@@ -243,13 +254,19 @@ function mergeSingletonConstants(doc: GameSpecDoc, value: unknown, diagnostics: 
       severity: 'warning',
       message: 'Duplicate singleton section "constants" ignored; first definition wins.',
     });
-    return;
+    return [];
   }
 
   (doc as MutableGameSpecDoc).constants = asObjectOrNull(value) as MutableGameSpecDoc['constants'];
+  return buildAnchoredPaths(section, value);
 }
 
-function mergeSingletonTurnStructure(doc: GameSpecDoc, value: unknown, diagnostics: Diagnostic[]): void {
+function mergeSingletonTurnStructure(
+  doc: GameSpecDoc,
+  section: 'turnStructure',
+  value: unknown,
+  diagnostics: Diagnostic[],
+): readonly string[] {
   if (doc.turnStructure !== null) {
     diagnostics.push({
       code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
@@ -257,10 +274,11 @@ function mergeSingletonTurnStructure(doc: GameSpecDoc, value: unknown, diagnosti
       severity: 'warning',
       message: 'Duplicate singleton section "turnStructure" ignored; first definition wins.',
     });
-    return;
+    return [];
   }
 
   (doc as MutableGameSpecDoc).turnStructure = asObjectOrNull(value) as MutableGameSpecDoc['turnStructure'];
+  return buildAnchoredPaths(section, value);
 }
 
 function mergeListSection(
@@ -275,41 +293,42 @@ function mergeListSection(
     | 'triggers'
     | 'endConditions',
   value: unknown,
-): void {
+): readonly string[] {
+  const existingLength = getListSectionLength(doc, section);
   const listValue = asArray(value);
   switch (section) {
     case 'globalVars':
       (doc as MutableGameSpecDoc).globalVars = (
         doc.globalVars === null ? listValue : [...doc.globalVars, ...listValue]
       ) as MutableGameSpecDoc['globalVars'];
-      return;
+      return buildAnchoredPaths(section, listValue, existingLength);
     case 'perPlayerVars':
       (doc as MutableGameSpecDoc).perPlayerVars =
         (doc.perPlayerVars === null ? listValue : [...doc.perPlayerVars, ...listValue]) as MutableGameSpecDoc['perPlayerVars'];
-      return;
+      return buildAnchoredPaths(section, listValue, existingLength);
     case 'zones':
       (doc as MutableGameSpecDoc).zones = (doc.zones === null ? listValue : [...doc.zones, ...listValue]) as MutableGameSpecDoc['zones'];
-      return;
+      return buildAnchoredPaths(section, listValue, existingLength);
     case 'tokenTypes':
       (doc as MutableGameSpecDoc).tokenTypes = (
         doc.tokenTypes === null ? listValue : [...doc.tokenTypes, ...listValue]
       ) as MutableGameSpecDoc['tokenTypes'];
-      return;
+      return buildAnchoredPaths(section, listValue, existingLength);
     case 'setup':
       (doc as MutableGameSpecDoc).setup = (doc.setup === null ? listValue : [...doc.setup, ...listValue]) as MutableGameSpecDoc['setup'];
-      return;
+      return buildAnchoredPaths(section, listValue, existingLength);
     case 'actions':
       (doc as MutableGameSpecDoc).actions =
         (doc.actions === null ? listValue : [...doc.actions, ...listValue]) as MutableGameSpecDoc['actions'];
-      return;
+      return buildAnchoredPaths(section, listValue, existingLength);
     case 'triggers':
       (doc as MutableGameSpecDoc).triggers =
         (doc.triggers === null ? listValue : [...doc.triggers, ...listValue]) as MutableGameSpecDoc['triggers'];
-      return;
+      return buildAnchoredPaths(section, listValue, existingLength);
     case 'endConditions':
       (doc as MutableGameSpecDoc).endConditions =
         (doc.endConditions === null ? listValue : [...doc.endConditions, ...listValue]) as MutableGameSpecDoc['endConditions'];
-      return;
+      return buildAnchoredPaths(section, listValue, existingLength);
   }
 }
 
@@ -329,6 +348,61 @@ function asArray(value: unknown): unknown[] {
     return value;
   }
   return [];
+}
+
+function getListSectionLength(
+  doc: GameSpecDoc,
+  section:
+    | 'globalVars'
+    | 'perPlayerVars'
+    | 'zones'
+    | 'tokenTypes'
+    | 'setup'
+    | 'actions'
+    | 'triggers'
+    | 'endConditions',
+): number {
+  const current = doc[section];
+  if (current === null) {
+    return 0;
+  }
+  return current.length;
+}
+
+function buildAnchoredPaths(
+  rootPath: string,
+  value: unknown,
+  rootArrayIndexOffset = 0,
+): readonly string[] {
+  const paths = new Set<string>([rootPath]);
+  collectAnchoredPaths(paths, rootPath, value, true, rootArrayIndexOffset);
+  return [...paths];
+}
+
+function collectAnchoredPaths(
+  paths: Set<string>,
+  path: string,
+  value: unknown,
+  isRoot: boolean,
+  rootArrayIndexOffset = 0,
+): void {
+  if (Array.isArray(value)) {
+    for (const [index, entry] of value.entries()) {
+      const nextIndex = isRoot ? rootArrayIndexOffset + index : index;
+      const entryPath = `${path}[${nextIndex}]`;
+      paths.add(entryPath);
+      collectAnchoredPaths(paths, entryPath, entry, false);
+    }
+    return;
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    for (const [key, entry] of Object.entries(value)) {
+      const childPath = `${path}.${key}`;
+      paths.add(childPath);
+      collectAnchoredPaths(paths, childPath, entry, false);
+    }
+  }
 }
 
 function countLines(text: string, endExclusive: number): number {

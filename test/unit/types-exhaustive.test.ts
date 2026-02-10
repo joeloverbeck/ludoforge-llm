@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { EffectAST, MoveLog, OptionsQuery, PlayerSel } from '../../src/kernel/index.js';
+import type { ConditionAST, EffectAST, MoveLog, OptionsQuery, PlayerSel } from '../../src/kernel/index.js';
 
 type UnionToIntersection<T> = (
   T extends unknown ? (arg: T) => void : never
@@ -86,13 +86,35 @@ const exhaustOptionsQuery = (query: OptionsQuery): string => {
   }
 };
 
+const exhaustConditionAST = (cond: ConditionAST): string => {
+  switch (cond.op) {
+    case 'and':
+    case 'or':
+    case 'not':
+    case '==':
+    case '!=':
+    case '<':
+    case '<=':
+    case '>':
+    case '>=':
+    case 'in':
+    case 'adjacent':
+    case 'connected':
+      return cond.op;
+    default:
+      return assertNever(cond);
+  }
+};
+
 describe('exhaustive kernel unions', () => {
   it('keeps the exact variant counts for key unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
+    const conditionVariants: UnionSize<ConditionAST> = 7;
     const effectVariants: UnionSize<EffectAST> = 14;
     const queryVariants: UnionSize<OptionsQuery> = 8;
 
     assert.equal(playerSelVariants, 7);
+    assert.equal(conditionVariants, 7);
     assert.equal(effectVariants, 14);
     assert.equal(queryVariants, 8);
   });
@@ -108,6 +130,7 @@ describe('exhaustive kernel unions', () => {
     void exhaustEffectAST({
       setVar: { scope: 'global', var: 'x', value: 1 },
     });
+    void exhaustConditionAST({ op: 'adjacent', left: 'zone:a', right: 'zone:b' });
     void exhaustOptionsQuery({ query: 'players' });
   });
 });

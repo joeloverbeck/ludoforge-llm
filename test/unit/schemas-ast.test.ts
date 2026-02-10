@@ -1,10 +1,12 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { EffectAST, PlayerSel } from '../../src/kernel/index.js';
+import type { ConditionAST, EffectAST, OptionsQuery, PlayerSel } from '../../src/kernel/index.js';
 
 import {
+  ConditionASTSchema,
   EffectASTSchema,
   OBJECT_STRICTNESS_POLICY,
+  OptionsQuerySchema,
   PlayerSelSchema,
   asPlayerId,
 } from '../../src/kernel/index.js';
@@ -100,6 +102,43 @@ describe('AST and selector schemas', () => {
     }
   });
 
+  it('parses spatial ConditionAST variants', () => {
+    const conditions: ConditionAST[] = [
+      { op: 'adjacent', left: 'board:a', right: 'board:b' },
+      {
+        op: 'connected',
+        from: 'board:a',
+        to: 'board:c',
+        via: { op: 'not', arg: { op: '==', left: 1, right: 2 } },
+        maxDepth: 3,
+      },
+      { op: 'connected', from: 'board:a', to: 'board:c' },
+    ];
+
+    for (const condition of conditions) {
+      assert.deepEqual(ConditionASTSchema.parse(condition), condition);
+    }
+  });
+
+  it('parses connectedZones query with traversal options', () => {
+    const queries: OptionsQuery[] = [
+      { query: 'connectedZones', zone: 'board:a' },
+      { query: 'connectedZones', zone: 'board:a', includeStart: true },
+      { query: 'connectedZones', zone: 'board:a', maxDepth: 2 },
+      {
+        query: 'connectedZones',
+        zone: 'board:a',
+        via: { op: 'adjacent', left: 'board:a', right: 'board:b' },
+        includeStart: false,
+        maxDepth: 4,
+      },
+    ];
+
+    for (const query of queries) {
+      assert.deepEqual(OptionsQuerySchema.parse(query), query);
+    }
+  });
+
   it('rejects invalid effect discriminants with a nested path', () => {
     const result = EffectASTSchema.safeParse({
       setVar: { scope: 'invalid', var: 'gold', value: 1 },
@@ -108,6 +147,31 @@ describe('AST and selector schemas', () => {
     assert.equal(result.success, false);
     const paths = result.error.issues.flatMap((issue) => collectIssuePaths(issue));
     assert.ok(paths.includes('setVar.scope'));
+  });
+
+  it('rejects malformed spatial ConditionAST payloads', () => {
+    const badAdjacent = ConditionASTSchema.safeParse({ op: 'adjacent', left: 'board:a', to: 'board:b' });
+    assert.equal(badAdjacent.success, false);
+
+    const badConnected = ConditionASTSchema.safeParse({ op: 'connected', from: 'board:a', right: 'board:b' });
+    assert.equal(badConnected.success, false);
+  });
+
+  it('rejects malformed connectedZones traversal option payloads', () => {
+    const wrongType = OptionsQuerySchema.safeParse({
+      query: 'connectedZones',
+      zone: 'board:a',
+      includeStart: 'yes',
+      maxDepth: '2',
+    });
+    assert.equal(wrongType.success, false);
+
+    const wrongField = OptionsQuerySchema.safeParse({
+      query: 'connectedZones',
+      zone: 'board:a',
+      includeStartAtDepth: 1,
+    });
+    assert.equal(wrongField.success, false);
   });
 
   it('enforces strict object policy for selector and AST objects', () => {

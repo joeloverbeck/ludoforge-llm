@@ -258,6 +258,19 @@ const validateConditionAst = (
       validateValueExpr(diagnostics, condition.set, `${path}.set`, context);
       return;
     }
+    case 'adjacent': {
+      validateZoneSelector(diagnostics, condition.left, `${path}.left`, context);
+      validateZoneSelector(diagnostics, condition.right, `${path}.right`, context);
+      return;
+    }
+    case 'connected': {
+      validateZoneSelector(diagnostics, condition.from, `${path}.from`, context);
+      validateZoneSelector(diagnostics, condition.to, `${path}.to`, context);
+      if (condition.via) {
+        validateConditionAst(diagnostics, condition.via, `${path}.via`, context);
+      }
+      return;
+    }
     default: {
       validateValueExpr(diagnostics, condition.left, `${path}.left`, context);
       validateValueExpr(diagnostics, condition.right, `${path}.right`, context);

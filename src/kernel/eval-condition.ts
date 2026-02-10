@@ -1,5 +1,5 @@
 import type { EvalContext } from './eval-context.js';
-import { typeMismatchError } from './eval-error.js';
+import { spatialNotImplementedError, typeMismatchError } from './eval-error.js';
 import { evalValue } from './eval-value.js';
 import type { ConditionAST, ValueExpr } from './types.js';
 
@@ -101,6 +101,10 @@ export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
       const setValues = evalMembershipSet(cond.set, ctx, cond);
       return setValues.includes(item);
     }
+
+    case 'adjacent':
+    case 'connected':
+      throw spatialNotImplementedError(`Spatial condition is not implemented: ${cond.op}`, { cond });
 
     default: {
       const _exhaustive: never = cond;

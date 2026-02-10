@@ -70,6 +70,8 @@ optionsQuerySchemaInternal = z.union([
       query: z.literal('connectedZones'),
       zone: ZoneSelSchema,
       via: ConditionASTSchema.optional(),
+      includeStart: BooleanSchema.optional(),
+      maxDepth: NumberSchema.optional(),
     })
     .strict(),
 ]);
@@ -118,6 +120,16 @@ conditionAstSchemaInternal = z.union([
     })
     .strict(),
   z.object({ op: z.literal('in'), item: ValueExprSchema, set: ValueExprSchema }).strict(),
+  z.object({ op: z.literal('adjacent'), left: ZoneSelSchema, right: ZoneSelSchema }).strict(),
+  z
+    .object({
+      op: z.literal('connected'),
+      from: ZoneSelSchema,
+      to: ZoneSelSchema,
+      via: ConditionASTSchema.optional(),
+      maxDepth: NumberSchema.optional(),
+    })
+    .strict(),
 ]);
 
 effectAstSchemaInternal = z.union([

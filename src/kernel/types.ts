@@ -64,7 +64,15 @@ export type ConditionAST =
       readonly left: ValueExpr;
       readonly right: ValueExpr;
     }
-  | { readonly op: 'in'; readonly item: ValueExpr; readonly set: ValueExpr };
+  | { readonly op: 'in'; readonly item: ValueExpr; readonly set: ValueExpr }
+  | { readonly op: 'adjacent'; readonly left: ZoneSel; readonly right: ZoneSel }
+  | {
+      readonly op: 'connected';
+      readonly from: ZoneSel;
+      readonly to: ZoneSel;
+      readonly via?: ConditionAST;
+      readonly maxDepth?: number;
+    };
 
 export type OptionsQuery =
   | { readonly query: 'tokensInZone'; readonly zone: ZoneSel }
@@ -78,6 +86,8 @@ export type OptionsQuery =
       readonly query: 'connectedZones';
       readonly zone: ZoneSel;
       readonly via?: ConditionAST;
+      readonly includeStart?: boolean;
+      readonly maxDepth?: number;
     };
 
 export type EffectAST =

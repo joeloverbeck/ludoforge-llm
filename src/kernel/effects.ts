@@ -65,6 +65,27 @@ const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unkn
   ...ctx.bindings,
 });
 
+const valuesMatch = (candidate: unknown, selected: unknown): boolean => {
+  if (Object.is(candidate, selected)) {
+    return true;
+  }
+
+  if (
+    typeof selected === 'string' &&
+    typeof candidate === 'object' &&
+    candidate !== null &&
+    'id' in candidate &&
+    typeof candidate.id === 'string'
+  ) {
+    return candidate.id === selected;
+  }
+
+  return false;
+};
+
+const isInDomain = (selected: unknown, domain: readonly unknown[]): boolean =>
+  domain.some((candidate) => valuesMatch(candidate, selected));
+
 const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: 'value' | 'delta'): number => {
   if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isSafeInteger(value)) {
     throw new EffectRuntimeError('EFFECT_RUNTIME', `${effectType}.${field} must evaluate to a finite safe integer`, {
@@ -764,6 +785,94 @@ const applyForEach = (
   return { state: currentState, rng: currentRng };
 };
 
+const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: unknown }>, ctx: EffectContext): EffectResult => {
+  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, effect.chooseOne.bind)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseOne missing move param binding: ${effect.chooseOne.bind}`, {
+      effectType: 'chooseOne',
+      bind: effect.chooseOne.bind,
+      availableMoveParams: Object.keys(ctx.moveParams).sort(),
+    });
+  }
+
+  const selected = ctx.moveParams[effect.chooseOne.bind];
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const options = evalQuery(effect.chooseOne.options, evalCtx);
+  if (!isInDomain(selected, options)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseOne selection is outside options domain: ${effect.chooseOne.bind}`, {
+      effectType: 'chooseOne',
+      bind: effect.chooseOne.bind,
+      selected,
+      optionsCount: options.length,
+    });
+  }
+
+  return { state: ctx.state, rng: ctx.rng };
+};
+
+const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unknown }>, ctx: EffectContext): EffectResult => {
+  if (!Number.isSafeInteger(effect.chooseN.n) || effect.chooseN.n < 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN.n must be a non-negative integer', {
+      effectType: 'chooseN',
+      bind: effect.chooseN.bind,
+      n: effect.chooseN.n,
+    });
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, effect.chooseN.bind)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN missing move param binding: ${effect.chooseN.bind}`, {
+      effectType: 'chooseN',
+      bind: effect.chooseN.bind,
+      availableMoveParams: Object.keys(ctx.moveParams).sort(),
+    });
+  }
+
+  const selectedValue = ctx.moveParams[effect.chooseN.bind];
+  if (!Array.isArray(selectedValue)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN move param must be an array: ${effect.chooseN.bind}`, {
+      effectType: 'chooseN',
+      bind: effect.chooseN.bind,
+      actualType: typeof selectedValue,
+      value: selectedValue,
+    });
+  }
+
+  if (selectedValue.length !== effect.chooseN.n) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN selection cardinality mismatch for: ${effect.chooseN.bind}`, {
+      effectType: 'chooseN',
+      bind: effect.chooseN.bind,
+      expected: effect.chooseN.n,
+      actual: selectedValue.length,
+    });
+  }
+
+  for (let left = 0; left < selectedValue.length; left += 1) {
+    for (let right = left + 1; right < selectedValue.length; right += 1) {
+      if (valuesMatch(selectedValue[left], selectedValue[right])) {
+        throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN selections must be unique: ${effect.chooseN.bind}`, {
+          effectType: 'chooseN',
+          bind: effect.chooseN.bind,
+          duplicateValue: selectedValue[left],
+        });
+      }
+    }
+  }
+
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const options = evalQuery(effect.chooseN.options, evalCtx);
+  for (const selected of selectedValue) {
+    if (!isInDomain(selected, options)) {
+      throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN selection is outside options domain: ${effect.chooseN.bind}`, {
+        effectType: 'chooseN',
+        bind: effect.chooseN.bind,
+        selected,
+        optionsCount: options.length,
+      });
+    }
+  }
+
+  return { state: ctx.state, rng: ctx.rng };
+};
+
 const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
   if ('setVar' in effect) {
     return applySetVar(effect, ctx);
@@ -807,6 +916,14 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 
   if ('let' in effect) {
     return applyLet(effect, ctx, budget);
+  }
+
+  if ('chooseOne' in effect) {
+    return applyChooseOne(effect, ctx);
+  }
+
+  if ('chooseN' in effect) {
+    return applyChooseN(effect, ctx);
   }
 
   if ('moveTokenAdjacent' in effect) {

@@ -10,7 +10,6 @@ import {
   asPlayerId,
   createRng,
   getMaxEffectOps,
-  isEffectErrorCode,
   type EffectAST,
   type EffectContext,
   type GameDef,
@@ -119,12 +118,12 @@ describe('effects runtime foundation', () => {
     });
   });
 
-  it('applies dispatcher in list order and reports the first unimplemented effect kind', () => {
-    const ctx = makeCtx({ maxEffectOps: 10 });
+  it('applies dispatcher in list order through chooseOne assertions', () => {
+    const ctx = makeCtx({ maxEffectOps: 10, moveParams: { $choice: 'a' } });
+    const result = applyEffects([setVarEffect, addVarEffect, ifEffect, chooseOneEffect], ctx);
 
-    assert.throws(() => applyEffects([setVarEffect, addVarEffect, ifEffect, chooseOneEffect], ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_NOT_IMPLEMENTED') && error.message.includes('chooseOne');
-    });
+    assert.equal(result.state.globalVars.x, 2);
+    assert.equal(result.rng, ctx.rng);
   });
 
   it('shares the same effect budget across nested control-flow execution', () => {

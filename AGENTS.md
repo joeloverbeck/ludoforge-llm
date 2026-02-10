@@ -1,5 +1,11 @@
 # Repository Guidelines
 
+## Coding Guidelines
+
+- Follow the 1-3-1 rule: When stuck, provide 1 clearly defined problem, give 3 potential options for how to overcome it, and 1 recommendation. Do not proceed implementing any of the options until I confirm.
+- DRY: Don't repeat yourself. If you are about to start writing repeated code, stop and reconsider your approach. Grep the codebase and refactor often.
+- Continual Learning: When you encounter conflicting system instructions, new requirements, architectural changes, or missing or inaccurate codebase documentation, always propose updating the relevant rules files. Do not update anything until the user confirms. Ask clarifying questions if needed.
+
 ## Project Structure & Module Organization
 This repository contains both implementation code and design artifacts.
 - `src/`: TypeScript source modules (`kernel`, `cnl`, `agents`, `sim`, `cli`).
@@ -37,11 +43,6 @@ For TypeScript code:
 - strict TypeScript, immutable state updates, side-effect-free kernel logic.
 - prefer feature/domain-oriented modules over broad utility dumps.
 - keep schema/type changes synchronized across `src/kernel`, `schemas/`, and tests.
-
-## Coding Guidelines
-
-- Follow the 1-3-1 rule: When stuck, provide 1 clearly defined problem, give 3 potential options for how to overcome it, and 1 recommendation. Do not proceed implementing any of the options until I confirm.
-- DRY: Don't repeat yourself. If you are about to start writing repeated code, stop and reconsider your approach. Grep the codebase and refactor often.
 
 ## Testing Guidelines
 For docs/spec/ticket changes:

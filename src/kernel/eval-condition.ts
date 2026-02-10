@@ -1,6 +1,8 @@
 import type { EvalContext } from './eval-context.js';
-import { spatialNotImplementedError, typeMismatchError } from './eval-error.js';
+import { typeMismatchError } from './eval-error.js';
 import { evalValue } from './eval-value.js';
+import { resolveSingleZoneSel } from './resolve-selectors.js';
+import { queryConnectedZones } from './spatial.js';
 import type { ConditionAST, ValueExpr } from './types.js';
 
 function isMembershipCollection(value: unknown): value is readonly unknown[] {
@@ -102,9 +104,21 @@ export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
       return setValues.includes(item);
     }
 
-    case 'adjacent':
-    case 'connected':
-      throw spatialNotImplementedError(`Spatial condition is not implemented: ${cond.op}`, { cond });
+    case 'adjacent': {
+      const leftZoneId = resolveSingleZoneSel(cond.left, ctx);
+      const rightZoneId = resolveSingleZoneSel(cond.right, ctx);
+      const neighbors = ctx.adjacencyGraph.neighbors[String(leftZoneId)] ?? [];
+      return neighbors.includes(rightZoneId);
+    }
+
+    case 'connected': {
+      const fromZoneId = resolveSingleZoneSel(cond.from, ctx);
+      const toZoneId = resolveSingleZoneSel(cond.to, ctx);
+      const reachableZones = queryConnectedZones(ctx.adjacencyGraph, ctx.state, fromZoneId, ctx, cond.via, {
+        ...(cond.maxDepth === undefined ? {} : { maxDepth: cond.maxDepth }),
+      });
+      return reachableZones.includes(toZoneId);
+    }
 
     default: {
       const _exhaustive: never = cond;

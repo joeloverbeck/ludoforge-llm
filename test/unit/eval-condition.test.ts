@@ -169,15 +169,4 @@ describe('evalCondition', () => {
     );
   });
 
-  it('throws SPATIAL_NOT_IMPLEMENTED for spatial conditions', () => {
-    const ctx = makeCtx();
-    assert.throws(
-      () => evalCondition({ op: 'adjacent', left: 'deck:none', right: 'hand:0' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'SPATIAL_NOT_IMPLEMENTED'),
-    );
-    assert.throws(
-      () => evalCondition({ op: 'connected', from: 'deck:none', to: 'hand:0' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'SPATIAL_NOT_IMPLEMENTED'),
-    );
-  });
 });

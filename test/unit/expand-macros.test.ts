@@ -89,6 +89,105 @@ describe('expandMacros', () => {
     assert.equal(result.diagnostics[1]?.code, 'CNL_COMPILER_LIMIT_EXCEEDED');
     assert.equal(containsHandEach(result.doc.setup), true);
   });
+
+  it('expands refillToSize into bounded guarded per-iteration draw effects', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      setup: [{ refillToSize: { zone: 'hand:actor', size: 3, fromZone: 'deck:none' } }],
+    };
+
+    const result = expandMacros(doc);
+    const setup = result.doc.setup as readonly Record<string, unknown>[];
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(setup.length, 3);
+
+    for (const effect of setup) {
+      const ifNode = effect.if as {
+        readonly when?: Record<string, unknown>;
+        readonly then?: readonly Record<string, unknown>[];
+      };
+      assert.ok(ifNode !== undefined);
+      assert.deepEqual(ifNode.when, {
+        op: '<',
+        left: { ref: 'zoneCount', zone: 'hand:actor' },
+        right: 3,
+      });
+      assert.deepEqual(ifNode.then, [{ draw: { from: 'deck:none', to: 'hand:actor', count: 1 } }]);
+    }
+  });
+
+  it('reports missing capability when refillToSize size is not a compile-time integer literal', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      setup: [{ refillToSize: { zone: 'hand:actor', size: { ref: 'gvar', var: 'n' }, fromZone: 'deck:none' } }],
+    };
+
+    const result = expandMacros(doc);
+
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.setup.0.refillToSize.size');
+    assert.deepEqual(result.doc.setup, doc.setup);
+  });
+
+  it('expands discardDownTo into deterministic surplus-only token processing', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      setup: [{ discardDownTo: { zone: 'hand:actor', size: 5, to: 'discard:none' } }],
+    };
+
+    const result = expandMacros(doc);
+    const setup = result.doc.setup as readonly Record<string, unknown>[];
+    const forEach = setup[0]?.forEach as {
+      readonly bind?: string;
+      readonly over?: Record<string, unknown>;
+      readonly effects?: readonly Record<string, unknown>[];
+    };
+    const ifNode = forEach.effects?.[0]?.if as {
+      readonly when?: Record<string, unknown>;
+      readonly then?: readonly Record<string, unknown>[];
+    };
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(forEach.bind, '$tok');
+    assert.deepEqual(forEach.over, { query: 'tokensInZone', zone: 'hand:actor' });
+    assert.deepEqual(ifNode.when, {
+      op: '>',
+      left: { ref: 'zoneCount', zone: 'hand:actor' },
+      right: 5,
+    });
+    assert.deepEqual(ifNode.then, [
+      { moveToken: { token: '$tok', from: 'hand:actor', to: 'discard:none' } },
+    ]);
+  });
+
+  it('reports missing capability when discardDownTo size is not a compile-time integer literal', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      setup: [{ discardDownTo: { zone: 'hand:actor', size: '5' } }],
+    };
+
+    const result = expandMacros(doc);
+
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.setup.0.discardDownTo.size');
+    assert.deepEqual(result.doc.setup, doc.setup);
+  });
+
+  it('enforces maxExpandedEffects for refillToSize expansion size', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      setup: [{ refillToSize: { zone: 'hand:actor', size: 2, fromZone: 'deck:none' } }],
+    };
+
+    const result = expandMacros(doc, { limits: { maxExpandedEffects: 1 } });
+
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_LIMIT_EXCEEDED');
+    assert.deepEqual(result.doc.setup, doc.setup);
+  });
 });
 
 function containsHandEach(value: unknown): boolean {

@@ -286,6 +286,16 @@ function expandSingleEffect(effect: unknown, path: string, state: ExpansionState
     return [effect];
   }
 
+  const refillToSize = expandRefillToSize(effect, path, state);
+  if (refillToSize !== undefined) {
+    return refillToSize;
+  }
+
+  const discardDownTo = expandDiscardDownTo(effect, path, state);
+  if (discardDownTo !== undefined) {
+    return [discardDownTo];
+  }
+
   const drawEach = expandDrawEach(effect, path, state);
   if (drawEach !== undefined) {
     return [drawEach];
@@ -338,25 +348,122 @@ function expandSingleEffect(effect: unknown, path: string, state: ExpansionState
   return [effect];
 }
 
+function expandRefillToSize(
+  effect: Record<string, unknown>,
+  path: string,
+  state: ExpansionState,
+): readonly unknown[] | undefined {
+  const refillNode = effect.refillToSize;
+  if (!isRecord(refillNode)) {
+    return undefined;
+  }
+
+  if (!isValidMacroSize(refillNode.size)) {
+    state.diagnostics.push({
+      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      path: `${path}.refillToSize.size`,
+      severity: 'error',
+      message: 'refillToSize requires compile-time integer literal size >= 0.',
+      suggestion:
+        'Use a non-negative integer literal size, or rewrite as explicit if + draw effects with count: 1.',
+    });
+    return [effect];
+  }
+
+  if (typeof refillNode.zone !== 'string' || typeof refillNode.fromZone !== 'string') {
+    return [effect];
+  }
+
+  const size = refillNode.size;
+  if (!consumeExpandedEffects(path, state, size, 'refillToSize')) {
+    return [effect];
+  }
+
+  const expanded: unknown[] = [];
+  for (let index = 0; index < size; index += 1) {
+    expanded.push({
+      if: {
+        when: {
+          op: '<',
+          left: { ref: 'zoneCount', zone: refillNode.zone },
+          right: size,
+        },
+        then: [{ draw: { from: refillNode.fromZone, to: refillNode.zone, count: 1 } }],
+        else: [],
+      },
+    });
+  }
+
+  return expanded;
+}
+
+function expandDiscardDownTo(
+  effect: Record<string, unknown>,
+  path: string,
+  state: ExpansionState,
+): unknown | undefined {
+  const discardNode = effect.discardDownTo;
+  if (!isRecord(discardNode)) {
+    return undefined;
+  }
+
+  if (!isValidMacroSize(discardNode.size)) {
+    state.diagnostics.push({
+      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      path: `${path}.discardDownTo.size`,
+      severity: 'error',
+      message: 'discardDownTo requires compile-time integer literal size >= 0.',
+      suggestion:
+        'Use a non-negative integer literal size, or rewrite as explicit token loop gated by zoneCount(zone) > size.',
+    });
+    return effect;
+  }
+
+  if (typeof discardNode.zone !== 'string') {
+    return effect;
+  }
+
+  if (!consumeExpandedEffects(path, state, 1, 'discardDownTo')) {
+    return effect;
+  }
+
+  const surplusGuard = {
+    op: '>',
+    left: { ref: 'zoneCount', zone: discardNode.zone },
+    right: discardNode.size,
+  };
+
+  const thenEffects =
+    typeof discardNode.to === 'string'
+      ? [{ moveToken: { token: '$tok', from: discardNode.zone, to: discardNode.to } }]
+      : [{ destroyToken: { token: '$tok' } }];
+
+  return {
+    forEach: {
+      bind: '$tok',
+      over: { query: 'tokensInZone', zone: discardNode.zone },
+      effects: [
+        {
+          if: {
+            when: surplusGuard,
+            then: thenEffects,
+            else: [],
+          },
+        },
+      ],
+    },
+  };
+}
+
 function expandDrawEach(effect: Record<string, unknown>, path: string, state: ExpansionState): unknown | undefined {
   const drawNode = effect.draw;
   if (!isRecord(drawNode) || drawNode.to !== 'hand:each') {
     return undefined;
   }
 
-  const nextExpandedEffects = state.expandedEffects + 1;
-  if (nextExpandedEffects > state.maxExpandedEffects) {
-    state.diagnostics.push({
-      code: 'CNL_COMPILER_LIMIT_EXCEEDED',
-      path: `${path}.draw.to`,
-      severity: 'error',
-      message: `Macro expansion exceeded maxExpandedEffects (${nextExpandedEffects} > ${state.maxExpandedEffects}).`,
-      suggestion: 'Reduce draw:each expansion count or increase compile limit maxExpandedEffects.',
-    });
+  if (!consumeExpandedEffects(path, state, 1, 'draw:each', `${path}.draw.to`)) {
     return effect;
   }
-
-  state.expandedEffects = nextExpandedEffects;
 
   return {
     forEach: {
@@ -406,6 +513,33 @@ function isBoardMacroZone(value: unknown): value is { readonly macro: string; re
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isValidMacroSize(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+}
+
+function consumeExpandedEffects(
+  path: string,
+  state: ExpansionState,
+  count: number,
+  macroName: string,
+  diagnosticPath = path,
+): boolean {
+  const nextExpandedEffects = state.expandedEffects + count;
+  if (nextExpandedEffects > state.maxExpandedEffects) {
+    state.diagnostics.push({
+      code: 'CNL_COMPILER_LIMIT_EXCEEDED',
+      path: diagnosticPath,
+      severity: 'error',
+      message: `Macro expansion exceeded maxExpandedEffects (${nextExpandedEffects} > ${state.maxExpandedEffects}).`,
+      suggestion: `Reduce ${macroName} expansion count or increase compile limit maxExpandedEffects.`,
+    });
+    return false;
+  }
+
+  state.expandedEffects = nextExpandedEffects;
+  return true;
 }
 
 interface ExpansionState {

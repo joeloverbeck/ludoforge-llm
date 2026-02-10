@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "EvalReport.schema.json",
+  "title": "SerializedEvalReport",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["gameDefId", "runCount", "metrics", "degeneracyFlags", "traces"],
+  "properties": {
+    "gameDefId": { "type": "string" },
+    "runCount": { "type": "number" },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "avgGameLength",
+        "avgBranchingFactor",
+        "actionDiversity",
+        "resourceTension",
+        "interactionProxy",
+        "dominantActionFreq",
+        "dramaMeasure"
+      ],
+      "properties": {
+        "avgGameLength": { "type": "number" },
+        "avgBranchingFactor": { "type": "number" },
+        "actionDiversity": { "type": "number" },
+        "resourceTension": { "type": "number" },
+        "interactionProxy": { "type": "number" },
+        "dominantActionFreq": { "type": "number" },
+        "dramaMeasure": { "type": "number" }
+      }
+    },
+    "degeneracyFlags": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "LOOP_DETECTED",
+          "NO_LEGAL_MOVES",
+          "DOMINANT_ACTION",
+          "TRIVIAL_WIN",
+          "STALL",
+          "TRIGGER_DEPTH_EXCEEDED"
+        ]
+      }
+    },
+    "traces": {
+      "type": "array",
+      "items": { "$ref": "Trace.schema.json#" }
+    }
+  }
+}

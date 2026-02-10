@@ -1,0 +1,794 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "GameDef.schema.json",
+  "title": "GameDef",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "metadata",
+    "constants",
+    "globalVars",
+    "perPlayerVars",
+    "zones",
+    "tokenTypes",
+    "setup",
+    "turnStructure",
+    "actions",
+    "triggers",
+    "endConditions"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "players"],
+      "properties": {
+        "id": { "type": "string" },
+        "players": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": { "type": "number" },
+            "max": { "type": "number" }
+          }
+        },
+        "maxTriggerDepth": { "type": "number" }
+      }
+    },
+    "constants": {
+      "type": "object",
+      "additionalProperties": { "type": "number" }
+    },
+    "globalVars": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/variableDef" }
+    },
+    "perPlayerVars": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/variableDef" }
+    },
+    "zones": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/zoneDef" }
+    },
+    "tokenTypes": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/tokenTypeDef" }
+    },
+    "setup": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/effectAST" }
+    },
+    "turnStructure": { "$ref": "#/definitions/turnStructure" },
+    "actions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/actionDef" }
+    },
+    "triggers": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/triggerDef" }
+    },
+    "endConditions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/endCondition" }
+    },
+    "scoring": { "$ref": "#/definitions/scoringDef" }
+  },
+  "definitions": {
+    "playerSel": {
+      "oneOf": [
+        { "const": "actor" },
+        { "const": "active" },
+        { "const": "all" },
+        { "const": "allOther" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id"],
+          "properties": {
+            "id": { "type": "integer" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["chosen"],
+          "properties": {
+            "chosen": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["relative"],
+          "properties": {
+            "relative": { "enum": ["left", "right"] }
+          }
+        }
+      ]
+    },
+    "zoneSel": { "type": "string" },
+    "tokenSel": { "type": "string" },
+    "reference": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref", "var"],
+          "properties": {
+            "ref": { "const": "gvar" },
+            "var": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref", "player", "var"],
+          "properties": {
+            "ref": { "const": "pvar" },
+            "player": { "$ref": "#/definitions/playerSel" },
+            "var": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref", "zone"],
+          "properties": {
+            "ref": { "const": "zoneCount" },
+            "zone": { "$ref": "#/definitions/zoneSel" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref", "token", "prop"],
+          "properties": {
+            "ref": { "const": "tokenProp" },
+            "token": { "$ref": "#/definitions/tokenSel" },
+            "prop": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref", "name"],
+          "properties": {
+            "ref": { "const": "binding" },
+            "name": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "optionsQuery": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["query", "zone"],
+          "properties": {
+            "query": { "const": "tokensInZone" },
+            "zone": { "$ref": "#/definitions/zoneSel" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["query", "min", "max"],
+          "properties": {
+            "query": { "const": "intsInRange" },
+            "min": { "type": "number" },
+            "max": { "type": "number" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["query", "values"],
+          "properties": {
+            "query": { "const": "enums" },
+            "values": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["query"],
+          "properties": {
+            "query": { "const": "players" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["query"],
+          "properties": {
+            "query": { "const": "zones" },
+            "filter": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "owner": { "$ref": "#/definitions/playerSel" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["query", "zone"],
+          "properties": {
+            "query": { "const": "adjacentZones" },
+            "zone": { "$ref": "#/definitions/zoneSel" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["query", "zone"],
+          "properties": {
+            "query": { "const": "tokensInAdjacentZones" },
+            "zone": { "$ref": "#/definitions/zoneSel" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["query", "zone"],
+          "properties": {
+            "query": { "const": "connectedZones" },
+            "zone": { "$ref": "#/definitions/zoneSel" },
+            "via": { "$ref": "#/definitions/conditionAST" }
+          }
+        }
+      ]
+    },
+    "valueExpr": {
+      "anyOf": [
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "string" },
+        { "$ref": "#/definitions/reference" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "left", "right"],
+          "properties": {
+            "op": { "enum": ["+", "-", "*"] },
+            "left": { "$ref": "#/definitions/valueExpr" },
+            "right": { "$ref": "#/definitions/valueExpr" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["aggregate"],
+          "properties": {
+            "aggregate": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["op", "query"],
+              "properties": {
+                "op": { "enum": ["sum", "count", "min", "max"] },
+                "query": { "$ref": "#/definitions/optionsQuery" },
+                "prop": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "conditionAST": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "args"],
+          "properties": {
+            "op": { "const": "and" },
+            "args": { "type": "array", "items": { "$ref": "#/definitions/conditionAST" } }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "args"],
+          "properties": {
+            "op": { "const": "or" },
+            "args": { "type": "array", "items": { "$ref": "#/definitions/conditionAST" } }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "arg"],
+          "properties": {
+            "op": { "const": "not" },
+            "arg": { "$ref": "#/definitions/conditionAST" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "left", "right"],
+          "properties": {
+            "op": { "enum": ["==", "!=", "<", "<=", ">", ">="] },
+            "left": { "$ref": "#/definitions/valueExpr" },
+            "right": { "$ref": "#/definitions/valueExpr" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "item", "set"],
+          "properties": {
+            "op": { "const": "in" },
+            "item": { "$ref": "#/definitions/valueExpr" },
+            "set": { "$ref": "#/definitions/valueExpr" }
+          }
+        }
+      ]
+    },
+    "effectAST": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["setVar"],
+          "properties": {
+            "setVar": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["scope", "var", "value"],
+              "properties": {
+                "scope": { "enum": ["global", "pvar"] },
+                "player": { "$ref": "#/definitions/playerSel" },
+                "var": { "type": "string" },
+                "value": { "$ref": "#/definitions/valueExpr" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["addVar"],
+          "properties": {
+            "addVar": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["scope", "var", "delta"],
+              "properties": {
+                "scope": { "enum": ["global", "pvar"] },
+                "player": { "$ref": "#/definitions/playerSel" },
+                "var": { "type": "string" },
+                "delta": { "$ref": "#/definitions/valueExpr" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["moveToken"],
+          "properties": {
+            "moveToken": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["token", "from", "to"],
+              "properties": {
+                "token": { "$ref": "#/definitions/tokenSel" },
+                "from": { "$ref": "#/definitions/zoneSel" },
+                "to": { "$ref": "#/definitions/zoneSel" },
+                "position": { "enum": ["top", "bottom", "random"] }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["moveAll"],
+          "properties": {
+            "moveAll": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["from", "to"],
+              "properties": {
+                "from": { "$ref": "#/definitions/zoneSel" },
+                "to": { "$ref": "#/definitions/zoneSel" },
+                "filter": { "$ref": "#/definitions/conditionAST" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["moveTokenAdjacent"],
+          "properties": {
+            "moveTokenAdjacent": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["token", "from"],
+              "properties": {
+                "token": { "$ref": "#/definitions/tokenSel" },
+                "from": { "$ref": "#/definitions/zoneSel" },
+                "direction": { "type": "string" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["draw"],
+          "properties": {
+            "draw": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["from", "to", "count"],
+              "properties": {
+                "from": { "$ref": "#/definitions/zoneSel" },
+                "to": { "$ref": "#/definitions/zoneSel" },
+                "count": { "type": "number" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["shuffle"],
+          "properties": {
+            "shuffle": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["zone"],
+              "properties": {
+                "zone": { "$ref": "#/definitions/zoneSel" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["createToken"],
+          "properties": {
+            "createToken": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "zone"],
+              "properties": {
+                "type": { "type": "string" },
+                "zone": { "$ref": "#/definitions/zoneSel" },
+                "props": {
+                  "type": "object",
+                  "additionalProperties": { "$ref": "#/definitions/valueExpr" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["destroyToken"],
+          "properties": {
+            "destroyToken": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["token"],
+              "properties": {
+                "token": { "$ref": "#/definitions/tokenSel" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["if"],
+          "properties": {
+            "if": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["when", "then"],
+              "properties": {
+                "when": { "$ref": "#/definitions/conditionAST" },
+                "then": { "type": "array", "items": { "$ref": "#/definitions/effectAST" } },
+                "else": { "type": "array", "items": { "$ref": "#/definitions/effectAST" } }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["forEach"],
+          "properties": {
+            "forEach": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["bind", "over", "effects"],
+              "properties": {
+                "bind": { "type": "string" },
+                "over": { "$ref": "#/definitions/optionsQuery" },
+                "effects": { "type": "array", "items": { "$ref": "#/definitions/effectAST" } },
+                "limit": { "type": "number" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["let"],
+          "properties": {
+            "let": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["bind", "value", "in"],
+              "properties": {
+                "bind": { "type": "string" },
+                "value": { "$ref": "#/definitions/valueExpr" },
+                "in": { "type": "array", "items": { "$ref": "#/definitions/effectAST" } }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["chooseOne"],
+          "properties": {
+            "chooseOne": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["bind", "options"],
+              "properties": {
+                "bind": { "type": "string" },
+                "options": { "$ref": "#/definitions/optionsQuery" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["chooseN"],
+          "properties": {
+            "chooseN": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["bind", "options", "n"],
+              "properties": {
+                "bind": { "type": "string" },
+                "options": { "$ref": "#/definitions/optionsQuery" },
+                "n": { "type": "number" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "variableDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "init", "min", "max"],
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "const": "int" },
+        "init": { "type": "number" },
+        "min": { "type": "number" },
+        "max": { "type": "number" }
+      }
+    },
+    "zoneDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "owner", "visibility", "ordering"],
+      "properties": {
+        "id": { "type": "string" },
+        "owner": { "enum": ["none", "player"] },
+        "visibility": { "enum": ["public", "owner", "hidden"] },
+        "ordering": { "enum": ["stack", "queue", "set"] },
+        "adjacentTo": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "tokenTypeDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "props"],
+      "properties": {
+        "id": { "type": "string" },
+        "props": {
+          "type": "object",
+          "additionalProperties": { "enum": ["int", "string", "boolean"] }
+        }
+      }
+    },
+    "paramDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "domain"],
+      "properties": {
+        "name": { "type": "string" },
+        "domain": { "$ref": "#/definitions/optionsQuery" }
+      }
+    },
+    "limitDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "max"],
+      "properties": {
+        "scope": { "enum": ["turn", "phase", "game"] },
+        "max": { "type": "number" }
+      }
+    },
+    "phaseDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" },
+        "onEnter": { "type": "array", "items": { "$ref": "#/definitions/effectAST" } },
+        "onExit": { "type": "array", "items": { "$ref": "#/definitions/effectAST" } }
+      }
+    },
+    "turnStructure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phases", "activePlayerOrder"],
+      "properties": {
+        "phases": { "type": "array", "items": { "$ref": "#/definitions/phaseDef" } },
+        "activePlayerOrder": { "enum": ["roundRobin", "fixed"] }
+      }
+    },
+    "actionDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "actor", "phase", "params", "pre", "cost", "effects", "limits"],
+      "properties": {
+        "id": { "type": "string" },
+        "actor": { "$ref": "#/definitions/playerSel" },
+        "phase": { "type": "string" },
+        "params": { "type": "array", "items": { "$ref": "#/definitions/paramDef" } },
+        "pre": {
+          "anyOf": [
+            { "$ref": "#/definitions/conditionAST" },
+            { "type": "null" }
+          ]
+        },
+        "cost": { "type": "array", "items": { "$ref": "#/definitions/effectAST" } },
+        "effects": { "type": "array", "items": { "$ref": "#/definitions/effectAST" } },
+        "limits": { "type": "array", "items": { "$ref": "#/definitions/limitDef" } }
+      }
+    },
+    "triggerEvent": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "phase"],
+          "properties": {
+            "type": { "const": "phaseEnter" },
+            "phase": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "phase"],
+          "properties": {
+            "type": { "const": "phaseExit" },
+            "phase": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "turnStart" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "turnEnd" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "actionResolved" },
+            "action": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "tokenEntered" },
+            "zone": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "triggerDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "event", "effects"],
+      "properties": {
+        "id": { "type": "string" },
+        "event": { "$ref": "#/definitions/triggerEvent" },
+        "match": { "$ref": "#/definitions/conditionAST" },
+        "when": { "$ref": "#/definitions/conditionAST" },
+        "effects": { "type": "array", "items": { "$ref": "#/definitions/effectAST" } }
+      }
+    },
+    "terminalResultDef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "player"],
+          "properties": {
+            "type": { "const": "win" },
+            "player": { "$ref": "#/definitions/playerSel" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "lossAll" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "draw" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "score" }
+          }
+        }
+      ]
+    },
+    "endCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["when", "result"],
+      "properties": {
+        "when": { "$ref": "#/definitions/conditionAST" },
+        "result": { "$ref": "#/definitions/terminalResultDef" }
+      }
+    },
+    "scoringDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "value"],
+      "properties": {
+        "method": { "enum": ["highest", "lowest"] },
+        "value": { "$ref": "#/definitions/valueExpr" }
+      }
+    }
+  }
+}

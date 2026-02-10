@@ -1,0 +1,317 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "Trace.schema.json",
+  "title": "SerializedGameTrace",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["gameDefId", "seed", "moves", "finalState", "result", "turnsCount"],
+  "properties": {
+    "gameDefId": { "type": "string" },
+    "seed": { "type": "number" },
+    "moves": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/serializedMoveLog" }
+    },
+    "finalState": { "$ref": "#/definitions/serializedGameState" },
+    "result": {
+      "anyOf": [
+        { "$ref": "#/definitions/terminalResult" },
+        { "type": "null" }
+      ]
+    },
+    "turnsCount": { "type": "number" }
+  },
+  "definitions": {
+    "hexBigInt": {
+      "type": "string",
+      "pattern": "^0x[0-9a-f]+$"
+    },
+    "playerSel": {
+      "oneOf": [
+        { "const": "actor" },
+        { "const": "active" },
+        { "const": "all" },
+        { "const": "allOther" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id"],
+          "properties": {
+            "id": { "type": "integer" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["chosen"],
+          "properties": {
+            "chosen": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["relative"],
+          "properties": {
+            "relative": { "enum": ["left", "right"] }
+          }
+        }
+      ]
+    },
+    "triggerEvent": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "phase"],
+          "properties": {
+            "type": { "const": "phaseEnter" },
+            "phase": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "phase"],
+          "properties": {
+            "type": { "const": "phaseExit" },
+            "phase": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "turnStart" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "turnEnd" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "actionResolved" },
+            "action": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "tokenEntered" },
+            "zone": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "moveParamScalar": {
+      "anyOf": [
+        { "type": "number" },
+        { "type": "string" },
+        { "type": "boolean" }
+      ]
+    },
+    "moveParamValue": {
+      "anyOf": [
+        { "$ref": "#/definitions/moveParamScalar" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/definitions/moveParamScalar" }
+        }
+      ]
+    },
+    "move": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actionId", "params"],
+      "properties": {
+        "actionId": { "type": "string" },
+        "params": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/moveParamValue" }
+        }
+      }
+    },
+    "stateDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "before", "after"],
+      "properties": {
+        "path": { "type": "string" },
+        "before": {},
+        "after": {}
+      }
+    },
+    "triggerFiring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["triggerId", "event", "depth"],
+      "properties": {
+        "triggerId": { "type": "string" },
+        "event": { "$ref": "#/definitions/triggerEvent" },
+        "depth": { "type": "number" }
+      }
+    },
+    "serializedRngState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/hexBigInt" }
+        }
+      }
+    },
+    "token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "props"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "props": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [{ "type": "number" }, { "type": "string" }, { "type": "boolean" }]
+          }
+        }
+      }
+    },
+    "actionUsageRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["turnCount", "phaseCount", "gameCount"],
+      "properties": {
+        "turnCount": { "type": "number" },
+        "phaseCount": { "type": "number" },
+        "gameCount": { "type": "number" }
+      }
+    },
+    "serializedGameState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "globalVars",
+        "perPlayerVars",
+        "playerCount",
+        "zones",
+        "currentPhase",
+        "activePlayer",
+        "turnCount",
+        "rng",
+        "stateHash",
+        "actionUsage"
+      ],
+      "properties": {
+        "globalVars": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "perPlayerVars": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": { "type": "number" }
+          }
+        },
+        "playerCount": { "type": "number" },
+        "zones": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/token" }
+          }
+        },
+        "currentPhase": { "type": "string" },
+        "activePlayer": { "type": "integer" },
+        "turnCount": { "type": "number" },
+        "rng": { "$ref": "#/definitions/serializedRngState" },
+        "stateHash": { "$ref": "#/definitions/hexBigInt" },
+        "actionUsage": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/actionUsageRecord" }
+        }
+      }
+    },
+    "serializedMoveLog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stateHash", "player", "move", "legalMoveCount", "deltas", "triggerFirings"],
+      "properties": {
+        "stateHash": { "$ref": "#/definitions/hexBigInt" },
+        "player": { "type": "integer" },
+        "move": { "$ref": "#/definitions/move" },
+        "legalMoveCount": { "type": "number" },
+        "deltas": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/stateDelta" }
+        },
+        "triggerFirings": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/triggerFiring" }
+        }
+      }
+    },
+    "playerScore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["player", "score"],
+      "properties": {
+        "player": { "type": "integer" },
+        "score": { "type": "number" }
+      }
+    },
+    "terminalResult": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "player"],
+          "properties": {
+            "type": { "const": "win" },
+            "player": { "type": "integer" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "lossAll" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "draw" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "ranking"],
+          "properties": {
+            "type": { "const": "score" },
+            "ranking": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/playerScore" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

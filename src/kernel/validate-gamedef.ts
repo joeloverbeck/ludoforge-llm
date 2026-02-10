@@ -1,0 +1,643 @@
+import type { Diagnostic } from './diagnostics.js';
+import type { ConditionAST, EffectAST, GameDef, OptionsQuery, Reference, ValueExpr } from './types.js';
+
+const MAX_ALTERNATIVE_DISTANCE = 3;
+
+const checkDuplicateIds = (
+  diagnostics: Diagnostic[],
+  values: readonly string[],
+  code: string,
+  label: string,
+  pathPrefix: string,
+): void => {
+  const seen = new Set<string>();
+
+  for (const [index, value] of values.entries()) {
+    if (!seen.has(value)) {
+      seen.add(value);
+      continue;
+    }
+
+    diagnostics.push({
+      code,
+      path: `${pathPrefix}[${index}]`,
+      severity: 'error',
+      message: `Duplicate ${label} \"${value}\".`,
+    });
+  }
+};
+
+const levenshteinDistance = (left: string, right: string): number => {
+  const cols = right.length + 1;
+  let previousRow: number[] = Array.from({ length: cols }, (_unused, index) => index);
+
+  for (let row = 1; row <= left.length; row += 1) {
+    const currentRow: number[] = new Array<number>(cols).fill(0);
+    currentRow[0] = row;
+
+    for (let col = 1; col <= right.length; col += 1) {
+      const substitutionCost = left[row - 1] === right[col - 1] ? 0 : 1;
+      const insertCost = (currentRow[col - 1] ?? Number.POSITIVE_INFINITY) + 1;
+      const deleteCost = (previousRow[col] ?? Number.POSITIVE_INFINITY) + 1;
+      const replaceCost = (previousRow[col - 1] ?? Number.POSITIVE_INFINITY) + substitutionCost;
+      currentRow[col] = Math.min(insertCost, deleteCost, replaceCost);
+    }
+
+    previousRow = currentRow;
+  }
+
+  return previousRow[right.length] ?? 0;
+};
+
+const getAlternatives = (value: string, validValues: readonly string[]): readonly string[] => {
+  if (validValues.length === 0) {
+    return [];
+  }
+
+  const scored = validValues
+    .map((candidate) => ({ candidate, distance: levenshteinDistance(value, candidate) }))
+    .sort((left, right) => {
+      if (left.distance !== right.distance) {
+        return left.distance - right.distance;
+      }
+
+      return left.candidate.localeCompare(right.candidate);
+    });
+
+  const bestDistance = scored[0]?.distance;
+  if (bestDistance === undefined || bestDistance > MAX_ALTERNATIVE_DISTANCE) {
+    return [];
+  }
+
+  return scored.filter((item) => item.distance === bestDistance).map((item) => item.candidate);
+};
+
+const pushMissingReferenceDiagnostic = (
+  diagnostics: Diagnostic[],
+  code: string,
+  path: string,
+  message: string,
+  value: string,
+  validValues: readonly string[],
+): void => {
+  const alternatives = getAlternatives(value, validValues);
+  const suggestion =
+    alternatives.length > 0 ? `Did you mean \"${alternatives[0]}\"?` : `Use one of the declared values.`;
+
+  if (alternatives.length > 0) {
+    diagnostics.push({
+      code,
+      path,
+      severity: 'error',
+      message,
+      suggestion,
+      alternatives,
+    });
+    return;
+  }
+
+  diagnostics.push({
+    code,
+    path,
+    severity: 'error',
+    message,
+    suggestion,
+  });
+};
+
+const parseZoneIdFromSelector = (zoneSelector: string): string => {
+  return zoneSelector;
+};
+
+const validateReference = (
+  diagnostics: Diagnostic[],
+  reference: Reference,
+  path: string,
+  context: {
+    globalVarNames: Set<string>;
+    perPlayerVarNames: Set<string>;
+    globalVarCandidates: readonly string[];
+    perPlayerVarCandidates: readonly string[];
+    zoneNames: Set<string>;
+    zoneCandidates: readonly string[];
+  },
+): void => {
+  if (reference.ref === 'gvar' && !context.globalVarNames.has(reference.var)) {
+    pushMissingReferenceDiagnostic(
+      diagnostics,
+      'REF_GVAR_MISSING',
+      `${path}.var`,
+      `Unknown global variable \"${reference.var}\".`,
+      reference.var,
+      context.globalVarCandidates,
+    );
+    return;
+  }
+
+  if (reference.ref === 'pvar' && !context.perPlayerVarNames.has(reference.var)) {
+    pushMissingReferenceDiagnostic(
+      diagnostics,
+      'REF_PVAR_MISSING',
+      `${path}.var`,
+      `Unknown per-player variable \"${reference.var}\".`,
+      reference.var,
+      context.perPlayerVarCandidates,
+    );
+    return;
+  }
+
+  if (reference.ref === 'zoneCount') {
+    const zoneId = parseZoneIdFromSelector(reference.zone);
+    if (!context.zoneNames.has(zoneId)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_ZONE_MISSING',
+        `${path}.zone`,
+        `Unknown zone \"${zoneId}\".`,
+        zoneId,
+        context.zoneCandidates,
+      );
+    }
+  }
+};
+
+const validateValueExpr = (
+  diagnostics: Diagnostic[],
+  valueExpr: ValueExpr,
+  path: string,
+  context: {
+    globalVarNames: Set<string>;
+    perPlayerVarNames: Set<string>;
+    globalVarCandidates: readonly string[];
+    perPlayerVarCandidates: readonly string[];
+    zoneNames: Set<string>;
+    zoneCandidates: readonly string[];
+  },
+): void => {
+  if (typeof valueExpr === 'number' || typeof valueExpr === 'boolean' || typeof valueExpr === 'string') {
+    return;
+  }
+
+  if ('ref' in valueExpr) {
+    validateReference(diagnostics, valueExpr, path, context);
+    return;
+  }
+
+  if ('op' in valueExpr) {
+    validateValueExpr(diagnostics, valueExpr.left, `${path}.left`, context);
+    validateValueExpr(diagnostics, valueExpr.right, `${path}.right`, context);
+    return;
+  }
+
+  validateOptionsQuery(diagnostics, valueExpr.aggregate.query, `${path}.aggregate.query`, context);
+};
+
+const validateConditionAst = (
+  diagnostics: Diagnostic[],
+  condition: ConditionAST,
+  path: string,
+  context: {
+    globalVarNames: Set<string>;
+    perPlayerVarNames: Set<string>;
+    globalVarCandidates: readonly string[];
+    perPlayerVarCandidates: readonly string[];
+    zoneNames: Set<string>;
+    zoneCandidates: readonly string[];
+  },
+): void => {
+  switch (condition.op) {
+    case 'and':
+    case 'or': {
+      condition.args.forEach((entry, index) => {
+        validateConditionAst(diagnostics, entry, `${path}.args[${index}]`, context);
+      });
+      return;
+    }
+    case 'not': {
+      validateConditionAst(diagnostics, condition.arg, `${path}.arg`, context);
+      return;
+    }
+    case 'in': {
+      validateValueExpr(diagnostics, condition.item, `${path}.item`, context);
+      validateValueExpr(diagnostics, condition.set, `${path}.set`, context);
+      return;
+    }
+    default: {
+      validateValueExpr(diagnostics, condition.left, `${path}.left`, context);
+      validateValueExpr(diagnostics, condition.right, `${path}.right`, context);
+    }
+  }
+};
+
+const validateZoneSelector = (
+  diagnostics: Diagnostic[],
+  zoneSelector: string,
+  path: string,
+  context: {
+    zoneNames: Set<string>;
+    zoneCandidates: readonly string[];
+  },
+): void => {
+  const zoneId = parseZoneIdFromSelector(zoneSelector);
+
+  if (context.zoneNames.has(zoneId)) {
+    return;
+  }
+
+  pushMissingReferenceDiagnostic(
+    diagnostics,
+    'REF_ZONE_MISSING',
+    path,
+    `Unknown zone \"${zoneId}\".`,
+    zoneId,
+    context.zoneCandidates,
+  );
+};
+
+const validateOptionsQuery = (
+  diagnostics: Diagnostic[],
+  query: OptionsQuery,
+  path: string,
+  context: {
+    globalVarNames: Set<string>;
+    perPlayerVarNames: Set<string>;
+    globalVarCandidates: readonly string[];
+    perPlayerVarCandidates: readonly string[];
+    zoneNames: Set<string>;
+    zoneCandidates: readonly string[];
+  },
+): void => {
+  switch (query.query) {
+    case 'tokensInZone':
+    case 'adjacentZones':
+    case 'tokensInAdjacentZones': {
+      validateZoneSelector(diagnostics, query.zone, `${path}.zone`, context);
+      return;
+    }
+    case 'connectedZones': {
+      validateZoneSelector(diagnostics, query.zone, `${path}.zone`, context);
+      if (query.via) {
+        validateConditionAst(diagnostics, query.via, `${path}.via`, context);
+      }
+      return;
+    }
+    case 'intsInRange': {
+      if (query.min > query.max) {
+        diagnostics.push({
+          code: 'DOMAIN_INTS_RANGE_INVALID',
+          path,
+          severity: 'error',
+          message: `Invalid intsInRange domain; min (${query.min}) must be <= max (${query.max}).`,
+        });
+      }
+      return;
+    }
+    case 'zones': {
+      return;
+    }
+    case 'enums':
+    case 'players': {
+      return;
+    }
+  }
+};
+
+const validateEffectAst = (
+  diagnostics: Diagnostic[],
+  effect: EffectAST,
+  path: string,
+  context: {
+    globalVarNames: Set<string>;
+    perPlayerVarNames: Set<string>;
+    globalVarCandidates: readonly string[];
+    perPlayerVarCandidates: readonly string[];
+    zoneNames: Set<string>;
+    zoneCandidates: readonly string[];
+    tokenTypeNames: Set<string>;
+    tokenTypeCandidates: readonly string[];
+  },
+): void => {
+  if ('setVar' in effect) {
+    if (effect.setVar.scope === 'global' && !context.globalVarNames.has(effect.setVar.var)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_GVAR_MISSING',
+        `${path}.setVar.var`,
+        `Unknown global variable \"${effect.setVar.var}\".`,
+        effect.setVar.var,
+        context.globalVarCandidates,
+      );
+    }
+
+    if (effect.setVar.scope === 'pvar' && !context.perPlayerVarNames.has(effect.setVar.var)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_PVAR_MISSING',
+        `${path}.setVar.var`,
+        `Unknown per-player variable \"${effect.setVar.var}\".`,
+        effect.setVar.var,
+        context.perPlayerVarCandidates,
+      );
+    }
+
+    validateValueExpr(diagnostics, effect.setVar.value, `${path}.setVar.value`, context);
+    return;
+  }
+
+  if ('addVar' in effect) {
+    if (effect.addVar.scope === 'global' && !context.globalVarNames.has(effect.addVar.var)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_GVAR_MISSING',
+        `${path}.addVar.var`,
+        `Unknown global variable \"${effect.addVar.var}\".`,
+        effect.addVar.var,
+        context.globalVarCandidates,
+      );
+    }
+
+    if (effect.addVar.scope === 'pvar' && !context.perPlayerVarNames.has(effect.addVar.var)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_PVAR_MISSING',
+        `${path}.addVar.var`,
+        `Unknown per-player variable \"${effect.addVar.var}\".`,
+        effect.addVar.var,
+        context.perPlayerVarCandidates,
+      );
+    }
+
+    validateValueExpr(diagnostics, effect.addVar.delta, `${path}.addVar.delta`, context);
+    return;
+  }
+
+  if ('moveToken' in effect) {
+    validateZoneSelector(diagnostics, effect.moveToken.from, `${path}.moveToken.from`, context);
+    validateZoneSelector(diagnostics, effect.moveToken.to, `${path}.moveToken.to`, context);
+    return;
+  }
+
+  if ('moveAll' in effect) {
+    validateZoneSelector(diagnostics, effect.moveAll.from, `${path}.moveAll.from`, context);
+    validateZoneSelector(diagnostics, effect.moveAll.to, `${path}.moveAll.to`, context);
+
+    if (effect.moveAll.filter) {
+      validateConditionAst(diagnostics, effect.moveAll.filter, `${path}.moveAll.filter`, context);
+    }
+    return;
+  }
+
+  if ('moveTokenAdjacent' in effect) {
+    validateZoneSelector(diagnostics, effect.moveTokenAdjacent.from, `${path}.moveTokenAdjacent.from`, context);
+    return;
+  }
+
+  if ('draw' in effect) {
+    validateZoneSelector(diagnostics, effect.draw.from, `${path}.draw.from`, context);
+    validateZoneSelector(diagnostics, effect.draw.to, `${path}.draw.to`, context);
+    return;
+  }
+
+  if ('shuffle' in effect) {
+    validateZoneSelector(diagnostics, effect.shuffle.zone, `${path}.shuffle.zone`, context);
+    return;
+  }
+
+  if ('createToken' in effect) {
+    if (!context.tokenTypeNames.has(effect.createToken.type)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_TOKEN_TYPE_MISSING',
+        `${path}.createToken.type`,
+        `Unknown token type \"${effect.createToken.type}\".`,
+        effect.createToken.type,
+        context.tokenTypeCandidates,
+      );
+    }
+
+    validateZoneSelector(diagnostics, effect.createToken.zone, `${path}.createToken.zone`, context);
+    if (effect.createToken.props) {
+      Object.entries(effect.createToken.props).forEach(([propName, propValue]) => {
+        validateValueExpr(diagnostics, propValue, `${path}.createToken.props.${propName}`, context);
+      });
+    }
+    return;
+  }
+
+  if ('destroyToken' in effect) {
+    return;
+  }
+
+  if ('if' in effect) {
+    validateConditionAst(diagnostics, effect.if.when, `${path}.if.when`, context);
+    effect.if.then.forEach((entry, index) => {
+      validateEffectAst(diagnostics, entry, `${path}.if.then[${index}]`, context);
+    });
+    effect.if.else?.forEach((entry, index) => {
+      validateEffectAst(diagnostics, entry, `${path}.if.else[${index}]`, context);
+    });
+    return;
+  }
+
+  if ('forEach' in effect) {
+    validateOptionsQuery(diagnostics, effect.forEach.over, `${path}.forEach.over`, context);
+    effect.forEach.effects.forEach((entry, index) => {
+      validateEffectAst(diagnostics, entry, `${path}.forEach.effects[${index}]`, context);
+    });
+    return;
+  }
+
+  if ('let' in effect) {
+    validateValueExpr(diagnostics, effect.let.value, `${path}.let.value`, context);
+    effect.let.in.forEach((entry, index) => {
+      validateEffectAst(diagnostics, entry, `${path}.let.in[${index}]`, context);
+    });
+    return;
+  }
+
+  if ('chooseOne' in effect) {
+    validateOptionsQuery(diagnostics, effect.chooseOne.options, `${path}.chooseOne.options`, context);
+    return;
+  }
+
+  validateOptionsQuery(diagnostics, effect.chooseN.options, `${path}.chooseN.options`, context);
+};
+
+export const validateGameDef = (def: GameDef): Diagnostic[] => {
+  const diagnostics: Diagnostic[] = [];
+
+  checkDuplicateIds(
+    diagnostics,
+    def.zones.map((zone) => zone.id),
+    'DUPLICATE_ZONE_ID',
+    'zone id',
+    'zones',
+  );
+  checkDuplicateIds(
+    diagnostics,
+    def.tokenTypes.map((tokenType) => tokenType.id),
+    'DUPLICATE_TOKEN_TYPE_ID',
+    'token type id',
+    'tokenTypes',
+  );
+  checkDuplicateIds(
+    diagnostics,
+    def.turnStructure.phases.map((phase) => phase.id),
+    'DUPLICATE_PHASE_ID',
+    'phase id',
+    'turnStructure.phases',
+  );
+  checkDuplicateIds(
+    diagnostics,
+    def.actions.map((action) => action.id),
+    'DUPLICATE_ACTION_ID',
+    'action id',
+    'actions',
+  );
+  checkDuplicateIds(
+    diagnostics,
+    def.triggers.map((trigger) => trigger.id),
+    'DUPLICATE_TRIGGER_ID',
+    'trigger id',
+    'triggers',
+  );
+  checkDuplicateIds(
+    diagnostics,
+    def.globalVars.map((variable) => variable.name),
+    'DUPLICATE_GLOBAL_VAR_NAME',
+    'global var name',
+    'globalVars',
+  );
+  checkDuplicateIds(
+    diagnostics,
+    def.perPlayerVars.map((variable) => variable.name),
+    'DUPLICATE_PER_PLAYER_VAR_NAME',
+    'per-player var name',
+    'perPlayerVars',
+  );
+
+  const zoneCandidates = [...new Set(def.zones.map((zone) => zone.id))].sort((left, right) =>
+    left.localeCompare(right),
+  );
+  const globalVarCandidates = [...new Set(def.globalVars.map((variable) => variable.name))].sort((left, right) =>
+    left.localeCompare(right),
+  );
+  const perPlayerVarCandidates = [...new Set(def.perPlayerVars.map((variable) => variable.name))].sort(
+    (left, right) => left.localeCompare(right),
+  );
+  const tokenTypeCandidates = [...new Set(def.tokenTypes.map((tokenType) => tokenType.id))].sort(
+    (left, right) => left.localeCompare(right),
+  );
+  const phaseCandidates = [...new Set(def.turnStructure.phases.map((phase) => phase.id))].sort((left, right) =>
+    left.localeCompare(right),
+  );
+  const actionCandidates = [...new Set(def.actions.map((action) => action.id))].sort((left, right) =>
+    left.localeCompare(right),
+  );
+
+  const context = {
+    zoneNames: new Set(zoneCandidates),
+    zoneCandidates,
+    globalVarNames: new Set(globalVarCandidates),
+    globalVarCandidates,
+    perPlayerVarNames: new Set(perPlayerVarCandidates),
+    perPlayerVarCandidates,
+    tokenTypeNames: new Set(tokenTypeCandidates),
+    tokenTypeCandidates,
+  };
+
+  def.setup.forEach((effect, index) => {
+    validateEffectAst(diagnostics, effect, `setup[${index}]`, context);
+  });
+
+  def.actions.forEach((action, actionIndex) => {
+    if (!phaseCandidates.includes(action.phase)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_PHASE_MISSING',
+        `actions[${actionIndex}].phase`,
+        `Unknown phase \"${action.phase}\".`,
+        action.phase,
+        phaseCandidates,
+      );
+    }
+
+    action.params.forEach((param, paramIndex) => {
+      validateOptionsQuery(diagnostics, param.domain, `actions[${actionIndex}].params[${paramIndex}].domain`, context);
+    });
+
+    if (action.pre) {
+      validateConditionAst(diagnostics, action.pre, `actions[${actionIndex}].pre`, context);
+    }
+
+    action.cost.forEach((effect, effectIndex) => {
+      validateEffectAst(diagnostics, effect, `actions[${actionIndex}].cost[${effectIndex}]`, context);
+    });
+    action.effects.forEach((effect, effectIndex) => {
+      validateEffectAst(diagnostics, effect, `actions[${actionIndex}].effects[${effectIndex}]`, context);
+    });
+  });
+
+  def.turnStructure.phases.forEach((phase, phaseIndex) => {
+    phase.onEnter?.forEach((effect, effectIndex) => {
+      validateEffectAst(diagnostics, effect, `turnStructure.phases[${phaseIndex}].onEnter[${effectIndex}]`, context);
+    });
+    phase.onExit?.forEach((effect, effectIndex) => {
+      validateEffectAst(diagnostics, effect, `turnStructure.phases[${phaseIndex}].onExit[${effectIndex}]`, context);
+    });
+  });
+
+  def.triggers.forEach((trigger, triggerIndex) => {
+    if (trigger.event.type === 'phaseEnter' || trigger.event.type === 'phaseExit') {
+      if (!phaseCandidates.includes(trigger.event.phase)) {
+        pushMissingReferenceDiagnostic(
+          diagnostics,
+          'REF_PHASE_MISSING',
+          `triggers[${triggerIndex}].event.phase`,
+          `Unknown phase \"${trigger.event.phase}\".`,
+          trigger.event.phase,
+          phaseCandidates,
+        );
+      }
+    }
+
+    if (trigger.event.type === 'actionResolved' && trigger.event.action) {
+      if (!actionCandidates.includes(trigger.event.action)) {
+        pushMissingReferenceDiagnostic(
+          diagnostics,
+          'REF_ACTION_MISSING',
+          `triggers[${triggerIndex}].event.action`,
+          `Unknown action \"${trigger.event.action}\".`,
+          trigger.event.action,
+          actionCandidates,
+        );
+      }
+    }
+
+    if (trigger.event.type === 'tokenEntered' && trigger.event.zone) {
+      validateZoneSelector(diagnostics, trigger.event.zone, `triggers[${triggerIndex}].event.zone`, context);
+    }
+
+    if (trigger.match) {
+      validateConditionAst(diagnostics, trigger.match, `triggers[${triggerIndex}].match`, context);
+    }
+
+    if (trigger.when) {
+      validateConditionAst(diagnostics, trigger.when, `triggers[${triggerIndex}].when`, context);
+    }
+
+    trigger.effects.forEach((effect, effectIndex) => {
+      validateEffectAst(diagnostics, effect, `triggers[${triggerIndex}].effects[${effectIndex}]`, context);
+    });
+  });
+
+  def.endConditions.forEach((endCondition, endConditionIndex) => {
+    validateConditionAst(diagnostics, endCondition.when, `endConditions[${endConditionIndex}].when`, context);
+  });
+
+  if (def.scoring) {
+    validateValueExpr(diagnostics, def.scoring.value, 'scoring.value', context);
+  }
+
+  return diagnostics;
+};

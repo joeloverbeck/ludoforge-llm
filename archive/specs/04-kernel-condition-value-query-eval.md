@@ -1,6 +1,6 @@
 # Spec 04: Kernel — Condition, Value & Query Evaluation
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0 (critical path)
 **Complexity**: L
 **Dependencies**: Spec 02, Spec 03
@@ -333,3 +333,16 @@ test/unit/resolve-ref.test.ts    # NEW — reference resolution tests
 test/unit/resolve-selectors.test.ts # NEW — selector resolution tests
 test/integration/eval-complex.test.ts # NEW — complex evaluation scenarios
 ```
+
+## Outcome
+
+- **Completion date**: 2026-02-10
+- **What changed**:
+  - Implemented kernel evaluation modules for conditions, values, queries, reference resolution, selector resolution, and shared evaluation context under `src/kernel/`.
+  - Added evaluation error typing support in `src/kernel/eval-error.ts`.
+  - Exported evaluation APIs through `src/kernel/index.ts`.
+  - Added unit coverage for condition/value/query/reference/selector evaluation and integration coverage for complex evaluation scenarios under `test/unit/` and `test/integration/`.
+- **Deviations from plan**:
+  - Added `src/kernel/eval-error.ts` as a dedicated shared error module; this was not explicitly listed in the original file list.
+- **Verification results**:
+  - `npm run test` passed on 2026-02-10 (135 tests, 32 suites, 0 failures).

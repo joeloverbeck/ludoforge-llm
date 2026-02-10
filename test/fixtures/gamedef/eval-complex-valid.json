@@ -1,0 +1,20 @@
+{
+  "metadata": { "id": "eval-complex-valid", "players": { "min": 2, "max": 2 } },
+  "constants": {},
+  "globalVars": [{ "name": "threat", "type": "int", "init": 0, "min": 0, "max": 20 }],
+  "perPlayerVars": [{ "name": "money", "type": "int", "init": 0, "min": 0, "max": 20 }],
+  "zones": [
+    { "id": "deck:none", "owner": "none", "visibility": "hidden", "ordering": "stack" },
+    { "id": "hand:0", "owner": "player", "visibility": "owner", "ordering": "stack" },
+    { "id": "hand:1", "owner": "player", "visibility": "owner", "ordering": "stack" }
+  ],
+  "tokenTypes": [{ "id": "card", "props": { "cost": "int", "vp": "int" } }],
+  "setup": [],
+  "turnStructure": {
+    "phases": [{ "id": "main" }],
+    "activePlayerOrder": "roundRobin"
+  },
+  "actions": [],
+  "triggers": [],
+  "endConditions": []
+}

@@ -1,0 +1,24 @@
+{
+  "globalVars": { "threat": 6 },
+  "perPlayerVars": {
+    "0": { "money": 4 },
+    "1": { "money": 2 }
+  },
+  "playerCount": 2,
+  "zones": {
+    "deck:none": [
+      { "id": "card-0", "type": "card", "props": { "cost": 3, "vp": 1 } },
+      { "id": "card-1", "type": "card", "props": { "cost": 5, "vp": 2 } }
+    ],
+    "hand:0": [
+      { "id": "card-2", "type": "card", "props": { "cost": 2, "vp": 3 } }
+    ],
+    "hand:1": []
+  },
+  "currentPhase": "main",
+  "activePlayer": 1,
+  "turnCount": 3,
+  "rng": { "algorithm": "pcg-dxsm-128", "version": 1, "state": ["0x1", "0x2"] },
+  "stateHash": "0x0",
+  "actionUsage": {}
+}

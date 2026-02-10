@@ -89,6 +89,7 @@ This is the longest dependency chain and determines minimum time-to-MVP.
 - Spec 02 defines all types consumed by Specs 03-06
 - Spec 03's PRNG is threaded through Spec 05 (effects) and Spec 06 (game loop)
 - Spec 04's evaluators are called by Spec 05 (forEach queries, if conditions) and Spec 06 (preconditions, end conditions)
+- Spec 04 must enforce deterministic query ordering, scalar-selector cardinality checks, and query boundedness guards to prevent downstream combinatorial blowups in Specs 05-06
 - Spec 05's effect interpreter is called by Spec 06 (move application, trigger dispatch)
 
 ### Milestone 2: Spatial + Compilation
@@ -205,6 +206,7 @@ All type definitions live in Spec 02. Other specs import and use these types but
 | 64-bit Zobrist hashing in JS (no native 64-bit ints) | High | High | Use BigInt or two 32-bit integers; benchmark for performance impact | 03, 06 |
 | Incomplete state hash coverage (phase/turn/order/action usage omitted) causing false loop/stall signals | High | Medium | Spec 03 requires hash coverage for all legal-move-relevant state and canonical feature encoding | 03, 06, 10, 11 |
 | forEach/query interaction edge cases | Medium | Medium | Extensive property testing; fuzzing with random GameDefs | 04, 05, 06 |
+| Unbounded query cardinality causing legal-move/forEach explosion | High | Medium | Spec 04 enforces `maxQueryResults` guard and deterministic ordering; Spec 06 evaluates param products lazily and short-circuits with diagnostics | 04, 06 |
 | YAML 1.2 parser edge cases with LLM output | Medium | High | Build comprehensive linter for 20 known failure modes; golden tests from real LLM output | 08a |
 | Compiler diagnostic quality insufficient for LLM self-correction | High | Medium | Test diagnostics against real LLM error patterns; iterate on suggestion quality | 08b |
 | GreedyAgent lookahead performance for high branching factor | Low | Medium | Cap lookahead depth; use evaluation heuristic without full simulation | 09 |

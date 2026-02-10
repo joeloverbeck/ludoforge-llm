@@ -21,6 +21,7 @@ Implement the pure evaluation layer of the kernel: resolving references against 
 - Bindings context: immutable map for let/forEach-bound values
 - Player selector resolution: resolve PlayerSel to concrete player IDs
 - Zone selector parsing: resolve "zoneId:playerSel" to concrete zone IDs
+- Deterministic query ordering and bounded query cardinality safeguards
 
 ### Out of Scope
 - Spatial queries (`adjacentZones`, `tokensInAdjacentZones`, `connectedZones`) — stubbed with descriptive error, implemented in Spec 07
@@ -28,6 +29,20 @@ Implement the pure evaluation layer of the kernel: resolving references against 
 - Effect application (Spec 05)
 - Game loop integration (Spec 06)
 - State mutation of any kind
+
+## Design Decisions (Robustness-Critical)
+
+1. **Single-value references require single-target selectors**:
+   - `pvar` and `zoneCount` references are scalar-valued. If selector resolution yields 0 or >1 targets, evaluation throws a descriptive cardinality error.
+   - Multi-target intent must be expressed through queries + aggregates (for example: `count(tokensInZone("hand:all"))`).
+2. **Deterministic ordering is part of the API contract**:
+   - `players`, `zones`, and selector expansion return stable sorted order.
+   - `tokensInZone` preserves zone container order from `GameState`.
+3. **Bounded evaluation to protect kernel totality/performance**:
+   - `evalQuery` enforces a hard maximum result size (`MAX_QUERY_RESULTS`, default 10_000).
+   - `intsInRange` and query expansions that exceed the cap throw a descriptive boundedness error.
+4. **Typed runtime errors for diagnostics and linter feedback loops**:
+   - Distinguish unsupported-spatial stubs, type mismatches, selector cardinality failures, and missing bindings/vars.
 
 ## Key Types & Interfaces
 
@@ -40,6 +55,7 @@ interface EvalContext {
   readonly activePlayer: PlayerId;
   readonly actorPlayer: PlayerId;
   readonly bindings: Readonly<Record<string, unknown>>;
+  readonly maxQueryResults?: number; // default 10_000
   // bindings holds values from let, forEach, chooseOne/chooseN
 }
 ```
@@ -67,6 +83,20 @@ function resolvePlayerSel(sel: PlayerSel, ctx: EvalContext): readonly PlayerId[]
 
 // Resolve a ZoneSel string to concrete zone ID(s)
 function resolveZoneSel(sel: ZoneSel, ctx: EvalContext): readonly ZoneId[];
+
+// Resolve selector and require exactly one result
+function resolveSinglePlayerSel(sel: PlayerSel, ctx: EvalContext): PlayerId;
+function resolveSingleZoneSel(sel: ZoneSel, ctx: EvalContext): ZoneId;
+
+class EvalError extends Error {
+  readonly code:
+    | 'MISSING_BINDING'
+    | 'MISSING_VAR'
+    | 'TYPE_MISMATCH'
+    | 'SELECTOR_CARDINALITY'
+    | 'QUERY_BOUNDS_EXCEEDED'
+    | 'SPATIAL_NOT_IMPLEMENTED';
+}
 ```
 
 ## Implementation Requirements
@@ -76,23 +106,27 @@ function resolveZoneSel(sel: ZoneSel, ctx: EvalContext): readonly ZoneId[];
 | Reference | Resolution |
 |-----------|------------|
 | `{ ref: 'gvar', var }` | `state.globalVars[var]` — error if var undefined |
-| `{ ref: 'pvar', player, var }` | Resolve `player` via `resolvePlayerSel`, then `state.perPlayerVars[playerId][var]` — error if var undefined |
-| `{ ref: 'zoneCount', zone }` | Resolve `zone` via `resolveZoneSel`, return `state.zones[zoneId].length` |
+| `{ ref: 'pvar', player, var }` | Resolve `player` via `resolveSinglePlayerSel`, then `state.perPlayerVars[playerId][var]` — error if var undefined |
+| `{ ref: 'zoneCount', zone }` | Resolve `zone` via `resolveSingleZoneSel`, return `state.zones[zoneId].length` |
 | `{ ref: 'tokenProp', token, prop }` | Look up `token` in bindings (must be a bound Token), return `token.props[prop]` — error if token unbound or prop missing |
 | `{ ref: 'binding', name }` | Look up `name` in `ctx.bindings` — error if undefined |
 
-**Error handling**: All reference resolution errors produce descriptive messages including the reference path, what was expected, and what bindings/vars are available.
+**Error handling**: All reference resolution errors produce descriptive messages including:
+- reference path and expected runtime type/cardinality
+- actual resolved value/selector result count
+- available bindings/vars/selectable players/zones when relevant
 
 ### Value Expression Evaluation (Section 3.3)
 
 - **Literals**: number, boolean, string — return as-is
 - **References**: delegate to `resolveRef`
-- **Arithmetic**: `+`, `-`, `*` — both operands must evaluate to numbers. Division is NOT in the AST (intentionally excluded). All results are integers (use `Math.trunc` if intermediate multiplication could theoretically overflow, though in practice values are bounded by VariableDef min/max).
+- **Arithmetic**: `+`, `-`, `*` — both operands must evaluate to numbers. Division is NOT in the AST (intentionally excluded). Operands/results must be finite safe integers (`Number.isSafeInteger`), else throw `TYPE_MISMATCH`.
 - **Aggregates**: `sum`, `count`, `min`, `max` over an OptionsQuery
   - `count`: return `evalQuery(query).length`
   - `sum`: for each item in `evalQuery(query)`, extract `prop` (or use item itself if numeric), sum all values
   - `min`: minimum of extracted values; return 0 if collection is empty
   - `max`: maximum of extracted values; return 0 if collection is empty
+  - If `prop` is requested but missing/non-numeric, throw `TYPE_MISMATCH` (do not coerce)
 
 ### Condition Evaluation (Section 3.2)
 
@@ -101,19 +135,24 @@ function resolveZoneSel(sel: ZoneSel, ctx: EvalContext): readonly ZoneId[];
 - `{ op: 'not', arg }`: boolean negation
 - Comparisons (`==`, `!=`, `<`, `<=`, `>`, `>=`): evaluate both sides via `evalValue`, compare. For `<`, `<=`, `>`, `>=`, both sides must be numeric. For `==` and `!=`, string/boolean comparison is also allowed.
 - `{ op: 'in', item, set }`: evaluate `item`, evaluate `set` — `set` must be an array-like value (from query). Check membership.
+- Spatial conditions (`adjacent`, `connected`) currently throw `SPATIAL_NOT_IMPLEMENTED` until Spec 07 lands.
 
 ### OptionsQuery Evaluation (Section 3.5)
 
 | Query | Result |
 |-------|--------|
 | `tokensInZone(zone)` | All tokens in the resolved zone |
-| `intsInRange(min, max)` | Array of integers `[min, min+1, ..., max]` |
+| `intsInRange(min, max)` | Array of integers `[min, min+1, ..., max]`; if `min > max`, returns `[]` |
 | `enums(values)` | The string array as-is |
-| `players` | All player IDs |
-| `zones(filter?)` | All zone IDs, optionally filtered by owner |
+| `players` | All player IDs (ascending numeric order) |
+| `zones(filter?)` | All zone IDs, optionally filtered by owner (lexicographically sorted) |
 | `adjacentZones(zone)` | **STUB** — throw `SpatialNotImplementedError` (Spec 07) |
 | `tokensInAdjacentZones(zone)` | **STUB** — throw `SpatialNotImplementedError` (Spec 07) |
 | `connectedZones(zone, via?)` | **STUB** — throw `SpatialNotImplementedError` (Spec 07) |
+
+**Query boundedness rule**:
+- `evalQuery` must enforce `result.length <= (ctx.maxQueryResults ?? 10_000)` for every query.
+- If limit would be exceeded, throw `QUERY_BOUNDS_EXCEEDED` with query shape and configured limit.
 
 ### Player Selector Resolution (Section 3.6)
 
@@ -125,8 +164,10 @@ function resolveZoneSel(sel: ZoneSel, ctx: EvalContext): readonly ZoneId[];
 | `'allOther'` | All player IDs except `ctx.actorPlayer` |
 | `{ id: n }` | Player ID `n` (validate exists) |
 | `{ chosen: name }` | Look up in `ctx.bindings[name]` (must be a PlayerId) |
-| `{ relative: 'left' }` | Player to the left of actor in turn order |
-| `{ relative: 'right' }` | Player to the right of actor in turn order |
+| `{ relative: 'left' }` | Player at `(actorPlayer - 1 + playerCount) % playerCount` |
+| `{ relative: 'right' }` | Player at `(actorPlayer + 1) % playerCount` |
+
+`resolvePlayerSel` deduplicates and returns sorted ascending `PlayerId[]` for deterministic downstream behavior.
 
 ### Zone Selector Resolution
 
@@ -134,6 +175,10 @@ Zone selectors are strings in the format `"zoneId:ownerSpec"`:
 - `"deck:none"` → zone ID `"deck"` (unowned)
 - `"hand:actor"` → `"hand"` zone owned by the actor player (resolves to `"hand:0"` or similar concrete ID)
 - `"hand:all"` → all hand zones (one per player) — returns multiple zone IDs
+
+Rules:
+- `resolveZoneSel` returns deduplicated, lexicographically sorted zone IDs.
+- If selector references a nonexistent zone base or owner-qualified variant, throw descriptive error listing available candidates.
 
 ### Bindings Context
 
@@ -148,17 +193,19 @@ Bindings are scoped: inner scopes shadow outer. The bindings map is threaded thr
 ## Invariants
 
 1. Evaluation is PURE — no side effects, no state mutation, no PRNG consumption
-2. All arithmetic is integer-only (no floating point, use `Math.trunc` for any division-like operation)
-3. `evalCondition` always returns `boolean` (never throws on well-typed input from a valid GameDef)
+2. All arithmetic is integer-only and safe-integer constrained (no float coercion)
+3. `evalCondition` always returns `boolean` for supported (non-spatial) operators in a valid GameDef
 4. `evalValue` never returns `NaN` or `Infinity`
 5. Aggregate `count` over empty collection returns `0`
 6. Aggregate `min`/`max` over empty collection returns `0`
 7. `tokenProp` reference on unbound token throws descriptive error listing available bindings
 8. `binding` reference on undefined binding throws descriptive error listing available bindings
-9. `intsInRange(min, max)` returns exactly `max - min + 1` values (inclusive both ends)
+9. `intsInRange(min, max)` returns exactly `max - min + 1` values when `min <= max`, else `[]`
 10. Query evaluator handles all 5 base query types; 3 spatial queries throw `SpatialNotImplementedError`
 11. `resolvePlayerSel` for `'all'` returns players in deterministic order (sorted by ID)
 12. `resolveZoneSel` for owner-qualified zones returns zone IDs in deterministic (sorted) order
+13. Scalar references (`pvar`, `zoneCount`) reject multi-target selector resolutions
+14. Query results are bounded by `maxQueryResults` (default 10_000)
 
 ## Required Tests
 
@@ -191,7 +238,9 @@ Bindings are scoped: inner scopes shadow outer. The bindings map is threaded thr
 - `gvar("missing")` → descriptive error
 - `pvar(actor, "money")` with actor=0, state `{0: {money: 10}}` → 10
 - `pvar(actor, "missing")` → descriptive error
+- `pvar(all, "money")` → selector cardinality error (expected single player)
 - `zoneCount("deck:none")` with 5 tokens in deck → 5
+- `zoneCount("hand:all")` → selector cardinality error (expected single zone)
 - `tokenProp("$card", "cost")` with bound card token → correct prop value
 - `tokenProp("$unbound", "cost")` → error listing available bindings
 - `binding("$x")` with bindings `{$x: 42}` → 42
@@ -202,6 +251,7 @@ Bindings are scoped: inner scopes shadow outer. The bindings map is threaded thr
 - `10 - 3` → 7
 - `5 * 2` → 10
 - `ref(gvar, "a") + ref(gvar, "b")` with a=3, b=4 → 7
+- non-integer operand (e.g. string) → `TYPE_MISMATCH`
 
 **Aggregates**:
 - `count(tokensInZone("hand:0"))` with 3 tokens → 3
@@ -211,15 +261,18 @@ Bindings are scoped: inner scopes shadow outer. The bindings map is threaded thr
 - `min(tokensInZone("hand:0"), "cost")` with costs [3,1,5] → 1
 - `min` over empty zone → 0
 - `max(tokensInZone("hand:0"), "cost")` with costs [3,1,5] → 5
+- `sum(tokensInZone("hand:0"), "missingProp")` → `TYPE_MISMATCH`
 
 **OptionsQuery**:
 - `tokensInZone("deck:none")` → correct tokens from state
 - `intsInRange(1, 5)` → [1, 2, 3, 4, 5]
 - `intsInRange(3, 3)` → [3]
+- `intsInRange(5, 3)` → []
 - `enums(["red", "blue", "green"])` → ["red", "blue", "green"]
 - `players` with 3-player game → [0, 1, 2] as PlayerId[]
 - `zones({owner: "actor"})` with actor=0 → zones owned by player 0
 - `adjacentZones` → throws SpatialNotImplementedError
+- oversized range exceeding `maxQueryResults` → `QUERY_BOUNDS_EXCEEDED`
 
 **PlayerSel resolution**:
 - `'actor'` → actorPlayer
@@ -227,6 +280,7 @@ Bindings are scoped: inner scopes shadow outer. The bindings map is threaded thr
 - `'allOther'` → all except actor
 - `{ id: 1 }` → player 1
 - `{ relative: 'left' }` → correct player in turn order
+- `{ chosen: "$p" }` where `$p` is non-player binding → `TYPE_MISMATCH`
 
 ### Integration Tests
 
@@ -238,6 +292,7 @@ Bindings are scoped: inner scopes shadow outer. The bindings map is threaded thr
 - `evalValue` never returns NaN for any valid `ValueExpr` with integer inputs
 - `evalQuery` for `intsInRange(a, b)` where `a <= b` returns exactly `b - a + 1` elements
 - `resolvePlayerSel('all')` always returns players in ascending ID order
+- `evalQuery` never returns more than `maxQueryResults`
 
 ### Golden Tests
 
@@ -258,6 +313,8 @@ Bindings are scoped: inner scopes shadow outer. The bindings map is threaded thr
 - [ ] Bindings context is immutable and properly scoped
 - [ ] No floating-point arithmetic anywhere in evaluation code
 - [ ] All error messages include context (available bindings, available vars, etc.)
+- [ ] Scalar references fail fast on non-single selector resolutions
+- [ ] Query result cardinality guard prevents unbounded expansion
 
 ## Files to Create/Modify
 

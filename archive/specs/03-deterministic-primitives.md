@@ -1,6 +1,6 @@
 # Spec 03: Deterministic Primitives (PRNG & Zobrist)
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0 (critical path)
 **Complexity**: M
 **Dependencies**: Spec 02
@@ -297,3 +297,16 @@ test/unit/zobrist.test.ts        # NEW - Zobrist hashing tests
 test/unit/determinism.test.ts    # NEW - determinism helper tests
 test/integration/determinism-full.test.ts  # NEW - full determinism integration test
 ```
+
+## Outcome
+- **Completed**: February 10, 2026
+- **Implemented**:
+  - Deterministic PRNG (`pcg-dxsm-128`) with `createRng`, `stepRng`, `nextInt`, `serialize`, `deserialize`, and `fork`.
+  - Zobrist table creation, keyed feature hashing, full hash computation, and incremental update helpers.
+  - Determinism test helpers including `assertDeterministic`, `assertRngRoundTrip`, and `assertStateRoundTrip`.
+  - Unit/property/integration coverage for PRNG, Zobrist determinism, and seeded replay hash trajectory checks.
+- **Deviations from original plan**:
+  - Implementation was split across incremental tickets/tests over time instead of landing exactly as one batch file plan.
+  - Existing files/tests differ from the initial proposed names, but deterministic primitives and invariants are now covered.
+- **Verification**:
+  - `npm test` passes against compiled unit and integration suites.

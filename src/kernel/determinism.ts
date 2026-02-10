@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import { createRng, deserialize, serialize, stepRng } from './prng.js';
-import type { Rng } from './types.js';
+import { deserializeGameState, serializeGameState } from './serde.js';
+import type { GameState, Rng } from './types.js';
 
 const formatValue = (value: unknown): string => {
   if (typeof value === 'bigint') {
@@ -43,5 +44,19 @@ export const assertRngRoundTrip = (rng: Rng, steps: number): void => {
 
     baseline = nextBaseline;
     restored = nextRestored;
+  }
+};
+
+export const assertStateRoundTrip = (state: GameState): void => {
+  const serialized = serializeGameState(state);
+  const roundTripped = deserializeGameState(serialized);
+
+  if (!isDeepStrictEqual(roundTripped, state)) {
+    throw new Error('State round-trip mismatch after serialize/deserialize');
+  }
+
+  const reserialized = serializeGameState(roundTripped);
+  if (!isDeepStrictEqual(reserialized, serialized)) {
+    throw new Error('State serialization is not stable across round-trip');
   }
 };

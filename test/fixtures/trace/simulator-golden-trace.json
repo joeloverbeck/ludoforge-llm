@@ -1,0 +1,162 @@
+{
+  "gameDefId": "sim-golden-trace",
+  "seed": 13,
+  "moves": [
+    {
+      "stateHash": "0x15e5e56a860baa12",
+      "player": 0,
+      "move": {
+        "actionId": "step1",
+        "params": {}
+      },
+      "legalMoveCount": 1,
+      "deltas": [
+        {
+          "path": "currentPhase",
+          "before": "p1",
+          "after": "p2"
+        },
+        {
+          "path": "globalVars.score",
+          "before": 0,
+          "after": 1
+        }
+      ],
+      "triggerFirings": []
+    },
+    {
+      "stateHash": "0xde8192e372a894f",
+      "player": 0,
+      "move": {
+        "actionId": "step2",
+        "params": {}
+      },
+      "legalMoveCount": 1,
+      "deltas": [
+        {
+          "path": "activePlayer",
+          "before": 0,
+          "after": 1
+        },
+        {
+          "path": "currentPhase",
+          "before": "p2",
+          "after": "p1"
+        },
+        {
+          "path": "turnCount",
+          "before": 0,
+          "after": 1
+        }
+      ],
+      "triggerFirings": []
+    },
+    {
+      "stateHash": "0xde8172e372a8011",
+      "player": 1,
+      "move": {
+        "actionId": "step1",
+        "params": {}
+      },
+      "legalMoveCount": 1,
+      "deltas": [
+        {
+          "path": "currentPhase",
+          "before": "p1",
+          "after": "p2"
+        },
+        {
+          "path": "globalVars.score",
+          "before": 1,
+          "after": 2
+        }
+      ],
+      "triggerFirings": []
+    },
+    {
+      "stateHash": "0xde8182e372a9d0c",
+      "player": 1,
+      "move": {
+        "actionId": "step2",
+        "params": {}
+      },
+      "legalMoveCount": 1,
+      "deltas": [
+        {
+          "path": "activePlayer",
+          "before": 1,
+          "after": 0
+        },
+        {
+          "path": "currentPhase",
+          "before": "p2",
+          "after": "p1"
+        },
+        {
+          "path": "turnCount",
+          "before": 1,
+          "after": 2
+        }
+      ],
+      "triggerFirings": []
+    },
+    {
+      "stateHash": "0xde8122e372a90ac",
+      "player": 0,
+      "move": {
+        "actionId": "step1",
+        "params": {}
+      },
+      "legalMoveCount": 1,
+      "deltas": [
+        {
+          "path": "globalVars.score",
+          "before": 2,
+          "after": 3
+        }
+      ],
+      "triggerFirings": []
+    }
+  ],
+  "finalState": {
+    "globalVars": {
+      "score": 3
+    },
+    "perPlayerVars": {
+      "0": {},
+      "1": {}
+    },
+    "playerCount": 2,
+    "zones": {},
+    "nextTokenOrdinal": 0,
+    "currentPhase": "p1",
+    "activePlayer": 0,
+    "turnCount": 2,
+    "rng": {
+      "algorithm": "pcg-dxsm-128",
+      "version": 1,
+      "state": [
+        "0x9e3779b97f4a7c15f39cc0605cedc838",
+        "0xda3e39cb94b95bc1"
+      ]
+    },
+    "stateHash": "0xde8122e372a90ac",
+    "actionUsage": {
+      "step1": {
+        "turnCount": 1,
+        "phaseCount": 1,
+        "gameCount": 3
+      },
+      "step2": {
+        "turnCount": 0,
+        "phaseCount": 0,
+        "gameCount": 2
+      }
+    }
+  },
+  "result": {
+    "type": "draw"
+  },
+  "turnsCount": 2,
+  "stopReason": "terminal"
+}

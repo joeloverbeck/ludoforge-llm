@@ -1,8 +1,12 @@
 import * as assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { asActionId, asPhaseId, asPlayerId, deserializeGameState, deserializeTrace, serializeGameState, serializeTrace } from '../../src/kernel/index.js';
 import type { GameState, GameTrace, SerializedGameState, SerializedGameTrace } from '../../src/kernel/index.js';
+
+const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 
 const gameStateFixture: GameState = {
   globalVars: { round: 1 },
@@ -112,5 +116,12 @@ describe('kernel bigint serialization codecs', () => {
       () => deserializeTrace(invalidSerializedTrace),
       /Invalid hex bigint at moves\[0\]\.stateHash: 0xFF/,
     );
+  });
+
+  it('simulator golden fixture round-trips through deserializeTrace/serializeTrace exactly', () => {
+    const fixture = readJsonFixture<SerializedGameTrace>('test/fixtures/trace/simulator-golden-trace.json');
+
+    const roundTripped = serializeTrace(deserializeTrace(fixture));
+    assert.deepEqual(roundTripped, fixture);
   });
 });

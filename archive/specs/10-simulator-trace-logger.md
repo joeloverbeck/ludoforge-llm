@@ -1,6 +1,6 @@
 # Spec 10: Simulator & Trace Logger
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1 (required for MVP)
 **Complexity**: M
 **Dependencies**: Spec 03, Spec 06, Spec 09
@@ -302,3 +302,20 @@ test/integration/sim/simulator.test.ts # NEW — determinism and batch integrati
 test/unit/schemas-top-level.test.ts   # MODIFY — trace schema expectations for stopReason
 test/unit/serde.test.ts               # MODIFY — trace serde expectations for stopReason
 ```
+
+## Outcome
+
+- Completion date: 2026-02-10
+- Actual implementation landed:
+  - `runGame(...)`/`runGames(...)` in `src/sim/simulator.ts`, exported via `src/sim/index.ts`.
+  - Deterministic delta computation in `src/sim/delta.ts`.
+  - `GameTrace.stopReason` + schema/serde wiring in kernel types/schemas/serde.
+  - Unit, integration, property-style, and golden simulator trace coverage, including serde round-trip checks for simulator-produced fixtures.
+- Deviations from original plan:
+  - Trace serialization remained in kernel serde as specified by contract correction; no simulator-local serializer was added.
+  - Final property coverage uses deterministic table-driven property-style tests rather than randomized fuzzing.
+- Verification:
+  - `npm run lint` passed.
+  - `npm run build` passed.
+  - `npm run test:unit -- --coverage=false` passed.
+  - `npm run test:integration` passed.

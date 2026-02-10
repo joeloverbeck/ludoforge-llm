@@ -9,6 +9,7 @@ const gameStateFixture: GameState = {
   perPlayerVars: { '0': { vp: 3 } },
   playerCount: 2,
   zones: {},
+  nextTokenOrdinal: 12,
   currentPhase: asPhaseId('main'),
   activePlayer: asPlayerId(0),
   turnCount: 4,
@@ -58,6 +59,7 @@ describe('kernel bigint serialization codecs', () => {
     assert.equal(serialized.rng.version, 1);
     assert.equal(serialized.stateHash, '0xabcd');
     assert.equal(typeof serialized.stateHash, 'string');
+    assert.equal(serialized.nextTokenOrdinal, gameStateFixture.nextTokenOrdinal);
   });
 
   it('deserializeGameState reconstructs exact bigint values', () => {
@@ -73,6 +75,7 @@ describe('kernel bigint serialization codecs', () => {
     assert.equal(deserialized.rng.algorithm, 'pcg-dxsm-128');
     assert.equal(deserialized.rng.version, 1);
     assert.equal(deserialized.stateHash, 0xabcdn);
+    assert.equal(deserialized.nextTokenOrdinal, gameStateFixture.nextTokenOrdinal);
   });
 
   it('deserializeTrace(serializeTrace(trace)) preserves all hashes exactly', () => {
@@ -85,6 +88,7 @@ describe('kernel bigint serialization codecs', () => {
     );
     assert.equal(deserialized.finalState.stateHash, traceFixture.finalState.stateHash);
     assert.deepEqual(deserialized.finalState.rng.state, traceFixture.finalState.rng.state);
+    assert.equal(deserialized.finalState.nextTokenOrdinal, traceFixture.finalState.nextTokenOrdinal);
   });
 
   it('rejects invalid hex values with deterministic error text', () => {

@@ -47,6 +47,7 @@ const makeState = (): GameState => ({
     'hand:0': [],
     'hand:1': [],
   },
+  nextTokenOrdinal: 0,
   currentPhase: asPhaseId('main'),
   activePlayer: asPlayerId(0),
   turnCount: 1,

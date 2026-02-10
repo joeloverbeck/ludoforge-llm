@@ -72,6 +72,7 @@ const createInitialState = (seed: bigint): GameState => {
       'lane:none': [],
       'vault:none': [],
     },
+    nextTokenOrdinal: 0,
     currentPhase: asPhaseId('main'),
     activePlayer: asPlayerId(0),
     turnCount: 0,

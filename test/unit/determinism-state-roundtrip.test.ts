@@ -15,6 +15,7 @@ const fixtureState: GameState = {
     'deck:none': [],
     'hand:none': [],
   },
+  nextTokenOrdinal: 0,
   currentPhase: asPhaseId('main'),
   activePlayer: asPlayerId(1),
   turnCount: 5,

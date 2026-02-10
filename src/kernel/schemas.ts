@@ -422,6 +422,7 @@ export const GameStateSchema = z
     perPlayerVars: z.record(StringSchema, z.record(StringSchema, NumberSchema)),
     playerCount: NumberSchema,
     zones: z.record(StringSchema, z.array(TokenSchema)),
+    nextTokenOrdinal: NumberSchema,
     currentPhase: StringSchema,
     activePlayer: IntegerSchema,
     turnCount: NumberSchema,

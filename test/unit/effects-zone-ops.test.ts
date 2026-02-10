@@ -49,6 +49,7 @@ const makeState = (): GameState => ({
     'discard:none': [token('x1', 9)],
     'board:none': [],
   },
+  nextTokenOrdinal: 0,
   currentPhase: asPhaseId('main'),
   activePlayer: asPlayerId(0),
   turnCount: 1,

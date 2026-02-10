@@ -210,6 +210,7 @@
         "perPlayerVars",
         "playerCount",
         "zones",
+        "nextTokenOrdinal",
         "currentPhase",
         "activePlayer",
         "turnCount",
@@ -237,6 +238,7 @@
             "items": { "$ref": "#/definitions/token" }
           }
         },
+        "nextTokenOrdinal": { "type": "number" },
         "currentPhase": { "type": "string" },
         "activePlayer": { "type": "integer" },
         "turnCount": { "type": "number" },

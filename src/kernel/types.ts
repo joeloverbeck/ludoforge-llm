@@ -316,6 +316,7 @@ export interface GameState {
   readonly perPlayerVars: Readonly<Record<string, Readonly<Record<string, number>>>>;
   readonly playerCount: number;
   readonly zones: Readonly<Record<string, readonly Token[]>>;
+  readonly nextTokenOrdinal: number;
   readonly currentPhase: PhaseId;
   readonly activePlayer: PlayerId;
   readonly turnCount: number;

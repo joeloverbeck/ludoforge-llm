@@ -46,6 +46,7 @@ const makeState = (playerCount: number): GameState => ({
     'hand:2': [],
     'bench:1': [],
   },
+  nextTokenOrdinal: 0,
   currentPhase: asPhaseId('main'),
   activePlayer: asPlayerId(2),
   turnCount: 1,

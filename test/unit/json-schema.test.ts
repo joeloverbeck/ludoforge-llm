@@ -86,6 +86,7 @@ const validRuntimeTrace: GameTrace = {
     perPlayerVars: {},
     playerCount: 2,
     zones: { 'deck:none': [] },
+    nextTokenOrdinal: 0,
     currentPhase: asPhaseId('main'),
     activePlayer: asPlayerId(0),
     turnCount: 1,

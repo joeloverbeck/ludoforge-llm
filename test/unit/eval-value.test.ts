@@ -50,6 +50,7 @@ const makeState = (): GameState => ({
     'hand:1': [makeToken('hand-1', { vp: 10, cost: 5, label: 'x' })],
     'tableau:0': [makeToken('tab-1', { vp: 3, cost: 8 }), makeToken('tab-2', { vp: 4, cost: 2 })],
   },
+  nextTokenOrdinal: 0,
   currentPhase: asPhaseId('main'),
   activePlayer: asPlayerId(0),
   turnCount: 1,

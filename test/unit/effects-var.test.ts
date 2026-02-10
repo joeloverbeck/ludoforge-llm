@@ -45,6 +45,7 @@ const makeState = (): GameState => ({
   },
   playerCount: 2,
   zones: {},
+  nextTokenOrdinal: 0,
   currentPhase: asPhaseId('main'),
   activePlayer: asPlayerId(1),
   turnCount: 1,

@@ -71,6 +71,7 @@ const createBaseState = (): GameState => ({
     ],
     'hand:none': [{ id: asTokenId('t-3'), type: 'card', props: {} }],
   },
+  nextTokenOrdinal: 0,
   currentPhase: asPhaseId('draw'),
   activePlayer: asPlayerId(0),
   turnCount: 5,

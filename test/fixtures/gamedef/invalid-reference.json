@@ -1,0 +1,30 @@
+{
+  "metadata": { "id": "fixture-invalid", "players": { "min": 2, "max": 4 } },
+  "constants": {},
+  "globalVars": [{ "name": "money", "type": "int", "init": 0, "min": 0, "max": 99 }],
+  "perPlayerVars": [{ "name": "vp", "type": "int", "init": 0, "min": 0, "max": 100 }],
+  "zones": [
+    { "id": "market:none", "owner": "none", "visibility": "public", "ordering": "set" },
+    { "id": "deck:none", "owner": "none", "visibility": "hidden", "ordering": "stack" }
+  ],
+  "tokenTypes": [{ "id": "card", "props": {} }],
+  "setup": [{ "shuffle": { "zone": "deck:none" } }],
+  "turnStructure": {
+    "phases": [{ "id": "main" }],
+    "activePlayerOrder": "roundRobin"
+  },
+  "actions": [
+    {
+      "id": "playCard",
+      "actor": "active",
+      "phase": "mian",
+      "params": [{ "name": "$n", "domain": { "query": "intsInRange", "min": 0, "max": 3 } }],
+      "pre": { "op": "==", "left": { "ref": "gvar", "var": "gold" }, "right": 1 },
+      "cost": [],
+      "effects": [{ "draw": { "from": "deck:none", "to": "markte:none", "count": 1 } }],
+      "limits": []
+    }
+  ],
+  "triggers": [{ "id": "onPlay", "event": { "type": "actionResolved", "action": "playCrad" }, "effects": [] }],
+  "endConditions": [{ "when": { "op": "==", "left": 1, "right": 1 }, "result": { "type": "draw" } }]
+}

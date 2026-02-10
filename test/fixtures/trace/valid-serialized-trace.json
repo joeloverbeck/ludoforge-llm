@@ -1,0 +1,31 @@
+{
+  "gameDefId": "fixture-minimal",
+  "seed": 7,
+  "moves": [
+    {
+      "stateHash": "0x1",
+      "player": 0,
+      "move": {
+        "actionId": "playCard",
+        "params": { "amount": 1 }
+      },
+      "legalMoveCount": 3,
+      "deltas": [{ "path": "globalVars.money", "before": 0, "after": 1 }],
+      "triggerFirings": []
+    }
+  ],
+  "finalState": {
+    "globalVars": { "money": 1 },
+    "perPlayerVars": { "0": { "vp": 0 } },
+    "playerCount": 2,
+    "zones": {},
+    "currentPhase": "main",
+    "activePlayer": 0,
+    "turnCount": 1,
+    "rng": { "state": ["0x0", "0x2aab"] },
+    "stateHash": "0xabcd",
+    "actionUsage": {}
+  },
+  "result": { "type": "draw" },
+  "turnsCount": 1
+}

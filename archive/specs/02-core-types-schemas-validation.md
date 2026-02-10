@@ -1,6 +1,6 @@
 # Spec 02: Core Types, Schemas & Validation
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0 (critical path)
 **Complexity**: L
 **Dependencies**: Spec 01
@@ -690,3 +690,21 @@ test/unit/serde.test.ts          # NEW — serialization codec tests
 test/unit/validate-gamedef.test.ts  # NEW — semantic validation tests
 test/unit/types-exhaustive.test.ts  # NEW — union type exhaustiveness tests
 ```
+
+## Outcome
+- Completion date: 2026-02-10
+- What was actually changed:
+  - Implemented core kernel types, branded IDs, diagnostics, Zod schemas, semantic `validateGameDef`, serialization codecs, and JSON Schemas in the paths listed above.
+  - Added comprehensive unit coverage for types, schemas, serde, and semantic validation.
+  - Added integration/golden/property-style validation coverage with fixtures:
+    - `test/integration/core-types-validation.integration.test.ts`
+    - `test/unit/validate-gamedef.golden.test.ts`
+    - `test/unit/property/core-types-validation.property.test.ts`
+    - `test/fixtures/gamedef/minimal-valid.json`
+    - `test/fixtures/gamedef/invalid-reference.json`
+    - `test/fixtures/trace/valid-serialized-trace.json`
+- Deviations from original plan:
+  - Top-level schema tests were split across focused files (`test/unit/schemas-top-level.test.ts` and `test/unit/schemas-ast.test.ts`) rather than a single `test/unit/schemas.test.ts`.
+  - Property checks were implemented as deterministic table-driven tests using built-in `node:test` instead of adding a dedicated property-testing dependency.
+- Verification results:
+  - `npm test` passes (TypeScript build + unit + integration suites).

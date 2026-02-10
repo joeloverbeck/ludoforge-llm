@@ -340,9 +340,23 @@ export interface StateDelta {
 }
 
 export interface TriggerFiring {
+  readonly kind: 'fired';
   readonly triggerId: TriggerId;
   readonly event: TriggerEvent;
   readonly depth: number;
+}
+
+export interface TriggerTruncated {
+  readonly kind: 'truncated';
+  readonly event: TriggerEvent;
+  readonly depth: number;
+}
+
+export type TriggerLogEntry = TriggerFiring | TriggerTruncated;
+
+export interface ApplyMoveResult {
+  readonly state: GameState;
+  readonly triggerFirings: readonly TriggerLogEntry[];
 }
 
 export interface MoveLog {
@@ -351,7 +365,7 @@ export interface MoveLog {
   readonly move: Move;
   readonly legalMoveCount: number;
   readonly deltas: readonly StateDelta[];
-  readonly triggerFirings: readonly TriggerFiring[];
+  readonly triggerFirings: readonly TriggerLogEntry[];
 }
 
 export interface PlayerScore {

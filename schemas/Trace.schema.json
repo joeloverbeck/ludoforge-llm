@@ -155,12 +155,29 @@
     "triggerFiring": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["triggerId", "event", "depth"],
+      "required": ["kind", "triggerId", "event", "depth"],
       "properties": {
+        "kind": { "const": "fired" },
         "triggerId": { "type": "string" },
         "event": { "$ref": "#/definitions/triggerEvent" },
         "depth": { "type": "number" }
       }
+    },
+    "triggerTruncated": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "event", "depth"],
+      "properties": {
+        "kind": { "const": "truncated" },
+        "event": { "$ref": "#/definitions/triggerEvent" },
+        "depth": { "type": "number" }
+      }
+    },
+    "triggerLogEntry": {
+      "oneOf": [
+        { "$ref": "#/definitions/triggerFiring" },
+        { "$ref": "#/definitions/triggerTruncated" }
+      ]
     },
     "serializedRngState": {
       "type": "object",
@@ -265,7 +282,7 @@
         },
         "triggerFirings": {
           "type": "array",
-          "items": { "$ref": "#/definitions/triggerFiring" }
+          "items": { "$ref": "#/definitions/triggerLogEntry" }
         }
       }
     },

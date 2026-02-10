@@ -452,11 +452,22 @@ export const StateDeltaSchema = z
 
 export const TriggerFiringSchema = z
   .object({
+    kind: z.literal('fired'),
     triggerId: StringSchema,
     event: TriggerEventSchema,
     depth: NumberSchema,
   })
   .strict();
+
+export const TriggerTruncatedSchema = z
+  .object({
+    kind: z.literal('truncated'),
+    event: TriggerEventSchema,
+    depth: NumberSchema,
+  })
+  .strict();
+
+export const TriggerLogEntrySchema = z.union([TriggerFiringSchema, TriggerTruncatedSchema]);
 
 export const MoveLogSchema = z
   .object({
@@ -465,7 +476,7 @@ export const MoveLogSchema = z
     move: MoveSchema,
     legalMoveCount: NumberSchema,
     deltas: z.array(StateDeltaSchema),
-    triggerFirings: z.array(TriggerFiringSchema),
+    triggerFirings: z.array(TriggerLogEntrySchema),
   })
   .strict();
 

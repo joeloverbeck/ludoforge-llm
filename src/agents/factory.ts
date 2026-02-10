@@ -1,20 +1,15 @@
 import type { Agent } from '../kernel/types.js';
+import { GreedyAgent } from './greedy-agent.js';
 import { RandomAgent } from './random-agent.js';
 
 export type AgentType = 'random' | 'greedy';
-
-const createUnimplementedAgent = (agentName: string): Agent => ({
-  chooseMove: () => {
-    throw new Error(`${agentName}.chooseMove is not implemented yet`);
-  },
-});
 
 export const createAgent = (type: AgentType): Agent => {
   switch (type) {
     case 'random':
       return new RandomAgent();
     case 'greedy':
-      return createUnimplementedAgent('GreedyAgent');
+      return new GreedyAgent();
     default:
       throw new Error(`Unknown agent type: ${type}`);
   }

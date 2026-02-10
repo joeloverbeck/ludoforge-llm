@@ -2,7 +2,17 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { createAgent, parseAgentSpec } from '../../../src/agents/index.js';
-import { asActionId, asPhaseId, asPlayerId, createRng, type GameDef, type GameState, type Move } from '../../../src/kernel/index.js';
+import {
+  asActionId,
+  asPhaseId,
+  asPlayerId,
+  createRng,
+  initialState,
+  legalMoves,
+  type GameDef,
+  type GameState,
+  type Move,
+} from '../../../src/kernel/index.js';
 
 const defStub: GameDef = {
   metadata: { id: 'agents-factory', players: { min: 2, max: 2 } },
@@ -55,6 +65,35 @@ describe('agents factory API shape', () => {
   it("createAgent('greedy') returns an object with chooseMove", () => {
     const agent = createAgent('greedy');
     assert.equal(typeof agent.chooseMove, 'function');
+  });
+
+  it("createAgent('greedy') chooseMove works for a simple legal move", () => {
+    const def: GameDef = {
+      ...defStub,
+      actions: [
+        {
+          id: asActionId('only'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    };
+    const state = initialState(def, 1, 2);
+    const moves = legalMoves(def, state);
+    const agent = createAgent('greedy');
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: moves,
+      rng: createRng(1n),
+    });
+    assert.deepEqual(result.move, moves[0]);
   });
 
   it("createAgent('unknown' as never) throws Unknown agent type", () => {

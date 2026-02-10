@@ -44,7 +44,11 @@ function expandMacros(doc: GameSpecDoc): {
 };
 
 // Compile a validated GameSpecDoc into executable GameDef
-function compileGameSpecToGameDef(doc: GameSpecDoc): {
+// Optional source map from Spec 08a enables contextSnippet-rich diagnostics
+function compileGameSpecToGameDef(
+  doc: GameSpecDoc,
+  options?: { readonly sourceMap?: GameSpecSourceMap },
+): {
   readonly gameDef: GameDef | null;
   readonly diagnostics: readonly Diagnostic[];
 };
@@ -55,6 +59,7 @@ function compileGameSpecToGameDef(doc: GameSpecDoc): {
 ```typescript
 interface CompilerContext {
   readonly specDoc: GameSpecDoc;
+  readonly sourceMap: GameSpecSourceMap | null;
   readonly diagnostics: Diagnostic[]; // mutable during compilation, readonly on return
   readonly zoneMap: ReadonlyMap<string, ZoneDef>; // resolved zone IDs
   readonly varMap: ReadonlyMap<string, VariableDef>; // all variable definitions
@@ -148,7 +153,7 @@ Or, if a discard destination is specified, use `chooseN` for player-driven disca
 
 ### Compilation Pipeline
 
-`compileGameSpecToGameDef(doc)`:
+`compileGameSpecToGameDef(doc, options?)`:
 
 1. **Build lookup maps**: Create maps for zones, variables, token types, phases, actions from the expanded doc
 2. **Compile metadata**: Extract `id`, `players`, `maxTriggerDepth`
@@ -192,7 +197,7 @@ Every compiler diagnostic MUST include:
 - **`severity`**: `'error'` for compilation-blocking issues, `'warning'` for suspicious patterns, `'info'` for suggestions
 - **`message`**: human-readable description of the problem
 - **`suggestion`**: concrete fix (e.g., `"replace 'shop' with 'market'"`)
-- **`contextSnippet`**: 2-3 lines of the original spec around the error location (if available from GameSpecDoc source mapping)
+- **`contextSnippet`**: 2-3 lines of the original spec around the error location (when parser `sourceMap` is supplied from Spec 08a)
 - **`alternatives`**: valid options when a reference fails, computed via fuzzy matching (Levenshtein distance or similar)
 
 #### MissingCapability Diagnostic

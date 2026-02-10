@@ -318,16 +318,16 @@ function countDistinctMechanics(def: GameDef): number {
 function generateAndVerify(config, prompt):
   for attempt = 1 to config.maxAttempts:
     1. markdown = await config.llm.generate(prompt)
-    2. { doc, diagnostics } = parseGameSpec(markdown)
+    2. { doc, sourceMap, diagnostics } = parseGameSpec(markdown)
     3. if parse errors:
          prompt = appendErrorFeedback(prompt, diagnostics)
          continue
-    4. diagnostics.push(...validateGameSpec(doc))
+    4. diagnostics.push(...validateGameSpec(doc, { sourceMap }))
     5. if validation errors:
          prompt = appendErrorFeedback(prompt, diagnostics)
          continue
     6. { doc: expanded } = expandMacros(doc)
-    7. { gameDef, diagnostics: compileDiags } = compileGameSpecToGameDef(expanded)
+    7. { gameDef, diagnostics: compileDiags } = compileGameSpecToGameDef(expanded, { sourceMap })
     8. if compilation errors:
          prompt = appendErrorFeedback(prompt, compileDiags)
          continue

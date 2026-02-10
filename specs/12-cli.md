@@ -71,8 +71,8 @@ interface CliCommand {
 
 **Behavior**:
 1. Read the markdown file from disk
-2. Call `parseGameSpec(markdown)` → get doc + parse diagnostics
-3. Call `validateGameSpec(doc)` → get validation diagnostics
+2. Call `parseGameSpec(markdown)` → get doc + sourceMap + parse diagnostics
+3. Call `validateGameSpec(doc, { sourceMap })` → get validation diagnostics
 4. Combine all diagnostics
 5. Output diagnostics in human-readable format (default) or JSON (`--json`)
 6. Exit 0 if no errors, exit 2 if warnings only, exit 1 if errors
@@ -116,12 +116,12 @@ spec:lint results for game-spec.md
 
 **Behavior**:
 1. Read the markdown file
-2. `parseGameSpec(markdown)` → doc + diagnostics
+2. `parseGameSpec(markdown)` → doc + sourceMap + diagnostics
 3. If parse errors: output diagnostics, exit 1
-4. `validateGameSpec(doc)` → diagnostics
+4. `validateGameSpec(doc, { sourceMap })` → diagnostics
 5. If validation errors: output diagnostics, exit 1
 6. `expandMacros(doc)` → expanded doc + diagnostics
-7. `compileGameSpecToGameDef(expandedDoc)` → gameDef + diagnostics
+7. `compileGameSpecToGameDef(expandedDoc, { sourceMap })` → gameDef + diagnostics
 8. If compilation errors: output diagnostics, exit 1
 9. `validateGameDef(gameDef)` → diagnostics (final sanity check)
 10. If semantic errors: output diagnostics, exit 1

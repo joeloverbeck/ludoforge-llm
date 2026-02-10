@@ -9,19 +9,25 @@
 
 ## Overview
 
-Implement the Markdown+YAML parser that extracts Game Spec sections from LLM-generated documents and validates their structure. This is the entry point for the LLM → kernel pipeline: raw Markdown text goes in, a structured `GameSpecDoc` comes out (with diagnostics for any issues). The parser uses YAML 1.2 strict mode (eemeli/yaml) and includes a linter for the 20 most common LLM YAML mistakes. The parser is total — any input produces a result, never throws.
+Implement the Markdown+YAML parser that extracts Game Spec sections from LLM-generated documents and validates their structure. This is the entry point for the LLM -> kernel pipeline: raw Markdown text goes in, a structured `GameSpecDoc` comes out (with diagnostics for any issues). The parser uses YAML 1.2 strict mode (`eemeli/yaml`) and includes a linter for the 20 most common LLM YAML mistakes.
+
+Responsibility split:
+- `parseGameSpec` does extraction, YAML hardening lint, strict parse, section mapping, merge policy, source mapping, and parser safety limits.
+- `validateGameSpec` does structural and cross-reference validation, including required-section checks.
+- Both functions are total and deterministic: never throw, always return diagnostics.
 
 ## Scope
 
 ### In Scope
-- Markdown parsing: extract fenced YAML blocks (code fences with any label)
-- YAML 1.2 strict parsing using `eemeli/yaml` package
-- Section identification by `section:` key inside each YAML block (order-independent)
+- Markdown parsing: extract fenced YAML blocks (`yaml`, `yml`, or unlabeled fences that parse as mappings)
+- YAML 1.2 strict parsing using `eemeli/yaml`
+- Deterministic section identification and merge policy (order-independent)
 - YAML hardening linter for 20 common LLM YAML mistakes
 - `GameSpecDoc` type: parsed representation of all Game Spec sections
-- `parseGameSpec(markdown): { doc: GameSpecDoc, diagnostics: Diagnostic[] }`
-- `validateGameSpec(doc): Diagnostic[]` — structural and cross-reference validation
+- `parseGameSpec(markdown): { doc: GameSpecDoc, sourceMap: GameSpecSourceMap, diagnostics: Diagnostic[] }`
+- `validateGameSpec(doc, options?): Diagnostic[]` - structural and cross-reference validation
 - Diagnostics with path, severity, suggestion, contextSnippet, and alternatives
+- Input safety bounds (`maxInputBytes`, `maxYamlBlocks`, `maxBlockBytes`, `maxDiagnostics`)
 
 ### Out of Scope
 - Macro expansion (Spec 08b)
@@ -50,9 +56,9 @@ interface GameSpecDoc {
 }
 ```
 
-Note: Each field is nullable — `null` means the section was missing from the spec. This allows the parser to return partial results with diagnostics for missing sections, rather than failing entirely.
+Note: each field is nullable - `null` means the section was missing. Missing required sections are reported by `validateGameSpec`.
 
-The `GameSpec*` types mirror the kernel types (Spec 02) but use looser typing suitable for pre-compilation representation. For example, `GameSpecEffect` may use string-based references that haven't been resolved yet, while the kernel's `EffectAST` uses typed references.
+The `GameSpec*` types mirror the kernel types (Spec 02) but use looser typing suitable for pre-compilation representation.
 
 ```typescript
 interface GameSpecMetadata {
@@ -63,7 +69,7 @@ interface GameSpecMetadata {
 
 interface GameSpecVarDef {
   readonly name: string;
-  readonly type: string; // "int" — string here, enum after validation
+  readonly type: string; // "int" - string here, enum after validation
   readonly init: number;
   readonly min: number;
   readonly max: number;
@@ -71,7 +77,7 @@ interface GameSpecVarDef {
 
 interface GameSpecZoneDef {
   readonly id: string;
-  readonly owner: string; // "none" | "player" — string here, validated later
+  readonly owner: string; // "none" | "player" - string here, validated later
   readonly visibility: string;
   readonly ordering: string;
   readonly adjacentTo?: readonly string[];
@@ -79,7 +85,7 @@ interface GameSpecZoneDef {
 
 interface GameSpecTokenTypeDef {
   readonly id: string;
-  readonly props: Readonly<Record<string, string>>; // prop name → type string
+  readonly props: Readonly<Record<string, string>>;
 }
 
 interface GameSpecTurnStructure {
@@ -94,7 +100,7 @@ interface GameSpecPhaseDef {
 }
 
 interface GameSpecEffect {
-  readonly [key: string]: unknown; // loose typing pre-compilation
+  readonly [key: string]: unknown;
 }
 
 interface GameSpecActionDef {
@@ -120,61 +126,85 @@ interface GameSpecEndCondition {
   readonly when: unknown;
   readonly result: unknown;
 }
+
+interface SourceSpan {
+  readonly blockIndex: number;
+  readonly markdownLineStart: number; // 1-based
+  readonly markdownColStart: number; // 1-based
+  readonly markdownLineEnd: number; // 1-based
+  readonly markdownColEnd: number; // 1-based
+}
+
+interface GameSpecSourceMap {
+  readonly byPath: Readonly<Record<string, SourceSpan>>;
+}
 ```
 
 ### Public API
 
 ```typescript
-// Parse a Game Spec markdown document into structured form
 function parseGameSpec(markdown: string): {
   readonly doc: GameSpecDoc;
+  readonly sourceMap: GameSpecSourceMap;
   readonly diagnostics: readonly Diagnostic[];
 };
 
-// Validate a parsed GameSpecDoc for structural correctness
-function validateGameSpec(doc: GameSpecDoc): readonly Diagnostic[];
+function validateGameSpec(
+  doc: GameSpecDoc,
+  options?: { readonly sourceMap?: GameSpecSourceMap },
+): readonly Diagnostic[];
 ```
 
 ## Implementation Requirements
 
+### Parsing Stages & Boundaries
+
+- `parseGameSpec` reports lexical/syntax/section-mapping issues.
+- `validateGameSpec` reports structural and cross-reference issues.
+- Missing required sections are emitted only by `validateGameSpec`.
+- `spec:lint` combines both diagnostic streams.
+
 ### Markdown Parsing
 
-1. Split input on fenced code blocks: detect `` ```yaml ``, `` ```yml ``, or bare `` ``` `` followed by content and closing `` ``` ``
-2. For each fenced block:
-   - Parse as YAML 1.2 strict using `eemeli/yaml`
-   - Look for a `section:` key (or identify by content structure if no explicit section key)
-   - Map to the appropriate GameSpecDoc field
-3. Sections are identified by content keys, NOT by position in the document:
-   - Block containing `id:` + `players:` → metadata
-   - Block containing `global:` or `perPlayer:` → variables
-   - Block containing items with `owner:` + `visibility:` → zones
-   - Block containing items with `actor:` + `phase:` + `effects:` → actions
-   - Block containing items with `when:` + `result:` → endConditions
-   - Block containing `phases:` + `activePlayerOrder:` → turnStructure
-   - And so on for each section type
-4. Handle the example format from brainstorming section 1.1 where multiple sections may be in a single YAML block (separated by different top-level keys)
+1. Split input on fenced code blocks (support `yaml`, `yml`, and bare fences).
+2. For each candidate block:
+   - Run YAML linter on raw block text.
+   - Parse with YAML 1.2 strict mode.
+   - Resolve section(s) using deterministic precedence:
+     1. Explicit `section:` key (single-section block)
+     2. Canonical top-level section keys (`metadata`, `constants`, `globalVars`, `perPlayerVars`, `zones`, `tokenTypes`, `setup`, `turnStructure`, `actions`, `triggers`, `endConditions`)
+     3. Fingerprint fallback only when exactly one section type matches
+   - If fallback matches none or multiple types, emit ambiguity diagnostic and skip ambiguous node.
+3. Section mapping is order-independent.
+4. Support multiple sections in one YAML block.
+5. Apply merge policy for repeated sections:
+   - Singleton sections (`metadata`, `constants`, `turnStructure`): first definition wins, later definitions warn.
+   - List sections (`globalVars`, `perPlayerVars`, `zones`, `tokenTypes`, `setup`, `actions`, `triggers`, `endConditions`): append in encounter order.
+6. Preserve array item order within each block exactly.
+7. Build `sourceMap` for mapped canonical paths.
 
 ### YAML 1.2 Strict Parsing
 
-Use `eemeli/yaml` with strict settings:
+Use `eemeli/yaml` strict settings:
+
 ```typescript
 import { parse } from 'yaml';
+
 const result = parse(yamlText, {
-  schema: 'core',      // YAML 1.2 core schema
-  strict: true,         // strict mode
-  uniqueKeys: true,     // reject duplicate keys
-  // Do NOT use 'json' schema — it's too permissive
+  schema: 'core',
+  strict: true,
+  uniqueKeys: true,
 });
 ```
 
-Key YAML 1.2 behaviors (different from YAML 1.1):
-- Bare `no`, `yes`, `on`, `off` are **strings**, not booleans
-- Bare `1.0` is a number (unquoted) or string (quoted)
-- Octal numbers use `0o` prefix (not bare leading zero)
+Key YAML 1.2 behavior:
+- Bare `no`, `yes`, `on`, `off` are strings, not booleans.
+- Bare `1.0` is numeric (unless quoted).
+- Octal requires `0o` prefix.
 
-### YAML Hardening Linter — 20 LLM Mistake Types
+### YAML Hardening Linter - 20 LLM Mistake Types
 
-The linter checks for these common LLM YAML generation failures. Each produces a diagnostic with severity, path, message, and suggestion.
+The linter checks common LLM YAML failures. It is lexical/syntax hardening only and MUST NOT enforce structural rules that belong to `validateGameSpec`.
 
 | # | Mistake | Detection | Suggestion |
 |---|---------|-----------|------------|
@@ -184,156 +214,152 @@ The linter checks for these common LLM YAML generation failures. Each produces a
 | 4 | Unquoted boolean-like strings | Bare `yes`/`no`/`true`/`false`/`on`/`off` where string expected | Wrap in quotes |
 | 5 | Trailing whitespace | Whitespace after value on a line | Remove trailing spaces |
 | 6 | Duplicate keys | Same key appears twice in a mapping | Remove duplicate |
-| 7 | Missing required sections | Required section not found | Add section with template |
+| 7 | Unknown section key | Unrecognized top-level section key | Use a canonical section name |
 | 8 | Invalid YAML syntax | YAML parse error | Show line number and expected syntax |
 | 9 | Unescaped special characters | `#`, `{`, `}`, `[`, `]`, `&`, `*` in unquoted strings | Wrap in quotes or escape |
 | 10 | Bare multi-line strings | Multi-line value without `|` or `>` indicator | Use `|` for block scalar |
 | 11 | Incorrect list syntax | Missing `-` prefix, or `-` without space | Use `- item` format |
-| 12 | Type confusion (number vs string) | Numeric string unquoted where string needed | Wrap in quotes to preserve string type |
-| 13 | Anchor/alias misuse | `&`/`*` used incorrectly or pointing to nonexistent anchor | Remove or fix anchor reference |
-| 14 | Empty values | Key with no value (bare `key:`) | Provide explicit value or use `null` |
+| 12 | Type confusion (number vs string) | Numeric string unquoted where string needed | Wrap in quotes |
+| 13 | Anchor/alias misuse | `&`/`*` used incorrectly or bad reference | Remove or fix anchor reference |
+| 14 | Empty values | Key with no value (`key:`) | Provide explicit value or `null` |
 | 15 | Comment-in-string errors | `#` inside unquoted string truncates value | Wrap in quotes |
 | 16 | Encoding issues | Non-UTF-8 characters, BOM marker | Remove BOM, ensure UTF-8 |
 | 17 | Missing document markers | Multiple documents without `---` separator | Add `---` between documents |
-| 18 | Flow vs block style confusion | Mixing `{key: val}` inline with block indented style | Use consistent style |
-| 19 | Nested quoting errors | Quotes inside quoted strings not escaped | Use alternate quote style or escape |
-| 20 | Multiline folding errors | `>` or `|` scalar with wrong indentation of continuation | Fix continuation line indentation |
-
-**Implementation**: Run the linter on raw YAML text BEFORE parsing. Some checks (duplicate keys, type confusion) can also run on the parsed result. The linter should be fast and produce all applicable warnings in a single pass.
+| 18 | Flow vs block style confusion | Mixing `{key: val}` with block style inconsistently | Use consistent style |
+| 19 | Nested quoting errors | Quotes inside quoted strings not escaped | Escape or switch quote style |
+| 20 | Multiline folding errors | `>` or `|` scalar with wrong continuation indent | Fix continuation indentation |
 
 ### parseGameSpec
 
 `parseGameSpec(markdown: string)`:
 
-1. Extract fenced code blocks from markdown
-2. For each block: run YAML linter → collect diagnostics
-3. For each block: parse YAML 1.2 strict
-   - If parse fails: add error diagnostic with line number and suggestion, continue to next block
-4. Identify section type from parsed content
-   - If section type unrecognized: add warning diagnostic
-5. Populate `GameSpecDoc` fields from identified sections
-   - If duplicate section: add warning diagnostic, use first occurrence
-6. Return `{ doc, diagnostics }`
+1. Extract fenced code blocks.
+2. Lint raw YAML blocks.
+3. Parse each block with strict YAML 1.2.
+4. Resolve sections using explicit precedence and ambiguity handling.
+5. Populate `GameSpecDoc` using deterministic merge policy.
+6. Build `sourceMap` for mapped paths.
+7. Enforce safety limits:
+   - `maxInputBytes` default 1 MiB
+   - `maxYamlBlocks` default 128
+   - `maxBlockBytes` default 256 KiB
+   - `maxDiagnostics` default 500 (then append truncation warning)
+8. Return `{ doc, sourceMap, diagnostics }`.
 
-**Total function**: ANY input produces a result. Empty string → GameSpecDoc with all null fields + diagnostics listing all missing sections. Malformed YAML → partial doc + parse error diagnostics. The function never throws.
+Total function: any input produces a result; malformed input produces diagnostics and partial output where possible.
 
 ### validateGameSpec
 
-`validateGameSpec(doc: GameSpecDoc)`:
+`validateGameSpec(doc, options?)` performs structural validation (without compilation):
 
-Structural validation (does NOT require compilation or GameDef):
+1. Required sections present: `metadata`, `zones`, `turnStructure`, `actions`, `endConditions`.
+2. Metadata completeness and ranges: `players.min >= 1`, `players.min <= players.max`.
+3. Variable validity: required fields and `min <= init <= max`.
+4. Zone validity: `owner` in `{none, player}`, `visibility` in `{public, owner, hidden}`, `ordering` in `{stack, queue, set}`.
+5. Action validity: required fields (`id`, `actor`, `phase`, `effects`) and shape checks.
+6. Turn structure validity: non-empty phases and valid `activePlayerOrder`.
+7. Cross-reference checks: action phase references, trigger/action references, adjacency IDs.
+8. Unknown keys: warning with deterministic fuzzy suggestions.
+9. Identifier hygiene: trimmed/non-empty IDs, NFC normalization before uniqueness checks.
 
-1. **Required sections present**: metadata, zones, turnStructure, actions, endConditions must be non-null
-2. **Metadata completeness**: id and players fields present, players.min >= 1, players.min <= players.max
-3. **Variable definitions valid**: each var has name, type, init, min, max; min <= init <= max
-4. **Zone definitions valid**: each zone has id, owner in {"none","player"}, visibility in {"public","owner","hidden"}, ordering in {"stack","queue","set"}
-5. **Action definitions valid**: each action has id, actor, phase, effects; params/pre/cost/limits have correct structure
-6. **Turn structure valid**: at least one phase, activePlayerOrder is valid string
-7. **Cross-reference validation within spec**: action phase references must match a defined phase id; trigger event action references must match a defined action id
-8. **No unknown keys**: warn on unexpected keys in any section (fuzzy-match to suggest correct key name)
-9. **Adjacency references valid**: zone adjacentTo references match defined zone ids
-
-Each check produces a `Diagnostic` with:
-- `path`: location in the spec (e.g., `actions[2].phase`)
-- `severity`: error for missing required fields, warning for suspicious patterns
-- `suggestion`: concrete fix
-- `alternatives`: valid options for reference mismatches
+Each diagnostic includes:
+- `path`
+- `severity`
+- `message`
+- `suggestion`
+- `alternatives` (when applicable)
+- `contextSnippet` (when source mapping is available)
 
 ## Invariants
 
-1. Parser handles sections in any order (not position-dependent)
-2. YAML 1.2 strict: bare `no` is string `"no"`, not boolean `false`
-3. YAML 1.2 strict: bare `1.0` is number `1.0` (unquoted), or string `"1.0"` (quoted)
-4. Missing required sections produce error diagnostics (not crashes)
-5. Duplicate section keys produce warning diagnostics
-6. Diagnostics include `path` pointing to exact location in spec
-7. Diagnostics include `suggestion` for common mistakes (with fuzzy-match alternatives)
-8. Parser is total: any input produces a result (`{ doc, diagnostics }`), never throws
-9. YAML linter detects all 20 listed LLM mistake types
-10. Unknown keys produce warnings with suggestions for the most similar valid key
+1. Parser handles sections in any order.
+2. YAML 1.2 strict behavior is preserved (`no`/`yes`/`on`/`off` remain strings).
+3. Missing required sections are emitted by `validateGameSpec`, not by parser lint.
+4. Duplicate singleton sections produce warnings with deterministic first-wins behavior.
+5. Parser is total: any input returns `{ doc, sourceMap, diagnostics }`.
+6. Validator is total: any `GameSpecDoc` returns diagnostics.
+7. YAML linter checks all 20 listed mistake types.
+8. Unknown keys produce suggestions for closest valid keys.
+9. Diagnostic output is deterministic: sorted by source position, then path, then code.
+10. Parser and validator never mutate input objects.
 
 ## Required Tests
 
 ### Unit Tests
 
-**Parsing**:
-- Parse valid Game Spec with all sections → GameSpecDoc has all fields populated, zero error diagnostics
-- Parse Game Spec with sections in reversed order → same GameSpecDoc (order-independent)
-- Parse Game Spec with missing required section (e.g., no actions) → error diagnostic for missing section
-- Parse Game Spec with duplicate section → warning diagnostic, first section used
-- Parse empty string → all-null GameSpecDoc, diagnostics list all missing required sections
-- Parse non-YAML content → parse error diagnostics with line numbers
+Parsing:
+- Parse valid Game Spec with all sections -> populated `GameSpecDoc`, no parser errors.
+- Parse reversed section order -> equivalent `GameSpecDoc`.
+- Parse missing required section -> parser succeeds; validator emits required-section error.
+- Duplicate singleton section (`metadata`) -> warning, first definition used.
+- Repeated list section (`actions`) across blocks -> append order preserved.
+- Ambiguous fallback section fingerprint -> ambiguity diagnostic.
+- Empty input -> all-null `GameSpecDoc` with no crash.
+- Non-YAML content -> parse diagnostics with line information.
+- Source mapping exists for mapped canonical paths.
 
-**YAML 1.2 strict**:
-- Bare `no` parsed as string `"no"`, not boolean
-- Bare `yes` parsed as string `"yes"`, not boolean
-- Bare `on` parsed as string `"on"`, not boolean
-- Bare `off` parsed as string `"off"`, not boolean
-- Quoted `"true"` is string, unquoted `true` is boolean
-- Unquoted `42` is number, quoted `"42"` is string
+YAML 1.2 strict:
+- Bare `no`/`yes`/`on`/`off` parse as strings.
+- Quoted `"true"` is string while bare `true` is boolean.
+- Quoted numeric strings remain strings.
 
-**YAML linter** (one test per mistake type):
-- Mistake #1: unquoted colon → diagnostic with suggestion
-- Mistake #2: inconsistent indent → diagnostic
-- Mistake #3: tab character → diagnostic
-- Mistake #4: unquoted boolean-like → diagnostic
-- Mistake #5: trailing whitespace → diagnostic
-- Mistake #6: duplicate key → diagnostic
-- (... tests for all 20 mistake types)
+YAML linter:
+- One test per mistake type (20 total).
 
-**Validation**:
-- Valid GameSpecDoc → zero diagnostics
-- Missing metadata → error diagnostic
-- Action references nonexistent phase → error with alternatives listing valid phases
-- Zone referenced in action doesn't exist → error with alternatives
-- Variable with min > max → error
-- Unknown key in action definition → warning with suggestion for closest valid key
-
-**Malformed YAML**:
-- YAML with syntax error → parse error with line number and suggestion
-- YAML with invalid indentation → error with correct indentation hint
+Validation:
+- Valid `GameSpecDoc` -> zero errors.
+- Missing metadata -> error.
+- Action references nonexistent phase -> error with alternatives.
+- Variable with `min > max` -> error.
+- Unknown key in action definition -> warning with suggestion.
+- Duplicate IDs after NFC normalization -> error.
 
 ### Integration Tests
 
-- Full realistic Game Spec markdown (from brainstorming example) → parses successfully with zero errors
-- Game Spec with 3 different issues → all 3 reported as separate diagnostics
+- Realistic full markdown spec parses and validates with zero errors.
+- Spec with multiple independent issues returns all expected diagnostics.
+- `spec:lint` flow (`parseGameSpec` + `validateGameSpec`) has stable deterministic output ordering.
 
 ### Property Tests
 
-- Any syntactically valid YAML block (generated randomly) produces a parseable result (no crashes)
-- Every `Diagnostic` has non-empty `path` and non-empty `message`
-- `parseGameSpec` is deterministic: same input → same output
+- Any markdown input produces a parse result (no crash).
+- Every `Diagnostic` has non-empty `path` and `message`.
+- `parseGameSpec` is deterministic for identical input.
+- Diagnostic ordering is deterministic for identical input.
 
 ### Golden Tests
 
-- Known valid Game Spec markdown (brainstorming section 1.1 example) → expected GameSpecDoc structure
-- Known invalid Game Spec → expected specific diagnostics
+- Known valid Game Spec markdown -> expected `GameSpecDoc` and source-map anchors.
+- Known invalid Game Spec -> expected diagnostics (paths, severities, suggestions).
 
 ## Acceptance Criteria
 
-- [ ] Parser extracts YAML blocks from markdown correctly
-- [ ] Sections identified by content (order-independent)
-- [ ] YAML 1.2 strict mode: no implicit boolean coercion of bare yes/no/on/off
-- [ ] `eemeli/yaml` is used (NOT js-yaml)
-- [ ] YAML linter detects all 20 listed LLM mistake types
-- [ ] Missing required sections produce error diagnostics
-- [ ] Parser never throws — any input produces `{ doc, diagnostics }`
-- [ ] Validation catches cross-reference errors within the spec
-- [ ] Diagnostics include path, severity, message, and suggestion
-- [ ] Unknown keys produce warnings with fuzzy-matched suggestions
+- [ ] Parser extracts YAML blocks from markdown correctly.
+- [ ] Sections resolved with deterministic precedence (explicit `section`, canonical keys, single-match fallback).
+- [ ] YAML 1.2 strict mode has no implicit coercion for bare yes/no/on/off.
+- [ ] `eemeli/yaml` is used (not `js-yaml`).
+- [ ] YAML linter detects all 20 listed mistake types.
+- [ ] Missing required sections are emitted by `validateGameSpec`.
+- [ ] Parser never throws and always returns `{ doc, sourceMap, diagnostics }`.
+- [ ] Parser enforces input and diagnostic safety limits.
+- [ ] Validation catches structural and cross-reference errors.
+- [ ] Diagnostics include path, severity, message, and suggestion.
+- [ ] Unknown keys produce fuzzy-matched suggestions.
 
 ## Files to Create/Modify
 
 ```
-src/cnl/parser.ts                # NEW — markdown parsing, YAML block extraction
-src/cnl/yaml-linter.ts           # NEW — 20 LLM YAML mistake linter
-src/cnl/game-spec-doc.ts         # NEW — GameSpecDoc type definitions
-src/cnl/validate-spec.ts         # NEW — validateGameSpec structural validation
-src/cnl/section-identifier.ts    # NEW — identify section type from YAML content
-src/cnl/index.ts                 # MODIFY — re-export parser APIs
-test/unit/parser.test.ts         # NEW — markdown + YAML parsing tests
-test/unit/yaml-linter.test.ts    # NEW — linter tests (20 mistake types)
-test/unit/validate-spec.test.ts  # NEW — structural validation tests
-test/unit/yaml-strict.test.ts    # NEW — YAML 1.2 strict behavior tests
-test/integration/parse-full-spec.test.ts  # NEW — full spec parsing integration
+src/cnl/parser.ts                # NEW - markdown parsing, YAML extraction, merge policy
+src/cnl/yaml-linter.ts           # NEW - 20-mistake YAML hardening linter
+src/cnl/game-spec-doc.ts         # NEW - GameSpecDoc type definitions
+src/cnl/source-map.ts            # NEW - source span/path mapping helpers
+src/cnl/validate-spec.ts         # NEW - validateGameSpec structural validation
+src/cnl/section-identifier.ts    # NEW - deterministic section resolver
+src/cnl/index.ts                 # MODIFY - re-export parser APIs
+test/unit/parser.test.ts         # NEW - parsing + merge policy tests
+test/unit/yaml-linter.test.ts    # NEW - linter tests (20 mistakes)
+test/unit/validate-spec.test.ts  # NEW - structural validation tests
+test/unit/yaml-strict.test.ts    # NEW - YAML 1.2 strict behavior tests
+test/unit/source-map.test.ts     # NEW - source mapping stability tests
+test/integration/parse-full-spec.test.ts  # NEW - full spec lint pipeline integration
 ```

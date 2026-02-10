@@ -102,6 +102,7 @@ This is the longest dependency chain and determines minimum time-to-MVP.
 **Verification criteria**:
 - `parseGameSpec(markdown)` extracts sections in any order
 - `validateGameSpec(doc)` catches missing/invalid sections
+- `parseGameSpec` emits deterministic diagnostics with source mapping and bounded safety limits
 - `expandMacros(doc)` expands `grid()`, `hex()`, and compiler sugar
 - `compileGameSpecToGameDef(doc)` produces valid GameDef JSON
 - Spatial conditions/effects/queries work with zone adjacency
@@ -113,6 +114,7 @@ This is the longest dependency chain and determines minimum time-to-MVP.
 - Spec 07 extends Spec 04 (spatial queries), Spec 05 (moveTokenAdjacent), Spec 06 (spatial triggers)
 - Spec 07 also extends runtime ConditionAST/schema with `adjacent`/`connected` operators
 - Spec 08a produces GameSpecDoc consumed by Spec 08b
+- Spec 08a also provides source mapping consumed by Specs 08b/12 for contextual diagnostics
 - Spec 08b uses Spec 07's board macros (grid, hex) and outputs GameDef validated by Spec 02
 
 ### Milestone 3: Full MVP
@@ -215,6 +217,7 @@ All type definitions live in Spec 02. Other specs import and use these types but
 | Unbounded query cardinality causing legal-move/forEach explosion | High | Medium | Spec 04 enforces `maxQueryResults` guard and deterministic ordering; Spec 05 enforces cumulative `maxEffectOps` and `forEach.limit`; Spec 06 evaluates param products lazily and short-circuits with diagnostics | 04, 05, 06 |
 | Spatial semantics ambiguity (adjacency normalization, traversal ordering, destination selection) causing non-reproducible behavior | High | Medium | Spec 07 now fixes normalization/order/depth contracts and requires golden/property tests for deterministic outputs | 07, 08b |
 | YAML 1.2 parser edge cases with LLM output | Medium | High | Build comprehensive linter for 20 known failure modes; golden tests from real LLM output | 08a |
+| Section identification ambiguity or conflicting merge behavior in parser causes unstable diagnostics/compilation inputs | High | Medium | Spec 08a fixes deterministic section precedence, merge policy, and source-mapped/stably sorted diagnostics with safety limits | 08a, 08b, 12 |
 | Compiler diagnostic quality insufficient for LLM self-correction | High | Medium | Test diagnostics against real LLM error patterns; iterate on suggestion quality | 08b |
 | GreedyAgent lookahead performance for high branching factor | Low | Medium | Cap lookahead depth; use evaluation heuristic without full simulation | 09 |
 | GameTrace size for long games | Low | Low | Implement delta compression; configurable trace verbosity | 10 |

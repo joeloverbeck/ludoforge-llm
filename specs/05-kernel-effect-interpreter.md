@@ -9,7 +9,7 @@
 
 ## Overview
 
-Implement the state-transforming layer of the kernel: applying effects to produce new game states. Every effect returns a new state object (immutable update). Effects are the only mechanism for changing game state. This spec covers all 13 effect types including variable manipulation, token movement, zone operations, token lifecycle, control flow (if/forEach/let), and player choice expansion. The PRNG state is threaded through effects that use randomness (shuffle, random positioning, draw order).
+Implement the state-transforming layer of the kernel: applying effects to produce new game states. Every effect returns a new state object (immutable update). Effects are the only mechanism for changing game state. This spec covers all 13 effect types including variable manipulation, token movement, zone operations, token lifecycle, control flow (if/forEach/let), and player choice expansion. The PRNG state is threaded through effects that use randomness (shuffle, random insertion positioning).
 
 ## Scope
 
@@ -20,6 +20,8 @@ Implement the state-transforming layer of the kernel: applying effects to produc
 - Bindings scoping for `let`, `forEach`, `chooseOne`, `chooseN`
 - Variable clamping to VariableDef bounds after `setVar`/`addVar`
 - Token position handling (top/bottom/random) for `moveToken`
+- Deterministic runtime error behavior for invalid effect execution inputs
+- Global effect-operation budget guard to prevent nested-effect blowups
 
 ### Out of Scope
 - `moveTokenAdjacent` — type-checked but throws `SpatialNotImplementedError` (implemented in Spec 07)
@@ -54,6 +56,8 @@ interface EffectContext {
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly moveParams: Readonly<Record<string, unknown>>;
   // moveParams holds bound values from the Move's params (populated by game loop)
+  // Optional override for nested-effect protection. Default if omitted: 10_000 effect ops.
+  readonly maxEffectOps?: number;
 }
 
 interface EffectResult {
@@ -61,6 +65,37 @@ interface EffectResult {
   readonly rng: Rng;
 }
 ```
+
+### Binding Model
+
+Effect evaluation uses an effective binding environment:
+- `effectiveBindings = { ...ctx.moveParams, ...ctx.bindings }`
+- `ctx.bindings` shadows `moveParams` on key collision (for `let`/`forEach` scoping)
+- `moveParams` are immutable for the duration of effect application
+
+`chooseOne`/`chooseN` are **apply-time assertions**, not prompts. They validate values already selected during legal move enumeration (Spec 06) and stored in `moveParams`.
+
+### Runtime Error Semantics
+
+Effect execution is fail-fast and deterministic. Invalid runtime inputs throw descriptive kernel errors with effect context (`effect type`, `bind name/selector`, and action/trigger origin if available in caller context):
+
+- Missing binding (`token`, `player.chosen`, `binding` refs)
+- Selector resolution cardinality mismatch for scalar operations (e.g., `setVar` targeting a single `pvar` but resolving 0 or >1 players when scalar semantics are required)
+- Variable/type mismatch (undefined variable, non-numeric input for int var operations)
+- Token location mismatch (`moveToken` token not found in resolved `from` zone; token appears in multiple zones)
+- Invalid numeric parameters (`draw.count < 0` or non-integer; `forEach.limit <= 0` or non-integer; `chooseN.n < 0` or non-integer)
+- Invalid choice payloads (`chooseOne` value not in options; `chooseN` contains value not in options, duplicates, or wrong cardinality)
+
+No partial application inside a single effect: on error, throw before returning any updated state from that effect.
+
+### Bounded Execution
+
+`applyEffects` enforces a cumulative effect-operation budget across nested calls (`if`, `forEach`, `let` branches):
+- Default budget: `10_000` effect applications per top-level `applyEffects` call
+- Optional override via `ctx.maxEffectOps`
+- Exceeding budget throws `EffectBudgetExceededError`
+
+This guard complements Spec 04 query bounds and `forEach.limit`, preventing pathological nested expansions in Spec 05/06.
 
 ## Implementation Requirements
 
@@ -75,6 +110,7 @@ interface EffectResult {
 - Evaluate `value` via `evalValue`
 - If `scope === 'global'`: update `state.globalVars[var]`
 - If `scope === 'pvar'`: resolve `player` via `resolvePlayerSel`, update `state.perPlayerVars[playerId][var]`
+- Variable must exist and be `int`; otherwise throw descriptive error
 - **Clamp** result to `[VariableDef.min, VariableDef.max]`
 - Return new state with updated variable
 
@@ -86,6 +122,7 @@ interface EffectResult {
 
 - Evaluate `delta` via `evalValue`
 - Add to current value: `currentValue + delta`
+- Variable must exist and be `int`; otherwise throw descriptive error
 - **Clamp** to `[VariableDef.min, VariableDef.max]`
 - Return new state
 
@@ -97,6 +134,7 @@ interface EffectResult {
 
 - Resolve `token` from bindings (must be a bound Token reference)
 - Resolve `from` and `to` zone selectors
+- Validate token exists in exactly one zone and specifically in resolved `from` zone
 - Remove token from source zone
 - Add token to destination zone at specified position:
   - `'top'` (default): prepend to zone array (index 0)
@@ -114,6 +152,7 @@ interface EffectResult {
 - If `filter` present: for each token in source zone, evaluate `filter` condition with token bound in context. Move only tokens where filter is true.
 - If no filter: move all tokens
 - Tokens are moved in their current order (deterministic)
+- If `from` resolves to same concrete zone as `to`, effect is a no-op
 - Return new state
 
 #### 5. `moveTokenAdjacent` — Spatial token movement (STUB)
@@ -132,6 +171,7 @@ interface EffectResult {
 ```
 
 - Resolve `from` and `to` zone selectors
+- `count` must be a non-negative integer; otherwise throw descriptive error
 - Move up to `count` tokens from the front (top) of source zone to destination
 - If source has fewer than `count` tokens, move all available (not an error)
 - If source is empty, this is a no-op
@@ -145,7 +185,7 @@ interface EffectResult {
 
 - Resolve zone selector
 - Fisher-Yates shuffle using PRNG (not Math.random)
-- Advances rng state
+- Advances rng state only when the algorithm draws random numbers (zone size >= 2)
 - Return new state + updated rng
 
 #### 8. `createToken` — Create new token in zone
@@ -154,7 +194,7 @@ interface EffectResult {
 { createToken: { type, zone, props? } }
 ```
 
-- Generate a unique `TokenId` (deterministic: based on turn count + effect index, or sequential counter in state)
+- Generate a unique `TokenId` using a deterministic monotonic state counter (recommended: `state.nextTokenOrdinal`)
 - Create token with specified type and props
 - If `props` provided, evaluate each value via `evalValue`
 - Add token to resolved zone
@@ -168,6 +208,7 @@ interface EffectResult {
 
 - Resolve `token` from bindings
 - Find and remove token from whichever zone it's in
+- Throw if token is not found or appears in multiple zones
 - Return new state
 
 #### 10. `if` — Conditional branching
@@ -189,8 +230,8 @@ interface EffectResult {
 ```
 
 - Evaluate `over` query via `evalQuery` to get collection
-- Set iteration limit: `limit ?? 100`
-- If collection size exceeds limit: truncate to limit, produce diagnostic warning
+- Set iteration limit: `limit ?? 100` (must be positive integer)
+- If collection size exceeds limit: truncate deterministically to first `limit` elements in query order
 - For each element in collection (up to limit):
   - Create new bindings scope: `{ ...ctx.bindings, [bind]: element }`
   - `applyEffects(effects, ctxWithNewBindings)`
@@ -220,7 +261,12 @@ During effect application, these read from already-bound params in `moveParams`:
 - `chooseOne`: Look up `bind` name in `ctx.moveParams`. The value was selected during legal move enumeration and bound in the Move.
 - `chooseN`: Same — the N chosen items are already bound in `ctx.moveParams`.
 
-These do NOT prompt the agent during effect application. The agent's choice was already made during move selection (Spec 06). During effect application, the bound value is simply read.
+These do NOT prompt the agent during effect application. The agent's choice was already made during move selection (Spec 06).
+
+Apply-time behavior:
+- `chooseOne`: assert a value exists for `bind` in `ctx.moveParams`, and that it belongs to evaluated `options`
+- `chooseN`: assert an array exists for `bind`, cardinality is exactly `n`, all values are unique, and all belong to evaluated `options`
+- State and rng are unchanged by successful `chooseOne`/`chooseN` evaluation
 
 ### Effect Sequencing
 
@@ -229,6 +275,7 @@ These do NOT prompt the agent during effect application. The agent's choice was 
 2. For each effect in order:
    - Call `applyEffect(effect, currentCtx)`
    - Update `currentCtx.state` and `currentCtx.rng` from result
+   - Decrement cumulative effect-operation budget (including nested effects)
 3. Return final `{ state, rng }`
 
 Order matters: effects see the state produced by preceding effects in the sequence.
@@ -243,8 +290,9 @@ After any `setVar` or `addVar`:
 ### Token ID Generation
 
 New tokens created by `createToken` need unique IDs. Strategy:
-- Maintain a counter in GameState (or derive from turnCount + zone + effect position)
-- IDs must be deterministic: same game state + same effect = same ID
+- Maintain a counter in GameState (recommended: `nextTokenOrdinal`, initialized in Spec 06 `initialState`)
+- Increment exactly once per successful `createToken`
+- IDs must be deterministic: same prior state + same effect sequence = same ID
 - Format: `"tok_<type>_<counter>"` or similar branded string
 
 ## Invariants
@@ -254,15 +302,17 @@ New tokens created by `createToken` need unique IDs. Strategy:
 3. `moveToken` removes token from source zone and adds to destination zone (no duplication, no loss)
 4. `moveAll` moves only tokens matching the filter condition (when filter present)
 5. `draw` from empty zone is a no-op (not an error)
-6. `shuffle` uses the PRNG (not Math.random) and advances RNG state
+6. `shuffle` uses the PRNG (not Math.random) and advances RNG state iff at least one random draw is required
 7. `createToken` adds to exactly one zone
 8. `destroyToken` removes from exactly one zone (error if token not found)
 9. `setVar`/`addVar` only modify the targeted variable (no side effects on other state)
 10. `let` bindings are scoped — not visible outside the `in` block
 11. `forEach` bindings are scoped — not visible outside the `effects` block
 12. Effects applied in sequence — order matters (state threading)
-13. RNG state is threaded through all effects that use randomness (shuffle, moveToken with random position, createToken ID generation)
+13. RNG state is threaded through all and only effects that use randomness (shuffle, `moveToken` with random position)
 14. Variable values are always clamped to their declared `[min, max]` bounds after modification
+15. `chooseOne`/`chooseN` never prompt at apply-time; they only validate pre-bound move params
+16. `applyEffects` terminates via combined `forEach` limits and cumulative effect-operation budget guard
 
 ## Required Tests
 
@@ -295,7 +345,7 @@ New tokens created by `createToken` need unique IDs. Strategy:
 **Shuffle**:
 - `shuffle` changes ordering (with known seed, verify deterministic result)
 - `shuffle` advances RNG state
-- `shuffle` on zone with 0 or 1 tokens → no-op (but RNG may still advance)
+- `shuffle` on zone with 0 or 1 tokens → no-op and RNG unchanged
 
 **Token lifecycle**:
 - `createToken` adds token to specified zone with correct type and props
@@ -312,6 +362,19 @@ New tokens created by `createToken` need unique IDs. Strategy:
 - `forEach` hits limit (limit=3, collection has 5): only 3 iterations
 - `let` binding available inside scope
 - `let` binding NOT available outside scope (verify by nested structure)
+- `applyEffects` throws `EffectBudgetExceededError` when cumulative nested effect ops exceed budget
+
+**Choice assertions**:
+- `chooseOne` succeeds when move param exists and is in options domain
+- `chooseOne` throws if move param missing or outside options domain
+- `chooseN` succeeds when array cardinality is exactly `n` and all values are unique/in-domain
+- `chooseN` throws on duplicates, wrong cardinality, or out-of-domain values
+
+**Error paths**:
+- `moveToken` throws if token is not in `from` zone
+- `destroyToken` throws if token is missing
+- `setVar`/`addVar` throw for unknown variable names
+- `draw` throws for negative or non-integer count
 
 **Nested effects**:
 - `forEach` containing `if` containing `setVar`: correct state after
@@ -333,6 +396,7 @@ New tokens created by `createToken` need unique IDs. Strategy:
 - After `forEach` with N items, the effect was applied exactly min(N, limit) times
 - `createToken` always increases total token count by exactly 1
 - `destroyToken` always decreases total token count by exactly 1
+- For any successful `chooseN`, bound selection has no duplicates and length exactly `n`
 
 ### Golden Tests
 
@@ -352,6 +416,8 @@ New tokens created by `createToken` need unique IDs. Strategy:
 - [ ] `moveTokenAdjacent` throws SpatialNotImplementedError
 - [ ] RNG state is advanced only by effects that use randomness
 - [ ] All error messages are descriptive with context
+- [ ] `chooseOne`/`chooseN` validate move-bound params against options deterministically
+- [ ] Cumulative effect-operation budget guard prevents pathological nested-effect blowups
 
 ## Files to Create/Modify
 

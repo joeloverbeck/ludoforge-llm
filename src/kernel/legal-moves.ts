@@ -2,15 +2,19 @@ import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
+import type { AdjacencyGraph } from './spatial.js';
+import { buildAdjacencyGraph } from './spatial.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue } from './types.js';
 
 function makeEvalContext(
   def: GameDef,
+  adjacencyGraph: AdjacencyGraph,
   state: GameState,
   bindings: Readonly<Record<string, unknown>>,
 ): EvalContext {
   return {
     def,
+    adjacencyGraph,
     state,
     activePlayer: state.activePlayer,
     actorPlayer: state.activePlayer,
@@ -40,13 +44,14 @@ function withinActionLimits(action: ActionDef, state: GameState): boolean {
 function enumerateParams(
   action: ActionDef,
   def: GameDef,
+  adjacencyGraph: AdjacencyGraph,
   state: GameState,
   paramIndex: number,
   bindings: Readonly<Record<string, unknown>>,
   moves: Move[],
 ): void {
   if (paramIndex >= action.params.length) {
-    const ctx = makeEvalContext(def, state, bindings);
+    const ctx = makeEvalContext(def, adjacencyGraph, state, bindings);
     if (action.pre !== null && !evalCondition(action.pre, ctx)) {
       return;
     }
@@ -66,22 +71,23 @@ function enumerateParams(
     return;
   }
 
-  const ctx = makeEvalContext(def, state, bindings);
+  const ctx = makeEvalContext(def, adjacencyGraph, state, bindings);
   const domainValues = evalQuery(param.domain, ctx);
   for (const value of domainValues) {
-    enumerateParams(action, def, state, paramIndex + 1, { ...bindings, [param.name]: value }, moves);
+    enumerateParams(action, def, adjacencyGraph, state, paramIndex + 1, { ...bindings, [param.name]: value }, moves);
   }
 }
 
 export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
   const moves: Move[] = [];
+  const adjacencyGraph = buildAdjacencyGraph(def.zones);
 
   for (const action of def.actions) {
     if (action.phase !== state.currentPhase) {
       continue;
     }
 
-    const actorCtx = makeEvalContext(def, state, {});
+    const actorCtx = makeEvalContext(def, adjacencyGraph, state, {});
     const resolvedActors = resolvePlayerSel(action.actor, actorCtx);
     if (!resolvedActors.includes(state.activePlayer)) {
       continue;
@@ -91,7 +97,7 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
 
-    enumerateParams(action, def, state, 0, {}, moves);
+    enumerateParams(action, def, adjacencyGraph, state, 0, {}, moves);
   }
 
   return moves;

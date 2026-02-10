@@ -1,6 +1,7 @@
 import { asPlayerId } from './branded.js';
 import { applyEffects } from './effects.js';
 import { createRng } from './prng.js';
+import { buildAdjacencyGraph } from './spatial.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import type { GameDef, GameState } from './types.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
@@ -11,6 +12,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
   const resolvedPlayerCount = resolvePlayerCount(def, playerCount);
   const initialPhase = resolveInitialPhase(def);
   const rng = createRng(BigInt(seed));
+  const adjacencyGraph = buildAdjacencyGraph(def.zones);
 
   const baseState: GameState = {
     globalVars: Object.fromEntries(def.globalVars.map((variable) => [variable.name, variable.init])),
@@ -33,6 +35,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
 
   const setupResult = applyEffects(def.setup, {
     def,
+    adjacencyGraph,
     state: baseState,
     rng,
     activePlayer: baseState.activePlayer,
@@ -49,6 +52,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     0,
     maxDepth,
     [],
+    adjacencyGraph,
   );
   const phaseEnterResult = dispatchTriggers(
     def,
@@ -58,6 +62,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     0,
     maxDepth,
     turnStartResult.triggerLog,
+    adjacencyGraph,
   );
   const stateWithRng = {
     ...phaseEnterResult.state,

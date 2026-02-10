@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildAdjacencyGraph,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -33,6 +34,33 @@ const createState = (overrides: Partial<GameState> = {}): GameState => ({
 });
 
 describe('dispatchTriggers', () => {
+  it('accepts a prebuilt adjacency graph for trigger recursion paths', () => {
+    const def: GameDef = {
+      metadata: { id: 'trigger-prebuilt-graph', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 100 }],
+      perPlayerVars: [],
+      zones: [{ id: asZoneId('a:none'), owner: 'none', visibility: 'public', ordering: 'stack' }],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      actions: [],
+      triggers: [],
+      endConditions: [],
+    };
+
+    const state = createState({
+      globalVars: { enabled: 1, score: 0, enteredB: 0, enteredC: 0 },
+      zones: { 'a:none': [] },
+    });
+    const adjacencyGraph = buildAdjacencyGraph(def.zones);
+
+    const result = dispatchTriggers(def, state, { state: state.rng }, { type: 'turnStart' }, 0, 8, [], adjacencyGraph);
+
+    assert.equal(result.state, state);
+    assert.deepEqual(result.triggerLog, []);
+  });
+
   it('fires matching triggers in definition order and applies match/when filters', () => {
     const def: GameDef = {
       metadata: { id: 'trigger-match-when', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },

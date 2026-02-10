@@ -1,5 +1,7 @@
 import { applyEffects } from './effects.js';
 import { evalCondition } from './eval-condition.js';
+import type { AdjacencyGraph } from './spatial.js';
+import { buildAdjacencyGraph } from './spatial.js';
 import type { GameDef, GameState, Rng, TriggerDef, TriggerEvent, TriggerLogEntry } from './types.js';
 
 export interface DispatchTriggersResult {
@@ -16,6 +18,7 @@ export const dispatchTriggers = (
   depth: number,
   maxDepth: number,
   triggerLog: readonly TriggerLogEntry[],
+  adjacencyGraph: AdjacencyGraph = buildAdjacencyGraph(def.zones),
 ): DispatchTriggersResult => {
   if (depth > maxDepth) {
     return {
@@ -36,6 +39,7 @@ export const dispatchTriggers = (
 
     const evalCtx = {
       def,
+      adjacencyGraph,
       state: nextState,
       activePlayer: nextState.activePlayer,
       actorPlayer: nextState.activePlayer,
@@ -65,7 +69,16 @@ export const dispatchTriggers = (
     });
 
     for (const emittedEvent of effectResult.emittedEvents ?? []) {
-      const cascadeResult = dispatchTriggers(def, nextState, nextRng, emittedEvent, depth + 1, maxDepth, nextTriggerLog);
+      const cascadeResult = dispatchTriggers(
+        def,
+        nextState,
+        nextRng,
+        emittedEvent,
+        depth + 1,
+        maxDepth,
+        nextTriggerLog,
+        adjacencyGraph,
+      );
       nextState = cascadeResult.state;
       nextRng = cascadeResult.rng;
       nextTriggerLog = [...cascadeResult.triggerLog];

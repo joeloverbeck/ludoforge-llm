@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import {
+  buildAdjacencyGraph,
   asPlayerId,
   deserializeGameState,
   evalCondition,
@@ -26,6 +27,7 @@ const makeCtx = (): EvalContext => {
 
   return {
     def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
     state: deserializeGameState(serializedState),
     activePlayer: asPlayerId(1),
     actorPlayer: asPlayerId(0),

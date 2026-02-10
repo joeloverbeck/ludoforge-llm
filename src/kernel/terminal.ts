@@ -3,11 +3,19 @@ import { evalCondition } from './eval-condition.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { evalValue } from './eval-value.js';
 import type { EvalContext } from './eval-context.js';
+import type { AdjacencyGraph } from './spatial.js';
+import { buildAdjacencyGraph } from './spatial.js';
 import type { GameDef, GameState, PlayerScore, TerminalResult } from './types.js';
 
-function buildEvalContext(def: GameDef, state: GameState, actorPlayer = state.activePlayer): EvalContext {
+function buildEvalContext(
+  def: GameDef,
+  adjacencyGraph: AdjacencyGraph,
+  state: GameState,
+  actorPlayer = state.activePlayer,
+): EvalContext {
   return {
     def,
+    adjacencyGraph,
     state,
     activePlayer: state.activePlayer,
     actorPlayer,
@@ -15,14 +23,14 @@ function buildEvalContext(def: GameDef, state: GameState, actorPlayer = state.ac
   };
 }
 
-function scoreRanking(def: GameDef, state: GameState): readonly PlayerScore[] {
+function scoreRanking(def: GameDef, adjacencyGraph: AdjacencyGraph, state: GameState): readonly PlayerScore[] {
   if (!def.scoring) {
     throw new Error('End condition result.type "score" requires def.scoring');
   }
 
   const ranking = Array.from({ length: state.playerCount }, (_, index) => {
     const player = asPlayerId(index);
-    const ctx = buildEvalContext(def, state, player);
+    const ctx = buildEvalContext(def, adjacencyGraph, state, player);
     const score = evalValue(def.scoring!.value, ctx);
     if (typeof score !== 'number') {
       throw new Error('Scoring value expression must evaluate to a number');
@@ -41,7 +49,8 @@ function scoreRanking(def: GameDef, state: GameState): readonly PlayerScore[] {
 }
 
 export const terminalResult = (def: GameDef, state: GameState): TerminalResult | null => {
-  const baseCtx = buildEvalContext(def, state);
+  const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const baseCtx = buildEvalContext(def, adjacencyGraph, state);
 
   for (const endCondition of def.endConditions) {
     if (!evalCondition(endCondition.when, baseCtx)) {
@@ -56,7 +65,7 @@ export const terminalResult = (def: GameDef, state: GameState): TerminalResult |
       case 'draw':
         return { type: 'draw' };
       case 'score':
-        return { type: 'score', ranking: scoreRanking(def, state) };
+        return { type: 'score', ranking: scoreRanking(def, adjacencyGraph, state) };
       default: {
         const _exhaustive: never = endCondition.result;
         return _exhaustive;

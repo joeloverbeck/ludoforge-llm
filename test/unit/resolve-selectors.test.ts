@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildAdjacencyGraph,
   asZoneId,
   asPhaseId,
   asPlayerId,
@@ -57,6 +58,7 @@ const makeState = (playerCount: number): GameState => ({
 
 const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => ({
   def: makeDef(),
+  adjacencyGraph: buildAdjacencyGraph([]),
   state: makeState(3),
   activePlayer: asPlayerId(2),
   actorPlayer: asPlayerId(1),

@@ -27,7 +27,7 @@ export const dispatchTriggers = (
 
   let nextState = state;
   let nextRng = rng;
-  const nextTriggerLog: TriggerLogEntry[] = [...triggerLog];
+  let nextTriggerLog: TriggerLogEntry[] = [...triggerLog];
 
   for (const trigger of def.triggers) {
     if (!matchesEvent(trigger, event)) {
@@ -63,6 +63,13 @@ export const dispatchTriggers = (
       event,
       depth,
     });
+
+    for (const emittedEvent of effectResult.emittedEvents ?? []) {
+      const cascadeResult = dispatchTriggers(def, nextState, nextRng, emittedEvent, depth + 1, maxDepth, nextTriggerLog);
+      nextState = cascadeResult.state;
+      nextRng = cascadeResult.rng;
+      nextTriggerLog = [...cascadeResult.triggerLog];
+    }
   }
 
   return {
@@ -73,7 +80,8 @@ export const dispatchTriggers = (
 };
 
 const matchesEvent = (trigger: TriggerDef, event: TriggerEvent): boolean => {
-  if (trigger.event.type !== event.type) {
+  const triggerEvent = trigger.event;
+  if (triggerEvent.type !== event.type) {
     return false;
   }
 
@@ -83,11 +91,11 @@ const matchesEvent = (trigger: TriggerDef, event: TriggerEvent): boolean => {
       return true;
     case 'phaseEnter':
     case 'phaseExit':
-      return 'phase' in trigger.event && trigger.event.phase === event.phase;
+      return triggerEvent.type === event.type && triggerEvent.phase === event.phase;
     case 'actionResolved':
-      return 'action' in trigger.event && (trigger.event.action === undefined || trigger.event.action === event.action);
+      return triggerEvent.type === 'actionResolved' && (triggerEvent.action === undefined || triggerEvent.action === event.action);
     case 'tokenEntered':
-      return 'zone' in trigger.event && (trigger.event.zone === undefined || trigger.event.zone === event.zone);
+      return triggerEvent.type === 'tokenEntered' && (triggerEvent.zone === undefined || triggerEvent.zone === event.zone);
   }
 };
 

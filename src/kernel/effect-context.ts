@@ -1,5 +1,5 @@
 import type { PlayerId } from './branded.js';
-import type { GameDef, GameState, MoveParamValue, Rng } from './types.js';
+import type { GameDef, GameState, MoveParamValue, Rng, TriggerEvent } from './types.js';
 
 export const DEFAULT_MAX_EFFECT_OPS = 10_000;
 
@@ -17,6 +17,7 @@ export interface EffectContext {
 export interface EffectResult {
   readonly state: GameState;
   readonly rng: Rng;
+  readonly emittedEvents?: readonly TriggerEvent[];
 }
 
 export function getMaxEffectOps(ctx: Pick<EffectContext, 'maxEffectOps'>): number {

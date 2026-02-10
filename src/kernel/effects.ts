@@ -11,7 +11,7 @@ import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { nextInt } from './prng.js';
 import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
-import type { EffectAST, Token } from './types.js';
+import type { EffectAST, Token, TriggerEvent } from './types.js';
 
 interface EffectBudgetState {
   remaining: number;
@@ -408,8 +408,10 @@ const findTokenOccurrences = (ctx: EffectContext, tokenId: string): readonly Tok
 
 const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const fromZoneId = String(resolveSingleZoneSel(effect.moveToken.from, evalCtx));
-  const toZoneId = String(resolveSingleZoneSel(effect.moveToken.to, evalCtx));
+  const fromZone = resolveSingleZoneSel(effect.moveToken.from, evalCtx);
+  const toZone = resolveSingleZoneSel(effect.moveToken.to, evalCtx);
+  const fromZoneId = String(fromZone);
+  const toZoneId = String(toZone);
   const sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'moveToken', 'from');
   const destinationTokens = resolveZoneTokens(ctx, toZoneId, 'moveToken', 'to');
 
@@ -474,6 +476,7 @@ const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown
         },
       },
       rng: nextRng,
+      emittedEvents: [],
     };
   }
 
@@ -487,6 +490,7 @@ const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown
       },
     },
     rng: nextRng,
+    emittedEvents: [{ type: 'tokenEntered', zone: toZone }],
   };
 };
 
@@ -574,14 +578,16 @@ const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>, ctx: 
   }
 
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const fromZoneId = String(resolveSingleZoneSel(effect.draw.from, evalCtx));
-  const toZoneId = String(resolveSingleZoneSel(effect.draw.to, evalCtx));
+  const fromZone = resolveSingleZoneSel(effect.draw.from, evalCtx);
+  const toZone = resolveSingleZoneSel(effect.draw.to, evalCtx);
+  const fromZoneId = String(fromZone);
+  const toZoneId = String(toZone);
 
   const sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'draw', 'from');
   resolveZoneTokens(ctx, toZoneId, 'draw', 'to');
 
   if (count === 0 || sourceTokens.length === 0 || fromZoneId === toZoneId) {
-    return { state: ctx.state, rng: ctx.rng };
+    return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
   }
 
   const moveCount = Math.min(count, sourceTokens.length);
@@ -600,18 +606,21 @@ const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>, ctx: 
       },
     },
     rng: ctx.rng,
+    emittedEvents: movedTokens.map(() => ({ type: 'tokenEntered', zone: toZone })),
   };
 };
 
 const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const fromZoneId = String(resolveSingleZoneSel(effect.moveAll.from, evalCtx));
-  const toZoneId = String(resolveSingleZoneSel(effect.moveAll.to, evalCtx));
+  const fromZone = resolveSingleZoneSel(effect.moveAll.from, evalCtx);
+  const toZone = resolveSingleZoneSel(effect.moveAll.to, evalCtx);
+  const fromZoneId = String(fromZone);
+  const toZoneId = String(toZone);
   const sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'moveAll', 'from');
   const destinationTokens = resolveZoneTokens(ctx, toZoneId, 'moveAll', 'to');
 
   if (fromZoneId === toZoneId || sourceTokens.length === 0) {
-    return { state: ctx.state, rng: ctx.rng };
+    return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
   }
 
   let movedTokens: readonly Token[] = sourceTokens;
@@ -643,7 +652,7 @@ const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unknown }>,
   }
 
   if (movedTokens.length === 0) {
-    return { state: ctx.state, rng: ctx.rng };
+    return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
   }
 
   if (effect.moveAll.filter === undefined) {
@@ -662,6 +671,7 @@ const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unknown }>,
       },
     },
     rng: ctx.rng,
+    emittedEvents: movedTokens.map(() => ({ type: 'tokenEntered', zone: toZone })),
   };
 };
 
@@ -701,14 +711,16 @@ const applyShuffle = (effect: Extract<EffectAST, { readonly shuffle: unknown }>,
 const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
   let currentState = ctx.state;
   let currentRng = ctx.rng;
+  const emittedEvents: TriggerEvent[] = [];
 
   for (const effect of effects) {
     const result = applyEffectWithBudget(effect, { ...ctx, state: currentState, rng: currentRng }, budget);
     currentState = result.state;
     currentRng = result.rng;
+    emittedEvents.push(...(result.emittedEvents ?? []));
   }
 
-  return { state: currentState, rng: currentRng };
+  return { state: currentState, rng: currentRng, emittedEvents };
 };
 
 const applyIf = (
@@ -939,7 +951,12 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
   const effectType = effectTypeOf(effect);
   consumeBudget(budget, effectType);
-  return dispatchEffect(effect, ctx, budget);
+  const result = dispatchEffect(effect, ctx, budget);
+  return {
+    state: result.state,
+    rng: result.rng,
+    emittedEvents: result.emittedEvents ?? [],
+  };
 };
 
 export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult {

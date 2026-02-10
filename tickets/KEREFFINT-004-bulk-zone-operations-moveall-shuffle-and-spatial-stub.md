@@ -1,0 +1,48 @@
+# KEREFFINT-004 - Bulk Zone Operations (`moveAll`, `shuffle`) and Spatial Stub
+
+**Status**: Proposed
+**Spec**: `specs/05-kernel-effect-interpreter.md`
+**Depends on**: `KEREFFINT-001`
+
+## Goal
+Implement bulk zone operations with deterministic ordering semantics and PRNG-backed shuffle, and lock in explicit stub behavior for `moveTokenAdjacent`.
+
+## Scope
+- Implement `moveAll` with:
+  - zone resolution for `from` and `to`
+  - no-op when both resolve to same concrete zone
+  - full move behavior preserving source order
+  - optional filter evaluation per token in source-order
+- Implement `shuffle` with Fisher-Yates using kernel PRNG.
+- Ensure `shuffle` does not advance RNG for zones of size 0 or 1.
+- Implement `moveTokenAdjacent` handler as strict `SpatialNotImplementedError`.
+
+## File List Expected To Touch
+- `src/kernel/effects.ts`
+- `src/kernel/effect-error.ts`
+- `test/unit/effects-zone-ops.test.ts` (new)
+
+## Out Of Scope
+- Single-token movement and draw.
+- Token lifecycle effects.
+- Control flow and choice assertion effects.
+- Spatial adjacency mechanics from Spec 07.
+
+## Acceptance Criteria
+## Specific Tests That Must Pass
+- `test/unit/effects-zone-ops.test.ts`
+  - `moveAll` without filter moves all tokens and preserves relative order.
+  - `moveAll` with filter moves only matching tokens, leaving non-matching tokens in source in original order.
+  - `moveAll` same source/destination is no-op.
+  - `moveAll` on empty source is no-op.
+  - `shuffle` yields deterministic order for known seed.
+  - `shuffle` advances RNG state for zone size >= 2.
+  - `shuffle` leaves state+RNG unchanged for zone size 0/1.
+  - `moveTokenAdjacent` throws `SpatialNotImplementedError` with effect context.
+- `test/unit/effects-runtime.test.ts` remains green.
+
+## Invariants That Must Remain True
+- `moveAll` conserves total token count across zones.
+- `shuffle` only reorders tokens within one zone; token identities and counts are unchanged.
+- No `Math.random` usage; PRNG is the sole randomness source.
+

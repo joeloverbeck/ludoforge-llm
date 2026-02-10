@@ -1,8 +1,14 @@
 # SIMTRALOG-003 - `runGame` Loop, Validation, and Stop Semantics
 
-**Status**: Proposed  
+**Status**: ✅ COMPLETED  
 **Spec**: `specs/10-simulator-trace-logger.md`  
 **Depends on**: `SIMTRALOG-001`, `SIMTRALOG-002`
+
+## Reassessed Assumptions (2026-02-10)
+- `SIMTRALOG-001` outcomes are already present in code (`GameTrace.stopReason`, schema, and serde support).
+- `SIMTRALOG-002` outcomes are already present in code (`src/sim/delta.ts` and `test/unit/sim/delta.test.ts`).
+- `src/sim/index.ts` currently exports only `computeDeltas`; `runGame` is not implemented yet.
+- No kernel contract changes are required for this ticket; scope is simulator-loop implementation + simulator-loop tests only.
 
 ## Goal
 Implement `runGame(...)` as the core simulator loop with strict input validation, legal-move boundaries, move logging, and exact stop-reason behavior.
@@ -61,3 +67,16 @@ Implement `runGame(...)` as the core simulator loop with strict input validation
 ## Diff Size Guardrail
 Keep this ticket focused on single-run behavior and unit-level checks only. Target review size: ~300 lines or less.
 
+## Outcome
+- **Completed on**: 2026-02-10
+- **Actually changed**:
+  - Added `runGame(def, seed, agents, maxTurns, playerCount?)` in `src/sim/simulator.ts`.
+  - Re-exported `runGame` from `src/sim/index.ts`.
+  - Added `test/unit/sim/simulator.test.ts` covering terminal/max-turn/no-legal-move exits, validation errors, turns-count invariant, post-state hash integrity, and illegal-agent-move legality enforcement.
+- **Deviations from original plan**:
+  - None in implementation scope.
+  - Ticket assumptions were updated up front to reflect already-completed dependencies (`SIMTRALOG-001` and `SIMTRALOG-002`) and avoid unnecessary kernel/schema/serde work.
+- **Verification**:
+  - `npm run build` passed.
+  - `npm run test:unit -- --coverage=false` passed.
+  - `npm run test:integration` passed.

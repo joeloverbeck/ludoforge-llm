@@ -1,6 +1,19 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
-import type { GameSpecSourceMap } from './source-map.js';
+import type { GameSpecSourceMap, SourceSpan } from './source-map.js';
+
+const MAX_ALTERNATIVE_DISTANCE = 3;
+
+const METADATA_KEYS = ['id', 'players', 'maxTriggerDepth'] as const;
+const PLAYERS_KEYS = ['min', 'max'] as const;
+const VARIABLE_KEYS = ['name', 'type', 'init', 'min', 'max'] as const;
+const ZONE_KEYS = ['id', 'owner', 'visibility', 'ordering', 'adjacentTo'] as const;
+const ACTION_KEYS = ['id', 'actor', 'phase', 'params', 'pre', 'cost', 'effects', 'limits'] as const;
+const TURN_STRUCTURE_KEYS = ['phases', 'activePlayerOrder'] as const;
+const PHASE_KEYS = ['id', 'onEnter', 'onExit'] as const;
+const TRIGGER_KEYS = ['id', 'event', 'when', 'match', 'effects'] as const;
+const TRIGGER_EVENT_KEYS = ['type', 'phase', 'action', 'zone'] as const;
+const END_CONDITION_KEYS = ['when', 'result'] as const;
 
 export interface ValidateGameSpecOptions {
   readonly sourceMap?: GameSpecSourceMap;
@@ -8,17 +21,23 @@ export interface ValidateGameSpecOptions {
 
 export function validateGameSpec(
   doc: GameSpecDoc,
-  _options?: ValidateGameSpecOptions,
+  options?: ValidateGameSpecOptions,
 ): readonly Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
 
   validateRequiredSections(doc, diagnostics);
   validateMetadata(doc, diagnostics);
   validateVariables(doc, diagnostics);
-  validateZones(doc, diagnostics);
-  validateActions(doc, diagnostics);
-  validateTurnStructure(doc, diagnostics);
 
+  const zoneIds = validateZones(doc, diagnostics);
+  const actionIds = validateActions(doc, diagnostics);
+  const phaseIds = validateTurnStructure(doc, diagnostics);
+
+  validateCrossReferences(doc, zoneIds, actionIds, phaseIds, diagnostics);
+  validateDuplicateIdentifiers(doc, diagnostics);
+  validateEndConditions(doc, diagnostics);
+
+  diagnostics.sort((left, right) => compareDiagnostics(left, right, options?.sourceMap));
   return diagnostics;
 }
 
@@ -47,6 +66,9 @@ function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
     return;
   }
 
+  validateUnknownKeys(metadata, METADATA_KEYS, 'doc.metadata', diagnostics, 'metadata');
+  validateIdentifierField(metadata, 'id', 'doc.metadata.id', diagnostics, 'metadata id');
+
   const players = metadata.players;
   if (!isRecord(players)) {
     diagnostics.push({
@@ -58,6 +80,8 @@ function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
     });
     return;
   }
+
+  validateUnknownKeys(players, PLAYERS_KEYS, 'doc.metadata.players', diagnostics, 'metadata.players');
 
   const min = players.min;
   const max = players.max;
@@ -120,6 +144,8 @@ function validateVariableSection(
       continue;
     }
 
+    validateUnknownKeys(variable, VARIABLE_KEYS, basePath, diagnostics, 'variable');
+
     const requiredStringFields: readonly ('name' | 'type')[] = ['name', 'type'];
     for (const field of requiredStringFields) {
       const value = variable[field];
@@ -169,9 +195,10 @@ function validateVariableSection(
   }
 }
 
-function validateZones(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
+function validateZones(doc: GameSpecDoc, diagnostics: Diagnostic[]): readonly string[] {
+  const collectedZoneIds: string[] = [];
   if (doc.zones === null) {
-    return;
+    return collectedZoneIds;
   }
 
   for (const [index, zone] of doc.zones.entries()) {
@@ -187,15 +214,24 @@ function validateZones(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
       continue;
     }
 
+    validateUnknownKeys(zone, ZONE_KEYS, basePath, diagnostics, 'zone');
     validateEnumField(zone, 'owner', ['none', 'player'], basePath, diagnostics, 'zone');
     validateEnumField(zone, 'visibility', ['public', 'owner', 'hidden'], basePath, diagnostics, 'zone');
     validateEnumField(zone, 'ordering', ['stack', 'queue', 'set'], basePath, diagnostics, 'zone');
+
+    const zoneId = validateIdentifierField(zone, 'id', `${basePath}.id`, diagnostics, 'zone id');
+    if (zoneId !== undefined) {
+      collectedZoneIds.push(zoneId);
+    }
   }
+
+  return uniqueSorted(collectedZoneIds);
 }
 
-function validateActions(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
+function validateActions(doc: GameSpecDoc, diagnostics: Diagnostic[]): readonly string[] {
+  const collectedActionIds: string[] = [];
   if (doc.actions === null) {
-    return;
+    return collectedActionIds;
   }
 
   for (const [index, action] of doc.actions.entries()) {
@@ -211,14 +247,11 @@ function validateActions(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
       continue;
     }
 
-    if (typeof action.id !== 'string' || action.id.trim() === '') {
-      diagnostics.push({
-        code: 'CNL_VALIDATOR_ACTION_REQUIRED_FIELD_MISSING',
-        path: `${basePath}.id`,
-        severity: 'error',
-        message: 'Action field "id" must be a non-empty string.',
-        suggestion: 'Set action.id to a non-empty string.',
-      });
+    validateUnknownKeys(action, ACTION_KEYS, basePath, diagnostics, 'action');
+
+    const actionId = validateIdentifierField(action, 'id', `${basePath}.id`, diagnostics, 'action id');
+    if (actionId !== undefined) {
+      collectedActionIds.push(actionId);
     }
 
     if (!('actor' in action) || action.actor === undefined || action.actor === null) {
@@ -251,13 +284,18 @@ function validateActions(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
       });
     }
   }
+
+  return uniqueSorted(collectedActionIds);
 }
 
-function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
+function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[]): readonly string[] {
+  const collectedPhaseIds: string[] = [];
   const turnStructure = doc.turnStructure;
   if (!isRecord(turnStructure)) {
-    return;
+    return collectedPhaseIds;
   }
+
+  validateUnknownKeys(turnStructure, TURN_STRUCTURE_KEYS, 'doc.turnStructure', diagnostics, 'turnStructure');
 
   if (!Array.isArray(turnStructure.phases) || turnStructure.phases.length === 0) {
     diagnostics.push({
@@ -267,6 +305,26 @@ function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[]): voi
       message: 'turnStructure.phases must be a non-empty array.',
       suggestion: 'Define at least one phase in turnStructure.phases.',
     });
+  } else {
+    for (const [phaseIndex, phase] of turnStructure.phases.entries()) {
+      const phasePath = `doc.turnStructure.phases.${phaseIndex}`;
+      if (!isRecord(phase)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_TURN_STRUCTURE_PHASE_SHAPE_INVALID',
+          path: phasePath,
+          severity: 'error',
+          message: 'Each turnStructure.phases entry must be an object.',
+          suggestion: 'Set phase entries to objects with at least an id field.',
+        });
+        continue;
+      }
+
+      validateUnknownKeys(phase, PHASE_KEYS, phasePath, diagnostics, 'phase');
+      const phaseId = validateIdentifierField(phase, 'id', `${phasePath}.id`, diagnostics, 'phase id');
+      if (phaseId !== undefined) {
+        collectedPhaseIds.push(phaseId);
+      }
+    }
   }
 
   const activePlayerOrder = turnStructure.activePlayerOrder;
@@ -278,6 +336,167 @@ function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[]): voi
       message: 'turnStructure.activePlayerOrder must be "roundRobin" or "fixed".',
       suggestion: 'Set activePlayerOrder to "roundRobin" or "fixed".',
     });
+  }
+
+  return uniqueSorted(collectedPhaseIds);
+}
+
+function validateCrossReferences(
+  doc: GameSpecDoc,
+  zoneIds: readonly string[],
+  actionIds: readonly string[],
+  phaseIds: readonly string[],
+  diagnostics: Diagnostic[],
+): void {
+  const phaseIdSet = new Set<string>(phaseIds);
+  const actionIdSet = new Set<string>(actionIds);
+  const zoneIdSet = new Set<string>(zoneIds);
+
+  if (doc.actions !== null) {
+    for (const [index, action] of doc.actions.entries()) {
+      const basePath = `doc.actions.${index}`;
+      if (!isRecord(action) || typeof action.phase !== 'string' || action.phase.trim() === '') {
+        continue;
+      }
+
+      const normalizedPhase = normalizeIdentifier(action.phase);
+      if (!phaseIdSet.has(normalizedPhase)) {
+        pushMissingReferenceDiagnostic(
+          diagnostics,
+          'CNL_VALIDATOR_REFERENCE_MISSING',
+          `${basePath}.phase`,
+          `Unknown phase "${action.phase}".`,
+          normalizedPhase,
+          phaseIds,
+          'Use one of the declared phase ids.',
+        );
+      }
+    }
+  }
+
+  if (doc.triggers !== null) {
+    const triggerIds: string[] = [];
+
+    for (const [index, trigger] of doc.triggers.entries()) {
+      const basePath = `doc.triggers.${index}`;
+      if (!isRecord(trigger)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_TRIGGER_SHAPE_INVALID',
+          path: basePath,
+          severity: 'error',
+          message: 'Trigger definition must be an object.',
+          suggestion: 'Set trigger to an object with event/when/match/effects fields.',
+        });
+        continue;
+      }
+
+      validateUnknownKeys(trigger, TRIGGER_KEYS, basePath, diagnostics, 'trigger');
+      const triggerId = optionalIdentifierField(trigger, 'id', `${basePath}.id`, diagnostics, 'trigger id');
+      if (triggerId !== undefined) {
+        triggerIds.push(triggerId);
+      }
+
+      const event = trigger.event;
+      if (!isRecord(event)) {
+        continue;
+      }
+
+      validateUnknownKeys(event, TRIGGER_EVENT_KEYS, `${basePath}.event`, diagnostics, 'trigger event');
+
+      if ((event.type === 'phaseEnter' || event.type === 'phaseExit') && typeof event.phase === 'string') {
+        const normalizedPhase = normalizeIdentifier(event.phase);
+        if (normalizedPhase.length > 0 && !phaseIdSet.has(normalizedPhase)) {
+          pushMissingReferenceDiagnostic(
+            diagnostics,
+            'CNL_VALIDATOR_REFERENCE_MISSING',
+            `${basePath}.event.phase`,
+            `Unknown phase "${event.phase}".`,
+            normalizedPhase,
+            phaseIds,
+            'Use one of the declared phase ids.',
+          );
+        }
+      }
+
+      if (event.type === 'actionResolved' && typeof event.action === 'string') {
+        const normalizedAction = normalizeIdentifier(event.action);
+        if (normalizedAction.length > 0 && !actionIdSet.has(normalizedAction)) {
+          pushMissingReferenceDiagnostic(
+            diagnostics,
+            'CNL_VALIDATOR_REFERENCE_MISSING',
+            `${basePath}.event.action`,
+            `Unknown action "${event.action}".`,
+            normalizedAction,
+            actionIds,
+            'Use one of the declared action ids.',
+          );
+        }
+      }
+    }
+
+    pushDuplicateNormalizedIdDiagnostics(diagnostics, triggerIds, 'doc.triggers', 'trigger id');
+  }
+
+  if (doc.zones !== null) {
+    for (const [zoneIndex, zone] of doc.zones.entries()) {
+      if (!isRecord(zone) || !Array.isArray(zone.adjacentTo)) {
+        continue;
+      }
+
+      for (const [adjacentIndex, adjacent] of zone.adjacentTo.entries()) {
+        if (typeof adjacent !== 'string') {
+          continue;
+        }
+        const normalizedZoneId = normalizeIdentifier(adjacent);
+        if (normalizedZoneId.length === 0 || zoneIdSet.has(normalizedZoneId)) {
+          continue;
+        }
+        pushMissingReferenceDiagnostic(
+          diagnostics,
+          'CNL_VALIDATOR_REFERENCE_MISSING',
+          `doc.zones.${zoneIndex}.adjacentTo.${adjacentIndex}`,
+          `Unknown adjacent zone "${adjacent}".`,
+          normalizedZoneId,
+          zoneIds,
+          'Use one of the declared zone ids.',
+        );
+      }
+    }
+  }
+}
+
+function validateDuplicateIdentifiers(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
+  if (doc.zones !== null) {
+    const zoneIds = doc.zones
+      .map((zone) => (isRecord(zone) && typeof zone.id === 'string' ? normalizeIdentifier(zone.id) : undefined))
+      .filter((value): value is string => value !== undefined && value.length > 0);
+    pushDuplicateNormalizedIdDiagnostics(diagnostics, zoneIds, 'doc.zones', 'zone id');
+  }
+
+  if (doc.actions !== null) {
+    const actionIds = doc.actions
+      .map((action) => (isRecord(action) && typeof action.id === 'string' ? normalizeIdentifier(action.id) : undefined))
+      .filter((value): value is string => value !== undefined && value.length > 0);
+    pushDuplicateNormalizedIdDiagnostics(diagnostics, actionIds, 'doc.actions', 'action id');
+  }
+
+  const phases = isRecord(doc.turnStructure) && Array.isArray(doc.turnStructure.phases) ? doc.turnStructure.phases : [];
+  const phaseIds = phases
+    .map((phase) => (isRecord(phase) && typeof phase.id === 'string' ? normalizeIdentifier(phase.id) : undefined))
+    .filter((value): value is string => value !== undefined && value.length > 0);
+  pushDuplicateNormalizedIdDiagnostics(diagnostics, phaseIds, 'doc.turnStructure.phases', 'phase id');
+}
+
+function validateEndConditions(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
+  if (doc.endConditions === null) {
+    return;
+  }
+
+  for (const [index, endCondition] of doc.endConditions.entries()) {
+    if (!isRecord(endCondition)) {
+      continue;
+    }
+    validateUnknownKeys(endCondition, END_CONDITION_KEYS, `doc.endConditions.${index}`, diagnostics, 'end condition');
   }
 }
 
@@ -299,6 +518,235 @@ function validateEnumField(
       suggestion: `Set ${field} to one of: ${allowedValues.join(', ')}.`,
     });
   }
+}
+
+function validateUnknownKeys(
+  value: Record<string, unknown>,
+  allowedKeys: readonly string[],
+  basePath: string,
+  diagnostics: Diagnostic[],
+  objectLabel: string,
+): void {
+  const unknownKeys = Object.keys(value)
+    .filter((key) => !allowedKeys.includes(key))
+    .sort((left, right) => left.localeCompare(right));
+
+  for (const unknownKey of unknownKeys) {
+    const alternatives = getAlternatives(unknownKey, allowedKeys);
+    const suggestion =
+      alternatives.length > 0
+        ? `Did you mean "${alternatives[0]}"?`
+        : `Use one of the supported ${objectLabel} keys: ${allowedKeys.join(', ')}.`;
+
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_UNKNOWN_KEY',
+      path: `${basePath}.${unknownKey}`,
+      severity: 'warning',
+      message: `Unknown key "${unknownKey}" in ${objectLabel}.`,
+      suggestion,
+      ...(alternatives.length > 0 ? { alternatives } : {}),
+    });
+  }
+}
+
+function validateIdentifierField(
+  value: Record<string, unknown>,
+  key: string,
+  path: string,
+  diagnostics: Diagnostic[],
+  label: string,
+): string | undefined {
+  const raw = value[key];
+  if (typeof raw !== 'string' || raw.trim() === '') {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_IDENTIFIER_INVALID',
+      path,
+      severity: 'error',
+      message: `${label} must be a non-empty string.`,
+      suggestion: `Set ${key} to a non-empty identifier string.`,
+    });
+    return undefined;
+  }
+
+  if (raw.trim() !== raw) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_IDENTIFIER_WHITESPACE',
+      path,
+      severity: 'error',
+      message: `${label} must not contain leading or trailing whitespace.`,
+      suggestion: `Trim whitespace from ${key}.`,
+    });
+  }
+
+  return normalizeIdentifier(raw);
+}
+
+function optionalIdentifierField(
+  value: Record<string, unknown>,
+  key: string,
+  path: string,
+  diagnostics: Diagnostic[],
+  label: string,
+): string | undefined {
+  if (!(key in value) || value[key] === undefined || value[key] === null) {
+    return undefined;
+  }
+  return validateIdentifierField(value, key, path, diagnostics, label);
+}
+
+function pushDuplicateNormalizedIdDiagnostics(
+  diagnostics: Diagnostic[],
+  values: readonly string[],
+  pathPrefix: string,
+  label: string,
+): void {
+  const seen = new Set<string>();
+  values.forEach((value, index) => {
+    if (!seen.has(value)) {
+      seen.add(value);
+      return;
+    }
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED',
+      path: `${pathPrefix}.${index}`,
+      severity: 'error',
+      message: `Duplicate ${label} "${value}" after NFC normalization.`,
+      suggestion: `Use unique ${label} values after normalization.`,
+    });
+  });
+}
+
+function pushMissingReferenceDiagnostic(
+  diagnostics: Diagnostic[],
+  code: string,
+  path: string,
+  message: string,
+  value: string,
+  validValues: readonly string[],
+  fallbackSuggestion: string,
+): void {
+  const alternatives = getAlternatives(value, validValues);
+  const suggestion = alternatives.length > 0 ? `Did you mean "${alternatives[0]}"?` : fallbackSuggestion;
+  diagnostics.push({
+    code,
+    path,
+    severity: 'error',
+    message,
+    suggestion,
+    ...(alternatives.length > 0 ? { alternatives } : {}),
+  });
+}
+
+function getAlternatives(value: string, validValues: readonly string[]): readonly string[] {
+  if (validValues.length === 0) {
+    return [];
+  }
+
+  const scored = validValues
+    .map((candidate) => ({
+      candidate,
+      distance: levenshteinDistance(value, candidate),
+    }))
+    .sort((left, right) => {
+      if (left.distance !== right.distance) {
+        return left.distance - right.distance;
+      }
+      return left.candidate.localeCompare(right.candidate);
+    });
+
+  const bestDistance = scored[0]?.distance;
+  if (bestDistance === undefined || bestDistance > MAX_ALTERNATIVE_DISTANCE) {
+    return [];
+  }
+
+  return scored.filter((entry) => entry.distance === bestDistance).map((entry) => entry.candidate);
+}
+
+function levenshteinDistance(left: string, right: string): number {
+  const cols = right.length + 1;
+  let previousRow: number[] = Array.from({ length: cols }, (_unused, index) => index);
+
+  for (let row = 1; row <= left.length; row += 1) {
+    const currentRow: number[] = new Array<number>(cols).fill(0);
+    currentRow[0] = row;
+
+    for (let col = 1; col <= right.length; col += 1) {
+      const substitutionCost = left[row - 1] === right[col - 1] ? 0 : 1;
+      const insertCost = (currentRow[col - 1] ?? Number.POSITIVE_INFINITY) + 1;
+      const deleteCost = (previousRow[col] ?? Number.POSITIVE_INFINITY) + 1;
+      const replaceCost = (previousRow[col - 1] ?? Number.POSITIVE_INFINITY) + substitutionCost;
+      currentRow[col] = Math.min(insertCost, deleteCost, replaceCost);
+    }
+
+    previousRow = currentRow;
+  }
+
+  return previousRow[right.length] ?? 0;
+}
+
+function compareDiagnostics(left: Diagnostic, right: Diagnostic, sourceMap?: GameSpecSourceMap): number {
+  const leftSpan = resolveSpanForDiagnosticPath(left.path, sourceMap);
+  const rightSpan = resolveSpanForDiagnosticPath(right.path, sourceMap);
+  const spanComparison = compareSourceSpans(leftSpan, rightSpan);
+  if (spanComparison !== 0) {
+    return spanComparison;
+  }
+
+  const pathComparison = left.path.localeCompare(right.path);
+  if (pathComparison !== 0) {
+    return pathComparison;
+  }
+
+  return left.code.localeCompare(right.code);
+}
+
+function resolveSpanForDiagnosticPath(path: string, sourceMap?: GameSpecSourceMap): SourceSpan | undefined {
+  if (sourceMap === undefined) {
+    return undefined;
+  }
+
+  const direct = sourceMap.byPath[path];
+  if (direct !== undefined) {
+    return direct;
+  }
+
+  const withoutDocPrefix = path.startsWith('doc.') ? path.slice(4) : path;
+  const bracketPath = withoutDocPrefix.replace(/\.([0-9]+)(?=\.|$)/g, '[$1]');
+  return sourceMap.byPath[bracketPath];
+}
+
+function compareSourceSpans(left?: SourceSpan, right?: SourceSpan): number {
+  if (left === undefined && right === undefined) {
+    return 0;
+  }
+  if (left === undefined) {
+    return 1;
+  }
+  if (right === undefined) {
+    return -1;
+  }
+
+  if (left.blockIndex !== right.blockIndex) {
+    return left.blockIndex - right.blockIndex;
+  }
+  if (left.markdownLineStart !== right.markdownLineStart) {
+    return left.markdownLineStart - right.markdownLineStart;
+  }
+  if (left.markdownColStart !== right.markdownColStart) {
+    return left.markdownColStart - right.markdownColStart;
+  }
+  if (left.markdownLineEnd !== right.markdownLineEnd) {
+    return left.markdownLineEnd - right.markdownLineEnd;
+  }
+  return left.markdownColEnd - right.markdownColEnd;
+}
+
+function normalizeIdentifier(value: string): string {
+  return value.trim().normalize('NFC');
+}
+
+function uniqueSorted(values: readonly string[]): readonly string[] {
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

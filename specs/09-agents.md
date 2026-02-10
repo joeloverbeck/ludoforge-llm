@@ -3,7 +3,7 @@
 **Status**: Draft
 **Priority**: P1 (required for MVP)
 **Complexity**: S
-**Dependencies**: Spec 02, Spec 06
+**Dependencies**: Spec 02, Spec 03, Spec 06
 **Estimated effort**: 1-2 days
 **Source sections**: Brainstorming section 2.3
 
@@ -19,6 +19,7 @@ Implement two bot agents that play games autonomously: RandomAgent (uniform rand
 - `GreedyAgent`: score-based selection using one-step lookahead heuristic
 - Deterministic behavior given same RNG state
 - Agent factory for creating agents by name string
+- Optional `GreedyAgent` configuration for bounded move evaluation (`maxMovesToEvaluate`)
 
 ### Out of Scope
 - UCT/MCTS agent (post-MVP, noted in brainstorming as optional)
@@ -54,6 +55,15 @@ function createAgent(type: AgentType): Agent;
 function parseAgentSpec(spec: string, playerCount: number): readonly Agent[];
 ```
 
+### GreedyAgent Configuration
+
+```typescript
+interface GreedyAgentConfig {
+  // If undefined, evaluate all legal moves. If set, deterministically evaluate at most this many.
+  readonly maxMovesToEvaluate?: number;
+}
+```
+
 ## Implementation Requirements
 
 ### RandomAgent
@@ -61,6 +71,13 @@ function parseAgentSpec(spec: string, playerCount: number): readonly Agent[];
 ```typescript
 class RandomAgent implements Agent {
   chooseMove(input): { move: Move; rng: Rng } {
+    if (input.legalMoves.length === 0) {
+      throw new Error('RandomAgent.chooseMove called with empty legalMoves');
+    }
+    if (input.legalMoves.length === 1) {
+      return { move: input.legalMoves[0], rng: input.rng };
+    }
+
     // Select uniformly at random from legalMoves using provided PRNG
     const [index, nextRng] = nextInt(input.rng, 0, input.legalMoves.length - 1);
     return { move: input.legalMoves[index], rng: nextRng };
@@ -71,7 +88,7 @@ class RandomAgent implements Agent {
 **Key behaviors**:
 - Uses `nextInt` from Spec 03 (PRNG), NOT `Math.random()`
 - Returns a move from `legalMoves` array (never invents a move) plus advanced RNG state
-- If `legalMoves` has exactly 1 element, returns that element (no randomness needed)
+- If `legalMoves` has exactly 1 element, returns that element and does not advance RNG
 - If `legalMoves` is empty: this should never happen in normal play (Spec 06's game loop checks terminal before asking for moves), but if it does, throw descriptive error
 - Deterministic: same state + same rng → same `{move, rng}` result
 
@@ -82,12 +99,19 @@ class RandomAgent implements Agent {
 ```typescript
 class GreedyAgent implements Agent {
   chooseMove(input): { move: Move; rng: Rng } {
+    if (input.legalMoves.length === 0) {
+      throw new Error('GreedyAgent.chooseMove called with empty legalMoves');
+    }
+
+    // Optional deterministic sampling for very high branching factors
+    const candidates = selectCandidatesDeterministically(input.legalMoves, input.rng, this.maxMovesToEvaluate);
+
     // Score each legal move by one-step lookahead
     // Pick the move with highest score (tiebreak by RNG)
     let bestScore = -Infinity;
     let bestMoves: Move[] = [];
 
-    for (const move of input.legalMoves) {
+    for (const move of candidates.moves) {
       const { state: nextState } = applyMove(input.def, input.state, move);
       const score = evaluateState(input.def, nextState, input.playerId);
       if (score > bestScore) {
@@ -100,9 +124,9 @@ class GreedyAgent implements Agent {
 
     // Tiebreak: random selection among equally-scored moves
     if (bestMoves.length === 1) {
-      return { move: bestMoves[0], rng: input.rng };
+      return { move: bestMoves[0], rng: candidates.rng };
     }
-    const [index, nextRng] = nextInt(input.rng, 0, bestMoves.length - 1);
+    const [index, nextRng] = nextInt(candidates.rng, 0, bestMoves.length - 1);
     return { move: bestMoves[index], rng: nextRng };
   }
 }
@@ -112,6 +136,14 @@ class GreedyAgent implements Agent {
 
 ```typescript
 function evaluateState(def: GameDef, state: GameState, playerId: PlayerId): number {
+  // 0. Highest priority: immediate terminal outcomes
+  const terminal = terminalResult(def, state);
+  if (terminal !== null) {
+    if (terminal.winner === playerId) return 1_000_000_000;
+    if (terminal.winner !== null) return -1_000_000_000;
+    return 0; // draw
+  }
+
   let score = 0;
 
   // 1. Maximize own scoring variable (VP, score, etc.)
@@ -120,12 +152,17 @@ function evaluateState(def: GameDef, state: GameState, playerId: PlayerId): numb
     score += evalScoringValue(def, state, playerId) * 100;
   }
 
-  // 2. Maximize own variable values (generic: sum of all per-player vars)
-  //    Weighted by position in variable range (normalized to 0-1)
+  // 2. Maximize own variable values and minimize opponents' (integer-only scaling)
   for (const varDef of def.perPlayerVars) {
-    const value = getPlayerVar(state, playerId, varDef.name);
-    const normalized = (value - varDef.min) / Math.max(1, varDef.max - varDef.min);
-    score += normalized * 10;
+    const range = Math.max(1, varDef.max - varDef.min);
+    const own = getPlayerVar(state, playerId, varDef.name) - varDef.min;
+    score += Math.trunc((own * 10_000) / range);
+
+    for (let p = 0; p < state.playerCount; p++) {
+      if (p === playerId) continue;
+      const opp = getPlayerVar(state, p as PlayerId, varDef.name) - varDef.min;
+      score -= Math.trunc((opp * 2_500) / range);
+    }
   }
 
   // 3. Maximize token count in own zones
@@ -136,17 +173,18 @@ function evaluateState(def: GameDef, state: GameState, playerId: PlayerId): numb
     }
   }
 
-  return Math.trunc(score); // integer-only
+  return score;
 }
 ```
 
 **Key behaviors**:
 - Uses one-step lookahead: tries each legal move via `applyMove`, evaluates resulting state
-- Heuristic: maximize own scoring value > maximize own resources > maximize own token count
+- Heuristic priority: terminal win/loss > own scoring value > own resources (with light opponent suppression) > own token count
 - Tiebreaks deterministically using PRNG
-- Performance consideration: for high branching factors (>50 legal moves), the agent calls `applyMove` for each. This should be acceptable for MVP; if too slow, add a configurable move sampling limit.
+- Boundedness: supports optional deterministic move sampling when legal move count is very high, to cap runtime
+- Sampling contract: if `maxMovesToEvaluate` is unset or `>= legalMoves.length`, evaluate all moves and preserve input RNG unchanged before tiebreak
 
-**Integer-only arithmetic**: The evaluation function uses `Math.trunc` to keep scores as integers. Normalization uses integer arithmetic where possible.
+**Integer-only arithmetic**: The evaluation function must avoid floating point accumulation. Use scaled integer math for normalization.
 
 ### Agent Factory
 
@@ -160,13 +198,22 @@ function createAgent(type: AgentType): Agent {
 }
 
 function parseAgentSpec(spec: string, playerCount: number): readonly Agent[] {
-  const types = spec.split(',').map(s => s.trim() as AgentType);
+  const types = spec
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean);
+
   if (types.length !== playerCount) {
     throw new Error(
       `Agent spec has ${types.length} agents but game needs ${playerCount} players`
     );
   }
-  return types.map(createAgent);
+  return types.map(type => {
+    if (type !== 'random' && type !== 'greedy') {
+      throw new Error(`Unknown agent type: ${type}. Allowed: random, greedy`);
+    }
+    return createAgent(type);
+  });
 }
 ```
 
@@ -181,6 +228,8 @@ Usage: `parseAgentSpec("random,greedy", 2)` → `[RandomAgent, GreedyAgent]`
 5. Agent interface threads RNG explicitly (`chooseMove` returns `{ move, rng }`)
 6. GreedyAgent's evaluation function uses integer-only arithmetic
 7. `parseAgentSpec` validates agent count matches player count
+8. GreedyAgent prefers immediate terminal win and avoids immediate terminal loss when alternatives exist
+9. If deterministic sampling is enabled, candidate set selection is deterministic for identical input RNG
 
 ## Required Tests
 
@@ -189,16 +238,20 @@ Usage: `parseAgentSpec("random,greedy", 2)` → `[RandomAgent, GreedyAgent]`
 **RandomAgent**:
 - With known seed: picks expected move from 5 legal moves (golden test)
 - With single legal move: always returns that move
+- With single legal move: returned RNG is unchanged
 - With 2 legal moves + known seed: deterministic choice verified
 - Same state + same rng → same `{move, rng}` result (determinism)
 - Over 100 calls with 3 legal moves: all 3 are chosen at least once (rough uniformity)
 
 **GreedyAgent**:
 - Simple scenario: move A gives +1 VP, move B gives +0 VP → chooses A
+- Terminal scenario: move A wins immediately, move B increases resources → chooses A
+- Terminal scenario: move A loses immediately, move B is non-terminal → chooses B
 - Tiebreak scenario: moves A and B both give +1 VP → deterministic tiebreak via RNG
 - With known seed for tiebreak: picks expected move (golden test)
 - Evaluation function: state with money=5, vp=3 → expected score
 - Same state + same rng → same `{move, rng}` result (determinism)
+- With `maxMovesToEvaluate` set, candidate selection is deterministic and bounded
 
 **Agent factory**:
 - `createAgent('random')` → RandomAgent instance
@@ -234,6 +287,8 @@ Usage: `parseAgentSpec("random,greedy", 2)` → `[RandomAgent, GreedyAgent]`
 - [ ] `parseAgentSpec` validates agent count against player count
 - [ ] No `Math.random()` calls anywhere in agent code
 - [ ] Evaluation function uses integer-only arithmetic
+- [ ] GreedyAgent prioritizes immediate terminal outcomes (win/loss) before heuristic score
+- [ ] Optional greedy move-evaluation cap behaves deterministically when enabled
 
 ## Files to Create/Modify
 

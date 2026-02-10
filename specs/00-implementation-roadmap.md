@@ -30,6 +30,7 @@ graph TD
     S07 --> S08b
     S08a --> S08b
     S02 --> S09[Spec 09: Agents]
+    S03 --> S09
     S06 --> S09
     S06 --> S10[Spec 10: Simulator & Trace]
     S09 --> S10
@@ -163,7 +164,7 @@ This is the longest dependency chain and determines minimum time-to-MVP.
 | 07 | Board-as-Graph Spatial Model | P1 | M | 04, 05, 06 | 2-3 | 2 |
 | 08a | Game Spec Parser & Validator | P1 | M | 02 | 2-3 | 2 |
 | 08b | Game Spec Compiler | P1 | L | 02, 07, 08a | 3-4 | 2 |
-| 09 | Agents (Random & Greedy) | P1 | S | 02, 06 | 1-2 | 3 |
+| 09 | Agents (Random & Greedy) | P1 | S | 02, 03, 06 | 1-2 | 3 |
 | 10 | Simulator & Trace Logger | P1 | M | 06, 09 | 2-3 | 3 |
 | 11 | Evaluator & Degeneracy Detection | P1 | M | 10 | 2-3 | 3 |
 | 12 | CLI | P1 | M | 08a, 08b, 10, 11 | 2-3 | 3 |
@@ -186,6 +187,7 @@ All type definitions live in Spec 02. Other specs import and use these types but
 | Producer | Consumer | API |
 |----------|----------|-----|
 | Spec 03 | Spec 05, 06 | `createRng`, `nextInt`, `serialize`, `deserialize`, `fork` |
+| Spec 03 | Spec 09 | `nextInt` and `Rng` contract for deterministic agent selection/tiebreaks |
 | Spec 03 | Spec 06 | Zobrist hash: `createZobristTable`, `zobristKey`, `computeFullHash`, `updateHashFeatureChange`, `updateHashTokenPlacement` |
 | Spec 04 | Spec 05, 06, 07 | `evalCondition`, `evalValue`, `evalQuery` |
 | Spec 05 | Spec 06 | `applyEffect`, `applyEffects` |

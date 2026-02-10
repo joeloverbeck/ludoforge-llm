@@ -1,6 +1,6 @@
 # Spec 09: Agents (Random & Greedy)
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1 (required for MVP)
 **Complexity**: S
 **Dependencies**: Spec 02, Spec 03, Spec 06
@@ -305,3 +305,20 @@ test/unit/evaluate-state.test.ts # NEW
 test/unit/agent-factory.test.ts  # NEW
 test/integration/agent-play.test.ts  # NEW — agents playing full games
 ```
+
+## Outcome
+
+- **Completion date**: 2026-02-10
+- **What was actually changed**:
+  - Implemented and exported `RandomAgent`, `GreedyAgent`, `evaluateState`, deterministic candidate selection, and agent factory APIs under `src/agents/`.
+  - Implemented `parseAgentSpec` normalization and validation behavior for comma-separated specs.
+  - Added comprehensive unit coverage in `test/unit/agents/` for random behavior, greedy evaluation/tiebreaking, candidate bounding, evaluation scoring, and factory/parse validation.
+- **Deviations from original plan**:
+  - Factory implementation lives in `src/agents/factory.ts` rather than `src/agents/agent-factory.ts`.
+  - Factory parsing tests were consolidated in `test/unit/agents/factory-api-shape.test.ts` rather than a separate `agent-factory`/`parse-agent-spec` file.
+  - No dedicated `test/integration/agent-play.test.ts` was added in this pass; baseline integration coverage still passes.
+- **Verification results**:
+  - `npm run lint`
+  - `npm run build`
+  - `npm run test:unit -- --coverage=false`
+  - `npm test`

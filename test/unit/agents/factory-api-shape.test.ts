@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { createAgent, parseAgentSpec } from '../../../src/agents/index.js';
+import { createAgent, GreedyAgent, parseAgentSpec, RandomAgent } from '../../../src/agents/index.js';
 import {
   asActionId,
   asPhaseId,
@@ -105,14 +105,25 @@ describe('agents factory API shape', () => {
     assert.throws(() => parseAgentSpec('random', 2), /Agent spec has 1 agents but game needs 2 players/);
   });
 
-  it('parseAgentSpec creates one agent per normalized token', () => {
+  it('parseAgentSpec creates ordered agents from normalized tokens', () => {
     const agents = parseAgentSpec(' random , GREEDY ', 2);
     assert.equal(agents.length, 2);
-    assert.equal(typeof agents[0]?.chooseMove, 'function');
-    assert.equal(typeof agents[1]?.chooseMove, 'function');
+    assert.equal(agents[0] instanceof RandomAgent, true);
+    assert.equal(agents[1] instanceof GreedyAgent, true);
   });
 
   it('parseAgentSpec rejects unknown agent names', () => {
     assert.throws(() => parseAgentSpec('random,smart', 2), /Unknown agent type: smart\. Allowed: random, greedy/);
+  });
+
+  it('parseAgentSpec ignores empty tokens when remaining count matches', () => {
+    const agents = parseAgentSpec('random,,greedy', 2);
+    assert.equal(agents.length, 2);
+    assert.equal(agents[0] instanceof RandomAgent, true);
+    assert.equal(agents[1] instanceof GreedyAgent, true);
+  });
+
+  it('parseAgentSpec still enforces count after filtering empty tokens', () => {
+    assert.throws(() => parseAgentSpec('random,,greedy', 3), /Agent spec has 2 agents but game needs 3 players/);
   });
 });

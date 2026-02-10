@@ -106,3 +106,11 @@ export const runGame = (
     stopReason,
   };
 };
+
+export const runGames = (
+  def: GameDef,
+  seeds: readonly number[],
+  agents: readonly Agent[],
+  maxTurns: number,
+  playerCount?: number,
+): readonly GameTrace[] => seeds.map((seed) => runGame(def, seed, agents, maxTurns, playerCount));

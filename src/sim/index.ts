@@ -1,2 +1,2 @@
 export { computeDeltas } from './delta.js';
-export { runGame } from './simulator.js';
+export { runGame, runGames } from './simulator.js';

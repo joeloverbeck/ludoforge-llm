@@ -1,6 +1,6 @@
 # Spec 08a: Game Spec Parser & Validator
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1 (required for MVP)
 **Complexity**: M
 **Dependencies**: Spec 02
@@ -363,3 +363,14 @@ test/unit/yaml-strict.test.ts    # NEW - YAML 1.2 strict behavior tests
 test/unit/source-map.test.ts     # NEW - source mapping stability tests
 test/integration/parse-full-spec.test.ts  # NEW - full spec lint pipeline integration
 ```
+
+## Outcome
+
+- Completion date: 2026-02-10
+- What was changed:
+  - Implemented the parser/validator pipeline and supporting types across `src/cnl/parser.ts`, `src/cnl/validate-spec.ts`, `src/cnl/section-identifier.ts`, `src/cnl/source-map.ts`, `src/cnl/yaml-linter.ts`, `src/cnl/game-spec-doc.ts`, and `src/cnl/index.ts`.
+  - Added parser, validator, and YAML hardening test coverage in `test/unit/parser.test.ts`, `test/unit/validate-spec.test.ts`, `test/unit/yaml-linter.test.ts`, and `test/unit/parser-validator.golden.test.ts`.
+- Deviations from original plan:
+  - The planned `test/unit/yaml-strict.test.ts`, `test/unit/source-map.test.ts`, and `test/integration/parse-full-spec.test.ts` are represented by consolidated coverage in the current parser/validator unit and golden tests.
+- Verification results:
+  - `npm run test:unit -- --coverage=false` passed on 2026-02-10 (331 tests, 0 failures).

@@ -1,5 +1,13 @@
 import type { Diagnostic } from './diagnostics.js';
-import type { ConditionAST, EffectAST, GameDef, OptionsQuery, Reference, ValueExpr } from './types.js';
+import type {
+  ConditionAST,
+  EffectAST,
+  GameDef,
+  OptionsQuery,
+  PlayerSel,
+  Reference,
+  ValueExpr,
+} from './types.js';
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
 
@@ -109,18 +117,56 @@ const parseZoneIdFromSelector = (zoneSelector: string): string => {
   return zoneSelector;
 };
 
+const parseZoneSelectorQualifier = (zoneSelector: string): string | null => {
+  const separatorIndex = zoneSelector.lastIndexOf(':');
+  if (separatorIndex < 0 || separatorIndex === zoneSelector.length - 1) {
+    return null;
+  }
+
+  return zoneSelector.slice(separatorIndex + 1);
+};
+
+type ValidationContext = {
+  globalVarNames: Set<string>;
+  perPlayerVarNames: Set<string>;
+  globalVarCandidates: readonly string[];
+  perPlayerVarCandidates: readonly string[];
+  zoneNames: Set<string>;
+  zoneCandidates: readonly string[];
+  zoneOwners: ReadonlyMap<string, GameDef['zones'][number]['owner']>;
+  tokenTypeNames: Set<string>;
+  tokenTypeCandidates: readonly string[];
+  playerIdMin: number;
+  playerIdMaxInclusive: number;
+};
+
+const validatePlayerSelector = (
+  diagnostics: Diagnostic[],
+  playerSelector: PlayerSel,
+  path: string,
+  context: ValidationContext,
+): void => {
+  if (typeof playerSelector !== 'object' || !('id' in playerSelector)) {
+    return;
+  }
+
+  const id = playerSelector.id;
+  if (!Number.isInteger(id) || id < context.playerIdMin || id > context.playerIdMaxInclusive) {
+    diagnostics.push({
+      code: 'PLAYER_SELECTOR_ID_OUT_OF_BOUNDS',
+      path,
+      severity: 'error',
+      message: `PlayerSel.id must be an integer in [${context.playerIdMin}, ${context.playerIdMaxInclusive}] based on metadata.players.max.`,
+      suggestion: `Use a value between ${context.playerIdMin} and ${context.playerIdMaxInclusive}, or a dynamic selector such as "active".`,
+    });
+  }
+};
+
 const validateReference = (
   diagnostics: Diagnostic[],
   reference: Reference,
   path: string,
-  context: {
-    globalVarNames: Set<string>;
-    perPlayerVarNames: Set<string>;
-    globalVarCandidates: readonly string[];
-    perPlayerVarCandidates: readonly string[];
-    zoneNames: Set<string>;
-    zoneCandidates: readonly string[];
-  },
+  context: ValidationContext,
 ): void => {
   if (reference.ref === 'gvar' && !context.globalVarNames.has(reference.var)) {
     pushMissingReferenceDiagnostic(
@@ -146,6 +192,10 @@ const validateReference = (
     return;
   }
 
+  if (reference.ref === 'pvar') {
+    validatePlayerSelector(diagnostics, reference.player, `${path}.player`, context);
+  }
+
   if (reference.ref === 'zoneCount') {
     const zoneId = parseZoneIdFromSelector(reference.zone);
     if (!context.zoneNames.has(zoneId)) {
@@ -165,14 +215,7 @@ const validateValueExpr = (
   diagnostics: Diagnostic[],
   valueExpr: ValueExpr,
   path: string,
-  context: {
-    globalVarNames: Set<string>;
-    perPlayerVarNames: Set<string>;
-    globalVarCandidates: readonly string[];
-    perPlayerVarCandidates: readonly string[];
-    zoneNames: Set<string>;
-    zoneCandidates: readonly string[];
-  },
+  context: ValidationContext,
 ): void => {
   if (typeof valueExpr === 'number' || typeof valueExpr === 'boolean' || typeof valueExpr === 'string') {
     return;
@@ -196,14 +239,7 @@ const validateConditionAst = (
   diagnostics: Diagnostic[],
   condition: ConditionAST,
   path: string,
-  context: {
-    globalVarNames: Set<string>;
-    perPlayerVarNames: Set<string>;
-    globalVarCandidates: readonly string[];
-    perPlayerVarCandidates: readonly string[];
-    zoneNames: Set<string>;
-    zoneCandidates: readonly string[];
-  },
+  context: ValidationContext,
 ): void => {
   switch (condition.op) {
     case 'and':
@@ -233,14 +269,34 @@ const validateZoneSelector = (
   diagnostics: Diagnostic[],
   zoneSelector: string,
   path: string,
-  context: {
-    zoneNames: Set<string>;
-    zoneCandidates: readonly string[];
-  },
+  context: ValidationContext,
 ): void => {
   const zoneId = parseZoneIdFromSelector(zoneSelector);
 
   if (context.zoneNames.has(zoneId)) {
+    const owner = context.zoneOwners.get(zoneId);
+    const qualifier = parseZoneSelectorQualifier(zoneSelector);
+
+    if (owner !== undefined && qualifier !== null) {
+      if (qualifier === 'none' && owner !== 'none') {
+        diagnostics.push({
+          code: 'ZONE_SELECTOR_OWNERSHIP_INVALID',
+          path,
+          severity: 'error',
+          message: `Selector "${zoneSelector}" uses :none, but zone "${zoneId}" is owner "${owner}".`,
+          suggestion: `Use a selector that targets a player-owned zone, or change "${zoneId}" owner to "none".`,
+        });
+      } else if (qualifier !== 'none' && owner !== 'player') {
+        diagnostics.push({
+          code: 'ZONE_SELECTOR_OWNERSHIP_INVALID',
+          path,
+          severity: 'error',
+          message: `Selector "${zoneSelector}" is owner-qualified, but zone "${zoneId}" is owner "${owner}".`,
+          suggestion: `Use :none for unowned zones, or change "${zoneId}" owner to "player".`,
+        });
+      }
+    }
+
     return;
   }
 
@@ -258,14 +314,7 @@ const validateOptionsQuery = (
   diagnostics: Diagnostic[],
   query: OptionsQuery,
   path: string,
-  context: {
-    globalVarNames: Set<string>;
-    perPlayerVarNames: Set<string>;
-    globalVarCandidates: readonly string[];
-    perPlayerVarCandidates: readonly string[];
-    zoneNames: Set<string>;
-    zoneCandidates: readonly string[];
-  },
+  context: ValidationContext,
 ): void => {
   switch (query.query) {
     case 'tokensInZone':
@@ -293,6 +342,9 @@ const validateOptionsQuery = (
       return;
     }
     case 'zones': {
+      if (query.filter?.owner) {
+        validatePlayerSelector(diagnostics, query.filter.owner, `${path}.filter.owner`, context);
+      }
       return;
     }
     case 'enums':
@@ -306,16 +358,7 @@ const validateEffectAst = (
   diagnostics: Diagnostic[],
   effect: EffectAST,
   path: string,
-  context: {
-    globalVarNames: Set<string>;
-    perPlayerVarNames: Set<string>;
-    globalVarCandidates: readonly string[];
-    perPlayerVarCandidates: readonly string[];
-    zoneNames: Set<string>;
-    zoneCandidates: readonly string[];
-    tokenTypeNames: Set<string>;
-    tokenTypeCandidates: readonly string[];
-  },
+  context: ValidationContext,
 ): void => {
   if ('setVar' in effect) {
     if (effect.setVar.scope === 'global' && !context.globalVarNames.has(effect.setVar.var)) {
@@ -338,6 +381,10 @@ const validateEffectAst = (
         effect.setVar.var,
         context.perPlayerVarCandidates,
       );
+    }
+
+    if (effect.setVar.player) {
+      validatePlayerSelector(diagnostics, effect.setVar.player, `${path}.setVar.player`, context);
     }
 
     validateValueExpr(diagnostics, effect.setVar.value, `${path}.setVar.value`, context);
@@ -365,6 +412,10 @@ const validateEffectAst = (
         effect.addVar.var,
         context.perPlayerVarCandidates,
       );
+    }
+
+    if (effect.addVar.player) {
+      validatePlayerSelector(diagnostics, effect.addVar.player, `${path}.addVar.player`, context);
     }
 
     validateValueExpr(diagnostics, effect.addVar.delta, `${path}.addVar.delta`, context);
@@ -466,6 +517,55 @@ const validateEffectAst = (
 export const validateGameDef = (def: GameDef): Diagnostic[] => {
   const diagnostics: Diagnostic[] = [];
 
+  if (def.metadata.players.min < 1) {
+    diagnostics.push({
+      code: 'META_PLAYERS_MIN_INVALID',
+      path: 'metadata.players.min',
+      severity: 'error',
+      message: `metadata.players.min must be >= 1; received ${def.metadata.players.min}.`,
+    });
+  }
+  if (def.metadata.players.min > def.metadata.players.max) {
+    diagnostics.push({
+      code: 'META_PLAYERS_RANGE_INVALID',
+      path: 'metadata.players',
+      severity: 'error',
+      message: `metadata.players.min (${def.metadata.players.min}) must be <= metadata.players.max (${def.metadata.players.max}).`,
+    });
+  }
+  if (
+    def.metadata.maxTriggerDepth !== undefined &&
+    (!Number.isInteger(def.metadata.maxTriggerDepth) || def.metadata.maxTriggerDepth < 1)
+  ) {
+    diagnostics.push({
+      code: 'META_MAX_TRIGGER_DEPTH_INVALID',
+      path: 'metadata.maxTriggerDepth',
+      severity: 'error',
+      message: `metadata.maxTriggerDepth must be an integer >= 1; received ${def.metadata.maxTriggerDepth}.`,
+    });
+  }
+
+  def.globalVars.forEach((variable, index) => {
+    if (variable.min > variable.init || variable.init > variable.max) {
+      diagnostics.push({
+        code: 'VAR_BOUNDS_INVALID',
+        path: `globalVars[${index}]`,
+        severity: 'error',
+        message: `Variable "${variable.name}" must satisfy min <= init <= max; received ${variable.min} <= ${variable.init} <= ${variable.max}.`,
+      });
+    }
+  });
+  def.perPlayerVars.forEach((variable, index) => {
+    if (variable.min > variable.init || variable.init > variable.max) {
+      diagnostics.push({
+        code: 'VAR_BOUNDS_INVALID',
+        path: `perPlayerVars[${index}]`,
+        severity: 'error',
+        message: `Variable "${variable.name}" must satisfy min <= init <= max; received ${variable.min} <= ${variable.init} <= ${variable.max}.`,
+      });
+    }
+  });
+
   checkDuplicateIds(
     diagnostics,
     def.zones.map((zone) => zone.id),
@@ -538,12 +638,15 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
   const context = {
     zoneNames: new Set(zoneCandidates),
     zoneCandidates,
+    zoneOwners: new Map(def.zones.map((zone) => [zone.id, zone.owner])),
     globalVarNames: new Set(globalVarCandidates),
     globalVarCandidates,
     perPlayerVarNames: new Set(perPlayerVarCandidates),
     perPlayerVarCandidates,
     tokenTypeNames: new Set(tokenTypeCandidates),
     tokenTypeCandidates,
+    playerIdMin: 0,
+    playerIdMaxInclusive: def.metadata.players.max - 1,
   };
 
   def.setup.forEach((effect, index) => {
@@ -551,6 +654,8 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
   });
 
   def.actions.forEach((action, actionIndex) => {
+    validatePlayerSelector(diagnostics, action.actor, `actions[${actionIndex}].actor`, context);
+
     if (!phaseCandidates.includes(action.phase)) {
       pushMissingReferenceDiagnostic(
         diagnostics,
@@ -575,6 +680,27 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
     });
     action.effects.forEach((effect, effectIndex) => {
       validateEffectAst(diagnostics, effect, `actions[${actionIndex}].effects[${effectIndex}]`, context);
+    });
+  });
+
+  def.zones.forEach((zone, zoneIndex) => {
+    zone.adjacentTo?.forEach((adjacentZoneId, adjacentIndex) => {
+      const adjacentZone = def.zones.find((entry) => entry.id === adjacentZoneId);
+      if (!adjacentZone) {
+        return;
+      }
+
+      if (adjacentZone.adjacentTo?.includes(zone.id)) {
+        return;
+      }
+
+      diagnostics.push({
+        code: 'ZONE_ADJACENCY_ASYMMETRIC',
+        path: `zones[${zoneIndex}].adjacentTo[${adjacentIndex}]`,
+        severity: 'warning',
+        message: `Zone "${zone.id}" lists "${adjacentZoneId}" in adjacentTo, but the reverse edge is missing.`,
+        suggestion: `Add "${zone.id}" to "${adjacentZoneId}" adjacentTo for a symmetric graph.`,
+      });
     });
   });
 
@@ -632,11 +758,39 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
   });
 
   def.endConditions.forEach((endCondition, endConditionIndex) => {
+    if (endCondition.result.type === 'win') {
+      validatePlayerSelector(
+        diagnostics,
+        endCondition.result.player,
+        `endConditions[${endConditionIndex}].result.player`,
+        context,
+      );
+    }
+    if (endCondition.result.type === 'score' && !def.scoring) {
+      diagnostics.push({
+        code: 'SCORING_REQUIRED_FOR_SCORE_RESULT',
+        path: `endConditions[${endConditionIndex}].result`,
+        severity: 'error',
+        message: 'End condition with result.type "score" requires a scoring definition.',
+        suggestion: 'Add def.scoring or change end condition result.type.',
+      });
+    }
+
     validateConditionAst(diagnostics, endCondition.when, `endConditions[${endConditionIndex}].when`, context);
   });
 
   if (def.scoring) {
     validateValueExpr(diagnostics, def.scoring.value, 'scoring.value', context);
+    const usesScoreResult = def.endConditions.some((endCondition) => endCondition.result.type === 'score');
+    if (!usesScoreResult) {
+      diagnostics.push({
+        code: 'SCORING_UNUSED',
+        path: 'scoring',
+        severity: 'warning',
+        message: 'scoring is configured but no end condition uses result.type "score".',
+        suggestion: 'Add a score-based end condition or remove scoring.',
+      });
+    }
   }
 
   return diagnostics;

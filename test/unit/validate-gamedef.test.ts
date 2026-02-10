@@ -186,3 +186,132 @@ describe('validateGameDef reference checks', () => {
     );
   });
 });
+
+describe('validateGameDef constraints and warnings', () => {
+  it('reports PlayerSel.id outside configured bounds', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [{ ...base.actions[0], actor: { id: 4 } }],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'PLAYER_SELECTOR_ID_OUT_OF_BOUNDS' && diag.path === 'actions[0].actor',
+      ),
+    );
+  });
+
+  it('reports invalid players metadata', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      metadata: { ...base.metadata, players: { min: 0, max: 0 } },
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'META_PLAYERS_MIN_INVALID' && diag.path === 'metadata.players.min'),
+    );
+  });
+
+  it('reports invalid maxTriggerDepth metadata', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      metadata: { ...base.metadata, maxTriggerDepth: 1.5 },
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'META_MAX_TRIGGER_DEPTH_INVALID' && diag.path === 'metadata.maxTriggerDepth',
+      ),
+    );
+  });
+
+  it('reports variable bounds inconsistency', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      globalVars: [{ name: 'money', type: 'int', min: 2, init: 1, max: 99 }],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(diagnostics.some((diag) => diag.code === 'VAR_BOUNDS_INVALID' && diag.path === 'globalVars[0]'));
+  });
+
+  it('reports score end-condition without scoring definition', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
+      scoring: undefined,
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'SCORING_REQUIRED_FOR_SCORE_RESULT' && diag.path === 'endConditions[0].result',
+      ),
+    );
+  });
+
+  it('warns when scoring is configured but never used by end-conditions', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      scoring: { method: 'highest', value: 1 },
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'SCORING_UNUSED' && diag.path === 'scoring' && diag.severity === 'warning'),
+    );
+  });
+
+  it('warns on asymmetric adjacency declarations', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        { ...base.zones[0], adjacentTo: ['deck:none'] },
+        { ...base.zones[1], adjacentTo: [] },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'ZONE_ADJACENCY_ASYMMETRIC' &&
+          diag.path === 'zones[0].adjacentTo[0]' &&
+          diag.severity === 'warning',
+      ),
+    );
+  });
+
+  it('reports ownership mismatch for :none selector targeting player-owned zone', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [{ ...base.zones[0], owner: 'player' }, base.zones[1]],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'ZONE_SELECTOR_OWNERSHIP_INVALID' &&
+          diag.path === 'actions[0].effects[0].draw.to' &&
+          diag.severity === 'error',
+      ),
+    );
+  });
+
+  it('returns no diagnostics for fully valid game def', () => {
+    const diagnostics = validateGameDef(createValidGameDef());
+    assert.deepEqual(diagnostics, []);
+  });
+});

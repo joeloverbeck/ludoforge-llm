@@ -15,18 +15,67 @@ export interface ParseGameSpecResult {
 }
 
 export interface ParseGameSpecOptions {
+  readonly maxInputBytes?: number;
+  readonly maxYamlBlocks?: number;
+  readonly maxBlockBytes?: number;
   readonly maxDiagnostics?: number;
 }
 
+const DEFAULT_MAX_INPUT_BYTES = 1024 * 1024;
+const DEFAULT_MAX_YAML_BLOCKS = 128;
+const DEFAULT_MAX_BLOCK_BYTES = 256 * 1024;
 const DEFAULT_MAX_DIAGNOSTICS = 500;
 
 export function parseGameSpec(markdown: string, options: ParseGameSpecOptions = {}): ParseGameSpecResult {
   const diagnostics: Diagnostic[] = [];
-  const yamlBlocks = extractYamlBlocks(markdown);
+  const maxInputBytes = normalizeLimit(options.maxInputBytes, DEFAULT_MAX_INPUT_BYTES, { allowZero: false });
+  const maxYamlBlocks = normalizeLimit(options.maxYamlBlocks, DEFAULT_MAX_YAML_BLOCKS, { allowZero: true });
+  const maxBlockBytes = normalizeLimit(options.maxBlockBytes, DEFAULT_MAX_BLOCK_BYTES, { allowZero: false });
   const doc = createEmptyGameSpecDoc();
   const sourceMapByPath: Record<string, GameSpecSourceMap['byPath'][string]> = {};
 
+  const inputBytes = Buffer.byteLength(markdown, 'utf8');
+  if (inputBytes > maxInputBytes) {
+    diagnostics.push({
+      code: 'CNL_PARSER_MAX_INPUT_BYTES_EXCEEDED',
+      path: 'parser.input',
+      severity: 'error',
+      message: `Input exceeds maxInputBytes (${inputBytes} > ${maxInputBytes}).`,
+      suggestion: 'Reduce markdown size or increase parseGameSpec maxInputBytes.',
+    });
+
+    return {
+      doc,
+      sourceMap: { byPath: sourceMapByPath },
+      diagnostics: applyDiagnosticCap(diagnostics, options.maxDiagnostics ?? DEFAULT_MAX_DIAGNOSTICS),
+    };
+  }
+
+  const extractedBlocks = extractYamlBlocks(markdown);
+  const yamlBlocks = extractedBlocks.slice(0, maxYamlBlocks);
+  if (extractedBlocks.length > maxYamlBlocks) {
+    diagnostics.push({
+      code: 'CNL_PARSER_MAX_YAML_BLOCKS_EXCEEDED',
+      path: 'parser.blocks',
+      severity: 'warning',
+      message: `YAML block count exceeds maxYamlBlocks (${extractedBlocks.length} > ${maxYamlBlocks}); extra blocks were skipped.`,
+      suggestion: 'Reduce fenced YAML blocks or increase parseGameSpec maxYamlBlocks.',
+    });
+  }
+
   for (const [index, block] of yamlBlocks.entries()) {
+    const blockBytes = Buffer.byteLength(block.text, 'utf8');
+    if (blockBytes > maxBlockBytes) {
+      diagnostics.push({
+        code: 'CNL_PARSER_MAX_BLOCK_BYTES_EXCEEDED',
+        path: `yaml.block.${index}.size`,
+        severity: 'error',
+        message: `YAML block exceeds maxBlockBytes (${blockBytes} > ${maxBlockBytes}).`,
+        suggestion: 'Split large YAML blocks or increase parseGameSpec maxBlockBytes.',
+      });
+      continue;
+    }
+
     diagnostics.push(
       ...lintYamlHardening(block.text, {
         pathPrefix: `yaml.block.${index}`,
@@ -41,11 +90,16 @@ export function parseGameSpec(markdown: string, options: ParseGameSpecOptions = 
 
     if (yamlDoc.errors.length > 0) {
       for (const error of yamlDoc.errors) {
+        const line = error.linePos?.[0]?.line;
+        const col = error.linePos?.[0]?.col;
         diagnostics.push({
           code: 'CNL_PARSER_YAML_PARSE_ERROR',
           path: `yaml.block.${index}.parse`,
           severity: 'error',
-          message: error.message,
+          message:
+            line !== undefined
+              ? `YAML parse error at line ${line}${col !== undefined ? `, col ${col}` : ''}: ${error.message}`
+              : error.message,
         });
       }
       continue;
@@ -310,4 +364,19 @@ function applyDiagnosticCap(
   };
 
   return [...kept, truncationWarning];
+}
+
+function normalizeLimit(
+  value: number | undefined,
+  fallback: number,
+  options: { readonly allowZero: boolean },
+): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
+  const normalized = Math.floor(value);
+  if (options.allowZero) {
+    return Math.max(0, normalized);
+  }
+  return Math.max(1, normalized);
 }

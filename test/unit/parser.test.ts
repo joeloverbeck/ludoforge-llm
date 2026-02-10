@@ -4,6 +4,25 @@ import { describe, it } from 'node:test';
 import { parseGameSpec } from '../../src/cnl/parser.js';
 
 describe('parseGameSpec API shape', () => {
+  it('returns an all-null document for empty input', () => {
+    const result = parseGameSpec('');
+
+    assert.deepEqual(result.doc, {
+      metadata: null,
+      constants: null,
+      globalVars: null,
+      perPlayerVars: null,
+      zones: null,
+      tokenTypes: null,
+      setup: null,
+      turnStructure: null,
+      actions: null,
+      triggers: null,
+      endConditions: null,
+    });
+    assert.deepEqual(result.sourceMap.byPath, {});
+  });
+
   it('returns parsed sections while keeping total deterministic result shape', () => {
     const result = parseGameSpec([
       '```yaml',
@@ -38,6 +57,36 @@ describe('parseGameSpec API shape', () => {
 
   it('does not throw for arbitrary input', () => {
     assert.doesNotThrow(() => parseGameSpec('\u0000\u0001 not yaml'));
+  });
+
+  it('reports malformed fenced YAML with parse diagnostics', () => {
+    const result = parseGameSpec('```yaml\nmetadata:\n  id: [1\n```');
+    const parseDiagnostic = result.diagnostics.find((diagnostic) => diagnostic.code === 'CNL_PARSER_YAML_PARSE_ERROR');
+
+    assert.ok(parseDiagnostic !== undefined);
+    assert.equal(parseDiagnostic?.path, 'yaml.block.0.parse');
+    assert.match(parseDiagnostic?.message ?? '', /line/i);
+  });
+
+  it('keeps YAML 1.2 boolean-like scalars as strings', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'metadata:',
+      '  id: on',
+      '  players:',
+      '    min: 2',
+      '    max: 4',
+      'constants:',
+      '  yes: yes',
+      '  no: no',
+      '  off: off',
+      '```',
+    ].join('\n'));
+
+    assert.equal(result.doc.metadata?.id, 'on');
+    assert.equal(result.doc.constants?.yes, 'yes');
+    assert.equal(result.doc.constants?.no, 'no');
+    assert.equal(result.doc.constants?.off, 'off');
   });
 
   it('is equivalent for reversed singleton section order', () => {
@@ -160,5 +209,51 @@ describe('parseGameSpec API shape', () => {
     assert.equal(result.diagnostics[2]?.code, 'CNL_PARSER_DIAGNOSTICS_TRUNCATED');
     assert.equal(result.diagnostics[2]?.path, 'parser.diagnostics');
     assert.equal(result.diagnostics[2]?.severity, 'warning');
+  });
+
+  it('returns a limit diagnostic when maxInputBytes is exceeded', () => {
+    const result = parseGameSpec('```yaml\nmetadata: {}\n```', { maxInputBytes: 4 });
+
+    assert.equal(result.doc.metadata, null);
+    assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_PARSER_MAX_INPUT_BYTES_EXCEEDED'));
+  });
+
+  it('limits parsed YAML blocks to maxYamlBlocks', () => {
+    const result = parseGameSpec(
+      [
+        '```yaml',
+        'metadata:',
+        '  id: first',
+        '  players: { min: 2, max: 4 }',
+        '```',
+        '```yaml',
+        'metadata:',
+        '  id: second',
+        '  players: { min: 2, max: 4 }',
+        '```',
+      ].join('\n'),
+      { maxYamlBlocks: 1 },
+    );
+
+    assert.equal(result.doc.metadata?.id, 'first');
+    assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_PARSER_MAX_YAML_BLOCKS_EXCEEDED'));
+  });
+
+  it('skips oversized YAML blocks when maxBlockBytes is exceeded', () => {
+    const result = parseGameSpec(
+      [
+        '```yaml',
+        'metadata:',
+        '  id: tiny',
+        '  players:',
+        '    min: 2',
+        '    max: 4',
+        '```',
+      ].join('\n'),
+      { maxBlockBytes: 8 },
+    );
+
+    assert.equal(result.doc.metadata, null);
+    assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_PARSER_MAX_BLOCK_BYTES_EXCEEDED'));
   });
 });

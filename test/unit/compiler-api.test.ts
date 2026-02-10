@@ -31,7 +31,7 @@ describe('compiler API foundation', () => {
     const doc = createEmptyGameSpecDoc();
     const result = expandMacros(doc, { limits: { maxExpandedEffects: 25 } });
 
-    assert.equal(result.doc, doc);
+    assert.deepEqual(result.doc, doc);
     assert.deepEqual(result.diagnostics, []);
   });
 

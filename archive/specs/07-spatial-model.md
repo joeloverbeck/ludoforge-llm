@@ -1,6 +1,6 @@
 # Spec 07: Board-as-Graph Spatial Model
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1 (required for MVP)
 **Complexity**: M
 **Dependencies**: Spec 04, Spec 05, Spec 06
@@ -358,3 +358,17 @@ test/unit/spatial-effects.test.ts
 test/unit/board-macros.test.ts
 test/integration/spatial-kernel-integration.test.ts
 ```
+
+## Outcome
+- **Completion date**: 2026-02-10
+- **What was implemented**:
+  - Spatial adjacency graph build/validation with deterministic normalization and diagnostics.
+  - Spatial query runtime (`adjacentZones`, `tokensInAdjacentZones`, `connectedZones`) and spatial conditions (`adjacent`, `connected`).
+  - `moveTokenAdjacent` runtime semantics with adjacency enforcement and `tokenEntered` emission.
+  - Board macro generation for `grid(rows, cols)` and `hex(radius)` with argument diagnostics.
+  - Integration/property/golden coverage for spatial behavior and topologies.
+- **Notable implementation adjustment**:
+  - Action-effect emitted events are now dispatched through trigger dispatch in `applyMove` before `actionResolved`, ensuring `moveTokenAdjacent`-originated `tokenEntered` events are observable by triggers.
+- **Verification**:
+  - Spatial unit/integration/property/golden tests pass.
+  - Full suite verification via `npm test` passed.

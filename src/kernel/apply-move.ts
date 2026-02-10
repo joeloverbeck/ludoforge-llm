@@ -113,14 +113,34 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
 
   const stateWithUsage = incrementActionUsage(effectResult.state, action.id);
   const maxDepth = def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
+  let triggerState = stateWithUsage;
+  let triggerRng = effectResult.rng;
+  let triggerLog = [] as ApplyMoveResult['triggerFirings'];
+
+  for (const emittedEvent of effectResult.emittedEvents ?? []) {
+    const emittedEventResult = dispatchTriggers(
+      def,
+      triggerState,
+      triggerRng,
+      emittedEvent,
+      0,
+      maxDepth,
+      triggerLog,
+      adjacencyGraph,
+    );
+    triggerState = emittedEventResult.state;
+    triggerRng = emittedEventResult.rng;
+    triggerLog = emittedEventResult.triggerLog;
+  }
+
   const triggerResult = dispatchTriggers(
     def,
-    stateWithUsage,
-    effectResult.rng,
+    triggerState,
+    triggerRng,
     { type: 'actionResolved', action: move.actionId },
     0,
     maxDepth,
-    [],
+    triggerLog,
     adjacencyGraph,
   );
 

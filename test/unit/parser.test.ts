@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { parseGameSpec } from '../../src/cnl/parser.js';
 
 describe('parseGameSpec API shape', () => {
-  it('returns a total deterministic stub result', () => {
+  it('returns a total deterministic result shape', () => {
     const result = parseGameSpec('```yaml\nmetadata:\n  id: game\n```');
 
     assert.deepEqual(result.doc, {
@@ -22,6 +22,14 @@ describe('parseGameSpec API shape', () => {
     });
     assert.deepEqual(result.sourceMap, { byPath: {} });
     assert.deepEqual(result.diagnostics, []);
+  });
+
+  it('surfaces YAML lint diagnostics from fenced YAML blocks', () => {
+    const result = parseGameSpec('```yaml\nmetadata:  \n  id: on\n```');
+
+    assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_004'));
+    assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_005'));
+    assert.ok(result.diagnostics.every((diagnostic) => diagnostic.path.startsWith('yaml.block.0.')));
   });
 
   it('does not throw for arbitrary input', () => {

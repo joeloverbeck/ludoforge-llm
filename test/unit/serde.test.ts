@@ -12,7 +12,7 @@ const gameStateFixture: GameState = {
   currentPhase: asPhaseId('main'),
   activePlayer: asPlayerId(0),
   turnCount: 4,
-  rng: { state: [0n, 0x2aabn] },
+  rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 0x2aabn] },
   stateHash: 0x00abcdn,
   actionUsage: { playCard: { turnCount: 1, phaseCount: 1, gameCount: 2 } },
 };
@@ -54,6 +54,8 @@ describe('kernel bigint serialization codecs', () => {
     const serialized = serializeGameState(gameStateFixture);
 
     assert.deepEqual(serialized.rng.state, ['0x0', '0x2aab']);
+    assert.equal(serialized.rng.algorithm, 'pcg-dxsm-128');
+    assert.equal(serialized.rng.version, 1);
     assert.equal(serialized.stateHash, '0xabcd');
     assert.equal(typeof serialized.stateHash, 'string');
   });
@@ -61,13 +63,15 @@ describe('kernel bigint serialization codecs', () => {
   it('deserializeGameState reconstructs exact bigint values', () => {
     const serializedState: SerializedGameState = {
       ...gameStateFixture,
-      rng: { state: ['0x0', '0x2aab'] },
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: ['0x0', '0x2aab'] },
       stateHash: '0xabcd',
     };
 
     const deserialized = deserializeGameState(serializedState);
 
     assert.deepEqual(deserialized.rng.state, [0n, 0x2aabn]);
+    assert.equal(deserialized.rng.algorithm, 'pcg-dxsm-128');
+    assert.equal(deserialized.rng.version, 1);
     assert.equal(deserialized.stateHash, 0xabcdn);
   });
 

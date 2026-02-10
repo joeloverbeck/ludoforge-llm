@@ -165,10 +165,14 @@
     "serializedRngState": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["state"],
+      "required": ["algorithm", "version", "state"],
       "properties": {
+        "algorithm": { "const": "pcg-dxsm-128" },
+        "version": { "const": 1 },
         "state": {
           "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
           "items": { "$ref": "#/definitions/hexBigInt" }
         }
       }

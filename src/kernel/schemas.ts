@@ -408,7 +408,13 @@ export const ActionUsageRecordSchema = z
   })
   .strict();
 
-export const RngStateSchema = z.object({ state: z.array(z.bigint()) }).strict();
+export const RngStateSchema = z
+  .object({
+    algorithm: z.literal('pcg-dxsm-128'),
+    version: z.literal(1),
+    state: z.array(z.bigint()).length(2),
+  })
+  .strict();
 
 export const GameStateSchema = z
   .object({

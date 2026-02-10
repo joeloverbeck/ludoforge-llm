@@ -27,6 +27,8 @@ const fromHexBigInt = (value: HexBigInt, path: string): bigint => {
 export const serializeGameState = (state: GameState): SerializedGameState => ({
   ...state,
   rng: {
+    algorithm: state.rng.algorithm,
+    version: state.rng.version,
     state: state.rng.state.map((word) => toHexBigInt(word)),
   },
   stateHash: toHexBigInt(state.stateHash),
@@ -35,6 +37,8 @@ export const serializeGameState = (state: GameState): SerializedGameState => ({
 export const deserializeGameState = (state: SerializedGameState): GameState => ({
   ...state,
   rng: {
+    algorithm: state.rng.algorithm,
+    version: state.rng.version,
     state: state.rng.state.map((word, index) => fromHexBigInt(word, `rng.state[${index}]`)),
   },
   stateHash: fromHexBigInt(state.stateHash, 'stateHash'),

@@ -89,7 +89,7 @@ const validRuntimeTrace: GameTrace = {
     currentPhase: asPhaseId('main'),
     activePlayer: asPlayerId(0),
     turnCount: 1,
-    rng: { state: [1n] },
+    rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 3n] },
     stateHash: 42n,
     actionUsage: {},
   },
@@ -176,7 +176,7 @@ describe('json schema artifacts', () => {
       ...baseSerializedTrace,
       finalState: {
         ...baseSerializedTrace.finalState,
-        rng: { state: ['0x1', '0xBAD'] },
+        rng: { algorithm: 'pcg-dxsm-128', version: 1, state: ['0x1', '0xBAD'] },
       },
     };
 

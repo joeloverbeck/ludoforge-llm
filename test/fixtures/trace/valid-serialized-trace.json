@@ -22,7 +22,7 @@
     "currentPhase": "main",
     "activePlayer": 0,
     "turnCount": 1,
-    "rng": { "state": ["0x0", "0x2aab"] },
+    "rng": { "algorithm": "pcg-dxsm-128", "version": 1, "state": ["0x0", "0x2aab"] },
     "stateHash": "0xabcd",
     "actionUsage": {}
   },

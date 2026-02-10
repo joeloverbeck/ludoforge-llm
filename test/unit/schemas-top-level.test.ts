@@ -74,7 +74,7 @@ const validGameState = {
   currentPhase: 'main',
   activePlayer: 0,
   turnCount: 1,
-  rng: { state: [1n] },
+  rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 3n] },
   stateHash: 42n,
   actionUsage: {},
 } as const;

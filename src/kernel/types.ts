@@ -9,11 +9,13 @@ import type {
 import type { DegeneracyFlag } from './diagnostics.js';
 
 export interface RngState {
+  readonly algorithm: 'pcg-dxsm-128';
+  readonly version: 1;
   readonly state: readonly bigint[];
 }
 
 export interface Rng {
-  readonly state: readonly bigint[];
+  readonly state: RngState;
 }
 
 export type PlayerSel =
@@ -368,6 +370,8 @@ export interface EvalReport {
 export type HexBigInt = string;
 
 export interface SerializedRngState {
+  readonly algorithm: 'pcg-dxsm-128';
+  readonly version: 1;
   readonly state: readonly HexBigInt[];
 }
 

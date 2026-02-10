@@ -138,4 +138,54 @@ describe('applyMove', () => {
 
     assert.deepEqual(state, originalSnapshot);
   });
+
+  it('advances to the next decision point after actionResolved processing', () => {
+    const def: GameDef = {
+      ...createDef(),
+      globalVars: [],
+      turnStructure: {
+        phases: [{ id: asPhaseId('p1') }, { id: asPhaseId('p2') }],
+        activePlayerOrder: 'roundRobin',
+      },
+      actions: [
+        {
+          id: asActionId('advance'),
+          actor: 'active',
+          phase: asPhaseId('p1'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [{ scope: 'turn', max: 1 }],
+        },
+        {
+          id: asActionId('decide'),
+          actor: 'active',
+          phase: asPhaseId('p2'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: {},
+      currentPhase: asPhaseId('p1'),
+      actionUsage: {},
+    };
+
+    const result = applyMove(def, state, {
+      actionId: asActionId('advance'),
+      params: {},
+    });
+
+    assert.equal(result.state.currentPhase, asPhaseId('p2'));
+    assert.equal(result.state.turnCount, 0);
+    assert.equal(result.state.activePlayer, asPlayerId(0));
+  });
 });

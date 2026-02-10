@@ -1,6 +1,7 @@
 import { incrementActionUsage } from './action-usage.js';
 import { applyEffects } from './effects.js';
 import { legalMoves } from './legal-moves.js';
+import { advanceToDecisionPoint } from './phase-advance.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import type { ActionDef, ApplyMoveResult, GameDef, GameState, Move, MoveParamValue, Rng } from './types.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
@@ -123,10 +124,11 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
     ...triggerResult.state,
     rng: triggerResult.rng.state,
   };
+  const progressedState = advanceToDecisionPoint(def, stateWithRng);
 
   const stateWithHash = {
-    ...stateWithRng,
-    stateHash: computeFullHash(createZobristTable(def), stateWithRng),
+    ...progressedState,
+    stateHash: computeFullHash(createZobristTable(def), progressedState),
   };
 
   return {

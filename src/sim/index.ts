@@ -1,3 +1,1 @@
-// Module: sim
-// Implementation added by subsequent specs.
-export {};
+export { computeDeltas } from './delta.js';

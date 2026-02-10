@@ -1,11 +1,18 @@
 # SIMTRALOG-002 - Deterministic State Delta Engine
 
-**Status**: Proposed  
+**Status**: ✅ COMPLETED  
 **Spec**: `specs/10-simulator-trace-logger.md`  
-**Depends on**: `SIMTRALOG-001`
+**Depends on**: `SIMTRALOG-001` (completed)
 
 ## Goal
 Implement deterministic `computeDeltas(preState, postState)` for trace logging with stable path ordering and strict field coverage/exclusions.
+
+## Reassessed Assumptions (Before Implementation)
+- `src/sim` currently contains only a stub `index.ts`; there is no existing simulator module to integrate with yet.
+- `StateDelta` contract already exists in `src/kernel/types.ts`; this ticket should consume that contract, not redefine it.
+- Trace contract updates from `SIMTRALOG-001` are already present (including `stopReason`), so this ticket should not touch trace schema/serde artifacts.
+- Test coverage for delta behavior does not yet exist; a new focused unit suite is required.
+- Because `GameState.zones` stores token objects, zone deltas must normalize to token-id arrays (`Token.id`) to satisfy Spec 10 stability requirements.
 
 ## Scope
 - Create `src/sim/delta.ts` exporting `computeDeltas(preState, postState): readonly StateDelta[]`.
@@ -26,7 +33,7 @@ Implement deterministic `computeDeltas(preState, postState)` for trace logging w
 - `test/unit/sim/delta.test.ts` (new)
 
 ## Out Of Scope
-- Simulator loop (`runGame` / `runGames`).
+- `runGame` / `runGames` implementation (no simulator loop exists yet in `src/sim`).
 - Kernel hash computation changes.
 - Trace schema/serde changes.
 - Non-deterministic or index-level zone diff formats.
@@ -51,3 +58,16 @@ Implement deterministic `computeDeltas(preState, postState)` for trace logging w
 ## Diff Size Guardrail
 Keep ticket limited to one new module + one focused test file. Target review size: ~220 lines or less.
 
+## Outcome
+- Completion date: 2026-02-10
+- Actual changes:
+  - Added `src/sim/delta.ts` with deterministic `computeDeltas(preState, postState)` covering only Spec 10 tracked fields.
+  - Exported `computeDeltas` from `src/sim/index.ts`.
+  - Added `test/unit/sim/delta.test.ts` to cover required delta behavior and deterministic ordering.
+- Deviations from original plan:
+  - Added one extra edge-case test for tracked-key additions/removals to lock deterministic union-of-keys behavior.
+  - No simulator loop files (`runGame`/`runGames`) were touched because they do not exist yet in current baseline and are out of scope.
+- Verification:
+  - `npm run test:unit -- --coverage=false`
+  - `npm run build`
+  - `node --test dist/test/unit/sim/delta.test.js`

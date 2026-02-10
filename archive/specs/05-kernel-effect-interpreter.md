@@ -1,6 +1,6 @@
 # Spec 05: Kernel — Effect Interpreter
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0 (critical path)
 **Complexity**: L
 **Dependencies**: Spec 04
@@ -433,3 +433,18 @@ test/unit/effects-control.test.ts    # NEW — control flow tests (if, forEach, 
 test/unit/effects-sequence.test.ts   # NEW — effect sequencing tests
 test/integration/effects-complex.test.ts  # NEW — complex effect chain tests
 ```
+
+## Outcome
+- Completion date: 2026-02-10
+- What was actually changed:
+  - Effect interpreter runtime is implemented in `src/kernel/effects.ts` with public exports in `src/kernel/index.ts`.
+  - Broad unit coverage exists across variable, movement, lifecycle, control-flow, choice assertions, and runtime budget/error behavior.
+  - Added cross-effect regression coverage via:
+    - `test/integration/effects-complex.test.ts`
+    - `test/unit/property/effects.property.test.ts`
+    - `test/unit/effects.golden.test.ts`
+- Deviations from original plan:
+  - Some test files landed under different names than the initial spec sketch (for example `effects-token-move-draw` and `effects-zone-ops`), while covering the same semantics.
+- Verification results:
+  - `npm run build` passed.
+  - `npm test` passed.

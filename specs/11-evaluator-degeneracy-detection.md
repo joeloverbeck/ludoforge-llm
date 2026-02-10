@@ -108,21 +108,13 @@ Simple arithmetic mean of turn counts across all traces.
 
 #### 2. avgBranchingFactor
 
-The branching factor at each turn is the number of legal moves available. This is NOT directly stored in MoveLog (MoveLog stores the chosen move, not all legal moves).
-
-**Approach**: To compute branching factor without re-simulation, either:
-- (a) Store legal move count in MoveLog (requires extending MoveLog — preferred), OR
-- (b) Re-enumerate legal moves from stored states (expensive)
-
-**Recommended**: Extend MoveLog with `readonly legalMoveCount: number` (cheap addition during simulation). Then:
+The branching factor at each turn is the number of legal moves available. Spec 02/10 requires this as `MoveLog.legalMoveCount`, so no re-simulation is needed:
 
 ```
 avgBranchingFactor = mean(
   traces.flatMap(t => t.moves.map(m => m.legalMoveCount))
 )
 ```
-
-If legalMoveCount is not available, fall back to a sentinel value and document the limitation.
 
 #### 3. actionDiversity (normalized Shannon entropy)
 
@@ -222,7 +214,7 @@ For each trace:
   OR if trace ended without terminal result and moves array is shorter than maxTurns
   → NO_LEGAL_MOVES
 
-Note: If legalMoveCount is not in MoveLog, detect from trace metadata
+Note: `legalMoveCount` is required by Spec 02/10; treat absence as invalid trace data.
 (trace ended early without terminal result).
 ```
 
@@ -280,9 +272,9 @@ function generateEvalReport(def, traces, config?): EvalReport {
 }
 ```
 
-### MoveLog Extension
+### MoveLog Contract
 
-To support branching factor and interaction metrics without re-simulation, extend MoveLog:
+Spec 02 defines `MoveLog.legalMoveCount` and Spec 10 records it during simulation:
 
 ```typescript
 interface MoveLog {
@@ -291,11 +283,9 @@ interface MoveLog {
   readonly move: Move;
   readonly deltas: readonly StateDelta[];
   readonly triggerFirings: readonly TriggerFiring[];
-  readonly legalMoveCount: number; // NEW — number of legal moves available this turn
+  readonly legalMoveCount: number; // number of legal moves available this turn
 }
 ```
-
-This requires a minor update to Spec 10's simulator to record `legalMoves.length` before agent selection.
 
 ## Invariants
 
@@ -378,7 +368,7 @@ This requires a minor update to Spec 10's simulator to record `legalMoves.length
 - [ ] Configurable thresholds for degeneracy detection
 - [ ] Empty traces handled gracefully (zero metrics, no flags)
 - [ ] EvalReport structure complete with all fields
-- [ ] MoveLog extended with legalMoveCount (coordination with Spec 10)
+- [ ] MoveLog includes legalMoveCount and branching-factor metric uses it directly
 
 ## Files to Create/Modify
 
@@ -387,7 +377,6 @@ src/sim/metrics.ts               # NEW — computeMetrics implementation
 src/sim/degeneracy.ts            # NEW — detectDegeneracy implementation
 src/sim/eval-report.ts           # NEW — generateEvalReport
 src/sim/index.ts                 # MODIFY — re-export evaluator APIs
-src/kernel/types.ts              # MODIFY — add legalMoveCount to MoveLog
 src/sim/simulator.ts             # MODIFY — record legalMoveCount in MoveLog
 test/unit/metrics.test.ts        # NEW — metric computation tests
 test/unit/degeneracy.test.ts     # NEW — degeneracy flag tests

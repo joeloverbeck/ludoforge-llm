@@ -163,6 +163,7 @@ interface GenerateVerifyConfig {
   readonly llm: LlmInterface;
   readonly simulationRuns: number; // how many games to simulate for evaluation
   readonly maxTurns: number;
+  readonly playerCount?: number; // default: gameDef.metadata.players.min
   readonly agents: readonly Agent[];
 }
 
@@ -216,6 +217,7 @@ interface EvolutionConfig {
   readonly llm: LlmInterface;
   readonly simulationRuns: number;
   readonly maxTurns: number;
+  readonly playerCount?: number; // default: compiled game's metadata.players.min
   readonly agents: readonly Agent[];
   readonly mutationWeights: Readonly<Record<MutationOperator, number>>;
 }
@@ -329,7 +331,13 @@ function generateAndVerify(config, prompt):
     8. if compilation errors:
          prompt = appendErrorFeedback(prompt, compileDiags)
          continue
-    9. traces = runGames(gameDef, generateSeeds(config.simulationRuns), config.agents, config.maxTurns)
+    9. traces = runGames(
+         gameDef,
+         generateSeeds(config.simulationRuns),
+         config.agents,
+         config.maxTurns,
+         config.playerCount
+       )
     10. evalReport = generateEvalReport(gameDef, traces)
     11. { fitness, tier1Pass } = computeFitness(evalReport, traces)
     12. if !tier1Pass:

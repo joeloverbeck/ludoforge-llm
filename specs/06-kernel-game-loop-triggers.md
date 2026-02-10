@@ -14,9 +14,9 @@ Implement the game loop — the orchestrator that ties together state initializa
 ## Scope
 
 ### In Scope
-- `initialState(def, seed)` — create starting game state with setup effects applied
+- `initialState(def, seed, playerCount?)` — create starting game state with setup effects applied
 - `legalMoves(def, state)` — enumerate all valid moves for current player
-- `applyMove(def, state, move)` — validate, apply costs + effects, dispatch triggers, update hash
+- `applyMove(def, state, move)` — validate, apply costs + effects, dispatch triggers, update hash, and return trigger metadata
 - `dispatchTriggers(def, state, event, depth)` — match and fire triggers with depth limit
 - `terminalResult(def, state)` — evaluate end conditions
 - Phase/turn advancement logic
@@ -36,16 +36,21 @@ Implement the game loop — the orchestrator that ties together state initializa
 
 ```typescript
 // Create initial game state from definition + seed
-function initialState(def: GameDef, seed: number): GameState;
+function initialState(def: GameDef, seed: number, playerCount?: number): GameState;
 
 // Enumerate all legal moves for the active player in the current phase
 function legalMoves(def: GameDef, state: GameState): readonly Move[];
 
 // Apply a move to the game state (validate, cost, effects, triggers, advance)
-function applyMove(def: GameDef, state: GameState, move: Move): GameState;
+function applyMove(def: GameDef, state: GameState, move: Move): ApplyMoveResult;
 
 // Check if game has reached a terminal condition
 function terminalResult(def: GameDef, state: GameState): TerminalResult | null;
+
+interface ApplyMoveResult {
+  readonly state: GameState;
+  readonly triggerFirings: readonly TriggerFiring[];
+}
 ```
 
 ### Internal Functions
@@ -88,22 +93,26 @@ function enumerateParamDomains(
 
 ## Implementation Requirements
 
-### initialState(def, seed)
+### initialState(def, seed, playerCount?)
 
 1. Create PRNG from seed: `createRng(BigInt(seed))`
 2. Create Zobrist table from GameDef: `createZobristTable(def)`
-3. Initialize global variables from `def.globalVars` (each at its `init` value)
-4. Initialize per-player variables from `def.perPlayerVars` for each player
-5. Initialize all zones as empty arrays
-6. Set `currentPhase` to first phase in `def.turnStructure.phases`
-7. Set `activePlayer` to first player (PlayerId 0)
-8. Set `turnCount` to 0
-9. Initialize `actionUsage` as empty records
-10. Apply `def.setup` effects via `applyEffects` (this populates zones with initial tokens, etc.)
-11. Compute initial Zobrist hash via `computeFullHash`
-12. Dispatch `phaseEnter` trigger for initial phase
-13. Dispatch `turnStart` trigger for first player
-14. Return complete GameState
+3. Resolve `playerCount`:
+   - If argument provided: validate `def.metadata.players.min <= playerCount <= def.metadata.players.max`
+   - If omitted: default to `def.metadata.players.min`
+4. Initialize global variables from `def.globalVars` (each at its `init` value)
+5. Initialize per-player variables from `def.perPlayerVars` for each player in `[0, playerCount - 1]`
+6. Initialize all zones as empty arrays
+7. Set `playerCount` on state
+8. Set `currentPhase` to first phase in `def.turnStructure.phases`
+9. Set `activePlayer` to first player (PlayerId 0)
+10. Set `turnCount` to 0
+11. Initialize `actionUsage` as empty records
+12. Apply `def.setup` effects via `applyEffects` (this populates zones with initial tokens, etc.)
+13. Compute initial Zobrist hash via `computeFullHash`
+14. Dispatch `phaseEnter` trigger for initial phase
+15. Dispatch `turnStart` trigger for first player
+16. Return complete GameState
 
 ### legalMoves(def, state)
 
@@ -138,7 +147,7 @@ For each action in `def.actions`:
 8. **Update Zobrist hash**: Incrementally update hash based on all state deltas (variable changes, token movements)
 9. **Check phase advancement**: If action indicates end-of-phase, advance phase
 10. **Check turn advancement**: If all phases complete, advance turn (next player, reset per-turn usage, dispatch turnEnd/turnStart triggers)
-11. Return new GameState
+11. Return `{ state: newState, triggerFirings }`
 
 ### dispatchTriggers(def, state, rng, event, depth, maxDepth, triggerLog)
 
@@ -272,7 +281,7 @@ For each action in `def.actions`:
 
 - For any valid GameDef + seed, random play for 1000 turns never crashes (no uncaught exceptions)
 - Every move in `legalMoves` output passes precondition check when evaluated independently
-- `applyMove` on any legal move produces a valid GameState (all vars in bounds, no orphan tokens)
+- `applyMove` on any legal move produces a valid `ApplyMoveResult.state` (all vars in bounds, no orphan tokens)
 - After `applyMove`, the new state's Zobrist hash matches `computeFullHash` recomputation
 
 ### Golden Tests

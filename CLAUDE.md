@@ -21,16 +21,16 @@ Greenfield project. The design spec lives in `brainstorming/executable-board-gam
 
 ## Planned Architecture
 
-Six modules, each a directory under `src/`:
+Five source modules under `src/`, plus a top-level `schemas/` directory:
 
-| Module | Purpose |
-|--------|---------|
-| `kernel/` | Pure, deterministic game engine — state init, legal move enumeration, condition eval, effect application, trigger dispatch, terminal detection |
-| `cnl/` | Game Spec parsing (Markdown → YAML blocks, YAML 1.2 strict), validation, macro expansion (including board generation), compilation to GameDef JSON |
-| `agents/` | Bot implementations (RandomAgent, GreedyAgent, optional UCT/MCTS) conforming to a strict `Agent` interface |
-| `sim/` | Simulation runner, trace logging, metrics computation, degeneracy flag detection |
-| `cli/` | Developer commands: `spec:lint`, `spec:compile`, `run`, `eval`, `replay` |
-| `schemas/` | JSON Schemas for GameDef, GameSpecDoc, Trace, EvalReport |
+| Directory | Purpose |
+|-----------|---------|
+| `src/kernel/` | Pure, deterministic game engine — state init, legal move enumeration, condition eval, effect application, trigger dispatch, terminal detection |
+| `src/cnl/` | Game Spec parsing (Markdown → YAML blocks, YAML 1.2 strict), validation, macro expansion (including board generation), compilation to GameDef JSON |
+| `src/agents/` | Bot implementations (RandomAgent, GreedyAgent, optional UCT/MCTS) conforming to a strict `Agent` interface |
+| `src/sim/` | Simulation runner, trace logging, metrics computation, degeneracy flag detection |
+| `src/cli/` | Developer commands: `spec:lint`, `spec:compile`, `run`, `eval`, `replay` |
+| `schemas/` | JSON Schemas for GameDef, GameSpecDoc, Trace, EvalReport (top-level, not under `src/`) |
 
 ### Core Design Constraints
 
@@ -57,16 +57,21 @@ These are the expected commands once the project is scaffolded:
 
 ```bash
 # Build
-npx tsc                              # TypeScript compilation
+npm run build                        # TypeScript compilation (tsc)
+npm run clean                        # Remove dist/ for fresh build
 
-# Test (Node.js built-in test runner)
-node --test test/unit/               # All unit tests
-node --test test/integration/        # All integration tests
-node --test test/e2e/                # All E2E tests
-node --test test/unit/kernel.test.ts # Single test file
+# Test (runs against compiled JS in dist/)
+npm test                             # Auto-builds via pretest, then unit + integration
+npm run test:unit                    # Unit tests only
+npm run test:integration             # Integration tests only
+npm run test:e2e                     # E2E tests only
+npm run test:all                     # Unit + integration + e2e
+
+# Single test file (run against dist/)
+node --test dist/test/unit/kernel.test.js
 
 # Lint & Typecheck
-npx tsc --noEmit                     # Type checking only
+npm run typecheck                    # tsc --noEmit
 ```
 
 ## Test Directory Structure

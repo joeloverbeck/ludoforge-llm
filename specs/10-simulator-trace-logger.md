@@ -14,13 +14,13 @@ Implement the simulation runner that orchestrates full game playthroughs: initia
 ## Scope
 
 ### In Scope
-- `runGame(def, seed, agents, maxTurns)` — main simulation loop
+- `runGame(def, seed, agents, maxTurns, playerCount?)` — main simulation loop
 - MoveLog construction: stateHash, player, move, deltas, triggerFirings
 - GameTrace construction: metadata, moves, finalState, result, turnsCount
 - Delta computation between pre-move and post-move states
 - Turn cap enforcement (maxTurns)
-- RNG forking for agent use (agent randomness isolated from game RNG)
-- Batch simulation: `runGames(def, seeds, agents, maxTurns)` for multiple runs
+- Per-agent RNG threading (agent randomness isolated from game RNG)
+- Batch simulation: `runGames(def, seeds, agents, maxTurns, playerCount?)` for multiple runs
 
 ### Out of Scope
 - Agent implementations (Spec 09 — consumed here)
@@ -40,7 +40,8 @@ function runGame(
   def: GameDef,
   seed: number,
   agents: readonly Agent[],
-  maxTurns: number
+  maxTurns: number,
+  playerCount?: number
 ): GameTrace;
 
 // Run multiple games with different seeds
@@ -48,7 +49,8 @@ function runGames(
   def: GameDef,
   seeds: readonly number[],
   agents: readonly Agent[],
-  maxTurns: number
+  maxTurns: number,
+  playerCount?: number
 ): readonly GameTrace[];
 ```
 
@@ -59,6 +61,7 @@ interface MoveLog {
   readonly stateHash: bigint;       // Zobrist hash AFTER move applied
   readonly player: PlayerId;
   readonly move: Move;
+  readonly legalMoveCount: number;  // number of legal moves before the chosen move
   readonly deltas: readonly StateDelta[];
   readonly triggerFirings: readonly TriggerFiring[];
 }
@@ -92,13 +95,17 @@ interface GameTrace {
 ### runGame Main Loop
 
 ```
-function runGame(def, seed, agents, maxTurns):
-  1. state = initialState(def, seed)
-  2. gameRng = state.rng (game-level RNG from initialState)
-  3. moveLogs = []
-  4. turnCount = 0
+function runGame(def, seed, agents, maxTurns, playerCount?):
+  1. state = initialState(def, seed, playerCount)
+  2. resolvedPlayerCount = state.playerCount
+  3. assert agents.length === resolvedPlayerCount
+  4. Initialize per-player RNG streams:
+       agentRngByPlayer[p] = createRng(BigInt(seed) ^ (BigInt(p + 1) * 0x9e3779b97f4a7c15n))
+       for p in [0..resolvedPlayerCount-1]
+  5. moveLogs = []
+  6. turnCount = 0
 
-  5. LOOP:
+  7. LOOP:
      a. result = terminalResult(def, state)
      b. if result !== null → BREAK (game over)
      c. if turnCount >= maxTurns → BREAK (turn cap)
@@ -109,34 +116,33 @@ function runGame(def, seed, agents, maxTurns):
      f. activePlayer = state.activePlayer
      g. agent = agents[activePlayer]
 
-     h. [agentRng, gameRng] = forkRng(gameRng)
-        // Fork RNG: agent gets a copy, game continues with its own stream
-        // This ensures agent randomness doesn't affect game determinism
-
-     i. chosenMove = agent.chooseMove({
+     h. selection = agent.chooseMove({
           def, state, playerId: activePlayer,
-          legalMoves: moves, rng: agentRng
+          legalMoves: moves, rng: agentRngByPlayer[activePlayer]
         })
+     i. chosenMove = selection.move
+     j. agentRngByPlayer[activePlayer] = selection.rng
 
-     j. preState = state
-     k. state = applyMove(def, state, chosenMove)
+     k. preState = state
+     l. applyResult = applyMove(def, state, chosenMove)
+        state = applyResult.state
         // applyMove handles: cost, effects, triggers, hash update, phase/turn advance
 
-     l. deltas = computeDeltas(preState, state)
-     m. triggerFirings = extractTriggerFirings(preState, state)
-        // trigger firings tracked by applyMove internally
+     m. deltas = computeDeltas(preState, state)
+     n. triggerFirings = applyResult.triggerFirings
 
-     n. moveLogs.push({
+     o. moveLogs.push({
           stateHash: state.stateHash,
           player: activePlayer,
           move: chosenMove,
+          legalMoveCount: moves.length,
           deltas,
           triggerFirings
         })
 
-     o. turnCount = state.turnCount
+     p. turnCount = state.turnCount
 
-  6. Return GameTrace {
+  8. Return GameTrace {
        gameDefId: def.metadata.id,
        seed,
        moves: moveLogs,
@@ -146,16 +152,16 @@ function runGame(def, seed, agents, maxTurns):
      }
 ```
 
-### RNG Forking Strategy
+### Agent RNG Strategy
 
-The simulation uses TWO RNG streams:
+The simulation uses separate RNG streams:
 1. **Game RNG**: Part of GameState, used by kernel effects (shuffle, random positioning). Deterministic based on seed + moves.
-2. **Agent RNG**: Forked from game RNG before each agent call. Used by agents for random selection and tiebreaking. Isolated — agent randomness does not affect game state RNG.
+2. **Agent RNG(s)**: One stream per player, initialized deterministically from the run seed and threaded through agent calls via `{ move, rng }`.
 
 This separation ensures that:
-- Swapping agent implementations doesn't change the game's random events (shuffles, draws)
-- Same seed + same moves = same game state, regardless of which agents are playing
-- Agent randomness is still deterministic (forked from deterministic stream)
+- Agent randomness never mutates game RNG state
+- Agent streams are deterministic and replayable
+- Same seed + same move sequence = same game RNG outcomes
 
 ### Delta Computation
 
@@ -181,26 +187,11 @@ Deltas use dot-path notation for the `path` field:
 
 ### Trigger Firing Extraction
 
-Trigger firings are produced by `applyMove` → `dispatchTriggers` (Spec 06). The simulator needs to capture these for the MoveLog.
-
-**Integration approach**: Either:
-1. `applyMove` returns trigger firings as part of its result (requires modifying applyMove return type to include metadata), OR
-2. The simulator wraps `dispatchTriggers` to capture firings
-
-Option 1 is cleaner. Extend `applyMove` return type:
-
-```typescript
-interface ApplyMoveResult {
-  readonly state: GameState;
-  readonly triggerFirings: readonly TriggerFiring[];
-}
-```
-
-Note: This may require a minor API extension to Spec 06's `applyMove`. The spec should document this integration requirement.
+Trigger firings are returned by Spec 06's `applyMove` result and copied directly into `MoveLog.triggerFirings`.
 
 ### Batch Simulation
 
-`runGames(def, seeds, agents, maxTurns)`:
+`runGames(def, seeds, agents, maxTurns, playerCount?)`:
 
 - Run `runGame` for each seed independently
 - Each run is fully independent (different seed → different RNG stream)
@@ -209,17 +200,14 @@ Note: This may require a minor API extension to Spec 06's `applyMove`. The spec 
 
 ### BigInt Serialization
 
-`GameTrace` contains `bigint` values (stateHash). Since `JSON.stringify` does not support BigInt natively:
-
-- Provide a `serializeTrace(trace): string` function that converts BigInt to hex strings
-- Provide a `deserializeTrace(json): GameTrace` function that restores BigInt from hex strings
-- Use a replacer/reviver pattern for JSON serialization
+`GameTrace` contains `bigint` values (stateHash). Use Spec 02 serialization codecs:
+- `serializeTrace(trace): SerializedGameTrace`
+- `deserializeTrace(json): GameTrace`
+- CLI (Spec 12) handles JSON stringification of serialized DTOs
 
 ```typescript
-function serializeTrace(trace: GameTrace): string {
-  return JSON.stringify(trace, (key, value) =>
-    typeof value === 'bigint' ? `0x${value.toString(16)}` : value
-  );
+function serializeTrace(trace: GameTrace): SerializedGameTrace {
+  return serializeTraceDto(trace);
 }
 ```
 
@@ -232,7 +220,7 @@ function serializeTrace(trace: GameTrace): string {
 5. `GameTrace.result` is non-null only if a terminal condition was met (null for maxTurns timeout or stall)
 6. All moves in trace are legal (validated by `applyMove` at each step)
 7. Deltas accurately reflect state changes (computable from consecutive states)
-8. Agent RNG is forked from game RNG — agent randomness doesn't pollute game state
+8. Agent RNG streams are separate from game RNG — agent randomness doesn't pollute game state
 9. `runGames` produces independent traces (different seeds → different games)
 10. Trace serialization round-trips correctly (serialize → deserialize → identical trace)
 
@@ -264,8 +252,8 @@ function serializeTrace(trace: GameTrace): string {
 **State hashes**:
 - Every MoveLog.stateHash matches independently computed `computeFullHash` on the corresponding state
 
-**RNG forking**:
-- Two runs with same seed but different agent types → game state hashes differ (agents make different choices) but game RNG is forked correctly
+**Agent RNG threading**:
+- Two runs with same seed but different agent types → game state hashes differ (agents make different choices) while game RNG remains isolated
 - Two runs with same seed and same agent type → identical traces
 
 **Serialization**:
@@ -300,7 +288,7 @@ function serializeTrace(trace: GameTrace): string {
 - [ ] Every MoveLog has stateHash matching independently computed hash
 - [ ] Deltas accurately reflect pre/post state differences
 - [ ] Same seed + same agents = identical trace (determinism verified)
-- [ ] Agent RNG forked correctly (isolated from game RNG)
+- [ ] Agent RNG threaded correctly (isolated from game RNG)
 - [ ] `runGames` produces independent traces for different seeds
 - [ ] Trace serialization handles BigInt round-trip
 - [ ] maxTurns cap works correctly

@@ -39,7 +39,7 @@ interface Agent {
     readonly playerId: PlayerId;
     readonly legalMoves: readonly Move[];
     readonly rng: Rng;
-  }): Move;
+  }): { readonly move: Move; readonly rng: Rng };
 }
 ```
 
@@ -60,35 +60,35 @@ function parseAgentSpec(spec: string, playerCount: number): readonly Agent[];
 
 ```typescript
 class RandomAgent implements Agent {
-  chooseMove(input): Move {
+  chooseMove(input): { move: Move; rng: Rng } {
     // Select uniformly at random from legalMoves using provided PRNG
-    const [index, _newRng] = nextInt(input.rng, 0, input.legalMoves.length - 1);
-    return input.legalMoves[index];
+    const [index, nextRng] = nextInt(input.rng, 0, input.legalMoves.length - 1);
+    return { move: input.legalMoves[index], rng: nextRng };
   }
 }
 ```
 
 **Key behaviors**:
 - Uses `nextInt` from Spec 03 (PRNG), NOT `Math.random()`
-- Returns a move from `legalMoves` array (never invents a move)
+- Returns a move from `legalMoves` array (never invents a move) plus advanced RNG state
 - If `legalMoves` has exactly 1 element, returns that element (no randomness needed)
 - If `legalMoves` is empty: this should never happen in normal play (Spec 06's game loop checks terminal before asking for moves), but if it does, throw descriptive error
-- Deterministic: same state + same rng → same move
+- Deterministic: same state + same rng → same `{move, rng}` result
 
-**Note on RNG threading**: The agent receives an `Rng` but does NOT return the updated rng. The simulation loop (Spec 10) is responsible for forking the RNG for agent use so that agent randomness doesn't affect game RNG. See Spec 10 for details.
+**RNG threading contract**: Agents are pure and do not keep hidden mutable RNG state. The caller threads RNG by feeding the returned `rng` back into the same agent on the next decision.
 
 ### GreedyAgent
 
 ```typescript
 class GreedyAgent implements Agent {
-  chooseMove(input): Move {
+  chooseMove(input): { move: Move; rng: Rng } {
     // Score each legal move by one-step lookahead
     // Pick the move with highest score (tiebreak by RNG)
     let bestScore = -Infinity;
     let bestMoves: Move[] = [];
 
     for (const move of input.legalMoves) {
-      const nextState = applyMove(input.def, input.state, move);
+      const { state: nextState } = applyMove(input.def, input.state, move);
       const score = evaluateState(input.def, nextState, input.playerId);
       if (score > bestScore) {
         bestScore = score;
@@ -99,9 +99,11 @@ class GreedyAgent implements Agent {
     }
 
     // Tiebreak: random selection among equally-scored moves
-    if (bestMoves.length === 1) return bestMoves[0];
-    const [index, _newRng] = nextInt(input.rng, 0, bestMoves.length - 1);
-    return bestMoves[index];
+    if (bestMoves.length === 1) {
+      return { move: bestMoves[0], rng: input.rng };
+    }
+    const [index, nextRng] = nextInt(input.rng, 0, bestMoves.length - 1);
+    return { move: bestMoves[index], rng: nextRng };
   }
 }
 ```
@@ -176,7 +178,7 @@ Usage: `parseAgentSpec("random,greedy", 2)` → `[RandomAgent, GreedyAgent]`
 2. Agent never throws if `legalMoves` is non-empty
 3. RandomAgent uses provided PRNG (not `Math.random`)
 4. GreedyAgent is deterministic given same state + same RNG
-5. Agent interface allows RNG parameter (RandomAgent requires it, GreedyAgent uses it for tiebreaking)
+5. Agent interface threads RNG explicitly (`chooseMove` returns `{ move, rng }`)
 6. GreedyAgent's evaluation function uses integer-only arithmetic
 7. `parseAgentSpec` validates agent count matches player count
 
@@ -188,7 +190,7 @@ Usage: `parseAgentSpec("random,greedy", 2)` → `[RandomAgent, GreedyAgent]`
 - With known seed: picks expected move from 5 legal moves (golden test)
 - With single legal move: always returns that move
 - With 2 legal moves + known seed: deterministic choice verified
-- Same state + same rng → same move choice (determinism)
+- Same state + same rng → same `{move, rng}` result (determinism)
 - Over 100 calls with 3 legal moves: all 3 are chosen at least once (rough uniformity)
 
 **GreedyAgent**:
@@ -196,7 +198,7 @@ Usage: `parseAgentSpec("random,greedy", 2)` → `[RandomAgent, GreedyAgent]`
 - Tiebreak scenario: moves A and B both give +1 VP → deterministic tiebreak via RNG
 - With known seed for tiebreak: picks expected move (golden test)
 - Evaluation function: state with money=5, vp=3 → expected score
-- Same state + same rng → same move choice (determinism)
+- Same state + same rng → same `{move, rng}` result (determinism)
 
 **Agent factory**:
 - `createAgent('random')` → RandomAgent instance
@@ -212,7 +214,7 @@ Usage: `parseAgentSpec("random,greedy", 2)` → `[RandomAgent, GreedyAgent]`
 
 ### Property Tests
 
-- Agent always returns element of `legalMoves` array (for any valid input with non-empty legal moves)
+- Agent result `.move` is always an element of `legalMoves` array (for any valid input with non-empty legal moves)
 - Agent never throws for non-empty `legalMoves`
 
 ### Golden Tests

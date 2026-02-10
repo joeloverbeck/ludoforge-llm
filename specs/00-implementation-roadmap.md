@@ -78,9 +78,9 @@ This is the longest dependency chain and determines minimum time-to-MVP.
 **Gate**: Can run a hardcoded GameDef through the kernel with deterministic results.
 
 **Verification criteria**:
-- `initialState(gameDef, seed)` produces valid GameState
+- `initialState(gameDef, seed, playerCount?)` produces valid GameState
 - `legalMoves(gameDef, state)` returns enumerable moves
-- `applyMove(gameDef, state, move)` returns new state with updated Zobrist hash
+- `applyMove(gameDef, state, move)` returns `{ state, triggerFirings }` with updated Zobrist hash in `state`
 - Same seed + same moves = identical state hashes at every step
 - Trigger chains capped at maxTriggerDepth
 - `terminalResult` detects win/loss/draw conditions
@@ -180,11 +180,11 @@ All type definitions live in Spec 02. Other specs import and use these types but
 | Spec 03 | Spec 06 | Zobrist hash: `initHash`, `updateHash` |
 | Spec 04 | Spec 05, 06, 07 | `evalCondition`, `evalValue`, `evalQuery` |
 | Spec 05 | Spec 06 | `applyEffect`, `applyEffects` |
-| Spec 06 | Spec 09, 10 | `initialState`, `legalMoves`, `applyMove`, `terminalResult` |
+| Spec 06 | Spec 09, 10 | `initialState(def, seed, playerCount?)`, `legalMoves`, `applyMove` (returns `{ state, triggerFirings }`), `terminalResult` |
 | Spec 07 | Spec 08b | `buildAdjacencyGraph`, `generateGrid`, `generateHex` |
 | Spec 08a | Spec 08b | `parseGameSpec`, `validateGameSpec`, `GameSpecDoc` |
 | Spec 08b | Spec 12 | `expandMacros`, `compileGameSpecToGameDef` |
-| Spec 09 | Spec 10 | `Agent` interface, `RandomAgent`, `GreedyAgent` |
+| Spec 09 | Spec 10 | `Agent.chooseMove` (returns `{ move, rng }`), `RandomAgent`, `GreedyAgent` |
 | Spec 10 | Spec 11, 12 | `runGame`, `GameTrace` |
 | Spec 11 | Spec 12, 14 | `computeMetrics`, `detectDegeneracy`, `generateEvalReport` |
 

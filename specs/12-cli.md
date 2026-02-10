@@ -133,22 +133,26 @@ spec:lint results for game-spec.md
 
 ### Command: run
 
-**Usage**: `ludoforge run <game.json> --agents <random,greedy> --seed <n> [--max-turns <n>] [--out <trace.json>] [--quiet]`
+**Usage**: `ludoforge run <game.json> --agents <random,greedy> --seed <n> [--players <n>] [--max-turns <n>] [--out <trace.json>] [--quiet]`
 
 **Behavior**:
 1. Read and parse GameDef JSON from file
 2. Validate with Zod schema
-3. Parse agent spec string → create agents via `parseAgentSpec`
-4. Call `runGame(def, seed, agents, maxTurns)`
-5. If `--out` specified: write GameTrace JSON to file
-6. Output summary: winner, turns played, final scores
-7. If `--quiet`: suppress per-turn output, only show final result
-8. Exit 0
+3. Resolve player count:
+   - If `--players` provided: validate against `def.metadata.players.min/max`
+   - If omitted: use `def.metadata.players.min`
+4. Parse agent spec string → create agents via `parseAgentSpec(spec, playerCount)`
+5. Call `runGame(def, seed, agents, maxTurns, playerCount)`
+6. If `--out` specified: write GameTrace JSON to file
+7. Output summary: winner, turns played, final scores
+8. If `--quiet`: suppress per-turn output, only show final result
+9. Exit 0
 
 **Default values**:
 - `--seed`: 1
 - `--max-turns`: 1000
-- `--agents`: "random,random" (number of agents must match player count)
+- `--players`: `def.metadata.players.min`
+- `--agents`: if omitted, synthesize `"random"` repeated `playerCount` times
 
 **Summary output**:
 ```
@@ -163,21 +167,23 @@ Trace written to trace.json
 
 ### Command: eval
 
-**Usage**: `ludoforge eval <game.json> --runs <n> --agents <random,greedy> [--seed-start <n>] [--max-turns <n>] [--out <report.json>] [--json]`
+**Usage**: `ludoforge eval <game.json> --runs <n> --agents <random,greedy> [--players <n>] [--seed-start <n>] [--max-turns <n>] [--out <report.json>] [--json]`
 
 **Behavior**:
 1. Read and validate GameDef JSON
-2. Parse agent spec
-3. Generate seeds: `[seedStart, seedStart+1, ..., seedStart+runs-1]`
-4. Call `runGames(def, seeds, agents, maxTurns)` → traces
-5. Call `generateEvalReport(def, traces)` → report
-6. If `--out` specified: write EvalReport JSON to file
-7. Output summary in human-readable (default) or JSON format
+2. Resolve player count (same rule as `run`)
+3. Parse agent spec with `playerCount`
+4. Generate seeds: `[seedStart, seedStart+1, ..., seedStart+runs-1]`
+5. Call `runGames(def, seeds, agents, maxTurns, playerCount)` → traces
+6. Call `generateEvalReport(def, traces)` → report
+7. If `--out` specified: write EvalReport JSON to file
+8. Output summary in human-readable (default) or JSON format
 
 **Default values**:
 - `--runs`: 10
 - `--seed-start`: 1
 - `--max-turns`: 1000
+- `--players`: `def.metadata.players.min`
 
 **Human-readable output**:
 ```
@@ -251,6 +257,7 @@ const { values, positionals } = parseArgs({
     agents: { type: 'string', short: 'a' },
     seed: { type: 'string', short: 's' },
     'max-turns': { type: 'string' },
+    players: { type: 'string', short: 'p' },
     runs: { type: 'string', short: 'n' },
     'seed-start': { type: 'string' },
     json: { type: 'boolean' },

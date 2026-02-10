@@ -9,7 +9,7 @@
 
 ## Overview
 
-Define ALL TypeScript types for the entire LudoForge-LLM system: game definitions, game state, AST nodes, selectors, runtime logs, diagnostics, and agent interfaces. Provide Zod schemas for runtime validation and JSON Schemas for external tooling. Implement `validateGameDef` for semantic validation (referential integrity). This spec is the type foundation consumed by every subsequent spec.
+Define ALL TypeScript types for the entire LudoForge-LLM system: game definitions, game state, AST nodes, selectors, runtime logs, diagnostics, and agent interfaces. Provide Zod schemas for runtime validation and JSON Schemas for external tooling. Implement `validateGameDef` for semantic validation (referential integrity and consistency checks). Define canonical serialized forms for types containing `bigint` to keep CLI/JSON I/O deterministic. This spec is the type foundation consumed by every subsequent spec.
 
 ## Scope
 
@@ -18,6 +18,7 @@ Define ALL TypeScript types for the entire LudoForge-LLM system: game definition
 - Branded types for type safety (PlayerId, ZoneId, TokenId)
 - Zod schemas for runtime validation of GameDef and GameState
 - JSON Schema files for GameDef, Trace, and EvalReport
+- Serialization/deserialization contracts for runtime types that include `bigint`
 - `validateGameDef(def): Diagnostic[]` — semantic validation
 - Diagnostic type with LLM-friendly fields
 - Agent interface definition
@@ -75,8 +76,10 @@ interface GameState {
   readonly globalVars: Readonly<Record<string, number>>;
   readonly perPlayerVars: Readonly<Record<string, Readonly<Record<string, number>>>>;
   // perPlayerVars keyed by PlayerId (as string), then var name
+  readonly playerCount: number;
+  // concrete player count used for this run (must satisfy metadata.players.min/max)
   readonly zones: Readonly<Record<string, readonly Token[]>>;
-  // zones keyed by ZoneId (as string)
+  // zones keyed by concrete zone instance ID (e.g. "deck:none", "hand:0")
   readonly currentPhase: PhaseId;
   readonly activePlayer: PlayerId;
   readonly turnCount: number;
@@ -86,6 +89,8 @@ interface GameState {
   // tracks per-action limits (per turn, per phase, per game)
 }
 ```
+
+`playerCount` is runtime-selected per game instance (must satisfy `metadata.players.min/max`). The selection source/API is defined by the game-loop layer (Spec 06).
 
 ### Supporting Definitions
 
@@ -223,7 +228,7 @@ type Reference =
   | { readonly ref: 'gvar'; readonly var: string }
   | { readonly ref: 'pvar'; readonly player: PlayerSel; readonly var: string }
   | { readonly ref: 'zoneCount'; readonly zone: ZoneSel }
-  | { readonly ref: 'tokenProp'; readonly token: string; readonly prop: string }
+  | { readonly ref: 'tokenProp'; readonly token: TokenSel; readonly prop: string }
   | { readonly ref: 'binding'; readonly name: string };
 ```
 
@@ -333,11 +338,11 @@ type PlayerSel =
   | 'active'
   | 'all'
   | 'allOther'
-  | { readonly id: number }
+  | { readonly id: PlayerId }
   | { readonly chosen: string }
   | { readonly relative: 'left' | 'right' };
 
-type ZoneSel = string; // format: "zoneId:none" | "zoneId:<playerSel>"
+type ZoneSel = string; // format: "<zoneId>:none" | "<zoneId>:<playerSel>"
 
 type TokenSel = string; // format: "$paramName" | "$bindName"
 ```
@@ -347,13 +352,17 @@ type TokenSel = string; // format: "$paramName" | "$bindName"
 ```typescript
 interface Move {
   readonly actionId: ActionId;
-  readonly params: Readonly<Record<string, number | string | boolean | TokenId>>;
+  readonly params: Readonly<Record<string, MoveParamValue>>;
 }
+
+type MoveParamScalar = number | string | boolean | TokenId | ZoneId | PlayerId;
+type MoveParamValue = MoveParamScalar | readonly MoveParamScalar[];
 
 interface MoveLog {
   readonly stateHash: bigint;
   readonly player: PlayerId;
   readonly move: Move;
+  readonly legalMoveCount: number; // needed by evaluator metrics/degeneracy checks
   readonly deltas: readonly StateDelta[];
   readonly triggerFirings: readonly TriggerFiring[];
 }
@@ -409,6 +418,30 @@ interface Metrics {
 }
 ```
 
+### Serialized DTO Types (JSON-safe)
+
+```typescript
+type HexBigInt = string; // /^0x[0-9a-f]+$/
+
+interface SerializedRngState {
+  readonly state: readonly HexBigInt[];
+}
+
+interface SerializedMoveLog extends Omit<MoveLog, 'stateHash'> {
+  readonly stateHash: HexBigInt;
+}
+
+interface SerializedGameState extends Omit<GameState, 'rng' | 'stateHash'> {
+  readonly rng: SerializedRngState;
+  readonly stateHash: HexBigInt;
+}
+
+interface SerializedGameTrace extends Omit<GameTrace, 'moves' | 'finalState'> {
+  readonly moves: readonly SerializedMoveLog[];
+  readonly finalState: SerializedGameState;
+}
+```
+
 ### DegeneracyFlag Enum — 6 values
 
 ```typescript
@@ -436,6 +469,7 @@ interface BehaviorCharacterization {
 
 ```typescript
 interface Diagnostic {
+  readonly code: string; // stable programmatic code, e.g. "REF_ZONE_MISSING"
   readonly path: string;
   readonly severity: 'error' | 'warning' | 'info';
   readonly message: string;
@@ -455,7 +489,7 @@ interface Agent {
     readonly playerId: PlayerId;
     readonly legalMoves: readonly Move[];
     readonly rng: Rng;
-  }): Move;
+  }): { readonly move: Move; readonly rng: Rng };
 }
 ```
 
@@ -518,6 +552,8 @@ Zod schemas must:
 - Reject malformed input with descriptive error paths
 - Validate nested AST structures (conditions, effects, values) recursively
 - Enforce enum constraints (DegeneracyFlag values, PlayerSel variants)
+- Be explicit about strictness policy (`.strict()` vs passthrough) and apply it consistently
+- Support runtime types with `bigint` via dedicated serialized schemas (hex string format)
 
 ### JSON Schema Files
 
@@ -528,24 +564,38 @@ Generate or hand-write JSON Schema files for external tooling:
 
 These must be consistent with the Zod schemas (single source of truth is the TypeScript types; both Zod and JSON Schema derive from them).
 
+Important serialization rule:
+- JSON Schema targets serialized DTOs, not raw in-memory runtime types
+- Any `bigint` field (e.g. `stateHash`, PRNG state words) must be encoded as lowercase hex strings (e.g. `"0x0123abcd..."`)
+- Provide explicit codec helpers:
+  - `serializeGameState(state: GameState): SerializedGameState`
+  - `deserializeGameState(json: SerializedGameState): GameState`
+  - `serializeTrace(trace: GameTrace): SerializedGameTrace`
+  - `deserializeTrace(json: SerializedGameTrace): GameTrace`
+
 ### validateGameDef
 
 `validateGameDef(def: GameDef): Diagnostic[]`
 
 Performs semantic validation beyond structural schema checks:
 
-1. **Zone reference integrity**: Every zone referenced in effects, conditions, params, triggers, and setup exists in `def.zones`
-2. **Variable reference integrity**: Every `gvar` reference names a variable in `def.globalVars`; every `pvar` reference names a variable in `def.perPlayerVars`
-3. **Token type integrity**: Every `createToken` type references a valid `def.tokenTypes` entry
-4. **Phase reference integrity**: Every action's `phase` references a valid `def.turnStructure.phases` entry
-5. **Action reference integrity**: Every trigger with `actionResolved` event references a valid action (if action is specified)
-6. **Param domain validity**: Every param's domain query is well-formed (zone exists for `tokensInZone`, range is valid for `intsInRange`)
-7. **Variable bounds consistency**: Every `VariableDef` has `min <= init <= max`
-8. **Adjacency consistency**: If zone A lists zone B in `adjacentTo`, zone B should list zone A (warning if not)
-9. **Trigger depth configured**: If triggers can cascade, `metadata.maxTriggerDepth` should be set
-10. **No impossible choices**: Warn if a param domain references a zone that starts empty and has no effects that add tokens to it
+1. **Identifier uniqueness**: IDs are unique within each namespace (`zones`, `tokenTypes`, `phases`, `actions`, `triggers`, variable names)
+2. **Zone reference integrity**: Every zone referenced in effects, conditions, params, triggers, and setup exists in `def.zones`
+3. **Variable reference integrity**: Every `gvar` reference names a variable in `def.globalVars`; every `pvar` reference names a variable in `def.perPlayerVars`
+4. **Token type integrity**: Every `createToken` type references a valid `def.tokenTypes` entry
+5. **Token property integrity**: `tokenProp` and `createToken.props` keys exist on the referenced token type and value types are compatible
+6. **Phase reference integrity**: Every action's `phase` and every trigger phase event reference a valid `def.turnStructure.phases` entry
+7. **Action reference integrity**: Every trigger with `actionResolved` event references a valid action (if action is specified)
+8. **Param domain validity**: Every param's domain query is well-formed (zone exists for `tokensInZone`, range is valid for `intsInRange`)
+9. **Selector validity**: `PlayerSel.id` is within player bounds; `all`/`allOther`/`relative` selectors are valid for configured player counts
+10. **Metadata validity**: `players.min >= 1`, `players.min <= players.max`, and `maxTriggerDepth` (if present) is an integer >= 1
+11. **Variable bounds consistency**: Every `VariableDef` has `min <= init <= max`
+12. **Scoring/end-condition consistency**: `result.type: 'score'` requires `def.scoring`; warn if `def.scoring` exists but no score-based end condition can use it
+13. **Adjacency consistency**: If zone A lists zone B in `adjacentTo`, zone B should list zone A (warning if not)
+14. **Zone ownership consistency**: owner-qualified zone selectors are only used with zones whose `owner` is `'player'`; `:none` only with unowned zones
 
 Each check produces a `Diagnostic` with:
+- `code`: stable machine-readable identifier
 - `path`: exact location of the problem
 - `severity`: 'error' for broken references, 'warning' for suspicious patterns
 - `suggestion`: concrete fix when possible
@@ -561,8 +611,10 @@ Each check produces a `Diagnostic` with:
 6. `DegeneracyFlag` has exactly 6 values: LOOP_DETECTED, NO_LEGAL_MOVES, DOMINANT_ACTION, TRIVIAL_WIN, STALL, TRIGGER_DEPTH_EXCEEDED
 7. `ZoneDef` includes `adjacentTo?: readonly ZoneId[]` (spatial types defined upfront, even though spatial logic is in Spec 07)
 8. Zod schemas accept valid GameDef JSON and reject invalid ones
-9. `validateGameDef` catches: missing zone references, undefined variable references, unbound token type references, invalid phase references
-10. Branded types for PlayerId, ZoneId, TokenId prevent accidental mixing of identifiers
+9. JSON-facing schemas operate on serialized DTO forms for runtime types containing `bigint`
+10. `MoveLog` includes `legalMoveCount` for evaluator compatibility (Spec 11)
+11. `validateGameDef` catches: missing zone references, undefined variable references, unbound token type references, invalid phase/action references, duplicate IDs, and metadata constraints
+12. Branded types for PlayerId, ZoneId, TokenId prevent accidental mixing of identifiers
 
 ## Required Tests
 
@@ -574,11 +626,15 @@ Each check produces a `Diagnostic` with:
 - Zod schema rejects GameDef with invalid `EffectAST` variant → error at correct path
 - Zod schema rejects GameDef with wrong type for `VariableDef.init` (string instead of number)
 - Zod schema rejects GameDef with extra unknown keys (if strictness desired) or passes through (document choice)
+- Serialized trace schema enforces hex string format for `stateHash` and PRNG words
 - `validateGameDef` catches missing zone: action references zone "shop" but only "market" exists → error with suggestion "did you mean 'market'?"
 - `validateGameDef` catches undefined gvar: condition references gvar "gold" but only "money" defined → error with alternatives
 - `validateGameDef` catches undefined pvar: effect references pvar "health" but only "vp" defined → error
 - `validateGameDef` catches invalid phase: action has phase "combat" but only "start", "main", "end" exist → error with alternatives
 - `validateGameDef` catches invalid token type: createToken type "weapon" but only "card" defined → error
+- `validateGameDef` catches duplicate IDs (e.g. duplicate action id) → error at duplicate path
+- `validateGameDef` catches invalid `PlayerSel.id` outside configured bounds → error
+- `validateGameDef` catches `result.type: 'score'` without `scoring` section → error
 - `validateGameDef` catches bounds inconsistency: min > max → error
 - `validateGameDef` catches asymmetric adjacency: zone A lists B but B doesn't list A → warning
 - `validateGameDef` on valid GameDef → empty diagnostics array
@@ -591,7 +647,9 @@ Each check produces a `Diagnostic` with:
 ### Property Tests
 
 - For any GameDef that passes Zod validation, `JSON.parse(JSON.stringify(gameDef))` passes Zod validation again (round-trip)
+- For any valid GameTrace, `deserializeTrace(serializeTrace(trace))` preserves all hash values exactly
 - Every `Diagnostic` produced by `validateGameDef` has non-empty `path` and non-empty `message`
+- Every `Diagnostic` produced by `validateGameDef` has non-empty `code`
 - `validateGameDef` is deterministic: same input → same diagnostics in same order
 
 ### Golden Tests
@@ -607,8 +665,10 @@ Each check produces a `Diagnostic` with:
 - [ ] Branded types prevent mixing PlayerId/ZoneId/TokenId at compile time
 - [ ] Zod schemas accept valid GameDef and reject invalid ones
 - [ ] JSON Schema files are valid JSON Schema draft-07 (or later)
-- [ ] `validateGameDef` catches all 10 semantic validation categories listed above
+- [ ] Serialization codecs correctly map runtime `bigint` fields to/from hex strings
+- [ ] `validateGameDef` catches all semantic validation categories listed above
 - [ ] Every diagnostic has a `path` field pointing to the error location
+- [ ] Every diagnostic has a stable `code`
 - [ ] Reference failure diagnostics include `alternatives` with fuzzy-matched suggestions
 - [ ] DegeneracyFlag enum has exactly 6 values
 
@@ -618,6 +678,7 @@ Each check produces a `Diagnostic` with:
 src/kernel/types.ts              # NEW — all kernel types (GameDef, GameState, AST types, etc.)
 src/kernel/branded.ts            # NEW — branded type constructors and guards
 src/kernel/schemas.ts            # NEW — Zod schemas for all types
+src/kernel/serde.ts              # NEW — runtime <-> serialized DTO codecs (bigint-safe)
 src/kernel/validate-gamedef.ts   # NEW — validateGameDef semantic validation
 src/kernel/diagnostics.ts        # NEW — Diagnostic type and diagnostic helpers
 src/kernel/index.ts              # MODIFY — re-export public API
@@ -625,6 +686,7 @@ schemas/GameDef.schema.json      # NEW — JSON Schema for GameDef
 schemas/Trace.schema.json        # NEW — JSON Schema for GameTrace
 schemas/EvalReport.schema.json   # NEW — JSON Schema for EvalReport
 test/unit/schemas.test.ts        # NEW — Zod schema tests
+test/unit/serde.test.ts          # NEW — serialization codec tests
 test/unit/validate-gamedef.test.ts  # NEW — semantic validation tests
 test/unit/types-exhaustive.test.ts  # NEW — union type exhaustiveness tests
 ```

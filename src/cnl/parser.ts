@@ -9,7 +9,13 @@ export interface ParseGameSpecResult {
   readonly diagnostics: readonly Diagnostic[];
 }
 
-export function parseGameSpec(markdown: string): ParseGameSpecResult {
+export interface ParseGameSpecOptions {
+  readonly maxDiagnostics?: number;
+}
+
+const DEFAULT_MAX_DIAGNOSTICS = 500;
+
+export function parseGameSpec(markdown: string, options: ParseGameSpecOptions = {}): ParseGameSpecResult {
   const diagnostics: Diagnostic[] = [];
   const yamlBlocks = extractYamlBlocks(markdown);
 
@@ -21,10 +27,12 @@ export function parseGameSpec(markdown: string): ParseGameSpecResult {
     );
   }
 
+  const cappedDiagnostics = applyDiagnosticCap(diagnostics, options.maxDiagnostics ?? DEFAULT_MAX_DIAGNOSTICS);
+
   return {
     doc: createEmptyGameSpecDoc(),
     sourceMap: { byPath: {} },
-    diagnostics,
+    diagnostics: cappedDiagnostics,
   };
 }
 
@@ -43,4 +51,26 @@ function extractYamlBlocks(markdown: string): readonly string[] {
   }
 
   return blocks;
+}
+
+function applyDiagnosticCap(
+  diagnostics: readonly Diagnostic[],
+  maxDiagnostics: number,
+): readonly Diagnostic[] {
+  const normalizedCap = Number.isFinite(maxDiagnostics) ? Math.max(1, Math.floor(maxDiagnostics)) : DEFAULT_MAX_DIAGNOSTICS;
+  if (diagnostics.length <= normalizedCap) {
+    return diagnostics;
+  }
+
+  const kept = diagnostics.slice(0, Math.max(0, normalizedCap - 1));
+  const droppedCount = diagnostics.length - kept.length;
+  const truncationWarning: Diagnostic = {
+    code: 'CNL_PARSER_DIAGNOSTICS_TRUNCATED',
+    path: 'parser.diagnostics',
+    severity: 'warning',
+    message: `Diagnostic limit reached; ${droppedCount} additional diagnostic(s) were truncated.`,
+    suggestion: 'Reduce YAML lint issues or increase parser maxDiagnostics when debugging.',
+  };
+
+  return [...kept, truncationWarning];
 }

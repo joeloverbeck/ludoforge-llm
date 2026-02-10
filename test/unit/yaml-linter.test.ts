@@ -54,6 +54,56 @@ describe('lintYamlHardening', () => {
     assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_010'));
   });
 
+  it('detects mistake 11: incorrect list syntax', () => {
+    const diagnostics = lintYamlHardening('actions:\n  -id: pass\n');
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_011'));
+  });
+
+  it('detects mistake 12: type confusion (number vs string)', () => {
+    const diagnostics = lintYamlHardening('metadata:\n  id: 123\n');
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_012'));
+  });
+
+  it('detects mistake 13: anchor/alias misuse', () => {
+    const diagnostics = lintYamlHardening('metadata:\n  id: *missingAnchor\n');
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_013'));
+  });
+
+  it('detects mistake 14: empty values', () => {
+    const diagnostics = lintYamlHardening('metadata:\n  id:\n');
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_014'));
+  });
+
+  it('detects mistake 15: comment-in-string errors', () => {
+    const diagnostics = lintYamlHardening('metadata:\n  id: game #version\n');
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_015'));
+  });
+
+  it('detects mistake 16: encoding issues', () => {
+    const diagnostics = lintYamlHardening('\uFEFFmetadata:\n  id: game\n');
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_016'));
+  });
+
+  it('detects mistake 17: missing document markers', () => {
+    const diagnostics = lintYamlHardening('metadata:\n  id: first\n...\nmetadata:\n  id: second\n');
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_017'));
+  });
+
+  it('detects mistake 18: flow vs block style confusion', () => {
+    const diagnostics = lintYamlHardening('metadata: { id: game }\nactions:\n  - id: pass\n');
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_018'));
+  });
+
+  it('detects mistake 19: nested quoting errors', () => {
+    const diagnostics = lintYamlHardening('metadata:\n  id: \"say \"hi\"\"\n');
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_019'));
+  });
+
+  it('detects mistake 20: multiline folding errors', () => {
+    const diagnostics = lintYamlHardening('metadata:\n  id: >\nnext: value\n');
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_YAML_020'));
+  });
+
   it('returns deterministic ordering for identical input', () => {
     const input = 'metadata:  \n  id: on\n';
     const first = lintYamlHardening(input);

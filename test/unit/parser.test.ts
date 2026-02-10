@@ -35,4 +35,24 @@ describe('parseGameSpec API shape', () => {
   it('does not throw for arbitrary input', () => {
     assert.doesNotThrow(() => parseGameSpec('\u0000\u0001 not yaml'));
   });
+
+  it('caps diagnostics and appends a trailing truncation warning', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:  ',
+      '  id: on',
+      '```',
+      '```yaml',
+      'metadata:  ',
+      '  id: on',
+      '```',
+    ].join('\n');
+
+    const result = parseGameSpec(markdown, { maxDiagnostics: 3 });
+
+    assert.equal(result.diagnostics.length, 3);
+    assert.equal(result.diagnostics[2]?.code, 'CNL_PARSER_DIAGNOSTICS_TRUNCATED');
+    assert.equal(result.diagnostics[2]?.path, 'parser.diagnostics');
+    assert.equal(result.diagnostics[2]?.severity, 'warning');
+  });
 });

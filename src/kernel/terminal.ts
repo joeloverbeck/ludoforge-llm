@@ -1,5 +1,68 @@
-import type { GameDef, GameState, TerminalResult } from './types.js';
+import { asPlayerId } from './branded.js';
+import { evalCondition } from './eval-condition.js';
+import { resolveSinglePlayerSel } from './resolve-selectors.js';
+import { evalValue } from './eval-value.js';
+import type { EvalContext } from './eval-context.js';
+import type { GameDef, GameState, PlayerScore, TerminalResult } from './types.js';
 
-export const terminalResult = (_def: GameDef, _state: GameState): TerminalResult | null => {
-  throw new Error('terminalResult is not implemented in KERGAMLOOTRI-001');
+function buildEvalContext(def: GameDef, state: GameState, actorPlayer = state.activePlayer): EvalContext {
+  return {
+    def,
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer,
+    bindings: {},
+  };
+}
+
+function scoreRanking(def: GameDef, state: GameState): readonly PlayerScore[] {
+  if (!def.scoring) {
+    throw new Error('End condition result.type "score" requires def.scoring');
+  }
+
+  const ranking = Array.from({ length: state.playerCount }, (_, index) => {
+    const player = asPlayerId(index);
+    const ctx = buildEvalContext(def, state, player);
+    const score = evalValue(def.scoring!.value, ctx);
+    if (typeof score !== 'number') {
+      throw new Error('Scoring value expression must evaluate to a number');
+    }
+
+    return { player, score };
+  });
+
+  return ranking.sort((left, right) => {
+    if (left.score === right.score) {
+      return left.player - right.player;
+    }
+
+    return def.scoring!.method === 'highest' ? right.score - left.score : left.score - right.score;
+  });
+}
+
+export const terminalResult = (def: GameDef, state: GameState): TerminalResult | null => {
+  const baseCtx = buildEvalContext(def, state);
+
+  for (const endCondition of def.endConditions) {
+    if (!evalCondition(endCondition.when, baseCtx)) {
+      continue;
+    }
+
+    switch (endCondition.result.type) {
+      case 'win':
+        return { type: 'win', player: resolveSinglePlayerSel(endCondition.result.player, baseCtx) };
+      case 'lossAll':
+        return { type: 'lossAll' };
+      case 'draw':
+        return { type: 'draw' };
+      case 'score':
+        return { type: 'score', ranking: scoreRanking(def, state) };
+      default: {
+        const _exhaustive: never = endCondition.result;
+        return _exhaustive;
+      }
+    }
+  }
+
+  return null;
 };

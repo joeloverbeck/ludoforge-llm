@@ -87,7 +87,7 @@ describe('game-loop API shape', () => {
 
     assert.deepEqual(resetTurnUsage(gameStateStub).actionUsage, gameStateStub.actionUsage);
     assert.deepEqual(resetPhaseUsage(gameStateStub).actionUsage, gameStateStub.actionUsage);
-    assert.throws(() => terminalResult(gameDefStub, gameStateStub), /not implemented/i);
+    assert.equal(terminalResult(gameDefStub, gameStateStub), null);
   });
 
   it('accepts fired and truncated trigger log entries via TriggerLogEntry union', () => {

@@ -1,0 +1,17 @@
+import type { PlayerId } from './branded.js';
+import type { GameDef, GameState } from './types.js';
+
+export const DEFAULT_MAX_QUERY_RESULTS = 10_000;
+
+export interface EvalContext {
+  readonly def: GameDef;
+  readonly state: GameState;
+  readonly activePlayer: PlayerId;
+  readonly actorPlayer: PlayerId;
+  readonly bindings: Readonly<Record<string, unknown>>;
+  readonly maxQueryResults?: number;
+}
+
+export function getMaxQueryResults(ctx: Pick<EvalContext, 'maxQueryResults'>): number {
+  return ctx.maxQueryResults ?? DEFAULT_MAX_QUERY_RESULTS;
+}

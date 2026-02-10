@@ -11,6 +11,8 @@
 
 Define the required order for implementing FITL foundation specs, with dependency gates, milestones, and verification checkpoints.
 
+This order is intentionally architecture-first: close generic engine capability gaps first, then encode FITL behavior in data/specs.
+
 ## Ordered Sequence
 
 1. Spec 15 - Foundation Scope and Engine Gaps
@@ -23,33 +25,41 @@ Define the required order for implementing FITL foundation specs, with dependenc
 
 ## Why This Order
 
-- Spec 15 prevents accidental hacks by forcing explicit gap decisions.
-- Spec 16 establishes the canonical state shape all later mechanics mutate.
-- Spec 17 defines legal execution windows that operations/events depend on.
-- Spec 18 provides the largest mechanics surface and should stabilize before coup/event layers.
+- Spec 15 prevents accidental hacks by forcing explicit capability-gap decisions and architecture constraints.
+- Spec 16 establishes canonical state/data structures used by all later mechanics.
+- Spec 17 defines legal execution windows and deterministic sequencing used by operations/events.
+- Spec 18 introduces the largest mechanics surface and should stabilize before coup/event layers.
 - Spec 19 depends on operation effects to compute correct coup transitions and scoring.
-- Spec 20 depends on stable core mechanics because events invoke them directly.
-- Spec 21 must be last to lock deterministic behavior against settled semantics.
+- Spec 20 depends on stable generic event/operation semantics because cards invoke those semantics.
+- Spec 21 locks deterministic behavior and architecture quality after semantics are settled.
 
 ## Milestones and Gates
 
+### Gate 0: Architecture Contract Locked
+- Spec 15 accepted, including P0 gap ownership and "no hardcoded FITL logic" checks.
+- Gate: all planned runtime/compiler changes are framed as generic capabilities, not FITL-specific handlers.
+
 ### Milestone A: Foundations Ready
-- Complete Specs 15-16.
-- Gate: scenario can initialize and validate deterministically.
+- Complete Specs 16-17.
+- Gate: scenario initializes deterministically, turn flow and eligibility transitions are deterministic and trace-visible.
 
 ### Milestone B: Core Campaign Loop
-- Complete Specs 17-19.
-- Gate: play through event-card turns and coup rounds with correct victory checks.
+- Complete Specs 18-19.
+- Gate: play through event-card turns and coup rounds with correct legality, accounting, and victory checks.
 
 ### Milestone C: Event Slice + Quality Bar
 - Complete Specs 20-21.
-- Gate: cards 82/27 execute correctly; deterministic golden traces and full test suite pass.
+- Gate: cards 82/27 execute correctly via generic event primitives; deterministic golden traces and test suite pass.
 
 ## Verification Gates
 
-After Milestone A:
+After Gate 0:
 - `npm run build`
-- targeted FITL unit tests for state/setup
+- targeted unit tests for schema/compiler additions tied to Spec 15 gaps
+
+After Milestone A:
+- `npm run test:unit`
+- targeted FITL setup/sequence tests
 
 After Milestone B:
 - `npm run test:unit`
@@ -61,7 +71,8 @@ After Milestone C:
 
 ## Risk Controls
 
+- Do not begin Spec 16 implementation until Spec 15 P0 gap ownership is explicit.
 - Do not begin Spec 18 before Spec 17 acceptance tests pass.
 - Do not begin Spec 20 before Spec 19 scoring/coup tests pass.
 - Treat any nondeterministic trace mismatch as a release blocker.
-
+- Treat any newly introduced FITL-specific branch in generic engine code as a release blocker.

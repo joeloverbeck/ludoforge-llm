@@ -9,11 +9,11 @@
 
 ## Overview
 
-Implement foundation event execution semantics and encode the first two concrete cards from the brainstorming appendix as a pilot card pack.
+Implement foundation event execution semantics using generic declarative event primitives, then encode the first two concrete cards from the brainstorming appendix as data in an initial FITL card pack.
 
 ## In Scope
 
-- Event parser/loader format for FITL cards used by runtime.
+- Data format for card/event definitions consumed by generic runtime event execution.
 - Dual-use selection (unshaded vs shaded).
 - Event precedence and partial execution semantics.
 - Lasting-effect hooks for capabilities/momentum (minimal infrastructure even if no lasting effect in first two cards).
@@ -43,10 +43,10 @@ Implement foundation event execution semantics and encode the first two concrete
 - Event execution is deterministic and trace-visible including side chosen and targets.
 - Cards 82 and 27 are executable end-to-end in campaign play.
 - Invalid event target selections return actionable diagnostics.
+- Cards are represented as data without FITL-specific event branches in generic engine code.
 
 ## Testing Requirements
 
 - Unit tests for generic dual-use event semantics.
 - Card-level golden tests for both sides of card 82 and 27.
 - Integration test where one card fires inside normal eligible-faction sequence.
-

@@ -9,7 +9,7 @@
 
 ## Overview
 
-Implement FITL campaign turn flow: reveal/play sequencing, eligibility transitions, passing, limited operations, first/second eligible option matrix, monsoon constraints, pivotal-event hooks, and card-state transitions.
+Implement FITL campaign turn flow as declarative game data interpreted by generic turn/card engine primitives: reveal/play sequencing, eligibility transitions, passing, limited operations, first/second eligible option matrix, monsoon constraints, pivotal-event hooks, and card-state transitions.
 
 ## In Scope
 
@@ -30,23 +30,24 @@ Implement FITL campaign turn flow: reveal/play sequencing, eligibility transitio
 - Faction order must be deterministic and strictly card-driven.
 - Passing must preserve eligibility for the next card and apply exact faction rewards.
 - Event-based eligibility overrides must persist for exactly one next-card window unless card text says otherwise.
-- “Execute as much as possible” must be represented as deterministic partial-execution behavior.
+- "Execute as much as possible" must be represented as deterministic partial-execution behavior.
 
 ## Engine Integration
 
-- Add a FITL-specific turn coordinator on top of generic kernel turn primitives.
+- Extend generic turn-sequencing primitives to express FITL card/eligibility sequencing through data.
 - Keep move legality enumeration deterministic under all option branches.
 - Ensure trace records include: card id, first/second eligible, action class (Pass/Event/Op/Limited Op/Op+SA).
+- Do not introduce FITL-only coordinator code paths in generic runtime modules.
 
 ## Acceptance Criteria
 
 - Deterministic replay of campaign flow across same seed and move sequence.
 - Tests cover all first/second eligible option permutations.
 - Monsoon restrictions are enforced and trace-visible.
+- Turn sequencing behavior is configured through game data, not FITL-specific engine branching.
 
 ## Testing Requirements
 
 - Unit tests for eligibility transition table.
 - Integration tests for pass chains and left-to-right replacement behavior.
 - Golden trace test for a short scripted card sequence including one Coup boundary.
-

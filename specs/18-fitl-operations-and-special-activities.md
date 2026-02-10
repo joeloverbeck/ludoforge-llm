@@ -9,7 +9,7 @@
 
 ## Overview
 
-Implement faction Operations and Special Activities for US, ARVN, NVA, and VC, including costs, targeting constraints, movement/removal semantics, terrain modifiers, tunnel rules, and side effects on tracks.
+Implement faction Operations and Special Activities for US, ARVN, NVA, and VC, including costs, targeting constraints, movement/removal semantics, terrain modifiers, tunnel rules, and side effects on tracks, using generic data-driven operation primitives.
 
 ## In Scope
 
@@ -34,9 +34,10 @@ Implement faction Operations and Special Activities for US, ARVN, NVA, and VC, i
 
 ## Runtime Capability Requirements
 
-- Add FITL operation executors with explicit precondition checks.
-- Add die-roll API integration for Attack/Assault tunnel interactions, fully seed-driven.
-- Extend effect primitives only where reusable and not FITL-hardcoded.
+- Extend generic operation/effect primitives so operation legality, costs, targets, and sequencing are data-configurable.
+- Add seed-driven die-roll integration for probabilistic resolution semantics used by FITL operations.
+- New primitives added here must be reusable and named independent of FITL concepts.
+- Do not implement FITL rules as hardcoded operation handlers in core runtime modules.
 
 ## Acceptance Criteria
 
@@ -44,10 +45,10 @@ Implement faction Operations and Special Activities for US, ARVN, NVA, and VC, i
 - Cost accounting matches rules and is trace-visible.
 - Illegal operation attempts produce diagnostics tied to faction/rule reason.
 - Same seed plus same choices yields byte-equivalent trace deltas.
+- Operation behavior is primarily declared in FITL game data, with engine code limited to generic reusable primitives.
 
 ## Testing Requirements
 
 - Unit tests per operation and special activity family.
 - Edge-case tests: Monsoon restrictions, Highland math, Bases-last removal, Tunnel removal behavior.
 - Integration tests for Op + Special Activity sequencing and limited-operation constraints.
-

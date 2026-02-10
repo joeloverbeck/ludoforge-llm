@@ -20,7 +20,7 @@ import {
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-runtime-test', players: { min: 1, max: 2 } },
   constants: {},
-  globalVars: [],
+  globalVars: [{ name: 'x', type: 'int', init: 0, min: 0, max: 10 }],
   perPlayerVars: [],
   zones: [],
   tokenTypes: [],
@@ -35,7 +35,7 @@ const makeDef = (): GameDef => ({
 });
 
 const makeState = (): GameState => ({
-  globalVars: {},
+  globalVars: { x: 0 },
   perPlayerVars: {},
   playerCount: 2,
   zones: {},
@@ -74,6 +74,14 @@ const addVarEffect: EffectAST = {
   },
 };
 
+const moveTokenEffect: EffectAST = {
+  moveToken: {
+    token: '$token',
+    from: 'deck:none',
+    to: 'hand:actor',
+  },
+};
+
 const moveTokenAdjacentEffect: EffectAST = {
   moveTokenAdjacent: {
     token: '$token',
@@ -107,8 +115,8 @@ describe('effects runtime foundation', () => {
   it('applies dispatcher in list order and reports the first failing effect kind', () => {
     const ctx = makeCtx({ maxEffectOps: 10 });
 
-    assert.throws(() => applyEffects([setVarEffect, addVarEffect], ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_NOT_IMPLEMENTED') && error.message.includes('setVar');
+    assert.throws(() => applyEffects([setVarEffect, addVarEffect, moveTokenEffect], ctx), (error: unknown) => {
+      return isEffectErrorCode(error, 'EFFECT_NOT_IMPLEMENTED') && error.message.includes('moveToken');
     });
   });
 

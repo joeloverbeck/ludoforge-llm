@@ -1,0 +1,88 @@
+{
+  "expectedGameDef": {
+    "metadata": {
+      "id": "compiler-valid",
+      "players": {
+        "min": 2,
+        "max": 2
+      }
+    },
+    "constants": {},
+    "globalVars": [],
+    "perPlayerVars": [],
+    "zones": [
+      {
+        "id": "deck:none",
+        "owner": "none",
+        "visibility": "hidden",
+        "ordering": "stack"
+      },
+      {
+        "id": "hand:0",
+        "owner": "player",
+        "visibility": "owner",
+        "ordering": "set"
+      },
+      {
+        "id": "hand:1",
+        "owner": "player",
+        "visibility": "owner",
+        "ordering": "set"
+      }
+    ],
+    "tokenTypes": [],
+    "setup": [],
+    "turnStructure": {
+      "phases": [
+        {
+          "id": "main"
+        }
+      ],
+      "activePlayerOrder": "roundRobin"
+    },
+    "actions": [
+      {
+        "id": "drawEach",
+        "actor": "active",
+        "phase": "main",
+        "params": [],
+        "pre": null,
+        "cost": [],
+        "effects": [
+          {
+            "forEach": {
+              "bind": "$p",
+              "over": {
+                "query": "players"
+              },
+              "effects": [
+                {
+                  "draw": {
+                    "from": "deck:none",
+                    "to": "hand:$p",
+                    "count": 1
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "limits": []
+      }
+    ],
+    "triggers": [],
+    "endConditions": [
+      {
+        "when": {
+          "op": "==",
+          "left": 1,
+          "right": 1
+        },
+        "result": {
+          "type": "draw"
+        }
+      }
+    ]
+  },
+  "expectedDiagnostics": []
+}

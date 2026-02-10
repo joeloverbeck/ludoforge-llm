@@ -1,6 +1,6 @@
 # Spec 08b: Game Spec Compiler
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1 (required for MVP)
 **Complexity**: L
 **Dependencies**: Spec 02, Spec 07, Spec 08a
@@ -311,3 +311,17 @@ test/unit/cnl/compile-zones.test.ts  # NEW
 test/unit/cnl/compile-bindings.test.ts  # NEW
 test/integration/cnl/compile-pipeline.test.ts  # NEW
 ```
+
+## Outcome
+- **Completion date**: 2026-02-10
+- **What was actually changed**:
+  - Deterministic compiler pipeline implemented and exported via `src/cnl/index.ts`.
+  - Macro expansion, selector normalization, zone materialization, diagnostics ordering/dedupe, and final `validateGameDef` merge implemented.
+  - Compiler coverage added across unit, integration, property-style, and golden tests, including fixture-based pipeline coverage.
+- **Deviations from original plan**:
+  - Test paths were aligned with the current repository layout (for example `test/integration/compile-pipeline.test.ts` and `test/unit/compiler.golden.test.ts`).
+  - Dedicated compiler fixtures were added under `test/fixtures/cnl/compiler/` because parser/validator fixtures were not fully compiler-valid.
+- **Verification results**:
+  - `npm run build` passed.
+  - Targeted compiler property/golden/pipeline test commands passed.
+  - `npm test` passed.

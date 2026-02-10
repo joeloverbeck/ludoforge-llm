@@ -1,7 +1,19 @@
 import * as assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { compileGameSpecToGameDef, createEmptyGameSpecDoc, expandMacros } from '../../src/cnl/index.js';
+import {
+  compileGameSpecToGameDef,
+  createEmptyGameSpecDoc,
+  expandMacros,
+  parseGameSpec,
+  validateGameSpec,
+} from '../../src/cnl/index.js';
+import { validateGameDef } from '../../src/kernel/index.js';
+
+const readCompilerFixture = (name: string): string =>
+  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
 
 describe('compile pipeline integration', () => {
   it('is deterministic when compiling raw vs pre-expanded docs', () => {
@@ -58,5 +70,52 @@ describe('compile pipeline integration', () => {
       ),
       true,
     );
+  });
+
+  it('runs parse/validate/expand/compile/validate end-to-end for compile-valid fixture', () => {
+    const markdown = readCompilerFixture('compile-valid.md');
+    const parsed = parseGameSpec(markdown);
+    const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
+    const expanded = expandMacros(parsed.doc, { sourceMap: parsed.sourceMap });
+    const raw = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const preExpanded = compileGameSpecToGameDef(expanded.doc, { sourceMap: parsed.sourceMap });
+
+    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assert.deepEqual(validatorDiagnostics, []);
+    assert.deepEqual(expanded.diagnostics, []);
+    assert.deepEqual(raw.diagnostics, []);
+    assert.deepEqual(raw, preExpanded);
+    assert.notEqual(raw.gameDef, null);
+    assert.deepEqual(validateGameDef(raw.gameDef!), []);
+  });
+
+  it('runs parse/validate/expand/compile/validate deterministically for malformed fixture', () => {
+    const markdown = readCompilerFixture('compile-malformed.md');
+
+    const run = () => {
+      const parsed = parseGameSpec(markdown);
+      const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
+      const expanded = expandMacros(parsed.doc, { sourceMap: parsed.sourceMap });
+      const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+      return { parsed, validatorDiagnostics, expanded, compiled };
+    };
+
+    const first = run();
+    const second = run();
+
+    assert.deepEqual(second, first);
+    assert.equal(first.validatorDiagnostics.length > 0, true);
+    assert.equal(first.compiled.gameDef, null);
+    assert.equal(first.compiled.diagnostics.length > 0, true);
+
+    first.compiled.diagnostics.forEach((diagnostic) => {
+      assert.equal(diagnostic.code.trim().length > 0, true);
+      assert.equal(diagnostic.path.trim().length > 0, true);
+      assert.equal(diagnostic.message.trim().length > 0, true);
+
+      if (diagnostic.suggestion !== undefined) {
+        assert.equal(diagnostic.suggestion.trim().length > 0, true);
+      }
+    });
   });
 });

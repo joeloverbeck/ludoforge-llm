@@ -12,7 +12,7 @@ This repository contains both implementation code and design artifacts.
 - `src/`: TypeScript source modules (`kernel`, `cnl`, `agents`, `sim`, `cli`).
 - `schemas/`: JSON schema artifacts (`GameDef`, `Trace`, `EvalReport`).
 - `test/`: `unit`, `integration`, `e2e`, plus `fixtures`, `memory`, and `performance`.
-- `specs/`: canonical implementation specs (`00` roadmap through `14` evolution pipeline).
+- `specs/`: canonical numbered implementation specs (currently `00` roadmap through `14` evolution pipeline).
 - `tickets/`: active implementation tickets.
 - `archive/`: completed or retired `tickets`, `specs`, `brainstorming`, and reports.
 - `brainstorming/`, `README.md`, `CLAUDE.md`: design context and constraints.
@@ -52,7 +52,7 @@ For docs/spec/ticket changes:
 - ensure roadmap and individual specs do not conflict.
 
 For code changes:
-- place tests in the relevant `test/` domain (`unit`, `integration`, or `e2e`).
+- place tests in the relevant `test/` domain (`unit`, `integration`, `e2e`, `memory`, or `performance`).
 - run targeted tests when possible (example: `node --test dist/test/unit/<file>.test.js`).
 - if running `node --test` directly, run `npm run build` first so `dist/` is up to date.
 - run at least `npm test` before finalizing; use `npm run test:all` when behavior spans CLI/pipeline flows.
@@ -71,7 +71,7 @@ PRs should include:
 
 ## Archiving Tickets and Specs
 
-When asked to archive a ticket, spec, or brainstorming document:
+When asked to archive a ticket, spec, brainstorming document, or report:
 
 1. **Edit the document** to mark its final status at the top:
    - `**Status**: ✅ COMPLETED` - Fully implemented

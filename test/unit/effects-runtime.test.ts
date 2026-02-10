@@ -82,6 +82,13 @@ const ifEffect: EffectAST = {
   },
 };
 
+const chooseOneEffect: EffectAST = {
+  chooseOne: {
+    bind: '$choice',
+    options: { query: 'enums', values: ['a', 'b'] },
+  },
+};
+
 const moveTokenAdjacentEffect: EffectAST = {
   moveTokenAdjacent: {
     token: '$token',
@@ -115,8 +122,23 @@ describe('effects runtime foundation', () => {
   it('applies dispatcher in list order and reports the first unimplemented effect kind', () => {
     const ctx = makeCtx({ maxEffectOps: 10 });
 
-    assert.throws(() => applyEffects([setVarEffect, addVarEffect, ifEffect], ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_NOT_IMPLEMENTED') && error.message.includes('if');
+    assert.throws(() => applyEffects([setVarEffect, addVarEffect, ifEffect, chooseOneEffect], ctx), (error: unknown) => {
+      return isEffectErrorCode(error, 'EFFECT_NOT_IMPLEMENTED') && error.message.includes('chooseOne');
+    });
+  });
+
+  it('shares the same effect budget across nested control-flow execution', () => {
+    const ctx = makeCtx({ maxEffectOps: 2 });
+    const nestedEffect: EffectAST = {
+      if: {
+        when: { op: '==', left: 1, right: 1 },
+        then: [setVarEffect, addVarEffect],
+      },
+    };
+
+    assert.throws(() => applyEffects([nestedEffect], ctx), (error: unknown) => {
+      assert.ok(error instanceof EffectBudgetExceededError);
+      return true;
     });
   });
 

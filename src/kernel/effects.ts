@@ -7,6 +7,7 @@ import {
 } from './effect-error.js';
 import { asTokenId } from './branded.js';
 import { evalCondition } from './eval-condition.js';
+import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { nextInt } from './prng.js';
 import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
@@ -676,7 +677,94 @@ const applyShuffle = (effect: Extract<EffectAST, { readonly shuffle: unknown }>,
   };
 };
 
-const dispatchEffect = (effect: EffectAST, ctx: EffectContext): EffectResult => {
+const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
+  let currentState = ctx.state;
+  let currentRng = ctx.rng;
+
+  for (const effect of effects) {
+    const result = applyEffectWithBudget(effect, { ...ctx, state: currentState, rng: currentRng }, budget);
+    currentState = result.state;
+    currentRng = result.rng;
+  }
+
+  return { state: currentState, rng: currentRng };
+};
+
+const applyIf = (
+  effect: Extract<EffectAST, { readonly if: unknown }>,
+  ctx: EffectContext,
+  budget: EffectBudgetState,
+): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const predicate = evalCondition(effect.if.when, evalCtx);
+
+  if (predicate) {
+    return applyEffectsWithBudget(effect.if.then, ctx, budget);
+  }
+
+  if (effect.if.else !== undefined) {
+    return applyEffectsWithBudget(effect.if.else, ctx, budget);
+  }
+
+  return { state: ctx.state, rng: ctx.rng };
+};
+
+const applyLet = (
+  effect: Extract<EffectAST, { readonly let: unknown }>,
+  ctx: EffectContext,
+  budget: EffectBudgetState,
+): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const evaluatedValue = evalValue(effect.let.value, evalCtx);
+  const nestedCtx: EffectContext = {
+    ...ctx,
+    bindings: {
+      ...ctx.bindings,
+      [effect.let.bind]: evaluatedValue,
+    },
+  };
+
+  return applyEffectsWithBudget(effect.let.in, nestedCtx, budget);
+};
+
+const applyForEach = (
+  effect: Extract<EffectAST, { readonly forEach: unknown }>,
+  ctx: EffectContext,
+  budget: EffectBudgetState,
+): EffectResult => {
+  const limit = effect.forEach.limit ?? 100;
+  if (!Number.isSafeInteger(limit) || limit <= 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'forEach.limit must be a positive integer', {
+      effectType: 'forEach',
+      limit,
+    });
+  }
+
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const queryResult = evalQuery(effect.forEach.over, evalCtx);
+  const boundedItems = queryResult.slice(0, limit);
+
+  let currentState = ctx.state;
+  let currentRng = ctx.rng;
+  for (const item of boundedItems) {
+    const iterationCtx: EffectContext = {
+      ...ctx,
+      state: currentState,
+      rng: currentRng,
+      bindings: {
+        ...ctx.bindings,
+        [effect.forEach.bind]: item,
+      },
+    };
+    const iterationResult = applyEffectsWithBudget(effect.forEach.effects, iterationCtx, budget);
+    currentState = iterationResult.state;
+    currentRng = iterationResult.rng;
+  }
+
+  return { state: currentState, rng: currentRng };
+};
+
+const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
   if ('setVar' in effect) {
     return applySetVar(effect, ctx);
   }
@@ -709,6 +797,18 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext): EffectResult => 
     return applyDestroyToken(effect, ctx);
   }
 
+  if ('if' in effect) {
+    return applyIf(effect, ctx, budget);
+  }
+
+  if ('forEach' in effect) {
+    return applyForEach(effect, ctx, budget);
+  }
+
+  if ('let' in effect) {
+    return applyLet(effect, ctx, budget);
+  }
+
   if ('moveTokenAdjacent' in effect) {
     throw new SpatialNotImplementedError('Spatial effect is not implemented: moveTokenAdjacent', {
       effectType: 'moveTokenAdjacent',
@@ -722,7 +822,7 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext): EffectResult => 
 const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
   const effectType = effectTypeOf(effect);
   consumeBudget(budget, effectType);
-  return dispatchEffect(effect, ctx);
+  return dispatchEffect(effect, ctx, budget);
 };
 
 export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult {
@@ -732,14 +832,5 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult
 
 export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext): EffectResult {
   const budget = createBudgetState(ctx);
-
-  let currentState = ctx.state;
-  let currentRng = ctx.rng;
-  for (const effect of effects) {
-    const result = applyEffectWithBudget(effect, { ...ctx, state: currentState, rng: currentRng }, budget);
-    currentState = result.state;
-    currentRng = result.rng;
-  }
-
-  return { state: currentState, rng: currentRng };
+  return applyEffectsWithBudget(effects, ctx, budget);
 }

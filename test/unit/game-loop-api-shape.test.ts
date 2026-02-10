@@ -70,7 +70,7 @@ describe('game-loop API shape', () => {
     assert.equal(typeof initial.stateHash, 'bigint');
 
     assert.deepEqual(legalMoves(gameDefStub, gameStateStub), []);
-    assert.throws(() => applyMove(gameDefStub, gameStateStub, moveStub), /not implemented/i);
+    assert.throws(() => applyMove(gameDefStub, gameStateStub, moveStub), /Illegal move/);
 
     const dispatchResult = dispatchTriggers(
       gameDefStub,

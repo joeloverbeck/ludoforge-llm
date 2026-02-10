@@ -1,4 +1,4 @@
-import type { GameState } from './types.js';
+import type { ActionDef, GameState } from './types.js';
 
 export const resetTurnUsage = (state: GameState): GameState => {
   const actionUsage = Object.fromEntries(
@@ -25,5 +25,21 @@ export const resetPhaseUsage = (state: GameState): GameState => {
   return {
     ...state,
     actionUsage,
+  };
+};
+
+export const incrementActionUsage = (state: GameState, actionId: ActionDef['id']): GameState => {
+  const usage = state.actionUsage[String(actionId)] ?? { turnCount: 0, phaseCount: 0, gameCount: 0 };
+
+  return {
+    ...state,
+    actionUsage: {
+      ...state.actionUsage,
+      [String(actionId)]: {
+        turnCount: usage.turnCount + 1,
+        phaseCount: usage.phaseCount + 1,
+        gameCount: usage.gameCount + 1,
+      },
+    },
   };
 };

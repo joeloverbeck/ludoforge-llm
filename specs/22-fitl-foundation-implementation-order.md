@@ -3,7 +3,7 @@
 **Status**: Draft
 **Priority**: P0 (execution control)
 **Complexity**: S
-**Dependencies**: Spec 15, Spec 16, Spec 17, Spec 18, Spec 19, Spec 20, Spec 21
+**Dependencies**: Spec 15, Spec 15a, Spec 16, Spec 17, Spec 18, Spec 19, Spec 20, Spec 21
 **Estimated effort**: 0.5-1 day
 **Source sections**: FITL foundation spec set (15-21)
 

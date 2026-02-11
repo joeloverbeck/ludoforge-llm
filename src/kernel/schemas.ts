@@ -631,6 +631,18 @@ export const TurnFlowRuntimeStateSchema = z
     factionOrder: z.array(StringSchema.min(1)),
     eligibility: z.record(StringSchema, BooleanSchema),
     currentCard: TurnFlowRuntimeCardStateSchema,
+    pendingEligibilityOverrides: z
+      .array(
+        z
+          .object({
+            faction: StringSchema.min(1),
+            eligible: BooleanSchema,
+            windowId: StringSchema.min(1),
+            duration: TurnFlowDurationSchema,
+          })
+          .strict(),
+      )
+      .optional(),
   })
   .strict();
 
@@ -734,16 +746,30 @@ export const TurnFlowLifecycleTraceEntrySchema = z
 export const TurnFlowEligibilityTraceEntrySchema = z
   .object({
     kind: z.literal('turnFlowEligibility'),
-    step: z.union([z.literal('candidateScan'), z.literal('passChain'), z.literal('cardEnd')]),
+    step: z.union([z.literal('candidateScan'), z.literal('passChain'), z.literal('cardEnd'), z.literal('overrideCreate')]),
     faction: StringSchema.min(1).nullable(),
     before: TurnFlowRuntimeCardStateSchema,
     after: TurnFlowRuntimeCardStateSchema,
+    eligibilityBefore: z.record(StringSchema, BooleanSchema).optional(),
+    eligibilityAfter: z.record(StringSchema, BooleanSchema).optional(),
     rewards: z
       .array(
         z
           .object({
             resource: StringSchema.min(1),
             amount: NumberSchema,
+          })
+          .strict(),
+      )
+      .optional(),
+    overrides: z
+      .array(
+        z
+          .object({
+            faction: StringSchema.min(1),
+            eligible: BooleanSchema,
+            windowId: StringSchema.min(1),
+            duration: TurnFlowDurationSchema,
           })
           .strict(),
       )

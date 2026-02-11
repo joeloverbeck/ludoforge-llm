@@ -102,10 +102,11 @@ describe('FITL eligibility/pass-chain integration', () => {
 
     const second = applyMove(def, first, operateMove).state;
     assert.equal(second.globalVars.ops, 2);
-    assert.equal(second.activePlayer, asPlayerId(0));
+    assert.equal(second.activePlayer, asPlayerId(2));
     assert.equal(second.turnFlow?.currentCard.nonPassCount, 0);
-    assert.equal(second.turnFlow?.currentCard.firstEligible, '0');
-    assert.equal(second.turnFlow?.currentCard.secondEligible, '1');
+    assert.equal(second.turnFlow?.currentCard.firstEligible, '2');
+    assert.equal(second.turnFlow?.currentCard.secondEligible, '3');
+    assert.deepEqual(second.turnFlow?.eligibility, { '0': false, '1': false, '2': true, '3': true });
     assert.deepEqual(second.turnFlow?.currentCard.actedFactions, []);
   });
 });

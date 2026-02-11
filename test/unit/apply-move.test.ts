@@ -253,4 +253,148 @@ describe('applyMove', () => {
     const cardEnd = eligibilityEntries.find((entry) => entry.step === 'cardEnd');
     assert.equal(cardEnd?.reason, 'rightmostPass');
   });
+
+  it('marks non-pass executors ineligible for the next card at card end', () => {
+    const def: GameDef = {
+      metadata: { id: 'turn-flow-default-eligibility', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
+        optionMatrix: [{ first: 'operation', second: ['limitedOperation', 'operation'] }],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      actions: [
+        {
+          id: asActionId('operation'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('limitedOperation'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const start = initialState(def, 13, 4);
+    const first = applyMove(def, start, { actionId: asActionId('operation'), params: {} }).state;
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} });
+
+    assert.deepEqual(second.state.turnFlow?.eligibility, { '0': false, '1': false, '2': true, '3': true });
+    assert.equal(second.state.turnFlow?.currentCard.firstEligible, '2');
+    assert.equal(second.state.turnFlow?.currentCard.secondEligible, '3');
+    assert.equal(second.state.activePlayer, asPlayerId(2));
+
+    const cardEndEntry = second.triggerFirings.find(
+      (entry) => entry.kind === 'turnFlowEligibility' && entry.step === 'cardEnd',
+    );
+    assert.deepEqual(
+      (cardEndEntry as Extract<TriggerLogEntry, { kind: 'turnFlowEligibility' }> | undefined)?.eligibilityAfter,
+      { '0': false, '1': false, '2': true, '3': true },
+    );
+  });
+
+  it('applies nextCard eligibility override directives and traces override creation', () => {
+    const selfOverride = 'eligibilityOverride:self:eligible:remain-eligible';
+    const targetOverride = 'eligibilityOverride:2:ineligible:force-ineligible';
+    const noOverride = 'none';
+
+    const def: GameDef = {
+      metadata: { id: 'turn-flow-override-directives', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: {
+          factions: ['0', '1', '2', '3'],
+          overrideWindows: [
+            { id: 'remain-eligible', duration: 'nextCard' },
+            { id: 'force-ineligible', duration: 'nextCard' },
+          ],
+        },
+        optionMatrix: [{ first: 'event', second: ['operation'] }],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      actions: [
+        {
+          id: asActionId('event'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [
+            { name: 'selfOverride', domain: { query: 'enums', values: [noOverride, selfOverride] } },
+            { name: 'targetOverride', domain: { query: 'enums', values: [noOverride, targetOverride] } },
+          ],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('operation'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const start = initialState(def, 17, 4);
+    const first = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { selfOverride, targetOverride },
+    });
+    const second = applyMove(def, first.state, { actionId: asActionId('operation'), params: {} });
+
+    assert.deepEqual(second.state.turnFlow?.eligibility, { '0': true, '1': false, '2': false, '3': true });
+    assert.equal(second.state.turnFlow?.currentCard.firstEligible, '0');
+    assert.equal(second.state.turnFlow?.currentCard.secondEligible, '3');
+    assert.equal(second.state.activePlayer, asPlayerId(0));
+
+    const overrideCreateEntry = first.triggerFirings.find(
+      (entry) => entry.kind === 'turnFlowEligibility' && entry.step === 'overrideCreate',
+    );
+    assert.equal((overrideCreateEntry as Extract<TriggerLogEntry, { kind: 'turnFlowEligibility' }> | undefined)?.overrides?.length, 2);
+
+    const cardEndEntry = second.triggerFirings.find(
+      (entry) => entry.kind === 'turnFlowEligibility' && entry.step === 'cardEnd',
+    );
+    assert.equal((cardEndEntry as Extract<TriggerLogEntry, { kind: 'turnFlowEligibility' }> | undefined)?.overrides?.length, 2);
+    assert.deepEqual(
+      (cardEndEntry as Extract<TriggerLogEntry, { kind: 'turnFlowEligibility' }> | undefined)?.eligibilityAfter,
+      { '0': true, '1': false, '2': false, '3': true },
+    );
+  });
 });

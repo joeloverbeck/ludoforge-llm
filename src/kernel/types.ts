@@ -470,10 +470,18 @@ export interface TurnFlowRuntimeCardState {
   readonly firstActionClass: 'event' | 'operation' | 'operationPlusSpecialActivity' | null;
 }
 
+export interface TurnFlowPendingEligibilityOverride {
+  readonly faction: string;
+  readonly eligible: boolean;
+  readonly windowId: string;
+  readonly duration: TurnFlowDuration;
+}
+
 export interface TurnFlowRuntimeState {
   readonly factionOrder: readonly string[];
   readonly eligibility: Readonly<Record<string, boolean>>;
   readonly currentCard: TurnFlowRuntimeCardState;
+  readonly pendingEligibilityOverrides?: readonly TurnFlowPendingEligibilityOverride[];
 }
 
 export interface GameState {
@@ -548,7 +556,7 @@ export interface TurnFlowLifecycleTraceEntry {
 
 export interface TurnFlowEligibilityTraceEntry {
   readonly kind: 'turnFlowEligibility';
-  readonly step: 'candidateScan' | 'passChain' | 'cardEnd';
+  readonly step: 'candidateScan' | 'passChain' | 'cardEnd' | 'overrideCreate';
   readonly faction: string | null;
   readonly before: {
     readonly firstEligible: string | null;
@@ -566,10 +574,13 @@ export interface TurnFlowEligibilityTraceEntry {
     readonly nonPassCount: number;
     readonly firstActionClass: 'event' | 'operation' | 'operationPlusSpecialActivity' | null;
   };
+  readonly eligibilityBefore?: Readonly<Record<string, boolean>>;
+  readonly eligibilityAfter?: Readonly<Record<string, boolean>>;
   readonly rewards?: readonly {
     readonly resource: string;
     readonly amount: number;
   }[];
+  readonly overrides?: readonly TurnFlowPendingEligibilityOverride[];
   readonly reason?: 'rightmostPass' | 'twoNonPass';
 }
 

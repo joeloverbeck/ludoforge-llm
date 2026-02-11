@@ -1,5 +1,13 @@
 import { asPlayerId } from './branded.js';
-import type { GameDef, GameState, Move, TriggerLogEntry, TurnFlowRuntimeCardState } from './types.js';
+import type {
+  GameDef,
+  GameState,
+  Move,
+  TriggerLogEntry,
+  TurnFlowDuration,
+  TurnFlowPendingEligibilityOverride,
+  TurnFlowRuntimeCardState,
+} from './types.js';
 
 interface TurnFlowTransitionResult {
   readonly state: GameState;
@@ -7,6 +15,7 @@ interface TurnFlowTransitionResult {
 }
 
 const isPassAction = (move: Move): boolean => String(move.actionId) === 'pass';
+const ELIGIBILITY_OVERRIDE_PREFIX = 'eligibilityOverride:';
 
 const isTurnFlowActionClass = (
   value: string,
@@ -88,6 +97,91 @@ const cardSnapshot = (card: TurnFlowRuntimeCardState) => ({
   firstActionClass: card.firstActionClass,
 });
 
+const indexOverrideWindows = (
+  def: GameDef,
+): Readonly<Record<string, TurnFlowDuration>> =>
+  Object.fromEntries((def.turnFlow?.eligibility.overrideWindows ?? []).map((windowDef) => [windowDef.id, windowDef.duration]));
+
+const extractOverrideDirectiveTokens = (value: Move['params'][string]): readonly string[] => {
+  if (typeof value === 'string') {
+    return [value];
+  }
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string');
+  }
+  return [];
+};
+
+const resolveDirectiveFaction = (
+  token: string,
+  activeFaction: string,
+  factionOrder: readonly string[],
+): string | null => {
+  if (token === 'self') {
+    return activeFaction;
+  }
+  return factionOrder.includes(token) ? token : null;
+};
+
+const resolveDirectiveEligibility = (token: string): boolean | null => {
+  if (token === 'eligible' || token === 'true') {
+    return true;
+  }
+  if (token === 'ineligible' || token === 'false') {
+    return false;
+  }
+  return null;
+};
+
+const extractPendingEligibilityOverrides = (
+  def: GameDef,
+  move: Move,
+  activeFaction: string,
+  factionOrder: readonly string[],
+): readonly TurnFlowPendingEligibilityOverride[] => {
+  const windowById = indexOverrideWindows(def);
+  const overrides: TurnFlowPendingEligibilityOverride[] = [];
+  for (const paramValue of Object.values(move.params)) {
+    for (const token of extractOverrideDirectiveTokens(paramValue)) {
+      if (!token.startsWith(ELIGIBILITY_OVERRIDE_PREFIX)) {
+        continue;
+      }
+      const [factionToken, eligibilityToken, windowId] = token.slice(ELIGIBILITY_OVERRIDE_PREFIX.length).split(':');
+      if (factionToken === undefined || eligibilityToken === undefined || windowId === undefined || windowId.length === 0) {
+        continue;
+      }
+      const faction = resolveDirectiveFaction(factionToken, activeFaction, factionOrder);
+      const eligible = resolveDirectiveEligibility(eligibilityToken);
+      const duration = windowById[windowId];
+      if (faction === null || eligible === null || duration !== 'nextCard') {
+        continue;
+      }
+      overrides.push({
+        faction,
+        eligible,
+        windowId,
+        duration,
+      });
+    }
+  }
+
+  return overrides;
+};
+
+const computePostCardEligibility = (
+  factionOrder: readonly string[],
+  currentCard: TurnFlowRuntimeCardState,
+  overrides: readonly TurnFlowPendingEligibilityOverride[],
+): Readonly<Record<string, boolean>> => {
+  const passed = new Set(currentCard.passedFactions);
+  const executed = new Set(currentCard.actedFactions.filter((faction) => !passed.has(faction)));
+  const eligibility = Object.fromEntries(factionOrder.map((faction) => [faction, !executed.has(faction)]));
+  for (const override of overrides) {
+    eligibility[override.faction] = override.eligible;
+  }
+  return eligibility;
+};
+
 const withActiveFromFirstEligible = (state: GameState, firstEligible: string | null): GameState => {
   if (firstEligible === null) {
     return state;
@@ -122,6 +216,7 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
     turnFlow: {
       factionOrder,
       eligibility,
+      pendingEligibilityOverrides: [],
       currentCard: {
         firstEligible: candidates.first,
         secondEligible: candidates.second,
@@ -193,6 +288,8 @@ export const applyTurnFlowEligibilityAfterMove = (
   }
 
   const moveClass = resolveTurnFlowActionClass(move);
+  const newOverrides = extractPendingEligibilityOverrides(def, move, activeFaction, runtime.factionOrder);
+  const pendingOverrides = [...(runtime.pendingEligibilityOverrides ?? []), ...newOverrides];
   const firstActionClass =
     before.firstActionClass ??
     (before.nonPassCount === 0 && moveClass !== 'pass' ? normalizeFirstActionClass(moveClass) : null);
@@ -231,6 +328,16 @@ export const applyTurnFlowEligibilityAfterMove = (
       ...(rewards.length === 0 ? {} : { rewards }),
     },
   ];
+  if (newOverrides.length > 0) {
+    traceEntries.push({
+      kind: 'turnFlowEligibility',
+      step: 'overrideCreate',
+      faction: activeFaction,
+      before: cardSnapshot(currentCard),
+      after: cardSnapshot(currentCard),
+      overrides: newOverrides,
+    });
+  }
 
   let endedReason: 'rightmostPass' | 'twoNonPass' | undefined;
   if (step === 'passChain' && currentCard.firstEligible === null && currentCard.secondEligible === null) {
@@ -240,8 +347,12 @@ export const applyTurnFlowEligibilityAfterMove = (
   }
 
   let nextCard = currentCard;
+  let nextEligibility = runtime.eligibility;
+  let nextPendingOverrides = pendingOverrides;
   if (endedReason !== undefined) {
-    const resetCandidates = computeCandidates(runtime.factionOrder, runtime.eligibility, new Set());
+    nextEligibility = computePostCardEligibility(runtime.factionOrder, currentCard, pendingOverrides);
+    nextPendingOverrides = [];
+    const resetCandidates = computeCandidates(runtime.factionOrder, nextEligibility, new Set());
     nextCard = {
       firstEligible: resetCandidates.first,
       secondEligible: resetCandidates.second,
@@ -256,6 +367,9 @@ export const applyTurnFlowEligibilityAfterMove = (
       faction: activeFaction,
       before: cardSnapshot(currentCard),
       after: cardSnapshot(nextCard),
+      eligibilityBefore: runtime.eligibility,
+      eligibilityAfter: nextEligibility,
+      ...(pendingOverrides.length === 0 ? {} : { overrides: pendingOverrides }),
       reason: endedReason,
     });
   }
@@ -264,6 +378,8 @@ export const applyTurnFlowEligibilityAfterMove = (
     ...rewardState,
     turnFlow: {
       ...runtime,
+      eligibility: nextEligibility,
+      pendingEligibilityOverrides: nextPendingOverrides,
       currentCard: nextCard,
     },
   };

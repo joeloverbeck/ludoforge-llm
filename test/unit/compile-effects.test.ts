@@ -70,4 +70,34 @@ describe('compile-effects lowering', () => {
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0');
     assert.ok((result.diagnostics[0]?.alternatives ?? []).includes('setVar'));
   });
+
+  it('lowers chooseN range cardinality forms deterministically', () => {
+    const source = [
+      { chooseN: { bind: '$upToTwo', options: { query: 'players' }, max: 2 } },
+      { chooseN: { bind: '$oneToThree', options: { query: 'players' }, min: 1, max: 3 } },
+    ];
+
+    const result = lowerEffectArray(source, context, 'doc.actions.0.effects');
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, [
+      { chooseN: { bind: '$upToTwo', options: { query: 'players' }, max: 2 } },
+      { chooseN: { bind: '$oneToThree', options: { query: 'players' }, min: 1, max: 3 } },
+    ]);
+  });
+
+  it('rejects chooseN cardinality mixes and contradictory ranges', () => {
+    const result = lowerEffectArray(
+      [
+        { chooseN: { bind: '$badMix', options: { query: 'players' }, n: 2, max: 3 } },
+        { chooseN: { bind: '$badRange', options: { query: 'players' }, min: 3, max: 1 } },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.chooseN'), true);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.1.chooseN'), true);
+  });
 });

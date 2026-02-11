@@ -485,6 +485,38 @@ describe('validateGameDef constraints and warnings', () => {
     );
   });
 
+  it('reports invalid chooseN range cardinality declarations', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              chooseN: {
+                bind: '$pick',
+                options: { query: 'players' },
+                n: 1,
+                max: 2,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'EFFECT_CHOOSE_N_CARDINALITY_INVALID' &&
+          diag.path === 'actions[0].effects[0].chooseN' &&
+          diag.severity === 'error',
+      ),
+    );
+  });
+
   it('returns no diagnostics for fully valid game def', () => {
     const diagnostics = validateGameDef(createValidGameDef());
     assert.deepEqual(diagnostics, []);

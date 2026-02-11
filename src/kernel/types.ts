@@ -177,8 +177,18 @@ export type EffectAST =
       readonly chooseN: {
         readonly bind: string;
         readonly options: OptionsQuery;
-        readonly n: number;
-      };
+      } & (
+        | {
+            readonly n: number;
+            readonly min?: never;
+            readonly max?: never;
+          }
+        | {
+            readonly min?: number;
+            readonly max: number;
+            readonly n?: never;
+          }
+      );
     };
 
 export interface VariableDef {

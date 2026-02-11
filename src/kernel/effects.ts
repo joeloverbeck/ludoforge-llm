@@ -893,37 +893,85 @@ const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: unknown
 };
 
 const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unknown }>, ctx: EffectContext): EffectResult => {
-  if (!Number.isSafeInteger(effect.chooseN.n) || effect.chooseN.n < 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN.n must be a non-negative integer', {
+  const chooseN = effect.chooseN;
+  const bind = chooseN.bind;
+  const hasN = 'n' in chooseN && chooseN.n !== undefined;
+  const hasMax = 'max' in chooseN && chooseN.max !== undefined;
+  const hasMin = 'min' in chooseN && chooseN.min !== undefined;
+  let minCardinality: number;
+  let maxCardinality: number;
+
+  if (hasN && hasMax) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN must use either exact n or range max/min cardinality', {
       effectType: 'chooseN',
-      bind: effect.chooseN.bind,
-      n: effect.chooseN.n,
+      bind,
+      chooseN,
     });
   }
 
-  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, effect.chooseN.bind)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN missing move param binding: ${effect.chooseN.bind}`, {
+  if (hasN) {
+    minCardinality = chooseN.n;
+    maxCardinality = chooseN.n;
+  } else if (hasMax) {
+    minCardinality = hasMin ? chooseN.min : 0;
+    maxCardinality = chooseN.max;
+  } else {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN must use either exact n or range max/min cardinality', {
       effectType: 'chooseN',
-      bind: effect.chooseN.bind,
+      bind,
+      chooseN,
+    });
+  }
+
+  if (!Number.isSafeInteger(minCardinality) || minCardinality < 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN minimum cardinality must be a non-negative integer', {
+      effectType: 'chooseN',
+      bind: chooseN.bind,
+      min: hasN ? chooseN.n : chooseN.min,
+    });
+  }
+
+  if (!Number.isSafeInteger(maxCardinality) || maxCardinality < 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN maximum cardinality must be a non-negative integer', {
+      effectType: 'chooseN',
+      bind: chooseN.bind,
+      max: hasN ? chooseN.n : chooseN.max,
+    });
+  }
+
+  if (minCardinality > maxCardinality) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN min cannot exceed max', {
+      effectType: 'chooseN',
+      bind: chooseN.bind,
+      min: minCardinality,
+      max: maxCardinality,
+    });
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, bind)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN missing move param binding: ${bind}`, {
+      effectType: 'chooseN',
+      bind,
       availableMoveParams: Object.keys(ctx.moveParams).sort(),
     });
   }
 
-  const selectedValue = ctx.moveParams[effect.chooseN.bind];
+  const selectedValue = ctx.moveParams[bind];
   if (!Array.isArray(selectedValue)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN move param must be an array: ${effect.chooseN.bind}`, {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN move param must be an array: ${bind}`, {
       effectType: 'chooseN',
-      bind: effect.chooseN.bind,
+      bind,
       actualType: typeof selectedValue,
       value: selectedValue,
     });
   }
 
-  if (selectedValue.length !== effect.chooseN.n) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN selection cardinality mismatch for: ${effect.chooseN.bind}`, {
+  if (selectedValue.length < minCardinality || selectedValue.length > maxCardinality) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN selection cardinality mismatch for: ${bind}`, {
       effectType: 'chooseN',
-      bind: effect.chooseN.bind,
-      expected: effect.chooseN.n,
+      bind,
+      min: minCardinality,
+      max: maxCardinality,
       actual: selectedValue.length,
     });
   }
@@ -931,9 +979,9 @@ const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unknown }>,
   for (let left = 0; left < selectedValue.length; left += 1) {
     for (let right = left + 1; right < selectedValue.length; right += 1) {
       if (valuesMatch(selectedValue[left], selectedValue[right])) {
-        throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN selections must be unique: ${effect.chooseN.bind}`, {
+        throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN selections must be unique: ${bind}`, {
           effectType: 'chooseN',
-          bind: effect.chooseN.bind,
+          bind,
           duplicateValue: selectedValue[left],
         });
       }
@@ -941,12 +989,12 @@ const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unknown }>,
   }
 
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const options = evalQuery(effect.chooseN.options, evalCtx);
+  const options = evalQuery(chooseN.options, evalCtx);
   for (const selected of selectedValue) {
     if (!isInDomain(selected, options)) {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN selection is outside options domain: ${effect.chooseN.bind}`, {
+      throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN selection is outside options domain: ${bind}`, {
         effectType: 'chooseN',
-        bind: effect.chooseN.bind,
+        bind,
         selected,
         optionsCount: options.length,
       });

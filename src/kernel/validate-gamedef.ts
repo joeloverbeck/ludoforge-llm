@@ -559,6 +559,67 @@ const validateEffectAst = (
     return;
   }
 
+  const chooseN = effect.chooseN;
+  const hasN = 'n' in chooseN && chooseN.n !== undefined;
+  const hasMax = 'max' in chooseN && chooseN.max !== undefined;
+  const hasMin = 'min' in chooseN && chooseN.min !== undefined;
+
+  if ((hasN && hasMax) || (!hasN && !hasMax)) {
+    diagnostics.push({
+      code: 'EFFECT_CHOOSE_N_CARDINALITY_INVALID',
+      path: `${path}.chooseN`,
+      severity: 'error',
+      message: 'chooseN must declare either exact n or range max/min cardinality.',
+      suggestion: 'Use { n } or { max, min? }.',
+    });
+  }
+
+  if (hasN && (!Number.isSafeInteger(chooseN.n) || chooseN.n < 0)) {
+    diagnostics.push({
+      code: 'EFFECT_CHOOSE_N_CARDINALITY_INVALID',
+      path: `${path}.chooseN.n`,
+      severity: 'error',
+      message: 'chooseN.n must be a non-negative integer.',
+      suggestion: 'Set n to an integer >= 0.',
+    });
+  }
+
+  if (hasMax && (!Number.isSafeInteger(chooseN.max) || chooseN.max < 0)) {
+    diagnostics.push({
+      code: 'EFFECT_CHOOSE_N_CARDINALITY_INVALID',
+      path: `${path}.chooseN.max`,
+      severity: 'error',
+      message: 'chooseN.max must be a non-negative integer.',
+      suggestion: 'Set max to an integer >= 0.',
+    });
+  }
+
+  if (hasMin && (!Number.isSafeInteger(chooseN.min) || chooseN.min < 0)) {
+    diagnostics.push({
+      code: 'EFFECT_CHOOSE_N_CARDINALITY_INVALID',
+      path: `${path}.chooseN.min`,
+      severity: 'error',
+      message: 'chooseN.min must be a non-negative integer.',
+      suggestion: 'Set min to an integer >= 0.',
+    });
+  }
+
+  if (
+    hasMax &&
+    hasMin &&
+    Number.isSafeInteger(chooseN.max) &&
+    Number.isSafeInteger(chooseN.min) &&
+    chooseN.min > chooseN.max
+  ) {
+    diagnostics.push({
+      code: 'EFFECT_CHOOSE_N_CARDINALITY_INVALID',
+      path: `${path}.chooseN`,
+      severity: 'error',
+      message: 'chooseN.min cannot exceed chooseN.max.',
+      suggestion: 'Set min <= max.',
+    });
+  }
+
   validateOptionsQuery(diagnostics, effect.chooseN.options, `${path}.chooseN.options`, context);
 };
 

@@ -566,14 +566,29 @@
           "required": ["chooseN"],
           "properties": {
             "chooseN": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["bind", "options", "n"],
-              "properties": {
-                "bind": { "type": "string" },
-                "options": { "$ref": "#/definitions/optionsQuery" },
-                "n": { "type": "number" }
-              }
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["bind", "options", "n"],
+                  "properties": {
+                    "bind": { "type": "string" },
+                    "options": { "$ref": "#/definitions/optionsQuery" },
+                    "n": { "type": "number" }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["bind", "options", "max"],
+                  "properties": {
+                    "bind": { "type": "string" },
+                    "options": { "$ref": "#/definitions/optionsQuery" },
+                    "min": { "type": "number" },
+                    "max": { "type": "number" }
+                  }
+                }
+              ]
             }
           }
         }

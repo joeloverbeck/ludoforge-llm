@@ -580,22 +580,70 @@ function lowerChooseNEffect(
   path: string,
 ): EffectLoweringResult<EffectAST> {
   if (typeof source.bind !== 'string') {
-    return missingCapability(path, 'chooseN effect', source, ['{ chooseN: { bind, options, n } }']);
+    return missingCapability(path, 'chooseN effect', source, [
+      '{ chooseN: { bind, options, n } }',
+      '{ chooseN: { bind, options, max, min? } }',
+    ]);
   }
   const options = lowerQueryNode(source.options, makeConditionContext(context, scope), `${path}.options`);
   const diagnostics = [...options.diagnostics];
-  if (!isInteger(source.n) || source.n < 0) {
+
+  const hasN = source.n !== undefined;
+  const hasMin = source.min !== undefined;
+  const hasMax = source.max !== undefined;
+
+  if (hasN && (hasMin || hasMax)) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      path,
+      severity: 'error',
+      message: 'chooseN must use either exact "n" or range "min/max", not both.',
+      suggestion: 'Use { n } for exact cardinality or { max, min? } for range cardinality.',
+      alternatives: ['n', 'max'],
+    });
+  }
+
+  if (!hasN && !hasMax) {
+    diagnostics.push(...missingCapability(path, 'chooseN cardinality', source, ['{ n }', '{ max, min? }']).diagnostics);
+  }
+
+  if (hasN && (!isInteger(source.n) || source.n < 0)) {
     diagnostics.push(...missingCapability(`${path}.n`, 'chooseN n', source.n, ['non-negative integer']).diagnostics);
   }
-  if (options.value === null || !isInteger(source.n) || source.n < 0) {
+  if (hasMax && (!isInteger(source.max) || source.max < 0)) {
+    diagnostics.push(...missingCapability(`${path}.max`, 'chooseN max', source.max, ['non-negative integer']).diagnostics);
+  }
+  if (hasMin && (!isInteger(source.min) || source.min < 0)) {
+    diagnostics.push(...missingCapability(`${path}.min`, 'chooseN min', source.min, ['non-negative integer']).diagnostics);
+  }
+
+  if (hasMax && hasMin && isInteger(source.max) && isInteger(source.min) && source.min > source.max) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_MISSING_CAPABILITY',
+      path,
+      severity: 'error',
+      message: 'chooseN min cannot exceed max.',
+      suggestion: 'Set chooseN.min <= chooseN.max.',
+    });
+  }
+
+  if (options.value === null || diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
     return { value: null, diagnostics };
   }
+
+  const cardinality =
+    hasN && isInteger(source.n)
+      ? { n: source.n }
+      : {
+          max: source.max as number,
+          ...(hasMin ? { min: source.min as number } : {}),
+        };
   return {
     value: {
       chooseN: {
         bind: source.bind,
         options: options.value,
-        n: source.n,
+        ...cardinality,
       },
     },
     diagnostics,

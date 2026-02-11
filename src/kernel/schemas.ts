@@ -261,13 +261,23 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
-      chooseN: z
-        .object({
-          bind: StringSchema,
-          options: OptionsQuerySchema,
-          n: NumberSchema,
-        })
-        .strict(),
+      chooseN: z.union([
+        z
+          .object({
+            bind: StringSchema,
+            options: OptionsQuerySchema,
+            n: NumberSchema,
+          })
+          .strict(),
+        z
+          .object({
+            bind: StringSchema,
+            options: OptionsQuerySchema,
+            min: NumberSchema.optional(),
+            max: NumberSchema,
+          })
+          .strict(),
+      ]),
     })
     .strict(),
 ]);

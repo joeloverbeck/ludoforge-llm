@@ -95,6 +95,8 @@ describe('AST and selector schemas', () => {
       },
       { chooseOne: { bind: '$zone', options: { query: 'zones', filter: { owner: 'active' } } } },
       { chooseN: { bind: '$token', options: { query: 'tokensInAdjacentZones', zone: 'board:actor' }, n: 2 } },
+      { chooseN: { bind: '$opt', options: { query: 'players' }, max: 2 } },
+      { chooseN: { bind: '$range', options: { query: 'players' }, min: 1, max: 3 } },
     ];
 
     for (const effect of effects) {
@@ -147,6 +149,19 @@ describe('AST and selector schemas', () => {
     assert.equal(result.success, false);
     const paths = result.error.issues.flatMap((issue) => collectIssuePaths(issue));
     assert.ok(paths.includes('setVar.scope'));
+  });
+
+  it('rejects chooseN payloads that mix exact and range cardinality', () => {
+    const result = EffectASTSchema.safeParse({
+      chooseN: {
+        bind: '$pick',
+        options: { query: 'players' },
+        n: 1,
+        max: 2,
+      },
+    });
+
+    assert.equal(result.success, false);
   });
 
   it('rejects malformed spatial ConditionAST payloads', () => {

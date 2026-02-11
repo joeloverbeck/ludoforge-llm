@@ -176,10 +176,23 @@
         "depth": { "type": "number" }
       }
     },
+    "operationPartialTraceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "actionId", "profileId", "step", "reason"],
+      "properties": {
+        "kind": { "const": "operationPartial" },
+        "actionId": { "type": "string" },
+        "profileId": { "type": "string" },
+        "step": { "const": "costSpendSkipped" },
+        "reason": { "const": "costValidationFailed" }
+      }
+    },
     "triggerLogEntry": {
       "oneOf": [
         { "$ref": "#/definitions/triggerFiring" },
-        { "$ref": "#/definitions/triggerTruncated" }
+        { "$ref": "#/definitions/triggerTruncated" },
+        { "$ref": "#/definitions/operationPartialTraceEntry" }
       ]
     },
     "serializedRngState": {

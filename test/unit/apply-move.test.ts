@@ -566,6 +566,13 @@ describe('applyMove', () => {
     assert.equal(result.state.globalVars.energy, 1);
     assert.equal(result.state.globalVars.score, 1);
     assert.deepEqual(result.state.actionUsage.operate, { turnCount: 1, phaseCount: 1, gameCount: 1 });
+    assert.deepEqual(result.triggerFirings[0], {
+      kind: 'operationPartial',
+      actionId: asActionId('operate'),
+      profileId: 'operate-profile',
+      step: 'costSpendSkipped',
+      reason: 'costValidationFailed',
+    });
   });
 
   it('skips RNG-consuming cost spend in allow mode when cost validation fails', () => {
@@ -630,6 +637,7 @@ describe('applyMove', () => {
       result.state.zones['bag:none']?.map((token) => token.id),
       [asTokenId('t-1'), asTokenId('t-2'), asTokenId('t-3')],
     );
+    assert.equal(result.triggerFirings.some((entry) => entry.kind === 'operationPartial'), true);
 
     const payableState: GameState = {
       ...state,
@@ -638,6 +646,7 @@ describe('applyMove', () => {
     };
     const payableResult = applyMove(def, payableState, { actionId: asActionId('operate'), params: {} });
     assert.notDeepEqual(payableResult.state.rng, payableState.rng);
+    assert.equal(payableResult.triggerFirings.some((entry) => entry.kind === 'operationPartial'), false);
   });
 
   it('executes operation-profile resolution stages in declared order', () => {

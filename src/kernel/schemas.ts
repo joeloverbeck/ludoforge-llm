@@ -1029,11 +1029,22 @@ export const TurnFlowEligibilityTraceEntrySchema = z
   })
   .strict();
 
+export const OperationPartialTraceEntrySchema = z
+  .object({
+    kind: z.literal('operationPartial'),
+    actionId: StringSchema.min(1),
+    profileId: StringSchema.min(1),
+    step: z.literal('costSpendSkipped'),
+    reason: z.literal('costValidationFailed'),
+  })
+  .strict();
+
 export const TriggerLogEntrySchema = z.union([
   TriggerFiringSchema,
   TriggerTruncatedSchema,
   TurnFlowLifecycleTraceEntrySchema,
   TurnFlowEligibilityTraceEntrySchema,
+  OperationPartialTraceEntrySchema,
 ]);
 
 export const MoveLogSchema = z

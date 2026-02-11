@@ -200,6 +200,17 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
   let effectState = costResult.state;
   let effectRng = costResult.rng;
   const emittedEvents: TriggerEvent[] = [];
+  const executionTraceEntries: TriggerLogEntry[] = [];
+
+  if (executionProfile !== undefined && executionProfile.partialMode === 'allow' && !costValidationPassed) {
+    executionTraceEntries.push({
+      kind: 'operationPartial',
+      actionId: action.id,
+      profileId: operationProfile?.id ?? 'unknown',
+      step: 'costSpendSkipped',
+      reason: 'costValidationFailed',
+    });
+  }
 
   if (executionProfile === undefined) {
     const effectResult = applyEffects(action.effects, {
@@ -275,6 +286,6 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
 
   return {
     state: stateWithHash,
-    triggerFirings: [...triggerResult.triggerLog, ...turnFlowResult.traceEntries, ...lifecycleAndAdvanceLog],
+    triggerFirings: [...executionTraceEntries, ...triggerResult.triggerLog, ...turnFlowResult.traceEntries, ...lifecycleAndAdvanceLog],
   };
 };

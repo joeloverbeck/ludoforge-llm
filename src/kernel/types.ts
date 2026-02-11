@@ -734,7 +734,20 @@ export interface TurnFlowEligibilityTraceEntry {
   readonly reason?: 'rightmostPass' | 'twoNonPass';
 }
 
-export type TriggerLogEntry = TriggerFiring | TriggerTruncated | TurnFlowLifecycleTraceEntry | TurnFlowEligibilityTraceEntry;
+export interface OperationPartialTraceEntry {
+  readonly kind: 'operationPartial';
+  readonly actionId: ActionId;
+  readonly profileId: string;
+  readonly step: 'costSpendSkipped';
+  readonly reason: 'costValidationFailed';
+}
+
+export type TriggerLogEntry =
+  | TriggerFiring
+  | TriggerTruncated
+  | TurnFlowLifecycleTraceEntry
+  | TurnFlowEligibilityTraceEntry
+  | OperationPartialTraceEntry;
 
 export interface ApplyMoveResult {
   readonly state: GameState;

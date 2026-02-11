@@ -90,7 +90,16 @@ const validRuntimeTrace: GameTrace = {
       move: { actionId: asActionId('playCard'), params: { amount: 1, target: 'deck:none', legal: true } },
       legalMoveCount: 3,
       deltas: [{ path: 'globalVars.round', before: 1, after: 2 }],
-      triggerFirings: [{ kind: 'fired', triggerId: asTriggerId('onMainEnter'), event: { type: 'turnStart' }, depth: 0 }],
+      triggerFirings: [
+        {
+          kind: 'operationPartial',
+          actionId: asActionId('playCard'),
+          profileId: 'play-card-profile',
+          step: 'costSpendSkipped',
+          reason: 'costValidationFailed',
+        },
+        { kind: 'fired', triggerId: asTriggerId('onMainEnter'), event: { type: 'turnStart' }, depth: 0 },
+      ],
     },
   ],
   finalState: {

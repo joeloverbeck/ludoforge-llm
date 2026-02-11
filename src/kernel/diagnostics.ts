@@ -8,6 +8,8 @@ export interface Diagnostic {
   readonly suggestion?: string;
   readonly contextSnippet?: string;
   readonly alternatives?: readonly string[];
+  readonly assetPath?: string;
+  readonly entityId?: string;
 }
 
 export enum DegeneracyFlag {

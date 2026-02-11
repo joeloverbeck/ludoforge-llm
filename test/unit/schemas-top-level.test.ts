@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  DataAssetEnvelopeSchema,
   EvalReportSchema,
   GameDefSchema,
   GameTraceSchema,
@@ -116,6 +117,36 @@ const validEvalReport = {
 } as const;
 
 describe('top-level runtime schemas', () => {
+  it('parses valid map/scenario data-asset envelopes', () => {
+    const mapEnvelope = {
+      id: 'fitl-map-foundation',
+      version: 1,
+      kind: 'map',
+      payload: { spaces: [] },
+    } as const;
+    const scenarioEnvelope = {
+      id: 'fitl-foundation-westys-war',
+      version: 1,
+      kind: 'scenario',
+      payload: { setup: {} },
+    } as const;
+
+    assert.equal(DataAssetEnvelopeSchema.safeParse(mapEnvelope).success, true);
+    assert.equal(DataAssetEnvelopeSchema.safeParse(scenarioEnvelope).success, true);
+  });
+
+  it('rejects unsupported data-asset envelope kinds', () => {
+    const result = DataAssetEnvelopeSchema.safeParse({
+      id: 'bad-kind',
+      version: 1,
+      kind: 'pieceCatalog',
+      payload: {},
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'kind'));
+  });
+
   it('parses a minimal valid GameDef with zero issues', () => {
     const result = GameDefSchema.safeParse(minimalGameDef);
     assert.equal(result.success, true);

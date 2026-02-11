@@ -389,6 +389,25 @@ export const ScoringDefSchema = z
   })
   .strict();
 
+export const DataAssetKindSchema = z.union([z.literal('map'), z.literal('scenario')]);
+
+export const DataAssetRefSchema = z
+  .object({
+    id: StringSchema.min(1),
+    version: IntegerSchema.min(1),
+    kind: DataAssetKindSchema,
+  })
+  .strict();
+
+export const DataAssetEnvelopeSchema = z
+  .object({
+    id: StringSchema.min(1),
+    version: IntegerSchema.min(1),
+    kind: DataAssetKindSchema,
+    payload: z.unknown(),
+  })
+  .strict();
+
 export const GameDefSchema = z
   .object({
     metadata: z

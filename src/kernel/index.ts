@@ -8,6 +8,7 @@ export * from './action-usage.js';
 export * from './terminal.js';
 export * from './determinism.js';
 export * from './diagnostics.js';
+export * from './data-assets.js';
 export * from './effect-context.js';
 export * from './effect-error.js';
 export * from './effects.js';

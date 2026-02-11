@@ -28,6 +28,12 @@ function diagnostic(overrides: Partial<Diagnostic>): Diagnostic {
   if (overrides.alternatives !== undefined) {
     result = { ...result, alternatives: overrides.alternatives };
   }
+  if (overrides.assetPath !== undefined) {
+    result = { ...result, assetPath: overrides.assetPath };
+  }
+  if (overrides.entityId !== undefined) {
+    result = { ...result, entityId: overrides.entityId };
+  }
 
   return result;
 }
@@ -126,6 +132,26 @@ describe('compiler diagnostics helpers', () => {
 
     const deduped = dedupeDiagnostics([first, duplicate, distinct]);
     assert.deepEqual(deduped, [first, distinct]);
+  });
+
+  it('does not dedupe diagnostics that only differ by asset context', () => {
+    const first = diagnostic({
+      path: 'asset.kind',
+      code: 'DATA_ASSET_KIND_UNSUPPORTED',
+      message: 'Unsupported kind.',
+      assetPath: 'data/fitl/map/foundation.v1.json',
+      entityId: 'fitl-map-foundation',
+    });
+    const second = diagnostic({
+      path: 'asset.kind',
+      code: 'DATA_ASSET_KIND_UNSUPPORTED',
+      message: 'Unsupported kind.',
+      assetPath: 'data/fitl/scenarios/foundation-westys-war.v1.yaml',
+      entityId: 'fitl-scenario-foundation',
+    });
+
+    const deduped = dedupeDiagnostics([first, second]);
+    assert.deepEqual(deduped, [first, second]);
   });
 
   it('caps diagnostics to maxDiagnosticCount', () => {

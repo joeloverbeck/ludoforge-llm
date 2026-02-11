@@ -291,6 +291,21 @@ export interface GameDef {
   readonly scoring?: ScoringDef;
 }
 
+export type DataAssetKind = 'map' | 'scenario';
+
+export interface DataAssetEnvelope<TPayload = unknown> {
+  readonly id: string;
+  readonly version: number;
+  readonly kind: DataAssetKind;
+  readonly payload: TPayload;
+}
+
+export interface DataAssetRef {
+  readonly id: string;
+  readonly version: number;
+  readonly kind: DataAssetKind;
+}
+
 export interface ZobristTable {
   readonly seed: bigint;
   readonly fingerprint: string;

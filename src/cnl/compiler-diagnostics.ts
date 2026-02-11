@@ -109,6 +109,8 @@ function serializeDiagnosticForDeduping(diagnostic: Diagnostic): string {
     diagnostic.suggestion ?? '',
     diagnostic.contextSnippet ?? '',
     alternatives,
+    diagnostic.assetPath ?? '',
+    diagnostic.entityId ?? '',
   ].join('\u001e');
 }
 

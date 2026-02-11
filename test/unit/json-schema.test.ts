@@ -23,6 +23,7 @@ const readSchema = (filename: string): Record<string, unknown> => {
 const traceSchema = readSchema('Trace.schema.json');
 const evalReportSchema = readSchema('EvalReport.schema.json');
 const gameDefSchema = readSchema('GameDef.schema.json');
+const dataAssetEnvelopeSchema = readSchema('DataAssetEnvelope.schema.json');
 
 const fullGameDef: GameDef = {
   metadata: { id: 'full-game', players: { min: 2, max: 4 }, maxTriggerDepth: 5 },
@@ -101,7 +102,7 @@ const validRuntimeTrace: GameTrace = {
 
 describe('json schema artifacts', () => {
   it('each schema file is valid JSON and declares a draft version', () => {
-    const schemas = [traceSchema, evalReportSchema, gameDefSchema];
+    const schemas = [traceSchema, evalReportSchema, gameDefSchema, dataAssetEnvelopeSchema];
 
     for (const schema of schemas) {
       assert.equal(typeof schema.$schema, 'string');
@@ -187,6 +188,39 @@ describe('json schema artifacts', () => {
       validate.errors?.some(
         (error: ErrorObject<string, Record<string, unknown>, unknown>) =>
           error.instancePath === '/finalState/rng/state/1',
+      ),
+    );
+  });
+
+  it('known-good data asset envelope validates against DataAssetEnvelope.schema.json', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(dataAssetEnvelopeSchema);
+
+    const envelope = {
+      id: 'fitl-map-foundation',
+      version: 1,
+      kind: 'map',
+      payload: { spaces: [] },
+    };
+
+    assert.equal(validate(envelope), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('data asset envelope with unknown kind fails schema validation', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(dataAssetEnvelopeSchema);
+
+    const envelope = {
+      id: 'fitl-piece-catalog',
+      version: 1,
+      kind: 'pieceCatalog',
+      payload: {},
+    };
+
+    assert.equal(validate(envelope), false);
+    assert.ok(
+      validate.errors?.some(
+        (error: ErrorObject<string, Record<string, unknown>, unknown>) => error.instancePath === '/kind',
       ),
     );
   });

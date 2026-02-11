@@ -10,6 +10,25 @@ export interface CompiledFixture {
   readonly compiled: ReturnType<typeof compileGameSpecToGameDef>;
 }
 
+type FactionRef = number | string;
+type EligibilityRef = 'eligible' | 'ineligible';
+
+const stringifyFactionRef = (value: FactionRef): string => String(value);
+
+export const FITL_NO_OVERRIDE = 'none';
+
+export const createEligibilityOverrideDirective = ({
+  target,
+  eligibility,
+  windowId,
+}: {
+  target: 'self' | FactionRef;
+  eligibility: EligibilityRef;
+  windowId: string;
+}): string => `eligibilityOverride:${target === 'self' ? 'self' : stringifyFactionRef(target)}:${eligibility}:${windowId}`;
+
+export const createFreeOpGrantedDirective = (faction: FactionRef): string => `freeOpGranted:${stringifyFactionRef(faction)}`;
+
 export const compileCompilerFixture = (name: string): CompiledFixture => {
   const markdown = readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
   const parsed = parseGameSpec(markdown);

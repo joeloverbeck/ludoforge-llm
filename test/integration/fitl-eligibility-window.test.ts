@@ -10,11 +10,24 @@ import {
   type GameDef,
   type Move,
 } from '../../src/kernel/index.js';
+import {
+  createEligibilityOverrideDirective,
+  createFreeOpGrantedDirective,
+  FITL_NO_OVERRIDE,
+} from './fitl-events-test-helpers.js';
 
-const selfOverride = 'eligibilityOverride:self:eligible:remain-eligible';
-const targetOverride = 'eligibilityOverride:2:ineligible:force-ineligible';
-const noOverride = 'none';
-const freeOpDirective = 'freeOpGranted:2';
+const selfOverride = createEligibilityOverrideDirective({
+  target: 'self',
+  eligibility: 'eligible',
+  windowId: 'remain-eligible',
+});
+const targetOverride = createEligibilityOverrideDirective({
+  target: 2,
+  eligibility: 'ineligible',
+  windowId: 'force-ineligible',
+});
+const noOverride = FITL_NO_OVERRIDE;
+const freeOpDirective = createFreeOpGrantedDirective(2);
 
 const createDef = (): GameDef =>
   ({

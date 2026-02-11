@@ -141,6 +141,42 @@ describe('evalQuery', () => {
     assert.deepEqual(evalQuery({ query: 'zones', filter: { owner: 'actor' } }, ctx), ['bench:1', 'hand:1']);
   });
 
+  it('filters owner-scoped zones using canonical ZoneDef.owner metadata', () => {
+    const def = makeDef();
+    const malformedZoneId = asZoneId('ghost:1');
+    const zones = [
+      ...def.zones,
+      {
+        id: malformedZoneId,
+        owner: 'none' as const,
+        visibility: 'public' as const,
+        ordering: 'set' as const,
+      },
+    ];
+    const state = makeState();
+    const ctx = makeCtx({
+      def: { ...def, zones },
+      adjacencyGraph: buildAdjacencyGraph(zones),
+      state: {
+        ...state,
+        zones: {
+          ...state.zones,
+          [malformedZoneId]: [],
+        },
+      },
+    });
+
+    assert.deepEqual(evalQuery({ query: 'zones' }, ctx), [
+      'bench:1',
+      'deck:none',
+      'ghost:1',
+      'hand:0',
+      'hand:1',
+      'tableau:2',
+    ]);
+    assert.deepEqual(evalQuery({ query: 'zones', filter: { owner: 'actor' } }, ctx), ['bench:1', 'hand:1']);
+  });
+
   it('evaluates spatial query variants with deterministic ordering', () => {
     const ctx = makeCtx();
 

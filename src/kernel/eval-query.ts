@@ -27,22 +27,29 @@ function extractOwnerQualifier(zoneId: ZoneId): string | null {
 }
 
 function evalZonesQuery(query: Extract<OptionsQuery, { readonly query: 'zones' }>, ctx: EvalContext): readonly ZoneId[] {
-  const allZoneIds = ctx.def.zones.map((zone) => zone.id).sort((left, right) => left.localeCompare(right));
+  const allZones = [...ctx.def.zones].sort((left, right) => left.id.localeCompare(right.id));
+  const allZoneIds = allZones.map((zone) => zone.id);
 
   if (query.filter?.owner === undefined) {
     return allZoneIds;
   }
 
   const owners = new Set(resolvePlayerSel(query.filter.owner, ctx));
-  return allZoneIds.filter((zoneId) => {
-    const ownerQualifier = extractOwnerQualifier(zoneId);
-    if (ownerQualifier === null || !/^[0-9]+$/.test(ownerQualifier)) {
-      return false;
-    }
+  return allZones
+    .filter((zone) => {
+      if (zone.owner !== 'player') {
+        return false;
+      }
 
-    const playerId = asPlayerId(Number(ownerQualifier));
-    return owners.has(playerId);
-  });
+      const ownerQualifier = extractOwnerQualifier(zone.id);
+      if (ownerQualifier === null || !/^[0-9]+$/.test(ownerQualifier)) {
+        return false;
+      }
+
+      const playerId = asPlayerId(Number(ownerQualifier));
+      return owners.has(playerId);
+    })
+    .map((zone) => zone.id);
 }
 
 export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly QueryResult[] {

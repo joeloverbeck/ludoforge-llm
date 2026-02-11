@@ -1,0 +1,16 @@
+{
+  "expectedDiagnostics": [
+    {
+      "code": "CNL_COMPILER_DATA_ASSET_REF_MISSING",
+      "path": "doc.dataAssets.2.payload.mapAssetId",
+      "suggestion": "Use an existing map asset id from doc.dataAssets.",
+      "entityId": "fitl-scenario-invalid"
+    },
+    {
+      "code": "CNL_COMPILER_DATA_ASSET_REF_MISSING",
+      "path": "doc.dataAssets.2.payload.pieceCatalogAssetId",
+      "suggestion": "Use an existing pieceCatalog asset id from doc.dataAssets.",
+      "entityId": "fitl-scenario-invalid"
+    }
+  ]
+}

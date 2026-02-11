@@ -219,6 +219,87 @@ describe('compile pipeline integration', () => {
     );
   });
 
+  it('fails fast for embedded scenario refs with stable path + entityId diagnostics', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-assets-invalid-refs',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: fitl-map-foundation',
+      '    kind: map',
+      '    payload:',
+      '      spaces:',
+      '        - id: alpha:none',
+      '          spaceType: province',
+      '          population: 1',
+      '          econ: 1',
+      '          terrainTags: [lowland]',
+      '          country: south-vietnam',
+      '          coastal: false',
+      '          adjacentTo: []',
+      '  - id: fitl-pieces-foundation',
+      '    kind: pieceCatalog',
+      '    payload:',
+      '      pieceTypes: []',
+      '      inventory: []',
+      '  - id: fitl-scenario-invalid',
+      '    kind: scenario',
+      '    payload:',
+      '      mapAssetId: fitl-map-missing',
+      '      pieceCatalogAssetId: fitl-pieces-missing',
+      'zones:',
+      '  - id: fallback:none',
+      '    owner: none',
+      '    visibility: public',
+      '    ordering: set',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      '  activePlayerOrder: roundRobin',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'endConditions:',
+      '  - when: { op: "==", left: 1, right: 1 }',
+      '    result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_REF_MISSING' &&
+          diagnostic.path === 'doc.dataAssets.2.payload.mapAssetId' &&
+          diagnostic.entityId === 'fitl-scenario-invalid',
+      ),
+      true,
+    );
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_DATA_ASSET_REF_MISSING' &&
+          diagnostic.path === 'doc.dataAssets.2.payload.pieceCatalogAssetId' &&
+          diagnostic.entityId === 'fitl-scenario-invalid',
+      ),
+      true,
+    );
+  });
+
   it('runs parse/validate/expand/compile/validate deterministically for malformed fixture', () => {
     const markdown = readCompilerFixture('compile-malformed.md');
 

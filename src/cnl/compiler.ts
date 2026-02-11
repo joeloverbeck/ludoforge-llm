@@ -200,7 +200,12 @@ function deriveSectionsFromDataAssets(
 
   const mapAssets: Array<{ readonly id: string; readonly payload: MapPayload }> = [];
   const pieceCatalogAssets: Array<{ readonly id: string; readonly payload: PieceCatalogPayload }> = [];
-  const scenarioRefs: Array<{ readonly mapAssetId?: string; readonly pieceCatalogAssetId?: string; readonly path: string }> = [];
+  const scenarioRefs: Array<{
+    readonly mapAssetId?: string;
+    readonly pieceCatalogAssetId?: string;
+    readonly path: string;
+    readonly entityId: string;
+  }> = [];
 
   for (const [index, rawAsset] of doc.dataAssets.entries()) {
     if (!isRecord(rawAsset)) {
@@ -247,6 +252,7 @@ function deriveSectionsFromDataAssets(
         ...(mapAssetId === undefined ? {} : { mapAssetId }),
         ...(pieceCatalogAssetId === undefined ? {} : { pieceCatalogAssetId }),
         path: `${pathPrefix}.payload`,
+        entityId: validated.asset.id,
       });
     }
   }
@@ -268,6 +274,7 @@ function deriveSectionsFromDataAssets(
     diagnostics,
     'map',
     selectedScenario?.path ?? 'doc.dataAssets',
+    selectedScenario?.entityId,
   );
   const selectedPieceCatalog = selectAssetById(
     pieceCatalogAssets,
@@ -275,6 +282,7 @@ function deriveSectionsFromDataAssets(
     diagnostics,
     'pieceCatalog',
     selectedScenario?.path ?? 'doc.dataAssets',
+    selectedScenario?.entityId,
   );
 
   const zones =
@@ -309,6 +317,7 @@ function selectAssetById<TPayload>(
   diagnostics: Diagnostic[],
   kind: 'map' | 'pieceCatalog',
   selectedPath: string,
+  entityId?: string,
 ): { readonly id: string; readonly payload: TPayload } | undefined {
   if (selectedId !== undefined) {
     const normalizedSelectedId = normalizeIdentifier(selectedId);
@@ -324,6 +333,7 @@ function selectAssetById<TPayload>(
       message: `Scenario references unknown ${kind} asset "${selectedId}".`,
       suggestion: `Use an existing ${kind} asset id from doc.dataAssets.`,
       alternatives: assets.map((asset) => asset.id).sort((left, right) => left.localeCompare(right)),
+      ...(entityId === undefined ? {} : { entityId }),
     });
     return undefined;
   }

@@ -1,0 +1,53 @@
+# Compiler Embedded Asset Malformed Fixture
+
+```yaml
+metadata:
+  id: embedded-assets-malformed
+  players:
+    min: 2
+    max: 2
+dataAssets:
+  - id: fitl-map-foundation
+    kind: map
+    payload:
+      spaces:
+        - id: alpha:none
+          spaceType: province
+          population: 1
+          econ: 1
+          terrainTags: [lowland]
+          country: south-vietnam
+          coastal: false
+          adjacentTo: []
+  - id: fitl-pieces-foundation
+    kind: pieceCatalog
+    payload:
+      pieceTypes: []
+      inventory: []
+  - id: fitl-scenario-invalid
+    kind: scenario
+    payload:
+      mapAssetId: fitl-map-missing
+      pieceCatalogAssetId: fitl-pieces-missing
+turnStructure:
+  phases:
+    - id: main
+  activePlayerOrder: roundRobin
+actions:
+  - id: pass
+    actor: active
+    phase: main
+    params: []
+    pre: null
+    cost: []
+    effects: []
+    limits: []
+endConditions:
+  - when: { op: "==", left: 1, right: 1 }
+    result: { type: draw }
+zones:
+  - id: fallback:none
+    owner: none
+    visibility: public
+    ordering: set
+```

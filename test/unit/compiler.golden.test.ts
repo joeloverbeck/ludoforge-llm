@@ -16,6 +16,7 @@ interface MalformedCompileGolden {
     readonly code: string;
     readonly path: string;
     readonly suggestion?: string;
+    readonly entityId?: string;
   }[];
 }
 
@@ -52,6 +53,24 @@ describe('compiler golden fixtures', () => {
       code: diagnostic.code,
       path: diagnostic.path,
       ...(diagnostic.suggestion !== undefined ? { suggestion: diagnostic.suggestion } : {}),
+      ...(diagnostic.entityId !== undefined ? { entityId: diagnostic.entityId } : {}),
+    }));
+
+    assert.equal(compiled.gameDef, null);
+    assert.deepEqual(normalized, golden.expectedDiagnostics);
+  });
+
+  it('matches malformed embedded-asset diagnostics golden snapshot (code/path/entityId)', () => {
+    const markdown = readCompilerFixture('compile-fitl-assets-malformed.md');
+    const golden = readCompilerGolden<MalformedCompileGolden>('compile-fitl-assets-malformed.golden.json');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const normalized = compiled.diagnostics.map((diagnostic) => ({
+      code: diagnostic.code,
+      path: diagnostic.path,
+      ...(diagnostic.suggestion !== undefined ? { suggestion: diagnostic.suggestion } : {}),
+      ...(diagnostic.entityId !== undefined ? { entityId: diagnostic.entityId } : {}),
     }));
 
     assert.equal(compiled.gameDef, null);

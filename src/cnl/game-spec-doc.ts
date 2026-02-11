@@ -106,12 +106,46 @@ export interface GameSpecTurnFlowPassReward {
   readonly amount: number;
 }
 
+export interface GameSpecTurnFlowMonsoonRestriction {
+  readonly actionId: string;
+  readonly maxParam?: {
+    readonly name: string;
+    readonly max: number;
+  };
+  readonly overrideToken?: string;
+}
+
+export interface GameSpecTurnFlowMonsoon {
+  readonly restrictedActions: readonly GameSpecTurnFlowMonsoonRestriction[];
+  readonly blockPivotal?: boolean;
+  readonly pivotalOverrideToken?: string;
+}
+
+export interface GameSpecTurnFlowInterruptCancellation {
+  readonly winnerActionId: string;
+  readonly canceledActionId: string;
+}
+
+export interface GameSpecTurnFlowInterruptResolution {
+  readonly precedence: readonly string[];
+  readonly cancellation?: readonly GameSpecTurnFlowInterruptCancellation[];
+}
+
+export interface GameSpecTurnFlowPivotal {
+  readonly actionIds: readonly string[];
+  readonly requirePreActionWindow?: boolean;
+  readonly disallowWhenLookaheadIsCoup?: boolean;
+  readonly interrupt?: GameSpecTurnFlowInterruptResolution;
+}
+
 export interface GameSpecTurnFlow {
   readonly cardLifecycle: GameSpecTurnFlowCardLifecycle;
   readonly eligibility: GameSpecTurnFlowEligibility;
   readonly optionMatrix: readonly GameSpecTurnFlowOptionMatrixRow[];
   readonly passRewards: readonly GameSpecTurnFlowPassReward[];
   readonly durationWindows: readonly GameSpecTurnFlowDuration[];
+  readonly monsoon?: GameSpecTurnFlowMonsoon;
+  readonly pivotal?: GameSpecTurnFlowPivotal;
 }
 
 export interface GameSpecDoc {

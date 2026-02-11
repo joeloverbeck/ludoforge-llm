@@ -328,12 +328,46 @@ export interface TurnFlowPassRewardDef {
   readonly amount: number;
 }
 
+export interface TurnFlowMonsoonRestrictionDef {
+  readonly actionId: string;
+  readonly maxParam?: {
+    readonly name: string;
+    readonly max: number;
+  };
+  readonly overrideToken?: string;
+}
+
+export interface TurnFlowMonsoonDef {
+  readonly restrictedActions: readonly TurnFlowMonsoonRestrictionDef[];
+  readonly blockPivotal?: boolean;
+  readonly pivotalOverrideToken?: string;
+}
+
+export interface TurnFlowInterruptCancellationDef {
+  readonly winnerActionId: string;
+  readonly canceledActionId: string;
+}
+
+export interface TurnFlowInterruptResolutionDef {
+  readonly precedence: readonly string[];
+  readonly cancellation?: readonly TurnFlowInterruptCancellationDef[];
+}
+
+export interface TurnFlowPivotalDef {
+  readonly actionIds: readonly string[];
+  readonly requirePreActionWindow?: boolean;
+  readonly disallowWhenLookaheadIsCoup?: boolean;
+  readonly interrupt?: TurnFlowInterruptResolutionDef;
+}
+
 export interface TurnFlowDef {
   readonly cardLifecycle: TurnFlowCardLifecycleDef;
   readonly eligibility: TurnFlowEligibilityDef;
   readonly optionMatrix: readonly TurnFlowOptionMatrixRowDef[];
   readonly passRewards: readonly TurnFlowPassRewardDef[];
   readonly durationWindows: readonly TurnFlowDuration[];
+  readonly monsoon?: TurnFlowMonsoonDef;
+  readonly pivotal?: TurnFlowPivotalDef;
 }
 
 export type DataAssetKind = 'map' | 'scenario' | 'pieceCatalog';

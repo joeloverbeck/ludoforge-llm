@@ -571,6 +571,51 @@ export const TurnFlowPassRewardSchema = z
   })
   .strict();
 
+export const TurnFlowMonsoonRestrictionSchema = z
+  .object({
+    actionId: StringSchema.min(1),
+    maxParam: z
+      .object({
+        name: StringSchema.min(1),
+        max: NumberSchema,
+      })
+      .strict()
+      .optional(),
+    overrideToken: StringSchema.min(1).optional(),
+  })
+  .strict();
+
+export const TurnFlowMonsoonSchema = z
+  .object({
+    restrictedActions: z.array(TurnFlowMonsoonRestrictionSchema),
+    blockPivotal: BooleanSchema.optional(),
+    pivotalOverrideToken: StringSchema.min(1).optional(),
+  })
+  .strict();
+
+export const TurnFlowInterruptCancellationSchema = z
+  .object({
+    winnerActionId: StringSchema.min(1),
+    canceledActionId: StringSchema.min(1),
+  })
+  .strict();
+
+export const TurnFlowInterruptResolutionSchema = z
+  .object({
+    precedence: z.array(StringSchema.min(1)),
+    cancellation: z.array(TurnFlowInterruptCancellationSchema).optional(),
+  })
+  .strict();
+
+export const TurnFlowPivotalSchema = z
+  .object({
+    actionIds: z.array(StringSchema.min(1)),
+    requirePreActionWindow: BooleanSchema.optional(),
+    disallowWhenLookaheadIsCoup: BooleanSchema.optional(),
+    interrupt: TurnFlowInterruptResolutionSchema.optional(),
+  })
+  .strict();
+
 export const TurnFlowSchema = z
   .object({
     cardLifecycle: TurnFlowCardLifecycleSchema,
@@ -578,6 +623,8 @@ export const TurnFlowSchema = z
     optionMatrix: z.array(TurnFlowOptionMatrixRowSchema),
     passRewards: z.array(TurnFlowPassRewardSchema),
     durationWindows: z.array(TurnFlowDurationSchema),
+    monsoon: TurnFlowMonsoonSchema.optional(),
+    pivotal: TurnFlowPivotalSchema.optional(),
   })
   .strict();
 

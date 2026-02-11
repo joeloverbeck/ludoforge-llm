@@ -716,6 +716,66 @@
         "durationWindows": {
           "type": "array",
           "items": { "enum": ["card", "nextCard", "coup", "campaign"] }
+        },
+        "monsoon": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["restrictedActions"],
+          "properties": {
+            "restrictedActions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["actionId"],
+                "properties": {
+                  "actionId": { "type": "string" },
+                  "maxParam": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["name", "max"],
+                    "properties": {
+                      "name": { "type": "string" },
+                      "max": { "type": "number" }
+                    }
+                  },
+                  "overrideToken": { "type": "string" }
+                }
+              }
+            },
+            "blockPivotal": { "type": "boolean" },
+            "pivotalOverrideToken": { "type": "string" }
+          }
+        },
+        "pivotal": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["actionIds"],
+          "properties": {
+            "actionIds": { "type": "array", "items": { "type": "string" } },
+            "requirePreActionWindow": { "type": "boolean" },
+            "disallowWhenLookaheadIsCoup": { "type": "boolean" },
+            "interrupt": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["precedence"],
+              "properties": {
+                "precedence": { "type": "array", "items": { "type": "string" } },
+                "cancellation": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["winnerActionId", "canceledActionId"],
+                    "properties": {
+                      "winnerActionId": { "type": "string" },
+                      "canceledActionId": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },

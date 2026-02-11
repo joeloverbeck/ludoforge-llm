@@ -5,6 +5,7 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   asZoneId,
   legalMoves,
   type GameDef,
@@ -333,5 +334,262 @@ describe('legalMoves', () => {
     };
 
     assert.deepEqual(legalMoves(def, state).map((move) => move.actionId), [asActionId('pass'), asActionId('limitedOperation')]);
+  });
+
+  it('applies monsoon action restrictions and pivotal override metadata when lookahead is coup', () => {
+    const def: GameDef = {
+      ...createDef(),
+      metadata: { id: 'turnflow-monsoon-windows', players: { min: 2, max: 2 } },
+      zones: [
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: ['0', '1'], overrideWindows: [] },
+        optionMatrix: [],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+        monsoon: {
+          restrictedActions: [
+            { actionId: 'sweep' },
+            { actionId: 'airLift', maxParam: { name: 'spaces', max: 2 } },
+          ],
+          blockPivotal: true,
+          pivotalOverrideToken: 'monsoonPivotalAllowed',
+        },
+        pivotal: {
+          actionIds: ['pivotalEvent'],
+        },
+      },
+      tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+      actions: [
+        {
+          id: asActionId('pass'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('sweep'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('airLift'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [{ name: 'spaces', domain: { query: 'intsInRange', min: 1, max: 3 } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('pivotalEvent'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [
+            {
+              name: 'override',
+              domain: { query: 'enums', values: ['none', 'monsoonPivotalAllowed'] },
+            },
+          ],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      zones: {
+        'played:none': [],
+        'lookahead:none': [{ id: asTokenId('tok_coup'), type: 'card', props: { isCoup: true } }],
+        'leader:none': [],
+      },
+      actionUsage: {},
+      turnFlow: {
+        factionOrder: ['0', '1'],
+        eligibility: { '0': true, '1': true },
+        currentCard: {
+          firstEligible: '0',
+          secondEligible: '1',
+          actedFactions: [],
+          passedFactions: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+      },
+    };
+
+    assert.deepEqual(legalMoves(def, state), [
+      { actionId: asActionId('pass'), params: {} },
+      { actionId: asActionId('airLift'), params: { spaces: 1 } },
+      { actionId: asActionId('airLift'), params: { spaces: 2 } },
+      { actionId: asActionId('pivotalEvent'), params: { override: 'monsoonPivotalAllowed' } },
+    ]);
+  });
+
+  it('enforces pivotal interrupt precedence against current first/second candidates', () => {
+    const def: GameDef = {
+      ...createDef(),
+      metadata: { id: 'turnflow-pivotal-precedence', players: { min: 2, max: 2 } },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: ['0', '1'], overrideWindows: [] },
+        optionMatrix: [],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+        pivotal: {
+          actionIds: ['pivotalA', 'pivotalB'],
+          interrupt: {
+            precedence: ['1', '0'],
+          },
+        },
+      },
+      actions: [
+        {
+          id: asActionId('pass'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('pivotalA'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      actionUsage: {},
+      turnFlow: {
+        factionOrder: ['0', '1'],
+        eligibility: { '0': true, '1': true },
+        currentCard: {
+          firstEligible: '0',
+          secondEligible: '1',
+          actedFactions: [],
+          passedFactions: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+      },
+    };
+
+    assert.deepEqual(legalMoves(def, state), [
+      { actionId: asActionId('pass'), params: {} },
+      { actionId: asActionId('operate'), params: {} },
+    ]);
+  });
+
+  it('applies deterministic pivotal cancellation after restriction filtering', () => {
+    const def: GameDef = {
+      ...createDef(),
+      metadata: { id: 'turnflow-pivotal-cancellation', players: { min: 2, max: 2 } },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: ['0', '1'], overrideWindows: [] },
+        optionMatrix: [],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+        pivotal: {
+          actionIds: ['pivotalA', 'pivotalB'],
+          interrupt: {
+            precedence: ['1', '0'],
+            cancellation: [{ winnerActionId: 'pivotalA', canceledActionId: 'pivotalB' }],
+          },
+        },
+      },
+      actions: [
+        {
+          id: asActionId('pass'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('pivotalA'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('pivotalB'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      activePlayer: asPlayerId(1),
+      actionUsage: {},
+      turnFlow: {
+        factionOrder: ['0', '1'],
+        eligibility: { '0': true, '1': true },
+        currentCard: {
+          firstEligible: '1',
+          secondEligible: '0',
+          actedFactions: [],
+          passedFactions: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+      },
+    };
+
+    assert.deepEqual(legalMoves(def, state), [
+      { actionId: asActionId('pass'), params: {} },
+      { actionId: asActionId('pivotalA'), params: {} },
+    ]);
   });
 });

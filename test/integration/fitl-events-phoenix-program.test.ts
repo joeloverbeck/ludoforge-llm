@@ -5,8 +5,9 @@ import { compileCompilerFixture } from './fitl-events-test-helpers.js';
 
 describe('FITL Phoenix Program event-card fixture', () => {
   it('compiles card 27 with dual-use sides and qualifier/cardinality constraints for constrained resolution', () => {
-    const { parsed, validatorDiagnostics, compiled } = compileCompilerFixture('fitl-events-initial-card-pack.md');
+    const { markdown, parsed, validatorDiagnostics, compiled } = compileCompilerFixture('fitl-events-initial-card-pack.md');
 
+    assert.equal(markdown.includes('data/fitl/'), false);
     assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
     assert.deepEqual(validatorDiagnostics, []);
     assert.deepEqual(compiled.diagnostics, []);
@@ -46,5 +47,7 @@ describe('FITL Phoenix Program event-card fixture', () => {
       { op: 'addTerrorToSelectedSpaces' },
       { op: 'setSupportOpposition', to: 'activeOpposition' },
     ]);
+
+    assert.deepEqual(phoenix?.unshaded?.effects, [{ op: 'removeSelectedPieces' }]);
   });
 });

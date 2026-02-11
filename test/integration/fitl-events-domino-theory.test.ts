@@ -36,4 +36,11 @@ describe('FITL Domino Theory event-card fixture', () => {
       clamp: { min: 0, max: 75 },
     });
   });
+
+  it('keeps deterministic event-card ordering and fixture action scope', () => {
+    const { compiled } = compileCompilerFixture('fitl-events-initial-card-pack.md');
+
+    assert.deepEqual(compiled.gameDef?.eventCards?.map((card) => card.id), ['card-27', 'card-82']);
+    assert.deepEqual(compiled.gameDef?.actions.map((action) => String(action.id)), ['pass']);
+  });
 });

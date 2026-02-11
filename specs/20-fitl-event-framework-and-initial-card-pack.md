@@ -6,6 +6,7 @@
 **Dependencies**: Spec 17, Spec 18, Spec 19
 **Estimated effort**: 2-3 days
 **Source sections**: rules 5.0-5.5, card appendix (Card 82 and Card 27)
+**Spec 15 Artifacts**: `specs/15-fitl-foundation-scope-and-engine-gaps.md`, `specs/15a-fitl-foundation-gap-analysis-matrix.md`
 
 ## Overview
 

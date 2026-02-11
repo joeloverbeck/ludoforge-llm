@@ -6,6 +6,7 @@
 **Dependencies**: Spec 16, Spec 17, Spec 18
 **Estimated effort**: 3-4 days
 **Source sections**: rules 6.0-7.x references in brainstorming text, 1.6-1.9
+**Spec 15 Artifacts**: `specs/15-fitl-foundation-scope-and-engine-gaps.md`, `specs/15a-fitl-foundation-gap-analysis-matrix.md`
 
 ## Overview
 
@@ -40,4 +41,3 @@ Implement Coup-round phase handling and victory computation for foundation play,
 - Unit tests for each coup phase.
 - Golden tests for end-of-campaign and final-coup scoring.
 - Regression tests for track caps (0/75) and trail bounds.
-

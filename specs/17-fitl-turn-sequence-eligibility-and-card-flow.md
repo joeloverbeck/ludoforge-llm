@@ -6,6 +6,7 @@
 **Dependencies**: Spec 15, Spec 16
 **Estimated effort**: 3-4 days
 **Source sections**: rules 2.0-2.4, 5.0-5.5
+**Spec 15 Artifacts**: `specs/15-fitl-foundation-scope-and-engine-gaps.md`, `specs/15a-fitl-foundation-gap-analysis-matrix.md`
 
 ## Overview
 

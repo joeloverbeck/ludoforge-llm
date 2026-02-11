@@ -9,18 +9,20 @@
 
 ## Overview
 
-Define the exact implementation boundary for the Fire in the Lake (FITL) foundation and enumerate required schema/compiler/runtime capability gaps before FITL content implementation starts.
+Define the exact implementation boundary for the Fire in the Lake (FITL) foundation and lock Gate 0 architecture decisions before Specs 16-21 begin.
 
-This spec is an architecture contract: **engine code remains game-agnostic**, while FITL-specific rules and content are encoded in `GameSpecDoc` YAML and compiled data assets.
+This spec is an architecture contract: engine code stays game-agnostic, and FITL behavior is encoded in `GameSpecDoc` YAML plus static data assets compiled into deterministic `GameDef` structures.
 
-## In Scope
+## Scope Contract
 
-- Foundation-only FITL slice: setup, map/state model, turn flow, operations, special activities, coup flow, victory checks, and cards 82 and 27.
-- Deterministic rule interpretation for ambiguous transcription areas.
-- Explicit list of `GameSpecDoc`/compiler/runtime capability extensions needed to express FITL without hardcoding FITL logic in engine code.
-- Backward compatibility for existing games/specs in this repo.
+### In Scope
 
-## Out of Scope
+- Foundation FITL slice only: setup, map/state model, turn flow, operations, special activities, coup flow, victory checks, and cards 82/27.
+- Deterministic interpretation choices for ambiguous transcription points.
+- Explicit schema/compiler/runtime capability decisions required to express FITL via data.
+- Backward compatibility for existing non-FITL games/specs.
+
+### Out of Scope
 
 - Full 130-card deck.
 - Section 8 non-player flowchart AI.
@@ -28,58 +30,71 @@ This spec is an architecture contract: **engine code remains game-agnostic**, wh
 
 ## Non-Negotiable Architecture Constraints
 
-- Engine/core runtime must not branch on FITL-specific identifiers (faction names, card ids, space names, marker names, operation names).
-- FITL rules must be represented as declarative data (`GameSpecDoc` YAML + static data assets), not handwritten FITL rule handlers inside generic engine modules.
-- Any new runtime primitive introduced for FITL must be named and shaped as a reusable cross-game capability.
-- Compiler lowering must remain deterministic and auditable: every high-level rule compiles into explicit, trace-visible effects/choices.
-- Deterministic tie-break behavior must be explicit in spec data whenever player choice is absent.
+- Engine/runtime modules must not branch on FITL identifiers (faction names, card ids, space ids, marker ids, operation names).
+- FITL rules must be represented as declarative data (`GameSpecDoc` YAML + static assets), not handwritten FITL handlers.
+- Any new runtime primitive must be reusable and named independent of FITL vocabulary.
+- Compiler lowering must remain deterministic and auditable: each high-level rule lowers to trace-visible choices/effects.
+- Deterministic tie-break behavior must be explicit in data whenever player choice is absent.
 
 ## Anti-Goals
 
-- No "just for FITL" switch statements in generic engine code.
-- No ad hoc runtime inference of map adjacency from artwork or naming patterns.
-- No hidden rule behavior inside test helpers that is not representable in `GameSpecDoc`.
-- No partial feature additions that cannot be expressed through schema-validated data.
+- No FITL-only switch/if branches in generic engine code.
+- No map adjacency inference from labels/artwork.
+- No hidden rule behavior in test helpers that cannot be represented in `GameSpecDoc`.
+- No partial capability additions that are not schema-validated.
 
-## Required Gap Analysis Deliverables
+## Required Deliverables
 
-1. `GameSpecDoc` expressiveness matrix mapping each required FITL mechanic to current schema support.
-2. Compiler lowering matrix showing how each mechanic becomes deterministic `GameDef` actions/triggers/effects.
-3. Runtime capability matrix listing required new generic primitives (if any), including reusable naming and invariants.
-4. Determinism checklist for all random/ordering branches (die rolls, tie-breakers, execution order).
-5. "No hardcoded FITL logic" audit checklist with concrete code-level acceptance checks.
+Spec 15 is complete only when all deliverables below exist and are accepted:
 
-## P0 Gaps to Resolve Before Content Specs Proceed
+1. `GameSpecDoc` expressiveness matrix.
+2. Compiler lowering matrix.
+3. Runtime capability matrix.
+4. Determinism checklist.
+5. "No hardcoded FITL logic" audit checklist.
 
-- **Typed domain tracks and markers**: Generic representation for multi-track political/economic/military state (Support/Opposition, Control, Resources, Aid, Patronage, Trail, Eligibility, Terror) without embedding FITL enums in engine internals.
-- **Piece state dimensions**: Generic piece-state tags (for statuses like Underground/Active/Tunneled) and rule-safe state transitions.
-- **Declarative operation framework**: Data-driven composition of costs, eligibility, target filters, sequencing, and "execute as much as possible" semantics.
-- **Choice + target DSL expressiveness**: Ability to declare bounded choices ("up to N"), alternative branches (A or B), and cross-space aggregate constraints in data.
-- **Event lifecycle model**: Generic card/event lifecycle support for dual-use events, one-card lookahead sequencing constraints, and temporary lasting effects.
-- **Deterministic ordering contracts**: Global reusable ordering policy for space iteration, target resolution, and tie-breaking where no player choice exists.
-- **Map dataset ingestion**: Versioned static map dataset with explicit adjacency/value data and provisional edge annotation support.
+All deliverables are captured in `specs/15a-fitl-foundation-gap-analysis-matrix.md`.
 
-## Mapping to Downstream Specs
+## P0 Gap Ownership (Single Owner per Gap)
 
-- Spec 16 consumes: typed tracks/markers, piece-state dimensions, map dataset ingestion.
-- Spec 17 consumes: event lifecycle model, deterministic ordering contracts.
-- Spec 18 consumes: declarative operation framework, choice + target DSL.
-- Spec 19 consumes: typed tracks/markers and deterministic recomputation semantics.
-- Spec 20 consumes: event lifecycle model and choice + target DSL.
-- Spec 21 verifies: determinism + "no hardcoded FITL logic" architecture constraints.
+Each P0 gap has exactly one owning downstream spec. Non-owning specs may consume the capability but do not own closure.
 
-## Acceptance Criteria
+| P0 Gap | Owning Spec | Ownership Rationale | Required Acceptance Tests |
+| --- | --- | --- | --- |
+| Typed domain tracks and markers | Spec 16 | State model and setup are the canonical source of track/marker representation. | `fitl-state-tracks.spec.ts`, `fitl-state-invariants.spec.ts` |
+| Piece state dimensions | Spec 16 | Piece typing/status is part of foundational state encoding. | `fitl-piece-status.spec.ts`, `fitl-state-invariants.spec.ts` |
+| Declarative operation framework | Spec 18 | Operations/special activities are the primary consumer and validator of framework semantics. | `fitl-ops-legality.spec.ts`, `fitl-op-sequencing.spec.ts` |
+| Choice + target DSL expressiveness | Spec 18 | Complex bounded/aggregate targeting semantics are first required in ops layer. | `fitl-choice-targeting.spec.ts`, `fitl-op-sequencing.spec.ts` |
+| Event lifecycle model | Spec 17 | Turn/card sequencing and lifecycle windows are owned by card-flow semantics. | `fitl-card-lifecycle.spec.ts`, `fitl-eligibility-window.spec.ts` |
+| Deterministic ordering contracts | Spec 17 | Global ordering policy must be defined before ops/events consume it. | `fitl-ordering-contract.spec.ts`, `fitl-card-flow-determinism.spec.ts` |
+| Map dataset ingestion | Spec 16 | Map schema + ingestion + validation are state/data concerns. | `fitl-map-ingestion.spec.ts`, `fitl-map-validation.spec.ts` |
 
-- A reviewed fit-gap table exists in `specs/` and is referenced by every FITL implementation spec (16-21).
-- For every identified gap, there is either:
-  - a no-change proof (already representable), or
-  - a concrete schema/compiler/runtime capability proposal with tests.
-- Each P0 gap is mapped to exactly one owning downstream spec with explicit acceptance tests.
-- A documented architecture audit confirms no FITL-specific logic was introduced in generic engine modules.
-- No FITL content implementation starts until each P0 gap has a tracked resolution path.
+## Dependency Contract to Specs 16-21
 
-## Testing Requirements
+- Spec 16 consumes and closes: typed tracks/markers, piece state dimensions, map dataset ingestion.
+- Spec 17 consumes and closes: event lifecycle model, deterministic ordering contracts.
+- Spec 18 consumes and closes: declarative operation framework, choice + target DSL.
+- Spec 19 consumes previously closed track and ordering contracts; does not own P0 closure.
+- Spec 20 consumes event lifecycle + choice/target capabilities; does not own P0 closure.
+- Spec 21 verifies determinism and architecture audit outcomes end-to-end.
 
-- Unit tests validating each new schema field and compiler diagnostic path introduced by this spec.
-- Unit tests for deterministic ordering/evaluation semantics introduced by new runtime primitives.
-- Regression tests proving existing non-FITL games/specs compile and execute unchanged.
+## Gate 0 Acceptance Criteria
+
+- `specs/15a-fitl-foundation-gap-analysis-matrix.md` exists and is referenced by Specs 16-21.
+- Every identified gap has either:
+  - a no-change proof against existing schema/compiler/runtime capabilities, or
+  - a concrete generic capability proposal with tests.
+- Every P0 gap maps to exactly one owning spec (16-18 only).
+- A documented audit checklist exists for confirming no FITL-specific engine branching.
+- No Spec 16 implementation work starts until Gap 0 ownership and resolution paths are explicit.
+
+## Testing Requirements for Spec 15 Work
+
+- Unit tests for any new schema/compiler diagnostics introduced while closing Spec 15 gap proposals.
+- Unit tests for deterministic ordering semantics introduced by generic runtime primitives.
+- Regression tests proving existing non-FITL specs compile and execute unchanged.
+
+## Verification Commands (Gate 0)
+
+- `npm run build`
+- targeted unit tests tied to the owning spec test files listed above

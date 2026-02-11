@@ -6,6 +6,7 @@
 **Dependencies**: Spec 16, Spec 17, Spec 18, Spec 19, Spec 20
 **Estimated effort**: 3-4 days
 **Source sections**: all FITL foundation sections in brainstorming doc
+**Spec 15 Artifacts**: `specs/15-fitl-foundation-scope-and-engine-gaps.md`, `specs/15a-fitl-foundation-gap-analysis-matrix.md`
 
 ## Overview
 
@@ -13,7 +14,7 @@ Define and implement the FITL foundation test harness: deterministic scenario te
 
 ## In Scope
 
-- Targeted unit tests for FITL-specific rule executors.
+- Targeted unit tests for generic data-driven primitives exercised by FITL scenarios.
 - Multi-step integration tests covering at least one full campaign slice (events + operations + coup).
 - Golden `GameTrace` fixtures for deterministic replay.
 - Test utilities for concise scenario setup overrides.
@@ -45,4 +46,3 @@ Define and implement the FITL foundation test harness: deterministic scenario te
 - `npm run test:unit`
 - `npm run test:integration`
 - `npm test`
-

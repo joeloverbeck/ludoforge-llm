@@ -181,4 +181,34 @@ describe('initialState', () => {
     assert.equal(state.zones['played:none']?.[0]?.id, 'tok_card_2');
     assert.equal(state.zones['lookahead:none']?.[0]?.id, 'tok_card_1');
   });
+
+  it('initializes turnFlow eligibility runtime state from declared faction order', () => {
+    const def: GameDef = {
+      metadata: { id: 'turn-flow-eligibility-start', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'res0', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: ['1', '0'], overrideWindows: [] },
+        optionMatrix: [],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      actions: [],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const state = initialState(def, 1, 2);
+    assert.equal(state.activePlayer, asPlayerId(1));
+    assert.deepEqual(state.turnFlow?.factionOrder, ['1', '0']);
+    assert.deepEqual(state.turnFlow?.eligibility, { '1': true, '0': true });
+    assert.equal(state.turnFlow?.currentCard.firstEligible, '1');
+    assert.equal(state.turnFlow?.currentCard.secondEligible, '0');
+  });
 });

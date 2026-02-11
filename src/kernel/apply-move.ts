@@ -3,6 +3,7 @@ import { applyEffects } from './effects.js';
 import { legalMoves } from './legal-moves.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { buildAdjacencyGraph } from './spatial.js';
+import { applyTurnFlowEligibilityAfterMove } from './turn-flow-eligibility.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import type { ActionDef, ApplyMoveResult, GameDef, GameState, Move, MoveParamValue, Rng, TriggerLogEntry } from './types.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
@@ -148,8 +149,9 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
     ...triggerResult.state,
     rng: triggerResult.rng.state,
   };
+  const turnFlowResult = applyTurnFlowEligibilityAfterMove(def, stateWithRng, move);
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
-  const progressedState = advanceToDecisionPoint(def, stateWithRng, lifecycleAndAdvanceLog);
+  const progressedState = advanceToDecisionPoint(def, turnFlowResult.state, lifecycleAndAdvanceLog);
 
   const stateWithHash = {
     ...progressedState,
@@ -158,6 +160,6 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
 
   return {
     state: stateWithHash,
-    triggerFirings: [...triggerResult.triggerLog, ...lifecycleAndAdvanceLog],
+    triggerFirings: [...triggerResult.triggerLog, ...turnFlowResult.traceEntries, ...lifecycleAndAdvanceLog],
   };
 };

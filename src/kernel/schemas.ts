@@ -613,6 +613,24 @@ export const ActionUsageRecordSchema = z
   })
   .strict();
 
+export const TurnFlowRuntimeCardStateSchema = z
+  .object({
+    firstEligible: StringSchema.min(1).nullable(),
+    secondEligible: StringSchema.min(1).nullable(),
+    actedFactions: z.array(StringSchema.min(1)),
+    passedFactions: z.array(StringSchema.min(1)),
+    nonPassCount: NumberSchema,
+  })
+  .strict();
+
+export const TurnFlowRuntimeStateSchema = z
+  .object({
+    factionOrder: z.array(StringSchema.min(1)),
+    eligibility: z.record(StringSchema, BooleanSchema),
+    currentCard: TurnFlowRuntimeCardStateSchema,
+  })
+  .strict();
+
 export const RngStateSchema = z
   .object({
     algorithm: z.literal('pcg-dxsm-128'),
@@ -634,6 +652,7 @@ export const GameStateSchema = z
     rng: RngStateSchema,
     stateHash: z.bigint(),
     actionUsage: z.record(StringSchema, ActionUsageRecordSchema),
+    turnFlow: TurnFlowRuntimeStateSchema.optional(),
   })
   .strict();
 
@@ -709,10 +728,32 @@ export const TurnFlowLifecycleTraceEntrySchema = z
   })
   .strict();
 
+export const TurnFlowEligibilityTraceEntrySchema = z
+  .object({
+    kind: z.literal('turnFlowEligibility'),
+    step: z.union([z.literal('candidateScan'), z.literal('passChain'), z.literal('cardEnd')]),
+    faction: StringSchema.min(1).nullable(),
+    before: TurnFlowRuntimeCardStateSchema,
+    after: TurnFlowRuntimeCardStateSchema,
+    rewards: z
+      .array(
+        z
+          .object({
+            resource: StringSchema.min(1),
+            amount: NumberSchema,
+          })
+          .strict(),
+      )
+      .optional(),
+    reason: z.union([z.literal('rightmostPass'), z.literal('twoNonPass')]).optional(),
+  })
+  .strict();
+
 export const TriggerLogEntrySchema = z.union([
   TriggerFiringSchema,
   TriggerTruncatedSchema,
   TurnFlowLifecycleTraceEntrySchema,
+  TurnFlowEligibilityTraceEntrySchema,
 ]);
 
 export const MoveLogSchema = z

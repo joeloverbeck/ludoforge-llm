@@ -4,6 +4,7 @@ import { evalQuery } from './eval-query.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
+import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue } from './types.js';
 
 function makeEvalContext(
@@ -79,6 +80,10 @@ function enumerateParams(
 }
 
 export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
+  if (!isActiveFactionEligibleForTurnFlow(state)) {
+    return [];
+  }
+
   const moves: Move[] = [];
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
 

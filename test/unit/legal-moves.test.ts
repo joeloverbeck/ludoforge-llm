@@ -147,4 +147,23 @@ describe('legalMoves', () => {
     assert.deepEqual(Object.keys(combo?.params ?? {}), ['n', 'c']);
     assert.deepEqual(Object.keys(dependent?.params ?? {}), ['$owner', 'zone']);
   });
+
+  it('returns no legal moves when active faction is not a current turnFlow candidate', () => {
+    const state: GameState = {
+      ...createState(),
+      turnFlow: {
+        factionOrder: ['0', '1', '2'],
+        eligibility: { '0': true, '1': true, '2': true },
+        currentCard: {
+          firstEligible: '1',
+          secondEligible: '2',
+          actedFactions: [],
+          passedFactions: [],
+          nonPassCount: 0,
+        },
+      },
+    };
+
+    assert.deepEqual(legalMoves(createDef(), state), []);
+  });
 });

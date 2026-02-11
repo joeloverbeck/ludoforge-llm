@@ -461,6 +461,20 @@ export interface ActionUsageRecord {
   readonly gameCount: number;
 }
 
+export interface TurnFlowRuntimeCardState {
+  readonly firstEligible: string | null;
+  readonly secondEligible: string | null;
+  readonly actedFactions: readonly string[];
+  readonly passedFactions: readonly string[];
+  readonly nonPassCount: number;
+}
+
+export interface TurnFlowRuntimeState {
+  readonly factionOrder: readonly string[];
+  readonly eligibility: Readonly<Record<string, boolean>>;
+  readonly currentCard: TurnFlowRuntimeCardState;
+}
+
 export interface GameState {
   readonly globalVars: Readonly<Record<string, number>>;
   readonly perPlayerVars: Readonly<Record<string, Readonly<Record<string, number>>>>;
@@ -473,6 +487,7 @@ export interface GameState {
   readonly rng: RngState;
   readonly stateHash: bigint;
   readonly actionUsage: Readonly<Record<string, ActionUsageRecord>>;
+  readonly turnFlow?: TurnFlowRuntimeState;
 }
 
 export type MoveParamScalar = number | string | boolean | TokenId | ZoneId | PlayerId;
@@ -530,7 +545,32 @@ export interface TurnFlowLifecycleTraceEntry {
   };
 }
 
-export type TriggerLogEntry = TriggerFiring | TriggerTruncated | TurnFlowLifecycleTraceEntry;
+export interface TurnFlowEligibilityTraceEntry {
+  readonly kind: 'turnFlowEligibility';
+  readonly step: 'candidateScan' | 'passChain' | 'cardEnd';
+  readonly faction: string | null;
+  readonly before: {
+    readonly firstEligible: string | null;
+    readonly secondEligible: string | null;
+    readonly actedFactions: readonly string[];
+    readonly passedFactions: readonly string[];
+    readonly nonPassCount: number;
+  };
+  readonly after: {
+    readonly firstEligible: string | null;
+    readonly secondEligible: string | null;
+    readonly actedFactions: readonly string[];
+    readonly passedFactions: readonly string[];
+    readonly nonPassCount: number;
+  };
+  readonly rewards?: readonly {
+    readonly resource: string;
+    readonly amount: number;
+  }[];
+  readonly reason?: 'rightmostPass' | 'twoNonPass';
+}
+
+export type TriggerLogEntry = TriggerFiring | TriggerTruncated | TurnFlowLifecycleTraceEntry | TurnFlowEligibilityTraceEntry;
 
 export interface ApplyMoveResult {
   readonly state: GameState;

@@ -2,6 +2,7 @@ import { asPlayerId } from './branded.js';
 import { applyEffects } from './effects.js';
 import { createRng } from './prng.js';
 import { buildAdjacencyGraph } from './spatial.js';
+import { initializeTurnFlowEligibilityState } from './turn-flow-eligibility.js';
 import { applyTurnFlowInitialReveal } from './turn-flow-lifecycle.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import type { GameDef, GameState } from './types.js';
@@ -70,11 +71,12 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     ...phaseEnterResult.state,
     rng: phaseEnterResult.rng.state,
   };
+  const withTurnFlow = initializeTurnFlowEligibilityState(def, stateWithRng);
   const table = createZobristTable(def);
 
   return {
-    ...stateWithRng,
-    stateHash: computeFullHash(table, stateWithRng),
+    ...withTurnFlow,
+    stateHash: computeFullHash(table, withTurnFlow),
   };
 };
 

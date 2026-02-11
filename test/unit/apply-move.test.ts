@@ -5,6 +5,7 @@ import {
   applyMove,
   asActionId,
   asPhaseId,
+  initialState,
   asPlayerId,
   asTriggerId,
   computeFullHash,
@@ -12,6 +13,7 @@ import {
   type GameDef,
   type GameState,
   type Move,
+  type TriggerLogEntry,
 } from '../../src/kernel/index.js';
 
 const createDef = (): GameDef =>
@@ -187,5 +189,68 @@ describe('applyMove', () => {
     assert.equal(result.state.currentPhase, asPhaseId('p2'));
     assert.equal(result.state.turnCount, 0);
     assert.equal(result.state.activePlayer, asPlayerId(0));
+  });
+
+  it('applies pass rewards and resets candidates when rightmost eligible faction passes', () => {
+    const def: GameDef = {
+      metadata: { id: 'turn-flow-pass-chain', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [
+        { name: 'res0', type: 'int', init: 0, min: 0, max: 99 },
+        { name: 'res1', type: 'int', init: 0, min: 0, max: 99 },
+      ],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
+        optionMatrix: [],
+        passRewards: [
+          { factionClass: '0', resource: 'res0', amount: 1 },
+          { factionClass: '1', resource: 'res1', amount: 3 },
+        ],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      actions: [
+        {
+          id: asActionId('pass'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const passMove: Move = { actionId: asActionId('pass'), params: {} };
+    const start = initialState(def, 5, 4);
+    const first = applyMove(def, start, passMove);
+    const second = applyMove(def, first.state, passMove);
+    const third = applyMove(def, second.state, passMove);
+    const fourth = applyMove(def, third.state, passMove);
+
+    assert.equal(first.state.globalVars.res0, 1);
+    assert.equal(second.state.globalVars.res1, 3);
+    assert.equal(fourth.state.activePlayer, asPlayerId(0));
+    assert.equal(fourth.state.turnFlow?.currentCard.firstEligible, '0');
+    assert.equal(fourth.state.turnFlow?.currentCard.secondEligible, '1');
+
+    const eligibilityEntries = fourth.triggerFirings.filter(
+      (entry): entry is Extract<TriggerLogEntry, { kind: 'turnFlowEligibility' }> => entry.kind === 'turnFlowEligibility',
+    );
+    const eligibilitySteps = eligibilityEntries
+      .map((entry) => entry.step);
+    assert.deepEqual(eligibilitySteps, ['passChain', 'cardEnd']);
+
+    const cardEnd = eligibilityEntries.find((entry) => entry.step === 'cardEnd');
+    assert.equal(cardEnd?.reason, 'rightmostPass');
   });
 });

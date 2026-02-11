@@ -111,7 +111,7 @@ function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]): DataAs
 
     const validated = validateDataAssetEnvelope(entry, {
       pathPrefix: path,
-      expectedKinds: ['map', 'scenario', 'pieceCatalog'],
+      expectedKinds: ['map', 'scenario', 'pieceCatalog', 'eventCardSet'],
     });
     diagnostics.push(...validated.diagnostics);
     if (validated.asset === null) {

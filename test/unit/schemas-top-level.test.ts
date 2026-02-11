@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   DataAssetEnvelopeSchema,
   EvalReportSchema,
+  EventCardSetPayloadSchema,
   GameDefSchema,
   GameTraceSchema,
   MapPayloadSchema,
@@ -219,6 +220,64 @@ describe('top-level runtime schemas', () => {
     });
 
     assert.equal(result.success, true);
+  });
+
+  it('accepts event-card-set data-asset envelope kind', () => {
+    const result = DataAssetEnvelopeSchema.safeParse({
+      id: 'fitl-event-cards-initial',
+      kind: 'eventCardSet',
+      payload: {
+        cards: [],
+      },
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('parses valid event-card-set payloads with dual-use sides and lasting effects', () => {
+    const result = EventCardSetPayloadSchema.safeParse({
+      cards: [
+        {
+          id: 'card-82',
+          title: 'Domino Theory',
+          sideMode: 'dual',
+          order: 82,
+          unshaded: {
+            branches: [
+              {
+                id: 'branch-a',
+                order: 0,
+                effects: [{ effect: 'moveOutOfPlayToAvailable' }],
+              },
+            ],
+          },
+          shaded: {
+            targets: [{ id: 'us-troops', selector: { query: 'piecesInPool' }, cardinality: { max: 3 } }],
+            lastingEffects: [{ id: 'aid-mod', duration: 'nextCard', effect: { op: 'addAidModifier', delta: -9 } }],
+          },
+        },
+      ],
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('rejects malformed event-card-set payload cardinality ranges', () => {
+    const result = EventCardSetPayloadSchema.safeParse({
+      cards: [
+        {
+          id: 'card-82',
+          title: 'Domino Theory',
+          sideMode: 'single',
+          unshaded: {
+            targets: [{ id: 'us-troops', selector: { query: 'piecesInPool' }, cardinality: { min: 3, max: 2 } }],
+          },
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'cards.0.unshaded.targets.0.cardinality.min'));
   });
 
   it('parses valid piece-catalog payload contracts', () => {

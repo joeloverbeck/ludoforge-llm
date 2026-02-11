@@ -512,6 +512,7 @@ export const DataAssetKindSchema = z.union([
   z.literal('map'),
   z.literal('scenario'),
   z.literal('pieceCatalog'),
+  z.literal('eventCardSet'),
 ]);
 
 export const DataAssetRefSchema = z
@@ -535,6 +536,128 @@ export const TurnFlowDurationSchema = z.union([
   z.literal('coup'),
   z.literal('campaign'),
 ]);
+
+export const EventCardEffectNodeSchema = z.record(StringSchema, z.unknown());
+
+export const EventCardTargetCardinalitySchema = z.union([
+  z
+    .object({
+      n: IntegerSchema.min(0),
+    })
+    .strict(),
+  z
+    .object({
+      min: IntegerSchema.min(0).optional(),
+      max: IntegerSchema.min(0),
+    })
+    .strict()
+    .superRefine((value, ctx) => {
+      if (value.min !== undefined && value.min > value.max) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Target cardinality min must be <= max.',
+          path: ['min'],
+        });
+      }
+    }),
+]);
+
+export const EventCardTargetSchema = z
+  .object({
+    id: StringSchema.min(1),
+    selector: z.record(StringSchema, z.unknown()),
+    cardinality: EventCardTargetCardinalitySchema,
+  })
+  .strict();
+
+export const EventCardLastingEffectSchema = z
+  .object({
+    id: StringSchema.min(1),
+    duration: TurnFlowDurationSchema,
+    effect: z.record(StringSchema, z.unknown()),
+  })
+  .strict();
+
+export const EventCardBranchSchema: z.ZodTypeAny = z
+  .object({
+    id: StringSchema.min(1),
+    order: IntegerSchema.min(0).optional(),
+    effects: z.array(EventCardEffectNodeSchema).min(1).optional(),
+    targets: z.array(EventCardTargetSchema).optional(),
+    lastingEffects: z.array(EventCardLastingEffectSchema).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.effects === undefined && value.targets === undefined && value.lastingEffects === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Branch must declare at least one of effects, targets, or lastingEffects.',
+        path: [],
+      });
+    }
+  });
+
+export const EventCardSideSchema = z
+  .object({
+    effects: z.array(EventCardEffectNodeSchema).min(1).optional(),
+    branches: z.array(EventCardBranchSchema).min(1).optional(),
+    targets: z.array(EventCardTargetSchema).optional(),
+    lastingEffects: z.array(EventCardLastingEffectSchema).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.effects === undefined && value.branches === undefined && value.targets === undefined && value.lastingEffects === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Event side must declare at least one of effects, branches, targets, or lastingEffects.',
+        path: [],
+      });
+    }
+  });
+
+export const EventCardSchema = z
+  .object({
+    id: StringSchema.min(1),
+    title: StringSchema.min(1),
+    sideMode: z.union([z.literal('single'), z.literal('dual')]),
+    order: IntegerSchema.min(0).optional(),
+    unshaded: EventCardSideSchema.optional(),
+    shaded: EventCardSideSchema.optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.sideMode === 'dual') {
+      if (value.unshaded === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Dual-use cards must declare an unshaded side payload.',
+          path: ['unshaded'],
+        });
+      }
+      if (value.shaded === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Dual-use cards must declare a shaded side payload.',
+          path: ['shaded'],
+        });
+      }
+      return;
+    }
+
+    if (value.unshaded === undefined && value.shaded === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Single-side cards must declare at least one side payload.',
+        path: [],
+      });
+    }
+  });
+
+export const EventCardSetPayloadSchema = z
+  .object({
+    cards: z.array(EventCardSchema),
+  })
+  .strict();
 
 export const TurnFlowActionClassSchema = z.union([
   z.literal('pass'),

@@ -93,6 +93,79 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('accepts event-card-set data assets through the shared data-asset validator path', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      dataAssets: [
+        {
+          id: 'fitl-event-cards-initial',
+          kind: 'eventCardSet',
+          payload: {
+            cards: [
+              {
+                id: 'card-82',
+                title: 'Domino Theory',
+                sideMode: 'dual',
+                unshaded: { effects: [{ op: 'branch-a' }] },
+                shaded: {
+                  targets: [{ id: 't', selector: { query: 'piecesInPool' }, cardinality: { max: 3 } }],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.0.kind' && diagnostic.code === 'DATA_ASSET_KIND_UNSUPPORTED'),
+      false,
+    );
+  });
+
+  it('surfaces malformed event-card-set diagnostics with nested payload paths', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      dataAssets: [
+        {
+          id: 'fitl-event-cards-invalid',
+          kind: 'eventCardSet',
+          payload: {
+            cards: [
+              {
+                id: 'card-82',
+                title: 'Domino Theory',
+                sideMode: 'dual',
+                unshaded: { effects: [{ op: 'branch-a' }] },
+                shaded: {
+                  targets: [{ id: 't', selector: { query: 'piecesInPool' }, cardinality: { min: 2, max: 1 } }],
+                  lastingEffects: [{ id: 'l', duration: 'season', effect: { op: 'aidDelta', value: -9 } }],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'DATA_ASSET_EVENT_CARD_SCHEMA_INVALID' &&
+          diagnostic.path === 'doc.dataAssets.0.payload.cards.0.shaded.targets.0.cardinality.min',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'DATA_ASSET_EVENT_CARD_SCHEMA_INVALID' &&
+          diagnostic.path === 'doc.dataAssets.0.payload.cards.0.shaded.lastingEffects.0.duration',
+      ),
+      true,
+    );
+  });
+
   it('validates metadata and variable ranges', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

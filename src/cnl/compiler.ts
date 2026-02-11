@@ -859,7 +859,7 @@ function deriveSectionsFromDataAssets(
     }
     const pathPrefix = `doc.dataAssets.${index}`;
     const validated = validateDataAssetEnvelope(rawAsset, {
-      expectedKinds: ['map', 'scenario', 'pieceCatalog'],
+      expectedKinds: ['map', 'scenario', 'pieceCatalog', 'eventCardSet'],
       pathPrefix,
     });
     diagnostics.push(...validated.diagnostics);

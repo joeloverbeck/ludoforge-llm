@@ -433,7 +433,58 @@ export interface VictoryDef {
   readonly ranking?: VictoryRankingDef;
 }
 
-export type DataAssetKind = 'map' | 'scenario' | 'pieceCatalog';
+export interface EventCardTargetCardinalityExact {
+  readonly n: number;
+}
+
+export interface EventCardTargetCardinalityRange {
+  readonly min?: number;
+  readonly max: number;
+}
+
+export type EventCardTargetCardinality = EventCardTargetCardinalityExact | EventCardTargetCardinalityRange;
+
+export interface EventCardTargetDef {
+  readonly id: string;
+  readonly selector: Readonly<Record<string, unknown>>;
+  readonly cardinality: EventCardTargetCardinality;
+}
+
+export interface EventCardLastingEffectDef {
+  readonly id: string;
+  readonly duration: TurnFlowDuration;
+  readonly effect: Readonly<Record<string, unknown>>;
+}
+
+export interface EventCardBranchDef {
+  readonly id: string;
+  readonly order?: number;
+  readonly effects?: readonly Readonly<Record<string, unknown>>[];
+  readonly targets?: readonly EventCardTargetDef[];
+  readonly lastingEffects?: readonly EventCardLastingEffectDef[];
+}
+
+export interface EventCardSideDef {
+  readonly effects?: readonly Readonly<Record<string, unknown>>[];
+  readonly branches?: readonly EventCardBranchDef[];
+  readonly targets?: readonly EventCardTargetDef[];
+  readonly lastingEffects?: readonly EventCardLastingEffectDef[];
+}
+
+export interface EventCardDef {
+  readonly id: string;
+  readonly title: string;
+  readonly sideMode: 'single' | 'dual';
+  readonly order?: number;
+  readonly unshaded?: EventCardSideDef;
+  readonly shaded?: EventCardSideDef;
+}
+
+export interface EventCardSetPayload {
+  readonly cards: readonly EventCardDef[];
+}
+
+export type DataAssetKind = 'map' | 'scenario' | 'pieceCatalog' | 'eventCardSet';
 
 export type PieceStatusDimension = 'activity' | 'tunnel';
 

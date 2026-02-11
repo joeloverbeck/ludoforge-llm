@@ -93,8 +93,22 @@ describe('FITL eligibility window integration', () => {
       actionId: asActionId('event'),
       params: { selfOverride: noOverride, targetOverride: noOverride, freeOp: freeOpDirective },
     };
-    const first = applyMove(def, start, firstMove).state;
-    const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} }).state;
+    const firstResult = applyMove(def, start, firstMove);
+    const secondResult = applyMove(def, firstResult.state, { actionId: asActionId('operation'), params: {} });
+    const second = secondResult.state;
+
+    assert.equal(
+      firstResult.triggerFirings.some(
+        (entry) => entry.kind === 'turnFlowEligibility' && entry.step === 'overrideCreate',
+      ),
+      false,
+    );
+
+    const cardEndEntry = secondResult.triggerFirings.find(
+      (entry) => entry.kind === 'turnFlowEligibility' && entry.step === 'cardEnd',
+    );
+    assert.equal(cardEndEntry?.kind, 'turnFlowEligibility');
+    assert.equal(cardEndEntry?.overrides, undefined);
 
     assert.deepEqual(second.turnFlow?.eligibility, { '0': false, '1': false, '2': true, '3': true });
     assert.equal(second.activePlayer, asPlayerId(2));

@@ -9,6 +9,7 @@ export * from './terminal.js';
 export * from './determinism.js';
 export * from './diagnostics.js';
 export * from './data-assets.js';
+export * from './map-model.js';
 export * from './piece-catalog.js';
 export * from './effect-context.js';
 export * from './effect-error.js';

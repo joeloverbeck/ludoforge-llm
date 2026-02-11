@@ -65,6 +65,42 @@
         "adjacentTo": ["cambodia:none", "hue:none", "laos:none", "north_vietnam:none"]
       }
     ],
+    "tracks": [
+      { "id": "aid", "scope": "global", "min": 0, "max": 80, "initial": 15 },
+      { "id": "patronage", "scope": "global", "min": 0, "max": 80, "initial": 10 },
+      { "id": "trail", "scope": "global", "min": 0, "max": 4, "initial": 1 },
+      { "id": "us-casualties", "scope": "global", "min": 0, "max": 75, "initial": 0 },
+      { "id": "resources", "scope": "faction", "faction": "us", "min": 0, "max": 75, "initial": 15 },
+      { "id": "resources", "scope": "faction", "faction": "arvn", "min": 0, "max": 75, "initial": 15 },
+      { "id": "resources", "scope": "faction", "faction": "nva", "min": 0, "max": 75, "initial": 10 },
+      { "id": "resources", "scope": "faction", "faction": "vc", "min": 0, "max": 75, "initial": 10 }
+    ],
+    "markerLattices": [
+      {
+        "id": "support-opposition",
+        "states": [
+          "active-support",
+          "passive-support",
+          "neutral",
+          "passive-opposition",
+          "active-opposition"
+        ],
+        "defaultState": "neutral",
+        "constraints": [
+          { "spaceTypes": ["loc"], "allowedStates": ["neutral"] },
+          { "populationEquals": 0, "allowedStates": ["neutral"] }
+        ]
+      },
+      {
+        "id": "terror-sabotage",
+        "states": ["none", "terror"],
+        "defaultState": "none"
+      }
+    ],
+    "spaceMarkers": [
+      { "spaceId": "south_vietnam:none", "markerId": "support-opposition", "state": "passive-support" },
+      { "spaceId": "hue:none", "markerId": "support-opposition", "state": "passive-support" }
+    ],
     "provisionalAdjacency": [
       {
         "from": "cambodia:none",

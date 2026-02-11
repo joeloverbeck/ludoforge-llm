@@ -65,6 +65,56 @@ describe('data asset loader scaffold', () => {
     }
   });
 
+  it('loads a valid map envelope with typed tracks and marker lattice declarations', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
+    try {
+      const assetPath = join(dir, 'foundation-map-typed.v1.json');
+      writeFileSync(
+        assetPath,
+        JSON.stringify({
+          id: 'fitl-map-foundation-typed',
+          version: 1,
+          kind: 'map',
+          payload: {
+            spaces: [
+              {
+                id: 'hue:none',
+                spaceType: 'city',
+                population: 1,
+                econ: 1,
+                terrainTags: ['urban'],
+                country: 'south-vietnam',
+                coastal: true,
+                adjacentTo: [],
+              },
+            ],
+            tracks: [{ id: 'aid', scope: 'global', min: 0, max: 80, initial: 12 }],
+            markerLattices: [
+              {
+                id: 'support-opposition',
+                states: ['neutral', 'passive-support'],
+                defaultState: 'neutral',
+                constraints: [{ spaceTypes: ['city'], allowedStates: ['neutral', 'passive-support'] }],
+              },
+            ],
+            spaceMarkers: [{ spaceId: 'hue:none', markerId: 'support-opposition', state: 'passive-support' }],
+          },
+        }),
+        'utf8',
+      );
+
+      const result = loadDataAssetEnvelopeFromFile(assetPath, {
+        expectedKinds: ['map', 'scenario', 'pieceCatalog'],
+        expectedVersion: 1,
+      });
+
+      assert.equal(result.asset?.kind, 'map');
+      assert.deepEqual(result.diagnostics, []);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('reports unsupported version with asset context', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
     try {
@@ -154,6 +204,112 @@ describe('data asset loader scaffold', () => {
       assert.equal(result.diagnostics.length, 0);
       assert.notEqual(result.asset, null);
       assert.equal(result.asset?.kind, 'pieceCatalog');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects map tracks with out-of-bounds defaults', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
+    try {
+      const assetPath = join(dir, 'foundation-map-track-bounds.v1.json');
+      writeFileSync(
+        assetPath,
+        JSON.stringify({
+          id: 'fitl-map-track-bounds-invalid',
+          version: 1,
+          kind: 'map',
+          payload: {
+            spaces: [],
+            tracks: [{ id: 'trail', scope: 'global', min: 0, max: 4, initial: 6 }],
+          },
+        }),
+        'utf8',
+      );
+
+      const result = loadDataAssetEnvelopeFromFile(assetPath);
+      assert.equal(result.asset, null);
+      const diag = result.diagnostics.find((entry) => entry.code === 'MAP_TRACK_BOUNDS_INVALID');
+      assert.notEqual(diag, undefined);
+      assert.equal(diag?.assetPath, assetPath);
+      assert.equal(diag?.entityId, 'fitl-map-track-bounds-invalid');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects map marker values that are not declared by their lattice', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
+    try {
+      const assetPath = join(dir, 'foundation-map-marker-state-invalid.v1.json');
+      writeFileSync(
+        assetPath,
+        JSON.stringify({
+          id: 'fitl-map-marker-state-invalid',
+          version: 1,
+          kind: 'map',
+          payload: {
+            spaces: [
+              {
+                id: 'hue:none',
+                spaceType: 'city',
+                population: 1,
+                econ: 1,
+                terrainTags: ['urban'],
+                country: 'south-vietnam',
+                coastal: true,
+                adjacentTo: [],
+              },
+            ],
+            markerLattices: [
+              { id: 'support-opposition', states: ['neutral', 'passive-support'], defaultState: 'neutral' },
+            ],
+            spaceMarkers: [{ spaceId: 'hue:none', markerId: 'support-opposition', state: 'active-opposition' }],
+          },
+        }),
+        'utf8',
+      );
+
+      const result = loadDataAssetEnvelopeFromFile(assetPath);
+      assert.equal(result.asset, null);
+      const diag = result.diagnostics.find((entry) => entry.code === 'MAP_SPACE_MARKER_STATE_UNKNOWN');
+      assert.notEqual(diag, undefined);
+      assert.equal(diag?.path, 'asset.payload.spaceMarkers[0].state');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects map lattice constraints that reference unknown spaces', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
+    try {
+      const assetPath = join(dir, 'foundation-map-marker-constraint-space-invalid.v1.json');
+      writeFileSync(
+        assetPath,
+        JSON.stringify({
+          id: 'fitl-map-marker-constraint-space-invalid',
+          version: 1,
+          kind: 'map',
+          payload: {
+            spaces: [],
+            markerLattices: [
+              {
+                id: 'support-opposition',
+                states: ['neutral'],
+                defaultState: 'neutral',
+                constraints: [{ spaceIds: ['missing:none'], allowedStates: ['neutral'] }],
+              },
+            ],
+          },
+        }),
+        'utf8',
+      );
+
+      const result = loadDataAssetEnvelopeFromFile(assetPath);
+      assert.equal(result.asset, null);
+      const diag = result.diagnostics.find((entry) => entry.code === 'MAP_MARKER_CONSTRAINT_SPACE_UNKNOWN');
+      assert.notEqual(diag, undefined);
+      assert.equal(diag?.path, 'asset.payload.markerLattices[0].constraints[0].spaceIds[0]');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

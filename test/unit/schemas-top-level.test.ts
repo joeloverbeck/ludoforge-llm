@@ -6,6 +6,7 @@ import {
   EvalReportSchema,
   GameDefSchema,
   GameTraceSchema,
+  MapPayloadSchema,
   OBJECT_STRICTNESS_POLICY,
   PieceCatalogPayloadSchema,
 } from '../../src/kernel/index.js';
@@ -134,6 +135,45 @@ describe('top-level runtime schemas', () => {
 
     assert.equal(DataAssetEnvelopeSchema.safeParse(mapEnvelope).success, true);
     assert.equal(DataAssetEnvelopeSchema.safeParse(scenarioEnvelope).success, true);
+  });
+
+  it('parses valid map payload contracts with typed tracks and marker lattices', () => {
+    const result = MapPayloadSchema.safeParse({
+      spaces: [
+        {
+          id: 'hue:none',
+          spaceType: 'city',
+          population: 1,
+          econ: 1,
+          terrainTags: ['urban'],
+          country: 'south-vietnam',
+          coastal: true,
+          adjacentTo: ['south_vietnam:none'],
+        },
+      ],
+      tracks: [{ id: 'aid', scope: 'global', min: 0, max: 80, initial: 10 }],
+      markerLattices: [
+        {
+          id: 'support-opposition',
+          states: ['neutral', 'passive-support'],
+          defaultState: 'neutral',
+          constraints: [{ spaceTypes: ['city'], allowedStates: ['neutral', 'passive-support'] }],
+        },
+      ],
+      spaceMarkers: [{ spaceId: 'hue:none', markerId: 'support-opposition', state: 'passive-support' }],
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('rejects malformed map tracks without explicit bounds', () => {
+    const result = MapPayloadSchema.safeParse({
+      spaces: [],
+      tracks: [{ id: 'aid', scope: 'global', min: 0, initial: 10 }],
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'tracks.0.max'));
   });
 
   it('accepts piece-catalog data-asset envelope kind', () => {

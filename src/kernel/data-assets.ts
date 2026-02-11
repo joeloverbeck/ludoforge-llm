@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { extname } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import type { Diagnostic } from './diagnostics.js';
+import { validateMapPayload } from './map-model.js';
 import { validatePieceCatalogPayload } from './piece-catalog.js';
 import { DataAssetEnvelopeSchema } from './schemas.js';
 import type { DataAssetEnvelope, DataAssetKind } from './types.js';
@@ -74,6 +75,15 @@ export function loadDataAssetEnvelopeFromFile(
   if (envelope.kind === 'pieceCatalog') {
     diagnostics.push(
       ...validatePieceCatalogPayload(envelope.payload, {
+        assetPath,
+        entityId: envelope.id,
+      }),
+    );
+  }
+
+  if (envelope.kind === 'map') {
+    diagnostics.push(
+      ...validateMapPayload(envelope.payload, {
         assetPath,
         entityId: envelope.id,
       }),

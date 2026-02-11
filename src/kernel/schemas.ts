@@ -430,6 +430,74 @@ export const PieceCatalogPayloadSchema = z
   })
   .strict();
 
+export const MapSpaceSchema = z
+  .object({
+    id: StringSchema.min(1),
+    spaceType: StringSchema.min(1),
+    population: IntegerSchema.min(0),
+    econ: IntegerSchema.min(0),
+    terrainTags: z.array(StringSchema.min(1)),
+    country: StringSchema.min(1),
+    coastal: BooleanSchema,
+    adjacentTo: z.array(StringSchema.min(1)),
+  })
+  .strict();
+
+export const ProvisionalAdjacencySchema = z
+  .object({
+    from: StringSchema.min(1),
+    to: StringSchema.min(1),
+    reason: StringSchema.min(1),
+  })
+  .strict();
+
+export const NumericTrackSchema = z
+  .object({
+    id: StringSchema.min(1),
+    scope: z.union([z.literal('global'), z.literal('faction')]),
+    faction: StringSchema.min(1).optional(),
+    min: IntegerSchema,
+    max: IntegerSchema,
+    initial: IntegerSchema,
+  })
+  .strict();
+
+export const SpaceMarkerConstraintSchema = z
+  .object({
+    spaceIds: z.array(StringSchema.min(1)).optional(),
+    spaceTypes: z.array(StringSchema.min(1)).optional(),
+    populationEquals: IntegerSchema.min(0).optional(),
+    allowedStates: z.array(StringSchema.min(1)),
+  })
+  .strict();
+
+export const SpaceMarkerLatticeSchema = z
+  .object({
+    id: StringSchema.min(1),
+    states: z.array(StringSchema.min(1)),
+    defaultState: StringSchema.min(1),
+    constraints: z.array(SpaceMarkerConstraintSchema).optional(),
+  })
+  .strict();
+
+export const SpaceMarkerValueSchema = z
+  .object({
+    spaceId: StringSchema.min(1),
+    markerId: StringSchema.min(1),
+    state: StringSchema.min(1),
+  })
+  .strict();
+
+export const MapPayloadSchema = z
+  .object({
+    spaces: z.array(MapSpaceSchema),
+    provisionalAdjacency: z.array(ProvisionalAdjacencySchema).optional(),
+    tracks: z.array(NumericTrackSchema).optional(),
+    markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),
+    spaceMarkers: z.array(SpaceMarkerValueSchema).optional(),
+  })
+  .strict();
+
 export const DataAssetKindSchema = z.union([
   z.literal('map'),
   z.literal('scenario'),

@@ -321,6 +321,60 @@ export interface PieceCatalogPayload {
   readonly inventory: readonly PieceInventoryEntry[];
 }
 
+export interface MapSpaceDef {
+  readonly id: string;
+  readonly spaceType: string;
+  readonly population: number;
+  readonly econ: number;
+  readonly terrainTags: readonly string[];
+  readonly country: string;
+  readonly coastal: boolean;
+  readonly adjacentTo: readonly string[];
+}
+
+export interface ProvisionalAdjacencyDef {
+  readonly from: string;
+  readonly to: string;
+  readonly reason: string;
+}
+
+export interface NumericTrackDef {
+  readonly id: string;
+  readonly scope: 'global' | 'faction';
+  readonly faction?: string;
+  readonly min: number;
+  readonly max: number;
+  readonly initial: number;
+}
+
+export interface SpaceMarkerConstraintDef {
+  readonly spaceIds?: readonly string[];
+  readonly spaceTypes?: readonly string[];
+  readonly populationEquals?: number;
+  readonly allowedStates: readonly string[];
+}
+
+export interface SpaceMarkerLatticeDef {
+  readonly id: string;
+  readonly states: readonly string[];
+  readonly defaultState: string;
+  readonly constraints?: readonly SpaceMarkerConstraintDef[];
+}
+
+export interface SpaceMarkerValueDef {
+  readonly spaceId: string;
+  readonly markerId: string;
+  readonly state: string;
+}
+
+export interface MapPayload {
+  readonly spaces: readonly MapSpaceDef[];
+  readonly provisionalAdjacency?: readonly ProvisionalAdjacencyDef[];
+  readonly tracks?: readonly NumericTrackDef[];
+  readonly markerLattices?: readonly SpaceMarkerLatticeDef[];
+  readonly spaceMarkers?: readonly SpaceMarkerValueDef[];
+}
+
 export interface DataAssetEnvelope<TPayload = unknown> {
   readonly id: string;
   readonly version: number;

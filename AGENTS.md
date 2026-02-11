@@ -16,7 +16,7 @@ This repository contains both implementation code and design artifacts.
 - `src/`: TypeScript source modules (`kernel`, `cnl`, `agents`, `sim`, `cli`).
 - `schemas/`: JSON schema artifacts (`GameDef`, `Trace`, `EvalReport`).
 - `test/`: `unit`, `integration`, `e2e`, plus `fixtures`, `memory`, and `performance`.
-- `specs/`: canonical numbered implementation specs (currently `00` roadmap through `14` evolution pipeline).
+- `specs/`: canonical numbered implementation specs.
 - `tickets/`: active implementation tickets.
 - `archive/`: completed or retired `tickets`, `specs`, `brainstorming`, and reports.
 - `brainstorming/`, `README.md`, `CLAUDE.md`: design context and constraints.

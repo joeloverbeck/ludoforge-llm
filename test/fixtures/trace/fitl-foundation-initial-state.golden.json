@@ -1,0 +1,26 @@
+{
+  "globalVars": {},
+  "perPlayerVars": {
+    "0": {},
+    "1": {}
+  },
+  "playerCount": 2,
+  "zones": {
+    "hue:none": [],
+    "quang-tri:none": []
+  },
+  "nextTokenOrdinal": 0,
+  "currentPhase": "main",
+  "activePlayer": 0,
+  "turnCount": 0,
+  "rng": {
+    "algorithm": "pcg-dxsm-128",
+    "version": 1,
+    "state": [
+      "0x9e3779b97f4a7c15f39cc0605cedc824",
+      "0xda3e39cb94b95bf9"
+    ]
+  },
+  "stateHash": "0x923045bcd6a462e9",
+  "actionUsage": {}
+}

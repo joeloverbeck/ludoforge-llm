@@ -3,7 +3,17 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPhaseId, asPlayerId, deserializeGameState, deserializeTrace, serializeGameState, serializeTrace } from '../../src/kernel/index.js';
+import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
+import {
+  asActionId,
+  asPhaseId,
+  asPlayerId,
+  deserializeGameState,
+  deserializeTrace,
+  initialState,
+  serializeGameState,
+  serializeTrace,
+} from '../../src/kernel/index.js';
 import type { GameState, GameTrace, SerializedGameState, SerializedGameTrace } from '../../src/kernel/index.js';
 
 const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
@@ -81,6 +91,24 @@ describe('kernel bigint serialization codecs', () => {
     assert.equal(deserialized.rng.version, 1);
     assert.equal(deserialized.stateHash, 0xabcdn);
     assert.equal(deserialized.nextTokenOrdinal, gameStateFixture.nextTokenOrdinal);
+  });
+
+  it('round-trips FITL-shaped initial state compiled from embedded dataAssets', () => {
+    const markdown = readFileSync(
+      join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', 'fitl-foundation-inline-assets.md'),
+      'utf8',
+    );
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assert.deepEqual(compiled.diagnostics, []);
+    assert.notEqual(compiled.gameDef, null);
+
+    const expectedState = initialState(compiled.gameDef!, 17, 2);
+    const fitlInitialState = deserializeGameState(serializeGameState(expectedState));
+
+    assert.deepEqual(fitlInitialState, expectedState);
   });
 
   it('deserializeTrace(serializeTrace(trace)) preserves all hashes exactly', () => {

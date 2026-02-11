@@ -1,6 +1,6 @@
 # Spec 16: Fire in the Lake Map, Scenario, and State Model
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0 (critical path)
 **Complexity**: L
 **Dependencies**: Spec 15
@@ -127,3 +127,18 @@ dataAssets:
 - Property test for control/support recomputation consistency after synthetic state edits.
 - Negative compilation tests for malformed assets (unknown ids, invalid bounds, illegal status dimensions/transitions, inventory mismatch).
 - Regression tests showing no FITL-specific branch requirements in generic state/compile modules.
+
+## Outcome
+
+- Completion date: 2026-02-11
+- What was actually changed:
+  - Landed FITL foundation data-asset schema support and validation for `map`, `pieceCatalog`, and `scenario`.
+  - Added compiler ingestion of embedded `dataAssets` with deterministic diagnostics and scenario asset reference checks.
+  - Added map adjacency/state model guardrails, piece status/inventory validations, and negative-fixture coverage.
+  - Added deterministic FITL initial-state snapshot and serde roundtrip tests from YAML-embedded assets.
+  - Preserved non-FITL compile/simulation paths with regression coverage in integration suites.
+- Deviations from original plan:
+  - Some broad acceptance bullets (for example expansive derived-metric recomputation/property breadth) were implemented incrementally across the FITLMAPSCEANDSTAMOD ticket series with focused deterministic/unit/integration checks rather than a single monolithic test artifact.
+- Verification results:
+  - `npm run test:unit` passed.
+  - `npm run test:integration` passed.

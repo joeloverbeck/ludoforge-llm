@@ -1,7 +1,24 @@
 import * as assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { asPhaseId, asPlayerId, computeFullHash, createZobristTable, initialState, type GameDef } from '../../src/kernel/index.js';
+import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
+import {
+  asPhaseId,
+  asPlayerId,
+  computeFullHash,
+  createZobristTable,
+  initialState,
+  serializeGameState,
+  type GameDef,
+  type SerializedGameState,
+} from '../../src/kernel/index.js';
+
+const readCompilerFixture = (name: string): string =>
+  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
+
+const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 
 const createDef = (): GameDef =>
   ({
@@ -95,5 +112,21 @@ describe('initialState', () => {
     };
 
     assert.throws(() => initialState(noPhaseDef, 1, 2), /at least one phase/);
+  });
+
+  it('matches FITL foundation initial-state golden snapshot from embedded dataAssets', () => {
+    const markdown = readCompilerFixture('fitl-foundation-inline-assets.md');
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assert.deepEqual(compiled.diagnostics, []);
+    assert.notEqual(compiled.gameDef, null);
+
+    const serialized = serializeGameState(initialState(compiled.gameDef!, 17, 2));
+    const fixture = readJsonFixture<SerializedGameState>('test/fixtures/trace/fitl-foundation-initial-state.golden.json');
+
+    assert.deepEqual(serialized, fixture);
+    assert.equal(JSON.stringify(serialized), JSON.stringify(fixture));
   });
 });

@@ -89,6 +89,25 @@ describe('compile pipeline integration', () => {
     assert.deepEqual(validateGameDef(raw.gameDef!), []);
   });
 
+  it('compiles FITL coup/victory fixture from embedded assets with no external data paths', () => {
+    const markdown = readCompilerFixture('fitl-foundation-coup-victory-inline-assets.md');
+    const parsed = parseGameSpec(markdown);
+    const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assert.equal(markdown.includes('data/fitl/'), false);
+    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assert.deepEqual(validatorDiagnostics, []);
+    assert.deepEqual(compiled.diagnostics, []);
+    assert.notEqual(compiled.gameDef, null);
+    assert.deepEqual(
+      compiled.gameDef?.zones.map((zone) => String(zone.id)),
+      ['hue:none', 'quang-tri:none'],
+    );
+    assert.equal(compiled.gameDef?.coupPlan?.phases[0]?.id, 'victory');
+    assert.equal(compiled.gameDef?.victory?.checkpoints[0]?.id, 'us-threshold');
+  });
+
   it('compiles map-driven zones from embedded dataAssets with no zones section', () => {
     const markdown = [
       '```yaml',

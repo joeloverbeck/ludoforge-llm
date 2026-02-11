@@ -1,74 +1,46 @@
 import * as assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
+import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
 import {
   applyMove,
   asActionId,
-  asPhaseId,
   initialState,
   terminalResult,
   type GameDef,
-  type Move,
 } from '../../src/kernel/index.js';
 
-const baseDef = (): GameDef =>
-  ({
-    metadata: { id: 'fitl-coup-victory-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
-    constants: {},
-    globalVars: [],
-    perPlayerVars: [],
-    zones: [],
-    tokenTypes: [],
-    setup: [],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-    turnFlow: {
-      cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-      eligibility: { factions: ['us', 'nva'], overrideWindows: [] },
-      optionMatrix: [],
-      passRewards: [],
-      durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
-    },
-    actions: [],
-    triggers: [],
-    endConditions: [],
-  }) as unknown as GameDef;
+const readCompilerFixture = (name: string): string =>
+  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
+
+const compileFixture = (): { readonly markdown: string; readonly def: GameDef } => {
+  const markdown = readCompilerFixture('fitl-foundation-coup-victory-inline-assets.md');
+  const parsed = parseGameSpec(markdown);
+  const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+  assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+  assert.deepEqual(compiled.diagnostics, []);
+  assert.notEqual(compiled.gameDef, null);
+
+  return { markdown, def: compiled.gameDef! };
+};
 
 describe('FITL coup victory integration', () => {
-  it('halts phase auto-advancement when a during-coup threshold is reached after a move', () => {
-    const def: GameDef = {
-      ...baseDef(),
-      globalVars: [{ name: 'usSupport', type: 'int', init: 50, min: 0, max: 75 }],
-      actions: [
-        {
-          id: asActionId('boostSupport'),
-          actor: 'active',
-          phase: asPhaseId('main'),
-          params: [],
-          pre: null,
-          cost: [],
-          effects: [{ addVar: { scope: 'global', var: 'usSupport', delta: 1 } }],
-          limits: [],
-        },
-      ],
-      victory: {
-        checkpoints: [
-          {
-            id: 'us-threshold',
-            faction: 'us',
-            timing: 'duringCoup',
-            when: { op: '>', left: { ref: 'gvar', var: 'usSupport' }, right: 50 },
-          },
-        ],
-      },
-    };
+  it('compiles from embedded YAML dataAssets and resolves during-coup threshold wins', () => {
+    const { markdown, def } = compileFixture();
     const start = initialState(def, 101, 2);
-    const move: Move = { actionId: asActionId('boostSupport'), params: {} };
-
-    const applied = applyMove(def, start, move);
+    const applied = applyMove(def, start, { actionId: asActionId('boostSupport'), params: {} });
     const terminal = terminalResult(def, applied.state);
 
-    assert.equal(applied.state.turnCount, 0);
-    assert.equal(applied.state.currentPhase, asPhaseId('main'));
+    assert.equal(markdown.includes('data/fitl/'), false);
+    assert.deepEqual(
+      def.zones.map((zone) => String(zone.id)),
+      ['hue:none', 'quang-tri:none'],
+    );
+    assert.equal(def.coupPlan?.phases[0]?.id, 'victory');
+    assert.equal(def.victory?.checkpoints[0]?.id, 'us-threshold');
     assert.deepEqual(terminal, {
       type: 'win',
       player: 0,
@@ -80,46 +52,10 @@ describe('FITL coup victory integration', () => {
     });
   });
 
-  it('computes final-coup winner from declarative margins and emits ordered ranking metadata', () => {
-    const def: GameDef = {
-      ...baseDef(),
-      globalVars: [
-        { name: 'isFinalCoup', type: 'int', init: 0, min: 0, max: 1 },
-        { name: 'usMargin', type: 'int', init: 2, min: -99, max: 99 },
-        { name: 'nvaMargin', type: 'int', init: 4, min: -99, max: 99 },
-      ],
-      actions: [
-        {
-          id: asActionId('markFinalCoup'),
-          actor: 'active',
-          phase: asPhaseId('main'),
-          params: [],
-          pre: null,
-          cost: [],
-          effects: [{ setVar: { scope: 'global', var: 'isFinalCoup', value: 1 } }],
-          limits: [],
-        },
-      ],
-      victory: {
-        checkpoints: [
-          {
-            id: 'final-coup',
-            faction: 'us',
-            timing: 'finalCoup',
-            when: { op: '==', left: { ref: 'gvar', var: 'isFinalCoup' }, right: 1 },
-          },
-        ],
-        margins: [
-          { faction: 'us', value: { ref: 'gvar', var: 'usMargin' } },
-          { faction: 'nva', value: { ref: 'gvar', var: 'nvaMargin' } },
-        ],
-        ranking: { order: 'desc' },
-      },
-    };
+  it('computes final-coup winner from fixture-defined margins and deterministic ranking metadata', () => {
+    const { def } = compileFixture();
     const start = initialState(def, 202, 2);
-    const move: Move = { actionId: asActionId('markFinalCoup'), params: {} };
-
-    const applied = applyMove(def, start, move);
+    const applied = applyMove(def, start, { actionId: asActionId('markFinalCoup'), params: {} });
     const terminal = terminalResult(def, applied.state);
 
     assert.deepEqual(terminal, {

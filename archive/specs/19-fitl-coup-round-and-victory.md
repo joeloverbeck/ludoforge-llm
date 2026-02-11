@@ -1,6 +1,6 @@
 # Spec 19: Fire in the Lake Coup Round and Victory
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0 (critical path)
 **Complexity**: L
 **Dependencies**: Spec 16, Spec 17, Spec 18
@@ -89,3 +89,13 @@ Implement full Coup-round handling and victory computation for foundation play, 
 - Deterministic tests for consecutive-Coup handling and final-round branching.
 - Golden tests for interim victory checks and final-Coup margin/ranking outputs.
 - Regression tests proving Coup/victory compile+run from embedded FITL YAML assets without required `data/fitl/...` runtime reads.
+
+## Outcome
+
+- Completion date: 2026-02-11
+- Implemented scope:
+  - Declarative `coupPlan` and `victory` contracts are compiled from `GameSpecDoc` YAML and executed in terminal/runtime paths.
+  - Coup lifecycle sequencing, consecutive-coup gating, and final-coup ranking metadata are covered by unit and integration tests.
+  - Embedded FITL YAML asset pipeline now has dedicated coup/victory compile+run regression coverage.
+- Not implemented by this spec:
+  - Optional deception marker and handicap rules (remained out of scope).

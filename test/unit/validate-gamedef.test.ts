@@ -379,6 +379,55 @@ describe('validateGameDef constraints and warnings', () => {
     );
   });
 
+  it('reports unowned zone ids that do not use :none qualifier', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [{ ...base.zones[0], id: 'market:0', owner: 'none' }, base.zones[1]],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'ZONE_ID_OWNERSHIP_INVALID' && diag.path === 'zones[0].id' && diag.severity === 'error',
+      ),
+    );
+  });
+
+  it('reports player-owned zone ids without numeric qualifiers', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [{ ...base.zones[0], id: 'hand:actor', owner: 'player' }, base.zones[1]],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'ZONE_ID_PLAYER_QUALIFIER_INVALID' && diag.path === 'zones[0].id' && diag.severity === 'error',
+      ),
+    );
+  });
+
+  it('reports player-owned zone ids that exceed metadata.players.max bounds', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [{ ...base.zones[0], id: 'hand:4', owner: 'player' }, base.zones[1]],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'ZONE_ID_PLAYER_INDEX_OUT_OF_BOUNDS' &&
+          diag.path === 'zones[0].id' &&
+          diag.severity === 'error',
+      ),
+    );
+  });
+
   it('returns no diagnostics for fully valid game def', () => {
     const diagnostics = validateGameDef(createValidGameDef());
     assert.deepEqual(diagnostics, []);

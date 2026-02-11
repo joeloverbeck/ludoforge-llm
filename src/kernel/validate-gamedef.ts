@@ -134,6 +134,8 @@ const parseZoneSelector = (
   };
 };
 
+const PLAYER_ZONE_QUALIFIER_PATTERN = /^[0-9]+$/;
+
 type ValidationContext = {
   globalVarNames: Set<string>;
   perPlayerVarNames: Set<string>;
@@ -661,6 +663,45 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
     'per-player var name',
     'perPlayerVars',
   );
+
+  def.zones.forEach((zone, index) => {
+    const qualifier = parseZoneSelector(zone.id).qualifier;
+
+    if (zone.owner === 'none') {
+      if (qualifier !== 'none') {
+        diagnostics.push({
+          code: 'ZONE_ID_OWNERSHIP_INVALID',
+          path: `zones[${index}].id`,
+          severity: 'error',
+          message: `Unowned zone "${zone.id}" must use the :none qualifier to match owner "none".`,
+          suggestion: `Rename zone id to use :none, or change owner to "player".`,
+        });
+      }
+      return;
+    }
+
+    if (qualifier === null || !PLAYER_ZONE_QUALIFIER_PATTERN.test(qualifier)) {
+      diagnostics.push({
+        code: 'ZONE_ID_PLAYER_QUALIFIER_INVALID',
+        path: `zones[${index}].id`,
+        severity: 'error',
+        message: `Player-owned zone "${zone.id}" must use a numeric owner qualifier (for example :0).`,
+        suggestion: `Rename zone id to include a numeric player qualifier, or change owner to "none".`,
+      });
+      return;
+    }
+
+    const playerId = Number(qualifier);
+    if (playerId > def.metadata.players.max - 1) {
+      diagnostics.push({
+        code: 'ZONE_ID_PLAYER_INDEX_OUT_OF_BOUNDS',
+        path: `zones[${index}].id`,
+        severity: 'error',
+        message: `Player-owned zone "${zone.id}" targets player ${playerId}, which exceeds metadata.players.max (${def.metadata.players.max}).`,
+        suggestion: `Use a qualifier in [0, ${def.metadata.players.max - 1}] or increase metadata.players.max.`,
+      });
+    }
+  });
 
   const zoneCandidates = [...new Set(def.zones.map((zone) => zone.id))].sort((left, right) =>
     left.localeCompare(right),

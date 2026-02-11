@@ -657,6 +657,53 @@ export const OperationProfileSchema = z
   })
   .strict();
 
+export const CoupPlanPhaseSchema = z
+  .object({
+    id: StringSchema.min(1),
+    steps: z.array(StringSchema.min(1)).min(1),
+  })
+  .strict();
+
+export const CoupPlanSchema = z
+  .object({
+    phases: z.array(CoupPlanPhaseSchema),
+    finalRoundOmitPhases: z.array(StringSchema.min(1)).optional(),
+    maxConsecutiveRounds: IntegerSchema.min(1).optional(),
+  })
+  .strict();
+
+export const VictoryTimingSchema = z.union([z.literal('duringCoup'), z.literal('finalCoup')]);
+
+export const VictoryCheckpointSchema = z
+  .object({
+    id: StringSchema.min(1),
+    faction: StringSchema.min(1),
+    timing: VictoryTimingSchema,
+    when: ConditionASTSchema,
+  })
+  .strict();
+
+export const VictoryMarginSchema = z
+  .object({
+    faction: StringSchema.min(1),
+    value: ValueExprSchema,
+  })
+  .strict();
+
+export const VictoryRankingSchema = z
+  .object({
+    order: z.union([z.literal('desc'), z.literal('asc')]),
+  })
+  .strict();
+
+export const VictorySchema = z
+  .object({
+    checkpoints: z.array(VictoryCheckpointSchema),
+    margins: z.array(VictoryMarginSchema).optional(),
+    ranking: VictoryRankingSchema.optional(),
+  })
+  .strict();
+
 export const GameDefSchema = z
   .object({
     metadata: z
@@ -675,6 +722,8 @@ export const GameDefSchema = z
     turnStructure: TurnStructureSchema,
     turnFlow: TurnFlowSchema.optional(),
     operationProfiles: z.array(OperationProfileSchema).optional(),
+    coupPlan: CoupPlanSchema.optional(),
+    victory: VictorySchema.optional(),
     actions: z.array(ActionDefSchema),
     triggers: z.array(TriggerDefSchema),
     endConditions: z.array(EndConditionSchema),

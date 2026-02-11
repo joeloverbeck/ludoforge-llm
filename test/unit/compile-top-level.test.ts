@@ -352,4 +352,101 @@ describe('compile top-level actions/triggers/end conditions', () => {
       true,
     );
   });
+
+  it('preserves coupPlan and victory contracts when declared', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'coup-victory-pass-through', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      coupPlan: {
+        phases: [
+          { id: 'victory', steps: ['check-thresholds'] },
+          { id: 'resources', steps: ['resource-income', 'aid-penalty'] },
+        ],
+        finalRoundOmitPhases: ['resources'],
+        maxConsecutiveRounds: 1,
+      },
+      victory: {
+        checkpoints: [
+          {
+            id: 'us-threshold',
+            faction: 'us',
+            timing: 'duringCoup' as const,
+            when: { op: '>' as const, left: 51, right: 50 },
+          },
+        ],
+        margins: [{ faction: 'us', value: { op: '-' as const, left: 55, right: 50 } }],
+        ranking: { order: 'desc' as const },
+      },
+      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef !== null, true);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.gameDef?.coupPlan?.phases[0]?.id, 'victory');
+    assert.equal(result.gameDef?.victory?.checkpoints[0]?.id, 'us-threshold');
+  });
+
+  it('returns blocking diagnostics for malformed coupPlan and victory metadata', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'coup-victory-invalid', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      coupPlan: {
+        phases: [{ id: 'victory', steps: [] }],
+        finalRoundOmitPhases: ['missing-phase'],
+        maxConsecutiveRounds: 0,
+      },
+      victory: {
+        checkpoints: [{ id: 'c1', faction: 'us', timing: 'not-valid', when: null }],
+        margins: [{ faction: '', value: null }],
+        ranking: { order: 'up' },
+      },
+      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+
+    const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_COUP_PLAN_PHASE_STEPS_INVALID' &&
+          diagnostic.path === 'doc.coupPlan.phases.0.steps',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_COUP_PLAN_FINAL_ROUND_OMIT_UNKNOWN_PHASE' &&
+          diagnostic.path === 'doc.coupPlan.finalRoundOmitPhases.0',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_VICTORY_CHECKPOINT_TIMING_INVALID' &&
+          diagnostic.path === 'doc.victory.checkpoints.0.timing',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_VICTORY_RANKING_ORDER_INVALID' &&
+          diagnostic.path === 'doc.victory.ranking.order',
+      ),
+      true,
+    );
+  });
 });

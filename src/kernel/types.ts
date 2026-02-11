@@ -297,6 +297,8 @@ export interface GameDef {
   readonly turnStructure: TurnStructure;
   readonly turnFlow?: TurnFlowDef;
   readonly operationProfiles?: readonly OperationProfileDef[];
+  readonly coupPlan?: CoupPlanDef;
+  readonly victory?: VictoryDef;
   readonly actions: readonly ActionDef[];
   readonly triggers: readonly TriggerDef[];
   readonly endConditions: readonly EndCondition[];
@@ -394,6 +396,41 @@ export interface OperationProfileDef {
   readonly resolution: readonly Readonly<Record<string, unknown>>[];
   readonly partialExecution: OperationProfilePartialExecutionDef;
   readonly linkedSpecialActivityWindows?: readonly string[];
+}
+
+export interface CoupPlanPhaseDef {
+  readonly id: string;
+  readonly steps: readonly string[];
+}
+
+export interface CoupPlanDef {
+  readonly phases: readonly CoupPlanPhaseDef[];
+  readonly finalRoundOmitPhases?: readonly string[];
+  readonly maxConsecutiveRounds?: number;
+}
+
+export type VictoryTiming = 'duringCoup' | 'finalCoup';
+
+export interface VictoryCheckpointDef {
+  readonly id: string;
+  readonly faction: string;
+  readonly timing: VictoryTiming;
+  readonly when: ConditionAST;
+}
+
+export interface VictoryMarginDef {
+  readonly faction: string;
+  readonly value: ValueExpr;
+}
+
+export interface VictoryRankingDef {
+  readonly order: 'desc' | 'asc';
+}
+
+export interface VictoryDef {
+  readonly checkpoints: readonly VictoryCheckpointDef[];
+  readonly margins?: readonly VictoryMarginDef[];
+  readonly ranking?: VictoryRankingDef;
 }
 
 export type DataAssetKind = 'map' | 'scenario' | 'pieceCatalog';

@@ -1,3 +1,5 @@
+import type { ConditionAST, ValueExpr } from '../kernel/types.js';
+
 export interface GameSpecMetadata {
   readonly id: string;
   readonly players: { readonly min: number; readonly max: number };
@@ -163,6 +165,41 @@ export interface GameSpecOperationProfileDef {
   readonly linkedSpecialActivityWindows?: readonly string[];
 }
 
+export interface GameSpecCoupPlanPhase {
+  readonly id: string;
+  readonly steps: readonly string[];
+}
+
+export interface GameSpecCoupPlan {
+  readonly phases: readonly GameSpecCoupPlanPhase[];
+  readonly finalRoundOmitPhases?: readonly string[];
+  readonly maxConsecutiveRounds?: number;
+}
+
+export type GameSpecVictoryTiming = 'duringCoup' | 'finalCoup';
+
+export interface GameSpecVictoryCheckpoint {
+  readonly id: string;
+  readonly faction: string;
+  readonly timing: GameSpecVictoryTiming;
+  readonly when: ConditionAST;
+}
+
+export interface GameSpecVictoryMargin {
+  readonly faction: string;
+  readonly value: ValueExpr;
+}
+
+export interface GameSpecVictoryRanking {
+  readonly order: 'desc' | 'asc';
+}
+
+export interface GameSpecVictory {
+  readonly checkpoints: readonly GameSpecVictoryCheckpoint[];
+  readonly margins?: readonly GameSpecVictoryMargin[];
+  readonly ranking?: GameSpecVictoryRanking;
+}
+
 export interface GameSpecDoc {
   readonly metadata: GameSpecMetadata | null;
   readonly constants: Readonly<Record<string, number>> | null;
@@ -175,6 +212,8 @@ export interface GameSpecDoc {
   readonly turnStructure: GameSpecTurnStructure | null;
   readonly turnFlow: GameSpecTurnFlow | null;
   readonly operationProfiles: readonly GameSpecOperationProfileDef[] | null;
+  readonly coupPlan: GameSpecCoupPlan | null;
+  readonly victory: GameSpecVictory | null;
   readonly actions: readonly GameSpecActionDef[] | null;
   readonly triggers: readonly GameSpecTriggerDef[] | null;
   readonly endConditions: readonly GameSpecEndCondition[] | null;
@@ -193,6 +232,8 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     turnStructure: null,
     turnFlow: null,
     operationProfiles: null,
+    coupPlan: null,
+    victory: null,
     actions: null,
     triggers: null,
     endConditions: null,

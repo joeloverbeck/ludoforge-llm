@@ -283,6 +283,53 @@ describe('validateGameDef reference checks', () => {
       ),
     );
   });
+
+  it('reports unknown coupPlan final-round omitted phases', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      coupPlan: {
+        phases: [{ id: 'victory', steps: ['check-thresholds'] }],
+        finalRoundOmitPhases: ['resources'],
+        maxConsecutiveRounds: 1,
+      },
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'COUP_PLAN_FINAL_ROUND_OMIT_UNKNOWN_PHASE' && diag.path === 'coupPlan.finalRoundOmitPhases[0]',
+      ),
+    );
+  });
+
+  it('reports missing references inside victory expressions', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      victory: {
+        checkpoints: [
+          {
+            id: 'us-threshold',
+            faction: 'us',
+            timing: 'duringCoup',
+            when: { op: '>=', left: { ref: 'gvar', var: 'unknown' }, right: 50 },
+          },
+        ],
+        margins: [{ faction: 'us', value: { ref: 'pvar', player: 'active', var: 'missingPvar' } }],
+        ranking: { order: 'desc' },
+      },
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'REF_GVAR_MISSING' && diag.path === 'victory.checkpoints[0].when.left.var'),
+    );
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'REF_PVAR_MISSING' && diag.path === 'victory.margins[0].value.var'),
+    );
+  });
 });
 
 describe('validateGameDef constraints and warnings', () => {

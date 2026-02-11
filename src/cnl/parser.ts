@@ -211,6 +211,10 @@ function mergeSection(
       return mergeSingletonTurnStructure(doc, section, value, diagnostics);
     case 'turnFlow':
       return mergeSingletonTurnFlow(doc, section, value, diagnostics);
+    case 'coupPlan':
+      return mergeSingletonCoupPlan(doc, section, value, diagnostics);
+    case 'victory':
+      return mergeSingletonVictory(doc, section, value, diagnostics);
     case 'dataAssets':
     case 'globalVars':
     case 'perPlayerVars':
@@ -302,6 +306,46 @@ function mergeSingletonTurnFlow(
   }
 
   (doc as MutableGameSpecDoc).turnFlow = asObjectOrNull(value) as MutableGameSpecDoc['turnFlow'];
+  return buildAnchoredPaths(section, value);
+}
+
+function mergeSingletonCoupPlan(
+  doc: GameSpecDoc,
+  section: 'coupPlan',
+  value: unknown,
+  diagnostics: Diagnostic[],
+): readonly string[] {
+  if (doc.coupPlan !== null) {
+    diagnostics.push({
+      code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
+      path: 'doc.coupPlan',
+      severity: 'warning',
+      message: 'Duplicate singleton section "coupPlan" ignored; first definition wins.',
+    });
+    return [];
+  }
+
+  (doc as MutableGameSpecDoc).coupPlan = asObjectOrNull(value) as MutableGameSpecDoc['coupPlan'];
+  return buildAnchoredPaths(section, value);
+}
+
+function mergeSingletonVictory(
+  doc: GameSpecDoc,
+  section: 'victory',
+  value: unknown,
+  diagnostics: Diagnostic[],
+): readonly string[] {
+  if (doc.victory !== null) {
+    diagnostics.push({
+      code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
+      path: 'doc.victory',
+      severity: 'warning',
+      message: 'Duplicate singleton section "victory" ignored; first definition wins.',
+    });
+    return [];
+  }
+
+  (doc as MutableGameSpecDoc).victory = asObjectOrNull(value) as MutableGameSpecDoc['victory'];
   return buildAnchoredPaths(section, value);
 }
 

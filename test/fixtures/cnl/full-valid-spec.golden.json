@@ -33,6 +33,8 @@
     },
     "turnFlow": null,
     "operationProfiles": null,
+    "coupPlan": null,
+    "victory": null,
     "actions": [
       {
         "id": "draw",

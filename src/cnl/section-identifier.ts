@@ -10,6 +10,8 @@ export const CANONICAL_SECTION_KEYS = [
   'turnStructure',
   'turnFlow',
   'operationProfiles',
+  'coupPlan',
+  'victory',
   'actions',
   'triggers',
   'endConditions',
@@ -143,6 +145,12 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isOperationProfilesShape(value)) {
     matches.push('operationProfiles');
   }
+  if (isCoupPlanShape(value)) {
+    matches.push('coupPlan');
+  }
+  if (isVictoryShape(value)) {
+    matches.push('victory');
+  }
   if (isGlobalVarsShape(value)) {
     matches.push('globalVars');
     matches.push('perPlayerVars');
@@ -206,6 +214,22 @@ function isOperationProfilesShape(value: Record<string, unknown>): boolean {
     Array.isArray(value.operationProfiles) &&
     value.operationProfiles.every(
       (entry) => isRecord(entry) && typeof entry.id === 'string' && typeof entry.actionId === 'string',
+    )
+  );
+}
+
+function isCoupPlanShape(value: Record<string, unknown>): boolean {
+  return (
+    Array.isArray(value.phases) &&
+    value.phases.every((entry) => isRecord(entry) && typeof entry.id === 'string' && Array.isArray(entry.steps))
+  );
+}
+
+function isVictoryShape(value: Record<string, unknown>): boolean {
+  return (
+    Array.isArray(value.checkpoints) &&
+    value.checkpoints.every(
+      (entry) => isRecord(entry) && typeof entry.id === 'string' && typeof entry.faction === 'string',
     )
   );
 }

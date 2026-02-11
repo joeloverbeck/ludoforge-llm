@@ -68,6 +68,18 @@ const fullGameDef = {
       linkedSpecialActivityWindows: ['window-a'],
     },
   ],
+  coupPlan: {
+    phases: [{ id: 'victory', steps: ['check-thresholds'] }],
+    finalRoundOmitPhases: ['victory'],
+    maxConsecutiveRounds: 1,
+  },
+  victory: {
+    checkpoints: [
+      { id: 'us-threshold', faction: 'us', timing: 'duringCoup', when: { op: '>', left: 51, right: 50 } },
+    ],
+    margins: [{ faction: 'us', value: { op: '-', left: 55, right: 50 } }],
+    ranking: { order: 'desc' },
+  },
   actions: [
     {
       id: 'playCard',
@@ -233,6 +245,16 @@ describe('top-level runtime schemas', () => {
   it('parses a full-featured valid GameDef with zero issues', () => {
     const result = GameDefSchema.safeParse(fullGameDef);
     assert.equal(result.success, true);
+  });
+
+  it('fails on invalid coupPlan.maxConsecutiveRounds path', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      coupPlan: { phases: [{ id: 'victory', steps: ['check-thresholds'] }], maxConsecutiveRounds: 0 },
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'coupPlan.maxConsecutiveRounds'));
   });
 
   it('fails on missing metadata with path metadata', () => {

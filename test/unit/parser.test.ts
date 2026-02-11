@@ -19,6 +19,8 @@ describe('parseGameSpec API shape', () => {
       turnStructure: null,
       turnFlow: null,
       operationProfiles: null,
+      coupPlan: null,
+      victory: null,
       actions: null,
       triggers: null,
       endConditions: null,
@@ -238,6 +240,29 @@ describe('parseGameSpec API shape', () => {
     assert.equal(result.doc.operationProfiles?.[0]?.id, 'patrol-profile');
     assert.ok(result.sourceMap.byPath['operationProfiles[0].id'] !== undefined);
     assert.ok(result.sourceMap.byPath['operationProfiles[0].partialExecution.mode'] !== undefined);
+  });
+
+  it('parses coupPlan and victory singleton sections', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'coupPlan:',
+      '  phases:',
+      '    - id: victory',
+      '      steps: [check-thresholds]',
+      '  maxConsecutiveRounds: 1',
+      'victory:',
+      '  checkpoints:',
+      '    - id: us-threshold',
+      '      faction: us',
+      '      timing: duringCoup',
+      '      when: { op: ">", left: 51, right: 50 }',
+      '```',
+    ].join('\n'));
+
+    assert.equal(result.doc.coupPlan?.phases[0]?.id, 'victory');
+    assert.equal(result.doc.victory?.checkpoints[0]?.id, 'us-threshold');
+    assert.ok(result.sourceMap.byPath['coupPlan.phases[0].id'] !== undefined);
+    assert.ok(result.sourceMap.byPath['victory.checkpoints[0].id'] !== undefined);
   });
 
   it('anchors appended list entries using canonical merged indexes', () => {

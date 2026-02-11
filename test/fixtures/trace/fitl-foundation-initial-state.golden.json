@@ -22,5 +22,28 @@
     ]
   },
   "stateHash": "0x923045bcd6a462e9",
-  "actionUsage": {}
+  "actionUsage": {},
+  "turnFlow": {
+    "factionOrder": [
+      "0",
+      "1",
+      "2",
+      "3"
+    ],
+    "eligibility": {
+      "0": true,
+      "1": true,
+      "2": true,
+      "3": true
+    },
+    "pendingEligibilityOverrides": [],
+    "currentCard": {
+      "firstEligible": "0",
+      "secondEligible": "1",
+      "actedFactions": [],
+      "passedFactions": [],
+      "nonPassCount": 0,
+      "firstActionClass": null
+    }
+  }
 }

@@ -51,6 +51,53 @@ turnStructure:
   phases:
     - id: main
   activePlayerOrder: roundRobin
+turnFlow:
+  cardLifecycle:
+    played: played:none
+    lookahead: lookahead:none
+    leader: leader:none
+  eligibility:
+    factions: ["0", "1", "2", "3"]
+    overrideWindows:
+      - id: remain-eligible
+        duration: nextCard
+      - id: force-ineligible
+        duration: nextCard
+  optionMatrix:
+    - first: event
+      second: [operation, operationPlusSpecialActivity]
+    - first: operation
+      second: [limitedOperation]
+    - first: operationPlusSpecialActivity
+      second: [limitedOperation, event]
+  passRewards:
+    - factionClass: "0"
+      resource: insurgentPassReward
+      amount: 1
+    - factionClass: "1"
+      resource: coinPassReward
+      amount: 3
+  durationWindows: [card, nextCard, coup, campaign]
+  monsoon:
+    restrictedActions:
+      - actionId: sweep
+      - actionId: march
+      - actionId: airLift
+        maxParam:
+          name: spaces
+          max: 2
+      - actionId: airStrike
+        maxParam:
+          name: spaces
+          max: 2
+    blockPivotal: true
+    pivotalOverrideToken: monsoonPivotalAllowed
+  pivotal:
+    actionIds: [pivotalEvent]
+    requirePreActionWindow: true
+    interrupt:
+      precedence: ["0", "1", "2", "3"]
+      cancellation: firstWins
 actions:
   - id: pass
     actor: active

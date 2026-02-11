@@ -1,6 +1,6 @@
 # Spec 17: Fire in the Lake Turn Sequence, Eligibility, and Card Flow
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0 (critical path)
 **Complexity**: L
 **Dependencies**: Spec 15, Spec 16
@@ -161,3 +161,19 @@ For each card and each acting/passing faction, trace must include:
 - Integration tests for all first/second eligible option matrix permutations.
 - Integration tests for monsoon restrictions and pivotal disallow rules when Coup is next.
 - Golden trace covering at least one pass chain, one event-based eligibility override, one monsoon card, and one coup handoff.
+
+## Outcome
+- **Completion date**: 2026-02-11
+- **Implemented scope**:
+  - Turn-flow data contracts, compiler/validation wiring, eligibility transitions, pass-chain rewards, option-matrix gating, monsoon/pivotal windows, deterministic ordering diagnostics, lifecycle/coup handoff traces, and deterministic replay coverage were implemented across FITLTURSEQELEANDCARFLO tickets `001` through `008`.
+  - FITL sequencing metadata is represented in `GameSpecDoc` fixture data, with no required runtime dependency on `data/fitl/...`.
+  - FITL golden coverage now includes dedicated turn-flow golden assertions (`test/integration/fitl-turn-flow-golden.test.ts`, `test/fixtures/trace/fitl-turn-flow.golden.json`) in addition to existing lifecycle/determinism/integration suites.
+- **Verification snapshot**:
+  - `npm test` passed with FITL integration and unit coverage green, including:
+    - `dist/test/integration/fitl-card-lifecycle.test.js`
+    - `dist/test/integration/fitl-eligibility-window.test.js`
+    - `dist/test/integration/fitl-eligibility-pass-chain.test.js`
+    - `dist/test/integration/fitl-option-matrix.test.js`
+    - `dist/test/integration/fitl-monsoon-pivotal-windows.test.js`
+    - `dist/test/integration/fitl-card-flow-determinism.test.js`
+    - `dist/test/integration/fitl-turn-flow-golden.test.js`

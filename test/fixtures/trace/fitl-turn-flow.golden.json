@@ -1,0 +1,678 @@
+{
+  "seed": 71,
+  "initialLegalMoves": [
+    {
+      "actionId": "pass",
+      "params": {}
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible"
+      }
+    },
+    {
+      "actionId": "operation",
+      "params": {}
+    },
+    {
+      "actionId": "operationPlusSpecialActivity",
+      "params": {}
+    },
+    {
+      "actionId": "airLift",
+      "params": {
+        "spaces": 1
+      }
+    },
+    {
+      "actionId": "airLift",
+      "params": {
+        "spaces": 2
+      }
+    },
+    {
+      "actionId": "pivotalEvent",
+      "params": {
+        "override": "monsoonPivotalAllowed"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "move": {
+        "actionId": "pass",
+        "params": {}
+      },
+      "applyTrace": [
+        {
+          "kind": "turnFlowEligibility",
+          "step": "passChain",
+          "faction": "0",
+          "before": {
+            "firstEligible": "0",
+            "secondEligible": "1",
+            "actedFactions": [],
+            "passedFactions": [],
+            "nonPassCount": 0,
+            "firstActionClass": null
+          },
+          "after": {
+            "firstEligible": "1",
+            "secondEligible": "2",
+            "actedFactions": [
+              "0"
+            ],
+            "passedFactions": [
+              "0"
+            ],
+            "nonPassCount": 0,
+            "firstActionClass": null
+          },
+          "rewards": [
+            {
+              "resource": "res0",
+              "amount": 1
+            }
+          ]
+        }
+      ],
+      "afterApply": {
+        "globalVars": {
+          "res0": 1,
+          "res1": 0
+        },
+        "perPlayerVars": {
+          "0": {},
+          "1": {},
+          "2": {},
+          "3": {}
+        },
+        "playerCount": 4,
+        "zones": {
+          "deck:none": [
+            {
+              "id": "tok_card_1",
+              "type": "card",
+              "props": {
+                "isCoup": false
+              }
+            },
+            {
+              "id": "tok_card_0",
+              "type": "card",
+              "props": {
+                "isCoup": false
+              }
+            }
+          ],
+          "played:none": [
+            {
+              "id": "tok_card_3",
+              "type": "card",
+              "props": {
+                "isCoup": false
+              }
+            }
+          ],
+          "lookahead:none": [
+            {
+              "id": "tok_card_2",
+              "type": "card",
+              "props": {
+                "isCoup": true
+              }
+            }
+          ],
+          "leader:none": []
+        },
+        "nextTokenOrdinal": 4,
+        "currentPhase": "main",
+        "activePlayer": 1,
+        "turnCount": 0,
+        "rng": {
+          "algorithm": "pcg-dxsm-128",
+          "version": 1,
+          "state": [
+            "0x9e3779b97f4a7c15f39cc0605cedc872",
+            "0xda3e39cb94b95b55"
+          ]
+        },
+        "stateHash": "0x12cd4fd7ac7a4047",
+        "actionUsage": {
+          "pass": {
+            "turnCount": 1,
+            "phaseCount": 1,
+            "gameCount": 1
+          }
+        },
+        "turnFlow": {
+          "factionOrder": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "eligibility": {
+            "0": true,
+            "1": true,
+            "2": true,
+            "3": true
+          },
+          "pendingEligibilityOverrides": [],
+          "currentCard": {
+            "firstEligible": "1",
+            "secondEligible": "2",
+            "actedFactions": [
+              "0"
+            ],
+            "passedFactions": [
+              "0"
+            ],
+            "nonPassCount": 0,
+            "firstActionClass": null
+          }
+        }
+      },
+      "boundaryTrace": [
+        {
+          "kind": "turnFlowLifecycle",
+          "step": "promoteLookaheadToPlayed",
+          "slots": {
+            "played": "played:none",
+            "lookahead": "lookahead:none",
+            "leader": "leader:none"
+          },
+          "before": {
+            "playedCardId": null,
+            "lookaheadCardId": "tok_card_2",
+            "leaderCardId": null
+          },
+          "after": {
+            "playedCardId": "tok_card_2",
+            "lookaheadCardId": null,
+            "leaderCardId": null
+          }
+        },
+        {
+          "kind": "turnFlowLifecycle",
+          "step": "revealLookahead",
+          "slots": {
+            "played": "played:none",
+            "lookahead": "lookahead:none",
+            "leader": "leader:none"
+          },
+          "before": {
+            "playedCardId": "tok_card_2",
+            "lookaheadCardId": null,
+            "leaderCardId": null
+          },
+          "after": {
+            "playedCardId": "tok_card_2",
+            "lookaheadCardId": "tok_card_1",
+            "leaderCardId": null
+          }
+        }
+      ],
+      "afterBoundary": {
+        "globalVars": {
+          "res0": 1,
+          "res1": 0
+        },
+        "perPlayerVars": {
+          "0": {},
+          "1": {},
+          "2": {},
+          "3": {}
+        },
+        "playerCount": 4,
+        "zones": {
+          "deck:none": [
+            {
+              "id": "tok_card_0",
+              "type": "card",
+              "props": {
+                "isCoup": false
+              }
+            }
+          ],
+          "played:none": [
+            {
+              "id": "tok_card_2",
+              "type": "card",
+              "props": {
+                "isCoup": true
+              }
+            }
+          ],
+          "lookahead:none": [
+            {
+              "id": "tok_card_1",
+              "type": "card",
+              "props": {
+                "isCoup": false
+              }
+            }
+          ],
+          "leader:none": []
+        },
+        "nextTokenOrdinal": 4,
+        "currentPhase": "main",
+        "activePlayer": 2,
+        "turnCount": 1,
+        "rng": {
+          "algorithm": "pcg-dxsm-128",
+          "version": 1,
+          "state": [
+            "0x9e3779b97f4a7c15f39cc0605cedc872",
+            "0xda3e39cb94b95b55"
+          ]
+        },
+        "stateHash": "0x12cd4fd7ac7a4047",
+        "actionUsage": {
+          "pass": {
+            "turnCount": 0,
+            "phaseCount": 0,
+            "gameCount": 1
+          }
+        },
+        "turnFlow": {
+          "factionOrder": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "eligibility": {
+            "0": true,
+            "1": true,
+            "2": true,
+            "3": true
+          },
+          "pendingEligibilityOverrides": [],
+          "currentCard": {
+            "firstEligible": "1",
+            "secondEligible": "2",
+            "actedFactions": [
+              "0"
+            ],
+            "passedFactions": [
+              "0"
+            ],
+            "nonPassCount": 0,
+            "firstActionClass": null
+          }
+        }
+      }
+    },
+    {
+      "move": {
+        "actionId": "event",
+        "params": {
+          "selfOverride": "eligibilityOverride:self:eligible:remain-eligible"
+        }
+      },
+      "applyTrace": [
+        {
+          "kind": "turnFlowEligibility",
+          "step": "candidateScan",
+          "faction": "2",
+          "before": {
+            "firstEligible": "1",
+            "secondEligible": "2",
+            "actedFactions": [
+              "0"
+            ],
+            "passedFactions": [
+              "0"
+            ],
+            "nonPassCount": 0,
+            "firstActionClass": null
+          },
+          "after": {
+            "firstEligible": "1",
+            "secondEligible": "3",
+            "actedFactions": [
+              "0",
+              "2"
+            ],
+            "passedFactions": [
+              "0"
+            ],
+            "nonPassCount": 1,
+            "firstActionClass": "event"
+          }
+        },
+        {
+          "kind": "turnFlowEligibility",
+          "step": "overrideCreate",
+          "faction": "2",
+          "before": {
+            "firstEligible": "1",
+            "secondEligible": "3",
+            "actedFactions": [
+              "0",
+              "2"
+            ],
+            "passedFactions": [
+              "0"
+            ],
+            "nonPassCount": 1,
+            "firstActionClass": "event"
+          },
+          "after": {
+            "firstEligible": "1",
+            "secondEligible": "3",
+            "actedFactions": [
+              "0",
+              "2"
+            ],
+            "passedFactions": [
+              "0"
+            ],
+            "nonPassCount": 1,
+            "firstActionClass": "event"
+          },
+          "overrides": [
+            {
+              "faction": "2",
+              "eligible": true,
+              "windowId": "remain-eligible",
+              "duration": "nextCard"
+            }
+          ]
+        }
+      ],
+      "afterApply": {
+        "globalVars": {
+          "res0": 1,
+          "res1": 0
+        },
+        "perPlayerVars": {
+          "0": {},
+          "1": {},
+          "2": {},
+          "3": {}
+        },
+        "playerCount": 4,
+        "zones": {
+          "deck:none": [
+            {
+              "id": "tok_card_0",
+              "type": "card",
+              "props": {
+                "isCoup": false
+              }
+            }
+          ],
+          "played:none": [
+            {
+              "id": "tok_card_2",
+              "type": "card",
+              "props": {
+                "isCoup": true
+              }
+            }
+          ],
+          "lookahead:none": [
+            {
+              "id": "tok_card_1",
+              "type": "card",
+              "props": {
+                "isCoup": false
+              }
+            }
+          ],
+          "leader:none": []
+        },
+        "nextTokenOrdinal": 4,
+        "currentPhase": "main",
+        "activePlayer": 1,
+        "turnCount": 1,
+        "rng": {
+          "algorithm": "pcg-dxsm-128",
+          "version": 1,
+          "state": [
+            "0x9e3779b97f4a7c15f39cc0605cedc872",
+            "0xda3e39cb94b95b55"
+          ]
+        },
+        "stateHash": "0xd1de1b28bcbcf098",
+        "actionUsage": {
+          "pass": {
+            "turnCount": 0,
+            "phaseCount": 0,
+            "gameCount": 1
+          },
+          "event": {
+            "turnCount": 1,
+            "phaseCount": 1,
+            "gameCount": 1
+          }
+        },
+        "turnFlow": {
+          "factionOrder": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "eligibility": {
+            "0": true,
+            "1": true,
+            "2": true,
+            "3": true
+          },
+          "pendingEligibilityOverrides": [
+            {
+              "faction": "2",
+              "eligible": true,
+              "windowId": "remain-eligible",
+              "duration": "nextCard"
+            }
+          ],
+          "currentCard": {
+            "firstEligible": "1",
+            "secondEligible": "3",
+            "actedFactions": [
+              "0",
+              "2"
+            ],
+            "passedFactions": [
+              "0"
+            ],
+            "nonPassCount": 1,
+            "firstActionClass": "event"
+          }
+        }
+      },
+      "boundaryTrace": [
+        {
+          "kind": "turnFlowLifecycle",
+          "step": "coupToLeader",
+          "slots": {
+            "played": "played:none",
+            "lookahead": "lookahead:none",
+            "leader": "leader:none"
+          },
+          "before": {
+            "playedCardId": null,
+            "lookaheadCardId": "tok_card_1",
+            "leaderCardId": null
+          },
+          "after": {
+            "playedCardId": null,
+            "lookaheadCardId": "tok_card_1",
+            "leaderCardId": "tok_card_2"
+          }
+        },
+        {
+          "kind": "turnFlowLifecycle",
+          "step": "coupHandoff",
+          "slots": {
+            "played": "played:none",
+            "lookahead": "lookahead:none",
+            "leader": "leader:none"
+          },
+          "before": {
+            "playedCardId": null,
+            "lookaheadCardId": "tok_card_1",
+            "leaderCardId": "tok_card_2"
+          },
+          "after": {
+            "playedCardId": null,
+            "lookaheadCardId": "tok_card_1",
+            "leaderCardId": "tok_card_2"
+          }
+        },
+        {
+          "kind": "turnFlowLifecycle",
+          "step": "promoteLookaheadToPlayed",
+          "slots": {
+            "played": "played:none",
+            "lookahead": "lookahead:none",
+            "leader": "leader:none"
+          },
+          "before": {
+            "playedCardId": null,
+            "lookaheadCardId": "tok_card_1",
+            "leaderCardId": "tok_card_2"
+          },
+          "after": {
+            "playedCardId": "tok_card_1",
+            "lookaheadCardId": null,
+            "leaderCardId": "tok_card_2"
+          }
+        },
+        {
+          "kind": "turnFlowLifecycle",
+          "step": "revealLookahead",
+          "slots": {
+            "played": "played:none",
+            "lookahead": "lookahead:none",
+            "leader": "leader:none"
+          },
+          "before": {
+            "playedCardId": "tok_card_1",
+            "lookaheadCardId": null,
+            "leaderCardId": "tok_card_2"
+          },
+          "after": {
+            "playedCardId": "tok_card_1",
+            "lookaheadCardId": "tok_card_0",
+            "leaderCardId": "tok_card_2"
+          }
+        }
+      ],
+      "afterBoundary": {
+        "globalVars": {
+          "res0": 1,
+          "res1": 0
+        },
+        "perPlayerVars": {
+          "0": {},
+          "1": {},
+          "2": {},
+          "3": {}
+        },
+        "playerCount": 4,
+        "zones": {
+          "deck:none": [],
+          "played:none": [
+            {
+              "id": "tok_card_1",
+              "type": "card",
+              "props": {
+                "isCoup": false
+              }
+            }
+          ],
+          "lookahead:none": [
+            {
+              "id": "tok_card_0",
+              "type": "card",
+              "props": {
+                "isCoup": false
+              }
+            }
+          ],
+          "leader:none": [
+            {
+              "id": "tok_card_2",
+              "type": "card",
+              "props": {
+                "isCoup": true
+              }
+            }
+          ]
+        },
+        "nextTokenOrdinal": 4,
+        "currentPhase": "main",
+        "activePlayer": 2,
+        "turnCount": 2,
+        "rng": {
+          "algorithm": "pcg-dxsm-128",
+          "version": 1,
+          "state": [
+            "0x9e3779b97f4a7c15f39cc0605cedc872",
+            "0xda3e39cb94b95b55"
+          ]
+        },
+        "stateHash": "0xd1de1b28bcbcf098",
+        "actionUsage": {
+          "pass": {
+            "turnCount": 0,
+            "phaseCount": 0,
+            "gameCount": 1
+          },
+          "event": {
+            "turnCount": 0,
+            "phaseCount": 0,
+            "gameCount": 1
+          }
+        },
+        "turnFlow": {
+          "factionOrder": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "eligibility": {
+            "0": true,
+            "1": true,
+            "2": true,
+            "3": true
+          },
+          "pendingEligibilityOverrides": [
+            {
+              "faction": "2",
+              "eligible": true,
+              "windowId": "remain-eligible",
+              "duration": "nextCard"
+            }
+          ],
+          "currentCard": {
+            "firstEligible": "1",
+            "secondEligible": "3",
+            "actedFactions": [
+              "0",
+              "2"
+            ],
+            "passedFactions": [
+              "0"
+            ],
+            "nonPassCount": 1,
+            "firstActionClass": "event"
+          }
+        }
+      }
+    }
+  ]
+}

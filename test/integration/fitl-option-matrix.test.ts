@@ -117,4 +117,18 @@ describe('FITL option matrix integration', () => {
       [asActionId('pass'), asActionId('limitedOperation')],
     );
   });
+
+  it('allows event or limitedOperation after first eligible resolves operationPlusSpecialActivity', () => {
+    const def = createDef();
+    const start = initialState(def, 47, 3);
+    const firstMove: Move = { actionId: asActionId('operationPlusSpecialActivity'), params: {} };
+    const afterFirst = applyMove(def, start, firstMove).state;
+
+    assert.equal(afterFirst.activePlayer, asPlayerId(1));
+    assert.equal(afterFirst.turnFlow?.currentCard.firstActionClass, 'operationPlusSpecialActivity');
+    assert.deepEqual(
+      legalMoves(def, afterFirst).map((move) => move.actionId),
+      [asActionId('pass'), asActionId('event'), asActionId('limitedOperation')],
+    );
+  });
 });

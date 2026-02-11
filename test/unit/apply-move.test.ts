@@ -7,7 +7,9 @@ import {
   asPhaseId,
   initialState,
   asPlayerId,
+  asTokenId,
   asTriggerId,
+  asZoneId,
   computeFullHash,
   createZobristTable,
   type GameDef,
@@ -564,6 +566,78 @@ describe('applyMove', () => {
     assert.equal(result.state.globalVars.energy, 1);
     assert.equal(result.state.globalVars.score, 1);
     assert.deepEqual(result.state.actionUsage.operate, { turnCount: 1, phaseCount: 1, gameCount: 1 });
+  });
+
+  it('skips RNG-consuming cost spend in allow mode when cost validation fails', () => {
+    const def: GameDef = {
+      metadata: { id: 'operation-profile-cost-allow-rng-skip', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [
+        { name: 'energy', type: 'int', init: 0, min: 0, max: 20 },
+        { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
+      ],
+      perPlayerVars: [],
+      zones: [{ id: asZoneId('bag:none'), owner: 'none', visibility: 'public', ordering: 'stack' }],
+      tokenTypes: [{ id: 'piece', props: {} }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {
+            validate: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
+            spend: [{ shuffle: { zone: 'bag:none' } }],
+          },
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],
+          partialExecution: { mode: 'allow' },
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { energy: 1, score: 0, triggered: 0 },
+      zones: {
+        'bag:none': [
+          { id: asTokenId('t-1'), type: 'piece', props: {} },
+          { id: asTokenId('t-2'), type: 'piece', props: {} },
+          { id: asTokenId('t-3'), type: 'piece', props: {} },
+        ],
+      },
+      actionUsage: {},
+    };
+
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
+    assert.equal(result.state.globalVars.score, 1);
+    assert.deepEqual(result.state.rng, state.rng);
+    assert.deepEqual(
+      result.state.zones['bag:none']?.map((token) => token.id),
+      [asTokenId('t-1'), asTokenId('t-2'), asTokenId('t-3')],
+    );
+
+    const payableState: GameState = {
+      ...state,
+      globalVars: { energy: 2, score: 0, triggered: 0 },
+      actionUsage: {},
+    };
+    const payableResult = applyMove(def, payableState, { actionId: asActionId('operate'), params: {} });
+    assert.notDeepEqual(payableResult.state.rng, payableState.rng);
   });
 
   it('executes operation-profile resolution stages in declared order', () => {

@@ -1,6 +1,6 @@
 # Spec 18: Fire in the Lake Operations and Special Activities
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0 (critical path)
 **Complexity**: XL
 **Dependencies**: Spec 15, Spec 16, Spec 17
@@ -99,3 +99,18 @@ Spec 18 is the owning closure spec for these Spec 15a P0 gaps:
 - Edge-case tests: Monsoon restrictions, Highland modifiers, bases-last removal, tunneled-base behavior, and cross-faction resource constraints.
 - Integration tests for Op + Special Activity sequencing, free-op interactions, and limited-operation constraints in card-flow context.
 - Determinism regression: same seed + same move sequence yields byte-identical trace output for operation-heavy scenarios.
+
+## Outcome
+- **Completion date**: 2026-02-11
+- **What was changed**:
+  - Implemented and validated all 16 FITL operation/special-activity families through data-driven operation profiles and integration suites.
+  - Added operation-heavy determinism replay coverage in `test/integration/fitl-card-flow-determinism.test.ts`.
+  - Added explicit shared engine audit coverage in `test/unit/no-hardcoded-fitl-audit.test.ts` to guard against FITL-id/name branching in `src/kernel` and `src/cnl`.
+- **Deviations from original plan**:
+  - Determinism regression was implemented as integration assertions over compiled fixtures rather than a dedicated new golden fixture artifact.
+  - Existing focused integration tests were retained instead of adding a redundant consolidated e2e file.
+- **Verification results**:
+  - `npm run build` passed.
+  - `npm run test:unit -- --coverage=false` passed.
+  - Targeted Spec 18 integration/determinism checks passed.
+  - `npm test` passed.

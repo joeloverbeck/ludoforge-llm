@@ -11,12 +11,13 @@ export interface MacroExpansionResult {
 }
 
 function baseZone(id: string, adjacentTo: readonly string[]): ZoneDef {
+  const sortedAdjacentTo = [...adjacentTo].sort((left, right) => left.localeCompare(right));
   return {
     id: asZoneId(id),
     owner: 'none',
     visibility: 'public',
     ordering: 'set',
-    adjacentTo: adjacentTo.map((zoneId) => asZoneId(zoneId)),
+    adjacentTo: sortedAdjacentTo.map((zoneId) => asZoneId(zoneId)),
   };
 }
 

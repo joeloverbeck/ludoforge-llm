@@ -206,7 +206,7 @@ describe('json schema artifacts', () => {
     assert.equal(validate(envelope), true, JSON.stringify(validate.errors, null, 2));
   });
 
-  it('data asset envelope with unknown kind fails schema validation', () => {
+  it('data asset envelope accepts pieceCatalog kind', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(dataAssetEnvelopeSchema);
 
@@ -214,6 +214,23 @@ describe('json schema artifacts', () => {
       id: 'fitl-piece-catalog',
       version: 1,
       kind: 'pieceCatalog',
+      payload: {
+        pieceTypes: [],
+        inventory: [],
+      },
+    };
+
+    assert.equal(validate(envelope), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('data asset envelope with unknown kind fails schema validation', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(dataAssetEnvelopeSchema);
+
+    const envelope = {
+      id: 'fitl-piece-catalog',
+      version: 1,
+      kind: 'invalid',
       payload: {},
     };
 

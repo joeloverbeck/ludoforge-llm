@@ -8,7 +8,7 @@
   "properties": {
     "id": { "type": "string", "minLength": 1 },
     "version": { "type": "integer", "minimum": 1 },
-    "kind": { "enum": ["map", "scenario"] },
+    "kind": { "enum": ["map", "scenario", "pieceCatalog"] },
     "payload": {}
   }
 }

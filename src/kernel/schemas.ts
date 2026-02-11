@@ -389,7 +389,52 @@ export const ScoringDefSchema = z
   })
   .strict();
 
-export const DataAssetKindSchema = z.union([z.literal('map'), z.literal('scenario')]);
+export const PieceStatusDimensionSchema = z.union([z.literal('activity'), z.literal('tunnel')]);
+
+export const PieceStatusValueSchema = z.union([
+  z.literal('underground'),
+  z.literal('active'),
+  z.literal('untunneled'),
+  z.literal('tunneled'),
+]);
+
+export const PieceStatusTransitionSchema = z
+  .object({
+    dimension: PieceStatusDimensionSchema,
+    from: PieceStatusValueSchema,
+    to: PieceStatusValueSchema,
+  })
+  .strict();
+
+export const PieceTypeCatalogEntrySchema = z
+  .object({
+    id: StringSchema.min(1),
+    faction: StringSchema.min(1),
+    statusDimensions: z.array(PieceStatusDimensionSchema),
+    transitions: z.array(PieceStatusTransitionSchema),
+  })
+  .strict();
+
+export const PieceInventoryEntrySchema = z
+  .object({
+    pieceTypeId: StringSchema.min(1),
+    faction: StringSchema.min(1),
+    total: IntegerSchema.min(0),
+  })
+  .strict();
+
+export const PieceCatalogPayloadSchema = z
+  .object({
+    pieceTypes: z.array(PieceTypeCatalogEntrySchema),
+    inventory: z.array(PieceInventoryEntrySchema),
+  })
+  .strict();
+
+export const DataAssetKindSchema = z.union([
+  z.literal('map'),
+  z.literal('scenario'),
+  z.literal('pieceCatalog'),
+]);
 
 export const DataAssetRefSchema = z
   .object({

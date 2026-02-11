@@ -291,7 +291,35 @@ export interface GameDef {
   readonly scoring?: ScoringDef;
 }
 
-export type DataAssetKind = 'map' | 'scenario';
+export type DataAssetKind = 'map' | 'scenario' | 'pieceCatalog';
+
+export type PieceStatusDimension = 'activity' | 'tunnel';
+
+export type PieceStatusValue = 'underground' | 'active' | 'untunneled' | 'tunneled';
+
+export interface PieceStatusTransition {
+  readonly dimension: PieceStatusDimension;
+  readonly from: PieceStatusValue;
+  readonly to: PieceStatusValue;
+}
+
+export interface PieceTypeCatalogEntry {
+  readonly id: string;
+  readonly faction: string;
+  readonly statusDimensions: readonly PieceStatusDimension[];
+  readonly transitions: readonly PieceStatusTransition[];
+}
+
+export interface PieceInventoryEntry {
+  readonly pieceTypeId: string;
+  readonly faction: string;
+  readonly total: number;
+}
+
+export interface PieceCatalogPayload {
+  readonly pieceTypes: readonly PieceTypeCatalogEntry[];
+  readonly inventory: readonly PieceInventoryEntry[];
+}
 
 export interface DataAssetEnvelope<TPayload = unknown> {
   readonly id: string;

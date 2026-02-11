@@ -7,6 +7,7 @@ import {
   GameDefSchema,
   GameTraceSchema,
   OBJECT_STRICTNESS_POLICY,
+  PieceCatalogPayloadSchema,
 } from '../../src/kernel/index.js';
 
 const minimalGameDef = {
@@ -135,16 +136,34 @@ describe('top-level runtime schemas', () => {
     assert.equal(DataAssetEnvelopeSchema.safeParse(scenarioEnvelope).success, true);
   });
 
-  it('rejects unsupported data-asset envelope kinds', () => {
+  it('accepts piece-catalog data-asset envelope kind', () => {
     const result = DataAssetEnvelopeSchema.safeParse({
-      id: 'bad-kind',
+      id: 'fitl-piece-catalog',
       version: 1,
       kind: 'pieceCatalog',
-      payload: {},
+      payload: {
+        pieceTypes: [],
+        inventory: [],
+      },
     });
 
-    assert.equal(result.success, false);
-    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'kind'));
+    assert.equal(result.success, true);
+  });
+
+  it('parses valid piece-catalog payload contracts', () => {
+    const result = PieceCatalogPayloadSchema.safeParse({
+      pieceTypes: [
+        {
+          id: 'vc-guerrilla',
+          faction: 'vc',
+          statusDimensions: ['activity'],
+          transitions: [{ dimension: 'activity', from: 'underground', to: 'active' }],
+        },
+      ],
+      inventory: [{ pieceTypeId: 'vc-guerrilla', faction: 'vc', total: 30 }],
+    });
+
+    assert.equal(result.success, true);
   });
 
   it('parses a minimal valid GameDef with zero issues', () => {

@@ -8,16 +8,23 @@
 ## Goal
 Implement deterministic recomputation for control and victory-relevant projections from canonical state, with validation guards against canonical/derived drift.
 
+## Architecture Contract
+- Canonical execution path: `GameSpecDoc` YAML -> parser/validator/compiler -> `GameDef` -> simulation.
+- Any FITL state inputs used by recomputation must come from compiled YAML game data, not direct runtime filesystem asset reads.
+- Derived-state logic must remain game-agnostic and reusable; no FITL-id keyed branching in kernel/compiler code.
+
 ## Scope
 - Add pure recomputation functions for control totals and support/opposition aggregates.
 - Add optional cached-derived assertions in validation paths.
 - Ensure synthetic state edits recompute to stable values.
+- Verify recomputation behavior is identical when state originates from YAML-embedded FITL assets.
 
 ## File List Expected To Touch
 - `src/kernel/types.ts`
 - `src/kernel/initial-state.ts`
 - `src/kernel/validate-gamedef.ts`
 - `src/kernel/eval-query.ts`
+- `test/fixtures/spec/fitl-foundation-inline-assets.md`
 - `test/unit/property/spatial.property.test.ts`
 - `test/unit/property/eval.property.test.ts`
 - `test/unit/validate-gamedef.test.ts`
@@ -44,3 +51,4 @@ Implement deterministic recomputation for control and victory-relevant projectio
 - Canonical state is the single source of truth.
 - Derived values are deterministic pure functions of canonical state.
 - No incremental hidden counters drift from canonical projections.
+- No FITL-specific derived-state code paths keyed off filesystem asset locations.

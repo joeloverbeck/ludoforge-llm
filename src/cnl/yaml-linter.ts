@@ -19,6 +19,7 @@ interface LintFinding {
 const CANONICAL_SECTION_KEYS = new Set<string>([
   'metadata',
   'constants',
+  'dataAssets',
   'globalVars',
   'perPlayerVars',
   'zones',

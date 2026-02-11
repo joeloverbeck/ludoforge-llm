@@ -11,7 +11,7 @@
 
 Define the exact implementation boundary for the Fire in the Lake (FITL) foundation and lock Gate 0 architecture decisions before Specs 16-21 begin.
 
-This spec is an architecture contract: engine code stays game-agnostic, and FITL behavior is encoded in `GameSpecDoc` YAML plus static data assets compiled into deterministic `GameDef` structures.
+This spec is an architecture contract: engine code stays game-agnostic, and FITL behavior is encoded in `GameSpecDoc` YAML and compiled into deterministic `GameDef` structures.
 
 ## Scope Contract
 
@@ -30,11 +30,19 @@ This spec is an architecture contract: engine code stays game-agnostic, and FITL
 
 ## Non-Negotiable Architecture Constraints
 
+- Canonical execution path is `GameSpecDoc` YAML -> parser/validator/compiler -> `GameDef` -> simulation.
 - Engine/runtime modules must not branch on FITL identifiers (faction names, card ids, space ids, marker ids, operation names).
-- FITL rules must be represented as declarative data (`GameSpecDoc` YAML + static assets), not handwritten FITL handlers.
+- FITL rules must be represented as declarative data inside `GameSpecDoc` YAML (for example `dataAssets` entries), not handwritten FITL handlers.
+- Files under `data/fitl/...` are optional fixtures/reference artifacts only and must never be a required runtime dependency for evolved specs.
 - Any new runtime primitive must be reusable and named independent of FITL vocabulary.
 - Compiler lowering must remain deterministic and auditable: each high-level rule lowers to trace-visible choices/effects.
 - Deterministic tie-break behavior must be explicit in data whenever player choice is absent.
+
+## FITL Decomposition Objective
+
+- The FITL ruleset must be dismantled into reusable, game-agnostic primitives (state typing, sequencing, targeting, effects, lifecycle windows).
+- FITL-specific content is then a complete data instance of those primitives in `GameSpecDoc` YAML, not special-case runtime logic.
+- Completion requires both outcomes: generic primitives reusable by non-FITL titles and a fully executable FITL `GameSpecDoc`.
 
 ## Anti-Goals
 

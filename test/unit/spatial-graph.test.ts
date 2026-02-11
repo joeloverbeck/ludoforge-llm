@@ -1,6 +1,4 @@
 import * as assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 import { asZoneId, buildAdjacencyGraph, type ZoneDef, validateAdjacency } from '../../src/kernel/index.js';
@@ -20,12 +18,19 @@ interface FitlMapPayload {
   }>;
 }
 
+const fitlMapPayload: FitlMapPayload = {
+  spaces: [
+    { id: 'cambodia:none', adjacentTo: ['south_vietnam:none'] },
+    { id: 'hue:none', adjacentTo: ['loc_ho_chi_minh_trail:none', 'south_vietnam:none'] },
+    { id: 'laos:none', adjacentTo: ['north_vietnam:none', 'south_vietnam:none'] },
+    { id: 'loc_ho_chi_minh_trail:none', adjacentTo: ['hue:none', 'north_vietnam:none'] },
+    { id: 'north_vietnam:none', adjacentTo: ['laos:none', 'loc_ho_chi_minh_trail:none', 'south_vietnam:none'] },
+    { id: 'south_vietnam:none', adjacentTo: ['cambodia:none', 'hue:none', 'laos:none', 'north_vietnam:none'] },
+  ],
+};
+
 const loadFitlMapZones = (): readonly ZoneDef[] => {
-  const distRelativeAssetPath = fileURLToPath(new URL('../../../data/fitl/map/foundation.v1.json', import.meta.url));
-  const sourceRelativeAssetPath = fileURLToPath(new URL('../../data/fitl/map/foundation.v1.json', import.meta.url));
-  const assetPath = existsSync(distRelativeAssetPath) ? distRelativeAssetPath : sourceRelativeAssetPath;
-  const asset = JSON.parse(readFileSync(assetPath, 'utf8')) as { readonly payload: FitlMapPayload };
-  return asset.payload.spaces.map((space) => zone(space.id, space.adjacentTo));
+  return fitlMapPayload.spaces.map((space) => zone(space.id, space.adjacentTo));
 };
 
 describe('spatial adjacency graph', () => {

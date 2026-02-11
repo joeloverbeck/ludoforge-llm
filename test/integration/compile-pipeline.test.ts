@@ -89,6 +89,136 @@ describe('compile pipeline integration', () => {
     assert.deepEqual(validateGameDef(raw.gameDef!), []);
   });
 
+  it('compiles map-driven zones from embedded dataAssets with no zones section', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-assets-only',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: fitl-map-foundation',
+      '    kind: map',
+      '    payload:',
+      '      spaces:',
+      '        - id: alpha:none',
+      '          spaceType: province',
+      '          population: 1',
+      '          econ: 1',
+      '          terrainTags: [lowland]',
+      '          country: south-vietnam',
+      '          coastal: false',
+      '          adjacentTo: [beta:none]',
+      '        - id: beta:none',
+      '          spaceType: city',
+      '          population: 1',
+      '          econ: 1',
+      '          terrainTags: [urban]',
+      '          country: south-vietnam',
+      '          coastal: true',
+      '          adjacentTo: [alpha:none]',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      '  activePlayerOrder: roundRobin',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'endConditions:',
+      '  - when: { op: "==", left: 1, right: 1 }',
+      '    result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assert.deepEqual(validatorDiagnostics, []);
+    assert.deepEqual(compiled.diagnostics, []);
+    assert.notEqual(compiled.gameDef, null);
+    assert.deepEqual(
+      compiled.gameDef?.zones.map((zone) => String(zone.id)),
+      ['alpha:none', 'beta:none'],
+    );
+  });
+
+  it('resolves scenario asset references using the same NFC normalization as validation', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-assets-normalized-refs',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: map-cafe\u0301',
+      '    kind: map',
+      '    payload:',
+      '      spaces:',
+      '        - id: alpha:none',
+      '          spaceType: province',
+      '          population: 1',
+      '          econ: 1',
+      '          terrainTags: [lowland]',
+      '          country: south-vietnam',
+      '          coastal: false',
+      '          adjacentTo: []',
+      '  - id: pieces-foundation',
+      '    kind: pieceCatalog',
+      '    payload:',
+      '      pieceTypes: []',
+      '      inventory: []',
+      '  - id: scenario-foundation',
+      '    kind: scenario',
+      '    payload:',
+      '      mapAssetId: map-café',
+      '      pieceCatalogAssetId: pieces-foundation',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      '  activePlayerOrder: roundRobin',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'endConditions:',
+      '  - when: { op: "==", left: 1, right: 1 }',
+      '    result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assert.deepEqual(validatorDiagnostics, []);
+    assert.deepEqual(compiled.diagnostics, []);
+    assert.notEqual(compiled.gameDef, null);
+    assert.deepEqual(
+      compiled.gameDef?.zones.map((zone) => String(zone.id)),
+      ['alpha:none'],
+    );
+  });
+
   it('runs parse/validate/expand/compile/validate deterministically for malformed fixture', () => {
     const markdown = readCompilerFixture('compile-malformed.md');
 

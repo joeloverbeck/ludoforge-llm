@@ -377,14 +377,12 @@ export interface MapPayload {
 
 export interface DataAssetEnvelope<TPayload = unknown> {
   readonly id: string;
-  readonly version: number;
   readonly kind: DataAssetKind;
   readonly payload: TPayload;
 }
 
 export interface DataAssetRef {
   readonly id: string;
-  readonly version: number;
   readonly kind: DataAssetKind;
 }
 

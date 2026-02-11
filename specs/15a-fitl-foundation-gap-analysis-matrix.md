@@ -75,7 +75,7 @@ All checks are required for Spec 21 acceptance.
 | Choice + target DSL expressiveness | Extension | Spec 18 adds optional cardinality and aggregate target constraint primitives/macros. |
 | Event lifecycle model | Extension | Spec 17 introduces generic card lifecycle and windowed eligibility model. |
 | Deterministic ordering contracts | Extension | Spec 17 codifies global ordering contract and runtime/compiler checks. |
-| Map dataset ingestion | Extension | Spec 16 adds versioned FITL map asset ingestion and validation pipeline. |
+| Map dataset ingestion | Extension | Spec 16 adds YAML-embedded FITL map/piece/scenario asset ingestion and validation pipeline. |
 
 ## Cross-Spec Reference Contract
 

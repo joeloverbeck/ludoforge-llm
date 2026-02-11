@@ -198,7 +198,6 @@ describe('json schema artifacts', () => {
 
     const envelope = {
       id: 'fitl-map-foundation',
-      version: 1,
       kind: 'map',
       payload: { spaces: [] },
     };
@@ -212,7 +211,6 @@ describe('json schema artifacts', () => {
 
     const envelope = {
       id: 'fitl-piece-catalog',
-      version: 1,
       kind: 'pieceCatalog',
       payload: {
         pieceTypes: [],
@@ -229,7 +227,6 @@ describe('json schema artifacts', () => {
 
     const envelope = {
       id: 'fitl-piece-catalog',
-      version: 1,
       kind: 'invalid',
       payload: {},
     };

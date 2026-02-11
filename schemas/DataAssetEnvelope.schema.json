@@ -4,10 +4,9 @@
   "title": "DataAssetEnvelope",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "version", "kind", "payload"],
+  "required": ["id", "kind", "payload"],
   "properties": {
     "id": { "type": "string", "minLength": 1 },
-    "version": { "type": "integer", "minimum": 1 },
     "kind": { "enum": ["map", "scenario", "pieceCatalog"] },
     "payload": {}
   }

@@ -10,6 +10,7 @@ describe('game-spec-doc', () => {
     const expected: GameSpecDoc = {
       metadata: null,
       constants: null,
+      dataAssets: null,
       globalVars: null,
       perPlayerVars: null,
       zones: null,

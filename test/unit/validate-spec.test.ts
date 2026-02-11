@@ -48,6 +48,51 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('does not require zones section when a map data asset is present', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      zones: null,
+      dataAssets: [{ id: 'fitl-map-foundation', kind: 'map', payload: { spaces: [] } }],
+    });
+
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path === 'doc.zones'), false);
+  });
+
+  it('validates scenario references against declared map and pieceCatalog assets', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      dataAssets: [
+        { id: 'fitl-map-foundation', kind: 'map', payload: { spaces: [] } },
+        { id: 'fitl-pieces-foundation', kind: 'pieceCatalog', payload: { pieceTypes: [], inventory: [] } },
+        {
+          id: 'fitl-scenario-foundation',
+          kind: 'scenario',
+          payload: {
+            mapAssetId: 'fitl-map-missing',
+            pieceCatalogAssetId: 'fitl-pieces-missing',
+          },
+        },
+      ],
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING' &&
+          diagnostic.path === 'doc.dataAssets.2.payload.mapAssetId',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING' &&
+          diagnostic.path === 'doc.dataAssets.2.payload.pieceCatalogAssetId',
+      ),
+      true,
+    );
+  });
+
   it('validates metadata and variable ranges', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

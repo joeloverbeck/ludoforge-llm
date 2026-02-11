@@ -507,7 +507,6 @@ export const DataAssetKindSchema = z.union([
 export const DataAssetRefSchema = z
   .object({
     id: StringSchema.min(1),
-    version: IntegerSchema.min(1),
     kind: DataAssetKindSchema,
   })
   .strict();
@@ -515,7 +514,6 @@ export const DataAssetRefSchema = z
 export const DataAssetEnvelopeSchema = z
   .object({
     id: StringSchema.min(1),
-    version: IntegerSchema.min(1),
     kind: DataAssetKindSchema,
     payload: z.unknown(),
   })

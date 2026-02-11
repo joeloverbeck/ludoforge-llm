@@ -64,9 +64,16 @@ export interface GameSpecEndCondition {
   readonly result: unknown;
 }
 
+export interface GameSpecDataAsset {
+  readonly id: string;
+  readonly kind: string;
+  readonly payload: unknown;
+}
+
 export interface GameSpecDoc {
   readonly metadata: GameSpecMetadata | null;
   readonly constants: Readonly<Record<string, number>> | null;
+  readonly dataAssets: readonly GameSpecDataAsset[] | null;
   readonly globalVars: readonly GameSpecVarDef[] | null;
   readonly perPlayerVars: readonly GameSpecVarDef[] | null;
   readonly zones: readonly GameSpecZoneDef[] | null;
@@ -82,6 +89,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
   return {
     metadata: null,
     constants: null,
+    dataAssets: null,
     globalVars: null,
     perPlayerVars: null,
     zones: null,

@@ -39,6 +39,8 @@ Implement faction Operations and Special Activities for US, ARVN, NVA, and VC, i
 - Add seed-driven die-roll integration for probabilistic resolution semantics used by FITL operations.
 - New primitives added here must be reusable and named independent of FITL concepts.
 - Do not implement FITL rules as hardcoded operation handlers in core runtime modules.
+- Operation definitions and constraints must be sourced from `GameSpecDoc` YAML compiled into `GameDef` (no required filesystem-side FITL assets).
+- FITL operation text should be dismantled into reusable generic primitives first; faction-specific operation payloads then bind those primitives as data.
 
 ## Acceptance Criteria
 
@@ -47,6 +49,7 @@ Implement faction Operations and Special Activities for US, ARVN, NVA, and VC, i
 - Illegal operation attempts produce diagnostics tied to faction/rule reason.
 - Same seed plus same choices yields byte-equivalent trace deltas.
 - Operation behavior is primarily declared in FITL game data, with engine code limited to generic reusable primitives.
+- Operations execute through the single path `GameSpecDoc` -> `GameDef` -> simulation.
 
 ## Testing Requirements
 

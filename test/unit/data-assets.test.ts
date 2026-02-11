@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, it } from 'node:test';
 
-import { loadDataAssetEnvelopeFromFile } from '../../src/kernel/index.js';
+import { loadDataAssetEnvelopeFromFile, validateDataAssetEnvelope } from '../../src/kernel/index.js';
 
 describe('data asset loader scaffold', () => {
   it('loads a valid JSON map envelope', () => {
@@ -15,7 +15,6 @@ describe('data asset loader scaffold', () => {
         assetPath,
         JSON.stringify({
           id: 'fitl-map-foundation',
-          version: 1,
           kind: 'map',
           payload: { spaces: [] },
         }),
@@ -24,7 +23,6 @@ describe('data asset loader scaffold', () => {
 
       const result = loadDataAssetEnvelopeFromFile(assetPath, {
         expectedKinds: ['map', 'scenario'],
-        expectedVersion: 1,
       });
 
       assert.equal(result.diagnostics.length, 0);
@@ -43,7 +41,6 @@ describe('data asset loader scaffold', () => {
         assetPath,
         [
           'id: fitl-foundation-westys-war',
-          'version: 1',
           'kind: scenario',
           'payload:',
           '  setup: {}',
@@ -54,7 +51,6 @@ describe('data asset loader scaffold', () => {
 
       const result = loadDataAssetEnvelopeFromFile(assetPath, {
         expectedKinds: ['map', 'scenario'],
-        expectedVersion: 1,
       });
 
       assert.equal(result.diagnostics.length, 0);
@@ -73,7 +69,6 @@ describe('data asset loader scaffold', () => {
         assetPath,
         JSON.stringify({
           id: 'fitl-map-foundation-typed',
-          version: 1,
           kind: 'map',
           payload: {
             spaces: [
@@ -105,7 +100,6 @@ describe('data asset loader scaffold', () => {
 
       const result = loadDataAssetEnvelopeFromFile(assetPath, {
         expectedKinds: ['map', 'scenario', 'pieceCatalog'],
-        expectedVersion: 1,
       });
 
       assert.equal(result.asset?.kind, 'map');
@@ -115,34 +109,21 @@ describe('data asset loader scaffold', () => {
     }
   });
 
-  it('reports unsupported version with asset context', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
-    try {
-      const assetPath = join(dir, 'foundation-map.v2.json');
-      writeFileSync(
-        assetPath,
-        JSON.stringify({
-          id: 'fitl-map-foundation',
-          version: 2,
-          kind: 'map',
-          payload: { spaces: [] },
-        }),
-        'utf8',
-      );
-
-      const result = loadDataAssetEnvelopeFromFile(assetPath, {
+  it('validates embedded envelopes without requiring filesystem paths', () => {
+    const result = validateDataAssetEnvelope(
+      {
+        id: 'fitl-map-foundation',
+        kind: 'map',
+        payload: { spaces: [] },
+      },
+      {
         expectedKinds: ['map', 'scenario'],
-        expectedVersion: 1,
-      });
+        pathPrefix: 'doc.dataAssets.0',
+      },
+    );
 
-      assert.equal(result.asset, null);
-      assert.equal(result.diagnostics.length, 1);
-      assert.equal(result.diagnostics[0]?.code, 'DATA_ASSET_VERSION_UNSUPPORTED');
-      assert.equal(result.diagnostics[0]?.assetPath, assetPath);
-      assert.equal(result.diagnostics[0]?.entityId, 'fitl-map-foundation');
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    assert.notEqual(result.asset, null);
+    assert.equal(result.diagnostics.length, 0);
   });
 
   it('reports schema failures with assetPath and entityId when available', () => {
@@ -153,7 +134,6 @@ describe('data asset loader scaffold', () => {
         assetPath,
         JSON.stringify({
           id: 'fitl-invalid-kind',
-          version: 1,
           kind: 'invalid',
           payload: {},
         }),
@@ -179,7 +159,6 @@ describe('data asset loader scaffold', () => {
         assetPath,
         JSON.stringify({
           id: 'fitl-piece-catalog-foundation',
-          version: 1,
           kind: 'pieceCatalog',
           payload: {
             pieceTypes: [
@@ -198,7 +177,6 @@ describe('data asset loader scaffold', () => {
 
       const result = loadDataAssetEnvelopeFromFile(assetPath, {
         expectedKinds: ['map', 'scenario', 'pieceCatalog'],
-        expectedVersion: 1,
       });
 
       assert.equal(result.diagnostics.length, 0);
@@ -217,7 +195,6 @@ describe('data asset loader scaffold', () => {
         assetPath,
         JSON.stringify({
           id: 'fitl-map-track-bounds-invalid',
-          version: 1,
           kind: 'map',
           payload: {
             spaces: [],
@@ -246,7 +223,6 @@ describe('data asset loader scaffold', () => {
         assetPath,
         JSON.stringify({
           id: 'fitl-map-marker-state-invalid',
-          version: 1,
           kind: 'map',
           payload: {
             spaces: [
@@ -288,7 +264,6 @@ describe('data asset loader scaffold', () => {
         assetPath,
         JSON.stringify({
           id: 'fitl-map-marker-constraint-space-invalid',
-          version: 1,
           kind: 'map',
           payload: {
             spaces: [],
@@ -323,7 +298,6 @@ describe('data asset loader scaffold', () => {
         assetPath,
         JSON.stringify({
           id: 'fitl-piece-catalog-invalid-transition',
-          version: 1,
           kind: 'pieceCatalog',
           payload: {
             pieceTypes: [
@@ -359,7 +333,6 @@ describe('data asset loader scaffold', () => {
         assetPath,
         JSON.stringify({
           id: 'fitl-piece-catalog-missing-inventory',
-          version: 1,
           kind: 'pieceCatalog',
           payload: {
             pieceTypes: [
@@ -395,7 +368,6 @@ describe('data asset loader scaffold', () => {
         assetPath,
         JSON.stringify({
           id: 'fitl-piece-catalog-negative-total',
-          version: 1,
           kind: 'pieceCatalog',
           payload: {
             pieceTypes: [

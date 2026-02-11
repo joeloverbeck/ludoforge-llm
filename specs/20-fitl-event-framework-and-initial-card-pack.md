@@ -20,6 +20,7 @@ Implement foundation event execution semantics using generic declarative event p
 - Lasting-effect hooks for capabilities/momentum (minimal infrastructure even if no lasting effect in first two cards).
 - Card 82: Domino Theory (both sides).
 - Card 27: Phoenix Program (both sides).
+- Event definitions are embedded in `GameSpecDoc` YAML and compiled to `GameDef` with no required runtime filesystem FITL card lookup.
 
 ## Out of Scope
 
@@ -45,6 +46,7 @@ Implement foundation event execution semantics using generic declarative event p
 - Cards 82 and 27 are executable end-to-end in campaign play.
 - Invalid event target selections return actionable diagnostics.
 - Cards are represented as data without FITL-specific event branches in generic engine code.
+- Event execution runs through the single path `GameSpecDoc` -> `GameDef` -> simulation.
 
 ## Testing Requirements
 

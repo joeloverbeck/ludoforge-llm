@@ -13,6 +13,8 @@ Define the required order for implementing FITL foundation specs, with dependenc
 
 This order is intentionally architecture-first: close generic engine capability gaps first, then encode FITL behavior in data/specs.
 
+Canonical delivery target for every phase: FITL runs only through `GameSpecDoc` YAML -> `GameDef` -> simulation, while new engine/compiler code remains reusable for non-FITL titles.
+
 ## Ordered Sequence
 
 1. Spec 15 - Foundation Scope and Engine Gaps
@@ -38,6 +40,7 @@ This order is intentionally architecture-first: close generic engine capability 
 ### Gate 0: Architecture Contract Locked
 - Spec 15 accepted, including P0 gap ownership and "no hardcoded FITL logic" checks.
 - Gate: all planned runtime/compiler changes are framed as generic capabilities, not FITL-specific handlers.
+- Gate: FITL executable data source is YAML-embedded `GameSpecDoc` data (no required filesystem asset dependency for evolved specs).
 
 ### Milestone A: Foundations Ready
 - Complete Specs 16-17.
@@ -56,6 +59,7 @@ This order is intentionally architecture-first: close generic engine capability 
 After Gate 0:
 - `npm run build`
 - targeted unit tests for schema/compiler additions tied to Spec 15 gaps
+- targeted tests proving embedded YAML data assets compile without requiring `data/fitl/...` files
 
 After Milestone A:
 - `npm run test:unit`
@@ -72,6 +76,8 @@ After Milestone C:
 ## Risk Controls
 
 - Do not begin Spec 16 implementation until Spec 15 P0 gap ownership is explicit.
+- Do not ship Spec 16 compiler/runtime wiring that depends on filesystem-only FITL asset files.
+- Do not accept any FITL milestone that adds FITL-specific branching where a generic primitive plus YAML data could express the same behavior.
 - Do not begin Spec 18 before Spec 17 acceptance tests pass.
 - Do not begin Spec 20 before Spec 19 scoring/coup tests pass.
 - Treat any nondeterministic trace mismatch as a release blocker.

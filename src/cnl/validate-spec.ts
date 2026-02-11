@@ -1,4 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import type { GameSpecSourceMap, SourceSpan } from './source-map.js';
 
@@ -6,6 +7,7 @@ const MAX_ALTERNATIVE_DISTANCE = 3;
 
 const METADATA_KEYS = ['id', 'players', 'maxTriggerDepth'] as const;
 const PLAYERS_KEYS = ['min', 'max'] as const;
+const DATA_ASSET_KEYS = ['id', 'kind', 'payload'] as const;
 const VARIABLE_KEYS = ['name', 'type', 'init', 'min', 'max'] as const;
 const ZONE_KEYS = ['id', 'owner', 'visibility', 'ordering', 'adjacentTo'] as const;
 const ACTION_KEYS = ['id', 'actor', 'phase', 'params', 'pre', 'cost', 'effects', 'limits'] as const;
@@ -25,7 +27,11 @@ export function validateGameSpec(
 ): readonly Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
 
+  const dataAssetContext = validateDataAssets(doc, diagnostics);
   validateRequiredSections(doc, diagnostics);
+  if (doc.zones === null && dataAssetContext.hasMapAsset) {
+    dropZoneMissingDiagnostic(diagnostics);
+  }
   validateMetadata(doc, diagnostics);
   validateVariables(doc, diagnostics);
 
@@ -39,6 +45,143 @@ export function validateGameSpec(
 
   diagnostics.sort((left, right) => compareDiagnostics(left, right, options?.sourceMap));
   return diagnostics;
+}
+
+interface DataAssetValidationContext {
+  readonly hasMapAsset: boolean;
+}
+
+function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]): DataAssetValidationContext {
+  if (doc.dataAssets === null) {
+    return { hasMapAsset: false };
+  }
+
+  const mapAssetIds = new Set<string>();
+  const pieceCatalogAssetIds = new Set<string>();
+  const scenarioRefs: Array<{ readonly path: string; readonly mapAssetId?: string; readonly pieceCatalogAssetId?: string }> = [];
+  const normalizedIds: string[] = [];
+  let hasMapAsset = false;
+
+  for (const [index, entry] of doc.dataAssets.entries()) {
+    const path = `doc.dataAssets.${index}`;
+    if (!isRecord(entry)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_DATA_ASSET_SHAPE_INVALID',
+        path,
+        severity: 'error',
+        message: 'Data asset entry must be an object.',
+        suggestion: 'Provide id, kind, and payload fields.',
+      });
+      continue;
+    }
+
+    validateUnknownKeys(entry, DATA_ASSET_KEYS, path, diagnostics, 'data asset');
+    if (typeof entry.id === 'string' && entry.id.trim() !== '') {
+      normalizedIds.push(normalizeIdentifier(entry.id));
+    }
+
+    const validated = validateDataAssetEnvelope(entry, {
+      pathPrefix: path,
+      expectedKinds: ['map', 'scenario', 'pieceCatalog'],
+    });
+    diagnostics.push(...validated.diagnostics);
+    if (validated.asset === null) {
+      continue;
+    }
+
+    const asset = validated.asset;
+    if (asset.kind === 'map') {
+      hasMapAsset = true;
+      mapAssetIds.add(normalizeIdentifier(asset.id));
+    } else if (asset.kind === 'pieceCatalog') {
+      pieceCatalogAssetIds.add(normalizeIdentifier(asset.id));
+    } else if (asset.kind === 'scenario') {
+      const payload = asset.payload;
+      const basePath = `${path}.payload`;
+      if (!isRecord(payload)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_DATA_ASSET_SCENARIO_PAYLOAD_INVALID',
+          path: basePath,
+          severity: 'error',
+          message: 'Scenario payload must be an object.',
+          suggestion: 'Set scenario payload to an object that includes mapAssetId and pieceCatalogAssetId.',
+        });
+        continue;
+      }
+
+      const mapAssetId =
+        typeof payload.mapAssetId === 'string' && payload.mapAssetId.trim() !== ''
+          ? normalizeIdentifier(payload.mapAssetId)
+          : undefined;
+      const pieceCatalogAssetId =
+        typeof payload.pieceCatalogAssetId === 'string' && payload.pieceCatalogAssetId.trim() !== ''
+          ? normalizeIdentifier(payload.pieceCatalogAssetId)
+          : undefined;
+
+      if (mapAssetId === undefined) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_DATA_ASSET_SCENARIO_REF_INVALID',
+          path: `${basePath}.mapAssetId`,
+          severity: 'error',
+          message: 'Scenario payload must declare a non-empty mapAssetId.',
+          suggestion: 'Set payload.mapAssetId to the id of a declared map data asset.',
+        });
+      }
+      if (pieceCatalogAssetId === undefined) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_DATA_ASSET_SCENARIO_REF_INVALID',
+          path: `${basePath}.pieceCatalogAssetId`,
+          severity: 'error',
+          message: 'Scenario payload must declare a non-empty pieceCatalogAssetId.',
+          suggestion: 'Set payload.pieceCatalogAssetId to the id of a declared pieceCatalog data asset.',
+        });
+      }
+
+      scenarioRefs.push({
+        path: basePath,
+        ...(mapAssetId === undefined ? {} : { mapAssetId }),
+        ...(pieceCatalogAssetId === undefined ? {} : { pieceCatalogAssetId }),
+      });
+    }
+  }
+
+  pushDuplicateNormalizedIdDiagnostics(diagnostics, normalizedIds, 'doc.dataAssets', 'data asset id');
+
+  for (const reference of scenarioRefs) {
+    if (reference.mapAssetId !== undefined && !mapAssetIds.has(reference.mapAssetId)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'CNL_VALIDATOR_REFERENCE_MISSING',
+        `${reference.path}.mapAssetId`,
+        `Unknown map data asset "${reference.mapAssetId}".`,
+        reference.mapAssetId,
+        [...mapAssetIds],
+        'Use one of the declared map data asset ids.',
+      );
+    }
+    if (reference.pieceCatalogAssetId !== undefined && !pieceCatalogAssetIds.has(reference.pieceCatalogAssetId)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'CNL_VALIDATOR_REFERENCE_MISSING',
+        `${reference.path}.pieceCatalogAssetId`,
+        `Unknown pieceCatalog data asset "${reference.pieceCatalogAssetId}".`,
+        reference.pieceCatalogAssetId,
+        [...pieceCatalogAssetIds],
+        'Use one of the declared pieceCatalog data asset ids.',
+      );
+    }
+  }
+
+  return { hasMapAsset };
+}
+
+function dropZoneMissingDiagnostic(diagnostics: Diagnostic[]): void {
+  const index = diagnostics.findIndex(
+    (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_REQUIRED_SECTION_MISSING' && diagnostic.path === 'doc.zones',
+  );
+  if (index >= 0) {
+    diagnostics.splice(index, 1);
+  }
 }
 
 function validateRequiredSections(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {

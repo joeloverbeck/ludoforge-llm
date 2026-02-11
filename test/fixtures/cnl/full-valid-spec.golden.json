@@ -10,6 +10,7 @@
     "constants": {
       "handLimit": 7
     },
+    "dataAssets": null,
     "globalVars": null,
     "perPlayerVars": null,
     "zones": [

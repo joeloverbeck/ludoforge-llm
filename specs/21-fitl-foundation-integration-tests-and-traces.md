@@ -18,6 +18,8 @@ Define and implement the FITL foundation test harness: deterministic scenario te
 - Multi-step integration tests covering at least one full campaign slice (events + operations + coup).
 - Golden `GameTrace` fixtures for deterministic replay.
 - Test utilities for concise scenario setup overrides.
+- Tests that explicitly assert FITL executes through `GameSpecDoc` YAML -> `GameDef` -> simulation with no required `data/fitl/...` runtime lookup.
+- Tests that show FITL behavior is expressed via reusable generic primitives plus FITL data payloads.
 
 ## Out of Scope
 
@@ -39,6 +41,7 @@ Define and implement the FITL foundation test harness: deterministic scenario te
 - `npm test` passes with all new FITL tests.
 - At least one golden trace includes: event execution, op+special activity, coup phase updates, and victory-metric recomputation.
 - No flaky FITL tests across repeated runs.
+- Integration coverage includes a fixture proving embedded FITL YAML data alone is sufficient for compile + simulation.
 
 ## Verification Commands
 

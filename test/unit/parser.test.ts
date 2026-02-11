@@ -10,6 +10,7 @@ describe('parseGameSpec API shape', () => {
     assert.deepEqual(result.doc, {
       metadata: null,
       constants: null,
+      dataAssets: null,
       globalVars: null,
       perPlayerVars: null,
       zones: null,
@@ -197,6 +198,23 @@ describe('parseGameSpec API shape', () => {
       result.doc.actions?.map((action) => action.id),
       ['a1', 'a2'],
     );
+  });
+
+  it('parses dataAssets section and anchors merged list paths', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'dataAssets:',
+      '  - id: fitl-map-foundation',
+      '    kind: map',
+      '    payload:',
+      '      spaces: []',
+      '```',
+    ].join('\n'));
+
+    assert.equal(result.doc.dataAssets?.length, 1);
+    assert.equal(result.doc.dataAssets?.[0]?.id, 'fitl-map-foundation');
+    assert.ok(result.sourceMap.byPath['dataAssets[0].id'] !== undefined);
+    assert.ok(result.sourceMap.byPath['dataAssets[0].kind'] !== undefined);
   });
 
   it('anchors appended list entries using canonical merged indexes', () => {

@@ -122,13 +122,11 @@ describe('top-level runtime schemas', () => {
   it('parses valid map/scenario data-asset envelopes', () => {
     const mapEnvelope = {
       id: 'fitl-map-foundation',
-      version: 1,
       kind: 'map',
       payload: { spaces: [] },
     } as const;
     const scenarioEnvelope = {
       id: 'fitl-foundation-westys-war',
-      version: 1,
       kind: 'scenario',
       payload: { setup: {} },
     } as const;
@@ -179,7 +177,6 @@ describe('top-level runtime schemas', () => {
   it('accepts piece-catalog data-asset envelope kind', () => {
     const result = DataAssetEnvelopeSchema.safeParse({
       id: 'fitl-piece-catalog',
-      version: 1,
       kind: 'pieceCatalog',
       payload: {
         pieceTypes: [],

@@ -1,4 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
 import {
   asActionId,
   asPhaseId,
@@ -18,6 +19,8 @@ import type {
   TriggerEvent,
   TurnStructure,
   VariableDef,
+  MapPayload,
+  PieceCatalogPayload,
 } from '../kernel/types.js';
 import { validateGameDef } from '../kernel/validate-gamedef.js';
 import { lowerConditionNode, lowerQueryNode } from './compile-conditions.js';
@@ -134,11 +137,15 @@ export function compileGameSpecToGameDef(
 }
 
 function compileExpandedDoc(doc: GameSpecDoc, diagnostics: Diagnostic[]): GameDef | null {
+  const derivedFromAssets = deriveSectionsFromDataAssets(doc, diagnostics);
+  const effectiveZones = doc.zones ?? derivedFromAssets.zones;
+  const effectiveTokenTypes = doc.tokenTypes ?? derivedFromAssets.tokenTypes;
+
   if (doc.metadata === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.metadata', 'metadata'));
     return null;
   }
-  if (doc.zones === null) {
+  if (effectiveZones === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.zones', 'zones'));
     return null;
   }
@@ -155,7 +162,7 @@ function compileExpandedDoc(doc: GameSpecDoc, diagnostics: Diagnostic[]): GameDe
     return null;
   }
 
-  const zoneCompilation = materializeZoneDefs(doc.zones, doc.metadata.players.max);
+  const zoneCompilation = materializeZoneDefs(effectiveZones, doc.metadata.players.max);
   diagnostics.push(...zoneCompilation.diagnostics);
   const ownershipByBase = zoneCompilation.value.ownershipByBase;
 
@@ -171,13 +178,172 @@ function compileExpandedDoc(doc: GameSpecDoc, diagnostics: Diagnostic[]): GameDe
     globalVars: lowerVarDefs(doc.globalVars, diagnostics, 'doc.globalVars'),
     perPlayerVars: lowerVarDefs(doc.perPlayerVars, diagnostics, 'doc.perPlayerVars'),
     zones: zoneCompilation.value.zones,
-    tokenTypes: lowerTokenTypes(doc.tokenTypes, diagnostics),
+    tokenTypes: lowerTokenTypes(effectiveTokenTypes, diagnostics),
     setup,
     turnStructure,
     actions,
     triggers,
     endConditions,
   };
+}
+
+function deriveSectionsFromDataAssets(
+  doc: GameSpecDoc,
+  diagnostics: Diagnostic[],
+): {
+  readonly zones: GameSpecDoc['zones'];
+  readonly tokenTypes: GameSpecDoc['tokenTypes'];
+} {
+  if (doc.dataAssets === null) {
+    return { zones: null, tokenTypes: null };
+  }
+
+  const mapAssets: Array<{ readonly id: string; readonly payload: MapPayload }> = [];
+  const pieceCatalogAssets: Array<{ readonly id: string; readonly payload: PieceCatalogPayload }> = [];
+  const scenarioRefs: Array<{ readonly mapAssetId?: string; readonly pieceCatalogAssetId?: string; readonly path: string }> = [];
+
+  for (const [index, rawAsset] of doc.dataAssets.entries()) {
+    if (!isRecord(rawAsset)) {
+      continue;
+    }
+    const pathPrefix = `doc.dataAssets.${index}`;
+    const validated = validateDataAssetEnvelope(rawAsset, {
+      expectedKinds: ['map', 'scenario', 'pieceCatalog'],
+      pathPrefix,
+    });
+    diagnostics.push(...validated.diagnostics);
+    if (validated.asset === null) {
+      continue;
+    }
+
+    if (validated.asset.kind === 'map') {
+      mapAssets.push({
+        id: validated.asset.id,
+        payload: validated.asset.payload as MapPayload,
+      });
+      continue;
+    }
+
+    if (validated.asset.kind === 'pieceCatalog') {
+      pieceCatalogAssets.push({
+        id: validated.asset.id,
+        payload: validated.asset.payload as PieceCatalogPayload,
+      });
+      continue;
+    }
+
+    if (validated.asset.kind === 'scenario') {
+      const payload = validated.asset.payload;
+      if (!isRecord(payload)) {
+        continue;
+      }
+      const mapAssetId =
+        typeof payload.mapAssetId === 'string' && payload.mapAssetId.trim() !== '' ? payload.mapAssetId.trim() : undefined;
+      const pieceCatalogAssetId =
+        typeof payload.pieceCatalogAssetId === 'string' && payload.pieceCatalogAssetId.trim() !== ''
+          ? payload.pieceCatalogAssetId.trim()
+          : undefined;
+      scenarioRefs.push({
+        ...(mapAssetId === undefined ? {} : { mapAssetId }),
+        ...(pieceCatalogAssetId === undefined ? {} : { pieceCatalogAssetId }),
+        path: `${pathPrefix}.payload`,
+      });
+    }
+  }
+
+  const selectedScenario = scenarioRefs.length > 0 ? scenarioRefs[0] : undefined;
+  if (scenarioRefs.length > 1) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS',
+      path: 'doc.dataAssets',
+      severity: 'error',
+      message: `Multiple scenario assets found (${scenarioRefs.length}); compiler cannot determine a single canonical scenario.`,
+      suggestion: 'Keep one scenario asset in the compiled document.',
+    });
+  }
+
+  const selectedMap = selectAssetById(
+    mapAssets,
+    selectedScenario?.mapAssetId,
+    diagnostics,
+    'map',
+    selectedScenario?.path ?? 'doc.dataAssets',
+  );
+  const selectedPieceCatalog = selectAssetById(
+    pieceCatalogAssets,
+    selectedScenario?.pieceCatalogAssetId,
+    diagnostics,
+    'pieceCatalog',
+    selectedScenario?.path ?? 'doc.dataAssets',
+  );
+
+  const zones =
+    selectedMap === undefined
+      ? null
+      : selectedMap.payload.spaces.map((space) => ({
+          id: space.id,
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: [...space.adjacentTo].sort((left, right) => left.localeCompare(right)),
+        }));
+
+  const tokenTypes =
+    selectedPieceCatalog === undefined
+      ? null
+      : selectedPieceCatalog.payload.pieceTypes.map((pieceType) => ({
+          id: pieceType.id,
+          props: Object.fromEntries(
+            [...pieceType.statusDimensions]
+              .sort((left, right) => left.localeCompare(right))
+              .map((dimension) => [dimension, 'string']),
+          ),
+        }));
+
+  return { zones, tokenTypes };
+}
+
+function selectAssetById<TPayload>(
+  assets: ReadonlyArray<{ readonly id: string; readonly payload: TPayload }>,
+  selectedId: string | undefined,
+  diagnostics: Diagnostic[],
+  kind: 'map' | 'pieceCatalog',
+  selectedPath: string,
+): { readonly id: string; readonly payload: TPayload } | undefined {
+  if (selectedId !== undefined) {
+    const normalizedSelectedId = normalizeIdentifier(selectedId);
+    const matched = assets.find((asset) => normalizeIdentifier(asset.id) === normalizedSelectedId);
+    if (matched !== undefined) {
+      return matched;
+    }
+
+    diagnostics.push({
+      code: 'CNL_COMPILER_DATA_ASSET_REF_MISSING',
+      path: `${selectedPath}.${kind}AssetId`,
+      severity: 'error',
+      message: `Scenario references unknown ${kind} asset "${selectedId}".`,
+      suggestion: `Use an existing ${kind} asset id from doc.dataAssets.`,
+      alternatives: assets.map((asset) => asset.id).sort((left, right) => left.localeCompare(right)),
+    });
+    return undefined;
+  }
+
+  if (assets.length === 1) {
+    return assets[0];
+  }
+
+  if (assets.length > 1) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_DATA_ASSET_AMBIGUOUS',
+      path: 'doc.dataAssets',
+      severity: 'error',
+      message: `Multiple ${kind} assets found (${assets.length}); compiler cannot infer which one to use.`,
+      suggestion: `Provide a scenario asset referencing exactly one ${kind} asset id.`,
+      alternatives: assets.map((asset) => asset.id).sort((left, right) => left.localeCompare(right)),
+    });
+  }
+
+  return undefined;
 }
 
 function finalizeDiagnostics(
@@ -685,6 +851,10 @@ function hasErrorDiagnostics(diagnostics: readonly Diagnostic[]): boolean {
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function normalizeIdentifier(value: string): string {
+  return value.trim().normalize('NFC');
 }
 
 function resolveLimit(candidate: number | undefined, fallback: number, name: keyof CompileLimits): number {

@@ -29,12 +29,15 @@ Implement Coup-round phase handling and victory computation for foundation play,
 - Phase order must be explicit and immutable.
 - Victory checks must be callable both at interim coup checks and final game-end scoring.
 - All derived tracks must be recomputed deterministically from base state, not incrementally drifted without audit.
+- Coup/victory semantics must be compiled from `GameSpecDoc` YAML into `GameDef`; no required runtime dependency on `data/fitl/...` files.
+- FITL-specific coup math should be expressed as reusable track/aggregation primitives with FITL values in YAML data.
 
 ## Acceptance Criteria
 
 - Coup round executes all foundation phases in rule order with correct caps and floors.
 - Victory margins for each faction are reproducible from state snapshots.
 - Final Coup terminates game and emits complete rank/condition metadata.
+- Coup/victory flow executes via the single path `GameSpecDoc` -> `GameDef` -> simulation.
 
 ## Testing Requirements
 

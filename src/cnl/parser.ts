@@ -209,6 +209,7 @@ function mergeSection(
       return mergeSingletonConstants(doc, section, value, diagnostics);
     case 'turnStructure':
       return mergeSingletonTurnStructure(doc, section, value, diagnostics);
+    case 'dataAssets':
     case 'globalVars':
     case 'perPlayerVars':
     case 'zones':
@@ -284,6 +285,7 @@ function mergeSingletonTurnStructure(
 function mergeListSection(
   doc: GameSpecDoc,
   section:
+    | 'dataAssets'
     | 'globalVars'
     | 'perPlayerVars'
     | 'zones'
@@ -297,6 +299,11 @@ function mergeListSection(
   const existingLength = getListSectionLength(doc, section);
   const listValue = asArray(value);
   switch (section) {
+    case 'dataAssets':
+      (doc as MutableGameSpecDoc).dataAssets = (
+        doc.dataAssets === null ? listValue : [...doc.dataAssets, ...listValue]
+      ) as MutableGameSpecDoc['dataAssets'];
+      return buildAnchoredPaths(section, listValue, existingLength);
     case 'globalVars':
       (doc as MutableGameSpecDoc).globalVars = (
         doc.globalVars === null ? listValue : [...doc.globalVars, ...listValue]
@@ -353,6 +360,7 @@ function asArray(value: unknown): unknown[] {
 function getListSectionLength(
   doc: GameSpecDoc,
   section:
+    | 'dataAssets'
     | 'globalVars'
     | 'perPlayerVars'
     | 'zones'

@@ -9,12 +9,17 @@ import type { DataAssetEnvelope, DataAssetKind } from './types.js';
 
 export interface LoadDataAssetEnvelopeOptions {
   readonly expectedKinds?: readonly DataAssetKind[];
-  readonly expectedVersion?: number;
 }
 
 export interface LoadDataAssetEnvelopeResult {
   readonly asset: DataAssetEnvelope | null;
   readonly diagnostics: readonly Diagnostic[];
+}
+
+export interface ValidateDataAssetEnvelopeOptions {
+  readonly expectedKinds?: readonly DataAssetKind[];
+  readonly assetPath?: string;
+  readonly pathPrefix?: string;
 }
 
 export function loadDataAssetEnvelopeFromFile(
@@ -29,17 +34,28 @@ export function loadDataAssetEnvelopeFromFile(
     };
   }
 
-  const envelopeResult = DataAssetEnvelopeSchema.safeParse(fileResult.value);
+  return validateDataAssetEnvelope(fileResult.value, {
+    ...(options.expectedKinds === undefined ? {} : { expectedKinds: options.expectedKinds }),
+    assetPath,
+  });
+}
+
+export function validateDataAssetEnvelope(
+  value: unknown,
+  options: ValidateDataAssetEnvelopeOptions = {},
+): LoadDataAssetEnvelopeResult {
+  const pathPrefix = options.pathPrefix ?? 'asset';
+  const envelopeResult = DataAssetEnvelopeSchema.safeParse(value);
   if (!envelopeResult.success) {
-    const entityId = readEntityId(fileResult.value);
+    const entityId = readEntityId(value);
     return {
       asset: null,
       diagnostics: envelopeResult.error.issues.map((issue) => ({
         code: 'DATA_ASSET_SCHEMA_INVALID',
-        path: issue.path.length > 0 ? `asset.${issue.path.join('.')}` : 'asset',
+        path: issue.path.length > 0 ? `${pathPrefix}.${issue.path.join('.')}` : pathPrefix,
         severity: 'error',
         message: issue.message,
-        assetPath,
+        ...(options.assetPath === undefined ? {} : { assetPath: options.assetPath }),
         ...(entityId === undefined ? {} : { entityId }),
       })),
     };
@@ -50,24 +66,12 @@ export function loadDataAssetEnvelopeFromFile(
   if (options.expectedKinds !== undefined && !options.expectedKinds.includes(envelope.kind)) {
     diagnostics.push({
       code: 'DATA_ASSET_KIND_UNSUPPORTED',
-      path: 'asset.kind',
+      path: `${pathPrefix}.kind`,
       severity: 'error',
       message: `Unsupported asset kind "${envelope.kind}".`,
       suggestion: 'Use one of the supported asset kinds.',
       alternatives: [...options.expectedKinds],
-      assetPath,
-      entityId: envelope.id,
-    });
-  }
-
-  if (options.expectedVersion !== undefined && envelope.version !== options.expectedVersion) {
-    diagnostics.push({
-      code: 'DATA_ASSET_VERSION_UNSUPPORTED',
-      path: 'asset.version',
-      severity: 'error',
-      message: `Unsupported asset version ${envelope.version}; expected ${options.expectedVersion}.`,
-      suggestion: 'Use an explicit supported schema version.',
-      assetPath,
+      ...(options.assetPath === undefined ? {} : { assetPath: options.assetPath }),
       entityId: envelope.id,
     });
   }
@@ -75,7 +79,7 @@ export function loadDataAssetEnvelopeFromFile(
   if (envelope.kind === 'pieceCatalog') {
     diagnostics.push(
       ...validatePieceCatalogPayload(envelope.payload, {
-        assetPath,
+        ...(options.assetPath === undefined ? {} : { assetPath: options.assetPath }),
         entityId: envelope.id,
       }),
     );
@@ -84,7 +88,7 @@ export function loadDataAssetEnvelopeFromFile(
   if (envelope.kind === 'map') {
     diagnostics.push(
       ...validateMapPayload(envelope.payload, {
-        assetPath,
+        ...(options.assetPath === undefined ? {} : { assetPath: options.assetPath }),
         entityId: envelope.id,
       }),
     );

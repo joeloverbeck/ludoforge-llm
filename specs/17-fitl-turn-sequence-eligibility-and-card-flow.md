@@ -39,6 +39,8 @@ Implement FITL campaign turn flow as declarative game data interpreted by generi
 - Keep move legality enumeration deterministic under all option branches.
 - Ensure trace records include: card id, first/second eligible, action class (Pass/Event/Op/Limited Op/Op+SA).
 - Do not introduce FITL-only coordinator code paths in generic runtime modules.
+- All turn/card flow inputs must come from `GameSpecDoc` YAML compiled into `GameDef`; no required direct reads from `data/fitl/...` at runtime.
+- Decompose FITL turn rules into reusable sequencing/lifecycle primitives, then encode FITL-specific tables/windows as YAML data.
 
 ## Acceptance Criteria
 
@@ -46,6 +48,7 @@ Implement FITL campaign turn flow as declarative game data interpreted by generi
 - Tests cover all first/second eligible option permutations.
 - Monsoon restrictions are enforced and trace-visible.
 - Turn sequencing behavior is configured through game data, not FITL-specific engine branching.
+- Turn sequencing executes through the single path `GameSpecDoc` -> `GameDef` -> simulation.
 
 ## Testing Requirements
 

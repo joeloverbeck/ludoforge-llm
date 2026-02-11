@@ -35,15 +35,47 @@ Spec 16 is the owning spec for these Spec 15a P0 gaps: typed domain tracks/marke
 - Engine/runtime code must not branch on FITL identifiers (faction/card/space/marker names).
 - FITL-specific behavior must be encoded in data assets plus generic compiler/runtime capabilities.
 - Any schema/compiler/runtime additions introduced here must be reusable for non-FITL titles.
+- Evolution pipeline inputs are YAML-only; all executable FITL data required by compile/runtime must be representable inside `GameSpecDoc` YAML.
 
 ## Data Model Requirements
 
-- Map/scenario data must be declared in versioned game-data assets (for example `data/fitl/...`), not in `src/` runtime/compiler code, with stable ids and explicit schema versions.
+- Map/scenario/piece-catalog data must be declared inside `GameSpecDoc` YAML (not filesystem-only runtime dependencies) so evolution can mutate full game state definitions.
+- Do not require per-document `version` fields for embedded assets; YAML document identity is the version boundary for evolution.
+- Embedded assets must still use stable `id` and typed `kind` so generic validators and diagnostics can stay deterministic.
 - No runtime-derived adjacency inference.
 - State serialization must preserve all victory-relevant and legality-relevant fields.
 - Piece identities are not required per-cube, but counts and statuses must be lossless.
 - Scenario definitions must include complete initial placement and pool counts such that total inventory conservation is checkable.
 - Data-level ordering fields must exist wherever deterministic non-choice ordering is required.
+
+## GameSpecDoc Embedded Asset Contract
+
+- Add a generic `dataAssets` section to `GameSpecDoc`:
+  - `id: string` (stable asset identifier within the YAML document)
+  - `kind: "map" | "pieceCatalog" | "scenario"`
+  - `payload: object` (kind-specific schema-validated payload)
+- No required `version` property in `dataAssets` entries.
+- `scenario` payload must reference `map` and `pieceCatalog` entries by `id`.
+
+Example shape:
+
+```yaml
+dataAssets:
+  - id: fitl-map-foundation
+    kind: map
+    payload: { ... }
+  - id: fitl-piece-catalog-foundation
+    kind: pieceCatalog
+    payload: { ... }
+  - id: fitl-scenario-foundation-westys-war
+    kind: scenario
+    payload:
+      mapAssetId: fitl-map-foundation
+      pieceCatalogAssetId: fitl-piece-catalog-foundation
+      ...
+```
+
+- Existing `data/fitl/...` files are permitted as fixtures/reference artifacts, but compile/runtime correctness for evolved specs must not depend on filesystem asset lookups.
 
 ## Canonical Runtime State Contract
 
@@ -67,7 +99,7 @@ Spec 16 is the owning spec for these Spec 15a P0 gaps: typed domain tracks/marke
 
 ## Compiler and Runtime Changes
 
-- Extend compiler ingestion to load versioned map/scenario assets and lower them into deterministic `GameDef` references.
+- Extend compiler ingestion to read embedded `dataAssets` entries from `GameSpecDoc` and lower them into deterministic `GameDef` references.
 - Add generic schema conventions/validators for typed tracks, markers, and piece-status transition constraints required by Spec 15a.
 - Add runtime state constructors for all declared tracks/markers/pools from compiled data.
 - Add fail-fast validators at compile time and runtime load time for map/setup/state invariants.
@@ -75,8 +107,8 @@ Spec 16 is the owning spec for these Spec 15a P0 gaps: typed domain tracks/marke
 
 ## Deliverables
 
-- Versioned FITL foundation map asset and schema-validated scenario asset.
-- Compiler integration that consumes those assets without FITL-specific branching in generic compiler modules.
+- FITL foundation map/pieceCatalog/scenario assets embedded in canonical GameSpec YAML fixtures.
+- Compiler integration that consumes embedded assets without FITL-specific branching in generic compiler modules.
 - Runtime state model and validator suite for invariants above.
 - Deterministic snapshot fixture for initial scenario state.
 

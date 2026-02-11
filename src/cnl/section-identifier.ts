@@ -1,6 +1,7 @@
 export const CANONICAL_SECTION_KEYS = [
   'metadata',
   'constants',
+  'dataAssets',
   'globalVars',
   'perPlayerVars',
   'zones',
@@ -128,6 +129,9 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isConstantsShape(value)) {
     matches.push('constants');
   }
+  if (isDataAssetsShape(value)) {
+    matches.push('dataAssets');
+  }
   if (isTurnStructureShape(value)) {
     matches.push('turnStructure');
   }
@@ -168,6 +172,15 @@ function isConstantsShape(value: Record<string, unknown>): boolean {
 
 function isTurnStructureShape(value: Record<string, unknown>): boolean {
   return Array.isArray(value.phases) && typeof value.activePlayerOrder === 'string';
+}
+
+function isDataAssetsShape(value: Record<string, unknown>): boolean {
+  return (
+    Array.isArray(value.dataAssets) &&
+    value.dataAssets.every(
+      (entry) => isRecord(entry) && typeof entry.id === 'string' && typeof entry.kind === 'string' && 'payload' in entry,
+    )
+  );
 }
 
 function isGlobalVarsShape(value: Record<string, unknown>): boolean {

@@ -170,4 +170,49 @@ describe('runGame', () => {
     const def = createDef();
     assert.throws(() => runGame(def, 9, [illegalMoveAgent, illegalMoveAgent], 1), /Illegal move/);
   });
+
+  it('keeps selected event side/branch params in move logs for trace visibility', () => {
+    const def: GameDef = {
+      metadata: { id: 'sim-event-selection-trace', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      actions: [
+        {
+          id: asActionId('event'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [
+            { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
+            { name: 'branch', domain: { query: 'enums', values: ['a', 'b'] } },
+          ],
+          pre: null,
+          cost: [],
+          effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const sideBranchAgent: Agent = {
+      chooseMove(input) {
+        const selected = input.legalMoves.find(
+          (move) => move.params.side === 'shaded' && move.params.branch === 'b',
+        );
+        if (selected === undefined) {
+          throw new Error('expected shaded/b event move to be legal');
+        }
+        return { move: selected, rng: input.rng };
+      },
+    };
+
+    const trace = runGame(def, 31, [sideBranchAgent, sideBranchAgent], 1);
+    assert.deepEqual(trace.moves[0]?.move.params, { side: 'shaded', branch: 'b' });
+  });
 });

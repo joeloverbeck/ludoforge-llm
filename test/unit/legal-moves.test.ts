@@ -592,4 +592,39 @@ describe('legalMoves', () => {
       { actionId: asActionId('pivotalA'), params: {} },
     ]);
   });
+
+  it('enumerates dual-use event side/branch selections deterministically for any active faction', () => {
+    const def: GameDef = {
+      ...createDef(),
+      metadata: { id: 'dual-use-event-selection-order', players: { min: 2, max: 2 } },
+      actions: [
+        {
+          id: asActionId('event'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [
+            { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
+            { name: 'branch', domain: { query: 'enums', values: ['a', 'b'] } },
+          ],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const expected: readonly Move[] = [
+      { actionId: asActionId('event'), params: { side: 'unshaded', branch: 'a' } },
+      { actionId: asActionId('event'), params: { side: 'unshaded', branch: 'b' } },
+      { actionId: asActionId('event'), params: { side: 'shaded', branch: 'a' } },
+      { actionId: asActionId('event'), params: { side: 'shaded', branch: 'b' } },
+    ];
+
+    const activeZero = legalMoves(def, { ...createState(), activePlayer: asPlayerId(0), actionUsage: {} });
+    const activeOne = legalMoves(def, { ...createState(), activePlayer: asPlayerId(1), actionUsage: {} });
+
+    assert.deepEqual(activeZero, expected);
+    assert.deepEqual(activeOne, expected);
+  });
 });

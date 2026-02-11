@@ -688,4 +688,67 @@ describe('applyMove', () => {
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
     assert.equal(result.state.globalVars.orderValue, 5);
   });
+
+  it('resolves event side and branch effects from selected move params', () => {
+    const def: GameDef = {
+      metadata: { id: 'event-side-branch-resolution', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      actions: [
+        {
+          id: asActionId('event'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [
+            { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
+            { name: 'branch', domain: { query: 'enums', values: ['a', 'b'] } },
+          ],
+          pre: null,
+          cost: [],
+          effects: [
+            {
+              if: {
+                when: { op: '==', left: { ref: 'binding', name: 'side' }, right: 'unshaded' },
+                then: [{ addVar: { scope: 'global', var: 'resolved', delta: 10 } }],
+                else: [{ addVar: { scope: 'global', var: 'resolved', delta: 20 } }],
+              },
+            },
+            {
+              if: {
+                when: { op: '==', left: { ref: 'binding', name: 'branch' }, right: 'a' },
+                then: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }],
+                else: [{ addVar: { scope: 'global', var: 'resolved', delta: 2 } }],
+              },
+            },
+          ],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      globalVars: { resolved: 0 },
+      actionUsage: {},
+    };
+
+    const unshadedA = applyMove(def, state, {
+      actionId: asActionId('event'),
+      params: { side: 'unshaded', branch: 'a' },
+    });
+    const shadedB = applyMove(def, state, {
+      actionId: asActionId('event'),
+      params: { side: 'shaded', branch: 'b' },
+    });
+
+    assert.equal(unshadedA.state.globalVars.resolved, 11);
+    assert.equal(shadedB.state.globalVars.resolved, 22);
+  });
 });

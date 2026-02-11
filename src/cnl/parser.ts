@@ -217,6 +217,7 @@ function mergeSection(
     case 'zones':
     case 'tokenTypes':
     case 'setup':
+    case 'operationProfiles':
     case 'actions':
     case 'triggers':
     case 'endConditions':
@@ -313,6 +314,7 @@ function mergeListSection(
     | 'zones'
     | 'tokenTypes'
     | 'setup'
+    | 'operationProfiles'
     | 'actions'
     | 'triggers'
     | 'endConditions',
@@ -345,6 +347,11 @@ function mergeListSection(
       return buildAnchoredPaths(section, listValue, existingLength);
     case 'setup':
       (doc as MutableGameSpecDoc).setup = (doc.setup === null ? listValue : [...doc.setup, ...listValue]) as MutableGameSpecDoc['setup'];
+      return buildAnchoredPaths(section, listValue, existingLength);
+    case 'operationProfiles':
+      (doc as MutableGameSpecDoc).operationProfiles = (
+        doc.operationProfiles === null ? listValue : [...doc.operationProfiles, ...listValue]
+      ) as MutableGameSpecDoc['operationProfiles'];
       return buildAnchoredPaths(section, listValue, existingLength);
     case 'actions':
       (doc as MutableGameSpecDoc).actions =
@@ -388,6 +395,7 @@ function getListSectionLength(
     | 'zones'
     | 'tokenTypes'
     | 'setup'
+    | 'operationProfiles'
     | 'actions'
     | 'triggers'
     | 'endConditions',

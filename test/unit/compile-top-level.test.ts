@@ -200,6 +200,118 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
   });
 
+  it('preserves operationProfiles contracts when declared', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'operation-profile-pass-through', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      actions: [{ id: 'patrol', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      operationProfiles: [
+        {
+          id: 'patrol-profile',
+          actionId: 'patrol',
+          legality: { when: 'always' },
+          cost: { spend: 0 },
+          targeting: { select: 'none' },
+          resolution: [{ stage: 'resolve' }],
+          partialExecution: { mode: 'forbid' as const },
+          linkedSpecialActivityWindows: ['window-a'],
+        },
+      ],
+      triggers: [],
+      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef !== null, true);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.gameDef?.operationProfiles?.[0]?.id, 'patrol-profile');
+    assert.equal(result.gameDef?.operationProfiles?.[0]?.partialExecution.mode, 'forbid');
+  });
+
+  it('returns blocking diagnostics for ambiguous or incomplete operationProfiles metadata', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'operation-profile-invalid', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      actions: [
+        { id: 'patrol', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'sweep', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      operationProfiles: [
+        {
+          id: 'patrol-profile',
+          actionId: 'patrol',
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ stage: 'resolve' }],
+          partialExecution: { mode: 'forbid' as const },
+        },
+        {
+          id: 'ambiguous-profile',
+          actionId: 'patrol',
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ stage: 'resolve' }],
+          partialExecution: { mode: 'allow' as const },
+        },
+        {
+          id: 'invalid-resolution-profile',
+          actionId: 'sweep',
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [],
+          partialExecution: { mode: 'invalid' },
+        },
+        {
+          id: 'unknown-action-profile',
+          actionId: 'missing-action',
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ stage: 'resolve' }],
+          partialExecution: { mode: 'forbid' as const },
+        },
+      ],
+      triggers: [],
+      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+
+    const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS' &&
+          diagnostic.path === 'doc.operationProfiles.1.actionId',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_OPERATION_PROFILE_UNKNOWN_ACTION' &&
+          diagnostic.path === 'doc.operationProfiles.3.actionId',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MISSING_CAPABILITY' &&
+          diagnostic.path === 'doc.operationProfiles.2.resolution',
+      ),
+      true,
+    );
+  });
+
   it('requires interrupt precedence when multiple pivotal actions are declared', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

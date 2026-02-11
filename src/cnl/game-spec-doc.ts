@@ -148,6 +148,21 @@ export interface GameSpecTurnFlow {
   readonly pivotal?: GameSpecTurnFlowPivotal;
 }
 
+export interface GameSpecOperationProfilePartialExecution {
+  readonly mode: 'forbid' | 'allow';
+}
+
+export interface GameSpecOperationProfileDef {
+  readonly id: string;
+  readonly actionId: string;
+  readonly legality: Readonly<Record<string, unknown>>;
+  readonly cost: Readonly<Record<string, unknown>>;
+  readonly targeting: Readonly<Record<string, unknown>>;
+  readonly resolution: readonly Readonly<Record<string, unknown>>[];
+  readonly partialExecution: GameSpecOperationProfilePartialExecution;
+  readonly linkedSpecialActivityWindows?: readonly string[];
+}
+
 export interface GameSpecDoc {
   readonly metadata: GameSpecMetadata | null;
   readonly constants: Readonly<Record<string, number>> | null;
@@ -159,6 +174,7 @@ export interface GameSpecDoc {
   readonly setup: readonly GameSpecEffect[] | null;
   readonly turnStructure: GameSpecTurnStructure | null;
   readonly turnFlow: GameSpecTurnFlow | null;
+  readonly operationProfiles: readonly GameSpecOperationProfileDef[] | null;
   readonly actions: readonly GameSpecActionDef[] | null;
   readonly triggers: readonly GameSpecTriggerDef[] | null;
   readonly endConditions: readonly GameSpecEndCondition[] | null;
@@ -176,6 +192,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     setup: null,
     turnStructure: null,
     turnFlow: null,
+    operationProfiles: null,
     actions: null,
     triggers: null,
     endConditions: null,

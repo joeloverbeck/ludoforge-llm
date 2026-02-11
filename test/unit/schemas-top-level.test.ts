@@ -56,6 +56,18 @@ const fullGameDef = {
     passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: 3 }],
     durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
   },
+  operationProfiles: [
+    {
+      id: 'play-card-profile',
+      actionId: 'playCard',
+      legality: { when: 'always' },
+      cost: { spend: 0 },
+      targeting: { select: 'none' },
+      resolution: [{ stage: 'resolve' }],
+      partialExecution: { mode: 'forbid' },
+      linkedSpecialActivityWindows: ['window-a'],
+    },
+  ],
   actions: [
     {
       id: 'playCard',
@@ -262,6 +274,21 @@ describe('top-level runtime schemas', () => {
 
     assert.equal(result.success, false);
     assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'turnFlow.durationWindows.1'));
+  });
+
+  it('fails on invalid operationProfiles partialExecution mode with actionable nested path', () => {
+    const result = GameDefSchema.safeParse({
+      ...fullGameDef,
+      operationProfiles: [
+        {
+          ...fullGameDef.operationProfiles[0],
+          partialExecution: { mode: 'sometimes' },
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'operationProfiles.0.partialExecution.mode'));
   });
 
   it('enforces strict top-level object policy', () => {

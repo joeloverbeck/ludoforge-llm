@@ -18,6 +18,18 @@ const TURN_FLOW_ELIGIBILITY_KEYS = ['factions', 'overrideWindows'] as const;
 const TURN_FLOW_OVERRIDE_WINDOW_KEYS = ['id', 'duration'] as const;
 const TURN_FLOW_OPTION_MATRIX_ROW_KEYS = ['first', 'second'] as const;
 const TURN_FLOW_PASS_REWARD_KEYS = ['factionClass', 'resource', 'amount'] as const;
+const OPERATION_PROFILE_KEYS = [
+  'id',
+  'actionId',
+  'legality',
+  'cost',
+  'targeting',
+  'resolution',
+  'partialExecution',
+  'linkedSpecialActivityWindows',
+] as const;
+const OPERATION_PROFILE_PARTIAL_EXECUTION_KEYS = ['mode'] as const;
+const OPERATION_PROFILE_PARTIAL_EXECUTION_MODE_VALUES: readonly string[] = ['forbid', 'allow'];
 const PHASE_KEYS = ['id', 'onEnter', 'onExit'] as const;
 const TRIGGER_KEYS = ['id', 'event', 'when', 'match', 'effects'] as const;
 const TRIGGER_EVENT_KEYS = ['type', 'phase', 'action', 'zone'] as const;
@@ -54,6 +66,7 @@ export function validateGameSpec(
   const actionIds = validateActions(doc, diagnostics);
   const phaseIds = validateTurnStructure(doc, diagnostics);
   validateTurnFlow(doc, diagnostics);
+  validateOperationProfiles(doc, actionIds, diagnostics);
 
   validateCrossReferences(doc, zoneIds, actionIds, phaseIds, diagnostics);
   validateDuplicateIdentifiers(doc, diagnostics);
@@ -716,6 +729,165 @@ function validateTurnFlow(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
   }
 }
 
+function validateOperationProfiles(
+  doc: GameSpecDoc,
+  actionIds: readonly string[],
+  diagnostics: Diagnostic[],
+): void {
+  if (doc.operationProfiles === null) {
+    return;
+  }
+
+  const actionIdSet = new Set(actionIds);
+  const actionIdCounts = new Map<string, number>();
+
+  for (const [index, profile] of doc.operationProfiles.entries()) {
+    const basePath = `doc.operationProfiles.${index}`;
+    if (!isRecord(profile)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_OPERATION_PROFILE_SHAPE_INVALID',
+        path: basePath,
+        severity: 'error',
+        message: 'Operation profile entry must be an object.',
+        suggestion: 'Set operation profile entries to objects with id/actionId/legality/cost/targeting/resolution/partialExecution.',
+      });
+      continue;
+    }
+
+    validateUnknownKeys(profile, OPERATION_PROFILE_KEYS, basePath, diagnostics, 'operation profile');
+    validateIdentifierField(profile, 'id', `${basePath}.id`, diagnostics, 'operation profile id');
+    validateIdentifierField(profile, 'actionId', `${basePath}.actionId`, diagnostics, 'operation profile actionId');
+
+    if (typeof profile.actionId === 'string' && profile.actionId.trim() !== '') {
+      const normalizedActionId = normalizeIdentifier(profile.actionId);
+      actionIdCounts.set(normalizedActionId, (actionIdCounts.get(normalizedActionId) ?? 0) + 1);
+      if (!actionIdSet.has(normalizedActionId)) {
+        pushMissingReferenceDiagnostic(
+          diagnostics,
+          'CNL_VALIDATOR_REFERENCE_MISSING',
+          `${basePath}.actionId`,
+          `Unknown action "${profile.actionId}".`,
+          normalizedActionId,
+          actionIds,
+          'Use one of the declared action ids.',
+        );
+      }
+    }
+
+    if (!isRecord(profile.legality)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_OPERATION_PROFILE_REQUIRED_FIELD_INVALID',
+        path: `${basePath}.legality`,
+        severity: 'error',
+        message: 'operation profile legality must be an object.',
+        suggestion: 'Provide a legality object (explicitly include a permissive policy if unconditional).',
+      });
+    }
+    if (!isRecord(profile.cost)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_OPERATION_PROFILE_REQUIRED_FIELD_INVALID',
+        path: `${basePath}.cost`,
+        severity: 'error',
+        message: 'operation profile cost must be an object.',
+        suggestion: 'Provide a cost object (explicitly include zero-cost behavior if applicable).',
+      });
+    }
+    if (!isRecord(profile.targeting)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_OPERATION_PROFILE_REQUIRED_FIELD_INVALID',
+        path: `${basePath}.targeting`,
+        severity: 'error',
+        message: 'operation profile targeting must be an object.',
+        suggestion: 'Provide a targeting object (explicitly encode no-target behavior if applicable).',
+      });
+    }
+    if (!Array.isArray(profile.resolution) || profile.resolution.length === 0) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_OPERATION_PROFILE_REQUIRED_FIELD_INVALID',
+        path: `${basePath}.resolution`,
+        severity: 'error',
+        message: 'operation profile resolution must be a non-empty array of stage objects.',
+        suggestion: 'Declare one or more ordered resolution stages.',
+      });
+    } else {
+      for (const [stageIndex, stage] of profile.resolution.entries()) {
+        if (!isRecord(stage)) {
+          diagnostics.push({
+            code: 'CNL_VALIDATOR_OPERATION_PROFILE_REQUIRED_FIELD_INVALID',
+            path: `${basePath}.resolution.${stageIndex}`,
+            severity: 'error',
+            message: 'Each resolution stage must be an object.',
+            suggestion: 'Replace non-object stages with explicit stage objects.',
+          });
+        }
+      }
+    }
+
+    if (!isRecord(profile.partialExecution)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_OPERATION_PROFILE_REQUIRED_FIELD_INVALID',
+        path: `${basePath}.partialExecution`,
+        severity: 'error',
+        message: 'operation profile partialExecution must be an object.',
+        suggestion: 'Set partialExecution.mode to "forbid" or "allow".',
+      });
+    } else {
+      validateUnknownKeys(
+        profile.partialExecution,
+        OPERATION_PROFILE_PARTIAL_EXECUTION_KEYS,
+        `${basePath}.partialExecution`,
+        diagnostics,
+        'operation profile partialExecution',
+      );
+      validateEnumField(
+        profile.partialExecution,
+        'mode',
+        OPERATION_PROFILE_PARTIAL_EXECUTION_MODE_VALUES,
+        `${basePath}.partialExecution`,
+        diagnostics,
+        'operation profile partialExecution',
+      );
+    }
+
+    if (profile.linkedSpecialActivityWindows !== undefined) {
+      if (!Array.isArray(profile.linkedSpecialActivityWindows)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_OPERATION_PROFILE_LINKED_WINDOWS_INVALID',
+          path: `${basePath}.linkedSpecialActivityWindows`,
+          severity: 'error',
+          message: 'linkedSpecialActivityWindows must be an array of non-empty strings when provided.',
+          suggestion: 'Set linkedSpecialActivityWindows to string ids or omit the field.',
+        });
+      } else {
+        for (const [windowIndex, windowId] of profile.linkedSpecialActivityWindows.entries()) {
+          if (typeof windowId !== 'string' || windowId.trim() === '') {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_OPERATION_PROFILE_LINKED_WINDOWS_INVALID',
+              path: `${basePath}.linkedSpecialActivityWindows.${windowIndex}`,
+              severity: 'error',
+              message: 'linkedSpecialActivityWindows entries must be non-empty strings.',
+              suggestion: 'Replace invalid entry with a non-empty window id.',
+            });
+          }
+        }
+      }
+    }
+  }
+
+  const ambiguousActionBindings = [...actionIdCounts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([actionId]) => actionId);
+  for (const actionId of ambiguousActionBindings) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS',
+      path: 'doc.operationProfiles',
+      severity: 'error',
+      message: `Multiple operation profiles target action "${actionId}".`,
+      suggestion: 'Map each action id to at most one operation profile.',
+    });
+  }
+}
+
 function validateCrossReferences(
   doc: GameSpecDoc,
   zoneIds: readonly string[],
@@ -747,6 +919,13 @@ function validateCrossReferences(
         );
       }
     }
+  }
+
+  if (doc.operationProfiles !== null) {
+    const operationProfileIds = doc.operationProfiles
+      .map((profile) => (isRecord(profile) && typeof profile.id === 'string' ? normalizeIdentifier(profile.id) : undefined))
+      .filter((value): value is string => value !== undefined && value.length > 0);
+    pushDuplicateNormalizedIdDiagnostics(diagnostics, operationProfileIds, 'doc.operationProfiles', 'operation profile id');
   }
 
   if (doc.triggers !== null) {

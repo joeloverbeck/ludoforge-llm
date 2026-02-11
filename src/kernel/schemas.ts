@@ -628,6 +628,25 @@ export const TurnFlowSchema = z
   })
   .strict();
 
+export const OperationProfilePartialExecutionSchema = z
+  .object({
+    mode: z.union([z.literal('forbid'), z.literal('allow')]),
+  })
+  .strict();
+
+export const OperationProfileSchema = z
+  .object({
+    id: StringSchema.min(1),
+    actionId: StringSchema.min(1),
+    legality: z.record(StringSchema, z.unknown()),
+    cost: z.record(StringSchema, z.unknown()),
+    targeting: z.record(StringSchema, z.unknown()),
+    resolution: z.array(z.record(StringSchema, z.unknown())).min(1),
+    partialExecution: OperationProfilePartialExecutionSchema,
+    linkedSpecialActivityWindows: z.array(StringSchema.min(1)).optional(),
+  })
+  .strict();
+
 export const GameDefSchema = z
   .object({
     metadata: z
@@ -645,6 +664,7 @@ export const GameDefSchema = z
     setup: z.array(EffectASTSchema),
     turnStructure: TurnStructureSchema,
     turnFlow: TurnFlowSchema.optional(),
+    operationProfiles: z.array(OperationProfileSchema).optional(),
     actions: z.array(ActionDefSchema),
     triggers: z.array(TriggerDefSchema),
     endConditions: z.array(EndConditionSchema),

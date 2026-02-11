@@ -226,6 +226,63 @@ describe('validateGameDef reference checks', () => {
       ),
     );
   });
+
+  it('reports operation profile action references missing from actions', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      operationProfiles: [
+        {
+          id: 'patrol-profile',
+          actionId: 'patrol',
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ stage: 'resolve' }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'REF_ACTION_MISSING' && diag.path === 'operationProfiles[0].actionId'),
+    );
+  });
+
+  it('reports ambiguous operation profile action mappings', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      operationProfiles: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ stage: 'resolve' }],
+          partialExecution: { mode: 'forbid' },
+        },
+        {
+          id: 'profile-b',
+          actionId: 'playCard',
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ stage: 'resolve' }],
+          partialExecution: { mode: 'allow' },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS' && diag.path === 'operationProfiles[1].actionId',
+      ),
+    );
+  });
 });
 
 describe('validateGameDef constraints and warnings', () => {

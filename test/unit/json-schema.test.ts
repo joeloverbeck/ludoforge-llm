@@ -45,6 +45,18 @@ const fullGameDef: GameDef = {
     phases: [{ id: asPhaseId('main'), onEnter: [{ addVar: { scope: 'global', var: 'round', delta: 1 } }] }],
     activePlayerOrder: 'roundRobin',
   },
+  operationProfiles: [
+    {
+      id: 'play-card-profile',
+      actionId: asActionId('playCard'),
+      legality: { when: 'always' },
+      cost: { spend: 0 },
+      targeting: { select: 'none' },
+      resolution: [{ stage: 'resolve' }],
+      partialExecution: { mode: 'forbid' },
+      linkedSpecialActivityWindows: ['window-a'],
+    },
+  ],
   actions: [
     {
       id: asActionId('playCard'),

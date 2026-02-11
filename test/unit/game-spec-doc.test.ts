@@ -18,6 +18,7 @@ describe('game-spec-doc', () => {
       setup: null,
       turnStructure: null,
       turnFlow: null,
+      operationProfiles: null,
       actions: null,
       triggers: null,
       endConditions: null,

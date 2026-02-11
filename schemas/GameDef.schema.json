@@ -62,6 +62,10 @@
     },
     "turnStructure": { "$ref": "#/definitions/turnStructure" },
     "turnFlow": { "$ref": "#/definitions/turnFlowDef" },
+    "operationProfiles": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/operationProfileDef" }
+    },
     "actions": {
       "type": "array",
       "items": { "$ref": "#/definitions/actionDef" }
@@ -776,6 +780,55 @@
               }
             }
           }
+        }
+      }
+    },
+    "operationProfileDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "actionId",
+        "legality",
+        "cost",
+        "targeting",
+        "resolution",
+        "partialExecution"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "actionId": { "type": "string", "minLength": 1 },
+        "legality": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "cost": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "targeting": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "resolution": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "partialExecution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": { "enum": ["forbid", "allow"] }
+          }
+        },
+        "linkedSpecialActivityWindows": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
         }
       }
     },

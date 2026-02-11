@@ -18,6 +18,7 @@ describe('parseGameSpec API shape', () => {
       setup: null,
       turnStructure: null,
       turnFlow: null,
+      operationProfiles: null,
       actions: null,
       triggers: null,
       endConditions: null,
@@ -216,6 +217,27 @@ describe('parseGameSpec API shape', () => {
     assert.equal(result.doc.dataAssets?.[0]?.id, 'fitl-map-foundation');
     assert.ok(result.sourceMap.byPath['dataAssets[0].id'] !== undefined);
     assert.ok(result.sourceMap.byPath['dataAssets[0].kind'] !== undefined);
+  });
+
+  it('parses operationProfiles section and anchors merged list paths', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'operationProfiles:',
+      '  - id: patrol-profile',
+      '    actionId: patrol',
+      '    legality: { when: always }',
+      '    cost: { spend: 0 }',
+      '    targeting: { select: none }',
+      '    resolution:',
+      '      - stage: apply',
+      '    partialExecution: { mode: forbid }',
+      '```',
+    ].join('\n'));
+
+    assert.equal(result.doc.operationProfiles?.length, 1);
+    assert.equal(result.doc.operationProfiles?.[0]?.id, 'patrol-profile');
+    assert.ok(result.sourceMap.byPath['operationProfiles[0].id'] !== undefined);
+    assert.ok(result.sourceMap.byPath['operationProfiles[0].partialExecution.mode'] !== undefined);
   });
 
   it('anchors appended list entries using canonical merged indexes', () => {

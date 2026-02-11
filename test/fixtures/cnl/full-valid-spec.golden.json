@@ -32,6 +32,7 @@
       "activePlayerOrder": "roundRobin"
     },
     "turnFlow": null,
+    "operationProfiles": null,
     "actions": [
       {
         "id": "draw",

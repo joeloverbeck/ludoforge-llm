@@ -663,6 +663,13 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
     'per-player var name',
     'perPlayerVars',
   );
+  checkDuplicateIds(
+    diagnostics,
+    (def.operationProfiles ?? []).map((operationProfile) => operationProfile.id),
+    'DUPLICATE_OPERATION_PROFILE_ID',
+    'operation profile id',
+    'operationProfiles',
+  );
 
   def.zones.forEach((zone, index) => {
     const qualifier = parseZoneSelector(zone.id).qualifier;
@@ -768,6 +775,54 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
     action.effects.forEach((effect, effectIndex) => {
       validateEffectAst(diagnostics, effect, `actions[${actionIndex}].effects[${effectIndex}]`, context);
     });
+  });
+
+  const seenOperationActionMappings = new Set<string>();
+  def.operationProfiles?.forEach((operationProfile, operationProfileIndex) => {
+    const basePath = `operationProfiles[${operationProfileIndex}]`;
+
+    if (!actionCandidates.includes(operationProfile.actionId)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_ACTION_MISSING',
+        `${basePath}.actionId`,
+        `Unknown action "${operationProfile.actionId}".`,
+        operationProfile.actionId,
+        actionCandidates,
+      );
+    }
+
+    if (seenOperationActionMappings.has(operationProfile.actionId)) {
+      diagnostics.push({
+        code: 'OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS',
+        path: `${basePath}.actionId`,
+        severity: 'error',
+        message: `Multiple operation profiles map to action "${operationProfile.actionId}".`,
+        suggestion: 'Map each action id to at most one operation profile.',
+      });
+    } else {
+      seenOperationActionMappings.add(operationProfile.actionId);
+    }
+
+    if (operationProfile.resolution.length === 0) {
+      diagnostics.push({
+        code: 'OPERATION_PROFILE_RESOLUTION_EMPTY',
+        path: `${basePath}.resolution`,
+        severity: 'error',
+        message: 'Operation profile resolution must contain at least one stage.',
+        suggestion: 'Declare one or more deterministic resolution stages.',
+      });
+    }
+
+    if (operationProfile.partialExecution.mode !== 'forbid' && operationProfile.partialExecution.mode !== 'allow') {
+      diagnostics.push({
+        code: 'OPERATION_PROFILE_PARTIAL_EXECUTION_MODE_INVALID',
+        path: `${basePath}.partialExecution.mode`,
+        severity: 'error',
+        message: `Unsupported partial execution mode "${operationProfile.partialExecution.mode}".`,
+        suggestion: 'Use "forbid" or "allow".',
+      });
+    }
   });
 
   const adjacencyGraph = buildAdjacencyGraph(def.zones);

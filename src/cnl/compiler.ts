@@ -19,6 +19,7 @@ import type {
   TriggerEvent,
   TurnFlowDef,
   TurnStructure,
+  OperationProfileDef,
   VariableDef,
   MapPayload,
   PieceCatalogPayload,
@@ -170,6 +171,7 @@ function compileExpandedDoc(doc: GameSpecDoc, diagnostics: Diagnostic[]): GameDe
   const setup = lowerEffectsWithDiagnostics(doc.setup ?? [], ownershipByBase, diagnostics, 'doc.setup');
   const turnStructure = lowerTurnStructure(doc.turnStructure, ownershipByBase, diagnostics);
   const turnFlow = lowerTurnFlow(doc.turnFlow, diagnostics);
+  const operationProfiles = lowerOperationProfiles(doc.operationProfiles, doc.actions, diagnostics);
   const actions = lowerActions(doc.actions, ownershipByBase, diagnostics);
   const triggers = lowerTriggers(doc.triggers ?? [], ownershipByBase, diagnostics);
   const endConditions = lowerEndConditions(doc.endConditions, ownershipByBase, diagnostics);
@@ -184,6 +186,7 @@ function compileExpandedDoc(doc: GameSpecDoc, diagnostics: Diagnostic[]): GameDe
     setup,
     turnStructure,
     ...(turnFlow === undefined ? {} : { turnFlow }),
+    ...(operationProfiles === undefined ? {} : { operationProfiles }),
     actions,
     triggers,
     endConditions,
@@ -354,6 +357,175 @@ function lowerTurnFlow(rawTurnFlow: GameSpecDoc['turnFlow'], diagnostics: Diagno
   }
 
   return rawTurnFlow as TurnFlowDef;
+}
+
+function lowerOperationProfiles(
+  rawProfiles: GameSpecDoc['operationProfiles'],
+  rawActions: GameSpecDoc['actions'],
+  diagnostics: Diagnostic[],
+): readonly OperationProfileDef[] | undefined {
+  if (rawProfiles === null) {
+    return undefined;
+  }
+
+  const knownActionIds = new Set<string>();
+  for (const action of rawActions ?? []) {
+    if (isRecord(action) && typeof action.id === 'string' && action.id.trim() !== '') {
+      knownActionIds.add(normalizeIdentifier(action.id));
+    }
+  }
+
+  const lowered: OperationProfileDef[] = [];
+  const seenProfileIds = new Set<string>();
+  const actionIdBindings = new Set<string>();
+
+  for (const [index, rawProfile] of rawProfiles.entries()) {
+    const basePath = `doc.operationProfiles.${index}`;
+    if (!isRecord(rawProfile)) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_OPERATION_PROFILE_INVALID',
+        path: basePath,
+        severity: 'error',
+        message: 'operation profile must be an object.',
+        suggestion: 'Provide id/actionId/legality/cost/targeting/resolution/partialExecution for each operation profile.',
+      });
+      continue;
+    }
+
+    const id = typeof rawProfile.id === 'string' ? normalizeIdentifier(rawProfile.id) : '';
+    if (id.length === 0) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_OPERATION_PROFILE_REQUIRED_FIELD_MISSING',
+        path: `${basePath}.id`,
+        severity: 'error',
+        message: 'operation profile id is required and must be a non-empty string.',
+        suggestion: 'Set operationProfiles[].id to a non-empty identifier.',
+      });
+      continue;
+    }
+    if (seenProfileIds.has(id)) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_OPERATION_PROFILE_DUPLICATE_ID',
+        path: `${basePath}.id`,
+        severity: 'error',
+        message: `Duplicate operation profile id "${id}" creates ambiguous profile lookup.`,
+        suggestion: 'Use a unique id per operation profile.',
+      });
+      continue;
+    }
+    seenProfileIds.add(id);
+
+    const actionId = typeof rawProfile.actionId === 'string' ? normalizeIdentifier(rawProfile.actionId) : '';
+    if (actionId.length === 0) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_OPERATION_PROFILE_REQUIRED_FIELD_MISSING',
+        path: `${basePath}.actionId`,
+        severity: 'error',
+        message: 'operation profile actionId is required and must be a non-empty string.',
+        suggestion: 'Map each operation profile to a declared action id.',
+      });
+      continue;
+    }
+    if (!knownActionIds.has(actionId)) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_OPERATION_PROFILE_UNKNOWN_ACTION',
+        path: `${basePath}.actionId`,
+        severity: 'error',
+        message: `operation profile references unknown action "${actionId}".`,
+        suggestion: 'Use an action id declared under doc.actions.',
+      });
+      continue;
+    }
+    if (actionIdBindings.has(actionId)) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS',
+        path: `${basePath}.actionId`,
+        severity: 'error',
+        message: `Multiple operation profiles map to action "${actionId}".`,
+        suggestion: 'Map each action id to at most one operation profile.',
+      });
+      continue;
+    }
+    actionIdBindings.add(actionId);
+
+    if (!isRecord(rawProfile.legality)) {
+      diagnostics.push(missingCapabilityDiagnostic(`${basePath}.legality`, 'operation profile legality object', rawProfile.legality, ['object']));
+      continue;
+    }
+    if (!isRecord(rawProfile.cost)) {
+      diagnostics.push(missingCapabilityDiagnostic(`${basePath}.cost`, 'operation profile cost object', rawProfile.cost, ['object']));
+      continue;
+    }
+    if (!isRecord(rawProfile.targeting)) {
+      diagnostics.push(missingCapabilityDiagnostic(`${basePath}.targeting`, 'operation profile targeting object', rawProfile.targeting, ['object']));
+      continue;
+    }
+    if (!Array.isArray(rawProfile.resolution) || rawProfile.resolution.length === 0) {
+      diagnostics.push(
+        missingCapabilityDiagnostic(
+          `${basePath}.resolution`,
+          'operation profile ordered resolution stages',
+          rawProfile.resolution,
+          ['non-empty array'],
+        ),
+      );
+      continue;
+    }
+    if (!rawProfile.resolution.every((stage) => isRecord(stage))) {
+      diagnostics.push(
+        missingCapabilityDiagnostic(
+          `${basePath}.resolution`,
+          'operation profile ordered resolution stages',
+          rawProfile.resolution,
+          ['array of objects'],
+        ),
+      );
+      continue;
+    }
+
+    const partialExecution = rawProfile.partialExecution;
+    if (!isRecord(partialExecution) || (partialExecution.mode !== 'forbid' && partialExecution.mode !== 'allow')) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_OPERATION_PROFILE_REQUIRED_FIELD_MISSING',
+        path: `${basePath}.partialExecution.mode`,
+        severity: 'error',
+        message: 'operation profile partialExecution.mode is required and must be "forbid" or "allow".',
+        suggestion: 'Set partialExecution.mode to "forbid" or "allow".',
+      });
+      continue;
+    }
+
+    let linkedSpecialActivityWindows: readonly string[] | undefined;
+    if (rawProfile.linkedSpecialActivityWindows !== undefined) {
+      if (
+        !Array.isArray(rawProfile.linkedSpecialActivityWindows) ||
+        rawProfile.linkedSpecialActivityWindows.some((entry) => typeof entry !== 'string' || entry.trim() === '')
+      ) {
+        diagnostics.push({
+          code: 'CNL_COMPILER_OPERATION_PROFILE_LINKED_WINDOWS_INVALID',
+          path: `${basePath}.linkedSpecialActivityWindows`,
+          severity: 'error',
+          message: 'linkedSpecialActivityWindows must be an array of non-empty strings when provided.',
+          suggestion: 'Set linkedSpecialActivityWindows to string ids or omit the field.',
+        });
+        continue;
+      }
+      linkedSpecialActivityWindows = rawProfile.linkedSpecialActivityWindows.map((entry) => normalizeIdentifier(entry));
+    }
+
+    lowered.push({
+      id,
+      actionId: asActionId(actionId),
+      legality: rawProfile.legality,
+      cost: rawProfile.cost,
+      targeting: rawProfile.targeting,
+      resolution: rawProfile.resolution,
+      partialExecution: { mode: partialExecution.mode },
+      ...(linkedSpecialActivityWindows === undefined ? {} : { linkedSpecialActivityWindows }),
+    });
+  }
+
+  return lowered;
 }
 
 function deriveSectionsFromDataAssets(

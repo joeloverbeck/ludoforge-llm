@@ -286,6 +286,7 @@ export interface GameDef {
   readonly setup: readonly EffectAST[];
   readonly turnStructure: TurnStructure;
   readonly turnFlow?: TurnFlowDef;
+  readonly operationProfiles?: readonly OperationProfileDef[];
   readonly actions: readonly ActionDef[];
   readonly triggers: readonly TriggerDef[];
   readonly endConditions: readonly EndCondition[];
@@ -368,6 +369,21 @@ export interface TurnFlowDef {
   readonly durationWindows: readonly TurnFlowDuration[];
   readonly monsoon?: TurnFlowMonsoonDef;
   readonly pivotal?: TurnFlowPivotalDef;
+}
+
+export interface OperationProfilePartialExecutionDef {
+  readonly mode: 'forbid' | 'allow';
+}
+
+export interface OperationProfileDef {
+  readonly id: string;
+  readonly actionId: ActionId;
+  readonly legality: Readonly<Record<string, unknown>>;
+  readonly cost: Readonly<Record<string, unknown>>;
+  readonly targeting: Readonly<Record<string, unknown>>;
+  readonly resolution: readonly Readonly<Record<string, unknown>>[];
+  readonly partialExecution: OperationProfilePartialExecutionDef;
+  readonly linkedSpecialActivityWindows?: readonly string[];
 }
 
 export type DataAssetKind = 'map' | 'scenario' | 'pieceCatalog';

@@ -9,6 +9,7 @@ export const CANONICAL_SECTION_KEYS = [
   'setup',
   'turnStructure',
   'turnFlow',
+  'operationProfiles',
   'actions',
   'triggers',
   'endConditions',
@@ -139,6 +140,9 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isTurnFlowShape(value)) {
     matches.push('turnFlow');
   }
+  if (isOperationProfilesShape(value)) {
+    matches.push('operationProfiles');
+  }
   if (isGlobalVarsShape(value)) {
     matches.push('globalVars');
     matches.push('perPlayerVars');
@@ -193,6 +197,15 @@ function isDataAssetsShape(value: Record<string, unknown>): boolean {
     Array.isArray(value.dataAssets) &&
     value.dataAssets.every(
       (entry) => isRecord(entry) && typeof entry.id === 'string' && typeof entry.kind === 'string' && 'payload' in entry,
+    )
+  );
+}
+
+function isOperationProfilesShape(value: Record<string, unknown>): boolean {
+  return (
+    Array.isArray(value.operationProfiles) &&
+    value.operationProfiles.every(
+      (entry) => isRecord(entry) && typeof entry.id === 'string' && typeof entry.actionId === 'string',
     )
   );
 }

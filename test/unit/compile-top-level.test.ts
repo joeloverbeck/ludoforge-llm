@@ -68,4 +68,64 @@ describe('compile top-level actions/triggers/end conditions', () => {
       true,
     );
   });
+
+  it('preserves turnFlow contracts when declared', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-flow-pass-through', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: {
+          factions: ['us', 'arvn', 'nva', 'vc'],
+          overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' as const }],
+        },
+        optionMatrix: [{ first: 'event' as const, second: ['operation', 'operationPlusSpecialActivity'] as const }],
+        passRewards: [
+          { factionClass: 'coin', resource: 'arvnResources', amount: 3 },
+          { factionClass: 'insurgent', resource: 'factionResource', amount: 1 },
+        ],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
+      },
+      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef !== null, true);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.gameDef?.turnFlow?.cardLifecycle.played, 'played:none');
+    assert.deepEqual(result.gameDef?.turnFlow?.durationWindows, ['card', 'nextCard', 'coup', 'campaign']);
+  });
+
+  it('returns blocking diagnostics for malformed turnFlow metadata', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-flow-invalid', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none' },
+        eligibility: { factions: ['us'], overrideWindows: [] },
+      },
+      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+
+    const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING' &&
+          diagnostic.path === 'doc.turnFlow.optionMatrix',
+      ),
+      true,
+    );
+  });
 });

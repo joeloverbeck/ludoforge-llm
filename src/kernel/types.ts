@@ -285,10 +285,55 @@ export interface GameDef {
   readonly tokenTypes: readonly TokenTypeDef[];
   readonly setup: readonly EffectAST[];
   readonly turnStructure: TurnStructure;
+  readonly turnFlow?: TurnFlowDef;
   readonly actions: readonly ActionDef[];
   readonly triggers: readonly TriggerDef[];
   readonly endConditions: readonly EndCondition[];
   readonly scoring?: ScoringDef;
+}
+
+export type TurnFlowDuration = 'card' | 'nextCard' | 'coup' | 'campaign';
+
+export type TurnFlowActionClass =
+  | 'pass'
+  | 'event'
+  | 'operation'
+  | 'limitedOperation'
+  | 'operationPlusSpecialActivity';
+
+export interface TurnFlowCardLifecycleDef {
+  readonly played: string;
+  readonly lookahead: string;
+  readonly leader: string;
+}
+
+export interface TurnFlowEligibilityOverrideWindowDef {
+  readonly id: string;
+  readonly duration: TurnFlowDuration;
+}
+
+export interface TurnFlowEligibilityDef {
+  readonly factions: readonly string[];
+  readonly overrideWindows: readonly TurnFlowEligibilityOverrideWindowDef[];
+}
+
+export interface TurnFlowOptionMatrixRowDef {
+  readonly first: 'event' | 'operation' | 'operationPlusSpecialActivity';
+  readonly second: readonly TurnFlowActionClass[];
+}
+
+export interface TurnFlowPassRewardDef {
+  readonly factionClass: string;
+  readonly resource: string;
+  readonly amount: number;
+}
+
+export interface TurnFlowDef {
+  readonly cardLifecycle: TurnFlowCardLifecycleDef;
+  readonly eligibility: TurnFlowEligibilityDef;
+  readonly optionMatrix: readonly TurnFlowOptionMatrixRowDef[];
+  readonly passRewards: readonly TurnFlowPassRewardDef[];
+  readonly durationWindows: readonly TurnFlowDuration[];
 }
 
 export type DataAssetKind = 'map' | 'scenario' | 'pieceCatalog';

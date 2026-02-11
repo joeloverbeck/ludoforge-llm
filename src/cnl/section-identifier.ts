@@ -8,6 +8,7 @@ export const CANONICAL_SECTION_KEYS = [
   'tokenTypes',
   'setup',
   'turnStructure',
+  'turnFlow',
   'actions',
   'triggers',
   'endConditions',
@@ -135,6 +136,9 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isTurnStructureShape(value)) {
     matches.push('turnStructure');
   }
+  if (isTurnFlowShape(value)) {
+    matches.push('turnFlow');
+  }
   if (isGlobalVarsShape(value)) {
     matches.push('globalVars');
     matches.push('perPlayerVars');
@@ -172,6 +176,16 @@ function isConstantsShape(value: Record<string, unknown>): boolean {
 
 function isTurnStructureShape(value: Record<string, unknown>): boolean {
   return Array.isArray(value.phases) && typeof value.activePlayerOrder === 'string';
+}
+
+function isTurnFlowShape(value: Record<string, unknown>): boolean {
+  return (
+    isRecord(value.cardLifecycle) &&
+    isRecord(value.eligibility) &&
+    Array.isArray(value.optionMatrix) &&
+    Array.isArray(value.passRewards) &&
+    Array.isArray(value.durationWindows)
+  );
 }
 
 function isDataAssetsShape(value: Record<string, unknown>): boolean {

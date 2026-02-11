@@ -61,6 +61,7 @@
       "items": { "$ref": "#/definitions/effectAST" }
     },
     "turnStructure": { "$ref": "#/definitions/turnStructure" },
+    "turnFlow": { "$ref": "#/definitions/turnFlowDef" },
     "actions": {
       "type": "array",
       "items": { "$ref": "#/definitions/actionDef" }
@@ -645,6 +646,77 @@
       "properties": {
         "phases": { "type": "array", "items": { "$ref": "#/definitions/phaseDef" } },
         "activePlayerOrder": { "enum": ["roundRobin", "fixed"] }
+      }
+    },
+    "turnFlowDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cardLifecycle", "eligibility", "optionMatrix", "passRewards", "durationWindows"],
+      "properties": {
+        "cardLifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["played", "lookahead", "leader"],
+          "properties": {
+            "played": { "type": "string" },
+            "lookahead": { "type": "string" },
+            "leader": { "type": "string" }
+          }
+        },
+        "eligibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["factions", "overrideWindows"],
+          "properties": {
+            "factions": { "type": "array", "items": { "type": "string" } },
+            "overrideWindows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "duration"],
+                "properties": {
+                  "id": { "type": "string" },
+                  "duration": { "enum": ["card", "nextCard", "coup", "campaign"] }
+                }
+              }
+            }
+          }
+        },
+        "optionMatrix": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["first", "second"],
+            "properties": {
+              "first": { "enum": ["event", "operation", "operationPlusSpecialActivity"] },
+              "second": {
+                "type": "array",
+                "items": {
+                  "enum": ["pass", "event", "operation", "limitedOperation", "operationPlusSpecialActivity"]
+                }
+              }
+            }
+          }
+        },
+        "passRewards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["factionClass", "resource", "amount"],
+            "properties": {
+              "factionClass": { "type": "string" },
+              "resource": { "type": "string" },
+              "amount": { "type": "number" }
+            }
+          }
+        },
+        "durationWindows": {
+          "type": "array",
+          "items": { "enum": ["card", "nextCard", "coup", "campaign"] }
+        }
       }
     },
     "actionDef": {

@@ -70,6 +70,50 @@ export interface GameSpecDataAsset {
   readonly payload: unknown;
 }
 
+export type GameSpecTurnFlowDuration = 'card' | 'nextCard' | 'coup' | 'campaign';
+
+export type GameSpecTurnFlowActionClass =
+  | 'pass'
+  | 'event'
+  | 'operation'
+  | 'limitedOperation'
+  | 'operationPlusSpecialActivity';
+
+export interface GameSpecTurnFlowCardLifecycle {
+  readonly played: string;
+  readonly lookahead: string;
+  readonly leader: string;
+}
+
+export interface GameSpecTurnFlowEligibilityOverrideWindow {
+  readonly id: string;
+  readonly duration: GameSpecTurnFlowDuration;
+}
+
+export interface GameSpecTurnFlowEligibility {
+  readonly factions: readonly string[];
+  readonly overrideWindows: readonly GameSpecTurnFlowEligibilityOverrideWindow[];
+}
+
+export interface GameSpecTurnFlowOptionMatrixRow {
+  readonly first: 'event' | 'operation' | 'operationPlusSpecialActivity';
+  readonly second: readonly GameSpecTurnFlowActionClass[];
+}
+
+export interface GameSpecTurnFlowPassReward {
+  readonly factionClass: string;
+  readonly resource: string;
+  readonly amount: number;
+}
+
+export interface GameSpecTurnFlow {
+  readonly cardLifecycle: GameSpecTurnFlowCardLifecycle;
+  readonly eligibility: GameSpecTurnFlowEligibility;
+  readonly optionMatrix: readonly GameSpecTurnFlowOptionMatrixRow[];
+  readonly passRewards: readonly GameSpecTurnFlowPassReward[];
+  readonly durationWindows: readonly GameSpecTurnFlowDuration[];
+}
+
 export interface GameSpecDoc {
   readonly metadata: GameSpecMetadata | null;
   readonly constants: Readonly<Record<string, number>> | null;
@@ -80,6 +124,7 @@ export interface GameSpecDoc {
   readonly tokenTypes: readonly GameSpecTokenTypeDef[] | null;
   readonly setup: readonly GameSpecEffect[] | null;
   readonly turnStructure: GameSpecTurnStructure | null;
+  readonly turnFlow: GameSpecTurnFlow | null;
   readonly actions: readonly GameSpecActionDef[] | null;
   readonly triggers: readonly GameSpecTriggerDef[] | null;
   readonly endConditions: readonly GameSpecEndCondition[] | null;
@@ -96,6 +141,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     tokenTypes: null,
     setup: null,
     turnStructure: null,
+    turnFlow: null,
     actions: null,
     triggers: null,
     endConditions: null,

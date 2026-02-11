@@ -46,6 +46,16 @@ const fullGameDef = {
     phases: [{ id: 'main', onEnter: [{ addVar: { scope: 'global', var: 'round', delta: 1 } }] }],
     activePlayerOrder: 'roundRobin',
   },
+  turnFlow: {
+    cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+    eligibility: {
+      factions: ['us', 'arvn', 'nva', 'vc'],
+      overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+    },
+    optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
+    passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: 3 }],
+    durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+  },
   actions: [
     {
       id: 'playCard',
@@ -239,6 +249,19 @@ describe('top-level runtime schemas', () => {
 
     assert.equal(result.success, false);
     assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'globalVars.0.init'));
+  });
+
+  it('fails on invalid turnFlow duration with actionable nested path', () => {
+    const result = GameDefSchema.safeParse({
+      ...fullGameDef,
+      turnFlow: {
+        ...fullGameDef.turnFlow,
+        durationWindows: ['card', 'season'],
+      },
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'turnFlow.durationWindows.1'));
   });
 
   it('enforces strict top-level object policy', () => {

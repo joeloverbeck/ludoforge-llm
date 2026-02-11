@@ -145,6 +145,57 @@ describe('validateGameSpec structural rules', () => {
     ]);
   });
 
+  it('accepts a valid optional turnFlow section', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: {
+          factions: ['us', 'arvn', 'nva', 'vc'],
+          overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+        },
+        optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
+        passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: 3 }],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+    });
+
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path.startsWith('doc.turnFlow')), false);
+  });
+
+  it('reports malformed turnFlow with explicit nested paths', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: '', leader: 'leader:none' },
+        eligibility: {
+          factions: ['us', ''],
+          overrideWindows: [{ id: 'window-a', duration: 'season' }],
+        },
+        optionMatrix: [{ first: 'event', second: ['operation', 'invalid'] }],
+        passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: '3' }],
+        durationWindows: ['campaign', 'epoch'],
+      },
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnFlow.eligibility.overrideWindows.0.duration'),
+      true,
+    );
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnFlow.optionMatrix.0.second.1'),
+      true,
+    );
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnFlow.passRewards.0.amount'),
+      true,
+    );
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnFlow.durationWindows.1'),
+      true,
+    );
+  });
+
   it('reports missing phase reference in action with alternatives', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

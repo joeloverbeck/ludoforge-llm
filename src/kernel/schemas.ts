@@ -519,6 +519,68 @@ export const DataAssetEnvelopeSchema = z
   })
   .strict();
 
+export const TurnFlowDurationSchema = z.union([
+  z.literal('card'),
+  z.literal('nextCard'),
+  z.literal('coup'),
+  z.literal('campaign'),
+]);
+
+export const TurnFlowActionClassSchema = z.union([
+  z.literal('pass'),
+  z.literal('event'),
+  z.literal('operation'),
+  z.literal('limitedOperation'),
+  z.literal('operationPlusSpecialActivity'),
+]);
+
+export const TurnFlowCardLifecycleSchema = z
+  .object({
+    played: StringSchema.min(1),
+    lookahead: StringSchema.min(1),
+    leader: StringSchema.min(1),
+  })
+  .strict();
+
+export const TurnFlowEligibilityOverrideWindowSchema = z
+  .object({
+    id: StringSchema.min(1),
+    duration: TurnFlowDurationSchema,
+  })
+  .strict();
+
+export const TurnFlowEligibilitySchema = z
+  .object({
+    factions: z.array(StringSchema.min(1)),
+    overrideWindows: z.array(TurnFlowEligibilityOverrideWindowSchema),
+  })
+  .strict();
+
+export const TurnFlowOptionMatrixRowSchema = z
+  .object({
+    first: z.union([z.literal('event'), z.literal('operation'), z.literal('operationPlusSpecialActivity')]),
+    second: z.array(TurnFlowActionClassSchema),
+  })
+  .strict();
+
+export const TurnFlowPassRewardSchema = z
+  .object({
+    factionClass: StringSchema.min(1),
+    resource: StringSchema.min(1),
+    amount: NumberSchema,
+  })
+  .strict();
+
+export const TurnFlowSchema = z
+  .object({
+    cardLifecycle: TurnFlowCardLifecycleSchema,
+    eligibility: TurnFlowEligibilitySchema,
+    optionMatrix: z.array(TurnFlowOptionMatrixRowSchema),
+    passRewards: z.array(TurnFlowPassRewardSchema),
+    durationWindows: z.array(TurnFlowDurationSchema),
+  })
+  .strict();
+
 export const GameDefSchema = z
   .object({
     metadata: z
@@ -535,6 +597,7 @@ export const GameDefSchema = z
     tokenTypes: z.array(TokenTypeDefSchema),
     setup: z.array(EffectASTSchema),
     turnStructure: TurnStructureSchema,
+    turnFlow: TurnFlowSchema.optional(),
     actions: z.array(ActionDefSchema),
     triggers: z.array(TriggerDefSchema),
     endConditions: z.array(EndConditionSchema),

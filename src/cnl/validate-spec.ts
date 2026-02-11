@@ -12,10 +12,25 @@ const VARIABLE_KEYS = ['name', 'type', 'init', 'min', 'max'] as const;
 const ZONE_KEYS = ['id', 'owner', 'visibility', 'ordering', 'adjacentTo'] as const;
 const ACTION_KEYS = ['id', 'actor', 'phase', 'params', 'pre', 'cost', 'effects', 'limits'] as const;
 const TURN_STRUCTURE_KEYS = ['phases', 'activePlayerOrder'] as const;
+const TURN_FLOW_KEYS = ['cardLifecycle', 'eligibility', 'optionMatrix', 'passRewards', 'durationWindows'] as const;
+const TURN_FLOW_CARD_LIFECYCLE_KEYS = ['played', 'lookahead', 'leader'] as const;
+const TURN_FLOW_ELIGIBILITY_KEYS = ['factions', 'overrideWindows'] as const;
+const TURN_FLOW_OVERRIDE_WINDOW_KEYS = ['id', 'duration'] as const;
+const TURN_FLOW_OPTION_MATRIX_ROW_KEYS = ['first', 'second'] as const;
+const TURN_FLOW_PASS_REWARD_KEYS = ['factionClass', 'resource', 'amount'] as const;
 const PHASE_KEYS = ['id', 'onEnter', 'onExit'] as const;
 const TRIGGER_KEYS = ['id', 'event', 'when', 'match', 'effects'] as const;
 const TRIGGER_EVENT_KEYS = ['type', 'phase', 'action', 'zone'] as const;
 const END_CONDITION_KEYS = ['when', 'result'] as const;
+const TURN_FLOW_DURATION_VALUES: readonly string[] = ['card', 'nextCard', 'coup', 'campaign'];
+const TURN_FLOW_ACTION_CLASS_VALUES: readonly string[] = [
+  'pass',
+  'event',
+  'operation',
+  'limitedOperation',
+  'operationPlusSpecialActivity',
+];
+const TURN_FLOW_FIRST_ACTION_VALUES: readonly string[] = ['event', 'operation', 'operationPlusSpecialActivity'];
 
 export interface ValidateGameSpecOptions {
   readonly sourceMap?: GameSpecSourceMap;
@@ -38,6 +53,7 @@ export function validateGameSpec(
   const zoneIds = validateZones(doc, diagnostics);
   const actionIds = validateActions(doc, diagnostics);
   const phaseIds = validateTurnStructure(doc, diagnostics);
+  validateTurnFlow(doc, diagnostics);
 
   validateCrossReferences(doc, zoneIds, actionIds, phaseIds, diagnostics);
   validateDuplicateIdentifiers(doc, diagnostics);
@@ -482,6 +498,222 @@ function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[]): rea
   }
 
   return uniqueSorted(collectedPhaseIds);
+}
+
+function validateTurnFlow(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
+  if (doc.turnFlow === null) {
+    return;
+  }
+
+  if (!isRecord(doc.turnFlow)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_TURN_FLOW_SHAPE_INVALID',
+      path: 'doc.turnFlow',
+      severity: 'error',
+      message: 'turnFlow must be an object when declared.',
+      suggestion: 'Provide turnFlow.cardLifecycle, eligibility, optionMatrix, passRewards, and durationWindows.',
+    });
+    return;
+  }
+
+  validateUnknownKeys(doc.turnFlow, TURN_FLOW_KEYS, 'doc.turnFlow', diagnostics, 'turnFlow');
+
+  const cardLifecycle = doc.turnFlow.cardLifecycle;
+  if (!isRecord(cardLifecycle)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_TURN_FLOW_CARD_LIFECYCLE_INVALID',
+      path: 'doc.turnFlow.cardLifecycle',
+      severity: 'error',
+      message: 'turnFlow.cardLifecycle must be an object.',
+      suggestion: 'Provide cardLifecycle.played, cardLifecycle.lookahead, and cardLifecycle.leader.',
+    });
+  } else {
+    validateUnknownKeys(cardLifecycle, TURN_FLOW_CARD_LIFECYCLE_KEYS, 'doc.turnFlow.cardLifecycle', diagnostics, 'cardLifecycle');
+    for (const key of TURN_FLOW_CARD_LIFECYCLE_KEYS) {
+      validateIdentifierField(
+        cardLifecycle,
+        key,
+        `doc.turnFlow.cardLifecycle.${key}`,
+        diagnostics,
+        `turnFlow.cardLifecycle.${key}`,
+      );
+    }
+  }
+
+  const eligibility = doc.turnFlow.eligibility;
+  if (!isRecord(eligibility)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_TURN_FLOW_ELIGIBILITY_INVALID',
+      path: 'doc.turnFlow.eligibility',
+      severity: 'error',
+      message: 'turnFlow.eligibility must be an object.',
+      suggestion: 'Provide eligibility.factions and eligibility.overrideWindows.',
+    });
+  } else {
+    validateUnknownKeys(eligibility, TURN_FLOW_ELIGIBILITY_KEYS, 'doc.turnFlow.eligibility', diagnostics, 'eligibility');
+
+    if (!Array.isArray(eligibility.factions)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_TURN_FLOW_ELIGIBILITY_FACTIONS_INVALID',
+        path: 'doc.turnFlow.eligibility.factions',
+        severity: 'error',
+        message: 'turnFlow.eligibility.factions must be an array of non-empty strings.',
+        suggestion: 'Set eligibility.factions to faction identifiers in deterministic order.',
+      });
+    } else {
+      for (const [index, faction] of eligibility.factions.entries()) {
+        if (typeof faction !== 'string' || faction.trim() === '') {
+          diagnostics.push({
+            code: 'CNL_VALIDATOR_TURN_FLOW_ELIGIBILITY_FACTIONS_INVALID',
+            path: `doc.turnFlow.eligibility.factions.${index}`,
+            severity: 'error',
+            message: 'Each eligibility faction must be a non-empty string.',
+            suggestion: 'Replace invalid faction value with a non-empty identifier.',
+          });
+        }
+      }
+    }
+
+    if (!Array.isArray(eligibility.overrideWindows)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_TURN_FLOW_OVERRIDE_WINDOWS_INVALID',
+        path: 'doc.turnFlow.eligibility.overrideWindows',
+        severity: 'error',
+        message: 'turnFlow.eligibility.overrideWindows must be an array.',
+        suggestion: 'Set overrideWindows to an array of { id, duration } objects.',
+      });
+    } else {
+      for (const [index, windowDef] of eligibility.overrideWindows.entries()) {
+        const basePath = `doc.turnFlow.eligibility.overrideWindows.${index}`;
+        if (!isRecord(windowDef)) {
+          diagnostics.push({
+            code: 'CNL_VALIDATOR_TURN_FLOW_OVERRIDE_WINDOW_SHAPE_INVALID',
+            path: basePath,
+            severity: 'error',
+            message: 'Each override window must be an object.',
+            suggestion: 'Set override window entries to { id, duration } objects.',
+          });
+          continue;
+        }
+        validateUnknownKeys(windowDef, TURN_FLOW_OVERRIDE_WINDOW_KEYS, basePath, diagnostics, 'override window');
+        validateIdentifierField(windowDef, 'id', `${basePath}.id`, diagnostics, 'override window id');
+        validateEnumField(
+          windowDef,
+          'duration',
+          TURN_FLOW_DURATION_VALUES,
+          basePath,
+          diagnostics,
+          'override window',
+        );
+      }
+    }
+  }
+
+  if (!Array.isArray(doc.turnFlow.optionMatrix)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_TURN_FLOW_OPTION_MATRIX_INVALID',
+      path: 'doc.turnFlow.optionMatrix',
+      severity: 'error',
+      message: 'turnFlow.optionMatrix must be an array.',
+      suggestion: 'Set optionMatrix to rows of { first, second } action classes.',
+    });
+  } else {
+    for (const [index, row] of doc.turnFlow.optionMatrix.entries()) {
+      const basePath = `doc.turnFlow.optionMatrix.${index}`;
+      if (!isRecord(row)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_TURN_FLOW_OPTION_MATRIX_ROW_INVALID',
+          path: basePath,
+          severity: 'error',
+          message: 'Each optionMatrix row must be an object.',
+          suggestion: 'Set optionMatrix rows to { first, second }.',
+        });
+        continue;
+      }
+      validateUnknownKeys(row, TURN_FLOW_OPTION_MATRIX_ROW_KEYS, basePath, diagnostics, 'optionMatrix row');
+      validateEnumField(row, 'first', TURN_FLOW_FIRST_ACTION_VALUES, basePath, diagnostics, 'optionMatrix row');
+
+      if (!Array.isArray(row.second)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_TURN_FLOW_OPTION_MATRIX_SECOND_INVALID',
+          path: `${basePath}.second`,
+          severity: 'error',
+          message: 'optionMatrix.second must be an array of action classes.',
+          suggestion: `Use one or more values from: ${TURN_FLOW_ACTION_CLASS_VALUES.join(', ')}.`,
+        });
+      } else {
+        for (const [secondIndex, actionClass] of row.second.entries()) {
+          if (typeof actionClass !== 'string' || !TURN_FLOW_ACTION_CLASS_VALUES.includes(actionClass)) {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_TURN_FLOW_OPTION_MATRIX_SECOND_INVALID',
+              path: `${basePath}.second.${secondIndex}`,
+              severity: 'error',
+              message: 'optionMatrix.second contains an invalid action class.',
+              suggestion: `Use one of: ${TURN_FLOW_ACTION_CLASS_VALUES.join(', ')}.`,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  if (!Array.isArray(doc.turnFlow.passRewards)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_TURN_FLOW_PASS_REWARDS_INVALID',
+      path: 'doc.turnFlow.passRewards',
+      severity: 'error',
+      message: 'turnFlow.passRewards must be an array.',
+      suggestion: 'Set passRewards to entries of { factionClass, resource, amount }.',
+    });
+  } else {
+    for (const [index, reward] of doc.turnFlow.passRewards.entries()) {
+      const basePath = `doc.turnFlow.passRewards.${index}`;
+      if (!isRecord(reward)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_TURN_FLOW_PASS_REWARD_SHAPE_INVALID',
+          path: basePath,
+          severity: 'error',
+          message: 'Each pass reward must be an object.',
+          suggestion: 'Set pass reward entries to { factionClass, resource, amount }.',
+        });
+        continue;
+      }
+      validateUnknownKeys(reward, TURN_FLOW_PASS_REWARD_KEYS, basePath, diagnostics, 'pass reward');
+      validateIdentifierField(reward, 'factionClass', `${basePath}.factionClass`, diagnostics, 'pass reward factionClass');
+      validateIdentifierField(reward, 'resource', `${basePath}.resource`, diagnostics, 'pass reward resource');
+      if (!isFiniteNumber(reward.amount)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_TURN_FLOW_PASS_REWARD_AMOUNT_INVALID',
+          path: `${basePath}.amount`,
+          severity: 'error',
+          message: 'pass reward amount must be a finite number.',
+          suggestion: 'Set amount to a finite numeric value.',
+        });
+      }
+    }
+  }
+
+  if (!Array.isArray(doc.turnFlow.durationWindows)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_TURN_FLOW_DURATION_WINDOWS_INVALID',
+      path: 'doc.turnFlow.durationWindows',
+      severity: 'error',
+      message: 'turnFlow.durationWindows must be an array of duration values.',
+      suggestion: `Use values from: ${TURN_FLOW_DURATION_VALUES.join(', ')}.`,
+    });
+  } else {
+    for (const [index, duration] of doc.turnFlow.durationWindows.entries()) {
+      if (typeof duration !== 'string' || !TURN_FLOW_DURATION_VALUES.includes(duration)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_TURN_FLOW_DURATION_WINDOWS_INVALID',
+          path: `doc.turnFlow.durationWindows.${index}`,
+          severity: 'error',
+          message: 'durationWindows contains an invalid duration value.',
+          suggestion: `Use one of: ${TURN_FLOW_DURATION_VALUES.join(', ')}.`,
+        });
+      }
+    }
+  }
 }
 
 function validateCrossReferences(

@@ -17,6 +17,7 @@ import type {
   TokenTypeDef,
   TriggerDef,
   TriggerEvent,
+  TurnFlowDef,
   TurnStructure,
   VariableDef,
   MapPayload,
@@ -168,6 +169,7 @@ function compileExpandedDoc(doc: GameSpecDoc, diagnostics: Diagnostic[]): GameDe
 
   const setup = lowerEffectsWithDiagnostics(doc.setup ?? [], ownershipByBase, diagnostics, 'doc.setup');
   const turnStructure = lowerTurnStructure(doc.turnStructure, ownershipByBase, diagnostics);
+  const turnFlow = lowerTurnFlow(doc.turnFlow, diagnostics);
   const actions = lowerActions(doc.actions, ownershipByBase, diagnostics);
   const triggers = lowerTriggers(doc.triggers ?? [], ownershipByBase, diagnostics);
   const endConditions = lowerEndConditions(doc.endConditions, ownershipByBase, diagnostics);
@@ -181,10 +183,97 @@ function compileExpandedDoc(doc: GameSpecDoc, diagnostics: Diagnostic[]): GameDe
     tokenTypes: lowerTokenTypes(effectiveTokenTypes, diagnostics),
     setup,
     turnStructure,
+    ...(turnFlow === undefined ? {} : { turnFlow }),
     actions,
     triggers,
     endConditions,
   };
+}
+
+function lowerTurnFlow(rawTurnFlow: GameSpecDoc['turnFlow'], diagnostics: Diagnostic[]): TurnFlowDef | undefined {
+  if (rawTurnFlow === null) {
+    return undefined;
+  }
+
+  if (!isRecord(rawTurnFlow)) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_TURN_FLOW_INVALID',
+      path: 'doc.turnFlow',
+      severity: 'error',
+      message: 'turnFlow must be an object when declared.',
+      suggestion: 'Provide a turnFlow object with required contract fields.',
+    });
+    return undefined;
+  }
+
+  const cardLifecycle = rawTurnFlow.cardLifecycle;
+  if (!isRecord(cardLifecycle)) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
+      path: 'doc.turnFlow.cardLifecycle',
+      severity: 'error',
+      message: 'turnFlow.cardLifecycle is required and must be an object.',
+      suggestion: 'Define cardLifecycle.played, cardLifecycle.lookahead, and cardLifecycle.leader.',
+    });
+  }
+
+  const eligibility = rawTurnFlow.eligibility;
+  if (!isRecord(eligibility)) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
+      path: 'doc.turnFlow.eligibility',
+      severity: 'error',
+      message: 'turnFlow.eligibility is required and must be an object.',
+      suggestion: 'Define eligibility.factions and eligibility.overrideWindows.',
+    });
+  }
+
+  if (!Array.isArray(rawTurnFlow.optionMatrix)) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
+      path: 'doc.turnFlow.optionMatrix',
+      severity: 'error',
+      message: 'turnFlow.optionMatrix is required and must be an array.',
+      suggestion: 'Define optionMatrix rows for first/second eligible action classes.',
+    });
+  }
+
+  if (!Array.isArray(rawTurnFlow.passRewards)) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
+      path: 'doc.turnFlow.passRewards',
+      severity: 'error',
+      message: 'turnFlow.passRewards is required and must be an array.',
+      suggestion: 'Define pass reward entries keyed by faction class.',
+    });
+  }
+
+  if (!Array.isArray(rawTurnFlow.durationWindows)) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
+      path: 'doc.turnFlow.durationWindows',
+      severity: 'error',
+      message: 'turnFlow.durationWindows is required and must be an array.',
+      suggestion: 'Declare supported duration windows such as card/nextCard/coup/campaign.',
+    });
+  }
+
+  if (
+    !isRecord(cardLifecycle) ||
+    typeof cardLifecycle.played !== 'string' ||
+    typeof cardLifecycle.lookahead !== 'string' ||
+    typeof cardLifecycle.leader !== 'string' ||
+    !isRecord(eligibility) ||
+    !Array.isArray(eligibility.factions) ||
+    !Array.isArray(eligibility.overrideWindows) ||
+    !Array.isArray(rawTurnFlow.optionMatrix) ||
+    !Array.isArray(rawTurnFlow.passRewards) ||
+    !Array.isArray(rawTurnFlow.durationWindows)
+  ) {
+    return undefined;
+  }
+
+  return rawTurnFlow as TurnFlowDef;
 }
 
 function deriveSectionsFromDataAssets(

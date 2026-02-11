@@ -209,6 +209,8 @@ function mergeSection(
       return mergeSingletonConstants(doc, section, value, diagnostics);
     case 'turnStructure':
       return mergeSingletonTurnStructure(doc, section, value, diagnostics);
+    case 'turnFlow':
+      return mergeSingletonTurnFlow(doc, section, value, diagnostics);
     case 'dataAssets':
     case 'globalVars':
     case 'perPlayerVars':
@@ -279,6 +281,26 @@ function mergeSingletonTurnStructure(
   }
 
   (doc as MutableGameSpecDoc).turnStructure = asObjectOrNull(value) as MutableGameSpecDoc['turnStructure'];
+  return buildAnchoredPaths(section, value);
+}
+
+function mergeSingletonTurnFlow(
+  doc: GameSpecDoc,
+  section: 'turnFlow',
+  value: unknown,
+  diagnostics: Diagnostic[],
+): readonly string[] {
+  if (doc.turnFlow !== null) {
+    diagnostics.push({
+      code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
+      path: 'doc.turnFlow',
+      severity: 'warning',
+      message: 'Duplicate singleton section "turnFlow" ignored; first definition wins.',
+    });
+    return [];
+  }
+
+  (doc as MutableGameSpecDoc).turnFlow = asObjectOrNull(value) as MutableGameSpecDoc['turnFlow'];
   return buildAnchoredPaths(section, value);
 }
 

@@ -930,8 +930,26 @@ export const PlayerScoreSchema = z
   })
   .strict();
 
+export const VictoryTerminalRankingEntrySchema = z
+  .object({
+    faction: StringSchema.min(1),
+    margin: NumberSchema,
+    rank: IntegerSchema,
+    tieBreakKey: StringSchema.min(1),
+  })
+  .strict();
+
+export const VictoryTerminalMetadataSchema = z
+  .object({
+    timing: VictoryTimingSchema,
+    checkpointId: StringSchema.min(1),
+    winnerFaction: StringSchema.min(1),
+    ranking: z.array(VictoryTerminalRankingEntrySchema).optional(),
+  })
+  .strict();
+
 export const TerminalResultSchema = z.union([
-  z.object({ type: z.literal('win'), player: IntegerSchema }).strict(),
+  z.object({ type: z.literal('win'), player: IntegerSchema, victory: VictoryTerminalMetadataSchema.optional() }).strict(),
   z.object({ type: z.literal('lossAll') }).strict(),
   z.object({ type: z.literal('draw') }).strict(),
   z.object({ type: z.literal('score'), ranking: z.array(PlayerScoreSchema) }).strict(),

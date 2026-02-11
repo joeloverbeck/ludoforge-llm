@@ -125,4 +125,121 @@ describe('terminalResult', () => {
 
     assert.deepEqual(terminalResult(def, createBaseState()), { type: 'draw' });
   });
+
+  it('resolves during-coup victory checkpoints before endConditions', () => {
+    const def: GameDef = {
+      ...createBaseDef(),
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: ['us', 'nva', 'arvn'], overrideWindows: [] },
+        optionMatrix: [],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      victory: {
+        checkpoints: [
+          {
+            id: 'us-threshold',
+            faction: 'us',
+            timing: 'duringCoup',
+            when: { op: '>', left: { ref: 'gvar', var: 'done' }, right: 0 },
+          },
+        ],
+      },
+      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+    const state = createBaseState({
+      globalVars: { done: 1 },
+      playerCount: 3,
+      turnFlow: {
+        factionOrder: ['us', 'nva', 'arvn'],
+        eligibility: { us: true, nva: true, arvn: true },
+        currentCard: {
+          firstEligible: 'us',
+          secondEligible: 'nva',
+          actedFactions: [],
+          passedFactions: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+      },
+    });
+
+    assert.deepEqual(terminalResult(def, state), {
+      type: 'win',
+      player: asPlayerId(0),
+      victory: {
+        timing: 'duringCoup',
+        checkpointId: 'us-threshold',
+        winnerFaction: 'us',
+      },
+    });
+  });
+
+  it('emits deterministic final-coup margin ranking metadata', () => {
+    const def: GameDef = {
+      ...createBaseDef(),
+      globalVars: [
+        { name: 'finalCoup', type: 'int', init: 0, min: 0, max: 1 },
+        { name: 'mUs', type: 'int', init: 0, min: -99, max: 99 },
+        { name: 'mNva', type: 'int', init: 0, min: -99, max: 99 },
+        { name: 'mArvn', type: 'int', init: 0, min: -99, max: 99 },
+      ],
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: ['us', 'nva', 'arvn'], overrideWindows: [] },
+        optionMatrix: [],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      victory: {
+        checkpoints: [
+          {
+            id: 'final-coup',
+            faction: 'us',
+            timing: 'finalCoup',
+            when: { op: '==', left: { ref: 'gvar', var: 'finalCoup' }, right: 1 },
+          },
+        ],
+        margins: [
+          { faction: 'us', value: { ref: 'gvar', var: 'mUs' } },
+          { faction: 'nva', value: { ref: 'gvar', var: 'mNva' } },
+          { faction: 'arvn', value: { ref: 'gvar', var: 'mArvn' } },
+        ],
+        ranking: { order: 'desc' },
+      },
+      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+    const state = createBaseState({
+      globalVars: { finalCoup: 1, mUs: 8, mNva: 8, mArvn: 2 },
+      playerCount: 3,
+      turnFlow: {
+        factionOrder: ['us', 'nva', 'arvn'],
+        eligibility: { us: true, nva: true, arvn: true },
+        currentCard: {
+          firstEligible: 'us',
+          secondEligible: 'nva',
+          actedFactions: [],
+          passedFactions: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+      },
+    });
+
+    assert.deepEqual(terminalResult(def, state), {
+      type: 'win',
+      player: asPlayerId(1),
+      victory: {
+        timing: 'finalCoup',
+        checkpointId: 'final-coup',
+        winnerFaction: 'nva',
+        ranking: [
+          { faction: 'nva', margin: 8, rank: 1, tieBreakKey: 'nva' },
+          { faction: 'us', margin: 8, rank: 2, tieBreakKey: 'us' },
+          { faction: 'arvn', margin: 2, rank: 3, tieBreakKey: 'arvn' },
+        ],
+      },
+    });
+  });
 });

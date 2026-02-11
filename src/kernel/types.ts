@@ -703,8 +703,22 @@ export interface PlayerScore {
   readonly score: number;
 }
 
+export interface VictoryTerminalRankingEntry {
+  readonly faction: string;
+  readonly margin: number;
+  readonly rank: number;
+  readonly tieBreakKey: string;
+}
+
+export interface VictoryTerminalMetadata {
+  readonly timing: VictoryTiming;
+  readonly checkpointId: string;
+  readonly winnerFaction: string;
+  readonly ranking?: readonly VictoryTerminalRankingEntry[];
+}
+
 export type TerminalResult =
-  | { readonly type: 'win'; readonly player: PlayerId }
+  | { readonly type: 'win'; readonly player: PlayerId; readonly victory?: VictoryTerminalMetadata }
   | { readonly type: 'lossAll' }
   | { readonly type: 'draw' }
   | { readonly type: 'score'; readonly ranking: readonly PlayerScore[] };

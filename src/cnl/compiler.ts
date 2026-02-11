@@ -25,6 +25,8 @@ import type {
   VariableDef,
   MapPayload,
   PieceCatalogPayload,
+  EventCardDef,
+  EventCardSetPayload,
 } from '../kernel/types.js';
 import { validateGameDef } from '../kernel/validate-gamedef.js';
 import { lowerConditionNode, lowerQueryNode } from './compile-conditions.js';
@@ -196,6 +198,7 @@ function compileExpandedDoc(doc: GameSpecDoc, diagnostics: Diagnostic[]): GameDe
     actions,
     triggers,
     endConditions,
+    ...(derivedFromAssets.eventCards === undefined ? {} : { eventCards: derivedFromAssets.eventCards }),
   };
 }
 
@@ -839,6 +842,7 @@ function deriveSectionsFromDataAssets(
 ): {
   readonly zones: GameSpecDoc['zones'];
   readonly tokenTypes: GameSpecDoc['tokenTypes'];
+  readonly eventCards?: readonly EventCardDef[];
 } {
   if (doc.dataAssets === null) {
     return { zones: null, tokenTypes: null };
@@ -851,6 +855,11 @@ function deriveSectionsFromDataAssets(
     readonly pieceCatalogAssetId?: string;
     readonly path: string;
     readonly entityId: string;
+  }> = [];
+  const eventCardSetAssets: Array<{
+    readonly id: string;
+    readonly payload: EventCardSetPayload;
+    readonly path: string;
   }> = [];
 
   for (const [index, rawAsset] of doc.dataAssets.entries()) {
@@ -899,6 +908,15 @@ function deriveSectionsFromDataAssets(
         ...(pieceCatalogAssetId === undefined ? {} : { pieceCatalogAssetId }),
         path: `${pathPrefix}.payload`,
         entityId: validated.asset.id,
+      });
+      continue;
+    }
+
+    if (validated.asset.kind === 'eventCardSet') {
+      eventCardSetAssets.push({
+        id: validated.asset.id,
+        payload: validated.asset.payload as EventCardSetPayload,
+        path: `${pathPrefix}.payload.cards`,
       });
     }
   }
@@ -954,7 +972,184 @@ function deriveSectionsFromDataAssets(
           ),
         }));
 
-  return { zones, tokenTypes };
+  let eventCards: readonly EventCardDef[] | undefined;
+  if (eventCardSetAssets.length === 1) {
+    const [selectedSet] = eventCardSetAssets;
+    if (selectedSet !== undefined) {
+      eventCards = lowerEventCards(selectedSet.payload.cards, diagnostics, selectedSet.path);
+    }
+  } else if (eventCardSetAssets.length > 1) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_EVENT_CARD_SET_AMBIGUOUS',
+      path: 'doc.dataAssets',
+      severity: 'error',
+      message: `Multiple eventCardSet assets found (${eventCardSetAssets.length}); compiler cannot determine a single canonical event-card source.`,
+      suggestion: 'Keep one eventCardSet asset in the compiled document.',
+      alternatives: eventCardSetAssets
+        .map((asset) => asset.id)
+        .sort((left, right) => left.localeCompare(right)),
+    });
+  }
+
+  return {
+    zones,
+    tokenTypes,
+    ...(eventCards === undefined ? {} : { eventCards }),
+  };
+}
+
+function lowerEventCards(
+  cards: readonly EventCardDef[],
+  diagnostics: Diagnostic[],
+  pathPrefix: string,
+): readonly EventCardDef[] {
+  const idFirstIndexByNormalized = new Map<string, number>();
+  const explicitOrderFirstIndex = new Map<number, number>();
+
+  const lowered = cards.map((card, index) => {
+    const cardPath = `${pathPrefix}.${index}`;
+    const normalizedId = normalizeIdentifier(card.id);
+    const existingIdIndex = idFirstIndexByNormalized.get(normalizedId);
+    if (existingIdIndex !== undefined) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_EVENT_CARD_ID_DUPLICATE',
+        path: `${cardPath}.id`,
+        severity: 'error',
+        message: `Duplicate event card id "${card.id}".`,
+        suggestion: 'Use unique event card ids inside one eventCardSet payload.',
+      });
+    } else {
+      idFirstIndexByNormalized.set(normalizedId, index);
+    }
+
+    if (card.order !== undefined) {
+      const existingOrderIndex = explicitOrderFirstIndex.get(card.order);
+      if (existingOrderIndex !== undefined) {
+        diagnostics.push({
+          code: 'CNL_COMPILER_EVENT_CARD_ORDER_AMBIGUOUS',
+          path: `${cardPath}.order`,
+          severity: 'error',
+          message: `Event card order ${card.order} is declared more than once in the same eventCardSet.`,
+          suggestion: 'Use unique order values or omit order and rely on deterministic id ordering.',
+        });
+      } else {
+        explicitOrderFirstIndex.set(card.order, index);
+      }
+    }
+
+    const unshaded =
+      card.unshaded === undefined
+        ? undefined
+        : lowerEventCardSide(card.unshaded, diagnostics, `${cardPath}.unshaded`);
+    const shaded = card.shaded === undefined ? undefined : lowerEventCardSide(card.shaded, diagnostics, `${cardPath}.shaded`);
+
+    return {
+      index,
+      card: {
+        ...card,
+        ...(unshaded === undefined ? {} : { unshaded }),
+        ...(shaded === undefined ? {} : { shaded }),
+      },
+    };
+  });
+
+  lowered.sort((left, right) => {
+    const leftOrder = left.card.order;
+    const rightOrder = right.card.order;
+    if (leftOrder !== undefined && rightOrder !== undefined) {
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+    } else if (leftOrder !== undefined) {
+      return -1;
+    } else if (rightOrder !== undefined) {
+      return 1;
+    }
+
+    const byId = normalizeIdentifier(left.card.id).localeCompare(normalizeIdentifier(right.card.id));
+    if (byId !== 0) {
+      return byId;
+    }
+
+    return left.index - right.index;
+  });
+
+  return lowered.map((entry) => entry.card);
+}
+
+function lowerEventCardSide(
+  side: NonNullable<EventCardDef['unshaded']>,
+  diagnostics: Diagnostic[],
+  pathPrefix: string,
+): NonNullable<EventCardDef['unshaded']> {
+  if (side.branches === undefined) {
+    return side;
+  }
+
+  const idFirstIndexByNormalized = new Map<string, number>();
+  const explicitOrderFirstIndex = new Map<number, number>();
+  const loweredBranches = side.branches.map((branch, index) => {
+    const branchPath = `${pathPrefix}.branches.${index}`;
+    const normalizedId = normalizeIdentifier(branch.id);
+    const existingIdIndex = idFirstIndexByNormalized.get(normalizedId);
+    if (existingIdIndex !== undefined) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_EVENT_CARD_BRANCH_ID_DUPLICATE',
+        path: `${branchPath}.id`,
+        severity: 'error',
+        message: `Duplicate event card branch id "${branch.id}" within one side.`,
+        suggestion: 'Use unique branch ids inside each event card side.',
+      });
+    } else {
+      idFirstIndexByNormalized.set(normalizedId, index);
+    }
+
+    if (branch.order !== undefined) {
+      const existingOrderIndex = explicitOrderFirstIndex.get(branch.order);
+      if (existingOrderIndex !== undefined) {
+        diagnostics.push({
+          code: 'CNL_COMPILER_EVENT_CARD_BRANCH_ORDER_AMBIGUOUS',
+          path: `${branchPath}.order`,
+          severity: 'error',
+          message: `Event card branch order ${branch.order} is declared more than once within one side.`,
+          suggestion: 'Use unique branch order values or omit order and rely on deterministic id ordering.',
+        });
+      } else {
+        explicitOrderFirstIndex.set(branch.order, index);
+      }
+    }
+
+    return {
+      index,
+      branch,
+    };
+  });
+
+  loweredBranches.sort((left, right) => {
+    const leftOrder = left.branch.order;
+    const rightOrder = right.branch.order;
+    if (leftOrder !== undefined && rightOrder !== undefined) {
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+    } else if (leftOrder !== undefined) {
+      return -1;
+    } else if (rightOrder !== undefined) {
+      return 1;
+    }
+
+    const byId = normalizeIdentifier(left.branch.id).localeCompare(normalizeIdentifier(right.branch.id));
+    if (byId !== 0) {
+      return byId;
+    }
+
+    return left.index - right.index;
+  });
+
+  return {
+    ...side,
+    branches: loweredBranches.map((entry) => entry.branch),
+  };
 }
 
 function selectAssetById<TPayload>(

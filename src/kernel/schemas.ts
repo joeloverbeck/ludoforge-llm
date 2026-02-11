@@ -851,6 +851,7 @@ export const GameDefSchema = z
     triggers: z.array(TriggerDefSchema),
     endConditions: z.array(EndConditionSchema),
     scoring: ScoringDefSchema.optional(),
+    eventCards: z.array(EventCardSchema).optional(),
   })
   .strict();
 

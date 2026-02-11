@@ -319,6 +319,138 @@ describe('compile pipeline integration', () => {
     );
   });
 
+  it('lowers embedded event-card sets into GameDef with deterministic card and branch ordering', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-event-card-set',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: fitl-events-foundation',
+      '    kind: eventCardSet',
+      '    payload:',
+      '      cards:',
+      '        - id: card-b',
+      '          title: B Card',
+      '          sideMode: single',
+      '          order: 2',
+      '          unshaded:',
+      '            branches:',
+      '              - id: z',
+      '                order: 2',
+      '                effects: [{ op: z }]',
+      '              - id: a',
+      '                order: 1',
+      '                effects: [{ op: a }]',
+      '        - id: card-a',
+      '          title: A Card',
+      '          sideMode: single',
+      '          order: 1',
+      '          unshaded:',
+      '            effects: [{ op: alpha }]',
+      '```',
+      '```yaml',
+      'zones:',
+      '  - id: board:none',
+      '    owner: none',
+      '    visibility: public',
+      '    ordering: set',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      '  activePlayerOrder: roundRobin',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'endConditions:',
+      '  - when: { op: "==", left: 1, right: 1 }',
+      '    result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assert.deepEqual(compiled.diagnostics, []);
+    assert.notEqual(compiled.gameDef, null);
+    assert.deepEqual(compiled.gameDef?.eventCards?.map((card) => card.id), ['card-a', 'card-b']);
+    assert.deepEqual(compiled.gameDef?.eventCards?.[1]?.unshaded?.branches?.map((branch) => branch.id), ['a', 'z']);
+  });
+
+  it('rejects ambiguous duplicate ordering declarations in embedded event-card lowering', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-event-card-set-duplicate-order',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: fitl-events-foundation',
+      '    kind: eventCardSet',
+      '    payload:',
+      '      cards:',
+      '        - id: card-a',
+      '          title: A Card',
+      '          sideMode: single',
+      '          order: 1',
+      '          unshaded:',
+      '            effects: [{ op: alpha }]',
+      '        - id: card-b',
+      '          title: B Card',
+      '          sideMode: single',
+      '          order: 1',
+      '          unshaded:',
+      '            effects: [{ op: beta }]',
+      '```',
+      '```yaml',
+      'zones:',
+      '  - id: board:none',
+      '    owner: none',
+      '    visibility: public',
+      '    ordering: set',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      '  activePlayerOrder: roundRobin',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'endConditions:',
+      '  - when: { op: "==", left: 1, right: 1 }',
+      '    result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_EVENT_CARD_ORDER_AMBIGUOUS' &&
+          diagnostic.path === 'doc.dataAssets.0.payload.cards.1.order',
+      ),
+      true,
+    );
+  });
+
   it('runs parse/validate/expand/compile/validate deterministically for malformed fixture', () => {
     const markdown = readCompilerFixture('compile-malformed.md');
 

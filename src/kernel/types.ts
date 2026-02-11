@@ -303,6 +303,7 @@ export interface GameDef {
   readonly triggers: readonly TriggerDef[];
   readonly endConditions: readonly EndCondition[];
   readonly scoring?: ScoringDef;
+  readonly eventCards?: readonly EventCardDef[];
 }
 
 export type TurnFlowDuration = 'card' | 'nextCard' | 'coup' | 'campaign';

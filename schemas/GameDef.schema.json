@@ -78,7 +78,11 @@
       "type": "array",
       "items": { "$ref": "#/definitions/endCondition" }
     },
-    "scoring": { "$ref": "#/definitions/scoringDef" }
+    "scoring": { "$ref": "#/definitions/scoringDef" },
+    "eventCards": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/eventCardDef" }
+    }
   },
   "definitions": {
     "playerSel": {
@@ -979,6 +983,113 @@
       "properties": {
         "when": { "$ref": "#/definitions/conditionAST" },
         "result": { "$ref": "#/definitions/terminalResultDef" }
+      }
+    },
+    "eventCardEffectNode": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "eventCardTargetCardinality": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["n"],
+          "properties": {
+            "n": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max"],
+          "properties": {
+            "min": { "type": "integer", "minimum": 0 },
+            "max": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "eventCardTargetDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "selector", "cardinality"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "selector": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "cardinality": { "$ref": "#/definitions/eventCardTargetCardinality" }
+      }
+    },
+    "eventCardLastingEffectDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "duration", "effect"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "duration": { "enum": ["card", "nextCard", "coup", "campaign"] },
+        "effect": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "eventCardBranchDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "order": { "type": "integer", "minimum": 0 },
+        "effects": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/eventCardEffectNode" }
+        },
+        "targets": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/eventCardTargetDef" }
+        },
+        "lastingEffects": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/eventCardLastingEffectDef" }
+        }
+      }
+    },
+    "eventCardSideDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "effects": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/eventCardEffectNode" }
+        },
+        "branches": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/eventCardBranchDef" }
+        },
+        "targets": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/eventCardTargetDef" }
+        },
+        "lastingEffects": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/eventCardLastingEffectDef" }
+        }
+      }
+    },
+    "eventCardDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "sideMode"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "sideMode": { "enum": ["single", "dual"] },
+        "order": { "type": "integer", "minimum": 0 },
+        "unshaded": { "$ref": "#/definitions/eventCardSideDef" },
+        "shaded": { "$ref": "#/definitions/eventCardSideDef" }
       }
     },
     "scoringDef": {

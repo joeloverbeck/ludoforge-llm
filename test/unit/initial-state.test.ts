@@ -5,8 +5,10 @@ import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
 import {
+  asActionId,
   asPhaseId,
   asPlayerId,
+  asZoneId,
   computeFullHash,
   createZobristTable,
   initialState,
@@ -128,5 +130,55 @@ describe('initialState', () => {
 
     assert.deepEqual(serialized, fixture);
     assert.equal(JSON.stringify(serialized), JSON.stringify(fixture));
+  });
+
+  it('reveals played and lookahead slots from the inferred draw pile when turnFlow lifecycle is declared', () => {
+    const def: GameDef = {
+      metadata: { id: 'lifecycle-start', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+      setup: [
+        { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+        { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },
+        { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+      ],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: [], overrideWindows: [] },
+        optionMatrix: [],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      actions: [
+        {
+          id: asActionId('pass'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const state = initialState(def, 1, 2);
+    assert.equal(state.zones['played:none']?.length, 1);
+    assert.equal(state.zones['lookahead:none']?.length, 1);
+    assert.equal(state.zones['deck:none']?.length, 1);
+    assert.equal(state.zones['played:none']?.[0]?.id, 'tok_card_2');
+    assert.equal(state.zones['lookahead:none']?.[0]?.id, 'tok_card_1');
   });
 });

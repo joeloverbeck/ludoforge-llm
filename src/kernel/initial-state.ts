@@ -2,6 +2,7 @@ import { asPlayerId } from './branded.js';
 import { applyEffects } from './effects.js';
 import { createRng } from './prng.js';
 import { buildAdjacencyGraph } from './spatial.js';
+import { applyTurnFlowInitialReveal } from './turn-flow-lifecycle.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import type { GameDef, GameState } from './types.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
@@ -43,10 +44,11 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     bindings: {},
     moveParams: {},
   });
+  const lifecycleResult = applyTurnFlowInitialReveal(def, setupResult.state);
   const maxDepth = def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
   const turnStartResult = dispatchTriggers(
     def,
-    setupResult.state,
+    lifecycleResult.state,
     setupResult.rng,
     { type: 'turnStart' },
     0,

@@ -1,9 +1,10 @@
 import { asPlayerId } from './branded.js';
 import { resetPhaseUsage, resetTurnUsage } from './action-usage.js';
 import { legalMoves } from './legal-moves.js';
+import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import { terminalResult } from './terminal.js';
-import type { GameDef, GameState, TriggerEvent } from './types.js';
+import type { GameDef, GameState, TriggerEvent, TriggerLogEntry } from './types.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
 
@@ -11,6 +12,7 @@ const dispatchLifecycleEvent = (
   def: GameDef,
   state: GameState,
   event: TriggerEvent,
+  triggerLogCollector?: TriggerLogEntry[],
 ): GameState => {
   const result = dispatchTriggers(
     def,
@@ -21,6 +23,10 @@ const dispatchLifecycleEvent = (
     def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH,
     [],
   );
+
+  if (triggerLogCollector !== undefined) {
+    triggerLogCollector.push(...result.triggerLog);
+  }
 
   return {
     ...result.state,
@@ -45,14 +51,18 @@ const nextActivePlayer = (def: GameDef, state: GameState): GameState['activePlay
   return asPlayerId((Number(state.activePlayer) + 1) % state.playerCount);
 };
 
-export const advancePhase = (def: GameDef, state: GameState): GameState => {
+export const advancePhase = (
+  def: GameDef,
+  state: GameState,
+  triggerLogCollector?: TriggerLogEntry[],
+): GameState => {
   const phases = def.turnStructure.phases;
   const currentPhaseIndex = phases.findIndex((phase) => phase.id === state.currentPhase);
   if (currentPhaseIndex < 0) {
     throw new Error(`advancePhase could not find current phase ${String(state.currentPhase)} in turnStructure.phases`);
   }
 
-  let nextState = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase });
+  let nextState = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector);
   const isLastPhase = currentPhaseIndex === phases.length - 1;
 
   if (!isLastPhase) {
@@ -65,10 +75,15 @@ export const advancePhase = (def: GameDef, state: GameState): GameState => {
       ...nextState,
       currentPhase: nextPhase.id,
     });
-    return dispatchLifecycleEvent(def, nextState, { type: 'phaseEnter', phase: nextPhase.id });
+    return dispatchLifecycleEvent(def, nextState, { type: 'phaseEnter', phase: nextPhase.id }, triggerLogCollector);
   }
 
-  nextState = dispatchLifecycleEvent(def, nextState, { type: 'turnEnd' });
+  nextState = dispatchLifecycleEvent(def, nextState, { type: 'turnEnd' }, triggerLogCollector);
+  const turnFlowLifecycle = applyTurnFlowCardBoundary(def, nextState);
+  nextState = turnFlowLifecycle.state;
+  if (triggerLogCollector !== undefined) {
+    triggerLogCollector.push(...turnFlowLifecycle.traceEntries);
+  }
   const newActivePlayer = nextActivePlayer(def, nextState);
   const initialPhase = firstPhaseId(def);
   const rolledState = resetPhaseUsage(
@@ -79,11 +94,15 @@ export const advancePhase = (def: GameDef, state: GameState): GameState => {
       currentPhase: initialPhase,
     }),
   );
-  const afterTurnStart = dispatchLifecycleEvent(def, rolledState, { type: 'turnStart' });
-  return dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: initialPhase });
+  const afterTurnStart = dispatchLifecycleEvent(def, rolledState, { type: 'turnStart' }, triggerLogCollector);
+  return dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, triggerLogCollector);
 };
 
-export const advanceToDecisionPoint = (def: GameDef, state: GameState): GameState => {
+export const advanceToDecisionPoint = (
+  def: GameDef,
+  state: GameState,
+  triggerLogCollector?: TriggerLogEntry[],
+): GameState => {
   const phaseCount = def.turnStructure.phases.length;
   if (phaseCount <= 0) {
     throw new Error('advanceToDecisionPoint requires at least one phase in turnStructure.phases');
@@ -98,7 +117,7 @@ export const advanceToDecisionPoint = (def: GameDef, state: GameState): GameStat
       throw new Error(`STALL_LOOP_DETECTED: exceeded maxAutoAdvancesPerMove=${maxAutoAdvancesPerMove}`);
     }
 
-    nextState = advancePhase(def, nextState);
+    nextState = advancePhase(def, nextState, triggerLogCollector);
     advances += 1;
   }
 

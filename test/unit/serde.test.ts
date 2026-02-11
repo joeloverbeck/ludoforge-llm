@@ -56,7 +56,15 @@ const traceFixture: GameTrace = {
       },
       legalMoveCount: 2,
       deltas: [],
-      triggerFirings: [],
+      triggerFirings: [
+        {
+          kind: 'turnFlowLifecycle',
+          step: 'promoteLookaheadToPlayed',
+          slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          before: { playedCardId: 'card-1', lookaheadCardId: 'card-2', leaderCardId: null },
+          after: { playedCardId: 'card-2', lookaheadCardId: 'card-3', leaderCardId: null },
+        },
+      ],
     },
   ],
   finalState: gameStateFixture,

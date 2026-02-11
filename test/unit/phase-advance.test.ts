@@ -7,8 +7,11 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   asTriggerId,
+  asZoneId,
   terminalResult,
+  type TriggerLogEntry,
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
@@ -216,5 +219,61 @@ describe('phase advancement', () => {
     assert.equal(next.currentPhase, state.currentPhase);
     assert.equal(next.turnCount, state.turnCount);
     assert.equal(next.activePlayer, state.activePlayer);
+  });
+
+  it('runs card boundary lifecycle promotion and coup handoff at turn boundary when turnFlow is configured', () => {
+    const def: GameDef = {
+      metadata: { id: 'phase-lifecycle', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: [], overrideWindows: [] },
+        optionMatrix: [],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      actions: [],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState({
+        currentPhase: asPhaseId('main'),
+        zones: {
+          'deck:none': [{ id: asTokenId('tok_card_2'), type: 'card', props: { isCoup: false } }],
+          'played:none': [{ id: asTokenId('tok_card_0'), type: 'card', props: { isCoup: true } }],
+          'lookahead:none': [{ id: asTokenId('tok_card_1'), type: 'card', props: { isCoup: false } }],
+          'leader:none': [],
+        },
+      }),
+      globalVars: {},
+      actionUsage: {},
+    };
+    const logs: TriggerLogEntry[] = [];
+
+    const next = advancePhase(def, state, logs);
+
+    assert.equal(next.turnCount, 1);
+    assert.equal(next.activePlayer, asPlayerId(1));
+    assert.equal(next.zones['leader:none']?.[0]?.id, 'tok_card_0');
+    assert.equal(next.zones['played:none']?.[0]?.id, 'tok_card_1');
+    assert.equal(next.zones['lookahead:none']?.[0]?.id, 'tok_card_2');
+
+    const lifecycleSteps = logs
+      .filter((entry): entry is Extract<TriggerLogEntry, { kind: 'turnFlowLifecycle' }> => entry.kind === 'turnFlowLifecycle')
+      .map((entry) => entry.step);
+    assert.deepEqual(lifecycleSteps, ['coupToLeader', 'coupHandoff', 'promoteLookaheadToPlayed', 'revealLookahead']);
   });
 });

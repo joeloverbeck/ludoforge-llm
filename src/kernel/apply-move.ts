@@ -4,7 +4,7 @@ import { legalMoves } from './legal-moves.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
-import type { ActionDef, ApplyMoveResult, GameDef, GameState, Move, MoveParamValue, Rng } from './types.js';
+import type { ActionDef, ApplyMoveResult, GameDef, GameState, Move, MoveParamValue, Rng, TriggerLogEntry } from './types.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
@@ -148,7 +148,8 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
     ...triggerResult.state,
     rng: triggerResult.rng.state,
   };
-  const progressedState = advanceToDecisionPoint(def, stateWithRng);
+  const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
+  const progressedState = advanceToDecisionPoint(def, stateWithRng, lifecycleAndAdvanceLog);
 
   const stateWithHash = {
     ...progressedState,
@@ -157,6 +158,6 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
 
   return {
     state: stateWithHash,
-    triggerFirings: triggerResult.triggerLog,
+    triggerFirings: [...triggerResult.triggerLog, ...lifecycleAndAdvanceLog],
   };
 };

@@ -672,7 +672,48 @@ export const TriggerTruncatedSchema = z
   })
   .strict();
 
-export const TriggerLogEntrySchema = z.union([TriggerFiringSchema, TriggerTruncatedSchema]);
+export const TurnFlowLifecycleStepSchema = z.union([
+  z.literal('initialRevealPlayed'),
+  z.literal('initialRevealLookahead'),
+  z.literal('promoteLookaheadToPlayed'),
+  z.literal('revealLookahead'),
+  z.literal('coupToLeader'),
+  z.literal('coupHandoff'),
+]);
+
+export const TurnFlowLifecycleTraceEntrySchema = z
+  .object({
+    kind: z.literal('turnFlowLifecycle'),
+    step: TurnFlowLifecycleStepSchema,
+    slots: z
+      .object({
+        played: StringSchema.min(1),
+        lookahead: StringSchema.min(1),
+        leader: StringSchema.min(1),
+      })
+      .strict(),
+    before: z
+      .object({
+        playedCardId: StringSchema.min(1).nullable(),
+        lookaheadCardId: StringSchema.min(1).nullable(),
+        leaderCardId: StringSchema.min(1).nullable(),
+      })
+      .strict(),
+    after: z
+      .object({
+        playedCardId: StringSchema.min(1).nullable(),
+        lookaheadCardId: StringSchema.min(1).nullable(),
+        leaderCardId: StringSchema.min(1).nullable(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export const TriggerLogEntrySchema = z.union([
+  TriggerFiringSchema,
+  TriggerTruncatedSchema,
+  TurnFlowLifecycleTraceEntrySchema,
+]);
 
 export const MoveLogSchema = z
   .object({

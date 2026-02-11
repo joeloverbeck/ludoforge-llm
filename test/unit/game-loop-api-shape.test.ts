@@ -90,14 +90,22 @@ describe('game-loop API shape', () => {
     assert.equal(terminalResult(gameDefStub, gameStateStub), null);
   });
 
-  it('accepts fired and truncated trigger log entries via TriggerLogEntry union', () => {
+  it('accepts fired, truncated, and turnFlow lifecycle trigger log entries via TriggerLogEntry union', () => {
     const entries: readonly TriggerLogEntry[] = [
       { kind: 'fired', triggerId: asTriggerId('onStart'), event: { type: 'turnStart' }, depth: 0 },
       { kind: 'truncated', event: { type: 'actionResolved', action: asActionId('pass') }, depth: 3 },
+      {
+        kind: 'turnFlowLifecycle',
+        step: 'revealLookahead',
+        slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        before: { playedCardId: 'card-1', lookaheadCardId: null, leaderCardId: null },
+        after: { playedCardId: 'card-1', lookaheadCardId: 'card-2', leaderCardId: null },
+      },
     ];
 
     assert.equal(entries[0]?.kind, 'fired');
     assert.equal(entries[1]?.kind, 'truncated');
+    assert.equal(entries[2]?.kind, 'turnFlowLifecycle');
   });
 
   it('keeps ApplyMoveResult.triggerFirings typed as TriggerLogEntry[]', () => {

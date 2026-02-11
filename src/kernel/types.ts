@@ -502,7 +502,35 @@ export interface TriggerTruncated {
   readonly depth: number;
 }
 
-export type TriggerLogEntry = TriggerFiring | TriggerTruncated;
+export type TurnFlowLifecycleStep =
+  | 'initialRevealPlayed'
+  | 'initialRevealLookahead'
+  | 'promoteLookaheadToPlayed'
+  | 'revealLookahead'
+  | 'coupToLeader'
+  | 'coupHandoff';
+
+export interface TurnFlowLifecycleTraceEntry {
+  readonly kind: 'turnFlowLifecycle';
+  readonly step: TurnFlowLifecycleStep;
+  readonly slots: {
+    readonly played: string;
+    readonly lookahead: string;
+    readonly leader: string;
+  };
+  readonly before: {
+    readonly playedCardId: string | null;
+    readonly lookaheadCardId: string | null;
+    readonly leaderCardId: string | null;
+  };
+  readonly after: {
+    readonly playedCardId: string | null;
+    readonly lookaheadCardId: string | null;
+    readonly leaderCardId: string | null;
+  };
+}
+
+export type TriggerLogEntry = TriggerFiring | TriggerTruncated | TurnFlowLifecycleTraceEntry;
 
 export interface ApplyMoveResult {
   readonly state: GameState;

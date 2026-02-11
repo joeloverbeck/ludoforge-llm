@@ -1,4 +1,6 @@
 import * as assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 import { asZoneId, buildAdjacencyGraph, type ZoneDef, validateAdjacency } from '../../src/kernel/index.js';
@@ -10,6 +12,21 @@ const zone = (id: string, adjacentTo?: readonly string[]): ZoneDef => ({
   ordering: 'set',
   ...(adjacentTo ? { adjacentTo: adjacentTo.map((entry) => asZoneId(entry)) } : {}),
 });
+
+interface FitlMapPayload {
+  readonly spaces: ReadonlyArray<{
+    readonly id: string;
+    readonly adjacentTo: readonly string[];
+  }>;
+}
+
+const loadFitlMapZones = (): readonly ZoneDef[] => {
+  const distRelativeAssetPath = fileURLToPath(new URL('../../../data/fitl/map/foundation.v1.json', import.meta.url));
+  const sourceRelativeAssetPath = fileURLToPath(new URL('../../data/fitl/map/foundation.v1.json', import.meta.url));
+  const assetPath = existsSync(distRelativeAssetPath) ? distRelativeAssetPath : sourceRelativeAssetPath;
+  const asset = JSON.parse(readFileSync(assetPath, 'utf8')) as { readonly payload: FitlMapPayload };
+  return asset.payload.spaces.map((space) => zone(space.id, space.adjacentTo));
+};
 
 describe('spatial adjacency graph', () => {
   it('preserves symmetric declarations', () => {
@@ -95,5 +112,23 @@ describe('spatial adjacency graph', () => {
     const graph = buildAdjacencyGraph(zones);
 
     assert.deepEqual(graph.neighbors['a:none'], [asZoneId('b:none'), asZoneId('c:none')]);
+  });
+
+  it('builds canonical adjacency graph from FITL foundation map asset', () => {
+    const zones = loadFitlMapZones();
+    const graph = buildAdjacencyGraph(zones);
+    const diagnostics = validateAdjacency(graph, zones);
+
+    assert.equal(graph.zoneCount, 6);
+    assert.deepEqual(graph.neighbors['south_vietnam:none'], [
+      asZoneId('cambodia:none'),
+      asZoneId('hue:none'),
+      asZoneId('laos:none'),
+      asZoneId('north_vietnam:none'),
+    ]);
+    assert.equal(
+      diagnostics.some((diag) => diag.severity === 'error' && diag.code.startsWith('SPATIAL_')),
+      false,
+    );
   });
 });

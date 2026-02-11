@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "id": "fitl-map-foundation-valid",
+    "players": {
+      "min": 2,
+      "max": 4
+    }
+  },
+  "constants": {},
+  "globalVars": [],
+  "perPlayerVars": [],
+  "zones": [
+    {
+      "id": "cambodia:none",
+      "owner": "none",
+      "visibility": "public",
+      "ordering": "set",
+      "adjacentTo": ["south_vietnam:none"]
+    },
+    {
+      "id": "hue:none",
+      "owner": "none",
+      "visibility": "public",
+      "ordering": "set",
+      "adjacentTo": ["loc_ho_chi_minh_trail:none", "south_vietnam:none"]
+    },
+    {
+      "id": "laos:none",
+      "owner": "none",
+      "visibility": "public",
+      "ordering": "set",
+      "adjacentTo": ["north_vietnam:none", "south_vietnam:none"]
+    },
+    {
+      "id": "loc_ho_chi_minh_trail:none",
+      "owner": "none",
+      "visibility": "public",
+      "ordering": "set",
+      "adjacentTo": ["hue:none", "north_vietnam:none"]
+    },
+    {
+      "id": "north_vietnam:none",
+      "owner": "none",
+      "visibility": "public",
+      "ordering": "set",
+      "adjacentTo": ["laos:none", "loc_ho_chi_minh_trail:none", "south_vietnam:none"]
+    },
+    {
+      "id": "south_vietnam:none",
+      "owner": "none",
+      "visibility": "public",
+      "ordering": "set",
+      "adjacentTo": ["cambodia:none", "hue:none", "laos:none", "north_vietnam:none"]
+    }
+  ],
+  "tokenTypes": [],
+  "setup": [],
+  "turnStructure": {
+    "phases": [],
+    "activePlayerOrder": "roundRobin"
+  },
+  "actions": [],
+  "triggers": [],
+  "endConditions": []
+}

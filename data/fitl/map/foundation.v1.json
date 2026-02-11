@@ -1,0 +1,76 @@
+{
+  "id": "fitl-map-foundation",
+  "version": 1,
+  "kind": "map",
+  "payload": {
+    "spaces": [
+      {
+        "id": "cambodia:none",
+        "spaceType": "foreign-country",
+        "population": 0,
+        "econ": 1,
+        "terrainTags": ["jungle"],
+        "country": "cambodia",
+        "coastal": false,
+        "adjacentTo": ["south_vietnam:none"]
+      },
+      {
+        "id": "hue:none",
+        "spaceType": "city",
+        "population": 1,
+        "econ": 1,
+        "terrainTags": ["urban", "coastal"],
+        "country": "south-vietnam",
+        "coastal": true,
+        "adjacentTo": ["loc_ho_chi_minh_trail:none", "south_vietnam:none"]
+      },
+      {
+        "id": "laos:none",
+        "spaceType": "foreign-country",
+        "population": 0,
+        "econ": 0,
+        "terrainTags": ["jungle", "mountain"],
+        "country": "laos",
+        "coastal": false,
+        "adjacentTo": ["north_vietnam:none", "south_vietnam:none"]
+      },
+      {
+        "id": "loc_ho_chi_minh_trail:none",
+        "spaceType": "loc",
+        "population": 0,
+        "econ": 0,
+        "terrainTags": ["jungle", "trail"],
+        "country": "laos",
+        "coastal": false,
+        "adjacentTo": ["hue:none", "north_vietnam:none"]
+      },
+      {
+        "id": "north_vietnam:none",
+        "spaceType": "foreign-country",
+        "population": 0,
+        "econ": 1,
+        "terrainTags": ["mountain"],
+        "country": "north-vietnam",
+        "coastal": true,
+        "adjacentTo": ["laos:none", "loc_ho_chi_minh_trail:none", "south_vietnam:none"]
+      },
+      {
+        "id": "south_vietnam:none",
+        "spaceType": "province",
+        "population": 2,
+        "econ": 2,
+        "terrainTags": ["lowland"],
+        "country": "south-vietnam",
+        "coastal": true,
+        "adjacentTo": ["cambodia:none", "hue:none", "laos:none", "north_vietnam:none"]
+      }
+    ],
+    "provisionalAdjacency": [
+      {
+        "from": "cambodia:none",
+        "to": "south_vietnam:none",
+        "reason": "Placeholder edge retained from foundation gap-analysis notes."
+      }
+    ]
+  }
+}

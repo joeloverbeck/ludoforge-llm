@@ -1,8 +1,10 @@
 import * as assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 import { generateGrid, generateHex } from '../../src/cnl/index.js';
-import { buildAdjacencyGraph } from '../../src/kernel/index.js';
+import { asZoneId, buildAdjacencyGraph, type ZoneDef } from '../../src/kernel/index.js';
 
 const canonicalNeighbors = (
   neighbors: Readonly<Record<string, readonly string[]>>,
@@ -12,6 +14,27 @@ const canonicalNeighbors = (
       .sort((left, right) => left.localeCompare(right))
       .map((zoneId) => [zoneId, [...(neighbors[zoneId] ?? [])]]),
   );
+
+interface FitlMapPayload {
+  readonly spaces: ReadonlyArray<{
+    readonly id: string;
+    readonly adjacentTo: readonly string[];
+  }>;
+}
+
+const loadFitlMapZones = (): readonly ZoneDef[] => {
+  const distRelativeAssetPath = fileURLToPath(new URL('../../../data/fitl/map/foundation.v1.json', import.meta.url));
+  const sourceRelativeAssetPath = fileURLToPath(new URL('../../data/fitl/map/foundation.v1.json', import.meta.url));
+  const assetPath = existsSync(distRelativeAssetPath) ? distRelativeAssetPath : sourceRelativeAssetPath;
+  const asset = JSON.parse(readFileSync(assetPath, 'utf8')) as { readonly payload: FitlMapPayload };
+  return asset.payload.spaces.map((space) => ({
+    id: asZoneId(space.id),
+    owner: 'none',
+    visibility: 'public',
+    ordering: 'set',
+    adjacentTo: space.adjacentTo.map((adjacent) => asZoneId(adjacent)),
+  }));
+};
 
 describe('spatial topology golden coverage', () => {
   it('grid(3,3) has exact canonical zone ids and adjacency lists', () => {
@@ -56,6 +79,34 @@ describe('spatial topology golden coverage', () => {
         hex_1_n1: ['hex_0_0', 'hex_0_n1', 'hex_1_0'],
         hex_n1_0: ['hex_0_0', 'hex_0_n1', 'hex_n1_1'],
         hex_n1_1: ['hex_0_0', 'hex_0_1', 'hex_n1_0'],
+      },
+    );
+  });
+
+  it('fitl foundation map asset has exact canonical zone ids and adjacency lists', () => {
+    const zones = loadFitlMapZones();
+    const graph = buildAdjacencyGraph(zones);
+
+    assert.deepEqual(
+      zones.map((zone) => String(zone.id)),
+      [
+        'cambodia:none',
+        'hue:none',
+        'laos:none',
+        'loc_ho_chi_minh_trail:none',
+        'north_vietnam:none',
+        'south_vietnam:none',
+      ],
+    );
+    assert.deepEqual(
+      canonicalNeighbors(graph.neighbors as Readonly<Record<string, readonly string[]>>),
+      {
+        'cambodia:none': ['south_vietnam:none'],
+        'hue:none': ['loc_ho_chi_minh_trail:none', 'south_vietnam:none'],
+        'laos:none': ['north_vietnam:none', 'south_vietnam:none'],
+        'loc_ho_chi_minh_trail:none': ['hue:none', 'north_vietnam:none'],
+        'north_vietnam:none': ['laos:none', 'loc_ho_chi_minh_trail:none', 'south_vietnam:none'],
+        'south_vietnam:none': ['cambodia:none', 'hue:none', 'laos:none', 'north_vietnam:none'],
       },
     );
   });

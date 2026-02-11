@@ -54,8 +54,28 @@ export function validateAdjacency(graph: AdjacencyGraph, zones: readonly ZoneDef
 
   zones.forEach((zone, zoneIndex) => {
     const seen = new Set<ZoneId>();
+    const adjacentTo = zone.adjacentTo ?? [];
 
-    zone.adjacentTo?.forEach((adjacentZoneId, adjacentIndex) => {
+    for (let adjacentIndex = 1; adjacentIndex < adjacentTo.length; adjacentIndex += 1) {
+      const previous = adjacentTo[adjacentIndex - 1];
+      const current = adjacentTo[adjacentIndex];
+      if (previous === undefined || current === undefined) {
+        continue;
+      }
+
+      if (previous.localeCompare(current) > 0) {
+        diagnostics.push({
+          code: 'SPATIAL_NEIGHBORS_UNSORTED',
+          path: `zones[${zoneIndex}].adjacentTo[${adjacentIndex}]`,
+          severity: 'error',
+          message: `Zone "${zone.id}" adjacentTo entries must be lexicographically sorted.`,
+          suggestion: `Sort adjacentTo entries for "${zone.id}" in ascending lexicographic order.`,
+        });
+        break;
+      }
+    }
+
+    adjacentTo.forEach((adjacentZoneId, adjacentIndex) => {
       const path = `zones[${zoneIndex}].adjacentTo[${adjacentIndex}]`;
 
       if (!zoneSet.has(adjacentZoneId)) {

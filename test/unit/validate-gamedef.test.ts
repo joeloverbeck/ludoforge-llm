@@ -1,7 +1,16 @@
 import * as assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 import { type GameDef, validateGameDef } from '../../src/kernel/index.js';
+
+const loadFixtureGameDef = (fixtureName: string): GameDef => {
+  const distRelativeFixturePath = fileURLToPath(new URL(`../../../test/fixtures/gamedef/${fixtureName}`, import.meta.url));
+  const sourceRelativeFixturePath = fileURLToPath(new URL(`../fixtures/gamedef/${fixtureName}`, import.meta.url));
+  const fixturePath = existsSync(distRelativeFixturePath) ? distRelativeFixturePath : sourceRelativeFixturePath;
+  return JSON.parse(readFileSync(fixturePath, 'utf8')) as GameDef;
+};
 
 const createValidGameDef = (): GameDef =>
   ({
@@ -337,6 +346,21 @@ describe('validateGameDef constraints and warnings', () => {
     assert.equal(typeof diagnostic.suggestion, 'string');
   });
 
+  it('reports unsorted adjacency declarations with spatial diagnostics', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [{ ...base.zones[0], adjacentTo: ['market:none', 'deck:none'] }, base.zones[1]],
+    } as unknown as GameDef;
+
+    const diagnostic = validateGameDef(def).find((diag) => diag.code === 'SPATIAL_NEIGHBORS_UNSORTED');
+    assert.ok(diagnostic);
+    assert.equal(diagnostic.path, 'zones[0].adjacentTo[1]');
+    assert.equal(diagnostic.severity, 'error');
+    assert.equal(typeof diagnostic.message, 'string');
+    assert.equal(typeof diagnostic.suggestion, 'string');
+  });
+
   it('reports ownership mismatch for :none selector targeting player-owned zone', () => {
     const base = createValidGameDef();
     const def = {
@@ -357,6 +381,11 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('returns no diagnostics for fully valid game def', () => {
     const diagnostics = validateGameDef(createValidGameDef());
+    assert.deepEqual(diagnostics, []);
+  });
+
+  it('returns no diagnostics for FITL foundation map fixture', () => {
+    const diagnostics = validateGameDef(loadFixtureGameDef('fitl-map-foundation-valid.json'));
     assert.deepEqual(diagnostics, []);
   });
 });

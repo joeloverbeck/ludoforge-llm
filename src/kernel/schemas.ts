@@ -620,6 +620,9 @@ export const TurnFlowRuntimeCardStateSchema = z
     actedFactions: z.array(StringSchema.min(1)),
     passedFactions: z.array(StringSchema.min(1)),
     nonPassCount: NumberSchema,
+    firstActionClass: z
+      .union([z.literal('event'), z.literal('operation'), z.literal('operationPlusSpecialActivity')])
+      .nullable(),
   })
   .strict();
 

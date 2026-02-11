@@ -8,6 +8,32 @@ interface TurnFlowTransitionResult {
 
 const isPassAction = (move: Move): boolean => String(move.actionId) === 'pass';
 
+const isTurnFlowActionClass = (
+  value: string,
+): value is 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' =>
+  value === 'pass' ||
+  value === 'event' ||
+  value === 'operation' ||
+  value === 'limitedOperation' ||
+  value === 'operationPlusSpecialActivity';
+
+export const resolveTurnFlowActionClass = (move: Move): 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' | null => {
+  const actionId = String(move.actionId);
+  return isTurnFlowActionClass(actionId) ? actionId : null;
+};
+
+const normalizeFirstActionClass = (
+  actionClass: ReturnType<typeof resolveTurnFlowActionClass>,
+): 'event' | 'operation' | 'operationPlusSpecialActivity' | null => {
+  if (actionClass === 'limitedOperation') {
+    return 'operation';
+  }
+  if (actionClass === 'event' || actionClass === 'operation' || actionClass === 'operationPlusSpecialActivity') {
+    return actionClass;
+  }
+  return null;
+};
+
 const normalizeFactionOrder = (factions: readonly string[]): readonly string[] => {
   const seen = new Set<string>();
   const ordered: string[] = [];
@@ -59,6 +85,7 @@ const cardSnapshot = (card: TurnFlowRuntimeCardState) => ({
   actedFactions: card.actedFactions,
   passedFactions: card.passedFactions,
   nonPassCount: card.nonPassCount,
+  firstActionClass: card.firstActionClass,
 });
 
 const withActiveFromFirstEligible = (state: GameState, firstEligible: string | null): GameState => {
@@ -101,6 +128,7 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
         actedFactions: [],
         passedFactions: [],
         nonPassCount: 0,
+        firstActionClass: null,
       },
     },
   };
@@ -164,6 +192,11 @@ export const applyTurnFlowEligibilityAfterMove = (
     nonPassCount += 1;
   }
 
+  const moveClass = resolveTurnFlowActionClass(move);
+  const firstActionClass =
+    before.firstActionClass ??
+    (before.nonPassCount === 0 && moveClass !== 'pass' ? normalizeFirstActionClass(moveClass) : null);
+
   const activeCardCandidates = computeCandidates(runtime.factionOrder, runtime.eligibility, acted);
   const currentCard: TurnFlowRuntimeCardState = {
     firstEligible: activeCardCandidates.first,
@@ -171,6 +204,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     actedFactions: [...acted],
     passedFactions: [...passed],
     nonPassCount,
+    firstActionClass,
   };
 
   const rewardState =
@@ -214,6 +248,7 @@ export const applyTurnFlowEligibilityAfterMove = (
       actedFactions: [],
       passedFactions: [],
       nonPassCount: 0,
+      firstActionClass: null,
     };
     traceEntries.push({
       kind: 'turnFlowEligibility',

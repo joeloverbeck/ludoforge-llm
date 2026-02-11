@@ -467,6 +467,7 @@ export interface TurnFlowRuntimeCardState {
   readonly actedFactions: readonly string[];
   readonly passedFactions: readonly string[];
   readonly nonPassCount: number;
+  readonly firstActionClass: 'event' | 'operation' | 'operationPlusSpecialActivity' | null;
 }
 
 export interface TurnFlowRuntimeState {
@@ -555,6 +556,7 @@ export interface TurnFlowEligibilityTraceEntry {
     readonly actedFactions: readonly string[];
     readonly passedFactions: readonly string[];
     readonly nonPassCount: number;
+    readonly firstActionClass: 'event' | 'operation' | 'operationPlusSpecialActivity' | null;
   };
   readonly after: {
     readonly firstEligible: string | null;
@@ -562,6 +564,7 @@ export interface TurnFlowEligibilityTraceEntry {
     readonly actedFactions: readonly string[];
     readonly passedFactions: readonly string[];
     readonly nonPassCount: number;
+    readonly firstActionClass: 'event' | 'operation' | 'operationPlusSpecialActivity' | null;
   };
   readonly rewards?: readonly {
     readonly resource: string;

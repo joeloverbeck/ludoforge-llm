@@ -4,7 +4,7 @@ import { evalQuery } from './eval-query.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
-import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
+import { isActiveFactionEligibleForTurnFlow, resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue } from './types.js';
 
 function makeEvalContext(
@@ -42,6 +42,30 @@ function withinActionLimits(action: ActionDef, state: GameState): boolean {
   return true;
 }
 
+function isMoveAllowedByTurnFlowOptionMatrix(def: GameDef, state: GameState, move: Move): boolean {
+  const runtime = state.turnFlow;
+  if (runtime === undefined) {
+    return true;
+  }
+
+  const firstActionClass = runtime.currentCard.firstActionClass;
+  if (runtime.currentCard.nonPassCount !== 1 || firstActionClass === null) {
+    return true;
+  }
+
+  const moveClass = resolveTurnFlowActionClass(move);
+  if (moveClass === 'pass') {
+    return true;
+  }
+
+  const row = def.turnFlow?.optionMatrix.find((matrixRow) => matrixRow.first === firstActionClass);
+  if (row === undefined || moveClass === null) {
+    return row === undefined;
+  }
+
+  return row.second.includes(moveClass);
+}
+
 function enumerateParams(
   action: ActionDef,
   def: GameDef,
@@ -60,10 +84,14 @@ function enumerateParams(
     const params = Object.fromEntries(
       action.params.map((param) => [param.name, bindings[param.name] as MoveParamValue]),
     );
-    moves.push({
+    const move: Move = {
       actionId: action.id,
       params,
-    });
+    };
+    if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
+      return;
+    }
+    moves.push(move);
     return;
   }
 

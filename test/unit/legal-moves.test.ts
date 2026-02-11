@@ -160,10 +160,178 @@ describe('legalMoves', () => {
           actedFactions: [],
           passedFactions: [],
           nonPassCount: 0,
+          firstActionClass: null,
         },
       },
     };
 
     assert.deepEqual(legalMoves(createDef(), state), []);
+  });
+
+  it('applies option matrix gating to the second eligible faction after a first event action', () => {
+    const def: GameDef = {
+      ...createDef(),
+      metadata: { id: 'turnflow-matrix-event', players: { min: 3, max: 3 } },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
+        optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      actions: [
+        {
+          id: asActionId('pass'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('event'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('operation'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('limitedOperation'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('operationPlusSpecialActivity'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      playerCount: 3,
+      activePlayer: asPlayerId(1),
+      actionUsage: {},
+      turnFlow: {
+        factionOrder: ['0', '1', '2'],
+        eligibility: { '0': true, '1': true, '2': true },
+        currentCard: {
+          firstEligible: '1',
+          secondEligible: '2',
+          actedFactions: ['0'],
+          passedFactions: [],
+          nonPassCount: 1,
+          firstActionClass: 'event',
+        },
+      },
+    };
+
+    assert.deepEqual(
+      legalMoves(def, state).map((move) => move.actionId),
+      [asActionId('pass'), asActionId('operation'), asActionId('operationPlusSpecialActivity')],
+    );
+  });
+
+  it('allows only limited operations as second action when first-action class is operation', () => {
+    const def: GameDef = {
+      ...createDef(),
+      metadata: { id: 'turnflow-matrix-operation', players: { min: 3, max: 3 } },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
+        optionMatrix: [{ first: 'operation', second: ['limitedOperation'] }],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      actions: [
+        {
+          id: asActionId('pass'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('event'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('operation'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('limitedOperation'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      playerCount: 3,
+      activePlayer: asPlayerId(1),
+      actionUsage: {},
+      turnFlow: {
+        factionOrder: ['0', '1', '2'],
+        eligibility: { '0': true, '1': true, '2': true },
+        currentCard: {
+          firstEligible: '1',
+          secondEligible: '2',
+          actedFactions: ['0'],
+          passedFactions: [],
+          nonPassCount: 1,
+          firstActionClass: 'operation',
+        },
+      },
+    };
+
+    assert.deepEqual(legalMoves(def, state).map((move) => move.actionId), [asActionId('pass'), asActionId('limitedOperation')]);
   });
 });

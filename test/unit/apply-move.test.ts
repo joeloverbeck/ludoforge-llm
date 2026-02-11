@@ -397,4 +397,221 @@ describe('applyMove', () => {
       { '0': true, '1': false, '2': false, '3': true },
     );
   });
+
+  it('enforces operation-profile legality predicates before side effects', () => {
+    const def: GameDef = {
+      metadata: { id: 'operation-profile-legality', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [
+        { name: 'energy', type: 'int', init: 0, min: 0, max: 20 },
+        { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
+      ],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: { when: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 } },
+          cost: {},
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [{ setVar: { scope: 'global', var: 'score', value: 9 } }],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { energy: 1, score: 0, triggered: 0 },
+      actionUsage: {},
+    };
+    const snapshot = structuredClone(state);
+
+    assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), (error: unknown) => {
+      const details = error as Error & { reason?: unknown; metadata?: Record<string, unknown> };
+      assert.equal(details.reason, 'operation profile legality predicate failed');
+      assert.equal(details.metadata?.code, 'OPERATION_LEGALITY_FAILED');
+      return true;
+    });
+    assert.deepEqual(state, snapshot);
+  });
+
+  it('blocks operation execution when partial mode is forbid and cost validation fails', () => {
+    const def: GameDef = {
+      metadata: { id: 'operation-profile-cost-forbid', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [
+        { name: 'energy', type: 'int', init: 0, min: 0, max: 20 },
+        { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
+      ],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {
+            validate: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
+            spend: [{ addVar: { scope: 'global', var: 'energy', delta: -2 } }],
+          },
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [{ setVar: { scope: 'global', var: 'score', value: 9 } }],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { energy: 1, score: 0, triggered: 0 },
+      actionUsage: {},
+    };
+    const snapshot = structuredClone(state);
+
+    assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), (error: unknown) => {
+      const details = error as Error & { reason?: unknown; metadata?: Record<string, unknown> };
+      assert.equal(details.reason, 'operation profile cost validation failed');
+      assert.equal(details.metadata?.code, 'OPERATION_COST_BLOCKED');
+      assert.equal(details.metadata?.partialExecutionMode, 'forbid');
+      return true;
+    });
+    assert.deepEqual(state, snapshot);
+  });
+
+  it('allows partial operation execution when cost validation fails in allow mode', () => {
+    const def: GameDef = {
+      metadata: { id: 'operation-profile-cost-allow', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [
+        { name: 'energy', type: 'int', init: 0, min: 0, max: 20 },
+        { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
+      ],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {
+            validate: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
+            spend: [{ addVar: { scope: 'global', var: 'energy', delta: -2 } }],
+          },
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],
+          partialExecution: { mode: 'allow' },
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [{ setVar: { scope: 'global', var: 'score', value: 9 } }],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { energy: 1, score: 0, triggered: 0 },
+      actionUsage: {},
+    };
+
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
+    assert.equal(result.state.globalVars.energy, 1);
+    assert.equal(result.state.globalVars.score, 1);
+    assert.deepEqual(result.state.actionUsage.operate, { turnCount: 1, phaseCount: 1, gameCount: 1 });
+  });
+
+  it('executes operation-profile resolution stages in declared order', () => {
+    const def: GameDef = {
+      metadata: { id: 'operation-profile-stage-order', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'orderValue', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [
+            { effects: [{ setVar: { scope: 'global', var: 'orderValue', value: 1 } }] },
+            { effects: [{ addVar: { scope: 'global', var: 'orderValue', delta: 4 } }] },
+          ],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [{ setVar: { scope: 'global', var: 'orderValue', value: 99 } }],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { orderValue: 0 },
+      actionUsage: {},
+    };
+
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
+    assert.equal(result.state.globalVars.orderValue, 5);
+  });
 });

@@ -1,11 +1,25 @@
 import { incrementActionUsage } from './action-usage.js';
+import { evalCondition } from './eval-condition.js';
 import { applyEffects } from './effects.js';
 import { legalMoves } from './legal-moves.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { applyTurnFlowEligibilityAfterMove } from './turn-flow-eligibility.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
-import type { ActionDef, ApplyMoveResult, GameDef, GameState, Move, MoveParamValue, Rng, TriggerLogEntry } from './types.js';
+import type {
+  ActionDef,
+  ApplyMoveResult,
+  ConditionAST,
+  EffectAST,
+  GameDef,
+  GameState,
+  Move,
+  MoveParamValue,
+  OperationProfileDef,
+  Rng,
+  TriggerLogEntry,
+  TriggerEvent,
+} from './types.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
@@ -50,7 +64,48 @@ const isSameMove = (left: Move, right: Move): boolean =>
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
 
-const illegalMoveError = (move: Move, reason: string): Error => {
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  typeof value === 'object' && value !== null;
+
+const asCondition = (value: unknown): ConditionAST | undefined =>
+  isRecord(value) ? (value as ConditionAST) : undefined;
+
+const asEffects = (value: unknown): readonly EffectAST[] | undefined =>
+  Array.isArray(value) ? (value as readonly EffectAST[]) : undefined;
+
+interface OperationExecutionProfile {
+  readonly legality: ConditionAST | null;
+  readonly costValidation: ConditionAST | null;
+  readonly costSpend: readonly EffectAST[];
+  readonly resolutionStages: readonly (readonly EffectAST[])[];
+  readonly partialMode: 'forbid' | 'allow';
+}
+
+const resolveOperationProfile = (def: GameDef, action: ActionDef): OperationProfileDef | undefined =>
+  def.operationProfiles?.find((profile) => profile.actionId === action.id);
+
+const toOperationExecutionProfile = (action: ActionDef, profile: OperationProfileDef): OperationExecutionProfile => {
+  const legality = asCondition(profile.legality.when ?? profile.legality.condition ?? profile.legality.pre) ?? null;
+  const costValidation = asCondition(profile.cost.validate ?? profile.cost.when) ?? null;
+  const costSpend = asEffects(profile.cost.spend) ?? action.cost;
+  const resolvedStages = profile.resolution
+    .map((stage) => asEffects(stage.effects))
+    .filter((effects): effects is readonly EffectAST[] => effects !== undefined);
+
+  return {
+    legality,
+    costValidation,
+    costSpend,
+    resolutionStages: resolvedStages.length > 0 ? resolvedStages : [action.effects],
+    partialMode: profile.partialExecution.mode,
+  };
+};
+
+const illegalMoveError = (
+  move: Move,
+  reason: string,
+  metadata?: Readonly<Record<string, unknown>>,
+): Error => {
   const error = new Error(
     `Illegal move: actionId=${String(move.actionId)} reason=${reason} params=${JSON.stringify(move.params)}`,
   );
@@ -58,6 +113,7 @@ const illegalMoveError = (move: Move, reason: string): Error => {
     actionId: move.actionId,
     params: move.params,
     reason,
+    ...(metadata === undefined ? {} : { metadata }),
   });
   return error;
 };
@@ -96,29 +152,88 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
     adjacencyGraph,
     activePlayer: state.activePlayer,
     actorPlayer: state.activePlayer,
-    bindings: {},
+    bindings: move.params,
     moveParams: move.params,
   } as const;
 
-  const costResult = applyEffects(action.cost, {
-    ...effectCtxBase,
-    state,
-    rng,
-  });
+  const operationProfile = resolveOperationProfile(def, action);
+  const executionProfile = operationProfile === undefined ? undefined : toOperationExecutionProfile(action, operationProfile);
 
-  const effectResult = applyEffects(action.effects, {
-    ...effectCtxBase,
-    state: costResult.state,
-    rng: costResult.rng,
-  });
+  if (
+    executionProfile !== undefined &&
+    executionProfile.legality !== null &&
+    !evalCondition(executionProfile.legality, { ...effectCtxBase, state })
+  ) {
+    throw illegalMoveError(move, 'operation profile legality predicate failed', {
+      code: 'OPERATION_LEGALITY_FAILED',
+      profileId: operationProfile?.id,
+      actionId: action.id,
+    });
+  }
 
-  const stateWithUsage = incrementActionUsage(effectResult.state, action.id);
+  const costValidationPassed =
+    executionProfile?.costValidation === null || executionProfile === undefined
+      ? true
+      : evalCondition(executionProfile.costValidation, { ...effectCtxBase, state });
+  if (executionProfile !== undefined && executionProfile.partialMode === 'forbid' && !costValidationPassed) {
+    throw illegalMoveError(move, 'operation profile cost validation failed', {
+      code: 'OPERATION_COST_BLOCKED',
+      profileId: operationProfile?.id,
+      actionId: action.id,
+      partialExecutionMode: executionProfile.partialMode,
+    });
+  }
+
+  const shouldSpendCost =
+    executionProfile === undefined ||
+    executionProfile.costValidation === null ||
+    costValidationPassed;
+  const costEffects = executionProfile?.costSpend ?? action.cost;
+  const costResult = shouldSpendCost
+    ? applyEffects(costEffects, {
+      ...effectCtxBase,
+      state,
+      rng,
+    })
+    : { state, rng };
+
+  let effectState = costResult.state;
+  let effectRng = costResult.rng;
+  const emittedEvents: TriggerEvent[] = [];
+
+  if (executionProfile === undefined) {
+    const effectResult = applyEffects(action.effects, {
+      ...effectCtxBase,
+      state: effectState,
+      rng: effectRng,
+    });
+    effectState = effectResult.state;
+    effectRng = effectResult.rng;
+    if (effectResult.emittedEvents !== undefined) {
+      emittedEvents.push(...effectResult.emittedEvents);
+    }
+  } else {
+    for (const stageEffects of executionProfile.resolutionStages) {
+      const stageResult = applyEffects(stageEffects, {
+        ...effectCtxBase,
+        state: effectState,
+        rng: effectRng,
+      });
+      effectState = stageResult.state;
+      effectRng = stageResult.rng;
+      if (stageResult.emittedEvents !== undefined) {
+        emittedEvents.push(...stageResult.emittedEvents);
+      }
+    }
+  }
+
+  const stateWithUsage = incrementActionUsage(effectState, action.id);
   const maxDepth = def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
   let triggerState = stateWithUsage;
-  let triggerRng = effectResult.rng;
+  let triggerRng = effectRng;
   let triggerLog = [] as ApplyMoveResult['triggerFirings'];
 
-  for (const emittedEvent of effectResult.emittedEvents ?? []) {
+  for (const emittedEvent of emittedEvents) {
     const emittedEventResult = dispatchTriggers(
       def,
       triggerState,

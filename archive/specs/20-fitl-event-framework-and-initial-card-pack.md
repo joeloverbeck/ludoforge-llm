@@ -1,6 +1,6 @@
 # Spec 20: Fire in the Lake Event Framework and Initial Card Pack
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1 (required for foundation deliverable)
 **Complexity**: M
 **Dependencies**: Spec 15, Spec 15a, Spec 16, Spec 17, Spec 18, Spec 19
@@ -109,3 +109,16 @@ Implement foundation event execution semantics using generic declarative event p
 - Unit tests for free-operation eligibility/resource behavior and capability/momentum duration hooks.
 - Card-level golden tests for both sides of card 82 and 27, including at least one constrained-state partial-resolution case per card.
 - Integration test where one card fires inside normal eligible-faction sequence.
+
+## Outcome
+
+- Completion date: 2026-02-11.
+- What changed:
+  - Implemented the Spec 20 ticket chain (`FITLEVEFRAANDINICARPAC-000` through `FITLEVEFRAANDINICARPAC-007`) covering prerequisite audit, event-card data contracts, compiler lowering, dual-use/branch semantics, partial/lifecycle semantics, and initial-card-pack integration/regression.
+  - Added embedded FITL initial card-pack YAML fixtures for cards 82 and 27 and deterministic compile/integration coverage for side/branch ordering and selector/cardinality constraints.
+  - Added event-in-turn-flow deterministic golden regression (`fitl-events-initial-pack`) and aligned serialized trace JSON schema with runtime turn-flow trace/state contracts.
+- Deviations from the original plan:
+  - Runtime event execution remains modeled through generic `event` action params and effect/profile primitives rather than direct execution of `GameDef.eventCards` by card id.
+  - Card id/title metadata remains validated and compiled in `eventCards`, while trace-visible runtime selection data is enforced via deterministic event move params plus turn-flow trace entries.
+- Verification:
+  - `npm run build` and `npm test` passed after final Spec 20 ticket completion updates.

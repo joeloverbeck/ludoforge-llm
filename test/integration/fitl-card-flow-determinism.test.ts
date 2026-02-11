@@ -9,6 +9,7 @@ import {
   asActionId,
   asPhaseId,
   initialState,
+  legalMoves,
   serializeGameState,
   type GameDef,
   type Move,
@@ -94,6 +95,8 @@ const scriptedMoves: readonly Move[] = [
 const readCompilerFixture = (name: string): string =>
   readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
 
+const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
+
 const compileFixtureDef = (name: string): GameDef => {
   const parsed = parseGameSpec(readCompilerFixture(name));
   const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
@@ -118,6 +121,107 @@ const runScriptedOperations = (def: GameDef, seed: number, actions: readonly str
     logs,
   };
 };
+
+interface FitlEventInitialPackGolden {
+  readonly seed: number;
+  readonly initialLegalMoves: readonly Move[];
+  readonly selectedMove: Move;
+  readonly triggerFirings: readonly unknown[];
+  readonly postState: {
+    readonly globalVars: Readonly<Record<string, number>>;
+    readonly turnFlow: ReturnType<typeof initialState>['turnFlow'];
+  };
+}
+
+const createEventTraceDef = (): GameDef =>
+  ({
+    metadata: { id: 'fitl-events-initial-pack-golden-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+    constants: {},
+    globalVars: [
+      { name: 'spent', type: 'int', init: 0, min: 0, max: 99 },
+      { name: 'resolved', type: 'int', init: 0, min: 0, max: 99 },
+    ],
+    perPlayerVars: [],
+    zones: [
+      { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      { id: 'played:none', owner: 'none', visibility: 'public', ordering: 'queue' },
+      { id: 'lookahead:none', owner: 'none', visibility: 'public', ordering: 'queue' },
+      { id: 'leader:none', owner: 'none', visibility: 'public', ordering: 'queue' },
+    ],
+    tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+    setup: [
+      { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+      { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+      { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },
+      { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+    ],
+    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+    turnFlow: {
+      cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+      eligibility: {
+        factions: ['0', '1', '2', '3'],
+        overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+      },
+      optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
+      passRewards: [],
+      durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+    },
+    operationProfiles: [
+      {
+        id: 'event-profile-partial',
+        actionId: asActionId('event'),
+        legality: {},
+        cost: {
+          validate: { op: '==', left: { ref: 'binding', name: 'branch' }, right: 'a' },
+          spend: [{ addVar: { scope: 'global', var: 'spent', delta: 1 } }],
+        },
+        targeting: {},
+        resolution: [{ effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }] }],
+        partialExecution: { mode: 'allow' },
+      },
+    ],
+    actions: [
+      { id: asActionId('pass'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+      {
+        id: asActionId('event'),
+        actor: 'active',
+        phase: asPhaseId('main'),
+        params: [
+          { name: 'selfOverride', domain: { query: 'enums', values: [noOverride, selfOverride] } },
+          { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
+          { name: 'branch', domain: { query: 'enums', values: ['a', 'b'] } },
+          { name: 'targetPrimary', domain: { query: 'enums', values: ['space-a', 'space-b'] } },
+          { name: 'targetSecondary', domain: { query: 'enums', values: ['space-c', 'space-d'] } },
+        ],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('operation'),
+        actor: 'active',
+        phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('operationPlusSpecialActivity'),
+        actor: 'active',
+        phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    triggers: [],
+    endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+  }) as unknown as GameDef;
 
 describe('FITL card-flow determinism integration', () => {
   it('produces byte-identical state and trace logs for same seed and move sequence', () => {
@@ -170,5 +274,53 @@ describe('FITL card-flow determinism integration', () => {
       const second = runScriptedOperations(def, 97, scenario.actions);
       assert.deepEqual(second, first);
     }
+  });
+
+  it('captures deterministic event side/branch/target metadata and partial-resolution trace entries during eligible-faction sequencing', () => {
+    const fixture = readJsonFixture<FitlEventInitialPackGolden>('test/fixtures/trace/fitl-events-initial-pack.golden.json');
+    const def = createEventTraceDef();
+    const seed = 113;
+
+    const run = (): FitlEventInitialPackGolden => {
+      const start = initialState(def, seed, 4);
+      const initialLegalMoves = legalMoves(def, start);
+
+      const selectedMove = initialLegalMoves.find(
+        (move) =>
+          move.actionId === asActionId('event') &&
+          move.params.side === 'shaded' &&
+          move.params.branch === 'b' &&
+          move.params.targetPrimary === 'space-b' &&
+          move.params.targetSecondary === 'space-d' &&
+          move.params.selfOverride === selfOverride,
+      );
+      assert.notEqual(selectedMove, undefined);
+
+      const eventMove = selectedMove;
+      if (eventMove === undefined) {
+        throw new Error('expected shaded/b event move with explicit targets to be legal');
+      }
+
+      const result = applyMove(def, start, eventMove);
+      assert.equal(result.state.globalVars.spent, 0);
+      assert.equal(result.state.globalVars.resolved, 1);
+
+      return {
+        seed,
+        initialLegalMoves,
+        selectedMove: eventMove,
+        triggerFirings: result.triggerFirings,
+        postState: {
+          globalVars: result.state.globalVars,
+          turnFlow: result.state.turnFlow,
+        },
+      };
+    };
+
+    const first = run();
+    const second = run();
+
+    assert.deepEqual(second, first);
+    assert.deepEqual(first, fixture);
   });
 });

@@ -176,6 +176,137 @@
         "depth": { "type": "number" }
       }
     },
+    "turnFlowDuration": {
+      "enum": ["card", "nextCard", "coup", "campaign"]
+    },
+    "turnFlowPendingEligibilityOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["faction", "eligible", "windowId", "duration"],
+      "properties": {
+        "faction": { "type": "string" },
+        "eligible": { "type": "boolean" },
+        "windowId": { "type": "string" },
+        "duration": { "$ref": "#/definitions/turnFlowDuration" }
+      }
+    },
+    "turnFlowRuntimeCardState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["firstEligible", "secondEligible", "actedFactions", "passedFactions", "nonPassCount", "firstActionClass"],
+      "properties": {
+        "firstEligible": { "type": ["string", "null"] },
+        "secondEligible": { "type": ["string", "null"] },
+        "actedFactions": { "type": "array", "items": { "type": "string" } },
+        "passedFactions": { "type": "array", "items": { "type": "string" } },
+        "nonPassCount": { "type": "number" },
+        "firstActionClass": { "enum": ["event", "operation", "operationPlusSpecialActivity", null] }
+      }
+    },
+    "turnFlowRuntimeState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["factionOrder", "eligibility", "currentCard"],
+      "properties": {
+        "factionOrder": { "type": "array", "items": { "type": "string" } },
+        "eligibility": {
+          "type": "object",
+          "additionalProperties": { "type": "boolean" }
+        },
+        "currentCard": { "$ref": "#/definitions/turnFlowRuntimeCardState" },
+        "pendingEligibilityOverrides": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/turnFlowPendingEligibilityOverride" }
+        },
+        "consecutiveCoupRounds": { "type": "number" }
+      }
+    },
+    "turnFlowLifecycleStep": {
+      "enum": [
+        "initialRevealPlayed",
+        "initialRevealLookahead",
+        "promoteLookaheadToPlayed",
+        "revealLookahead",
+        "coupToLeader",
+        "coupHandoff"
+      ]
+    },
+    "turnFlowLifecycleTraceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "step", "slots", "before", "after"],
+      "properties": {
+        "kind": { "const": "turnFlowLifecycle" },
+        "step": { "$ref": "#/definitions/turnFlowLifecycleStep" },
+        "slots": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["played", "lookahead", "leader"],
+          "properties": {
+            "played": { "type": "string" },
+            "lookahead": { "type": "string" },
+            "leader": { "type": "string" }
+          }
+        },
+        "before": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["playedCardId", "lookaheadCardId", "leaderCardId"],
+          "properties": {
+            "playedCardId": { "type": ["string", "null"] },
+            "lookaheadCardId": { "type": ["string", "null"] },
+            "leaderCardId": { "type": ["string", "null"] }
+          }
+        },
+        "after": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["playedCardId", "lookaheadCardId", "leaderCardId"],
+          "properties": {
+            "playedCardId": { "type": ["string", "null"] },
+            "lookaheadCardId": { "type": ["string", "null"] },
+            "leaderCardId": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "turnFlowEligibilityTraceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "step", "faction", "before", "after"],
+      "properties": {
+        "kind": { "const": "turnFlowEligibility" },
+        "step": { "enum": ["candidateScan", "passChain", "cardEnd", "overrideCreate"] },
+        "faction": { "type": ["string", "null"] },
+        "before": { "$ref": "#/definitions/turnFlowRuntimeCardState" },
+        "after": { "$ref": "#/definitions/turnFlowRuntimeCardState" },
+        "eligibilityBefore": {
+          "type": "object",
+          "additionalProperties": { "type": "boolean" }
+        },
+        "eligibilityAfter": {
+          "type": "object",
+          "additionalProperties": { "type": "boolean" }
+        },
+        "rewards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["resource", "amount"],
+            "properties": {
+              "resource": { "type": "string" },
+              "amount": { "type": "number" }
+            }
+          }
+        },
+        "overrides": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/turnFlowPendingEligibilityOverride" }
+        },
+        "reason": { "enum": ["rightmostPass", "twoNonPass"] }
+      }
+    },
     "operationPartialTraceEntry": {
       "type": "object",
       "additionalProperties": false,
@@ -192,6 +323,8 @@
       "oneOf": [
         { "$ref": "#/definitions/triggerFiring" },
         { "$ref": "#/definitions/triggerTruncated" },
+        { "$ref": "#/definitions/turnFlowLifecycleTraceEntry" },
+        { "$ref": "#/definitions/turnFlowEligibilityTraceEntry" },
         { "$ref": "#/definitions/operationPartialTraceEntry" }
       ]
     },
@@ -280,7 +413,8 @@
         "actionUsage": {
           "type": "object",
           "additionalProperties": { "$ref": "#/definitions/actionUsageRecord" }
-        }
+        },
+        "turnFlow": { "$ref": "#/definitions/turnFlowRuntimeState" }
       }
     },
     "serializedMoveLog": {

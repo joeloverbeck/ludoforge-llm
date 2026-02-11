@@ -1,0 +1,450 @@
+{
+  "seed": 113,
+  "initialLegalMoves": [
+    {
+      "actionId": "pass",
+      "params": {}
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "unshaded",
+        "branch": "a",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "unshaded",
+        "branch": "a",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "unshaded",
+        "branch": "a",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "unshaded",
+        "branch": "a",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "unshaded",
+        "branch": "b",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "unshaded",
+        "branch": "b",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "unshaded",
+        "branch": "b",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "unshaded",
+        "branch": "b",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "shaded",
+        "branch": "a",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "shaded",
+        "branch": "a",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "shaded",
+        "branch": "a",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "shaded",
+        "branch": "a",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "shaded",
+        "branch": "b",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "shaded",
+        "branch": "b",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "shaded",
+        "branch": "b",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "none",
+        "side": "shaded",
+        "branch": "b",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "unshaded",
+        "branch": "a",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "unshaded",
+        "branch": "a",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "unshaded",
+        "branch": "a",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "unshaded",
+        "branch": "a",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "unshaded",
+        "branch": "b",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "unshaded",
+        "branch": "b",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "unshaded",
+        "branch": "b",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "unshaded",
+        "branch": "b",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "shaded",
+        "branch": "a",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "shaded",
+        "branch": "a",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "shaded",
+        "branch": "a",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "shaded",
+        "branch": "a",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "shaded",
+        "branch": "b",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "shaded",
+        "branch": "b",
+        "targetPrimary": "space-a",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "shaded",
+        "branch": "b",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-c"
+      }
+    },
+    {
+      "actionId": "event",
+      "params": {
+        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+        "side": "shaded",
+        "branch": "b",
+        "targetPrimary": "space-b",
+        "targetSecondary": "space-d"
+      }
+    },
+    {
+      "actionId": "operation",
+      "params": {}
+    },
+    {
+      "actionId": "operationPlusSpecialActivity",
+      "params": {}
+    }
+  ],
+  "selectedMove": {
+    "actionId": "event",
+    "params": {
+      "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+      "side": "shaded",
+      "branch": "b",
+      "targetPrimary": "space-b",
+      "targetSecondary": "space-d"
+    }
+  },
+  "triggerFirings": [
+    {
+      "kind": "operationPartial",
+      "actionId": "event",
+      "profileId": "event-profile-partial",
+      "step": "costSpendSkipped",
+      "reason": "costValidationFailed"
+    },
+    {
+      "kind": "turnFlowEligibility",
+      "step": "candidateScan",
+      "faction": "0",
+      "before": {
+        "firstEligible": "0",
+        "secondEligible": "1",
+        "actedFactions": [],
+        "passedFactions": [],
+        "nonPassCount": 0,
+        "firstActionClass": null
+      },
+      "after": {
+        "firstEligible": "1",
+        "secondEligible": "2",
+        "actedFactions": [
+          "0"
+        ],
+        "passedFactions": [],
+        "nonPassCount": 1,
+        "firstActionClass": "event"
+      }
+    },
+    {
+      "kind": "turnFlowEligibility",
+      "step": "overrideCreate",
+      "faction": "0",
+      "before": {
+        "firstEligible": "1",
+        "secondEligible": "2",
+        "actedFactions": [
+          "0"
+        ],
+        "passedFactions": [],
+        "nonPassCount": 1,
+        "firstActionClass": "event"
+      },
+      "after": {
+        "firstEligible": "1",
+        "secondEligible": "2",
+        "actedFactions": [
+          "0"
+        ],
+        "passedFactions": [],
+        "nonPassCount": 1,
+        "firstActionClass": "event"
+      },
+      "overrides": [
+        {
+          "faction": "0",
+          "eligible": true,
+          "windowId": "remain-eligible",
+          "duration": "nextCard"
+        }
+      ]
+    }
+  ],
+  "postState": {
+    "globalVars": {
+      "spent": 0,
+      "resolved": 1
+    },
+    "turnFlow": {
+      "factionOrder": [
+        "0",
+        "1",
+        "2",
+        "3"
+      ],
+      "eligibility": {
+        "0": true,
+        "1": true,
+        "2": true,
+        "3": true
+      },
+      "pendingEligibilityOverrides": [
+        {
+          "faction": "0",
+          "eligible": true,
+          "windowId": "remain-eligible",
+          "duration": "nextCard"
+        }
+      ],
+      "currentCard": {
+        "firstEligible": "1",
+        "secondEligible": "2",
+        "actedFactions": [
+          "0"
+        ],
+        "passedFactions": [],
+        "nonPassCount": 1,
+        "firstActionClass": "event"
+      }
+    }
+  }
+}

@@ -276,4 +276,83 @@ describe('phase advancement', () => {
       .map((entry) => entry.step);
     assert.deepEqual(lifecycleSteps, ['coupToLeader', 'coupHandoff', 'promoteLookaheadToPlayed', 'revealLookahead']);
   });
+
+  it('suppresses a second consecutive coup handoff when coupPlan.maxConsecutiveRounds is 1', () => {
+    const def: GameDef = {
+      metadata: { id: 'phase-lifecycle-consecutive', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: ['0', '1'], overrideWindows: [] },
+        optionMatrix: [],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      coupPlan: {
+        phases: [{ id: 'victory', steps: ['check-thresholds'] }],
+        maxConsecutiveRounds: 1,
+      },
+      actions: [],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState({
+        currentPhase: asPhaseId('main'),
+        zones: {
+          'deck:none': [{ id: asTokenId('tok_card_2'), type: 'card', props: { isCoup: false } }],
+          'played:none': [{ id: asTokenId('tok_card_0'), type: 'card', props: { isCoup: true } }],
+          'lookahead:none': [{ id: asTokenId('tok_card_1'), type: 'card', props: { isCoup: true } }],
+          'leader:none': [],
+        },
+      }),
+      globalVars: {},
+      actionUsage: {},
+      turnFlow: {
+        factionOrder: ['0', '1'],
+        eligibility: { '0': true, '1': true },
+        currentCard: {
+          firstEligible: '0',
+          secondEligible: '1',
+          actedFactions: [],
+          passedFactions: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+        pendingEligibilityOverrides: [],
+        consecutiveCoupRounds: 0,
+      },
+    };
+
+    const firstLogs: TriggerLogEntry[] = [];
+    const afterFirst = advancePhase(def, state, firstLogs);
+
+    const secondLogs: TriggerLogEntry[] = [];
+    const afterSecond = advancePhase(def, afterFirst, secondLogs);
+
+    const firstLifecycleSteps = firstLogs
+      .filter((entry): entry is Extract<TriggerLogEntry, { kind: 'turnFlowLifecycle' }> => entry.kind === 'turnFlowLifecycle')
+      .map((entry) => entry.step);
+    const secondLifecycleSteps = secondLogs
+      .filter((entry): entry is Extract<TriggerLogEntry, { kind: 'turnFlowLifecycle' }> => entry.kind === 'turnFlowLifecycle')
+      .map((entry) => entry.step);
+
+    assert.deepEqual(firstLifecycleSteps, ['coupToLeader', 'coupHandoff', 'promoteLookaheadToPlayed', 'revealLookahead']);
+    assert.deepEqual(secondLifecycleSteps, ['promoteLookaheadToPlayed']);
+    assert.equal(afterSecond.zones['leader:none']?.length, 1);
+    assert.equal(afterSecond.zones['leader:none']?.[0]?.id, 'tok_card_0');
+    assert.equal(afterSecond.turnFlow?.consecutiveCoupRounds, 1);
+  });
 });

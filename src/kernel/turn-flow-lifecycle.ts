@@ -131,6 +131,21 @@ const prependToken = (state: GameState, zoneId: string, token: Token): GameState
 
 const isCoupCard = (token: Token): boolean => token.props.isCoup === true;
 
+const withConsecutiveCoupRounds = (state: GameState, rounds: number): GameState => {
+  const runtime = state.turnFlow;
+  if (runtime === undefined || runtime.consecutiveCoupRounds === rounds) {
+    return state;
+  }
+
+  return {
+    ...state,
+    turnFlow: {
+      ...runtime,
+      consecutiveCoupRounds: rounds,
+    },
+  };
+};
+
 export const applyTurnFlowInitialReveal = (def: GameDef, state: GameState): LifecycleResult => {
   const slots = resolveLifecycleSlots(def, state);
   if (slots === null) {
@@ -176,12 +191,29 @@ export const applyTurnFlowCardBoundary = (def: GameDef, state: GameState): Lifec
   let nextState = state;
   const removed = popTopToken(nextState, slots.played);
   nextState = removed.state;
+  const maxConsecutiveRounds = def.coupPlan?.maxConsecutiveRounds;
+  const previousConsecutiveCoupRounds = state.turnFlow?.consecutiveCoupRounds ?? 0;
+  const canRunCoupHandoff =
+    removed.popped !== null &&
+    isCoupCard(removed.popped) &&
+    (maxConsecutiveRounds === undefined || previousConsecutiveCoupRounds < maxConsecutiveRounds);
 
-  if (removed.popped !== null && isCoupCard(removed.popped)) {
+  if (canRunCoupHandoff && removed.popped !== null) {
     const beforeLeaderMove = nextState;
     nextState = prependToken(nextState, slots.leader, removed.popped);
     pushLifecycleEntry(traceEntries, 'coupToLeader', slots, beforeLeaderMove, nextState);
     pushLifecycleEntry(traceEntries, 'coupHandoff', slots, nextState, nextState);
+  }
+
+  if (maxConsecutiveRounds !== undefined && removed.popped !== null) {
+    if (isCoupCard(removed.popped)) {
+      const nextConsecutiveCoupRounds = canRunCoupHandoff
+        ? previousConsecutiveCoupRounds + 1
+        : previousConsecutiveCoupRounds;
+      nextState = withConsecutiveCoupRounds(nextState, nextConsecutiveCoupRounds);
+    } else {
+      nextState = withConsecutiveCoupRounds(nextState, 0);
+    }
   }
 
   const beforePromotion = nextState;

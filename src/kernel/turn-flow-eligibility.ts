@@ -199,17 +199,14 @@ const withActiveFromFirstEligible = (state: GameState, firstEligible: string | n
 };
 
 export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameState): GameState => {
-  const factions = def.turnFlow?.eligibility.factions;
-  if (factions === undefined || factions.length === 0) {
+  const flow = def.turnFlow;
+  if (flow === undefined) {
     return state;
   }
 
+  const factions = flow.eligibility.factions;
   const factionOrder = normalizeFactionOrder(factions);
-  if (factionOrder.length === 0) {
-    return state;
-  }
-
-  const eligibility = Object.fromEntries(factionOrder.map((faction) => [faction, true]));
+  const eligibility = Object.fromEntries(factionOrder.map((faction) => [faction, true])) as Readonly<Record<string, boolean>>;
   const candidates = computeCandidates(factionOrder, eligibility, new Set());
   const nextState: GameState = {
     ...state,
@@ -225,6 +222,7 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
         nonPassCount: 0,
         firstActionClass: null,
       },
+      ...(def.coupPlan?.maxConsecutiveRounds === undefined ? {} : { consecutiveCoupRounds: 0 }),
     },
   };
 

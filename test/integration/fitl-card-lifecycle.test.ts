@@ -75,4 +75,32 @@ describe('FITL card lifecycle integration', () => {
     assert.equal(second.state.zones['played:none']?.[0]?.id, 'tok_card_1');
     assert.equal(second.state.zones['lookahead:none']?.[0]?.id, 'tok_card_0');
   });
+
+  it('enforces coupPlan.maxConsecutiveRounds by suppressing repeated coup handoffs', () => {
+    const baseDef = createLifecycleDef();
+    const def: GameDef = {
+      ...baseDef,
+      setup: [
+        { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+        { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },
+        { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },
+        { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+      ],
+      coupPlan: {
+        phases: [{ id: 'victory', steps: ['check-thresholds'] }],
+        maxConsecutiveRounds: 1,
+      },
+    };
+
+    const start = initialState(def, 9, 2);
+    const first = applyMove(def, start, legalMoves(def, start)[0]!);
+    const second = applyMove(def, first.state, legalMoves(def, first.state)[0]!);
+    const third = applyMove(def, second.state, legalMoves(def, second.state)[0]!);
+
+    assert.deepEqual(lifecycleSteps(first.triggerFirings), ['promoteLookaheadToPlayed', 'revealLookahead']);
+    assert.deepEqual(lifecycleSteps(second.triggerFirings), ['coupToLeader', 'coupHandoff', 'promoteLookaheadToPlayed', 'revealLookahead']);
+    assert.deepEqual(lifecycleSteps(third.triggerFirings), ['promoteLookaheadToPlayed']);
+    assert.equal(third.state.zones['leader:none']?.length, 1);
+    assert.equal(third.state.zones['leader:none']?.[0]?.id, 'tok_card_2');
+  });
 });

@@ -769,6 +769,7 @@ export const TurnFlowRuntimeStateSchema = z
           .strict(),
       )
       .optional(),
+    consecutiveCoupRounds: IntegerSchema.min(0).optional(),
   })
   .strict();
 

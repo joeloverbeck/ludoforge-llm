@@ -579,6 +579,7 @@ export interface TurnFlowRuntimeState {
   readonly eligibility: Readonly<Record<string, boolean>>;
   readonly currentCard: TurnFlowRuntimeCardState;
   readonly pendingEligibilityOverrides?: readonly TurnFlowPendingEligibilityOverride[];
+  readonly consecutiveCoupRounds?: number;
 }
 
 export interface GameState {

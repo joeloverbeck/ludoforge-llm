@@ -128,4 +128,116 @@ describe('compile top-level actions/triggers/end conditions', () => {
       true,
     );
   });
+
+  it('returns blocking diagnostics for unresolved turnFlow ordering metadata', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-flow-ordering-invalid', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: {
+          factions: ['us', 'arvn', 'us'],
+          overrideWindows: [],
+        },
+        optionMatrix: [
+          { first: 'event' as const, second: ['operation'] as const },
+          { first: 'event' as const, second: ['operationPlusSpecialActivity'] as const },
+        ],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
+        pivotal: {
+          actionIds: ['pivotalA', 'pivotalB'],
+          interrupt: {
+            precedence: ['us', 'vc', 'us'],
+          },
+        },
+      },
+      actions: [
+        { id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalA', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalB', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [],
+      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_FACTION' &&
+          diagnostic.path === 'doc.turnFlow.eligibility.factions.2',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_OPTION_ROW' &&
+          diagnostic.path === 'doc.turnFlow.optionMatrix.1.first',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_UNKNOWN_FACTION' &&
+          diagnostic.path === 'doc.turnFlow.pivotal.interrupt.precedence.1',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_DUPLICATE' &&
+          diagnostic.path === 'doc.turnFlow.pivotal.interrupt.precedence.2',
+      ),
+      true,
+    );
+  });
+
+  it('requires interrupt precedence when multiple pivotal actions are declared', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-flow-ordering-missing-precedence', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: {
+          factions: ['us', 'arvn', 'nva', 'vc'],
+          overrideWindows: [],
+        },
+        optionMatrix: [{ first: 'event' as const, second: ['operation'] as const }],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
+        pivotal: {
+          actionIds: ['pivotalA', 'pivotalB'],
+        },
+      },
+      actions: [
+        { id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalA', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalB', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [],
+      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_REQUIRED' &&
+          diagnostic.path === 'doc.turnFlow.pivotal.interrupt.precedence',
+      ),
+      true,
+    );
+  });
 });

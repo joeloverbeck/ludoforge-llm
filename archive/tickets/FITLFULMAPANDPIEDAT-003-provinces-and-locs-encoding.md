@@ -2,12 +2,19 @@
 
 **Spec**: 23, Tasks 23.1 and 23.5
 **Priority**: P0
-**Depends on**: FITLFULMAPANDPIEDAT-001
+**Depends on**: FITLFULMAPANDPIEDAT-002
 **Blocks**: FITLFULMAPANDPIEDAT-004 (adjacency depends on all spaces existing)
+**Status**: ✅ COMPLETED
 
 ## Description
 
-Add the 22 province and 17 LoC `MapSpaceDef` entries to the map data asset payload in `data/games/fire-in-the-lake.md`. Zone IDs use kebab-case with `:none` suffix.
+Current baseline in this repository:
+- `data/games/fire-in-the-lake.md` already exists and already encodes the 8 city spaces from ticket 002.
+- Existing unit tests already cover scaffold parsing and city map encoding:
+  - `test/unit/fitl-production-data-scaffold.test.ts`
+  - `test/unit/fitl-production-map-cities.test.ts`
+
+Add the 22 province and 17 LoC `MapSpaceDef` entries to the existing map data asset payload in `data/games/fire-in-the-lake.md`. Zone IDs use kebab-case with `:none` suffix.
 
 ### Provinces (22)
 
@@ -69,7 +76,7 @@ All provinces have `spaceType: 'province'`, `econ: 0`, `country: 'southVietnam'`
 
 All LoCs have `spaceType: 'loc'`, `population: 0`, `country: 'southVietnam'`, and `adjacentTo: []` (populated in ticket 004).
 
-**ID mapping table**: Include a comment block documenting brainstorming-ID-to-canonical-ID correspondence for all 39 spaces in this ticket.
+**ID mapping table**: Include a comment block documenting brainstorming-ID-to-canonical-ID correspondence for all 39 spaces in this ticket (22 provinces + 17 LoCs). The existing city mapping block from ticket 002 remains unchanged.
 
 ## File list
 
@@ -93,6 +100,9 @@ All LoCs have `spaceType: 'loc'`, `population: 0`, `country: 'southVietnam'`, an
 
 - `npm run build` succeeds
 - `npm test` passes
+- Existing city/scaffold tests continue to pass unchanged:
+  - `test/unit/fitl-production-data-scaffold.test.ts`
+  - `test/unit/fitl-production-map-cities.test.ts`
 - New unit test `test/unit/fitl-production-map-provinces-locs.test.ts`:
   - Parses the map asset from `data/games/fire-in-the-lake.md`
   - Asserts exactly 22 spaces with `spaceType: 'province'`
@@ -111,3 +121,16 @@ All LoCs have `spaceType: 'loc'`, `population: 0`, `country: 'southVietnam'`, an
 - No existing test file is modified
 - No `src/` file is modified
 - The `test/fixtures/cnl/compiler/fitl-*.md` fixtures remain unchanged
+
+## Outcome
+
+- **Completion date**: 2026-02-12
+- **What changed**:
+  - Added all 22 province and 17 LoC entries to `fitl-map-production` in `data/games/fire-in-the-lake.md`
+  - Added the required 39-entry brainstorming-to-canonical ID mapping comment block for provinces + LoCs
+  - Added `test/unit/fitl-production-map-provinces-locs.test.ts` covering counts, country assignment, terrain tags, LoC type tags, population/econ bounds, coastal flags, and ID format
+- **Deviations from original plan**:
+  - Ticket assumptions were corrected before implementation to match repo reality (existing city/scaffold data/tests from ticket 002, and dependency updated from 001 to 002)
+- **Verification results**:
+  - `npm run build` passed
+  - `npm test` passed

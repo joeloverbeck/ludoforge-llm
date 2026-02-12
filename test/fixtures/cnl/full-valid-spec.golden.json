@@ -61,7 +61,8 @@
           "type": "draw"
         }
       }
-    ]
+    ],
+    "effectMacros": null
   },
   "requiredSourceMapAnchors": [
     "metadata.id",

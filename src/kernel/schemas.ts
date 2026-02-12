@@ -121,6 +121,7 @@ valueExprSchemaInternal = z.union([
         .strict(),
     })
     .strict(),
+  z.object({ concat: z.array(ValueExprSchema) }).strict(),
 ]);
 
 conditionAstSchemaInternal = z.union([
@@ -266,7 +267,9 @@ effectAstSchemaInternal = z.union([
           bind: StringSchema,
           over: OptionsQuerySchema,
           effects: z.array(EffectASTSchema),
-          limit: NumberSchema.optional(),
+          limit: ValueExprSchema.optional(),
+          countBind: StringSchema.optional(),
+          in: z.array(EffectASTSchema).optional(),
         })
         .strict(),
     })

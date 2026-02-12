@@ -1,3 +1,4 @@
+export * from './expand-effect-macros.js';
 export * from './expand-macros.js';
 export * from './compiler.js';
 export * from './compiler-diagnostics.js';

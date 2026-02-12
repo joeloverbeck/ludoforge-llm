@@ -56,7 +56,8 @@ export type ValueExpr =
         readonly query: OptionsQuery;
         readonly prop?: string;
       };
-    };
+    }
+  | { readonly concat: readonly ValueExpr[] };
 
 export type ConditionAST =
   | { readonly op: 'and'; readonly args: readonly ConditionAST[] }
@@ -180,7 +181,9 @@ export type EffectAST =
         readonly bind: string;
         readonly over: OptionsQuery;
         readonly effects: readonly EffectAST[];
-        readonly limit?: number;
+        readonly limit?: ValueExpr;
+        readonly countBind?: string;
+        readonly in?: readonly EffectAST[];
       };
     }
   | {

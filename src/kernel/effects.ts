@@ -1098,15 +1098,22 @@ const applyForEach = (
   ctx: EffectContext,
   budget: EffectBudgetState,
 ): EffectResult => {
-  const limit = effect.forEach.limit ?? 100;
-  if (!Number.isSafeInteger(limit) || limit <= 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'forEach.limit must be a positive integer', {
-      effectType: 'forEach',
-      limit,
-    });
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+
+  let limit: number;
+  if (effect.forEach.limit === undefined) {
+    limit = 100;
+  } else {
+    const limitValue = evalValue(effect.forEach.limit, evalCtx);
+    if (typeof limitValue !== 'number' || !Number.isSafeInteger(limitValue) || limitValue <= 0) {
+      throw new EffectRuntimeError('EFFECT_RUNTIME', 'forEach.limit must evaluate to a positive integer', {
+        effectType: 'forEach',
+        limit: limitValue,
+      });
+    }
+    limit = limitValue;
   }
 
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const queryResult = evalQuery(effect.forEach.over, evalCtx);
   const boundedItems = queryResult.slice(0, limit);
 
@@ -1125,6 +1132,21 @@ const applyForEach = (
     const iterationResult = applyEffectsWithBudget(effect.forEach.effects, iterationCtx, budget);
     currentState = iterationResult.state;
     currentRng = iterationResult.rng;
+  }
+
+  if (effect.forEach.countBind !== undefined && effect.forEach.in !== undefined) {
+    const countCtx: EffectContext = {
+      ...ctx,
+      state: currentState,
+      rng: currentRng,
+      bindings: {
+        ...ctx.bindings,
+        [effect.forEach.countBind]: boundedItems.length,
+      },
+    };
+    const countResult = applyEffectsWithBudget(effect.forEach.in, countCtx, budget);
+    currentState = countResult.state;
+    currentRng = countResult.rng;
   }
 
   return { state: currentState, rng: currentRng };

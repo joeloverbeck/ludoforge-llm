@@ -272,6 +272,72 @@ describe('effects control-flow handlers', () => {
     assert.equal(result.state.globalVars.bonus, 1);
   });
 
+  it('forEach accepts dynamic limit via ValueExpr (binding ref)', () => {
+    const ctx = makeCtx({ bindings: { '$maxItems': 2 } });
+    const effect: EffectAST = {
+      forEach: {
+        bind: '$n',
+        over: { query: 'intsInRange', min: 1, max: 5 },
+        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$n' } } }],
+        limit: { ref: 'binding', name: '$maxItems' },
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.sum, 3);
+  });
+
+  it('forEach with countBind and in binds iteration count after loop', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      forEach: {
+        bind: '$n',
+        over: { query: 'intsInRange', min: 1, max: 3 },
+        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$n' } } }],
+        countBind: '$total',
+        in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$total' } } }],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.sum, 6);
+    assert.equal(result.state.globalVars.count, 3);
+  });
+
+  it('forEach countBind reflects actual iteration count when limited', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      forEach: {
+        bind: '$n',
+        over: { query: 'intsInRange', min: 1, max: 10 },
+        effects: [{ addVar: { scope: 'global', var: 'count', delta: 1 } }],
+        limit: 4,
+        countBind: '$actual',
+        in: [{ setVar: { scope: 'global', var: 'bonus', value: { ref: 'binding', name: '$actual' } } }],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.count, 4);
+    assert.equal(result.state.globalVars.bonus, 4);
+  });
+
+  it('forEach countBind is 0 when collection is empty', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      forEach: {
+        bind: '$n',
+        over: { query: 'intsInRange', min: 5, max: 4 },
+        effects: [{ addVar: { scope: 'global', var: 'count', delta: 1 } }],
+        countBind: '$total',
+        in: [{ setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$total' } } }],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.x, 0);
+  });
+
   it('rollRandom generates a deterministic integer and binds it within scope', () => {
     const ctx = makeCtx();
     const effect: EffectAST = {

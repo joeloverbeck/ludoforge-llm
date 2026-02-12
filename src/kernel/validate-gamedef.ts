@@ -229,6 +229,13 @@ const validateValueExpr = (
     return;
   }
 
+  if ('concat' in valueExpr) {
+    valueExpr.concat.forEach((child, index) => {
+      validateValueExpr(diagnostics, child, `${path}.concat[${index}]`, context);
+    });
+    return;
+  }
+
   if ('op' in valueExpr) {
     validateValueExpr(diagnostics, valueExpr.left, `${path}.left`, context);
     validateValueExpr(diagnostics, valueExpr.right, `${path}.right`, context);
@@ -550,6 +557,12 @@ const validateEffectAst = (
     validateOptionsQuery(diagnostics, effect.forEach.over, `${path}.forEach.over`, context);
     effect.forEach.effects.forEach((entry, index) => {
       validateEffectAst(diagnostics, entry, `${path}.forEach.effects[${index}]`, context);
+    });
+    if (effect.forEach.limit !== undefined) {
+      validateValueExpr(diagnostics, effect.forEach.limit, `${path}.forEach.limit`, context);
+    }
+    effect.forEach.in?.forEach((entry, index) => {
+      validateEffectAst(diagnostics, entry, `${path}.forEach.in[${index}]`, context);
     });
     return;
   }

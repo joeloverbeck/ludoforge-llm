@@ -201,6 +201,20 @@ export function lowerValueNode(
     return lowerAggregate(source.aggregate, context, `${path}.aggregate`);
   }
 
+  if ('concat' in source && Array.isArray(source.concat)) {
+    const children: ValueExpr[] = [];
+    let diagnostics: readonly Diagnostic[] = [];
+    for (let i = 0; i < source.concat.length; i++) {
+      const child = lowerValueNode(source.concat[i], context, `${path}.concat[${i}]`);
+      diagnostics = [...diagnostics, ...child.diagnostics];
+      if (child.value === null) {
+        return { value: null, diagnostics };
+      }
+      children.push(child.value);
+    }
+    return { value: { concat: children }, diagnostics };
+  }
+
   return missingCapability(path, 'value expression', source, [
     'number',
     'boolean',
@@ -208,6 +222,7 @@ export function lowerValueNode(
     '{ ref: ... }',
     '{ op: "+|-|*", left, right }',
     '{ aggregate: { op, query, prop? } }',
+    '{ concat: ValueExpr[] }',
   ]);
 }
 

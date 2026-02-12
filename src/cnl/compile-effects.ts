@@ -527,13 +527,21 @@ function lowerForEachEffect(
   path: string,
 ): EffectLoweringResult<EffectAST> {
   if (typeof source.bind !== 'string' || !Array.isArray(source.effects)) {
-    return missingCapability(path, 'forEach effect', source, ['{ forEach: { bind, over, effects, limit? } }']);
+    return missingCapability(path, 'forEach effect', source, ['{ forEach: { bind, over, effects, limit?, countBind?, in? } }']);
   }
 
-  const over = lowerQueryNode(source.over, makeConditionContext(context, scope), `${path}.over`);
+  const condCtx = makeConditionContext(context, scope);
+  const over = lowerQueryNode(source.over, condCtx, `${path}.over`);
   const diagnostics = [...over.diagnostics];
-  if (source.limit !== undefined && (!isInteger(source.limit) || source.limit < 0)) {
-    diagnostics.push(...missingCapability(`${path}.limit`, 'forEach limit', source.limit, ['non-negative integer']).diagnostics);
+
+  let loweredLimit: ValueExpr | undefined;
+  if (source.limit !== undefined) {
+    const limitResult = lowerValueNode(source.limit, condCtx, `${path}.limit`);
+    diagnostics.push(...limitResult.diagnostics);
+    if (limitResult.value === null) {
+      return { value: null, diagnostics };
+    }
+    loweredLimit = limitResult.value;
   }
 
   diagnostics.push(...scope.shadowWarning(source.bind, `${path}.bind`));
@@ -541,7 +549,22 @@ function lowerForEachEffect(
     lowerNestedEffects(source.effects as readonly unknown[], context, scope, `${path}.effects`),
   );
   diagnostics.push(...loweredEffects.diagnostics);
-  if (over.value === null || loweredEffects.value === null || (source.limit !== undefined && (!isInteger(source.limit) || source.limit < 0))) {
+
+  const countBind = typeof source.countBind === 'string' ? source.countBind : undefined;
+  let loweredIn: readonly EffectAST[] | undefined;
+  if (countBind !== undefined && Array.isArray(source.in)) {
+    diagnostics.push(...scope.shadowWarning(countBind, `${path}.countBind`));
+    const inResult = scope.withBinding(countBind, () =>
+      lowerNestedEffects(source.in as readonly unknown[], context, scope, `${path}.in`),
+    );
+    diagnostics.push(...inResult.diagnostics);
+    if (inResult.value === null) {
+      return { value: null, diagnostics };
+    }
+    loweredIn = inResult.value;
+  }
+
+  if (over.value === null || loweredEffects.value === null) {
     return { value: null, diagnostics };
   }
 
@@ -551,7 +574,9 @@ function lowerForEachEffect(
         bind: source.bind,
         over: over.value,
         effects: loweredEffects.value,
-        ...(source.limit === undefined ? {} : { limit: source.limit }),
+        ...(loweredLimit !== undefined ? { limit: loweredLimit } : {}),
+        ...(countBind !== undefined ? { countBind } : {}),
+        ...(loweredIn !== undefined ? { in: loweredIn } : {}),
       },
     },
     diagnostics,

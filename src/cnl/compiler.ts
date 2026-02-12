@@ -40,6 +40,7 @@ import { materializeZoneDefs } from './compile-zones.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import type { GameSpecSourceMap } from './source-map.js';
 import { capDiagnostics, dedupeDiagnostics, sortDiagnosticsDeterministic } from './compiler-diagnostics.js';
+import { expandEffectMacros } from './expand-effect-macros.js';
 import { expandBoardMacro } from './expand-macros.js';
 
 export interface CompileLimits {
@@ -130,8 +131,9 @@ export function compileGameSpecToGameDef(
   readonly diagnostics: readonly Diagnostic[];
 } {
   const limits = resolveCompileLimits(options?.limits);
-  const expanded = expandMacros(doc, options);
-  const diagnostics: Diagnostic[] = [...expanded.diagnostics];
+  const macroExpansion = expandEffectMacros(doc);
+  const expanded = expandMacros(macroExpansion.doc, options);
+  const diagnostics: Diagnostic[] = [...macroExpansion.diagnostics, ...expanded.diagnostics];
   const gameDef = compileExpandedDoc(expanded.doc, diagnostics);
 
   if (gameDef !== null) {

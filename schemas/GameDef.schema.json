@@ -314,6 +314,17 @@
               }
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["concat"],
+          "properties": {
+            "concat": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/valueExpr" }
+            }
+          }
         }
       ]
     },
@@ -566,7 +577,9 @@
                 "bind": { "type": "string" },
                 "over": { "$ref": "#/definitions/optionsQuery" },
                 "effects": { "type": "array", "items": { "$ref": "#/definitions/effectAST" } },
-                "limit": { "type": "number" }
+                "limit": { "$ref": "#/definitions/valueExpr" },
+                "countBind": { "type": "string" },
+                "in": { "type": "array", "items": { "$ref": "#/definitions/effectAST" } }
               }
             }
           }

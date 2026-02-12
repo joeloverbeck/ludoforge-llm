@@ -208,4 +208,33 @@ describe('evalValue', () => {
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
+
+  it('evaluates concat with string literals', () => {
+    const ctx = makeCtx();
+    assert.equal(evalValue({ concat: ['hello', ' ', 'world'] }, ctx), 'hello world');
+  });
+
+  it('evaluates concat with mixed types (coerced to string)', () => {
+    const ctx = makeCtx();
+    assert.equal(evalValue({ concat: ['count:', 42] }, ctx), 'count:42');
+    assert.equal(evalValue({ concat: ['flag:', true] }, ctx), 'flag:true');
+  });
+
+  it('evaluates concat with refs', () => {
+    const ctx = makeCtx();
+    assert.equal(evalValue({ concat: ['var_a=', { ref: 'gvar', var: 'a' }] }, ctx), 'var_a=3');
+  });
+
+  it('evaluates concat with nested expressions', () => {
+    const ctx = makeCtx();
+    assert.equal(
+      evalValue({ concat: ['result:', { op: '+', left: 1, right: 2 }] }, ctx),
+      'result:3',
+    );
+  });
+
+  it('evaluates empty concat as empty string', () => {
+    const ctx = makeCtx();
+    assert.equal(evalValue({ concat: [] }, ctx), '');
+  });
 });

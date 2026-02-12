@@ -61,6 +61,10 @@ export function evalValue(expr: ValueExpr, ctx: EvalContext): number | boolean |
     return resolveRef(expr, ctx);
   }
 
+  if ('concat' in expr) {
+    return expr.concat.map((child) => String(evalValue(child, ctx))).join('');
+  }
+
   if ('aggregate' in expr) {
     const { aggregate } = expr;
     const items = evalQuery(aggregate.query, ctx);

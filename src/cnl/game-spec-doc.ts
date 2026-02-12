@@ -200,6 +200,17 @@ export interface GameSpecVictory {
   readonly ranking?: GameSpecVictoryRanking;
 }
 
+export interface EffectMacroParam {
+  readonly name: string;
+  readonly type: 'string' | 'number' | 'effect' | 'effects' | 'value' | 'condition' | 'query';
+}
+
+export interface EffectMacroDef {
+  readonly id: string;
+  readonly params: readonly EffectMacroParam[];
+  readonly effects: readonly GameSpecEffect[];
+}
+
 export interface GameSpecDoc {
   readonly metadata: GameSpecMetadata | null;
   readonly constants: Readonly<Record<string, number>> | null;
@@ -217,6 +228,7 @@ export interface GameSpecDoc {
   readonly actions: readonly GameSpecActionDef[] | null;
   readonly triggers: readonly GameSpecTriggerDef[] | null;
   readonly endConditions: readonly GameSpecEndCondition[] | null;
+  readonly effectMacros: readonly EffectMacroDef[] | null;
 }
 
 export function createEmptyGameSpecDoc(): GameSpecDoc {
@@ -237,5 +249,6 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     actions: null,
     triggers: null,
     endConditions: null,
+    effectMacros: null,
   };
 }

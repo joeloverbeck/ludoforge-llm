@@ -195,7 +195,13 @@ function walkForEach(
   wCtx: WalkContext,
 ): ChoiceRequest | null {
   const items = evalQuery(effect.forEach.over, wCtx.evalCtx);
-  const limit = effect.forEach.limit ?? 100;
+  let limit = 100;
+  if (effect.forEach.limit !== undefined) {
+    const limitValue = evalValue(effect.forEach.limit, wCtx.evalCtx);
+    if (typeof limitValue === 'number' && Number.isSafeInteger(limitValue) && limitValue > 0) {
+      limit = limitValue;
+    }
+  }
   const bounded = items.slice(0, limit);
 
   for (const item of bounded) {
@@ -205,6 +211,15 @@ function walkForEach(
       return result;
     }
   }
+
+  if (effect.forEach.countBind !== undefined && effect.forEach.in !== undefined) {
+    const countCtx = withBinding(wCtx, effect.forEach.countBind, bounded.length);
+    const result = walkEffects(effect.forEach.in, countCtx);
+    if (result !== null) {
+      return result;
+    }
+  }
+
   return null;
 }
 

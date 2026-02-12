@@ -646,9 +646,6 @@ dataAssets:
         - pieceTypeId: vc-bases
           faction: vc
           total: 9
-  - id: fitl-scenario-production
-    kind: scenario
-    payload: {}
   - id: fitl-scenario-full
     kind: scenario
     payload:

@@ -1,6 +1,6 @@
 # FITLSCESET-007: Remove Placeholder Scenario and Update Integration Test
 
-**Status**: Pending
+**Status**: ✅ COMPLETED
 **Priority**: P0
 **Depends on**: FITLSCESET-004, FITLSCESET-005, FITLSCESET-006
 **Blocks**: FITLSCESET-008
@@ -83,3 +83,19 @@ Add an assertion that exactly 3 scenario assets exist with the expected IDs: `fi
 - `fitl-map-production` and `fitl-piece-catalog-production` assets unchanged
 - All non-scenario-related assertions in `fitl-production-data-compilation.test.ts` unchanged (47 spaces, 7 tracks, 12 piece types, 229 total inventory, etc.)
 - No other test files modified
+
+## Outcome
+
+**Completed**: 2026-02-12
+
+### Changes Made
+- Removed `fitl-scenario-production` placeholder from `data/games/fire-in-the-lake.md`
+- Updated `test/integration/fitl-production-data-compilation.test.ts`: removed 2 `SCENARIO_REF_INVALID` entries from expected validation profile, added assertions for exactly 3 scenario assets with correct IDs, added assertion that `fitl-scenario-production` no longer exists
+- Updated `test/unit/fitl-production-data-scaffold.test.ts`: adjusted data asset count from 6 to 5 and removed extra `'scenario'` kind entry (ticket invariant "no other test files modified" conflicted with "all tests pass" — this test counted the removed placeholder)
+
+### Deviations
+- `fitl-production-data-scaffold.test.ts` was also modified (not listed in ticket) because it asserted the total data asset count including the placeholder
+
+### Verification
+- `npm run build` passes
+- `npm test` — 633/633 tests pass, 0 failures

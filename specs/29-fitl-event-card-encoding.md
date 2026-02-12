@@ -248,6 +248,33 @@ Event Text: "Cancel shaded MiGs. Air Strikes Degrade Trail 2 boxes.
 Lasting Effects Indicator (5.3): US CAPABILITY
 Shaded Text (see Dual Use 5.2): "Mediocre tactics: Air Strike Degrades Trail after applying 2 hits only on die roll of 4-6."
 
+Period Event (Set Up Option): 1965
+Faction Order: US, NVA, ARVN, VC
+Card Number: 5
+Title: Wild Weasels
+Italized Flavor Text: "Air defense suppression."
+Event Text: "Remove shaded SA-2s or, if no shaded SA-2s, Degrade Trail 2 boxes and NVA Resources -9."
+Lasting Effects Indicator (5.3): None.
+Shaded Text (see Dual Use 5.2): "Complex strike packages: Until Coup, Air Strike either Degrades Trail or may remove just 1 piece (not 1-6). MOMENTUM"
+
+Period Event (Set Up Option): 1965
+Faction Order: US, NVA, VC, ARVN
+Card Number: 6
+Title: Aces
+Italized Flavor Text: "Robin Olds ambushes MiGs."
+Event Text: "Free Air Strike any 1 space outside the South with 6 hits and Degrade Trail 2 boxes."
+Lasting Effects Indicator (5.3): None.
+Shaded Text (see Dual Use 5.2): "MiG ace 'Colonel Tomb': 2 Available US Troops to Casualties. Improve Trail by 2 boxes."
+
+Period Event (Set Up Option): 1965
+Faction Order: US, NVA, VC, ARVN
+Card Number: 7
+Title: ADSID
+Italized Flavor Text: "Air-delivered seismic intrusion detector."
+Event Text: "Through Coup, -6 NVA Resources at any Trail# change. MOMENTUM"
+Lasting Effects Indicator (5.3): None.
+Shaded Text (see Dual Use 5.2): "Dubious technology: Improve Trail by 1 box and to a minimum of 2. ARVN Resources -9."
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

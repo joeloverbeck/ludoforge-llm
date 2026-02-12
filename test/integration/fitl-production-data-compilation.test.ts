@@ -39,8 +39,6 @@ describe('FITL production data integration compilation', () => {
     const actualValidationProfile = new Set(validationDiagnostics.map((diagnostic) => `${diagnostic.code}|${diagnostic.path}`));
     const expectedValidationProfile = new Set([
       'CNL_VALIDATOR_REQUIRED_SECTION_MISSING|doc.actions',
-      'CNL_VALIDATOR_DATA_ASSET_SCENARIO_REF_INVALID|doc.dataAssets.2.payload.mapAssetId',
-      'CNL_VALIDATOR_DATA_ASSET_SCENARIO_REF_INVALID|doc.dataAssets.2.payload.pieceCatalogAssetId',
       'CNL_VALIDATOR_REQUIRED_SECTION_MISSING|doc.endConditions',
       'CNL_VALIDATOR_METADATA_PLAYERS_INVALID|doc.metadata.players',
       'CNL_VALIDATOR_REQUIRED_SECTION_MISSING|doc.turnStructure',
@@ -103,5 +101,20 @@ describe('FITL production data integration compilation', () => {
     assert.equal(pieceCatalogPayload.pieceTypes.length, 12);
     const inventoryTotal = pieceCatalogPayload.inventory.reduce((sum, entry) => sum + entry.total, 0);
     assert.equal(inventoryTotal, 229);
+
+    const allAssets = parsed.doc.dataAssets ?? [];
+    const scenarioAssets = allAssets.filter((asset) => asset.kind === 'scenario');
+    assert.equal(scenarioAssets.length, 3, 'Expected exactly 3 scenario assets');
+    const scenarioIds = new Set(scenarioAssets.map((asset) => asset.id));
+    assert.deepEqual(
+      scenarioIds,
+      new Set(['fitl-scenario-full', 'fitl-scenario-short', 'fitl-scenario-medium']),
+      'Expected scenario IDs: fitl-scenario-full, fitl-scenario-short, fitl-scenario-medium',
+    );
+    assert.equal(
+      allAssets.some((asset) => asset.id === 'fitl-scenario-production'),
+      false,
+      'Placeholder fitl-scenario-production must not exist',
+    );
   });
 });

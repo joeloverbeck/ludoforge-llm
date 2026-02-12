@@ -1,6 +1,6 @@
 # Spec 25: FITL Game Mechanics Infrastructure
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P0
 **Complexity**: L
 **Dependencies**: Spec 23 (map + pieces for testing)
@@ -314,3 +314,10 @@ Use production FITL data from `data/games/fire-in-the-lake.md` via the `parseGam
 7. Lattice marker shift works via `addVar` with clamping to lattice bounds
 8. Existing tests pass
 9. Build passes (`npm run build`)
+
+## Outcome
+
+- **Completed**: 2026-02-12
+- **Changes**: All 7 FITLMECHINF tickets (001–007) implemented: token filter extension, derived value helpers, stacking constraints (compile-time + runtime), free operation flag, joint operation cost constraint, dynamic piece sourcing verification, and lattice shift verification. Tests added across unit and integration suites.
+- **Deviations**: Dynamic piece sourcing and lattice shift (Tasks 25.3/marker lattice) confirmed expressible with existing AST — no kernel changes needed. Derived values implemented as on-demand computation per Decision #1.
+- **Verification**: `npm run build` and `npm test` pass.

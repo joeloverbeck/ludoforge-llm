@@ -1,6 +1,6 @@
 # FITLMECHINF-007 - Dynamic Piece Sourcing Pattern and Lattice Shift Verification
 
-**Status**: Pending
+**Status**: COMPLETED
 **Spec**: `specs/25-fitl-game-mechanics-infrastructure.md` (Tasks 25.3 + Marker Lattice Shift)
 **References**: `specs/00-fitl-implementation-order.md` (Milestone B)
 **Depends on**: `FITLMECHINF-001` (token filter for counting available pieces by faction)
@@ -78,3 +78,10 @@ Both dynamic piece sourcing and lattice marker shifts are identified in the spec
 - Existing `addVar` clamping behavior unchanged
 - Existing `if/then/else` nesting behavior unchanged
 - The `sourcePiece` pattern is documented as a reusable reference for Specs 26–27
+
+## Outcome
+
+- **Completed**: 2026-02-12
+- **Changes**: Added `test/unit/dynamic-sourcing.test.ts` with nested if/then/else sourcing pattern tests and `test/unit/effects-var.test.ts` lattice shift edge case tests. Verified existing `EffectAST` supports dynamic piece sourcing without kernel changes. Documented `sourcePiece` pattern for Specs 26–27.
+- **Deviations**: None — existing AST was sufficient as predicted.
+- **Verification**: `npm run build` and `npm test` pass.

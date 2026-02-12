@@ -1,3 +1,5 @@
+**Status**: 🚫 NOT IMPLEMENTED
+
 # Implement Fire in the Lake - Foundation
 
 We've just implemented the kernel of the app: Game Specs in YAML that get compiled into game defs, which can be executed and played by bots, and the traces show us the entire play log. We're in the right situation to actually implement our first game in YAML, ensure it compiles well, and that it plays as expected. We could cement the proper behavior of a complex game with tests.

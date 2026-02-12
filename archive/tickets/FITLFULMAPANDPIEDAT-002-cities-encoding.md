@@ -1,9 +1,16 @@
 # FITLFULMAPANDPIEDAT-002: Encode all 8 cities in the MapPayload
 
+**Status**: ✅ COMPLETED
 **Spec**: 23, Task 23.1
 **Priority**: P0
 **Depends on**: FITLFULMAPANDPIEDAT-001
 **Blocks**: FITLFULMAPANDPIEDAT-004 (adjacency depends on all spaces existing)
+
+## Assumption reassessment (updated)
+
+- `data/games/fire-in-the-lake.md` currently exists as the scaffold created by ticket 001, with `fitl-map-production.payload` still empty (`{}`); this ticket must be the first one to add `spaces` entries there.
+- The only FITL production data test currently present is `test/unit/fitl-production-data-scaffold.test.ts`; the city-specific assertions described below are not implemented yet and must be added in this ticket.
+- Validation for the production map should remain strictly scoped to cities in this ticket (8 entries, no adjacency wiring yet), with provinces/LoCs and complete graph work deferred to tickets 003 and 004.
 
 ## Description
 
@@ -63,3 +70,17 @@ All cities have `spaceType: city`, `terrainTags: []` (cities have no terrain tag
 - No existing test file is modified
 - No `src/` file is modified
 - The `test/fixtures/cnl/compiler/fitl-*.md` fixtures remain unchanged
+
+## Outcome
+
+- Completion date: 2026-02-12
+- What changed:
+  - Populated `fitl-map-production.payload.spaces` in `data/games/fire-in-the-lake.md` with the 8 required city `MapSpaceDef` entries.
+  - Added the requested city ID mapping comment block in the map payload.
+  - Added `test/unit/fitl-production-map-cities.test.ts` to validate IDs, counts, populations, econ, coastal split, `country`, plus empty `terrainTags`/`adjacentTo`.
+- Deviations from original plan:
+  - Ticket assumptions were updated first to reflect the current scaffold-only baseline and existing test state before any code/data edits.
+- Verification results:
+  - `npm run build` passed.
+  - `node --test dist/test/unit/fitl-production-map-cities.test.js` passed.
+  - `npm test` passed.

@@ -472,6 +472,15 @@ dataAssets:
           min: 0
           max: 75
           initial: 0
+      markerLattices:
+        - id: supportOpposition
+          states: [activeOpposition, passiveOpposition, neutral, passiveSupport, activeSupport]
+          defaultState: neutral
+          constraints:
+            - spaceTypes: [loc]
+              allowedStates: [neutral]
+            - populationEquals: 0
+              allowedStates: [neutral]
   - id: fitl-piece-catalog-production
     kind: pieceCatalog
     payload:

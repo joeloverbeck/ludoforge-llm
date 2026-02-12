@@ -108,6 +108,7 @@ const makeState = (): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 2n] },
   stateHash: 0n,
   actionUsage: {},
+  markers: {},
 });
 
 const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
@@ -242,7 +243,7 @@ describe('evalQuery', () => {
     const ctx = makeCtx();
 
     const result = evalQuery(
-      { query: 'tokensInZone', zone: 'battlefield:none', filter: { prop: 'faction', op: 'eq', value: 'US' } },
+      { query: 'tokensInZone', zone: 'battlefield:none', filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
       ctx,
     );
     assert.deepEqual(
@@ -255,7 +256,7 @@ describe('evalQuery', () => {
     const ctx = makeCtx();
 
     const result = evalQuery(
-      { query: 'tokensInZone', zone: 'battlefield:none', filter: { prop: 'faction', op: 'neq', value: 'US' } },
+      { query: 'tokensInZone', zone: 'battlefield:none', filter: [{ prop: 'faction', op: 'neq', value: 'US' }] },
       ctx,
     );
     assert.deepEqual(
@@ -271,7 +272,7 @@ describe('evalQuery', () => {
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
-        filter: { prop: 'faction', op: 'in', value: ['US', 'ARVN'] },
+        filter: [{ prop: 'faction', op: 'in', value: ['US', 'ARVN'] }],
       },
       ctx,
     );
@@ -288,7 +289,7 @@ describe('evalQuery', () => {
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
-        filter: { prop: 'faction', op: 'notIn', value: ['US', 'ARVN'] },
+        filter: [{ prop: 'faction', op: 'notIn', value: ['US', 'ARVN'] }],
       },
       ctx,
     );
@@ -305,11 +306,43 @@ describe('evalQuery', () => {
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
-        filter: { prop: 'nonexistent', op: 'eq', value: 'anything' },
+        filter: [{ prop: 'nonexistent', op: 'eq', value: 'anything' }],
       },
       ctx,
     );
     assert.deepEqual(result, []);
+  });
+
+  it('tokensInZone with compound filter (AND) returns only tokens matching all predicates', () => {
+    const ctx = makeCtx();
+
+    // Tokens have only 'faction' prop, so filter on faction=US AND faction!=ARVN
+    // Both US troops match faction=US AND faction!=ARVN
+    const result = evalQuery(
+      {
+        query: 'tokensInZone',
+        zone: 'battlefield:none',
+        filter: [
+          { prop: 'faction', op: 'in', value: ['US', 'ARVN'] },
+          { prop: 'faction', op: 'neq', value: 'ARVN' },
+        ],
+      },
+      ctx,
+    );
+    assert.deepEqual(
+      result.map((token) => (token as Token).id),
+      [asTokenId('us-troop-1'), asTokenId('us-troop-2')],
+    );
+  });
+
+  it('tokensInZone with empty filter array returns all tokens', () => {
+    const ctx = makeCtx();
+
+    const result = evalQuery(
+      { query: 'tokensInZone', zone: 'battlefield:none', filter: [] },
+      ctx,
+    );
+    assert.equal(result.length, 5);
   });
 
   it('throws QUERY_BOUNDS_EXCEEDED when a query would exceed maxQueryResults', () => {

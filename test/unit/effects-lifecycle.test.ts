@@ -5,6 +5,7 @@ import {
   buildAdjacencyGraph,
   applyEffect,
   applyEffects,
+  EffectRuntimeError,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -16,6 +17,7 @@ import {
   type GameDef,
   type GameState,
   type MapSpaceDef,
+  type SpaceMarkerLatticeDef,
   type StackingConstraint,
   type Token,
 } from '../../src/kernel/index.js';
@@ -60,6 +62,7 @@ const makeState = (): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
   stateHash: 0n,
   actionUsage: {},
+  markers: {},
 });
 
 const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
@@ -256,5 +259,314 @@ describe('effects createToken stacking enforcement', () => {
     );
 
     assert.ok(result.state.zones['discard:none']!.length > 0);
+  });
+});
+
+describe('effects setTokenProp', () => {
+  const makeTokenWithProps = (id: string, props: Token['props']): Token => ({
+    id: asTokenId(id),
+    type: 'piece',
+    props,
+  });
+
+  const makePieceDef = (): GameDef => ({
+    ...makeDef(),
+    tokenTypes: [
+      { id: 'card', props: { cost: 'int', label: 'string', frozen: 'boolean' } },
+      {
+        id: 'piece',
+        props: { faction: 'string', activity: 'string' },
+        transitions: [
+          { prop: 'activity', from: 'underground', to: 'active' },
+          { prop: 'activity', from: 'active', to: 'underground' },
+        ],
+      },
+    ],
+  });
+
+  it('updates a token property in-place preserving ID and zone position', () => {
+    const t = makeTokenWithProps('g1', { faction: 'NVA', activity: 'underground' });
+    const state = makeState();
+    const ctx = makeCtx({
+      def: makePieceDef(),
+      state: {
+        ...state,
+        zones: { ...state.zones, 'deck:none': [token('d1'), t, token('d2')] },
+      },
+      bindings: { $unit: t },
+    });
+
+    const result = applyEffect(
+      { setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } },
+      ctx,
+    );
+
+    const updated = result.state.zones['deck:none']?.[1];
+    assert.ok(updated !== undefined);
+    assert.equal(updated.id, asTokenId('g1'));
+    assert.equal(updated.props['activity'], 'active');
+    assert.equal(updated.props['faction'], 'NVA');
+    assert.equal(result.state.zones['deck:none']?.length, 3);
+  });
+
+  it('throws when token is not found', () => {
+    const ctx = makeCtx({
+      def: makePieceDef(),
+      bindings: { $unit: asTokenId('missing') },
+    });
+
+    assert.throws(
+      () => applyEffect({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }, ctx),
+      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('not found'),
+    );
+  });
+
+  it('throws when property is not defined on token type', () => {
+    const t = makeTokenWithProps('g1', { faction: 'NVA', activity: 'underground' });
+    const state = makeState();
+    const ctx = makeCtx({
+      def: makePieceDef(),
+      state: { ...state, zones: { ...state.zones, 'deck:none': [t] } },
+      bindings: { $unit: t },
+    });
+
+    assert.throws(
+      () => applyEffect({ setTokenProp: { token: '$unit', prop: 'nonexistent', value: 'x' } }, ctx),
+      (error: unknown) =>
+        isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('not defined on token type'),
+    );
+  });
+
+  it('throws when transition is invalid', () => {
+    const t = makeTokenWithProps('g1', { faction: 'NVA', activity: 'underground' });
+    const state = makeState();
+    const ctx = makeCtx({
+      def: makePieceDef(),
+      state: { ...state, zones: { ...state.zones, 'deck:none': [t] } },
+      bindings: { $unit: t },
+    });
+
+    // underground → destroyed is not a valid transition
+    assert.throws(
+      () => applyEffect({ setTokenProp: { token: '$unit', prop: 'activity', value: 'destroyed' } }, ctx),
+      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Invalid transition'),
+    );
+  });
+
+  it('allows any value when no transitions are defined for the property', () => {
+    const t = makeTokenWithProps('g1', { faction: 'NVA', activity: 'underground' });
+    const state = makeState();
+    const ctx = makeCtx({
+      def: makePieceDef(),
+      state: { ...state, zones: { ...state.zones, 'deck:none': [t] } },
+      bindings: { $unit: t },
+    });
+
+    // 'faction' has no transitions defined, so any value is allowed
+    const result = applyEffect(
+      { setTokenProp: { token: '$unit', prop: 'faction', value: 'ARVN' } },
+      ctx,
+    );
+
+    assert.equal(result.state.zones['deck:none']?.[0]?.props['faction'], 'ARVN');
+  });
+
+  it('evaluates value expressions via evalValue', () => {
+    const t = makeTokenWithProps('g1', { faction: 'NVA', activity: 'underground' });
+    const state = makeState();
+    const ctx = makeCtx({
+      def: makePieceDef(),
+      state: { ...state, zones: { ...state.zones, 'deck:none': [t] } },
+      bindings: { $unit: t },
+      moveParams: { $newFaction: 'VC' },
+    });
+
+    const result = applyEffect(
+      { setTokenProp: { token: '$unit', prop: 'faction', value: { ref: 'binding', name: '$newFaction' } } },
+      ctx,
+    );
+
+    assert.equal(result.state.zones['deck:none']?.[0]?.props['faction'], 'VC');
+  });
+
+  it('does not mutate original state', () => {
+    const t = makeTokenWithProps('g1', { faction: 'NVA', activity: 'underground' });
+    const state = makeState();
+    const ctx = makeCtx({
+      def: makePieceDef(),
+      state: { ...state, zones: { ...state.zones, 'deck:none': [t] } },
+      bindings: { $unit: t },
+    });
+
+    applyEffect(
+      { setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } },
+      ctx,
+    );
+
+    assert.equal(ctx.state.zones['deck:none']?.[0]?.props['activity'], 'underground');
+  });
+});
+
+const supportLattice: SpaceMarkerLatticeDef = {
+  id: 'support',
+  states: ['activeOpposition', 'passiveOpposition', 'neutral', 'passiveSupport', 'activeSupport'],
+  defaultState: 'neutral',
+};
+
+const makeMarkerDef = (): GameDef => ({
+  ...makeDef(),
+  markerLattices: [supportLattice],
+});
+
+const makeMarkerCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
+  def: makeMarkerDef(),
+  adjacencyGraph: buildAdjacencyGraph([]),
+  state: makeState(),
+  rng: createRng(42n),
+  activePlayer: asPlayerId(0),
+  actorPlayer: asPlayerId(0),
+  bindings: {},
+  moveParams: {},
+  ...overrides,
+});
+
+describe('effects setMarker', () => {
+  it('sets a marker state on a space', () => {
+    const ctx = makeMarkerCtx();
+    const effect: EffectAST = {
+      setMarker: { space: 'deck:none', marker: 'support', state: 'activeSupport' },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.markers['deck:none']?.['support'], 'activeSupport');
+  });
+
+  it('throws for invalid marker state', () => {
+    const ctx = makeMarkerCtx();
+    const effect: EffectAST = {
+      setMarker: { space: 'deck:none', marker: 'support', state: 'invalidState' },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) => error instanceof EffectRuntimeError && String(error).includes('invalidState'),
+    );
+  });
+
+  it('throws for unknown marker lattice', () => {
+    const ctx = makeMarkerCtx();
+    const effect: EffectAST = {
+      setMarker: { space: 'deck:none', marker: 'nonexistent', state: 'neutral' },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) => error instanceof EffectRuntimeError && String(error).includes('nonexistent'),
+    );
+  });
+
+  it('overwrites existing marker state', () => {
+    const state: GameState = {
+      ...makeState(),
+      markers: { 'deck:none': { support: 'neutral' } },
+    };
+    const ctx = makeMarkerCtx({ state });
+    const effect: EffectAST = {
+      setMarker: { space: 'deck:none', marker: 'support', state: 'activeOpposition' },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.markers['deck:none']?.['support'], 'activeOpposition');
+  });
+
+  it('does not mutate original state', () => {
+    const ctx = makeMarkerCtx();
+    const effect: EffectAST = {
+      setMarker: { space: 'deck:none', marker: 'support', state: 'activeSupport' },
+    };
+
+    applyEffect(effect, ctx);
+    assert.deepEqual(ctx.state.markers, {});
+  });
+});
+
+describe('effects shiftMarker', () => {
+  it('shifts marker state forward in lattice', () => {
+    const state: GameState = {
+      ...makeState(),
+      markers: { 'deck:none': { support: 'neutral' } },
+    };
+    const ctx = makeMarkerCtx({ state });
+    const effect: EffectAST = {
+      shiftMarker: { space: 'deck:none', marker: 'support', delta: 1 },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.markers['deck:none']?.['support'], 'passiveSupport');
+  });
+
+  it('shifts marker state backward in lattice', () => {
+    const state: GameState = {
+      ...makeState(),
+      markers: { 'deck:none': { support: 'neutral' } },
+    };
+    const ctx = makeMarkerCtx({ state });
+    const effect: EffectAST = {
+      shiftMarker: { space: 'deck:none', marker: 'support', delta: -1 },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.markers['deck:none']?.['support'], 'passiveOpposition');
+  });
+
+  it('clamps at lattice boundaries (no overshoot)', () => {
+    const state: GameState = {
+      ...makeState(),
+      markers: { 'deck:none': { support: 'activeSupport' } },
+    };
+    const ctx = makeMarkerCtx({ state });
+    const effect: EffectAST = {
+      shiftMarker: { space: 'deck:none', marker: 'support', delta: 10 },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.markers['deck:none']?.['support'], 'activeSupport');
+  });
+
+  it('uses default state when space has no markers', () => {
+    const ctx = makeMarkerCtx();
+    const effect: EffectAST = {
+      shiftMarker: { space: 'deck:none', marker: 'support', delta: 2 },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.markers['deck:none']?.['support'], 'activeSupport');
+  });
+
+  it('is a no-op when already at boundary and shift goes further', () => {
+    const state: GameState = {
+      ...makeState(),
+      markers: { 'deck:none': { support: 'activeOpposition' } },
+    };
+    const ctx = makeMarkerCtx({ state });
+    const effect: EffectAST = {
+      shiftMarker: { space: 'deck:none', marker: 'support', delta: -5 },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state, ctx.state);
+    assert.equal(result.rng, ctx.rng);
+  });
+
+  it('throws for unknown marker lattice', () => {
+    const ctx = makeMarkerCtx();
+    const effect: EffectAST = {
+      shiftMarker: { space: 'deck:none', marker: 'unknown', delta: 1 },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) => error instanceof EffectRuntimeError && String(error).includes('unknown'),
+    );
   });
 });

@@ -40,6 +40,7 @@ const stateStub: GameState = {
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
   stateHash: 0n,
   actionUsage: {},
+  markers: {},
 };
 
 const moveStub: Move = { actionId: asActionId('only'), params: {} };

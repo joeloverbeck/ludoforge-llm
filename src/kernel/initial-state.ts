@@ -33,6 +33,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     rng: rng.state,
     stateHash: 0n,
     actionUsage: {},
+    markers: {},
   };
 
   const setupResult = applyEffects(def.setup, {

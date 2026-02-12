@@ -617,14 +617,410 @@ Event Text: "Each NVA Attack space, first remove 1 NVA Troop cube."
 Lasting Effects Indicator (5.3): NVA CAPABILITY
 Shaded Text (see Dual Use 5.2): "Communist armored assault: NVA Attack in 1 space removes 1 enemy per Troop."
 
-Period Event (Set Up Option):
-Faction Order:
-Card Number:
-Title:
-Italized Flavor Text:
-Event Text:
+Period Event (Set Up Option): 1965
+Faction Order: NVA, ARVN, VC, US
+Card Number: 46
+Title: 559th Transport Grp
+Italized Flavor Text: "Tough terrain."
+Event Text: "Degrade the Trail by 2 boxes. Until Coup, Infiltrate is max 1 space. MOMENTUM"
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "The way through: NVA free Infiltrate. Then NVA add 3 times and VC 2 times Trail value in Resources."
+
+Period Event (Set Up Option): 1965
+Faction Order: NVA, ARVN, VC, US
+Card Number: 47
+Title: Chu Luc
+Italized Flavor Text: "Southerners resist invasion."
+Event Text: "Add ARVN Troops to double the ARVN pieces in a space with NVA. All ARVN free Assault NVA."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "NVA professional soldiers: Place up to 10 NVA Troops anywhere within 1 space of North Vietnam."
+
+Period Event (Set Up Option): 1964
+Faction Order: NVA, ARVN, VC, US
+Card Number: 48
+Title: Nam Dong
+Italized Flavor Text: "CIDG camp holds out."
+Event Text: "Remove up to 3 Guerrillas from a Province with a COIN Base."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Camp overrun: Remove a COIN Base from a Province with 0-2 COIN cubes (US to Casualties) and set it to Active Opposition."
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, ARVN, VC, US
+Card Number: 49
+Title: Russian Arms
+Italized Flavor Text: "Soviet escalation matched."
+Event Text: "Place any 6 ARVN pieces anywhere in South Vietnam."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Heavy divisions, big guns: NVA in any 3 spaces places enough Troops to double their number. It then free Bombards."
+
+Period Event (Set Up Option): 1964
+Faction Order: NVA, ARVN, VC, US
+Card Number: 50
+Title: Uncle Ho
+Italized Flavor Text: "Known communist."
+Event Text: "4 out-of-play US Troops to South Vietnam, or ARVN Resources +9. ARVN executes any 2 free Limited Operations."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Revolutionary unifier: VC then NVA each execute 3 free Limited Operations."
+
+Period Event (Set Up Option): 1964
+Faction Order: NVA, VC, US, ARVN
+Card Number: 51
+Title: 301st Supply Bn
+Italized Flavor Text: "Combat units diverted to logistics."
+Event Text: "Remove 6 non-Base Insurgent pieces from outside South Vietnam."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Trail construction unit: Improve Trail by 2 boxes and add a die roll of NVA Resources."
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, VC, US, ARVN
+Card Number: 52
+Title: RAND
+Italized Flavor Text: "Whiz-kid corporation."
+Event Text: "Flip 1 shaded US Capability to unshaded."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Systems analysis ignorant of local conditions: Flip 1 unshaded US Capability to shaded."
+
+Period Event (Set Up Option): 1965
+Faction Order: NVA, VC, US, ARVN
+Card Number: 53
+Title: Sappers
+Italized Flavor Text: "Ineffective tactics"
+Event Text: "Remove 2 NVA Troops each from up to 3 spaces in South Vietnam. Remain Eligible."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Facilities damaged: Remove up to 1 US and 2 ARVN Bases from any Provinces (US to Casualties)"
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, VC, US, ARVN
+Card Number: 54
+Title: Son Tay
+Italized Flavor Text: "Daring rescue."
+Event Text: "2 Troop Casualties to Available. NVA Ineligible through next card. US Eligible."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "No prisoners there: Any 2 Casualties out of play. US Ineligible through next card."
+
+Period Event (Set Up Option): 1964
+Faction Order: NVA, VC, US, ARVN
+Card Number: 55
+Title: Trucks
+Italized Flavor Text: "Bottlenecks."
+Event Text: "Degrade Trail 2 boxes. NVA selects and removes 4 of its pieces each from Laos and Cambodia."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Convoys: Add twice Trail value to each NVA and VC Resources. NVA moves its unTunneled Bases anywhere within Laos/Cambodia."
+
+Period Event (Set Up Option): 1965
+Faction Order: NVA, VC, ARVN, US
+Card Number: 56
+Title: Vo Nguyen Giap
+Italized Flavor Text: "Premature conventional buildup."
+Event Text: "In each of any 3 spaces, replace any 2 Guerrillas with 1 NVA Troop."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Military strategist: NVA free Marches into up to 3 spaces then executes any 1 free Op or Special Activity within each, if desired."
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, VC, ARVN, US
+Card Number: 57
+Title: International Unrest
+Italized Flavor Text: "Protests ignored."
+Event Text: "Any 2 US Casualties to Available."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "US accused of neocolonialist war: 2 Available US Troops out of play. NVA add a die roll of Resources."
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, VC, ARVN, US
+Card Number: 58
+Title: Pathet Lao
+Italized Flavor Text: "Drive on Vientiane."
+Event Text: "NVA removes 6 of its pieces total from North Vietnam and Laos."
+Lasting Effects Indicator (5.3): None. 
+Shaded Text (see Dual Use 5.2): "Trail security: if no COIN cubes in Laos, Improve Trail 2 boxes. If there are, US and ARVN Redeploy them to Vietnam."
+
+Period Event (Set Up Option): 1965
+Faction Order: NVA, VC, ARVN, US
+Card Number: 59
+Title: Plei Mei
+Italized Flavor Text: "CIDG interdict NVA."
+Event Text: "Remove any 3 NVA pieces from a space with or adjacent to a COIN Base."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Tay Nguyen offensive: NVA free March from any spaces outside South Vietnam, then free Attack or Ambush any 1 space."
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, VC, ARVN, US
+Card Number: 60
+Title: War Photographer
+Italized Flavor Text: "Pulitzer photo inspires."
+Event Text: "3 out of play US pieces to Available."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Photos galvanize home front: NVA place 6 Troops outside South Vietnam, add +6 Resources, and, if executing, stay Eligible."
+
+Period Event (Set Up Option): 1968
+Faction Order: ARVN, US, NVA, VC
+Card Number: 61
+Title: Armored Cavalry
+Italized Flavor Text: "Shock force."
+Event Text: "ARVN in 1 Transport destination after Ops may free Assault."
+Lasting Effects Indicator (5.3): ARVN CAPABILITY
+Shaded Text (see Dual Use 5.2): "Sedentary sinecures: Transport Rangers only."
+
+Period Event (Set Up Option): 1968
+Faction Order: ARVN, US, NVA, VC
+Card Number: 62
+Title: Cambodian Civil War
+Italized Flavor Text: "Lol Nol deposes Sihanouk."
+Event Text: "US free Air Lifts into and US or ARVN free Sweeps within Cambodia. Remove 2 NVA/VC Bases from Cambodia."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "NVA invades Cambodia: NVA places a total of 12 NVA Troops and Guerrillas in Cambodia."
+
+Period Event (Set Up Option): 1964
+Faction Order: ARVN, US, NVA, VC
+Card Number: 63
+Title: Fact Finding
+Italized Flavor Text: "US sends study teams."
+Event Text: "2 US pieces from out-of-play to South Vietnam, or transfer a die roll from Patronage to ARVN Resources. Aid +6."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Duped: Remove Support from a COIN-Controlled City outside Saigon. Patronage +4 or VC Resources +4."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, US, NVA, VC
+Card Number: 64
+Title: Honolulu Conference
+Italized Flavor Text: "Uneasy allies."
+Event Text: "Aid +10 or -10. Patronage +3 or -5. If US or ARVN executing, that Faction Pacifies as if Support Phase. If Insurgent executing, that Faction remains Eligible."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): None
+
+Period Event (Set Up Option): 1968
+Faction Order: ARVN, US, NVA, VC
+Card Number: 65
+Title: International Forces
+Italized Flavor Text: "Free World allies."
+Event Text: "Place 4 out-of-play US pieces onto the map."
+Lasting Effects Indicator (5.3): None 
+Shaded Text (see Dual Use 5.2): "Withdrawal: Us must remove a die roll in pieces from the map to out of play."
+
+Period Event (Set Up Option): 1964
+Faction Order: ARVN, US, VC, NVA
+Card Number: 66
+Title: Ambassador Taylor
+Italized Flavor Text: "Interventionist."
+Event Text: "Aid and ARVN Resources each +9. Up to 2 US pieces from out-of-play to South Vietnam or, if desired, Patronage -3."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Saigon seen as US puppet: Remove Support from 3 spaces outside Saigon. Patronage -3."
+
+Period Event (Set Up Option): 1963
+Faction Order: ARVN, US, VC, NVA
+Card Number: 67
+Title: Amphib Landing
+Italized Flavor Text: "Sea power."
+Event Text: "US or ARVN relocates any of its Troops among coastal spaces, then free Sweeps and Assaults in 1 coastal space."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Enemy vanished: VC relocate up to 3 pieces from any coastal space. US and ARVN Ineligible through next card."
+
+Period Event (Set Up Option): 1964
+Faction Order: ARVN, US, VC, NVA
+Card Number: 68
+Title: Green Berets
+Italized Flavor Text: "Elite trainers."
+Event Text: "Place 3 Irregulars or 3 Rangers in a Province without NVA Control. Set it to Active Support."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Reluctant trainees: Remove any 3 Irregulars to Available and set 1 of their Provinces to Active Opposition."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, US, VC, NVA
+Card Number: 69
+Title: MACV
+Italized Flavor Text: "Military Assistance Command, Vietnam spurs coordination."
+Event Text: "Either US then ARVN or NVA then VC each executes any 1 free Special Activity, Faction executing Event stays Eligible."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): None
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, US, VC, NVA
+Card Number: 70
+Title: ROKs
+Italized Flavor Text: "Tough Koreans."
+Event Text: "US or ARVN free Sweep into/in then free Assault Phu Bon and adjacent spaces as if US and as if all ARVN cubes are US Troops."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "UN troops abuse locals: Shift Qui Nhon, Phu Bon, and Khanh Hoa each 1 level toward Active Opposition."
+
+Period Event (Set Up Option): 71
+Faction Order: ARVN, NVA, US, VC
+Card Number: 71
+Title: An Loc
+Italized Flavor Text: "ARVN stand firm."
+Event Text: "In a space in the south with ARVN, remove all NVA Troops and place 3 ARVN Troops."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Conventional thrust: NVA free Marches Troops into a City and free Attacks there twice."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, NVA, US, VC
+Card Number: 72
+Title: Body Count
+Italized Flavor Text: "Crossover point."
+Event Text: "Until Coup, Assault and Patrol add +3 Aid per Guerrilla removed and cost 0. MOMENTUM"
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "'If it's dead, it's VC': Place 1 VC Guerrilla in each Active Opposition space, 2 NVA Troops in each Laos/Cambodia space."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, NVA, US, VC
+Card Number: 73
+Title: Great Society
+Italized Flavor Text: "LBJ advances social agenda."
+Event Text: "Conduct a Commitment Phase."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "War wrecks economy: US moves 3 pieces from Available to out of play."
+
+Period Event (Set Up Option): 1968
+Faction Order: ARVN, NVA, US, VC
+Card Number: 74
+Title: Lam Son 719
+Italized Flavor Text: "Sudden incursion."
+Event Text: "Place up to 6 ARVN Troops in a Laos space. ARVN executes a free LimOp there. Degrade Trail 2 boxes."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Southern escalation: NVA Resources +6 and +1 more for each ARVN piece in Laos."
+
+Period Event (Set Up Option): 1964
+Faction Order: ARVN, NVA, US, VC
+Card Number: 75
+Title: Sihanouk
+Italized Flavor Text: "Pursuit operations."
+Event Text: "US or ARVN free Sweep into or in any Cambodia spaces, then free Assaults in one."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Sea supply and sanctuary: VC free Rally in any Cambodia spaces then free March from any Rally spaces. Then NVA do the same."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, NVA, VC, US
+Card Number: 76
+Title: Annam
+Italized Flavor Text: "North-South rivalry lingers."
+Event Text: "NVA and VC -1 Resource each per space with both. Patronage +2."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Saigon regime seen as colonial retread. Remove support from Hue. Da Nang, and an adjacent Province."
+
+Period Event (Set Up Option): 1968
+Faction Order: ARVN, NVA, VC, US
+Card Number: 77
+Title: Détente
+Italized Flavor Text: "Communist Bloc eases off of war."
+Event Text: "Cut NVA and VC Resources each to half their total (round down). 5 Available NVA Troops out of play."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Nixon disappointed: NVA add +9 Resources or free Infiltrate. Then VC free Rally in up to 6 spaces."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, NVA, VC, US
+Card Number: 78
+Title: General Landsdale
+Italized Flavor Text: "Unconventional counterinsurgent."
+Event Text: "Set a space outside Saigon with US or ARVN to Active Support. Add a Terror marker there. Patronage +1."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Bureaucratic infighter: Patronage +3. No US Assault until Coup. MOMENTUM"
+
+Period Event (Set Up Option): 1964
+Faction Order: ARVN, NVA, VC, US
+Card Number: 79
+Title: Henry Cabot Lodge
+Italized Flavor Text: "Ambassador proposes US protectorate."
+Event Text: "Aid +20"
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Internecine enabler: Remove up to 3 ARVN pieces. Patronage +2 for each. ARVN Ineligible through next card."
+
+Period Event (Set Up Option): 1968
+Faction Order: ARVN, NVA, VC, US
+Card Number: 80
+Title: Light at the End of the Tunnel
+Italized Flavor Text: "Wind down seen."
+Event Text: "Remove 1-4 US pieces from map to Available. For each piece, Patronage +2, shift a space 1 level toward Active Opposition, and place 4 NVA Troops outside the South. Stay Eligible."
 Lasting Effects Indicator (5.3):
 Shaded Text (see Dual Use 5.2):
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, VC, US, NVA
+Card Number: 81
+Title: CIDG
+Italized Flavor Text: "Civilian Irregular Defense Groups."
+Event Text: "Replace a die roll of VC Guerrillas in South Vietnam with Rangers, Irregulars, or Police."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Desertions and defections. Replace all Rangers, Police, and Irregulars in a Highland space with 2 VC Guerrillas total."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, VC, US, NVA
+Card Number: 82
+Title: Domino Theory
+Italized Flavor Text: "US justifies its war."
+Event Text: "Up to 3 US or 6 ARVN out-of-play pieces to Available. Or ARVN Resources and Aid each +9."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "US public doubts war's purpose: 3 Available US Troops out of play. Aid -9."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, VC, US, NVA
+Card Number: 83
+Title: Election
+Italized Flavor Text: "Clean vote."
+Event Text: "3 Passive Support spaces to Active Support. Aid +10."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Ballot stuffing defeats opposition candidate Druong Dinh Dzu: Shift 2 Cities each 1 level toward Active Opposition. Aid -15."
+
+Period Event (Set Up Option): 1968
+Faction Order: ARVN, VC, US, NVA
+Card Number: 84
+Title: To Quoc
+Italized Flavor Text: "Fear of Northern reprisal."
+Event Text: "Place 1 ARVN Troop and 1 Police in each South Vietnam space with NVA."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Thoroughly penetrated: ARVN remove 1 in 3 cubes (round down) each space. Place a VC Guerrilla in 3 spaces where ARVN removed."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, VC, US, NVA
+Card Number: 85
+Title: USAID
+Italized Flavor Text: "Increased help to civilians."
+Event Text: "Shift 3 COIN-Controlled spaces each 1 level toward Active Support."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "More aid, more corruption: Increase or decrease any or all of ARVN Resources, Aid, and Patronage by 2 each."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, VC, NVA, US
+Card Number: 86
+Title: Mandate of Heaven
+Italized Flavor Text: "Anger at regime suppressed."
+Event Text: "1 Govern space may transfer Aid to Patronage without shifting support."
+Lasting Effects Indicator (5.3): ARVN CAPABILITY
+Shaded Text (see Dual Use 5.2): "Communism seen in harmony with Confucious: ARVN Govern and Pacify maximum 1 space."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, VC, NVA, US
+Card Number: 87
+Title: Nguyen Chanh Thi
+Italized Flavor Text: "I Corps Commander."
+Event Text: "Place 3 ARVN pieces within 3 spaces of Hue. Shift receiving spaces each 1 level toward Active Support."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Popular general relieved: Replace any 2 ARVN with any 2 VC pieces within 2 spaces of Hue. Patronage +4 or -4."
+
+Period Event (Set Up Option): 1968
+Faction Order: ARVN, VC, NVA, US
+Card Number: 88
+Title: Phan Quang Dan
+Italized Flavor Text: "Dissident becomes RVN minister."
+Event Text: "Shift Saigon 1 level toward Active Support. Patronage +5."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Oppositionist Assemblyman: Shift Saigon 1 level toward Neutral. Patronage -5. ARVN Ineligible through next card."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, VC, NVA, US
+Card Number: 89
+Title: Tam Chau
+Italized Flavor Text: "Catholic backlash."
+Event Text: "Shift Saigon 1 level toward Passive Support. Patronage +6."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Saigon Buddhists find leader: Place a VC piece in and shift Saigon 1 level toward Passive Opposition. Patronage -6."
+
+Period Event (Set Up Option): 1965
+Faction Order: ARVN, VC, NVA, US
+Card Number: 90
+Title: Walt Rostow
+Italized Flavor Text: "COIN portfolio."
+Event Text: "Place any 2 ARVN pieecs from anywhere (even out of play) into any COIN Control spaces."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "The enemy owns the night: Place any 1 Guerrilla in each Province with ARVN. ARVN Troops Redeploy as if no Bases."
 
 Period Event (Set Up Option):
 Faction Order:

@@ -35,7 +35,8 @@ export type Reference =
   | { readonly ref: 'pvar'; readonly player: PlayerSel; readonly var: string }
   | { readonly ref: 'zoneCount'; readonly zone: ZoneSel }
   | { readonly ref: 'tokenProp'; readonly token: TokenSel; readonly prop: string }
-  | { readonly ref: 'binding'; readonly name: string };
+  | { readonly ref: 'binding'; readonly name: string }
+  | { readonly ref: 'markerState'; readonly space: ZoneSel; readonly marker: string };
 
 export type ValueExpr =
   | number
@@ -81,20 +82,21 @@ export interface TokenFilterPredicate {
 }
 
 export type OptionsQuery =
-  | { readonly query: 'tokensInZone'; readonly zone: ZoneSel; readonly filter?: TokenFilterPredicate }
+  | { readonly query: 'tokensInZone'; readonly zone: ZoneSel; readonly filter?: readonly TokenFilterPredicate[] }
   | { readonly query: 'intsInRange'; readonly min: number; readonly max: number }
   | { readonly query: 'enums'; readonly values: readonly string[] }
   | { readonly query: 'players' }
   | { readonly query: 'zones'; readonly filter?: { readonly owner?: PlayerSel } }
   | { readonly query: 'adjacentZones'; readonly zone: ZoneSel }
-  | { readonly query: 'tokensInAdjacentZones'; readonly zone: ZoneSel }
+  | { readonly query: 'tokensInAdjacentZones'; readonly zone: ZoneSel; readonly filter?: readonly TokenFilterPredicate[] }
   | {
       readonly query: 'connectedZones';
       readonly zone: ZoneSel;
       readonly via?: ConditionAST;
       readonly includeStart?: boolean;
       readonly maxDepth?: number;
-    };
+    }
+  | { readonly query: 'binding'; readonly name: string };
 
 export type EffectAST =
   | {
@@ -152,6 +154,13 @@ export type EffectAST =
     }
   | { readonly destroyToken: { readonly token: TokenSel } }
   | {
+      readonly setTokenProp: {
+        readonly token: TokenSel;
+        readonly prop: string;
+        readonly value: ValueExpr;
+      };
+    }
+  | {
       readonly if: {
         readonly when: ConditionAST;
         readonly then: readonly EffectAST[];
@@ -195,6 +204,28 @@ export type EffectAST =
             readonly n?: never;
           }
       );
+    }
+  | {
+      readonly rollRandom: {
+        readonly bind: string;
+        readonly min: ValueExpr;
+        readonly max: ValueExpr;
+        readonly in: readonly EffectAST[];
+      };
+    }
+  | {
+      readonly setMarker: {
+        readonly space: ZoneSel;
+        readonly marker: string;
+        readonly state: ValueExpr;
+      };
+    }
+  | {
+      readonly shiftMarker: {
+        readonly space: ZoneSel;
+        readonly marker: string;
+        readonly delta: ValueExpr;
+      };
     };
 
 export interface VariableDef {
@@ -213,9 +244,16 @@ export interface ZoneDef {
   readonly adjacentTo?: readonly ZoneId[];
 }
 
+export interface TokenTypeTransition {
+  readonly prop: string;
+  readonly from: string;
+  readonly to: string;
+}
+
 export interface TokenTypeDef {
   readonly id: string;
   readonly props: Readonly<Record<string, 'int' | 'string' | 'boolean'>>;
+  readonly transitions?: readonly TokenTypeTransition[];
 }
 
 export interface Token {
@@ -311,6 +349,7 @@ export interface GameDef {
   readonly scoring?: ScoringDef;
   readonly eventCards?: readonly EventCardDef[];
   readonly stackingConstraints?: readonly StackingConstraint[];
+  readonly markerLattices?: readonly SpaceMarkerLatticeDef[];
 }
 
 export type TurnFlowDuration = 'card' | 'nextCard' | 'coup' | 'campaign';
@@ -395,13 +434,35 @@ export interface OperationProfilePartialExecutionDef {
   readonly mode: 'forbid' | 'allow';
 }
 
+export interface OperationLegalityDef {
+  readonly when?: ConditionAST;
+}
+
+export interface OperationCostDef {
+  readonly validate?: ConditionAST;
+  readonly spend?: readonly EffectAST[];
+}
+
+export interface OperationTargetingDef {
+  readonly select?: 'upToN' | 'allEligible' | 'exactN';
+  readonly max?: number;
+  readonly filter?: ConditionAST;
+  readonly order?: string;
+  readonly tieBreak?: string;
+}
+
+export interface OperationResolutionStageDef {
+  readonly stage?: string;
+  readonly effects: readonly EffectAST[];
+}
+
 export interface OperationProfileDef {
   readonly id: string;
   readonly actionId: ActionId;
-  readonly legality: Readonly<Record<string, unknown>>;
-  readonly cost: Readonly<Record<string, unknown>>;
-  readonly targeting: Readonly<Record<string, unknown>>;
-  readonly resolution: readonly Readonly<Record<string, unknown>>[];
+  readonly legality: OperationLegalityDef;
+  readonly cost: OperationCostDef;
+  readonly targeting: OperationTargetingDef;
+  readonly resolution: readonly OperationResolutionStageDef[];
   readonly partialExecution: OperationProfilePartialExecutionDef;
   readonly linkedSpecialActivityWindows?: readonly string[];
 }
@@ -668,6 +729,12 @@ export type ZobristFeature =
       readonly actionId: ActionId;
       readonly scope: 'turn' | 'phase' | 'game';
       readonly count: number;
+    }
+  | {
+      readonly kind: 'markerState';
+      readonly spaceId: string;
+      readonly markerId: string;
+      readonly state: string;
     };
 
 export interface ActionUsageRecord {
@@ -692,12 +759,18 @@ export interface TurnFlowPendingEligibilityOverride {
   readonly duration: TurnFlowDuration;
 }
 
+export interface CompoundActionState {
+  readonly operationProfileId: string;
+  readonly saTiming: 'before' | 'during' | 'after' | null;
+}
+
 export interface TurnFlowRuntimeState {
   readonly factionOrder: readonly string[];
   readonly eligibility: Readonly<Record<string, boolean>>;
   readonly currentCard: TurnFlowRuntimeCardState;
   readonly pendingEligibilityOverrides?: readonly TurnFlowPendingEligibilityOverride[];
   readonly consecutiveCoupRounds?: number;
+  readonly compoundAction?: CompoundActionState;
 }
 
 export interface GameState {
@@ -713,15 +786,23 @@ export interface GameState {
   readonly stateHash: bigint;
   readonly actionUsage: Readonly<Record<string, ActionUsageRecord>>;
   readonly turnFlow?: TurnFlowRuntimeState;
+  readonly markers: Readonly<Record<string, Readonly<Record<string, string>>>>;
 }
 
 export type MoveParamScalar = number | string | boolean | TokenId | ZoneId | PlayerId;
 export type MoveParamValue = MoveParamScalar | readonly MoveParamScalar[];
 
+export interface CompoundMovePayload {
+  readonly specialActivity: Move;
+  readonly timing: 'before' | 'during' | 'after';
+  readonly insertAfterStage?: number;
+}
+
 export interface Move {
   readonly actionId: ActionId;
   readonly params: Readonly<Record<string, MoveParamValue>>;
   readonly freeOperation?: boolean;
+  readonly compound?: CompoundMovePayload;
 }
 
 export interface StateDelta {

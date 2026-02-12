@@ -56,6 +56,7 @@ const makeState = (zones: Record<string, readonly Token[]>, globalVars: Record<s
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 2n] },
   stateHash: 0n,
   actionUsage: {},
+  markers: {},
 });
 
 const DEFAULT_FACTION_CONFIG: FactionConfig = {

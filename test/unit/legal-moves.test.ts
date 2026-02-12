@@ -107,6 +107,7 @@ const createState = (): GameState => ({
   actionUsage: {
     limitedTurn: { turnCount: 1, phaseCount: 0, gameCount: 0 },
   },
+  markers: {},
 });
 
 function expectedMoves(): readonly Move[] {

@@ -562,6 +562,32 @@ const validateEffectAst = (
     return;
   }
 
+  if ('setTokenProp' in effect) {
+    validateValueExpr(diagnostics, effect.setTokenProp.value, `${path}.setTokenProp.value`, context);
+    return;
+  }
+
+  if ('rollRandom' in effect) {
+    validateValueExpr(diagnostics, effect.rollRandom.min, `${path}.rollRandom.min`, context);
+    validateValueExpr(diagnostics, effect.rollRandom.max, `${path}.rollRandom.max`, context);
+    effect.rollRandom.in.forEach((entry, index) => {
+      validateEffectAst(diagnostics, entry, `${path}.rollRandom.in[${index}]`, context);
+    });
+    return;
+  }
+
+  if ('setMarker' in effect) {
+    validateZoneSelector(diagnostics, effect.setMarker.space, `${path}.setMarker.space`, context);
+    validateValueExpr(diagnostics, effect.setMarker.state, `${path}.setMarker.state`, context);
+    return;
+  }
+
+  if ('shiftMarker' in effect) {
+    validateZoneSelector(diagnostics, effect.shiftMarker.space, `${path}.shiftMarker.space`, context);
+    validateValueExpr(diagnostics, effect.shiftMarker.delta, `${path}.shiftMarker.delta`, context);
+    return;
+  }
+
   const chooseN = effect.chooseN;
   const hasN = 'n' in chooseN && chooseN.n !== undefined;
   const hasMax = 'max' in chooseN && chooseN.max !== undefined;

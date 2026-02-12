@@ -62,10 +62,10 @@ const fullGameDef = {
     {
       id: 'play-card-profile',
       actionId: 'playCard',
-      legality: { when: 'always' },
-      cost: { spend: 0 },
-      targeting: { select: 'none' },
-      resolution: [{ stage: 'resolve' }],
+      legality: {},
+      cost: {},
+      targeting: {},
+      resolution: [{ effects: [] }],
       partialExecution: { mode: 'forbid' },
       linkedSpecialActivityWindows: ['window-a'],
     },
@@ -117,6 +117,7 @@ const validGameState = {
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 3n] },
   stateHash: 42n,
   actionUsage: {},
+  markers: {},
 } as const;
 
 const validGameTrace = {

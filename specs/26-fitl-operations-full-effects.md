@@ -1,15 +1,27 @@
 # Spec 26: FITL Operations Full Effects
 
-**Status**: Draft
+**Status**: Draft (prerequisites complete)
 **Priority**: P0
 **Complexity**: XL
-**Dependencies**: Spec 23 (map + pieces), Spec 25 (derived values, stacking, dynamic sourcing, free ops)
+**Dependencies**: Spec 23 (map + pieces), Spec 25 (derived values, stacking, dynamic sourcing, free ops), **Spec 25a (kernel operation primitives — COMPLETED)**
 **Estimated effort**: 5–7 days
 **Source sections**: Brainstorming Sections 4.2 (items 1, 3–5), 5.3, 7.4, 7.6
 
 ## Overview
 
 Replace the 8 stub operation profiles with complete effect resolution. Establish multi-space targeting, piece removal ordering, and the operation/SA interleaving architecture. This is the largest and highest-risk spec in the FITL implementation.
+
+## Kernel Prerequisites (Spec 25a — Completed)
+
+All kernel primitive gaps identified during spec analysis have been implemented:
+
+1. **Compound token filtering** — `filter` on `tokensInZone`/`tokensInAdjacentZones` accepts array of predicates (AND-conjunction)
+2. **Binding query** — `{ query: 'binding', name: string }` in `OptionsQuery` enables `forEach` over `chooseN` selections
+3. **setTokenProp** — In-place token property mutation (e.g., flip guerrillas underground/active)
+4. **rollRandom** — Deterministic random number generation with let-like scoping
+5. **Marker lattice** — `setMarker`/`shiftMarker` effects with lattice validation, `markerState` reference, Zobrist hashing
+6. **Typed OperationProfileDef** — `legality`, `cost`, `targeting`, `resolution` use typed interfaces instead of Record<string, unknown>
+7. **Compound Move** — `Move.compound` field for SA interleaving with `before`/`during`/`after` timing
 
 ## Scope
 
@@ -48,7 +60,7 @@ Already in `EffectAST` — `chooseN` selects spaces, `forEach` resolves per spac
 // Step 2: Pay cost and resolve per space
 { forEach: {
     bind: 'space',
-    over: { ref: 'targetSpaces' },
+    over: { query: 'binding', name: 'targetSpaces' },
     effects: [
       // pay resource cost per space
       // resolve operation in space
@@ -96,22 +108,30 @@ interface OperationProfileDef {
 
 **Alternative**: Phase-based approach where operations and SAs are separate action phases in a turn's action sequence. Simpler but less flexible.
 
+**Resolved**: Compound Move model with `Move.compound` field. See Spec 25a.
+
+> **Deferred from Spec 25a**: The compound move *execution* infrastructure (`applyMove` handling for `before`/`during`/`after` timing) is complete. However, **compound move variant enumeration in `legal-moves.ts`** was not implemented — `legal-moves.ts` does not yet read `linkedSpecialActivityWindows` to generate compound `Move` objects. This must be implemented as part of Task 26.1 below.
+
 ## Implementation Tasks
 
-### Task 26.1: Operation/SA Interleaving Architecture
+### Task 26.1: Operation/SA Interleaving — Legal Move Enumeration
 
-**This is the highest-risk task.** Resolve Open Question #6.
+**Prerequisite work from Spec 25a is done** (compound Move types, schemas, applyMove execution). This task completes the interleaving model by implementing **compound move generation in `legal-moves.ts`**.
 
-Design and implement the interleaving model. Key considerations:
-- SA must have access to operation context (which spaces were selected)
-- SA "during" means the player can insert SA resolution between per-space resolutions
-- Limited Operations (1 space, no SA) must still work cleanly
-- The model must work for all 4 COIN and 4 Insurgent operations
+Key work:
+- Read `linkedSpecialActivityWindows` from `OperationProfileDef` to discover which SAs pair with which operations
+- For each legal operation move, enumerate compound variants combining it with each legal SA move at each valid timing (`before`/`during`/`after`)
+- Limited Operations (1 space, no SA) must NOT generate compound variants
+- Free operations must NOT have compound SA
 
 Modify:
-- `src/kernel/types.ts` — extend `OperationProfileDef` or add `CompositeActionDef`
-- `src/kernel/effects.ts` — implement composite action execution
-- Possibly `src/kernel/game-loop.ts` or equivalent — integrate with turn flow
+- `src/kernel/legal-moves.ts` — generate compound move variants from `linkedSpecialActivityWindows`
+
+Tests:
+- Legal move generation includes compound variants when SA windows exist
+- Free operations cannot have compound SA
+- Limited operations do not generate compound variants
+- Non-compound moves still generated alongside compound variants
 
 ### Task 26.2: COIN Operations — Train
 
@@ -215,7 +235,7 @@ Rule 4.1 states SA may occur "immediately before, during, or immediately after" 
 1. All 8 operations have complete effect implementations — no stubs remain
 2. Multi-space targeting works via `chooseN` + `forEach` pattern
 3. Piece removal follows ordering constraints for Assault and Attack
-4. Operation/SA interleaving model is implemented and documented
+4. Operation/SA interleaving model is implemented and documented (including compound variant enumeration in `legal-moves.ts`)
 5. Underground Guerrillas immune to Assault/Attack removal
 6. Tunneled Base die roll logic correct (deterministic via PRNG)
 7. All existing integration tests pass or are updated

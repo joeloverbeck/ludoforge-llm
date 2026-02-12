@@ -58,6 +58,7 @@ const makeState = (): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 2n] },
   stateHash: 0n,
   actionUsage: {},
+  markers: {},
 });
 
 const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => ({

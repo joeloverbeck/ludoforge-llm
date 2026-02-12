@@ -80,6 +80,7 @@ const createBaseState = (): GameState => ({
   actionUsage: {
     playCard: { turnCount: 1, phaseCount: 2, gameCount: 4 },
   },
+  markers: {},
 });
 
 describe('zobrist full hash and incremental update helpers', () => {

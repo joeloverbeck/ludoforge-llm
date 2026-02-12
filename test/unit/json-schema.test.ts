@@ -49,10 +49,10 @@ const fullGameDef: GameDef = {
     {
       id: 'play-card-profile',
       actionId: asActionId('playCard'),
-      legality: { when: 'always' },
-      cost: { spend: 0 },
-      targeting: { select: 'none' },
-      resolution: [{ stage: 'resolve' }],
+      legality: {},
+      cost: {},
+      targeting: {},
+      resolution: [{ effects: [] }],
       partialExecution: { mode: 'forbid' },
       linkedSpecialActivityWindows: ['window-a'],
     },
@@ -143,6 +143,7 @@ const validRuntimeTrace: GameTrace = {
     rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 3n] },
     stateHash: 42n,
     actionUsage: {},
+    markers: {},
     turnFlow: {
       factionOrder: ['0', '1'],
       eligibility: { '0': true, '1': true },

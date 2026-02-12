@@ -37,11 +37,15 @@ const effectTypeOf = (effect: EffectAST): string => {
   if ('shuffle' in effect) return 'shuffle';
   if ('createToken' in effect) return 'createToken';
   if ('destroyToken' in effect) return 'destroyToken';
+  if ('setTokenProp' in effect) return 'setTokenProp';
   if ('if' in effect) return 'if';
   if ('forEach' in effect) return 'forEach';
   if ('let' in effect) return 'let';
   if ('chooseOne' in effect) return 'chooseOne';
   if ('chooseN' in effect) return 'chooseN';
+  if ('rollRandom' in effect) return 'rollRandom';
+  if ('setMarker' in effect) return 'setMarker';
+  if ('shiftMarker' in effect) return 'shiftMarker';
 
   const _exhaustive: never = effect;
   return _exhaustive;
@@ -379,7 +383,7 @@ const resolveZoneTokens = (
   return zoneTokens;
 };
 
-const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string, effectType: 'moveToken' | 'destroyToken'): string => {
+const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string, effectType: 'moveToken' | 'destroyToken' | 'setTokenProp'): string => {
   const bindings = resolveEffectBindings(ctx);
   const boundValue = bindings[tokenBinding];
   if (boundValue === undefined) {
@@ -666,6 +670,190 @@ const applyDestroyToken = (effect: Extract<EffectAST, { readonly destroyToken: u
   };
 };
 
+const applySetTokenProp = (effect: Extract<EffectAST, { readonly setTokenProp: unknown }>, ctx: EffectContext): EffectResult => {
+  const { token: tokenBinding, prop, value } = effect.setTokenProp;
+  const tokenId = resolveBoundTokenId(ctx, tokenBinding, 'setTokenProp');
+  const occurrences = findTokenOccurrences(ctx, tokenId);
+
+  if (occurrences.length === 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token not found in any zone: ${tokenId}`, {
+      effectType: 'setTokenProp',
+      tokenId,
+    });
+  }
+
+  if (occurrences.length > 1) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token appears in multiple zones: ${tokenId}`, {
+      effectType: 'setTokenProp',
+      tokenId,
+      zones: occurrences.map((occurrence) => occurrence.zoneId).sort(),
+    });
+  }
+
+  const occurrence = occurrences[0]!;
+  const tokenTypeDef = ctx.def.tokenTypes.find((tt) => tt.id === occurrence.token.type);
+
+  if (tokenTypeDef !== undefined) {
+    const propType = tokenTypeDef.props[prop];
+    if (propType === undefined) {
+      throw new EffectRuntimeError('EFFECT_RUNTIME', `Property "${prop}" is not defined on token type "${occurrence.token.type}"`, {
+        effectType: 'setTokenProp',
+        tokenId,
+        prop,
+        tokenType: occurrence.token.type,
+        availableProps: Object.keys(tokenTypeDef.props).sort(),
+      });
+    }
+  }
+
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const evaluatedValue = evalValue(value, evalCtx);
+
+  if (tokenTypeDef?.transitions !== undefined && tokenTypeDef.transitions.length > 0) {
+    const transitionsForProp = tokenTypeDef.transitions.filter((t) => t.prop === prop);
+    if (transitionsForProp.length > 0) {
+      const currentValue = String(occurrence.token.props[prop] ?? '');
+      const newValue = String(evaluatedValue);
+      const isValid = transitionsForProp.some((t) => t.from === currentValue && t.to === newValue);
+      if (!isValid) {
+        throw new EffectRuntimeError('EFFECT_RUNTIME', `Invalid transition for "${prop}": "${currentValue}" → "${newValue}"`, {
+          effectType: 'setTokenProp',
+          tokenId,
+          prop,
+          currentValue,
+          newValue,
+          validTransitions: transitionsForProp.map((t) => `${t.from} → ${t.to}`),
+        });
+      }
+    }
+  }
+
+  const updatedToken: Token = {
+    ...occurrence.token,
+    props: {
+      ...occurrence.token.props,
+      [prop]: evaluatedValue as number | string | boolean,
+    },
+  };
+
+  const sourceTokens = ctx.state.zones[occurrence.zoneId]!;
+  const zoneAfter = [...sourceTokens.slice(0, occurrence.index), updatedToken, ...sourceTokens.slice(occurrence.index + 1)];
+
+  return {
+    state: {
+      ...ctx.state,
+      zones: {
+        ...ctx.state.zones,
+        [occurrence.zoneId]: zoneAfter,
+      },
+    },
+    rng: ctx.rng,
+  };
+};
+
+const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string) => {
+  const lattice = ctx.def.markerLattices?.find((l) => l.id === markerId);
+  if (lattice === undefined) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Unknown marker lattice: ${markerId}`, {
+      effectType,
+      markerId,
+      availableLattices: (ctx.def.markerLattices ?? []).map((l) => l.id).sort(),
+    });
+  }
+
+  return lattice;
+};
+
+const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: unknown }>, ctx: EffectContext): EffectResult => {
+  const { space, marker, state: stateExpr } = effect.setMarker;
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const spaceId = resolveSingleZoneSel(space, evalCtx);
+  const evaluatedState = evalValue(stateExpr, evalCtx);
+
+  if (typeof evaluatedState !== 'string') {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'setMarker.state must evaluate to a string', {
+      effectType: 'setMarker',
+      actualType: typeof evaluatedState,
+      value: evaluatedState,
+    });
+  }
+
+  const lattice = resolveMarkerLattice(ctx, marker, 'setMarker');
+  if (!lattice.states.includes(evaluatedState)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
+      effectType: 'setMarker',
+      marker,
+      state: evaluatedState,
+      validStates: lattice.states,
+    });
+  }
+
+  const spaceMarkers = ctx.state.markers[String(spaceId)] ?? {};
+  return {
+    state: {
+      ...ctx.state,
+      markers: {
+        ...ctx.state.markers,
+        [String(spaceId)]: {
+          ...spaceMarkers,
+          [marker]: evaluatedState,
+        },
+      },
+    },
+    rng: ctx.rng,
+  };
+};
+
+const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMarker: unknown }>, ctx: EffectContext): EffectResult => {
+  const { space, marker, delta: deltaExpr } = effect.shiftMarker;
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const spaceId = resolveSingleZoneSel(space, evalCtx);
+  const evaluatedDelta = evalValue(deltaExpr, evalCtx);
+
+  if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'shiftMarker.delta must evaluate to a safe integer', {
+      effectType: 'shiftMarker',
+      actualType: typeof evaluatedDelta,
+      value: evaluatedDelta,
+    });
+  }
+
+  const lattice = resolveMarkerLattice(ctx, marker, 'shiftMarker');
+  const spaceMarkers = ctx.state.markers[String(spaceId)] ?? {};
+  const currentState = spaceMarkers[marker] ?? lattice.defaultState;
+  const currentIndex = lattice.states.indexOf(currentState);
+
+  if (currentIndex < 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Current marker state "${currentState}" not found in lattice "${marker}"`, {
+      effectType: 'shiftMarker',
+      marker,
+      currentState,
+      validStates: lattice.states,
+    });
+  }
+
+  const newIndex = Math.max(0, Math.min(lattice.states.length - 1, currentIndex + evaluatedDelta));
+  const newState = lattice.states[newIndex]!;
+
+  if (newState === currentState) {
+    return { state: ctx.state, rng: ctx.rng };
+  }
+
+  return {
+    state: {
+      ...ctx.state,
+      markers: {
+        ...ctx.state.markers,
+        [String(spaceId)]: {
+          ...spaceMarkers,
+          [marker]: newState,
+        },
+      },
+    },
+    rng: ctx.rng,
+  };
+};
+
 const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>, ctx: EffectContext): EffectResult => {
   const count = effect.draw.count;
   if (!Number.isSafeInteger(count) || count < 0) {
@@ -857,6 +1045,52 @@ const applyLet = (
   };
 
   return applyEffectsWithBudget(effect.let.in, nestedCtx, budget);
+};
+
+const applyRollRandom = (
+  effect: Extract<EffectAST, { readonly rollRandom: unknown }>,
+  ctx: EffectContext,
+  budget: EffectBudgetState,
+): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const minValue = evalValue(effect.rollRandom.min, evalCtx);
+  const maxValue = evalValue(effect.rollRandom.max, evalCtx);
+
+  if (typeof minValue !== 'number' || !Number.isSafeInteger(minValue)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'rollRandom.min must evaluate to a safe integer', {
+      effectType: 'rollRandom',
+      actualType: typeof minValue,
+      value: minValue,
+    });
+  }
+
+  if (typeof maxValue !== 'number' || !Number.isSafeInteger(maxValue)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'rollRandom.max must evaluate to a safe integer', {
+      effectType: 'rollRandom',
+      actualType: typeof maxValue,
+      value: maxValue,
+    });
+  }
+
+  if (minValue > maxValue) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `rollRandom requires min <= max, received min=${minValue}, max=${maxValue}`, {
+      effectType: 'rollRandom',
+      min: minValue,
+      max: maxValue,
+    });
+  }
+
+  const [rolledValue, nextRng] = nextInt(ctx.rng, minValue, maxValue);
+  const nestedCtx: EffectContext = {
+    ...ctx,
+    rng: nextRng,
+    bindings: {
+      ...ctx.bindings,
+      [effect.rollRandom.bind]: rolledValue,
+    },
+  };
+
+  return applyEffectsWithBudget(effect.rollRandom.in, nestedCtx, budget);
 };
 
 const applyForEach = (
@@ -1069,6 +1303,10 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
     return applyDestroyToken(effect, ctx);
   }
 
+  if ('setTokenProp' in effect) {
+    return applySetTokenProp(effect, ctx);
+  }
+
   if ('if' in effect) {
     return applyIf(effect, ctx, budget);
   }
@@ -1087,6 +1325,18 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 
   if ('chooseN' in effect) {
     return applyChooseN(effect, ctx);
+  }
+
+  if ('rollRandom' in effect) {
+    return applyRollRandom(effect, ctx, budget);
+  }
+
+  if ('setMarker' in effect) {
+    return applySetMarker(effect, ctx);
+  }
+
+  if ('shiftMarker' in effect) {
+    return applyShiftMarker(effect, ctx);
   }
 
   throw effectNotImplementedError(effectTypeOf(effect), { effect });

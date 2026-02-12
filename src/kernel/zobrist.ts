@@ -84,6 +84,8 @@ const encodeFeature = (feature: ZobristFeature): string => {
       return `kind=turnCount|value=${feature.value}`;
     case 'actionUsage':
       return `kind=actionUsage|actionId=${String(feature.actionId)}|scope=${feature.scope}|count=${feature.count}`;
+    case 'markerState':
+      return `kind=markerState|spaceId=${feature.spaceId}|markerId=${feature.markerId}|state=${feature.state}`;
   }
 };
 
@@ -192,6 +194,23 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
       scope: 'game',
       count: usage.gameCount,
     });
+  }
+
+  const sortedMarkerSpaceIds = Object.keys(state.markers).sort(compareStrings);
+  for (const spaceId of sortedMarkerSpaceIds) {
+    const spaceMarkers = state.markers[spaceId] ?? {};
+    const sortedMarkerIds = Object.keys(spaceMarkers).sort(compareStrings);
+    for (const markerId of sortedMarkerIds) {
+      const markerState = spaceMarkers[markerId];
+      if (markerState !== undefined) {
+        hash ^= zobristKey(table, {
+          kind: 'markerState',
+          spaceId,
+          markerId,
+          state: markerState,
+        });
+      }
+    }
   }
 
   return hash;

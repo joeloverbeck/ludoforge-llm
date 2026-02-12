@@ -30,6 +30,7 @@ const gameStateFixture: GameState = {
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 0x2aabn] },
   stateHash: 0x00abcdn,
   actionUsage: { playCard: { turnCount: 1, phaseCount: 1, gameCount: 2 } },
+  markers: {},
 };
 
 const traceFixture: GameTrace = {

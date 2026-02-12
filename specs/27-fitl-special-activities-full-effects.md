@@ -116,6 +116,6 @@ Same as NVA Ambush (Task 27.9) but with VC Guerrillas. In 1 space with Undergrou
 2. Monsoon restrictions enforced (Air Lift, Air Strike, Typhoon Kate on Bombard)
 3. Resource gains/costs computed correctly
 4. Die rolls deterministic via seeded PRNG
-5. SAs work within the interleaving model from Spec 26
+5. SAs work within the interleaving model from Spec 26 (compound variant enumeration in `legal-moves.ts` must be complete — see Spec 26 Task 26.1)
 6. All existing integration tests pass or are updated
 7. Build passes (`npm run build`)

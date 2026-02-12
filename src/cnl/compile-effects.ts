@@ -21,11 +21,15 @@ const SUPPORTED_EFFECT_KINDS = [
   'shuffle',
   'createToken',
   'destroyToken',
+  'setTokenProp',
   'if',
   'forEach',
   'let',
   'chooseOne',
   'chooseN',
+  'rollRandom',
+  'setMarker',
+  'shiftMarker',
 ] as const;
 
 export interface EffectLoweringContext {
@@ -99,6 +103,9 @@ function lowerEffectNode(
   if (isRecord(source.destroyToken)) {
     return lowerDestroyTokenEffect(source.destroyToken, scope, `${path}.destroyToken`);
   }
+  if (isRecord(source.setTokenProp)) {
+    return lowerSetTokenPropEffect(source.setTokenProp, context, scope, `${path}.setTokenProp`);
+  }
   if (isRecord(source.if)) {
     return lowerIfEffect(source.if, context, scope, `${path}.if`);
   }
@@ -113,6 +120,15 @@ function lowerEffectNode(
   }
   if (isRecord(source.chooseN)) {
     return lowerChooseNEffect(source.chooseN, context, scope, `${path}.chooseN`);
+  }
+  if (isRecord(source.rollRandom)) {
+    return lowerRollRandomEffect(source.rollRandom, context, scope, `${path}.rollRandom`);
+  }
+  if (isRecord(source.setMarker)) {
+    return lowerSetMarkerEffect(source.setMarker, context, scope, `${path}.setMarker`);
+  }
+  if (isRecord(source.shiftMarker)) {
+    return lowerShiftMarkerEffect(source.shiftMarker, context, scope, `${path}.shiftMarker`);
   }
 
   return missingCapability(path, 'effect node', source, SUPPORTED_EFFECT_KINDS);
@@ -445,6 +461,30 @@ function lowerDestroyTokenEffect(
   };
 }
 
+function lowerSetTokenPropEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (typeof source.token !== 'string' || typeof source.prop !== 'string') {
+    return missingCapability(path, 'setTokenProp effect', source, ['{ setTokenProp: { token, prop, value } }']);
+  }
+
+  const bindingDiagnostics = validateBindingLikeString(source.token, scope, `${path}.token`);
+  const value = lowerValueNode(source.value, makeConditionContext(context, scope), `${path}.value`);
+  const diagnostics = [...bindingDiagnostics, ...value.diagnostics];
+
+  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error') || value.value === null) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: { setTokenProp: { token: source.token, prop: source.prop, value: value.value } },
+    diagnostics,
+  };
+}
+
 function lowerIfEffect(
   source: Record<string, unknown>,
   context: EffectLoweringContext,
@@ -543,6 +583,100 @@ function lowerLetEffect(
         bind: source.bind,
         value: value.value,
         in: inEffects.value,
+      },
+    },
+    diagnostics,
+  };
+}
+
+function lowerRollRandomEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (typeof source.bind !== 'string' || !Array.isArray(source.in)) {
+    return missingCapability(path, 'rollRandom effect', source, ['{ rollRandom: { bind, min, max, in } }']);
+  }
+
+  const condCtx = makeConditionContext(context, scope);
+  const minResult = lowerValueNode(source.min, condCtx, `${path}.min`);
+  const maxResult = lowerValueNode(source.max, condCtx, `${path}.max`);
+  const diagnostics = [...minResult.diagnostics, ...maxResult.diagnostics, ...scope.shadowWarning(source.bind, `${path}.bind`)];
+  const inEffects = scope.withBinding(source.bind, () => lowerNestedEffects(source.in as readonly unknown[], context, scope, `${path}.in`));
+  diagnostics.push(...inEffects.diagnostics);
+
+  if (minResult.value === null || maxResult.value === null || inEffects.value === null) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: {
+      rollRandom: {
+        bind: source.bind,
+        min: minResult.value,
+        max: maxResult.value,
+        in: inEffects.value,
+      },
+    },
+    diagnostics,
+  };
+}
+
+function lowerSetMarkerEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (typeof source.marker !== 'string') {
+    return missingCapability(path, 'setMarker effect', source, ['{ setMarker: { space, marker, state } }']);
+  }
+
+  const space = lowerZoneSelector(source.space, context, scope, `${path}.space`);
+  const stateResult = lowerValueNode(source.state, makeConditionContext(context, scope), `${path}.state`);
+  const diagnostics = [...space.diagnostics, ...stateResult.diagnostics];
+
+  if (space.value === null || stateResult.value === null) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: {
+      setMarker: {
+        space: space.value,
+        marker: source.marker,
+        state: stateResult.value,
+      },
+    },
+    diagnostics,
+  };
+}
+
+function lowerShiftMarkerEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (typeof source.marker !== 'string') {
+    return missingCapability(path, 'shiftMarker effect', source, ['{ shiftMarker: { space, marker, delta } }']);
+  }
+
+  const space = lowerZoneSelector(source.space, context, scope, `${path}.space`);
+  const delta = lowerValueNode(source.delta, makeConditionContext(context, scope), `${path}.delta`);
+  const diagnostics = [...space.diagnostics, ...delta.diagnostics];
+
+  if (space.value === null || delta.value === null) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: {
+      shiftMarker: {
+        space: space.value,
+        marker: source.marker,
+        delta: delta.value,
       },
     },
     diagnostics,

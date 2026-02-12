@@ -71,6 +71,15 @@ describe('AST and selector schemas', () => {
       { shuffle: { zone: 'deck:none' } },
       { createToken: { type: 'card', zone: 'deck:none', props: { cost: 3, rare: false } } },
       { destroyToken: { token: '$dead' } },
+      { setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } },
+      {
+        rollRandom: {
+          bind: '$die',
+          min: 1,
+          max: 6,
+          in: [{ setVar: { scope: 'global', var: 'roll', value: { ref: 'binding', name: '$die' } } }],
+        },
+      },
       {
         if: {
           when: { op: 'and', args: [{ op: '==', left: 1, right: 1 }] },
@@ -97,6 +106,8 @@ describe('AST and selector schemas', () => {
       { chooseN: { bind: '$token', options: { query: 'tokensInAdjacentZones', zone: 'board:actor' }, n: 2 } },
       { chooseN: { bind: '$opt', options: { query: 'players' }, max: 2 } },
       { chooseN: { bind: '$range', options: { query: 'players' }, min: 1, max: 3 } },
+      { setMarker: { space: 'saigon:none', marker: 'support', state: 'activeSupport' } },
+      { shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } },
     ];
 
     for (const effect of effects) {
@@ -144,10 +155,10 @@ describe('AST and selector schemas', () => {
   it('parses tokensInZone query with and without filter', () => {
     const queries: OptionsQuery[] = [
       { query: 'tokensInZone', zone: 'board:a' },
-      { query: 'tokensInZone', zone: 'board:a', filter: { prop: 'faction', op: 'eq', value: 'US' } },
-      { query: 'tokensInZone', zone: 'board:a', filter: { prop: 'faction', op: 'neq', value: 'NVA' } },
-      { query: 'tokensInZone', zone: 'board:a', filter: { prop: 'faction', op: 'in', value: ['US', 'ARVN'] } },
-      { query: 'tokensInZone', zone: 'board:a', filter: { prop: 'faction', op: 'notIn', value: ['NVA', 'VC'] } },
+      { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+      { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'neq', value: 'NVA' }] },
+      { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'in', value: ['US', 'ARVN'] }] },
+      { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'notIn', value: ['NVA', 'VC'] }] },
     ];
 
     for (const query of queries) {
@@ -155,27 +166,51 @@ describe('AST and selector schemas', () => {
     }
   });
 
+  it('parses tokensInZone query with compound filter (multiple predicates)', () => {
+    const query: OptionsQuery = {
+      query: 'tokensInZone',
+      zone: 'board:a',
+      filter: [
+        { prop: 'faction', op: 'eq', value: 'NVA' },
+        { prop: 'type', op: 'eq', value: 'troops' },
+      ],
+    };
+    assert.deepEqual(OptionsQuerySchema.parse(query), query);
+  });
+
+  it('parses binding query', () => {
+    const query: OptionsQuery = { query: 'binding', name: 'targetSpaces' };
+    assert.deepEqual(OptionsQuerySchema.parse(query), query);
+  });
+
   it('rejects malformed tokensInZone filter payloads', () => {
     const badOp = OptionsQuerySchema.safeParse({
       query: 'tokensInZone',
       zone: 'board:a',
-      filter: { prop: 'faction', op: 'contains', value: 'US' },
+      filter: [{ prop: 'faction', op: 'contains', value: 'US' }],
     });
     assert.equal(badOp.success, false);
 
     const missingProp = OptionsQuerySchema.safeParse({
       query: 'tokensInZone',
       zone: 'board:a',
-      filter: { op: 'eq', value: 'US' },
+      filter: [{ op: 'eq', value: 'US' }],
     });
     assert.equal(missingProp.success, false);
 
     const extraField = OptionsQuerySchema.safeParse({
       query: 'tokensInZone',
       zone: 'board:a',
-      filter: { prop: 'faction', op: 'eq', value: 'US', extra: true },
+      filter: [{ prop: 'faction', op: 'eq', value: 'US', extra: true }],
     });
     assert.equal(extraField.success, false);
+
+    const notArray = OptionsQuerySchema.safeParse({
+      query: 'tokensInZone',
+      zone: 'board:a',
+      filter: { prop: 'faction', op: 'eq', value: 'US' },
+    });
+    assert.equal(notArray.success, false);
   });
 
   it('rejects invalid effect discriminants with a nested path', () => {

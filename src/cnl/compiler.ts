@@ -20,7 +20,11 @@ import type {
   TriggerEvent,
   TurnFlowDef,
   TurnStructure,
+  OperationCostDef,
+  OperationLegalityDef,
   OperationProfileDef,
+  OperationResolutionStageDef,
+  OperationTargetingDef,
   VictoryDef,
   VariableDef,
   MapPayload,
@@ -175,7 +179,7 @@ function compileExpandedDoc(doc: GameSpecDoc, diagnostics: Diagnostic[]): GameDe
   const setup = lowerEffectsWithDiagnostics(doc.setup ?? [], ownershipByBase, diagnostics, 'doc.setup');
   const turnStructure = lowerTurnStructure(doc.turnStructure, ownershipByBase, diagnostics);
   const turnFlow = lowerTurnFlow(doc.turnFlow, diagnostics);
-  const operationProfiles = lowerOperationProfiles(doc.operationProfiles, doc.actions, diagnostics);
+  const operationProfiles = lowerOperationProfiles(doc.operationProfiles, doc.actions, ownershipByBase, diagnostics);
   const coupPlan = lowerCoupPlan(doc.coupPlan, diagnostics);
   const victory = lowerVictory(doc.victory, diagnostics);
   const actions = lowerActions(doc.actions, ownershipByBase, diagnostics);
@@ -670,6 +674,7 @@ function lowerVictory(rawVictory: GameSpecDoc['victory'], diagnostics: Diagnosti
 function lowerOperationProfiles(
   rawProfiles: GameSpecDoc['operationProfiles'],
   rawActions: GameSpecDoc['actions'],
+  ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>>,
   diagnostics: Diagnostic[],
 ): readonly OperationProfileDef[] | undefined {
   if (rawProfiles === null) {
@@ -821,13 +826,81 @@ function lowerOperationProfiles(
       linkedSpecialActivityWindows = rawProfile.linkedSpecialActivityWindows.map((entry) => normalizeIdentifier(entry));
     }
 
+    // Lower legality
+    const rawLegality = rawProfile.legality;
+    let legalityWhen: ConditionAST | undefined;
+    if (rawLegality.when !== undefined) {
+      const loweredWhen = lowerOptionalCondition(rawLegality.when, ownershipByBase, [], diagnostics, `${basePath}.legality.when`);
+      if (loweredWhen !== undefined && loweredWhen !== null) {
+        legalityWhen = loweredWhen;
+      }
+    }
+    const legality: OperationLegalityDef = {
+      ...(legalityWhen !== undefined ? { when: legalityWhen } : {}),
+    };
+
+    // Lower cost
+    const rawCost = rawProfile.cost;
+    let costValidate: ConditionAST | undefined;
+    let costSpend: readonly EffectAST[] | undefined;
+    if (rawCost.validate !== undefined) {
+      const loweredValidate = lowerOptionalCondition(rawCost.validate, ownershipByBase, [], diagnostics, `${basePath}.cost.validate`);
+      if (loweredValidate !== undefined && loweredValidate !== null) {
+        costValidate = loweredValidate;
+      }
+    }
+    if (rawCost.spend !== undefined) {
+      const loweredSpend = lowerEffectsWithDiagnostics(rawCost.spend, ownershipByBase, diagnostics, `${basePath}.cost.spend`);
+      if (loweredSpend.length > 0) {
+        costSpend = loweredSpend;
+      }
+    }
+    const cost: OperationCostDef = {
+      ...(costValidate !== undefined ? { validate: costValidate } : {}),
+      ...(costSpend !== undefined ? { spend: costSpend } : {}),
+    };
+
+    // Lower targeting
+    const rawTargeting = rawProfile.targeting;
+    let targetingFilter: ConditionAST | undefined;
+    if (rawTargeting.filter !== undefined) {
+      const loweredFilter = lowerOptionalCondition(rawTargeting.filter, ownershipByBase, [], diagnostics, `${basePath}.targeting.filter`);
+      if (loweredFilter !== undefined && loweredFilter !== null) {
+        targetingFilter = loweredFilter;
+      }
+    }
+    const targeting: OperationTargetingDef = {
+      ...(typeof rawTargeting.select === 'string' ? { select: rawTargeting.select as 'upToN' | 'allEligible' | 'exactN' } : {}),
+      ...(typeof rawTargeting.max === 'number' ? { max: rawTargeting.max } : {}),
+      ...(targetingFilter !== undefined ? { filter: targetingFilter } : {}),
+      ...(typeof rawTargeting.order === 'string' ? { order: rawTargeting.order } : {}),
+      ...(typeof rawTargeting.tieBreak === 'string' ? { tieBreak: rawTargeting.tieBreak } : {}),
+    };
+
+    // Lower resolution stages
+    const resolution: OperationResolutionStageDef[] = [];
+    for (const [stageIdx, rawStage] of (rawProfile.resolution as Record<string, unknown>[]).entries()) {
+      const stagePath = `${basePath}.resolution[${stageIdx}]`;
+      const loweredEffects = lowerEffectsWithDiagnostics(
+        rawStage.effects ?? [],
+        ownershipByBase,
+        diagnostics,
+        `${stagePath}.effects`,
+      );
+      const stage: OperationResolutionStageDef = {
+        ...(typeof rawStage.stage === 'string' ? { stage: rawStage.stage } : {}),
+        effects: loweredEffects,
+      };
+      resolution.push(stage);
+    }
+
     lowered.push({
       id,
       actionId: asActionId(actionId),
-      legality: rawProfile.legality,
-      cost: rawProfile.cost,
-      targeting: rawProfile.targeting,
-      resolution: rawProfile.resolution,
+      legality,
+      cost,
+      targeting,
+      resolution,
       partialExecution: { mode: partialExecution.mode },
       ...(linkedSpecialActivityWindows === undefined ? {} : { linkedSpecialActivityWindows }),
     });

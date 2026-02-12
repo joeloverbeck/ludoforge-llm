@@ -17,28 +17,34 @@ function assertWithinBounds(length: number, query: OptionsQuery, maxQueryResults
   }
 }
 
-function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterPredicate): readonly Token[] {
-  return tokens.filter((token) => {
-    const propValue = token.props[filter.prop];
-    if (propValue === undefined) {
-      return false;
-    }
+function tokenMatchesPredicate(token: Token, predicate: TokenFilterPredicate): boolean {
+  const propValue = token.props[predicate.prop];
+  if (propValue === undefined) {
+    return false;
+  }
 
-    switch (filter.op) {
-      case 'eq':
-        return propValue === filter.value;
-      case 'neq':
-        return propValue !== filter.value;
-      case 'in':
-        return Array.isArray(filter.value) && filter.value.includes(String(propValue));
-      case 'notIn':
-        return Array.isArray(filter.value) && !filter.value.includes(String(propValue));
-      default: {
-        const _exhaustive: never = filter.op;
-        return _exhaustive;
-      }
+  switch (predicate.op) {
+    case 'eq':
+      return propValue === predicate.value;
+    case 'neq':
+      return propValue !== predicate.value;
+    case 'in':
+      return Array.isArray(predicate.value) && predicate.value.includes(String(propValue));
+    case 'notIn':
+      return Array.isArray(predicate.value) && !predicate.value.includes(String(propValue));
+    default: {
+      const _exhaustive: never = predicate.op;
+      return _exhaustive;
     }
-  });
+  }
+}
+
+function applyTokenFilters(tokens: readonly Token[], filters: readonly TokenFilterPredicate[]): readonly Token[] {
+  if (filters.length === 0) {
+    return [...tokens];
+  }
+
+  return tokens.filter((token) => filters.every((predicate) => tokenMatchesPredicate(token, predicate)));
 }
 
 function extractOwnerQualifier(zoneId: ZoneId): string | null {
@@ -91,7 +97,7 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
         });
       }
 
-      const filtered = query.filter !== undefined ? applyTokenFilter(zoneTokens, query.filter) : [...zoneTokens];
+      const filtered = query.filter !== undefined ? applyTokenFilters(zoneTokens, query.filter) : [...zoneTokens];
       assertWithinBounds(filtered.length, query, maxQueryResults);
       return filtered;
     }
@@ -134,8 +140,9 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
     case 'tokensInAdjacentZones': {
       const zoneId = resolveSingleZoneSel(query.zone, ctx);
       const tokens = queryTokensInAdjacentZones(ctx.adjacencyGraph, ctx.state, zoneId);
-      assertWithinBounds(tokens.length, query, maxQueryResults);
-      return tokens;
+      const filtered = query.filter !== undefined ? applyTokenFilters(tokens, query.filter) : tokens;
+      assertWithinBounds(filtered.length, query, maxQueryResults);
+      return filtered;
     }
 
     case 'connectedZones': {
@@ -152,6 +159,29 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       });
       assertWithinBounds(zones.length, query, maxQueryResults);
       return zones;
+    }
+
+    case 'binding': {
+      const bindings = ctx.bindings;
+      const boundValue = bindings[query.name];
+      if (boundValue === undefined) {
+        throw missingVarError(`Binding not found: ${query.name}`, {
+          query,
+          binding: query.name,
+          availableBindings: Object.keys(bindings).sort(),
+        });
+      }
+
+      if (!Array.isArray(boundValue)) {
+        throw missingVarError(`Binding query requires an array value, got ${typeof boundValue}: ${query.name}`, {
+          query,
+          binding: query.name,
+          actualType: typeof boundValue,
+        });
+      }
+
+      assertWithinBounds(boundValue.length, query, maxQueryResults);
+      return boundValue as readonly QueryResult[];
     }
 
     default: {

@@ -70,11 +70,15 @@ const exhaustEffectAST = (effect: EffectAST): string => {
   if ('shuffle' in effect) return 'shuffle';
   if ('createToken' in effect) return 'createToken';
   if ('destroyToken' in effect) return 'destroyToken';
+  if ('setTokenProp' in effect) return 'setTokenProp';
   if ('if' in effect) return 'if';
   if ('forEach' in effect) return 'forEach';
   if ('let' in effect) return 'let';
   if ('chooseOne' in effect) return 'chooseOne';
   if ('chooseN' in effect) return 'chooseN';
+  if ('rollRandom' in effect) return 'rollRandom';
+  if ('setMarker' in effect) return 'setMarker';
+  if ('shiftMarker' in effect) return 'shiftMarker';
 
   return assertNever(effect);
 };
@@ -89,6 +93,7 @@ const exhaustOptionsQuery = (query: OptionsQuery): string => {
     case 'adjacentZones':
     case 'tokensInAdjacentZones':
     case 'connectedZones':
+    case 'binding':
       return query.query;
     default:
       return assertNever(query);
@@ -119,13 +124,13 @@ describe('exhaustive kernel unions', () => {
   it('keeps the exact variant counts for key unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
     const conditionVariants: UnionSize<ConditionAST> = 7;
-    const effectVariants: UnionSize<EffectAST> = 14;
-    const queryVariants: UnionSize<OptionsQuery> = 8;
+    const effectVariants: UnionSize<EffectAST> = 18;
+    const queryVariants: UnionSize<OptionsQuery> = 9;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 7);
-    assert.equal(effectVariants, 14);
-    assert.equal(queryVariants, 8);
+    assert.equal(effectVariants, 18);
+    assert.equal(queryVariants, 9);
   });
 
   it('ensures MoveLog includes legalMoveCount', () => {

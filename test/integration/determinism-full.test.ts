@@ -79,6 +79,7 @@ const createInitialState = (seed: bigint): GameState => {
     rng: serialize(createRng(seed)),
     stateHash: 0n,
     actionUsage: {},
+    markers: {},
   };
 };
 

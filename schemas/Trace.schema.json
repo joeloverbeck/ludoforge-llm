@@ -142,6 +142,17 @@
         "params": {
           "type": "object",
           "additionalProperties": { "$ref": "#/definitions/moveParamValue" }
+        },
+        "freeOperation": { "type": "boolean" },
+        "compound": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["specialActivity", "timing"],
+          "properties": {
+            "specialActivity": { "$ref": "#/definitions/move" },
+            "timing": { "type": "string", "enum": ["before", "during", "after"] },
+            "insertAfterStage": { "type": "integer", "minimum": 0 }
+          }
         }
       }
     },
@@ -218,7 +229,21 @@
           "type": "array",
           "items": { "$ref": "#/definitions/turnFlowPendingEligibilityOverride" }
         },
-        "consecutiveCoupRounds": { "type": "number" }
+        "consecutiveCoupRounds": { "type": "number" },
+        "compoundAction": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["operationProfileId", "saTiming"],
+          "properties": {
+            "operationProfileId": { "type": "string", "minLength": 1 },
+            "saTiming": {
+              "oneOf": [
+                { "type": "string", "enum": ["before", "during", "after"] },
+                { "type": "null" }
+              ]
+            }
+          }
+        }
       }
     },
     "turnFlowLifecycleStep": {
@@ -382,7 +407,8 @@
         "turnCount",
         "rng",
         "stateHash",
-        "actionUsage"
+        "actionUsage",
+        "markers"
       ],
       "properties": {
         "globalVars": {
@@ -413,6 +439,13 @@
         "actionUsage": {
           "type": "object",
           "additionalProperties": { "$ref": "#/definitions/actionUsageRecord" }
+        },
+        "markers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
         },
         "turnFlow": { "$ref": "#/definitions/turnFlowRuntimeState" }
       }

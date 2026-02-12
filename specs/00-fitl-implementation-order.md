@@ -19,6 +19,9 @@ Spec 23 (Map + Pieces) ───────────────────
     v                                                     v
 Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
     │                                                     │
+    │                                                     v
+    │                                         Spec 25a (Kernel Op Primitives)
+    │                                                     │
     │              ┌──────────────────────────────────────┤
     v              v                                      v
     Spec 26 (Operations Full Effects) ──> Spec 27 (SAs Full Effects)
@@ -58,6 +61,20 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 - Free operations don't cost resources or affect eligibility
 - Total Econ computed correctly from COIN-controlled non-sabotaged LoCs
 - Joint operation cost constraint works (US spending limited by Total Econ)
+
+### Milestone B2: Kernel Operations Infrastructure (Spec 25a)
+
+**Status**: COMPLETED
+
+**Criteria**: All 7 kernel primitive gaps resolved.
+
+- Compound token filtering
+- Binding query for forEach
+- setTokenProp
+- rollRandom
+- Marker lattice system (state + effects + refs + zobrist)
+- Typed OperationProfileDef
+- Compound Move for SA interleaving
 
 ### Milestone C: Operations + SAs Complete (Specs 26–27)
 
@@ -154,7 +171,8 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 | 23 | Full Map and Piece Data | P0 | L | 2–3 |
 | 24 | Scenario Setups | P0 | M | 2–3 |
 | 25 | Game Mechanics Infrastructure | P0 | L | 4–5 |
-| 26 | Operations Full Effects | P0 | XL | 5–7 |
+| 25a | Kernel Operation Primitives | P0 | M | 2–3 | COMPLETED |
+| 26 | Operations Full Effects (Depends: 25, 25a) | P0 | XL | 5–7 |
 | 27 | Special Activities Full Effects | P0 | L | 4–5 |
 | 28 | Capabilities, Momentum, RVN Leader | P1 | L | 3–4 |
 | 29 | Event Card Encoding | P1 | XL | 8–12 |
@@ -171,13 +189,13 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 | 3 | Event card expressiveness ceiling | 29 | High — 5–10% of cards may need new primitives |
 | 4 | Performance of full 130-card simulation | 31 | Medium — benchmark after Milestone C |
 | 5 | ~~Stacking: compile-time vs runtime vs both~~ **CLOSED**: Both compile-time and runtime enforcement. Belt-and-suspenders, minimal extra code. | 25 | ~~Low~~ Resolved |
-| 6 | Operation/SA interleaving model | 26 | High — architectural ripple through compiler and game loop |
+| 6 | ~~Operation/SA interleaving model~~ **CLOSED**: Compound Move model implemented in Spec 25a. `Move.compound` field with timing 'before'/'during'/'after' and `insertAfterStage` for during-mode interleaving. | 26 | ~~High~~ Resolved |
 
 ## Risk Registry
 
 | Risk | Impact | Likelihood | Mitigation |
 |---|---|---|---|
-| Op/SA interleaving requires deep kernel changes | High | Medium | Prototype early in Spec 26; accept composite-action model if simpler |
+| Op/SA interleaving requires deep kernel changes | High | Medium | MITIGATED — Compound Move model implemented; 4 unit tests pass. Minimal kernel impact. |
 | Complex event cards exceed kernel expressiveness | High | Medium | Budget 5–10% escape hatches in Spec 29; add primitives as needed |
 | 130-card simulation too slow for evolution | Medium | Low | Benchmark after Milestone C; add caching if needed |
 | Tutorial turns 2–13 narrative not fully documented | Medium | High | Note as "data to be obtained from physical rulebook" in Spec 31 |

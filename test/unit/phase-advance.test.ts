@@ -51,6 +51,7 @@ const createState = (overrides: Partial<GameState> = {}): GameState => ({
   actionUsage: {
     pass: { turnCount: 3, phaseCount: 2, gameCount: 9 },
   },
+  markers: {},
   ...overrides,
 });
 
@@ -260,6 +261,7 @@ describe('phase advancement', () => {
       }),
       globalVars: {},
       actionUsage: {},
+      markers: {},
     };
     const logs: TriggerLogEntry[] = [];
 
@@ -320,6 +322,7 @@ describe('phase advancement', () => {
       }),
       globalVars: {},
       actionUsage: {},
+      markers: {},
       turnFlow: {
         factionOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },

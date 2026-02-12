@@ -71,6 +71,7 @@ const makeRuntimeState = (): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [3n, 7n] },
   stateHash: 0n,
   actionUsage: {},
+  markers: {},
 });
 
 const makeEvalCtx = (): EvalContext => {

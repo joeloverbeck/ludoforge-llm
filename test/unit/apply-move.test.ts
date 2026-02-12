@@ -77,6 +77,7 @@ const createState = (): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [7n, 11n] },
   stateHash: 0n,
   actionUsage: {},
+  markers: {},
 });
 
 const playMove = (boost: number): Move => ({
@@ -1097,5 +1098,171 @@ describe('applyMove', () => {
 
     assert.equal(unshadedA.state.globalVars.resolved, 11);
     assert.equal(shadedB.state.globalVars.resolved, 22);
+  });
+
+  it('executes compound SA before operation stages when timing is "before"', () => {
+    const def: GameDef = {
+      metadata: { id: 'compound-before', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'order', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'op-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'order', delta: 10 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        { id: asActionId('operate'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [{ setVar: { scope: 'global', var: 'order', value: 1 } }], limits: [] },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, order: 0 } };
+    const result = applyMove(def, state, {
+      actionId: asActionId('operate'),
+      params: {},
+      compound: {
+        specialActivity: { actionId: asActionId('sa'), params: {} },
+        timing: 'before',
+      },
+    });
+
+    // SA sets order=1 first, then operation adds 10 → 11
+    assert.equal(result.state.globalVars.order, 11);
+  });
+
+  it('executes compound SA after operation stages when timing is "after"', () => {
+    const def: GameDef = {
+      metadata: { id: 'compound-after', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'order', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'op-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ effects: [{ setVar: { scope: 'global', var: 'order', value: 10 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        { id: asActionId('operate'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [{ addVar: { scope: 'global', var: 'order', delta: 5 } }], limits: [] },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, order: 0 } };
+    const result = applyMove(def, state, {
+      actionId: asActionId('operate'),
+      params: {},
+      compound: {
+        specialActivity: { actionId: asActionId('sa'), params: {} },
+        timing: 'after',
+      },
+    });
+
+    // Operation sets order=10 first, then SA adds 5 → 15
+    assert.equal(result.state.globalVars.order, 15);
+  });
+
+  it('executes compound SA during operation stages after specified stage index', () => {
+    const def: GameDef = {
+      metadata: { id: 'compound-during', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'order', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'op-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [
+            { effects: [{ setVar: { scope: 'global', var: 'order', value: 1 } }] },
+            { effects: [{ addVar: { scope: 'global', var: 'order', delta: 20 } }] },
+          ],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        { id: asActionId('operate'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [{ addVar: { scope: 'global', var: 'order', delta: 5 } }], limits: [] },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, order: 0 } };
+    const result = applyMove(def, state, {
+      actionId: asActionId('operate'),
+      params: {},
+      compound: {
+        specialActivity: { actionId: asActionId('sa'), params: {} },
+        timing: 'during',
+        insertAfterStage: 0,
+      },
+    });
+
+    // Stage 0: order=1, then SA: order=1+5=6, then stage 1: order=6+20=26
+    assert.equal(result.state.globalVars.order, 26);
+  });
+
+  it('executes non-compound moves identically to before (no compound field)', () => {
+    const def: GameDef = {
+      metadata: { id: 'no-compound', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'op-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ effects: [{ setVar: { scope: 'global', var: 'v', value: 42 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        { id: asActionId('operate'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
+    assert.equal(result.state.globalVars.v, 42);
   });
 });

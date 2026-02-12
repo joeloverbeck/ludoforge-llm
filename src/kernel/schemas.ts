@@ -35,6 +35,7 @@ export const ReferenceSchema = z.union([
   z.object({ ref: z.literal('zoneCount'), zone: ZoneSelSchema }).strict(),
   z.object({ ref: z.literal('tokenProp'), token: TokenSelSchema, prop: StringSchema }).strict(),
   z.object({ ref: z.literal('binding'), name: StringSchema }).strict(),
+  z.object({ ref: z.literal('markerState'), space: ZoneSelSchema, marker: StringSchema }).strict(),
 ]);
 
 let conditionAstSchemaInternal: z.ZodTypeAny;
@@ -47,19 +48,20 @@ export const OptionsQuerySchema = z.lazy(() => optionsQuerySchemaInternal);
 export const ValueExprSchema = z.lazy(() => valueExprSchemaInternal);
 export const EffectASTSchema = z.lazy(() => effectAstSchemaInternal);
 
+export const TokenFilterPredicateSchema = z
+  .object({
+    prop: StringSchema,
+    op: z.union([z.literal('eq'), z.literal('neq'), z.literal('in'), z.literal('notIn')]),
+    value: z.union([StringSchema, z.array(StringSchema)]),
+  })
+  .strict();
+
 optionsQuerySchemaInternal = z.union([
   z
     .object({
       query: z.literal('tokensInZone'),
       zone: ZoneSelSchema,
-      filter: z
-        .object({
-          prop: StringSchema,
-          op: z.union([z.literal('eq'), z.literal('neq'), z.literal('in'), z.literal('notIn')]),
-          value: z.union([StringSchema, z.array(StringSchema)]),
-        })
-        .strict()
-        .optional(),
+      filter: z.array(TokenFilterPredicateSchema).optional(),
     })
     .strict(),
   z.object({ query: z.literal('intsInRange'), min: NumberSchema, max: NumberSchema }).strict(),
@@ -77,7 +79,13 @@ optionsQuerySchemaInternal = z.union([
     })
     .strict(),
   z.object({ query: z.literal('adjacentZones'), zone: ZoneSelSchema }).strict(),
-  z.object({ query: z.literal('tokensInAdjacentZones'), zone: ZoneSelSchema }).strict(),
+  z
+    .object({
+      query: z.literal('tokensInAdjacentZones'),
+      zone: ZoneSelSchema,
+      filter: z.array(TokenFilterPredicateSchema).optional(),
+    })
+    .strict(),
   z
     .object({
       query: z.literal('connectedZones'),
@@ -87,6 +95,7 @@ optionsQuerySchemaInternal = z.union([
       maxDepth: NumberSchema.optional(),
     })
     .strict(),
+  z.object({ query: z.literal('binding'), name: StringSchema }).strict(),
 ]);
 
 valueExprSchemaInternal = z.union([
@@ -230,6 +239,17 @@ effectAstSchemaInternal = z.union([
   z.object({ destroyToken: z.object({ token: TokenSelSchema }).strict() }).strict(),
   z
     .object({
+      setTokenProp: z
+        .object({
+          token: TokenSelSchema,
+          prop: StringSchema,
+          value: ValueExprSchema,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
       if: z
         .object({
           when: ConditionASTSchema,
@@ -293,6 +313,40 @@ effectAstSchemaInternal = z.union([
       ]),
     })
     .strict(),
+  z
+    .object({
+      rollRandom: z
+        .object({
+          bind: StringSchema,
+          min: ValueExprSchema,
+          max: ValueExprSchema,
+          in: z.array(EffectASTSchema),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      setMarker: z
+        .object({
+          space: ZoneSelSchema,
+          marker: StringSchema,
+          state: ValueExprSchema,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      shiftMarker: z
+        .object({
+          space: ZoneSelSchema,
+          marker: StringSchema,
+          delta: ValueExprSchema,
+        })
+        .strict(),
+    })
+    .strict(),
 ]);
 
 export const VariableDefSchema = z
@@ -315,10 +369,19 @@ export const ZoneDefSchema = z
   })
   .strict();
 
+export const TokenTypeTransitionSchema = z
+  .object({
+    prop: StringSchema,
+    from: StringSchema,
+    to: StringSchema,
+  })
+  .strict();
+
 export const TokenTypeDefSchema = z
   .object({
     id: StringSchema,
     props: z.record(StringSchema, z.union([z.literal('int'), z.literal('string'), z.literal('boolean')])),
+    transitions: z.array(TokenTypeTransitionSchema).optional(),
   })
   .strict();
 
@@ -909,14 +972,44 @@ export const OperationProfilePartialExecutionSchema = z
   })
   .strict();
 
+export const OperationLegalitySchema = z
+  .object({
+    when: ConditionASTSchema.optional(),
+  })
+  .strict();
+
+export const OperationCostSchema = z
+  .object({
+    validate: ConditionASTSchema.optional(),
+    spend: z.array(EffectASTSchema).optional(),
+  })
+  .strict();
+
+export const OperationTargetingSchema = z
+  .object({
+    select: z.union([z.literal('upToN'), z.literal('allEligible'), z.literal('exactN')]).optional(),
+    max: z.number().int().min(1).optional(),
+    filter: ConditionASTSchema.optional(),
+    order: StringSchema.optional(),
+    tieBreak: StringSchema.optional(),
+  })
+  .strict();
+
+export const OperationResolutionStageSchema = z
+  .object({
+    stage: StringSchema.optional(),
+    effects: z.array(EffectASTSchema),
+  })
+  .strict();
+
 export const OperationProfileSchema = z
   .object({
     id: StringSchema.min(1),
     actionId: StringSchema.min(1),
-    legality: z.record(StringSchema, z.unknown()),
-    cost: z.record(StringSchema, z.unknown()),
-    targeting: z.record(StringSchema, z.unknown()),
-    resolution: z.array(z.record(StringSchema, z.unknown())).min(1),
+    legality: OperationLegalitySchema,
+    cost: OperationCostSchema,
+    targeting: OperationTargetingSchema,
+    resolution: z.array(OperationResolutionStageSchema).min(1),
     partialExecution: OperationProfilePartialExecutionSchema,
     linkedSpecialActivityWindows: z.array(StringSchema.min(1)).optional(),
   })
@@ -995,6 +1088,7 @@ export const GameDefSchema = z
     scoring: ScoringDefSchema.optional(),
     eventCards: z.array(EventCardSchema).optional(),
     stackingConstraints: z.array(StackingConstraintSchema).optional(),
+    markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),
   })
   .strict();
 
@@ -1037,6 +1131,13 @@ export const TurnFlowRuntimeStateSchema = z
       )
       .optional(),
     consecutiveCoupRounds: IntegerSchema.min(0).optional(),
+    compoundAction: z
+      .object({
+        operationProfileId: StringSchema.min(1),
+        saTiming: z.union([z.literal('before'), z.literal('during'), z.literal('after'), z.null()]),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -1061,6 +1162,7 @@ export const GameStateSchema = z
     rng: RngStateSchema,
     stateHash: z.bigint(),
     actionUsage: z.record(StringSchema, ActionUsageRecordSchema),
+    markers: z.record(StringSchema, z.record(StringSchema, StringSchema)),
     turnFlow: TurnFlowRuntimeStateSchema.optional(),
   })
   .strict();
@@ -1068,10 +1170,22 @@ export const GameStateSchema = z
 export const MoveParamScalarSchema = z.union([NumberSchema, StringSchema, BooleanSchema]);
 export const MoveParamValueSchema = z.union([MoveParamScalarSchema, z.array(MoveParamScalarSchema)]);
 
-export const MoveSchema = z
+export const CompoundMovePayloadSchema: z.ZodType = z.lazy(() =>
+  z
+    .object({
+      specialActivity: MoveSchema,
+      timing: z.union([z.literal('before'), z.literal('during'), z.literal('after')]),
+      insertAfterStage: z.number().int().min(0).optional(),
+    })
+    .strict(),
+);
+
+export const MoveSchema: z.ZodType = z
   .object({
     actionId: StringSchema,
     params: z.record(StringSchema, MoveParamValueSchema),
+    freeOperation: BooleanSchema.optional(),
+    compound: CompoundMovePayloadSchema.optional(),
   })
   .strict();
 

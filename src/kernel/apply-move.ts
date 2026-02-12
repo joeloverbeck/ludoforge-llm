@@ -64,15 +64,6 @@ const isSameMove = (left: Move, right: Move): boolean =>
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
 
-const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-  typeof value === 'object' && value !== null;
-
-const asCondition = (value: unknown): ConditionAST | undefined =>
-  isRecord(value) ? (value as ConditionAST) : undefined;
-
-const asEffects = (value: unknown): readonly EffectAST[] | undefined =>
-  Array.isArray(value) ? (value as readonly EffectAST[]) : undefined;
-
 interface OperationExecutionProfile {
   readonly legality: ConditionAST | null;
   readonly costValidation: ConditionAST | null;
@@ -84,22 +75,15 @@ interface OperationExecutionProfile {
 const resolveOperationProfile = (def: GameDef, action: ActionDef): OperationProfileDef | undefined =>
   def.operationProfiles?.find((profile) => profile.actionId === action.id);
 
-const toOperationExecutionProfile = (action: ActionDef, profile: OperationProfileDef): OperationExecutionProfile => {
-  const legality = asCondition(profile.legality.when ?? profile.legality.condition ?? profile.legality.pre) ?? null;
-  const costValidation = asCondition(profile.cost.validate ?? profile.cost.when) ?? null;
-  const costSpend = asEffects(profile.cost.spend) ?? action.cost;
-  const resolvedStages = profile.resolution
-    .map((stage) => asEffects(stage.effects))
-    .filter((effects): effects is readonly EffectAST[] => effects !== undefined);
-
-  return {
-    legality,
-    costValidation,
-    costSpend,
-    resolutionStages: resolvedStages.length > 0 ? resolvedStages : [action.effects],
-    partialMode: profile.partialExecution.mode,
-  };
-};
+const toOperationExecutionProfile = (action: ActionDef, profile: OperationProfileDef): OperationExecutionProfile => ({
+  legality: profile.legality.when ?? null,
+  costValidation: profile.cost.validate ?? null,
+  costSpend: profile.cost.spend ?? action.cost,
+  resolutionStages: profile.resolution.length > 0
+    ? profile.resolution.map((stage) => stage.effects)
+    : [action.effects],
+  partialMode: profile.partialExecution.mode,
+});
 
 const illegalMoveError = (
   move: Move,
@@ -219,6 +203,18 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
     });
   }
 
+  const applyCompoundSA = (): void => {
+    if (move.compound === undefined) return;
+    const saResult = applyMove(def, effectState, move.compound.specialActivity);
+    effectState = saResult.state;
+    effectRng = { state: effectState.rng };
+    executionTraceEntries.push(...saResult.triggerFirings);
+  };
+
+  if (move.compound?.timing === 'before') {
+    applyCompoundSA();
+  }
+
   if (executionProfile === undefined) {
     const effectResult = applyEffects(action.effects, {
       ...effectCtxBase,
@@ -231,7 +227,8 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
       emittedEvents.push(...effectResult.emittedEvents);
     }
   } else {
-    for (const stageEffects of executionProfile.resolutionStages) {
+    const insertAfter = move.compound?.timing === 'during' ? (move.compound.insertAfterStage ?? 0) : -1;
+    for (const [stageIdx, stageEffects] of executionProfile.resolutionStages.entries()) {
       const stageResult = applyEffects(stageEffects, {
         ...effectCtxBase,
         state: effectState,
@@ -242,7 +239,14 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
       if (stageResult.emittedEvents !== undefined) {
         emittedEvents.push(...stageResult.emittedEvents);
       }
+      if (stageIdx === insertAfter) {
+        applyCompoundSA();
+      }
     }
+  }
+
+  if (move.compound?.timing === 'after') {
+    applyCompoundSA();
   }
 
   const stateWithUsage = incrementActionUsage(effectState, action.id);

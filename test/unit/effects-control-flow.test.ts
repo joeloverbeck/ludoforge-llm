@@ -50,6 +50,7 @@ const makeState = (): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
   stateHash: 0n,
   actionUsage: {},
+  markers: {},
 });
 
 const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
@@ -269,5 +270,90 @@ describe('effects control-flow handlers', () => {
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.sum, 6);
     assert.equal(result.state.globalVars.bonus, 1);
+  });
+
+  it('rollRandom generates a deterministic integer and binds it within scope', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      rollRandom: {
+        bind: '$die',
+        min: 1,
+        max: 6,
+        in: [{ setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$die' } } }],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    const rolled = result.state.globalVars.x;
+    assert.ok(typeof rolled === 'number');
+    assert.ok(rolled >= 1 && rolled <= 6);
+  });
+
+  it('rollRandom is deterministic for the same seed', () => {
+    const effect: EffectAST = {
+      rollRandom: {
+        bind: '$die',
+        min: 1,
+        max: 6,
+        in: [{ setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$die' } } }],
+      },
+    };
+
+    const result1 = applyEffect(effect, makeCtx());
+    const result2 = applyEffect(effect, makeCtx());
+    assert.equal(result1.state.globalVars.x, result2.state.globalVars.x);
+  });
+
+  it('rollRandom advances RNG state', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      rollRandom: {
+        bind: '$die',
+        min: 1,
+        max: 6,
+        in: [],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.notDeepEqual(result.rng.state.state, ctx.rng.state.state);
+  });
+
+  it('rollRandom throws when min > max', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      rollRandom: {
+        bind: '$die',
+        min: 10,
+        max: 3,
+        in: [],
+      },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) => error instanceof EffectRuntimeError && String(error).includes('min <= max'),
+    );
+  });
+
+  it('rollRandom binding is only available inside in-scope', () => {
+    const ctx = makeCtx();
+    const effects: readonly EffectAST[] = [
+      {
+        rollRandom: {
+          bind: '$die',
+          min: 1,
+          max: 6,
+          in: [{ setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$die' } } }],
+        },
+      },
+      // $die should not be available here
+      { setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$die' } } },
+    ];
+
+    assert.throws(
+      () => applyEffects(effects, ctx),
+      (error: unknown) => String(error).includes('$die'),
+    );
   });
 });

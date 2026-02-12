@@ -102,6 +102,29 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     return propValue;
   }
 
+  if (ref.ref === 'markerState') {
+    const spaceMarkers = ctx.state.markers[ref.space];
+    if (spaceMarkers === undefined) {
+      throw missingVarError(`No markers found for space: ${ref.space}`, {
+        reference: ref,
+        space: ref.space,
+        availableSpaces: Object.keys(ctx.state.markers).sort(),
+      });
+    }
+
+    const state = spaceMarkers[ref.marker];
+    if (state === undefined) {
+      throw missingVarError(`Marker not found on space: ${ref.marker}`, {
+        reference: ref,
+        space: ref.space,
+        marker: ref.marker,
+        availableMarkers: Object.keys(spaceMarkers).sort(),
+      });
+    }
+
+    return state;
+  }
+
   const value = ctx.bindings[ref.name];
   if (value === undefined) {
     throw missingBindingError(`Binding not found: ${ref.name}`, {

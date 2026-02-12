@@ -20,5 +20,6 @@
   "turnCount": 3,
   "rng": { "algorithm": "pcg-dxsm-128", "version": 1, "state": ["0x1", "0x2"] },
   "stateHash": "0x0",
-  "actionUsage": {}
+  "actionUsage": {},
+  "markers": {}
 }

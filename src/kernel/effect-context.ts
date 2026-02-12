@@ -15,6 +15,7 @@ export interface EffectContext {
   readonly moveParams: Readonly<Record<string, MoveParamValue>>;
   readonly maxEffectOps?: number;
   readonly mapSpaces?: readonly MapSpaceDef[];
+  readonly freeOperation?: boolean;
 }
 
 export interface EffectResult {

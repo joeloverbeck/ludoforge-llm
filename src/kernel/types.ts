@@ -721,6 +721,7 @@ export type MoveParamValue = MoveParamScalar | readonly MoveParamScalar[];
 export interface Move {
   readonly actionId: ActionId;
   readonly params: Readonly<Record<string, MoveParamValue>>;
+  readonly freeOperation?: boolean;
 }
 
 export interface StateDelta {
@@ -808,12 +809,19 @@ export interface OperationPartialTraceEntry {
   readonly reason: 'costValidationFailed';
 }
 
+export interface OperationFreeTraceEntry {
+  readonly kind: 'operationFree';
+  readonly actionId: ActionId;
+  readonly step: 'costSpendSkipped';
+}
+
 export type TriggerLogEntry =
   | TriggerFiring
   | TriggerTruncated
   | TurnFlowLifecycleTraceEntry
   | TurnFlowEligibilityTraceEntry
-  | OperationPartialTraceEntry;
+  | OperationPartialTraceEntry
+  | OperationFreeTraceEntry;
 
 export interface ApplyMoveResult {
   readonly state: GameState;

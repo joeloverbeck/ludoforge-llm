@@ -158,6 +158,7 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
 
   const operationProfile = resolveOperationProfile(def, action);
   const executionProfile = operationProfile === undefined ? undefined : toOperationExecutionProfile(action, operationProfile);
+  const isFreeOp = move.freeOperation === true && executionProfile !== undefined;
 
   if (
     executionProfile !== undefined &&
@@ -171,10 +172,10 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
     });
   }
 
-  const costValidationPassed =
-    executionProfile?.costValidation === null || executionProfile === undefined
+  const costValidationPassed = isFreeOp ||
+    (executionProfile?.costValidation === null || executionProfile === undefined
       ? true
-      : evalCondition(executionProfile.costValidation, { ...effectCtxBase, state });
+      : evalCondition(executionProfile.costValidation, { ...effectCtxBase, state }));
   if (executionProfile !== undefined && executionProfile.partialMode === 'forbid' && !costValidationPassed) {
     throw illegalMoveError(move, 'operation profile cost validation failed', {
       code: 'OPERATION_COST_BLOCKED',
@@ -184,10 +185,10 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
     });
   }
 
-  const shouldSpendCost =
+  const shouldSpendCost = !isFreeOp && (
     executionProfile === undefined ||
     executionProfile.costValidation === null ||
-    costValidationPassed;
+    costValidationPassed);
   const costEffects = executionProfile?.costSpend ?? action.cost;
   const costResult = shouldSpendCost
     ? applyEffects(costEffects, {
@@ -202,7 +203,13 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
   const emittedEvents: TriggerEvent[] = [];
   const executionTraceEntries: TriggerLogEntry[] = [];
 
-  if (executionProfile !== undefined && executionProfile.partialMode === 'allow' && !costValidationPassed) {
+  if (isFreeOp) {
+    executionTraceEntries.push({
+      kind: 'operationFree',
+      actionId: action.id,
+      step: 'costSpendSkipped',
+    });
+  } else if (executionProfile !== undefined && executionProfile.partialMode === 'allow' && !costValidationPassed) {
     executionTraceEntries.push({
       kind: 'operationPartial',
       actionId: action.id,
@@ -275,7 +282,9 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
     ...triggerResult.state,
     rng: triggerResult.rng.state,
   };
-  const turnFlowResult = applyTurnFlowEligibilityAfterMove(def, stateWithRng, move);
+  const turnFlowResult = isFreeOp
+    ? { state: stateWithRng, traceEntries: [] as readonly TriggerLogEntry[] }
+    : applyTurnFlowEligibilityAfterMove(def, stateWithRng, move);
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
   const progressedState = advanceToDecisionPoint(def, turnFlowResult.state, lifecycleAndAdvanceLog);
 

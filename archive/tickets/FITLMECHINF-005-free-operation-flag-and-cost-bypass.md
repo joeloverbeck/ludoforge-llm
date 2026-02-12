@@ -1,6 +1,6 @@
 # FITLMECHINF-005 - Free Operation Flag and Cost Bypass
 
-**Status**: Pending
+**Status**: COMPLETED
 **Spec**: `specs/25-fitl-game-mechanics-infrastructure.md` (Task 25.4)
 **References**: `specs/00-fitl-implementation-order.md` (Milestone B)
 **Depends on**: None (builds on existing `EffectContext` and `apply-move.ts`)
@@ -67,3 +67,14 @@ Rule 3.1.2 defines "free operations" that don't cost resources and don't affect 
 - Cost validation (`costValidation` predicate) is irrelevant for free operations — skip cost entirely, not just validation
 - Trigger dispatch after effects is unaffected by the free operation flag
 - `applyMove` atomicity contract preserved: if any resolution stage throws, the entire move is rejected
+
+## Outcome
+
+- **Completed**: 2026-02-12
+- **Changes**:
+  - `src/kernel/effect-context.ts`: Added `readonly freeOperation?: boolean` to `EffectContext`
+  - `src/kernel/types.ts`: Added `readonly freeOperation?: boolean` to `Move`, added `OperationFreeTraceEntry` interface, included it in `TriggerLogEntry` union
+  - `src/kernel/apply-move.ts`: Wired bypass logic — `isFreeOp` derived from `move.freeOperation && executionProfile !== undefined`; cost validation short-circuited, costSpend skipped, eligibility update skipped, `operationFree` trace entry emitted; resolution stages and trigger dispatch unaffected
+  - `test/unit/apply-move.test.ts`: 7 new tests covering all acceptance criteria
+- **Deviations**: Passed `freeOperation` via `Move` type (not `applyMove` signature) — cleaner since it's a per-move property
+- **Verification**: `npm run build` passes, `npm test` passes (815 tests, 0 failures)

@@ -383,6 +383,15 @@ Event Text: "US Training may Pacify in 2 selected spaces."
 Lasting Effects Indicator (5.3): US CAPABILITY
 Shaded Text (see Dual Use 5.2): "Civilian programs subordinated to military: US Training may Pacify only to Passive Support."
 
+Period Event (Set Up Option): 1968
+Faction Order: US, ARVN, VC, NVA
+Card Number: 20
+Title: Laser Guided Bombs
+Italized Flavor Text: "Dawn of precision strike."
+Event Text: "Air Strike does not shift Support/Opposition in spaces where only 1 piece removed."
+Lasting Effects Indicator (5.3): US CAPABILITY
+Shaded Text (see Dual Use 5.2): "Camouflage: Air Strike removes no more than 2 pieces."
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

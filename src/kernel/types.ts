@@ -310,6 +310,7 @@ export interface GameDef {
   readonly endConditions: readonly EndCondition[];
   readonly scoring?: ScoringDef;
   readonly eventCards?: readonly EventCardDef[];
+  readonly stackingConstraints?: readonly StackingConstraint[];
 }
 
 export type TurnFlowDuration = 'card' | 'nextCard' | 'coup' | 'campaign';
@@ -608,12 +609,30 @@ export interface SpaceMarkerValueDef {
   readonly state: string;
 }
 
+export interface StackingConstraint {
+  readonly id: string;
+  readonly description: string;
+  readonly spaceFilter: {
+    readonly spaceIds?: readonly string[];
+    readonly spaceTypes?: readonly string[];
+    readonly country?: readonly string[];
+    readonly populationEquals?: number;
+  };
+  readonly pieceFilter: {
+    readonly pieceTypeIds?: readonly string[];
+    readonly factions?: readonly string[];
+  };
+  readonly rule: 'maxCount' | 'prohibit';
+  readonly maxCount?: number;
+}
+
 export interface MapPayload {
   readonly spaces: readonly MapSpaceDef[];
   readonly provisionalAdjacency?: readonly ProvisionalAdjacencyDef[];
   readonly tracks?: readonly NumericTrackDef[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];
   readonly spaceMarkers?: readonly SpaceMarkerValueDef[];
+  readonly stackingConstraints?: readonly StackingConstraint[];
 }
 
 export interface DataAssetEnvelope<TPayload = unknown> {

@@ -520,6 +520,38 @@ export const SpaceMarkerValueSchema = z
   })
   .strict();
 
+export const StackingConstraintSchema = z
+  .object({
+    id: StringSchema.min(1),
+    description: StringSchema,
+    spaceFilter: z
+      .object({
+        spaceIds: z.array(StringSchema.min(1)).optional(),
+        spaceTypes: z.array(StringSchema.min(1)).optional(),
+        country: z.array(StringSchema.min(1)).optional(),
+        populationEquals: IntegerSchema.min(0).optional(),
+      })
+      .strict(),
+    pieceFilter: z
+      .object({
+        pieceTypeIds: z.array(StringSchema.min(1)).optional(),
+        factions: z.array(StringSchema.min(1)).optional(),
+      })
+      .strict(),
+    rule: z.union([z.literal('maxCount'), z.literal('prohibit')]),
+    maxCount: IntegerSchema.min(0).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.rule === 'maxCount' && value.maxCount === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'maxCount is required when rule is "maxCount".',
+        path: ['maxCount'],
+      });
+    }
+  });
+
 export const MapPayloadSchema = z
   .object({
     spaces: z.array(MapSpaceSchema),
@@ -527,6 +559,7 @@ export const MapPayloadSchema = z
     tracks: z.array(NumericTrackSchema).optional(),
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),
     spaceMarkers: z.array(SpaceMarkerValueSchema).optional(),
+    stackingConstraints: z.array(StackingConstraintSchema).optional(),
   })
   .strict();
 
@@ -961,6 +994,7 @@ export const GameDefSchema = z
     endConditions: z.array(EndConditionSchema),
     scoring: ScoringDefSchema.optional(),
     eventCards: z.array(EventCardSchema).optional(),
+    stackingConstraints: z.array(StackingConstraintSchema).optional(),
   })
   .strict();
 

@@ -10,6 +10,7 @@ import {
   MapPayloadSchema,
   OBJECT_STRICTNESS_POLICY,
   PieceCatalogPayloadSchema,
+  StackingConstraintSchema,
 } from '../../src/kernel/index.js';
 
 const minimalGameDef = {
@@ -431,5 +432,146 @@ describe('top-level runtime schemas', () => {
 
     assert.equal(result.success, false);
     assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'metrics.avgGameLength'));
+  });
+});
+
+describe('StackingConstraintSchema', () => {
+  it('accepts valid maxCount constraint', () => {
+    const result = StackingConstraintSchema.safeParse({
+      id: 'max-2-bases',
+      description: 'Max 2 bases per province or city',
+      spaceFilter: { spaceTypes: ['province', 'city'] },
+      pieceFilter: { pieceTypeIds: ['base'] },
+      rule: 'maxCount',
+      maxCount: 2,
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts valid prohibit constraint', () => {
+    const result = StackingConstraintSchema.safeParse({
+      id: 'no-bases-on-loc',
+      description: 'No bases on LoCs',
+      spaceFilter: { spaceTypes: ['loc'] },
+      pieceFilter: { pieceTypeIds: ['base'] },
+      rule: 'prohibit',
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('rejects maxCount rule with missing maxCount value', () => {
+    const result = StackingConstraintSchema.safeParse({
+      id: 'max-2-bases',
+      description: 'Max 2 bases per province or city',
+      spaceFilter: { spaceTypes: ['province', 'city'] },
+      pieceFilter: { pieceTypeIds: ['base'] },
+      rule: 'maxCount',
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'maxCount'));
+  });
+
+  it('accepts empty spaceFilter and pieceFilter (matches all)', () => {
+    const result = StackingConstraintSchema.safeParse({
+      id: 'global-limit',
+      description: 'Global piece limit',
+      spaceFilter: {},
+      pieceFilter: {},
+      rule: 'maxCount',
+      maxCount: 10,
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts constraint with country filter', () => {
+    const result = StackingConstraintSchema.safeParse({
+      id: 'nv-restriction',
+      description: 'Only NVA/VC in North Vietnam',
+      spaceFilter: { country: ['northVietnam'] },
+      pieceFilter: { factions: ['US', 'ARVN'] },
+      rule: 'prohibit',
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts constraint with populationEquals filter', () => {
+    const result = StackingConstraintSchema.safeParse({
+      id: 'zero-pop-limit',
+      description: 'Limit pieces in zero-pop spaces',
+      spaceFilter: { populationEquals: 0 },
+      pieceFilter: {},
+      rule: 'maxCount',
+      maxCount: 5,
+    });
+
+    assert.equal(result.success, true);
+  });
+});
+
+describe('MapPayloadSchema with stackingConstraints', () => {
+  it('accepts map payload with stacking constraints', () => {
+    const result = MapPayloadSchema.safeParse({
+      spaces: [
+        {
+          id: 'saigon',
+          spaceType: 'city',
+          population: 6,
+          econ: 0,
+          terrainTags: [],
+          country: 'south-vietnam',
+          coastal: true,
+          adjacentTo: [],
+        },
+      ],
+      stackingConstraints: [
+        {
+          id: 'max-2-bases',
+          description: 'Max 2 bases per province or city',
+          spaceFilter: { spaceTypes: ['province', 'city'] },
+          pieceFilter: { pieceTypeIds: ['base'] },
+          rule: 'maxCount',
+          maxCount: 2,
+        },
+      ],
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts map payload without stacking constraints (backward compatible)', () => {
+    const result = MapPayloadSchema.safeParse({
+      spaces: [],
+    });
+
+    assert.equal(result.success, true);
+  });
+});
+
+describe('GameDefSchema with stackingConstraints', () => {
+  it('accepts GameDef with stacking constraints', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      stackingConstraints: [
+        {
+          id: 'no-bases-on-loc',
+          description: 'No bases on LoCs',
+          spaceFilter: { spaceTypes: ['loc'] },
+          pieceFilter: { pieceTypeIds: ['base'] },
+          rule: 'prohibit',
+        },
+      ],
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts GameDef without stacking constraints (backward compatible)', () => {
+    const result = GameDefSchema.safeParse(minimalGameDef);
+    assert.equal(result.success, true);
   });
 });

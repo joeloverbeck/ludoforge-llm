@@ -1,6 +1,6 @@
 # FITLMECHINF-003 - Stacking Constraint Type and Compile-Time Validation
 
-**Status**: Pending
+**Status**: COMPLETED
 **Spec**: `specs/25-fitl-game-mechanics-infrastructure.md` (Task 25.2, compile-time half)
 **References**: `specs/00-fitl-implementation-order.md` (Milestone B), Decision #5
 **Depends on**: None (builds on existing `MapPayload` and `validate-gamedef.ts`)
@@ -87,3 +87,22 @@ Decision #5 requires both compile-time and runtime stacking enforcement. This ti
 - No changes to runtime effect execution paths
 - `StackingConstraint` type is game-agnostic — no FITL-specific IDs hardcoded in kernel code
 - `MapPayload` remains backward-compatible (new field is optional)
+
+## Outcome
+
+**Completed**: 2026-02-12
+
+### What was changed
+- **`src/kernel/types.ts`**: Added `StackingConstraint` interface, extended `MapPayload` and `GameDef` with optional `stackingConstraints` field
+- **`src/kernel/schemas.ts`**: Added `StackingConstraintSchema` with `superRefine` enforcing `maxCount` presence when `rule === 'maxCount'`; updated `MapPayloadSchema` and `GameDefSchema`
+- **`src/kernel/validate-gamedef.ts`**: Added `validateInitialPlacementsAgainstStackingConstraints()` exported function with `spaceMatchesFilter` and `placementMatchesPieceFilter` helpers; emits `STACKING_CONSTRAINT_VIOLATION` diagnostics
+- **`test/unit/schemas-top-level.test.ts`**: 10 new schema tests (maxCount, prohibit, missing maxCount, empty filters, country filter, populationEquals, MapPayload with/without constraints, GameDef with/without constraints)
+- **`test/unit/validate-gamedef.test.ts`**: 8 new validation tests (maxCount violation, prohibit on LoC, faction+country prohibit, valid placements, no constraints, multiple violations, non-matching pieces, NVA/VC allowed in NV)
+
+### Deviations
+- Validation function (`validateInitialPlacementsAgainstStackingConstraints`) takes `constraints`, `placements`, and `spaces` as separate arguments rather than being wired into the existing `validateGameDef` function, since `GameDef` does not carry raw `ScenarioPiecePlacement` data. It is intended to be called from the compilation pipeline with access to both the raw scenario data and stacking constraints.
+
+### Verification
+- `npm run build` passes
+- Full test suite: 782 tests pass, 0 failures
+- All acceptance criteria met

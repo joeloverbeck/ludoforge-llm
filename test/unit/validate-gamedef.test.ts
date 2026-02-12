@@ -3,7 +3,14 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
-import { type GameDef, validateGameDef } from '../../src/kernel/index.js';
+import {
+  type GameDef,
+  type MapSpaceDef,
+  type ScenarioPiecePlacement,
+  type StackingConstraint,
+  validateGameDef,
+  validateInitialPlacementsAgainstStackingConstraints,
+} from '../../src/kernel/index.js';
 
 const loadFixtureGameDef = (fixtureName: string): GameDef => {
   const distRelativeFixturePath = fileURLToPath(new URL(`../../../test/fixtures/gamedef/${fixtureName}`, import.meta.url));
@@ -571,6 +578,174 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('returns no diagnostics for FITL foundation map fixture', () => {
     const diagnostics = validateGameDef(loadFixtureGameDef('fitl-map-foundation-valid.json'));
+    assert.deepEqual(diagnostics, []);
+  });
+});
+
+describe('validateInitialPlacementsAgainstStackingConstraints', () => {
+  const spaces: readonly MapSpaceDef[] = [
+    { id: 'quang-tri', spaceType: 'province', population: 1, econ: 0, terrainTags: [], country: 'south-vietnam', coastal: false, adjacentTo: [] },
+    { id: 'hue', spaceType: 'city', population: 2, econ: 0, terrainTags: [], country: 'south-vietnam', coastal: true, adjacentTo: [] },
+    { id: 'route-1', spaceType: 'loc', population: 0, econ: 1, terrainTags: [], country: 'south-vietnam', coastal: false, adjacentTo: [] },
+    { id: 'hanoi', spaceType: 'city', population: 3, econ: 0, terrainTags: [], country: 'north-vietnam', coastal: false, adjacentTo: [] },
+  ];
+
+  const maxBasesConstraint: StackingConstraint = {
+    id: 'max-2-bases',
+    description: 'Max 2 bases per province or city',
+    spaceFilter: { spaceTypes: ['province', 'city'] },
+    pieceFilter: { pieceTypeIds: ['base'] },
+    rule: 'maxCount',
+    maxCount: 2,
+  };
+
+  const noBasesOnLocConstraint: StackingConstraint = {
+    id: 'no-bases-on-loc',
+    description: 'No bases on LoCs',
+    spaceFilter: { spaceTypes: ['loc'] },
+    pieceFilter: { pieceTypeIds: ['base'] },
+    rule: 'prohibit',
+  };
+
+  const nvRestrictionConstraint: StackingConstraint = {
+    id: 'nv-restriction',
+    description: 'Only NVA/VC in North Vietnam',
+    spaceFilter: { country: ['north-vietnam'] },
+    pieceFilter: { factions: ['US', 'ARVN'] },
+    rule: 'prohibit',
+  };
+
+  it('reports error when 3 bases placed in province (maxCount 2)', () => {
+    const placements: readonly ScenarioPiecePlacement[] = [
+      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'US', count: 1 },
+      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'ARVN', count: 1 },
+      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'NVA', count: 1 },
+    ];
+
+    const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
+      [maxBasesConstraint],
+      placements,
+      spaces,
+    );
+
+    assert.equal(diagnostics.length, 1);
+    const diag = diagnostics.find((d) => d.code === 'STACKING_CONSTRAINT_VIOLATION');
+    assert.ok(diag);
+    assert.equal(diag.severity, 'error');
+    assert.ok(diag.message.includes('3'));
+    assert.ok(diag.message.includes('quang-tri'));
+  });
+
+  it('reports error when base placed on LoC (prohibit)', () => {
+    const placements: readonly ScenarioPiecePlacement[] = [
+      { spaceId: 'route-1', pieceTypeId: 'base', faction: 'NVA', count: 1 },
+    ];
+
+    const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
+      [noBasesOnLocConstraint],
+      placements,
+      spaces,
+    );
+
+    assert.equal(diagnostics.length, 1);
+    const diag = diagnostics.find((d) => d.code === 'STACKING_CONSTRAINT_VIOLATION');
+    assert.ok(diag);
+    assert.ok(diag.message.includes('route-1'));
+  });
+
+  it('reports error when US piece placed in North Vietnam (prohibit by faction+country)', () => {
+    const placements: readonly ScenarioPiecePlacement[] = [
+      { spaceId: 'hanoi', pieceTypeId: 'troops', faction: 'US', count: 2 },
+    ];
+
+    const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
+      [nvRestrictionConstraint],
+      placements,
+      spaces,
+    );
+
+    assert.equal(diagnostics.length, 1);
+    const diag = diagnostics.find((d) => d.code === 'STACKING_CONSTRAINT_VIOLATION');
+    assert.ok(diag);
+    assert.ok(diag.message.includes('hanoi'));
+    assert.ok(diag.message.includes('2'));
+  });
+
+  it('produces no diagnostics for valid placements within all constraints', () => {
+    const placements: readonly ScenarioPiecePlacement[] = [
+      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'US', count: 1 },
+      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'ARVN', count: 1 },
+      { spaceId: 'quang-tri', pieceTypeId: 'troops', faction: 'US', count: 5 },
+      { spaceId: 'hue', pieceTypeId: 'base', faction: 'NVA', count: 2 },
+      { spaceId: 'hanoi', pieceTypeId: 'guerrilla', faction: 'NVA', count: 3 },
+    ];
+
+    const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
+      [maxBasesConstraint, noBasesOnLocConstraint, nvRestrictionConstraint],
+      placements,
+      spaces,
+    );
+
+    assert.deepEqual(diagnostics, []);
+  });
+
+  it('produces no diagnostics when no stacking constraints defined (backward-compatible)', () => {
+    const placements: readonly ScenarioPiecePlacement[] = [
+      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'US', count: 5 },
+    ];
+
+    const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
+      [],
+      placements,
+      spaces,
+    );
+
+    assert.deepEqual(diagnostics, []);
+  });
+
+  it('reports multiple violations across different constraints', () => {
+    const placements: readonly ScenarioPiecePlacement[] = [
+      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'US', count: 3 },
+      { spaceId: 'route-1', pieceTypeId: 'base', faction: 'ARVN', count: 1 },
+      { spaceId: 'hanoi', pieceTypeId: 'troops', faction: 'ARVN', count: 1 },
+    ];
+
+    const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
+      [maxBasesConstraint, noBasesOnLocConstraint, nvRestrictionConstraint],
+      placements,
+      spaces,
+    );
+
+    assert.equal(diagnostics.length, 3);
+    assert.ok(diagnostics.every((d) => d.code === 'STACKING_CONSTRAINT_VIOLATION'));
+  });
+
+  it('does not flag non-matching piece types against constraint', () => {
+    const placements: readonly ScenarioPiecePlacement[] = [
+      { spaceId: 'quang-tri', pieceTypeId: 'troops', faction: 'US', count: 10 },
+    ];
+
+    const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
+      [maxBasesConstraint],
+      placements,
+      spaces,
+    );
+
+    assert.deepEqual(diagnostics, []);
+  });
+
+  it('does not flag NVA/VC pieces in North Vietnam against restriction', () => {
+    const placements: readonly ScenarioPiecePlacement[] = [
+      { spaceId: 'hanoi', pieceTypeId: 'guerrilla', faction: 'NVA', count: 5 },
+      { spaceId: 'hanoi', pieceTypeId: 'guerrilla', faction: 'VC', count: 3 },
+    ];
+
+    const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
+      [nvRestrictionConstraint],
+      placements,
+      spaces,
+    );
+
     assert.deepEqual(diagnostics, []);
   });
 });

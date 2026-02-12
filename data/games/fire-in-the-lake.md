@@ -433,6 +433,45 @@ dataAssets:
           country: southVietnam
           coastal: true
           adjacentTo: [can-tho:none, kien-hoa-vinh-binh:none, ba-xuyen:none]
+      tracks:
+        - id: nvaResources
+          scope: faction
+          faction: nva
+          min: 0
+          max: 75
+          initial: 0
+        - id: vcResources
+          scope: faction
+          faction: vc
+          min: 0
+          max: 75
+          initial: 0
+        - id: arvnResources
+          scope: faction
+          faction: arvn
+          min: 0
+          max: 75
+          initial: 0
+        - id: aid
+          scope: global
+          min: 0
+          max: 75
+          initial: 0
+        - id: patronage
+          scope: global
+          min: 0
+          max: 75
+          initial: 0
+        - id: trail
+          scope: global
+          min: 0
+          max: 4
+          initial: 0
+        - id: totalEcon
+          scope: global
+          min: 0
+          max: 75
+          initial: 0
   - id: fitl-piece-catalog-production
     kind: pieceCatalog
     payload:

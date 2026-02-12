@@ -22,6 +22,9 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
     │                                                     v
     │                                         Spec 25a (Kernel Op Primitives)
     │                                                     │
+    │                                                     v
+    │                                         Spec 25b (Decision Sequence Model)
+    │                                                     │
     │              ┌──────────────────────────────────────┤
     v              v                                      v
     Spec 26 (Operations Full Effects) ──> Spec 27 (SAs Full Effects)
@@ -76,7 +79,21 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 - Typed OperationProfileDef
 - Compound Move for SA interleaving
 
-### Milestone C: Operations + SAs Complete (Specs 26–27)
+### Milestone B3: Kernel Decision Sequence Model (Spec 25b)
+
+**Status**: Not started
+
+**Criteria**: Multi-step in-operation decisions work via incremental `legalChoices()` model.
+
+- `legalChoices()` returns correct next decision point for partial moves
+- `legalMoves()` emits template moves (empty params) for operations with profiles
+- `validateMove()` accepts operation moves validated via `legalChoices()`
+- `freeOperation` binding accessible in resolution effects
+- RandomAgent and GreedyAgent build operation moves incrementally via `legalChoices()`
+- Simple actions (no operation profile) are completely unaffected (backward compatible)
+- All existing tests pass (no regression)
+
+### Milestone C: Operations + SAs Complete (Specs 26-27)
 
 **Criteria**: All 8 operations and 12 special activities have complete effect implementations (no stubs).
 
@@ -171,14 +188,15 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 | 23 | Full Map and Piece Data | P0 | L | 2–3 |
 | 24 | Scenario Setups | P0 | M | 2–3 |
 | 25 | Game Mechanics Infrastructure | P0 | L | 4–5 |
-| 25a | Kernel Operation Primitives | P0 | M | 2–3 | COMPLETED |
-| 26 | Operations Full Effects (Depends: 25, 25a) | P0 | XL | 5–7 |
+| 25a | Kernel Operation Primitives | P0 | M | 2-3 | COMPLETED |
+| 25b | Kernel Decision Sequence Model (Depends: 25a) | P0 | M | 2-3 |
+| 26 | Operations Full Effects (Depends: 25, 25a, 25b) | P0 | XL | 5-7 |
 | 27 | Special Activities Full Effects | P0 | L | 4–5 |
 | 28 | Capabilities, Momentum, RVN Leader | P1 | L | 3–4 |
 | 29 | Event Card Encoding | P1 | XL | 8–12 |
 | 30 | Non-Player AI | P1 | L | 4–5 |
 | 31 | E2E Tests and Validation | P0 | L | 3–4 |
-| **Total** | | | | **36–49** |
+| **Total** | | | | **38-52** |
 
 ## Open Questions (Tracked Across Specs)
 
@@ -195,7 +213,8 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 
 | Risk | Impact | Likelihood | Mitigation |
 |---|---|---|---|
-| Op/SA interleaving requires deep kernel changes | High | Medium | MITIGATED — Compound Move model implemented; 4 unit tests pass. Minimal kernel impact. |
+| Op/SA interleaving requires deep kernel changes | High | Medium | MITIGATED -- Compound Move model implemented; 4 unit tests pass. Minimal kernel impact. |
+| Multi-space operations cause combinatorial explosion in legalMoves() | High | High | MITIGATED -- Spec 25b Decision Sequence Model: template moves + legalChoices() incremental decisions. |
 | Complex event cards exceed kernel expressiveness | High | Medium | Budget 5–10% escape hatches in Spec 29; add primitives as needed |
 | 130-card simulation too slow for evolution | Medium | Low | Benchmark after Milestone C; add caching if needed |
 | Tutorial turns 2–13 narrative not fully documented | Medium | High | Note as "data to be obtained from physical rulebook" in Spec 31 |

@@ -1022,6 +1022,78 @@ Event Text: "Place any 2 ARVN pieecs from anywhere (even out of play) into any C
 Lasting Effects Indicator (5.3): None
 Shaded Text (see Dual Use 5.2): "The enemy owns the night: Place any 1 Guerrilla in each Province with ARVN. ARVN Troops Redeploy as if no Bases."
 
+Period Event (Set Up Option): 1968
+Faction Order: VC, US, NVA, ARVN
+Card Number: 91
+Title: Bob Hope
+Italized Flavor Text: "USO."
+Event Text: "Move any US Troops from a Province to a COIN Control City. For each 2 moved (round down), 1 Casualty piece to Available."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Show lowers op tempo: NVA or VC move up to 3 US Troops from any Provinces to Cities, placing a Guerrilla where each Troop was."
+
+Period Event (Set Up Option): 1968
+Faction Order: VC, US, NVA, ARVN
+Card Number: 92
+Title: SEALORDS
+Italized Flavor Text: "Delta strategy."
+Event Text: "ARVN then US free Sweep in place or Assault in each space adjacent to Can Tho."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Sampans: NVA or VC moves any of its pieces (including unTunneled Bases) from Cambodia/Tay Ninh to spaces adjacent to Can Tho."
+
+Period Event (Set Up Option): 1964
+Faction Order: VC, US, NVA, ARVN
+Card Number: 93
+Title: Senator Fulbright
+Italized Flavor Text: "Hearings stoke debate."
+Event Text: "US moves 4 US pieces from map to Available."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "War skeptic: 1 Available US Base out of play. Aid -9."
+
+Period Event (Set Up Option): 1968
+Faction Order: VC, US, NVA, ARVN
+Card Number: 94
+Title: Tunnel Rats
+Italized Flavor Text: "Subterranean specialists."
+Event Text: "Place a Tunnel marker on an Insurgent Base in each of 2 Provinces, or remove 1 Tunneled Base from a space with US Troops."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): None
+
+Period Event (Set Up Option): 1965
+Faction Order: VC, US, NVA, ARVN
+Card Number: 95
+Title: Westmoreland
+Italized Flavor Text: "Root 'em out."
+Event Text: "US free Air Lifts, then Sweeps (no moves) or Assaults (no ARVN) in 2 spaces, then Air Strikes."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Big-unit war bypasses population: Shift 3 Provinces with no Police each 2 levels toward Active Opposition."
+
+Period Event (Set Up Option): 1968
+Faction Order: VC, US, ARVN, NVA
+Card Number: 96
+Title: APC
+Italized Flavor Text: "Accelerated Pacification Campaign."
+Event Text: "US and ARVN immediately Pacify as if Support Phase, but cost is 0. Shift at most 1 level per space."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "False progress: If Tet Offensive played, return it to VC. If not, VC execute 'General uprising' as on the card (without using it)."
+
+Period Event (Set Up Option): 1964
+Faction Order: VC, US, ARVN, NVA
+Card Number: 97
+Title: Brinks Hotel
+Italized Flavor Text: "NLF terror reconciles GVN-US."
+Event Text: "Aid +10, or 4 Patronage to ARVN Resources. Flip any current RVN leader card; its text is ignored."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "US billet car bombed: Shift a City that has VC by 2 levels toward Active Opposition and add a Terror marker there."
+
+Period Event (Set Up Option): 1965
+Faction Order: VC, US, ARVN, NVA
+Card Number: 98
+Title: Long Tan
+Italized Flavor Text: "Royal Australians."
+Event Text: "Place 2 out-of-play US Troops into a Province or remove all Guerrillas from all Jungle with US Troops."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "VC strike newly arrived troops: 1 US Base and 1 US Troop in a Jungle with 2+ VC Guerrillas to Casualties."
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

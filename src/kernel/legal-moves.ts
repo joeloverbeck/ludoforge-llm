@@ -5,7 +5,7 @@ import { resolvePlayerSel } from './resolve-selectors.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { isActiveFactionEligibleForTurnFlow, resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
-import type { ActionDef, GameDef, GameState, Move, MoveParamValue } from './types.js';
+import type { ActionDef, GameDef, GameState, Move, MoveParamValue, OperationProfileDef } from './types.js';
 
 function makeEvalContext(
   def: GameDef,
@@ -246,6 +246,9 @@ function enumerateParams(
   }
 }
 
+const resolveOperationProfile = (def: GameDef, action: ActionDef): OperationProfileDef | undefined =>
+  def.operationProfiles?.find((profile) => profile.actionId === action.id);
+
 export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
   if (!isActiveFactionEligibleForTurnFlow(state)) {
     return [];
@@ -266,6 +269,35 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
     }
 
     if (!withinActionLimits(action, state)) {
+      continue;
+    }
+
+    const profile = resolveOperationProfile(def, action);
+    if (profile !== undefined) {
+      if (profile.legality.when !== undefined) {
+        try {
+          if (!evalCondition(profile.legality.when, actorCtx)) {
+            continue;
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      if (
+        profile.cost.validate !== undefined &&
+        profile.partialExecution.mode === 'forbid'
+      ) {
+        try {
+          if (!evalCondition(profile.cost.validate, actorCtx)) {
+            continue;
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      moves.push({ actionId: action.id, params: {} });
       continue;
     }
 

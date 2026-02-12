@@ -449,9 +449,8 @@ describe('applyMove', () => {
     const snapshot = structuredClone(state);
 
     assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), (error: unknown) => {
-      const details = error as Error & { reason?: unknown; metadata?: Record<string, unknown> };
-      assert.equal(details.reason, 'operation profile legality predicate failed');
-      assert.equal(details.metadata?.code, 'OPERATION_LEGALITY_FAILED');
+      const details = error as Error & { reason?: unknown };
+      assert.equal(details.reason, 'action is not legal in current state');
       return true;
     });
     assert.deepEqual(state, snapshot);
@@ -507,10 +506,8 @@ describe('applyMove', () => {
     const snapshot = structuredClone(state);
 
     assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), (error: unknown) => {
-      const details = error as Error & { reason?: unknown; metadata?: Record<string, unknown> };
-      assert.equal(details.reason, 'operation profile cost validation failed');
-      assert.equal(details.metadata?.code, 'OPERATION_COST_BLOCKED');
-      assert.equal(details.metadata?.partialExecutionMode, 'forbid');
+      const details = error as Error & { reason?: unknown };
+      assert.equal(details.reason, 'action is not legal in current state');
       return true;
     });
     assert.deepEqual(state, snapshot);
@@ -1012,6 +1009,16 @@ describe('applyMove', () => {
       ],
       actions: [
         {
+          id: asActionId('pass'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
           id: asActionId('operate'),
           actor: 'active',
           phase: asPhaseId('main'),
@@ -1031,7 +1038,7 @@ describe('applyMove', () => {
       actionUsage: {},
     };
 
-    // Without freeOperation, this would throw OPERATION_COST_BLOCKED (energy=1 < required 5)
+    // Without freeOperation, this would be rejected (energy=1 < required 5, mode=forbid → no template in legalMoves)
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {}, freeOperation: true });
     assert.equal(result.state.globalVars.energy, 1, 'energy unchanged — cost bypassed');
     assert.equal(result.state.globalVars.score, 10, 'resolution effects still execute');

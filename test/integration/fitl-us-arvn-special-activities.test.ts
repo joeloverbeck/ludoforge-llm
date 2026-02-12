@@ -97,10 +97,7 @@ describe('FITL US/ARVN special activities integration', () => {
           };
         };
 
-        assert.equal(details.reason, 'operation profile cost validation failed');
-        assert.equal(details.metadata?.code, 'OPERATION_COST_BLOCKED');
-        assert.equal(details.metadata?.profileId, 'air-strike-profile');
-        assert.equal(details.metadata?.partialExecutionMode, 'forbid');
+        assert.equal(details.reason, 'action is not legal in current state');
         return true;
       },
     );

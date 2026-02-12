@@ -1,6 +1,6 @@
 # KERDECSEQMOD-002 - Template Moves in `legalMoves()`
 
-**Status**: Not started
+**Status**: COMPLETED
 **Spec**: `specs/25b-kernel-decision-sequence-model.md` (Task 25b.2)
 **Depends on**: KERDECSEQMOD-001
 
@@ -89,3 +89,12 @@ For template moves, compound SA variants from `linkedSpecialActivityWindows` are
 - `legalMoves()` output for profiled actions is O(actions) instead of O(2^spaces)
 - Template moves are valid `Move` objects with empty `params`
 - The function remains pure (no state mutation)
+
+## Outcome
+
+- **Completed**: 2026-02-12
+- **Changes**:
+  - `src/kernel/legal-moves.ts`: Added `resolveOperationProfile()` helper. Modified `legalMoves()` to emit `{ actionId, params: {} }` template moves for profiled actions. Includes try-catch guards for legality/cost conditions that may reference unavailable bindings at enumeration time.
+  - `test/unit/kernel/legal-moves.test.ts`: Created with 8 test cases covering template emission, legality predicates, cost validation (forbid/allow modes), limits, mixed actions, and Move structure validation.
+- **Deviations**: Added defensive try-catch around `evalCondition()` calls for `legality.when` and `cost.validate` — conditions may reference `{ ref: 'binding' }` which are unavailable during `legalMoves()` (only available during `applyMove()`). On error, the template is silently skipped.
+- **Verification**: Build, typecheck, lint pass. 884/884 tests pass.

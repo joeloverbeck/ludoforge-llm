@@ -292,21 +292,18 @@ describe('FITL card-flow determinism integration', () => {
       const start = initialState(def, seed, 4);
       const initialLegalMoves = legalMoves(def, start);
 
-      const selectedMove = initialLegalMoves.find(
-        (move) =>
-          move.actionId === asActionId('event') &&
-          move.params.side === 'shaded' &&
-          move.params.branch === 'b' &&
-          move.params.targetPrimary === 'space-b' &&
-          move.params.targetSecondary === 'space-d' &&
-          move.params.selfOverride === selfOverride,
-      );
-      assert.notEqual(selectedMove, undefined);
-
-      const eventMove = selectedMove;
-      if (eventMove === undefined) {
-        throw new Error('expected shaded/b event move with explicit targets to be legal');
-      }
+      // Event action has an operation profile → legalMoves emits a template move.
+      // Construct the fully-parameterized move directly; validateMove uses legalChoices() for profiled actions.
+      const eventMove: Move = {
+        actionId: asActionId('event'),
+        params: {
+          selfOverride,
+          side: 'shaded',
+          branch: 'b',
+          targetPrimary: 'space-b',
+          targetSecondary: 'space-d',
+        },
+      };
 
       const result = applyMove(def, start, eventMove);
       assert.equal(result.state.globalVars.spent, 0);

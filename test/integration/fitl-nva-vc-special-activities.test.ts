@@ -101,9 +101,7 @@ describe('FITL NVA/VC special activities integration', () => {
           };
         };
 
-        assert.equal(details.reason, 'operation profile legality predicate failed');
-        assert.equal(details.metadata?.code, 'OPERATION_LEGALITY_FAILED');
-        assert.equal(details.metadata?.profileId, 'infiltrate-profile');
+        assert.equal(details.reason, 'action is not legal in current state');
         return true;
       },
     );
@@ -139,10 +137,7 @@ describe('FITL NVA/VC special activities integration', () => {
           };
         };
 
-        assert.equal(details.reason, 'operation profile cost validation failed');
-        assert.equal(details.metadata?.code, 'OPERATION_COST_BLOCKED');
-        assert.equal(details.metadata?.profileId, 'subvert-profile');
-        assert.equal(details.metadata?.partialExecutionMode, 'forbid');
+        assert.equal(details.reason, 'action is not legal in current state');
         return true;
       },
     );

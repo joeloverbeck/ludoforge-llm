@@ -1274,20 +1274,99 @@ Event Text: "2 Available US Troops out of play. Patronage +2."
 Lasting Effects Indicator (5.3): None
 Shaded Text (see Dual Use 5.2): "Massacre: Set a Province with US Troops to Active Opposition. VC place a Base and Guerrilla there. Aid -6."
 
-Period Event (Set Up Option):
-Faction Order:
-Card Number:
-Title:
-Italized Flavor Text:
-Event Text:
-Lasting Effects Indicator (5.3):
-Shaded Text (see Dual Use 5.2):
+Period Event (Set Up Option): 1968
+Faction Order: VC, ARVN, NVA, US
+Card Number: 120
+Title: US Press Corps
+Italized Flavor Text: "Initial support."
+Event Text: "Move US pieces from out of play to map; 4 if 0-2 cards in RVN Leader box, 2 if 3-5."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Bulding skepticism: US Troop Casualties up to cards in RVN Leader box plus all US Base Csaualties go out of play."
 
-Period Event (Set Up Option):
-Faction Order:
-Card Number:
-Title:
-Italized Flavor Text:
-Event Text:
-Lasting Effects Indicator (5.3):
-Shaded Text (see Dual Use 5.2):
+Faction Order: US, ARVN, VC, NVA
+Card Number: 121
+Title: Linebacker II
+US Pivotal Event
+Play if 2+ cards in RVN Leader box and Support + Available > 40.
+Unrestricted air war: NVA removes 2 Bases, reduces Resources to half (round down), Ineligible through next card.
+3 US Casualties to Available.
+Not if Coup! showing as next card.
+
+Faction Order: NVA, VC, ARVN, US
+Card Number: 122
+Title: Easter Offensive
+NVA Pivotal Event
+Play if 2+ cards in RVN Leader box and more NVA Troops than US Troops on map.
+Invasion: NVA free Marches. Then NVA Troops on LoCs with no US/ARVN may move 1 space. Then all NVA Troops free Attack.
+Not if Coup! next. May trump Pivotal US.
+
+Faction Order: ARVN, US, NVA, VC
+Card Number: 123
+Title: Vietnamization
+ARVN Pivotal Event
+Play if 2+ cards in RVN Leader box and < 20 US Troops on map.
+Mechanization: +12 ARVN Resources. +12 Aid. All out-of-play ARVN Available. Place 4 ARVN cubes anywhere.
+Not if Coup! next. May trump Pivotal NVA, Pivotal US.
+
+FactionOrder: VC, NVA, US, ARVN
+Card Number: 124
+Title: Tet Offensive
+VC Pivotal Event
+Play if 2+ cards in RVN Leader box and >20 VC Guerrillas in South.
+General uprising: Free Terror with 1 Underground VC per space. Place 6 VC pieces in any cities. VC + NVA Guerrillas free Attack where enemies (remove VC first).
+Not if Coup! next. May trump Pivotal ARVN, Pivotal NVA, Pivotal US
+
+Coup!
+Card Number: 125
+Nguyen Khanh
+Corps commanders ascendant: Transport uses max 1 LoC space.
+Conduct Coup Round:
+Victory? to Reset
+Monsoon: If this card next, no Sweep or March, Air Lift & Air Strike max 2.
+
+Coup!
+Card Number: 126
+Young Turks
+Thi, Ky, & Thieu wag the US dog: Each ARVN Govern Special Activity adds +2 Patronage.
+Conduct Coup Round:
+Victory? to Reset
+Monsoon: If this card next, no Sweep or March, Air Lift & Air Strike max 2.
+
+Coup!
+Card Number: 127
+Nguyen Cao Ky
+Brash brass Ky: Pacification costs 4 Resources per Terror or level.
+Conduct Coup Round:
+Victory? to Reset
+Monsoon: If this card next, no Sweep or March, Air Lift & Air Strike max 2.
+
+Coup!
+Card Number: 128
+Nguyen Van Thieu
+Stabilizer: No effect.
+Conduct Coup Round:
+Victory? to Reset
+Monsoon: If this card next, no Sweep or March, Air Lift & Air Strike max 2.
+
+Coup!
+Card Number: 129
+Failed Attempt
+Desertion: ARVN removes 1 in 3 of its cubes per space (round down).
+Place below any RVN Leader card.
+Conduct Coup Round:
+Victory? to Reset.
+Monsoon: If this card next, no Sweep or March, Air Lift & Air Strike max 2.
+
+Coup!
+Card Number: 130
+Failed Attempt
+Desertion: ARVN removes 1 in 3 of its cubes per space (round down).
+Place below any RVN Leader card.
+Conduct Coup Round:
+Victory? to Reset
+Monsoon: If this card next, no Sweep or March, Air Lift & Air Strike max 2.
+
+RVN Leader (card printed on map)
+Duong Van Minh
+General pledges democracy.
+Each ARVN Train Operation adds +5 bonus aid.

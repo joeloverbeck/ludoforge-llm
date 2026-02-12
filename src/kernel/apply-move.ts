@@ -1,6 +1,7 @@
 import { incrementActionUsage } from './action-usage.js';
 import { evalCondition } from './eval-condition.js';
 import { applyEffects } from './effects.js';
+import { legalChoices } from './legal-choices.js';
 import { legalMoves } from './legal-moves.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -106,6 +107,38 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
   const action = findAction(def, move.actionId);
   if (action === undefined) {
     throw illegalMoveError(move, 'unknown action id');
+  }
+
+  const profile = resolveOperationProfile(def, action);
+
+  if (profile !== undefined) {
+    const legal = legalMoves(def, state);
+    const hasTemplate = legal.some((candidate) => candidate.actionId === action.id);
+    if (!hasTemplate && move.freeOperation !== true) {
+      throw illegalMoveError(move, 'action is not legal in current state');
+    }
+
+    try {
+      const result = legalChoices(def, state, move);
+      if (!result.complete) {
+        throw illegalMoveError(move, 'operation move has incomplete params', {
+          code: 'OPERATION_INCOMPLETE_PARAMS',
+          nextDecision: result.name,
+        });
+      }
+    } catch (err) {
+      if (err instanceof Error && 'reason' in err) {
+        throw err;
+      }
+      if (err instanceof Error && err.message.startsWith('legalChoices:')) {
+        throw illegalMoveError(move, 'operation move params are invalid', {
+          code: 'OPERATION_INVALID_PARAMS',
+          detail: err.message,
+        });
+      }
+      throw err;
+    }
+    return;
   }
 
   const legal = legalMoves(def, state);

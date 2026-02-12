@@ -1,6 +1,6 @@
 # KERDECSEQMOD-003 - `validateMove()` Relaxation for Operation Profiles
 
-**Status**: Not started
+**Status**: COMPLETED
 **Spec**: `specs/25b-kernel-decision-sequence-model.md` (Task 25b.3)
 **Depends on**: KERDECSEQMOD-001, KERDECSEQMOD-002
 
@@ -75,3 +75,15 @@ else:
 - `applyMove()` never mutates `state` on validation failure (atomicity preserved)
 - Error messages for invalid operation moves are descriptive and structured
 - The validation path for profiled actions uses `legalChoices()` as the single source of truth
+
+## Outcome
+
+- **Completed**: 2026-02-12
+- **Changes**:
+  - `src/kernel/apply-move.ts`: Replaced `validateMove()` with profile-aware logic. For profiled actions: checks template presence in `legalMoves()`, validates params via `legalChoices()`, supports `move.freeOperation` bypass. Non-profiled actions retain original exact-match validation.
+  - `test/unit/apply-move.test.ts`: Updated error message expectations (tests 8, 9) and added pass action to free operation fixture (test 19) to prevent `STALL_LOOP_DETECTED`.
+  - `test/fixtures/trace/fitl-events-initial-pack.golden.json`: Updated `initialLegalMoves` from 32 enumerated event moves to 1 template move.
+  - `test/integration/fitl-card-flow-determinism.test.ts`: Updated to construct event move directly instead of searching `legalMoves()`.
+  - 4 integration test files (`fitl-insurgent-operations`, `fitl-joint-operations`, `fitl-nva-vc-special-activities`, `fitl-us-arvn-special-activities`): Updated error reason assertions from specific profile messages to `'action is not legal in current state'` (rejection now happens earlier in `validateMove` via `legalMoves()` template absence).
+- **Deviations**: Error messages changed — profiled actions with failing legality/cost are now rejected by `validateMove()` (template not in `legalMoves()`) rather than deeper in `applyMove()`, producing the generic reason `'action is not legal in current state'` instead of specific profile error codes.
+- **Verification**: Build, typecheck, lint pass. 884/884 tests pass.

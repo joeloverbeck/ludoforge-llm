@@ -1,6 +1,6 @@
 # FITLMECHINF-006 - Joint Operation Cost Constraint
 
-**Status**: Pending
+**Status**: COMPLETED
 **Spec**: `specs/25-fitl-game-mechanics-infrastructure.md` (Task 25.5)
 **References**: `specs/00-fitl-implementation-order.md` (Milestone B)
 **Depends on**: `FITLMECHINF-002` (Total Econ computation)
@@ -62,3 +62,16 @@ The US faction doesn't track its own Resources — it spends ARVN Resources. But
 - Existing non-FITL GameDefs without `costValidation` are unaffected
 - `partialExecution.mode === 'forbid'` behavior unchanged: validation failure blocks the operation
 - `partialExecution.mode === 'allow'` behavior unchanged: validation failure skips cost but allows resolution
+
+## Outcome
+
+**Completed**: 2026-02-12
+
+**What was done**:
+- Verified that existing `ValueExpr` arithmetic (`+`, `-`, `*`) with `pvar` references (explicit player ID) and `gvar` references can express `ARVN_Resources - cost >= Total_Econ` — no type extensions needed
+- Created test fixture `test/fixtures/cnl/compiler/fitl-joint-operations.md` with synthetic 2-player game (US=player 0, ARVN=player 1), per-player `resources` variable, global `totalEcon`, and two operation profiles demonstrating cross-player cost validation
+- Created integration test `test/integration/fitl-joint-operations.test.ts` with 6 tests covering: compilation, allowed spend, boundary spend, blocked spend, non-US faction unaffected, and free operation bypass
+
+**Deviations**: None. No kernel or type changes were required — the existing `costValidation` mechanism in `apply-move.ts` already supports the joint operation constraint purely through data (ConditionAST).
+
+**Verification**: `npm run build` passes, all 821 tests pass (including 6 new)

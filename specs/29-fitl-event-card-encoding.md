@@ -518,6 +518,69 @@ Event Text: "When Air Strike Degrades Trail, US removes 1 NVA piece outside the 
 Lasting Effects Indicator (5.3): NVA CAPABILITY
 Shaded Text (see Dual Use 5.2): "SAMs guard infrsatructure: NVA Rally Improves Trail 2 boxes not 1 (unshaded Wild Weasels remove)"
 
+Period Event (Set Up Option): 1968
+Faction Order: NVA, US, ARVN, VC
+Card Number: 35
+Title: Thanh Hoa
+Italized Flavor Text: "Bridge busters."
+Event Text: "Degrade the Trail by 3 boxes."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Stubborn targets: Improve Trail by 1 box. Then add three times Trail value to NVA Resources."
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, US, VC, ARVN
+Card Number: 36
+Title: Hamburger Hill
+Italized Flavor Text: "A Shau Valley campaign."
+Event Text: "Move 4 US Troops from any spaces to a Highland. Remove 1 NVA or VC Base there, even if Tunneled."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Prepared defenses: Place a Tunnel on an NVA or VC Highland Base. 3 US Troops there to Casualties."
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, US, VC, ARVN
+Card Number: 37
+Title: Khe Sanh
+Italized Flavor Text: "Northern casualties."
+Event Text: "Select a US Base with US Troops. Remove 10 NVA Troops within 1 space of it."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "US Marines pinned: Up to 3 US Troops in 1 space with NVA to Casualties. US Ineligible through next card."
+
+Period Event (Set Up Option): 1965
+Faction Order: NVA, US, VC, ARVN
+Card Number: 38
+Title: McNamara Line
+Italized Flavor Text: "Fortification mentality."
+Event Text: "Redeploy all COIN forces outside Vietnam to COIN-Controlled Cities. ARVN Resources -12. No Infiltrate or Trail Improvement by Rally until Coup. MOMENTUM"
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): None
+
+Period Event (Set Up Option): 1965
+Faction Order: NVA, US, VC, ARVN
+Card Number: 39
+Title: Oriskany
+Italized Flavor Text: "'Alpha' strikes on North Vietnam."
+Event Text: "Remove any 4 pieces from North Vietnam or, once none, Laos. Degrade Trail 2 boxes."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Explosion on CV-34: 1 Available US Troop out of play. Through next Coup, no Degrade of Trail. MOMENTUM"
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, US, VC, ARVN
+Card Number: 40
+Title: PoWs
+Italized Flavor Text: "Release negotiations keep US at war."
+Event Text: "Free Air Strike. 2 US Troops from Casualties to Available."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Air campaign creates hostages. 3 US Troops from Available to Casualties."
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, ARVN, US, VC
+Card Number: 41
+Title: Bombing Pause
+Italized Flavor Text: "Tet holiday gesture."
+Event Text: "Set any two spaces to Passive Support. Patronage +2. No Air Strike until Coup. MOMENTUM"
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): None
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

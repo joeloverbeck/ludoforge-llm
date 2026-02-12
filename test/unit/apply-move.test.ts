@@ -15,6 +15,7 @@ import {
   type GameDef,
   type GameState,
   type Move,
+  type OperationFreeTraceEntry,
   type TriggerLogEntry,
 } from '../../src/kernel/index.js';
 
@@ -696,6 +697,343 @@ describe('applyMove', () => {
 
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
     assert.equal(result.state.globalVars.orderValue, 5);
+  });
+
+  it('skips costSpend effects and preserves resources when freeOperation is true with operation profile', () => {
+    const def: GameDef = {
+      metadata: { id: 'free-op-cost-skip', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [
+        { name: 'energy', type: 'int', init: 0, min: 0, max: 20 },
+        { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
+      ],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {
+            spend: [{ addVar: { scope: 'global', var: 'energy', delta: -3 } }],
+          },
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 5 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [{ addVar: { scope: 'global', var: 'energy', delta: -3 } }],
+          effects: [{ setVar: { scope: 'global', var: 'score', value: 99 } }],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { energy: 10, score: 0 },
+      actionUsage: {},
+    };
+
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {}, freeOperation: true });
+    assert.equal(result.state.globalVars.energy, 10, 'energy should be unchanged (costSpend skipped)');
+    assert.equal(result.state.globalVars.score, 5, 'resolution stage effects should still execute');
+  });
+
+  it('preserves eligibility state when freeOperation is true with operation profile', () => {
+    const def: GameDef = {
+      metadata: { id: 'free-op-eligibility', players: { min: 4, max: 4 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
+        optionMatrix: [],
+        passRewards: [],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      operationProfiles: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ effects: [] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+
+    const start = initialState(def, 7, 4);
+    const beforeEligibility = start.turnFlow?.eligibility;
+    const beforeCard = start.turnFlow?.currentCard;
+
+    const result = applyMove(def, start, { actionId: asActionId('operate'), params: {}, freeOperation: true });
+
+    assert.deepEqual(result.state.turnFlow?.eligibility, beforeEligibility, 'eligibility should be unchanged');
+    assert.equal(result.state.turnFlow?.currentCard.firstEligible, beforeCard?.firstEligible);
+    assert.equal(result.state.turnFlow?.currentCard.secondEligible, beforeCard?.secondEligible);
+    assert.deepEqual(result.state.turnFlow?.currentCard.actedFactions, beforeCard?.actedFactions);
+    const eligibilityEntries = result.triggerFirings.filter(
+      (entry) => entry.kind === 'turnFlowEligibility',
+    );
+    assert.equal(eligibilityEntries.length, 0, 'no eligibility trace entries for free operations');
+  });
+
+  it('executes resolution stage effects normally for free operations', () => {
+    const def: GameDef = {
+      metadata: { id: 'free-op-resolution', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [
+        { name: 'stageA', type: 'int', init: 0, min: 0, max: 20 },
+        { name: 'stageB', type: 'int', init: 0, min: 0, max: 20 },
+      ],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {
+            spend: [{ setVar: { scope: 'global', var: 'stageA', value: 99 } }],
+          },
+          targeting: {},
+          resolution: [
+            { effects: [{ addVar: { scope: 'global', var: 'stageA', delta: 3 } }] },
+            { effects: [{ addVar: { scope: 'global', var: 'stageB', delta: 7 } }] },
+          ],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { stageA: 0, stageB: 0 },
+      actionUsage: {},
+    };
+
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {}, freeOperation: true });
+    assert.equal(result.state.globalVars.stageA, 3, 'resolution stage A should execute');
+    assert.equal(result.state.globalVars.stageB, 7, 'resolution stage B should execute');
+  });
+
+  it('includes operationFree trace entry for free operations with operation profile', () => {
+    const def: GameDef = {
+      metadata: { id: 'free-op-trace', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ effects: [] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: {},
+      actionUsage: {},
+    };
+
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {}, freeOperation: true });
+    const freeEntry = result.triggerFirings.find(
+      (entry): entry is OperationFreeTraceEntry => entry.kind === 'operationFree',
+    );
+    assert.ok(freeEntry, 'should have operationFree trace entry');
+    assert.equal(freeEntry.actionId, asActionId('operate'));
+    assert.equal(freeEntry.step, 'costSpendSkipped');
+  });
+
+  it('applies costSpend and eligibility normally when freeOperation is not set (default)', () => {
+    const def: GameDef = {
+      metadata: { id: 'non-free-op-default', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [
+        { name: 'energy', type: 'int', init: 0, min: 0, max: 20 },
+        { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
+      ],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {
+            spend: [{ addVar: { scope: 'global', var: 'energy', delta: -3 } }],
+          },
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 5 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [{ addVar: { scope: 'global', var: 'energy', delta: -3 } }],
+          effects: [{ setVar: { scope: 'global', var: 'score', value: 99 } }],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { energy: 10, score: 0 },
+      actionUsage: {},
+    };
+
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
+    assert.equal(result.state.globalVars.energy, 7, 'costSpend should deduct energy');
+    assert.equal(result.state.globalVars.score, 5, 'resolution stage effects should execute');
+    const freeEntries = result.triggerFirings.filter((entry) => entry.kind === 'operationFree');
+    assert.equal(freeEntries.length, 0, 'no operationFree trace entry for non-free operations');
+  });
+
+  it('executes all effects normally when freeOperation is true but no operation profile exists (plain action)', () => {
+    const def = createDef();
+    const state = createState();
+
+    const result = applyMove(def, state, { ...playMove(2), freeOperation: true });
+    assert.equal(result.state.globalVars.energy, 3, 'cost effects should still execute for plain actions');
+    assert.equal(result.state.globalVars.score, 2, 'effects should still execute for plain actions');
+    const freeEntries = result.triggerFirings.filter((entry) => entry.kind === 'operationFree');
+    assert.equal(freeEntries.length, 0, 'no operationFree trace entry for plain actions');
+  });
+
+  it('bypasses cost validation for free operations even when cost validation would fail', () => {
+    const def: GameDef = {
+      metadata: { id: 'free-op-bypass-cost-validation', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [
+        { name: 'energy', type: 'int', init: 0, min: 0, max: 20 },
+        { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
+      ],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      operationProfiles: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {
+            validate: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 5 },
+            spend: [{ addVar: { scope: 'global', var: 'energy', delta: -5 } }],
+          },
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { energy: 1, score: 0 },
+      actionUsage: {},
+    };
+
+    // Without freeOperation, this would throw OPERATION_COST_BLOCKED (energy=1 < required 5)
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {}, freeOperation: true });
+    assert.equal(result.state.globalVars.energy, 1, 'energy unchanged — cost bypassed');
+    assert.equal(result.state.globalVars.score, 10, 'resolution effects still execute');
   });
 
   it('resolves event side and branch effects from selected move params', () => {

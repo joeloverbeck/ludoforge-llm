@@ -1,6 +1,6 @@
 # Spec 24: FITL Scenario Setups
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0
 **Complexity**: M
 **Dependencies**: Spec 23 (full map and pieces must exist)
@@ -524,3 +524,9 @@ Victory marker starting values per FITL rule 1.9. These are **derived** from pie
 8. Scenario payload validation catches common errors (bad space IDs, excess pieces, etc.)
 9. Build passes (`npm run build`)
 10. All existing tests pass (`npm test`)
+
+## Outcome
+
+- **Completed**: 2026-02-12
+- **Changes**: All tasks (24.1–24.9) implemented across tickets FITLSCESET-003 through FITLSCESET-008. Extended scenario types/schemas/validation, encoded all 3 scenarios (Full, Short, Medium), removed placeholder asset, added conservation tables and golden validation tests.
+- **Deviations**: None significant. `leaderStack` is top-level on ScenarioPayload as specified. Victory markers and totalEcon are derived in tests, not stored in payloads.

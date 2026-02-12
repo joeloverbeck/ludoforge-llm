@@ -275,6 +275,24 @@ Event Text: "Through Coup, -6 NVA Resources at any Trail# change. MOMENTUM"
 Lasting Effects Indicator (5.3): None.
 Shaded Text (see Dual Use 5.2): "Dubious technology: Improve Trail by 1 box and to a minimum of 2. ARVN Resources -9."
 
+Period Event (Set Up Option): 1965
+Faction Order: US, NVA, VC, ARVN
+Card Number: 8
+Title: Arc Light
+Italized Flavor Text: "Guided B-52 tactical bombing."
+Event Text: "1 space each Air Strike may be a Province without COIN pieces."
+Lasting Effects Indicator (5.3): US CAPABILITY
+Shaded Text (see Dual Use 5.2): "Moonscape: Air Strike spaces removing >1 piece shift 2 levels toward Active Opposition."
+
+Period Event (Set Up Option): 1968
+Faction Order: US, NVA, VC, ARVN
+Card Number: 9
+Title: Psychedelic Cookie
+Italized Flavor Text: "9th Division."
+Event Text: "US moves up to 3 US Troops from out of play to Available or South Vietnam, or from the map to Available."
+Lasting Effects Indicator (5.3): None.
+Shaded Text (see Dual Use 5.2): "Worn out formation. US takes 3 of its Troops from the map out of play."
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

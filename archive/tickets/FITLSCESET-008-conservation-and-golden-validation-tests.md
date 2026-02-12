@@ -1,6 +1,6 @@
 # FITLSCESET-008: Piece Conservation and Golden Validation Tests
 
-**Status**: Pending
+**Status**: ✅ COMPLETED
 **Priority**: P0
 **Depends on**: FITLSCESET-003, FITLSCESET-004, FITLSCESET-005, FITLSCESET-006, FITLSCESET-007
 **Blocks**: None (final ticket)
@@ -100,3 +100,10 @@ For a selection of key spaces per scenario, verify that the control derived from
 - All existing tests continue to pass
 - Tests derive values from the data (parse + compute), not from hardcoded intermediate values
 - Tests use the same `parseGameSpec` pipeline as the compiler (not custom YAML parsing)
+
+## Outcome
+
+- **Completed**: 2026-02-12
+- **Changes**: Created `test/integration/fitl-scenario-conservation.test.ts` (1 new file, no source/data files modified)
+- **Test results**: 59 new tests across 14 suites — piece conservation (36), golden victory markers (12), totalEcon (3), control annotation spot checks (8). All 692 total tests pass.
+- **Deviations**: totalEcon computation uses `insurgentForces === 0` for LoC COIN-control (LoCs are COIN-controlled when no insurgent forces present), rather than `COIN > Insurgent` which is for provinces/cities. This matches FITL rules for LoC sabotage.

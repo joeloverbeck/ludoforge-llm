@@ -224,7 +224,10 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
   }
 
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const baseBindings: Record<string, unknown> = { ...partialMove.params };
+  const baseBindings: Record<string, unknown> = {
+    ...partialMove.params,
+    __freeOperation: partialMove.freeOperation ?? false,
+  };
 
   const evalCtx: EvalContext = {
     def,

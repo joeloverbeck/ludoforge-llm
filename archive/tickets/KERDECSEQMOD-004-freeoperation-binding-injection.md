@@ -1,6 +1,6 @@
 # KERDECSEQMOD-004 - `__freeOperation` Binding Injection
 
-**Status**: Not started
+**Status**: COMPLETED
 **Spec**: `specs/25b-kernel-decision-sequence-model.md` (Task 25b.4)
 **Depends on**: KERDECSEQMOD-003
 
@@ -82,3 +82,13 @@ Binding names starting with `__` (double underscore) are reserved for kernel use
 - Non-operation actions (simple actions) are unaffected -- they don't use operation profiles
 - The binding does not collide with game-designer bindings (reserved prefix `__`)
 - Effect context construction remains immutable (no mutation of existing bindings object)
+
+## Outcome
+
+- **Completed**: 2026-02-12
+- **Changes**:
+  - `src/kernel/apply-move.ts:172` — Injected `__freeOperation: move.freeOperation ?? false` into `effectCtxBase.bindings`
+  - `src/kernel/legal-choices.ts:227-230` — Also injected `__freeOperation` into `legalChoices()` baseBindings (necessary because `legalChoices()` traverses `if` conditions in resolution effects that may reference the binding; without this, `validateMove()` would throw "Binding not found")
+  - `test/unit/kernel/apply-move.test.ts` (NEW) — 4 test cases covering all acceptance criteria
+- **Deviation from ticket**: `legal-choices.ts` was also modified (not listed in original file list). This was required to prevent a production bug: `legalChoices()` evaluates `if` conditions during effect traversal, and those conditions reference `__freeOperation`.
+- **Verification**: build, typecheck, lint clean; 888/888 tests pass, 0 regressions

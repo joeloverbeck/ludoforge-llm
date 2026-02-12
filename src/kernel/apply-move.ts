@@ -169,7 +169,7 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
     adjacencyGraph,
     activePlayer: state.activePlayer,
     actorPlayer: state.activePlayer,
-    bindings: move.params,
+    bindings: { ...move.params, __freeOperation: move.freeOperation ?? false },
     moveParams: move.params,
   } as const;
 

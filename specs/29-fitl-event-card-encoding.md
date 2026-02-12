@@ -473,6 +473,51 @@ Event Text: "Remove any 4 Insurgent pieces total from spaces with Irregulars."
 Lasting Effects Indicator (5.3): None
 Shaded Text (see Dual Use 5.2): "tribal secession: Replace all Irregulars with VC Guerrillas. 1 Neutral Highland to Active Opposition. -3 Patronage."
 
+Period Event (Set Up Option): 1968
+Faction Order: US, VC, ARVN, NVA
+Card Number: 30
+Title: USS New Jersey
+Italized Flavor Text: "Fire support."
+Event Text: "US or ARVN free Air Strikes any 1-3 coastal spaces, removing up to 2 pieces per space (no die roll and no effect on Trail)."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Frightening free fire: Shift 2 coastal Provinces with US Troops each 2 levels toward Active Opposition."
+
+Period Event (Set Up Option): 1964
+Faction Order: NVA, US, ARVN, VC
+Card Number: 31
+Title: AAA
+Italized Flavor Text: "Assets to protection from close air attack."
+Event Text: "Rally that Improves Trail may select 1 space only."
+Lasting Effects Indicator (5.3): NVA Capability
+Shaded Text (see Dual Use 5.2): "Point air defense of logistic hubs: Air Strike does not Degrade Trail below 2."
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, US, ARVN, VC
+Card Number: 32
+Title: Long Range Guns
+Italized Flavor Text: "US M-107 175mm counterbattery."
+Event Text: "NVA Bombard max 1 space."
+Lasting Effects Indicator (5.3): NVA CAPABILITY
+Shaded Text (see Dual Use 5.2): "Soviet M-46 130mm artillery: NVA Bombard max 3 spaces."
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, US, ARVN, VC
+Card Number: 33
+Title: MiGs
+Italized Flavor Text: "Expensive interceptors."
+Event Text: "NVA Resources -6 each Reset."
+Lasting Effects Indicator (5.3): NVA CAPABILITIES
+Shaded Text (see Dual Use 5.2): "High US loss ratio: Unless unshaded Top Gun, whenever Air Strike Degrades Trail, US removes 1 Available Troop to Casualties."
+
+Period Event (Set Up Option): 1965
+Faction Order: NVA, US, ARVN, VC
+Card Number: 34
+Title: SA-2s
+Italized Flavor Text: "Fiddly Soviet gear."
+Event Text: "When Air Strike Degrades Trail, US removes 1 NVA piece outside the South."
+Lasting Effects Indicator (5.3): NVA CAPABILITY
+Shaded Text (see Dual Use 5.2): "SAMs guard infrsatructure: NVA Rally Improves Trail 2 boxes not 1 (unshaded Wild Weasels remove)"
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

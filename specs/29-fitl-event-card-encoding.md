@@ -1220,6 +1220,60 @@ Event Text: "Place 1 Police into each of 6 Provinces."
 Lasting Effects Indicator (5.3): None
 Shaded Text (see Dual Use 5.2): "Local Viet Minh tradition: Shift 3 Provinces with ARVN each 1 level toward Active Opposition. Place a VC Guerrilla in each."
 
+Period Event (Set Up Option): 1968
+Faction Order: VC, ARVN, US, NVA
+Card Number: 113
+Title: Ruff Puff
+Italized Flavor Text: "RF/PF-Regional and Popular Forces."
+Event Text: "Place up to 9 Police in the South."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Ill-trained, thoroughly subverted: Replace 5 Police outside Cities with 1 VC piece each; 1 of the VC pieces may be a Base."
+
+Period Event (Set Up Option): 1965
+Faction Order: VC, ARVN, US, NVA
+Card Number: 114
+Title: Tri Quang
+Italized Flavor Text: "Buddhists counter Communists."
+Event Text: "Set up to 3 Neutral or Opposition Cities to Passive Support."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "People's Revolutionary Committee: Shift Hue, Da Nang, and Saigon 1 level toward Active Opposition. Place a VC piece in Saigon."
+
+Period Event (Set Up Option): 1968
+Faction Order: VC, ARVN, US, NVA
+Card Number: 115
+Title: Typhoon Kate
+Italized Flavor Text: "Year of storms."
+Event Text: "Until Coup, no Air Lift, Transport, or Bombard, and all other Special Activities are maximum 1 space. Executing Faction stays Eligible. MOMENTUM"
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): None
+
+Period Event (Set Up Option): 1964
+Faction Order: VC, ARVN, NVA, US
+Card Number: 116
+Title: Cadres
+Italized Flavor Text: "Manpower to political sections."
+Event Text: "VC to Terror or Agitate must remove 2 VC Guerrillas per space."
+Lasting Effects Indicator (5.3): VC CAPABILITY
+Shaded Text (see Dual Use 5.2): "NLF village committees: VC Rally in 1 space where VC already had a Base may Agitate as if Support Phase even if COIN Control."
+
+Period Event (Set Up Option): 1964
+Faction Order: VC, ARVN, NVA, US
+Card Number: 118
+Title: Korean War Arms
+Italized Flavor Text: "Obsolete."
+Event Text: "VC must remove 1 VC Guerrilla from each space with at least 2 and no NVA Base."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "NLF gets US arms captured in Korea: Place any 1 VC piece in each of 3 spaces."
+
+Period Event (Set Up Option): 1968
+Faction Order: VC, ARVN, NVA, US
+Card Number: 119
+Title: My Lai
+Italized Flavor Text: "US LT convicted."
+Event Text: "2 Available US Troops out of play. Patronage +2."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Massacre: Set a Province with US Troops to Active Opposition. VC place a Base and Guerrilla there. Aid -6."
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

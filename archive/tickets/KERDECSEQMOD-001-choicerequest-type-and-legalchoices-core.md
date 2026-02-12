@@ -1,6 +1,6 @@
 # KERDECSEQMOD-001 - ChoiceRequest Type and `legalChoices()` Core Function
 
-**Status**: Not started
+**Status**: COMPLETED
 **Spec**: `specs/25b-kernel-decision-sequence-model.md` (Task 25b.1)
 **Depends on**: None (builds on existing types from Spec 25a)
 
@@ -107,3 +107,14 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
 - All existing tests pass (no regression)
 - The function handles both profiled and non-profiled actions
 - Binding names starting with `__` are reserved for kernel use (not validated here, but the function must not create such bindings)
+
+## Outcome
+
+- **Completed**: 2026-02-12
+- **Files changed**:
+  - `src/kernel/types.ts` — Added `ChoiceRequest` interface
+  - `src/kernel/legal-choices.ts` — NEW: `legalChoices()` function implementing effect AST traversal
+  - `src/kernel/index.ts` — Added re-export of `legal-choices.js`
+  - `test/unit/kernel/legal-choices.test.ts` — NEW: 13 test cases (all 10 ticket scenarios + operation profile support + purity invariant)
+- **Deviations**: None. All acceptance criteria met exactly as specified.
+- **Verification**: `npm run build` ✓, `npm run typecheck` ✓, `npm run lint` ✓, 13/13 new tests pass, 876/876 full suite pass (0 regressions)

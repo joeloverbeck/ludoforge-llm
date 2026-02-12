@@ -1,5 +1,6 @@
 export * from './branded.js';
 export * from './initial-state.js';
+export * from './legal-choices.js';
 export * from './legal-moves.js';
 export * from './apply-move.js';
 export * from './trigger-dispatch.js';

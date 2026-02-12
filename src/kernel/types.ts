@@ -805,6 +805,15 @@ export interface Move {
   readonly compound?: CompoundMovePayload;
 }
 
+export interface ChoiceRequest {
+  readonly complete: boolean;
+  readonly name?: string;
+  readonly type?: 'chooseOne' | 'chooseN';
+  readonly options?: readonly MoveParamValue[];
+  readonly min?: number;
+  readonly max?: number;
+}
+
 export interface StateDelta {
   readonly path: string;
   readonly before: unknown;

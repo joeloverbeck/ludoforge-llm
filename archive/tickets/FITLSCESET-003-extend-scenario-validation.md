@@ -1,6 +1,6 @@
 # FITLSCESET-003: Extend Scenario Validation
 
-**Status**: Pending
+**Status**: ✅ COMPLETED
 **Priority**: P0
 **Depends on**: FITLSCESET-001, FITLSCESET-002
 **Blocks**: FITLSCESET-004, FITLSCESET-005, FITLSCESET-006
@@ -91,3 +91,10 @@ New diagnostic codes to introduce:
 - Existing diagnostic codes unchanged
 - The `fitl-production-data-compilation.test.ts` expected validation profile may need updating (the empty `fitl-scenario-production` asset currently produces 2 ref-invalid diagnostics — this is expected to change in FITLSCESET-007)
 - Validation is additive — new fields are optional, so scenarios without them still pass
+
+## Outcome
+
+- **Completion date**: 2026-02-12
+- **What was changed**: Extended `src/cnl/validate-spec.ts` with cross-reference validation for scenario payloads (placements, tracks, markers, out-of-play, deck composition, US policy, piece conservation). Added `test/unit/validate-spec-scenario.test.ts` with unit tests covering all new diagnostic codes.
+- **Deviations**: None
+- **Verification**: `npm run typecheck` passes, all 633 tests pass (0 failures)

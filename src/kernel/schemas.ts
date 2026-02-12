@@ -517,6 +517,93 @@ export const MapPayloadSchema = z
   })
   .strict();
 
+export const ScenarioPiecePlacementSchema = z
+  .object({
+    spaceId: StringSchema.min(1),
+    pieceTypeId: StringSchema.min(1),
+    faction: StringSchema.min(1),
+    count: IntegerSchema.positive(),
+    status: z.record(StringSchema, StringSchema).optional(),
+  })
+  .strict();
+
+export const ScenarioDeckCompositionSchema = z
+  .object({
+    pileCount: IntegerSchema.positive(),
+    eventsPerPile: IntegerSchema.positive(),
+    coupsPerPile: IntegerSchema.positive(),
+    includedCardIds: z.array(StringSchema.min(1)).optional(),
+    excludedCardIds: z.array(StringSchema.min(1)).optional(),
+  })
+  .strict();
+
+export const ScenarioPayloadSchema = z
+  .object({
+    mapAssetId: StringSchema.min(1),
+    pieceCatalogAssetId: StringSchema.min(1),
+    eventCardSetAssetId: StringSchema.min(1).optional(),
+    scenarioName: StringSchema.min(1),
+    yearRange: StringSchema.min(1),
+    initialPlacements: z.array(ScenarioPiecePlacementSchema).optional(),
+    initialTrackValues: z
+      .array(
+        z
+          .object({
+            trackId: StringSchema.min(1),
+            value: NumberSchema,
+          })
+          .strict(),
+      )
+      .optional(),
+    initialMarkers: z
+      .array(
+        z
+          .object({
+            spaceId: StringSchema.min(1),
+            markerId: StringSchema.min(1),
+            state: StringSchema.min(1),
+          })
+          .strict(),
+      )
+      .optional(),
+    outOfPlay: z
+      .array(
+        z
+          .object({
+            pieceTypeId: StringSchema.min(1),
+            faction: StringSchema.min(1),
+            count: IntegerSchema.positive(),
+          })
+          .strict(),
+      )
+      .optional(),
+    deckComposition: ScenarioDeckCompositionSchema.optional(),
+    startingLeader: StringSchema.min(1).optional(),
+    leaderStack: z.array(StringSchema.min(1)).optional(),
+    startingCapabilities: z
+      .array(
+        z
+          .object({
+            capabilityId: StringSchema.min(1),
+            side: z.union([z.literal('unshaded'), z.literal('shaded')]),
+          })
+          .strict(),
+      )
+      .optional(),
+    startingEligibility: z
+      .array(
+        z
+          .object({
+            faction: StringSchema.min(1),
+            eligible: BooleanSchema,
+          })
+          .strict(),
+      )
+      .optional(),
+    usPolicy: z.union([z.literal('jfk'), z.literal('lbj'), z.literal('nixon')]).optional(),
+  })
+  .strict();
+
 export const DataAssetKindSchema = z.union([
   z.literal('map'),
   z.literal('scenario'),

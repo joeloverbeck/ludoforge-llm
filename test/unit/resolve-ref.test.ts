@@ -12,6 +12,7 @@ import {
   type EvalContext,
   type GameDef,
   type GameState,
+  type MapSpaceDef,
   type Token,
 } from '../../src/kernel/index.js';
 
@@ -142,6 +143,89 @@ describe('resolveRef', () => {
     const objectBindingCtx = makeCtx({ bindings: { '$obj': { nested: true } } });
     assert.throws(() => resolveRef({ ref: 'binding', name: '$obj' }, objectBindingCtx), (error: unknown) =>
       isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('resolves tokenZone — returns zone ID containing the bound token', () => {
+    const handToken = makeToken('hand-1', { cost: 2 });
+    const ctx = makeCtx({ bindings: { '$x': 42, '$card': handToken } });
+    assert.equal(resolveRef({ ref: 'tokenZone', token: '$card' }, ctx), 'hand:1');
+  });
+
+  it('throws MISSING_BINDING when tokenZone binding is not found', () => {
+    const ctx = makeCtx();
+    assert.throws(
+      () => resolveRef({ ref: 'tokenZone', token: '$missing' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
+    );
+  });
+
+  it('throws TYPE_MISMATCH when tokenZone binding is not a token', () => {
+    const ctx = makeCtx();
+    assert.throws(
+      () => resolveRef({ ref: 'tokenZone', token: '$x' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('throws MISSING_VAR when token is not in any zone', () => {
+    const orphanToken = makeToken('orphan-1', { cost: 0 });
+    const ctx = makeCtx({ bindings: { '$orphan': orphanToken } });
+    assert.throws(
+      () => resolveRef({ ref: 'tokenZone', token: '$orphan' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+  });
+
+  it('resolves zoneProp — returns scalar properties from mapSpaces', () => {
+    const mapSpaces: readonly MapSpaceDef[] = [
+      {
+        id: 'saigon',
+        spaceType: 'city',
+        population: 2,
+        econ: 3,
+        terrainTags: ['lowland'],
+        country: 'south-vietnam',
+        coastal: true,
+        adjacentTo: ['hue'],
+      },
+    ];
+    const ctx = makeCtx({ mapSpaces });
+    assert.equal(resolveRef({ ref: 'zoneProp', zone: 'saigon', prop: 'spaceType' }, ctx), 'city');
+    assert.equal(resolveRef({ ref: 'zoneProp', zone: 'saigon', prop: 'population' }, ctx), 2);
+    assert.equal(resolveRef({ ref: 'zoneProp', zone: 'saigon', prop: 'coastal' }, ctx), true);
+  });
+
+  it('throws ZONE_PROP_NOT_FOUND when zone is not in mapSpaces', () => {
+    const ctx = makeCtx({ mapSpaces: [] });
+    assert.throws(
+      () => resolveRef({ ref: 'zoneProp', zone: 'unknown', prop: 'spaceType' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND'),
+    );
+  });
+
+  it('throws ZONE_PROP_NOT_FOUND when property is not on zone', () => {
+    const mapSpaces: readonly MapSpaceDef[] = [
+      { id: 'hue', spaceType: 'city', population: 1, econ: 1, terrainTags: [], country: 'south-vietnam', coastal: false, adjacentTo: [] },
+    ];
+    const ctx = makeCtx({ mapSpaces });
+    assert.throws(
+      () => resolveRef({ ref: 'zoneProp', zone: 'hue', prop: 'missingProp' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND'),
+    );
+  });
+
+  it('throws TYPE_MISMATCH when zoneProp targets an array property', () => {
+    const mapSpaces: readonly MapSpaceDef[] = [
+      { id: 'hue', spaceType: 'city', population: 1, econ: 1, terrainTags: ['highland'], country: 'south-vietnam', coastal: false, adjacentTo: [] },
+    ];
+    const ctx = makeCtx({ mapSpaces });
+    assert.throws(
+      () => resolveRef({ ref: 'zoneProp', zone: 'hue', prop: 'terrainTags' }, ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'TYPE_MISMATCH') &&
+        typeof error.message === 'string' &&
+        error.message.includes('zonePropIncludes'),
     );
   });
 });

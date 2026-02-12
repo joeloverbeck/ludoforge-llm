@@ -36,7 +36,9 @@ export type Reference =
   | { readonly ref: 'zoneCount'; readonly zone: ZoneSel }
   | { readonly ref: 'tokenProp'; readonly token: TokenSel; readonly prop: string }
   | { readonly ref: 'binding'; readonly name: string }
-  | { readonly ref: 'markerState'; readonly space: ZoneSel; readonly marker: string };
+  | { readonly ref: 'markerState'; readonly space: ZoneSel; readonly marker: string }
+  | { readonly ref: 'tokenZone'; readonly token: TokenSel }
+  | { readonly ref: 'zoneProp'; readonly zone: ZoneSel; readonly prop: string };
 
 export type ValueExpr =
   | number
@@ -44,7 +46,7 @@ export type ValueExpr =
   | string
   | Reference
   | {
-      readonly op: '+' | '-' | '*';
+      readonly op: '+' | '-' | '*' | '/';
       readonly left: ValueExpr;
       readonly right: ValueExpr;
     }
@@ -73,6 +75,12 @@ export type ConditionAST =
       readonly to: ZoneSel;
       readonly via?: ConditionAST;
       readonly maxDepth?: number;
+    }
+  | {
+      readonly op: 'zonePropIncludes';
+      readonly zone: ZoneSel;
+      readonly prop: string;
+      readonly value: ValueExpr;
     };
 
 export interface TokenFilterPredicate {

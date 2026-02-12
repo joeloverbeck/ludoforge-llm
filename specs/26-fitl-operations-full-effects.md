@@ -552,8 +552,8 @@ resolution:
                           when:
                             op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: 'highland' }
-                              - { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: 'jungle' }
+                              - { op: zonePropIncludes, zone: $space, prop: terrainTags, value: 'highland' }
+                              - { op: zonePropIncludes, zone: $space, prop: terrainTags, value: 'jungle' }
                           then: { op: '/', left: { ref: binding, name: cubeCount }, right: 2 }
                           else: { ref: binding, name: cubeCount }
                       in:

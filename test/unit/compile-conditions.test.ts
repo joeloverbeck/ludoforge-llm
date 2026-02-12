@@ -81,6 +81,78 @@ describe('compile-conditions lowering', () => {
     ]);
   });
 
+  it('lowers division operator in value node', () => {
+    const result = lowerValueNode(
+      { op: '/', left: 10, right: 3 },
+      context,
+      'doc.actions.0.effects.0.addVar.delta',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, { op: '/', left: 10, right: 3 });
+  });
+
+  it('lowers markerState reference with zone canonicalization', () => {
+    const result = lowerValueNode(
+      { ref: 'markerState', space: 'board', marker: 'support' },
+      context,
+      'doc.actions.0.pre.left',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, { ref: 'markerState', space: 'board:none', marker: 'support' });
+  });
+
+  it('emits diagnostic for markerState with missing marker', () => {
+    const result = lowerValueNode(
+      { ref: 'markerState', space: 'board' },
+      context,
+      'doc.actions.0.pre.left',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+  });
+
+  it('lowers tokenZone reference', () => {
+    const result = lowerValueNode(
+      { ref: 'tokenZone', token: '$piece' },
+      context,
+      'doc.actions.0.effects.0.moveToken.to',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, { ref: 'tokenZone', token: '$piece' });
+  });
+
+  it('lowers zoneProp reference with zone canonicalization', () => {
+    const result = lowerValueNode(
+      { ref: 'zoneProp', zone: 'board', prop: 'population' },
+      context,
+      'doc.actions.0.pre.left',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, { ref: 'zoneProp', zone: 'board:none', prop: 'population' });
+  });
+
+  it('lowers zonePropIncludes condition with zone canonicalization', () => {
+    const result = lowerConditionNode(
+      { op: 'zonePropIncludes', zone: 'board', prop: 'terrainTags', value: 'highland' },
+      context,
+      'doc.actions.0.pre',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, {
+      op: 'zonePropIncludes',
+      zone: 'board:none',
+      prop: 'terrainTags',
+      value: 'highland',
+    });
+  });
+
   it('emits missing capability diagnostics with alternatives for unsupported query kinds', () => {
     const result = lowerQueryNode(
       { query: 'tokensMatchingPredicate', predicate: { op: 'truthy', value: '$x' } },

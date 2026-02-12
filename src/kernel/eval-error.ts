@@ -4,7 +4,9 @@ export type EvalErrorCode =
   | 'TYPE_MISMATCH'
   | 'SELECTOR_CARDINALITY'
   | 'QUERY_BOUNDS_EXCEEDED'
-  | 'SPATIAL_NOT_IMPLEMENTED';
+  | 'SPATIAL_NOT_IMPLEMENTED'
+  | 'DIVISION_BY_ZERO'
+  | 'ZONE_PROP_NOT_FOUND';
 
 export type EvalErrorContext = Readonly<Record<string, unknown>>;
 
@@ -60,6 +62,14 @@ export function queryBoundsExceededError(message: string, context?: EvalErrorCon
 
 export function spatialNotImplementedError(message: string, context?: EvalErrorContext): EvalError {
   return createEvalError('SPATIAL_NOT_IMPLEMENTED', message, context);
+}
+
+export function divisionByZeroError(message: string, context?: EvalErrorContext): EvalError {
+  return createEvalError('DIVISION_BY_ZERO', message, context);
+}
+
+export function zonePropNotFoundError(message: string, context?: EvalErrorContext): EvalError {
+  return createEvalError('ZONE_PROP_NOT_FOUND', message, context);
 }
 
 export function isEvalError(error: unknown): error is EvalError {

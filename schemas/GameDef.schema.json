@@ -167,6 +167,35 @@
             "ref": { "const": "binding" },
             "name": { "type": "string" }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref", "space", "marker"],
+          "properties": {
+            "ref": { "const": "markerState" },
+            "space": { "$ref": "#/definitions/zoneSel" },
+            "marker": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref", "token"],
+          "properties": {
+            "ref": { "const": "tokenZone" },
+            "token": { "$ref": "#/definitions/tokenSel" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref", "zone", "prop"],
+          "properties": {
+            "ref": { "const": "zoneProp" },
+            "zone": { "$ref": "#/definitions/zoneSel" },
+            "prop": { "type": "string" }
+          }
         }
       ]
     },
@@ -264,7 +293,7 @@
           "additionalProperties": false,
           "required": ["op", "left", "right"],
           "properties": {
-            "op": { "enum": ["+", "-", "*"] },
+            "op": { "enum": ["+", "-", "*", "/"] },
             "left": { "$ref": "#/definitions/valueExpr" },
             "right": { "$ref": "#/definitions/valueExpr" }
           }
@@ -335,6 +364,17 @@
             "op": { "const": "in" },
             "item": { "$ref": "#/definitions/valueExpr" },
             "set": { "$ref": "#/definitions/valueExpr" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "zone", "prop", "value"],
+          "properties": {
+            "op": { "const": "zonePropIncludes" },
+            "zone": { "$ref": "#/definitions/zoneSel" },
+            "prop": { "type": "string" },
+            "value": { "$ref": "#/definitions/valueExpr" }
           }
         }
       ]

@@ -85,12 +85,34 @@ describe('evalValue', () => {
     assert.equal(evalValue({ ref: 'gvar', var: 'a' }, ctx), 3);
   });
 
-  it('evaluates integer arithmetic (+, -, *)', () => {
+  it('evaluates integer arithmetic (+, -, *, /)', () => {
     const ctx = makeCtx();
 
     assert.equal(evalValue({ op: '+', left: 3, right: 4 }, ctx), 7);
     assert.equal(evalValue({ op: '-', left: 10, right: 3 }, ctx), 7);
     assert.equal(evalValue({ op: '*', left: 5, right: 2 }, ctx), 10);
+    assert.equal(evalValue({ op: '/', left: 7, right: 2 }, ctx), 3);
+    assert.equal(evalValue({ op: '/', left: -7, right: 2 }, ctx), -3);
+    assert.equal(evalValue({ op: '/', left: 0, right: 5 }, ctx), 0);
+    assert.equal(evalValue({ op: '/', left: 6, right: 3 }, ctx), 2);
+  });
+
+  it('throws DIVISION_BY_ZERO for division by zero', () => {
+    const ctx = makeCtx();
+    assert.throws(
+      () => evalValue({ op: '/', left: 10, right: 0 }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'DIVISION_BY_ZERO'),
+    );
+  });
+
+  it('evaluates division with aggregate sub-expressions', () => {
+    const ctx = makeCtx();
+    const expr: ValueExpr = {
+      op: '/',
+      left: { aggregate: { op: 'sum', query: { query: 'tokensInZone', zone: 'tableau:0' }, prop: 'vp' } },
+      right: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'tableau:0' } } },
+    };
+    assert.equal(evalValue(expr, ctx), 3);
   });
 
   it('throws TYPE_MISMATCH for non-numeric arithmetic operands', () => {

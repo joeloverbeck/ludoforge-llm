@@ -227,3 +227,17 @@ export function resolveSingleZoneSel(sel: ZoneSel, ctx: EvalContext): ZoneId {
 
   return resolved[0]!;
 }
+
+export function resolveMapSpaceId(zone: ZoneSel, ctx: Pick<EvalContext, 'bindings'>): string {
+  if (zone.startsWith('$')) {
+    const bound = ctx.bindings[zone];
+    if (bound === undefined) {
+      throw missingBindingError(`Zone binding not found: ${zone}`, { zone, availableBindings: Object.keys(ctx.bindings).sort() });
+    }
+    if (typeof bound !== 'string') {
+      throw typeMismatchError(`Zone binding ${zone} must resolve to a string`, { zone, actualType: typeof bound, value: bound });
+    }
+    return bound;
+  }
+  return zone;
+}

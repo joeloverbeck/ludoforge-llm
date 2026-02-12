@@ -5,13 +5,14 @@ import { resolvePlayerSel } from './resolve-selectors.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { isActiveFactionEligibleForTurnFlow, resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
-import type { ActionDef, GameDef, GameState, Move, MoveParamValue, OperationProfileDef } from './types.js';
+import type { ActionDef, GameDef, GameState, MapSpaceDef, Move, MoveParamValue, OperationProfileDef } from './types.js';
 
 function makeEvalContext(
   def: GameDef,
   adjacencyGraph: AdjacencyGraph,
   state: GameState,
   bindings: Readonly<Record<string, unknown>>,
+  mapSpaces?: readonly MapSpaceDef[],
 ): EvalContext {
   return {
     def,
@@ -20,6 +21,7 @@ function makeEvalContext(
     activePlayer: state.activePlayer,
     actorPlayer: state.activePlayer,
     bindings,
+    ...(mapSpaces === undefined ? {} : { mapSpaces }),
   };
 }
 

@@ -1,7 +1,7 @@
 import type { EvalContext } from './eval-context.js';
-import { typeMismatchError } from './eval-error.js';
+import { typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import { evalValue } from './eval-value.js';
-import { resolveSingleZoneSel } from './resolve-selectors.js';
+import { resolveMapSpaceId, resolveSingleZoneSel } from './resolve-selectors.js';
 import { queryConnectedZones } from './spatial.js';
 import type { ConditionAST, ValueExpr } from './types.js';
 
@@ -118,6 +118,51 @@ export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
         ...(cond.maxDepth === undefined ? {} : { maxDepth: cond.maxDepth }),
       });
       return reachableZones.includes(toZoneId);
+    }
+
+    case 'zonePropIncludes': {
+      const zoneId = resolveMapSpaceId(cond.zone, ctx);
+      const mapSpaces = ctx.mapSpaces;
+      if (mapSpaces === undefined) {
+        throw zonePropNotFoundError('No mapSpaces available to look up zone properties', {
+          condition: cond,
+          zoneId,
+        });
+      }
+
+      const spaceDef = mapSpaces.find((space) => space.id === String(zoneId));
+      if (spaceDef === undefined) {
+        throw zonePropNotFoundError(`Zone not found in mapSpaces: ${String(zoneId)}`, {
+          condition: cond,
+          zoneId,
+          availableSpaceIds: mapSpaces.map((space) => space.id).sort(),
+        });
+      }
+
+      const propValue = (spaceDef as unknown as Record<string, unknown>)[cond.prop];
+      if (propValue === undefined) {
+        throw zonePropNotFoundError(`Property "${cond.prop}" not found on zone ${String(zoneId)}`, {
+          condition: cond,
+          zoneId,
+          prop: cond.prop,
+          availableProps: Object.keys(spaceDef).sort(),
+        });
+      }
+
+      if (!Array.isArray(propValue)) {
+        throw typeMismatchError(
+          `Property "${cond.prop}" on zone ${String(zoneId)} is not an array. Use zoneProp reference with a comparison condition instead.`,
+          {
+            condition: cond,
+            zoneId,
+            prop: cond.prop,
+            actualType: typeof propValue,
+          },
+        );
+      }
+
+      const needle = evalValue(cond.value, ctx);
+      return propValue.includes(needle);
     }
 
     default: {

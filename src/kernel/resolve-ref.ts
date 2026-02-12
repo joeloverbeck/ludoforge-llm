@@ -1,6 +1,6 @@
-import { resolveSinglePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
+import { resolveMapSpaceId, resolveSinglePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import type { EvalContext } from './eval-context.js';
-import { missingBindingError, missingVarError, typeMismatchError } from './eval-error.js';
+import { missingBindingError, missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import type { Reference, Token } from './types.js';
 
 function isScalarValue(value: unknown): value is number | boolean | string {
@@ -102,6 +102,40 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     return propValue;
   }
 
+  if (ref.ref === 'tokenZone') {
+    const boundToken = ctx.bindings[ref.token];
+    if (boundToken === undefined) {
+      throw missingBindingError(`Token binding not found: ${ref.token}`, {
+        reference: ref,
+        binding: ref.token,
+        availableBindings: Object.keys(ctx.bindings).sort(),
+      });
+    }
+
+    if (!isTokenBinding(boundToken)) {
+      throw typeMismatchError(`Token binding ${ref.token} must resolve to a Token`, {
+        reference: ref,
+        binding: ref.token,
+        actualType: typeof boundToken,
+        value: boundToken,
+      });
+    }
+
+    const tokenId = boundToken.id;
+    for (const [zoneId, tokens] of Object.entries(ctx.state.zones)) {
+      if (tokens.some((token) => token.id === tokenId)) {
+        return zoneId;
+      }
+    }
+
+    throw missingVarError(`Token ${String(tokenId)} not found in any zone`, {
+      reference: ref,
+      binding: ref.token,
+      tokenId: String(tokenId),
+      availableZoneIds: Object.keys(ctx.state.zones).sort(),
+    });
+  }
+
   if (ref.ref === 'markerState') {
     const spaceMarkers = ctx.state.markers[ref.space];
     if (spaceMarkers === undefined) {
@@ -123,6 +157,60 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     }
 
     return state;
+  }
+
+  if (ref.ref === 'zoneProp') {
+    const zoneId = resolveMapSpaceId(ref.zone, ctx);
+    const mapSpaces = ctx.mapSpaces;
+    if (mapSpaces === undefined) {
+      throw zonePropNotFoundError(`No mapSpaces available to look up zone properties`, {
+        reference: ref,
+        zoneId,
+      });
+    }
+
+    const spaceDef = mapSpaces.find((space) => space.id === String(zoneId));
+    if (spaceDef === undefined) {
+      throw zonePropNotFoundError(`Zone not found in mapSpaces: ${String(zoneId)}`, {
+        reference: ref,
+        zoneId,
+        availableSpaceIds: mapSpaces.map((space) => space.id).sort(),
+      });
+    }
+
+    const propValue = (spaceDef as unknown as Record<string, unknown>)[ref.prop];
+    if (propValue === undefined) {
+      throw zonePropNotFoundError(`Property "${ref.prop}" not found on zone ${String(zoneId)}`, {
+        reference: ref,
+        zoneId,
+        prop: ref.prop,
+        availableProps: Object.keys(spaceDef).sort(),
+      });
+    }
+
+    if (Array.isArray(propValue)) {
+      throw typeMismatchError(
+        `Property "${ref.prop}" on zone ${String(zoneId)} is an array, not a scalar. Use zonePropIncludes to check array membership.`,
+        {
+          reference: ref,
+          zoneId,
+          prop: ref.prop,
+          actualType: 'array',
+        },
+      );
+    }
+
+    if (!isScalarValue(propValue)) {
+      throw typeMismatchError(`Property "${ref.prop}" on zone ${String(zoneId)} must be a scalar`, {
+        reference: ref,
+        zoneId,
+        prop: ref.prop,
+        actualType: typeof propValue,
+        value: propValue,
+      });
+    }
+
+    return propValue;
   }
 
   const value = ctx.bindings[ref.name];

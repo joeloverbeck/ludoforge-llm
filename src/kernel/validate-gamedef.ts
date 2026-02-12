@@ -274,6 +274,11 @@ const validateConditionAst = (
       }
       return;
     }
+    case 'zonePropIncludes': {
+      validateZoneSelector(diagnostics, condition.zone, `${path}.zone`, context);
+      validateValueExpr(diagnostics, condition.value, `${path}.value`, context);
+      return;
+    }
     default: {
       validateValueExpr(diagnostics, condition.left, `${path}.left`, context);
       validateValueExpr(diagnostics, condition.right, `${path}.right`, context);

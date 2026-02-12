@@ -15,7 +15,7 @@ export interface ConditionLoweringResult<TValue> {
   readonly diagnostics: readonly Diagnostic[];
 }
 
-const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected'];
+const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes'];
 const SUPPORTED_QUERY_KINDS = [
   'tokensInZone',
   'intsInRange',
@@ -26,7 +26,7 @@ const SUPPORTED_QUERY_KINDS = [
   'tokensInAdjacentZones',
   'connectedZones',
 ];
-const SUPPORTED_REFERENCE_KINDS = ['gvar', 'pvar', 'zoneCount', 'tokenProp', 'binding'];
+const SUPPORTED_REFERENCE_KINDS = ['gvar', 'pvar', 'zoneCount', 'tokenProp', 'binding', 'markerState', 'tokenZone', 'zoneProp'];
 
 export function lowerConditionNode(
   source: unknown,
@@ -100,6 +100,23 @@ export function lowerConditionNode(
         diagnostics,
       };
     }
+    case 'zonePropIncludes': {
+      if (typeof source.prop !== 'string') {
+        return missingCapability(path, 'zonePropIncludes condition', source, [
+          '{ op: "zonePropIncludes", zone: <ZoneSel>, prop: string, value: <ValueExpr> }',
+        ]);
+      }
+      const zpiZone = lowerZoneSelector(source.zone, context, `${path}.zone`);
+      const zpiValue = lowerValueNode(source.value, context, `${path}.value`);
+      const zpiDiagnostics = [...zpiZone.diagnostics, ...zpiValue.diagnostics];
+      if (zpiZone.value === null || zpiValue.value === null) {
+        return { value: null, diagnostics: zpiDiagnostics };
+      }
+      return {
+        value: { op: 'zonePropIncludes', zone: zpiZone.value, prop: source.prop, value: zpiValue.value },
+        diagnostics: zpiDiagnostics,
+      };
+    }
     case 'connected': {
       const from = lowerZoneSelector(source.from, context, `${path}.from`);
       const to = lowerZoneSelector(source.to, context, `${path}.to`);
@@ -167,7 +184,7 @@ export function lowerValueNode(
     return lowerReference(source, context, path);
   }
 
-  if ('op' in source && typeof source.op === 'string' && (source.op === '+' || source.op === '-' || source.op === '*')) {
+  if ('op' in source && typeof source.op === 'string' && (source.op === '+' || source.op === '-' || source.op === '*' || source.op === '/')) {
     const left = lowerValueNode(source.left, context, `${path}.left`);
     const right = lowerValueNode(source.right, context, `${path}.right`);
     const diagnostics = [...left.diagnostics, ...right.diagnostics];
@@ -423,6 +440,40 @@ function lowerReference(
         };
       }
       return missingCapability(path, 'tokenProp reference', source, ['{ ref: "tokenProp", token: string, prop: string }']);
+    case 'markerState': {
+      if (typeof source.marker !== 'string') {
+        return missingCapability(path, 'markerState reference', source, ['{ ref: "markerState", space: <ZoneSel>, marker: string }']);
+      }
+      const space = lowerZoneSelector(source.space, context, `${path}.space`);
+      if (space.value === null) {
+        return { value: null, diagnostics: space.diagnostics };
+      }
+      return {
+        value: { ref: 'markerState', space: space.value, marker: source.marker },
+        diagnostics: space.diagnostics,
+      };
+    }
+    case 'tokenZone':
+      if (typeof source.token === 'string') {
+        return {
+          value: { ref: 'tokenZone', token: source.token },
+          diagnostics: [],
+        };
+      }
+      return missingCapability(path, 'tokenZone reference', source, ['{ ref: "tokenZone", token: string }']);
+    case 'zoneProp': {
+      if (typeof source.prop !== 'string') {
+        return missingCapability(path, 'zoneProp reference', source, ['{ ref: "zoneProp", zone: <ZoneSel>, prop: string }']);
+      }
+      const zonePropZone = lowerZoneSelector(source.zone, context, `${path}.zone`);
+      if (zonePropZone.value === null) {
+        return { value: null, diagnostics: zonePropZone.diagnostics };
+      }
+      return {
+        value: { ref: 'zoneProp', zone: zonePropZone.value, prop: source.prop },
+        diagnostics: zonePropZone.diagnostics,
+      };
+    }
     case 'binding':
       if (typeof source.name === 'string') {
         if (context.bindingScope !== undefined && !context.bindingScope.includes(source.name)) {

@@ -1,5 +1,5 @@
 import type { EvalContext } from './eval-context.js';
-import { typeMismatchError } from './eval-error.js';
+import { divisionByZeroError, typeMismatchError } from './eval-error.js';
 import { evalQuery } from './eval-query.js';
 import { resolveRef } from './resolve-ref.js';
 import type { Token, ValueExpr } from './types.js';
@@ -98,6 +98,14 @@ export function evalValue(expr: ValueExpr, ctx: EvalContext): number | boolean |
     expr,
     side: 'right',
   });
+
+  if (expr.op === '/') {
+    if (right === 0) {
+      throw divisionByZeroError('Division by zero', { expr, left, right });
+    }
+    const result = Math.trunc(left / right);
+    return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
+  }
 
   const result = expr.op === '+' ? left + right : expr.op === '-' ? left - right : left * right;
   return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });

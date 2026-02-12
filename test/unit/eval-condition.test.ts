@@ -11,6 +11,7 @@ import {
   type EvalContext,
   type GameDef,
   type GameState,
+  type MapSpaceDef,
 } from '../../src/kernel/index.js';
 
 const makeDef = (): GameDef => ({
@@ -167,6 +168,53 @@ describe('evalCondition', () => {
     assert.throws(
       () => evalCondition({ op: 'in', item: 3, set: { ref: 'binding', name: '$set' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('evaluates zonePropIncludes for array properties', () => {
+    const mapSpaces: readonly MapSpaceDef[] = [
+      {
+        id: 'quang-tri',
+        spaceType: 'province',
+        population: 1,
+        econ: 0,
+        terrainTags: ['highland', 'jungle'],
+        country: 'south-vietnam',
+        coastal: false,
+        adjacentTo: [],
+      },
+    ];
+    const ctx = makeCtx({ mapSpaces });
+
+    assert.equal(
+      evalCondition({ op: 'zonePropIncludes', zone: 'quang-tri', prop: 'terrainTags', value: 'highland' }, ctx),
+      true,
+    );
+    assert.equal(
+      evalCondition({ op: 'zonePropIncludes', zone: 'quang-tri', prop: 'terrainTags', value: 'coastal' }, ctx),
+      false,
+    );
+  });
+
+  it('throws TYPE_MISMATCH when zonePropIncludes targets a non-array property', () => {
+    const mapSpaces: readonly MapSpaceDef[] = [
+      { id: 'hue', spaceType: 'city', population: 2, econ: 3, terrainTags: [], country: 'south-vietnam', coastal: false, adjacentTo: [] },
+    ];
+    const ctx = makeCtx({ mapSpaces });
+    assert.throws(
+      () => evalCondition({ op: 'zonePropIncludes', zone: 'hue', prop: 'spaceType', value: 'city' }, ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'TYPE_MISMATCH') &&
+        typeof error.message === 'string' &&
+        error.message.includes('zoneProp'),
+    );
+  });
+
+  it('throws ZONE_PROP_NOT_FOUND when zonePropIncludes zone not found', () => {
+    const ctx = makeCtx({ mapSpaces: [] });
+    assert.throws(
+      () => evalCondition({ op: 'zonePropIncludes', zone: 'unknown', prop: 'terrainTags', value: 'highland' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND'),
     );
   });
 

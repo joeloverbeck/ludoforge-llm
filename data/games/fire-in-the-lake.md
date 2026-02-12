@@ -24,7 +24,7 @@ dataAssets:
           terrainTags: []
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [quang-tri-thua-thien:none, loc-hue-khe-sanh:none, loc-hue-da-nang:none]
         - id: da-nang:none
           spaceType: city
           population: 1
@@ -32,7 +32,7 @@ dataAssets:
           terrainTags: []
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [quang-nam:none, quang-tin-quang-ngai:none, loc-hue-da-nang:none, loc-da-nang-qui-nhon:none, loc-da-nang-dak-to:none]
         - id: kontum:none
           spaceType: city
           population: 1
@@ -40,7 +40,7 @@ dataAssets:
           terrainTags: []
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [binh-dinh:none, pleiku-darlac:none, phu-bon-phu-yen:none, loc-kontum-dak-to:none, loc-kontum-ban-me-thuot:none, loc-kontum-qui-nhon:none]
         - id: qui-nhon:none
           spaceType: city
           population: 1
@@ -48,7 +48,7 @@ dataAssets:
           terrainTags: []
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [binh-dinh:none, phu-bon-phu-yen:none, loc-da-nang-qui-nhon:none, loc-kontum-qui-nhon:none, loc-qui-nhon-cam-ranh:none]
         - id: cam-ranh:none
           spaceType: city
           population: 1
@@ -56,7 +56,7 @@ dataAssets:
           terrainTags: []
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [khanh-hoa:none, binh-tuy-binh-thuan:none, loc-qui-nhon-cam-ranh:none, loc-saigon-cam-ranh:none, loc-cam-ranh-da-lat:none]
         - id: an-loc:none
           spaceType: city
           population: 1
@@ -64,7 +64,7 @@ dataAssets:
           terrainTags: []
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [phuoc-long:none, tay-ninh:none, the-fishhook:none, loc-saigon-an-loc-ban-me-thuot:none]
         - id: saigon:none
           spaceType: city
           population: 6
@@ -72,7 +72,7 @@ dataAssets:
           terrainTags: []
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [binh-tuy-binh-thuan:none, quang-duc-long-khanh:none, tay-ninh:none, kien-phong:none, kien-hoa-vinh-binh:none, loc-saigon-cam-ranh:none, loc-saigon-da-lat:none, loc-saigon-an-loc-ban-me-thuot:none, loc-saigon-can-tho:none]
         - id: can-tho:none
           spaceType: city
           population: 1
@@ -80,7 +80,7 @@ dataAssets:
           terrainTags: []
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [kien-phong:none, kien-hoa-vinh-binh:none, ba-xuyen:none, kien-giang-an-xuyen:none, loc-saigon-can-tho:none, loc-can-tho-chau-doc:none, loc-can-tho-bac-lieu:none, loc-can-tho-long-phu:none]
       # FITLFULMAPANDPIEDAT-003 province and LoC ID mapping:
       # CentralLaos -> central-laos:none
       # SouthernLaos -> southern-laos:none
@@ -128,7 +128,7 @@ dataAssets:
           terrainTags: [jungle]
           country: laos
           coastal: false
-          adjacentTo: []
+          adjacentTo: [north-vietnam:none, quang-tri-thua-thien:none, quang-nam:none, southern-laos:none, loc-hue-khe-sanh:none]
         - id: southern-laos:none
           spaceType: province
           population: 0
@@ -136,7 +136,7 @@ dataAssets:
           terrainTags: [jungle]
           country: laos
           coastal: false
-          adjacentTo: []
+          adjacentTo: [central-laos:none, quang-nam:none, quang-tin-quang-ngai:none, binh-dinh:none, pleiku-darlac:none, northeast-cambodia:none, loc-da-nang-dak-to:none, loc-kontum-dak-to:none]
         - id: northeast-cambodia:none
           spaceType: province
           population: 0
@@ -144,7 +144,7 @@ dataAssets:
           terrainTags: [jungle]
           country: cambodia
           coastal: false
-          adjacentTo: []
+          adjacentTo: [southern-laos:none, the-fishhook:none, pleiku-darlac:none]
         - id: the-fishhook:none
           spaceType: province
           population: 0
@@ -152,7 +152,7 @@ dataAssets:
           terrainTags: [jungle]
           country: cambodia
           coastal: false
-          adjacentTo: []
+          adjacentTo: [an-loc:none, northeast-cambodia:none, the-parrots-beak:none, pleiku-darlac:none, quang-duc-long-khanh:none, phuoc-long:none, tay-ninh:none, loc-saigon-an-loc-ban-me-thuot:none]
         - id: the-parrots-beak:none
           spaceType: province
           population: 0
@@ -160,7 +160,7 @@ dataAssets:
           terrainTags: [jungle]
           country: cambodia
           coastal: false
-          adjacentTo: []
+          adjacentTo: [the-fishhook:none, sihanoukville:none, tay-ninh:none, kien-phong:none, kien-giang-an-xuyen:none, loc-can-tho-chau-doc:none]
         - id: sihanoukville:none
           spaceType: province
           population: 0
@@ -168,7 +168,7 @@ dataAssets:
           terrainTags: [jungle]
           country: cambodia
           coastal: true
-          adjacentTo: []
+          adjacentTo: [the-parrots-beak:none, kien-giang-an-xuyen:none]
         - id: north-vietnam:none
           spaceType: province
           population: 0
@@ -176,7 +176,7 @@ dataAssets:
           terrainTags: [highland]
           country: northVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [central-laos:none, quang-tri-thua-thien:none, loc-hue-khe-sanh:none]
         - id: quang-tri-thua-thien:none
           spaceType: province
           population: 2
@@ -184,7 +184,7 @@ dataAssets:
           terrainTags: [highland]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [hue:none, central-laos:none, north-vietnam:none, quang-nam:none, loc-hue-khe-sanh:none, loc-hue-da-nang:none]
         - id: quang-nam:none
           spaceType: province
           population: 1
@@ -192,7 +192,7 @@ dataAssets:
           terrainTags: [highland]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [da-nang:none, central-laos:none, southern-laos:none, quang-tri-thua-thien:none, quang-tin-quang-ngai:none, loc-hue-da-nang:none, loc-da-nang-dak-to:none]
         - id: quang-tin-quang-ngai:none
           spaceType: province
           population: 2
@@ -200,7 +200,7 @@ dataAssets:
           terrainTags: [lowland]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [da-nang:none, southern-laos:none, quang-nam:none, binh-dinh:none, loc-da-nang-dak-to:none, loc-da-nang-qui-nhon:none]
         - id: binh-dinh:none
           spaceType: province
           population: 2
@@ -208,7 +208,7 @@ dataAssets:
           terrainTags: [highland]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [kontum:none, qui-nhon:none, southern-laos:none, quang-tin-quang-ngai:none, phu-bon-phu-yen:none, pleiku-darlac:none, loc-da-nang-dak-to:none, loc-da-nang-qui-nhon:none, loc-kontum-dak-to:none, loc-kontum-qui-nhon:none]
         - id: pleiku-darlac:none
           spaceType: province
           population: 1
@@ -216,7 +216,7 @@ dataAssets:
           terrainTags: [highland]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [kontum:none, southern-laos:none, northeast-cambodia:none, the-fishhook:none, binh-dinh:none, phu-bon-phu-yen:none, khanh-hoa:none, quang-duc-long-khanh:none, loc-kontum-dak-to:none, loc-kontum-ban-me-thuot:none, loc-da-nang-dak-to:none, loc-ban-me-thuot-da-lat:none, loc-saigon-an-loc-ban-me-thuot:none]
         - id: phu-bon-phu-yen:none
           spaceType: province
           population: 1
@@ -224,7 +224,7 @@ dataAssets:
           terrainTags: [lowland]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [kontum:none, qui-nhon:none, binh-dinh:none, pleiku-darlac:none, khanh-hoa:none, loc-kontum-qui-nhon:none, loc-qui-nhon-cam-ranh:none, loc-kontum-ban-me-thuot:none]
         - id: khanh-hoa:none
           spaceType: province
           population: 1
@@ -232,7 +232,7 @@ dataAssets:
           terrainTags: [highland]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [cam-ranh:none, pleiku-darlac:none, phu-bon-phu-yen:none, binh-tuy-binh-thuan:none, quang-duc-long-khanh:none, loc-qui-nhon-cam-ranh:none, loc-cam-ranh-da-lat:none, loc-ban-me-thuot-da-lat:none, loc-kontum-ban-me-thuot:none, loc-saigon-da-lat:none, loc-saigon-an-loc-ban-me-thuot:none]
         - id: phuoc-long:none
           spaceType: province
           population: 0
@@ -240,7 +240,7 @@ dataAssets:
           terrainTags: [jungle]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [an-loc:none, the-fishhook:none, quang-duc-long-khanh:none, tay-ninh:none, loc-saigon-an-loc-ban-me-thuot:none]
         - id: quang-duc-long-khanh:none
           spaceType: province
           population: 1
@@ -248,7 +248,7 @@ dataAssets:
           terrainTags: [jungle]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [saigon:none, the-fishhook:none, pleiku-darlac:none, khanh-hoa:none, phuoc-long:none, binh-tuy-binh-thuan:none, tay-ninh:none, loc-kontum-ban-me-thuot:none, loc-saigon-an-loc-ban-me-thuot:none, loc-ban-me-thuot-da-lat:none, loc-saigon-da-lat:none, loc-cam-ranh-da-lat:none]
         - id: binh-tuy-binh-thuan:none
           spaceType: province
           population: 1
@@ -256,7 +256,7 @@ dataAssets:
           terrainTags: [jungle]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [cam-ranh:none, saigon:none, khanh-hoa:none, quang-duc-long-khanh:none, loc-ban-me-thuot-da-lat:none, loc-cam-ranh-da-lat:none, loc-saigon-da-lat:none, loc-saigon-cam-ranh:none]
         - id: tay-ninh:none
           spaceType: province
           population: 2
@@ -264,7 +264,7 @@ dataAssets:
           terrainTags: [jungle]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [an-loc:none, saigon:none, the-fishhook:none, the-parrots-beak:none, phuoc-long:none, quang-duc-long-khanh:none, kien-phong:none, loc-saigon-an-loc-ban-me-thuot:none]
         - id: kien-phong:none
           spaceType: province
           population: 2
@@ -272,7 +272,7 @@ dataAssets:
           terrainTags: [lowland]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [saigon:none, can-tho:none, the-parrots-beak:none, tay-ninh:none, kien-hoa-vinh-binh:none, kien-giang-an-xuyen:none, loc-can-tho-chau-doc:none, loc-saigon-can-tho:none]
         - id: kien-hoa-vinh-binh:none
           spaceType: province
           population: 2
@@ -280,7 +280,7 @@ dataAssets:
           terrainTags: [lowland]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [saigon:none, can-tho:none, kien-phong:none, ba-xuyen:none, loc-saigon-can-tho:none, loc-can-tho-long-phu:none]
         - id: ba-xuyen:none
           spaceType: province
           population: 1
@@ -288,7 +288,7 @@ dataAssets:
           terrainTags: [lowland]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [can-tho:none, kien-hoa-vinh-binh:none, kien-giang-an-xuyen:none, loc-can-tho-bac-lieu:none, loc-can-tho-long-phu:none]
         - id: kien-giang-an-xuyen:none
           spaceType: province
           population: 2
@@ -296,7 +296,7 @@ dataAssets:
           terrainTags: [lowland]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [can-tho:none, the-parrots-beak:none, sihanoukville:none, kien-phong:none, ba-xuyen:none, loc-can-tho-chau-doc:none, loc-can-tho-bac-lieu:none]
         - id: loc-hue-khe-sanh:none
           spaceType: loc
           population: 0
@@ -304,7 +304,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [hue:none, central-laos:none, north-vietnam:none, quang-tri-thua-thien:none]
         - id: loc-hue-da-nang:none
           spaceType: loc
           population: 0
@@ -312,7 +312,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [hue:none, da-nang:none, quang-tri-thua-thien:none, quang-nam:none]
         - id: loc-da-nang-dak-to:none
           spaceType: loc
           population: 0
@@ -320,7 +320,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [da-nang:none, southern-laos:none, quang-nam:none, quang-tin-quang-ngai:none, binh-dinh:none, pleiku-darlac:none, loc-kontum-dak-to:none]
         - id: loc-da-nang-qui-nhon:none
           spaceType: loc
           population: 0
@@ -328,7 +328,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [da-nang:none, qui-nhon:none, quang-tin-quang-ngai:none, binh-dinh:none]
         - id: loc-kontum-dak-to:none
           spaceType: loc
           population: 0
@@ -336,7 +336,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [kontum:none, southern-laos:none, binh-dinh:none, pleiku-darlac:none, loc-da-nang-dak-to:none]
         - id: loc-kontum-qui-nhon:none
           spaceType: loc
           population: 0
@@ -344,7 +344,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [kontum:none, qui-nhon:none, binh-dinh:none, phu-bon-phu-yen:none]
         - id: loc-kontum-ban-me-thuot:none
           spaceType: loc
           population: 0
@@ -352,7 +352,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [kontum:none, pleiku-darlac:none, phu-bon-phu-yen:none, khanh-hoa:none, quang-duc-long-khanh:none, loc-saigon-an-loc-ban-me-thuot:none, loc-ban-me-thuot-da-lat:none]
         - id: loc-qui-nhon-cam-ranh:none
           spaceType: loc
           population: 0
@@ -360,7 +360,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [qui-nhon:none, cam-ranh:none, phu-bon-phu-yen:none, khanh-hoa:none]
         - id: loc-cam-ranh-da-lat:none
           spaceType: loc
           population: 0
@@ -368,7 +368,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [cam-ranh:none, khanh-hoa:none, binh-tuy-binh-thuan:none, quang-duc-long-khanh:none, loc-saigon-da-lat:none, loc-ban-me-thuot-da-lat:none]
         - id: loc-ban-me-thuot-da-lat:none
           spaceType: loc
           population: 0
@@ -376,7 +376,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [pleiku-darlac:none, khanh-hoa:none, quang-duc-long-khanh:none, binh-tuy-binh-thuan:none, loc-kontum-ban-me-thuot:none, loc-cam-ranh-da-lat:none, loc-saigon-an-loc-ban-me-thuot:none, loc-saigon-da-lat:none]
         - id: loc-saigon-cam-ranh:none
           spaceType: loc
           population: 0
@@ -384,7 +384,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [cam-ranh:none, saigon:none, binh-tuy-binh-thuan:none]
         - id: loc-saigon-da-lat:none
           spaceType: loc
           population: 0
@@ -392,7 +392,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [saigon:none, khanh-hoa:none, quang-duc-long-khanh:none, binh-tuy-binh-thuan:none, loc-cam-ranh-da-lat:none, loc-ban-me-thuot-da-lat:none]
         - id: loc-saigon-an-loc-ban-me-thuot:none
           spaceType: loc
           population: 0
@@ -400,7 +400,7 @@ dataAssets:
           terrainTags: [highway]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [an-loc:none, saigon:none, the-fishhook:none, pleiku-darlac:none, phuoc-long:none, quang-duc-long-khanh:none, tay-ninh:none, loc-kontum-ban-me-thuot:none, loc-ban-me-thuot-da-lat:none, khanh-hoa:none]
         - id: loc-saigon-can-tho:none
           spaceType: loc
           population: 0
@@ -408,7 +408,7 @@ dataAssets:
           terrainTags: [mekong]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [saigon:none, can-tho:none, kien-phong:none, kien-hoa-vinh-binh:none]
         - id: loc-can-tho-chau-doc:none
           spaceType: loc
           population: 0
@@ -416,7 +416,7 @@ dataAssets:
           terrainTags: [mekong]
           country: southVietnam
           coastal: false
-          adjacentTo: []
+          adjacentTo: [can-tho:none, the-parrots-beak:none, kien-phong:none, kien-giang-an-xuyen:none]
         - id: loc-can-tho-bac-lieu:none
           spaceType: loc
           population: 0
@@ -424,7 +424,7 @@ dataAssets:
           terrainTags: [mekong]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [can-tho:none, ba-xuyen:none, kien-giang-an-xuyen:none]
         - id: loc-can-tho-long-phu:none
           spaceType: loc
           population: 0
@@ -432,7 +432,7 @@ dataAssets:
           terrainTags: [mekong]
           country: southVietnam
           coastal: true
-          adjacentTo: []
+          adjacentTo: [can-tho:none, kien-hoa-vinh-binh:none, ba-xuyen:none]
   - id: fitl-piece-catalog-production
     kind: pieceCatalog
     payload: {}
@@ -440,3 +440,5 @@ dataAssets:
     kind: scenario
     payload: {}
 ```
+
+

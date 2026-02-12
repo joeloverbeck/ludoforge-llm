@@ -43,7 +43,7 @@ describe('FITL production map cities', () => {
     );
     assert.equal(cities.every((city) => /^[a-z0-9]+(?:-[a-z0-9]+)*:none$/.test(city.id)), true);
     assert.equal(cities.every((city) => city.terrainTags.length === 0), true);
-    assert.equal(cities.every((city) => city.adjacentTo.length === 0), true);
+    assert.equal(cities.every((city) => city.adjacentTo.every((adjacentId) => adjacentId.endsWith(':none'))), true);
   });
 
   it('encodes population, econ, coastal split, and country values per ticket', () => {

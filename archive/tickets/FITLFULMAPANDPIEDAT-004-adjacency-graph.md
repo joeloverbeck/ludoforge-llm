@@ -1,9 +1,18 @@
 # FITLFULMAPANDPIEDAT-004: Encode the complete adjacency graph
 
+**Status**: ✅ COMPLETED
 **Spec**: 23, Task 23.2
 **Priority**: P0
 **Depends on**: FITLFULMAPANDPIEDAT-002, FITLFULMAPANDPIEDAT-003 (all 47 spaces must exist)
 **Blocks**: FITLFULMAPANDPIEDAT-009 (integration test needs complete map)
+
+## Reassessed assumptions (2026-02-12)
+
+- **Confirmed**: `data/games/fire-in-the-lake.md` currently contains all 47 spaces from tickets 002/003, and all `adjacentTo` arrays are empty.
+- **Discrepancy found**: Existing test `test/unit/fitl-production-map-cities.test.ts` currently asserts that all city `adjacentTo` arrays are empty. This conflicts with this ticket's goal.
+- **Discrepancy found**: Brainstorming Section 11 adjacency rows are not perfectly symmetric as written for every edge. This ticket must enforce the symmetry invariant by adding reverse links where needed while preserving listed neighbors.
+- **Scope correction**: Existing map tests may be modified minimally where they encode now-invalid pre-adjacency assumptions.
+- **Scope confirmation**: No `src/` runtime/compiler changes are required for this ticket.
 
 ## Description
 
@@ -21,7 +30,7 @@ Populate the `adjacentTo` arrays for all 47 spaces in `data/games/fire-in-the-la
    - `loc-ban-me-thuot-da-lat:none` ↔ `loc-saigon-da-lat:none` (share Da Lat)
    - `loc-ban-me-thuot-da-lat:none` ↔ `loc-saigon-an-loc-ban-me-thuot:none` (share Ban Me Thuot)
 
-**Source data**: Brainstorming Section 11, `implementing-fire-in-the-lake-game-spec-doc.md` lines 576–628.
+**Source data**: Brainstorming Section 11, `brainstorming/implementing-fire-in-the-lake-game-spec-doc.md` lines 578–628.
 
 ## File list
 
@@ -29,6 +38,7 @@ Populate the `adjacentTo` arrays for all 47 spaces in `data/games/fire-in-the-la
 |------|--------|
 | `data/games/fire-in-the-lake.md` | **Edit** (populate `adjacentTo` arrays for all 47 spaces) |
 | `test/unit/fitl-production-map-adjacency.test.ts` | **Create** |
+| `test/unit/fitl-production-map-cities.test.ts` | **Edit (minimal)** to remove outdated empty-adjacency assumption |
 
 ## Out of scope
 
@@ -56,8 +66,22 @@ Populate the `adjacentTo` arrays for all 47 spaces in `data/games/fire-in-the-la
 
 ### Invariants that must remain true
 
-- No existing test file is modified
 - No `src/` file is modified
 - The `test/fixtures/cnl/compiler/fitl-*.md` fixtures remain unchanged
 - Space count remains exactly 47
 - No space attributes (spaceType, population, econ, etc.) are changed — only `adjacentTo` arrays
+
+## Outcome
+
+- **Completion date**: 2026-02-12
+- **What changed**:
+  - Populated `adjacentTo` for all 47 FITL map spaces in `data/games/fire-in-the-lake.md`.
+  - Added `test/unit/fitl-production-map-adjacency.test.ts` with graph integrity checks (symmetry, self-loop/duplicate/dangling prevention, key city counts, LoC-to-LoC links, no isolated spaces).
+  - Updated `test/unit/fitl-production-map-cities.test.ts` to remove outdated “all city adjacency empty” assumption.
+- **Deviations from original plan**:
+  - Existing test modification was required (ticket originally said no existing test files modified).
+  - Brainstorming Section 11 source rows were not fully symmetric for every listed edge; implementation enforced symmetric closure to satisfy ticket invariant.
+- **Verification**:
+  - `npm run build` passed.
+  - `npm run test:unit -- --test-name-pattern \"FITL production map\"` passed.
+  - `npm test` passed.

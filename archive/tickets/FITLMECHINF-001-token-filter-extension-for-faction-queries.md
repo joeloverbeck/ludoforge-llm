@@ -1,6 +1,6 @@
 # FITLMECHINF-001 - Token Filter Extension for Faction Queries
 
-**Status**: Pending
+**Status**: ✅ COMPLETED
 **Spec**: `specs/25-fitl-game-mechanics-infrastructure.md`
 **References**: `specs/00-fitl-implementation-order.md` (Milestone B)
 **Depends on**: None (builds on existing `OptionsQuery` infrastructure)
@@ -73,3 +73,15 @@ Several Spec 25 derived values require counting pieces filtered by token propert
 - No mutation of `GameState` or `Token` objects during filter evaluation
 - Filter evaluation is a pure function of token props — no side effects
 - `evalQuery` budget enforcement still applies after filtering
+
+## Outcome
+
+- **Completed**: 2026-02-12
+- **Changes**:
+  - `src/kernel/types.ts`: Added `TokenFilterPredicate` interface; extended `tokensInZone` variant with optional `filter`
+  - `src/kernel/schemas.ts`: Extended tokensInZone Zod schema to validate optional `filter` (prop, op, value) with strict mode
+  - `src/kernel/eval-query.ts`: Added `applyTokenFilter` pure function; `tokensInZone` case applies filter before bounds check
+  - `test/unit/eval-query.test.ts`: 6 new tests (backward-compat, eq, neq, in, notIn, missing prop)
+  - `test/unit/schemas-ast.test.ts`: 2 new tests (valid filter schemas, rejected malformed filters)
+- **Deviations**: None
+- **Verification**: Build passes, 25/25 tests in modified files pass, no existing tests broken

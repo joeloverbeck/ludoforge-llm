@@ -3,7 +3,7 @@ import { missingVarError, queryBoundsExceededError } from './eval-error.js';
 import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
-import type { OptionsQuery, Token } from './types.js';
+import type { OptionsQuery, Token, TokenFilterPredicate } from './types.js';
 
 type QueryResult = Token | number | string | PlayerId | ZoneId;
 
@@ -15,6 +15,30 @@ function assertWithinBounds(length: number, query: OptionsQuery, maxQueryResults
       resultLength: length,
     });
   }
+}
+
+function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterPredicate): readonly Token[] {
+  return tokens.filter((token) => {
+    const propValue = token.props[filter.prop];
+    if (propValue === undefined) {
+      return false;
+    }
+
+    switch (filter.op) {
+      case 'eq':
+        return propValue === filter.value;
+      case 'neq':
+        return propValue !== filter.value;
+      case 'in':
+        return Array.isArray(filter.value) && filter.value.includes(String(propValue));
+      case 'notIn':
+        return Array.isArray(filter.value) && !filter.value.includes(String(propValue));
+      default: {
+        const _exhaustive: never = filter.op;
+        return _exhaustive;
+      }
+    }
+  });
 }
 
 function extractOwnerQualifier(zoneId: ZoneId): string | null {
@@ -67,8 +91,9 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
         });
       }
 
-      assertWithinBounds(zoneTokens.length, query, maxQueryResults);
-      return [...zoneTokens];
+      const filtered = query.filter !== undefined ? applyTokenFilter(zoneTokens, query.filter) : [...zoneTokens];
+      assertWithinBounds(filtered.length, query, maxQueryResults);
+      return filtered;
     }
 
     case 'intsInRange': {

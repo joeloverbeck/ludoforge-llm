@@ -74,8 +74,14 @@ export type ConditionAST =
       readonly maxDepth?: number;
     };
 
+export interface TokenFilterPredicate {
+  readonly prop: string;
+  readonly op: 'eq' | 'neq' | 'in' | 'notIn';
+  readonly value: string | readonly string[];
+}
+
 export type OptionsQuery =
-  | { readonly query: 'tokensInZone'; readonly zone: ZoneSel }
+  | { readonly query: 'tokensInZone'; readonly zone: ZoneSel; readonly filter?: TokenFilterPredicate }
   | { readonly query: 'intsInRange'; readonly min: number; readonly max: number }
   | { readonly query: 'enums'; readonly values: readonly string[] }
   | { readonly query: 'players' }

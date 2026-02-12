@@ -485,6 +485,40 @@ export interface EventCardSetPayload {
   readonly cards: readonly EventCardDef[];
 }
 
+export interface ScenarioPiecePlacement {
+  readonly spaceId: string;
+  readonly pieceTypeId: string;
+  readonly faction: string;
+  readonly count: number;
+  readonly status?: Readonly<Record<string, string>>;
+}
+
+export interface ScenarioDeckComposition {
+  readonly pileCount: number;
+  readonly eventsPerPile: number;
+  readonly coupsPerPile: number;
+  readonly includedCardIds?: readonly string[];
+  readonly excludedCardIds?: readonly string[];
+}
+
+export interface ScenarioPayload {
+  readonly mapAssetId: string;
+  readonly pieceCatalogAssetId: string;
+  readonly eventCardSetAssetId?: string;
+  readonly scenarioName: string;
+  readonly yearRange: string;
+  readonly initialPlacements?: readonly ScenarioPiecePlacement[];
+  readonly initialTrackValues?: readonly { readonly trackId: string; readonly value: number }[];
+  readonly initialMarkers?: readonly { readonly spaceId: string; readonly markerId: string; readonly state: string }[];
+  readonly outOfPlay?: readonly { readonly pieceTypeId: string; readonly faction: string; readonly count: number }[];
+  readonly deckComposition?: ScenarioDeckComposition;
+  readonly startingLeader?: string;
+  readonly leaderStack?: readonly string[];
+  readonly startingCapabilities?: readonly { readonly capabilityId: string; readonly side: 'unshaded' | 'shaded' }[];
+  readonly startingEligibility?: readonly { readonly faction: string; readonly eligible: boolean }[];
+  readonly usPolicy?: 'jfk' | 'lbj' | 'nixon';
+}
+
 export type DataAssetKind = 'map' | 'scenario' | 'pieceCatalog' | 'eventCardSet';
 
 export type PieceStatusDimension = 'activity' | 'tunnel';

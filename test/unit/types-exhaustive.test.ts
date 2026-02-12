@@ -1,7 +1,16 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { ConditionAST, EffectAST, MoveLog, OptionsQuery, PlayerSel } from '../../src/kernel/index.js';
+import type {
+  ConditionAST,
+  EffectAST,
+  MoveLog,
+  OptionsQuery,
+  PlayerSel,
+  ScenarioDeckComposition,
+  ScenarioPayload,
+  ScenarioPiecePlacement,
+} from '../../src/kernel/index.js';
 
 type UnionToIntersection<T> = (
   T extends unknown ? (arg: T) => void : never
@@ -123,6 +132,58 @@ describe('exhaustive kernel unions', () => {
     type HasLegalMoveCount = MoveLog extends { readonly legalMoveCount: number } ? true : false;
     const hasLegalMoveCount: HasLegalMoveCount = true;
     assert.equal(hasLegalMoveCount, true);
+  });
+
+  it('exports scenario payload interfaces with expected shape constraints', () => {
+    const placement: ScenarioPiecePlacement = {
+      spaceId: 'space:a',
+      pieceTypeId: 'troops',
+      faction: 'us',
+      count: 2,
+      status: { activity: 'active' },
+    };
+
+    const deckComposition: ScenarioDeckComposition = {
+      pileCount: 4,
+      eventsPerPile: 13,
+      coupsPerPile: 3,
+      includedCardIds: ['card-001'],
+      excludedCardIds: ['card-130'],
+    };
+
+    const payload: ScenarioPayload = {
+      mapAssetId: 'fitl-map-v1',
+      pieceCatalogAssetId: 'fitl-piece-catalog-v1',
+      eventCardSetAssetId: 'fitl-event-cards-v1',
+      scenarioName: 'Foundation',
+      yearRange: '1964-1967',
+      initialPlacements: [placement],
+      initialTrackValues: [{ trackId: 'patronage', value: 15 }],
+      initialMarkers: [{ spaceId: 'saigon', markerId: 'support', state: 'activeSupport' }],
+      outOfPlay: [{ pieceTypeId: 'base', faction: 'us', count: 1 }],
+      deckComposition,
+      startingLeader: 'duong-van-minh',
+      leaderStack: ['duong-van-minh', 'nguyen-cao-ky'],
+      startingCapabilities: [{ capabilityId: 'boeing-vertol', side: 'unshaded' }],
+      startingEligibility: [{ faction: 'us', eligible: true }],
+      usPolicy: 'lbj',
+    };
+
+    const policy: NonNullable<ScenarioPayload['usPolicy']> = 'nixon';
+    assert.equal(policy, 'nixon');
+    assert.equal(payload.deckComposition?.pileCount, 4);
+
+    const readonlyGuard = (scenario: ScenarioPayload): void => {
+      // @ts-expect-error ScenarioPayload fields are readonly.
+      scenario.mapAssetId = 'another-map';
+    };
+    void readonlyGuard;
+
+    const deckShapeGuard = (deck: ScenarioDeckComposition): void => {
+      // @ts-expect-error leaderStack belongs on ScenarioPayload, not ScenarioDeckComposition.
+      void deck.leaderStack;
+    };
+    void deckShapeGuard;
   });
 
   it('keeps exhaustive checks type-safe', () => {

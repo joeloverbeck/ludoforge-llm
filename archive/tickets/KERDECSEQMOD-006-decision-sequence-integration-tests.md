@@ -1,6 +1,6 @@
 # KERDECSEQMOD-006 - Decision Sequence Integration Tests
 
-**Status**: Not started
+**Status**: COMPLETED
 **Spec**: `specs/25b-kernel-decision-sequence-model.md` (Integration tests section)
 **Depends on**: KERDECSEQMOD-001, KERDECSEQMOD-002, KERDECSEQMOD-003, KERDECSEQMOD-004, KERDECSEQMOD-005
 
@@ -99,3 +99,32 @@ Create a minimal GameDef with:
 - Tests are deterministic (no flaky behavior)
 - Tests verify state correctness, not just absence of errors
 - No production code changes in this ticket
+
+## Outcome
+
+**Completed**: 2026-02-12
+
+### What was changed
+- Created `test/integration/decision-sequence.test.ts` with 8 integration tests (6 required by ticket + 2 supplementary)
+- Synthetic GameDef fixture inline: 2 players, `reserve:none`/`fieldA:none` zones, 3 tokens, operation profile with `chooseOne` (mode enum) + `chooseN` (1-3 tokens) + per-space cost via `__freeOperation`, and a simple `simpleScore` action
+
+### Test cases implemented
+1. `legalMoves` returns template move for profiled action and full move for simple action
+2. RandomAgent plays multi-choice operation from template to completion, state correct
+3. GreedyAgent plays multi-choice operation from template to completion, state correct
+4. Same seed produces identical final state hash (determinism)
+5. Free operation skips per-space cost (resources unchanged)
+6. Non-free operation deducts per-space cost correctly
+7. Simple actions work end-to-end alongside template moves
+8. `legalChoices` returns decision points incrementally ($mode -> $selectedTokens -> complete)
+
+### Deviations
+- No separate fixture JSON files needed; synthetic GameDef is defined inline in the test
+- Added 2 extra tests beyond the 6 required: template/simple move detection test and incremental `legalChoices` walkthrough
+
+### Verification
+- `npm run build` — clean
+- `npm run typecheck` — clean
+- `npm run lint` — clean
+- `node --test dist/test/integration/decision-sequence.test.js` — 8/8 pass
+- `npm test` — 904/904 pass, 0 failures

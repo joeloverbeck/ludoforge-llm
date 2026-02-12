@@ -1,6 +1,6 @@
 # Spec 25b: Kernel Decision Sequence Model
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P0
 **Complexity**: M
 **Dependencies**: Spec 25a (kernel operation primitives)
@@ -348,3 +348,34 @@ The `Agent.chooseMove` interface stays the same — agents receive `legalMoves` 
 - **Ordered choices**: `chooseN` currently enforces uniqueness (set semantics). Some games need ordered sequences or duplicates. A `chooseN.ordering: 'set' | 'sequence'` flag could be added. FITL operations don't need this.
 - **Multi-phase operations**: An `applyMovePartial()` function for operations where later choices depend on effects from earlier choices (e.g., Spirit Island cascading powers). FITL per-space resolution is deterministic, so this isn't needed now.
 - **Indexed bindings for forEach inner choices**: Per-iteration choices inside `forEach` could use indexed binding names (e.g., `$pieceType[0]`, `$pieceType[1]`). This would require changes to the flat `move.params` record and the `legalChoices()` loop. Defer until a concrete game demonstrates the need.
+
+## Outcome
+
+**Completed**: 2026-02-12
+
+### Implementation summary
+
+All 5 tasks (25b.1–25b.5) plus the integration test ticket (KERDECSEQMOD-006) were implemented across 6 commits:
+
+| Task | Ticket | What was delivered |
+|------|--------|--------------------|
+| 25b.1 | KERDECSEQMOD-001 | `legalChoices()` in `src/kernel/legal-choices.ts`, `ChoiceRequest` type |
+| 25b.2 | KERDECSEQMOD-002 | Template moves in `legalMoves()` for profiled actions |
+| 25b.3 | KERDECSEQMOD-003 | `validateMove()` relaxation for operation moves via `legalChoices()` |
+| 25b.4 | KERDECSEQMOD-004 | `__freeOperation` binding injection in effect context |
+| 25b.5 | KERDECSEQMOD-005 | RandomAgent + GreedyAgent template completion via `completeTemplateMove()` |
+| Integration | KERDECSEQMOD-006 | 8 end-to-end integration tests in `test/integration/decision-sequence.test.ts` |
+
+### Key files created/modified
+- `src/kernel/legal-choices.ts` (NEW)
+- `src/kernel/types.ts` (ChoiceRequest interface)
+- `src/kernel/legal-moves.ts` (template move emission)
+- `src/kernel/apply-move.ts` (validation relaxation + __freeOperation binding)
+- `src/agents/template-completion.ts` (NEW — shared legalChoices loop)
+- `src/agents/random-agent.ts` (template move support)
+- `src/agents/greedy-agent.ts` (template move support with N-completion sampling)
+- `test/integration/decision-sequence.test.ts` (NEW — 8 integration tests)
+
+### Verification
+- All 904 tests pass, 0 failures
+- Build, typecheck, and lint all clean

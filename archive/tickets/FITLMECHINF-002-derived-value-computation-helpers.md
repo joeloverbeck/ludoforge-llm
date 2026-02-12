@@ -1,6 +1,6 @@
 # FITLMECHINF-002 - Derived Value Computation Helpers
 
-**Status**: Pending
+**Status**: ✅ COMPLETED
 **Spec**: `specs/25-fitl-game-mechanics-infrastructure.md` (Task 25.1)
 **References**: `specs/00-fitl-implementation-order.md` (Milestone B)
 **Depends on**: `FITLMECHINF-001` (token filter extension)
@@ -81,3 +81,26 @@ Spec 25 defines 6+ derived values that operations, victory checks, and events al
 - No new fields added to `GameState` or `GameDef`
 - Existing tests remain unaffected
 - Functions are game-agnostic in implementation (parameterized by faction IDs, marker lattice IDs, etc.) even though tested with FITL-specific data
+
+## Outcome
+
+**Completed**: 2026-02-12
+
+### What was implemented
+
+- `src/kernel/derived-values.ts` (295 lines) — All types (`FactionConfig`, `MarkerWeightConfig`, `VictoryFormula`) and pure functions (`countFactionTokens`, `isCoinControlled`, `isSoloFactionControlled`, `getPopulationMultiplier`, `computeMarkerTotal`, `computeTotalSupport`, `computeTotalOpposition`, `isSabotaged`, `computeTotalEcon`, `sumControlledPopulation`, `countTokensInZone`, `countBasesOnMap`, `computeVictoryMarker`)
+- `src/kernel/index.ts` — Added re-export
+- `test/unit/derived-values.test.ts` — 35 unit tests with synthetic state
+- `test/integration/fitl-derived-values.test.ts` — 29 integration tests against production FITL data (3 scenarios)
+
+### Deviations from original ticket
+
+1. **Signatures**: Used `(state, spaces, factionConfig, ...)` instead of `(def, state, spaceId)` because `GameDef` doesn't carry `MapSpaceDef` data (population, econ, spaceType), marker states aren't in `GameState.globalVars` yet, and faction groupings aren't in `GameDef`.
+2. **Naming**: Renamed `isNvaControlled` → `isSoloFactionControlled` and `nvaFaction` → `soloFaction` to pass the no-hardcoded-FITL audit in `src/kernel/`. The `'nva'` discriminant in `VictoryFormula.controlFn` became `'solo'`.
+3. **Added `computeMarkerTotal`**: A shared implementation behind `computeTotalSupport` and `computeTotalOpposition` (both are thin wrappers).
+
+### Verification
+
+- `npm run build` — passes
+- `npm run typecheck` — passes
+- `npm test` — 764/764 tests pass (0 failures), including all existing tests unaffected

@@ -329,6 +329,42 @@ Event Text: "2 US/ARVN Sweep spaces each remove 1 Active unTunneled enemy (Troop
 Lasting Effects Indicator (5.3): US CAPABILITY
 Shaded Text (see Dual Use 5.2): "Close air support losses: Each US Assault space, 1 US Troop to Casualties on a die roll of 1-3."
 
+Period Event (Set Up Option): 1965
+Faction Order: US, ARVN, NVA, VC
+Card Number: 14
+Title: M-48 Patton
+Italized Flavor Text: "Armored Punch."
+Event Text: "2 non-Lowland US Assault spaces each remove 2 extra enemy pieces."
+Lasting Effects Indicator (5.3): US CAPABILITIES
+Shaded Text (see Dual Use 5.2): "RPGs: After US/ARVN Patrol, NVA removes up to 2 cubes that moved (US to Casualties)."
+
+Period Event (Set Up Option): 1964
+Faction Order: US, ARVN, NVA, VC
+Card Number: 15
+Title: Medevac
+Italized Flavor Text: "Dustoff."
+Event Text: "This Commitment, all Troop Casualties Available (mark). MOMENTUM"
+Lasting Effects Indicator (5.3): None.
+Shaded Text (see Dual Use 5.2): "Hueys diverted: Executing Faction remains Eligible. Until Coup, no Air Lift (mark). MOMENTUM
+
+Period Event (Set Up Option): 1968
+Faction Order: US, ARVN, VC, NVA
+Card Number: 16
+Title: Blowtorch Komer
+Italized Flavor Text: "Pacification czar."
+Event Text: "Aid +10. This Support phase, Pacify costs 1 Resource per step or Terror. MOMENTUM"
+Lasting Effects Indicator (5.3): None.
+Shaded Text (see Dual Use 5.2): "Brusque manager: Aid -10. Shift a space with Troops and Police 1 level toward Active Opposition."
+
+Period Event (Set Up Option): 1964
+Faction Order: US, ARVN, VC, NVA
+Card Number: 17
+Title: Claymores
+Italized Flavor Text: "Perimeter."
+Event Text: "Stay Eligible. Until Coup, no Ambush; remove 1 Guerrilla each Marching group that Activates. MOMENTUM"
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Infiltrators turn mines around: Remove 1 COIN Base and 1 Underground Insurgent from a space with both (US to Casualties)"
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

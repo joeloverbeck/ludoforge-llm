@@ -177,8 +177,9 @@ describe('FITL coup redeploy/commitment/reset integration', () => {
   it('executes non-final redeploy, commitment, and reset effects with deterministic checkpoints', () => {
     const def = createRedeployCommitResetDef({ isFinalCoup: false, trail: 4 });
     const start = initialState(def, 73, 2);
+    const phaseLog: TriggerLogEntry[] = [];
 
-    const afterRedeploy = advancePhase(def, start);
+    const afterRedeploy = advancePhase(def, start, phaseLog);
     assert.equal(afterRedeploy.currentPhase, asPhaseId('redeploy'));
     assert.equal(afterRedeploy.globalVars.redeployExecuted, 1);
     assert.equal(afterRedeploy.globalVars.redeployControlCheckpoint, 3);
@@ -186,14 +187,14 @@ describe('FITL coup redeploy/commitment/reset integration', () => {
     assert.equal(afterRedeploy.zones['arvn_redeploy:none']?.length, 2);
     assert.equal(afterRedeploy.zones['nva_base:none']?.length, 1);
 
-    const afterCommitment = advancePhase(def, afterRedeploy);
+    const afterCommitment = advancePhase(def, afterRedeploy, phaseLog);
     assert.equal(afterCommitment.currentPhase, asPhaseId('commitment'));
     assert.equal(afterCommitment.globalVars.commitmentExecuted, 1);
     assert.equal(afterCommitment.globalVars.commitmentControlCheckpoint, 3);
     assert.equal(afterCommitment.zones['us_available:none']?.length, 2);
     assert.equal(afterCommitment.zones['us_out_of_play:none']?.length, 0);
 
-    const afterReset = advancePhase(def, afterCommitment);
+    const afterReset = advancePhase(def, afterCommitment, phaseLog);
     assert.equal(afterReset.currentPhase, asPhaseId('reset'));
     assert.equal(afterReset.globalVars.resetExecuted, 1);
     assert.equal(afterReset.globalVars.eligibilityBaselineAudit, 1);
@@ -203,6 +204,10 @@ describe('FITL coup redeploy/commitment/reset integration', () => {
     assert.equal(afterReset.zones['guerrilla_underground:none']?.length, 1);
     assert.equal(afterReset.zones['sf_underground:none']?.length, 1);
     assert.equal(afterReset.zones['momentum_discard:none']?.length, 1);
+    const phaseTriggerOrder = phaseLog
+      .filter((entry) => entry.kind === 'fired')
+      .map((entry) => entry.triggerId);
+    assert.deepEqual(phaseTriggerOrder, ['on_redeploy_enter', 'on_commitment_enter', 'on_reset_enter']);
 
     const lifecycleLog: TriggerLogEntry[] = [];
     const nextTurn = advancePhase(def, afterReset, lifecycleLog);

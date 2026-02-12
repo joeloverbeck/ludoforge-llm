@@ -15,10 +15,10 @@ describe('fitl production data scaffold', () => {
 
     const dataAssets = parsed.doc.dataAssets;
     assert.ok(dataAssets !== null);
-    assert.equal(dataAssets.length, 4);
+    assert.equal(dataAssets.length, 5);
     assert.deepEqual(
       dataAssets.map((asset) => asset.kind),
-      ['map', 'pieceCatalog', 'scenario', 'scenario'],
+      ['map', 'pieceCatalog', 'scenario', 'scenario', 'scenario'],
     );
   });
 });

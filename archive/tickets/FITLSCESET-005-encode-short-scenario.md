@@ -1,6 +1,6 @@
 # FITLSCESET-005: Encode Short Scenario ("Westy's War" 1965-1967)
 
-**Status**: Pending
+**Status**: ✅ COMPLETED
 **Priority**: P0
 **Depends on**: FITLSCESET-001, FITLSCESET-003, FITLSCESET-004 (for pattern reference)
 **Blocks**: FITLSCESET-008
@@ -94,3 +94,12 @@ Add a YAML data asset block with `id: fitl-scenario-short`, `kind: scenario`. Fo
 - YAML 1.2 strict: quoted strings, no aliases
 - Track IDs match the map asset's actual format
 - Structure matches the pattern from FITLSCESET-004
+
+## Outcome
+
+- **Completed**: 2026-02-12
+- **Changes**:
+  - Added `fitl-scenario-short` data asset to `data/games/fire-in-the-lake.md` with all 117 placed pieces, 14 markers, 6 track values, 3 out-of-play entries, 1 starting capability (Shaded AAA), deck composition, leader stack, and eligibility
+  - Updated `test/unit/fitl-production-data-scaffold.test.ts` to expect 5 data assets (was 4)
+- **Deviations**: None. Track IDs use camelCase (`vcResources`, `nvaResources`, `arvnResources`) matching the map asset, not the kebab-case in the ticket description.
+- **Verification**: `npm run build` passes, all 633 tests pass (0 failures), `parseGameSpec()` returns 0 errors, asset found with correct kind

@@ -212,6 +212,24 @@ For each card that grants momentum: verify the `EventCardLastingEffectDef` uses 
 
 ## Specific cards
 
+Period Event (Set Up Option): 1964
+Faction Order: US, NVA, ARVN, VC
+Card Number: 1
+Title: Gulf of Tonkin
+Italized Flavor Text: "Incident and resolution."
+Event Text: "US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities."
+Lasting Effects Indicator (5.3): None.
+Shaded Text (see Dual Use 5.2): "Congressional regrets: Aid -1 per Casualty. All Casualties out of play."
+
+Period Event (Set Up Option): 1968
+Faction Order: US, NVA, ARVN, US
+Card Number: 2
+Title: Kissinger
+Italized Flavor Text: "Operation Menu."
+Event Text: "remove a die roll of Insurgent pieces total from Cambodia and Laos."
+Lasting Effects Indicator (5.3): None.
+Shaded Text (see Dual Use 5.2): "'Secret bombing' revealed: NVA places 2 pieces in Cambodia. US moves any 2 US Troops to out of play. Aid -6."
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

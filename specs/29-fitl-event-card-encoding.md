@@ -230,6 +230,24 @@ Event Text: "remove a die roll of Insurgent pieces total from Cambodia and Laos.
 Lasting Effects Indicator (5.3): None.
 Shaded Text (see Dual Use 5.2): "'Secret bombing' revealed: NVA places 2 pieces in Cambodia. US moves any 2 US Troops to out of play. Aid -6."
 
+Period Event (Set Up Option): 1968
+Faction Order: US, NVA, ARVN, VC
+Card Number: 3
+Title: Peace Talks
+Italized Flavor Text: "Haiphong mined."
+Event Text: "NVA Resources -9. Linebacker 11 allowed when Support + Available > 25 (mark)."
+Lasting Effects Indicator (5.3): None.
+Shaded Text (see Dual Use 5.2): "Bombing halt: NVA Resources +9. If Trail 0-2, Improve to 3."
+
+Period Event (Set Up Option): 1968
+Faction Order: US, NVA, ARVN, VC
+Card Number: 4
+Title: Top Gun
+Italized Flavor Text: "Air combat maneuver."
+Event Text: "Cancel shaded MiGs. Air Strikes Degrade Trail 2 boxes.
+Lasting Effects Indicator (5.3): US CAPABILITY
+Shaded Text (see Dual Use 5.2): "Mediocre tactics: Air Strike Degrades Trail after applying 2 hits only on die roll of 4-6."
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

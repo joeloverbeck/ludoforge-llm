@@ -924,4 +924,196 @@ dataAssets:
         # The Parrot's Beak: NVA 1 Base, 2 Guerrillas
         - { spaceId: "the-parrots-beak:none", pieceTypeId: "nva-bases", faction: "nva", count: 1 }
         - { spaceId: "the-parrots-beak:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 2 }
+  - id: fitl-scenario-medium
+    kind: scenario
+    payload:
+      mapAssetId: "fitl-map-production"
+      pieceCatalogAssetId: "fitl-piece-catalog-production"
+      scenarioName: "Medium"
+      yearRange: "1968-1972"
+      usPolicy: "lbj"
+      startingLeader: "ky"
+      leaderStack: ["khanh", "young-turks"]
+      deckComposition:
+        pileCount: 3
+        eventsPerPile: 12
+        coupsPerPile: 1
+      startingCapabilities:
+        - { capabilityId: "aaa", side: "shaded" }
+        - { capabilityId: "main-force-bns", side: "shaded" }
+        - { capabilityId: "sa-2s", side: "shaded" }
+        - { capabilityId: "search-and-destroy", side: "shaded" }
+        - { capabilityId: "arc-light", side: "unshaded" }
+        - { capabilityId: "m-48-patton", side: "unshaded" }
+      startingEligibility:
+        - { faction: "us", eligible: true }
+        - { faction: "arvn", eligible: true }
+        - { faction: "nva", eligible: true }
+        - { faction: "vc", eligible: true }
+      initialTrackValues:
+        - { trackId: "aid", value: 30 }
+        - { trackId: "patronage", value: 15 }
+        - { trackId: "trail", value: 3 }
+        - { trackId: "vcResources", value: 15 }
+        - { trackId: "nvaResources", value: 20 }
+        - { trackId: "arvnResources", value: 30 }
+      outOfPlay:
+        - { pieceTypeId: "us-troops", faction: "us", count: 5 }
+        - { pieceTypeId: "arvn-troops", faction: "arvn", count: 10 }
+        - { pieceTypeId: "arvn-rangers", faction: "arvn", count: 3 }
+      initialMarkers:
+        # Active Support spaces
+        - { spaceId: "binh-dinh:none", markerId: "supportOpposition", state: "activeSupport" }
+        - { spaceId: "pleiku-darlac:none", markerId: "supportOpposition", state: "activeSupport" }
+        - { spaceId: "khanh-hoa:none", markerId: "supportOpposition", state: "activeSupport" }
+        - { spaceId: "saigon:none", markerId: "supportOpposition", state: "activeSupport" }
+        # Passive Support spaces
+        - { spaceId: "quang-tri-thua-thien:none", markerId: "supportOpposition", state: "passiveSupport" }
+        - { spaceId: "hue:none", markerId: "supportOpposition", state: "passiveSupport" }
+        - { spaceId: "da-nang:none", markerId: "supportOpposition", state: "passiveSupport" }
+        - { spaceId: "qui-nhon:none", markerId: "supportOpposition", state: "passiveSupport" }
+        - { spaceId: "cam-ranh:none", markerId: "supportOpposition", state: "passiveSupport" }
+        - { spaceId: "quang-tin-quang-ngai:none", markerId: "supportOpposition", state: "passiveSupport" }
+        - { spaceId: "kontum:none", markerId: "supportOpposition", state: "passiveSupport" }
+        - { spaceId: "phu-bon-phu-yen:none", markerId: "supportOpposition", state: "passiveSupport" }
+        - { spaceId: "can-tho:none", markerId: "supportOpposition", state: "passiveSupport" }
+        # Active Opposition spaces
+        - { spaceId: "quang-nam:none", markerId: "supportOpposition", state: "activeOpposition" }
+        - { spaceId: "tay-ninh:none", markerId: "supportOpposition", state: "activeOpposition" }
+        - { spaceId: "kien-giang-an-xuyen:none", markerId: "supportOpposition", state: "activeOpposition" }
+        # Passive Opposition spaces
+        - { spaceId: "kien-phong:none", markerId: "supportOpposition", state: "passiveOpposition" }
+        - { spaceId: "kien-hoa-vinh-binh:none", markerId: "supportOpposition", state: "passiveOpposition" }
+        - { spaceId: "ba-xuyen:none", markerId: "supportOpposition", state: "passiveOpposition" }
+      initialPlacements:
+        # Quang Tri: US 1 Base, 4 Troops, 1 Irregular; ARVN 3 Troops; NVA 1 Base, 3 Guerrillas
+        - { spaceId: "quang-tri-thua-thien:none", pieceTypeId: "us-bases", faction: "us", count: 1 }
+        - { spaceId: "quang-tri-thua-thien:none", pieceTypeId: "us-troops", faction: "us", count: 4 }
+        - { spaceId: "quang-tri-thua-thien:none", pieceTypeId: "us-irregulars", faction: "us", count: 1 }
+        - { spaceId: "quang-tri-thua-thien:none", pieceTypeId: "arvn-troops", faction: "arvn", count: 3 }
+        - { spaceId: "quang-tri-thua-thien:none", pieceTypeId: "nva-bases", faction: "nva", count: 1 }
+        - { spaceId: "quang-tri-thua-thien:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 3 }
+        # Quang Nam: VC 1 Base, 2 Guerrillas
+        - { spaceId: "quang-nam:none", pieceTypeId: "vc-bases", faction: "vc", count: 1 }
+        - { spaceId: "quang-nam:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 2 }
+        # Hue: US 1 Troop; ARVN 2 Police
+        - { spaceId: "hue:none", pieceTypeId: "us-troops", faction: "us", count: 1 }
+        - { spaceId: "hue:none", pieceTypeId: "arvn-police", faction: "arvn", count: 2 }
+        # Da Nang: US 1 Troop; ARVN 2 Police
+        - { spaceId: "da-nang:none", pieceTypeId: "us-troops", faction: "us", count: 1 }
+        - { spaceId: "da-nang:none", pieceTypeId: "arvn-police", faction: "arvn", count: 2 }
+        # Qui Nhon: US 1 Troop; ARVN 2 Police
+        - { spaceId: "qui-nhon:none", pieceTypeId: "us-troops", faction: "us", count: 1 }
+        - { spaceId: "qui-nhon:none", pieceTypeId: "arvn-police", faction: "arvn", count: 2 }
+        # Cam Ranh: US 1 Troop; ARVN 2 Police
+        - { spaceId: "cam-ranh:none", pieceTypeId: "us-troops", faction: "us", count: 1 }
+        - { spaceId: "cam-ranh:none", pieceTypeId: "arvn-police", faction: "arvn", count: 2 }
+        # Quang Tin: US 1 Base, 2 Troops; ARVN 2 Troops, 1 Police
+        - { spaceId: "quang-tin-quang-ngai:none", pieceTypeId: "us-bases", faction: "us", count: 1 }
+        - { spaceId: "quang-tin-quang-ngai:none", pieceTypeId: "us-troops", faction: "us", count: 2 }
+        - { spaceId: "quang-tin-quang-ngai:none", pieceTypeId: "arvn-troops", faction: "arvn", count: 2 }
+        - { spaceId: "quang-tin-quang-ngai:none", pieceTypeId: "arvn-police", faction: "arvn", count: 1 }
+        # Kontum: US 1 Base, 1 Troop, 1 Irregular
+        - { spaceId: "kontum:none", pieceTypeId: "us-bases", faction: "us", count: 1 }
+        - { spaceId: "kontum:none", pieceTypeId: "us-troops", faction: "us", count: 1 }
+        - { spaceId: "kontum:none", pieceTypeId: "us-irregulars", faction: "us", count: 1 }
+        # Binh Dinh: US 2 Troops, 1 Irregular; ARVN 1 Police; VC 1 Base, 2 Guerrillas
+        - { spaceId: "binh-dinh:none", pieceTypeId: "us-troops", faction: "us", count: 2 }
+        - { spaceId: "binh-dinh:none", pieceTypeId: "us-irregulars", faction: "us", count: 1 }
+        - { spaceId: "binh-dinh:none", pieceTypeId: "arvn-police", faction: "arvn", count: 1 }
+        - { spaceId: "binh-dinh:none", pieceTypeId: "vc-bases", faction: "vc", count: 1 }
+        - { spaceId: "binh-dinh:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 2 }
+        # Pleiku: US 2 Troops, 1 Irregular; ARVN 1 Police; VC 1 Base, 2 Guerrillas
+        - { spaceId: "pleiku-darlac:none", pieceTypeId: "us-troops", faction: "us", count: 2 }
+        - { spaceId: "pleiku-darlac:none", pieceTypeId: "us-irregulars", faction: "us", count: 1 }
+        - { spaceId: "pleiku-darlac:none", pieceTypeId: "arvn-police", faction: "arvn", count: 1 }
+        - { spaceId: "pleiku-darlac:none", pieceTypeId: "vc-bases", faction: "vc", count: 1 }
+        - { spaceId: "pleiku-darlac:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 2 }
+        # Khanh Hoa: US 2 Troops, 1 Irregular; ARVN 1 Police; VC 1 Base, 2 Guerrillas
+        - { spaceId: "khanh-hoa:none", pieceTypeId: "us-troops", faction: "us", count: 2 }
+        - { spaceId: "khanh-hoa:none", pieceTypeId: "us-irregulars", faction: "us", count: 1 }
+        - { spaceId: "khanh-hoa:none", pieceTypeId: "arvn-police", faction: "arvn", count: 1 }
+        - { spaceId: "khanh-hoa:none", pieceTypeId: "vc-bases", faction: "vc", count: 1 }
+        - { spaceId: "khanh-hoa:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 2 }
+        # Phu Bon: US 3 Troops; ARVN 2 Troops, 2 Police; VC 2 Guerrillas
+        - { spaceId: "phu-bon-phu-yen:none", pieceTypeId: "us-troops", faction: "us", count: 3 }
+        - { spaceId: "phu-bon-phu-yen:none", pieceTypeId: "arvn-troops", faction: "arvn", count: 2 }
+        - { spaceId: "phu-bon-phu-yen:none", pieceTypeId: "arvn-police", faction: "arvn", count: 2 }
+        - { spaceId: "phu-bon-phu-yen:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 2 }
+        # Binh Tuy: US 1 Base, 2 Troops; ARVN 3 Troops, 1 Police; VC 1 Base, 2 Guerrillas
+        - { spaceId: "binh-tuy-binh-thuan:none", pieceTypeId: "us-bases", faction: "us", count: 1 }
+        - { spaceId: "binh-tuy-binh-thuan:none", pieceTypeId: "us-troops", faction: "us", count: 2 }
+        - { spaceId: "binh-tuy-binh-thuan:none", pieceTypeId: "arvn-troops", faction: "arvn", count: 3 }
+        - { spaceId: "binh-tuy-binh-thuan:none", pieceTypeId: "arvn-police", faction: "arvn", count: 1 }
+        - { spaceId: "binh-tuy-binh-thuan:none", pieceTypeId: "vc-bases", faction: "vc", count: 1 }
+        - { spaceId: "binh-tuy-binh-thuan:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 2 }
+        # Saigon: US 1 Base, 2 Troops; ARVN 1 Troop, 1 Ranger, 4 Police; VC 1 Base, 1 Guerrilla
+        - { spaceId: "saigon:none", pieceTypeId: "us-bases", faction: "us", count: 1 }
+        - { spaceId: "saigon:none", pieceTypeId: "us-troops", faction: "us", count: 2 }
+        - { spaceId: "saigon:none", pieceTypeId: "arvn-troops", faction: "arvn", count: 1 }
+        - { spaceId: "saigon:none", pieceTypeId: "arvn-rangers", faction: "arvn", count: 1 }
+        - { spaceId: "saigon:none", pieceTypeId: "arvn-police", faction: "arvn", count: 4 }
+        - { spaceId: "saigon:none", pieceTypeId: "vc-bases", faction: "vc", count: 1 }
+        - { spaceId: "saigon:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 1 }
+        # Quang Duc: ARVN 2 Troops, 1 Police; VC 1 Guerrilla
+        - { spaceId: "quang-duc-long-khanh:none", pieceTypeId: "arvn-troops", faction: "arvn", count: 2 }
+        - { spaceId: "quang-duc-long-khanh:none", pieceTypeId: "arvn-police", faction: "arvn", count: 1 }
+        - { spaceId: "quang-duc-long-khanh:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 1 }
+        # Phuoc Long: VC 1 Base, 2 Guerrillas; NVA 1 Guerrilla
+        - { spaceId: "phuoc-long:none", pieceTypeId: "vc-bases", faction: "vc", count: 1 }
+        - { spaceId: "phuoc-long:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 2 }
+        - { spaceId: "phuoc-long:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 1 }
+        # Tay Ninh: US 1 Base, 3 Troops; ARVN 2 Troops, 1 Ranger; VC 1 Tunneled Base, 3 Guerrillas; NVA 2 Guerrillas
+        - { spaceId: "tay-ninh:none", pieceTypeId: "us-bases", faction: "us", count: 1 }
+        - { spaceId: "tay-ninh:none", pieceTypeId: "us-troops", faction: "us", count: 3 }
+        - { spaceId: "tay-ninh:none", pieceTypeId: "arvn-troops", faction: "arvn", count: 2 }
+        - { spaceId: "tay-ninh:none", pieceTypeId: "arvn-rangers", faction: "arvn", count: 1 }
+        - { spaceId: "tay-ninh:none", pieceTypeId: "vc-bases", faction: "vc", count: 1, status: { tunnel: "tunneled" } }
+        - { spaceId: "tay-ninh:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 3 }
+        - { spaceId: "tay-ninh:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 2 }
+        # An Loc: ARVN 1 Troop, 2 Police
+        - { spaceId: "an-loc:none", pieceTypeId: "arvn-troops", faction: "arvn", count: 1 }
+        - { spaceId: "an-loc:none", pieceTypeId: "arvn-police", faction: "arvn", count: 2 }
+        # Can Tho: US 3 Troops, 1 Irregular; ARVN 2 Troops, 1 Police
+        - { spaceId: "can-tho:none", pieceTypeId: "us-troops", faction: "us", count: 3 }
+        - { spaceId: "can-tho:none", pieceTypeId: "us-irregulars", faction: "us", count: 1 }
+        - { spaceId: "can-tho:none", pieceTypeId: "arvn-troops", faction: "arvn", count: 2 }
+        - { spaceId: "can-tho:none", pieceTypeId: "arvn-police", faction: "arvn", count: 1 }
+        # Kien Phong: ARVN 1 Police; VC 1 Guerrilla
+        - { spaceId: "kien-phong:none", pieceTypeId: "arvn-police", faction: "arvn", count: 1 }
+        - { spaceId: "kien-phong:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 1 }
+        # Kien Hoa-Vinh Binh: ARVN 1 Police; VC 1 Guerrilla
+        - { spaceId: "kien-hoa-vinh-binh:none", pieceTypeId: "arvn-police", faction: "arvn", count: 1 }
+        - { spaceId: "kien-hoa-vinh-binh:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 1 }
+        # Ba Xuyen: ARVN 1 Police; VC 1 Guerrilla
+        - { spaceId: "ba-xuyen:none", pieceTypeId: "arvn-police", faction: "arvn", count: 1 }
+        - { spaceId: "ba-xuyen:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 1 }
+        # Kien Giang: ARVN 1 Base, 2 Troops, 1 Ranger; VC 1 Guerrilla
+        - { spaceId: "kien-giang-an-xuyen:none", pieceTypeId: "arvn-bases", faction: "arvn", count: 1 }
+        - { spaceId: "kien-giang-an-xuyen:none", pieceTypeId: "arvn-troops", faction: "arvn", count: 2 }
+        - { spaceId: "kien-giang-an-xuyen:none", pieceTypeId: "arvn-rangers", faction: "arvn", count: 1 }
+        - { spaceId: "kien-giang-an-xuyen:none", pieceTypeId: "vc-guerrillas", faction: "vc", count: 1 }
+        # North Vietnam: NVA 1 Base, 1 Guerrilla, 9 Troops
+        - { spaceId: "north-vietnam:none", pieceTypeId: "nva-bases", faction: "nva", count: 1 }
+        - { spaceId: "north-vietnam:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 1 }
+        - { spaceId: "north-vietnam:none", pieceTypeId: "nva-troops", faction: "nva", count: 9 }
+        # Central Laos: NVA 1 Base, 1 Guerrilla, 9 Troops
+        - { spaceId: "central-laos:none", pieceTypeId: "nva-bases", faction: "nva", count: 1 }
+        - { spaceId: "central-laos:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 1 }
+        - { spaceId: "central-laos:none", pieceTypeId: "nva-troops", faction: "nva", count: 9 }
+        # Southern Laos: NVA 1 Base, 2 Guerrillas
+        - { spaceId: "southern-laos:none", pieceTypeId: "nva-bases", faction: "nva", count: 1 }
+        - { spaceId: "southern-laos:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 2 }
+        # NE Cambodia: NVA 1 Base, 2 Guerrillas
+        - { spaceId: "northeast-cambodia:none", pieceTypeId: "nva-bases", faction: "nva", count: 1 }
+        - { spaceId: "northeast-cambodia:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 2 }
+        # The Fishhook: NVA 1 Base, 2 Guerrillas
+        - { spaceId: "the-fishhook:none", pieceTypeId: "nva-bases", faction: "nva", count: 1 }
+        - { spaceId: "the-fishhook:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 2 }
+        # The Parrot's Beak: NVA 1 Base, 2 Guerrillas
+        - { spaceId: "the-parrots-beak:none", pieceTypeId: "nva-bases", faction: "nva", count: 1 }
+        - { spaceId: "the-parrots-beak:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 2 }
+        # Sihanoukville: NVA 1 Base, 2 Guerrillas
+        - { spaceId: "sihanoukville:none", pieceTypeId: "nva-bases", faction: "nva", count: 1 }
+        - { spaceId: "sihanoukville:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 2 }
 ```

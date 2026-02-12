@@ -1,6 +1,6 @@
 # FITLSCESET-006: Encode Medium Scenario ("A Better War" 1968-1972)
 
-**Status**: Pending
+**Status**: ✅ COMPLETED
 **Priority**: P0
 **Depends on**: FITLSCESET-001, FITLSCESET-003, FITLSCESET-004 (for pattern reference)
 **Blocks**: FITLSCESET-008
@@ -95,3 +95,12 @@ Add a YAML data asset block with `id: fitl-scenario-medium`, `kind: scenario`. F
 - YAML 1.2 strict: quoted strings, no aliases
 - Track IDs match the map asset's actual format
 - Structure matches the pattern from FITLSCESET-004
+
+## Outcome
+
+- **Completion date**: 2026-02-12
+- **What was changed**:
+  - Added `fitl-scenario-medium` data asset block to `data/games/fire-in-the-lake.md` with all 159 placed pieces across 29 spaces, 20 markers, 6 starting capabilities, deck composition, track values, out-of-play pieces, leader stack, and starting eligibility
+  - Updated `test/unit/fitl-production-data-scaffold.test.ts` to expect 6 data assets (was 5) to account for the new scenario alongside the still-present placeholder
+- **Deviations**: None. All data matches the spec conservation table and brainstorming Section 11 exactly.
+- **Verification**: `npm run build` clean, `npm test` 633/633 pass. Conservation cross-check and golden value cross-check both verified.

@@ -283,6 +283,7 @@ describe('FITL card-flow determinism integration', () => {
   });
 
   it('captures deterministic event side/branch/target metadata and partial-resolution trace entries during eligible-faction sequencing', () => {
+    // Fixture policy: this golden trace is intentionally reviewed state/trace contract data, not an auto-regenerated snapshot.
     const fixture = readJsonFixture<FitlEventInitialPackGolden>('test/fixtures/trace/fitl-events-initial-pack.golden.json');
     const def = createEventTraceDef();
     const seed = 113;

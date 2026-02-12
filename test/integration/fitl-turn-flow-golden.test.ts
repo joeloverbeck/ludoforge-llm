@@ -120,12 +120,17 @@ const createDef = (): GameDef =>
 
 describe('FITL turn-flow golden trace', () => {
   it('matches golden artifact for pass chain, override window, monsoon gating, and coup handoff boundary logs', () => {
+    // Fixture policy: this file is a contract artifact. Update it only when turn-flow semantics intentionally change.
     const fixture = readJsonFixture<FitlTurnFlowGolden>('test/fixtures/trace/fitl-turn-flow.golden.json');
     const def = createDef();
     const seed = 71;
 
     const start = initialState(def, seed, 4);
     const initialLegal = legalMoves(def, start);
+    assert.equal(
+      initialLegal.some((move) => move.actionId === asActionId('operationPlusSpecialActivity')),
+      true,
+    );
 
     const passMove: Move = { actionId: asActionId('pass'), params: {} };
     const first = applyMove(def, start, passMove);

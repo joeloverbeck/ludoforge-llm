@@ -1094,6 +1094,141 @@ Event Text: "Place 2 out-of-play US Troops into a Province or remove all Guerril
 Lasting Effects Indicator (5.3): None
 Shaded Text (see Dual Use 5.2): "VC strike newly arrived troops: 1 US Base and 1 US Troop in a Jungle with 2+ VC Guerrillas to Casualties."
 
+Period Event (Set Up Option): 1965
+Faction Order: VC, US, ARVN, NVA
+Card Number: 99
+Title: Masher/White Wing
+Italized Flavor Text: "Sweep flushes enemy into kill zone."
+Event Text: "US or ARVN free Sweeps 1 non-Jungle space with US and ARVN Troops. They free Assault as US."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Poor OPSEC: VC or NVA free March Guerrillas to any 3 spaces then free Ambush in each (even if Active)"
+
+Period Event (Set Up Option): 1965
+Faction Order: VC, US, ARVN, NVA
+Card Number: 100
+Title: Rach Ba Rai
+Italized Flavor Text: "Riverines hunt Charlie."
+Event Text: "Remove all VC or all non-Troop NVA from a Lowland with US Troops."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "VC river ambush: In a Lowland with any VC, remove a die roll of US/ARVN cubes (US to Casualties). Place 1 VC piece."
+
+Period Event (Set Up Option): 1964
+Faction Order: VC, NVA, US, ARVN
+Card Number: 101
+Title: Booby Traps
+Italized Flavor Text: "Preparations tip off enemy."
+Event Text: "VC and NVA Ambush in max 1 space."
+Lasting Effects Indicator (5.3): VC CAPABILITY
+Shaded Text (see Dual Use 5.2): "Mines and punji: Each Sweep space, VC afterward removes 1 Sweeping Troop on roll of 1-3 (US to Casualties)"
+
+Period Event (Set Up Option): 1965
+Faction Order: VC, NVA, US, ARVN
+Card Number: 102
+Title: Cu Chi
+Italized Flavor Text: "Clear and secure."
+Event Text: "Remove all Guerrillas from 1 space with a Tunnel and COIN Control."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Iron Triangle: Place Tunnel markers on each Insurgent Base in 1 Province. Place 1 NVA and 1 VC Guerrilla there."
+
+Period Event (Set Up Option): 1968
+Faction Order: VC, NVA, US, ARVN
+Card Number: 103
+Title: Kent State
+Italized Flavor Text: "National Guard imposes order."
+Event Text: "Any 2 US Casualties to Available. 1 free US LimOp. US Eligible."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "National Guard overreacts: Up to 3 US Troop Casualties out of play. Aid -6. US ineligible through next card."
+
+Period Event (Set Up Option): 1965
+Faction Order: VC, NVA, US, ARVN
+Card Number: 104
+Title: Main Force Bns
+Italized Flavor Text: "Larger footprints."
+Event Text: "March into Support/LoC Activates if moving plus non-Base COIN >1 (vice >3)."
+Lasting Effects Indicator (5.3): VC CAPABILITY
+Shaded Text (see Dual Use 5.2): "Hard-hitting guerrillas: 1 VC Ambush space may remove 2 enemy pieces."
+
+Period Event (Set Up Option): 1965
+Faction Order: VC, NVA, US, ARVN
+Card Number: 105
+Title: Rural Pressure
+Italized Flavor Text: "Onerous VC taxation."
+Event Text: "Shift 4 Provinces with any VC each by 1 level toward Active Support."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Local government corruption: Shift 3 Provinces with Police each by 1 level toward Active Opposition. Patronage +6 or -6."
+
+Period Event (Set Up Option): 1965
+Faction Order: VC, NVA, ARVN, US
+Card Number: 106
+Title: Binh Duong
+Italized Flavor Text: "Revolutionary land reform seeks traction in prosperous districts."
+Event Text: "In each of 2 Provinces adjacent to Saigon, shift Support/Opposition 1 level either direction and place a VC Guerrilla or Police."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): None
+
+Period Event (Set Up Option): 1064
+Faction Order: VC, NVA, ARVN, US
+Card Number: 107
+Title: Burning Bonze
+Italized Flavor Text: "Gruesome protests close elite ranks."
+Event Text: "Patronage +3 or, if Saigon at Active Support, +6."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Anti-regime self-immolation: Shift Saigon 1 level toward Active Opposition. Aid -12."
+
+Period Event (Set Up Option): 1965
+Faction Order: VC, NVA, ARVN, US
+Card Number: 108
+Title: Draft Dodgers
+Italized Flavor Text: "Public furor sparks enlistment."
+Event Text: "If fewer than 3 Casualty pieces, 3 US Troops from out of play to Available."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Recruiting sags: Move 1 US Troop per Casualty piece, to a maximum of 3, from Available to out-of-play."
+
+Period Event (Set Up Option): 1965
+Faction Order: VC, NVA, ARVN, US
+Card Number: 109
+Title: Nguyen Huu Tho
+Italized Flavor Text: "Party control of NLF draws anti-communist reaction."
+Event Text: "Shift each City with VC 1 level toward Active Support."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "National Liberation Front leader: Place a VC base and a VC Guerrilla in Saigon. Stay Eligible."
+
+Period Event (Set Up Option): 1964
+Faction Order: VC, NVA, ARVN, US
+Card Number: 110
+Title: No Contact
+Italized Flavor Text: "Respite."
+Event Text: "Place 2 Casualties onto the map. All Rangers and Irregulars Underground."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Charlie bugs out: Flip all VC and NVA Guerrillas Underground."
+
+Period Event (Set Up Option): 1968
+Faction Order: VC, ARVN, US, NVa
+Card Number: 111
+Title: Agent Orange
+Italized Flavor Text: "Counter-sanctuary chemical."
+Event Text: "All insurgents in Jungle go Active. US free Air Strikes among up to any 2 Jungle spaces (no effect on Trail)."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Industrial defoliation: Shift each Jungle and Highland with Insurgents 1 level toward Active Opposition."
+
+Period Event (Set Up Option): 1964
+Faction Order: VC, ARVN, US, NVA
+Card Number: 112
+Title: Colonel Chau
+Italized Flavor Text: "Census-grievance teams."
+Event Text: "Place 1 Police into each of 6 Provinces."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Local Viet Minh tradition: Shift 3 Provinces with ARVN each 1 level toward Active Opposition. Place a VC Guerrilla in each."
+
+Period Event (Set Up Option):
+Faction Order:
+Card Number:
+Title:
+Italized Flavor Text:
+Event Text:
+Lasting Effects Indicator (5.3):
+Shaded Text (see Dual Use 5.2):
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

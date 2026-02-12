@@ -30,7 +30,7 @@ This makes exhaustive enumeration infeasible for operations with `chooseN` where
 - **`legalChoices()` function**: Given a partially-filled move, return the next decision point with available options
 - **Template moves**: `legalMoves()` returns template moves (actionId + empty params) for actions with operation profiles
 - **`validateMove()` relaxation**: For operations with profiles, validate incrementally via effect execution rather than requiring exact match in `legalMoves()` output
-- **`freeOperation` binding**: Inject `move.freeOperation` into effect context bindings so resolution effects can conditionally skip cost spending
+- **`__freeOperation` binding**: Inject `move.freeOperation` into effect context bindings as `__freeOperation` (reserved kernel prefix) so resolution effects can conditionally skip cost spending
 - **Agent interface updates**: Agents use `legalChoices()` to incrementally build valid moves
 
 ### Out of Scope
@@ -81,13 +81,44 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
 
 **Key design decisions**:
 - `legalChoices()` does NOT apply side effects (no state mutation). It only walks effects to find the next unbound decision point.
+- `legalChoices()` evaluates read-only constructs that produce bindings: `let` (computes a value) and `if` (evaluates condition to determine which branch to walk). These are not side effects — they don't mutate state. Side-effect-producing effects (`setVar`, `addVar`, `moveToken`, `createToken`, etc.) are skipped.
 - The options domain is computed using `evalQuery` against the CURRENT state (not a hypothetical post-cost state), since per-space costs are paid inside resolution effects.
-- For actions WITHOUT operation profiles (simple actions), `legalChoices()` walks `ActionDef.effects` instead.
+- For actions WITHOUT operation profiles (simple actions), `legalChoices()` walks `ActionDef.effects` instead. This includes event resolution actions, which use `chooseOne` for branch selection and `chooseN` for target selection.
+- `legalChoices()` walks resolution stage effects only. Cost effects (`cost.spend`) MUST NOT contain `chooseOne`/`chooseN`. Cost is always a deterministic deduction.
+
+**Structural constraints**:
+- `chooseOne` and `chooseN` effects MUST NOT appear inside `forEach` blocks. Per-element resolution within `forEach` MUST be deterministic. Rationale: `applyChooseOne()` reads from `ctx.moveParams[bind]` (a flat record). In a `forEach` with N iterations, an inner `chooseOne { bind: '$x' }` reads the SAME `$x` for all iterations — there's no way to store per-iteration values in the flat `move.params` record, and `legalChoices()` can't return N separate decision points with the same binding name. Future extension: indexed bindings (e.g., `$pieceType[0]`) could enable per-iteration choices if needed for other games.
+- `chooseOne` and `chooseN` effects MUST NOT appear inside `rollRandom.in` blocks. The random value is unknown during decision-building, so `legalChoices()` cannot compute options that depend on it.
+- Binding names starting with `__` (double underscore) are reserved for kernel use and MUST NOT be used in game specifications.
+
+**Effect traversal behavior**:
+
+| Effect type | `legalChoices()` behavior |
+|-------------|--------------------------|
+| `chooseOne` | **DECISION POINT** — if unbound, return `ChoiceRequest`; if bound, validate and continue |
+| `chooseN` | **DECISION POINT** — same as `chooseOne` |
+| `if` | **TRAVERSE** — evaluate condition against current state + existing bindings; walk the matching branch only (`then` or `else`). Do NOT walk both branches. |
+| `forEach` | **TRAVERSE** — resolve `over` binding, walk inner effects (no inner choices allowed per structural constraint) |
+| `let` | **EVALUATE** — compute binding value, add to context, walk `in` effects |
+| `rollRandom` | **STOP** — do not walk `in` effects (choices inside `rollRandom` forbidden per structural constraint) |
+| `setVar` | SKIP |
+| `addVar` | SKIP |
+| `moveToken` | SKIP |
+| `moveAll` | SKIP |
+| `moveTokenAdjacent` | SKIP |
+| `createToken` | SKIP |
+| `destroyToken` | SKIP |
+| `draw` | SKIP |
+| `shuffle` | SKIP |
+| `setTokenProp` | SKIP |
+| `setMarker` | SKIP |
+| `shiftMarker` | SKIP |
 
 **Edge cases**:
 - If `partialMove.params` contains an invalid selection (not in domain), throw an error
 - If the operation profile has `legality.when` that fails, return `{ complete: true }` (the move is illegal; `applyMove` will reject it)
-- Nested `chooseOne`/`chooseN` inside `forEach` or `if` blocks: these produce decisions only when the enclosing context is resolved (i.e., the `forEach` binding must already be in params)
+- If `chooseOne` or `chooseN` (with `min >= 1`) has an empty options domain, return a `ChoiceRequest` with `options: []`. The agent sees empty options and knows this template move is unplayable — it should skip this template.
+- The returned `max` for `chooseN` is clamped to the domain size: `max = Math.min(declaredMax, options.length)`
 
 Modify:
 - `src/kernel/legal-choices.ts` (NEW file)
@@ -101,7 +132,9 @@ Tests:
   - Action with one `chooseN` (range mode) returns options with min/max
   - Action with multiple sequential choices returns them one at a time
   - Invalid selection in params throws error
-  - `chooseN` inside `forEach` only triggers after forEach binding resolved
+  - `chooseOne` inside `if.then` only appears when condition is true
+  - `chooseN` with `min >= 1` and empty domain returns `ChoiceRequest` with `options: []`
+  - `legalChoices` evaluates `let` bindings so subsequent options queries can reference them
 
 ### Task 25b.2: Template moves in `legalMoves()`
 
@@ -127,7 +160,7 @@ Simple actions (no operation profile) continue to enumerate fully as before.
 
 **Note on multi-space cost validation**: For operations with per-space cost in resolution effects (i.e., `cost.spend: []`), `cost.validate` checks whether the player can afford **at least 1 space**. The per-space cost is enforced inside resolution effects using the `freeOperation` guard. The `legalChoices()` options domain is not constrained by remaining resources -- resource exhaustion is handled by the resolution effects themselves (the player selects spaces, and the `addVar` effects deduct cost per space, with the variable's min/max bounds clamping at zero).
 
-**Compound move variants**: For template moves, compound SA variants (from `linkedSpecialActivityWindows`) are NOT pre-generated. Instead, compound SA selection happens after the agent completes the operation's decisions. This defers compound move variant generation to a later step.
+**Compound move variants**: For template moves, compound SA variants (from `linkedSpecialActivityWindows`) are NOT pre-generated. Compound move construction for template moves is deferred to Spec 26 (Operations Full Effects). Spec 25b tests use operations WITHOUT linked special activities. Agents in spec 25b only build the operation part via `legalChoices()`; the compound SA interleaving mechanism is designed in Spec 26.
 
 Modify:
 - `src/kernel/legal-moves.ts`
@@ -160,24 +193,26 @@ Tests:
 - Simple action moves still validate via exact match
 - Operation moves with incomplete params fail validation
 
-### Task 25b.4: `freeOperation` binding in effect context
+### Task 25b.4: `__freeOperation` binding in effect context
 
 Modify `src/kernel/apply-move.ts`:
 
-Inject `move.freeOperation` into the effect context bindings so that resolution effects can reference it via `{ ref: 'binding', name: 'freeOperation' }`:
+Inject `move.freeOperation` into the effect context bindings under the reserved name `__freeOperation` so that resolution effects can reference it via `{ ref: 'binding', name: '__freeOperation' }`:
 
 ```typescript
 const effectCtxBase = {
   ...
-  bindings: { ...move.params, freeOperation: move.freeOperation ?? false },
+  bindings: { ...move.params, __freeOperation: move.freeOperation ?? false },
 };
 ```
+
+The `__` prefix indicates a kernel-reserved binding name, preventing collision with game-designer bindings. All binding names starting with `__` are reserved for kernel use (see structural constraints in Task 25b.1).
 
 This allows operation resolution effects to conditionally skip per-space cost via:
 
 ```yaml
 - if:
-    when: { op: '!=', left: { ref: binding, name: freeOperation }, right: true }
+    when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
     then:
       - addVar: { scope: global, var: arvnResources, delta: -3 }
 ```
@@ -186,10 +221,10 @@ Modify:
 - `src/kernel/apply-move.ts`
 
 Tests:
-- `freeOperation: true` makes binding `freeOperation` resolve to `true`
-- `freeOperation: false` (or absent) makes binding `freeOperation` resolve to `false`
-- Resolution effects can read `freeOperation` via `{ ref: 'binding', name: 'freeOperation' }`
-- Per-space cost is conditionally skipped when `freeOperation` is `true`
+- `freeOperation: true` makes binding `__freeOperation` resolve to `true`
+- `freeOperation: false` (or absent) makes binding `__freeOperation` resolve to `false`
+- Resolution effects can read `__freeOperation` via `{ ref: 'binding', name: '__freeOperation' }`
+- Per-space cost is conditionally skipped when `__freeOperation` is `true`
 
 ### Task 25b.5: Agent interface updates
 
@@ -207,9 +242,14 @@ chooseMove(input) {
 
 The `legalChoices()` loop pattern:
 ```typescript
+const MAX_CHOICES = 50; // Safety guard against infinite loops
 let move = templateMove;
 let choices = legalChoices(def, state, move);
+let iterations = 0;
 while (!choices.complete) {
+  if (++iterations > MAX_CHOICES) {
+    throw new Error(`Choice loop exceeded ${MAX_CHOICES} iterations for action ${move.actionId}`);
+  }
   // For chooseOne: pick one random option
   // For chooseN: pick random count in [min, max], then random subset
   const selected = randomSelect(choices, rng);
@@ -239,39 +279,42 @@ Tests:
 
 1. Simple action (no profile) with `chooseOne` in effects → returns options, then complete
 2. Action with `chooseN` (exact n) → returns options with cardinality constraint
-3. Action with `chooseN` (range min/max) → returns options with min/max
+3. Action with `chooseN` (range min/max) → returns options with min/max, `max` clamped to domain size
 4. Multiple sequential `chooseOne`s → returns them one at a time
-5. `chooseN` followed by `forEach` with inner `chooseOne` → inner choice only after outer resolved
+5. `chooseOne` inside `if.then` only appears when condition is true (walk matching branch only)
 6. Invalid selection → throws descriptive error
 7. Action with no choices → returns `{ complete: true }` immediately
+8. `chooseN` with `min >= 1` and empty domain → returns `ChoiceRequest` with `options: []`
+9. `legalChoices` evaluates `let` bindings so subsequent options queries reference them correctly
+10. `legalChoices` does NOT walk `rollRandom.in` effects (returns `complete: true` before inner choices)
 
 ### Unit Tests (UPDATED: `test/unit/kernel/legal-moves.test.ts`)
 
-8. Operation with profile → emits template move with empty params
-9. Simple action → still emits fully-enumerated moves
-10. Template move respects legality predicate
-11. Template move respects cost validation
+11. Operation with profile → emits template move with empty params
+12. Simple action → still emits fully-enumerated moves
+13. Template move respects legality predicate
+14. Template move respects cost validation
 
 ### Unit Tests (UPDATED: `test/unit/kernel/apply-move.test.ts`)
 
-12. Operation move with valid filled params → passes validation
-13. Operation move with invalid params → fails validation
-14. Operation move with `freeOperation: true` → binding available in effects
-15. Simple action move → still validates via exact match
+15. Operation move with valid filled params → passes validation
+16. Operation move with invalid params → fails validation
+17. Operation move with `__freeOperation: true` → binding available in effects
+18. Simple action move → still validates via exact match
 
 ### Integration Tests (NEW: `test/integration/decision-sequence.test.ts`)
 
-16. RandomAgent plays a multi-choice operation from template to completion
-17. GreedyAgent plays a multi-choice operation
-18. Same seed produces identical results for template-based moves
-19. Free operation via template move skips per-space cost
+19. RandomAgent plays a multi-choice operation from template to completion
+20. GreedyAgent plays a multi-choice operation
+21. Same seed produces identical results for template-based moves
+22. Free operation via template move skips per-space cost
 
 ## Acceptance Criteria
 
 1. `legalChoices()` correctly identifies the next unbound decision point
 2. `legalMoves()` returns template moves for operations with profiles
 3. `validateMove()` accepts operation moves validated via `legalChoices()`
-4. `freeOperation` binding is accessible in resolution effects
+4. `__freeOperation` binding is accessible in resolution effects
 5. RandomAgent and GreedyAgent can play operations via the new model
 6. All existing tests pass (no regression)
 7. Build passes (`npm run build`)
@@ -298,3 +341,10 @@ The `Agent.chooseMove` interface stays the same — agents receive `legalMoves` 
 - `legalMoves()` output for simple actions is identical
 - `validateMove()` for simple actions is identical
 - Only operations with profiles use the new template + `legalChoices()` path
+
+### Future extensions (not needed for FITL)
+
+- **Dynamic cardinality**: `chooseN.min`/`max`/`n` could accept `ValueExpr` instead of static numbers, enabling state-dependent cardinality (e.g., "choose up to N spaces where N = resources / 3"). This would change `EffectAST` types with wide impact. Defer until a concrete game requires it.
+- **Ordered choices**: `chooseN` currently enforces uniqueness (set semantics). Some games need ordered sequences or duplicates. A `chooseN.ordering: 'set' | 'sequence'` flag could be added. FITL operations don't need this.
+- **Multi-phase operations**: An `applyMovePartial()` function for operations where later choices depend on effects from earlier choices (e.g., Spirit Island cascading powers). FITL per-space resolution is deterministic, so this isn't needed now.
+- **Indexed bindings for forEach inner choices**: Per-iteration choices inside `forEach` could use indexed binding names (e.g., `$pieceType[0]`, `$pieceType[1]`). This would require changes to the flat `move.params` record and the `legalChoices()` loop. Defer until a concrete game demonstrates the need.

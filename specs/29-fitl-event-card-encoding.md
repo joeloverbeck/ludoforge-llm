@@ -365,6 +365,24 @@ Event Text: "Stay Eligible. Until Coup, no Ambush; remove 1 Guerrilla each March
 Lasting Effects Indicator (5.3): None
 Shaded Text (see Dual Use 5.2): "Infiltrators turn mines around: Remove 1 COIN Base and 1 Underground Insurgent from a space with both (US to Casualties)"
 
+Period Event (Set Up Option): 1965
+Faction Order: US, ARVN, VC, NVA
+Card Number: 18
+Title: Combined Action Platoons
+Italized Flavor Text: "Hamlet defense."
+Event Text: "US Training places or relocates an added Police into any 1 space with US Troops."
+Lasting Effects Indicator (5.3): US CAPABILITY
+Shaded Text (see Dual Use 5.2): "Passive posture: US may select max 2 spaces per Sweep."
+
+Period Event (Set Up Option): 1968
+Faction Order: US, ARVN, VC, NVA
+Card Number: 19
+Title: CORDS
+Italized Flavor Text: "Civil Operations and Revolutionary Development Support."
+Event Text: "US Training may Pacify in 2 selected spaces."
+Lasting Effects Indicator (5.3): US CAPABILITY
+Shaded Text (see Dual Use 5.2): "Civilian programs subordinated to military: US Training may Pacify only to Passive Support."
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

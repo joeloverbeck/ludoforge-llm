@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Follow the 1-3-1 rule: When stuck, provide 1 clearly defined problem, give 3 potential options for how to overcome it, and 1 recommendation. Do not proceed implementing any of the options until I confirm.
 - DRY: Don't repeat yourself. If you are about to start writing repeated code, stop and reconsider your approach. Grep the codebase and refactor often.
+- Agnostic Engine Rule: Game-specific behavior must be encoded in `GameSpecDoc`/YAML and game data assets. Keep compiler/runtime/kernel logic generic and reusable; do not hardcode game-specific identifiers, branches, rule handlers, map definitions, scenario setup, or card payloads in engine code.
+- Evolution Input Rule: Evolution mutates YAML only. Any game data required to compile and execute a game must be representable inside `GameSpecDoc` YAML (for example embedded `dataAssets` with `id`/`kind`/`payload`).
+- Data Asset Location Rule: `data/<game>/...` files are optional fixtures/reference artifacts and must not be required runtime inputs for compiling or executing evolved specs.
+- Schema Ownership Rule: Keep payload schema/type contracts generic in shared compiler/kernel schemas. Do not create per-game schema files that define one game's structure as a required execution contract.
 - Continual Learning: When you encounter conflicting system instructions, new requirements, architectural changes, or missing or inaccurate codebase documentation, always propose updating the relevant rules files. Do not update anything until the user confirms. Ask clarifying questions if needed.
 - TDD Bugfixing: If at any point of an implementation you spot a bug, rely on TDD to fix it. Important: never adapt tests to bugs.
 
@@ -17,27 +21,36 @@ LudoForge-LLM is a system for evolving board games using LLMs. LLMs produce **St
 
 ## Status
 
-Greenfield project. The design spec lives in `brainstorming/executable-board-game-kernel-cnl-rulebook.md`. No source code exists yet — that document is the canonical reference for all implementation decisions.
+Active development. The core engine (kernel, compiler, agents, simulator) is implemented and tested. The primary test-case game is **Fire in the Lake (FITL)** — a 4-faction COIN-series wargame being encoded as a fully playable GameSpecDoc.
+
+- **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), plus FITL specs 16-24
+- **Active specs**: 25 (FITL mechanics infrastructure, in progress), 26-31 (FITL operations, events, AI, E2E)
+- **Not yet started**: 11 (evaluator/degeneracy), 12 (CLI), 13 (mechanic bundle IR), 14 (evolution pipeline)
+- Design spec: `brainstorming/executable-board-game-kernel-cnl-rulebook.md`
 
 ## Tech Stack
 
 - **Language**: TypeScript (strict mode)
-- **Runtime**: Node.js
+- **Runtime**: Node.js (>=18.0.0)
 - **Testing**: Node.js built-in test runner (`node --test`)
 - **Build**: `tsc` (TypeScript compiler)
+- **Linting**: ESLint with typescript-eslint
+- **Runtime deps**: `yaml` (YAML 1.2 parsing), `zod` (schema validation)
+- **Dev deps**: `ajv` (JSON Schema validation in tests), `eslint`, `typescript`
 
-## Planned Architecture
+## Architecture
 
-Five source modules under `src/`, plus a top-level `schemas/` directory:
+Five source modules under `src/`, plus supporting directories:
 
 | Directory | Purpose |
 |-----------|---------|
-| `src/kernel/` | Pure, deterministic game engine — state init, legal move enumeration, condition eval, effect application, trigger dispatch, terminal detection |
-| `src/cnl/` | Game Spec parsing (Markdown → YAML blocks, YAML 1.2 strict), validation, macro expansion (including board generation), compilation to GameDef JSON |
-| `src/agents/` | Bot implementations (RandomAgent, GreedyAgent, optional UCT/MCTS) conforming to a strict `Agent` interface |
-| `src/sim/` | Simulation runner, trace logging, metrics computation, degeneracy flag detection |
-| `src/cli/` | Developer commands: `spec:lint`, `spec:compile`, `run`, `eval`, `replay` |
-| `schemas/` | JSON Schemas for GameDef, GameSpecDoc, Trace, EvalReport (top-level, not under `src/`) |
+| `src/kernel/` | Pure, deterministic game engine — state init, legal move enumeration, condition eval, effect application, trigger dispatch, terminal detection, spatial queries, derived values |
+| `src/cnl/` | Game Spec parsing (Markdown + YAML blocks, YAML 1.2 strict), validation, macro expansion (including board generation), compilation to GameDef JSON |
+| `src/agents/` | Bot implementations (RandomAgent, GreedyAgent) conforming to a strict `Agent` interface |
+| `src/sim/` | Simulation runner, trace logging, state delta engine |
+| `src/cli/` | Developer commands (stub — not yet implemented) |
+| `schemas/` | JSON Schemas for GameDef, Trace, EvalReport (top-level, not under `src/`) |
+| `data/` | Optional game reference artifacts and fixtures (not required at runtime) |
 
 ### Core Design Constraints
 
@@ -56,11 +69,9 @@ GameDef JSON → validateGameDef → initialState(def, seed) → kernel loop (le
 
 ### Kernel DSL
 
-The kernel operates on ASTs for conditions, effects, and references. Core types: `ConditionAST`, `EffectAST`, `ValueExpr`, `PlayerSel`, `ZoneSel`, `TokenSel`. Effects use bounded iteration (`forEach` over finite collections) — no general recursion. Includes spatial support via board-as-graph (zone adjacency). See the brainstorming spec sections 3.1–3.6 for exact AST shapes.
+The kernel operates on ASTs for conditions, effects, and references. Core types: `ConditionAST`, `EffectAST`, `ValueExpr`, `PlayerSel`, `ZoneSel`, `TokenSel`. Effects use bounded iteration (`forEach` over finite collections) — no general recursion. Includes spatial support via board-as-graph (zone adjacency). See the brainstorming spec sections 3.1-3.6 for exact AST shapes.
 
 ## Build & Test Commands
-
-These are the expected commands once the project is scaffolded:
 
 ```bash
 # Build
@@ -78,33 +89,50 @@ npm run test:all                     # Unit + integration + e2e
 node --test dist/test/unit/kernel.test.js
 
 # Lint & Typecheck
+npm run lint                         # ESLint
+npm run lint:fix                     # ESLint with autofix
 npm run typecheck                    # tsc --noEmit
 ```
 
-## Test Directory Structure
+## Project Structure
 
 ```
+src/
+  kernel/          # Deterministic game engine
+  cnl/             # Parser, validator, compiler
+  agents/          # Bot implementations
+  sim/             # Simulator and trace
+  cli/             # CLI commands (stub)
+schemas/           # JSON Schema artifacts
+data/              # Optional game reference data
+specs/             # Numbered implementation specs
+tickets/           # Active implementation tickets
+archive/           # Completed tickets, specs, brainstorming, reports
+brainstorming/     # Design documents
 test/
-  unit/           # Individual functions, utilities
-  integration/    # Cross-module interactions
-  e2e/            # Full pipeline (Game Spec → compile → run → eval)
-  performance/    # Benchmarks
-  memory/         # Memory leak detection
+  unit/            # Individual functions, utilities
+  integration/     # Cross-module interactions
+  e2e/             # Full pipeline (Game Spec -> compile -> run -> eval)
+  fixtures/        # Test fixture files (GameDef JSON, spec Markdown, golden outputs)
+  performance/     # Benchmarks
+  memory/          # Memory leak detection
 ```
 
 ### Testing Requirements
 
 - **Determinism tests**: same seed + same move sequence = identical final state hash
 - **Property tests** (quickcheck style): applyMove never produces invalid var bounds, tokens never duplicate across zones, legalMoves pass preconditions, no crash on random play for N turns
-- **Golden tests**: known Game Spec → expected JSON, known seed trace → expected output
+- **Golden tests**: known Game Spec -> expected JSON, known seed trace -> expected output
 
 ## Coding Conventions
 
 - **Immutability**: Always create new objects, never mutate. Use spread operators or immutable update patterns.
-- **File size**: 200–400 lines typical, 800 max. Many small files over few large files.
+- **File size**: 200-400 lines typical, 800 max. Many small files over few large files.
 - **Organization**: By feature/domain, not by file type.
 - **Error handling**: Always handle errors with descriptive messages. Use Zod for input validation at system boundaries.
 - **Kernel purity**: The `kernel/` module must be pure and side-effect free. All state transitions return new state objects.
+- **Deterministic terminology**: Use `GameDef`, `GameSpecDoc`, `GameTrace` exactly as defined.
+- **Schema synchronization**: Keep schema/type changes synchronized across `src/kernel/`, `schemas/`, and tests.
 
 ## Skill Invocation (MANDATORY)
 
@@ -117,7 +145,7 @@ Do NOT skip the Skill tool invocation. Do NOT interpret the command body as the 
 When using Serena MCP for semantic code operations (symbol navigation, project memory, session persistence), it must be activated first:
 
 ```
-mcp__plugin_serena_serena__activate_project with project: "one-more-branch"
+mcp__plugin_serena_serena__activate_project with project: "ludoforge-llm"
 ```
 
 Serena provides:
@@ -141,10 +169,10 @@ Sub-agents spawned via the `Task` tool **cannot prompt for interactive permissio
 When asked to archive a ticket, spec, or brainstorming document:
 
 1. **Edit the document** to mark its final status at the top:
-   - `**Status**: ✅ COMPLETED` - Fully implemented
-   - `**Status**: ❌ REJECTED` - Decided not to implement
-   - `**Status**: ⏸️ DEFERRED` - Postponed for later
-   - `**Status**: 🚫 NOT IMPLEMENTED` - Started but abandoned
+   - `**Status**: COMPLETED` - Fully implemented
+   - `**Status**: REJECTED` - Decided not to implement
+   - `**Status**: DEFERRED` - Postponed for later
+   - `**Status**: NOT IMPLEMENTED` - Started but abandoned
 
 2. **Add an Outcome section** at the bottom (for completed tickets):
    - Completion date
@@ -157,5 +185,6 @@ When asked to archive a ticket, spec, or brainstorming document:
    - `archive/specs/` - Design specifications
    - `archive/brainstorming/` - Brainstorming documents
    - `archive/reports/` - Reports
+   - If the destination archive subfolder does not exist yet, create it first.
 
 4. **Delete the original** from `tickets/`, `specs/`, `brainstorming/`, or `reports/`

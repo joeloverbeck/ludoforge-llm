@@ -293,6 +293,42 @@ Event Text: "US moves up to 3 US Troops from out of play to Available or South V
 Lasting Effects Indicator (5.3): None.
 Shaded Text (see Dual Use 5.2): "Worn out formation. US takes 3 of its Troops from the map out of play."
 
+Period Event (Set Up Option): 1965
+Faction Order: US, NVA, VC, ARVN
+Card Number: 10
+Title: Rolling Thunder
+Italized Flavor Text: "Sustained bombing."
+Event Text: "Degrade Trail 2 boxes. -9 NVA Resources. NVA Ineligible through next card."
+Lasting Effects Indicator (5.3): None.
+Shaded Text (see Dual Use 5.2): "Assets to restricted strategic air campaign: -5 ARVN Resources. No Air Strike until Coup. MOMENTUM"
+
+Period Event (Set Up Option): 1968
+Faction Order: US, ARVN, NVA, VC
+Card Number: 11
+Title: Abrams
+Italized Flavor Text: "Counter-logistics."
+Event Text: "1 US Assault space may remove 1 enemy non-Tunnel Base first not last."
+Lasting Effects Indicator (5.3): US CAPABILITY
+Shaded Text (see Dual Use 5.2): "No more big-unit war: US may select max 2 spaces per Assault."
+
+Period Event (Set Up Option): 1968
+Faction Order: US, ARVN, NVA, VC
+Card Number: 12
+Title: Capt Buck Adams
+Italized Flavor Text: "Strategic reconnaissance."
+Event Text: "Outside the South, flip all Insurgents Active and remove 1 NVA Base."
+Lasting Effects Indicator (5.3): None.
+Shaded Text (see Dual Use 5.2): "SR-71 pilot must outrun SA-2s. Place 1 NVA Base at NVA Control outside the South and flip any 3 NVA Guerrillas Underground."
+
+Period Event (Set Up Option): 1968
+Faction Order: US, ARVN, NVA, VC
+Card Number: 13
+Title: Cobras
+Italized Flavor Text: "Gunships."
+Event Text: "2 US/ARVN Sweep spaces each remove 1 Active unTunneled enemy (Troops first, Bases last)."
+Lasting Effects Indicator (5.3): US CAPABILITY
+Shaded Text (see Dual Use 5.2): "Close air support losses: Each US Assault space, 1 US Troop to Casualties on a die roll of 1-3."
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

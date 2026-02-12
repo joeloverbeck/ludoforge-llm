@@ -56,6 +56,8 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 - Stacking violations rejected (max 2 bases, no bases on LoCs, NV restrictions)
 - Dynamic piece sourcing with US exception
 - Free operations don't cost resources or affect eligibility
+- Total Econ computed correctly from COIN-controlled non-sabotaged LoCs
+- Joint operation cost constraint works (US spending limited by Total Econ)
 
 ### Milestone C: Operations + SAs Complete (Specs 26–27)
 
@@ -151,24 +153,24 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 |---|---|---|---|---|
 | 23 | Full Map and Piece Data | P0 | L | 2–3 |
 | 24 | Scenario Setups | P0 | M | 2–3 |
-| 25 | Game Mechanics Infrastructure | P0 | L | 3–4 |
+| 25 | Game Mechanics Infrastructure | P0 | L | 4–5 |
 | 26 | Operations Full Effects | P0 | XL | 5–7 |
 | 27 | Special Activities Full Effects | P0 | L | 4–5 |
 | 28 | Capabilities, Momentum, RVN Leader | P1 | L | 3–4 |
 | 29 | Event Card Encoding | P1 | XL | 8–12 |
 | 30 | Non-Player AI | P1 | L | 4–5 |
 | 31 | E2E Tests and Validation | P0 | L | 3–4 |
-| **Total** | | | | **35–48** |
+| **Total** | | | | **36–49** |
 
 ## Open Questions (Tracked Across Specs)
 
 | # | Question | Affects Spec | Risk |
 |---|---|---|---|
-| 1 | Derived value caching vs on-demand | 25 | Medium — performance at scale |
+| 1 | ~~Derived value caching vs on-demand~~ **CLOSED**: On-demand computation. Caching contradicts immutable state architecture. Benchmark post-MVP. | 25 | ~~Medium~~ Resolved |
 | 2 | RVN Leader as TriggerDef vs special system | 28 | Low — both approaches viable |
 | 3 | Event card expressiveness ceiling | 29 | High — 5–10% of cards may need new primitives |
 | 4 | Performance of full 130-card simulation | 31 | Medium — benchmark after Milestone C |
-| 5 | Stacking: compile-time vs runtime vs both | 25 | Low — both viable |
+| 5 | ~~Stacking: compile-time vs runtime vs both~~ **CLOSED**: Both compile-time and runtime enforcement. Belt-and-suspenders, minimal extra code. | 25 | ~~Low~~ Resolved |
 | 6 | Operation/SA interleaving model | 26 | High — architectural ripple through compiler and game loop |
 
 ## Risk Registry

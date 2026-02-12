@@ -1,6 +1,6 @@
 # KERDECSEQMOD-005 - Agent `legalChoices()` Integration
 
-**Status**: Not started
+**Status**: COMPLETED
 **Spec**: `specs/25b-kernel-decision-sequence-model.md` (Task 25b.5)
 **Depends on**: KERDECSEQMOD-001, KERDECSEQMOD-002, KERDECSEQMOD-003
 
@@ -115,3 +115,29 @@ Both agents must thread the PRNG correctly through the `legalChoices()` loop so 
 - The `MAX_CHOICES` guard prevents infinite loops
 - Simple games (no operation profiles) are completely unaffected
 - RNG state is correctly threaded through template move completion
+
+## Outcome
+
+**Completed**: 2026-02-12
+
+### What was changed
+
+- **`src/agents/template-completion.ts`** (NEW) — Shared helper with `isTemplateMoveForProfile()`, `completeTemplateMove()`, `selectFromChooseOne()`, `selectFromChooseN()` (Fisher-Yates), and `MAX_CHOICES = 50` guard.
+- **`src/agents/random-agent.ts`** — Rewrote `chooseMove()` to partition moves into template vs. simple, complete templates via `legalChoices()` loop, skip unplayable templates, combine into candidate pool, pick randomly.
+- **`src/agents/greedy-agent.ts`** — Rewrote `chooseMove()` to generate N random completions per template (`completionsPerTemplate` config, default 5), combine with simple moves, apply `maxMovesToEvaluate` cap, evaluate all candidates. Added `completionsPerTemplate` to `GreedyAgentConfig`.
+- **`src/agents/index.ts`** — Added export for `template-completion.ts`.
+- **`test/unit/agents/random-agent.test.ts`** — Added 4 template move tests (fill params, simple backward compat, determinism, unplayable skip).
+- **`test/unit/agents/greedy-agent-core.test.ts`** — Added 4 template move tests (fill params, simple backward compat, determinism, maxMovesToEvaluate cap).
+
+### Deviations from plan
+
+- Extracted shared template completion logic into `src/agents/template-completion.ts` (not listed in original file list) to follow DRY principle — both agents share the same `legalChoices()` loop and selection helpers.
+- GreedyAgent tests live in `greedy-agent-core.test.ts` (existing file) rather than a separate `greedy-agent.test.ts`.
+
+### Verification
+
+- `npm run build` — pass
+- `npm run typecheck` — pass
+- `npm run lint` — pass
+- 896 tests, 0 failures, 0 regressions
+- All 8 new agent template tests pass

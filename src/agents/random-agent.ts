@@ -1,5 +1,6 @@
 import { nextInt } from '../kernel/prng.js';
-import type { Agent } from '../kernel/types.js';
+import type { Agent, Move } from '../kernel/types.js';
+import { completeTemplateMove, isTemplateMoveForProfile } from './template-completion.js';
 
 export class RandomAgent implements Agent {
   chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {
@@ -7,19 +8,34 @@ export class RandomAgent implements Agent {
       throw new Error('RandomAgent.chooseMove called with empty legalMoves');
     }
 
-    if (input.legalMoves.length === 1) {
-      const move = input.legalMoves[0];
-      if (move === undefined) {
-        throw new Error('RandomAgent.chooseMove called with empty legalMoves');
+    const completedMoves: Move[] = [];
+    let rng = input.rng;
+
+    for (const move of input.legalMoves) {
+      if (isTemplateMoveForProfile(input.def, move)) {
+        const result = completeTemplateMove(input.def, input.state, move, rng);
+        if (result !== null) {
+          completedMoves.push(result.move);
+          rng = result.rng;
+        }
+      } else {
+        completedMoves.push(move);
       }
-      return { move, rng: input.rng };
     }
 
-    const [index, rng] = nextInt(input.rng, 0, input.legalMoves.length - 1);
-    const move = input.legalMoves[index];
-    if (move === undefined) {
+    if (completedMoves.length === 0) {
+      throw new Error('RandomAgent.chooseMove: no playable moves after template completion');
+    }
+
+    if (completedMoves.length === 1) {
+      return { move: completedMoves[0]!, rng };
+    }
+
+    const [index, nextRng] = nextInt(rng, 0, completedMoves.length - 1);
+    const selected = completedMoves[index];
+    if (selected === undefined) {
       throw new Error(`RandomAgent.chooseMove selected out-of-range index ${index}`);
     }
-    return { move, rng };
+    return { move: selected, rng: nextRng };
   }
 }

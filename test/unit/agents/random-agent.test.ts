@@ -2,7 +2,20 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { RandomAgent } from '../../../src/agents/random-agent.js';
-import { asActionId, asPhaseId, asPlayerId, createRng, nextInt, type GameDef, type GameState, type Move } from '../../../src/kernel/index.js';
+import {
+  asActionId,
+  asPhaseId,
+  asPlayerId,
+  createRng,
+  nextInt,
+  type ActionDef,
+  type GameDef,
+  type GameState,
+  type Move,
+  type OperationProfileDef,
+} from '../../../src/kernel/index.js';
+
+const phaseId = asPhaseId('main');
 
 const defStub: GameDef = {
   metadata: { id: 'agents-random', players: { min: 2, max: 2 } },
@@ -12,7 +25,7 @@ const defStub: GameDef = {
   zones: [],
   tokenTypes: [],
   setup: [],
-  turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+  turnStructure: { phases: [{ id: phaseId }], activePlayerOrder: 'roundRobin' },
   actions: [],
   triggers: [],
   endConditions: [],
@@ -24,7 +37,7 @@ const stateStub: GameState = {
   playerCount: 2,
   zones: {},
   nextTokenOrdinal: 0,
-  currentPhase: asPhaseId('main'),
+  currentPhase: phaseId,
   activePlayer: asPlayerId(0),
   turnCount: 0,
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
@@ -45,6 +58,79 @@ const createInput = (legalMoves: readonly Move[], rngSeed = 42n) => ({
   playerId: asPlayerId(0),
   legalMoves,
   rng: createRng(rngSeed),
+});
+
+// --- Fixtures for template move tests ---
+
+const createActionWithChooseOne = (id: string): ActionDef => ({
+  id: asActionId(id),
+  actor: 'active',
+  phase: phaseId,
+  params: [],
+  pre: null,
+  cost: [],
+  effects: [
+    {
+      chooseOne: {
+        bind: '$target',
+        options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
+      },
+    },
+  ],
+  limits: [],
+});
+
+const createProfileForAction = (actionId: string): OperationProfileDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: {},
+  cost: {},
+  targeting: {},
+  resolution: [
+    {
+      stage: 'resolve',
+      effects: [
+        {
+          chooseOne: {
+            bind: '$target',
+            options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
+          },
+        },
+      ],
+    },
+  ],
+  partialExecution: { mode: 'forbid' },
+});
+
+const createEmptyOptionsProfile = (actionId: string): OperationProfileDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: {},
+  cost: {},
+  targeting: {},
+  resolution: [
+    {
+      stage: 'resolve',
+      effects: [
+        {
+          chooseOne: {
+            bind: '$target',
+            options: { query: 'enums', values: [] },
+          },
+        },
+      ],
+    },
+  ],
+  partialExecution: { mode: 'forbid' },
+});
+
+const createDefWithProfile = (
+  actions: readonly ActionDef[],
+  profiles: readonly OperationProfileDef[],
+): GameDef => ({
+  ...defStub,
+  actions,
+  operationProfiles: profiles,
 });
 
 describe('RandomAgent', () => {
@@ -114,5 +200,96 @@ describe('RandomAgent', () => {
     }
 
     assert.equal(seen.size, 3);
+  });
+
+  // --- Template move tests ---
+
+  it('can play operations via template moves (fills params via legalChoices() loop)', () => {
+    const action = createActionWithChooseOne('op1');
+    const profile = createProfileForAction('op1');
+    const def = createDefWithProfile([action], [profile]);
+
+    const templateMove: Move = { actionId: asActionId('op1'), params: {} };
+    const agent = new RandomAgent();
+    const result = agent.chooseMove({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: [templateMove],
+      rng: createRng(42n),
+    });
+
+    assert.equal(result.move.actionId, asActionId('op1'));
+    assert.ok('$target' in result.move.params, 'should have $target param filled');
+    const target = result.move.params['$target'];
+    assert.ok(
+      target === 'alpha' || target === 'beta' || target === 'gamma',
+      `selected target "${String(target)}" should be one of the enum options`,
+    );
+  });
+
+  it('still works with simple (non-template) moves as before', () => {
+    const agent = new RandomAgent();
+    const legalMoves = createMoves(3);
+    const first = agent.chooseMove(createInput(legalMoves, 42n));
+    const [expectedIndex] = nextInt(createRng(42n), 0, legalMoves.length - 1);
+
+    assert.deepEqual(first.move, legalMoves[expectedIndex]);
+  });
+
+  it('produces deterministic results with same seed for template moves', () => {
+    const action = createActionWithChooseOne('op1');
+    const profile = createProfileForAction('op1');
+    const def = createDefWithProfile([action], [profile]);
+
+    const templateMove: Move = { actionId: asActionId('op1'), params: {} };
+    const agent = new RandomAgent();
+
+    const makeInput = () => ({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: [templateMove],
+      rng: createRng(77n),
+    });
+
+    const first = agent.chooseMove(makeInput());
+    const second = agent.chooseMove(makeInput());
+
+    assert.deepEqual(first, second);
+  });
+
+  it('skips unplayable templates (empty options domain)', () => {
+    const action = createActionWithChooseOne('unplayable');
+    const emptyProfile = createEmptyOptionsProfile('unplayable');
+
+    // Also add a simple non-template action so there's something to pick
+    const simpleAction: ActionDef = {
+      id: asActionId('simple'),
+      actor: 'active',
+      phase: phaseId,
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = createDefWithProfile([action, simpleAction], [emptyProfile]);
+
+    const templateMove: Move = { actionId: asActionId('unplayable'), params: {} };
+    const simpleMove: Move = { actionId: asActionId('simple'), params: { x: 1 } };
+    const agent = new RandomAgent();
+
+    const result = agent.chooseMove({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: [templateMove, simpleMove],
+      rng: createRng(42n),
+    });
+
+    // Should have skipped the unplayable template and selected the simple move
+    assert.equal(result.move.actionId, asActionId('simple'));
   });
 });

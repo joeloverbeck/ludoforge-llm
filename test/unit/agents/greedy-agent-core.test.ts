@@ -13,6 +13,9 @@ import {
   type ActionDef,
   type EndCondition,
   type GameDef,
+  type GameState,
+  type Move,
+  type OperationProfileDef,
 } from '../../../src/kernel/index.js';
 
 const phaseId = asPhaseId('main');
@@ -60,6 +63,83 @@ const choose = (def: GameDef, seed = 5n) => {
     rng: createRng(seed),
   });
 };
+
+// --- Template move fixtures ---
+
+const stateStub: GameState = {
+  globalVars: {},
+  perPlayerVars: {},
+  playerCount: 2,
+  zones: {},
+  nextTokenOrdinal: 0,
+  currentPhase: phaseId,
+  activePlayer: asPlayerId(0),
+  turnCount: 0,
+  rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
+  stateHash: 0n,
+  actionUsage: {},
+  markers: {},
+};
+
+const createActionWithChooseOne = (id: string): ActionDef => ({
+  id: asActionId(id),
+  actor: 'active',
+  phase: phaseId,
+  params: [],
+  pre: null,
+  cost: [],
+  effects: [
+    {
+      chooseOne: {
+        bind: '$target',
+        options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
+      },
+    },
+  ],
+  limits: [],
+});
+
+const createProfileForAction = (actionId: string): OperationProfileDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: {},
+  cost: {},
+  targeting: {},
+  resolution: [
+    {
+      stage: 'resolve',
+      effects: [
+        {
+          chooseOne: {
+            bind: '$target',
+            options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
+          },
+        },
+      ],
+    },
+  ],
+  partialExecution: { mode: 'forbid' },
+});
+
+const createDefWithProfile = (
+  actions: readonly ActionDef[],
+  profiles: readonly OperationProfileDef[],
+): GameDef => ({
+  metadata: { id: 'agents-greedy-template', players: { min: 2, max: 2 } },
+  constants: {},
+  globalVars: [],
+  perPlayerVars: [
+    { name: 'vp', type: 'int', init: 0, min: 0, max: 20 },
+  ],
+  zones: [],
+  tokenTypes: [],
+  setup: [],
+  turnStructure: { phases: [{ id: phaseId }], activePlayerOrder: 'roundRobin' },
+  actions,
+  triggers: [],
+  endConditions: [],
+  operationProfiles: profiles,
+});
 
 describe('GreedyAgent core', () => {
   it('rejects non-positive maxMovesToEvaluate config', () => {
@@ -190,5 +270,84 @@ describe('GreedyAgent core', () => {
 
     assert.equal(result.move.actionId, asActionId('best'));
     assert.equal(result.rng, rng);
+  });
+
+  // --- Template move tests ---
+
+  it('can play operations via template moves', () => {
+    const action = createActionWithChooseOne('op1');
+    const profile = createProfileForAction('op1');
+    const def = createDefWithProfile([action], [profile]);
+
+    const templateMove: Move = { actionId: asActionId('op1'), params: {} };
+    const agent = new GreedyAgent();
+    const result = agent.chooseMove({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: [templateMove],
+      rng: createRng(42n),
+    });
+
+    assert.equal(result.move.actionId, asActionId('op1'));
+    assert.ok('$target' in result.move.params, 'should have $target param filled');
+    const target = result.move.params['$target'];
+    assert.ok(
+      target === 'alpha' || target === 'beta' || target === 'gamma',
+      `selected target "${String(target)}" should be one of the enum options`,
+    );
+  });
+
+  it('still works with simple (non-template) moves as before', () => {
+    const def = createDef([
+      createAction('best', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } }]),
+      createAction('worse', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
+    ]);
+
+    const result = choose(def, 10n);
+    assert.equal(result.move.actionId, asActionId('best'));
+  });
+
+  it('produces deterministic results with same seed for template moves', () => {
+    const action = createActionWithChooseOne('op1');
+    const profile = createProfileForAction('op1');
+    const def = createDefWithProfile([action], [profile]);
+
+    const templateMove: Move = { actionId: asActionId('op1'), params: {} };
+    const agent = new GreedyAgent();
+
+    const makeInput = () => ({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: [templateMove],
+      rng: createRng(77n),
+    });
+
+    const first = agent.chooseMove(makeInput());
+    const second = agent.chooseMove(makeInput());
+
+    assert.deepEqual(first, second);
+  });
+
+  it('respects maxMovesToEvaluate cap with template moves', () => {
+    const action = createActionWithChooseOne('op1');
+    const profile = createProfileForAction('op1');
+    const def = createDefWithProfile([action], [profile]);
+
+    const templateMove: Move = { actionId: asActionId('op1'), params: {} };
+    // With completionsPerTemplate=5 we get 5 candidates, cap at 2
+    const agent = new GreedyAgent({ maxMovesToEvaluate: 2 });
+    const result = agent.chooseMove({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: [templateMove],
+      rng: createRng(42n),
+    });
+
+    // Should still produce a valid complete move despite cap
+    assert.equal(result.move.actionId, asActionId('op1'));
+    assert.ok('$target' in result.move.params);
   });
 });

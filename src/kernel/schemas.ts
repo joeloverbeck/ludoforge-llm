@@ -48,7 +48,20 @@ export const ValueExprSchema = z.lazy(() => valueExprSchemaInternal);
 export const EffectASTSchema = z.lazy(() => effectAstSchemaInternal);
 
 optionsQuerySchemaInternal = z.union([
-  z.object({ query: z.literal('tokensInZone'), zone: ZoneSelSchema }).strict(),
+  z
+    .object({
+      query: z.literal('tokensInZone'),
+      zone: ZoneSelSchema,
+      filter: z
+        .object({
+          prop: StringSchema,
+          op: z.union([z.literal('eq'), z.literal('neq'), z.literal('in'), z.literal('notIn')]),
+          value: z.union([StringSchema, z.array(StringSchema)]),
+        })
+        .strict()
+        .optional(),
+    })
+    .strict(),
   z.object({ query: z.literal('intsInRange'), min: NumberSchema, max: NumberSchema }).strict(),
   z.object({ query: z.literal('enums'), values: z.array(StringSchema) }).strict(),
   z.object({ query: z.literal('players') }).strict(),

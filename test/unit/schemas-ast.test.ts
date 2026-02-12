@@ -141,6 +141,43 @@ describe('AST and selector schemas', () => {
     }
   });
 
+  it('parses tokensInZone query with and without filter', () => {
+    const queries: OptionsQuery[] = [
+      { query: 'tokensInZone', zone: 'board:a' },
+      { query: 'tokensInZone', zone: 'board:a', filter: { prop: 'faction', op: 'eq', value: 'US' } },
+      { query: 'tokensInZone', zone: 'board:a', filter: { prop: 'faction', op: 'neq', value: 'NVA' } },
+      { query: 'tokensInZone', zone: 'board:a', filter: { prop: 'faction', op: 'in', value: ['US', 'ARVN'] } },
+      { query: 'tokensInZone', zone: 'board:a', filter: { prop: 'faction', op: 'notIn', value: ['NVA', 'VC'] } },
+    ];
+
+    for (const query of queries) {
+      assert.deepEqual(OptionsQuerySchema.parse(query), query);
+    }
+  });
+
+  it('rejects malformed tokensInZone filter payloads', () => {
+    const badOp = OptionsQuerySchema.safeParse({
+      query: 'tokensInZone',
+      zone: 'board:a',
+      filter: { prop: 'faction', op: 'contains', value: 'US' },
+    });
+    assert.equal(badOp.success, false);
+
+    const missingProp = OptionsQuerySchema.safeParse({
+      query: 'tokensInZone',
+      zone: 'board:a',
+      filter: { op: 'eq', value: 'US' },
+    });
+    assert.equal(missingProp.success, false);
+
+    const extraField = OptionsQuerySchema.safeParse({
+      query: 'tokensInZone',
+      zone: 'board:a',
+      filter: { prop: 'faction', op: 'eq', value: 'US', extra: true },
+    });
+    assert.equal(extraField.success, false);
+  });
+
   it('rejects invalid effect discriminants with a nested path', () => {
     const result = EffectASTSchema.safeParse({
       setVar: { scope: 'invalid', var: 'gold', value: 1 },

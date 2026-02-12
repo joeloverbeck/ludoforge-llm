@@ -56,6 +56,12 @@ const makeDef = (): GameDef => ({
       ordering: 'set',
       adjacentTo: [asZoneId('bench:1')],
     },
+    {
+      id: asZoneId('battlefield:none'),
+      owner: 'none',
+      visibility: 'public',
+      ordering: 'set',
+    },
   ],
   tokenTypes: [],
   setup: [],
@@ -71,6 +77,12 @@ const makeToken = (id: string): Token => ({
   props: { cost: 1 },
 });
 
+const makeFactionToken = (id: string, faction: string): Token => ({
+  id: asTokenId(id),
+  type: 'piece',
+  props: { faction },
+});
+
 const makeState = (): GameState => ({
   globalVars: {},
   perPlayerVars: {},
@@ -81,6 +93,13 @@ const makeState = (): GameState => ({
     'hand:1': [makeToken('hand-1')],
     'bench:1': [],
     'tableau:2': [],
+    'battlefield:none': [
+      makeFactionToken('us-troop-1', 'US'),
+      makeFactionToken('us-troop-2', 'US'),
+      makeFactionToken('arvn-troop-1', 'ARVN'),
+      makeFactionToken('nva-guerrilla-1', 'NVA'),
+      makeFactionToken('vc-guerrilla-1', 'VC'),
+    ],
   },
   nextTokenOrdinal: 0,
   currentPhase: asPhaseId('main'),
@@ -137,7 +156,7 @@ describe('evalQuery', () => {
   it('returns zones sorted, and filter.owner=actor resolves correctly', () => {
     const ctx = makeCtx();
 
-    assert.deepEqual(evalQuery({ query: 'zones' }, ctx), ['bench:1', 'deck:none', 'hand:0', 'hand:1', 'tableau:2']);
+    assert.deepEqual(evalQuery({ query: 'zones' }, ctx), ['battlefield:none', 'bench:1', 'deck:none', 'hand:0', 'hand:1', 'tableau:2']);
     assert.deepEqual(evalQuery({ query: 'zones', filter: { owner: 'actor' } }, ctx), ['bench:1', 'hand:1']);
   });
 
@@ -167,6 +186,7 @@ describe('evalQuery', () => {
     });
 
     assert.deepEqual(evalQuery({ query: 'zones' }, ctx), [
+      'battlefield:none',
       'bench:1',
       'deck:none',
       'ghost:1',
@@ -209,6 +229,87 @@ describe('evalQuery', () => {
       ),
       [asZoneId('hand:0'), asZoneId('bench:1')],
     );
+  });
+
+  it('tokensInZone with no filter returns all tokens (backward-compatible)', () => {
+    const ctx = makeCtx();
+
+    const result = evalQuery({ query: 'tokensInZone', zone: 'battlefield:none' }, ctx);
+    assert.equal(result.length, 5);
+  });
+
+  it('tokensInZone with filter op=eq returns only matching tokens', () => {
+    const ctx = makeCtx();
+
+    const result = evalQuery(
+      { query: 'tokensInZone', zone: 'battlefield:none', filter: { prop: 'faction', op: 'eq', value: 'US' } },
+      ctx,
+    );
+    assert.deepEqual(
+      result.map((token) => (token as Token).id),
+      [asTokenId('us-troop-1'), asTokenId('us-troop-2')],
+    );
+  });
+
+  it('tokensInZone with filter op=neq returns non-matching tokens', () => {
+    const ctx = makeCtx();
+
+    const result = evalQuery(
+      { query: 'tokensInZone', zone: 'battlefield:none', filter: { prop: 'faction', op: 'neq', value: 'US' } },
+      ctx,
+    );
+    assert.deepEqual(
+      result.map((token) => (token as Token).id),
+      [asTokenId('arvn-troop-1'), asTokenId('nva-guerrilla-1'), asTokenId('vc-guerrilla-1')],
+    );
+  });
+
+  it('tokensInZone with filter op=in returns tokens matching any value in array', () => {
+    const ctx = makeCtx();
+
+    const result = evalQuery(
+      {
+        query: 'tokensInZone',
+        zone: 'battlefield:none',
+        filter: { prop: 'faction', op: 'in', value: ['US', 'ARVN'] },
+      },
+      ctx,
+    );
+    assert.deepEqual(
+      result.map((token) => (token as Token).id),
+      [asTokenId('us-troop-1'), asTokenId('us-troop-2'), asTokenId('arvn-troop-1')],
+    );
+  });
+
+  it('tokensInZone with filter op=notIn returns tokens not matching any value in array', () => {
+    const ctx = makeCtx();
+
+    const result = evalQuery(
+      {
+        query: 'tokensInZone',
+        zone: 'battlefield:none',
+        filter: { prop: 'faction', op: 'notIn', value: ['US', 'ARVN'] },
+      },
+      ctx,
+    );
+    assert.deepEqual(
+      result.map((token) => (token as Token).id),
+      [asTokenId('nva-guerrilla-1'), asTokenId('vc-guerrilla-1')],
+    );
+  });
+
+  it('tokensInZone with filter on missing token prop returns empty array', () => {
+    const ctx = makeCtx();
+
+    const result = evalQuery(
+      {
+        query: 'tokensInZone',
+        zone: 'battlefield:none',
+        filter: { prop: 'nonexistent', op: 'eq', value: 'anything' },
+      },
+      ctx,
+    );
+    assert.deepEqual(result, []);
   });
 
   it('throws QUERY_BOUNDS_EXCEEDED when a query would exceed maxQueryResults', () => {

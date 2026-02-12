@@ -21,6 +21,7 @@ const selfOverride = createEligibilityOverrideDirective({
   eligibility: 'eligible',
   windowId: 'remain-eligible',
 });
+const REPEATED_RUN_COUNT = 20;
 const noOverride = FITL_NO_OVERRIDE;
 
 const createDef = (): GameDef =>
@@ -229,7 +230,7 @@ const createEventTraceDef = (): GameDef =>
   }) as unknown as GameDef;
 
 describe('FITL card-flow determinism integration', () => {
-  it('produces byte-identical state and trace logs for same seed and move sequence', () => {
+  it('produces byte-identical state and trace logs for same seed and move sequence across repeated runs', () => {
     const def = createDef();
     const run = () => {
       let state = initialState(def, 97, 4);
@@ -247,10 +248,10 @@ describe('FITL card-flow determinism integration', () => {
       };
     };
 
-    const first = run();
-    const second = run();
-
-    assert.deepEqual(second, first);
+    const baseline = run();
+    for (let runIndex = 0; runIndex < REPEATED_RUN_COUNT; runIndex += 1) {
+      assert.deepEqual(run(), baseline);
+    }
   });
 
   it('produces byte-identical operation-heavy traces across FITL operation/special-activity fixtures', () => {

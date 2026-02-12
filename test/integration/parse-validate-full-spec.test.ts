@@ -6,6 +6,8 @@ import { describe, it } from 'node:test';
 import { parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 
 const readFixture = (name: string): string => readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', name), 'utf8');
+const readCompilerFixture = (name: string): string =>
+  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
 
 describe('parse + validate full-spec integration', () => {
   it('accepts a realistic valid full markdown spec end-to-end', () => {
@@ -39,5 +41,35 @@ describe('parse + validate full-spec integration', () => {
     assert.equal(first.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_ACTION_EFFECTS_SHAPE_INVALID'), true);
     assert.equal(first.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_TURN_STRUCTURE_PHASES_INVALID'), true);
     assert.equal(first.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_UNKNOWN_KEY'), true);
+  });
+
+  it('reports deterministic FITL embedded-asset reference diagnostics for missing required scenario assets', () => {
+    const markdown = readCompilerFixture('compile-fitl-assets-malformed.md');
+
+    const runOnce = () => {
+      const parsed = parseGameSpec(markdown);
+      return [...parsed.diagnostics, ...validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap })];
+    };
+
+    const first = runOnce();
+    const second = runOnce();
+
+    assert.deepEqual(second, first);
+    assert.equal(
+      first.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING' &&
+          diagnostic.path === 'doc.dataAssets.2.payload.mapAssetId',
+      ),
+      true,
+    );
+    assert.equal(
+      first.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING' &&
+          diagnostic.path === 'doc.dataAssets.2.payload.pieceCatalogAssetId',
+      ),
+      true,
+    );
   });
 });

@@ -14,7 +14,7 @@ const BANNED_PATTERNS = [
 ] as const;
 
 const collectTsFiles = (directory: string): string[] => {
-  const entries = readdirSync(directory, { withFileTypes: true });
+  const entries = readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name));
   const files: string[] = [];
 
   for (const entry of entries) {
@@ -39,7 +39,7 @@ describe('no-hardcoded FITL audit', () => {
 
     for (const relativeDir of SHARED_ENGINE_DIRS) {
       const absoluteDir = join(root, relativeDir);
-      for (const file of collectTsFiles(absoluteDir)) {
+      for (const file of collectTsFiles(absoluteDir).sort()) {
         const source = readFileSync(file, 'utf8');
         for (const pattern of BANNED_PATTERNS) {
           if (pattern.test(source)) {
@@ -49,6 +49,11 @@ describe('no-hardcoded FITL audit', () => {
       }
     }
 
-    assert.deepEqual(violations, []);
+    violations.sort();
+    assert.equal(
+      violations.length,
+      0,
+      `Found hardcoded FITL tokens in shared modules:\n${violations.map((violation) => `- ${violation}`).join('\n')}`,
+    );
   });
 });

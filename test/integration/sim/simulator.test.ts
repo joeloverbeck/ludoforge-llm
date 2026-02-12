@@ -1,6 +1,9 @@
 import * as assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
+import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../../src/cnl/index.js';
 import { asActionId, asPhaseId, nextInt, serializeTrace, type Agent, type GameDef } from '../../../src/kernel/index.js';
 import { runGames } from '../../../src/sim/index.js';
 
@@ -52,6 +55,23 @@ const createDef = (): GameDef =>
   }) as unknown as GameDef;
 
 describe('runGames integration', () => {
+  it('keeps a non-FITL fixture compile + simulation path green', () => {
+    const markdown = readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', 'compile-valid.md'), 'utf8');
+    const parsed = parseGameSpec(markdown);
+    const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assert.deepEqual(validatorDiagnostics, []);
+    assert.deepEqual(compiled.diagnostics, []);
+    assert.notEqual(compiled.gameDef, null);
+
+    const [trace] = runGames(compiled.gameDef!, [41], [rngDrivenAgent, rngDrivenAgent], 3);
+    assert.notEqual(trace, undefined);
+    assert.equal(trace?.gameDefId, 'compiler-valid');
+    assert.equal(trace?.stopReason, 'terminal');
+  });
+
   it('preserves input seed order in returned traces', () => {
     const def = createDef();
     const seeds = [31, 7, 19];

@@ -441,10 +441,16 @@ dataAssets:
           faction: us
           statusDimensions: []
           transitions: []
+          visual:
+            color: olive
+            shape: cube
         - id: us-bases
           faction: us
           statusDimensions: []
           transitions: []
+          visual:
+            color: olive
+            shape: round-disk
         - id: us-irregulars
           faction: us
           statusDimensions: [activity]
@@ -455,14 +461,24 @@ dataAssets:
             - dimension: activity
               from: active
               to: underground
+          visual:
+            color: olive
+            shape: cylinder
+            activeSymbol: star
         - id: arvn-troops
           faction: arvn
           statusDimensions: []
           transitions: []
+          visual:
+            color: yellow
+            shape: cube
         - id: arvn-police
           faction: arvn
           statusDimensions: []
           transitions: []
+          visual:
+            color: orange
+            shape: cube
         - id: arvn-rangers
           faction: arvn
           statusDimensions: [activity]
@@ -473,14 +489,24 @@ dataAssets:
             - dimension: activity
               from: active
               to: underground
+          visual:
+            color: yellow
+            shape: cylinder
+            activeSymbol: star
         - id: arvn-bases
           faction: arvn
           statusDimensions: []
           transitions: []
+          visual:
+            color: yellow
+            shape: round-disk
         - id: nva-troops
           faction: nva
           statusDimensions: []
           transitions: []
+          visual:
+            color: red
+            shape: cube
         - id: nva-guerrillas
           faction: nva
           statusDimensions: [activity]
@@ -491,6 +517,10 @@ dataAssets:
             - dimension: activity
               from: active
               to: underground
+          visual:
+            color: red
+            shape: cylinder
+            activeSymbol: star
         - id: nva-bases
           faction: nva
           statusDimensions: [tunnel]
@@ -501,6 +531,9 @@ dataAssets:
             - dimension: tunnel
               from: tunneled
               to: untunneled
+          visual:
+            color: red
+            shape: round-disk
         - id: vc-guerrillas
           faction: vc
           statusDimensions: [activity]
@@ -511,6 +544,10 @@ dataAssets:
             - dimension: activity
               from: active
               to: underground
+          visual:
+            color: bright-blue
+            shape: cylinder
+            activeSymbol: star
         - id: vc-bases
           faction: vc
           statusDimensions: [tunnel]
@@ -521,45 +558,47 @@ dataAssets:
             - dimension: tunnel
               from: tunneled
               to: untunneled
+          visual:
+            color: bright-blue
+            shape: round-disk
       inventory:
         - pieceTypeId: us-troops
           faction: us
-          total: 0
+          total: 40
         - pieceTypeId: us-bases
           faction: us
-          total: 0
+          total: 6
         - pieceTypeId: us-irregulars
           faction: us
-          total: 0
+          total: 6
         - pieceTypeId: arvn-troops
           faction: arvn
-          total: 0
+          total: 30
         - pieceTypeId: arvn-police
           faction: arvn
-          total: 0
+          total: 30
         - pieceTypeId: arvn-rangers
           faction: arvn
-          total: 0
+          total: 6
         - pieceTypeId: arvn-bases
           faction: arvn
-          total: 0
+          total: 3
         - pieceTypeId: nva-troops
           faction: nva
-          total: 0
+          total: 40
         - pieceTypeId: nva-guerrillas
           faction: nva
-          total: 0
+          total: 20
         - pieceTypeId: nva-bases
           faction: nva
-          total: 0
+          total: 9
         - pieceTypeId: vc-guerrillas
           faction: vc
-          total: 0
+          total: 30
         - pieceTypeId: vc-bases
           faction: vc
-          total: 0
+          total: 9
   - id: fitl-scenario-production
     kind: scenario
     payload: {}
 ```
-

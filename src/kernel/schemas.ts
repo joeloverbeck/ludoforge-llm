@@ -416,12 +416,21 @@ export const PieceStatusTransitionSchema = z
   })
   .strict();
 
+export const PieceVisualMetadataSchema = z
+  .object({
+    color: StringSchema.min(1),
+    shape: StringSchema.min(1),
+    activeSymbol: StringSchema.min(1).optional(),
+  })
+  .strict();
+
 export const PieceTypeCatalogEntrySchema = z
   .object({
     id: StringSchema.min(1),
     faction: StringSchema.min(1),
     statusDimensions: z.array(PieceStatusDimensionSchema),
     transitions: z.array(PieceStatusTransitionSchema),
+    visual: PieceVisualMetadataSchema.optional(),
   })
   .strict();
 

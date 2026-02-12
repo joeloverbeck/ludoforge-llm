@@ -1,5 +1,6 @@
 # FITLFULMAPANDPIEDAT-006: Encode full piece inventory (229 pieces) and visual metadata
 
+**Status**: ✅ COMPLETED
 **Spec**: 23, Task 23.4
 **Priority**: P0
 **Depends on**: FITLFULMAPANDPIEDAT-005 (piece types must exist first)
@@ -59,6 +60,8 @@ The "star" symbol appears on the active side of: US Irregulars, ARVN Rangers, NV
 |------|--------|
 | `data/games/fire-in-the-lake.md` | **Edit** (add inventory entries + visual metadata) |
 | `src/kernel/types.ts` | **Edit** (add optional `visual` field to `PieceTypeCatalogEntry`) |
+| `src/kernel/schemas.ts` | **Edit** (add optional `visual` schema to strict `PieceTypeCatalogEntrySchema`) |
+| `test/unit/fitl-production-piece-types.test.ts` | **Edit** (remove stale zero-inventory assumption from ticket 005 scaffold) |
 | `test/unit/fitl-production-piece-inventory.test.ts` | **Create** |
 
 ## Out of scope
@@ -68,6 +71,11 @@ The "star" symbol appears on the active side of: US Irregulars, ARVN Rangers, NV
 - Tracks and lattices (tickets 007–008)
 - Changing existing piece type definitions from ticket 005
 - Any changes to existing test fixtures
+
+## Assumptions and scope updates
+
+- `PieceTypeCatalogEntrySchema` is strict, so adding `visual` metadata required updating both `src/kernel/types.ts` and `src/kernel/schemas.ts`.
+- The ticket-005 scaffold test in `test/unit/fitl-production-piece-types.test.ts` asserted zero inventory totals; this was updated because ticket 006 replaces scaffold totals with production totals.
 
 ## Acceptance criteria
 
@@ -85,6 +93,24 @@ The "star" symbol appears on the active side of: US Irregulars, ARVN Rangers, NV
 
 ### Invariants that must remain true
 
-- No existing test file is modified
-- The `test/fixtures/cnl/compiler/fitl-*.md` fixtures remain unchanged
+- Existing fixture files remain unchanged (especially `test/fixtures/cnl/compiler/fitl-*.md`)
+- Existing tests may be updated only where they encode the ticket-005 scaffold assumption that production inventory totals are zero
 - Existing tests pass — the `visual` field on `PieceTypeCatalogEntry` must be optional so existing code continues to compile
+
+## Outcome
+
+- **Completed on**: 2026-02-12
+- **What changed**:
+  - Populated all 12 production piece inventory totals in `data/games/fire-in-the-lake.md` (sum = 229).
+  - Added `visual` metadata (`color`, `shape`, optional `activeSymbol`) to all production piece types.
+  - Extended shared piece catalog contracts with optional visual metadata in `src/kernel/types.ts` and strict schema support in `src/kernel/schemas.ts`.
+  - Added `test/unit/fitl-production-piece-inventory.test.ts` for inventory and visual metadata invariants.
+  - Updated `test/unit/fitl-production-piece-types.test.ts` to remove the outdated zero-inventory scaffold assertion.
+- **Deviations from original plan**:
+  - The ticket originally scoped only `src/kernel/types.ts` for visual metadata; `src/kernel/schemas.ts` also required changes due to strict schema validation.
+  - The ticket originally stated no existing tests should be modified; one existing scaffold test required a minimal update to align with production inventory.
+- **Verification**:
+  - `npm run build` passed.
+  - Targeted tests passed:
+    - `node --test dist/test/unit/fitl-production-piece-types.test.js dist/test/unit/fitl-production-piece-inventory.test.js dist/test/unit/schemas-top-level.test.js dist/test/unit/data-assets.test.js`
+  - `npm test` passed.

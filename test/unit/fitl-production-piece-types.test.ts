@@ -113,7 +113,7 @@ describe('fitl production piece type catalog', () => {
       const entry = inventoryByPieceTypeId.get(pieceType.id);
       assert.ok(entry, `Expected inventory entry for ${pieceType.id}`);
       assert.equal(entry.faction, pieceType.faction);
-      assert.equal(entry.total, 0);
+      assert.equal(entry.total > 0, true, `${pieceType.id} inventory total must be positive`);
     }
   });
 });

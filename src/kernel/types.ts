@@ -497,11 +497,18 @@ export interface PieceStatusTransition {
   readonly to: PieceStatusValue;
 }
 
+export interface PieceVisualMetadata {
+  readonly color: string;
+  readonly shape: string;
+  readonly activeSymbol?: string;
+}
+
 export interface PieceTypeCatalogEntry {
   readonly id: string;
   readonly faction: string;
   readonly statusDimensions: readonly PieceStatusDimension[];
   readonly transitions: readonly PieceStatusTransition[];
+  readonly visual?: PieceVisualMetadata;
 }
 
 export interface PieceInventoryEntry {

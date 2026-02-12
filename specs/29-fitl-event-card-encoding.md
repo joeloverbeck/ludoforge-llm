@@ -581,6 +581,51 @@ Event Text: "Set any two spaces to Passive Support. Patronage +2. No Air Strike 
 Lasting Effects Indicator (5.3): None
 Shaded Text (see Dual Use 5.2): None
 
+Period Event (Set Up Option): 1968
+Faction Order: NVA, ARVN, US, VC
+Card Number: 42
+Title: Chou En Lai
+Italized Flavor Text: "Chinese opening to US."
+Event Text: "NVA Resources -10. NVA must remove a die roll in Troops."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Chinese boost aid to North: NVA add +10 Resources. VC add Trail value in Resources."
+
+Period Event (Set Up Option): 1964
+Faction Order: NVA, ARVN, US, VC
+Card Number: 43
+Title: Economic Aid
+Italized Flavor Text: "Free World aids Saigon."
+Event Text: "2 ARVN or 2 US Bases out-of-play to Available. Then ARVN Resources +6 or Aid +12"
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Moscow aids Hanoi: Improve the Trail 1 box. Then either Improve it 1 more box or add +10 NVA Resources."
+
+Period Event (Set Up Option): 1965
+Faction Order: NVA, ARVN, US, VC
+Card Number: 44
+Title: Ia Drang
+Italized Flavor Text: "Silver Bayonet."
+Event Text: "US free Air Lifts into 1 space with any NVA piece, then fere Sweeps and Assaults there."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Dong Xuan campaign-hot LZs: Select a Province with NVA Troops then remove a die roll of US Troops within 1 space of it to Casualties."
+
+Period Event (Set Up Option): 1968
+Faction Order: NVA, ARVN, US, VC
+Card Number: 45
+Title: PT-76
+Italized Flavor Text: "Light armor target."
+Event Text: "Each NVA Attack space, first remove 1 NVA Troop cube."
+Lasting Effects Indicator (5.3): NVA CAPABILITY
+Shaded Text (see Dual Use 5.2): "Communist armored assault: NVA Attack in 1 space removes 1 enemy per Troop."
+
+Period Event (Set Up Option):
+Faction Order:
+Card Number:
+Title:
+Italized Flavor Text:
+Event Text:
+Lasting Effects Indicator (5.3):
+Shaded Text (see Dual Use 5.2):
+
 Period Event (Set Up Option):
 Faction Order:
 Card Number:

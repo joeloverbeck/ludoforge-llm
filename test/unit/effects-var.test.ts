@@ -189,3 +189,101 @@ describe('effects var handlers', () => {
     });
   });
 });
+
+/**
+ * Lattice marker shift mechanism (Spec 25):
+ *
+ * Support/Opposition markers are stored as integer zone variables indexing
+ * into a lattice like ['activeOpposition', 'passiveOpposition', 'neutral',
+ * 'passiveSupport', 'activeSupport'] (indices 0–4).
+ *
+ * "Shift toward Active Support" = addVar delta +1
+ * "Shift toward Active Opposition" = addVar delta -1
+ *
+ * The existing addVar with clamp(currentValue + delta, min, max) handles
+ * lattice bounds naturally. No new EffectAST type is needed.
+ */
+describe('lattice marker shift via addVar', () => {
+  const makeLatticeDef = (): GameDef => ({
+    metadata: { id: 'lattice-shift-test', players: { min: 1, max: 2 } },
+    constants: {},
+    globalVars: [
+      { name: 'marker', type: 'int', init: 2, min: 0, max: 4 },
+    ],
+    perPlayerVars: [],
+    zones: [],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [], activePlayerOrder: 'roundRobin' },
+    actions: [],
+    triggers: [],
+    endConditions: [],
+  });
+
+  const makeLatticeState = (markerValue: number): GameState => ({
+    globalVars: { marker: markerValue },
+    perPlayerVars: {},
+    playerCount: 2,
+    zones: {},
+    nextTokenOrdinal: 0,
+    currentPhase: asPhaseId('main'),
+    activePlayer: asPlayerId(0),
+    turnCount: 1,
+    rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
+    stateHash: 0n,
+    actionUsage: {},
+  });
+
+  const makeLatticeCtx = (markerValue: number): EffectContext => ({
+    def: makeLatticeDef(),
+    adjacencyGraph: buildAdjacencyGraph([]),
+    state: makeLatticeState(markerValue),
+    rng: createRng(17n),
+    activePlayer: asPlayerId(0),
+    actorPlayer: asPlayerId(0),
+    bindings: {},
+    moveParams: {},
+  });
+
+  it('shifts +1 from middle state (index 2 → 3)', () => {
+    const ctx = makeLatticeCtx(2);
+    const effect: EffectAST = { addVar: { scope: 'global', var: 'marker', delta: 1 } };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.marker, 3);
+  });
+
+  it('clamps at max when shifting +1 from top state (index 4 → 4)', () => {
+    const ctx = makeLatticeCtx(4);
+    const effect: EffectAST = { addVar: { scope: 'global', var: 'marker', delta: 1 } };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.marker, 4, 'clamped at max');
+    assert.equal(result.state, ctx.state, 'no-op returns same state reference');
+  });
+
+  it('clamps at min when shifting -1 from bottom state (index 0 → 0)', () => {
+    const ctx = makeLatticeCtx(0);
+    const effect: EffectAST = { addVar: { scope: 'global', var: 'marker', delta: -1 } };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.marker, 0, 'clamped at min');
+    assert.equal(result.state, ctx.state, 'no-op returns same state reference');
+  });
+
+  it('shifts -1 from middle state (index 3 → 2)', () => {
+    const ctx = makeLatticeCtx(3);
+    const effect: EffectAST = { addVar: { scope: 'global', var: 'marker', delta: -1 } };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.marker, 2);
+  });
+
+  it('clamps double shift +2 correctly (index 3 + 2 → clamped to 4)', () => {
+    const ctx = makeLatticeCtx(3);
+    const effect: EffectAST = { addVar: { scope: 'global', var: 'marker', delta: 2 } };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.marker, 4, 'clamped to max on double shift');
+  });
+});

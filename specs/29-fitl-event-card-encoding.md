@@ -392,14 +392,86 @@ Event Text: "Air Strike does not shift Support/Opposition in spaces where only 1
 Lasting Effects Indicator (5.3): US CAPABILITY
 Shaded Text (see Dual Use 5.2): "Camouflage: Air Strike removes no more than 2 pieces."
 
-Period Event (Set Up Option):
-Faction Order:
-Card Number:
-Title:
-Italized Flavor Text:
-Event Text:
-Lasting Effects Indicator (5.3):
-Shaded Text (see Dual Use 5.2):
+Period Event (Set Up Option): 1968
+Faction Order: US, VC, NVA, ARVN
+Card Number: 21
+Title: Americal
+Italized Flavor Text: "23rd Division."
+Event Text: "US moves up to 2 US Troops each from the map and out of play to any 1 space or Available."
+Lasting Effects Indicator (5.3): None.
+Shaded Text (see Dual Use 5.2): "US divisions 'clean out' NLF: In 1 or 2 Provinces with US Troops, remove 1 VC piece to set to Active Opposition."
+
+Period Event (Set Up Option): 1965
+Faction Order: US, VC, NVA, ARVN
+Card Number: 22
+Title: Da Nang
+Italized Flavor Text: "US Marines arrive"
+Event Text: "US places up to 6 Troops in Da Nang, up to 3 from out of play."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "VC fire closes air base: Remove all Support within 1 space of Da Nang. No Air Strike until Coup. MOMENTUM"
+
+Period Event (Set Up Option): 1965
+Faction Order: US, VC, NVA, ARVN
+Card Number: 23
+Title: Operation Attleboro
+Italized Flavor Text: "Stab at Iron Triangle."
+Event Text: "US free Air Lifts into, Sweeps in, then Assaults a space with a Tunnel, removing Tunneled Bases as if no Tunnel."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Heavy casualties, few results: Select a Tunnel space: remove a die roll of US Troops within 1 space of it to Casualties."
+
+Period Event (Set Up Option): 1965
+Faction Order: US, VC, NVA, ARVN
+Card Number: 24
+Title: Operation Starlite
+Italized Flavor Text: "VC caught off guard."
+Event Text: "Remove all VC from a coastal Province with or adjacent to US Troops."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Slipped away: In up to 3 Provinces, flip all VC Guerrillas Underground. Stay Eligible."
+
+Period Event (Set Up Option): 1965
+Faction Order: US, VC, NVA, ARVN
+Card Number: 25
+Title: TF-116 Riverines
+Italized Flavor Text: "Delta boats."
+Event Text: "Remove all NVA/VC from Mekong LoCs. US or ARVN free Sweep into/in then free Assault each Lowland touching Mekong."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "VC river fortifications: Place 2 VC Guerrillas per Mekong LoC space, then Sabotage each that has more VC than COIN."
+
+Period Event (Set Up Option): 1964
+Faction Order: US, VC, ARVN, NVA
+Card Number: 26
+Title: LRRP
+Italized Flavor Text: "Long Range Recon Patrol."
+Event Text: "US places 3 Irregulars outside the South then free Air Strikes."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Patrols ambushed: 3 Irregulars map to Casualties. Shift each space they were in 1 level toward Active Opposition."
+
+Period Event (Set Up Option): 1968
+Faction Order: US, VC, ARVN, NVA
+Card Number: 27
+Title: Phoenix Program
+Italized Flavor Text: "Cadres assassinated."
+Event Text: "Remove any 3 VC pieces total from any COIN Control spaces."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Misdirected: Add a Terror marker to any 2 spaces outside Saigon with COIN Control and VC. Set them to Active Opposition."
+
+Period Event (Set Up Option): 1965
+Faction Order: US, VC, ARVN, NVA
+Card Number: 28
+Title: Search and Destroy
+Italized Flavor Text: "Mobile counter-guerrilla ops."
+Event Text: "Each US Assault space may remove 1 Underground Guerrilla."
+Lasting Effects Indicator (5.3): US CAPABILITY
+Shaded Text (see Dual Use 5.2): "Villagers in the crossfire: Each US and ARVN Assault Province shifts by 1 level toward Active Opposition."
+
+Period Event (Set Up Option): 1964
+Faction Order: US, VC, ARVN, NVA
+Card Number: 29
+Title: Tribesmen
+Italized Flavor Text: "Minority fighters."
+Event Text: "Remove any 4 Insurgent pieces total from spaces with Irregulars."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "tribal secession: Replace all Irregulars with VC Guerrillas. 1 Neutral Highland to Active Opposition. -3 Patronage."
 
 Period Event (Set Up Option):
 Faction Order:

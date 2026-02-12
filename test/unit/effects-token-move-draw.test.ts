@@ -14,6 +14,8 @@ import {
   type EffectContext,
   type GameDef,
   type GameState,
+  type MapSpaceDef,
+  type StackingConstraint,
   type Token,
 } from '../../src/kernel/index.js';
 
@@ -241,5 +243,75 @@ describe('effects moveToken and draw', () => {
     );
 
     assert.deepEqual(result.rng.state, ctx.rng.state);
+  });
+});
+
+describe('effects moveToken stacking enforcement', () => {
+  const stackingConstraints: StackingConstraint[] = [
+    {
+      id: 'max-2-bases',
+      description: 'Max 2 Bases per Province',
+      spaceFilter: { spaceTypes: ['province'] },
+      pieceFilter: { pieceTypeIds: ['base'] },
+      rule: 'maxCount',
+      maxCount: 2,
+    },
+  ];
+
+  const mapSpaces: MapSpaceDef[] = [
+    {
+      id: 'discard:none',
+      spaceType: 'province',
+      population: 2,
+      econ: 0,
+      terrainTags: [],
+      country: 'southVietnam',
+      coastal: false,
+      adjacentTo: [],
+    },
+  ];
+
+  const base = (id: string): Token => ({ id: asTokenId(id), type: 'base', props: { faction: 'US' } });
+
+  it('moveToken to zone exceeding maxCount throws STACKING_VIOLATION', () => {
+    const def = { ...makeDef(), stackingConstraints };
+    const state: GameState = {
+      ...makeState(),
+      zones: {
+        ...makeState().zones,
+        'deck:none': [base('b3')],
+        'discard:none': [base('b1'), base('b2')],
+      },
+    };
+    const ctx = makeCtx({ def, state, mapSpaces });
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } },
+          { ...ctx, bindings: { $token: 'b3' } },
+        ),
+      (error: unknown) => isEffectErrorCode(error, 'STACKING_VIOLATION'),
+    );
+  });
+
+  it('moveToken to zone within maxCount succeeds normally', () => {
+    const def = { ...makeDef(), stackingConstraints };
+    const state: GameState = {
+      ...makeState(),
+      zones: {
+        ...makeState().zones,
+        'deck:none': [base('b2')],
+        'discard:none': [base('b1')],
+      },
+    };
+    const ctx = makeCtx({ def, state, mapSpaces });
+
+    const result = applyEffect(
+      { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } },
+      { ...ctx, bindings: { $token: 'b2' } },
+    );
+
+    assert.equal(result.state.zones['discard:none']!.length, 2);
   });
 });

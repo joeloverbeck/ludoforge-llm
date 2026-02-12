@@ -1,6 +1,6 @@
 # FITLMECHINF-004 - Runtime Stacking Enforcement in Effects
 
-**Status**: Pending
+**Status**: COMPLETED
 **Spec**: `specs/25-fitl-game-mechanics-infrastructure.md` (Task 25.2, runtime half)
 **References**: `specs/00-fitl-implementation-order.md` (Milestone B), Decision #5
 **Depends on**: `FITLMECHINF-003` (stacking constraint type must exist)
@@ -76,3 +76,34 @@ Decision #5 requires both compile-time and runtime stacking enforcement. Compile
 - `EffectRuntimeError` thrown on violation includes the constraint ID and a descriptive message
 - All other effect types (`setVar`, `addVar`, `draw`, `shuffle`, `destroyToken`) are unaffected
 - Budget accounting in `effects.ts` is not disrupted — stacking check does not consume budget
+
+## Outcome
+
+**Completed**: 2026-02-12
+
+### What was changed
+
+| File | Change |
+|------|--------|
+| `src/kernel/effect-error.ts` | Added `'STACKING_VIOLATION'` to `EffectErrorCode` union |
+| `src/kernel/effect-context.ts` | Added optional `mapSpaces?: readonly MapSpaceDef[]` to `EffectContext` |
+| `src/kernel/stacking.ts` | **New file**: pure `checkStackingConstraints` function + `StackingViolation` interface |
+| `src/kernel/effects.ts` | Added `enforceStacking` helper; integrated into `applyMoveToken`, `applyMoveAll`, `applyCreateToken` |
+| `src/kernel/index.ts` | Re-exports `stacking.js` |
+| `test/unit/stacking.test.ts` | **New file**: 13 unit tests for `checkStackingConstraints` |
+| `test/unit/effects-token-move-draw.test.ts` | 2 new tests: moveToken stacking violation + success |
+| `test/unit/effects-lifecycle.test.ts` | 2 new tests: createToken stacking violation + success |
+| `test/integration/fitl-stacking.test.ts` | **New file**: 9 integration tests (compile-time + runtime enforcement) |
+
+### Deviations from original plan
+
+- Added `mapSpaces?: readonly MapSpaceDef[]` to `EffectContext` (not listed in ticket file list). This was necessary because `GameDef` does not contain `MapSpaceDef[]` — the space metadata lives in data assets. The optional field keeps the change backward-compatible: existing code without `mapSpaces` skips stacking checks entirely.
+
+### Verification
+
+- `npm run build` — passes
+- `npm test` — 808 tests, 0 failures
+- `npm run lint` — clean
+- `npm run typecheck` — clean
+- All acceptance criteria tests pass
+- All invariants verified: backward-compatible, pure functions, no budget consumption, error includes constraint ID

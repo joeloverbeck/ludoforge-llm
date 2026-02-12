@@ -4,7 +4,8 @@ export type EffectErrorCode =
   | 'EFFECT_BUDGET_EXCEEDED'
   | 'SPATIAL_NOT_IMPLEMENTED'
   | 'SPATIAL_DESTINATION_REQUIRED'
-  | 'SPATIAL_DESTINATION_NOT_ADJACENT';
+  | 'SPATIAL_DESTINATION_NOT_ADJACENT'
+  | 'STACKING_VIOLATION';
 
 export type EffectErrorContext = Readonly<Record<string, unknown>>;
 

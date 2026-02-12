@@ -10,6 +10,7 @@ import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { nextInt } from './prng.js';
 import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
+import { checkStackingConstraints } from './stacking.js';
 import type { EffectAST, Token, TriggerEvent } from './types.js';
 
 interface EffectBudgetState {
@@ -84,6 +85,27 @@ const valuesMatch = (candidate: unknown, selected: unknown): boolean => {
 
 const isInDomain = (selected: unknown, domain: readonly unknown[]): boolean =>
   domain.some((candidate) => valuesMatch(candidate, selected));
+
+const enforceStacking = (ctx: EffectContext, zoneId: string, zoneContentsAfter: readonly Token[], effectType: string): void => {
+  const constraints = ctx.def.stackingConstraints;
+  const mapSpaces = ctx.mapSpaces;
+  if (constraints === undefined || constraints.length === 0 || mapSpaces === undefined || mapSpaces.length === 0) {
+    return;
+  }
+
+  const violations = checkStackingConstraints(constraints, mapSpaces, zoneId, zoneContentsAfter);
+  if (violations.length > 0) {
+    const first = violations[0]!;
+    throw new EffectRuntimeError('STACKING_VIOLATION', `Stacking violation: constraint "${first.constraintId}" (${first.description})`, {
+      effectType,
+      zoneId,
+      constraintId: first.constraintId,
+      rule: first.rule,
+      matchingCount: first.matchingCount,
+      ...(first.maxCount !== undefined ? { maxCount: first.maxCount } : {}),
+    });
+  }
+};
 
 const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: 'value' | 'delta'): number => {
   if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isSafeInteger(value)) {
@@ -506,6 +528,8 @@ const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown
     ...destinationBase.slice(insertionIndex),
   ];
 
+  enforceStacking(ctx, toZoneId, destinationAfter, 'moveToken');
+
   if (fromZoneId === toZoneId) {
     return {
       state: {
@@ -591,12 +615,15 @@ const applyCreateToken = (effect: Extract<EffectAST, { readonly createToken: unk
     props: evaluatedProps,
   };
 
+  const zoneAfterCreation = [createdToken, ...zoneTokens];
+  enforceStacking(ctx, zoneId, zoneAfterCreation, 'createToken');
+
   return {
     state: {
       ...ctx.state,
       zones: {
         ...ctx.state.zones,
-        [zoneId]: [createdToken, ...zoneTokens],
+        [zoneId]: zoneAfterCreation,
       },
       nextTokenOrdinal: ordinal + 1,
     },
@@ -731,6 +758,7 @@ const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unknown }>,
   }
 
   const destinationAfter = [...movedTokens, ...destinationTokens];
+  enforceStacking(ctx, toZoneId, destinationAfter, 'moveAll');
 
   return {
     state: {

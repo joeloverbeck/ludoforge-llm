@@ -15,6 +15,8 @@ import {
   type EffectAST,
   type GameDef,
   type GameState,
+  type MapSpaceDef,
+  type StackingConstraint,
   type Token,
 } from '../../src/kernel/index.js';
 
@@ -196,5 +198,63 @@ describe('effects token lifecycle', () => {
       () => applyEffect({ destroyToken: { token: '$token' } }, ctx),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('multiple zones'),
     );
+  });
+});
+
+describe('effects createToken stacking enforcement', () => {
+  const prohibitConstraint: StackingConstraint[] = [
+    {
+      id: 'no-bases-loc',
+      description: 'No Bases on LoCs',
+      spaceFilter: { spaceTypes: ['loc'] },
+      pieceFilter: { pieceTypeIds: ['base'] },
+      rule: 'prohibit',
+    },
+  ];
+
+  const mapSpaces: MapSpaceDef[] = [
+    {
+      id: 'deck:none',
+      spaceType: 'loc',
+      population: 0,
+      econ: 1,
+      terrainTags: [],
+      country: 'southVietnam',
+      coastal: false,
+      adjacentTo: [],
+    },
+  ];
+
+  it('createToken in zone violating prohibit rule throws STACKING_VIOLATION', () => {
+    const def: GameDef = {
+      ...makeDef(),
+      stackingConstraints: prohibitConstraint,
+    };
+    const ctx = makeCtx({ def, mapSpaces });
+
+    assert.throws(
+      () =>
+        applyEffect(
+          { createToken: { type: 'base', zone: 'deck:none', props: { faction: 'US' } } },
+          ctx,
+        ),
+      (error: unknown) => isEffectErrorCode(error, 'STACKING_VIOLATION'),
+    );
+  });
+
+  it('createToken succeeds when constraint does not apply', () => {
+    const def: GameDef = {
+      ...makeDef(),
+      stackingConstraints: prohibitConstraint,
+    };
+    // discard:none is not in mapSpaces (not a loc), so constraint doesn't apply
+    const ctx = makeCtx({ def, mapSpaces });
+
+    const result = applyEffect(
+      { createToken: { type: 'base', zone: 'discard:none', props: { faction: 'US' } } },
+      ctx,
+    );
+
+    assert.ok(result.state.zones['discard:none']!.length > 0);
   });
 });

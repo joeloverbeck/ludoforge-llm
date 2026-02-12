@@ -208,3 +208,24 @@ For each card that grants momentum: verify the `EventCardLastingEffectDef` uses 
 - New: `test/fixtures/cnl/compiler/fitl-events-1968.md` (1968 period)
 - New: `test/fixtures/cnl/compiler/fitl-events-coup-pivotal.md` (coup + pivotal)
 - New tests per card batch
+
+
+## Specific cards
+
+Period Event (Set Up Option):
+Faction Order:
+Card Number:
+Title:
+Italized Flavor Text:
+Event Text:
+Lasting Effects Indicator (5.3):
+Shaded Text (see Dual Use 5.2):
+
+Period Event (Set Up Option):
+Faction Order:
+Card Number:
+Title:
+Italized Flavor Text:
+Event Text:
+Lasting Effects Indicator (5.3):
+Shaded Text (see Dual Use 5.2):

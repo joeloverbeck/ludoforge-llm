@@ -1,6 +1,6 @@
 # FITLSCESET-004: Encode Full Scenario ("Nam" 1964-1972)
 
-**Status**: Pending
+**Status**: COMPLETED
 **Priority**: P0
 **Depends on**: FITLSCESET-001 (types exist for reference), FITLSCESET-003 (validation can catch errors)
 **Blocks**: FITLSCESET-008 (golden tests)
@@ -95,3 +95,12 @@ Add a YAML data asset block with `id: fitl-scenario-full`, `kind: scenario` to t
 - Piece counts match the conservation table exactly
 - YAML follows YAML 1.2 strict: quoted strings, no aliases
 - Track IDs use camelCase matching the map asset's track definitions (e.g., `nvaResources` not `nva-resources`) — verify against the map asset's actual track ID format
+
+## Outcome
+
+- **Completed**: 2026-02-12
+- **Changes**:
+  - `data/games/fire-in-the-lake.md`: Added `fitl-scenario-full` data asset (index 3) with complete Full 1964-1972 scenario — 6 track values, 5 out-of-play entries, 15 initial markers (9 passive support, 6 active opposition), and piece placements across 24 spaces including tunneled VC base at Tay Ninh
+  - `test/unit/fitl-production-data-scaffold.test.ts`: Updated expected asset count from 3 to 4 and kinds array to `['map', 'pieceCatalog', 'scenario', 'scenario']`
+- **Deviations**: None. All conservation counts verified, all space/piece/track IDs match existing assets.
+- **Verification**: `npm run build` passes, all 633 tests pass (0 failures)

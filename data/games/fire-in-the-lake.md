@@ -435,10 +435,131 @@ dataAssets:
           adjacentTo: [can-tho:none, kien-hoa-vinh-binh:none, ba-xuyen:none]
   - id: fitl-piece-catalog-production
     kind: pieceCatalog
-    payload: {}
+    payload:
+      pieceTypes:
+        - id: us-troops
+          faction: us
+          statusDimensions: []
+          transitions: []
+        - id: us-bases
+          faction: us
+          statusDimensions: []
+          transitions: []
+        - id: us-irregulars
+          faction: us
+          statusDimensions: [activity]
+          transitions:
+            - dimension: activity
+              from: underground
+              to: active
+            - dimension: activity
+              from: active
+              to: underground
+        - id: arvn-troops
+          faction: arvn
+          statusDimensions: []
+          transitions: []
+        - id: arvn-police
+          faction: arvn
+          statusDimensions: []
+          transitions: []
+        - id: arvn-rangers
+          faction: arvn
+          statusDimensions: [activity]
+          transitions:
+            - dimension: activity
+              from: underground
+              to: active
+            - dimension: activity
+              from: active
+              to: underground
+        - id: arvn-bases
+          faction: arvn
+          statusDimensions: []
+          transitions: []
+        - id: nva-troops
+          faction: nva
+          statusDimensions: []
+          transitions: []
+        - id: nva-guerrillas
+          faction: nva
+          statusDimensions: [activity]
+          transitions:
+            - dimension: activity
+              from: underground
+              to: active
+            - dimension: activity
+              from: active
+              to: underground
+        - id: nva-bases
+          faction: nva
+          statusDimensions: [tunnel]
+          transitions:
+            - dimension: tunnel
+              from: untunneled
+              to: tunneled
+            - dimension: tunnel
+              from: tunneled
+              to: untunneled
+        - id: vc-guerrillas
+          faction: vc
+          statusDimensions: [activity]
+          transitions:
+            - dimension: activity
+              from: underground
+              to: active
+            - dimension: activity
+              from: active
+              to: underground
+        - id: vc-bases
+          faction: vc
+          statusDimensions: [tunnel]
+          transitions:
+            - dimension: tunnel
+              from: untunneled
+              to: tunneled
+            - dimension: tunnel
+              from: tunneled
+              to: untunneled
+      inventory:
+        - pieceTypeId: us-troops
+          faction: us
+          total: 0
+        - pieceTypeId: us-bases
+          faction: us
+          total: 0
+        - pieceTypeId: us-irregulars
+          faction: us
+          total: 0
+        - pieceTypeId: arvn-troops
+          faction: arvn
+          total: 0
+        - pieceTypeId: arvn-police
+          faction: arvn
+          total: 0
+        - pieceTypeId: arvn-rangers
+          faction: arvn
+          total: 0
+        - pieceTypeId: arvn-bases
+          faction: arvn
+          total: 0
+        - pieceTypeId: nva-troops
+          faction: nva
+          total: 0
+        - pieceTypeId: nva-guerrillas
+          faction: nva
+          total: 0
+        - pieceTypeId: nva-bases
+          faction: nva
+          total: 0
+        - pieceTypeId: vc-guerrillas
+          faction: vc
+          total: 0
+        - pieceTypeId: vc-bases
+          faction: vc
+          total: 0
   - id: fitl-scenario-production
     kind: scenario
     payload: {}
 ```
-
 

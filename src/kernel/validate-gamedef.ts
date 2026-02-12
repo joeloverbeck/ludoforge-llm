@@ -3,9 +3,12 @@ import type {
   ConditionAST,
   EffectAST,
   GameDef,
+  MapSpaceDef,
   OptionsQuery,
   PlayerSel,
   Reference,
+  ScenarioPiecePlacement,
+  StackingConstraint,
   ValueExpr,
 } from './types.js';
 import { buildAdjacencyGraph, validateAdjacency } from './spatial.js';
@@ -1085,6 +1088,98 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
         message: 'scoring is configured but no end condition uses result.type "score".',
         suggestion: 'Add a score-based end condition or remove scoring.',
       });
+    }
+  }
+
+  return diagnostics;
+};
+
+const spaceMatchesFilter = (
+  space: MapSpaceDef,
+  filter: StackingConstraint['spaceFilter'],
+): boolean => {
+  if (filter.spaceIds !== undefined && filter.spaceIds.length > 0 && !filter.spaceIds.includes(space.id)) {
+    return false;
+  }
+  if (filter.spaceTypes !== undefined && filter.spaceTypes.length > 0 && !filter.spaceTypes.includes(space.spaceType)) {
+    return false;
+  }
+  if (filter.country !== undefined && filter.country.length > 0 && !filter.country.includes(space.country)) {
+    return false;
+  }
+  if (filter.populationEquals !== undefined && space.population !== filter.populationEquals) {
+    return false;
+  }
+  return true;
+};
+
+const placementMatchesPieceFilter = (
+  placement: ScenarioPiecePlacement,
+  filter: StackingConstraint['pieceFilter'],
+): boolean => {
+  if (
+    filter.pieceTypeIds !== undefined &&
+    filter.pieceTypeIds.length > 0 &&
+    !filter.pieceTypeIds.includes(placement.pieceTypeId)
+  ) {
+    return false;
+  }
+  if (filter.factions !== undefined && filter.factions.length > 0 && !filter.factions.includes(placement.faction)) {
+    return false;
+  }
+  return true;
+};
+
+export const validateInitialPlacementsAgainstStackingConstraints = (
+  constraints: readonly StackingConstraint[],
+  placements: readonly ScenarioPiecePlacement[],
+  spaces: readonly MapSpaceDef[],
+): Diagnostic[] => {
+  const diagnostics: Diagnostic[] = [];
+  const spaceMap = new Map(spaces.map((space) => [space.id, space]));
+
+  for (const constraint of constraints) {
+    const matchingSpaceIds = spaces
+      .filter((space) => spaceMatchesFilter(space, constraint.spaceFilter))
+      .map((space) => space.id);
+
+    const matchingSpaceSet = new Set(matchingSpaceIds);
+
+    const countBySpace = new Map<string, number>();
+    for (const placement of placements) {
+      if (!matchingSpaceSet.has(placement.spaceId)) {
+        continue;
+      }
+      if (!placementMatchesPieceFilter(placement, constraint.pieceFilter)) {
+        continue;
+      }
+      const current = countBySpace.get(placement.spaceId) ?? 0;
+      countBySpace.set(placement.spaceId, current + placement.count);
+    }
+
+    for (const [spaceId, count] of countBySpace) {
+      const space = spaceMap.get(spaceId);
+      const spaceLabel = space ? `${spaceId} (${space.spaceType})` : spaceId;
+
+      if (constraint.rule === 'prohibit' && count > 0) {
+        diagnostics.push({
+          code: 'STACKING_CONSTRAINT_VIOLATION',
+          path: `stackingConstraints[${constraint.id}]`,
+          severity: 'error',
+          message: `Stacking violation: ${count} piece(s) in ${spaceLabel} violate constraint "${constraint.id}" (${constraint.description}).`,
+          suggestion: `Remove the prohibited pieces from ${spaceId} or adjust the constraint.`,
+        });
+      }
+
+      if (constraint.rule === 'maxCount' && constraint.maxCount !== undefined && count > constraint.maxCount) {
+        diagnostics.push({
+          code: 'STACKING_CONSTRAINT_VIOLATION',
+          path: `stackingConstraints[${constraint.id}]`,
+          severity: 'error',
+          message: `Stacking violation: ${count} piece(s) in ${spaceLabel} exceed max ${constraint.maxCount} for constraint "${constraint.id}" (${constraint.description}).`,
+          suggestion: `Reduce pieces in ${spaceId} to at most ${constraint.maxCount} or adjust the constraint.`,
+        });
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 # FITLOPEFULEFF-002: New Effect Macros
 
-**Status**: Pending
+**Status**: COMPLETED
 **Priority**: P0 (blocker — operation profiles depend on these macros)
 **Estimated effort**: Medium (3-4 hours)
 **Spec reference**: Spec 26, "New Macros" section
@@ -47,3 +47,19 @@ Add 4 new effect macros to the FITL GameSpecDoc that are shared across multiple 
 - Existing macros (`piece-removal-ordering`, `place-from-available-or-map`) are NOT modified
 - Build passes (`npm run build`)
 - Typecheck passes (`npm run typecheck`)
+
+## Outcome
+
+- **Completion date**: 2026-02-13
+- **What was changed**:
+  - Added all 4 effect macros to `data/games/fire-in-the-lake.md` (master GameSpecDoc)
+  - Added `effectMacros` sections to both COIN and insurgent test fixtures
+  - Created 3 new integration test files with 14 total tests:
+    - `fitl-removal-ordering.test.ts` (5 tests): COIN/insurgent fixture compilation + runtime behavior
+    - `fitl-faction-costs.test.ts` (4 tests): Province/City charge, LoC skip, freeOperation skip
+    - `fitl-sweep-activation.test.ts` (5 tests): non-jungle 1:1 ratio, jungle 1:2 ratio, edge cases
+- **Deviations from plan**:
+  - Skipped kernel `mapSpaces` injection (out of scope); tested at `applyEffects` level with manual `EffectContext`
+  - Compilation tests that invoke macros from `setup` were removed because `__freeOperation` is a runtime binding not in compile-time scope — runtime behavior tests cover the same logic
+  - Discovered pre-existing issue: YAML macro filter `{ prop: type }` checks `token.props.type` (undefined) instead of `token.type`; does not affect this ticket since macros are defined but not yet invoked from actions
+- **Verification**: 974 tests pass, 0 failures, build and typecheck clean

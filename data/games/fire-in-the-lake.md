@@ -3,6 +3,133 @@
 ```yaml
 metadata:
   id: fire-in-the-lake
+
+effectMacros:
+  # ── coin-assault-removal-order ─────────────────────────────────────────────
+  # Wraps piece-removal-ordering with COIN-specific behavior:
+  # each insurgent Base removed adds +6 Aid.
+  - id: coin-assault-removal-order
+    params:
+      - { name: space, type: string }
+      - { name: damageExpr, type: value }
+    effects:
+      - let:
+          bind: basesBefore
+          value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
+          in:
+            - macro: piece-removal-ordering
+              args:
+                space: { param: space }
+                damageExpr: { param: damageExpr }
+            - let:
+                bind: basesAfter
+                value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
+                in:
+                  - let:
+                      bind: basesRemoved
+                      value: { op: '-', left: { ref: binding, name: $basesBefore }, right: { ref: binding, name: $basesAfter } }
+                      in:
+                        - if:
+                            when: { op: '>', left: { ref: binding, name: $basesRemoved }, right: 0 }
+                            then:
+                              - addVar:
+                                  scope: global
+                                  var: aid
+                                  delta: { op: '*', left: { ref: binding, name: $basesRemoved }, right: 6 }
+
+  # ── insurgent-attack-removal-order ─────────────────────────────────────────
+  # Wraps piece-removal-ordering with Attack-specific behavior:
+  # US pieces to Casualties, attacker attrition per US piece removed.
+  - id: insurgent-attack-removal-order
+    params:
+      - { name: space, type: string }
+      - { name: damageExpr, type: value }
+      - { name: attackerFaction, type: string }
+    effects:
+      - let:
+          bind: usPiecesBefore
+          value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: 'US' }] } } }
+          in:
+            - macro: piece-removal-ordering
+              args:
+                space: { param: space }
+                damageExpr: { param: damageExpr }
+            - let:
+                bind: usPiecesAfter
+                value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: 'US' }] } } }
+                in:
+                  - let:
+                      bind: usRemoved
+                      value: { op: '-', left: { ref: binding, name: $usPiecesBefore }, right: { ref: binding, name: $usPiecesAfter } }
+                      in:
+                        - forEach:
+                            bind: $attritionPiece
+                            over:
+                              query: tokensInZone
+                              zone: { param: space }
+                              filter: [{ prop: faction, eq: { param: attackerFaction } }]
+                            limit: { ref: binding, name: $usRemoved }
+                            effects:
+                              - moveToken:
+                                  token: $attritionPiece
+                                  from: { param: space }
+                                  to: { concat: ['available:', { param: attackerFaction }] }
+
+  # ── per-province-city-cost ─────────────────────────────────────────────────
+  # Faction-conditional per-space cost that charges 0 for LoCs.
+  - id: per-province-city-cost
+    params:
+      - { name: space, type: string }
+      - { name: resource, type: string }
+      - { name: amount, type: number }
+    effects:
+      - if:
+          when:
+            op: and
+            args:
+              - { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+              - { op: '!=', left: { ref: zoneProp, zone: { param: space }, prop: spaceType }, right: 'loc' }
+          then:
+            - addVar: { scope: global, var: { param: resource }, delta: { param: amount } }
+
+  # ── sweep-activation ───────────────────────────────────────────────────────
+  # Guerrilla activation counting cubes + Special Forces, with Jungle terrain ratio.
+  - id: sweep-activation
+    params:
+      - { name: space, type: string }
+      - { name: cubeFaction, type: string }
+      - { name: sfType, type: string }
+    effects:
+      - let:
+          bind: cubeCount
+          value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: { param: cubeFaction } }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
+          in:
+            - let:
+                bind: sfCount
+                value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: { param: cubeFaction } }, { prop: type, eq: { param: sfType } }] } } }
+                in:
+                  - let:
+                      bind: totalSweepers
+                      value: { op: '+', left: { ref: binding, name: $cubeCount }, right: { ref: binding, name: $sfCount } }
+                      in:
+                        - let:
+                            bind: activationLimit
+                            value:
+                              if:
+                                when: { op: zonePropIncludes, zone: { param: space }, prop: terrainTags, value: 'jungle' }
+                                then: { op: '/', left: { ref: binding, name: $totalSweepers }, right: 2 }
+                                else: { ref: binding, name: $totalSweepers }
+                            in:
+                              - forEach:
+                                  bind: $guerrilla
+                                  over:
+                                    query: tokensInZone
+                                    zone: { param: space }
+                                    filter: [{ prop: type, eq: guerrilla }, { prop: activity, eq: underground }]
+                                  limit: { ref: binding, name: $activationLimit }
+                                  effects:
+                                    - setTokenProp: { token: $guerrilla, prop: activity, value: active }
+
 dataAssets:
   - id: fitl-map-production
     kind: map

@@ -37,6 +37,46 @@ globalVars:
     init: 0
     min: 0
     max: 200
+  - name: terrorSabotageMarkersPlaced
+    type: int
+    init: 0
+    min: 0
+    max: 15
+  - name: arvnResources
+    type: int
+    init: 30
+    min: 0
+    max: 75
+  - name: nvaResources
+    type: int
+    init: 10
+    min: 0
+    max: 75
+  - name: vcResources
+    type: int
+    init: 5
+    min: 0
+    max: 75
+  - name: trail
+    type: int
+    init: 1
+    min: 0
+    max: 4
+  - name: patronage
+    type: int
+    init: 15
+    min: 0
+    max: 75
+  - name: totalEcon
+    type: int
+    init: 10
+    min: 0
+    max: 75
+  - name: aid
+    type: int
+    init: 15
+    min: 0
+    max: 75
 effectMacros:
   # Base removal ordering macro (shared dependency)
   - id: piece-removal-ordering

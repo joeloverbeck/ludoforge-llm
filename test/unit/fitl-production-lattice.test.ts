@@ -46,31 +46,46 @@ const readMapLattices = (): {
 describe('FITL production support/opposition marker lattice', () => {
   it('encodes the canonical supportOpposition lattice with LoC and pop-0 neutral constraints', () => {
     const { markerLattices, spaceMarkers } = readMapLattices();
-    assert.equal(markerLattices.length, 1);
+    assert.equal(markerLattices.length, 3);
 
-    const lattice = markerLattices[0];
-    if (lattice === undefined) {
-      throw new Error('Expected exactly one marker lattice definition');
-    }
-    assert.equal(lattice.id, 'supportOpposition');
+    const supportOpposition = markerLattices.find((lattice) => lattice.id === 'supportOpposition');
+    assert.ok(supportOpposition, 'Expected supportOpposition lattice');
     assert.deepEqual(
-      lattice.states,
+      supportOpposition.states,
       ['activeOpposition', 'passiveOpposition', 'neutral', 'passiveSupport', 'activeSupport'],
     );
-    assert.equal(lattice.defaultState, 'neutral');
+    assert.equal(supportOpposition.defaultState, 'neutral');
 
-    assert.ok(Array.isArray(lattice.constraints));
-    assert.equal(lattice.constraints.length, 2);
+    assert.ok(Array.isArray(supportOpposition.constraints));
+    assert.equal(supportOpposition.constraints.length, 2);
 
-    const locConstraint = lattice.constraints.find((constraint) => constraint.spaceTypes !== undefined);
+    const locConstraint = supportOpposition.constraints.find((constraint) => constraint.spaceTypes !== undefined);
     assert.notEqual(locConstraint, undefined);
     assert.deepEqual(locConstraint?.spaceTypes, ['loc']);
     assert.deepEqual(locConstraint?.allowedStates, ['neutral']);
 
-    const popZeroConstraint = lattice.constraints.find((constraint) => constraint.populationEquals !== undefined);
+    const popZeroConstraint = supportOpposition.constraints.find((constraint) => constraint.populationEquals !== undefined);
     assert.notEqual(popZeroConstraint, undefined);
     assert.equal(popZeroConstraint?.populationEquals, 0);
     assert.deepEqual(popZeroConstraint?.allowedStates, ['neutral']);
+
+    const terrorLattice = markerLattices.find((lattice) => lattice.id === 'terror');
+    assert.ok(terrorLattice, 'Expected terror lattice');
+    assert.deepEqual(terrorLattice.states, ['none', 'terror']);
+    assert.equal(terrorLattice.defaultState, 'none');
+    assert.ok(Array.isArray(terrorLattice.constraints));
+    const terrorLocConstraint = terrorLattice.constraints.find((constraint) => constraint.spaceTypes !== undefined);
+    assert.deepEqual(terrorLocConstraint?.spaceTypes, ['loc']);
+    assert.deepEqual(terrorLocConstraint?.allowedStates, ['none']);
+
+    const sabotageLattice = markerLattices.find((lattice) => lattice.id === 'sabotage');
+    assert.ok(sabotageLattice, 'Expected sabotage lattice');
+    assert.deepEqual(sabotageLattice.states, ['none', 'sabotage']);
+    assert.equal(sabotageLattice.defaultState, 'none');
+    assert.ok(Array.isArray(sabotageLattice.constraints));
+    const sabotageConstraint = sabotageLattice.constraints.find((constraint) => constraint.spaceTypes !== undefined);
+    assert.deepEqual(sabotageConstraint?.spaceTypes, ['city', 'province']);
+    assert.deepEqual(sabotageConstraint?.allowedStates, ['none']);
 
     assert.equal(spaceMarkers === undefined || spaceMarkers.length === 0, true);
   });

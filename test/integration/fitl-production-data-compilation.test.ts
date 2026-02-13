@@ -76,10 +76,10 @@ describe('FITL production data integration compilation', () => {
 
     assert.ok(Array.isArray(mapPayload.tracks), 'Expected tracks array');
     const trackIds = new Set(mapPayload.tracks.map((track) => track.id));
-    assert.equal(trackIds.size, 7);
+    assert.equal(trackIds.size, 8);
     assert.deepEqual(
       trackIds,
-      new Set(['nvaResources', 'vcResources', 'arvnResources', 'aid', 'patronage', 'trail', 'totalEcon']),
+      new Set(['nvaResources', 'vcResources', 'arvnResources', 'aid', 'patronage', 'trail', 'totalEcon', 'terrorSabotageMarkersPlaced']),
     );
 
     assert.ok(Array.isArray(mapPayload.markerLattices), 'Expected markerLattices array');

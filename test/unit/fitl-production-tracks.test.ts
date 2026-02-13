@@ -32,15 +32,15 @@ const readMapTracks = (): NumericTrackDef[] => {
 describe('FITL production numeric tracks', () => {
   it('encodes all 7 numeric tracks with expected scope and bounds', () => {
     const tracks = readMapTracks();
-    assert.equal(tracks.length, 7);
+    assert.equal(tracks.length, 8);
 
     const byId = new Map(tracks.map((track) => [track.id, track]));
-    assert.equal(byId.size, 7, 'Track IDs must be unique');
+    assert.equal(byId.size, 8, 'Track IDs must be unique');
 
     const factionTracks = tracks.filter((track) => track.scope === 'faction');
     const globalTracks = tracks.filter((track) => track.scope === 'global');
     assert.equal(factionTracks.length, 3);
-    assert.equal(globalTracks.length, 4);
+    assert.equal(globalTracks.length, 5);
 
     assert.deepEqual(
       factionTracks
@@ -54,7 +54,7 @@ describe('FITL production numeric tracks', () => {
     );
     assert.deepEqual(
       globalTracks.map((track) => track.id).sort(),
-      ['aid', 'patronage', 'totalEcon', 'trail'],
+      ['aid', 'patronage', 'terrorSabotageMarkersPlaced', 'totalEcon', 'trail'],
     );
 
     assert.equal(
@@ -70,6 +70,8 @@ describe('FITL production numeric tracks', () => {
     );
     assert.equal(byId.get('trail')?.min, 0);
     assert.equal(byId.get('trail')?.max, 4);
+    assert.equal(byId.get('terrorSabotageMarkersPlaced')?.min, 0);
+    assert.equal(byId.get('terrorSabotageMarkersPlaced')?.max, 15);
 
     assert.equal(
       factionTracks.every((track) => typeof track.faction === 'string' && track.faction.length > 0),

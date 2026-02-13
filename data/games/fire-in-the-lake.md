@@ -599,6 +599,11 @@ dataAssets:
           min: 0
           max: 75
           initial: 0
+        - id: terrorSabotageMarkersPlaced
+          scope: global
+          min: 0
+          max: 15
+          initial: 0
       markerLattices:
         - id: supportOpposition
           states: [activeOpposition, passiveOpposition, neutral, passiveSupport, activeSupport]
@@ -608,6 +613,18 @@ dataAssets:
               allowedStates: [neutral]
             - populationEquals: 0
               allowedStates: [neutral]
+        - id: terror
+          states: [none, terror]
+          defaultState: none
+          constraints:
+            - spaceTypes: [loc]
+              allowedStates: [none]
+        - id: sabotage
+          states: [none, sabotage]
+          defaultState: none
+          constraints:
+            - spaceTypes: [city, province]
+              allowedStates: [none]
   - id: fitl-piece-catalog-production
     kind: pieceCatalog
     payload:

@@ -1,6 +1,6 @@
 # FITLOPEFULEFF-003: Global Mechanics Variables and Guards
 
-**Status**: Pending
+**Status**: COMPLETED
 **Priority**: P0 (blocker — profiles reference these globals)
 **Estimated effort**: Small (1-2 hours)
 **Spec reference**: Spec 26, "Global Mechanics" section
@@ -48,3 +48,23 @@ Also verify that zone definitions include the required properties: `spaceType`, 
 - Zone definitions from Spec 23 are NOT altered (only extended if needed)
 - Build passes (`npm run build`)
 - Typecheck passes (`npm run typecheck`)
+
+## Outcome
+
+**Completed**: 2026-02-13
+
+### Changes Made
+- **COIN fixture** (`fitl-operations-coin.md`): Added 7 globalVars — `terrorSabotageMarkersPlaced`, `arvnResources`, `nvaResources`, `vcResources`, `trail`, `patronage`, `totalEcon`
+- **Insurgent fixture** (`fitl-operations-insurgent.md`): Added 8 globalVars — same 7 plus `aid`
+- **Production data** (`fire-in-the-lake.md`): Added `terrorSabotageMarkersPlaced` track (global, 0–15), `terror` marker lattice, `sabotage` marker lattice
+- **Tests updated**: `fitl-production-tracks.test.ts`, `fitl-production-lattice.test.ts`, `fitl-production-data-compilation.test.ts` — updated assertions for new track and lattice counts
+- **Joint operations fixture** (`fitl-joint-operations.md`): Verified `totalEcon` already present — no changes needed
+
+### Deviations
+- Zone spatial properties (`spaceType`, `population`, `terrainTags`) live on `MapSpaceDef` in data assets, not on `ZoneDef`. Existing `board:none` zones are sufficient for compilation. Future operation profile tickets will need representative data assets for runtime `zoneProp` lookups.
+
+### Verification
+- Build: clean
+- Typecheck: clean
+- All 974 tests pass (0 failures)
+- No kernel or compiler source files modified

@@ -129,6 +129,7 @@ const validRuntimeTrace: GameTrace = {
         },
         { kind: 'fired', triggerId: asTriggerId('onMainEnter'), event: { type: 'turnStart' }, depth: 0 },
       ],
+      warnings: [],
     },
   ],
   finalState: {

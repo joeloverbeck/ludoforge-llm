@@ -453,7 +453,7 @@
     "serializedMoveLog": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["stateHash", "player", "move", "legalMoveCount", "deltas", "triggerFirings"],
+      "required": ["stateHash", "player", "move", "legalMoveCount", "deltas", "triggerFirings", "warnings"],
       "properties": {
         "stateHash": { "$ref": "#/definitions/hexBigInt" },
         "player": { "type": "integer" },
@@ -466,8 +466,108 @@
         "triggerFirings": {
           "type": "array",
           "items": { "$ref": "#/definitions/triggerLogEntry" }
+        },
+        "warnings": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/runtimeWarning" }
+        },
+        "effectTrace": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/effectTraceEntry" }
         }
       }
+    },
+    "runtimeWarning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "context"],
+      "properties": {
+        "code": {
+          "enum": [
+            "EMPTY_QUERY_RESULT",
+            "TOKEN_NOT_IN_ZONE",
+            "BINDING_UNDEFINED",
+            "EMPTY_ZONE_OPERATION",
+            "ZERO_EFFECT_ITERATIONS"
+          ]
+        },
+        "message": { "type": "string" },
+        "context": { "type": "object" },
+        "hint": { "type": "string" }
+      }
+    },
+    "effectTraceEntry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "collection", "count"],
+          "properties": {
+            "kind": { "const": "forEach" },
+            "collection": { "type": "string" },
+            "count": { "type": "number" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "tokenId", "from", "to"],
+          "properties": {
+            "kind": { "const": "moveToken" },
+            "tokenId": { "type": "string" },
+            "from": { "type": "string" },
+            "to": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "tokenId", "prop", "before", "after"],
+          "properties": {
+            "kind": { "const": "setTokenProp" },
+            "tokenId": { "type": "string" },
+            "prop": { "type": "string" },
+            "before": {},
+            "after": {}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "scope", "var", "before", "after"],
+          "properties": {
+            "kind": { "const": "varChange" },
+            "scope": { "type": "string" },
+            "var": { "type": "string" },
+            "before": {},
+            "after": {}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "tokenId", "tokenType", "zone"],
+          "properties": {
+            "kind": { "const": "createToken" },
+            "tokenId": { "type": "string" },
+            "tokenType": { "type": "string" },
+            "zone": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "query", "resultCount"],
+          "properties": {
+            "kind": { "const": "queryResult" },
+            "query": { "type": "string" },
+            "resultCount": { "type": "number" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "condition", "result"],
+          "properties": {
+            "kind": { "const": "conditional" },
+            "condition": { "type": "string" },
+            "result": { "type": "boolean" }
+          }
+        }
+      ]
     },
     "playerScore": {
       "type": "object",

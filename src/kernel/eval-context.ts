@@ -1,6 +1,6 @@
 import type { PlayerId } from './branded.js';
 import type { AdjacencyGraph } from './spatial.js';
-import type { GameDef, GameState, MapSpaceDef } from './types.js';
+import type { ExecutionCollector, GameDef, GameState, MapSpaceDef } from './types.js';
 
 export const DEFAULT_MAX_QUERY_RESULTS = 10_000;
 
@@ -13,6 +13,7 @@ export interface EvalContext {
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly mapSpaces?: readonly MapSpaceDef[];
   readonly maxQueryResults?: number;
+  readonly collector?: ExecutionCollector;
 }
 
 export function getMaxQueryResults(ctx: Pick<EvalContext, 'maxQueryResults'>): number {

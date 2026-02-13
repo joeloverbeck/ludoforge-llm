@@ -22,7 +22,8 @@
           "after": 1
         }
       ],
-      "triggerFirings": []
+      "triggerFirings": [],
+      "warnings": []
     },
     {
       "stateHash": "0xde8192e372a894f",
@@ -49,7 +50,8 @@
           "after": 1
         }
       ],
-      "triggerFirings": []
+      "triggerFirings": [],
+      "warnings": []
     },
     {
       "stateHash": "0xde8172e372a8011",
@@ -71,7 +73,8 @@
           "after": 2
         }
       ],
-      "triggerFirings": []
+      "triggerFirings": [],
+      "warnings": []
     },
     {
       "stateHash": "0xde8182e372a9d0c",
@@ -98,7 +101,8 @@
           "after": 2
         }
       ],
-      "triggerFirings": []
+      "triggerFirings": [],
+      "warnings": []
     },
     {
       "stateHash": "0xde8122e372a90ac",
@@ -115,7 +119,8 @@
           "after": 3
         }
       ],
-      "triggerFirings": []
+      "triggerFirings": [],
+      "warnings": []
     }
   ],
   "finalState": {

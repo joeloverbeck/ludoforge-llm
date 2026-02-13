@@ -113,6 +113,7 @@ describe('game-loop API shape', () => {
     const result: ApplyMoveResult = {
       state: gameStateStub,
       triggerFirings: [{ kind: 'fired', triggerId: asTriggerId('onStart'), event: { type: 'turnStart' }, depth: 0 }],
+      warnings: [],
     };
 
     assert.equal(result.triggerFirings.length, 1);

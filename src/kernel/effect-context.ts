@@ -1,6 +1,6 @@
 import type { PlayerId } from './branded.js';
 import type { AdjacencyGraph } from './spatial.js';
-import type { GameDef, GameState, MapSpaceDef, MoveParamValue, Rng, TriggerEvent } from './types.js';
+import type { ExecutionCollector, GameDef, GameState, MapSpaceDef, MoveParamValue, Rng, TriggerEvent } from './types.js';
 
 export const DEFAULT_MAX_EFFECT_OPS = 10_000;
 
@@ -16,6 +16,7 @@ export interface EffectContext {
   readonly maxEffectOps?: number;
   readonly mapSpaces?: readonly MapSpaceDef[];
   readonly freeOperation?: boolean;
+  readonly collector?: ExecutionCollector;
 }
 
 export interface EffectResult {

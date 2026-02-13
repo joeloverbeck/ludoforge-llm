@@ -93,6 +93,7 @@ export const runGame = (
       legalMoveCount: legal.length,
       deltas: computeDeltas(preState, state),
       triggerFirings: applied.triggerFirings,
+      warnings: applied.warnings,
     });
   }
 

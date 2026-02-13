@@ -352,5 +352,6 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
   return {
     state: stateWithHash,
     triggerFirings: [...executionTraceEntries, ...triggerResult.triggerLog, ...turnFlowResult.traceEntries, ...lifecycleAndAdvanceLog],
+    warnings: [],
   };
 };

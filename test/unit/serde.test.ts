@@ -47,6 +47,7 @@ const traceFixture: GameTrace = {
       legalMoveCount: 3,
       deltas: [{ path: 'globalVars.round', before: 0, after: 1 }],
       triggerFirings: [],
+      warnings: [],
     },
     {
       stateHash: 0x00ff00n,
@@ -66,6 +67,7 @@ const traceFixture: GameTrace = {
           after: { playedCardId: 'card-2', lookaheadCardId: 'card-3', leaderCardId: null },
         },
       ],
+      warnings: [],
     },
   ],
   finalState: gameStateFixture,

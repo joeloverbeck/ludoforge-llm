@@ -2,6 +2,7 @@ import { incrementActionUsage } from './action-usage.js';
 import type { EvalContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
 import { applyEffects } from './effects.js';
+import { createCollector } from './execution-collector.js';
 import { legalChoices } from './legal-choices.js';
 import { legalMoves } from './legal-moves.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
@@ -13,6 +14,7 @@ import type {
   ApplyMoveResult,
   ConditionAST,
   EffectAST,
+  ExecutionOptions,
   GameDef,
   GameState,
   Move,
@@ -173,7 +175,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
   throw illegalMoveError(move, 'action is not legal in current state');
 };
 
-export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMoveResult => {
+export const applyMove = (def: GameDef, state: GameState, move: Move, options?: ExecutionOptions): ApplyMoveResult => {
   validateMove(def, state, move);
 
   const action = findAction(def, move.actionId);
@@ -183,6 +185,7 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
 
   const rng: Rng = { state: state.rng };
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const collector = createCollector(options);
   const effectCtxBase = {
     def,
     adjacencyGraph,
@@ -190,6 +193,7 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
     actorPlayer: state.activePlayer,
     bindings: { ...move.params, __freeOperation: move.freeOperation ?? false, __actionClass: move.actionClass ?? 'operation' },
     moveParams: move.params,
+    collector,
   } as const;
 
   const operationProfile = resolveOperationProfile(def, action, { ...effectCtxBase, state });
@@ -257,10 +261,14 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
 
   const applyCompoundSA = (): void => {
     if (move.compound === undefined) return;
-    const saResult = applyMove(def, effectState, move.compound.specialActivity);
+    const saResult = applyMove(def, effectState, move.compound.specialActivity, options);
     effectState = saResult.state;
     effectRng = { state: effectState.rng };
     executionTraceEntries.push(...saResult.triggerFirings);
+    collector.warnings.push(...saResult.warnings);
+    if (collector.trace !== null && saResult.effectTrace !== undefined) {
+      collector.trace.push(...saResult.effectTrace);
+    }
   };
 
   if (move.compound?.timing === 'before') {
@@ -352,6 +360,7 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
   return {
     state: stateWithHash,
     triggerFirings: [...executionTraceEntries, ...triggerResult.triggerLog, ...turnFlowResult.traceEntries, ...lifecycleAndAdvanceLog],
-    warnings: [],
+    warnings: collector.warnings,
+    ...(collector.trace !== null ? { effectTrace: collector.trace } : {}),
   };
 };

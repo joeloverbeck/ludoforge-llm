@@ -112,7 +112,13 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
       });
     }
 
-    if (!isTokenBinding(boundToken)) {
+    const tokenId = typeof boundToken === 'string'
+      ? boundToken
+      : isTokenBinding(boundToken)
+        ? boundToken.id
+        : null;
+
+    if (tokenId === null) {
       throw typeMismatchError(`Token binding ${ref.token} must resolve to a Token`, {
         reference: ref,
         binding: ref.token,
@@ -120,8 +126,6 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
         value: boundToken,
       });
     }
-
-    const tokenId = boundToken.id;
     for (const [zoneId, tokens] of Object.entries(ctx.state.zones)) {
       if (tokens.some((token) => token.id === tokenId)) {
         return zoneId;

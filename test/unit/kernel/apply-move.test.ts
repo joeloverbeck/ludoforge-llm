@@ -22,6 +22,7 @@ const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
   actionPipelines?: readonly ActionPipelineDef[];
   globalVars?: readonly VariableDef[];
+  mapSpaces?: GameDef['mapSpaces'];
 }): GameDef =>
   ({
     metadata: { id: 'apply-move-test', players: { min: 2, max: 2 } },
@@ -30,7 +31,9 @@ const makeBaseDef = (overrides?: {
     perPlayerVars: [],
     zones: [
       { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set' },
     ],
+    ...(overrides?.mapSpaces === undefined ? {} : { mapSpaces: overrides.mapSpaces }),
     tokenTypes: [],
     setup: [],
     turnStructure: {
@@ -48,6 +51,7 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   playerCount: 2,
   zones: {
     'board:none': [],
+    'city:none': [],
   },
   nextTokenOrdinal: 0,
   currentPhase: asPhaseId('main'),
@@ -307,5 +311,76 @@ describe('applyMove() __actionClass binding (FITLOPEFULEFF-001)', () => {
     };
     const resultNonFree = applyMove(def, state, moveNonFree);
     assert.equal(resultNonFree.state.globalVars['resources'], 7, 'non-free still deducts with actionClass set');
+  });
+});
+
+describe('applyMove() map-aware pipeline evaluation', () => {
+  it('evaluates zoneProp in profile legality/effects using def.mapSpaces', () => {
+    const mapFlagVar: VariableDef = { name: 'mapFlag', type: 'int', init: 0, min: 0, max: 1 };
+
+    const action: ActionDef = {
+      id: asActionId('mapAwareOp'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'mapAwareProfile',
+      actionId: asActionId('mapAwareOp'),
+      legality: {
+        op: '==',
+        left: { ref: 'zoneProp', zone: 'city:none', prop: 'spaceType' },
+        right: 'city',
+      },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          stage: 'resolve',
+          effects: [
+            {
+              if: {
+                when: {
+                  op: 'zonePropIncludes',
+                  zone: 'city:none',
+                  prop: 'terrainTags',
+                  value: 'urban',
+                },
+                then: [{ setVar: { scope: 'global', var: 'mapFlag', value: 1 } }],
+              },
+            },
+          ],
+        },
+      ],
+      atomicity: 'atomic',
+    };
+
+    const def = makeBaseDef({
+      actions: [action],
+      actionPipelines: [profile],
+      globalVars: [resourcesVar, mapFlagVar],
+      mapSpaces: [
+        {
+          id: 'city:none',
+          spaceType: 'city',
+          population: 2,
+          econ: 0,
+          terrainTags: ['urban'],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
+    });
+
+    const state = makeBaseState({ globalVars: { resources: 10, mapFlag: 0 } });
+    const result = applyMove(def, state, { actionId: asActionId('mapAwareOp'), params: {} });
+    assert.equal(result.state.globalVars['mapFlag'], 1);
   });
 });

@@ -152,6 +152,37 @@ function buildActivateGuerrillaEffects(zone: string, activationLimit: number): r
   ];
 }
 
+/**
+ * Simulates the US Sweep one-LoC hop movement guard:
+ * troops may move through a single adjacent LoC only when that LoC has no NVA/VC pieces.
+ */
+function buildSweepHopMoveEffects(
+  sourceTroopBinding: string,
+  hopLocZone: string,
+  targetZone: string,
+  state: GameState,
+): readonly EffectAST[] {
+  const hopLocTokens = state.zones[hopLocZone] ?? [];
+  const hasEnemyOnHopLoc = hopLocTokens.some((token) => {
+    const faction = token.props.faction;
+    return faction === 'NVA' || faction === 'VC';
+  });
+
+  if (hasEnemyOnHopLoc) {
+    return [];
+  }
+
+  return [
+    {
+      moveToken: {
+        token: sourceTroopBinding,
+        from: { zoneExpr: { ref: 'tokenZone', token: sourceTroopBinding } },
+        to: targetZone,
+      },
+    },
+  ];
+}
+
 describe('FITL patrol movement and activation', () => {
   describe('cube movement from adjacent spaces into target LoC', () => {
     it('moves US cubes from two adjacent provinces into the LoC', () => {
@@ -413,6 +444,44 @@ describe('FITL patrol movement and activation', () => {
 
       assert.equal(activatedCount, 2, 'Exactly 2 guerrillas should activate for 2 ARVN cubes');
       assert.equal(undergroundCount, 1, 'One guerrilla should remain underground');
+    });
+  });
+
+  describe('US sweep one-LoC hop movement', () => {
+    it('allows hop movement into target province when hop LoC is free of NVA/VC', () => {
+      const usTroop = makeToken('us-hop-1', 'troops', 'US');
+      const state = makeState({
+        [locId]: [],
+        [adjProvince1Id]: [],
+        [adjProvince2Id]: [usTroop],
+        [availableUS]: [],
+      });
+
+      const effects = buildSweepHopMoveEffects('$hopTroop', locId, adjProvince1Id, state);
+      const ctx = makeCtx(state, { $hopTroop: usTroop });
+      const result = applyEffects(effects, ctx);
+
+      assert.equal(result.state.zones[adjProvince1Id]!.some((token) => token.id === usTroop.id), true);
+      assert.equal(result.state.zones[adjProvince2Id]!.some((token) => token.id === usTroop.id), false);
+    });
+
+    it('blocks hop movement when hop LoC contains NVA/VC pieces', () => {
+      const usTroop = makeToken('us-hop-2', 'troops', 'US');
+      const nvaGuard = makeToken('nva-block-1', 'troops', 'NVA');
+      const state = makeState({
+        [locId]: [nvaGuard],
+        [adjProvince1Id]: [],
+        [adjProvince2Id]: [usTroop],
+        [availableUS]: [],
+      });
+
+      const effects = buildSweepHopMoveEffects('$hopTroop', locId, adjProvince1Id, state);
+      const ctx = makeCtx(state, { $hopTroop: usTroop });
+      const result = applyEffects(effects, ctx);
+
+      assert.equal(effects.length, 0, 'Enemy-occupied hop LoC should produce no hop move effects');
+      assert.equal(result.state.zones[adjProvince2Id]!.some((token) => token.id === usTroop.id), true);
+      assert.equal(result.state.zones[adjProvince1Id]!.some((token) => token.id === usTroop.id), false);
     });
   });
 });

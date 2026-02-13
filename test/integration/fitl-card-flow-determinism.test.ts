@@ -258,12 +258,12 @@ describe('FITL card-flow determinism integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    // Coin operations (sweep, assault use coinResources)
+    // Coin operations (assault currently used here; sweep requires map-space-driven decisions)
     // Insurgent operations (rally, march, attack, terror use insurgentResources)
     // US/ARVN specials (advise, airLift, airStrike, govern, transport, raid)
     // NVA/VC specials (infiltrate, bombard, ambushNva, tax, subvert, ambushVc)
     const scenarios = [
-      { label: 'coin', actions: ['sweep', 'assault'] },
+      { label: 'coin', actions: ['assault'] },
       { label: 'insurgent', actions: ['rally', 'march', 'attack', 'terror'] },
       { label: 'us-arvn-specials', actions: ['advise', 'airLift', 'airStrike', 'govern', 'transport', 'raid'] },
       { label: 'nva-vc-specials', actions: ['infiltrate', 'bombard', 'ambushNva', 'tax', 'subvert', 'ambushVc'] },

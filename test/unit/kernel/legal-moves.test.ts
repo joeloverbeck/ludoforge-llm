@@ -17,6 +17,7 @@ const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
   actionPipelines?: readonly ActionPipelineDef[];
   globalVars?: GameDef['globalVars'];
+  mapSpaces?: GameDef['mapSpaces'];
 }): GameDef =>
   ({
     metadata: { id: 'legal-moves-test', players: { min: 2, max: 2 } },
@@ -25,7 +26,9 @@ const makeBaseDef = (overrides?: {
     perPlayerVars: [],
     zones: [
       { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set' },
     ],
+    ...(overrides?.mapSpaces === undefined ? {} : { mapSpaces: overrides.mapSpaces }),
     tokenTypes: [],
     setup: [],
     turnStructure: {
@@ -43,6 +46,7 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   playerCount: 2,
   zones: {
     'board:none': [],
+    'city:none': [],
   },
   nextTokenOrdinal: 0,
   currentPhase: asPhaseId('main'),
@@ -367,5 +371,54 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
     assert.ok('params' in move);
     assert.equal(typeof move.params, 'object');
     assert.equal(Object.keys(move.params).length, 0);
+  });
+
+  it('9. map-aware profile legality evaluates against def.mapSpaces', () => {
+    const action: ActionDef = {
+      id: asActionId('mapAwareOp'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'mapAwareProfile',
+      actionId: asActionId('mapAwareOp'),
+      legality: {
+        op: '==',
+        left: { ref: 'zoneProp', zone: 'city:none', prop: 'spaceType' },
+        right: 'city',
+      },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
+    };
+
+    const def = makeBaseDef({
+      actions: [action],
+      actionPipelines: [profile],
+      mapSpaces: [
+        {
+          id: 'city:none',
+          spaceType: 'city',
+          population: 2,
+          econ: 0,
+          terrainTags: [],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
+    });
+
+    const moves = legalMoves(def, makeBaseState());
+    assert.equal(moves.length, 1);
+    assert.equal(moves[0]?.actionId, asActionId('mapAwareOp'));
   });
 });

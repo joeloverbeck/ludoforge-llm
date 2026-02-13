@@ -19,6 +19,7 @@ const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
   actionPipelines?: readonly ActionPipelineDef[];
   globalVars?: GameDef['globalVars'];
+  mapSpaces?: GameDef['mapSpaces'];
 }): GameDef =>
   ({
     metadata: { id: 'legal-choices-test', players: { min: 2, max: 2 } },
@@ -36,6 +37,7 @@ const makeBaseDef = (overrides?: {
     },
     actions: overrides?.actions ?? [],
     actionPipelines: overrides?.actionPipelines,
+    ...(overrides?.mapSpaces === undefined ? {} : { mapSpaces: overrides.mapSpaces }),
     triggers: [],
     terminal: { conditions: [] },
   }) as unknown as GameDef;
@@ -522,6 +524,85 @@ describe('legalChoices()', () => {
 
       const result = legalChoices(def, state, makeMove('blockedOp'));
       assert.deepStrictEqual(result, { complete: true });
+    });
+
+    it('evaluates map-aware zones filters in profile chooseN options via def.mapSpaces', () => {
+      const action: ActionDef = {
+        id: asActionId('mapChoiceOp'),
+        actor: 'active',
+        phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'mapChoiceProfile',
+        actionId: asActionId('mapChoiceOp'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseN: {
+                  bind: '$spaces',
+                  options: {
+                    query: 'zones',
+                    filter: {
+                      condition: {
+                        op: '==',
+                        left: { ref: 'zoneProp', zone: '$zone', prop: 'spaceType' },
+                        right: 'city',
+                      },
+                    },
+                  },
+                  min: 1,
+                  max: 5,
+                },
+              } as EffectAST,
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      };
+
+      const def = makeBaseDef({
+        actions: [action],
+        actionPipelines: [profile],
+        mapSpaces: [
+          {
+            id: 'board:none',
+            spaceType: 'province',
+            population: 1,
+            econ: 0,
+            terrainTags: [],
+            country: 'southVietnam',
+            coastal: false,
+            adjacentTo: [],
+          },
+          {
+            id: 'hand:0',
+            spaceType: 'city',
+            population: 2,
+            econ: 0,
+            terrainTags: [],
+            country: 'southVietnam',
+            coastal: false,
+            adjacentTo: [],
+          },
+        ],
+      });
+
+      const result = legalChoices(def, makeBaseState(), makeMove('mapChoiceOp'));
+      assert.equal(result.complete, false);
+      assert.equal(result.name, '$spaces');
+      assert.equal(result.type, 'chooseN');
+      assert.deepStrictEqual(result.options, ['hand:0']);
     });
   });
 

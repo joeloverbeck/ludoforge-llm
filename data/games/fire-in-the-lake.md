@@ -2059,39 +2059,136 @@ actionPipelines:
                                 damageExpr: { ref: binding, name: $patrolDmg }
                                 actorFaction: 'ARVN'
     atomicity: atomic
-  # ── COIN stub profiles (sweep, assault) ─────────────────────────────────────
-  # NOTE: Kept as stubs for now, but split by faction-specific IDs/applicability
-  # to preserve the Spec 26 architecture direction (no shared COIN profile IDs).
+  # ── sweep-us-profile ──────────────────────────────────────────────────────────
+  # US Sweep operation (Rule 3.2.3)
+  # Spaces: Provinces/Cities only; excludes North Vietnam; LimOp: max 1 space
+  # Cost: 0 (US pays nothing)
+  # Resolution: move US Troops from adjacent spaces; optional 1-LoC hop if LoC is free of NVA/VC;
+  #             activate underground guerrillas via sweep-activation macro (US cubes + irregulars; jungle halving)
   - id: sweep-us-profile
     actionId: sweep
     applicability: { op: '==', left: { ref: activePlayer }, right: '0' }
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: coinResources
-        right: 1
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: coinResources
-        right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: coinResources
-            delta: -1
-    targeting:
-      select: allEligible
-      terrainFilter: [lowland, urban]
+    legality: true
+    costValidation: null
+    costEffects: []
+    targeting: {}
     stages:
-      - stage: sweep-resolve
+      - stage: select-spaces
         effects:
-          - addVar:
-              scope: global
-              var: sweepCount
-              delta: 1
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
+                    min: 1
+                    max: 99
+
+      - stage: move-troops
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - chooseN:
+                    bind: $movingAdjacentTroops
+                    options:
+                      query: tokensInAdjacentZones
+                      zone: $space
+                      filter:
+                        - { prop: faction, eq: 'US' }
+                        - { prop: type, eq: troops }
+                    min: 0
+                    max: 99
+                - forEach:
+                    bind: $troop
+                    over: { query: binding, name: $movingAdjacentTroops }
+                    effects:
+                      - moveToken:
+                          token: $troop
+                          from: { ref: tokenZone, token: $troop }
+                          to: $space
+                - chooseN:
+                    bind: $hopLocs
+                    options:
+                      query: adjacentZones
+                      zone: $space
+                    min: 0
+                    max: 99
+                - forEach:
+                    bind: $hopLoc
+                    over: { query: binding, name: $hopLocs }
+                    effects:
+                      - if:
+                          when:
+                            op: and
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $hopLoc, prop: spaceType }, right: 'loc' }
+                              - op: '=='
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $hopLoc
+                                      filter:
+                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                right: 0
+                          then:
+                            - chooseN:
+                                bind: $movingHopTroops
+                                options:
+                                  query: tokensInAdjacentZones
+                                  zone: $hopLoc
+                                  filter:
+                                    - { prop: faction, eq: 'US' }
+                                    - { prop: type, eq: troops }
+                                min: 0
+                                max: 99
+                            - forEach:
+                                bind: $hopTroop
+                                over: { query: binding, name: $movingHopTroops }
+                                effects:
+                                  - moveToken:
+                                      token: $hopTroop
+                                      from: { ref: tokenZone, token: $hopTroop }
+                                      to: $space
+
+      - stage: activate-guerrillas
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - macro: sweep-activation
+                  args:
+                    space: $space
+                    cubeFaction: 'US'
+                    sfType: irregulars
     atomicity: atomic
   - id: sweep-arvn-profile
     actionId: sweep

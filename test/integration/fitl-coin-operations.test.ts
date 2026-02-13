@@ -1,11 +1,62 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, initialState, type Move } from '../../src/kernel/index.js';
+import {
+  applyMove,
+  asActionId,
+  asTokenId,
+  initialState,
+  legalChoices,
+  legalMoves,
+  type ChoiceRequest,
+  type GameDef,
+  type GameState,
+  type Move,
+  type MoveParamScalar,
+  type MoveParamValue,
+} from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 describe('FITL COIN operations integration', () => {
+  const completeProfileMoveDeterministically = (
+    baseMove: Move,
+    choose: (request: ChoiceRequest) => MoveParamValue,
+    def: GameDef,
+    state: GameState,
+  ): Move => {
+    let move = baseMove;
+    for (let guard = 0; guard < 128; guard += 1) {
+      const request = legalChoices(def, state, move);
+      if (request.complete) {
+        return move;
+      }
+
+      const selected = choose(request);
+      move = {
+        ...move,
+        params: {
+          ...move.params,
+          [request.name!]: selected,
+        },
+      };
+    }
+    throw new Error('Exceeded decision-sequence completion guard while building profiled move');
+  };
+
+  const pickDeterministicValue = (request: ChoiceRequest): MoveParamValue => {
+    if (request.type === 'chooseOne') {
+      return (request.options?.[0] ?? null) as MoveParamScalar;
+    }
+
+    const min = request.min ?? 0;
+    const options = request.options ?? [];
+    if (options.length === 0) {
+      return [];
+    }
+    return options.slice(0, min) as MoveParamScalar[];
+  };
+
   it('compiles COIN Train/Patrol/Sweep/Assault operation profiles from production spec', () => {
     const { parsed, compiled } = compileProductionSpec();
 
@@ -30,27 +81,229 @@ describe('FITL COIN operations integration', () => {
     }
   });
 
-  it('executes stub COIN operations through compiled actionPipelines instead of fallback action effects', () => {
+  it('routes assault through operation profiles instead of fallback action effects', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);
 
-    // Train and Patrol require complex params (chooseN/chooseOne decisions) — tested separately.
-    // Sweep, Assault are stubs that take empty params.
+    // Train/Patrol/Sweep require decision-sequence params and map-space context — tested structurally in this file.
+    // Assault remains a no-param operation profile and is used as runtime fallback-dispatch guard.
     const start = initialState(compiled.gameDef!, 73, 2);
-    const sequence: readonly Move[] = [
-      { actionId: asActionId('sweep'), params: {} },
-      { actionId: asActionId('assault'), params: {} },
-    ];
+    const sequence: readonly Move[] = [{ actionId: asActionId('assault'), params: {} }];
 
     const final = sequence.reduce((state, move) => applyMove(compiled.gameDef!, state, move).state, start);
 
-    // coinResources: 10 - 1 (sweep) - 3 (assault) = 6
-    assert.equal(final.globalVars.coinResources, 6);
-    assert.equal(final.globalVars.sweepCount, 1);
+    // coinResources: 10 - 3 (assault only)
+    assert.equal(final.globalVars.coinResources, 7);
+    assert.equal(final.globalVars.sweepCount, 0);
     assert.equal(final.globalVars.assaultCount, 1);
     assert.equal(final.globalVars.fallbackUsed, 0);
   });
+
+  it('executes sweep-us-profile at runtime via decision sequence (no fallback, no sweep resource spend)', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const start = initialState(def, 79, 2);
+
+    const targetSpace = 'quang-nam:none';
+    const sourceSpace = 'da-nang:none';
+    const troopId = 'us-sweep-runtime-1';
+    const modifiedStart = {
+      ...start,
+      zones: {
+        ...start.zones,
+        [sourceSpace]: [
+          ...(start.zones[sourceSpace] ?? []),
+          { id: asTokenId(troopId), type: 'troops', props: { faction: 'US', type: 'troops' } },
+        ],
+        [targetSpace]: [
+          ...(start.zones[targetSpace] ?? []),
+          {
+            id: asTokenId('nva-sweep-target-1'),
+            type: 'guerrilla',
+            props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+          },
+        ],
+      },
+    };
+
+    const template = legalMoves(def, modifiedStart).find(
+      (move) => move.actionId === asActionId('sweep') && Object.keys(move.params).length === 0,
+    );
+    assert.ok(template, 'Expected template move for sweep');
+
+    const selected = completeProfileMoveDeterministically(
+      { ...template!, actionClass: 'limitedOperation' },
+      (request) => {
+        if (request.name === 'targetSpaces') return [targetSpace];
+        if (request.name === '$movingAdjacentTroops') return [troopId];
+        if (request.name === '$hopLocs') return [];
+        if (request.name === '$movingHopTroops') return [];
+        return pickDeterministicValue(request);
+      },
+      def,
+      modifiedStart,
+    );
+
+    const beforeCoinResources = modifiedStart.globalVars.coinResources;
+    const result = applyMove(def, modifiedStart, selected);
+    const final = result.state;
+
+    assert.equal(final.globalVars.coinResources, beforeCoinResources, 'US Sweep should not spend coinResources');
+    assert.equal(final.globalVars.fallbackUsed, 0, 'Sweep must execute through operation profile, not fallback');
+    assert.equal(
+      (final.zones[targetSpace] ?? []).some((token) => String(token.id) === troopId),
+      true,
+      'Selected US troop should move into the target sweep space',
+    );
+    assert.equal(
+      (final.zones[sourceSpace] ?? []).some((token) => String(token.id) === troopId),
+      false,
+      'Selected US troop should no longer remain in its source space',
+    );
+  });
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  describe('sweep-us-profile structure', () => {
+    const getSweepUsProfile = () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'sweep-us-profile');
+      assert.ok(profile, 'sweep-us-profile must exist');
+      return profile;
+    };
+
+    const parseSweepUsProfile = (): any => {
+      const { parsed } = compileProductionSpec();
+      const profile = parsed.doc.actionPipelines?.find(
+        (p: { id: string }) => p.id === 'sweep-us-profile',
+      );
+      assert.ok(profile, 'sweep-us-profile must exist in parsed doc');
+      return profile;
+    };
+
+    const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => {
+      const results: any[] = [];
+      const walk = (node: any): void => {
+        if (node === null || node === undefined) return;
+        if (predicate(node)) results.push(node);
+        if (Array.isArray(node)) {
+          for (const item of node) walk(item);
+        } else if (typeof node === 'object') {
+          for (const value of Object.values(node)) walk(value);
+        }
+      };
+      walk(obj);
+      return results;
+    };
+    it('compiles sweep-us-profile without diagnostics', () => {
+      getSweepUsProfile();
+    });
+
+    it('uses actionId sweep and always-legal zero-cost top-level fields', () => {
+      const profile = getSweepUsProfile();
+      assert.equal(String(profile.actionId), 'sweep');
+      assert.equal(profile.legality, true);
+      assert.equal(profile.costValidation, null);
+      assert.deepEqual(profile.costEffects, []);
+    });
+
+    it('has three stages: select-spaces, move-troops, activate-guerrillas', () => {
+      const profile = getSweepUsProfile();
+      assert.deepEqual(
+        profile.stages.map((stage) => stage.stage),
+        ['select-spaces', 'move-troops', 'activate-guerrillas'],
+      );
+    });
+
+    it('select-spaces filters provinces/cities and excludes northVietnam, with LimOp max 1', () => {
+      const profile = getSweepUsProfile();
+      const selectSpaces = profile.stages[0]!;
+      assert.equal(selectSpaces.stage, 'select-spaces');
+
+      const limOpIf = findDeep(selectSpaces.effects, (node: any) =>
+        node?.if?.when?.op === '==' &&
+        node?.if?.when?.left?.ref === 'binding' &&
+        node?.if?.when?.left?.name === '__actionClass' &&
+        node?.if?.when?.right === 'limitedOperation',
+      );
+      assert.ok(limOpIf.length >= 1, 'Expected LimOp branch for __actionClass == limitedOperation');
+
+      const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) => node?.chooseN?.max === 1);
+      const normalChooseN = findDeep(limOpIf[0].if.else, (node: any) => node?.chooseN?.max === 99);
+      assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 for LimOp');
+      assert.ok(normalChooseN.length >= 1, 'Expected chooseN max:99 for full operation');
+
+      const spaceTypeGuards = findDeep(selectSpaces.effects, (node: any) =>
+        node?.op === '==' &&
+        node?.left?.ref === 'zoneProp' &&
+        node?.left?.prop === 'spaceType' &&
+        (node?.right === 'province' || node?.right === 'city'),
+      );
+      assert.ok(spaceTypeGuards.length >= 4, 'Expected province/city filters in both selection branches');
+
+      const northVietnamExclusions = findDeep(selectSpaces.effects, (node: any) =>
+        node?.op === '!=' &&
+        node?.left?.ref === 'zoneProp' &&
+        node?.left?.prop === 'country' &&
+        node?.right === 'northVietnam',
+      );
+      assert.ok(northVietnamExclusions.length >= 2, 'Expected northVietnam exclusion in both selection branches');
+    });
+
+    it('move-troops includes direct adjacent movement and one-hop LoC movement wiring', () => {
+      const parsed = parseSweepUsProfile();
+      const moveTroops = parsed.stages[1];
+      assert.equal(moveTroops.stage, 'move-troops');
+
+      const directMoveQuery = findDeep(moveTroops.effects, (node: any) =>
+        node?.query === 'tokensInAdjacentZones' &&
+        node?.zone === '$space' &&
+        Array.isArray(node?.filter) &&
+        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'US') &&
+        node.filter.some((f: any) => f.prop === 'type' && f.eq === 'troops'),
+      );
+      assert.ok(directMoveQuery.length >= 1, 'Expected direct adjacent US troop movement query');
+
+      const hopLocSelection = findDeep(moveTroops.effects, (node: any) =>
+        node?.query === 'adjacentZones' && node?.zone === '$space',
+      );
+      assert.ok(hopLocSelection.length >= 1, 'Expected adjacent-zone selection for one-hop candidates');
+
+      const hopEligibilityGuard = findDeep(moveTroops.effects, (node: any) =>
+        node?.if?.when?.op === 'and' &&
+        findDeep(node.if.when.args, (inner: any) =>
+          inner?.op === '==' && inner?.left?.ref === 'zoneProp' && inner?.left?.prop === 'spaceType' && inner?.right === 'loc',
+        ).length > 0 &&
+        findDeep(node.if.when.args, (inner: any) => inner?.op === '==' && inner?.right === 0).length > 0,
+      );
+      assert.ok(hopEligibilityGuard.length >= 1, 'Expected hop LoC guard (loc + no NVA/VC)');
+
+      const hopMoveQuery = findDeep(moveTroops.effects, (node: any) =>
+        node?.query === 'tokensInAdjacentZones' &&
+        node?.zone === '$hopLoc' &&
+        Array.isArray(node?.filter) &&
+        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'US') &&
+        node.filter.some((f: any) => f.prop === 'type' && f.eq === 'troops'),
+      );
+      assert.ok(hopMoveQuery.length >= 1, 'Expected one-hop US troop movement query');
+    });
+
+    it('activate-guerrillas invokes sweep-activation macro with US cube+SF args', () => {
+      const parsed = parseSweepUsProfile();
+      const activate = parsed.stages[2];
+      assert.equal(activate.stage, 'activate-guerrillas');
+
+      const sweepMacroCall = findDeep(activate.effects, (node: any) =>
+        node?.macro === 'sweep-activation' &&
+        node?.args?.cubeFaction === 'US' &&
+        node?.args?.sfType === 'irregulars',
+      );
+      assert.ok(sweepMacroCall.length >= 1, 'Expected sweep-activation macro call with US/irregulars args');
+    });
+  });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   describe('train-arvn-profile structure', () => {
     const getArvnProfile = () => {

@@ -167,6 +167,7 @@ const applyMoveCore = (
     bindings: { ...move.params, __freeOperation: move.freeOperation ?? false, __actionClass: move.actionClass ?? 'operation' },
     moveParams: move.params,
     collector,
+    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   } as const;
 
   const actionPipeline = resolveActionPipeline(def, action, { ...effectCtxBase, state });

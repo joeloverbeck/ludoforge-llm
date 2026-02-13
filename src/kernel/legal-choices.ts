@@ -251,6 +251,7 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     actorPlayer: state.activePlayer,
     bindings: baseBindings,
     collector: createCollector(),
+    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   };
 
   const pipeline = resolveActionPipeline(def, action, evalCtx);

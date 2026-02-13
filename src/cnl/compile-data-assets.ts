@@ -1,6 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
-import type { MapPayload, PieceCatalogPayload } from '../kernel/types.js';
+import type { MapPayload, MapSpaceDef, PieceCatalogPayload } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord, normalizeIdentifier } from './compile-lowering.js';
 
@@ -10,6 +10,7 @@ export function deriveSectionsFromDataAssets(
 ): {
   readonly zones: GameSpecDoc['zones'];
   readonly tokenTypes: GameSpecDoc['tokenTypes'];
+  readonly mapSpaces: readonly MapSpaceDef[] | null;
   readonly derivationFailures: {
     readonly map: boolean;
     readonly pieceCatalog: boolean;
@@ -19,6 +20,7 @@ export function deriveSectionsFromDataAssets(
     return {
       zones: null,
       tokenTypes: null,
+      mapSpaces: null,
       derivationFailures: {
         map: false,
         pieceCatalog: false,
@@ -153,6 +155,7 @@ export function deriveSectionsFromDataAssets(
   return {
     zones,
     tokenTypes,
+    mapSpaces: selectedMap?.payload.spaces ?? null,
     derivationFailures: {
       map: mapDerivationFailed,
       pieceCatalog: pieceCatalogDerivationFailed,

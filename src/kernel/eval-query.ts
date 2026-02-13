@@ -1,5 +1,6 @@
 import { getMaxQueryResults, type EvalContext } from './eval-context.js';
-import { missingVarError, queryBoundsExceededError } from './eval-error.js';
+import { isEvalErrorCode, missingVarError, queryBoundsExceededError } from './eval-error.js';
+import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitWarning } from './execution-collector.js';
 import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
@@ -72,15 +73,11 @@ function extractOwnerQualifier(zoneId: ZoneId): string | null {
 
 function evalZonesQuery(query: Extract<OptionsQuery, { readonly query: 'zones' }>, ctx: EvalContext): readonly ZoneId[] {
   const allZones = [...ctx.def.zones].sort((left, right) => left.id.localeCompare(right.id));
-  const allZoneIds = allZones.map((zone) => zone.id);
+  let filteredZones = allZones;
 
-  if (query.filter?.owner === undefined) {
-    return allZoneIds;
-  }
-
-  const owners = new Set(resolvePlayerSel(query.filter.owner, ctx));
-  return allZones
-    .filter((zone) => {
+  if (query.filter?.owner !== undefined) {
+    const owners = new Set(resolvePlayerSel(query.filter.owner, ctx));
+    filteredZones = filteredZones.filter((zone) => {
       if (zone.owner !== 'player') {
         return false;
       }
@@ -92,8 +89,32 @@ function evalZonesQuery(query: Extract<OptionsQuery, { readonly query: 'zones' }
 
       const playerId = asPlayerId(Number(ownerQualifier));
       return owners.has(playerId);
-    })
-    .map((zone) => zone.id);
+    });
+  }
+
+  if (query.filter?.condition !== undefined) {
+    const { condition } = query.filter;
+    filteredZones = filteredZones.filter((zone) => {
+      try {
+        return evalCondition(condition, {
+          ...ctx,
+          bindings: {
+            ...ctx.bindings,
+            $zone: zone.id,
+          },
+        });
+      } catch (error) {
+        // zones query may include non-map utility zones (available/discard/etc.).
+        // Map-property predicates should treat those as non-matches, not hard failures.
+        if (isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND')) {
+          return false;
+        }
+        throw error;
+      }
+    });
+  }
+
+  return filteredZones.map((zone) => zone.id);
 }
 
 export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly QueryResult[] {

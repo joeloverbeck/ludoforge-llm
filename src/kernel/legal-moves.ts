@@ -8,14 +8,13 @@ import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
-import type { ActionDef, GameDef, GameState, MapSpaceDef, Move, MoveParamValue } from './types.js';
+import type { ActionDef, GameDef, GameState, Move, MoveParamValue } from './types.js';
 
 function makeEvalContext(
   def: GameDef,
   adjacencyGraph: AdjacencyGraph,
   state: GameState,
   bindings: Readonly<Record<string, unknown>>,
-  mapSpaces?: readonly MapSpaceDef[],
 ): EvalContext {
   return {
     def,
@@ -25,7 +24,7 @@ function makeEvalContext(
     actorPlayer: state.activePlayer,
     bindings,
     collector: createCollector(),
-    ...(mapSpaces === undefined ? {} : { mapSpaces }),
+    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   };
 }
 

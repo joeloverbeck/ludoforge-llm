@@ -314,6 +314,7 @@ function compileExpandedDoc(
     globalVars: globalVars.value,
     perPlayerVars: perPlayerVars.value,
     zones,
+    ...(derivedFromAssets.mapSpaces === null ? {} : { mapSpaces: derivedFromAssets.mapSpaces }),
     tokenTypes: tokenTypes.value,
     setup: setup.value,
     turnStructure,

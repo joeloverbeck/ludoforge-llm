@@ -175,6 +175,62 @@
         "additionalProperties": false
       }
     },
+    "mapSpaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "spaceType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "population": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "econ": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "terrainTags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "country": {
+            "type": "string",
+            "minLength": 1
+          },
+          "coastal": {
+            "type": "boolean"
+          },
+          "adjacentTo": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "id",
+          "spaceType",
+          "population",
+          "econ",
+          "terrainTags",
+          "country",
+          "coastal",
+          "adjacentTo"
+        ],
+        "additionalProperties": false
+      }
+    },
     "tokenTypes": {
       "type": "array",
       "items": {

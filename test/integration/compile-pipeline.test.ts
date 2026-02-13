@@ -101,6 +101,10 @@ describe('compile pipeline integration', () => {
       compiled.gameDef?.zones.map((zone) => String(zone.id)),
       ['hue:none', 'quang-tri:none'],
     );
+    assert.deepEqual(
+      compiled.gameDef?.mapSpaces?.map((space) => space.id),
+      ['hue:none', 'quang-tri:none'],
+    );
     assert.equal(compiled.gameDef?.turnOrder?.type, 'cardDriven');
     assert.equal(
       compiled.gameDef?.turnOrder?.type === 'cardDriven' ? compiled.gameDef.turnOrder.config.coupPlan?.phases[0]?.id : undefined,
@@ -169,6 +173,10 @@ describe('compile pipeline integration', () => {
     assert.notEqual(compiled.gameDef, null);
     assert.deepEqual(
       compiled.gameDef?.zones.map((zone) => String(zone.id)),
+      ['alpha:none', 'beta:none'],
+    );
+    assert.deepEqual(
+      compiled.gameDef?.mapSpaces?.map((space) => space.id),
       ['alpha:none', 'beta:none'],
     );
   });

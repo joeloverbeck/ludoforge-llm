@@ -164,6 +164,93 @@ describe('evalQuery', () => {
     assert.deepEqual(evalQuery({ query: 'zones', filter: { owner: 'actor' } }, ctx), ['bench:1', 'hand:1']);
   });
 
+  it('applies zones filter.condition and composes it with owner filtering', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $allowedZones: [asZoneId('hand:0'), asZoneId('hand:1')],
+      },
+    });
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'zones',
+          filter: {
+            condition: {
+              op: 'in',
+              item: { ref: 'binding', name: '$zone' },
+              set: { ref: 'binding', name: '$allowedZones' },
+            },
+          },
+        },
+        ctx,
+      ),
+      ['hand:0', 'hand:1'],
+    );
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'zones',
+          filter: {
+            owner: 'actor',
+            condition: {
+              op: 'in',
+              item: { ref: 'binding', name: '$zone' },
+              set: { ref: 'binding', name: '$allowedZones' },
+            },
+          },
+        },
+        ctx,
+      ),
+      ['hand:1'],
+    );
+  });
+
+  it('treats non-map zones as non-matches for zoneProp-based zones filter conditions', () => {
+    const ctx = makeCtx({
+      mapSpaces: [
+        {
+          id: 'battlefield:none',
+          spaceType: 'province',
+          population: 1,
+          econ: 0,
+          terrainTags: ['lowland'],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+        {
+          id: 'tableau:2',
+          spaceType: 'city',
+          population: 2,
+          econ: 0,
+          terrainTags: ['urban'],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
+    });
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'zones',
+          filter: {
+            condition: {
+              op: '==',
+              left: { ref: 'zoneProp', zone: '$zone', prop: 'spaceType' },
+              right: 'city',
+            },
+          },
+        },
+        ctx,
+      ),
+      ['tableau:2'],
+    );
+  });
+
   it('filters owner-scoped zones using canonical ZoneDef.owner metadata', () => {
     const def = makeDef();
     const malformedZoneId = asZoneId('ghost:1');

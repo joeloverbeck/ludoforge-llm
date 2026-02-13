@@ -144,6 +144,58 @@ export function resolveSinglePlayerSel(sel: PlayerSel, ctx: EvalContext): Player
 }
 
 export function resolveZoneSel(sel: ZoneSel, ctx: EvalContext): readonly ZoneId[] {
+  if (sel.startsWith('$')) {
+    const boundValue = ctx.bindings[sel];
+    if (boundValue === undefined) {
+      throw missingBindingError(`Zone binding not found: ${sel}`, {
+        selector: sel,
+        availableBindings: Object.keys(ctx.bindings).sort(),
+      });
+    }
+
+    const allZoneIds = listZoneIds(ctx);
+    const validateKnownZone = (zoneId: ZoneId): void => {
+      if (!allZoneIds.includes(zoneId)) {
+        throw missingVarError(`Unknown zone in bound selector ${sel}: ${zoneId}`, {
+          selector: sel,
+          zoneId,
+          availableZoneIds: allZoneIds,
+        });
+      }
+    };
+
+    if (typeof boundValue === 'string') {
+      const zoneId = asZoneId(boundValue);
+      validateKnownZone(zoneId);
+      return [zoneId];
+    }
+
+    if (Array.isArray(boundValue)) {
+      const resolved: ZoneId[] = [];
+      for (const entry of boundValue) {
+        if (typeof entry !== 'string') {
+          throw typeMismatchError(`Zone binding ${sel} array entries must be strings`, {
+            selector: sel,
+            binding: sel,
+            actualType: typeof entry,
+            value: entry,
+          });
+        }
+        const zoneId = asZoneId(entry);
+        validateKnownZone(zoneId);
+        resolved.push(zoneId);
+      }
+      return sortAndDedupeZones(resolved);
+    }
+
+    throw typeMismatchError(`Zone binding ${sel} must resolve to a zone id string or array of zone ids`, {
+      selector: sel,
+      binding: sel,
+      actualType: typeof boundValue,
+      value: boundValue,
+    });
+  }
+
   const { zoneBase, ownerSpec } = parseZoneSel(sel);
   const candidatesForBase = listZoneCandidatesByBase(zoneBase, ctx);
 

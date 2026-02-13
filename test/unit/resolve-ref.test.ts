@@ -155,6 +155,11 @@ describe('resolveRef', () => {
     assert.equal(resolveRef({ ref: 'tokenZone', token: '$card' }, ctx), 'hand:1');
   });
 
+  it('resolves tokenZone when binding is a token id string', () => {
+    const ctx = makeCtx({ bindings: { '$cardId': 'hand-1' } });
+    assert.equal(resolveRef({ ref: 'tokenZone', token: '$cardId' }, ctx), 'hand:1');
+  });
+
   it('throws MISSING_BINDING when tokenZone binding is not found', () => {
     const ctx = makeCtx();
     assert.throws(

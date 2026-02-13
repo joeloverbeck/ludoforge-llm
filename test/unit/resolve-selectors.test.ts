@@ -124,6 +124,33 @@ describe('resolveZoneSel', () => {
     assert.deepEqual(resolveZoneSel('hand:$picked', ctx), ['hand:2']);
   });
 
+  it('resolves bound zone selectors from string and string-array bindings', () => {
+    const stringCtx = makeCtx({ bindings: { $zone: 'bench:1' } });
+    assert.deepEqual(resolveZoneSel('$zone', stringCtx), ['bench:1']);
+    assert.deepEqual(resolveSingleZoneSel('$zone', stringCtx), 'bench:1');
+
+    const arrayCtx = makeCtx({ bindings: { $zones: ['hand:2', 'hand:0', 'hand:2'] } });
+    assert.deepEqual(resolveZoneSel('$zones', arrayCtx), ['hand:0', 'hand:2']);
+  });
+
+  it('throws typed errors for missing or invalid bound zone selectors', () => {
+    const ctx = makeCtx();
+
+    assert.throws(() => resolveZoneSel('$missing', ctx), (error: unknown) =>
+      isEvalErrorCode(error, 'MISSING_BINDING'),
+    );
+
+    const badScalar = makeCtx({ bindings: { $zone: 42 } });
+    assert.throws(() => resolveZoneSel('$zone', badScalar), (error: unknown) =>
+      isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+
+    const badArrayEntry = makeCtx({ bindings: { $zones: ['hand:0', 17] as unknown as string[] } });
+    assert.throws(() => resolveZoneSel('$zones', badArrayEntry), (error: unknown) =>
+      isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('throws descriptive typed errors for unknown zone base or missing variant', () => {
     const ctx = makeCtx();
 

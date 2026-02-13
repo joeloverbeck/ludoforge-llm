@@ -1,5 +1,8 @@
 {
-  "globalVars": {},
+  "globalVars": {
+    "insurgentPassReward": 0,
+    "coinPassReward": 0
+  },
   "perPlayerVars": {
     "0": {},
     "1": {}
@@ -21,7 +24,7 @@
       "0xda3e39cb94b95bf9"
     ]
   },
-  "stateHash": "0x923045bcd6a462e9",
+  "stateHash": "0xe2cbdb795863e92d",
   "actionUsage": {},
   "markers": {},
   "turnFlow": {

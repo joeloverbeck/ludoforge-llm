@@ -21,6 +21,7 @@ import { lowerOperationProfiles } from './compile-operations.js';
 import { lowerCoupPlan, lowerVictory } from './compile-victory.js';
 import { deriveSectionsFromDataAssets } from './compile-data-assets.js';
 import { expandEffectSections, expandZoneMacros } from './compile-macro-expansion.js';
+import { crossValidateSpec } from './cross-validate.js';
 
 export interface CompileLimits {
   readonly maxExpandedEffects: number;
@@ -302,6 +303,7 @@ function compileExpandedDoc(
   }
 
   sections.eventCards = derivedFromAssets.eventCards ?? null;
+  diagnostics.push(...crossValidateSpec(sections));
 
   if (metadata === null || zones === null || turnStructure === null || actions === null || endConditions === null) {
     return { gameDef: null, sections };

@@ -74,9 +74,9 @@ turnStructure:
   activePlayerOrder: roundRobin
 turnFlow:
   cardLifecycle:
-    played: played:none
-    lookahead: lookahead:none
-    leader: leader:none
+    played: hue:none
+    lookahead: quang-tri:none
+    leader: hue:none
   eligibility:
     factions: [us, nva]
     overrideWindows: []

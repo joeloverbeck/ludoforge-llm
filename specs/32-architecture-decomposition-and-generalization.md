@@ -279,18 +279,19 @@ function crossValidateSpec(sections: CompileSectionResults): readonly Diagnostic
 | Source | References | Target | Diagnostic Code |
 |--------|-----------|--------|-----------------|
 | `actions[].phase` | phase ID | `turnStructure.phases[].id` | `CNL_XREF_ACTION_PHASE_MISSING` |
-| `actionPipelines[].actionId` | action ID | `actions[].id` | `CNL_XREF_PROFILE_ACTION_MISSING` |
-| `actionPipelines[].linkedWindows[]` | window ID | `turnOrder.config.eligibility.overrideWindows[].id` | `CNL_XREF_PROFILE_WINDOW_MISSING` |
+| `operationProfiles[].actionId` | action ID | `actions[].id` | `CNL_XREF_PROFILE_ACTION_MISSING` |
+| `operationProfiles[].linkedSpecialActivityWindows[]` | window ID | `turnFlow.eligibility.overrideWindows[].id` | `CNL_XREF_PROFILE_WINDOW_MISSING` |
 | `triggers[].event.phase` | phase ID | `turnStructure.phases[].id` | `CNL_XREF_TRIGGER_PHASE_MISSING` |
 | `triggers[].event.action` | action ID | `actions[].id` | `CNL_XREF_TRIGGER_ACTION_MISSING` |
-| `terminal.checkpoints[].faction` | faction ID | `turnOrder.config.eligibility.factions[]` | `CNL_XREF_VICTORY_FACTION_MISSING` |
-| `terminal.margins[].faction` | faction ID | `turnOrder.config.eligibility.factions[]` | `CNL_XREF_MARGIN_FACTION_MISSING` |
-| `turnOrder.config.coupPlan.phases[].id` | phase ID | `turnStructure.phases[].id` | `CNL_XREF_COUP_PHASE_MISSING` |
+| `victory.checkpoints[].faction` | faction ID | `turnFlow.eligibility.factions[]` | `CNL_XREF_VICTORY_FACTION_MISSING` |
+| `victory.margins[].faction` | faction ID | `turnFlow.eligibility.factions[]` | `CNL_XREF_MARGIN_FACTION_MISSING` |
 | `setup[].createToken.zone` | zone ID | `zones[].id` | `CNL_XREF_SETUP_ZONE_MISSING` |
 | `setup[].createToken.type` | token type ID | `tokenTypes[].id` | `CNL_XREF_SETUP_TOKEN_TYPE_MISSING` |
 | `actions[].effects[]` (moveToken/draw refs) | zone IDs | `zones[].id` | `CNL_XREF_EFFECT_ZONE_MISSING` |
-| `turnOrder.config.cardLifecycle.played` | zone ID | `zones[].id` | `CNL_XREF_LIFECYCLE_ZONE_MISSING` |
-| `turnOrder.config.passRewards[].resource` | var name | `globalVars[].name` | `CNL_XREF_REWARD_VAR_MISSING` |
+| `turnFlow.cardLifecycle.played/lookahead/leader` | zone ID | `zones[].id` | `CNL_XREF_LIFECYCLE_ZONE_MISSING` |
+| `turnFlow.passRewards[].resource` | var name | `globalVars[].name` | `CNL_XREF_REWARD_VAR_MISSING` |
+
+**Note**: `coupPlan.phases[].id` currently belongs to a coup-workflow domain, not the turn-structure phase domain. The coup cross-reference contract is specified separately as follow-up work (see ARCDECANDGEN-011).
 
 **Files to touch:**
 

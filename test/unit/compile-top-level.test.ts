@@ -74,7 +74,16 @@ describe('compile top-level actions/triggers/end conditions', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'turn-flow-pass-through', players: { min: 2, max: 4 } },
-      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      globalVars: [
+        { name: 'arvnResources', type: 'int', init: 0, min: 0, max: 99 },
+        { name: 'factionResource', type: 'int', init: 0, min: 0, max: 99 },
+      ],
+      zones: [
+        { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: 'played:none', owner: 'none', visibility: 'public', ordering: 'stack' },
+        { id: 'lookahead:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: 'leader:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      ],
       turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
       turnFlow: {
         cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },

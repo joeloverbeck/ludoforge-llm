@@ -51,11 +51,22 @@ turnStructure:
   phases:
     - id: main
   activePlayerOrder: roundRobin
+globalVars:
+  - name: insurgentPassReward
+    type: int
+    init: 0
+    min: 0
+    max: 99
+  - name: coinPassReward
+    type: int
+    init: 0
+    min: 0
+    max: 99
 turnFlow:
   cardLifecycle:
-    played: played:none
-    lookahead: lookahead:none
-    leader: leader:none
+    played: hue:none
+    lookahead: quang-tri:none
+    leader: hue:none
   eligibility:
     factions: ["0", "1", "2", "3"]
     overrideWindows:

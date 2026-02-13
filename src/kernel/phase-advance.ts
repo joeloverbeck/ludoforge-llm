@@ -1,5 +1,6 @@
 import { asPlayerId } from './branded.js';
 import { resetPhaseUsage, resetTurnUsage } from './action-usage.js';
+import { expireLastingEffectsAtBoundaries } from './event-lasting-effects.js';
 import { legalMoves } from './legal-moves.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
@@ -121,6 +122,21 @@ export const advancePhase = (
   nextState = dispatchLifecycleEvent(def, nextState, { type: 'turnEnd' }, triggerLogCollector);
   const turnFlowLifecycle = applyTurnFlowCardBoundary(def, nextState);
   nextState = turnFlowLifecycle.state;
+  if (turnFlowLifecycle.boundaryDurations.length > 0) {
+    const expiry = expireLastingEffectsAtBoundaries(
+      def,
+      nextState,
+      { state: nextState.rng },
+      turnFlowLifecycle.boundaryDurations,
+    );
+    nextState = {
+      ...expiry.state,
+      rng: expiry.rng.state,
+    };
+    for (const emittedEvent of expiry.emittedEvents) {
+      nextState = dispatchLifecycleEvent(def, nextState, emittedEvent, triggerLogCollector);
+    }
+  }
   if (triggerLogCollector !== undefined) {
     triggerLogCollector.push(...turnFlowLifecycle.traceEntries);
   }

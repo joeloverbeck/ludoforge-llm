@@ -15,7 +15,7 @@ import type {
   PlayerSel,
   ValueExpr,
 } from './types-ast.js';
-import type { EventDeckDef } from './types-events.js';
+import type { ActiveLastingEffect, EventDeckDef } from './types-events.js';
 import type {
   OperationFreeTraceEntry,
   OperationPartialTraceEntry,
@@ -344,6 +344,7 @@ export interface GameState {
   readonly actionUsage: Readonly<Record<string, ActionUsageRecord>>;
   readonly turnOrderState: TurnOrderRuntimeState;
   readonly markers: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  readonly activeLastingEffects?: readonly ActiveLastingEffect[];
 }
 
 export interface CompoundMovePayload {

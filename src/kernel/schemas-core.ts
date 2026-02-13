@@ -17,6 +17,7 @@ import {
   SimultaneousSubmissionTraceEntrySchema,
   TurnFlowEligibilityTraceEntrySchema,
   TurnFlowLifecycleTraceEntrySchema,
+  TurnFlowDurationSchema,
   TurnOrderRuntimeStateSchema,
   VictoryCheckpointSchema,
   VictoryMarginSchema,
@@ -199,6 +200,21 @@ export const ActionUsageRecordSchema = z
   })
   .strict();
 
+export const ActiveLastingEffectSchema = z
+  .object({
+    id: StringSchema,
+    sourceCardId: StringSchema,
+    side: z.union([z.literal('unshaded'), z.literal('shaded')]),
+    branchId: StringSchema.optional(),
+    duration: TurnFlowDurationSchema,
+    setupEffects: z.array(EffectASTSchema),
+    teardownEffects: z.array(EffectASTSchema).optional(),
+    remainingCardBoundaries: IntegerSchema.min(0).optional(),
+    remainingCoupBoundaries: IntegerSchema.min(0).optional(),
+    remainingCampaignBoundaries: IntegerSchema.min(0).optional(),
+  })
+  .strict();
+
 export const RngStateSchema = z
   .object({
     algorithm: z.literal('pcg-dxsm-128'),
@@ -222,6 +238,7 @@ export const GameStateSchema = z
     actionUsage: z.record(StringSchema, ActionUsageRecordSchema),
     turnOrderState: TurnOrderRuntimeStateSchema,
     markers: z.record(StringSchema, z.record(StringSchema, StringSchema)),
+    activeLastingEffects: z.array(ActiveLastingEffectSchema).optional(),
   })
   .strict();
 

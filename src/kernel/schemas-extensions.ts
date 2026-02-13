@@ -1,5 +1,14 @@
 import { z } from 'zod';
-import { BooleanSchema, ConditionASTSchema, EffectASTSchema, IntegerSchema, NumberSchema, StringSchema, ValueExprSchema } from './schemas-ast.js';
+import {
+  BooleanSchema,
+  ConditionASTSchema,
+  EffectASTSchema,
+  IntegerSchema,
+  NumberSchema,
+  OptionsQuerySchema,
+  StringSchema,
+  ValueExprSchema,
+} from './schemas-ast.js';
 
 export const TurnFlowDurationSchema = z.union([
   z.literal('card'),
@@ -7,8 +16,6 @@ export const TurnFlowDurationSchema = z.union([
   z.literal('coup'),
   z.literal('campaign'),
 ]);
-
-export const EventCardEffectNodeSchema = z.record(StringSchema, z.unknown());
 
 export const EventCardTargetCardinalitySchema = z.union([
   z
@@ -36,7 +43,7 @@ export const EventCardTargetCardinalitySchema = z.union([
 export const EventCardTargetSchema = z
   .object({
     id: StringSchema.min(1),
-    selector: z.record(StringSchema, z.unknown()),
+    selector: OptionsQuerySchema,
     cardinality: EventCardTargetCardinalitySchema,
   })
   .strict();
@@ -45,7 +52,8 @@ export const EventCardLastingEffectSchema = z
   .object({
     id: StringSchema.min(1),
     duration: TurnFlowDurationSchema,
-    effect: z.record(StringSchema, z.unknown()),
+    setupEffects: z.array(EffectASTSchema).min(1),
+    teardownEffects: z.array(EffectASTSchema).min(1).optional(),
   })
   .strict();
 
@@ -53,7 +61,7 @@ export const EventCardBranchSchema: z.ZodTypeAny = z
   .object({
     id: StringSchema.min(1),
     order: IntegerSchema.min(0).optional(),
-    effects: z.array(EventCardEffectNodeSchema).min(1).optional(),
+    effects: z.array(EffectASTSchema).min(1).optional(),
     targets: z.array(EventCardTargetSchema).optional(),
     lastingEffects: z.array(EventCardLastingEffectSchema).optional(),
   })
@@ -70,7 +78,7 @@ export const EventCardBranchSchema: z.ZodTypeAny = z
 
 export const EventCardSideSchema = z
   .object({
-    effects: z.array(EventCardEffectNodeSchema).min(1).optional(),
+    effects: z.array(EffectASTSchema).min(1).optional(),
     branches: z.array(EventCardBranchSchema).min(1).optional(),
     targets: z.array(EventCardTargetSchema).optional(),
     lastingEffects: z.array(EventCardLastingEffectSchema).optional(),
@@ -127,6 +135,9 @@ export const EventCardSchema = z
 export const EventDeckSchema = z
   .object({
     id: StringSchema.min(1),
+    drawZone: StringSchema.min(1),
+    discardZone: StringSchema.min(1),
+    shuffleOnSetup: BooleanSchema.optional(),
     cards: z.array(EventCardSchema),
   })
   .strict();

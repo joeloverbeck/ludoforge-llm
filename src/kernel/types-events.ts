@@ -1,41 +1,43 @@
+import type { EffectAST, OptionsQuery } from './types-ast.js';
 import type { TurnFlowDuration } from './types-turn-flow.js';
 
-export interface EventCardTargetCardinalityExact {
+export interface EventTargetCardinalityExact {
   readonly n: number;
 }
 
-export interface EventCardTargetCardinalityRange {
+export interface EventTargetCardinalityRange {
   readonly min?: number;
   readonly max: number;
 }
 
-export type EventCardTargetCardinality = EventCardTargetCardinalityExact | EventCardTargetCardinalityRange;
+export type EventTargetCardinality = EventTargetCardinalityExact | EventTargetCardinalityRange;
 
-export interface EventCardTargetDef {
+export interface EventTargetDef {
   readonly id: string;
-  readonly selector: Readonly<Record<string, unknown>>;
-  readonly cardinality: EventCardTargetCardinality;
+  readonly selector: OptionsQuery;
+  readonly cardinality: EventTargetCardinality;
 }
 
-export interface EventCardLastingEffectDef {
+export interface EventLastingEffectDef {
   readonly id: string;
   readonly duration: TurnFlowDuration;
-  readonly effect: Readonly<Record<string, unknown>>;
+  readonly setupEffects: readonly EffectAST[];
+  readonly teardownEffects?: readonly EffectAST[];
 }
 
-export interface EventCardBranchDef {
+export interface EventBranchDef {
   readonly id: string;
   readonly order?: number;
-  readonly effects?: readonly Readonly<Record<string, unknown>>[];
-  readonly targets?: readonly EventCardTargetDef[];
-  readonly lastingEffects?: readonly EventCardLastingEffectDef[];
+  readonly effects?: readonly EffectAST[];
+  readonly targets?: readonly EventTargetDef[];
+  readonly lastingEffects?: readonly EventLastingEffectDef[];
 }
 
-export interface EventCardSideDef {
-  readonly effects?: readonly Readonly<Record<string, unknown>>[];
-  readonly branches?: readonly EventCardBranchDef[];
-  readonly targets?: readonly EventCardTargetDef[];
-  readonly lastingEffects?: readonly EventCardLastingEffectDef[];
+export interface EventSideDef {
+  readonly effects?: readonly EffectAST[];
+  readonly branches?: readonly EventBranchDef[];
+  readonly targets?: readonly EventTargetDef[];
+  readonly lastingEffects?: readonly EventLastingEffectDef[];
 }
 
 export interface EventCardDef {
@@ -43,13 +45,29 @@ export interface EventCardDef {
   readonly title: string;
   readonly sideMode: 'single' | 'dual';
   readonly order?: number;
-  readonly unshaded?: EventCardSideDef;
-  readonly shaded?: EventCardSideDef;
+  readonly unshaded?: EventSideDef;
+  readonly shaded?: EventSideDef;
 }
 
 export interface EventDeckDef {
   readonly id: string;
+  readonly drawZone: string;
+  readonly discardZone: string;
+  readonly shuffleOnSetup?: boolean;
   readonly cards: readonly EventCardDef[];
+}
+
+export interface ActiveLastingEffect {
+  readonly id: string;
+  readonly sourceCardId: string;
+  readonly side: 'unshaded' | 'shaded';
+  readonly branchId?: string;
+  readonly duration: TurnFlowDuration;
+  readonly setupEffects: readonly EffectAST[];
+  readonly teardownEffects?: readonly EffectAST[];
+  readonly remainingCardBoundaries?: number;
+  readonly remainingCoupBoundaries?: number;
+  readonly remainingCampaignBoundaries?: number;
 }
 
 export interface ScenarioPiecePlacement {

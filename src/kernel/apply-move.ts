@@ -1,6 +1,7 @@
 import { incrementActionUsage } from './action-usage.js';
 import { evalCondition } from './eval-condition.js';
 import { applyEffects } from './effects.js';
+import { activateEventLastingEffects } from './event-lasting-effects.js';
 import { createCollector } from './execution-collector.js';
 import { legalChoices } from './legal-choices.js';
 import { legalMoves } from './legal-moves.js';
@@ -279,6 +280,13 @@ const applyMoveCore = (
 
   if (move.compound?.timing === 'after') {
     applyCompoundSA();
+  }
+
+  const lastingActivation = activateEventLastingEffects(def, effectState, effectRng, move);
+  effectState = lastingActivation.state;
+  effectRng = lastingActivation.rng;
+  if (lastingActivation.emittedEvents.length > 0) {
+    emittedEvents.push(...lastingActivation.emittedEvents);
   }
 
   const stateWithUsage = incrementActionUsage(effectState, action.id);

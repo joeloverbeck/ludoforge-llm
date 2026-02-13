@@ -161,7 +161,16 @@ describe('compiler structured section results', () => {
       eventDecks: [
         {
           id: 'foundation',
-          cards: [{ id: 'card-a', title: 'Card A', sideMode: 'single' as const, unshaded: { effects: [{ op: 'noop' }] } }],
+          drawZone: 'board:none',
+          discardZone: 'board:none',
+          cards: [
+            {
+              id: 'card-a',
+              title: 'Card A',
+              sideMode: 'single' as const,
+              unshaded: { effects: [{ shuffle: { zone: 'board:none' } }] },
+            },
+          ],
         },
       ],
     };

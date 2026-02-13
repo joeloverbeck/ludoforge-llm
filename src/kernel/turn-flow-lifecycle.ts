@@ -1,4 +1,4 @@
-import type { GameDef, GameState, Token, TriggerLogEntry, TurnFlowLifecycleStep } from './types.js';
+import type { GameDef, GameState, Token, TriggerLogEntry, TurnFlowDuration, TurnFlowLifecycleStep } from './types.js';
 
 interface LifecycleSlots {
   readonly played: string;
@@ -9,6 +9,7 @@ interface LifecycleSlots {
 interface LifecycleResult {
   readonly state: GameState;
   readonly traceEntries: readonly TriggerLogEntry[];
+  readonly boundaryDurations: readonly TurnFlowDuration[];
 }
 
 const cardDrivenConfig = (def: GameDef) =>
@@ -158,12 +159,12 @@ const withConsecutiveCoupRounds = (state: GameState, rounds: number): GameState 
 export const applyTurnFlowInitialReveal = (def: GameDef, state: GameState): LifecycleResult => {
   const slots = resolveLifecycleSlots(def, state);
   if (slots === null) {
-    return { state, traceEntries: [] };
+    return { state, traceEntries: [], boundaryDurations: [] };
   }
 
   const drawPileId = resolveDrawPileId(def, slots);
   if (drawPileId === null) {
-    return { state, traceEntries: [] };
+    return { state, traceEntries: [], boundaryDurations: [] };
   }
 
   const traceEntries: TriggerLogEntry[] = [];
@@ -187,16 +188,17 @@ export const applyTurnFlowInitialReveal = (def: GameDef, state: GameState): Life
     }
   }
 
-  return { state: nextState, traceEntries };
+  return { state: nextState, traceEntries, boundaryDurations: [] };
 };
 
 export const applyTurnFlowCardBoundary = (def: GameDef, state: GameState): LifecycleResult => {
   const slots = resolveLifecycleSlots(def, state);
   if (slots === null) {
-    return { state, traceEntries: [] };
+    return { state, traceEntries: [], boundaryDurations: [] };
   }
 
   const traceEntries: TriggerLogEntry[] = [];
+  const boundaryDurations: TurnFlowDuration[] = ['card'];
   let nextState = state;
   const removed = popTopToken(nextState, slots.played);
   nextState = removed.state;
@@ -212,6 +214,8 @@ export const applyTurnFlowCardBoundary = (def: GameDef, state: GameState): Lifec
     nextState = prependToken(nextState, slots.leader, removed.popped);
     pushLifecycleEntry(traceEntries, 'coupToLeader', slots, beforeLeaderMove, nextState);
     pushLifecycleEntry(traceEntries, 'coupHandoff', slots, nextState, nextState);
+    boundaryDurations.push('coup');
+    boundaryDurations.push('campaign');
   }
 
   if (maxConsecutiveRounds !== undefined && removed.popped !== null) {
@@ -242,5 +246,5 @@ export const applyTurnFlowCardBoundary = (def: GameDef, state: GameState): Lifec
     }
   }
 
-  return { state: nextState, traceEntries };
+  return { state: nextState, traceEntries, boundaryDurations };
 };

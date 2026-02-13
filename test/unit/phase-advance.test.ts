@@ -487,4 +487,242 @@ describe('phase advancement', () => {
     assert.equal(afterSecond.zones['leader:none']?.[0]?.id, 'tok_card_0');
     assert.equal(requireCardDrivenRuntime(afterSecond).consecutiveCoupRounds, 1);
   });
+
+  it('expires card-duration lasting effects at card boundary and applies teardown effects', () => {
+    const def: GameDef = {
+      metadata: { id: 'phase-card-lasting-expiry', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'aid', type: 'int', init: 0, min: -99, max: 99 }],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
+      },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState({
+        currentPhase: asPhaseId('main'),
+        zones: {
+          'deck:none': [],
+          'played:none': [{ id: asTokenId('card-0'), type: 'card', props: { isCoup: false } }],
+          'lookahead:none': [],
+          'leader:none': [],
+        },
+      }),
+      globalVars: { aid: 3 },
+      actionUsage: {},
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+      activeLastingEffects: [
+        {
+          id: 'aid-shift',
+          sourceCardId: 'card-0',
+          side: 'unshaded',
+          duration: 'card',
+          setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 3 } }],
+          teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -3 } }],
+          remainingCardBoundaries: 1,
+        },
+      ],
+    };
+
+    const next = advancePhase(def, state);
+    assert.equal(next.globalVars.aid, 0);
+    assert.equal(next.activeLastingEffects, undefined);
+  });
+
+  it('keeps nextCard lasting effects for one boundary and expires on the second boundary', () => {
+    const def: GameDef = {
+      metadata: { id: 'phase-next-card-lasting-expiry', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'aid', type: 'int', init: 0, min: -99, max: 99 }],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
+      },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState({
+        currentPhase: asPhaseId('main'),
+        zones: {
+          'deck:none': [],
+          'played:none': [{ id: asTokenId('card-0'), type: 'card', props: { isCoup: false } }],
+          'lookahead:none': [],
+          'leader:none': [],
+        },
+      }),
+      globalVars: { aid: 3 },
+      actionUsage: {},
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+      activeLastingEffects: [
+        {
+          id: 'aid-shift',
+          sourceCardId: 'card-0',
+          side: 'unshaded',
+          duration: 'nextCard',
+          setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 3 } }],
+          teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -3 } }],
+          remainingCardBoundaries: 2,
+        },
+      ],
+    };
+
+    const afterOne = advancePhase(def, state);
+    assert.equal(afterOne.globalVars.aid, 3);
+    assert.equal(afterOne.activeLastingEffects?.[0]?.remainingCardBoundaries, 1);
+
+    const afterTwo = advancePhase(def, afterOne);
+    assert.equal(afterTwo.globalVars.aid, 0);
+    assert.equal(afterTwo.activeLastingEffects, undefined);
+  });
+
+  it('expires campaign-duration lasting effects when turn flow emits a campaign boundary', () => {
+    const def: GameDef = {
+      metadata: { id: 'phase-campaign-lasting-expiry', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'aid', type: 'int', init: 0, min: -99, max: 99 }],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
+      },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState({
+        currentPhase: asPhaseId('main'),
+        zones: {
+          'deck:none': [],
+          'played:none': [{ id: asTokenId('coup-card-0'), type: 'card', props: { isCoup: true } }],
+          'lookahead:none': [],
+          'leader:none': [],
+        },
+      }),
+      globalVars: { aid: 3 },
+      actionUsage: {},
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+      activeLastingEffects: [
+        {
+          id: 'campaign-aid-shift',
+          sourceCardId: 'coup-card-0',
+          side: 'unshaded',
+          duration: 'campaign',
+          setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 3 } }],
+          teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -3 } }],
+          remainingCampaignBoundaries: 1,
+        },
+      ],
+    };
+
+    const next = advancePhase(def, state);
+    assert.equal(next.globalVars.aid, 0);
+    assert.equal(next.activeLastingEffects, undefined);
+  });
 });

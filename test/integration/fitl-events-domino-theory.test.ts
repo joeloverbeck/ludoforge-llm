@@ -15,6 +15,9 @@ describe('FITL Domino Theory event-card production spec', () => {
     assert.notEqual(domino, undefined);
     assert.equal(domino?.title, 'Domino Theory');
     assert.equal(domino?.sideMode, 'dual');
+    assert.equal(compiled.gameDef?.eventDecks?.[0]?.drawZone, 'leader:none');
+    assert.equal(compiled.gameDef?.eventDecks?.[0]?.discardZone, 'played:none');
+    assert.equal(compiled.gameDef?.eventDecks?.[0]?.shuffleOnSetup, true);
 
     const unshadedBranchIds = domino?.unshaded?.branches?.map((branch) => branch.id);
     assert.deepEqual(unshadedBranchIds, ['return-from-out-of-play', 'resources-and-aid']);
@@ -27,12 +30,9 @@ describe('FITL Domino Theory event-card production spec', () => {
     assert.equal(shadedTargets?.[0]?.id, 'us-troops-available');
     assert.deepEqual(shadedTargets?.[0]?.cardinality, { max: 3 });
 
-    const shadedAidEffect = domino?.shaded?.effects?.find((effect) => effect.op === 'addTrack');
+    const shadedAidEffect = domino?.shaded?.effects?.find((effect) => 'addVar' in effect);
     assert.deepEqual(shadedAidEffect, {
-      op: 'addTrack',
-      track: 'aid',
-      delta: -9,
-      clamp: { min: 0, max: 75 },
+      addVar: { scope: 'global', var: 'aid', delta: -9 },
     });
   });
 

@@ -244,6 +244,8 @@ describe('top-level runtime schemas', () => {
   it('parses valid event-deck payloads with dual-use sides and lasting effects', () => {
     const result = EventDeckSchema.safeParse({
       id: 'fitl-events-initial',
+      drawZone: 'leader:none',
+      discardZone: 'played:none',
       cards: [
         {
           id: 'card-82',
@@ -255,13 +257,19 @@ describe('top-level runtime schemas', () => {
               {
                 id: 'branch-a',
                 order: 0,
-                effects: [{ effect: 'moveOutOfPlayToAvailable' }],
+                effects: [{ shuffle: { zone: 'played:none' } }],
               },
             ],
           },
           shaded: {
-            targets: [{ id: 'us-troops', selector: { query: 'piecesInPool' }, cardinality: { max: 3 } }],
-            lastingEffects: [{ id: 'aid-mod', duration: 'nextCard', effect: { op: 'addAidModifier', delta: -9 } }],
+            targets: [{ id: 'us-troops', selector: { query: 'players' }, cardinality: { max: 3 } }],
+            lastingEffects: [
+              {
+                id: 'aid-mod',
+                duration: 'nextCard',
+                setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -9 } }],
+              },
+            ],
           },
         },
       ],
@@ -273,13 +281,15 @@ describe('top-level runtime schemas', () => {
   it('rejects malformed event-deck payload cardinality ranges', () => {
     const result = EventDeckSchema.safeParse({
       id: 'fitl-events-initial',
+      drawZone: 'leader:none',
+      discardZone: 'played:none',
       cards: [
         {
           id: 'card-82',
           title: 'Domino Theory',
           sideMode: 'single',
           unshaded: {
-            targets: [{ id: 'us-troops', selector: { query: 'piecesInPool' }, cardinality: { min: 3, max: 2 } }],
+            targets: [{ id: 'us-troops', selector: { query: 'players' }, cardinality: { min: 3, max: 2 } }],
           },
         },
       ],
@@ -287,6 +297,27 @@ describe('top-level runtime schemas', () => {
 
     assert.equal(result.success, false);
     assert.ok(result.error.issues.some((issue: { path: readonly PropertyKey[] }) => issue.path.join('.') === 'cards.0.unshaded.targets.0.cardinality.min'));
+  });
+
+  it('rejects legacy opaque event effect payloads that are not EffectAST nodes', () => {
+    const result = EventDeckSchema.safeParse({
+      id: 'fitl-events-initial',
+      drawZone: 'leader:none',
+      discardZone: 'played:none',
+      cards: [
+        {
+          id: 'card-82',
+          title: 'Domino Theory',
+          sideMode: 'single',
+          unshaded: {
+            effects: [{ op: 'addTrack', track: 'aid', delta: -9 }],
+          },
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue: { path: readonly PropertyKey[] }) => issue.path.join('.').startsWith('cards.0.unshaded.effects.0')));
   });
 
   it('parses valid piece-catalog payload contracts', () => {

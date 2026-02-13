@@ -129,18 +129,20 @@ describe('validateGameSpec structural rules', () => {
       eventDecks: [
         {
           id: 'fitl-events-initial',
+          drawZone: 'leader:none',
+          discardZone: 'played:none',
           cards: [
             {
               id: 'card-82',
               title: 'Domino Theory',
               sideMode: 'single',
-              unshaded: { effects: [{ op: 'branch-a' }] },
+              unshaded: { effects: [{ shuffle: { zone: 'played:none' } }] },
             },
             {
               id: 'card-82',
               title: 'Domino Theory Duplicate',
               sideMode: 'single',
-              unshaded: { effects: [{ op: 'branch-b' }] },
+              unshaded: { effects: [{ shuffle: { zone: 'played:none' } }] },
             },
           ],
         },

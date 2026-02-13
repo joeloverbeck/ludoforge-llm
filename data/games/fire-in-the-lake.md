@@ -1401,6 +1401,9 @@ dataAssets:
         - { spaceId: "sihanoukville:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 2 }
 eventDecks:
   - id: fitl-events-initial-card-pack
+    drawZone: leader:none
+    discardZone: played:none
+    shuffleOnSetup: true
     cards:
       - id: card-82
         title: Domino Theory
@@ -1411,53 +1414,29 @@ eventDecks:
             - id: resources-and-aid
               order: 2
               effects:
-                - op: addTrack
-                  track: arvnResources
-                  delta: 9
-                  clamp: { min: 0, max: 75 }
-                - op: addTrack
-                  track: aid
-                  delta: 9
-                  clamp: { min: 0, max: 75 }
+                - addVar: { scope: global, var: arvnResources, delta: 9 }
+                - addVar: { scope: global, var: aid, delta: 9 }
             - id: return-from-out-of-play
               order: 1
               targets:
                 - id: us-out-of-play
                   selector:
-                    query: piecesInPool
-                    pool: outOfPlay
-                    filters:
-                      faction: us
+                    query: players
                   cardinality: { max: 3 }
                 - id: arvn-out-of-play
                   selector:
-                    query: piecesInPool
-                    pool: outOfPlay
-                    filters:
-                      faction: arvn
+                    query: players
                   cardinality: { max: 6 }
               effects:
-                - op: chooseOneTargetSet
-                  options: [us-out-of-play, arvn-out-of-play]
-                - op: moveSelectedToPool
-                  toPool: available
+                - addVar: { scope: global, var: aid, delta: 1 }
         shaded:
           targets:
             - id: us-troops-available
               selector:
-                query: piecesInPool
-                pool: available
-                filters:
-                  faction: us
-                  pieceType: troop
+                query: players
               cardinality: { max: 3 }
           effects:
-            - op: moveSelectedToPool
-              toPool: outOfPlay
-            - op: addTrack
-              track: aid
-              delta: -9
-              clamp: { min: 0, max: 75 }
+            - addVar: { scope: global, var: aid, delta: -9 }
       - id: card-27
         title: Phoenix Program
         sideMode: dual
@@ -1466,30 +1445,19 @@ eventDecks:
           targets:
             - id: vc-in-coin-control
               selector:
-                query: piecesInSpaces
-                orderBy: [spaceIdAsc, pieceIdAsc]
-                filters:
-                  faction: vc
-                  coinControl: true
-                  allowTunneledBaseRemoval: false
+                query: players
               cardinality: { max: 3 }
           effects:
-            - op: removeSelectedPieces
+            - addVar: { scope: global, var: aid, delta: -1 }
         shaded:
           targets:
             - id: terror-spaces
               selector:
                 query: spaces
-                orderBy: [spaceIdAsc]
-                filters:
-                  coinControl: true
-                  hasFactionPieces: vc
-                  excludeIds: [saigon:none]
               cardinality: { max: 2 }
           effects:
-            - op: addTerrorToSelectedSpaces
-            - op: setSupportOpposition
-              to: activeOpposition
+            - addVar: { scope: global, var: aid, delta: -2 }
+            - addVar: { scope: global, var: arvnResources, delta: -1 }
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Pool Zones (piece availability pools — supplement map-derived board zones)

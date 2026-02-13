@@ -1232,6 +1232,113 @@ describe('applyMove', () => {
     assert.equal(shadedB.state.globalVars.resolved, 22);
   });
 
+  it('activates selected lasting effects and applies setup effects for event moves', () => {
+    const def: GameDef = {
+      metadata: { id: 'event-lasting-effect-activation', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'aid', type: 'int', init: 0, min: -99, max: 99 }],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('draw:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [{ id: 'card', props: {} }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
+      },
+      eventDecks: [
+        {
+          id: 'deck-a',
+          drawZone: 'draw:none',
+          discardZone: 'played:none',
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Card 1',
+              sideMode: 'single',
+              unshaded: {
+                lastingEffects: [
+                  {
+                    id: 'aid-shift',
+                    duration: 'nextCard',
+                    setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 3 } }],
+                    teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -3 } }],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('event'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [{ name: 'side', domain: { query: 'enums', values: ['unshaded'] } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      globalVars: { aid: 0 },
+      zones: {
+        'draw:none': [],
+        'played:none': [{ id: asTokenId('card-1'), type: 'card', props: {} }],
+        'lookahead:none': [],
+        'leader:none': [],
+      },
+      actionUsage: {},
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+    };
+
+    const result = applyMove(def, state, {
+      actionId: asActionId('event'),
+      actionClass: 'event',
+      params: { side: 'unshaded' },
+    });
+
+    assert.equal(result.state.globalVars.aid, 3);
+    assert.equal(result.state.activeLastingEffects?.length, 1);
+    assert.equal(result.state.activeLastingEffects?.[0]?.id, 'aid-shift');
+    assert.equal(result.state.activeLastingEffects?.[0]?.remainingCardBoundaries, 2);
+  });
+
   it('executes compound SA before operation stages when timing is "before"', () => {
     const def: GameDef = {
       metadata: { id: 'compound-before', players: { min: 2, max: 2 } },

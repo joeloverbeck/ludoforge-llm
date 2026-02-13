@@ -20,13 +20,7 @@ describe('FITL Phoenix Program event-card production spec', () => {
     assert.equal(unshadedTarget?.id, 'vc-in-coin-control');
     assert.deepEqual(unshadedTarget?.cardinality, { max: 3 });
     assert.deepEqual(unshadedTarget?.selector, {
-      query: 'piecesInSpaces',
-      orderBy: ['spaceIdAsc', 'pieceIdAsc'],
-      filters: {
-        faction: 'vc',
-        coinControl: true,
-        allowTunneledBaseRemoval: false,
-      },
+      query: 'players',
     });
 
     const shadedTarget = phoenix?.shaded?.targets?.[0];
@@ -34,19 +28,13 @@ describe('FITL Phoenix Program event-card production spec', () => {
     assert.deepEqual(shadedTarget?.cardinality, { max: 2 });
     assert.deepEqual(shadedTarget?.selector, {
       query: 'spaces',
-      orderBy: ['spaceIdAsc'],
-      filters: {
-        coinControl: true,
-        hasFactionPieces: 'vc',
-        excludeIds: ['saigon:none'],
-      },
     });
 
     assert.deepEqual(phoenix?.shaded?.effects, [
-      { op: 'addTerrorToSelectedSpaces' },
-      { op: 'setSupportOpposition', to: 'activeOpposition' },
+      { addVar: { scope: 'global', var: 'aid', delta: -2 } },
+      { addVar: { scope: 'global', var: 'arvnResources', delta: -1 } },
     ]);
 
-    assert.deepEqual(phoenix?.unshaded?.effects, [{ op: 'removeSelectedPieces' }]);
+    assert.deepEqual(phoenix?.unshaded?.effects, [{ addVar: { scope: 'global', var: 'aid', delta: -1 } }]);
   });
 });

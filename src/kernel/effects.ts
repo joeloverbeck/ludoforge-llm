@@ -8,7 +8,7 @@ import { asTokenId } from './branded.js';
 import { evalCondition } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
-import { emitWarning } from './execution-collector.js';
+import { emitTrace, emitWarning } from './execution-collector.js';
 import { nextInt } from './prng.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
@@ -287,6 +287,13 @@ const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknown }>, c
     }
 
     const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
+    emitTrace(ctx.collector, {
+      kind: 'varChange',
+      scope: 'global',
+      varName: variableName,
+      oldValue: currentValue,
+      newValue: nextValue,
+    });
     if (nextValue === currentValue) {
       return { state: ctx.state, rng: ctx.rng };
     }
@@ -347,6 +354,13 @@ const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknown }>, c
   }
 
   const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
+  emitTrace(ctx.collector, {
+    kind: 'varChange',
+    scope: 'perPlayer',
+    varName: variableName,
+    oldValue: currentValue,
+    newValue: nextValue,
+  });
   if (nextValue === currentValue) {
     return { state: ctx.state, rng: ctx.rng };
   }
@@ -535,6 +549,13 @@ const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown
   ];
 
   enforceStacking(ctx, toZoneId, destinationAfter, 'moveToken');
+
+  emitTrace(ctx.collector, {
+    kind: 'moveToken',
+    tokenId: String(tokenId),
+    from: fromZoneId,
+    to: toZoneId,
+  });
 
   if (fromZoneId === toZoneId) {
     return {
@@ -730,6 +751,8 @@ const applySetTokenProp = (effect: Extract<EffectAST, { readonly setTokenProp: u
     }
   }
 
+  const oldValue = occurrence.token.props[prop];
+
   const updatedToken: Token = {
     ...occurrence.token,
     props: {
@@ -737,6 +760,14 @@ const applySetTokenProp = (effect: Extract<EffectAST, { readonly setTokenProp: u
       [prop]: evaluatedValue as number | string | boolean,
     },
   };
+
+  emitTrace(ctx.collector, {
+    kind: 'setTokenProp',
+    tokenId: String(tokenId),
+    prop,
+    oldValue,
+    newValue: evaluatedValue,
+  });
 
   const sourceTokens = ctx.state.zones[occurrence.zoneId]!;
   const zoneAfter = [...sourceTokens.slice(0, occurrence.index), updatedToken, ...sourceTokens.slice(occurrence.index + 1)];
@@ -1153,6 +1184,14 @@ const applyForEach = (
     currentState = iterationResult.state;
     currentRng = iterationResult.rng;
   }
+
+  emitTrace(ctx.collector, {
+    kind: 'forEach',
+    bind: effect.forEach.bind,
+    matchCount: queryResult.length,
+    iteratedCount: boundedItems.length,
+    ...(effect.forEach.limit !== undefined ? { limit } : {}),
+  });
 
   if (effect.forEach.countBind !== undefined && effect.forEach.in !== undefined) {
     const countCtx: EffectContext = {

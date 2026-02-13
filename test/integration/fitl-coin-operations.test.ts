@@ -58,6 +58,12 @@ describe('FITL COIN operations integration', () => {
     return options.slice(0, min) as MoveParamScalar[];
   };
 
+  const countFactionTokensInSpace = (
+    state: GameState,
+    space: string,
+    factions: readonly string[],
+  ): number => (state.zones[space] ?? []).filter((token) => factions.includes(String(token.props.faction))).length;
+
   it('compiles COIN Train/Patrol/Sweep/Assault operation profiles from production spec', () => {
     const { parsed, compiled } = compileProductionSpec();
 
@@ -82,23 +88,72 @@ describe('FITL COIN operations integration', () => {
     }
   });
 
-  it('routes assault through operation profiles instead of fallback action effects', () => {
+  it('routes assault through operation profile runtime (no fallback, no transitional stub counters)', () => {
     const { compiled } = compileProductionSpec();
-
     assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const start = initialState(def, 73, 2);
+    const space = 'quang-nam:none';
 
-    // Train/Patrol/Sweep require decision-sequence params and map-space context — tested structurally in this file.
-    // Assault remains a no-param operation profile and is used as runtime fallback-dispatch guard.
-    const start = initialState(compiled.gameDef!, 73, 2);
-    const sequence: readonly Move[] = [{ actionId: asActionId('assault'), params: {} }];
+    const modifiedStart: GameState = {
+      ...start,
+      zones: {
+        ...start.zones,
+        [space]: [
+          { id: asTokenId('assault-us-troop-1'), type: 'troops', props: { faction: 'US', type: 'troops' } },
+          { id: asTokenId('assault-us-troop-2'), type: 'troops', props: { faction: 'US', type: 'troops' } },
+          {
+            id: asTokenId('assault-us-base-1'),
+            type: 'base',
+            props: { faction: 'US', type: 'base' },
+          },
+          {
+            id: asTokenId('assault-enemy-g-1'),
+            type: 'guerrilla',
+            props: { faction: 'NVA', type: 'guerrilla', activity: 'active' },
+          },
+          {
+            id: asTokenId('assault-enemy-g-2'),
+            type: 'guerrilla',
+            props: { faction: 'VC', type: 'guerrilla', activity: 'active' },
+          },
+          {
+            id: asTokenId('assault-enemy-g-3'),
+            type: 'guerrilla',
+            props: { faction: 'VC', type: 'guerrilla', activity: 'active' },
+          },
+        ],
+      },
+    };
 
-    const final = sequence.reduce((state, move) => applyMove(compiled.gameDef!, state, move).state, start);
+    const template = legalMoves(def, modifiedStart).find(
+      (move) => move.actionId === asActionId('assault') && Object.keys(move.params).length === 0,
+    );
+    assert.ok(template, 'Expected template move for assault');
 
-    // coinResources: 10 - 3 (assault only)
-    assert.equal(final.globalVars.coinResources, 7);
+    const selected = completeProfileMoveDeterministically(
+      { ...template!, actionClass: 'limitedOperation' },
+      (request) => {
+        if (request.name === 'targetSpaces') return [space];
+        if (request.name === '$arvnFollowupSpaces') return [];
+        return pickDeterministicValue(request);
+      },
+      def,
+      modifiedStart,
+    );
+
+    const beforeCoinResources = modifiedStart.globalVars.coinResources;
+    const result = applyMove(def, modifiedStart, selected);
+    const final = result.state;
+
+    assert.equal(final.globalVars.coinResources, beforeCoinResources, 'US Assault should not spend coinResources');
     assert.equal(final.globalVars.sweepCount, 0);
-    assert.equal(final.globalVars.assaultCount, 1);
     assert.equal(final.globalVars.fallbackUsed, 0);
+    assert.equal(
+      countFactionTokensInSpace(final, space, ['NVA', 'VC']),
+      0,
+      'US Assault with Base should remove 2x US troop count of enemy pieces',
+    );
   });
 
   it('executes sweep-us-profile at runtime via decision sequence (no fallback, no sweep resource spend)', () => {
@@ -846,6 +901,373 @@ describe('FITL COIN operations integration', () => {
         );
         assert.ok(costEffect.length >= 1, 'Expected arvnResources cost inside __freeOperation guard');
       }
+    });
+  });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  describe('assault-us-profile acceptance criteria', () => {
+    const getAssaultUsProfile = () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'assault-us-profile');
+      assert.ok(profile, 'assault-us-profile must exist');
+      return profile;
+    };
+
+    const parseAssaultUsProfile = (): any => {
+      const { parsed } = compileProductionSpec();
+      const profile = parsed.doc.actionPipelines?.find(
+        (p: { id: string }) => p.id === 'assault-us-profile',
+      );
+      assert.ok(profile, 'assault-us-profile must exist in parsed doc');
+      return profile;
+    };
+
+    const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => {
+      const results: any[] = [];
+      const walk = (node: any): void => {
+        if (node === null || node === undefined) return;
+        if (predicate(node)) results.push(node);
+        if (Array.isArray(node)) {
+          for (const item of node) walk(item);
+        } else if (typeof node === 'object') {
+          for (const value of Object.values(node)) walk(value);
+        }
+      };
+      walk(obj);
+      return results;
+    };
+
+    it('AC1/AC2: compiles with zero-cost top-level fields', () => {
+      const profile = getAssaultUsProfile();
+      assert.equal(String(profile.actionId), 'assault');
+      assert.equal(profile.legality, true);
+      assert.equal(profile.costValidation, null);
+      assert.deepEqual(profile.costEffects, []);
+    });
+
+    it('AC3/AC10: select-spaces requires US Troops and enemy pieces, with LimOp max 1', () => {
+      const parsed = parseAssaultUsProfile();
+      const selectSpaces = parsed.stages[0];
+      assert.equal(selectSpaces.stage, 'select-spaces');
+
+      const limOpIf = findDeep(selectSpaces.effects, (node: any) =>
+        node?.if?.when?.op === '==' &&
+        node?.if?.when?.left?.ref === 'binding' &&
+        node?.if?.when?.left?.name === '__actionClass' &&
+        node?.if?.when?.right === 'limitedOperation',
+      );
+      assert.ok(limOpIf.length >= 1, 'Expected LimOp branch for __actionClass == limitedOperation');
+
+      const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) => node?.chooseN?.max === 1);
+      assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
+
+      const troopFilterCountChecks = findDeep(selectSpaces.effects, (node: any) =>
+        node?.op === '>' &&
+        node?.left?.aggregate?.query?.filter?.some((f: any) => f.prop === 'faction' && f.eq === 'US') &&
+        node?.left?.aggregate?.query?.filter?.some((f: any) => f.prop === 'type' && f.eq === 'troops'),
+      );
+      assert.ok(troopFilterCountChecks.length >= 2, 'Expected US Troops filter in both branches');
+
+      const enemyFilterCountChecks = findDeep(selectSpaces.effects, (node: any) =>
+        node?.op === '>' &&
+        node?.left?.aggregate?.query?.filter?.some(
+          (f: any) =>
+            f.prop === 'faction' &&
+            f.op === 'in' &&
+            Array.isArray(f.value) &&
+            f.value.includes('NVA') &&
+            f.value.includes('VC'),
+        ),
+      );
+      assert.ok(enemyFilterCountChecks.length >= 2, 'Expected enemy (NVA/VC) filter in both branches');
+    });
+
+    it('AC4/AC5/AC6: US damage formula applies base/highland/normal branches', () => {
+      const parsed = parseAssaultUsProfile();
+      const resolvePerSpace = parsed.stages[1];
+      assert.equal(resolvePerSpace.stage, 'resolve-per-space');
+
+      const baseDoubleBranch = findDeep(resolvePerSpace.effects, (node: any) =>
+        node?.if?.when?.op === '>' &&
+        node?.if?.when?.left?.ref === 'binding' &&
+        node?.if?.when?.left?.name === '$hasUSBase' &&
+        node?.if?.then?.op === '*' &&
+        node?.if?.then?.right === 2,
+      );
+      assert.ok(baseDoubleBranch.length >= 1, 'Expected 2x damage branch when US Base is present');
+
+      const highlandHalfBranch = findDeep(resolvePerSpace.effects, (node: any) =>
+        node?.if?.when?.op === 'zonePropIncludes' &&
+        node?.if?.when?.value === 'highland' &&
+        node?.if?.then?.op === '/' &&
+        node?.if?.then?.right === 2,
+      );
+      assert.ok(highlandHalfBranch.length >= 1, 'Expected highland floor(usTroops/2) branch');
+
+      const macroCall = findDeep(resolvePerSpace.effects, (node: any) =>
+        node?.macro === 'coin-assault-removal-order' && node?.args?.actorFaction === 'US',
+      );
+      assert.ok(macroCall.length >= 1, 'Expected coin-assault-removal-order call with actorFaction US');
+    });
+
+    it('AC8/AC9: ARVN follow-up is optional, costs 3, and uses ARVN highland/non-highland formulas', () => {
+      const parsed = parseAssaultUsProfile();
+      const arvnFollowup = parsed.stages[2];
+      assert.equal(arvnFollowup.stage, 'arvn-followup');
+
+      const followupGuard = findDeep(arvnFollowup.effects, (node: any) =>
+        node?.if?.when?.op === '>=' &&
+        node?.if?.when?.left?.ref === 'gvar' &&
+        node?.if?.when?.left?.var === 'arvnResources' &&
+        node?.if?.when?.right === 3,
+      );
+      assert.ok(followupGuard.length >= 1, 'Expected arvnResources >= 3 follow-up guard');
+
+      const arvnCost = findDeep(arvnFollowup.effects, (node: any) =>
+        node?.addVar?.var === 'arvnResources' && node?.addVar?.delta === -3,
+      );
+      assert.ok(arvnCost.length >= 1, 'Expected ARVN follow-up to spend 3 arvnResources');
+
+      const highlandThird = findDeep(arvnFollowup.effects, (node: any) =>
+        node?.if?.when?.op === 'zonePropIncludes' &&
+        node?.if?.when?.value === 'highland' &&
+        node?.if?.then?.op === '/' &&
+        node?.if?.then?.right === 3,
+      );
+      assert.ok(highlandThird.length >= 1, 'Expected highland floor(arvnCubes/3) branch');
+
+      const nonHighlandHalf = findDeep(arvnFollowup.effects, (node: any) =>
+        node?.if?.else?.op === '/' && node?.if?.else?.right === 2,
+      );
+      assert.ok(nonHighlandHalf.length >= 1, 'Expected non-highland floor(arvnCubes/2) branch');
+
+      const macroCall = findDeep(arvnFollowup.effects, (node: any) =>
+        node?.macro === 'coin-assault-removal-order' && node?.args?.actorFaction === 'ARVN',
+      );
+      assert.ok(macroCall.length >= 1, 'Expected ARVN follow-up to call coin-assault-removal-order');
+    });
+
+    it('runtime: highland without US Base uses floor(usTroops / 2)', () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const def = compiled.gameDef!;
+      const start = initialState(def, 91, 2);
+      const space = 'quang-nam:none';
+
+      const modifiedStart: GameState = {
+        ...start,
+        zones: {
+          ...start.zones,
+          [space]: [
+            { id: asTokenId('assault-hi-us-1'), type: 'troops', props: { faction: 'US', type: 'troops' } },
+            { id: asTokenId('assault-hi-us-2'), type: 'troops', props: { faction: 'US', type: 'troops' } },
+            { id: asTokenId('assault-hi-us-3'), type: 'troops', props: { faction: 'US', type: 'troops' } },
+            {
+              id: asTokenId('assault-hi-enemy-1'),
+              type: 'guerrilla',
+              props: { faction: 'NVA', type: 'guerrilla', activity: 'active' },
+            },
+            {
+              id: asTokenId('assault-hi-enemy-2'),
+              type: 'guerrilla',
+              props: { faction: 'VC', type: 'guerrilla', activity: 'active' },
+            },
+            {
+              id: asTokenId('assault-hi-enemy-3'),
+              type: 'guerrilla',
+              props: { faction: 'VC', type: 'guerrilla', activity: 'active' },
+            },
+          ],
+        },
+      };
+
+      const template = legalMoves(def, modifiedStart).find((move) => move.actionId === asActionId('assault'));
+      assert.ok(template, 'Expected template move for assault');
+      const selected = completeProfileMoveDeterministically(
+        { ...template!, actionClass: 'limitedOperation' },
+        (request) => {
+          if (request.name === 'targetSpaces') return [space];
+          if (request.name === '$arvnFollowupSpaces') return [];
+          return pickDeterministicValue(request);
+        },
+        def,
+        modifiedStart,
+      );
+
+      const final = applyMove(def, modifiedStart, selected).state;
+      assert.equal(
+        countFactionTokensInSpace(final, space, ['NVA', 'VC']),
+        2,
+        'Expected only 1 enemy piece removed in highland without US base',
+      );
+    });
+
+    it('runtime: non-highland without US Base uses 1 enemy per US Troop', () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const def = compiled.gameDef!;
+      const start = initialState(def, 92, 2);
+      const space = 'quang-tin-quang-ngai:none';
+
+      const modifiedStart: GameState = {
+        ...start,
+        zones: {
+          ...start.zones,
+          [space]: [
+            { id: asTokenId('assault-lo-us-1'), type: 'troops', props: { faction: 'US', type: 'troops' } },
+            { id: asTokenId('assault-lo-us-2'), type: 'troops', props: { faction: 'US', type: 'troops' } },
+            {
+              id: asTokenId('assault-lo-enemy-1'),
+              type: 'guerrilla',
+              props: { faction: 'NVA', type: 'guerrilla', activity: 'active' },
+            },
+            {
+              id: asTokenId('assault-lo-enemy-2'),
+              type: 'guerrilla',
+              props: { faction: 'VC', type: 'guerrilla', activity: 'active' },
+            },
+            {
+              id: asTokenId('assault-lo-enemy-3'),
+              type: 'guerrilla',
+              props: { faction: 'VC', type: 'guerrilla', activity: 'active' },
+            },
+          ],
+        },
+      };
+
+      const template = legalMoves(def, modifiedStart).find((move) => move.actionId === asActionId('assault'));
+      assert.ok(template, 'Expected template move for assault');
+      const selected = completeProfileMoveDeterministically(
+        { ...template!, actionClass: 'limitedOperation' },
+        (request) => {
+          if (request.name === 'targetSpaces') return [space];
+          if (request.name === '$arvnFollowupSpaces') return [];
+          return pickDeterministicValue(request);
+        },
+        def,
+        modifiedStart,
+      );
+
+      const final = applyMove(def, modifiedStart, selected).state;
+      assert.equal(
+        countFactionTokensInSpace(final, space, ['NVA', 'VC']),
+        1,
+        'Expected 2 enemy pieces removed in non-highland without US base',
+      );
+    });
+
+    it('runtime: insurgent Base removal adds +6 Aid', () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const def = compiled.gameDef!;
+      const start = initialState(def, 93, 2);
+      const space = 'quang-tin-quang-ngai:none';
+
+      const modifiedStart: GameState = {
+        ...start,
+        zones: {
+          ...start.zones,
+          [space]: [
+            { id: asTokenId('assault-aid-us-1'), type: 'troops', props: { faction: 'US', type: 'troops' } },
+            {
+              id: asTokenId('assault-aid-us-base'),
+              type: 'base',
+              props: { faction: 'US', type: 'base' },
+            },
+            {
+              id: asTokenId('assault-aid-enemy-g'),
+              type: 'guerrilla',
+              props: { faction: 'NVA', type: 'guerrilla', activity: 'active' },
+            },
+            {
+              id: asTokenId('assault-aid-enemy-base'),
+              type: 'base',
+              props: { faction: 'VC', type: 'base', tunnel: 'untunneled' },
+            },
+          ],
+        },
+      };
+
+      const template = legalMoves(def, modifiedStart).find((move) => move.actionId === asActionId('assault'));
+      assert.ok(template, 'Expected template move for assault');
+      const selected = completeProfileMoveDeterministically(
+        { ...template!, actionClass: 'limitedOperation' },
+        (request) => {
+          if (request.name === 'targetSpaces') return [space];
+          if (request.name === '$arvnFollowupSpaces') return [];
+          return pickDeterministicValue(request);
+        },
+        def,
+        modifiedStart,
+      );
+
+      const beforeAid = modifiedStart.globalVars.aid ?? 0;
+      const final = applyMove(def, modifiedStart, selected).state;
+      assert.equal(final.globalVars.aid, beforeAid + 6, 'Expected +6 Aid from one insurgent Base removed');
+    });
+
+    it('runtime: ARVN follow-up spends 3 and uses highland floor(arvnCubes / 3)', () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const def = compiled.gameDef!;
+      const start = initialState(def, 94, 2);
+      const space = 'quang-nam:none';
+
+      const modifiedStart: GameState = {
+        ...start,
+        zones: {
+          ...start.zones,
+          [space]: [
+            { id: asTokenId('assault-fu-us-1'), type: 'troops', props: { faction: 'US', type: 'troops' } },
+            { id: asTokenId('assault-fu-arvn-1'), type: 'troops', props: { faction: 'ARVN', type: 'troops' } },
+            { id: asTokenId('assault-fu-arvn-2'), type: 'troops', props: { faction: 'ARVN', type: 'troops' } },
+            { id: asTokenId('assault-fu-arvn-3'), type: 'police', props: { faction: 'ARVN', type: 'police' } },
+            {
+              id: asTokenId('assault-fu-enemy-1'),
+              type: 'guerrilla',
+              props: { faction: 'NVA', type: 'guerrilla', activity: 'active' },
+            },
+            {
+              id: asTokenId('assault-fu-enemy-2'),
+              type: 'guerrilla',
+              props: { faction: 'VC', type: 'guerrilla', activity: 'active' },
+            },
+            {
+              id: asTokenId('assault-fu-enemy-3'),
+              type: 'guerrilla',
+              props: { faction: 'VC', type: 'guerrilla', activity: 'active' },
+            },
+          ],
+        },
+      };
+
+      const template = legalMoves(def, modifiedStart).find((move) => move.actionId === asActionId('assault'));
+      assert.ok(template, 'Expected template move for assault');
+      const selected = completeProfileMoveDeterministically(
+        { ...template!, actionClass: 'limitedOperation' },
+        (request) => {
+          if (request.name === 'targetSpaces') return [space];
+          if (request.name === '$arvnFollowupSpaces') return [space];
+          return pickDeterministicValue(request);
+        },
+        def,
+        modifiedStart,
+      );
+
+      const beforeArvnResources = modifiedStart.globalVars.arvnResources ?? 0;
+      const final = applyMove(def, modifiedStart, selected).state;
+      assert.equal(
+        final.globalVars.arvnResources,
+        beforeArvnResources - 3,
+        'Expected ARVN follow-up to cost 3 arvnResources',
+      );
+      assert.equal(
+        countFactionTokensInSpace(final, space, ['NVA', 'VC']),
+        2,
+        'Expected US damage 0 and ARVN highland follow-up damage 1',
+      );
     });
   });
   /* eslint-enable @typescript-eslint/no-explicit-any */

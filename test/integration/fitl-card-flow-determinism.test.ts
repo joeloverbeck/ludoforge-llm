@@ -10,10 +10,14 @@ import {
   asActionId,
   asPhaseId,
   initialState,
+  legalChoices,
   legalMoves,
   serializeGameState,
+  type ChoiceRequest,
   type GameDef,
   type Move,
+  type MoveParamScalar,
+  type MoveParamValue,
 } from '../../src/kernel/index.js';
 import { createEligibilityOverrideDirective, FITL_NO_OVERRIDE } from './fitl-events-test-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
@@ -107,12 +111,57 @@ const scriptedMoves: readonly Move[] = [
 
 const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 
+const pickDeterministicValue = (request: ChoiceRequest): MoveParamValue => {
+  if (request.type === 'chooseOne') {
+    return (request.options?.[0] ?? null) as MoveParamScalar;
+  }
+
+  const min = request.min ?? 0;
+  const options = request.options ?? [];
+  if (options.length === 0) {
+    return [];
+  }
+  return options.slice(0, min) as MoveParamScalar[];
+};
+
+const completeProfileMoveDeterministically = (
+  baseMove: Move,
+  def: GameDef,
+  state: ReturnType<typeof initialState>,
+): Move | null => {
+  let move = baseMove;
+  for (let guard = 0; guard < 128; guard += 1) {
+    const request = legalChoices(def, state, move);
+    if (request.complete) return move;
+    const min = request.min ?? 0;
+    const options = request.options ?? [];
+    if (options.length < min) {
+      return null;
+    }
+
+    move = {
+      ...move,
+      params: {
+        ...move.params,
+        [request.name!]: pickDeterministicValue(request),
+      },
+    };
+  }
+  throw new Error('Exceeded decision-sequence completion guard while building deterministic move');
+};
+
 const runScriptedOperations = (def: GameDef, seed: number, actions: readonly string[]) => {
   let state = initialState(def, seed, 2);
   const logs: unknown[] = [];
 
   for (const action of actions) {
-    const result = applyMove(def, state, { actionId: asActionId(action), params: {} });
+    const template = legalMoves(def, state).find((move) => move.actionId === asActionId(action));
+    const baseMove = template ?? { actionId: asActionId(action), params: {} };
+    const selectedMove = completeProfileMoveDeterministically(baseMove, def, state);
+    if (selectedMove === null) {
+      continue;
+    }
+    const result = applyMove(def, state, selectedMove);
     logs.push(result.triggerFirings);
     state = result.state;
   }

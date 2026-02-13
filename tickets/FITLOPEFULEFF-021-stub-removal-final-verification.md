@@ -4,7 +4,7 @@
 **Priority**: P1
 **Estimated effort**: Small (1-2 hours)
 **Spec reference**: Spec 26, Acceptance Criteria 1, 21-23
-**Depends on**: ALL previous FITLOPEFULEFF tickets (001-020)
+**Depends on**: ALL previous FITLOPEFULEFF tickets (001-020), FITLOPEFULEFF-022, FITLOPEFULEFF-023, FITLOPEFULEFF-024, FITLOPEFULEFF-025
 
 ## Summary
 
@@ -42,6 +42,12 @@ This is a verification-only ticket. If issues are found, they should be addresse
 - [ ] `npm run build` passes
 - [ ] `npm run typecheck` passes
 - [ ] `npm test` passes (all unit + integration)
+
+### Architecture Hardening Verification (Post-021 dependency chain)
+- [ ] Pipeline legal-move satisfiability guard present and validated (FITLOPEFULEFF-022)
+- [ ] Typed zone-reference path is in use where required; no fragile string-concat zone-id construction remains in scoped FITL operation paths (FITLOPEFULEFF-023)
+- [ ] Generic priority-removal primitive is in place and validated by tests (FITLOPEFULEFF-024)
+- [ ] FITL removal macros are decomposed by responsibility and pass removal-ordering regressions (FITLOPEFULEFF-025)
 
 ## Files to Touch
 

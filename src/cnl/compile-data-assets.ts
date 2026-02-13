@@ -12,9 +12,20 @@ export function deriveSectionsFromDataAssets(
   readonly zones: GameSpecDoc['zones'];
   readonly tokenTypes: GameSpecDoc['tokenTypes'];
   readonly eventCards?: readonly EventCardDef[];
+  readonly derivationFailures: {
+    readonly map: boolean;
+    readonly pieceCatalog: boolean;
+  };
 } {
   if (doc.dataAssets === null) {
-    return { zones: null, tokenTypes: null };
+    return {
+      zones: null,
+      tokenTypes: null,
+      derivationFailures: {
+        map: false,
+        pieceCatalog: false,
+      },
+    };
   }
 
   const mapAssets: Array<{ readonly id: string; readonly payload: MapPayload }> = [];
@@ -30,6 +41,8 @@ export function deriveSectionsFromDataAssets(
     readonly payload: EventCardSetPayload;
     readonly path: string;
   }> = [];
+  let mapDerivationFailed = false;
+  let pieceCatalogDerivationFailed = false;
 
   for (const [index, rawAsset] of doc.dataAssets.entries()) {
     if (!isRecord(rawAsset)) {
@@ -42,6 +55,12 @@ export function deriveSectionsFromDataAssets(
     });
     diagnostics.push(...validated.diagnostics);
     if (validated.asset === null) {
+      if (rawAsset.kind === 'map') {
+        mapDerivationFailed = true;
+      }
+      if (rawAsset.kind === 'pieceCatalog') {
+        pieceCatalogDerivationFailed = true;
+      }
       continue;
     }
 
@@ -101,7 +120,7 @@ export function deriveSectionsFromDataAssets(
     });
   }
 
-  const selectedMap = selectAssetById(
+  const selectedMapResult = selectAssetById(
     mapAssets,
     selectedScenario?.mapAssetId,
     diagnostics,
@@ -109,7 +128,9 @@ export function deriveSectionsFromDataAssets(
     selectedScenario?.path ?? 'doc.dataAssets',
     selectedScenario?.entityId,
   );
-  const selectedPieceCatalog = selectAssetById(
+  mapDerivationFailed = mapDerivationFailed || selectedMapResult.failed;
+  const selectedMap = selectedMapResult.selected;
+  const selectedPieceCatalogResult = selectAssetById(
     pieceCatalogAssets,
     selectedScenario?.pieceCatalogAssetId,
     diagnostics,
@@ -117,6 +138,8 @@ export function deriveSectionsFromDataAssets(
     selectedScenario?.path ?? 'doc.dataAssets',
     selectedScenario?.entityId,
   );
+  pieceCatalogDerivationFailed = pieceCatalogDerivationFailed || selectedPieceCatalogResult.failed;
+  const selectedPieceCatalog = selectedPieceCatalogResult.selected;
 
   const zones =
     selectedMap === undefined
@@ -164,6 +187,10 @@ export function deriveSectionsFromDataAssets(
     zones,
     tokenTypes,
     ...(eventCards === undefined ? {} : { eventCards }),
+    derivationFailures: {
+      map: mapDerivationFailed,
+      pieceCatalog: pieceCatalogDerivationFailed,
+    },
   };
 }
 
@@ -174,12 +201,18 @@ function selectAssetById<TPayload>(
   kind: 'map' | 'pieceCatalog',
   selectedPath: string,
   entityId?: string,
-): { readonly id: string; readonly payload: TPayload } | undefined {
+): {
+  readonly selected: { readonly id: string; readonly payload: TPayload } | undefined;
+  readonly failed: boolean;
+} {
   if (selectedId !== undefined) {
     const normalizedSelectedId = normalizeIdentifier(selectedId);
     const matched = assets.find((asset) => normalizeIdentifier(asset.id) === normalizedSelectedId);
     if (matched !== undefined) {
-      return matched;
+      return {
+        selected: matched,
+        failed: false,
+      };
     }
 
     diagnostics.push({
@@ -191,11 +224,17 @@ function selectAssetById<TPayload>(
       alternatives: assets.map((asset) => asset.id).sort((left, right) => left.localeCompare(right)),
       ...(entityId === undefined ? {} : { entityId }),
     });
-    return undefined;
+    return {
+      selected: undefined,
+      failed: true,
+    };
   }
 
   if (assets.length === 1) {
-    return assets[0];
+    return {
+      selected: assets[0],
+      failed: false,
+    };
   }
 
   if (assets.length > 1) {
@@ -209,5 +248,8 @@ function selectAssetById<TPayload>(
     });
   }
 
-  return undefined;
+  return {
+    selected: undefined,
+    failed: assets.length > 1,
+  };
 }

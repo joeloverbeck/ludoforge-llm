@@ -1,6 +1,11 @@
 {
   "expectedDiagnostics": [
     {
+      "code": "CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING",
+      "path": "doc.dataAssets",
+      "suggestion": "Fix the pieceCatalog data asset diagnostics or provide doc.tokenTypes explicitly in YAML."
+    },
+    {
       "code": "CNL_COMPILER_DATA_ASSET_REF_MISSING",
       "path": "doc.dataAssets.2.payload.mapAssetId",
       "suggestion": "Use an existing map asset id from doc.dataAssets.",

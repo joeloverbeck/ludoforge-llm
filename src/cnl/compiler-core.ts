@@ -204,7 +204,11 @@ function compileExpandedDoc(
   let ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>> = {};
   let zones: GameDef['zones'] | null = null;
   if (effectiveZones === null) {
-    diagnostics.push(requiredSectionDiagnostic('doc.zones', 'zones'));
+    if (doc.zones === null && derivedFromAssets.derivationFailures.map) {
+      diagnostics.push(dataAssetCascadeZonesDiagnostic());
+    } else {
+      diagnostics.push(requiredSectionDiagnostic('doc.zones', 'zones'));
+    }
   } else {
     const zoneCompilation = compileSection(diagnostics, () => {
       const materialized = materializeZoneDefs(effectiveZones, metadata?.players.max ?? 0);
@@ -216,8 +220,21 @@ function compileExpandedDoc(
     sections.zones = zoneCompilation.failed ? null : zoneCompilation.value;
   }
 
-  const tokenTypes = compileSection(diagnostics, () => lowerTokenTypes(effectiveTokenTypes, diagnostics));
-  sections.tokenTypes = tokenTypes.failed ? null : tokenTypes.value;
+  let tokenTypes: {
+    readonly value: GameDef['tokenTypes'];
+    readonly failed: boolean;
+  };
+  if (effectiveTokenTypes === null && doc.tokenTypes === null && derivedFromAssets.derivationFailures.pieceCatalog) {
+    diagnostics.push(dataAssetCascadeTokenTypesDiagnostic());
+    tokenTypes = {
+      value: [],
+      failed: true,
+    };
+    sections.tokenTypes = null;
+  } else {
+    tokenTypes = compileSection(diagnostics, () => lowerTokenTypes(effectiveTokenTypes, diagnostics));
+    sections.tokenTypes = tokenTypes.failed ? null : tokenTypes.value;
+  }
 
   const setup = compileSection(diagnostics, () =>
     lowerEffectsWithDiagnostics(doc.setup ?? [], ownershipByBase, diagnostics, 'doc.setup'),
@@ -344,6 +361,26 @@ function requiredSectionDiagnostic(path: string, section: string): Diagnostic {
     severity: 'error',
     message: `Required section "${section}" is missing.`,
     suggestion: `Provide doc.${section} before compilation.`,
+  };
+}
+
+function dataAssetCascadeZonesDiagnostic(): Diagnostic {
+  return {
+    code: 'CNL_DATA_ASSET_CASCADE_ZONES_MISSING',
+    path: 'doc.dataAssets',
+    severity: 'warning',
+    message: 'Map data asset derivation failed and no explicit zones were provided; zones section is unavailable.',
+    suggestion: 'Fix the map data asset diagnostics or provide doc.zones explicitly in YAML.',
+  };
+}
+
+function dataAssetCascadeTokenTypesDiagnostic(): Diagnostic {
+  return {
+    code: 'CNL_DATA_ASSET_CASCADE_TOKEN_TYPES_MISSING',
+    path: 'doc.dataAssets',
+    severity: 'warning',
+    message: 'Piece catalog data asset derivation failed and no explicit tokenTypes were provided; tokenTypes section is unavailable.',
+    suggestion: 'Fix the pieceCatalog data asset diagnostics or provide doc.tokenTypes explicitly in YAML.',
   };
 }
 

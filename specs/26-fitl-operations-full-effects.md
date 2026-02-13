@@ -97,6 +97,22 @@ Approach B (single profile + `{ ref: actor }` branching) was rejected because:
 - Special activity effect implementations (Spec 27)
 - Event-granted free operations (Spec 29)
 
+### Production Data File: Architectural Gap
+
+The production data file (`data/games/fire-in-the-lake.md`) currently has `operationProfiles` entries that reference action IDs (e.g., `actionId: train`) via their profiles, but the file has no `actions` section defining those IDs, and no `zones`, `turnStructure`, or `endConditions` sections either. No existing ticket or spec addresses adding these sections.
+
+**This must be resolved before ticket FITLOPEFULEFF-021 (final verification) can pass cleanly.** Each profile ticket adds an `operationProfiles` entry to the production data file. By ticket 021, there will be 16 profiles all referencing action IDs that don't exist, producing 16 `CNL_VALIDATOR_REFERENCE_MISSING` diagnostics.
+
+**Requirements for the fix:**
+
+1. **Game-specific data in GameSpecDoc only**: The `actions`, `zones`, `turnStructure`, and `endConditions` sections belong in the GameSpecDoc (`fire-in-the-lake.md`). They encode FITL-specific game rules (COIN eligibility, faction turn order, victory conditions). The compiler transforms these into the game-agnostic `GameDef` that the kernel executes.
+
+2. **No backwards compatibility or aliasing**: Define the canonical sections cleanly. If the current production data file structure needs restructuring, restructure it — do not add shims or aliases.
+
+3. **Clean, robust, extensible architecture**: The `actions` section must define each operation (train, patrol, sweep, assault, rally, march, attack, terror) in a way that: (a) maps to the correct faction-specific `operationProfiles`, (b) integrates with the COIN turn structure (eligible factions, operation+SA interleaving, limited operations), and (c) follows existing GameSpecDoc patterns so other games can define their own actions the same way.
+
+4. **One or more new tickets** should be created (namespaced under FITLOPEFULEFF or a new namespace) to add these sections to `fire-in-the-lake.md`. These tickets should be ordered before FITLOPEFULEFF-021 in the dependency chain.
+
 ## Global Mechanics
 
 ### Terror/Sabotage Marker Supply (Rule 3.3.4)

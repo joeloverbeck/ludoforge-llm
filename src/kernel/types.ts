@@ -28,6 +28,7 @@ export type PlayerSel =
   | { readonly relative: 'left' | 'right' };
 
 export type ZoneSel = string;
+export type ZoneRef = ZoneSel | { readonly zoneExpr: ValueExpr };
 export type TokenSel = string;
 
 export type Reference =
@@ -58,7 +59,14 @@ export type ValueExpr =
         readonly prop?: string;
       };
     }
-  | { readonly concat: readonly ValueExpr[] };
+  | { readonly concat: readonly ValueExpr[] }
+  | {
+      readonly if: {
+        readonly when: ConditionAST;
+        readonly then: ValueExpr;
+        readonly else: ValueExpr;
+      };
+    };
 
 export type ConditionAST =
   | boolean
@@ -129,37 +137,37 @@ export type EffectAST =
   | {
       readonly moveToken: {
         readonly token: TokenSel;
-        readonly from: ZoneSel;
-        readonly to: ZoneSel;
+        readonly from: ZoneRef;
+        readonly to: ZoneRef;
         readonly position?: 'top' | 'bottom' | 'random';
       };
     }
   | {
       readonly moveAll: {
-        readonly from: ZoneSel;
-        readonly to: ZoneSel;
+        readonly from: ZoneRef;
+        readonly to: ZoneRef;
         readonly filter?: ConditionAST;
       };
     }
   | {
       readonly moveTokenAdjacent: {
         readonly token: TokenSel;
-        readonly from: ZoneSel;
+        readonly from: ZoneRef;
         readonly direction?: string;
       };
     }
   | {
       readonly draw: {
-        readonly from: ZoneSel;
-        readonly to: ZoneSel;
+        readonly from: ZoneRef;
+        readonly to: ZoneRef;
         readonly count: number;
       };
     }
-  | { readonly shuffle: { readonly zone: ZoneSel } }
+  | { readonly shuffle: { readonly zone: ZoneRef } }
   | {
       readonly createToken: {
         readonly type: string;
-        readonly zone: ZoneSel;
+        readonly zone: ZoneRef;
         readonly props?: Readonly<Record<string, ValueExpr>>;
       };
     }
@@ -228,14 +236,14 @@ export type EffectAST =
     }
   | {
       readonly setMarker: {
-        readonly space: ZoneSel;
+        readonly space: ZoneRef;
         readonly marker: string;
         readonly state: ValueExpr;
       };
     }
   | {
       readonly shiftMarker: {
-        readonly space: ZoneSel;
+        readonly space: ZoneRef;
         readonly marker: string;
         readonly delta: ValueExpr;
       };
@@ -928,9 +936,101 @@ export type TriggerLogEntry =
   | OperationPartialTraceEntry
   | OperationFreeTraceEntry;
 
+// ── Runtime Warnings ──────────────────────────────────────
+
+export type RuntimeWarningCode =
+  | 'EMPTY_QUERY_RESULT'
+  | 'TOKEN_NOT_IN_ZONE'
+  | 'BINDING_UNDEFINED'
+  | 'EMPTY_ZONE_OPERATION'
+  | 'ZERO_EFFECT_ITERATIONS';
+
+export interface RuntimeWarning {
+  readonly code: RuntimeWarningCode;
+  readonly message: string;
+  readonly context: Readonly<Record<string, unknown>>;
+  readonly hint?: string;
+}
+
+// ── Effect Execution Trace ────────────────────────────────
+
+export interface EffectTraceForEach {
+  readonly kind: 'forEach';
+  readonly bind: string;
+  readonly matchCount: number;
+  readonly limit?: number;
+  readonly iteratedCount: number;
+}
+
+export interface EffectTraceMoveToken {
+  readonly kind: 'moveToken';
+  readonly tokenId: string;
+  readonly from: string;
+  readonly to: string;
+}
+
+export interface EffectTraceSetTokenProp {
+  readonly kind: 'setTokenProp';
+  readonly tokenId: string;
+  readonly prop: string;
+  readonly oldValue: unknown;
+  readonly newValue: unknown;
+}
+
+export interface EffectTraceVarChange {
+  readonly kind: 'varChange';
+  readonly scope: 'global' | 'perPlayer';
+  readonly varName: string;
+  readonly oldValue: number;
+  readonly newValue: number;
+}
+
+export interface EffectTraceCreateToken {
+  readonly kind: 'createToken';
+  readonly tokenId: string;
+  readonly type: string;
+  readonly zone: string;
+}
+
+export interface EffectTraceQueryResult {
+  readonly kind: 'queryResult';
+  readonly queryType: string;
+  readonly zone: string;
+  readonly filterSummary: string;
+  readonly matchCount: number;
+}
+
+export interface EffectTraceConditional {
+  readonly kind: 'conditional';
+  readonly branch: 'then' | 'else';
+  readonly conditionSummary: string;
+}
+
+export type EffectTraceEntry =
+  | EffectTraceForEach
+  | EffectTraceMoveToken
+  | EffectTraceSetTokenProp
+  | EffectTraceVarChange
+  | EffectTraceCreateToken
+  | EffectTraceQueryResult
+  | EffectTraceConditional;
+
+// ── Execution Options & Collector ─────────────────────────
+
+export interface ExecutionOptions {
+  readonly trace?: boolean;
+}
+
+export interface ExecutionCollector {
+  readonly warnings: RuntimeWarning[];
+  readonly trace: EffectTraceEntry[] | null;
+}
+
 export interface ApplyMoveResult {
   readonly state: GameState;
   readonly triggerFirings: readonly TriggerLogEntry[];
+  readonly warnings: readonly RuntimeWarning[];
+  readonly effectTrace?: readonly EffectTraceEntry[];
 }
 
 export interface MoveLog {
@@ -940,6 +1040,8 @@ export interface MoveLog {
   readonly legalMoveCount: number;
   readonly deltas: readonly StateDelta[];
   readonly triggerFirings: readonly TriggerLogEntry[];
+  readonly warnings: readonly RuntimeWarning[];
+  readonly effectTrace?: readonly EffectTraceEntry[];
 }
 
 export interface PlayerScore {

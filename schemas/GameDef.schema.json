@@ -118,6 +118,19 @@
       ]
     },
     "zoneSel": { "type": "string" },
+    "zoneRef": {
+      "oneOf": [
+        { "$ref": "#/definitions/zoneSel" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["zoneExpr"],
+          "properties": {
+            "zoneExpr": { "$ref": "#/definitions/valueExpr" }
+          }
+        }
+      ]
+    },
     "tokenSel": { "type": "string" },
     "reference": {
       "oneOf": [
@@ -325,6 +338,23 @@
               "items": { "$ref": "#/definitions/valueExpr" }
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["if"],
+          "properties": {
+            "if": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["when", "then", "else"],
+              "properties": {
+                "when": { "$ref": "#/definitions/conditionAST" },
+                "then": { "$ref": "#/definitions/valueExpr" },
+                "else": { "$ref": "#/definitions/valueExpr" }
+              }
+            }
+          }
         }
       ]
     },
@@ -439,8 +469,8 @@
               "required": ["token", "from", "to"],
               "properties": {
                 "token": { "$ref": "#/definitions/tokenSel" },
-                "from": { "$ref": "#/definitions/zoneSel" },
-                "to": { "$ref": "#/definitions/zoneSel" },
+                "from": { "$ref": "#/definitions/zoneRef" },
+                "to": { "$ref": "#/definitions/zoneRef" },
                 "position": { "enum": ["top", "bottom", "random"] }
               }
             }
@@ -456,8 +486,8 @@
               "additionalProperties": false,
               "required": ["from", "to"],
               "properties": {
-                "from": { "$ref": "#/definitions/zoneSel" },
-                "to": { "$ref": "#/definitions/zoneSel" },
+                "from": { "$ref": "#/definitions/zoneRef" },
+                "to": { "$ref": "#/definitions/zoneRef" },
                 "filter": { "$ref": "#/definitions/conditionAST" }
               }
             }
@@ -474,7 +504,7 @@
               "required": ["token", "from"],
               "properties": {
                 "token": { "$ref": "#/definitions/tokenSel" },
-                "from": { "$ref": "#/definitions/zoneSel" },
+                "from": { "$ref": "#/definitions/zoneRef" },
                 "direction": { "type": "string" }
               }
             }
@@ -490,8 +520,8 @@
               "additionalProperties": false,
               "required": ["from", "to", "count"],
               "properties": {
-                "from": { "$ref": "#/definitions/zoneSel" },
-                "to": { "$ref": "#/definitions/zoneSel" },
+                "from": { "$ref": "#/definitions/zoneRef" },
+                "to": { "$ref": "#/definitions/zoneRef" },
                 "count": { "type": "number" }
               }
             }
@@ -507,7 +537,7 @@
               "additionalProperties": false,
               "required": ["zone"],
               "properties": {
-                "zone": { "$ref": "#/definitions/zoneSel" }
+                "zone": { "$ref": "#/definitions/zoneRef" }
               }
             }
           }
@@ -523,7 +553,7 @@
               "required": ["type", "zone"],
               "properties": {
                 "type": { "type": "string" },
-                "zone": { "$ref": "#/definitions/zoneSel" },
+                "zone": { "$ref": "#/definitions/zoneRef" },
                 "props": {
                   "type": "object",
                   "additionalProperties": { "$ref": "#/definitions/valueExpr" }

@@ -106,14 +106,14 @@ describe('canonicalizeZoneSelector', () => {
     assert.deepEqual(result.diagnostics, []);
   });
 
-  it('emits diagnostic for dynamic expressions in { concat: [...] }', () => {
+  it('falls through to invalid selector for dynamic concat (handled by caller)', () => {
     const result = canonicalizeZoneSelector(
       { concat: ['available-', { ref: 'binding', name: '$faction' }] },
       ownershipByBase,
       'doc.effects.0.moveToken.to',
     );
     assert.equal(result.value, null);
-    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_CONCAT_DYNAMIC');
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_SELECTOR_INVALID');
   });
 
   it('passes through $-prefixed binding references without canonicalization', () => {

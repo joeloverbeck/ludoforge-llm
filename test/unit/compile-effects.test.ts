@@ -100,4 +100,66 @@ describe('compile-effects lowering', () => {
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.chooseN'), true);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.1.chooseN'), true);
   });
+
+  it('lowers dynamic zone expression (tokenZone ref) to zoneExpr', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          moveToken: {
+            token: '$cube',
+            from: { ref: 'tokenZone', token: '$cube' },
+            to: 'discard',
+          },
+        },
+      ],
+      { ...context, bindingScope: ['$cube'] },
+      'doc.actions.0.effects',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.ok(result.value !== null && result.value.length === 1);
+    const effect = result.value[0]!;
+    assert.ok('moveToken' in effect);
+    assert.deepEqual(effect.moveToken.from, { zoneExpr: { ref: 'tokenZone', token: '$cube' } });
+    assert.equal(effect.moveToken.to, 'discard:none');
+  });
+
+  it('lowers dynamic concat zone expression to zoneExpr', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          moveToken: {
+            token: '$cube',
+            from: 'deck',
+            to: { concat: ['available:', { ref: 'binding', name: '$faction' }] },
+          },
+        },
+      ],
+      { ...context, bindingScope: ['$cube', '$faction'] },
+      'doc.actions.0.effects',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.ok(result.value !== null && result.value.length === 1);
+    const effect = result.value[0]!;
+    assert.ok('moveToken' in effect);
+    assert.equal(effect.moveToken.from, 'deck:none');
+    assert.deepEqual(effect.moveToken.to, {
+      zoneExpr: { concat: ['available:', { ref: 'binding', name: '$faction' }] },
+    });
+  });
+
+  it('lowers static concat zone expression to string', () => {
+    const result = lowerEffectArray(
+      [{ shuffle: { zone: { concat: ['deck:', 'none'] } } }],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.ok(result.value !== null && result.value.length === 1);
+    const effect = result.value[0]!;
+    assert.ok('shuffle' in effect);
+    assert.equal(effect.shuffle.zone, 'deck:none');
+  });
 });

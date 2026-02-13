@@ -11,6 +11,7 @@ import type {
   StackingConstraint,
   TokenFilterPredicate,
   ValueExpr,
+  ZoneRef,
 } from './types.js';
 import { buildAdjacencyGraph, validateAdjacency } from './spatial.js';
 
@@ -243,6 +244,13 @@ const validateValueExpr = (
     return;
   }
 
+  if ('if' in valueExpr) {
+    validateConditionAst(diagnostics, valueExpr.if.when, `${path}.if.when`, context);
+    validateValueExpr(diagnostics, valueExpr.if.then, `${path}.if.then`, context);
+    validateValueExpr(diagnostics, valueExpr.if.else, `${path}.if.else`, context);
+    return;
+  }
+
   validateOptionsQuery(diagnostics, valueExpr.aggregate.query, `${path}.aggregate.query`, context);
 };
 
@@ -373,6 +381,19 @@ const validateZoneSelector = (
     });
     return;
   }
+};
+
+const validateZoneRef = (
+  diagnostics: Diagnostic[],
+  zoneRef: ZoneRef,
+  path: string,
+  context: ValidationContext,
+): void => {
+  if (typeof zoneRef === 'string') {
+    validateZoneSelector(diagnostics, zoneRef, path, context);
+    return;
+  }
+  validateValueExpr(diagnostics, zoneRef.zoneExpr, `${path}.zoneExpr`, context);
 };
 
 const validateTokenFilterPredicates = (
@@ -517,14 +538,14 @@ const validateEffectAst = (
   }
 
   if ('moveToken' in effect) {
-    validateZoneSelector(diagnostics, effect.moveToken.from, `${path}.moveToken.from`, context);
-    validateZoneSelector(diagnostics, effect.moveToken.to, `${path}.moveToken.to`, context);
+    validateZoneRef(diagnostics, effect.moveToken.from, `${path}.moveToken.from`, context);
+    validateZoneRef(diagnostics, effect.moveToken.to, `${path}.moveToken.to`, context);
     return;
   }
 
   if ('moveAll' in effect) {
-    validateZoneSelector(diagnostics, effect.moveAll.from, `${path}.moveAll.from`, context);
-    validateZoneSelector(diagnostics, effect.moveAll.to, `${path}.moveAll.to`, context);
+    validateZoneRef(diagnostics, effect.moveAll.from, `${path}.moveAll.from`, context);
+    validateZoneRef(diagnostics, effect.moveAll.to, `${path}.moveAll.to`, context);
 
     if (effect.moveAll.filter) {
       validateConditionAst(diagnostics, effect.moveAll.filter, `${path}.moveAll.filter`, context);
@@ -533,18 +554,18 @@ const validateEffectAst = (
   }
 
   if ('moveTokenAdjacent' in effect) {
-    validateZoneSelector(diagnostics, effect.moveTokenAdjacent.from, `${path}.moveTokenAdjacent.from`, context);
+    validateZoneRef(diagnostics, effect.moveTokenAdjacent.from, `${path}.moveTokenAdjacent.from`, context);
     return;
   }
 
   if ('draw' in effect) {
-    validateZoneSelector(diagnostics, effect.draw.from, `${path}.draw.from`, context);
-    validateZoneSelector(diagnostics, effect.draw.to, `${path}.draw.to`, context);
+    validateZoneRef(diagnostics, effect.draw.from, `${path}.draw.from`, context);
+    validateZoneRef(diagnostics, effect.draw.to, `${path}.draw.to`, context);
     return;
   }
 
   if ('shuffle' in effect) {
-    validateZoneSelector(diagnostics, effect.shuffle.zone, `${path}.shuffle.zone`, context);
+    validateZoneRef(diagnostics, effect.shuffle.zone, `${path}.shuffle.zone`, context);
     return;
   }
 
@@ -560,7 +581,7 @@ const validateEffectAst = (
       );
     }
 
-    validateZoneSelector(diagnostics, effect.createToken.zone, `${path}.createToken.zone`, context);
+    validateZoneRef(diagnostics, effect.createToken.zone, `${path}.createToken.zone`, context);
     if (effect.createToken.props) {
       Object.entries(effect.createToken.props).forEach(([propName, propValue]) => {
         validateValueExpr(diagnostics, propValue, `${path}.createToken.props.${propName}`, context);
@@ -626,13 +647,13 @@ const validateEffectAst = (
   }
 
   if ('setMarker' in effect) {
-    validateZoneSelector(diagnostics, effect.setMarker.space, `${path}.setMarker.space`, context);
+    validateZoneRef(diagnostics, effect.setMarker.space, `${path}.setMarker.space`, context);
     validateValueExpr(diagnostics, effect.setMarker.state, `${path}.setMarker.state`, context);
     return;
   }
 
   if ('shiftMarker' in effect) {
-    validateZoneSelector(diagnostics, effect.shiftMarker.space, `${path}.shiftMarker.space`, context);
+    validateZoneRef(diagnostics, effect.shiftMarker.space, `${path}.shiftMarker.space`, context);
     validateValueExpr(diagnostics, effect.shiftMarker.delta, `${path}.shiftMarker.delta`, context);
     return;
   }

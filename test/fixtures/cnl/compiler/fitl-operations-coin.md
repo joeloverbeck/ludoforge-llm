@@ -83,21 +83,22 @@ effectMacros:
     params:
       - { name: space, type: string }
       - { name: damageExpr, type: value }
+      - { name: actorFaction, type: string }
     effects:
       - let:
-          bind: damage
+          bind: $damage
           value: { param: damageExpr }
           in:
             - forEach:
                 bind: $target
-                over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: troops }, { prop: faction, op: neq, value: { ref: actor } }] }
+                over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: troops }, { prop: faction, op: neq, value: { param: actorFaction } }] }
                 limit: { ref: binding, name: $damage }
                 effects:
                   - moveToken: { token: $target, from: { param: space }, to: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }] } }
                 countBind: $troopsRemoved
                 in:
                   - let:
-                      bind: remainingDamage
+                      bind: $remainingDamage
                       value: { op: '-', left: { ref: binding, name: $damage }, right: { ref: binding, name: $troopsRemoved } }
                       in:
                         - chooseOne:
@@ -112,11 +113,11 @@ effectMacros:
                             countBind: $guerrillas1Removed
                             in:
                               - let:
-                                  bind: remainingDamage2
+                                  bind: $remainingDamage2
                                   value: { op: '-', left: { ref: binding, name: $remainingDamage }, right: { ref: binding, name: $guerrillas1Removed } }
                                   in:
                                     - let:
-                                        bind: targetFactionSecond
+                                        bind: $targetFactionSecond
                                         value: { if: { when: { op: '==', left: { ref: binding, name: $targetFactionFirst }, right: 'NVA' }, then: 'VC', else: 'NVA' } }
                                         in:
                                           - forEach:
@@ -126,15 +127,15 @@ effectMacros:
                                               effects:
                                                 - moveToken: { token: $target3, from: { param: space }, to: { concat: ['available-', { ref: binding, name: $targetFactionSecond }] } }
                                           - let:
-                                              bind: guerrillasRemaining
-                                              value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, op: neq, value: { ref: actor } }, { prop: activity, eq: active }] } } }
+                                              bind: $guerrillasRemaining
+                                              value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, op: neq, value: { param: actorFaction } }, { prop: activity, eq: active }] } } }
                                               in:
                                                 - if:
                                                     when: { op: '==', left: { ref: binding, name: $guerrillasRemaining }, right: 0 }
                                                     then:
                                                       - forEach:
                                                           bind: $baseTarget
-                                                          over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: neq, value: { ref: actor } }] }
+                                                          over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: neq, value: { param: actorFaction } }] }
                                                           effects:
                                                             - if:
                                                                 when: { op: '==', left: { ref: tokenProp, token: $baseTarget, prop: tunnel }, right: 'tunneled' }
@@ -156,21 +157,23 @@ effectMacros:
     params:
       - { name: space, type: string }
       - { name: damageExpr, type: value }
+      - { name: actorFaction, type: string }
     effects:
       - let:
-          bind: basesBefore
+          bind: $basesBefore
           value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
           in:
             - macro: piece-removal-ordering
               args:
                 space: { param: space }
                 damageExpr: { param: damageExpr }
+                actorFaction: { param: actorFaction }
             - let:
-                bind: basesAfter
+                bind: $basesAfter
                 value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
                 in:
                   - let:
-                      bind: basesRemoved
+                      bind: $basesRemoved
                       value: { op: '-', left: { ref: binding, name: $basesBefore }, right: { ref: binding, name: $basesAfter } }
                       in:
                         - if:
@@ -265,19 +268,19 @@ effectMacros:
       - { name: sfType, type: string }
     effects:
       - let:
-          bind: cubeCount
+          bind: $cubeCount
           value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: { param: cubeFaction } }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
           in:
             - let:
-                bind: sfCount
+                bind: $sfCount
                 value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: { param: cubeFaction } }, { prop: type, eq: { param: sfType } }] } } }
                 in:
                   - let:
-                      bind: totalSweepers
+                      bind: $totalSweepers
                       value: { op: '+', left: { ref: binding, name: $cubeCount }, right: { ref: binding, name: $sfCount } }
                       in:
                         - let:
-                            bind: activationLimit
+                            bind: $activationLimit
                             value:
                               if:
                                 when: { op: zonePropIncludes, zone: { param: space }, prop: terrainTags, value: 'jungle' }
@@ -724,37 +727,113 @@ operationProfiles:
                           maxPieces: 1
     partialExecution:
       mode: forbid
-  - id: patrol-profile
+  - id: patrol-us-profile
     actionId: patrol
+    applicability: { op: '==', left: { ref: activePlayer }, right: '0' }
     legality:
-      when:
-        op: ">="
-        left:
-          ref: gvar
-          var: coinResources
-        right: 2
+      when: true
     cost:
-      validate:
-        op: ">="
-        left:
-          ref: gvar
-          var: coinResources
-        right: 2
-      spend:
-        - addVar:
-            scope: global
-            var: coinResources
-            delta: -2
-    targeting:
-      select: allEligible
-      order: lexicographicSpaceId
+      spend: []
+    targeting: {}
     resolution:
-      - stage: patrol-resolve
+      - stage: select-locs
         effects:
-          - addVar:
-              scope: global
-              var: patrolCount
-              delta: 1
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: targetLoCs
+                    options:
+                      query: zones
+                      filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetLoCs
+                    options:
+                      query: zones
+                      filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                    min: 1
+                    max: 99
+
+      - stage: move-cubes
+        effects:
+          - forEach:
+              bind: loc
+              over: { query: binding, name: targetLoCs }
+              effects:
+                - chooseN:
+                    bind: $movingCubes
+                    options:
+                      query: tokensInAdjacentZones
+                      zone: $loc
+                      filter:
+                        - { prop: faction, eq: 'US' }
+                        - { prop: type, op: in, value: ['troops', 'police'] }
+                    min: 0
+                    max: 99
+                - forEach:
+                    bind: $cube
+                    over: { query: binding, name: $movingCubes }
+                    effects:
+                      - moveToken:
+                          token: $cube
+                          from: { ref: tokenZone, token: $cube }
+                          to: $loc
+
+      - stage: activate-guerrillas
+        effects:
+          - forEach:
+              bind: $actLoc
+              over: { query: binding, name: targetLoCs }
+              effects:
+                - let:
+                    bind: $usCubeCount
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $actLoc, filter: [{ prop: faction, eq: 'US' }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
+                    in:
+                      - forEach:
+                          bind: $guerrilla
+                          over:
+                            query: tokensInZone
+                            zone: $actLoc
+                            filter: [{ prop: type, eq: guerrilla }, { prop: activity, eq: underground }]
+                          limit: { ref: binding, name: $usCubeCount }
+                          effects:
+                            - setTokenProp: { token: $guerrilla, prop: activity, value: active }
+
+      - stage: free-assault
+        effects:
+          - chooseN:
+              bind: $assaultLoCs
+              options: { query: binding, name: targetLoCs }
+              min: 0
+              max: 1
+          - forEach:
+              bind: $assaultLoC
+              over: { query: binding, name: $assaultLoCs }
+              effects:
+                - let:
+                    bind: $usTroops
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $assaultLoC, filter: [{ prop: faction, eq: 'US' }, { prop: type, eq: troops }] } } }
+                    in:
+                      - let:
+                          bind: $hasUSBase
+                          value: { aggregate: { op: count, query: { query: tokensInZone, zone: $assaultLoC, filter: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }] } } }
+                          in:
+                            - let:
+                                bind: $patrolDmg
+                                value:
+                                  if:
+                                    when: { op: '>', left: { ref: binding, name: $hasUSBase }, right: 0 }
+                                    then: { op: '*', left: { ref: binding, name: $usTroops }, right: 2 }
+                                    else: { ref: binding, name: $usTroops }
+                                in:
+                                  - macro: coin-assault-removal-order
+                                    args:
+                                      space: $assaultLoC
+                                      damageExpr: { ref: binding, name: $patrolDmg }
+                                      actorFaction: 'US'
     partialExecution:
       mode: forbid
   - id: sweep-profile

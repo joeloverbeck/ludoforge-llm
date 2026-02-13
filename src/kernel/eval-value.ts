@@ -1,4 +1,5 @@
 import type { EvalContext } from './eval-context.js';
+import { evalCondition } from './eval-condition.js';
 import { divisionByZeroError, typeMismatchError } from './eval-error.js';
 import { evalQuery } from './eval-query.js';
 import { resolveRef } from './resolve-ref.js';
@@ -63,6 +64,11 @@ export function evalValue(expr: ValueExpr, ctx: EvalContext): number | boolean |
 
   if ('concat' in expr) {
     return expr.concat.map((child) => String(evalValue(child, ctx))).join('');
+  }
+
+  if ('if' in expr) {
+    const condResult = evalCondition(expr.if.when, ctx);
+    return condResult ? evalValue(expr.if.then, ctx) : evalValue(expr.if.else, ctx);
   }
 
   if ('aggregate' in expr) {

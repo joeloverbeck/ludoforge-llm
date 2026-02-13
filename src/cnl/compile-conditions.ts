@@ -219,6 +219,21 @@ export function lowerValueNode(
     return { value: { concat: children }, diagnostics };
   }
 
+  if ('if' in source && isRecord(source.if)) {
+    const ifNode = source.if;
+    const when = lowerConditionNode(ifNode.when, context, `${path}.if.when`);
+    const then = lowerValueNode(ifNode.then, context, `${path}.if.then`);
+    const elseVal = lowerValueNode(ifNode.else, context, `${path}.if.else`);
+    const diagnostics = [...when.diagnostics, ...then.diagnostics, ...elseVal.diagnostics];
+    if (when.value === null || then.value === null || elseVal.value === null) {
+      return { value: null, diagnostics };
+    }
+    return {
+      value: { if: { when: when.value, then: then.value, else: elseVal.value } },
+      diagnostics,
+    };
+  }
+
   return missingCapability(path, 'value expression', source, [
     'number',
     'boolean',
@@ -227,6 +242,7 @@ export function lowerValueNode(
     '{ op: "+|-|*", left, right }',
     '{ aggregate: { op, query, prop? } }',
     '{ concat: ValueExpr[] }',
+    '{ if: { when, then, else } }',
   ]);
 }
 

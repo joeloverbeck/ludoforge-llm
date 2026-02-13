@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { EffectAST, PlayerSel, ValueExpr } from '../kernel/types.js';
+import type { EffectAST, PlayerSel, ValueExpr, ZoneRef } from '../kernel/types.js';
 import {
   lowerConditionNode,
   lowerQueryNode,
@@ -837,19 +837,29 @@ function lowerZoneSelector(
   context: EffectLoweringContext,
   scope: BindingScope,
   path: string,
-): EffectLoweringResult<string> {
+): EffectLoweringResult<ZoneRef> {
+  // Try static canonicalization first (handles strings and static concats)
   const zone = canonicalizeZoneSelector(source, context.ownershipByBase, path);
-  if (zone.value === null) {
-    return { value: null, diagnostics: zone.diagnostics };
+  if (zone.value !== null) {
+    const diagnostics = validateZoneQualifierBinding(zone.value, scope, path);
+    if (diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
+      return { value: null, diagnostics };
+    }
+    return { value: zone.value, diagnostics };
   }
-  const diagnostics = validateZoneQualifierBinding(zone.value, scope, path);
-  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
-    return { value: null, diagnostics };
+
+  // Static resolution failed — try dynamic expression path if source is a record
+  if (isRecord(source)) {
+    const valueResult = lowerValueNode(source, makeConditionContext(context, scope), path);
+    if (valueResult.value !== null) {
+      return { value: { zoneExpr: valueResult.value }, diagnostics: valueResult.diagnostics };
+    }
+    // Both static and dynamic paths failed — combine diagnostics
+    return { value: null, diagnostics: [...zone.diagnostics, ...valueResult.diagnostics] };
   }
-  return {
-    value: zone.value,
-    diagnostics,
-  };
+
+  // Not a string and not a record — return original canonicalization errors
+  return { value: null, diagnostics: zone.diagnostics };
 }
 
 function lowerPlayerSelector(source: unknown, scope: BindingScope, path: string): EffectLoweringResult<PlayerSel> {

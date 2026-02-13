@@ -25,7 +25,7 @@ describe('FITL COIN operations integration', () => {
       [
         { id: 'train-us-profile', actionId: 'train' },
         { id: 'train-arvn-profile', actionId: 'train' },
-        { id: 'patrol-profile', actionId: 'patrol' },
+        { id: 'patrol-us-profile', actionId: 'patrol' },
         { id: 'sweep-profile', actionId: 'sweep' },
         { id: 'assault-profile', actionId: 'assault' },
       ],
@@ -40,20 +40,18 @@ describe('FITL COIN operations integration', () => {
     assert.deepEqual(compiled.diagnostics, []);
     assert.notEqual(compiled.gameDef, null);
 
-    // Train requires complex params (chooseN/chooseOne decisions) — tested separately.
-    // Patrol, Sweep, Assault are stubs that take empty params.
+    // Train and Patrol require complex params (chooseN/chooseOne decisions) — tested separately.
+    // Sweep, Assault are stubs that take empty params.
     const start = initialState(compiled.gameDef!, 73, 2);
     const sequence: readonly Move[] = [
-      { actionId: asActionId('patrol'), params: {} },
       { actionId: asActionId('sweep'), params: {} },
       { actionId: asActionId('assault'), params: {} },
     ];
 
     const final = sequence.reduce((state, move) => applyMove(compiled.gameDef!, state, move).state, start);
 
-    // coinResources: 10 - 2 (patrol) - 1 (sweep) - 3 (assault) = 4
-    assert.equal(final.globalVars.coinResources, 4);
-    assert.equal(final.globalVars.patrolCount, 1);
+    // coinResources: 10 - 1 (sweep) - 3 (assault) = 6
+    assert.equal(final.globalVars.coinResources, 6);
     assert.equal(final.globalVars.sweepCount, 1);
     assert.equal(final.globalVars.assaultCount, 1);
     assert.equal(final.globalVars.fallbackUsed, 0);
@@ -401,17 +399,215 @@ describe('FITL COIN operations integration', () => {
       assert.deepEqual(arvnProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: '1' });
     });
 
-    it('profiles without applicability (patrol/sweep/assault) remain undefined', () => {
+    it('patrol-us-profile has applicability for player 0 (US)', () => {
       const markdown = readCompilerFixture('fitl-operations-coin.md');
       const parsed = parseGameSpec(markdown);
       const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
       assert.deepEqual(compiled.diagnostics, []);
 
-      for (const id of ['patrol-profile', 'sweep-profile', 'assault-profile']) {
+      const patrolProfile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'patrol-us-profile');
+      assert.ok(patrolProfile, 'patrol-us-profile must exist');
+      assert.deepEqual(patrolProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: '0' });
+    });
+
+    it('profiles without applicability (sweep/assault) remain undefined', () => {
+      const markdown = readCompilerFixture('fitl-operations-coin.md');
+      const parsed = parseGameSpec(markdown);
+      const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+      assert.deepEqual(compiled.diagnostics, []);
+
+      for (const id of ['sweep-profile', 'assault-profile']) {
         const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === id);
         assert.ok(profile, `${id} must exist`);
         assert.equal(profile.applicability, undefined);
       }
     });
   });
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  describe('patrol-us-profile structure', () => {
+    const getPatrolProfile = () => {
+      const markdown = readCompilerFixture('fitl-operations-coin.md');
+      const parsed = parseGameSpec(markdown);
+      const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+      assert.deepEqual(compiled.diagnostics, []);
+      const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'patrol-us-profile');
+      assert.ok(profile, 'patrol-us-profile must exist');
+      return profile;
+    };
+
+    const parsePatrolProfile = (): any => {
+      const markdown = readCompilerFixture('fitl-operations-coin.md');
+      const parsed = parseGameSpec(markdown);
+      const profile = parsed.doc.operationProfiles?.find(
+        (p: { id: string }) => p.id === 'patrol-us-profile',
+      );
+      assert.ok(profile, 'patrol-us-profile must exist in parsed doc');
+      return profile;
+    };
+
+    const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => {
+      const results: any[] = [];
+      const walk = (node: any): void => {
+        if (node === null || node === undefined) return;
+        if (predicate(node)) results.push(node);
+        if (Array.isArray(node)) {
+          for (const item of node) walk(item);
+        } else if (typeof node === 'object') {
+          for (const value of Object.values(node)) walk(value);
+        }
+      };
+      walk(obj);
+      return results;
+    };
+
+    it('AC1: compiles patrol-us-profile without diagnostics', () => {
+      getPatrolProfile();
+    });
+
+    it('AC2: US Patrol costs 0 (no resource deduction)', () => {
+      const profile = getPatrolProfile();
+      assert.deepEqual(profile.cost.spend, undefined);
+    });
+
+    it('AC2b: legality is always true (no cost check)', () => {
+      const profile = getPatrolProfile();
+      assert.equal(profile.legality.when, true);
+    });
+
+    it('AC3: targets LoCs only (spaceType filter)', () => {
+      const profile = getPatrolProfile();
+      const selectLoCs = profile.resolution[0]!;
+      assert.equal(selectLoCs.stage, 'select-locs');
+
+      // Both LimOp and normal branches filter for spaceType == 'loc'
+      const locFilters = findDeep(selectLoCs.effects, (node: any) =>
+        node?.op === '==' &&
+        node?.left?.ref === 'zoneProp' &&
+        node?.left?.prop === 'spaceType' &&
+        node?.right === 'loc',
+      );
+      assert.ok(
+        locFilters.length >= 2,
+        `Expected LoC filter in both LimOp and normal branches, found ${locFilters.length}`,
+      );
+    });
+
+    it('AC4: move-cubes stage uses tokensInAdjacentZones for US cubes', () => {
+      const parsed = parsePatrolProfile();
+      const moveCubes = parsed.resolution[1];
+      assert.equal(moveCubes.stage, 'move-cubes');
+
+      // chooseN with tokensInAdjacentZones query and US faction filter
+      const adjacentQueries = findDeep(moveCubes.effects, (node: any) =>
+        node?.query === 'tokensInAdjacentZones' &&
+        Array.isArray(node?.filter) &&
+        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'US'),
+      );
+      assert.ok(adjacentQueries.length >= 1, 'Expected tokensInAdjacentZones query for US cubes');
+    });
+
+    it('AC5: activation stage — 1 guerrilla per US cube (1:1 ratio)', () => {
+      const profile = getPatrolProfile();
+      const activateStage = profile.resolution[2]!;
+      assert.equal(activateStage.stage, 'activate-guerrillas');
+
+      // The forEach over guerrillas must be limited by usCubeCount
+      const guerrillaForEach = findDeep(activateStage.effects, (node: any) =>
+        node?.forEach?.over?.query === 'tokensInZone' &&
+        node?.forEach?.over?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'guerrilla') &&
+        node?.forEach?.over?.filter?.some?.((f: any) => f.prop === 'activity' && f.op === 'eq' && f.value === 'underground'),
+      );
+      assert.ok(guerrillaForEach.length >= 1, 'Expected forEach over underground guerrillas');
+
+      // The limit should reference usCubeCount binding
+      const limitedByCount = findDeep(activateStage.effects, (node: any) =>
+        node?.forEach?.limit?.ref === 'binding' &&
+        node?.forEach?.limit?.name === '$usCubeCount',
+      );
+      assert.ok(limitedByCount.length >= 1, 'Expected guerrilla forEach limited by $usCubeCount');
+    });
+
+    it('AC6: free Assault uses coin-assault-removal-order macro', () => {
+      const parsed = parsePatrolProfile();
+      const freeAssault = parsed.resolution[3];
+      assert.equal(freeAssault.stage, 'free-assault');
+
+      const macroRef = findDeep(freeAssault.effects, (node: any) =>
+        node?.macro === 'coin-assault-removal-order',
+      );
+      assert.ok(macroRef.length >= 1, 'Expected coin-assault-removal-order macro in free-assault');
+    });
+
+    it('AC7: free Assault damage formula considers US Base (doubled with base)', () => {
+      const profile = getPatrolProfile();
+      const freeAssault = profile.resolution[3]!;
+      assert.equal(freeAssault.stage, 'free-assault');
+
+      // Damage binding uses conditional: hasUSBase > 0 → usTroops * 2, else usTroops
+      const damageConditional = findDeep(freeAssault.effects, (node: any) =>
+        node?.if?.when?.op === '>' &&
+        node?.if?.when?.left?.ref === 'binding' &&
+        node?.if?.when?.left?.name === '$hasUSBase',
+      );
+      assert.ok(damageConditional.length >= 1, 'Expected damage conditional on hasUSBase');
+
+      // The "then" branch multiplies by 2
+      const doubledDamage = findDeep(freeAssault.effects, (node: any) =>
+        node?.op === '*' && node?.right === 2,
+      );
+      assert.ok(doubledDamage.length >= 1, 'Expected damage * 2 when US Base present');
+    });
+
+    it('AC8: LimOp variant — max 1 LoC', () => {
+      const profile = getPatrolProfile();
+      const selectLoCs = profile.resolution[0]!;
+
+      // if __actionClass == 'limitedOperation'
+      const limOpIf = findDeep(selectLoCs.effects, (node: any) =>
+        node?.if?.when?.op === '==' &&
+        node?.if?.when?.left?.ref === 'binding' &&
+        node?.if?.when?.left?.name === '__actionClass' &&
+        node?.if?.when?.right === 'limitedOperation',
+      );
+      assert.ok(limOpIf.length >= 1, 'Expected LimOp check');
+
+      // Then: chooseN max: 1
+      const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) =>
+        node?.chooseN?.max === 1,
+      );
+      assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
+
+      // Else: chooseN max: 99
+      const normalChooseN = findDeep(limOpIf[0].if.else, (node: any) =>
+        node?.chooseN?.max === 99,
+      );
+      assert.ok(normalChooseN.length >= 1, 'Expected chooseN max:99 in normal branch');
+    });
+
+    it('AC9: free Assault limited to at most 1 LoC', () => {
+      const profile = getPatrolProfile();
+      const freeAssault = profile.resolution[3]!;
+
+      // chooseN from targetLoCs with max: 1
+      const assaultChooseN = findDeep(freeAssault.effects, (node: any) =>
+        node?.chooseN?.max === 1 && node?.chooseN?.min === 0,
+      );
+      assert.ok(assaultChooseN.length >= 1, 'Expected chooseN max:1 for free assault LoC selection');
+    });
+
+    it('has four resolution stages: select-locs, move-cubes, activate-guerrillas, free-assault', () => {
+      const profile = getPatrolProfile();
+      assert.deepEqual(
+        profile.resolution.map((s: any) => s.stage),
+        ['select-locs', 'move-cubes', 'activate-guerrillas', 'free-assault'],
+      );
+    });
+
+    it('forbids partial execution', () => {
+      const profile = getPatrolProfile();
+      assert.equal(profile.partialExecution.mode, 'forbid');
+    });
+  });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 });

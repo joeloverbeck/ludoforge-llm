@@ -244,7 +244,7 @@ function normalizeAdjacentTo(value: GameSpecZoneDef['adjacentTo']): readonly Zon
  */
 function tryStaticConcatResolution(
   source: unknown,
-  path: string,
+  _path: string,
 ): ZoneCompileResult<string | null> | undefined {
   if (typeof source !== 'object' || source === null || !('concat' in source)) {
     return undefined;
@@ -262,16 +262,9 @@ function tryStaticConcatResolution(
     } else if (typeof part === 'number') {
       parts.push(String(part));
     } else {
-      return {
-        value: null,
-        diagnostics: [{
-          code: 'CNL_COMPILER_ZONE_CONCAT_DYNAMIC',
-          path,
-          severity: 'error',
-          message: 'Zone selector { concat: [...] } contains dynamic expressions that cannot be resolved at compile time.',
-          suggestion: 'Ensure all parts of a zone concat are string or number literals, or use a binding reference instead.',
-        }],
-      };
+      // Dynamic part — cannot resolve at compile time.
+      // Signal to caller (undefined = not fully static).
+      return undefined;
     }
   }
 

@@ -237,4 +237,62 @@ describe('evalValue', () => {
     const ctx = makeCtx();
     assert.equal(evalValue({ concat: [] }, ctx), '');
   });
+
+  it('evaluates conditional if/then/else — true branch', () => {
+    const ctx = makeCtx();
+    const expr: ValueExpr = {
+      if: {
+        when: { op: '>', left: { ref: 'gvar', var: 'a' }, right: 0 },
+        then: 100,
+        else: 0,
+      },
+    };
+    assert.equal(evalValue(expr, ctx), 100);
+  });
+
+  it('evaluates conditional if/then/else — false branch', () => {
+    const ctx = makeCtx();
+    const expr: ValueExpr = {
+      if: {
+        when: { op: '<', left: { ref: 'gvar', var: 'a' }, right: 0 },
+        then: 100,
+        else: 0,
+      },
+    };
+    assert.equal(evalValue(expr, ctx), 0);
+  });
+
+  it('evaluates nested conditional', () => {
+    const ctx = makeCtx();
+    const expr: ValueExpr = {
+      if: {
+        when: { op: '==', left: { ref: 'gvar', var: 'a' }, right: 3 },
+        then: {
+          if: {
+            when: { op: '==', left: { ref: 'gvar', var: 'b' }, right: 4 },
+            then: 'both-match',
+            else: 'only-a',
+          },
+        },
+        else: 'no-match',
+      },
+    };
+    assert.equal(evalValue(expr, ctx), 'both-match');
+  });
+
+  it('evaluates conditional in arithmetic expression', () => {
+    const ctx = makeCtx();
+    const expr: ValueExpr = {
+      op: '+',
+      left: 10,
+      right: {
+        if: {
+          when: { op: '>', left: { ref: 'gvar', var: 'a' }, right: 2 },
+          then: 5,
+          else: 0,
+        },
+      },
+    };
+    assert.equal(evalValue(expr, ctx), 15);
+  });
 });

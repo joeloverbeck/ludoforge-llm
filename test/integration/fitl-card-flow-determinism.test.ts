@@ -258,8 +258,8 @@ describe('FITL card-flow determinism integration', () => {
     const scenarios = [
       {
         fixture: 'fitl-operations-coin.md',
-        // train requires complex params (chooseN/chooseOne decisions) — excluded from determinism stub test.
-        actions: ['patrol', 'sweep', 'assault'],
+        // train/patrol require complex params (chooseN/chooseOne decisions) — excluded from determinism stub test.
+        actions: ['sweep', 'assault'],
       },
       {
         fixture: 'fitl-operations-insurgent.md',

@@ -351,4 +351,67 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.diagnostics, []);
     assert.deepEqual(result.value, { query: 'tokensInZone', zone: 'deck:none' });
   });
+
+  it('lowers if/then/else value expression', () => {
+    const result = lowerValueNode(
+      {
+        if: {
+          when: { op: '>', left: { ref: 'gvar', var: 'score' }, right: 10 },
+          then: 1,
+          else: 0,
+        },
+      },
+      context,
+      'doc.actions.0.effects.0.setVar.value',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, {
+      if: {
+        when: { op: '>', left: { ref: 'gvar', var: 'score' }, right: 10 },
+        then: 1,
+        else: 0,
+      },
+    });
+  });
+
+  it('lowers nested if/then/else value expression', () => {
+    const result = lowerValueNode(
+      {
+        if: {
+          when: { op: '==', left: { ref: 'gvar', var: 'x' }, right: 1 },
+          then: {
+            if: {
+              when: { op: '==', left: { ref: 'gvar', var: 'y' }, right: 2 },
+              then: 'both',
+              else: 'x-only',
+            },
+          },
+          else: 'neither',
+        },
+      },
+      context,
+      'doc.actions.0.effects.0.setVar.value',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.ok(result.value !== null);
+  });
+
+  it('propagates diagnostics from if/then/else sub-expressions', () => {
+    const result = lowerValueNode(
+      {
+        if: {
+          when: { op: '>', left: { ref: 'gvar', var: 'score' }, right: 10 },
+          then: 1,
+          else: { badExpr: true },
+        },
+      },
+      context,
+      'doc.actions.0.effects.0.setVar.value',
+    );
+
+    assert.equal(result.value, null);
+    assert.ok(result.diagnostics.length > 0);
+  });
 });

@@ -9,7 +9,8 @@ import { evalCondition } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { nextInt } from './prng.js';
-import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
+import { resolvePlayerSel } from './resolve-selectors.js';
+import { resolveZoneRef } from './resolve-zone-ref.js';
 import { checkStackingConstraints } from './stacking.js';
 import type { EffectAST, Token, TriggerEvent } from './types.js';
 
@@ -474,8 +475,8 @@ const resolveMoveTokenAdjacentDestination = (
 
 const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const fromZone = resolveSingleZoneSel(effect.moveToken.from, evalCtx);
-  const toZone = resolveSingleZoneSel(effect.moveToken.to, evalCtx);
+  const fromZone = resolveZoneRef(effect.moveToken.from, evalCtx);
+  const toZone = resolveZoneRef(effect.moveToken.to, evalCtx);
   const fromZoneId = String(fromZone);
   const toZoneId = String(toZone);
   const sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'moveToken', 'from');
@@ -567,7 +568,7 @@ const applyMoveTokenAdjacent = (
   ctx: EffectContext,
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const fromZone = resolveSingleZoneSel(effect.moveTokenAdjacent.from, evalCtx);
+  const fromZone = resolveZoneRef(effect.moveTokenAdjacent.from, evalCtx);
   const fromZoneId = String(fromZone);
   const toZoneId = resolveMoveTokenAdjacentDestination(effect.moveTokenAdjacent.direction, ctx);
   const adjacentZones = ctx.adjacencyGraph.neighbors[fromZoneId] ?? [];
@@ -595,7 +596,7 @@ const applyMoveTokenAdjacent = (
 
 const applyCreateToken = (effect: Extract<EffectAST, { readonly createToken: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const zoneId = String(resolveSingleZoneSel(effect.createToken.zone, evalCtx));
+  const zoneId = String(resolveZoneRef(effect.createToken.zone, evalCtx));
   const zoneTokens = resolveZoneTokens(ctx, zoneId, 'createToken', 'zone');
 
   const ordinal = ctx.state.nextTokenOrdinal;
@@ -767,7 +768,7 @@ const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: 
 const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: unknown }>, ctx: EffectContext): EffectResult => {
   const { space, marker, state: stateExpr } = effect.setMarker;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const spaceId = resolveSingleZoneSel(space, evalCtx);
+  const spaceId = resolveZoneRef(space, evalCtx);
   const evaluatedState = evalValue(stateExpr, evalCtx);
 
   if (typeof evaluatedState !== 'string') {
@@ -807,7 +808,7 @@ const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: unknown
 const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMarker: unknown }>, ctx: EffectContext): EffectResult => {
   const { space, marker, delta: deltaExpr } = effect.shiftMarker;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const spaceId = resolveSingleZoneSel(space, evalCtx);
+  const spaceId = resolveZoneRef(space, evalCtx);
   const evaluatedDelta = evalValue(deltaExpr, evalCtx);
 
   if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
@@ -864,8 +865,8 @@ const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>, ctx: 
   }
 
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const fromZone = resolveSingleZoneSel(effect.draw.from, evalCtx);
-  const toZone = resolveSingleZoneSel(effect.draw.to, evalCtx);
+  const fromZone = resolveZoneRef(effect.draw.from, evalCtx);
+  const toZone = resolveZoneRef(effect.draw.to, evalCtx);
   const fromZoneId = String(fromZone);
   const toZoneId = String(toZone);
 
@@ -898,8 +899,8 @@ const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>, ctx: 
 
 const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const fromZone = resolveSingleZoneSel(effect.moveAll.from, evalCtx);
-  const toZone = resolveSingleZoneSel(effect.moveAll.to, evalCtx);
+  const fromZone = resolveZoneRef(effect.moveAll.from, evalCtx);
+  const toZone = resolveZoneRef(effect.moveAll.to, evalCtx);
   const fromZoneId = String(fromZone);
   const toZoneId = String(toZone);
   const sourceTokens = resolveZoneTokens(ctx, fromZoneId, 'moveAll', 'from');
@@ -964,7 +965,7 @@ const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unknown }>,
 
 const applyShuffle = (effect: Extract<EffectAST, { readonly shuffle: unknown }>, ctx: EffectContext): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const zoneId = String(resolveSingleZoneSel(effect.shuffle.zone, evalCtx));
+  const zoneId = String(resolveZoneRef(effect.shuffle.zone, evalCtx));
   const zoneTokens = resolveZoneTokens(ctx, zoneId, 'shuffle', 'zone');
 
   if (zoneTokens.length <= 1) {

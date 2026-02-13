@@ -42,9 +42,10 @@ describe('FITL production data integration compilation', () => {
       'CNL_VALIDATOR_REQUIRED_SECTION_MISSING|doc.endConditions',
       'CNL_VALIDATOR_METADATA_PLAYERS_INVALID|doc.metadata.players',
       'CNL_VALIDATOR_REQUIRED_SECTION_MISSING|doc.turnStructure',
-      // train-us-profile and train-arvn-profile both reference actionId: train, but no actions section exists yet
+      // train-us-profile, train-arvn-profile, and patrol-us-profile all reference actionIds but no actions section exists yet
       'CNL_VALIDATOR_REFERENCE_MISSING|doc.operationProfiles.0.actionId',
       'CNL_VALIDATOR_REFERENCE_MISSING|doc.operationProfiles.1.actionId',
+      'CNL_VALIDATOR_REFERENCE_MISSING|doc.operationProfiles.2.actionId',
     ]);
     assert.deepEqual(actualValidationProfile, expectedValidationProfile);
 

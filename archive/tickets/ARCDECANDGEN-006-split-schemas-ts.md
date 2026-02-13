@@ -1,5 +1,7 @@
 # ARCDECANDGEN-006: Split `schemas.ts` into 4 focused files
 
+**Status**: ✅ COMPLETED
+
 **Phase**: 1F (File Decomposition — Pure Refactoring)
 **Priority**: P0
 **Complexity**: M
@@ -40,3 +42,19 @@ Split `src/kernel/schemas.ts` (1397 lines) into 4 cohesive files.
 - All public exports from `src/kernel/schemas.ts` remain identical
 - No file in the new split exceeds 600 lines
 - No circular dependencies (verify: `npx madge --circular src/kernel/schemas*.ts`)
+
+## Outcome
+
+- **Completion date**: 2026-02-13
+- **What was changed**:
+  - `src/kernel/schemas.ts` was reduced to barrel re-exports.
+  - Schema content is split across:
+    - `src/kernel/schemas-core.ts`
+    - `src/kernel/schemas-ast.ts`
+    - `src/kernel/schemas-extensions.ts`
+    - `src/kernel/schemas-gamespec.ts`
+- **Deviations from original plan**:
+  - None observed from the repository state.
+- **Verification results**:
+  - Verified that all four focused schema files exist and remain under 600 lines.
+  - Verified `src/kernel/schemas.ts` exports from all four split files.

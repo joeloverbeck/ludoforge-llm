@@ -1,0 +1,219 @@
+import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import {
+  applyMove,
+  asActionId,
+  asPhaseId,
+  asPlayerId,
+  asZoneId,
+  initialState,
+  legalMoves,
+  legalChoices,
+  type GameDef,
+  type GameState,
+} from '../../src/kernel/index.js';
+
+/**
+ * Shared helpers for multi-profile dispatch tests.
+ *
+ * Two operation profiles share actionId 'operate':
+ *   - profile-player-0: applicability = { activePlayer == '0' }, sets score += 10
+ *   - profile-player-1: applicability = { activePlayer == '1' }, sets score += 20
+ */
+
+const createMultiProfileDef = (): GameDef =>
+  ({
+    metadata: { id: 'applicability-dispatch', players: { min: 2, max: 2 } },
+    constants: {},
+    globalVars: [
+      { name: 'score', type: 'int', init: 0, min: 0, max: 100 },
+    ],
+    perPlayerVars: [],
+    zones: [
+      { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+    ],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+    operationProfiles: [
+      {
+        id: 'profile-player-0',
+        actionId: asActionId('operate'),
+        applicability: { op: '==', left: { ref: 'activePlayer' }, right: '0' },
+        legality: {},
+        cost: {},
+        targeting: {},
+        resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
+        partialExecution: { mode: 'forbid' },
+      },
+      {
+        id: 'profile-player-1',
+        actionId: asActionId('operate'),
+        applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+        legality: {},
+        cost: {},
+        targeting: {},
+        resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 20 } }] }],
+        partialExecution: { mode: 'forbid' },
+      },
+    ],
+    actions: [
+      {
+        id: asActionId('operate'),
+        actor: 'active',
+        phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [{ addVar: { scope: 'global', var: 'score', delta: 99 } }],
+        limits: [],
+      },
+    ],
+    triggers: [],
+    endConditions: [],
+  }) as unknown as GameDef;
+
+const createState = (activePlayer: number): GameState => {
+  const def = createMultiProfileDef();
+  const base = initialState(def, 42);
+  return {
+    ...base,
+    activePlayer: asPlayerId(activePlayer),
+    currentPhase: asPhaseId('main'),
+  };
+};
+
+describe('applicability-based operation profile dispatch', () => {
+  it('legalMoves includes the action when the matching profile is applicable', () => {
+    const def = createMultiProfileDef();
+    const stateP0 = createState(0);
+    const movesP0 = legalMoves(def, stateP0);
+    assert.ok(movesP0.some((m) => m.actionId === asActionId('operate')));
+
+    const stateP1 = createState(1);
+    const movesP1 = legalMoves(def, stateP1);
+    assert.ok(movesP1.some((m) => m.actionId === asActionId('operate')));
+  });
+
+  it('legalChoices returns complete for an applicable profile with no choices', () => {
+    const def = createMultiProfileDef();
+    const state = createState(0);
+    const result = legalChoices(def, state, { actionId: asActionId('operate'), params: {} });
+    assert.equal(result.complete, true);
+  });
+
+  it('applyMove applies player-0 profile effects when activePlayer is 0', () => {
+    const def = createMultiProfileDef();
+    const state = createState(0);
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
+    assert.equal(result.state.globalVars.score, 10);
+  });
+
+  it('applyMove applies player-1 profile effects when activePlayer is 1', () => {
+    const def = createMultiProfileDef();
+    const state = createState(1);
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
+    assert.equal(result.state.globalVars.score, 20);
+  });
+
+  it('does not use fallback action effects when a profile matches', () => {
+    const def = createMultiProfileDef();
+    const state = createState(0);
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
+    // If fallback effects were used, score would be 99
+    assert.notEqual(result.state.globalVars.score, 99);
+    assert.equal(result.state.globalVars.score, 10);
+  });
+
+  it('single profile without applicability still works (backward compatibility)', () => {
+    const def: GameDef = {
+      ...createMultiProfileDef(),
+      operationProfiles: [
+        {
+          id: 'solo-profile',
+          actionId: asActionId('operate'),
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 5 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+    } as unknown as GameDef;
+    const state = createState(0);
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
+    assert.equal(result.state.globalVars.score, 5);
+  });
+
+  it('resolveOperationProfile returns undefined when no candidate applicability matches', () => {
+    const def: GameDef = {
+      ...createMultiProfileDef(),
+      operationProfiles: [
+        {
+          id: 'profile-player-0',
+          actionId: asActionId('operate'),
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '0' },
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+        {
+          id: 'profile-player-1',
+          actionId: asActionId('operate'),
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 20 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+    } as unknown as GameDef;
+    // Player 999 matches no applicability — falls back to action effects
+    const state: GameState = { ...createState(0), activePlayer: asPlayerId(999) };
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
+    // Fallback to action.effects: delta: 99
+    assert.equal(result.state.globalVars.score, 99);
+  });
+
+  it('profile with legality condition blocks move for the matching applicability player', () => {
+    const def: GameDef = {
+      ...createMultiProfileDef(),
+      operationProfiles: [
+        {
+          id: 'profile-player-0',
+          actionId: asActionId('operate'),
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '0' },
+          legality: { when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 50 } },
+          cost: {},
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+        {
+          id: 'profile-player-1',
+          actionId: asActionId('operate'),
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+          legality: {},
+          cost: {},
+          targeting: {},
+          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 20 } }] }],
+          partialExecution: { mode: 'forbid' },
+        },
+      ],
+    } as unknown as GameDef;
+
+    // Player 0: score is 0, legality requires >= 50 — move is NOT legal
+    const stateP0 = createState(0);
+    const movesP0 = legalMoves(def, stateP0);
+    assert.ok(!movesP0.some((m) => m.actionId === asActionId('operate')));
+
+    // Player 1: no legality condition — move IS legal
+    const stateP1 = createState(1);
+    const movesP1 = legalMoves(def, stateP1);
+    assert.ok(movesP1.some((m) => m.actionId === asActionId('operate')));
+  });
+});

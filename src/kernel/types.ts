@@ -38,7 +38,8 @@ export type Reference =
   | { readonly ref: 'binding'; readonly name: string }
   | { readonly ref: 'markerState'; readonly space: ZoneSel; readonly marker: string }
   | { readonly ref: 'tokenZone'; readonly token: TokenSel }
-  | { readonly ref: 'zoneProp'; readonly zone: ZoneSel; readonly prop: string };
+  | { readonly ref: 'zoneProp'; readonly zone: ZoneSel; readonly prop: string }
+  | { readonly ref: 'activePlayer' };
 
 export type ValueExpr =
   | number
@@ -471,6 +472,7 @@ export interface OperationResolutionStageDef {
 export interface OperationProfileDef {
   readonly id: string;
   readonly actionId: ActionId;
+  readonly applicability?: ConditionAST;
   readonly legality: OperationLegalityDef;
   readonly cost: OperationCostDef;
   readonly targeting: OperationTargetingDef;

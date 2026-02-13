@@ -21,6 +21,7 @@ const TURN_FLOW_PASS_REWARD_KEYS = ['factionClass', 'resource', 'amount'] as con
 const OPERATION_PROFILE_KEYS = [
   'id',
   'actionId',
+  'applicability',
   'legality',
   'cost',
   'targeting',
@@ -1248,13 +1249,18 @@ function validateOperationProfiles(
     .filter(([, count]) => count > 1)
     .map(([actionId]) => actionId);
   for (const actionId of ambiguousActionBindings) {
-    diagnostics.push({
-      code: 'CNL_VALIDATOR_OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS',
-      path: 'doc.operationProfiles',
-      severity: 'error',
-      message: `Multiple operation profiles target action "${actionId}".`,
-      suggestion: 'Map each action id to at most one operation profile.',
-    });
+    const profilesForAction = doc.operationProfiles
+      .filter((p) => normalizeIdentifier(String(p.actionId ?? '')) === actionId);
+    const missingApplicability = profilesForAction.some((p) => p.applicability === undefined || p.applicability === null);
+    if (missingApplicability) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS',
+        path: 'doc.operationProfiles',
+        severity: 'error',
+        message: `Multiple operation profiles target action "${actionId}" but not all have an applicability condition.`,
+        suggestion: 'When multiple profiles share an actionId, each must have an applicability condition for dispatch.',
+      });
+    }
   }
 }
 

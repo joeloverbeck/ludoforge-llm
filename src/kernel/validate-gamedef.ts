@@ -996,7 +996,7 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
     });
   });
 
-  const seenOperationActionMappings = new Set<string>();
+  const operationActionIdCounts = new Map<string, number>();
   def.operationProfiles?.forEach((operationProfile, operationProfileIndex) => {
     const basePath = `operationProfiles[${operationProfileIndex}]`;
 
@@ -1011,17 +1011,7 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
       );
     }
 
-    if (seenOperationActionMappings.has(operationProfile.actionId)) {
-      diagnostics.push({
-        code: 'OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS',
-        path: `${basePath}.actionId`,
-        severity: 'error',
-        message: `Multiple operation profiles map to action "${operationProfile.actionId}".`,
-        suggestion: 'Map each action id to at most one operation profile.',
-      });
-    } else {
-      seenOperationActionMappings.add(operationProfile.actionId);
-    }
+    operationActionIdCounts.set(operationProfile.actionId, (operationActionIdCounts.get(operationProfile.actionId) ?? 0) + 1);
 
     if (operationProfile.resolution.length === 0) {
       diagnostics.push({
@@ -1043,6 +1033,24 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
       });
     }
   });
+
+  // Post-loop: when multiple profiles share an actionId, all must have applicability
+  for (const [actionId, count] of operationActionIdCounts) {
+    if (count <= 1) {
+      continue;
+    }
+    const profilesForAction = (def.operationProfiles ?? []).filter((p) => p.actionId === actionId);
+    const missingApplicability = profilesForAction.some((p) => p.applicability === undefined);
+    if (missingApplicability) {
+      diagnostics.push({
+        code: 'OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS',
+        path: 'operationProfiles',
+        severity: 'error',
+        message: `Multiple operation profiles map to action "${actionId}" but not all have an applicability condition.`,
+        suggestion: 'When multiple profiles share an actionId, each must have an applicability condition for dispatch.',
+      });
+    }
+  }
 
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   diagnostics.push(...validateAdjacency(adjacencyGraph, def.zones));

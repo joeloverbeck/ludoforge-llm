@@ -290,7 +290,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS' &&
-          diagnostic.path === 'doc.operationProfiles.1.actionId',
+          diagnostic.path === 'doc.operationProfiles',
       ),
       true,
     );

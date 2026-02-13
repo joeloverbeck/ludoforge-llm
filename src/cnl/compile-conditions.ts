@@ -27,7 +27,7 @@ const SUPPORTED_QUERY_KINDS = [
   'connectedZones',
   'binding',
 ];
-const SUPPORTED_REFERENCE_KINDS = ['gvar', 'pvar', 'zoneCount', 'tokenProp', 'binding', 'markerState', 'tokenZone', 'zoneProp'];
+const SUPPORTED_REFERENCE_KINDS = ['gvar', 'pvar', 'zoneCount', 'tokenProp', 'binding', 'markerState', 'tokenZone', 'zoneProp', 'activePlayer'];
 
 export function lowerConditionNode(
   source: unknown,
@@ -502,6 +502,8 @@ function lowerReference(
         diagnostics: zonePropZone.diagnostics,
       };
     }
+    case 'activePlayer':
+      return { value: { ref: 'activePlayer' }, diagnostics: [] };
     case 'binding':
       if (typeof source.name === 'string') {
         if (context.bindingScope !== undefined && !context.bindingScope.includes(source.name)) {

@@ -1328,6 +1328,7 @@ operationProfiles:
   # Sub-action: Pacification or Saigon patronage transfer in 1 selected space
   - id: train-us-profile
     actionId: train
+    applicability: { op: '==', left: { ref: activePlayer }, right: '0' }
     legality:
       when: true
     cost:
@@ -1497,6 +1498,193 @@ operationProfiles:
                           options: { query: intsInRange, min: 1, max: 3 }
                       - addVar: { scope: global, var: patronage, delta: { op: '*', left: { ref: binding, name: $transferAmount }, right: -1 } }
                       - addVar: { scope: global, var: arvnResources, delta: { ref: binding, name: $transferAmount } }
+    partialExecution:
+      mode: forbid
+  # ── train-arvn-profile ─────────────────────────────────────────────────────────
+  # ARVN Train operation (Rule 3.2.1)
+  # Spaces: Provinces/Cities without NVA Control; LimOp: max 1 space
+  # Cost: 3 ARVN Resources when placing ARVN pieces (including base replacement)
+  # Resolution: Per-space choice of Rangers (up to 2) or ARVN cubes (up to 6)
+  # Sub-action: Pacification or replace 3 ARVN cubes with 1 ARVN Base
+  - id: train-arvn-profile
+    actionId: train
+    applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
+    legality:
+      when: true
+    cost:
+      spend: []
+    targeting: {}
+    resolution:
+      - stage: select-spaces
+        effects:
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                          # Without NVA Control (NVA pieces <= COIN+VC pieces)
+                          - op: not
+                            arg: { op: '==', left: { ref: zoneProp, zone: $zone, prop: control }, right: 'NVA' }
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                          - op: not
+                            arg: { op: '==', left: { ref: zoneProp, zone: $zone, prop: control }, right: 'NVA' }
+                    min: 1
+                    max: 99
+
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                # ARVN Train: place 1-2 Rangers or up to 6 ARVN cubes
+                # at Cities or at US/ARVN Bases
+                - chooseOne:
+                    bind: $trainChoice
+                    options: { query: enums, values: ['rangers', 'arvn-cubes'] }
+
+                - if:
+                    when: { op: '==', left: { ref: binding, name: $trainChoice }, right: 'rangers' }
+                    then:
+                      # Cost: 3 ARVN Resources for placing ARVN pieces
+                      - if:
+                          when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                          then:
+                            - addVar: { scope: global, var: arvnResources, delta: -3 }
+                      - macro: place-from-available-or-map
+                        args:
+                          pieceType: rangers
+                          faction: 'ARVN'
+                          targetSpace: $space
+                          maxPieces: 2
+
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: binding, name: $trainChoice }, right: 'arvn-cubes' }
+                        # Must be City or have COIN Base
+                        - op: or
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: 'city' }
+                            - op: '>'
+                              left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }, { prop: type, eq: base }] } } }
+                              right: 0
+                    then:
+                      # Cost: 3 ARVN Resources
+                      - if:
+                          when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                          then:
+                            - addVar: { scope: global, var: arvnResources, delta: -3 }
+                      # Place up to 6 ARVN cubes
+                      - macro: place-from-available-or-map
+                        args:
+                          pieceType: troops
+                          faction: 'ARVN'
+                          targetSpace: $space
+                          maxPieces: 6
+
+      - stage: sub-action
+        effects:
+          # In 1 selected space (even if LimOp), choose one of:
+          # A) Pacification (ARVN needs ARVN Troops AND Police + COIN Control)
+          # B) Replace 3 ARVN cubes with 1 ARVN Base
+          - chooseN:
+              bind: $subActionSpaces
+              options: { query: binding, name: targetSpaces }
+              min: 0
+              max: 1
+          - forEach:
+              bind: $subSpace
+              over: { query: binding, name: $subActionSpaces }
+              effects:
+                - chooseOne:
+                    bind: $subAction
+                    options: { query: enums, values: ['pacify', 'replace-cubes-with-base', 'none'] }
+
+                # Pacification: needs ARVN Troops AND Police + COIN Control
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: binding, name: $subAction }, right: 'pacify' }
+                        - op: '>'
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: troops }] } } }
+                          right: 0
+                        - op: '>'
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: police }] } } }
+                          right: 0
+                    then:
+                      - if:
+                          when: { op: '==', left: { ref: markerState, space: $subSpace, marker: terror }, right: 'terror' }
+                          then:
+                            - addVar: { scope: global, var: arvnResources, delta: -3 }
+                            - setMarker: { space: $subSpace, marker: terror, state: none }
+                      - chooseOne:
+                          bind: $pacLevels
+                          options: { query: intsInRange, min: 1, max: 2 }
+                      - addVar:
+                          scope: global
+                          var: arvnResources
+                          delta: { op: '*', left: { ref: binding, name: $pacLevels }, right: -3 }
+                      - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
+
+                # Replace 3 ARVN cubes with 1 ARVN Base (costs 3 even if free op)
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: binding, name: $subAction }, right: 'replace-cubes-with-base' }
+                        # Must have 3+ ARVN cubes
+                        - op: '>='
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
+                          right: 3
+                        # Stacking: fewer than 2 bases
+                        - op: '<'
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: [{ prop: type, eq: base }] } } }
+                          right: 2
+                    then:
+                      # Cost: 3 ARVN Resources (even if free op)
+                      - addVar: { scope: global, var: arvnResources, delta: -3 }
+                      # Remove 3 ARVN cubes
+                      - forEach:
+                          bind: $cube
+                          over:
+                            query: tokensInZone
+                            zone: $subSpace
+                            filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }]
+                          limit: 3
+                          effects:
+                            - moveToken: { token: $cube, from: $subSpace, to: available-ARVN }
+                      # Place 1 ARVN Base
+                      - macro: place-from-available-or-map
+                        args:
+                          pieceType: base
+                          faction: 'ARVN'
+                          targetSpace: $subSpace
+                          maxPieces: 1
     partialExecution:
       mode: forbid
 ```

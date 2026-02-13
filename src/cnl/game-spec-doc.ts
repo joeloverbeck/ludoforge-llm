@@ -157,6 +157,7 @@ export interface GameSpecOperationProfilePartialExecution {
 export interface GameSpecOperationProfileDef {
   readonly id: string;
   readonly actionId: string;
+  readonly applicability?: unknown;
   readonly legality: Readonly<Record<string, unknown>>;
   readonly cost: Readonly<Record<string, unknown>>;
   readonly targeting: Readonly<Record<string, unknown>>;

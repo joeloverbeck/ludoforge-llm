@@ -19,8 +19,26 @@ const COMPLETE: ChoiceRequest = { complete: true };
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
 
-const resolveOperationProfile = (def: GameDef, action: ActionDef): OperationProfileDef | undefined =>
-  def.operationProfiles?.find((profile) => profile.actionId === action.id);
+const resolveOperationProfile = (
+  def: GameDef,
+  action: ActionDef,
+  ctx: EvalContext,
+): OperationProfileDef | undefined => {
+  const candidates = (def.operationProfiles ?? []).filter((profile) => profile.actionId === action.id);
+  if (candidates.length <= 1) {
+    return candidates[0];
+  }
+  return candidates.find((profile) => {
+    if (profile.applicability === undefined) {
+      return false;
+    }
+    try {
+      return evalCondition(profile.applicability, ctx);
+    } catch {
+      return false;
+    }
+  });
+};
 
 const valuesMatch = (candidate: unknown, selected: unknown): boolean => {
   if (Object.is(candidate, selected)) {
@@ -254,7 +272,7 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     bindings: baseBindings,
   };
 
-  const profile = resolveOperationProfile(def, action);
+  const profile = resolveOperationProfile(def, action, evalCtx);
 
   if (profile !== undefined) {
     if (profile.legality.when !== undefined) {

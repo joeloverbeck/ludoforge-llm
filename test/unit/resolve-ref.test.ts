@@ -228,4 +228,14 @@ describe('resolveRef', () => {
         error.message.includes('zonePropIncludes'),
     );
   });
+
+  it('resolves activePlayer — returns stringified active player ID', () => {
+    const ctx = makeCtx({ activePlayer: asPlayerId(2) });
+    assert.equal(resolveRef({ ref: 'activePlayer' }, ctx), '2');
+  });
+
+  it('resolves activePlayer for player 0', () => {
+    const ctx = makeCtx({ activePlayer: asPlayerId(0) });
+    assert.equal(resolveRef({ ref: 'activePlayer' }, ctx), '0');
+  });
 });

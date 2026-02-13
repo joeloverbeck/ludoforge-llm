@@ -697,7 +697,7 @@ function lowerOperationProfiles(
 
   const lowered: OperationProfileDef[] = [];
   const seenProfileIds = new Set<string>();
-  const actionIdBindings = new Set<string>();
+  const actionIdCounts = new Map<string, number>();
 
   for (const [index, rawProfile] of rawProfiles.entries()) {
     const basePath = `doc.operationProfiles.${index}`;
@@ -756,17 +756,7 @@ function lowerOperationProfiles(
       });
       continue;
     }
-    if (actionIdBindings.has(actionId)) {
-      diagnostics.push({
-        code: 'CNL_COMPILER_OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS',
-        path: `${basePath}.actionId`,
-        severity: 'error',
-        message: `Multiple operation profiles map to action "${actionId}".`,
-        suggestion: 'Map each action id to at most one operation profile.',
-      });
-      continue;
-    }
-    actionIdBindings.add(actionId);
+    actionIdCounts.set(actionId, (actionIdCounts.get(actionId) ?? 0) + 1);
 
     if (!isRecord(rawProfile.legality)) {
       diagnostics.push(missingCapabilityDiagnostic(`${basePath}.legality`, 'operation profile legality object', rawProfile.legality, ['object']));
@@ -833,8 +823,17 @@ function lowerOperationProfiles(
       linkedSpecialActivityWindows = rawProfile.linkedSpecialActivityWindows.map((entry) => normalizeIdentifier(entry));
     }
 
-    // Lower legality
+    // Lower applicability (optional — required when multiple profiles share an actionId)
+    let applicability: ConditionAST | undefined;
     const runtimeBindings = [...OPERATION_PROFILE_RUNTIME_BINDINGS];
+    if (rawProfile.applicability !== undefined) {
+      const loweredApplicability = lowerOptionalCondition(rawProfile.applicability, ownershipByBase, runtimeBindings, diagnostics, `${basePath}.applicability`);
+      if (loweredApplicability !== undefined && loweredApplicability !== null) {
+        applicability = loweredApplicability;
+      }
+    }
+
+    // Lower legality
     const rawLegality = rawProfile.legality;
     let legalityWhen: ConditionAST | undefined;
     if (rawLegality.when !== undefined) {
@@ -920,6 +919,7 @@ function lowerOperationProfiles(
     lowered.push({
       id,
       actionId: asActionId(actionId),
+      ...(applicability !== undefined ? { applicability } : {}),
       legality,
       cost,
       targeting,
@@ -927,6 +927,24 @@ function lowerOperationProfiles(
       partialExecution: { mode: partialExecution.mode },
       ...(linkedSpecialActivityWindows === undefined ? {} : { linkedSpecialActivityWindows }),
     });
+  }
+
+  // Post-loop: when multiple profiles share an actionId, all must have applicability
+  for (const [actionId, count] of actionIdCounts) {
+    if (count <= 1) {
+      continue;
+    }
+    const profilesForAction = lowered.filter((p) => String(p.actionId) === actionId);
+    const missingApplicability = profilesForAction.some((p) => p.applicability === undefined);
+    if (missingApplicability) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS',
+        path: 'doc.operationProfiles',
+        severity: 'error',
+        message: `Multiple operation profiles map to action "${actionId}" but not all have an applicability condition.`,
+        suggestion: 'When multiple profiles share an actionId, each must have an applicability condition for dispatch.',
+      });
+    }
   }
 
   return lowered;

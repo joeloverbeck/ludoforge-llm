@@ -36,6 +36,7 @@ export const ReferenceSchema = z.union([
   z.object({ ref: z.literal('tokenProp'), token: TokenSelSchema, prop: StringSchema }).strict(),
   z.object({ ref: z.literal('binding'), name: StringSchema }).strict(),
   z.object({ ref: z.literal('markerState'), space: ZoneSelSchema, marker: StringSchema }).strict(),
+  z.object({ ref: z.literal('activePlayer') }).strict(),
 ]);
 
 let conditionAstSchemaInternal: z.ZodTypeAny;
@@ -1010,6 +1011,7 @@ export const OperationProfileSchema = z
   .object({
     id: StringSchema.min(1),
     actionId: StringSchema.min(1),
+    applicability: ConditionASTSchema.optional(),
     legality: OperationLegalitySchema,
     cost: OperationCostSchema,
     targeting: OperationTargetingSchema,

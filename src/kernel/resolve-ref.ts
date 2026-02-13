@@ -159,6 +159,10 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     return state;
   }
 
+  if (ref.ref === 'activePlayer') {
+    return String(ctx.activePlayer);
+  }
+
   if (ref.ref === 'zoneProp') {
     const zoneId = resolveMapSpaceId(ref.zone, ctx);
     const mapSpaces = ctx.mapSpaces;

@@ -248,8 +248,26 @@ function enumerateParams(
   }
 }
 
-const resolveOperationProfile = (def: GameDef, action: ActionDef): OperationProfileDef | undefined =>
-  def.operationProfiles?.find((profile) => profile.actionId === action.id);
+const resolveOperationProfile = (
+  def: GameDef,
+  action: ActionDef,
+  ctx: EvalContext,
+): OperationProfileDef | undefined => {
+  const candidates = (def.operationProfiles ?? []).filter((profile) => profile.actionId === action.id);
+  if (candidates.length <= 1) {
+    return candidates[0];
+  }
+  return candidates.find((profile) => {
+    if (profile.applicability === undefined) {
+      return false;
+    }
+    try {
+      return evalCondition(profile.applicability, ctx);
+    } catch {
+      return false;
+    }
+  });
+};
 
 export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
   if (!isActiveFactionEligibleForTurnFlow(state)) {
@@ -274,7 +292,7 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
 
-    const profile = resolveOperationProfile(def, action);
+    const profile = resolveOperationProfile(def, action, actorCtx);
     if (profile !== undefined) {
       if (profile.legality.when !== undefined) {
         try {

@@ -1,4 +1,5 @@
 import { incrementActionUsage } from './action-usage.js';
+import type { EvalContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
 import { applyEffects } from './effects.js';
 import { legalChoices } from './legal-choices.js';
@@ -73,8 +74,26 @@ interface OperationExecutionProfile {
   readonly partialMode: 'forbid' | 'allow';
 }
 
-const resolveOperationProfile = (def: GameDef, action: ActionDef): OperationProfileDef | undefined =>
-  def.operationProfiles?.find((profile) => profile.actionId === action.id);
+const resolveOperationProfile = (
+  def: GameDef,
+  action: ActionDef,
+  ctx: EvalContext,
+): OperationProfileDef | undefined => {
+  const candidates = (def.operationProfiles ?? []).filter((profile) => profile.actionId === action.id);
+  if (candidates.length <= 1) {
+    return candidates[0];
+  }
+  return candidates.find((profile) => {
+    if (profile.applicability === undefined) {
+      return false;
+    }
+    try {
+      return evalCondition(profile.applicability, ctx);
+    } catch {
+      return false;
+    }
+  });
+};
 
 const toOperationExecutionProfile = (action: ActionDef, profile: OperationProfileDef): OperationExecutionProfile => ({
   legality: profile.legality.when ?? null,
@@ -109,9 +128,9 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
     throw illegalMoveError(move, 'unknown action id');
   }
 
-  const profile = resolveOperationProfile(def, action);
+  const hasProfile = (def.operationProfiles ?? []).some((profile) => profile.actionId === action.id);
 
-  if (profile !== undefined) {
+  if (hasProfile) {
     const legal = legalMoves(def, state);
     const hasTemplate = legal.some((candidate) => candidate.actionId === action.id);
     if (!hasTemplate && move.freeOperation !== true) {
@@ -173,7 +192,7 @@ export const applyMove = (def: GameDef, state: GameState, move: Move): ApplyMove
     moveParams: move.params,
   } as const;
 
-  const operationProfile = resolveOperationProfile(def, action);
+  const operationProfile = resolveOperationProfile(def, action, { ...effectCtxBase, state });
   const executionProfile = operationProfile === undefined ? undefined : toOperationExecutionProfile(action, operationProfile);
   const isFreeOp = move.freeOperation === true && executionProfile !== undefined;
 

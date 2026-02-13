@@ -286,7 +286,7 @@ describe('validateGameDef reference checks', () => {
     const diagnostics = validateGameDef(def);
     assert.ok(
       diagnostics.some(
-        (diag) => diag.code === 'OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS' && diag.path === 'operationProfiles[1].actionId',
+        (diag) => diag.code === 'OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS' && diag.path === 'operationProfiles',
       ),
     );
   });

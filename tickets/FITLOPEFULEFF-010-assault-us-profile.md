@@ -21,6 +21,12 @@ Key behaviors:
 - **Removal**: Uses `coin-assault-removal-order` macro (+6 Aid per insurgent Base removed)
 - **LimOp-aware**: Max 1 space
 
+## Architectural Notice
+
+- The current production data still contains transitional COIN stub resource wiring (`coinResources`, `assaultCount`).
+- This ticket must remove US Assault dependence on transitional COIN stub semantics and implement canonical FITL/Spec 26 behavior for `assault-us-profile` (including ARVN follow-up cost via canonical ARVN resource tracks).
+- No backward-compatibility profile aliases or dual-path logic: if tests break due to old stub assumptions, update tests to the canonical behavior.
+
 ## Files to Touch
 
 - `data/games/fire-in-the-lake.md` — Replace stub in production spec with `assault-us-profile` YAML

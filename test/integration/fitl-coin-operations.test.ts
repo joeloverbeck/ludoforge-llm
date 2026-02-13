@@ -17,8 +17,11 @@ describe('FITL COIN operations integration', () => {
       { id: 'train-us-profile', actionId: 'train' },
       { id: 'train-arvn-profile', actionId: 'train' },
       { id: 'patrol-us-profile', actionId: 'patrol' },
-      { id: 'sweep-profile', actionId: 'sweep' },
-      { id: 'assault-profile', actionId: 'assault' },
+      { id: 'patrol-arvn-profile', actionId: 'patrol' },
+      { id: 'sweep-us-profile', actionId: 'sweep' },
+      { id: 'sweep-arvn-profile', actionId: 'sweep' },
+      { id: 'assault-us-profile', actionId: 'assault' },
+      { id: 'assault-arvn-profile', actionId: 'assault' },
     ]) {
       assert.ok(
         profileMap.some((p) => p.id === expected.id && p.actionId === expected.actionId),
@@ -376,14 +379,29 @@ describe('FITL COIN operations integration', () => {
       assert.deepEqual(patrolProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: '0' });
     });
 
-    it('profiles without applicability (sweep/assault) remain undefined', () => {
+    it('patrol-arvn-profile has applicability for player 1 (ARVN)', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
 
-      for (const id of ['sweep-profile', 'assault-profile']) {
-        const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === id);
-        assert.ok(profile, `${id} must exist`);
-        assert.equal(profile.applicability, undefined);
+      const patrolProfile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'patrol-arvn-profile');
+      assert.ok(patrolProfile, 'patrol-arvn-profile must exist');
+      assert.deepEqual(patrolProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: '1' });
+    });
+
+    it('sweep/assault profiles have explicit US/ARVN applicability', () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+
+      const expected = [
+        { id: 'sweep-us-profile', right: '0' },
+        { id: 'sweep-arvn-profile', right: '1' },
+        { id: 'assault-us-profile', right: '0' },
+        { id: 'assault-arvn-profile', right: '1' },
+      ];
+      for (const entry of expected) {
+        const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === entry.id);
+        assert.ok(profile, `${entry.id} must exist`);
+        assert.deepEqual(profile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: entry.right });
       }
     });
   });
@@ -558,6 +576,128 @@ describe('FITL COIN operations integration', () => {
     it('forbids partial execution', () => {
       const profile = getPatrolProfile();
       assert.equal(profile.atomicity, 'atomic');
+    });
+  });
+
+  describe('patrol-arvn-profile structure', () => {
+    const getPatrolProfile = () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'patrol-arvn-profile');
+      assert.ok(profile, 'patrol-arvn-profile must exist');
+      return profile;
+    };
+
+    const parsePatrolProfile = (): any => {
+      const { parsed } = compileProductionSpec();
+      const profile = parsed.doc.actionPipelines?.find(
+        (p: { id: string }) => p.id === 'patrol-arvn-profile',
+      );
+      assert.ok(profile, 'patrol-arvn-profile must exist in parsed doc');
+      return profile;
+    };
+
+    const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => {
+      const results: any[] = [];
+      const walk = (node: any): void => {
+        if (node === null || node === undefined) return;
+        if (predicate(node)) results.push(node);
+        if (Array.isArray(node)) {
+          for (const item of node) walk(item);
+        } else if (typeof node === 'object') {
+          for (const value of Object.values(node)) walk(value);
+        }
+      };
+      walk(obj);
+      return results;
+    };
+
+    it('AC1: compiles patrol-arvn-profile without diagnostics', () => {
+      getPatrolProfile();
+    });
+
+    it('AC2: ARVN Patrol costs 3 ARVN resources upfront', () => {
+      const profile = getPatrolProfile();
+      assert.deepEqual(profile.costEffects, [{ addVar: { scope: 'global', var: 'arvnResources', delta: -3 } }]);
+    });
+
+    it('AC3: legality and costValidation require arvnResources >= 3', () => {
+      const profile = getPatrolProfile();
+      const expected = { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 };
+      assert.deepEqual(profile.legality, expected);
+      assert.deepEqual(profile.costValidation, expected);
+    });
+
+    it('AC4: move-cubes stage uses tokensInAdjacentZones for ARVN cubes', () => {
+      const parsed = parsePatrolProfile();
+      const moveCubes = parsed.stages[1];
+      assert.equal(moveCubes.stage, 'move-cubes');
+
+      const adjacentQueries = findDeep(moveCubes.effects, (node: any) =>
+        node?.query === 'tokensInAdjacentZones' &&
+        Array.isArray(node?.filter) &&
+        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'ARVN'),
+      );
+      assert.ok(adjacentQueries.length >= 1, 'Expected tokensInAdjacentZones query for ARVN cubes');
+    });
+
+    it('AC5: activation stage uses ARVN cube count as guerrilla activation limit', () => {
+      const profile = getPatrolProfile();
+      const activateStage = profile.stages[2]!;
+      assert.equal(activateStage.stage, 'activate-guerrillas');
+
+      const limitedByCount = findDeep(activateStage.effects, (node: any) =>
+        node?.forEach?.limit?.ref === 'binding' &&
+        node?.forEach?.limit?.name === '$arvnCubeCount',
+      );
+      assert.ok(limitedByCount.length >= 1, 'Expected guerrilla activation limited by $arvnCubeCount');
+    });
+
+    it('AC6: free Assault damage uses ARVN cubes / 2 and ARVN actor faction', () => {
+      const profile = getPatrolProfile();
+      const freeAssault = profile.stages[3]!;
+      assert.equal(freeAssault.stage, 'free-assault');
+
+      const divideByTwo = findDeep(freeAssault.effects, (node: any) =>
+        node?.op === '/' &&
+        node?.left?.ref === 'binding' &&
+        node?.left?.name === '$arvnCubes' &&
+        node?.right === 2,
+      );
+      assert.ok(divideByTwo.length >= 1, 'Expected ARVN patrol free-assault damage formula arvnCubes/2');
+
+      const parsed = parsePatrolProfile();
+      const parsedFreeAssault = parsed.stages[3];
+      const macroRef = findDeep(parsedFreeAssault.effects, (node: any) =>
+        node?.macro === 'coin-assault-removal-order' && node?.args?.actorFaction === 'ARVN',
+      );
+      assert.ok(macroRef.length >= 1, 'Expected coin-assault-removal-order with actorFaction ARVN');
+    });
+
+    it('AC7: LimOp variant limits destination selection to max 1 LoC', () => {
+      const profile = getPatrolProfile();
+      const selectLoCs = profile.stages[0]!;
+
+      const limOpIf = findDeep(selectLoCs.effects, (node: any) =>
+        node?.if?.when?.op === '==' &&
+        node?.if?.when?.left?.ref === 'binding' &&
+        node?.if?.when?.left?.name === '__actionClass' &&
+        node?.if?.when?.right === 'limitedOperation',
+      );
+      assert.ok(limOpIf.length >= 1, 'Expected LimOp check');
+
+      const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) =>
+        node?.chooseN?.max === 1,
+      );
+      assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
+    });
+
+    it('has four stages stages: select-locs, move-cubes, activate-guerrillas, free-assault', () => {
+      const profile = getPatrolProfile();
+      assert.deepEqual(
+        profile.stages.map((s: any) => s.stage),
+        ['select-locs', 'move-cubes', 'activate-guerrillas', 'free-assault'],
+      );
     });
   });
   /* eslint-enable @typescript-eslint/no-explicit-any */

@@ -1947,9 +1947,124 @@ actionPipelines:
                                       damageExpr: { ref: binding, name: $patrolDmg }
                                       actorFaction: 'US'
     atomicity: atomic
-  # ── COIN stub profiles (sweep, assault) ──
-  - id: sweep-profile
+  # ── patrol-arvn-profile ─────────────────────────────────────────────────────
+  # ARVN Patrol operation (Rule 3.2.2)
+  # Spaces: LoCs only; LimOp: max 1 LoC
+  # Cost: 3 ARVN Resources TOTAL (upfront, not per-space)
+  # Resolution: Move ARVN cubes from adjacent spaces, activate 1 guerrilla per cube (1:1),
+  #             free Assault in 1 LoC using ARVN Assault damage formula
+  - id: patrol-arvn-profile
+    actionId: patrol
+    applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
+    legality:
+      op: '>='
+      left: { ref: gvar, var: arvnResources }
+      right: 3
+    costValidation:
+      op: '>='
+      left: { ref: gvar, var: arvnResources }
+      right: 3
+    costEffects:
+      - addVar: { scope: global, var: arvnResources, delta: -3 }
+    targeting: {}
+    stages:
+      - stage: select-locs
+        effects:
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: targetLoCs
+                    options:
+                      query: zones
+                      filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetLoCs
+                    options:
+                      query: zones
+                      filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                    min: 1
+                    max: 99
+
+      - stage: move-cubes
+        effects:
+          - forEach:
+              bind: loc
+              over: { query: binding, name: targetLoCs }
+              effects:
+                - chooseN:
+                    bind: $movingCubes
+                    options:
+                      query: tokensInAdjacentZones
+                      zone: $loc
+                      filter:
+                        - { prop: faction, eq: 'ARVN' }
+                        - { prop: type, op: in, value: ['troops', 'police'] }
+                    min: 0
+                    max: 99
+                - forEach:
+                    bind: $cube
+                    over: { query: binding, name: $movingCubes }
+                    effects:
+                      - moveToken:
+                          token: $cube
+                          from: { ref: tokenZone, token: $cube }
+                          to: $loc
+
+      - stage: activate-guerrillas
+        effects:
+          - forEach:
+              bind: $actLoc
+              over: { query: binding, name: targetLoCs }
+              effects:
+                - let:
+                    bind: $arvnCubeCount
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $actLoc, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
+                    in:
+                      - forEach:
+                          bind: $guerrilla
+                          over:
+                            query: tokensInZone
+                            zone: $actLoc
+                            filter: [{ prop: type, eq: guerrilla }, { prop: activity, eq: underground }]
+                          limit: { ref: binding, name: $arvnCubeCount }
+                          effects:
+                            - setTokenProp: { token: $guerrilla, prop: activity, value: active }
+
+      - stage: free-assault
+        effects:
+          - chooseN:
+              bind: $assaultLoCs
+              options: { query: binding, name: targetLoCs }
+              min: 0
+              max: 1
+          - forEach:
+              bind: $assaultLoC
+              over: { query: binding, name: $assaultLoCs }
+              effects:
+                - let:
+                    bind: $arvnCubes
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $assaultLoC, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
+                    in:
+                      - let:
+                          bind: $patrolDmg
+                          value: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
+                          in:
+                            - macro: coin-assault-removal-order
+                              args:
+                                space: $assaultLoC
+                                damageExpr: { ref: binding, name: $patrolDmg }
+                                actorFaction: 'ARVN'
+    atomicity: atomic
+  # ── COIN stub profiles (sweep, assault) ─────────────────────────────────────
+  # NOTE: Kept as stubs for now, but split by faction-specific IDs/applicability
+  # to preserve the Spec 26 architecture direction (no shared COIN profile IDs).
+  - id: sweep-us-profile
     actionId: sweep
+    applicability: { op: '==', left: { ref: activePlayer }, right: '0' }
     legality:
         op: ">="
         left:
@@ -1978,8 +2093,72 @@ actionPipelines:
               var: sweepCount
               delta: 1
     atomicity: atomic
-  - id: assault-profile
+  - id: sweep-arvn-profile
+    actionId: sweep
+    applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
+    legality:
+        op: ">="
+        left:
+          ref: gvar
+          var: coinResources
+        right: 1
+    costValidation:
+        op: ">="
+        left:
+          ref: gvar
+          var: coinResources
+        right: 1
+    costEffects:
+        - addVar:
+            scope: global
+            var: coinResources
+            delta: -1
+    targeting:
+      select: allEligible
+      terrainFilter: [lowland, urban]
+    stages:
+      - stage: sweep-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: sweepCount
+              delta: 1
+    atomicity: atomic
+  - id: assault-us-profile
     actionId: assault
+    applicability: { op: '==', left: { ref: activePlayer }, right: '0' }
+    legality:
+        op: ">="
+        left:
+          ref: gvar
+          var: coinResources
+        right: 3
+    costValidation:
+        op: ">="
+        left:
+          ref: gvar
+          var: coinResources
+        right: 3
+    costEffects:
+        - addVar:
+            scope: global
+            var: coinResources
+            delta: -3
+    targeting:
+      select: exactlyN
+      count: 1
+      tieBreak: basesLast
+    stages:
+      - stage: assault-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: assaultCount
+              delta: 1
+    atomicity: atomic
+  - id: assault-arvn-profile
+    actionId: assault
+    applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
     legality:
         op: ">="
         left:

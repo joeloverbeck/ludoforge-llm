@@ -18,6 +18,12 @@ Key behaviors:
 - **Terrain**: Same Jungle halving rule
 - **LimOp-aware**: Max 1 space
 
+## Architectural Notice
+
+- The current production data still contains transitional COIN stub resource wiring (`coinResources`, `sweepCount`).
+- This ticket must remove ARVN Sweep dependence on transitional COIN stub semantics and implement canonical FITL/Spec 26 behavior for `sweep-arvn-profile` using ARVN resource rules.
+- No backward-compatibility profile aliases or dual-path logic: if tests break due to old stub assumptions, update tests to the canonical behavior.
+
 ## Files to Touch
 
 - `data/games/fire-in-the-lake.md` — Replace stub in production spec with `sweep-arvn-profile` YAML

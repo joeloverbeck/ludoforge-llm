@@ -36,10 +36,14 @@ describe('FITL removal ordering macros', () => {
       // Verify the macros were expanded by checking that the production spec contains
       // profiles referencing removal-order related effects
       const profiles = compiled.gameDef!.actionPipelines ?? [];
-      const sweepProfile = profiles.find((p) => p.id === 'sweep-profile');
-      const assaultProfile = profiles.find((p) => p.id === 'assault-profile');
-      assert.ok(sweepProfile, 'Expected sweep-profile to exist');
-      assert.ok(assaultProfile, 'Expected assault-profile to exist');
+      const sweepUsProfile = profiles.find((p) => p.id === 'sweep-us-profile');
+      const sweepArvnProfile = profiles.find((p) => p.id === 'sweep-arvn-profile');
+      const assaultUsProfile = profiles.find((p) => p.id === 'assault-us-profile');
+      const assaultArvnProfile = profiles.find((p) => p.id === 'assault-arvn-profile');
+      assert.ok(sweepUsProfile, 'Expected sweep-us-profile to exist');
+      assert.ok(sweepArvnProfile, 'Expected sweep-arvn-profile to exist');
+      assert.ok(assaultUsProfile, 'Expected assault-us-profile to exist');
+      assert.ok(assaultArvnProfile, 'Expected assault-arvn-profile to exist');
     });
   });
 

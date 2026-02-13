@@ -73,12 +73,14 @@ const locId = asZoneId('route1:none');
 const adjProvince1Id = asZoneId('quangTri:none');
 const adjProvince2Id = asZoneId('thua:none');
 const availableUS = asZoneId('available-US:none');
+const availableARVN = asZoneId('available-ARVN:none');
 
 const zoneDefs: readonly ZoneDef[] = [
   { id: locId, owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [adjProvince1Id, adjProvince2Id] },
   { id: adjProvince1Id, owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [locId] },
   { id: adjProvince2Id, owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [locId] },
   { id: availableUS, owner: 'none', visibility: 'public', ordering: 'set' },
+  { id: availableARVN, owner: 'none', visibility: 'public', ordering: 'set' },
 ];
 
 const mapSpaces: readonly MapSpaceDef[] = [
@@ -361,6 +363,56 @@ describe('FITL patrol movement and activation', () => {
 
       assert.equal(activatedCount, 2, '2 guerrillas activated (1:1 with US cubes)');
       assert.equal(undergroundCount, 1, '1 guerrilla remains underground');
+    });
+  });
+
+  describe('ARVN patrol parity checks', () => {
+    it('moves ARVN cubes from adjacent provinces into the LoC', () => {
+      const arvnCube1 = makeToken('arvn-t1', 'troops', 'ARVN');
+      const arvnCube2 = makeToken('arvn-p1', 'police', 'ARVN');
+
+      const state = makeState({
+        [locId]: [],
+        [adjProvince1Id]: [arvnCube1],
+        [adjProvince2Id]: [arvnCube2],
+        [availableUS]: [],
+        [availableARVN]: [],
+      });
+
+      const moveEffects = buildMoveCubeEffects(['$c1', '$c2'], locId);
+      const moveCtx = makeCtx(state, { $c1: arvnCube1, $c2: arvnCube2 });
+      const result = applyEffects(moveEffects, moveCtx);
+
+      assert.equal(result.state.zones[locId]!.length, 2, 'LoC should contain both moved ARVN cubes');
+      assert.equal(result.state.zones[adjProvince1Id]!.length, 0, 'Origin province 1 should be empty');
+      assert.equal(result.state.zones[adjProvince2Id]!.length, 0, 'Origin province 2 should be empty');
+    });
+
+    it('activates underground guerrillas at 1:1 ratio with ARVN cubes in LoC', () => {
+      const state = makeState({
+        [locId]: [
+          makeToken('arvn-t1', 'troops', 'ARVN'),
+          makeToken('arvn-p1', 'police', 'ARVN'),
+          makeToken('nva-g1', 'guerrilla', 'NVA', { activity: 'underground' }),
+          makeToken('vc-g1', 'guerrilla', 'VC', { activity: 'underground' }),
+          makeToken('vc-g2', 'guerrilla', 'VC', { activity: 'underground' }),
+        ],
+        [adjProvince1Id]: [],
+        [adjProvince2Id]: [],
+        [availableUS]: [],
+        [availableARVN]: [],
+      });
+
+      const effects = buildActivateGuerrillaEffects(locId, 2);
+      const ctx = makeCtx(state);
+      const result = applyEffects(effects, ctx);
+
+      const guerrillas = result.state.zones[locId]!.filter((token) => token.type === 'guerrilla');
+      const activatedCount = guerrillas.filter((token) => token.props.activity === 'active').length;
+      const undergroundCount = guerrillas.filter((token) => token.props.activity === 'underground').length;
+
+      assert.equal(activatedCount, 2, 'Exactly 2 guerrillas should activate for 2 ARVN cubes');
+      assert.equal(undergroundCount, 1, 'One guerrilla should remain underground');
     });
   });
 });

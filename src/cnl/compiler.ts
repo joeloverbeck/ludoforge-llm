@@ -101,6 +101,7 @@ export function expandMacros(
       actions: doc.actions,
       triggers: doc.triggers,
       turnStructure: doc.turnStructure,
+      operationProfiles: doc.operationProfiles,
     },
     limits.maxExpandedEffects,
     diagnostics,
@@ -113,6 +114,7 @@ export function expandMacros(
     actions: effectsExpansion.actions,
     triggers: effectsExpansion.triggers,
     turnStructure: effectsExpansion.turnStructure,
+    operationProfiles: effectsExpansion.operationProfiles,
   };
 
   const finalizedDiagnostics = finalizeDiagnostics(diagnostics, options?.sourceMap, limits.maxDiagnosticCount);
@@ -673,6 +675,9 @@ function lowerVictory(rawVictory: GameSpecDoc['victory'], diagnostics: Diagnosti
   return rawVictory as VictoryDef;
 }
 
+/** Bindings injected at runtime by the kernel into every operation profile. */
+const OPERATION_PROFILE_RUNTIME_BINDINGS: readonly string[] = ['__actionClass', '__freeOperation'];
+
 function lowerOperationProfiles(
   rawProfiles: GameSpecDoc['operationProfiles'],
   rawActions: GameSpecDoc['actions'],
@@ -829,10 +834,11 @@ function lowerOperationProfiles(
     }
 
     // Lower legality
+    const runtimeBindings = [...OPERATION_PROFILE_RUNTIME_BINDINGS];
     const rawLegality = rawProfile.legality;
     let legalityWhen: ConditionAST | undefined;
     if (rawLegality.when !== undefined) {
-      const loweredWhen = lowerOptionalCondition(rawLegality.when, ownershipByBase, [], diagnostics, `${basePath}.legality.when`);
+      const loweredWhen = lowerOptionalCondition(rawLegality.when, ownershipByBase, runtimeBindings, diagnostics, `${basePath}.legality.when`);
       if (loweredWhen !== undefined && loweredWhen !== null) {
         legalityWhen = loweredWhen;
       }
@@ -846,13 +852,13 @@ function lowerOperationProfiles(
     let costValidate: ConditionAST | undefined;
     let costSpend: readonly EffectAST[] | undefined;
     if (rawCost.validate !== undefined) {
-      const loweredValidate = lowerOptionalCondition(rawCost.validate, ownershipByBase, [], diagnostics, `${basePath}.cost.validate`);
+      const loweredValidate = lowerOptionalCondition(rawCost.validate, ownershipByBase, runtimeBindings, diagnostics, `${basePath}.cost.validate`);
       if (loweredValidate !== undefined && loweredValidate !== null) {
         costValidate = loweredValidate;
       }
     }
     if (rawCost.spend !== undefined) {
-      const loweredSpend = lowerEffectsWithDiagnostics(rawCost.spend, ownershipByBase, diagnostics, `${basePath}.cost.spend`);
+      const loweredSpend = lowerEffectsWithDiagnostics(rawCost.spend, ownershipByBase, diagnostics, `${basePath}.cost.spend`, runtimeBindings);
       if (loweredSpend.length > 0) {
         costSpend = loweredSpend;
       }
@@ -866,7 +872,7 @@ function lowerOperationProfiles(
     const rawTargeting = rawProfile.targeting;
     let targetingFilter: ConditionAST | undefined;
     if (rawTargeting.filter !== undefined) {
-      const loweredFilter = lowerOptionalCondition(rawTargeting.filter, ownershipByBase, [], diagnostics, `${basePath}.targeting.filter`);
+      const loweredFilter = lowerOptionalCondition(rawTargeting.filter, ownershipByBase, runtimeBindings, diagnostics, `${basePath}.targeting.filter`);
       if (loweredFilter !== undefined && loweredFilter !== null) {
         targetingFilter = loweredFilter;
       }
@@ -879,8 +885,11 @@ function lowerOperationProfiles(
       ...(typeof rawTargeting.tieBreak === 'string' ? { tieBreak: rawTargeting.tieBreak } : {}),
     };
 
-    // Lower resolution stages
+    // Lower resolution stages — bindings from chooseOne/forEach in
+    // earlier stages flow forward so later stages can reference them.
+    // Seed with runtime-injected bindings available to all operation profiles.
     const resolution: OperationResolutionStageDef[] = [];
+    let accumulatedBindings: readonly string[] = OPERATION_PROFILE_RUNTIME_BINDINGS;
     for (const [stageIdx, rawStage] of (rawProfile.resolution as Record<string, unknown>[]).entries()) {
       const stagePath = `${basePath}.resolution[${stageIdx}]`;
       const loweredEffects = lowerEffectsWithDiagnostics(
@@ -888,7 +897,19 @@ function lowerOperationProfiles(
         ownershipByBase,
         diagnostics,
         `${stagePath}.effects`,
+        accumulatedBindings,
       );
+      // Collect top-level bindings introduced by this stage.
+      const stageBindings: string[] = [];
+      for (const eff of loweredEffects) {
+        if ('chooseOne' in eff && typeof eff.chooseOne === 'object' && eff.chooseOne !== null && 'bind' in eff.chooseOne) {
+          stageBindings.push((eff.chooseOne as { bind: string }).bind);
+        }
+        if ('forEach' in eff && typeof eff.forEach === 'object' && eff.forEach !== null && 'bind' in eff.forEach) {
+          stageBindings.push((eff.forEach as { bind: string }).bind);
+        }
+      }
+      accumulatedBindings = [...accumulatedBindings, ...stageBindings];
       const stage: OperationResolutionStageDef = {
         ...(typeof rawStage.stage === 'string' ? { stage: rawStage.stage } : {}),
         effects: loweredEffects,
@@ -1839,10 +1860,10 @@ function expandZoneMacros(
 }
 
 function expandEffectSections(
-  sections: Pick<GameSpecDoc, 'setup' | 'actions' | 'triggers' | 'turnStructure'>,
+  sections: Pick<GameSpecDoc, 'setup' | 'actions' | 'triggers' | 'turnStructure' | 'operationProfiles'>,
   maxExpandedEffects: number,
   diagnostics: Diagnostic[],
-): Pick<GameSpecDoc, 'setup' | 'actions' | 'triggers' | 'turnStructure'> {
+): Pick<GameSpecDoc, 'setup' | 'actions' | 'triggers' | 'turnStructure' | 'operationProfiles'> {
   const state: ExpansionState = {
     maxExpandedEffects,
     expandedEffects: 0,
@@ -1867,6 +1888,7 @@ function expandEffectSections(
             expandTriggerEffects(trigger, triggerIndex, state),
           ) as GameSpecDoc['triggers']),
     turnStructure: expandTurnStructureEffects(sections.turnStructure, state),
+    operationProfiles: expandOperationProfileEffects(sections.operationProfiles, state),
   };
 }
 
@@ -1929,6 +1951,44 @@ function expandTriggerEffects(trigger: unknown, triggerIndex: number, state: Exp
     ...trigger,
     effects: expandEffectArray(trigger.effects, `doc.triggers.${triggerIndex}.effects`, state),
   };
+}
+
+function expandOperationProfileEffects(
+  profiles: GameSpecDoc['operationProfiles'],
+  state: ExpansionState,
+): GameSpecDoc['operationProfiles'] {
+  if (profiles === null) {
+    return null;
+  }
+  return profiles.map((profile, profileIndex) => {
+    if (!isRecord(profile)) return profile;
+    const resolution = profile.resolution;
+    if (!Array.isArray(resolution)) return profile;
+    const expandedResolution = resolution.map((stage, stageIndex) => {
+      if (!isRecord(stage) || !Array.isArray(stage.effects)) return stage;
+      return {
+        ...stage,
+        effects: expandEffectArray(
+          stage.effects,
+          `doc.operationProfiles.${profileIndex}.resolution.${stageIndex}.effects`,
+          state,
+        ),
+      };
+    });
+    // Also expand cost.spend if present
+    let expandedCost = profile.cost;
+    if (isRecord(profile.cost) && Array.isArray(profile.cost.spend)) {
+      expandedCost = {
+        ...profile.cost,
+        spend: expandEffectArray(
+          profile.cost.spend,
+          `doc.operationProfiles.${profileIndex}.cost.spend`,
+          state,
+        ),
+      };
+    }
+    return { ...profile, resolution: expandedResolution, cost: expandedCost };
+  }) as GameSpecDoc['operationProfiles'];
 }
 
 function expandEffectArray(effects: readonly unknown[], path: string, state: ExpansionState): readonly unknown[] {

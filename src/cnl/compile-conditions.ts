@@ -25,6 +25,7 @@ const SUPPORTED_QUERY_KINDS = [
   'adjacentZones',
   'tokensInAdjacentZones',
   'connectedZones',
+  'binding',
 ];
 const SUPPORTED_REFERENCE_KINDS = ['gvar', 'pvar', 'zoneCount', 'tokenProp', 'binding', 'markerState', 'tokenZone', 'zoneProp'];
 
@@ -33,6 +34,9 @@ export function lowerConditionNode(
   context: ConditionLoweringContext,
   path: string,
 ): ConditionLoweringResult<ConditionAST> {
+  if (typeof source === 'boolean') {
+    return { value: source, diagnostics: [] };
+  }
   if (!isRecord(source) || typeof source.op !== 'string') {
     return missingCapability(path, 'condition node', source, SUPPORTED_CONDITION_OPS);
   }
@@ -355,6 +359,15 @@ export function lowerQueryNode(
           ...(maxDepthValue === undefined ? {} : { maxDepth: maxDepthValue }),
         },
         diagnostics,
+      };
+    }
+    case 'binding': {
+      if (typeof source.name !== 'string') {
+        return missingCapability(path, 'binding query', source, ['{ query: "binding", name: "$bindingName" }']);
+      }
+      return {
+        value: { query: 'binding', name: source.name },
+        diagnostics: [],
       };
     }
     default:

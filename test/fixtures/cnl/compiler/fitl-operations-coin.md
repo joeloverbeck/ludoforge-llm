@@ -93,7 +93,7 @@ effectMacros:
                 over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: troops }, { prop: faction, op: neq, value: { ref: actor } }] }
                 limit: { ref: binding, name: $damage }
                 effects:
-                  - moveToken: { token: $target, from: { param: space }, to: { concat: ['available:', { ref: tokenProp, token: $target, prop: faction }] } }
+                  - moveToken: { token: $target, from: { param: space }, to: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }] } }
                 countBind: $troopsRemoved
                 in:
                   - let:
@@ -108,7 +108,7 @@ effectMacros:
                             over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, eq: { ref: binding, name: $targetFactionFirst } }, { prop: activity, eq: active }] }
                             limit: { ref: binding, name: $remainingDamage }
                             effects:
-                              - moveToken: { token: $target2, from: { param: space }, to: { concat: ['available:', { ref: binding, name: $targetFactionFirst }] } }
+                              - moveToken: { token: $target2, from: { param: space }, to: { concat: ['available-', { ref: binding, name: $targetFactionFirst }] } }
                             countBind: $guerrillas1Removed
                             in:
                               - let:
@@ -124,7 +124,7 @@ effectMacros:
                                               over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, eq: { ref: binding, name: $targetFactionSecond } }, { prop: activity, eq: active }] }
                                               limit: { ref: binding, name: $remainingDamage2 }
                                               effects:
-                                                - moveToken: { token: $target3, from: { param: space }, to: { concat: ['available:', { ref: binding, name: $targetFactionSecond }] } }
+                                                - moveToken: { token: $target3, from: { param: space }, to: { concat: ['available-', { ref: binding, name: $targetFactionSecond }] } }
                                           - let:
                                               bind: guerrillasRemaining
                                               value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, op: neq, value: { ref: actor } }, { prop: activity, eq: active }] } } }
@@ -149,7 +149,7 @@ effectMacros:
                                                                             then:
                                                                               - setTokenProp: { token: $baseTarget, prop: tunnel, value: 'untunneled' }
                                                                 else:
-                                                                  - moveToken: { token: $baseTarget, from: { param: space }, to: { concat: ['available:', { ref: tokenProp, token: $baseTarget, prop: faction }] } }
+                                                                  - moveToken: { token: $baseTarget, from: { param: space }, to: { concat: ['available-', { ref: tokenProp, token: $baseTarget, prop: faction }] } }
 
   # COIN Assault removal with +6 Aid per base removed
   - id: coin-assault-removal-order
@@ -197,6 +197,66 @@ effectMacros:
           then:
             - addVar: { scope: global, var: { param: resource }, delta: { param: amount } }
 
+  # Dynamic piece sourcing (Rule 1.4.1): place from Available, then from map if not US
+  - id: place-from-available-or-map
+    params:
+      - { name: pieceType, type: string }
+      - { name: faction, type: string }
+      - { name: targetSpace, type: string }
+      - { name: maxPieces, type: value }
+    effects:
+      - forEach:
+          bind: $piece
+          over:
+            query: tokensInZone
+            zone: { concat: ['available-', { param: faction }] }
+            filter: [{ prop: type, eq: { param: pieceType } }]
+          limit: { param: maxPieces }
+          effects:
+            - moveToken:
+                token: $piece
+                from: { concat: ['available-', { param: faction }] }
+                to: { param: targetSpace }
+          countBind: $placed
+          in:
+            - let:
+                bind: $remaining
+                value: { op: '-', left: { param: maxPieces }, right: { ref: binding, name: $placed } }
+                in:
+                  - if:
+                      when:
+                        op: and
+                        args:
+                          - { op: '!=', left: { param: faction }, right: 'US' }
+                          - { op: '>', left: { ref: binding, name: $remaining }, right: 0 }
+                      then:
+                        - chooseN:
+                            bind: $sourceSpaces
+                            options:
+                              query: zones
+                              filter:
+                                op: '>'
+                                left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: type, eq: { param: pieceType } }, { prop: faction, eq: { param: faction } }] } } }
+                                right: 0
+                            min: 0
+                            max: 99
+                        - forEach:
+                            bind: $srcSpace
+                            over: { query: binding, name: $sourceSpaces }
+                            effects:
+                              - forEach:
+                                  bind: $mapPiece
+                                  over:
+                                    query: tokensInZone
+                                    zone: $srcSpace
+                                    filter: [{ prop: type, eq: { param: pieceType } }, { prop: faction, eq: { param: faction } }]
+                                  limit: 1
+                                  effects:
+                                    - moveToken:
+                                        token: $mapPiece
+                                        from: $srcSpace
+                                        to: { param: targetSpace }
+
   # Sweep activation: cubes + SF, jungle halves count
   - id: sweep-activation
     params:
@@ -235,7 +295,23 @@ effectMacros:
                                     - setTokenProp: { token: $guerrilla, prop: activity, value: active }
 
 zones:
-  - id: board:none
+  - id: board
+    owner: none
+    visibility: public
+    ordering: set
+  - id: available-US
+    owner: none
+    visibility: public
+    ordering: set
+  - id: available-ARVN
+    owner: none
+    visibility: public
+    ordering: set
+  - id: available-NVA
+    owner: none
+    visibility: public
+    ordering: set
+  - id: available-VC
     owner: none
     visibility: public
     ordering: set
@@ -293,38 +369,177 @@ actions:
           delta: 100
     limits: []
 operationProfiles:
-  - id: train-profile
+  - id: train-us-profile
     actionId: train
     legality:
-      when:
-        op: ">="
-        left:
-          ref: gvar
-          var: coinResources
-        right: 3
+      when: true
     cost:
-      validate:
-        op: ">="
-        left:
-          ref: gvar
-          var: coinResources
-        right: 3
-      spend:
-        - addVar:
-            scope: global
-            var: coinResources
-            delta: -3
-    targeting:
-      select: upToN
-      max: 2
-      tieBreak: lexicographicSpaceId
+      spend: []
+    targeting: {}
     resolution:
-      - stage: train-resolve
+      - stage: select-spaces
         effects:
-          - addVar:
-              scope: global
-              var: trainCount
-              delta: 1
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'US' }] } } }
+                            right: 0
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'US' }] } } }
+                            right: 0
+                    min: 1
+                    max: 99
+
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - chooseOne:
+                    bind: $trainChoice
+                    options: { query: enums, values: ['place-irregulars', 'place-at-base'] }
+
+                - if:
+                    when: { op: '==', left: { ref: binding, name: $trainChoice }, right: 'place-irregulars' }
+                    then:
+                      - macro: place-from-available-or-map
+                        args:
+                          pieceType: irregulars
+                          faction: 'US'
+                          targetSpace: $space
+                          maxPieces: 2
+
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: binding, name: $trainChoice }, right: 'place-at-base' }
+                        - op: '>'
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }] } } }
+                          right: 0
+                    then:
+                      - chooseOne:
+                          bind: $baseTrainChoice
+                          options: { query: enums, values: ['rangers', 'arvn-cubes'] }
+                      - if:
+                          when: { op: '==', left: { ref: binding, name: $baseTrainChoice }, right: 'rangers' }
+                          then:
+                            - macro: place-from-available-or-map
+                              args:
+                                pieceType: rangers
+                                faction: 'ARVN'
+                                targetSpace: $space
+                                maxPieces: 2
+                      - if:
+                          when: { op: '==', left: { ref: binding, name: $baseTrainChoice }, right: 'arvn-cubes' }
+                          then:
+                            # Cost: 3 ARVN Resources for placing ARVN pieces
+                            - if:
+                                when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                                then:
+                                  - addVar: { scope: global, var: arvnResources, delta: -3 }
+                            # Place up to 6 ARVN cubes (any mix of Troops and Police)
+                            - chooseN:
+                                bind: $arvnCubeTypes
+                                options: { query: enums, values: ['troops', 'police'] }
+                                min: 1
+                                max: 6
+                            - forEach:
+                                bind: $cubeType
+                                over: { query: binding, name: $arvnCubeTypes }
+                                effects:
+                                  - macro: place-from-available-or-map
+                                    args:
+                                      pieceType: { ref: binding, name: $cubeType }
+                                      faction: 'ARVN'
+                                      targetSpace: $space
+                                      maxPieces: 1
+
+      - stage: sub-action
+        effects:
+          - chooseN:
+              bind: $subActionSpaces
+              options:
+                query: binding
+                name: targetSpaces
+              min: 0
+              max: 1
+          - forEach:
+              bind: $subSpace
+              over: { query: binding, name: $subActionSpaces }
+              effects:
+                - chooseOne:
+                    bind: $subAction
+                    options: { query: enums, values: ['pacify', 'saigon-transfer', 'none'] }
+
+                # Pacification: needs US piece + COIN Control
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: binding, name: $subAction }, right: 'pacify' }
+                        - op: '>'
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: [{ prop: faction, eq: 'US' }] } } }
+                          right: 0
+                    then:
+                      # Remove Terror marker first (if present)
+                      - if:
+                          when: { op: '==', left: { ref: markerState, space: $subSpace, marker: terror }, right: 'terror' }
+                          then:
+                            # Costs 3 ARVN Resources per Terror removed (even if free op!)
+                            - addVar: { scope: global, var: arvnResources, delta: -3 }
+                            - setMarker: { space: $subSpace, marker: terror, state: none }
+                      # Shift up to 2 levels toward Active Support
+                      - chooseOne:
+                          bind: $pacLevels
+                          options: { query: intsInRange, min: 1, max: 2 }
+                      # Costs 3 ARVN Resources per level shifted (even if free op!)
+                      - addVar:
+                          scope: global
+                          var: arvnResources
+                          delta: { op: '*', left: { ref: binding, name: $pacLevels }, right: -3 }
+                      - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
+
+                # Saigon patronage transfer (US only, space must be Saigon)
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: binding, name: $subAction }, right: 'saigon-transfer' }
+                        - { op: '==', left: { ref: zoneProp, zone: $subSpace, prop: spaceId }, right: 'saigon' }
+                    then:
+                      - chooseOne:
+                          bind: $transferAmount
+                          options: { query: intsInRange, min: 1, max: 3 }
+                      - addVar: { scope: global, var: patronage, delta: { op: '*', left: { ref: binding, name: $transferAmount }, right: -1 } }
+                      - addVar: { scope: global, var: arvnResources, delta: { ref: binding, name: $transferAmount } }
     partialExecution:
       mode: forbid
   - id: patrol-profile

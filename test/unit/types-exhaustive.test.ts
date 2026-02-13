@@ -101,6 +101,7 @@ const exhaustOptionsQuery = (query: OptionsQuery): string => {
 };
 
 const exhaustConditionAST = (cond: ConditionAST): string => {
+  if (typeof cond === 'boolean') return String(cond);
   switch (cond.op) {
     case 'and':
     case 'or':
@@ -124,12 +125,12 @@ const exhaustConditionAST = (cond: ConditionAST): string => {
 describe('exhaustive kernel unions', () => {
   it('keeps the exact variant counts for key unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
-    const conditionVariants: UnionSize<ConditionAST> = 8;
+    const conditionVariants: UnionSize<ConditionAST> = 10;
     const effectVariants: UnionSize<EffectAST> = 18;
     const queryVariants: UnionSize<OptionsQuery> = 9;
 
     assert.equal(playerSelVariants, 7);
-    assert.equal(conditionVariants, 8);
+    assert.equal(conditionVariants, 10);
     assert.equal(effectVariants, 18);
     assert.equal(queryVariants, 9);
   });

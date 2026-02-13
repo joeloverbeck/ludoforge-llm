@@ -251,6 +251,7 @@ const validateConditionAst = (
   path: string,
   context: ValidationContext,
 ): void => {
+  if (typeof condition === 'boolean') return;
   switch (condition.op) {
     case 'and':
     case 'or': {

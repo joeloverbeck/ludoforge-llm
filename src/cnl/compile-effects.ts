@@ -56,6 +56,7 @@ export function lowerEffectArray(
     diagnostics.push(...lowered.diagnostics);
     if (lowered.value !== null) {
       values.push(lowered.value);
+      registerSequentialBinding(lowered.value, scope);
     }
   });
 
@@ -822,6 +823,7 @@ function lowerNestedEffects(
     diagnostics.push(...lowered.diagnostics);
     if (lowered.value !== null) {
       values.push(lowered.value);
+      registerSequentialBinding(lowered.value, scope);
     }
   });
   if (diagnostics.some((diagnostic) => diagnostic.severity === 'error') && values.length !== source.length) {
@@ -951,6 +953,14 @@ class BindingScope {
     return this.frames.some((frame) => frame.includes(name));
   }
 
+  /** Permanently add a binding to the top frame (for sequential effects). */
+  register(name: string): void {
+    const top = this.frames[this.frames.length - 1];
+    if (top !== undefined) {
+      top.push(name);
+    }
+  }
+
   visibleBindings(): readonly string[] {
     const deduped = new Set<string>();
     for (let index = this.frames.length - 1; index >= 0; index -= 1) {
@@ -996,6 +1006,20 @@ class BindingScope {
         return left.localeCompare(right);
       })
       .slice(0, 5);
+  }
+}
+
+/**
+ * After a choice/random effect is lowered, register its `bind` name in the
+ * scope so subsequent effects in the same array can reference it.
+ */
+function registerSequentialBinding(effect: EffectAST, scope: BindingScope): void {
+  if ('chooseOne' in effect) {
+    scope.register(effect.chooseOne.bind);
+  } else if ('chooseN' in effect) {
+    scope.register(effect.chooseN.bind);
+  } else if ('rollRandom' in effect) {
+    scope.register(effect.rollRandom.bind);
   }
 }
 

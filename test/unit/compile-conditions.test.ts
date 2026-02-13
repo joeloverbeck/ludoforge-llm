@@ -168,4 +168,27 @@ describe('compile-conditions lowering', () => {
     assert.ok((result.diagnostics[0]?.message ?? '').length > 0);
     assert.ok((result.diagnostics[0]?.alternatives ?? []).includes('tokensInZone'));
   });
+
+  it('lowers query: binding as a pass-through binding reference', () => {
+    const result = lowerQueryNode(
+      { query: 'binding', name: '$targetSpaces' },
+      context,
+      'doc.operationProfiles.0.resolution.0.effects.0.forEach.over',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, { query: 'binding', name: '$targetSpaces' });
+  });
+
+  it('lowers boolean literal true as ConditionAST passthrough', () => {
+    const result = lowerConditionNode(true, context, 'doc.operationProfiles.0.legality.when');
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.value, true);
+  });
+
+  it('lowers boolean literal false as ConditionAST passthrough', () => {
+    const result = lowerConditionNode(false, context, 'doc.operationProfiles.0.legality.when');
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.value, false);
+  });
 });

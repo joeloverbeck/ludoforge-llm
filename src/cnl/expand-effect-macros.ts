@@ -1,10 +1,8 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type {
   EffectMacroDef,
-  GameSpecActionDef,
   GameSpecDoc,
   GameSpecEffect,
-  GameSpecTriggerDef,
 } from './game-spec-doc.js';
 
 const MAX_EXPANSION_DEPTH = 10;
@@ -194,54 +192,6 @@ function expandValueRecursive(
   return value;
 }
 
-function expandEffectList(
-  effects: readonly GameSpecEffect[],
-  index: MacroIndex,
-  diagnostics: Diagnostic[],
-  path: string,
-): readonly GameSpecEffect[] {
-  const result: GameSpecEffect[] = [];
-  for (let i = 0; i < effects.length; i++) {
-    const eff = effects[i];
-    if (eff === undefined) continue;
-    const expanded = expandEffect(eff, index, diagnostics, `${path}[${i}]`, new Set(), 0);
-    result.push(...expanded);
-  }
-  return result;
-}
-
-function expandActionEffects(
-  action: GameSpecActionDef,
-  index: MacroIndex,
-  diagnostics: Diagnostic[],
-  path: string,
-): GameSpecActionDef {
-  const effects = action.effects;
-  if (!Array.isArray(effects)) {
-    return action;
-  }
-  return {
-    ...action,
-    effects: expandEffectList(effects as readonly GameSpecEffect[], index, diagnostics, `${path}.effects`),
-  };
-}
-
-function expandTriggerEffects(
-  trigger: GameSpecTriggerDef,
-  index: MacroIndex,
-  diagnostics: Diagnostic[],
-  path: string,
-): GameSpecTriggerDef {
-  const effects = trigger.effects;
-  if (!Array.isArray(effects)) {
-    return trigger;
-  }
-  return {
-    ...trigger,
-    effects: expandEffectList(effects as readonly GameSpecEffect[], index, diagnostics, `${path}.effects`),
-  };
-}
-
 function buildMacroIndex(
   macros: readonly EffectMacroDef[],
   diagnostics: Diagnostic[],
@@ -275,26 +225,24 @@ export function expandEffectMacros(
   const diagnostics: Diagnostic[] = [];
   const index = buildMacroIndex(doc.effectMacros, diagnostics);
 
-  const expandedSetup = doc.setup !== null
-    ? expandEffectList(doc.setup, index, diagnostics, 'setup')
-    : null;
-
-  const expandedActions = doc.actions !== null
-    ? doc.actions.map((action, i) => expandActionEffects(action, index, diagnostics, `actions[${i}]`))
-    : null;
-
-  const expandedTriggers = doc.triggers !== null
-    ? doc.triggers.map((trigger, i) => expandTriggerEffects(trigger, index, diagnostics, `triggers[${i}]`))
-    : null;
+  // Walk the entire document tree generically. expandValueRecursive
+  // handles arrays (detecting macro invocations), objects, and
+  // primitives. Sections without macros pass through unchanged.
+  // This avoids enumerating sections explicitly so any new section
+  // (e.g. operationProfiles) automatically benefits from expansion.
+  const expanded: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(doc)) {
+    if (key === 'effectMacros') {
+      expanded[key] = null;
+    } else {
+      expanded[key] = expandValueRecursive(
+        value, index, diagnostics, key, new Set(), 0,
+      );
+    }
+  }
 
   return {
-    doc: {
-      ...doc,
-      setup: expandedSetup,
-      actions: expandedActions,
-      triggers: expandedTriggers,
-      effectMacros: null,
-    },
+    doc: expanded as unknown as GameSpecDoc,
     diagnostics,
   };
 }

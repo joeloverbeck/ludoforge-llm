@@ -83,4 +83,42 @@ describe('canonicalizeZoneSelector', () => {
       },
     ]);
   });
+
+  it('resolves static { concat: [...] } to a joined string at compile time', () => {
+    const extended = { ...ownershipByBase, 'available-US': 'none' } as const;
+    const result = canonicalizeZoneSelector(
+      { concat: ['available-', 'US'] },
+      extended,
+      'doc.effects.0.moveToken.to',
+    );
+    assert.equal(result.value, 'available-US:none');
+    assert.deepEqual(result.diagnostics, []);
+  });
+
+  it('resolves { concat: [...] } with number parts', () => {
+    const extended = { ...ownershipByBase, 'zone42': 'none' } as const;
+    const result = canonicalizeZoneSelector(
+      { concat: ['zone', 42] },
+      extended,
+      'doc.effects.0.moveToken.to',
+    );
+    assert.equal(result.value, 'zone42:none');
+    assert.deepEqual(result.diagnostics, []);
+  });
+
+  it('emits diagnostic for dynamic expressions in { concat: [...] }', () => {
+    const result = canonicalizeZoneSelector(
+      { concat: ['available-', { ref: 'binding', name: '$faction' }] },
+      ownershipByBase,
+      'doc.effects.0.moveToken.to',
+    );
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_CONCAT_DYNAMIC');
+  });
+
+  it('passes through $-prefixed binding references without canonicalization', () => {
+    const result = canonicalizeZoneSelector('$targetSpace', ownershipByBase, 'doc.effects.0.moveToken.to');
+    assert.equal(result.value, '$targetSpace');
+    assert.deepEqual(result.diagnostics, []);
+  });
 });

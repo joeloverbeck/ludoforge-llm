@@ -23,7 +23,7 @@ describe('FITL COIN operations integration', () => {
     assert.deepEqual(
       compiled.gameDef?.operationProfiles?.map((profile) => ({ id: profile.id, actionId: String(profile.actionId) })),
       [
-        { id: 'train-profile', actionId: 'train' },
+        { id: 'train-us-profile', actionId: 'train' },
         { id: 'patrol-profile', actionId: 'patrol' },
         { id: 'sweep-profile', actionId: 'sweep' },
         { id: 'assault-profile', actionId: 'assault' },
@@ -31,7 +31,7 @@ describe('FITL COIN operations integration', () => {
     );
   });
 
-  it('executes COIN operations through compiled operationProfiles instead of fallback action effects', () => {
+  it('executes stub COIN operations through compiled operationProfiles instead of fallback action effects', () => {
     const markdown = readCompilerFixture('fitl-operations-coin.md');
     const parsed = parseGameSpec(markdown);
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
@@ -39,9 +39,10 @@ describe('FITL COIN operations integration', () => {
     assert.deepEqual(compiled.diagnostics, []);
     assert.notEqual(compiled.gameDef, null);
 
+    // Train requires complex params (chooseN/chooseOne decisions) — tested separately.
+    // Patrol, Sweep, Assault are stubs that take empty params.
     const start = initialState(compiled.gameDef!, 73, 2);
     const sequence: readonly Move[] = [
-      { actionId: asActionId('train'), params: {} },
       { actionId: asActionId('patrol'), params: {} },
       { actionId: asActionId('sweep'), params: {} },
       { actionId: asActionId('assault'), params: {} },
@@ -49,8 +50,8 @@ describe('FITL COIN operations integration', () => {
 
     const final = sequence.reduce((state, move) => applyMove(compiled.gameDef!, state, move).state, start);
 
-    assert.equal(final.globalVars.coinResources, 1);
-    assert.equal(final.globalVars.trainCount, 1);
+    // coinResources: 10 - 2 (patrol) - 1 (sweep) - 3 (assault) = 4
+    assert.equal(final.globalVars.coinResources, 4);
     assert.equal(final.globalVars.patrolCount, 1);
     assert.equal(final.globalVars.sweepCount, 1);
     assert.equal(final.globalVars.assaultCount, 1);

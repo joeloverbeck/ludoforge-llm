@@ -218,4 +218,22 @@ describe('evalCondition', () => {
     );
   });
 
+  it('evaluates boolean literal true as truthy', () => {
+    const ctx = makeCtx({});
+    assert.equal(evalCondition(true, ctx), true);
+  });
+
+  it('evaluates boolean literal false as falsy', () => {
+    const ctx = makeCtx({});
+    assert.equal(evalCondition(false, ctx), false);
+  });
+
+  it('supports boolean literals inside compound conditions (and/or)', () => {
+    const ctx = makeCtx({});
+    assert.equal(evalCondition({ op: 'and', args: [true, true] }, ctx), true);
+    assert.equal(evalCondition({ op: 'and', args: [true, false] }, ctx), false);
+    assert.equal(evalCondition({ op: 'or', args: [false, true] }, ctx), true);
+    assert.equal(evalCondition({ op: 'or', args: [false, false] }, ctx), false);
+  });
+
 });

@@ -73,7 +73,7 @@ effectMacros:
                               - moveToken:
                                   token: $attritionPiece
                                   from: { param: space }
-                                  to: { concat: ['available:', { param: attackerFaction }] }
+                                  to: { concat: ['available-', { param: attackerFaction }] }
 
   # ── per-province-city-cost ─────────────────────────────────────────────────
   # Faction-conditional per-space cost that charges 0 for LoCs.
@@ -91,6 +91,67 @@ effectMacros:
               - { op: '!=', left: { ref: zoneProp, zone: { param: space }, prop: spaceType }, right: 'loc' }
           then:
             - addVar: { scope: global, var: { param: resource }, delta: { param: amount } }
+
+  # ── place-from-available-or-map ────────────────────────────────────────────
+  # Dynamic piece sourcing (Rule 1.4.1): place from Available, then from map if not US.
+  - id: place-from-available-or-map
+    params:
+      - { name: pieceType, type: string }
+      - { name: faction, type: string }
+      - { name: targetSpace, type: string }
+      - { name: maxPieces, type: value }
+    effects:
+      - forEach:
+          bind: $piece
+          over:
+            query: tokensInZone
+            zone: { concat: ['available-', { param: faction }] }
+            filter: [{ prop: type, eq: { param: pieceType } }]
+          limit: { param: maxPieces }
+          effects:
+            - moveToken:
+                token: $piece
+                from: { concat: ['available-', { param: faction }] }
+                to: { param: targetSpace }
+          countBind: $placed
+          in:
+            - let:
+                bind: $remaining
+                value: { op: '-', left: { param: maxPieces }, right: { ref: binding, name: $placed } }
+                in:
+                  - if:
+                      when:
+                        op: and
+                        args:
+                          - { op: '!=', left: { param: faction }, right: 'US' }
+                          - { op: '>', left: { ref: binding, name: $remaining }, right: 0 }
+                      then:
+                        - chooseN:
+                            bind: $sourceSpaces
+                            options:
+                              query: zones
+                              filter:
+                                op: '>'
+                                left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: type, eq: { param: pieceType } }, { prop: faction, eq: { param: faction } }] } } }
+                                right: 0
+                            min: 0
+                            max: 99
+                        - forEach:
+                            bind: $srcSpace
+                            over: { query: binding, name: $sourceSpaces }
+                            effects:
+                              - forEach:
+                                  bind: $mapPiece
+                                  over:
+                                    query: tokensInZone
+                                    zone: $srcSpace
+                                    filter: [{ prop: type, eq: { param: pieceType } }, { prop: faction, eq: { param: faction } }]
+                                  limit: 1
+                                  effects:
+                                    - moveToken:
+                                        token: $mapPiece
+                                        from: $srcSpace
+                                        to: { param: targetSpace }
 
   # ── sweep-activation ───────────────────────────────────────────────────────
   # Guerrilla activation counting cubes + Special Forces, with Jungle terrain ratio.

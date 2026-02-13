@@ -125,6 +125,7 @@ valueExprSchemaInternal = z.union([
 ]);
 
 conditionAstSchemaInternal = z.union([
+  z.boolean(),
   z.object({ op: z.literal('and'), args: z.array(ConditionASTSchema) }).strict(),
   z.object({ op: z.literal('or'), args: z.array(ConditionASTSchema) }).strict(),
   z.object({ op: z.literal('not'), arg: ConditionASTSchema }).strict(),

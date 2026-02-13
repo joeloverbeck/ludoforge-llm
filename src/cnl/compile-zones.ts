@@ -100,6 +100,15 @@ export function canonicalizeZoneSelector(
   ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>,
   path: string,
 ): ZoneCompileResult<string | null> {
+  // Static concat resolution: { concat: ['available:', 'US'] } → "available:US"
+  const resolved = tryStaticConcatResolution(selector, path);
+  if (resolved !== undefined) {
+    if (resolved.value === null) {
+      return resolved;
+    }
+    selector = resolved.value;
+  }
+
   if (typeof selector !== 'string' || selector.trim() === '') {
     return {
       value: null,
@@ -113,6 +122,11 @@ export function canonicalizeZoneSelector(
         },
       ],
     };
+  }
+
+  // Binding references (e.g. "$space") resolve at runtime — pass through.
+  if (selector.startsWith('$')) {
+    return { value: selector, diagnostics: [] };
   }
 
   const splitIndex = selector.indexOf(':');
@@ -221,6 +235,47 @@ function normalizeAdjacentTo(value: GameSpecZoneDef['adjacentTo']): readonly Zon
     return undefined;
   }
   return value.map((zoneId) => asZoneId(zoneId));
+}
+
+/**
+ * If `source` is a `{ concat: [...] }` ValueExpr whose parts are all string
+ * or number literals, resolve it to a single string at compile time.
+ * Returns `undefined` if source is not a concat expression.
+ */
+function tryStaticConcatResolution(
+  source: unknown,
+  path: string,
+): ZoneCompileResult<string | null> | undefined {
+  if (typeof source !== 'object' || source === null || !('concat' in source)) {
+    return undefined;
+  }
+
+  const concatArray = (source as Record<string, unknown>).concat;
+  if (!Array.isArray(concatArray)) {
+    return undefined;
+  }
+
+  const parts: string[] = [];
+  for (const part of concatArray) {
+    if (typeof part === 'string') {
+      parts.push(part);
+    } else if (typeof part === 'number') {
+      parts.push(String(part));
+    } else {
+      return {
+        value: null,
+        diagnostics: [{
+          code: 'CNL_COMPILER_ZONE_CONCAT_DYNAMIC',
+          path,
+          severity: 'error',
+          message: 'Zone selector { concat: [...] } contains dynamic expressions that cannot be resolved at compile time.',
+          suggestion: 'Ensure all parts of a zone concat are string or number literals, or use a binding reference instead.',
+        }],
+      };
+    }
+  }
+
+  return { value: parts.join(''), diagnostics: [] };
 }
 
 function createZoneDef(

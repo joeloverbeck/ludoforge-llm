@@ -48,6 +48,7 @@ function expectOrderingNumber(
 }
 
 export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
+  if (typeof cond === 'boolean') return cond;
   switch (cond.op) {
     case 'and':
       for (const arg of cond.args) {

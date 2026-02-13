@@ -60,6 +60,7 @@ export type ValueExpr =
   | { readonly concat: readonly ValueExpr[] };
 
 export type ConditionAST =
+  | boolean
   | { readonly op: 'and'; readonly args: readonly ConditionAST[] }
   | { readonly op: 'or'; readonly args: readonly ConditionAST[] }
   | { readonly op: 'not'; readonly arg: ConditionAST }

@@ -1,0 +1,144 @@
+import { evalCondition } from './eval-condition.js';
+import { evalQuery } from './eval-query.js';
+import { evalValue } from './eval-value.js';
+import { EffectRuntimeError } from './effect-error.js';
+import { emitTrace, emitWarning } from './execution-collector.js';
+import type { EffectContext, EffectResult } from './effect-context.js';
+import type { EffectAST } from './types.js';
+
+export interface EffectBudgetState {
+  remaining: number;
+  readonly max: number;
+}
+
+type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
+
+const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
+  ...ctx.moveParams,
+  ...ctx.bindings,
+});
+
+export const applyIf = (
+  effect: Extract<EffectAST, { readonly if: unknown }>,
+  ctx: EffectContext,
+  budget: EffectBudgetState,
+  applyEffectsWithBudget: ApplyEffectsWithBudget,
+): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const predicate = evalCondition(effect.if.when, evalCtx);
+
+  if (predicate) {
+    return applyEffectsWithBudget(effect.if.then, ctx, budget);
+  }
+
+  if (effect.if.else !== undefined) {
+    return applyEffectsWithBudget(effect.if.else, ctx, budget);
+  }
+
+  return { state: ctx.state, rng: ctx.rng };
+};
+
+export const applyLet = (
+  effect: Extract<EffectAST, { readonly let: unknown }>,
+  ctx: EffectContext,
+  budget: EffectBudgetState,
+  applyEffectsWithBudget: ApplyEffectsWithBudget,
+): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const evaluatedValue = evalValue(effect.let.value, evalCtx);
+  const nestedCtx: EffectContext = {
+    ...ctx,
+    bindings: {
+      ...ctx.bindings,
+      [effect.let.bind]: evaluatedValue,
+    },
+  };
+
+  return applyEffectsWithBudget(effect.let.in, nestedCtx, budget);
+};
+
+export const applyForEach = (
+  effect: Extract<EffectAST, { readonly forEach: unknown }>,
+  ctx: EffectContext,
+  budget: EffectBudgetState,
+  applyEffectsWithBudget: ApplyEffectsWithBudget,
+): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+
+  let limit: number;
+  if (effect.forEach.limit === undefined) {
+    limit = 100;
+  } else {
+    const limitValue = evalValue(effect.forEach.limit, evalCtx);
+    if (typeof limitValue !== 'number' || !Number.isSafeInteger(limitValue) || limitValue <= 0) {
+      throw new EffectRuntimeError('EFFECT_RUNTIME', 'forEach.limit must evaluate to a positive integer', {
+        effectType: 'forEach',
+        limit: limitValue,
+      });
+    }
+    limit = limitValue;
+  }
+
+  const queryResult = evalQuery(effect.forEach.over, evalCtx);
+
+  if (queryResult.length === 0) {
+    emitWarning(ctx.collector, {
+      code: 'ZERO_EFFECT_ITERATIONS',
+      message: `forEach bind=${effect.forEach.bind} matched 0 items in query`,
+      context: { bind: effect.forEach.bind },
+      hint: 'enable trace:true for effect execution details',
+    });
+  }
+
+  const boundedItems = queryResult.slice(0, limit);
+
+  if (boundedItems.length === 0 && queryResult.length > 0) {
+    emitWarning(ctx.collector, {
+      code: 'ZERO_EFFECT_ITERATIONS',
+      message: `forEach bind=${effect.forEach.bind} limit=${limit} truncated ${queryResult.length} matches to 0`,
+      context: { bind: effect.forEach.bind, limit, matchCount: queryResult.length },
+    });
+  }
+
+  let currentState = ctx.state;
+  let currentRng = ctx.rng;
+  for (const item of boundedItems) {
+    const iterationCtx: EffectContext = {
+      ...ctx,
+      state: currentState,
+      rng: currentRng,
+      bindings: {
+        ...ctx.bindings,
+        [effect.forEach.bind]: item,
+      },
+    };
+    const iterationResult = applyEffectsWithBudget(effect.forEach.effects, iterationCtx, budget);
+    currentState = iterationResult.state;
+    currentRng = iterationResult.rng;
+  }
+
+  emitTrace(ctx.collector, {
+    kind: 'forEach',
+    bind: effect.forEach.bind,
+    matchCount: queryResult.length,
+    iteratedCount: boundedItems.length,
+    ...(effect.forEach.limit !== undefined ? { limit } : {}),
+  });
+
+  if (effect.forEach.countBind !== undefined && effect.forEach.in !== undefined) {
+    const countCtx: EffectContext = {
+      ...ctx,
+      state: currentState,
+      rng: currentRng,
+      bindings: {
+        ...ctx.bindings,
+        [effect.forEach.countBind]: boundedItems.length,
+      },
+    };
+    const countResult = applyEffectsWithBudget(effect.forEach.in, countCtx, budget);
+    currentState = countResult.state;
+    currentRng = countResult.rng;
+  }
+
+  return { state: currentState, rng: currentRng };
+};

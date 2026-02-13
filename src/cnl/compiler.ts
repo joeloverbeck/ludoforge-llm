@@ -1,4 +1,6 @@
 export {
+  type CompileResult,
+  type CompileSectionResults,
   type CompileLimits,
   type CompileOptions,
   DEFAULT_COMPILE_LIMITS,

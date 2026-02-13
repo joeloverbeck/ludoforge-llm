@@ -44,7 +44,10 @@ describe('compiler API foundation', () => {
     assert.equal(first.gameDef, null);
     assert.equal(second.gameDef, null);
     assert.deepEqual(first.diagnostics, second.diagnostics);
-    assert.equal(first.diagnostics.length, 1);
+    assert.deepEqual(first.sections, second.sections);
+    assert.equal(first.diagnostics.length > 0, true);
+    assert.equal(first.sections.metadata, null);
+    assert.deepEqual(first.sections.constants, {});
 
     const diagnostic = first.diagnostics[0];
     assert.ok(diagnostic !== undefined);

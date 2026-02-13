@@ -33,6 +33,35 @@ export interface CompileOptions {
   readonly limits?: Partial<CompileLimits>;
 }
 
+export interface CompileSectionResults {
+  readonly metadata: GameDef['metadata'] | null;
+  readonly constants: GameDef['constants'] | null;
+  readonly globalVars: GameDef['globalVars'] | null;
+  readonly perPlayerVars: GameDef['perPlayerVars'] | null;
+  readonly zones: GameDef['zones'] | null;
+  readonly tokenTypes: GameDef['tokenTypes'] | null;
+  readonly setup: GameDef['setup'] | null;
+  readonly turnStructure: GameDef['turnStructure'] | null;
+  readonly turnFlow: Exclude<GameDef['turnFlow'], undefined> | null;
+  readonly operationProfiles: Exclude<GameDef['operationProfiles'], undefined> | null;
+  readonly coupPlan: Exclude<GameDef['coupPlan'], undefined> | null;
+  readonly victory: Exclude<GameDef['victory'], undefined> | null;
+  readonly actions: GameDef['actions'] | null;
+  readonly triggers: GameDef['triggers'] | null;
+  readonly endConditions: GameDef['endConditions'] | null;
+  readonly eventCards: Exclude<GameDef['eventCards'], undefined> | null;
+}
+
+export interface CompileResult {
+  readonly gameDef: GameDef | null;
+  readonly sections: CompileSectionResults;
+  readonly diagnostics: readonly Diagnostic[];
+}
+
+type MutableCompileSectionResults = {
+  -readonly [K in keyof CompileSectionResults]: CompileSectionResults[K];
+};
+
 export const DEFAULT_COMPILE_LIMITS: CompileLimits = {
   maxExpandedEffects: 20_000,
   maxGeneratedZones: 10_000,
@@ -107,85 +136,194 @@ export function expandMacros(
 export function compileGameSpecToGameDef(
   doc: GameSpecDoc,
   options?: CompileOptions,
-): {
-  readonly gameDef: GameDef | null;
-  readonly diagnostics: readonly Diagnostic[];
-} {
+): CompileResult {
   const limits = resolveCompileLimits(options?.limits);
   const macroExpansion = expandEffectMacros(doc);
   const expanded = expandMacros(macroExpansion.doc, options);
   const diagnostics: Diagnostic[] = [...macroExpansion.diagnostics, ...expanded.diagnostics];
-  const gameDef = compileExpandedDoc(expanded.doc, diagnostics);
+  const compiled = compileExpandedDoc(expanded.doc, diagnostics);
 
-  if (gameDef !== null) {
-    diagnostics.push(...validateGameDef(gameDef));
+  if (compiled.gameDef !== null) {
+    diagnostics.push(...validateGameDef(compiled.gameDef));
   }
 
   const finalizedDiagnostics = finalizeDiagnostics(diagnostics, options?.sourceMap, limits.maxDiagnosticCount);
 
   return {
-    gameDef: hasErrorDiagnostics(finalizedDiagnostics) ? null : gameDef,
+    gameDef: hasErrorDiagnostics(finalizedDiagnostics) ? null : compiled.gameDef,
+    sections: compiled.sections,
     diagnostics: finalizedDiagnostics,
   };
 }
 
-function compileExpandedDoc(doc: GameSpecDoc, diagnostics: Diagnostic[]): GameDef | null {
+function compileExpandedDoc(
+  doc: GameSpecDoc,
+  diagnostics: Diagnostic[],
+): {
+  readonly gameDef: GameDef | null;
+  readonly sections: CompileSectionResults;
+} {
   const derivedFromAssets = deriveSectionsFromDataAssets(doc, diagnostics);
   const effectiveZones = doc.zones ?? derivedFromAssets.zones;
   const effectiveTokenTypes = doc.tokenTypes ?? derivedFromAssets.tokenTypes;
+  const sections: MutableCompileSectionResults = {
+    metadata: null,
+    constants: null,
+    globalVars: null,
+    perPlayerVars: null,
+    zones: null,
+    tokenTypes: null,
+    setup: null,
+    turnStructure: null,
+    turnFlow: null,
+    operationProfiles: null,
+    coupPlan: null,
+    victory: null,
+    actions: null,
+    triggers: null,
+    endConditions: null,
+    eventCards: null,
+  };
 
-  if (doc.metadata === null) {
+  const metadata = doc.metadata;
+  if (metadata === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.metadata', 'metadata'));
-    return null;
+  } else {
+    sections.metadata = metadata;
   }
+
+  const constants = compileSection(diagnostics, () => lowerConstants(doc.constants, diagnostics));
+  sections.constants = constants.failed ? null : constants.value;
+
+  const globalVars = compileSection(diagnostics, () => lowerVarDefs(doc.globalVars, diagnostics, 'doc.globalVars'));
+  sections.globalVars = globalVars.failed ? null : globalVars.value;
+
+  const perPlayerVars = compileSection(diagnostics, () => lowerVarDefs(doc.perPlayerVars, diagnostics, 'doc.perPlayerVars'));
+  sections.perPlayerVars = perPlayerVars.failed ? null : perPlayerVars.value;
+
+  let ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>> = {};
+  let zones: GameDef['zones'] | null = null;
   if (effectiveZones === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.zones', 'zones'));
-    return null;
+  } else {
+    const zoneCompilation = compileSection(diagnostics, () => {
+      const materialized = materializeZoneDefs(effectiveZones, metadata?.players.max ?? 0);
+      diagnostics.push(...materialized.diagnostics);
+      ownershipByBase = materialized.value.ownershipByBase;
+      return materialized.value.zones;
+    });
+    zones = zoneCompilation.value;
+    sections.zones = zoneCompilation.failed ? null : zoneCompilation.value;
   }
-  if (doc.turnStructure === null) {
+
+  const tokenTypes = compileSection(diagnostics, () => lowerTokenTypes(effectiveTokenTypes, diagnostics));
+  sections.tokenTypes = tokenTypes.failed ? null : tokenTypes.value;
+
+  const setup = compileSection(diagnostics, () =>
+    lowerEffectsWithDiagnostics(doc.setup ?? [], ownershipByBase, diagnostics, 'doc.setup'),
+  );
+  sections.setup = setup.failed ? null : setup.value;
+
+  let turnStructure: GameDef['turnStructure'] | null = null;
+  const rawTurnStructure = doc.turnStructure;
+  if (rawTurnStructure === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.turnStructure', 'turnStructure'));
-    return null;
+  } else {
+    const turnStructureSection = compileSection(diagnostics, () =>
+      lowerTurnStructure(rawTurnStructure, ownershipByBase, diagnostics),
+    );
+    turnStructure = turnStructureSection.value;
+    sections.turnStructure = turnStructureSection.failed ? null : turnStructureSection.value;
   }
-  if (doc.actions === null) {
+
+  if (doc.turnFlow !== null) {
+    const turnFlow = compileSection(diagnostics, () => lowerTurnFlow(doc.turnFlow, diagnostics));
+    sections.turnFlow = turnFlow.failed || turnFlow.value === undefined ? null : turnFlow.value;
+  }
+
+  if (doc.operationProfiles !== null) {
+    const operationProfiles = compileSection(diagnostics, () =>
+      lowerOperationProfiles(doc.operationProfiles, doc.actions, ownershipByBase, diagnostics),
+    );
+    sections.operationProfiles =
+      operationProfiles.failed || operationProfiles.value === undefined ? null : operationProfiles.value;
+  }
+
+  if (doc.coupPlan !== null) {
+    const coupPlan = compileSection(diagnostics, () => lowerCoupPlan(doc.coupPlan, diagnostics));
+    sections.coupPlan = coupPlan.failed || coupPlan.value === undefined ? null : coupPlan.value;
+  }
+
+  if (doc.victory !== null) {
+    const victory = compileSection(diagnostics, () => lowerVictory(doc.victory, diagnostics));
+    sections.victory = victory.failed || victory.value === undefined ? null : victory.value;
+  }
+
+  let actions: GameDef['actions'] | null = null;
+  const rawActions = doc.actions;
+  if (rawActions === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.actions', 'actions'));
-    return null;
+  } else {
+    const actionsSection = compileSection(diagnostics, () => lowerActions(rawActions, ownershipByBase, diagnostics));
+    actions = actionsSection.value;
+    sections.actions = actionsSection.failed ? null : actionsSection.value;
   }
-  if (doc.endConditions === null) {
+
+  const triggers = compileSection(diagnostics, () => lowerTriggers(doc.triggers ?? [], ownershipByBase, diagnostics));
+  sections.triggers = triggers.failed ? null : triggers.value;
+
+  let endConditions: GameDef['endConditions'] | null = null;
+  const rawEndConditions = doc.endConditions;
+  if (rawEndConditions === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.endConditions', 'endConditions'));
-    return null;
+  } else {
+    const endConditionsSection = compileSection(diagnostics, () =>
+      lowerEndConditions(rawEndConditions, ownershipByBase, diagnostics),
+    );
+    endConditions = endConditionsSection.value;
+    sections.endConditions = endConditionsSection.failed ? null : endConditionsSection.value;
   }
 
-  const zoneCompilation = materializeZoneDefs(effectiveZones, doc.metadata.players.max);
-  diagnostics.push(...zoneCompilation.diagnostics);
-  const ownershipByBase = zoneCompilation.value.ownershipByBase;
+  sections.eventCards = derivedFromAssets.eventCards ?? null;
 
-  const setup = lowerEffectsWithDiagnostics(doc.setup ?? [], ownershipByBase, diagnostics, 'doc.setup');
-  const turnStructure = lowerTurnStructure(doc.turnStructure, ownershipByBase, diagnostics);
-  const turnFlow = lowerTurnFlow(doc.turnFlow, diagnostics);
-  const operationProfiles = lowerOperationProfiles(doc.operationProfiles, doc.actions, ownershipByBase, diagnostics);
-  const coupPlan = lowerCoupPlan(doc.coupPlan, diagnostics);
-  const victory = lowerVictory(doc.victory, diagnostics);
-  const actions = lowerActions(doc.actions, ownershipByBase, diagnostics);
-  const triggers = lowerTriggers(doc.triggers ?? [], ownershipByBase, diagnostics);
-  const endConditions = lowerEndConditions(doc.endConditions, ownershipByBase, diagnostics);
+  if (metadata === null || zones === null || turnStructure === null || actions === null || endConditions === null) {
+    return { gameDef: null, sections };
+  }
 
-  return {
-    metadata: doc.metadata,
-    constants: lowerConstants(doc.constants, diagnostics),
-    globalVars: lowerVarDefs(doc.globalVars, diagnostics, 'doc.globalVars'),
-    perPlayerVars: lowerVarDefs(doc.perPlayerVars, diagnostics, 'doc.perPlayerVars'),
-    zones: zoneCompilation.value.zones,
-    tokenTypes: lowerTokenTypes(effectiveTokenTypes, diagnostics),
-    setup,
+  const gameDef: GameDef = {
+    metadata,
+    constants: constants.value,
+    globalVars: globalVars.value,
+    perPlayerVars: perPlayerVars.value,
+    zones,
+    tokenTypes: tokenTypes.value,
+    setup: setup.value,
     turnStructure,
-    ...(turnFlow === undefined ? {} : { turnFlow }),
-    ...(operationProfiles === undefined ? {} : { operationProfiles }),
-    ...(coupPlan === undefined ? {} : { coupPlan }),
-    ...(victory === undefined ? {} : { victory }),
+    ...(sections.turnFlow === null ? {} : { turnFlow: sections.turnFlow }),
+    ...(sections.operationProfiles === null ? {} : { operationProfiles: sections.operationProfiles }),
+    ...(sections.coupPlan === null ? {} : { coupPlan: sections.coupPlan }),
+    ...(sections.victory === null ? {} : { victory: sections.victory }),
     actions,
-    triggers,
+    triggers: triggers.value,
     endConditions,
-    ...(derivedFromAssets.eventCards === undefined ? {} : { eventCards: derivedFromAssets.eventCards }),
+    ...(sections.eventCards === null ? {} : { eventCards: sections.eventCards }),
+  };
+
+  return { gameDef, sections };
+}
+
+function compileSection<T>(
+  diagnostics: Diagnostic[],
+  compile: () => T,
+): {
+  readonly value: T;
+  readonly failed: boolean;
+} {
+  const beforeErrorCount = countErrorDiagnostics(diagnostics);
+  const value = compile();
+  return {
+    value,
+    failed: countErrorDiagnostics(diagnostics) > beforeErrorCount,
   };
 }
 
@@ -211,6 +349,10 @@ function requiredSectionDiagnostic(path: string, section: string): Diagnostic {
 
 function hasErrorDiagnostics(diagnostics: readonly Diagnostic[]): boolean {
   return diagnostics.some((diagnostic) => diagnostic.severity === 'error');
+}
+
+function countErrorDiagnostics(diagnostics: readonly Diagnostic[]): number {
+  return diagnostics.reduce((count, diagnostic) => count + (diagnostic.severity === 'error' ? 1 : 0), 0);
 }
 
 function resolveLimit(candidate: number | undefined, fallback: number, name: keyof CompileLimits): number {

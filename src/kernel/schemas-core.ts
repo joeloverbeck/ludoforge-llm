@@ -13,6 +13,8 @@ import {
 } from './schemas-ast.js';
 import {
   OperationPartialTraceEntrySchema,
+  SimultaneousCommitTraceEntrySchema,
+  SimultaneousSubmissionTraceEntrySchema,
   TurnFlowEligibilityTraceEntrySchema,
   TurnFlowLifecycleTraceEntrySchema,
   TurnOrderRuntimeStateSchema,
@@ -266,6 +268,8 @@ export const TriggerLogEntrySchema = z.union([
   TriggerTruncatedSchema,
   TurnFlowLifecycleTraceEntrySchema,
   TurnFlowEligibilityTraceEntrySchema,
+  SimultaneousSubmissionTraceEntrySchema,
+  SimultaneousCommitTraceEntrySchema,
   OperationPartialTraceEntrySchema,
 ]);
 

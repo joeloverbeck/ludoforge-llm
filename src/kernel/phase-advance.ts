@@ -80,6 +80,7 @@ const advanceTurnOrder = (def: GameDef, state: GameState): Pick<GameState, 'acti
         submitted: Object.fromEntries(
           Array.from({ length: state.playerCount }, (_unused, index) => [String(index), false]),
         ),
+        pending: {},
       },
     };
   }

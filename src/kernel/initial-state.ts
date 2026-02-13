@@ -121,6 +121,7 @@ const resolveInitialTurnOrderState = (def: GameDef, playerCount: number): GameSt
     return {
       type: 'simultaneous',
       submitted: Object.fromEntries(Array.from({ length: playerCount }, (_unused, index) => [String(index), false])),
+      pending: {},
     };
   }
   return {

@@ -89,6 +89,23 @@ describe('initialState', () => {
     assert.equal(state.activePlayer, asPlayerId(0));
   });
 
+  it('initializes simultaneous turnOrder submitted flags for every player', () => {
+    const def: GameDef = {
+      ...createDef(),
+      turnOrder: { type: 'simultaneous' },
+      triggers: [],
+    };
+
+    const state = initialState(def, 11, 4);
+
+    assert.equal(state.activePlayer, asPlayerId(0));
+    assert.deepEqual(state.turnOrderState, {
+      type: 'simultaneous',
+      submitted: { '0': false, '1': false, '2': false, '3': false },
+      pending: {},
+    });
+  });
+
   it('throws descriptive errors for invalid playerCount', () => {
     assert.throws(() => initialState(createDef(), 11, 1), /out of range/);
     assert.throws(() => initialState(createDef(), 11, 5), /out of range/);

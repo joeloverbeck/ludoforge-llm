@@ -131,6 +131,34 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
   });
 
+  it('compiles simultaneous turnOrder with a non-blocking warning', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-order-simultaneous', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: { type: 'simultaneous' as const },
+      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.notEqual(result.gameDef, null);
+    assert.equal(result.gameDef?.turnOrder?.type, 'simultaneous');
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_SIMULTANEOUS_NOT_IMPLEMENTED' &&
+          diagnostic.path === 'doc.turnOrder.type' &&
+          diagnostic.severity === 'warning',
+      ),
+      true,
+    );
+  });
+
   it('returns blocking diagnostics for malformed turnFlow metadata', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

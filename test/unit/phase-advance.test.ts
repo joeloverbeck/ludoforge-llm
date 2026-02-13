@@ -104,6 +104,35 @@ describe('phase advancement', () => {
     assert.deepEqual(next.turnOrderState, { type: 'fixedOrder', currentIndex: 1 });
   });
 
+  it('resets simultaneous submitted flags at turn boundary', () => {
+    const def: GameDef = {
+      ...createBaseDef(),
+      turnOrder: { type: 'simultaneous' },
+    };
+    const state = createState({
+      currentPhase: asPhaseId('p2'),
+      turnCount: 4,
+      activePlayer: asPlayerId(1),
+      playerCount: 4,
+      turnOrderState: {
+        type: 'simultaneous',
+        submitted: { '0': true, '1': true, '2': false, '3': true },
+        pending: {},
+      },
+    });
+
+    const next = advancePhase(def, state);
+
+    assert.equal(next.currentPhase, asPhaseId('p1'));
+    assert.equal(next.turnCount, 5);
+    assert.equal(next.activePlayer, asPlayerId(1));
+    assert.deepEqual(next.turnOrderState, {
+      type: 'simultaneous',
+      submitted: { '0': false, '1': false, '2': false, '3': false },
+      pending: {},
+    });
+  });
+
   it('resets phase counters on phase boundary and preserves gameCount', () => {
     const def = createBaseDef();
     const state = createState({ currentPhase: asPhaseId('p1') });

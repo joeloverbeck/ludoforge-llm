@@ -21,6 +21,7 @@ import type {
   TriggerLogEntry,
   TriggerEvent,
 } from './types.js';
+import { asPlayerId } from './branded.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
@@ -133,8 +134,21 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
   throw illegalMoveError(move, 'action is not legal in current state');
 };
 
-export const applyMove = (def: GameDef, state: GameState, move: Move, options?: ExecutionOptions): ApplyMoveResult => {
-  validateMove(def, state, move);
+interface ApplyMoveCoreOptions {
+  readonly skipValidation?: boolean;
+  readonly skipAdvanceToDecisionPoint?: boolean;
+}
+
+const applyMoveCore = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  options?: ExecutionOptions,
+  coreOptions?: ApplyMoveCoreOptions,
+): ApplyMoveResult => {
+  if (coreOptions?.skipValidation !== true) {
+    validateMove(def, state, move);
+  }
 
   const action = findAction(def, move.actionId);
   if (action === undefined) {
@@ -219,7 +233,7 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
 
   const applyCompoundSA = (): void => {
     if (move.compound === undefined) return;
-    const saResult = applyMove(def, effectState, move.compound.specialActivity, options);
+    const saResult = applyMoveCore(def, effectState, move.compound.specialActivity, options);
     effectState = saResult.state;
     effectRng = { state: effectState.rng };
     executionTraceEntries.push(...saResult.triggerFirings);
@@ -308,7 +322,9 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
     ? { state: stateWithRng, traceEntries: [] as readonly TriggerLogEntry[] }
     : applyTurnFlowEligibilityAfterMove(def, stateWithRng, move);
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
-  const progressedState = advanceToDecisionPoint(def, turnFlowResult.state, lifecycleAndAdvanceLog);
+  const progressedState = coreOptions?.skipAdvanceToDecisionPoint === true
+    ? turnFlowResult.state
+    : advanceToDecisionPoint(def, turnFlowResult.state, lifecycleAndAdvanceLog);
 
   const stateWithHash = {
     ...progressedState,
@@ -321,4 +337,180 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
     warnings: collector.warnings,
     ...(collector.trace !== null ? { effectTrace: collector.trace } : {}),
   };
+};
+
+const createSimultaneousSubmittedMap = (playerCount: number): Readonly<Record<string, boolean>> =>
+  Object.fromEntries(Array.from({ length: playerCount }, (_unused, index) => [String(index), false]));
+
+const toSimultaneousSubmission = (move: Move) => ({
+  actionId: String(move.actionId),
+  params: move.params,
+  ...(move.freeOperation === undefined ? {} : { freeOperation: move.freeOperation }),
+  ...(move.actionClass === undefined ? {} : { actionClass: move.actionClass }),
+});
+
+const toMoveFromSubmission = (
+  submission: ReturnType<typeof toSimultaneousSubmission>,
+): Move => ({
+  actionId: submission.actionId as Move['actionId'],
+  params: submission.params,
+  ...(submission.freeOperation === undefined ? {} : { freeOperation: submission.freeOperation }),
+  ...(submission.actionClass === undefined ? {} : { actionClass: submission.actionClass }),
+});
+
+const simultaneousSubmissionTrace = (
+  player: string,
+  move: ReturnType<typeof toSimultaneousSubmission>,
+  submittedBefore: Readonly<Record<string, boolean>>,
+  submittedAfter: Readonly<Record<string, boolean>>,
+): TriggerLogEntry => ({
+  kind: 'simultaneousSubmission',
+  player,
+  move,
+  submittedBefore,
+  submittedAfter,
+});
+
+const nextUnsubmittedPlayer = (
+  currentPlayer: number,
+  submitted: Readonly<Record<string, boolean>>,
+  playerCount: number,
+): number | null => {
+  for (let offset = 1; offset <= playerCount; offset += 1) {
+    const candidate = (currentPlayer + offset) % playerCount;
+    if (submitted[String(candidate)] !== true) {
+      return candidate;
+    }
+  }
+  return null;
+};
+
+const applySimultaneousSubmission = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  options?: ExecutionOptions,
+): ApplyMoveResult => {
+  if (move.compound !== undefined) {
+    throw illegalMoveError(move, 'simultaneous submission does not support compound moves');
+  }
+  if (state.turnOrderState.type !== 'simultaneous') {
+    throw illegalMoveError(move, 'simultaneous strategy requires simultaneous runtime state');
+  }
+
+  validateMove(def, state, move);
+
+  const currentPlayer = Number(state.activePlayer);
+  const playerKey = String(currentPlayer);
+  const submittedBefore = state.turnOrderState.submitted;
+  const submittedMove = toSimultaneousSubmission(move);
+  const submitted = {
+    ...submittedBefore,
+    [playerKey]: true,
+  };
+  const pending = {
+    ...state.turnOrderState.pending,
+    [playerKey]: submittedMove,
+  };
+  const table = createZobristTable(def);
+  const hasRemainingPlayers = Object.values(submitted).some((value) => value === false);
+
+  if (hasRemainingPlayers) {
+    const nextPlayer = nextUnsubmittedPlayer(currentPlayer, submitted, state.playerCount);
+    const waitingState: GameState = {
+      ...state,
+      activePlayer: nextPlayer === null ? state.activePlayer : asPlayerId(nextPlayer),
+      turnOrderState: {
+        type: 'simultaneous',
+        submitted,
+        pending,
+      },
+    };
+
+    return {
+      state: {
+        ...waitingState,
+        stateHash: computeFullHash(table, waitingState),
+      },
+      triggerFirings: [simultaneousSubmissionTrace(playerKey, submittedMove, submittedBefore, submitted)],
+      warnings: [],
+    };
+  }
+
+  const orderedPlayers = Array.from({ length: state.playerCount }, (_unused, index) => index);
+  let committedState: GameState = {
+    ...state,
+    turnOrderState: {
+      type: 'simultaneous',
+      submitted,
+      pending,
+    },
+  };
+  const triggerFirings: TriggerLogEntry[] = [
+    simultaneousSubmissionTrace(playerKey, submittedMove, submittedBefore, submitted),
+    {
+      kind: 'simultaneousCommit',
+      playersInOrder: orderedPlayers.map(String),
+      pendingCount: Object.keys(pending).length,
+    },
+  ];
+  const warnings: Array<ApplyMoveResult['warnings'][number]> = [];
+  const effectTraceEntries: Array<NonNullable<ApplyMoveResult['effectTrace']>[number]> | undefined =
+    options?.trace === true ? [] : undefined;
+
+  for (const player of orderedPlayers) {
+    const submission = pending[String(player)];
+    if (submission === undefined) {
+      continue;
+    }
+    const applied = applyMoveCore(
+      def,
+      {
+        ...committedState,
+        activePlayer: asPlayerId(player),
+      },
+      toMoveFromSubmission(submission),
+      options,
+      {
+        skipValidation: true,
+        skipAdvanceToDecisionPoint: true,
+      },
+    );
+    committedState = applied.state;
+    triggerFirings.push(...applied.triggerFirings);
+    warnings.push(...applied.warnings);
+    if (effectTraceEntries !== undefined && applied.effectTrace !== undefined) {
+      effectTraceEntries.push(...applied.effectTrace);
+    }
+  }
+
+  const resetState: GameState = {
+    ...committedState,
+    activePlayer: asPlayerId(0),
+    turnOrderState: {
+      type: 'simultaneous',
+      submitted: createSimultaneousSubmittedMap(committedState.playerCount),
+      pending: {},
+    },
+  };
+  const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
+  const progressedState = advanceToDecisionPoint(def, resetState, lifecycleAndAdvanceLog);
+  const finalState = {
+    ...progressedState,
+    stateHash: computeFullHash(table, progressedState),
+  };
+
+  return {
+    state: finalState,
+    triggerFirings: [...triggerFirings, ...lifecycleAndAdvanceLog],
+    warnings,
+    ...(effectTraceEntries === undefined ? {} : { effectTrace: effectTraceEntries }),
+  };
+};
+
+export const applyMove = (def: GameDef, state: GameState, move: Move, options?: ExecutionOptions): ApplyMoveResult => {
+  if (def.turnOrder?.type === 'simultaneous') {
+    return applySimultaneousSubmission(def, state, move, options);
+  }
+  return applyMoveCore(def, state, move, options);
 };

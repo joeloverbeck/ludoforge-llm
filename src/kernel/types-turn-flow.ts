@@ -119,6 +119,27 @@ export interface CompoundActionState {
   readonly saTiming: 'before' | 'during' | 'after' | null;
 }
 
+export interface SimultaneousMoveSubmission {
+  readonly actionId: string;
+  readonly params: Readonly<Record<string, import('./types-ast.js').MoveParamValue>>;
+  readonly freeOperation?: boolean;
+  readonly actionClass?: string;
+}
+
+export interface SimultaneousSubmissionTraceEntry {
+  readonly kind: 'simultaneousSubmission';
+  readonly player: string;
+  readonly move: SimultaneousMoveSubmission;
+  readonly submittedBefore: Readonly<Record<string, boolean>>;
+  readonly submittedAfter: Readonly<Record<string, boolean>>;
+}
+
+export interface SimultaneousCommitTraceEntry {
+  readonly kind: 'simultaneousCommit';
+  readonly playersInOrder: readonly string[];
+  readonly pendingCount: number;
+}
+
 export interface TurnFlowRuntimeState {
   readonly factionOrder: readonly string[];
   readonly eligibility: Readonly<Record<string, boolean>>;
@@ -132,7 +153,11 @@ export type TurnOrderRuntimeState =
   | { readonly type: 'roundRobin' }
   | { readonly type: 'fixedOrder'; readonly currentIndex: number }
   | { readonly type: 'cardDriven'; readonly runtime: TurnFlowRuntimeState }
-  | { readonly type: 'simultaneous'; readonly submitted: Readonly<Record<string, boolean>> };
+  | {
+      readonly type: 'simultaneous';
+      readonly submitted: Readonly<Record<string, boolean>>;
+      readonly pending: Readonly<Record<string, SimultaneousMoveSubmission>>;
+    };
 
 export type TurnFlowLifecycleStep =
   | 'initialRevealPlayed'

@@ -196,6 +196,121 @@ describe('applyMove', () => {
     assert.equal(result.state.activePlayer, asPlayerId(0));
   });
 
+  it('queues simultaneous submissions and rotates to next unsubmitted player before commit', () => {
+    const def: GameDef = {
+      metadata: { id: 'simultaneous-submit', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 20 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: { type: 'simultaneous' },
+      actions: [
+        {
+          id: asActionId('play'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [{ name: 'boost', domain: { query: 'intsInRange', min: 1, max: 2 } }],
+          pre: null,
+          cost: [],
+          effects: [{ addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: 'boost' } } }],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { score: 0 },
+      actionUsage: {},
+      turnOrderState: {
+        type: 'simultaneous',
+        submitted: { '0': false, '1': false },
+        pending: {},
+      },
+    };
+
+    const first = applyMove(def, state, { actionId: asActionId('play'), params: { boost: 2 } });
+
+    assert.equal(first.state.globalVars.score, 0);
+    assert.equal(first.state.activePlayer, asPlayerId(1));
+    assert.deepEqual(first.state.turnOrderState, {
+      type: 'simultaneous',
+      submitted: { '0': true, '1': false },
+      pending: {
+        '0': { actionId: 'play', params: { boost: 2 } },
+      },
+    });
+    assert.deepEqual(first.triggerFirings, [
+      {
+        kind: 'simultaneousSubmission',
+        player: '0',
+        move: { actionId: 'play', params: { boost: 2 } },
+        submittedBefore: { '0': false, '1': false },
+        submittedAfter: { '0': true, '1': false },
+      },
+    ]);
+  });
+
+  it('commits simultaneous submissions in deterministic player order once all players submit', () => {
+    const def: GameDef = {
+      metadata: { id: 'simultaneous-commit', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 20 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: { type: 'simultaneous' },
+      actions: [
+        {
+          id: asActionId('play'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [{ name: 'boost', domain: { query: 'intsInRange', min: 1, max: 2 } }],
+          pre: null,
+          cost: [],
+          effects: [{ addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: 'boost' } } }],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      endConditions: [],
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { score: 0 },
+      actionUsage: {},
+      turnOrderState: {
+        type: 'simultaneous',
+        submitted: { '0': false, '1': false },
+        pending: {},
+      },
+    };
+
+    const first = applyMove(def, state, { actionId: asActionId('play'), params: { boost: 2 } });
+    const second = applyMove(def, first.state, { actionId: asActionId('play'), params: { boost: 1 } });
+
+    assert.equal(second.state.globalVars.score, 3);
+    assert.equal(second.state.activePlayer, asPlayerId(0));
+    assert.deepEqual(second.state.actionUsage.play, { turnCount: 2, phaseCount: 2, gameCount: 2 });
+    assert.deepEqual(second.state.turnOrderState, {
+      type: 'simultaneous',
+      submitted: { '0': false, '1': false },
+      pending: {},
+    });
+    assert.equal(second.triggerFirings[0]?.kind, 'simultaneousSubmission');
+    assert.deepEqual(second.triggerFirings[1], {
+      kind: 'simultaneousCommit',
+      playersInOrder: ['0', '1'],
+      pendingCount: 2,
+    });
+  });
+
   it('applies pass rewards and resets candidates when rightmost eligible faction passes', () => {
     const def: GameDef = {
       metadata: { id: 'turn-flow-pass-chain', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },

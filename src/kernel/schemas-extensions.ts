@@ -367,7 +367,23 @@ export const TurnOrderRuntimeStateSchema = z.union([
   z.object({ type: z.literal('roundRobin') }).strict(),
   z.object({ type: z.literal('fixedOrder'), currentIndex: IntegerSchema.min(0) }).strict(),
   z.object({ type: z.literal('cardDriven'), runtime: TurnFlowRuntimeStateSchema }).strict(),
-  z.object({ type: z.literal('simultaneous'), submitted: z.record(StringSchema, BooleanSchema) }).strict(),
+  z
+    .object({
+      type: z.literal('simultaneous'),
+      submitted: z.record(StringSchema, BooleanSchema),
+      pending: z.record(
+        StringSchema,
+        z
+          .object({
+            actionId: StringSchema.min(1),
+            params: z.record(StringSchema, z.union([NumberSchema, StringSchema, BooleanSchema, z.array(z.union([NumberSchema, StringSchema, BooleanSchema]))])),
+            freeOperation: BooleanSchema.optional(),
+            actionClass: StringSchema.optional(),
+          })
+          .strict(),
+      ),
+    })
+    .strict(),
 ]);
 
 export const TurnFlowLifecycleStepSchema = z.union([
@@ -450,6 +466,31 @@ export const OperationPartialTraceEntrySchema = z
     profileId: StringSchema.min(1),
     step: z.literal('costSpendSkipped'),
     reason: z.literal('costValidationFailed'),
+  })
+  .strict();
+
+export const SimultaneousSubmissionTraceEntrySchema = z
+  .object({
+    kind: z.literal('simultaneousSubmission'),
+    player: StringSchema.min(1),
+    move: z
+      .object({
+        actionId: StringSchema.min(1),
+        params: z.record(StringSchema, z.union([NumberSchema, StringSchema, BooleanSchema, z.array(z.union([NumberSchema, StringSchema, BooleanSchema]))])),
+        freeOperation: BooleanSchema.optional(),
+        actionClass: StringSchema.optional(),
+      })
+      .strict(),
+    submittedBefore: z.record(StringSchema, BooleanSchema),
+    submittedAfter: z.record(StringSchema, BooleanSchema),
+  })
+  .strict();
+
+export const SimultaneousCommitTraceEntrySchema = z
+  .object({
+    kind: z.literal('simultaneousCommit'),
+    playersInOrder: z.array(StringSchema.min(1)),
+    pendingCount: IntegerSchema.min(0),
   })
   .strict();
 

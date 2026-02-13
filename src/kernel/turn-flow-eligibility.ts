@@ -239,6 +239,10 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
 };
 
 export const isActiveFactionEligibleForTurnFlow = (state: GameState): boolean => {
+  if (state.turnOrderState.type === 'simultaneous') {
+    return state.turnOrderState.submitted[String(state.activePlayer)] !== true;
+  }
+
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
     return true;

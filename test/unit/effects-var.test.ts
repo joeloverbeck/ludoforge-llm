@@ -13,6 +13,7 @@ import {
   type EffectContext,
   type GameDef,
   type GameState,
+  createCollector,
 } from '../../src/kernel/index.js';
 
 const makeDef = (): GameDef => ({
@@ -65,6 +66,7 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   actorPlayer: asPlayerId(0),
   bindings: {},
   moveParams: {},
+  collector: createCollector(),
   ...overrides,
 });
 
@@ -245,6 +247,7 @@ describe('lattice marker shift via addVar', () => {
     actorPlayer: asPlayerId(0),
     bindings: {},
     moveParams: {},
+    collector: createCollector(),
   });
 
   it('shifts +1 from middle state (index 2 → 3)', () => {

@@ -3,6 +3,7 @@ import { evalValue } from '../kernel/eval-value.js';
 import { terminalResult } from '../kernel/terminal.js';
 import type { PlayerId } from '../kernel/branded.js';
 import type { EvalContext } from '../kernel/eval-context.js';
+import { createCollector } from '../kernel/execution-collector.js';
 import type { GameDef, GameState } from '../kernel/types.js';
 
 const TERMINAL_WIN_SCORE = 1_000_000_000;
@@ -26,6 +27,7 @@ const evalScoringValue = (def: GameDef, state: GameState, playerId: PlayerId): n
     activePlayer: state.activePlayer,
     actorPlayer: playerId,
     bindings: {},
+    collector: createCollector(),
   };
   const score = evalValue(def.scoring.value, ctx);
   if (typeof score !== 'number') {

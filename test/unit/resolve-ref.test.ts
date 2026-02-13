@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
+  createCollector,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -75,6 +76,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => ({
     '$x': 42,
     '$card': makeToken('bound-1', { cost: 9, color: 'blue', faceUp: true }),
   },
+  collector: createCollector(),
   ...overrides,
 });
 

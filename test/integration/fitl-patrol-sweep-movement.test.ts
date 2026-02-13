@@ -16,6 +16,7 @@ import {
   type MapSpaceDef,
   type Token,
   type ZoneDef,
+  createCollector,
 } from '../../src/kernel/index.js';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
@@ -96,6 +97,7 @@ function makeCtx(state: GameState, bindings?: Record<string, unknown>): EffectCo
     actorPlayer: asPlayerId(0),
     bindings: bindings ?? {},
     moveParams: {},
+    collector: createCollector(),
     mapSpaces,
   };
 }

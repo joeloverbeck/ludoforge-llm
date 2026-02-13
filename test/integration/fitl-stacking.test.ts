@@ -18,6 +18,7 @@ import {
   type ScenarioPiecePlacement,
   type StackingConstraint,
   type Token,
+  createCollector,
 } from '../../src/kernel/index.js';
 
 // ─── Shared FITL-style stacking constraints ──────────────────────────────────
@@ -170,6 +171,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       actorPlayer: asPlayerId(0),
       bindings: {},
       moveParams: {},
+      collector: createCollector(),
       mapSpaces: [...runtimeMapSpaces],
       ...overrides,
     });

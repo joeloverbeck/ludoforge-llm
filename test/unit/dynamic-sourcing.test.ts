@@ -14,6 +14,7 @@ import {
   type GameDef,
   type GameState,
   type Token,
+  createCollector,
 } from '../../src/kernel/index.js';
 
 /**
@@ -84,6 +85,7 @@ const makeCtx = (zones: Record<string, readonly Token[]>): EffectContext => ({
   actorPlayer: asPlayerId(0),
   bindings: {},
   moveParams: {},
+  collector: createCollector(),
 });
 
 /**

@@ -14,6 +14,7 @@ import {
   type EffectContext,
   type GameDef,
   type GameState,
+  createCollector,
 } from '../../src/kernel/index.js';
 
 const makeDef = (): GameDef => ({
@@ -62,6 +63,7 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   actorPlayer: asPlayerId(0),
   bindings: {},
   moveParams: {},
+  collector: createCollector(),
   ...overrides,
 });
 

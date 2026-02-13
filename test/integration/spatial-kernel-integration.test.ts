@@ -9,6 +9,7 @@ import {
   asTriggerId,
   asZoneId,
   buildAdjacencyGraph,
+  createCollector,
   evalCondition,
   evalQuery,
   initialState,
@@ -83,6 +84,7 @@ const makeEvalCtx = (): EvalContext => {
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),
     bindings: { $reachable: [asZoneId('b:none')] },
+    collector: createCollector(),
   };
 };
 

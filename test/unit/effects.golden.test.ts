@@ -14,6 +14,7 @@ import {
   type GameDef,
   type GameState,
   type Token,
+  createCollector,
 } from '../../src/kernel/index.js';
 
 const token = (id: string, rank: number): Token => ({
@@ -66,6 +67,7 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   actorPlayer: asPlayerId(0),
   bindings: {},
   moveParams: {},
+  collector: createCollector(),
   ...overrides,
 });
 

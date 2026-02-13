@@ -2,6 +2,7 @@ import { applyEffects } from './effects.js';
 import { evalCondition } from './eval-condition.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
+import { createCollector } from './execution-collector.js';
 import type { GameDef, GameState, Rng, TriggerDef, TriggerEvent, TriggerLogEntry } from './types.js';
 
 export interface DispatchTriggersResult {
@@ -44,6 +45,7 @@ export const dispatchTriggers = (
       activePlayer: nextState.activePlayer,
       actorPlayer: nextState.activePlayer,
       bindings: createEventBindings(event),
+      collector: createCollector(),
     };
 
     if (trigger.match !== undefined && !evalCondition(trigger.match, evalCtx)) {

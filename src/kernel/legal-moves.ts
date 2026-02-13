@@ -5,6 +5,7 @@ import { resolvePlayerSel } from './resolve-selectors.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { isActiveFactionEligibleForTurnFlow, resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
+import { createCollector } from './execution-collector.js';
 import type { ActionDef, GameDef, GameState, MapSpaceDef, Move, MoveParamValue, OperationProfileDef } from './types.js';
 
 function makeEvalContext(
@@ -21,6 +22,7 @@ function makeEvalContext(
     activePlayer: state.activePlayer,
     actorPlayer: state.activePlayer,
     bindings,
+    collector: createCollector(),
     ...(mapSpaces === undefined ? {} : { mapSpaces }),
   };
 }

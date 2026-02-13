@@ -6,6 +6,7 @@ import {
   asPlayerId,
   asZoneId,
   buildAdjacencyGraph,
+  createCollector,
   evalCondition,
   type EvalContext,
   type GameDef,
@@ -64,6 +65,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),
     bindings: {},
+    collector: createCollector(),
     ...overrides,
   };
 };

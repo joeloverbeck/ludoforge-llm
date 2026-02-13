@@ -5,6 +5,7 @@ import { evalValue } from './eval-value.js';
 import type { EvalContext } from './eval-context.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
+import { createCollector } from './execution-collector.js';
 import type { GameDef, GameState, PlayerScore, TerminalResult, VictoryTerminalRankingEntry } from './types.js';
 
 function buildEvalContext(
@@ -20,6 +21,7 @@ function buildEvalContext(
     activePlayer: state.activePlayer,
     actorPlayer,
     bindings: {},
+    collector: createCollector(),
   };
 }
 

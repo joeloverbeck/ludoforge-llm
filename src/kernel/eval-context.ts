@@ -13,7 +13,7 @@ export interface EvalContext {
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly mapSpaces?: readonly MapSpaceDef[];
   readonly maxQueryResults?: number;
-  readonly collector?: ExecutionCollector;
+  readonly collector: ExecutionCollector;
 }
 
 export function getMaxQueryResults(ctx: Pick<EvalContext, 'maxQueryResults'>): number {

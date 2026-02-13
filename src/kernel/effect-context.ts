@@ -16,7 +16,7 @@ export interface EffectContext {
   readonly maxEffectOps?: number;
   readonly mapSpaces?: readonly MapSpaceDef[];
   readonly freeOperation?: boolean;
-  readonly collector?: ExecutionCollector;
+  readonly collector: ExecutionCollector;
 }
 
 export interface EffectResult {

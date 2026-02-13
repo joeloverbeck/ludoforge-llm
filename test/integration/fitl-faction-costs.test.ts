@@ -13,6 +13,7 @@ import {
   type GameDef,
   type GameState,
   type MapSpaceDef,
+  createCollector,
 } from '../../src/kernel/index.js';
 
 function makeDef(): GameDef {
@@ -75,6 +76,7 @@ function makeCtx(overrides?: Partial<EffectContext>): EffectContext {
     actorPlayer: asPlayerId(0),
     bindings: { __freeOperation: false },
     moveParams: {},
+    collector: createCollector(),
     mapSpaces,
     ...overrides,
   };

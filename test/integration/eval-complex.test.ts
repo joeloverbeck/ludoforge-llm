@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
+  createCollector,
   asPlayerId,
   deserializeGameState,
   evalCondition,
@@ -33,6 +34,7 @@ describe('evaluation integration - complex scenario', () => {
       activePlayer: asPlayerId(1),
       actorPlayer: asPlayerId(0),
       bindings: {},
+      collector: createCollector(),
     };
 
     const condition: ConditionAST = {

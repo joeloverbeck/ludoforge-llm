@@ -6,6 +6,7 @@ import {
   asPhaseId,
   asPlayerId,
   buildAdjacencyGraph,
+  createCollector,
   queryConnectedZones,
   type EvalContext,
   type GameDef,
@@ -34,6 +35,7 @@ const makeCtx = (def: GameDef): EvalContext => ({
   activePlayer: asPlayerId(0),
   actorPlayer: asPlayerId(0),
   bindings: {},
+  collector: createCollector(),
 });
 
 const makeDef = (id: string, zones: GameDef['zones']): GameDef => ({

@@ -2,6 +2,7 @@ import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
+import { createCollector } from './execution-collector.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import type {
   ActionDef,
@@ -270,6 +271,7 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     activePlayer: state.activePlayer,
     actorPlayer: state.activePlayer,
     bindings: baseBindings,
+    collector: createCollector(),
   };
 
   const profile = resolveOperationProfile(def, action, evalCtx);

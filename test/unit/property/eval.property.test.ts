@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
+  createCollector,
   asPlayerId,
   deserializeGameState,
   evalCondition,
@@ -34,6 +35,7 @@ const makeCtx = (overrides?: Partial<EvalContext>): EvalContext => {
     activePlayer: asPlayerId(1),
     actorPlayer: asPlayerId(0),
     bindings: {},
+    collector: createCollector(),
     ...overrides,
   };
 };

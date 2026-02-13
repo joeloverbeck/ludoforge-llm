@@ -5,6 +5,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { initializeTurnFlowEligibilityState } from './turn-flow-eligibility.js';
 import { applyTurnFlowInitialReveal } from './turn-flow-lifecycle.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
+import { createCollector } from './execution-collector.js';
 import type { GameDef, GameState } from './types.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 
@@ -45,6 +46,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     actorPlayer: baseState.activePlayer,
     bindings: {},
     moveParams: {},
+    collector: createCollector(),
   });
   const lifecycleResult = applyTurnFlowInitialReveal(def, setupResult.state);
   const maxDepth = def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;

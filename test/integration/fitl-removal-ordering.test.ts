@@ -18,6 +18,7 @@ import {
   type GameDef,
   type GameState,
   type Token,
+  createCollector,
 } from '../../src/kernel/index.js';
 
 const readCompilerFixture = (name: string): string =>
@@ -133,6 +134,7 @@ describe('FITL removal ordering macros', () => {
         actorPlayer: asPlayerId(0),
         bindings: {},
         moveParams: {},
+        collector: createCollector(),
       };
 
       const result = applyEffects(aidEffects, ctx);
@@ -183,6 +185,7 @@ describe('FITL removal ordering macros', () => {
         actorPlayer: asPlayerId(0),
         bindings: {},
         moveParams: {},
+        collector: createCollector(),
       };
 
       const result = applyEffects(aidEffects, ctx);
@@ -270,6 +273,7 @@ describe('FITL removal ordering macros', () => {
         actorPlayer: asPlayerId(0),
         bindings: {},
         moveParams: {},
+        collector: createCollector(),
       };
 
       const result = applyEffects(attritionEffects, ctx);

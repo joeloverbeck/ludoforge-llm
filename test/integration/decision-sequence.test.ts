@@ -330,6 +330,27 @@ describe('decision sequence integration', () => {
     assert.equal(result.state.globalVars.resources, 10, 'simpleScore should not touch resources');
   });
 
+  it('__actionClass binding is available in decision sequence context (FITLOPEFULEFF-001)', () => {
+    const def = createDecisionSequenceDef();
+    const state = initialState(def, 42, 2);
+
+    const moves = legalMoves(def, state);
+    const template = findTemplateMove(moves, ACTION_DEPLOY);
+    assert.ok(template !== undefined, 'deploy template should exist');
+
+    // With actionClass set, legalChoices should still work (binding doesn't affect choice enumeration)
+    const withActionClass: Move = { ...template, actionClass: 'limitedOperation' };
+    const choices = legalChoices(def, state, withActionClass);
+    assert.equal(choices.complete, false, 'should still have pending decisions');
+    assert.equal(choices.name, '$mode', 'first decision should be $mode');
+
+    // Without actionClass (default 'operation'), same behavior
+    const withoutActionClass: Move = { ...template };
+    const choicesDefault = legalChoices(def, state, withoutActionClass);
+    assert.equal(choicesDefault.complete, false, 'should still have pending decisions');
+    assert.equal(choicesDefault.name, '$mode', 'first decision should be $mode');
+  });
+
   it('legalChoices returns decision points incrementally for profiled action', () => {
     const def = createDecisionSequenceDef();
     const state = initialState(def, 42, 2);

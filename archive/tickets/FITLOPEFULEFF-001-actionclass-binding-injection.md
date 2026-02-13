@@ -1,6 +1,6 @@
 # FITLOPEFULEFF-001: `__actionClass` Binding Injection
 
-**Status**: Pending
+**Status**: COMPLETED
 **Priority**: P0 (blocker — all operation profiles depend on this)
 **Estimated effort**: Small (1-2 hours)
 **Spec reference**: Spec 26, Task 26.1
@@ -45,3 +45,19 @@ Accepted values: `'operation' | 'limitedOperation' | 'operationPlusSpecialActivi
 - `Move` type change is backwards-compatible (field is optional)
 - Build passes (`npm run build`)
 - Typecheck passes (`npm run typecheck`)
+
+## Outcome
+
+**Completed**: 2026-02-13
+
+### Changes Made
+- `src/kernel/types.ts`: Added `actionClass?: string` to `Move` interface (line 815)
+- `src/kernel/apply-move.ts`: Injected `__actionClass: move.actionClass ?? 'operation'` into bindings (line 172)
+- `src/kernel/legal-choices.ts`: Injected `__actionClass: partialMove.actionClass ?? 'operation'` into baseBindings (line 245)
+- `test/unit/kernel/apply-move.test.ts`: Added 4 new unit tests for `__actionClass` binding
+- `test/integration/decision-sequence.test.ts`: Added 1 new integration test for `__actionClass` in decision context
+
+### Verification
+- Build: clean (0 errors)
+- All 960 tests pass (0 failures)
+- No existing tests modified, no deviations from ticket design

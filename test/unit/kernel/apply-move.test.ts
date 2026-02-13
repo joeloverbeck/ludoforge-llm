@@ -200,3 +200,112 @@ describe('applyMove() __freeOperation binding (KERDECSEQMOD-004)', () => {
     assert.equal(resultFree.state.globalVars['resources'], 10);
   });
 });
+
+/**
+ * Resolution effect: conditionally checks __actionClass binding.
+ *
+ * Sets a flag variable to 1 when __actionClass is 'limitedOperation'.
+ */
+const actionClassCheckEffect: EffectAST = {
+  if: {
+    when: { op: '==', left: { ref: 'binding', name: '__actionClass' }, right: 'limitedOperation' },
+    then: [{ setVar: { scope: 'global', var: 'isLimited', value: 1 } }],
+  },
+};
+
+describe('applyMove() __actionClass binding (FITLOPEFULEFF-001)', () => {
+  const isLimitedVar: VariableDef = { name: 'isLimited', type: 'int', init: 0, min: 0, max: 1 };
+
+  it('1. move.actionClass = "limitedOperation" → bindings contain __actionClass: "limitedOperation"', () => {
+    const action = makeOperationAction();
+    const profile = makeOperationProfile([actionClassCheckEffect]);
+    const def = makeBaseDef({
+      actions: [action],
+      operationProfiles: [profile],
+      globalVars: [resourcesVar, isLimitedVar],
+    });
+    const state = makeBaseState({ globalVars: { resources: 10, isLimited: 0 } });
+
+    const move: Move = {
+      actionId: asActionId('trainOp'),
+      params: {},
+      actionClass: 'limitedOperation',
+    };
+
+    const result = applyMove(def, state, move);
+    assert.equal(result.state.globalVars['isLimited'], 1, '__actionClass should be "limitedOperation"');
+  });
+
+  it('2. move without actionClass field → bindings contain __actionClass: "operation" (default)', () => {
+    const action = makeOperationAction();
+    const profile = makeOperationProfile([actionClassCheckEffect]);
+    const def = makeBaseDef({
+      actions: [action],
+      operationProfiles: [profile],
+      globalVars: [resourcesVar, isLimitedVar],
+    });
+    const state = makeBaseState({ globalVars: { resources: 10, isLimited: 0 } });
+
+    const move: Move = {
+      actionId: asActionId('trainOp'),
+      params: {},
+    };
+
+    const result = applyMove(def, state, move);
+    // Default is 'operation', not 'limitedOperation', so isLimited stays 0
+    assert.equal(result.state.globalVars['isLimited'], 0, '__actionClass should default to "operation"');
+  });
+
+  it('3. move.actionClass = "operationPlusSpecialActivity" → bindings contain correct value', () => {
+    const opSACheckEffect: EffectAST = {
+      if: {
+        when: { op: '==', left: { ref: 'binding', name: '__actionClass' }, right: 'operationPlusSpecialActivity' },
+        then: [{ setVar: { scope: 'global', var: 'isLimited', value: 1 } }],
+      },
+    };
+
+    const action = makeOperationAction();
+    const profile = makeOperationProfile([opSACheckEffect]);
+    const def = makeBaseDef({
+      actions: [action],
+      operationProfiles: [profile],
+      globalVars: [resourcesVar, isLimitedVar],
+    });
+    const state = makeBaseState({ globalVars: { resources: 10, isLimited: 0 } });
+
+    const move: Move = {
+      actionId: asActionId('trainOp'),
+      params: {},
+      actionClass: 'operationPlusSpecialActivity',
+    };
+
+    const result = applyMove(def, state, move);
+    assert.equal(result.state.globalVars['isLimited'], 1, '__actionClass should be "operationPlusSpecialActivity"');
+  });
+
+  it('4. __freeOperation binding is unchanged by actionClass addition', () => {
+    const action = makeOperationAction();
+    const profile = makeOperationProfile([conditionalCostEffect]);
+    const def = makeBaseDef({ actions: [action], operationProfiles: [profile] });
+    const state = makeBaseState();
+
+    // Free + limitedOperation: resources unchanged (freeOperation still works)
+    const moveFree: Move = {
+      actionId: asActionId('trainOp'),
+      params: {},
+      freeOperation: true,
+      actionClass: 'limitedOperation',
+    };
+    const resultFree = applyMove(def, state, moveFree);
+    assert.equal(resultFree.state.globalVars['resources'], 10, '__freeOperation still works with actionClass set');
+
+    // Non-free + limitedOperation: resources deducted
+    const moveNonFree: Move = {
+      actionId: asActionId('trainOp'),
+      params: {},
+      actionClass: 'limitedOperation',
+    };
+    const resultNonFree = applyMove(def, state, moveNonFree);
+    assert.equal(resultNonFree.state.globalVars['resources'], 7, 'non-free still deducts with actionClass set');
+  });
+});

@@ -242,6 +242,7 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
   const baseBindings: Record<string, unknown> = {
     ...partialMove.params,
     __freeOperation: partialMove.freeOperation ?? false,
+    __actionClass: partialMove.actionClass ?? 'operation',
   };
 
   const evalCtx: EvalContext = {

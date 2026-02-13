@@ -813,6 +813,7 @@ export interface Move {
   readonly actionId: ActionId;
   readonly params: Readonly<Record<string, MoveParamValue>>;
   readonly freeOperation?: boolean;
+  readonly actionClass?: string;
   readonly compound?: CompoundMovePayload;
 }
 

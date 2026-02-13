@@ -1,5 +1,5 @@
 import { applyMove, createRng, initialState, legalMoves, terminalResult } from '../kernel/index.js';
-import type { Agent, GameDef, GameTrace, MoveLog, Rng, SimulationStopReason, TerminalResult } from '../kernel/index.js';
+import type { Agent, ExecutionOptions, GameDef, GameTrace, MoveLog, Rng, SimulationStopReason, TerminalResult } from '../kernel/index.js';
 import { computeDeltas } from './delta.js';
 
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
@@ -31,6 +31,7 @@ export const runGame = (
   agents: readonly Agent[],
   maxTurns: number,
   playerCount?: number,
+  options?: ExecutionOptions,
 ): GameTrace => {
   validateSeed(seed);
   validateMaxTurns(maxTurns);
@@ -83,7 +84,7 @@ export const runGame = (
     agentRngByPlayer[player] = selected.rng;
 
     const preState = state;
-    const applied = applyMove(def, state, selected.move);
+    const applied = applyMove(def, state, selected.move, options);
     state = applied.state;
 
     moveLogs.push({
@@ -94,6 +95,7 @@ export const runGame = (
       deltas: computeDeltas(preState, state),
       triggerFirings: applied.triggerFirings,
       warnings: applied.warnings,
+      ...(applied.effectTrace !== undefined ? { effectTrace: applied.effectTrace } : {}),
     });
   }
 
@@ -114,4 +116,5 @@ export const runGames = (
   agents: readonly Agent[],
   maxTurns: number,
   playerCount?: number,
-): readonly GameTrace[] => seeds.map((seed) => runGame(def, seed, agents, maxTurns, playerCount));
+  options?: ExecutionOptions,
+): readonly GameTrace[] => seeds.map((seed) => runGame(def, seed, agents, maxTurns, playerCount, options));

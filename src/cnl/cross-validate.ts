@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { EffectAST, ZoneRef } from '../kernel/types.js';
+import type { EffectAST, EventSideDef, ZoneRef } from '../kernel/types.js';
 import type { CompileSectionResults } from './compiler-core.js';
 import { normalizeIdentifier, pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
 
@@ -155,44 +155,54 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
   if (sections.actions !== null && sections.zones !== null) {
     for (const [actionIndex, action] of sections.actions.entries()) {
       walkEffects(action.effects, `doc.actions.${actionIndex}.effects`, (effect, path) => {
-        if ('moveToken' in effect) {
-          pushMissingZoneRefDiagnostic(
-            diagnostics,
-            'CNL_XREF_EFFECT_ZONE_MISSING',
-            `${path}.moveToken.from`,
-            effect.moveToken.from,
-            zoneTargets,
-            `Action "${action.id}" references unknown zone in moveToken.from.`,
-          );
-          pushMissingZoneRefDiagnostic(
-            diagnostics,
-            'CNL_XREF_EFFECT_ZONE_MISSING',
-            `${path}.moveToken.to`,
-            effect.moveToken.to,
-            zoneTargets,
-            `Action "${action.id}" references unknown zone in moveToken.to.`,
-          );
-        }
-
-        if ('draw' in effect) {
-          pushMissingZoneRefDiagnostic(
-            diagnostics,
-            'CNL_XREF_EFFECT_ZONE_MISSING',
-            `${path}.draw.from`,
-            effect.draw.from,
-            zoneTargets,
-            `Action "${action.id}" references unknown zone in draw.from.`,
-          );
-          pushMissingZoneRefDiagnostic(
-            diagnostics,
-            'CNL_XREF_EFFECT_ZONE_MISSING',
-            `${path}.draw.to`,
-            effect.draw.to,
-            zoneTargets,
-            `Action "${action.id}" references unknown zone in draw.to.`,
-          );
-        }
+        pushEffectZoneDiagnostics(
+          diagnostics,
+          effect,
+          path,
+          zoneTargets,
+          'CNL_XREF_EFFECT_ZONE_MISSING',
+          `Action "${action.id}" references unknown zone`,
+        );
       });
+    }
+  }
+
+  if (sections.eventDecks !== null && sections.zones !== null) {
+    for (const [deckIndex, deck] of sections.eventDecks.entries()) {
+      const deckPath = `doc.eventDecks.${deckIndex}`;
+      pushMissingZoneRefDiagnostic(
+        diagnostics,
+        'CNL_XREF_EVENT_DECK_ZONE_MISSING',
+        `${deckPath}.drawZone`,
+        deck.drawZone,
+        zoneTargets,
+        `Event deck "${deck.id}" references unknown drawZone.`,
+      );
+      pushMissingZoneRefDiagnostic(
+        diagnostics,
+        'CNL_XREF_EVENT_DECK_ZONE_MISSING',
+        `${deckPath}.discardZone`,
+        deck.discardZone,
+        zoneTargets,
+        `Event deck "${deck.id}" references unknown discardZone.`,
+      );
+
+      for (const [cardIndex, card] of deck.cards.entries()) {
+        validateEventCardSide(
+          diagnostics,
+          card.unshaded,
+          `${deckPath}.cards.${cardIndex}.unshaded`,
+          zoneTargets,
+          card.id,
+        );
+        validateEventCardSide(
+          diagnostics,
+          card.shaded,
+          `${deckPath}.cards.${cardIndex}.shaded`,
+          zoneTargets,
+          card.id,
+        );
+      }
     }
   }
 
@@ -367,5 +377,133 @@ function walkEffects(
     if ('rollRandom' in effect) {
       walkEffects(effect.rollRandom.in, `${effectPath}.rollRandom.in`, onEffect);
     }
+  }
+}
+
+function validateEventCardSide(
+  diagnostics: Diagnostic[],
+  side: EventSideDef | undefined,
+  pathPrefix: string,
+  zoneTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  cardId: string,
+): void {
+  if (side === undefined) {
+    return;
+  }
+
+  if (side.effects !== undefined) {
+    walkEffects(side.effects, `${pathPrefix}.effects`, (effect, path) => {
+      pushEffectZoneDiagnostics(
+        diagnostics,
+        effect,
+        path,
+        zoneTargets,
+        'CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING',
+        `Event card "${cardId}" references unknown zone`,
+      );
+    });
+  }
+
+  for (const [branchIndex, branch] of (side.branches ?? []).entries()) {
+    if (branch.effects === undefined) {
+      continue;
+    }
+    walkEffects(branch.effects, `${pathPrefix}.branches.${branchIndex}.effects`, (effect, path) => {
+      pushEffectZoneDiagnostics(
+        diagnostics,
+        effect,
+        path,
+        zoneTargets,
+        'CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING',
+        `Event card "${cardId}" references unknown zone`,
+      );
+    });
+  }
+
+  for (const [lastingEffectIndex, lastingEffect] of (side.lastingEffects ?? []).entries()) {
+    walkEffects(lastingEffect.setupEffects, `${pathPrefix}.lastingEffects.${lastingEffectIndex}.setupEffects`, (effect, path) => {
+      pushEffectZoneDiagnostics(
+        diagnostics,
+        effect,
+        path,
+        zoneTargets,
+        'CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING',
+        `Event card "${cardId}" references unknown zone`,
+      );
+    });
+    if (lastingEffect.teardownEffects !== undefined) {
+      walkEffects(
+        lastingEffect.teardownEffects,
+        `${pathPrefix}.lastingEffects.${lastingEffectIndex}.teardownEffects`,
+        (effect, path) => {
+          pushEffectZoneDiagnostics(
+            diagnostics,
+            effect,
+            path,
+            zoneTargets,
+            'CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING',
+            `Event card "${cardId}" references unknown zone`,
+          );
+        },
+      );
+    }
+  }
+}
+
+function pushEffectZoneDiagnostics(
+  diagnostics: Diagnostic[],
+  effect: EffectAST,
+  path: string,
+  zoneTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  code: string,
+  messagePrefix: string,
+): void {
+  if ('moveToken' in effect) {
+    pushMissingZoneRefDiagnostic(
+      diagnostics,
+      code,
+      `${path}.moveToken.from`,
+      effect.moveToken.from,
+      zoneTargets,
+      `${messagePrefix} in moveToken.from.`,
+    );
+    pushMissingZoneRefDiagnostic(
+      diagnostics,
+      code,
+      `${path}.moveToken.to`,
+      effect.moveToken.to,
+      zoneTargets,
+      `${messagePrefix} in moveToken.to.`,
+    );
+  }
+
+  if ('draw' in effect) {
+    pushMissingZoneRefDiagnostic(
+      diagnostics,
+      code,
+      `${path}.draw.from`,
+      effect.draw.from,
+      zoneTargets,
+      `${messagePrefix} in draw.from.`,
+    );
+    pushMissingZoneRefDiagnostic(
+      diagnostics,
+      code,
+      `${path}.draw.to`,
+      effect.draw.to,
+      zoneTargets,
+      `${messagePrefix} in draw.to.`,
+    );
+  }
+
+  if ('shuffle' in effect) {
+    pushMissingZoneRefDiagnostic(
+      diagnostics,
+      code,
+      `${path}.shuffle.zone`,
+      effect.shuffle.zone,
+      zoneTargets,
+      `${messagePrefix} in shuffle.zone.`,
+    );
   }
 }

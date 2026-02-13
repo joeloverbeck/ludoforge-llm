@@ -134,6 +134,73 @@ describe('compiler structured section results', () => {
     );
   });
 
+  it('merges map-derived zones with explicit YAML zones when both are declared', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      dataAssets: [
+        {
+          id: 'fitl-map-foundation',
+          kind: 'map' as const,
+          payload: {
+            spaces: [
+              {
+                id: 'alpha:none',
+                spaceType: 'province',
+                population: 1,
+                econ: 1,
+                terrainTags: ['lowland'],
+                country: 'south-vietnam',
+                coastal: false,
+                adjacentTo: [],
+              },
+            ],
+          },
+        },
+      ],
+      zones: [{ id: 'available-US', owner: 'none', visibility: 'public', ordering: 'set' }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    const zoneIds = result.sections.zones?.map((zone) => zone.id);
+
+    assert.notEqual(result.gameDef, null);
+    assert.deepEqual(zoneIds, ['alpha:none', 'available-US:none']);
+  });
+
+  it('fails when explicit zones collide with map-derived zone ids', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      dataAssets: [
+        {
+          id: 'fitl-map-foundation',
+          kind: 'map' as const,
+          payload: {
+            spaces: [
+              {
+                id: 'alpha:none',
+                spaceType: 'province',
+                population: 1,
+                econ: 1,
+                terrainTags: ['lowland'],
+                country: 'south-vietnam',
+                coastal: false,
+                adjacentTo: [],
+              },
+            ],
+          },
+        },
+      ],
+      zones: [{ id: 'alpha:none', owner: 'none', visibility: 'public', ordering: 'set' }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === 'DUPLICATE_ZONE_ID'), true);
+  });
+
   it('pieceCatalog failure nulls tokenTypes when no explicit YAML tokenTypes exist', () => {
     const base = createMinimalCompilableDoc();
     const doc = {

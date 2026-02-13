@@ -72,6 +72,23 @@ function createRichCompilableDoc(): GameSpecDoc {
       },
     ],
     triggers: [{ id: 'on-act', event: { type: 'actionResolved', action: 'act' }, effects: [] }],
+    eventDecks: [
+      {
+        id: 'events-core',
+        drawZone: 'deck:none',
+        discardZone: 'discard:none',
+        cards: [
+          {
+            id: 'card-1',
+            title: 'Card 1',
+            sideMode: 'single',
+            unshaded: {
+              effects: [{ shuffle: { zone: 'deck:none' } }],
+            },
+          },
+        ],
+      },
+    ],
     terminal: {
       conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
       checkpoints: [{ id: 'cp-1', faction: 'us', timing: 'duringCoup' as const, when: { op: '==', left: 1, right: 1 } }],
@@ -278,5 +295,62 @@ describe('crossValidateSpec', () => {
     assert.notEqual(diagnostic, undefined);
     assert.equal(diagnostic?.path, 'doc.triggers.0.event.action');
     assert.equal(diagnostic?.suggestion, 'Did you mean "act"?');
+  });
+
+  it('eventDeck effects referencing nonexistent zone emit CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING', () => {
+    const sections = compileRichSections();
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                effects: [{ draw: { from: 'deck:none', to: 'discrad:none', count: 1 } }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.effects.0.draw.to');
+    assert.equal(diagnostic?.suggestion, 'Did you mean "discard:none"?');
+  });
+
+  it('eventDecks drawZone referencing nonexistent zone emits CNL_XREF_EVENT_DECK_ZONE_MISSING', () => {
+    const sections = compileRichSections();
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      eventDecks: [{ ...deck, drawZone: 'decj:none' }],
+    });
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_ZONE_MISSING');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.eventDecks.0.drawZone');
+    assert.equal(diagnostic?.suggestion, 'Did you mean "deck:none"?');
+  });
+
+  it('eventDecks discardZone referencing nonexistent zone emits CNL_XREF_EVENT_DECK_ZONE_MISSING', () => {
+    const sections = compileRichSections();
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      eventDecks: [{ ...deck, discardZone: 'discrad:none' }],
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (entry) => entry.code === 'CNL_XREF_EVENT_DECK_ZONE_MISSING' && entry.path === 'doc.eventDecks.0.discardZone',
+      ),
+      true,
+    );
   });
 });

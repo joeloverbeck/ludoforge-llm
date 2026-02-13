@@ -387,6 +387,77 @@ describe('compile pipeline integration', () => {
     assert.deepEqual(compiled.gameDef?.eventDecks?.[0]?.cards[1]?.unshaded?.branches?.map((branch) => branch.id), ['a', 'z']);
   });
 
+  it('emits event-deck zone cross-ref diagnostics through full compile pipeline', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-event-deck-xref-errors',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'eventDecks:',
+      '  - id: fitl-events-foundation',
+      '    drawZone: decj:none',
+      '    discardZone: discard:none',
+      '    cards:',
+      '      - id: card-a',
+      '        title: A Card',
+      '        sideMode: single',
+      '        unshaded:',
+      '          effects:',
+      '            - draw: { from: deck:none, to: discrad:none, count: 1 }',
+      '```',
+      '```yaml',
+      'zones:',
+      '  - id: deck:none',
+      '    owner: none',
+      '    visibility: public',
+      '    ordering: set',
+      '  - id: discard:none',
+      '    owner: none',
+      '    visibility: public',
+      '    ordering: set',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_XREF_EVENT_DECK_ZONE_MISSING' && diagnostic.path === 'doc.eventDecks.0.drawZone',
+      ),
+      true,
+    );
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING' &&
+          diagnostic.path === 'doc.eventDecks.0.cards.0.unshaded.effects.0.draw.to',
+      ),
+      true,
+    );
+  });
+
   it('rejects ambiguous duplicate ordering declarations in embedded event-deck lowering', () => {
     const markdown = [
       '```yaml',

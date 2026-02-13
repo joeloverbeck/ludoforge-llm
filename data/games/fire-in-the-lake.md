@@ -1467,6 +1467,8 @@ zones:
   - { id: available-ARVN, owner: none, visibility: public, ordering: set }
   - { id: available-NVA, owner: none, visibility: public, ordering: set }
   - { id: available-VC, owner: none, visibility: public, ordering: set }
+  - { id: leader, owner: none, visibility: public, ordering: stack }
+  - { id: played, owner: none, visibility: public, ordering: stack }
 
 actionPipelines:
   # ── train-us-profile ──────────────────────────────────────────────────────────

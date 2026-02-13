@@ -165,7 +165,7 @@ function compileExpandedDoc(
   readonly sections: CompileSectionResults;
 } {
   const derivedFromAssets = deriveSectionsFromDataAssets(doc, diagnostics);
-  const effectiveZones = doc.zones ?? derivedFromAssets.zones;
+  const effectiveZones = mergeZoneSections(doc.zones, derivedFromAssets.zones);
   const effectiveTokenTypes = doc.tokenTypes ?? derivedFromAssets.tokenTypes;
   const sections: MutableCompileSectionResults = {
     metadata: null,
@@ -399,4 +399,17 @@ function resolveLimit(candidate: number | undefined, fallback: number, name: key
     throw new Error(`${name} must be an integer >= 0.`);
   }
   return candidate;
+}
+
+function mergeZoneSections(
+  explicitZones: GameSpecDoc['zones'],
+  derivedZones: GameSpecDoc['zones'],
+): GameSpecDoc['zones'] {
+  if (explicitZones === null) {
+    return derivedZones;
+  }
+  if (derivedZones === null) {
+    return explicitZones;
+  }
+  return [...derivedZones, ...explicitZones];
 }

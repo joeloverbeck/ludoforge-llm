@@ -8,6 +8,7 @@ import { asTokenId } from './branded.js';
 import { evalCondition } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
+import { emitWarning } from './execution-collector.js';
 import { nextInt } from './prng.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
@@ -1116,7 +1117,25 @@ const applyForEach = (
   }
 
   const queryResult = evalQuery(effect.forEach.over, evalCtx);
+
+  if (queryResult.length === 0) {
+    emitWarning(ctx.collector, {
+      code: 'ZERO_EFFECT_ITERATIONS',
+      message: `forEach bind=${effect.forEach.bind} matched 0 items in query`,
+      context: { bind: effect.forEach.bind },
+      hint: 'enable trace:true for effect execution details',
+    });
+  }
+
   const boundedItems = queryResult.slice(0, limit);
+
+  if (boundedItems.length === 0 && queryResult.length > 0) {
+    emitWarning(ctx.collector, {
+      code: 'ZERO_EFFECT_ITERATIONS',
+      message: `forEach bind=${effect.forEach.bind} limit=${limit} truncated ${queryResult.length} matches to 0`,
+      context: { bind: effect.forEach.bind, limit, matchCount: queryResult.length },
+    });
+  }
 
   let currentState = ctx.state;
   let currentRng = ctx.rng;

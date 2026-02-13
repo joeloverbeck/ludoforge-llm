@@ -1,6 +1,7 @@
 import { getMaxQueryResults, type EvalContext } from './eval-context.js';
 import { missingVarError, queryBoundsExceededError } from './eval-error.js';
 import { evalValue } from './eval-value.js';
+import { emitWarning } from './execution-collector.js';
 import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
@@ -111,6 +112,14 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       }
 
       const filtered = query.filter !== undefined ? applyTokenFilters(zoneTokens, query.filter, ctx) : [...zoneTokens];
+      if (filtered.length === 0 && zoneTokens.length > 0 && query.filter !== undefined && query.filter.length > 0) {
+        emitWarning(ctx.collector, {
+          code: 'EMPTY_QUERY_RESULT',
+          message: `tokensInZone in ${zoneId} matched 0 of ${zoneTokens.length} tokens after filtering`,
+          context: { zone: zoneId, totalTokens: zoneTokens.length, filterCount: query.filter.length },
+          hint: 'enable trace:true to see filter predicates vs token props',
+        });
+      }
       assertWithinBounds(filtered.length, query, maxQueryResults);
       return filtered;
     }

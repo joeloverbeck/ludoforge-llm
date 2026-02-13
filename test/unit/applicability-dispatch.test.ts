@@ -36,26 +36,26 @@ const createMultiProfileDef = (): GameDef =>
     tokenTypes: [],
     setup: [],
     turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-    operationProfiles: [
+    actionPipelines: [
       {
         id: 'profile-player-0',
         actionId: asActionId('operate'),
         applicability: { op: '==', left: { ref: 'activePlayer' }, right: '0' },
-        legality: {},
-        cost: {},
+        legality: null,
+        costValidation: null, costEffects: [],
         targeting: {},
-        resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
-        partialExecution: { mode: 'forbid' },
+        stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
+        atomicity: 'atomic',
       },
       {
         id: 'profile-player-1',
         actionId: asActionId('operate'),
         applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
-        legality: {},
-        cost: {},
+        legality: null,
+        costValidation: null, costEffects: [],
         targeting: {},
-        resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 20 } }] }],
-        partialExecution: { mode: 'forbid' },
+        stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 20 } }] }],
+        atomicity: 'atomic',
       },
     ],
     actions: [
@@ -129,15 +129,15 @@ describe('applicability-based operation profile dispatch', () => {
   it('single profile without applicability still works (backward compatibility)', () => {
     const def: GameDef = {
       ...createMultiProfileDef(),
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'solo-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 5 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 5 } }] }],
+          atomicity: 'atomic',
         },
       ],
     } as unknown as GameDef;
@@ -149,26 +149,26 @@ describe('applicability-based operation profile dispatch', () => {
   it('resolveOperationProfile returns undefined when no candidate applicability matches', () => {
     const def: GameDef = {
       ...createMultiProfileDef(),
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'profile-player-0',
           actionId: asActionId('operate'),
           applicability: { op: '==', left: { ref: 'activePlayer' }, right: '0' },
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
+          atomicity: 'atomic',
         },
         {
           id: 'profile-player-1',
           actionId: asActionId('operate'),
           applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 20 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 20 } }] }],
+          atomicity: 'atomic',
         },
       ],
     } as unknown as GameDef;
@@ -188,26 +188,26 @@ describe('applicability-based operation profile dispatch', () => {
   it('profile with legality condition blocks move for the matching applicability player', () => {
     const def: GameDef = {
       ...createMultiProfileDef(),
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'profile-player-0',
           actionId: asActionId('operate'),
           applicability: { op: '==', left: { ref: 'activePlayer' }, right: '0' },
-          legality: { when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 50 } },
-          cost: {},
+          legality: { op: '>=', left: { ref: 'gvar', var: 'score' , right: 50 } },
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
+          atomicity: 'atomic',
         },
         {
           id: 'profile-player-1',
           actionId: asActionId('operate'),
           applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 20 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 20 } }] }],
+          atomicity: 'atomic',
         },
       ],
     } as unknown as GameDef;

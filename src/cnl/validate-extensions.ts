@@ -2,10 +2,9 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import {
+  ACTION_PIPELINE_ATOMICITY_VALUES,
+  ACTION_PIPELINE_KEYS,
   DATA_ASSET_KEYS,
-  OPERATION_PROFILE_KEYS,
-  OPERATION_PROFILE_PARTIAL_EXECUTION_KEYS,
-  OPERATION_PROFILE_PARTIAL_EXECUTION_MODE_VALUES,
   TURN_FLOW_ACTION_CLASS_VALUES,
   TURN_FLOW_CARD_LIFECYCLE_KEYS,
   TURN_FLOW_DURATION_VALUES,
@@ -405,34 +404,34 @@ export function validateTurnFlow(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
   }
 }
 
-export function validateOperationProfiles(
+export function validateActionPipelines(
   doc: GameSpecDoc,
   actionIds: readonly string[],
   diagnostics: Diagnostic[],
 ): void {
-  if (doc.operationProfiles === null) {
+  if (doc.actionPipelines === null) {
     return;
   }
 
   const actionIdSet = new Set(actionIds);
   const actionIdCounts = new Map<string, number>();
 
-  for (const [index, profile] of doc.operationProfiles.entries()) {
-    const basePath = `doc.operationProfiles.${index}`;
+  for (const [index, profile] of doc.actionPipelines.entries()) {
+    const basePath = `doc.actionPipelines.${index}`;
     if (!isRecord(profile)) {
       diagnostics.push({
-        code: 'CNL_VALIDATOR_OPERATION_PROFILE_SHAPE_INVALID',
+        code: 'CNL_VALIDATOR_ACTION_PIPELINE_SHAPE_INVALID',
         path: basePath,
         severity: 'error',
-        message: 'Operation profile entry must be an object.',
-        suggestion: 'Set operation profile entries to objects with id/actionId/legality/cost/targeting/resolution/partialExecution.',
+        message: 'Action pipeline entry must be an object.',
+        suggestion: 'Set action pipeline entries to objects with id/actionId/legality/costValidation/costEffects/targeting/stages/atomicity.',
       });
       continue;
     }
 
-    validateUnknownKeys(profile, OPERATION_PROFILE_KEYS, basePath, diagnostics, 'operation profile');
-    validateIdentifierField(profile, 'id', `${basePath}.id`, diagnostics, 'operation profile id');
-    validateIdentifierField(profile, 'actionId', `${basePath}.actionId`, diagnostics, 'operation profile actionId');
+    validateUnknownKeys(profile, ACTION_PIPELINE_KEYS, basePath, diagnostics, 'action pipeline');
+    validateIdentifierField(profile, 'id', `${basePath}.id`, diagnostics, 'action pipeline id');
+    validateIdentifierField(profile, 'actionId', `${basePath}.actionId`, diagnostics, 'action pipeline actionId');
 
     if (typeof profile.actionId === 'string' && profile.actionId.trim() !== '') {
       const normalizedActionId = normalizeIdentifier(profile.actionId);
@@ -450,98 +449,101 @@ export function validateOperationProfiles(
       }
     }
 
-    if (!isRecord(profile.legality)) {
+    if (profile.legality !== null && !isRecord(profile.legality) && typeof profile.legality !== 'boolean') {
       diagnostics.push({
-        code: 'CNL_VALIDATOR_OPERATION_PROFILE_REQUIRED_FIELD_INVALID',
+        code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
         path: `${basePath}.legality`,
         severity: 'error',
-        message: 'operation profile legality must be an object.',
-        suggestion: 'Provide a legality object (explicitly include a permissive policy if unconditional).',
+        message: 'action pipeline legality must be a Condition AST object, boolean, or null.',
+        suggestion: 'Provide a Condition AST, boolean literal, or null.',
       });
     }
-    if (!isRecord(profile.cost)) {
+    if (profile.costValidation !== null && profile.costValidation !== undefined
+      && !isRecord(profile.costValidation) && typeof profile.costValidation !== 'boolean') {
       diagnostics.push({
-        code: 'CNL_VALIDATOR_OPERATION_PROFILE_REQUIRED_FIELD_INVALID',
-        path: `${basePath}.cost`,
+        code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+        path: `${basePath}.costValidation`,
         severity: 'error',
-        message: 'operation profile cost must be an object.',
-        suggestion: 'Provide a cost object (explicitly include zero-cost behavior if applicable).',
+        message: 'action pipeline costValidation must be a Condition AST object, boolean, or null.',
+        suggestion: 'Provide a Condition AST, boolean literal, or null.',
+      });
+    }
+    if (!Array.isArray(profile.costEffects)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+        path: `${basePath}.costEffects`,
+        severity: 'error',
+        message: 'action pipeline costEffects must be an array.',
+        suggestion: 'Provide an array of Effect AST entries (empty array means no explicit pipeline cost).',
       });
     }
     if (!isRecord(profile.targeting)) {
       diagnostics.push({
-        code: 'CNL_VALIDATOR_OPERATION_PROFILE_REQUIRED_FIELD_INVALID',
+        code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
         path: `${basePath}.targeting`,
         severity: 'error',
-        message: 'operation profile targeting must be an object.',
+        message: 'action pipeline targeting must be an object.',
         suggestion: 'Provide a targeting object (explicitly encode no-target behavior if applicable).',
       });
     }
-    if (!Array.isArray(profile.resolution) || profile.resolution.length === 0) {
+    if (!Array.isArray(profile.stages) || profile.stages.length === 0) {
       diagnostics.push({
-        code: 'CNL_VALIDATOR_OPERATION_PROFILE_REQUIRED_FIELD_INVALID',
-        path: `${basePath}.resolution`,
+        code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+        path: `${basePath}.stages`,
         severity: 'error',
-        message: 'operation profile resolution must be a non-empty array of stage objects.',
-        suggestion: 'Declare one or more ordered resolution stages.',
+        message: 'action pipeline stages must be a non-empty array of stage objects.',
+        suggestion: 'Declare one or more ordered stages.',
       });
     } else {
-      for (const [stageIndex, stage] of profile.resolution.entries()) {
+      for (const [stageIndex, stage] of profile.stages.entries()) {
         if (!isRecord(stage)) {
           diagnostics.push({
-            code: 'CNL_VALIDATOR_OPERATION_PROFILE_REQUIRED_FIELD_INVALID',
-            path: `${basePath}.resolution.${stageIndex}`,
+            code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+            path: `${basePath}.stages.${stageIndex}`,
             severity: 'error',
-            message: 'Each resolution stage must be an object.',
+            message: 'Each stages stage must be an object.',
             suggestion: 'Replace non-object stages with explicit stage objects.',
           });
         }
       }
     }
 
-    if (!isRecord(profile.partialExecution)) {
+    if (typeof profile.atomicity !== 'string') {
       diagnostics.push({
-        code: 'CNL_VALIDATOR_OPERATION_PROFILE_REQUIRED_FIELD_INVALID',
-        path: `${basePath}.partialExecution`,
+        code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+        path: `${basePath}.atomicity`,
         severity: 'error',
-        message: 'operation profile partialExecution must be an object.',
-        suggestion: 'Set partialExecution.mode to "forbid" or "allow".',
+        message: 'action pipeline atomicity must be a string.',
+        suggestion: 'Set atomicity to "atomic" or "partial".',
       });
     } else {
-      validateUnknownKeys(
-        profile.partialExecution,
-        OPERATION_PROFILE_PARTIAL_EXECUTION_KEYS,
-        `${basePath}.partialExecution`,
-        diagnostics,
-        'operation profile partialExecution',
-      );
       validateEnumField(
-        profile.partialExecution,
-        'mode',
-        OPERATION_PROFILE_PARTIAL_EXECUTION_MODE_VALUES,
-        `${basePath}.partialExecution`,
+        profile,
+        'atomicity',
+        ACTION_PIPELINE_ATOMICITY_VALUES,
+        basePath,
         diagnostics,
-        'operation profile partialExecution',
+        'action pipeline atomicity',
       );
     }
 
-    if (profile.linkedSpecialActivityWindows !== undefined) {
-      if (!Array.isArray(profile.linkedSpecialActivityWindows)) {
+    if (profile.linkedWindows !== undefined) {
+      if (!Array.isArray(profile.linkedWindows)) {
         diagnostics.push({
-          code: 'CNL_VALIDATOR_OPERATION_PROFILE_LINKED_WINDOWS_INVALID',
-          path: `${basePath}.linkedSpecialActivityWindows`,
+          code: 'CNL_VALIDATOR_ACTION_PIPELINE_LINKED_WINDOWS_INVALID',
+          path: `${basePath}.linkedWindows`,
           severity: 'error',
-          message: 'linkedSpecialActivityWindows must be an array of non-empty strings when provided.',
-          suggestion: 'Set linkedSpecialActivityWindows to string ids or omit the field.',
+          message: 'linkedWindows must be an array of non-empty strings when provided.',
+          suggestion: 'Set linkedWindows to string ids or omit the field.',
         });
       } else {
-        for (const [windowIndex, windowId] of profile.linkedSpecialActivityWindows.entries()) {
+        for (const [windowIndex, windowId] of profile.linkedWindows.entries()) {
           if (typeof windowId !== 'string' || windowId.trim() === '') {
             diagnostics.push({
-              code: 'CNL_VALIDATOR_OPERATION_PROFILE_LINKED_WINDOWS_INVALID',
-              path: `${basePath}.linkedSpecialActivityWindows.${windowIndex}`,
+              code: 'CNL_VALIDATOR_ACTION_PIPELINE_LINKED_WINDOWS_INVALID',
+              path: `${basePath}.linkedWindows.${windowIndex}`,
               severity: 'error',
-              message: 'linkedSpecialActivityWindows entries must be non-empty strings.',
+              message: 'linkedWindows entries must be non-empty strings.',
               suggestion: 'Replace invalid entry with a non-empty window id.',
             });
           }
@@ -554,16 +556,16 @@ export function validateOperationProfiles(
     .filter(([, count]) => count > 1)
     .map(([actionId]) => actionId);
   for (const actionId of ambiguousActionBindings) {
-    const profilesForAction = doc.operationProfiles
+    const profilesForAction = doc.actionPipelines
       .filter((p) => normalizeIdentifier(String(p.actionId ?? '')) === actionId);
     const missingApplicability = profilesForAction.some((p) => p.applicability === undefined || p.applicability === null);
     if (missingApplicability) {
       diagnostics.push({
-        code: 'CNL_VALIDATOR_OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS',
-        path: 'doc.operationProfiles',
+        code: 'CNL_VALIDATOR_ACTION_PIPELINE_ACTION_MAPPING_AMBIGUOUS',
+        path: 'doc.actionPipelines',
         severity: 'error',
-        message: `Multiple operation profiles target action "${actionId}" but not all have an applicability condition.`,
-        suggestion: 'When multiple profiles share an actionId, each must have an applicability condition for dispatch.',
+        message: `Multiple action pipelines target action "${actionId}" but not all have an applicability condition.`,
+        suggestion: 'When multiple pipelines share an actionId, each must have an applicability condition for dispatch.',
       });
     }
   }

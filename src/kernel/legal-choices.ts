@@ -256,15 +256,15 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
   const profile = resolveOperationProfile(def, action, evalCtx);
 
   if (profile !== undefined) {
-    if (profile.legality.when !== undefined) {
-      if (!evalCondition(profile.legality.when, evalCtx)) {
+    if (profile.legality !== null) {
+      if (!evalCondition(profile.legality, evalCtx)) {
         return COMPLETE;
       }
     }
 
     const resolutionEffects: readonly EffectAST[] =
-      profile.resolution.length > 0
-        ? profile.resolution.flatMap((stage) => stage.effects)
+      profile.stages.length > 0
+        ? profile.stages.flatMap((stage) => stage.effects)
         : action.effects;
 
     const wCtx: WalkContext = { evalCtx, moveParams: partialMove.params };

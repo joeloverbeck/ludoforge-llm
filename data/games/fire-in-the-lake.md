@@ -1502,7 +1502,7 @@ zones:
   - { id: available-NVA, owner: none, visibility: public, ordering: set }
   - { id: available-VC, owner: none, visibility: public, ordering: set }
 
-operationProfiles:
+actionPipelines:
   # ── train-us-profile ──────────────────────────────────────────────────────────
   # US Train operation (Rule 3.2.1)
   # Spaces: Provinces/Cities with US pieces; LimOp: max 1 space
@@ -1512,12 +1512,11 @@ operationProfiles:
   - id: train-us-profile
     actionId: train
     applicability: { op: '==', left: { ref: activePlayer }, right: '0' }
-    legality:
-      when: true
-    cost:
-      spend: []
+    legality: true
+    costValidation: null
+    costEffects: []
     targeting: {}
-    resolution:
+    stages:
       - stage: select-spaces
         effects:
           - if:
@@ -1681,8 +1680,7 @@ operationProfiles:
                           options: { query: intsInRange, min: 1, max: 3 }
                       - addVar: { scope: global, var: patronage, delta: { op: '*', left: { ref: binding, name: $transferAmount }, right: -1 } }
                       - addVar: { scope: global, var: arvnResources, delta: { ref: binding, name: $transferAmount } }
-    partialExecution:
-      mode: forbid
+    atomicity: atomic
   # ── train-arvn-profile ─────────────────────────────────────────────────────────
   # ARVN Train operation (Rule 3.2.1)
   # Spaces: Provinces/Cities without NVA Control; LimOp: max 1 space
@@ -1692,12 +1690,11 @@ operationProfiles:
   - id: train-arvn-profile
     actionId: train
     applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
-    legality:
-      when: true
-    cost:
-      spend: []
+    legality: true
+    costValidation: null
+    costEffects: []
     targeting: {}
-    resolution:
+    stages:
       - stage: select-spaces
         effects:
           - if:
@@ -1868,8 +1865,7 @@ operationProfiles:
                           faction: 'ARVN'
                           targetSpace: $subSpace
                           maxPieces: 1
-    partialExecution:
-      mode: forbid
+    atomicity: atomic
   # ── patrol-us-profile ────────────────────────────────────────────────────────
   # US Patrol operation (Rule 3.2.2)
   # Spaces: LoCs only; LimOp: max 1 LoC
@@ -1879,12 +1875,11 @@ operationProfiles:
   - id: patrol-us-profile
     actionId: patrol
     applicability: { op: '==', left: { ref: activePlayer }, right: '0' }
-    legality:
-      when: true
-    cost:
-      spend: []
+    legality: true
+    costValidation: null
+    costEffects: []
     targeting: {}
-    resolution:
+    stages:
       - stage: select-locs
         effects:
           - if:
@@ -1983,26 +1978,23 @@ operationProfiles:
                                       space: $assaultLoC
                                       damageExpr: { ref: binding, name: $patrolDmg }
                                       actorFaction: 'US'
-    partialExecution:
-      mode: forbid
+    atomicity: atomic
   # ── COIN stub profiles (sweep, assault) ──
   - id: sweep-profile
     actionId: sweep
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: coinResources
         right: 1
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: coinResources
         right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: coinResources
@@ -2010,32 +2002,29 @@ operationProfiles:
     targeting:
       select: allEligible
       terrainFilter: [lowland, urban]
-    resolution:
+    stages:
       - stage: sweep-resolve
         effects:
           - addVar:
               scope: global
               var: sweepCount
               delta: 1
-    partialExecution:
-      mode: forbid
+    atomicity: atomic
   - id: assault-profile
     actionId: assault
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: coinResources
         right: 3
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: coinResources
         right: 3
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: coinResources
@@ -2044,33 +2033,30 @@ operationProfiles:
       select: exactlyN
       count: 1
       tieBreak: basesLast
-    resolution:
+    stages:
       - stage: assault-resolve
         effects:
           - addVar:
               scope: global
               var: assaultCount
               delta: 1
-    partialExecution:
-      mode: forbid
+    atomicity: atomic
   # ── Insurgent stub profiles (rally, march, attack, terror) ──
   - id: rally-profile
     actionId: rally
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: insurgentResources
         right: 1
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: insurgentResources
         right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: insurgentResources
@@ -2079,32 +2065,29 @@ operationProfiles:
       select: upToN
       max: 2
       placementPolicy: placeUndergroundFirst
-    resolution:
+    stages:
       - stage: rally-resolve
         effects:
           - addVar:
               scope: global
               var: rallyCount
               delta: 1
-    partialExecution:
-      mode: forbid
+    atomicity: atomic
   - id: march-profile
     actionId: march
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: insurgentResources
         right: 1
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: insurgentResources
         right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: insurgentResources
@@ -2113,32 +2096,29 @@ operationProfiles:
       select: allEligible
       movementOrder: deterministicSpaceOrder
       activationPolicy: activateWhenEnteringCOINControl
-    resolution:
+    stages:
       - stage: march-resolve
         effects:
           - addVar:
               scope: global
               var: marchCount
               delta: 1
-    partialExecution:
-      mode: forbid
+    atomicity: atomic
   - id: attack-profile
     actionId: attack
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: insurgentResources
         right: 0
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: insurgentResources
         right: 2
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: insurgentResources
@@ -2149,32 +2129,29 @@ operationProfiles:
       removalPolicy:
         tieBreak: basesLast
         tunnelConstraint: removeUntunneledBeforeTunneled
-    resolution:
+    stages:
       - stage: attack-resolve
         effects:
           - addVar:
               scope: global
               var: attackCount
               delta: 1
-    partialExecution:
-      mode: forbid
+    atomicity: atomic
   - id: terror-profile
     actionId: terror
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: insurgentResources
         right: 1
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: insurgentResources
         right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: insurgentResources
@@ -2184,20 +2161,18 @@ operationProfiles:
       max: 2
       order: lexicographicSpaceId
       supportShiftPolicy: setOppositionTowardActive
-    resolution:
+    stages:
       - stage: terror-resolve
         effects:
           - addVar:
               scope: global
               var: terrorCount
               delta: 1
-    partialExecution:
-      mode: forbid
+    atomicity: atomic
   # ── US/ARVN special-activity stub profiles ──
   - id: advise-profile
     actionId: advise
     legality:
-      when:
         op: and
         args:
           - op: ">="
@@ -2210,8 +2185,7 @@ operationProfiles:
               ref: gvar
               var: arvnResources
             right: 1
-    cost:
-      validate:
+    costValidation:
         op: and
         args:
           - op: ">="
@@ -2224,7 +2198,7 @@ operationProfiles:
               ref: gvar
               var: arvnResources
             right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: arvnResources
@@ -2232,33 +2206,30 @@ operationProfiles:
     targeting:
       select: upToN
       max: 2
-    resolution:
+    stages:
       - stage: advise-resolve
         effects:
           - addVar:
               scope: global
               var: adviseCount
               delta: 1
-    partialExecution:
-      mode: forbid
-    linkedSpecialActivityWindows: [us-special-window]
+    atomicity: atomic
+    linkedWindows: [us-special-window]
   - id: air-lift-profile
     actionId: airLift
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: usResources
         right: 1
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: usResources
         right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: usResources
@@ -2266,27 +2237,24 @@ operationProfiles:
     targeting:
       select: allEligible
       order: lexicographicSpaceId
-    resolution:
+    stages:
       - stage: air-lift-resolve
         effects:
           - addVar:
               scope: global
               var: airLiftCount
               delta: 1
-    partialExecution:
-      mode: forbid
-    linkedSpecialActivityWindows: [us-special-window]
+    atomicity: atomic
+    linkedWindows: [us-special-window]
   - id: air-strike-profile
     actionId: airStrike
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: usResources
         right: 2
-    cost:
-      validate:
+    costValidation:
         op: and
         args:
           - op: ">="
@@ -2299,7 +2267,7 @@ operationProfiles:
               ref: gvar
               var: arvnResources
             right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: usResources
@@ -2308,33 +2276,30 @@ operationProfiles:
       select: exactlyN
       count: 1
       tieBreak: basesLast
-    resolution:
+    stages:
       - stage: air-strike-resolve
         effects:
           - addVar:
               scope: global
               var: airStrikeCount
               delta: 1
-    partialExecution:
-      mode: forbid
-    linkedSpecialActivityWindows: [us-special-window]
+    atomicity: atomic
+    linkedWindows: [us-special-window]
   - id: govern-profile
     actionId: govern
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: arvnResources
         right: 1
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: arvnResources
         right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: arvnResources
@@ -2342,33 +2307,30 @@ operationProfiles:
     targeting:
       select: upToN
       max: 1
-    resolution:
+    stages:
       - stage: govern-resolve
         effects:
           - addVar:
               scope: global
               var: governCount
               delta: 1
-    partialExecution:
-      mode: forbid
-    linkedSpecialActivityWindows: [arvn-special-window]
+    atomicity: atomic
+    linkedWindows: [arvn-special-window]
   - id: transport-profile
     actionId: transport
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: arvnResources
         right: 1
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: arvnResources
         right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: arvnResources
@@ -2376,20 +2338,18 @@ operationProfiles:
     targeting:
       select: allEligible
       movementOrder: deterministicSpaceOrder
-    resolution:
+    stages:
       - stage: transport-resolve
         effects:
           - addVar:
               scope: global
               var: transportCount
               delta: 1
-    partialExecution:
-      mode: forbid
-    linkedSpecialActivityWindows: [arvn-special-window]
+    atomicity: atomic
+    linkedWindows: [arvn-special-window]
   - id: raid-profile
     actionId: raid
     legality:
-      when:
         op: and
         args:
           - op: ">="
@@ -2402,8 +2362,7 @@ operationProfiles:
               ref: gvar
               var: usResources
             right: 1
-    cost:
-      validate:
+    costValidation:
         op: and
         args:
           - op: ">="
@@ -2416,7 +2375,7 @@ operationProfiles:
               ref: gvar
               var: usResources
             right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: arvnResources
@@ -2425,34 +2384,31 @@ operationProfiles:
       select: upToN
       max: 2
       tieBreak: lexicographicSpaceId
-    resolution:
+    stages:
       - stage: raid-resolve
         effects:
           - addVar:
               scope: global
               var: raidCount
               delta: 1
-    partialExecution:
-      mode: forbid
-    linkedSpecialActivityWindows: [arvn-special-window]
+    atomicity: atomic
+    linkedWindows: [arvn-special-window]
   # ── NVA/VC special-activity stub profiles ──
   - id: infiltrate-profile
     actionId: infiltrate
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: nvaResources
         right: 2
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: nvaResources
         right: 2
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: nvaResources
@@ -2461,27 +2417,24 @@ operationProfiles:
       select: upToN
       max: 2
       placementPolicy: baseThenGuerrilla
-    resolution:
+    stages:
       - stage: infiltrate-resolve
         effects:
           - addVar:
               scope: global
               var: infiltrateCount
               delta: 1
-    partialExecution:
-      mode: forbid
-    linkedSpecialActivityWindows: [nva-special-window]
+    atomicity: atomic
+    linkedWindows: [nva-special-window]
   - id: bombard-profile
     actionId: bombard
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: nvaResources
         right: 1
-    cost:
-      validate:
+    costValidation:
         op: and
         args:
           - op: ">="
@@ -2494,7 +2447,7 @@ operationProfiles:
               ref: gvar
               var: vcResources
             right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: nvaResources
@@ -2502,33 +2455,30 @@ operationProfiles:
     targeting:
       select: allEligible
       order: lexicographicSpaceId
-    resolution:
+    stages:
       - stage: bombard-resolve
         effects:
           - addVar:
               scope: global
               var: bombardCount
               delta: 1
-    partialExecution:
-      mode: forbid
-    linkedSpecialActivityWindows: [nva-special-window]
+    atomicity: atomic
+    linkedWindows: [nva-special-window]
   - id: nva-ambush-profile
     actionId: ambushNva
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: nvaResources
         right: 1
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: nvaResources
         right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: nvaResources
@@ -2538,33 +2488,30 @@ operationProfiles:
       count: 1
       tieBreak: basesLast
       removalPolicy: removeActiveGuerrillasBeforeBases
-    resolution:
+    stages:
       - stage: ambush-nva-resolve
         effects:
           - addVar:
               scope: global
               var: nvaAmbushCount
               delta: 1
-    partialExecution:
-      mode: forbid
-    linkedSpecialActivityWindows: [nva-special-window]
+    atomicity: atomic
+    linkedWindows: [nva-special-window]
   - id: tax-profile
     actionId: tax
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: vcResources
         right: 1
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: vcResources
         right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: vcResources
@@ -2573,20 +2520,18 @@ operationProfiles:
       select: upToN
       max: 2
       order: lexicographicSpaceId
-    resolution:
+    stages:
       - stage: tax-resolve
         effects:
           - addVar:
               scope: global
               var: taxCount
               delta: 1
-    partialExecution:
-      mode: forbid
-    linkedSpecialActivityWindows: [vc-special-window]
+    atomicity: atomic
+    linkedWindows: [vc-special-window]
   - id: subvert-profile
     actionId: subvert
     legality:
-      when:
         op: and
         args:
           - op: ">="
@@ -2599,8 +2544,7 @@ operationProfiles:
               ref: gvar
               var: nvaResources
             right: 1
-    cost:
-      validate:
+    costValidation:
         op: and
         args:
           - op: ">="
@@ -2613,7 +2557,7 @@ operationProfiles:
               ref: gvar
               var: nvaResources
             right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: vcResources
@@ -2622,33 +2566,30 @@ operationProfiles:
       select: upToN
       max: 1
       supportShiftPolicy: setTowardOpposition
-    resolution:
+    stages:
       - stage: subvert-resolve
         effects:
           - addVar:
               scope: global
               var: subvertCount
               delta: 1
-    partialExecution:
-      mode: forbid
-    linkedSpecialActivityWindows: [vc-special-window]
+    atomicity: atomic
+    linkedWindows: [vc-special-window]
   - id: vc-ambush-profile
     actionId: ambushVc
     legality:
-      when:
         op: ">="
         left:
           ref: gvar
           var: vcResources
         right: 1
-    cost:
-      validate:
+    costValidation:
         op: ">="
         left:
           ref: gvar
           var: vcResources
         right: 1
-      spend:
+    costEffects:
         - addVar:
             scope: global
             var: vcResources
@@ -2658,23 +2599,20 @@ operationProfiles:
       count: 1
       tieBreak: lexicographicSpaceId
       removalPolicy: removeUndergroundGuerrillaFirst
-    resolution:
+    stages:
       - stage: ambush-vc-resolve
         effects:
           - addVar:
               scope: global
               var: vcAmbushCount
               delta: 1
-    partialExecution:
-      mode: forbid
-    linkedSpecialActivityWindows: [vc-special-window]
+    atomicity: atomic
+    linkedWindows: [vc-special-window]
   # ── Joint operation stub profiles ──
   - id: us-op-profile
     actionId: usOp
-    legality:
-      when: null
-    cost:
-      validate:
+    legality: null
+    costValidation:
         op: ">="
         left:
           op: "-"
@@ -2687,7 +2625,7 @@ operationProfiles:
         right:
           ref: gvar
           var: totalEcon
-      spend:
+    costEffects:
         - addVar:
             scope: pvar
             player:
@@ -2697,28 +2635,25 @@ operationProfiles:
     targeting:
       select: allEligible
       order: lexicographicSpaceId
-    resolution:
+    stages:
       - stage: us-resolve
         effects:
           - addVar:
               scope: global
               var: usOpCount
               delta: 1
-    partialExecution:
-      mode: forbid
+    atomicity: atomic
   - id: arvn-op-profile
     actionId: arvnOp
-    legality:
-      when: null
-    cost:
-      validate:
+    legality: null
+    costValidation:
         op: ">="
         left:
           ref: pvar
           player: active
           var: resources
         right: 5
-      spend:
+    costEffects:
         - addVar:
             scope: pvar
             player: active
@@ -2727,15 +2662,14 @@ operationProfiles:
     targeting:
       select: allEligible
       order: lexicographicSpaceId
-    resolution:
+    stages:
       - stage: arvn-resolve
         effects:
           - addVar:
               scope: global
               var: arvnOpCount
               delta: 1
-    partialExecution:
-      mode: forbid
+    atomicity: atomic
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Global / Per-Player Variables

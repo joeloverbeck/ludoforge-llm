@@ -20,7 +20,7 @@ import {
   VictoryTerminalMetadataSchema,
   CoupPlanSchema,
   EventCardSchema,
-  OperationProfileSchema,
+  ActionPipelineSchema,
   TurnFlowSchema
 } from './schemas-extensions.js';
 import { SpaceMarkerLatticeSchema, StackingConstraintSchema } from './schemas-gamespec.js';
@@ -169,7 +169,7 @@ export const GameDefSchema = z
     setup: z.array(EffectASTSchema),
     turnStructure: TurnStructureSchema,
     turnFlow: TurnFlowSchema.optional(),
-    operationProfiles: z.array(OperationProfileSchema).optional(),
+    actionPipelines: z.array(ActionPipelineSchema).optional(),
     coupPlan: CoupPlanSchema.optional(),
     victory: VictorySchema.optional(),
     actions: z.array(ActionDefSchema),

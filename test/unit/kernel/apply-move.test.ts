@@ -12,7 +12,7 @@ import {
   type GameDef,
   type GameState,
   type Move,
-  type OperationProfileDef,
+  type ActionPipelineDef,
   type VariableDef,
 } from '../../../src/kernel/index.js';
 
@@ -20,7 +20,7 @@ const resourcesVar: VariableDef = { name: 'resources', type: 'int', init: 10, mi
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
-  operationProfiles?: readonly OperationProfileDef[];
+  actionPipelines?: readonly ActionPipelineDef[];
   globalVars?: readonly VariableDef[];
 }): GameDef =>
   ({
@@ -38,7 +38,7 @@ const makeBaseDef = (overrides?: {
       activePlayerOrder: 'roundRobin',
     },
     actions: overrides?.actions ?? [],
-    operationProfiles: overrides?.operationProfiles,
+    actionPipelines: overrides?.actionPipelines,
     triggers: [],
     endConditions: [],
   }) as unknown as GameDef;
@@ -88,26 +88,26 @@ const makeOperationAction = (): ActionDef => ({
   limits: [],
 });
 
-const makeOperationProfile = (resolutionEffects: readonly EffectAST[]): OperationProfileDef => ({
+const makeOperationProfile = (resolutionEffects: readonly EffectAST[]): ActionPipelineDef => ({
   id: 'trainProfile',
   actionId: asActionId('trainOp'),
-  legality: {},
-  cost: {},
+  legality: null,
+  costValidation: null, costEffects: [],
   targeting: {},
-  resolution: [
+  stages: [
     {
       stage: 'resolve',
       effects: resolutionEffects,
     },
   ],
-  partialExecution: { mode: 'allow' },
+  atomicity: 'partial',
 });
 
 describe('applyMove() __freeOperation binding (KERDECSEQMOD-004)', () => {
   it('1. freeOperation: true makes __freeOperation binding resolve to true in effect context', () => {
     const action = makeOperationAction();
     const profile = makeOperationProfile([conditionalCostEffect]);
-    const def = makeBaseDef({ actions: [action], operationProfiles: [profile] });
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const state = makeBaseState();
 
     const move: Move = {
@@ -126,7 +126,7 @@ describe('applyMove() __freeOperation binding (KERDECSEQMOD-004)', () => {
   it('2. freeOperation: false (or absent) makes __freeOperation binding resolve to false', () => {
     const action = makeOperationAction();
     const profile = makeOperationProfile([conditionalCostEffect]);
-    const def = makeBaseDef({ actions: [action], operationProfiles: [profile] });
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const state = makeBaseState();
 
     // Explicit false
@@ -147,9 +147,9 @@ describe('applyMove() __freeOperation binding (KERDECSEQMOD-004)', () => {
     assert.equal(resultAbsent.state.globalVars['resources'], 7);
   });
 
-  it('3. resolution effects can read __freeOperation via { ref: "binding", name: "__freeOperation" }', () => {
+  it('3. stages effects can read __freeOperation via { ref: "binding", name: "__freeOperation" }', () => {
     // Use a setVar that stores 1 when __freeOperation is true, 0 when false,
-    // proving the binding is readable in resolution effects.
+    // proving the binding is readable in stages effects.
     const flagVar: VariableDef = { name: 'wasFree', type: 'int', init: 0, min: 0, max: 1 };
     const setFlagEffect: EffectAST = {
       if: {
@@ -162,7 +162,7 @@ describe('applyMove() __freeOperation binding (KERDECSEQMOD-004)', () => {
     const profile = makeOperationProfile([setFlagEffect]);
     const def = makeBaseDef({
       actions: [action],
-      operationProfiles: [profile],
+      actionPipelines: [profile],
       globalVars: [resourcesVar, flagVar],
     });
     const state = makeBaseState({ globalVars: { resources: 10, wasFree: 0 } });
@@ -186,7 +186,7 @@ describe('applyMove() __freeOperation binding (KERDECSEQMOD-004)', () => {
   it('4. per-space cost deduction is conditionally skipped when __freeOperation is true', () => {
     const action = makeOperationAction();
     const profile = makeOperationProfile([conditionalCostEffect]);
-    const def = makeBaseDef({ actions: [action], operationProfiles: [profile] });
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const state = makeBaseState({ globalVars: { resources: 10 } });
 
     // Non-free: resources go from 10 → 7 (deducted 3)
@@ -221,7 +221,7 @@ describe('applyMove() __actionClass binding (FITLOPEFULEFF-001)', () => {
     const profile = makeOperationProfile([actionClassCheckEffect]);
     const def = makeBaseDef({
       actions: [action],
-      operationProfiles: [profile],
+      actionPipelines: [profile],
       globalVars: [resourcesVar, isLimitedVar],
     });
     const state = makeBaseState({ globalVars: { resources: 10, isLimited: 0 } });
@@ -241,7 +241,7 @@ describe('applyMove() __actionClass binding (FITLOPEFULEFF-001)', () => {
     const profile = makeOperationProfile([actionClassCheckEffect]);
     const def = makeBaseDef({
       actions: [action],
-      operationProfiles: [profile],
+      actionPipelines: [profile],
       globalVars: [resourcesVar, isLimitedVar],
     });
     const state = makeBaseState({ globalVars: { resources: 10, isLimited: 0 } });
@@ -268,7 +268,7 @@ describe('applyMove() __actionClass binding (FITLOPEFULEFF-001)', () => {
     const profile = makeOperationProfile([opSACheckEffect]);
     const def = makeBaseDef({
       actions: [action],
-      operationProfiles: [profile],
+      actionPipelines: [profile],
       globalVars: [resourcesVar, isLimitedVar],
     });
     const state = makeBaseState({ globalVars: { resources: 10, isLimited: 0 } });
@@ -286,7 +286,7 @@ describe('applyMove() __actionClass binding (FITLOPEFULEFF-001)', () => {
   it('4. __freeOperation binding is unchanged by actionClass addition', () => {
     const action = makeOperationAction();
     const profile = makeOperationProfile([conditionalCostEffect]);
-    const def = makeBaseDef({ actions: [action], operationProfiles: [profile] });
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const state = makeBaseState();
 
     // Free + limitedOperation: resources unchanged (freeOperation still works)

@@ -17,7 +17,7 @@ import {
   lowerVarDefs,
 } from './compile-lowering.js';
 import { lowerTurnFlow } from './compile-turn-flow.js';
-import { lowerOperationProfiles } from './compile-operations.js';
+import { lowerActionPipelines } from './compile-operations.js';
 import { lowerCoupPlan, lowerVictory } from './compile-victory.js';
 import { deriveSectionsFromDataAssets } from './compile-data-assets.js';
 import { expandEffectSections, expandZoneMacros } from './compile-macro-expansion.js';
@@ -44,7 +44,7 @@ export interface CompileSectionResults {
   readonly setup: GameDef['setup'] | null;
   readonly turnStructure: GameDef['turnStructure'] | null;
   readonly turnFlow: Exclude<GameDef['turnFlow'], undefined> | null;
-  readonly operationProfiles: Exclude<GameDef['operationProfiles'], undefined> | null;
+  readonly actionPipelines: Exclude<GameDef['actionPipelines'], undefined> | null;
   readonly coupPlan: Exclude<GameDef['coupPlan'], undefined> | null;
   readonly victory: Exclude<GameDef['victory'], undefined> | null;
   readonly actions: GameDef['actions'] | null;
@@ -110,7 +110,7 @@ export function expandMacros(
       actions: doc.actions,
       triggers: doc.triggers,
       turnStructure: doc.turnStructure,
-      operationProfiles: doc.operationProfiles,
+      actionPipelines: doc.actionPipelines,
     },
     limits.maxExpandedEffects,
     diagnostics,
@@ -123,7 +123,7 @@ export function expandMacros(
     actions: effectsExpansion.actions,
     triggers: effectsExpansion.triggers,
     turnStructure: effectsExpansion.turnStructure,
-    operationProfiles: effectsExpansion.operationProfiles,
+    actionPipelines: effectsExpansion.actionPipelines,
   };
 
   const finalizedDiagnostics = finalizeDiagnostics(diagnostics, options?.sourceMap, limits.maxDiagnosticCount);
@@ -177,7 +177,7 @@ function compileExpandedDoc(
     setup: null,
     turnStructure: null,
     turnFlow: null,
-    operationProfiles: null,
+    actionPipelines: null,
     coupPlan: null,
     victory: null,
     actions: null,
@@ -259,12 +259,12 @@ function compileExpandedDoc(
     sections.turnFlow = turnFlow.failed || turnFlow.value === undefined ? null : turnFlow.value;
   }
 
-  if (doc.operationProfiles !== null) {
-    const operationProfiles = compileSection(diagnostics, () =>
-      lowerOperationProfiles(doc.operationProfiles, doc.actions, ownershipByBase, diagnostics),
+  if (doc.actionPipelines !== null) {
+    const actionPipelines = compileSection(diagnostics, () =>
+      lowerActionPipelines(doc.actionPipelines, doc.actions, ownershipByBase, diagnostics),
     );
-    sections.operationProfiles =
-      operationProfiles.failed || operationProfiles.value === undefined ? null : operationProfiles.value;
+    sections.actionPipelines =
+      actionPipelines.failed || actionPipelines.value === undefined ? null : actionPipelines.value;
   }
 
   if (doc.coupPlan !== null) {
@@ -319,7 +319,7 @@ function compileExpandedDoc(
     setup: setup.value,
     turnStructure,
     ...(sections.turnFlow === null ? {} : { turnFlow: sections.turnFlow }),
-    ...(sections.operationProfiles === null ? {} : { operationProfiles: sections.operationProfiles }),
+    ...(sections.actionPipelines === null ? {} : { actionPipelines: sections.actionPipelines }),
     ...(sections.coupPlan === null ? {} : { coupPlan: sections.coupPlan }),
     ...(sections.victory === null ? {} : { victory: sections.victory }),
     actions,

@@ -10,12 +10,12 @@ import {
   type ActionDef,
   type GameDef,
   type GameState,
-  type OperationProfileDef,
+  type ActionPipelineDef,
 } from '../../../src/kernel/index.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
-  operationProfiles?: readonly OperationProfileDef[];
+  actionPipelines?: readonly ActionPipelineDef[];
   globalVars?: GameDef['globalVars'];
 }): GameDef =>
   ({
@@ -33,7 +33,7 @@ const makeBaseDef = (overrides?: {
       activePlayerOrder: 'roundRobin',
     },
     actions: overrides?.actions ?? [],
-    operationProfiles: overrides?.operationProfiles,
+    actionPipelines: overrides?.actionPipelines,
     triggers: [],
     endConditions: [],
   }) as unknown as GameDef;
@@ -69,13 +69,13 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
       limits: [],
     };
 
-    const profile: OperationProfileDef = {
+    const profile: ActionPipelineDef = {
       id: 'trainProfile',
       actionId: asActionId('trainOp'),
-      legality: {},
-      cost: {},
+      legality: null,
+      costValidation: null, costEffects: [],
       targeting: {},
-      resolution: [
+      stages: [
         {
           stage: 'selectSpaces',
           effects: [
@@ -90,10 +90,10 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
           ],
         },
       ],
-      partialExecution: { mode: 'allow' },
+      atomicity: 'partial',
     };
 
-    const def = makeBaseDef({ actions: [action], operationProfiles: [profile] });
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const state = makeBaseState();
 
     const moves = legalMoves(def, state);
@@ -125,7 +125,7 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
     assert.deepStrictEqual(targets, ['a', 'b', 'c']);
   });
 
-  it('3. template move respects legality predicate (failing legality.when produces no template)', () => {
+  it('3. template move respects legality predicate (failing legality produces no template)', () => {
     const action: ActionDef = {
       id: asActionId('blockedOp'),
       actor: 'active',
@@ -137,25 +137,23 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
       limits: [],
     };
 
-    const profile: OperationProfileDef = {
+    const profile: ActionPipelineDef = {
       id: 'blockedProfile',
       actionId: asActionId('blockedOp'),
       legality: {
-        when: {
           op: '>=',
           left: { ref: 'gvar', var: 'resources' },
           right: 5,
         },
-      },
-      cost: {},
+      costValidation: null, costEffects: [],
       targeting: {},
-      resolution: [{ effects: [] }],
-      partialExecution: { mode: 'allow' },
+      stages: [{ effects: [] }],
+      atomicity: 'partial',
     };
 
     const def = makeBaseDef({
       actions: [action],
-      operationProfiles: [profile],
+      actionPipelines: [profile],
       globalVars: [{ name: 'resources', type: 'int', init: 0, min: 0, max: 100 }],
     });
 
@@ -165,7 +163,7 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
     assert.equal(moves.length, 0);
   });
 
-  it('4. template move respects cost validation (failing cost.validate + forbid produces no template)', () => {
+  it('4. template move respects cost validation (failing costValidation + forbid produces no template)', () => {
     const action: ActionDef = {
       id: asActionId('costlyOp'),
       actor: 'active',
@@ -177,25 +175,23 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
       limits: [],
     };
 
-    const profile: OperationProfileDef = {
+    const profile: ActionPipelineDef = {
       id: 'costlyProfile',
       actionId: asActionId('costlyOp'),
-      legality: {},
-      cost: {
-        validate: {
+      legality: null,
+      costValidation: {
           op: '>=',
-          left: { ref: 'gvar', var: 'resources' },
-          right: 3,
+          left: { ref: 'gvar', var: 'resources' }, right: 3,
         },
-      },
+      costEffects: [],
       targeting: {},
-      resolution: [{ effects: [] }],
-      partialExecution: { mode: 'forbid' },
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
     };
 
     const def = makeBaseDef({
       actions: [action],
-      operationProfiles: [profile],
+      actionPipelines: [profile],
       globalVars: [{ name: 'resources', type: 'int', init: 0, min: 0, max: 100 }],
     });
 
@@ -222,25 +218,23 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
       limits: [],
     };
 
-    const profile: OperationProfileDef = {
+    const profile: ActionPipelineDef = {
       id: 'freeProfile',
       actionId: asActionId('freeOp'),
-      legality: {},
-      cost: {
-        validate: {
+      legality: null,
+      costValidation: {
           op: '>=',
-          left: { ref: 'gvar', var: 'resources' },
-          right: 3,
+          left: { ref: 'gvar', var: 'resources' }, right: 3,
         },
-      },
+      costEffects: [],
       targeting: {},
-      resolution: [{ effects: [] }],
-      partialExecution: { mode: 'allow' },
+      stages: [{ effects: [] }],
+      atomicity: 'partial',
     };
 
     const def = makeBaseDef({
       actions: [action],
-      operationProfiles: [profile],
+      actionPipelines: [profile],
       globalVars: [{ name: 'resources', type: 'int', init: 0, min: 0, max: 100 }],
     });
 
@@ -263,17 +257,17 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
       limits: [{ scope: 'turn', max: 1 }],
     };
 
-    const profile: OperationProfileDef = {
+    const profile: ActionPipelineDef = {
       id: 'limitedProfile',
       actionId: asActionId('limitedOp'),
-      legality: {},
-      cost: {},
+      legality: null,
+      costValidation: null, costEffects: [],
       targeting: {},
-      resolution: [{ effects: [] }],
-      partialExecution: { mode: 'allow' },
+      stages: [{ effects: [] }],
+      atomicity: 'partial',
     };
 
-    const def = makeBaseDef({ actions: [action], operationProfiles: [profile] });
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
 
     // Within limits (0 uses) → template emitted
     const stateUnused = makeBaseState();
@@ -311,19 +305,19 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
       limits: [],
     };
 
-    const profile: OperationProfileDef = {
+    const profile: ActionPipelineDef = {
       id: 'testProfile',
       actionId: asActionId('profiledOp'),
-      legality: {},
-      cost: {},
+      legality: null,
+      costValidation: null, costEffects: [],
       targeting: {},
-      resolution: [{ effects: [] }],
-      partialExecution: { mode: 'allow' },
+      stages: [{ effects: [] }],
+      atomicity: 'partial',
     };
 
     const def = makeBaseDef({
       actions: [simpleAction, profiledAction],
-      operationProfiles: [profile],
+      actionPipelines: [profile],
     });
     const state = makeBaseState();
 
@@ -353,17 +347,17 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
       limits: [],
     };
 
-    const profile: OperationProfileDef = {
+    const profile: ActionPipelineDef = {
       id: 'validProfile',
       actionId: asActionId('validOp'),
-      legality: {},
-      cost: {},
+      legality: null,
+      costValidation: null, costEffects: [],
       targeting: {},
-      resolution: [{ effects: [] }],
-      partialExecution: { mode: 'allow' },
+      stages: [{ effects: [] }],
+      atomicity: 'partial',
     };
 
-    const def = makeBaseDef({ actions: [action], operationProfiles: [profile] });
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const state = makeBaseState();
 
     const moves = legalMoves(def, state);

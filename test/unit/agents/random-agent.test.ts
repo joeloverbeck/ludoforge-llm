@@ -12,7 +12,7 @@ import {
   type GameDef,
   type GameState,
   type Move,
-  type OperationProfileDef,
+  type ActionPipelineDef,
 } from '../../../src/kernel/index.js';
 
 const phaseId = asPhaseId('main');
@@ -80,13 +80,13 @@ const createActionWithChooseOne = (id: string): ActionDef => ({
   limits: [],
 });
 
-const createProfileForAction = (actionId: string): OperationProfileDef => ({
+const createProfileForAction = (actionId: string): ActionPipelineDef => ({
   id: `profile-${actionId}`,
   actionId: asActionId(actionId),
-  legality: {},
-  cost: {},
+  legality: null,
+  costValidation: null, costEffects: [],
   targeting: {},
-  resolution: [
+  stages: [
     {
       stage: 'resolve',
       effects: [
@@ -99,16 +99,16 @@ const createProfileForAction = (actionId: string): OperationProfileDef => ({
       ],
     },
   ],
-  partialExecution: { mode: 'forbid' },
+  atomicity: 'atomic',
 });
 
-const createEmptyOptionsProfile = (actionId: string): OperationProfileDef => ({
+const createEmptyOptionsProfile = (actionId: string): ActionPipelineDef => ({
   id: `profile-${actionId}`,
   actionId: asActionId(actionId),
-  legality: {},
-  cost: {},
+  legality: null,
+  costValidation: null, costEffects: [],
   targeting: {},
-  resolution: [
+  stages: [
     {
       stage: 'resolve',
       effects: [
@@ -121,16 +121,16 @@ const createEmptyOptionsProfile = (actionId: string): OperationProfileDef => ({
       ],
     },
   ],
-  partialExecution: { mode: 'forbid' },
+  atomicity: 'atomic',
 });
 
 const createDefWithProfile = (
   actions: readonly ActionDef[],
-  profiles: readonly OperationProfileDef[],
+  profiles: readonly ActionPipelineDef[],
 ): GameDef => ({
   ...defStub,
   actions,
-  operationProfiles: profiles,
+  actionPipelines: profiles,
 });
 
 describe('RandomAgent', () => {

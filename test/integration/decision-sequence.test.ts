@@ -13,7 +13,7 @@ import {
   type GameDef,
   type GameState,
   type Move,
-  type OperationProfileDef,
+  type ActionPipelineDef,
 } from '../../src/kernel/index.js';
 import { RandomAgent } from '../../src/agents/random-agent.js';
 import { GreedyAgent } from '../../src/agents/greedy-agent.js';
@@ -29,16 +29,14 @@ const ACTION_SIMPLE = asActionId('simpleScore');
 const ZONE_RESERVE = asZoneId('reserve:none');
 const ZONE_FIELD = asZoneId('fieldA:none');
 
-const DEPLOY_PROFILE: OperationProfileDef = {
+const DEPLOY_PROFILE: ActionPipelineDef = {
   id: 'deployProfile',
   actionId: ACTION_DEPLOY,
-  legality: {},
-  cost: {
-    validate: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 3 },
-    spend: [],
-  },
+  legality: null,
+  costValidation: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 3 },
+          costEffects: [],
   targeting: {},
-  resolution: [
+  stages: [
     {
       stage: 'select',
       effects: [
@@ -78,8 +76,8 @@ const DEPLOY_PROFILE: OperationProfileDef = {
       ],
     },
   ],
-  partialExecution: { mode: 'forbid' },
-} as unknown as OperationProfileDef;
+  atomicity: 'atomic',
+} as unknown as ActionPipelineDef;
 
 const createDecisionSequenceDef = (): GameDef =>
   ({
@@ -101,7 +99,7 @@ const createDecisionSequenceDef = (): GameDef =>
       { createToken: { type: 'piece', zone: 'reserve:none' } },
     ],
     turnStructure: { phases: [{ id: PHASE_MAIN }], activePlayerOrder: 'roundRobin' },
-    operationProfiles: [DEPLOY_PROFILE],
+    actionPipelines: [DEPLOY_PROFILE],
     actions: [
       {
         id: ACTION_DEPLOY,

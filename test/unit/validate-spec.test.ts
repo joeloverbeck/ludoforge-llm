@@ -269,76 +269,72 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
-  it('accepts valid optional operationProfiles section', () => {
+  it('accepts valid optional actionPipelines section', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'op-pass',
           actionId: 'draw',
-          legality: { when: 'always' },
-          cost: { spend: 0 },
-          targeting: { select: 'none' },
-          resolution: [{ stage: 'resolve' }],
-          partialExecution: { mode: 'forbid' },
+          legality: true,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
         },
       ],
     });
 
-    assert.equal(diagnostics.some((diagnostic) => diagnostic.path.startsWith('doc.operationProfiles')), false);
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path.startsWith('doc.actionPipelines')), false);
   });
 
-  it('reports incomplete or ambiguous operationProfiles with explicit nested paths', () => {
+  it('reports incomplete or ambiguous actionPipelines with explicit nested paths', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'op-pass-a',
           actionId: 'draw',
           legality: null,
-          cost: {},
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [],
-          partialExecution: { mode: 'invalid' },
+          stages: [],
+          atomicity: 'invalid',
         },
         {
           id: 'op-pass-b',
           actionId: 'draw',
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ stage: 'resolve' }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
         },
         {
           id: 'op-missing-action',
           actionId: 'unknown-action',
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ stage: 'resolve' }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
         },
       ],
     } as unknown as Parameters<typeof validateGameSpec>[0]);
 
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.path === 'doc.operationProfiles.0.legality'),
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.actionPipelines.0.stages'),
       true,
     );
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.path === 'doc.operationProfiles.0.resolution'),
-      true,
-    );
-    assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.path === 'doc.operationProfiles.0.partialExecution.mode'),
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.actionPipelines.0.atomicity'),
       true,
     );
     assert.equal(
       diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'CNL_VALIDATOR_OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS' &&
-          diagnostic.path === 'doc.operationProfiles',
+          diagnostic.code === 'CNL_VALIDATOR_ACTION_PIPELINE_ACTION_MAPPING_AMBIGUOUS' &&
+          diagnostic.path === 'doc.actionPipelines',
       ),
       true,
     );
@@ -346,7 +342,7 @@ describe('validateGameSpec structural rules', () => {
       diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING' &&
-          diagnostic.path === 'doc.operationProfiles.2.actionId',
+          diagnostic.path === 'doc.actionPipelines.2.actionId',
       ),
       true,
     );

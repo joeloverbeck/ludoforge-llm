@@ -11,11 +11,11 @@ describe('FITL US/ARVN special activities integration', () => {
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
-    const profiles = compiled.gameDef!.operationProfiles ?? [];
+    const profiles = compiled.gameDef!.actionPipelines ?? [];
     const profileSummaries = profiles.map((profile) => ({
       id: profile.id,
       actionId: String(profile.actionId),
-      windows: profile.linkedSpecialActivityWindows ?? [],
+      windows: profile.linkedWindows ?? [],
     }));
     for (const expected of [
       { id: 'advise-profile', actionId: 'advise', windows: ['us-special-window'] },
@@ -32,7 +32,7 @@ describe('FITL US/ARVN special activities integration', () => {
     }
   });
 
-  it('executes US/ARVN special activities through compiled operationProfiles instead of fallback action effects', () => {
+  it('executes US/ARVN special activities through compiled actionPipelines instead of fallback action effects', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);
@@ -62,7 +62,7 @@ describe('FITL US/ARVN special activities integration', () => {
     assert.equal(final.globalVars.fallbackUsed, 0);
   });
 
-  it('rejects airStrike when cross-faction cost validation fails under partialExecution forbid', () => {
+  it('rejects airStrike when cross-faction cost validation fails under atomicity forbid', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);

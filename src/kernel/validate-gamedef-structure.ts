@@ -336,10 +336,10 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
   );
   checkDuplicateIds(
     diagnostics,
-    (def.operationProfiles ?? []).map((operationProfile) => operationProfile.id),
+    (def.actionPipelines ?? []).map((operationProfile) => operationProfile.id),
     'DUPLICATE_OPERATION_PROFILE_ID',
     'operation profile id',
-    'operationProfiles',
+    'actionPipelines',
   );
 
   def.zones.forEach((zone, index) => {

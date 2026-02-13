@@ -226,26 +226,7 @@ export const TurnFlowSchema = z
   })
   .strict();
 
-export const OperationProfilePartialExecutionSchema = z
-  .object({
-    mode: z.union([z.literal('forbid'), z.literal('allow')]),
-  })
-  .strict();
-
-export const OperationLegalitySchema = z
-  .object({
-    when: ConditionASTSchema.optional(),
-  })
-  .strict();
-
-export const OperationCostSchema = z
-  .object({
-    validate: ConditionASTSchema.optional(),
-    spend: z.array(EffectASTSchema).optional(),
-  })
-  .strict();
-
-export const OperationTargetingSchema = z
+export const ActionPipelineTargetingSchema = z
   .object({
     select: z.union([z.literal('upToN'), z.literal('allEligible'), z.literal('exactN')]).optional(),
     max: z.number().int().min(1).optional(),
@@ -255,24 +236,25 @@ export const OperationTargetingSchema = z
   })
   .strict();
 
-export const OperationResolutionStageSchema = z
+export const ActionPipelineStageSchema = z
   .object({
     stage: StringSchema.optional(),
     effects: z.array(EffectASTSchema),
   })
   .strict();
 
-export const OperationProfileSchema = z
+export const ActionPipelineSchema = z
   .object({
     id: StringSchema.min(1),
     actionId: StringSchema.min(1),
     applicability: ConditionASTSchema.optional(),
-    legality: OperationLegalitySchema,
-    cost: OperationCostSchema,
-    targeting: OperationTargetingSchema,
-    resolution: z.array(OperationResolutionStageSchema).min(1),
-    partialExecution: OperationProfilePartialExecutionSchema,
-    linkedSpecialActivityWindows: z.array(StringSchema.min(1)).optional(),
+    legality: ConditionASTSchema.nullable(),
+    costValidation: ConditionASTSchema.nullable(),
+    costEffects: z.array(EffectASTSchema),
+    targeting: ActionPipelineTargetingSchema,
+    stages: z.array(ActionPipelineStageSchema).min(1),
+    atomicity: z.union([z.literal('atomic'), z.literal('partial')]),
+    linkedWindows: z.array(StringSchema.min(1)).optional(),
   })
   .strict();
 

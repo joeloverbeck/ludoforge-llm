@@ -238,22 +238,22 @@ describe('validateGameDef reference checks', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'patrol-profile',
           actionId: 'patrol',
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ stage: 'resolve' }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
         },
       ],
     } as unknown as GameDef;
 
     const diagnostics = validateGameDef(def);
     assert.ok(
-      diagnostics.some((diag) => diag.code === 'REF_ACTION_MISSING' && diag.path === 'operationProfiles[0].actionId'),
+      diagnostics.some((diag) => diag.code === 'REF_ACTION_MISSING' && diag.path === 'actionPipelines[0].actionId'),
     );
   });
 
@@ -261,24 +261,24 @@ describe('validateGameDef reference checks', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'profile-a',
           actionId: 'playCard',
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ stage: 'resolve' }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
         },
         {
           id: 'profile-b',
           actionId: 'playCard',
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ stage: 'resolve' }],
-          partialExecution: { mode: 'allow' },
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'partial',
         },
       ],
     } as unknown as GameDef;
@@ -286,7 +286,7 @@ describe('validateGameDef reference checks', () => {
     const diagnostics = validateGameDef(def);
     assert.ok(
       diagnostics.some(
-        (diag) => diag.code === 'OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS' && diag.path === 'operationProfiles',
+        (diag) => diag.code === 'ACTION_PIPELINE_ACTION_MAPPING_AMBIGUOUS' && diag.path === 'actionPipelines',
       ),
     );
   });

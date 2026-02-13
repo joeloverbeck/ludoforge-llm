@@ -2,12 +2,9 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import { asActionId } from '../kernel/branded.js';
 import type {
   ConditionAST,
-  EffectAST,
-  OperationCostDef,
-  OperationLegalityDef,
-  OperationProfileDef,
-  OperationResolutionStageDef,
-  OperationTargetingDef,
+  ActionPipelineDef,
+  ActionResolutionStageDef,
+  ActionTargetingDef,
 } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import {
@@ -18,16 +15,16 @@ import {
   normalizeIdentifier,
 } from './compile-lowering.js';
 
-/** Bindings injected at runtime by the kernel into every operation profile. */
-const OPERATION_PROFILE_RUNTIME_BINDINGS: readonly string[] = ['__actionClass', '__freeOperation'];
+/** Bindings injected at runtime by the kernel into every action pipeline. */
+const ACTION_PIPELINE_RUNTIME_BINDINGS: readonly string[] = ['__actionClass', '__freeOperation'];
 
-export function lowerOperationProfiles(
-  rawProfiles: GameSpecDoc['operationProfiles'],
+export function lowerActionPipelines(
+  rawPipelines: GameSpecDoc['actionPipelines'],
   rawActions: GameSpecDoc['actions'],
   ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>>,
   diagnostics: Diagnostic[],
-): readonly OperationProfileDef[] | undefined {
-  if (rawProfiles === null) {
+): readonly ActionPipelineDef[] | undefined {
+  if (rawPipelines === null) {
     return undefined;
   }
 
@@ -38,188 +35,190 @@ export function lowerOperationProfiles(
     }
   }
 
-  const lowered: OperationProfileDef[] = [];
-  const seenProfileIds = new Set<string>();
+  const lowered: ActionPipelineDef[] = [];
+  const seenPipelineIds = new Set<string>();
   const actionIdCounts = new Map<string, number>();
 
-  for (const [index, rawProfile] of rawProfiles.entries()) {
-    const basePath = `doc.operationProfiles.${index}`;
-    if (!isRecord(rawProfile)) {
+  for (const [index, rawPipeline] of rawPipelines.entries()) {
+    const basePath = `doc.actionPipelines.${index}`;
+    if (!isRecord(rawPipeline)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_OPERATION_PROFILE_INVALID',
+        code: 'CNL_COMPILER_ACTION_PIPELINE_INVALID',
         path: basePath,
         severity: 'error',
-        message: 'operation profile must be an object.',
-        suggestion: 'Provide id/actionId/legality/cost/targeting/resolution/partialExecution for each operation profile.',
+        message: 'action pipeline must be an object.',
+        suggestion: 'Provide id/actionId/legality/costValidation/costEffects/targeting/stages/atomicity for each action pipeline.',
       });
       continue;
     }
 
-    const id = typeof rawProfile.id === 'string' ? normalizeIdentifier(rawProfile.id) : '';
+    const id = typeof rawPipeline.id === 'string' ? normalizeIdentifier(rawPipeline.id) : '';
     if (id.length === 0) {
       diagnostics.push({
-        code: 'CNL_COMPILER_OPERATION_PROFILE_REQUIRED_FIELD_MISSING',
+        code: 'CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING',
         path: `${basePath}.id`,
         severity: 'error',
-        message: 'operation profile id is required and must be a non-empty string.',
-        suggestion: 'Set operationProfiles[].id to a non-empty identifier.',
+        message: 'action pipeline id is required and must be a non-empty string.',
+        suggestion: 'Set actionPipelines[].id to a non-empty identifier.',
       });
       continue;
     }
-    if (seenProfileIds.has(id)) {
+    if (seenPipelineIds.has(id)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_OPERATION_PROFILE_DUPLICATE_ID',
+        code: 'CNL_COMPILER_ACTION_PIPELINE_DUPLICATE_ID',
         path: `${basePath}.id`,
         severity: 'error',
-        message: `Duplicate operation profile id "${id}" creates ambiguous profile lookup.`,
-        suggestion: 'Use a unique id per operation profile.',
+        message: `Duplicate action pipeline id "${id}" creates ambiguous pipeline lookup.`,
+        suggestion: 'Use a unique id per action pipeline.',
       });
       continue;
     }
-    seenProfileIds.add(id);
+    seenPipelineIds.add(id);
 
-    const actionId = typeof rawProfile.actionId === 'string' ? normalizeIdentifier(rawProfile.actionId) : '';
+    const actionId = typeof rawPipeline.actionId === 'string' ? normalizeIdentifier(rawPipeline.actionId) : '';
     if (actionId.length === 0) {
       diagnostics.push({
-        code: 'CNL_COMPILER_OPERATION_PROFILE_REQUIRED_FIELD_MISSING',
+        code: 'CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING',
         path: `${basePath}.actionId`,
         severity: 'error',
-        message: 'operation profile actionId is required and must be a non-empty string.',
-        suggestion: 'Map each operation profile to a declared action id.',
+        message: 'action pipeline actionId is required and must be a non-empty string.',
+        suggestion: 'Map each action pipeline to a declared action id.',
       });
       continue;
     }
     if (!knownActionIds.has(actionId)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_OPERATION_PROFILE_UNKNOWN_ACTION',
+        code: 'CNL_COMPILER_ACTION_PIPELINE_UNKNOWN_ACTION',
         path: `${basePath}.actionId`,
         severity: 'error',
-        message: `operation profile references unknown action "${actionId}".`,
+        message: `action pipeline references unknown action "${actionId}".`,
         suggestion: 'Use an action id declared under doc.actions.',
       });
       continue;
     }
     actionIdCounts.set(actionId, (actionIdCounts.get(actionId) ?? 0) + 1);
 
-    if (!isRecord(rawProfile.legality)) {
-      diagnostics.push(missingCapabilityDiagnostic(`${basePath}.legality`, 'operation profile legality object', rawProfile.legality, ['object']));
-      continue;
-    }
-    if (!isRecord(rawProfile.cost)) {
-      diagnostics.push(missingCapabilityDiagnostic(`${basePath}.cost`, 'operation profile cost object', rawProfile.cost, ['object']));
-      continue;
-    }
-    if (!isRecord(rawProfile.targeting)) {
-      diagnostics.push(missingCapabilityDiagnostic(`${basePath}.targeting`, 'operation profile targeting object', rawProfile.targeting, ['object']));
-      continue;
-    }
-    if (!Array.isArray(rawProfile.resolution) || rawProfile.resolution.length === 0) {
+    if (!isRecord(rawPipeline.targeting)) {
       diagnostics.push(
-        missingCapabilityDiagnostic(
-          `${basePath}.resolution`,
-          'operation profile ordered resolution stages',
-          rawProfile.resolution,
-          ['non-empty array'],
-        ),
+        missingCapabilityDiagnostic(`${basePath}.targeting`, 'action pipeline targeting object', rawPipeline.targeting, ['object']),
       );
       continue;
     }
-    if (!rawProfile.resolution.every((stage) => isRecord(stage))) {
+    if (!Array.isArray(rawPipeline.stages) || rawPipeline.stages.length === 0) {
       diagnostics.push(
-        missingCapabilityDiagnostic(
-          `${basePath}.resolution`,
-          'operation profile ordered resolution stages',
-          rawProfile.resolution,
-          ['array of objects'],
-        ),
+        missingCapabilityDiagnostic(`${basePath}.stages`, 'action pipeline ordered stages', rawPipeline.stages, ['non-empty array']),
+      );
+      continue;
+    }
+    if (!rawPipeline.stages.every((stage) => isRecord(stage))) {
+      diagnostics.push(
+        missingCapabilityDiagnostic(`${basePath}.stages`, 'action pipeline ordered stages', rawPipeline.stages, ['array of objects']),
       );
       continue;
     }
 
-    const partialExecution = rawProfile.partialExecution;
-    if (!isRecord(partialExecution) || (partialExecution.mode !== 'forbid' && partialExecution.mode !== 'allow')) {
+    if (rawPipeline.atomicity !== 'atomic' && rawPipeline.atomicity !== 'partial') {
       diagnostics.push({
-        code: 'CNL_COMPILER_OPERATION_PROFILE_REQUIRED_FIELD_MISSING',
-        path: `${basePath}.partialExecution.mode`,
+        code: 'CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING',
+        path: `${basePath}.atomicity`,
         severity: 'error',
-        message: 'operation profile partialExecution.mode is required and must be "forbid" or "allow".',
-        suggestion: 'Set partialExecution.mode to "forbid" or "allow".',
+        message: 'action pipeline atomicity is required and must be "atomic" or "partial".',
+        suggestion: 'Set atomicity to "atomic" or "partial".',
       });
       continue;
     }
 
-    let linkedSpecialActivityWindows: readonly string[] | undefined;
-    if (rawProfile.linkedSpecialActivityWindows !== undefined) {
+    if (!Array.isArray(rawPipeline.costEffects)) {
+      diagnostics.push(
+        missingCapabilityDiagnostic(`${basePath}.costEffects`, 'action pipeline cost effects array', rawPipeline.costEffects, ['array']),
+      );
+      continue;
+    }
+
+    let linkedWindows: readonly string[] | undefined;
+    if (rawPipeline.linkedWindows !== undefined) {
       if (
-        !Array.isArray(rawProfile.linkedSpecialActivityWindows) ||
-        rawProfile.linkedSpecialActivityWindows.some((entry) => typeof entry !== 'string' || entry.trim() === '')
+        !Array.isArray(rawPipeline.linkedWindows) ||
+        rawPipeline.linkedWindows.some((entry) => typeof entry !== 'string' || entry.trim() === '')
       ) {
         diagnostics.push({
-          code: 'CNL_COMPILER_OPERATION_PROFILE_LINKED_WINDOWS_INVALID',
-          path: `${basePath}.linkedSpecialActivityWindows`,
+          code: 'CNL_COMPILER_ACTION_PIPELINE_LINKED_WINDOWS_INVALID',
+          path: `${basePath}.linkedWindows`,
           severity: 'error',
-          message: 'linkedSpecialActivityWindows must be an array of non-empty strings when provided.',
-          suggestion: 'Set linkedSpecialActivityWindows to string ids or omit the field.',
+          message: 'linkedWindows must be an array of non-empty strings when provided.',
+          suggestion: 'Set linkedWindows to string ids or omit the field.',
         });
         continue;
       }
-      linkedSpecialActivityWindows = rawProfile.linkedSpecialActivityWindows.map((entry) => normalizeIdentifier(entry));
+      linkedWindows = rawPipeline.linkedWindows.map((entry) => normalizeIdentifier(entry));
     }
 
-    // Lower applicability (optional — required when multiple profiles share an actionId)
     let applicability: ConditionAST | undefined;
-    const runtimeBindings = [...OPERATION_PROFILE_RUNTIME_BINDINGS];
-    if (rawProfile.applicability !== undefined) {
-      const loweredApplicability = lowerOptionalCondition(rawProfile.applicability, ownershipByBase, runtimeBindings, diagnostics, `${basePath}.applicability`);
+    const runtimeBindings = [...ACTION_PIPELINE_RUNTIME_BINDINGS];
+    if (rawPipeline.applicability !== undefined) {
+      const loweredApplicability = lowerOptionalCondition(
+        rawPipeline.applicability,
+        ownershipByBase,
+        runtimeBindings,
+        diagnostics,
+        `${basePath}.applicability`,
+      );
       if (loweredApplicability !== undefined && loweredApplicability !== null) {
         applicability = loweredApplicability;
       }
     }
 
-    // Lower legality
-    const rawLegality = rawProfile.legality;
-    let legalityWhen: ConditionAST | undefined;
-    if (rawLegality.when !== undefined) {
-      const loweredWhen = lowerOptionalCondition(rawLegality.when, ownershipByBase, runtimeBindings, diagnostics, `${basePath}.legality.when`);
-      if (loweredWhen !== undefined && loweredWhen !== null) {
-        legalityWhen = loweredWhen;
+    let legality: ConditionAST | null = null;
+    if (rawPipeline.legality !== undefined) {
+      const loweredLegality = lowerOptionalCondition(
+        rawPipeline.legality,
+        ownershipByBase,
+        runtimeBindings,
+        diagnostics,
+        `${basePath}.legality`,
+      );
+      if (loweredLegality !== undefined) {
+        legality = loweredLegality;
       }
     }
-    const legality: OperationLegalityDef = {
-      ...(legalityWhen !== undefined ? { when: legalityWhen } : {}),
-    };
 
-    // Lower cost
-    const rawCost = rawProfile.cost;
-    let costValidate: ConditionAST | undefined;
-    let costSpend: readonly EffectAST[] | undefined;
-    if (rawCost.validate !== undefined) {
-      const loweredValidate = lowerOptionalCondition(rawCost.validate, ownershipByBase, runtimeBindings, diagnostics, `${basePath}.cost.validate`);
-      if (loweredValidate !== undefined && loweredValidate !== null) {
-        costValidate = loweredValidate;
+    let costValidation: ConditionAST | null = null;
+    if (rawPipeline.costValidation !== undefined) {
+      const loweredValidate = lowerOptionalCondition(
+        rawPipeline.costValidation,
+        ownershipByBase,
+        runtimeBindings,
+        diagnostics,
+        `${basePath}.costValidation`,
+      );
+      if (loweredValidate !== undefined) {
+        costValidation = loweredValidate;
       }
     }
-    if (rawCost.spend !== undefined) {
-      const loweredSpend = lowerEffectsWithDiagnostics(rawCost.spend, ownershipByBase, diagnostics, `${basePath}.cost.spend`, runtimeBindings);
-      if (loweredSpend.length > 0) {
-        costSpend = loweredSpend;
-      }
-    }
-    const cost: OperationCostDef = {
-      ...(costValidate !== undefined ? { validate: costValidate } : {}),
-      ...(costSpend !== undefined ? { spend: costSpend } : {}),
-    };
 
-    // Lower targeting
-    const rawTargeting = rawProfile.targeting;
+    const costEffects = lowerEffectsWithDiagnostics(
+      rawPipeline.costEffects,
+      ownershipByBase,
+      diagnostics,
+      `${basePath}.costEffects`,
+      runtimeBindings,
+    );
+
+    const rawTargeting = rawPipeline.targeting;
     let targetingFilter: ConditionAST | undefined;
     if (rawTargeting.filter !== undefined) {
-      const loweredFilter = lowerOptionalCondition(rawTargeting.filter, ownershipByBase, runtimeBindings, diagnostics, `${basePath}.targeting.filter`);
+      const loweredFilter = lowerOptionalCondition(
+        rawTargeting.filter,
+        ownershipByBase,
+        runtimeBindings,
+        diagnostics,
+        `${basePath}.targeting.filter`,
+      );
       if (loweredFilter !== undefined && loweredFilter !== null) {
         targetingFilter = loweredFilter;
       }
     }
-    const targeting: OperationTargetingDef = {
+    const targeting: ActionTargetingDef = {
       ...(typeof rawTargeting.select === 'string' ? { select: rawTargeting.select as 'upToN' | 'allEligible' | 'exactN' } : {}),
       ...(typeof rawTargeting.max === 'number' ? { max: rawTargeting.max } : {}),
       ...(targetingFilter !== undefined ? { filter: targetingFilter } : {}),
@@ -227,13 +226,10 @@ export function lowerOperationProfiles(
       ...(typeof rawTargeting.tieBreak === 'string' ? { tieBreak: rawTargeting.tieBreak } : {}),
     };
 
-    // Lower resolution stages — bindings from chooseOne/forEach in
-    // earlier stages flow forward so later stages can reference them.
-    // Seed with runtime-injected bindings available to all operation profiles.
-    const resolution: OperationResolutionStageDef[] = [];
-    let accumulatedBindings: readonly string[] = OPERATION_PROFILE_RUNTIME_BINDINGS;
-    for (const [stageIdx, rawStage] of (rawProfile.resolution as Record<string, unknown>[]).entries()) {
-      const stagePath = `${basePath}.resolution[${stageIdx}]`;
+    const stages: ActionResolutionStageDef[] = [];
+    let accumulatedBindings: readonly string[] = ACTION_PIPELINE_RUNTIME_BINDINGS;
+    for (const [stageIdx, rawStage] of (rawPipeline.stages as Record<string, unknown>[]).entries()) {
+      const stagePath = `${basePath}.stages[${stageIdx}]`;
       const loweredEffects = lowerEffectsWithDiagnostics(
         rawStage.effects ?? [],
         ownershipByBase,
@@ -241,7 +237,6 @@ export function lowerOperationProfiles(
         `${stagePath}.effects`,
         accumulatedBindings,
       );
-      // Collect top-level bindings introduced by this stage.
       const stageBindings: string[] = [];
       for (const eff of loweredEffects) {
         if ('chooseOne' in eff && typeof eff.chooseOne === 'object' && eff.chooseOne !== null && 'bind' in eff.chooseOne) {
@@ -252,11 +247,10 @@ export function lowerOperationProfiles(
         }
       }
       accumulatedBindings = [...accumulatedBindings, ...stageBindings];
-      const stage: OperationResolutionStageDef = {
+      stages.push({
         ...(typeof rawStage.stage === 'string' ? { stage: rawStage.stage } : {}),
         effects: loweredEffects,
-      };
-      resolution.push(stage);
+      });
     }
 
     lowered.push({
@@ -264,28 +258,28 @@ export function lowerOperationProfiles(
       actionId: asActionId(actionId),
       ...(applicability !== undefined ? { applicability } : {}),
       legality,
-      cost,
+      costValidation,
+      costEffects,
       targeting,
-      resolution,
-      partialExecution: { mode: partialExecution.mode },
-      ...(linkedSpecialActivityWindows === undefined ? {} : { linkedSpecialActivityWindows }),
+      stages,
+      atomicity: rawPipeline.atomicity,
+      ...(linkedWindows === undefined ? {} : { linkedWindows }),
     });
   }
 
-  // Post-loop: when multiple profiles share an actionId, all must have applicability
   for (const [actionId, count] of actionIdCounts) {
     if (count <= 1) {
       continue;
     }
-    const profilesForAction = lowered.filter((p) => String(p.actionId) === actionId);
-    const missingApplicability = profilesForAction.some((p) => p.applicability === undefined);
+    const pipelinesForAction = lowered.filter((pipeline) => String(pipeline.actionId) === actionId);
+    const missingApplicability = pipelinesForAction.some((pipeline) => pipeline.applicability === undefined);
     if (missingApplicability) {
       diagnostics.push({
-        code: 'CNL_COMPILER_OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS',
-        path: 'doc.operationProfiles',
+        code: 'CNL_COMPILER_ACTION_PIPELINE_ACTION_MAPPING_AMBIGUOUS',
+        path: 'doc.actionPipelines',
         severity: 'error',
-        message: `Multiple operation profiles map to action "${actionId}" but not all have an applicability condition.`,
-        suggestion: 'When multiple profiles share an actionId, each must have an applicability condition for dispatch.',
+        message: `Multiple action pipelines map to action "${actionId}" but not all have an applicability condition.`,
+        suggestion: 'When multiple pipelines share an actionId, each must have an applicability condition for dispatch.',
       });
     }
   }

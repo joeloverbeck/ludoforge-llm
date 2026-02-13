@@ -174,7 +174,7 @@ describe('compile-conditions lowering', () => {
     const result = lowerQueryNode(
       { query: 'binding', name: '$targetSpaces' },
       context,
-      'doc.operationProfiles.0.resolution.0.effects.0.forEach.over',
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
     );
 
     assertNoDiagnostics(result);
@@ -182,13 +182,13 @@ describe('compile-conditions lowering', () => {
   });
 
   it('lowers boolean literal true as ConditionAST passthrough', () => {
-    const result = lowerConditionNode(true, context, 'doc.operationProfiles.0.legality.when');
+    const result = lowerConditionNode(true, context, 'doc.actionPipelines.0.legality');
     assertNoDiagnostics(result);
     assert.equal(result.value, true);
   });
 
   it('lowers boolean literal false as ConditionAST passthrough', () => {
-    const result = lowerConditionNode(false, context, 'doc.operationProfiles.0.legality.when');
+    const result = lowerConditionNode(false, context, 'doc.actionPipelines.0.legality');
     assertNoDiagnostics(result);
     assert.equal(result.value, false);
   });
@@ -206,7 +206,7 @@ describe('compile-conditions lowering', () => {
         },
       },
       context,
-      'doc.operationProfiles.0.resolution.0.effects.0.chooseN.options',
+      'doc.actionPipelines.0.stages.0.effects.0.chooseN.options',
     );
 
     assertNoDiagnostics(result);
@@ -235,7 +235,7 @@ describe('compile-conditions lowering', () => {
         ],
       },
       context,
-      'doc.operationProfiles.0.resolution.0.effects.0.forEach.over',
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
     );
 
     assertNoDiagnostics(result);
@@ -259,7 +259,7 @@ describe('compile-conditions lowering', () => {
         ],
       },
       context,
-      'doc.operationProfiles.0.resolution.0.effects.0.forEach.over',
+      'doc.actionPipelines.0.stages.0.effects.0.forEach.over',
     );
 
     assertNoDiagnostics(result);

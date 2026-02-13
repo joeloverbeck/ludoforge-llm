@@ -88,7 +88,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
     throw illegalMoveError(move, 'unknown action id');
   }
 
-  const hasProfile = (def.operationProfiles ?? []).some((profile) => profile.actionId === action.id);
+  const hasProfile = (def.actionPipelines ?? []).some((profile) => profile.actionId === action.id);
 
   if (hasProfile) {
     const legal = legalMoves(def, state);
@@ -174,7 +174,7 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
     (executionProfile?.costValidation === null || executionProfile === undefined
       ? true
       : evalCondition(executionProfile.costValidation, { ...effectCtxBase, state }));
-  if (executionProfile !== undefined && executionProfile.partialMode === 'forbid' && !costValidationPassed) {
+  if (executionProfile !== undefined && executionProfile.partialMode === 'atomic' && !costValidationPassed) {
     throw illegalMoveError(move, 'operation profile cost validation failed', {
       code: 'OPERATION_COST_BLOCKED',
       profileId: operationProfile?.id,
@@ -207,7 +207,7 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
       actionId: action.id,
       step: 'costSpendSkipped',
     });
-  } else if (executionProfile !== undefined && executionProfile.partialMode === 'allow' && !costValidationPassed) {
+  } else if (executionProfile !== undefined && executionProfile.partialMode === 'partial' && !costValidationPassed) {
     executionTraceEntries.push({
       kind: 'operationPartial',
       actionId: action.id,

@@ -415,15 +415,15 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'operate-profile',
           actionId: asActionId('operate'),
-          legality: { when: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 } },
-          cost: {},
+          legality: { op: '>=', left: { ref: 'gvar', var: 'energy' , right: 2 } },
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],
+          atomicity: 'atomic',
         },
       ],
       actions: [
@@ -469,18 +469,16 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'operate-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {
-            validate: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
-            spend: [{ addVar: { scope: 'global', var: 'energy', delta: -2 } }],
-          },
+          legality: null,
+          costValidation: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
+          costEffects: [{ addVar: { scope: 'global', var: 'energy', delta: -2 } }],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],
+          atomicity: 'atomic',
         },
       ],
       actions: [
@@ -526,18 +524,16 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'operate-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {
-            validate: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
-            spend: [{ addVar: { scope: 'global', var: 'energy', delta: -2 } }],
-          },
+          legality: null,
+          costValidation: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
+          costEffects: [{ addVar: { scope: 'global', var: 'energy', delta: -2 } }],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],
-          partialExecution: { mode: 'allow' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],
+          atomicity: 'partial',
         },
       ],
       actions: [
@@ -587,18 +583,16 @@ describe('applyMove', () => {
       tokenTypes: [{ id: 'piece', props: {} }],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'operate-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {
-            validate: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
-            spend: [{ shuffle: { zone: 'bag:none' } }],
-          },
+          legality: null,
+          costValidation: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
+          costEffects: [{ shuffle: { zone: 'bag:none' } }],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],
-          partialExecution: { mode: 'allow' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],
+          atomicity: 'partial',
         },
       ],
       actions: [
@@ -648,7 +642,7 @@ describe('applyMove', () => {
     assert.equal(payableResult.triggerFirings.some((entry) => entry.kind === 'operationPartial'), false);
   });
 
-  it('executes operation-profile resolution stages in declared order', () => {
+  it('executes operation-profile stages stages in declared order', () => {
     const def: GameDef = {
       metadata: { id: 'operation-profile-stage-order', players: { min: 2, max: 2 } },
       constants: {},
@@ -658,18 +652,18 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'operate-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [
+          stages: [
             { effects: [{ setVar: { scope: 'global', var: 'orderValue', value: 1 } }] },
             { effects: [{ addVar: { scope: 'global', var: 'orderValue', delta: 4 } }] },
           ],
-          partialExecution: { mode: 'forbid' },
+          atomicity: 'atomic',
         },
       ],
       actions: [
@@ -710,17 +704,16 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'operate-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {
-            spend: [{ addVar: { scope: 'global', var: 'energy', delta: -3 } }],
-          },
+          legality: null,
+          costValidation: null,
+          costEffects: [{ addVar: { scope: 'global', var: 'energy', delta: -3 } }],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 5 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 5 } }] }],
+          atomicity: 'atomic',
         },
       ],
       actions: [
@@ -746,7 +739,7 @@ describe('applyMove', () => {
 
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {}, freeOperation: true });
     assert.equal(result.state.globalVars.energy, 10, 'energy should be unchanged (costSpend skipped)');
-    assert.equal(result.state.globalVars.score, 5, 'resolution stage effects should still execute');
+    assert.equal(result.state.globalVars.score, 5, 'stages stage effects should still execute');
   });
 
   it('preserves eligibility state when freeOperation is true with operation profile', () => {
@@ -766,15 +759,15 @@ describe('applyMove', () => {
         passRewards: [],
         durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
       },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'operate-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ effects: [] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [] }],
+          atomicity: 'atomic',
         },
       ],
       actions: [
@@ -809,9 +802,9 @@ describe('applyMove', () => {
     assert.equal(eligibilityEntries.length, 0, 'no eligibility trace entries for free operations');
   });
 
-  it('executes resolution stage effects normally for free operations', () => {
+  it('executes stages stage effects normally for free operations', () => {
     const def: GameDef = {
-      metadata: { id: 'free-op-resolution', players: { min: 2, max: 2 } },
+      metadata: { id: 'free-op-stages', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [
         { name: 'stageA', type: 'int', init: 0, min: 0, max: 20 },
@@ -822,20 +815,19 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'operate-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {
-            spend: [{ setVar: { scope: 'global', var: 'stageA', value: 99 } }],
-          },
+          legality: null,
+          costValidation: null,
+          costEffects: [{ setVar: { scope: 'global', var: 'stageA', value: 99 } }],
           targeting: {},
-          resolution: [
+          stages: [
             { effects: [{ addVar: { scope: 'global', var: 'stageA', delta: 3 } }] },
             { effects: [{ addVar: { scope: 'global', var: 'stageB', delta: 7 } }] },
           ],
-          partialExecution: { mode: 'forbid' },
+          atomicity: 'atomic',
         },
       ],
       actions: [
@@ -860,8 +852,8 @@ describe('applyMove', () => {
     };
 
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {}, freeOperation: true });
-    assert.equal(result.state.globalVars.stageA, 3, 'resolution stage A should execute');
-    assert.equal(result.state.globalVars.stageB, 7, 'resolution stage B should execute');
+    assert.equal(result.state.globalVars.stageA, 3, 'stages stage A should execute');
+    assert.equal(result.state.globalVars.stageB, 7, 'stages stage B should execute');
   });
 
   it('includes operationFree trace entry for free operations with operation profile', () => {
@@ -874,15 +866,15 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'operate-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ effects: [] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [] }],
+          atomicity: 'atomic',
         },
       ],
       actions: [
@@ -928,17 +920,16 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'operate-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {
-            spend: [{ addVar: { scope: 'global', var: 'energy', delta: -3 } }],
-          },
+          legality: null,
+          costValidation: null,
+          costEffects: [{ addVar: { scope: 'global', var: 'energy', delta: -3 } }],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 5 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 5 } }] }],
+          atomicity: 'atomic',
         },
       ],
       actions: [
@@ -964,7 +955,7 @@ describe('applyMove', () => {
 
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
     assert.equal(result.state.globalVars.energy, 7, 'costSpend should deduct energy');
-    assert.equal(result.state.globalVars.score, 5, 'resolution stage effects should execute');
+    assert.equal(result.state.globalVars.score, 5, 'stages stage effects should execute');
     const freeEntries = result.triggerFirings.filter((entry) => entry.kind === 'operationFree');
     assert.equal(freeEntries.length, 0, 'no operationFree trace entry for non-free operations');
   });
@@ -993,18 +984,16 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'operate-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {
-            validate: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 5 },
-            spend: [{ addVar: { scope: 'global', var: 'energy', delta: -5 } }],
-          },
+          legality: null,
+          costValidation: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 5 },
+          costEffects: [{ addVar: { scope: 'global', var: 'energy', delta: -5 } }],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
+          atomicity: 'atomic',
         },
       ],
       actions: [
@@ -1041,12 +1030,12 @@ describe('applyMove', () => {
     // Without freeOperation, this would be rejected (energy=1 < required 5, mode=forbid → no template in legalMoves)
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {}, freeOperation: true });
     assert.equal(result.state.globalVars.energy, 1, 'energy unchanged — cost bypassed');
-    assert.equal(result.state.globalVars.score, 10, 'resolution effects still execute');
+    assert.equal(result.state.globalVars.score, 10, 'stages effects still execute');
   });
 
   it('resolves event side and branch effects from selected move params', () => {
     const def: GameDef = {
-      metadata: { id: 'event-side-branch-resolution', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      metadata: { id: 'event-side-branch-stages', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
       perPlayerVars: [],
@@ -1117,15 +1106,15 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'op-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ effects: [{ addVar: { scope: 'global', var: 'order', delta: 10 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'order', delta: 10 } }] }],
+          atomicity: 'atomic',
         },
       ],
       actions: [
@@ -1160,15 +1149,15 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'op-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ effects: [{ setVar: { scope: 'global', var: 'order', value: 10 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ setVar: { scope: 'global', var: 'order', value: 10 } }] }],
+          atomicity: 'atomic',
         },
       ],
       actions: [
@@ -1203,18 +1192,18 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'op-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [
+          stages: [
             { effects: [{ setVar: { scope: 'global', var: 'order', value: 1 } }] },
             { effects: [{ addVar: { scope: 'global', var: 'order', delta: 20 } }] },
           ],
-          partialExecution: { mode: 'forbid' },
+          atomicity: 'atomic',
         },
       ],
       actions: [
@@ -1250,15 +1239,15 @@ describe('applyMove', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      operationProfiles: [
+      actionPipelines: [
         {
           id: 'op-profile',
           actionId: asActionId('operate'),
-          legality: {},
-          cost: {},
+          legality: null,
+          costValidation: null, costEffects: [],
           targeting: {},
-          resolution: [{ effects: [{ setVar: { scope: 'global', var: 'v', value: 42 } }] }],
-          partialExecution: { mode: 'forbid' },
+          stages: [{ effects: [{ setVar: { scope: 'global', var: 'v', value: 42 } }] }],
+          atomicity: 'atomic',
         },
       ],
       actions: [

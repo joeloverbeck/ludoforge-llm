@@ -161,18 +161,16 @@ const createEventTraceDef = (): GameDef =>
       passRewards: [],
       durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
     },
-    operationProfiles: [
+    actionPipelines: [
       {
         id: 'event-profile-partial',
         actionId: asActionId('event'),
-        legality: {},
-        cost: {
-          validate: { op: '==', left: { ref: 'binding', name: 'branch' }, right: 'a' },
-          spend: [{ addVar: { scope: 'global', var: 'spent', delta: 1 } }],
-        },
+        legality: null,
+        costValidation: { op: '==', left: { ref: 'binding', name: 'branch' }, right: 'a' },
+          costEffects: [{ addVar: { scope: 'global', var: 'spent', delta: 1 } }],
         targeting: {},
-        resolution: [{ effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }] }],
-        partialExecution: { mode: 'allow' },
+        stages: [{ effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }] }],
+        atomicity: 'partial',
       },
     ],
     actions: [
@@ -267,7 +265,7 @@ describe('FITL card-flow determinism integration', () => {
     }
   });
 
-  it('captures deterministic event side/branch/target metadata and partial-resolution trace entries during eligible-faction sequencing', () => {
+  it('captures deterministic event side/branch/target metadata and partial-stages trace entries during eligible-faction sequencing', () => {
     // Fixture policy: this golden trace is intentionally reviewed state/trace contract data, not an auto-regenerated snapshot.
     const fixture = readJsonFixture<FitlEventInitialPackGolden>('test/fixtures/trace/fitl-events-initial-pack.golden.json');
     const def = createEventTraceDef();

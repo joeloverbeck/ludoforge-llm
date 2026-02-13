@@ -16,19 +16,19 @@ export const TURN_FLOW_ELIGIBILITY_KEYS = ['factions', 'overrideWindows'] as con
 export const TURN_FLOW_OVERRIDE_WINDOW_KEYS = ['id', 'duration'] as const;
 export const TURN_FLOW_OPTION_MATRIX_ROW_KEYS = ['first', 'second'] as const;
 export const TURN_FLOW_PASS_REWARD_KEYS = ['factionClass', 'resource', 'amount'] as const;
-export const OPERATION_PROFILE_KEYS = [
+export const ACTION_PIPELINE_KEYS = [
   'id',
   'actionId',
   'applicability',
   'legality',
-  'cost',
+  'costValidation',
+  'costEffects',
   'targeting',
-  'resolution',
-  'partialExecution',
-  'linkedSpecialActivityWindows',
+  'stages',
+  'atomicity',
+  'linkedWindows',
 ] as const;
-export const OPERATION_PROFILE_PARTIAL_EXECUTION_KEYS = ['mode'] as const;
-export const OPERATION_PROFILE_PARTIAL_EXECUTION_MODE_VALUES: readonly string[] = ['forbid', 'allow'];
+export const ACTION_PIPELINE_ATOMICITY_VALUES: readonly string[] = ['atomic', 'partial'];
 export const PHASE_KEYS = ['id', 'onEnter', 'onExit'] as const;
 export const TRIGGER_KEYS = ['id', 'event', 'when', 'match', 'effects'] as const;
 export const TRIGGER_EVENT_KEYS = ['type', 'phase', 'action', 'zone'] as const;

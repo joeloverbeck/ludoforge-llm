@@ -9,7 +9,7 @@ export const CANONICAL_SECTION_KEYS = [
   'setup',
   'turnStructure',
   'turnFlow',
-  'operationProfiles',
+  'actionPipelines',
   'coupPlan',
   'victory',
   'actions',
@@ -144,7 +144,7 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
     matches.push('turnFlow');
   }
   if (isOperationProfilesShape(value)) {
-    matches.push('operationProfiles');
+    matches.push('actionPipelines');
   }
   if (isCoupPlanShape(value)) {
     matches.push('coupPlan');
@@ -212,8 +212,8 @@ function isDataAssetsShape(value: Record<string, unknown>): boolean {
 
 function isOperationProfilesShape(value: Record<string, unknown>): boolean {
   return (
-    Array.isArray(value.operationProfiles) &&
-    value.operationProfiles.every(
+    Array.isArray(value.actionPipelines) &&
+    value.actionPipelines.every(
       (entry) => isRecord(entry) && typeof entry.id === 'string' && typeof entry.actionId === 'string',
     )
   );

@@ -110,45 +110,45 @@ export const validateVictory = (diagnostics: Diagnostic[], def: GameDef, context
   });
 };
 
-export const validateOperationProfiles = (
+export const validateActionPipelines = (
   diagnostics: Diagnostic[],
   def: GameDef,
   actionCandidates: readonly string[],
 ): void => {
   const operationActionIdCounts = new Map<string, number>();
-  def.operationProfiles?.forEach((operationProfile, operationProfileIndex) => {
-    const basePath = `operationProfiles[${operationProfileIndex}]`;
+  def.actionPipelines?.forEach((actionPipeline, actionPipelineIndex) => {
+    const basePath = `actionPipelines[${actionPipelineIndex}]`;
 
-    if (!actionCandidates.includes(operationProfile.actionId)) {
+    if (!actionCandidates.includes(actionPipeline.actionId)) {
       pushMissingReferenceDiagnostic(
         diagnostics,
         'REF_ACTION_MISSING',
         `${basePath}.actionId`,
-        `Unknown action "${operationProfile.actionId}".`,
-        operationProfile.actionId,
+        `Unknown action "${actionPipeline.actionId}".`,
+        actionPipeline.actionId,
         actionCandidates,
       );
     }
 
-    operationActionIdCounts.set(operationProfile.actionId, (operationActionIdCounts.get(operationProfile.actionId) ?? 0) + 1);
+    operationActionIdCounts.set(actionPipeline.actionId, (operationActionIdCounts.get(actionPipeline.actionId) ?? 0) + 1);
 
-    if (operationProfile.resolution.length === 0) {
+    if (actionPipeline.stages.length === 0) {
       diagnostics.push({
-        code: 'OPERATION_PROFILE_RESOLUTION_EMPTY',
-        path: `${basePath}.resolution`,
+        code: 'ACTION_PIPELINE_STAGES_EMPTY',
+        path: `${basePath}.stages`,
         severity: 'error',
-        message: 'Operation profile resolution must contain at least one stage.',
-        suggestion: 'Declare one or more deterministic resolution stages.',
+        message: 'Action pipeline stages must contain at least one stage.',
+        suggestion: 'Declare one or more deterministic stages.',
       });
     }
 
-    if (operationProfile.partialExecution.mode !== 'forbid' && operationProfile.partialExecution.mode !== 'allow') {
+    if (actionPipeline.atomicity !== 'atomic' && actionPipeline.atomicity !== 'partial') {
       diagnostics.push({
-        code: 'OPERATION_PROFILE_PARTIAL_EXECUTION_MODE_INVALID',
-        path: `${basePath}.partialExecution.mode`,
+        code: 'ACTION_PIPELINE_ATOMICITY_INVALID',
+        path: `${basePath}.atomicity`,
         severity: 'error',
-        message: `Unsupported partial execution mode "${operationProfile.partialExecution.mode}".`,
-        suggestion: 'Use "forbid" or "allow".',
+        message: `Unsupported action pipeline atomicity "${actionPipeline.atomicity}".`,
+        suggestion: 'Use "atomic" or "partial".',
       });
     }
   });
@@ -157,15 +157,15 @@ export const validateOperationProfiles = (
     if (count <= 1) {
       continue;
     }
-    const profilesForAction = (def.operationProfiles ?? []).filter((profile) => profile.actionId === actionId);
+    const profilesForAction = (def.actionPipelines ?? []).filter((profile) => profile.actionId === actionId);
     const missingApplicability = profilesForAction.some((profile) => profile.applicability === undefined);
     if (missingApplicability) {
       diagnostics.push({
-        code: 'OPERATION_PROFILE_ACTION_MAPPING_AMBIGUOUS',
-        path: 'operationProfiles',
+        code: 'ACTION_PIPELINE_ACTION_MAPPING_AMBIGUOUS',
+        path: 'actionPipelines',
         severity: 'error',
-        message: `Multiple operation profiles map to action "${actionId}" but not all have an applicability condition.`,
-        suggestion: 'When multiple profiles share an actionId, each must have an applicability condition for dispatch.',
+        message: `Multiple action pipelines map to action "${actionId}" but not all have an applicability condition.`,
+        suggestion: 'When multiple pipelines share an actionId, each must have an applicability condition for dispatch.',
       });
     }
   }

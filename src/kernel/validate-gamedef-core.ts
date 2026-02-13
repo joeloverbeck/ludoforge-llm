@@ -2,7 +2,7 @@ import type { Diagnostic } from './diagnostics.js';
 import { buildAdjacencyGraph, validateAdjacency } from './spatial.js';
 import type { GameDef } from './types.js';
 import { validateConditionAst, validateEffectAst, validateOptionsQuery, validatePostAdjacencyBehavior } from './validate-gamedef-behavior.js';
-import { validateCoupPlan, validateOperationProfiles, validateVictory } from './validate-gamedef-extensions.js';
+import { validateActionPipelines, validateCoupPlan, validateVictory } from './validate-gamedef-extensions.js';
 import {
   buildValidationContext,
   pushMissingReferenceDiagnostic,
@@ -55,7 +55,7 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
     });
   });
 
-  validateOperationProfiles(diagnostics, def, actionCandidates);
+  validateActionPipelines(diagnostics, def, actionCandidates);
 
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   diagnostics.push(...validateAdjacency(adjacencyGraph, def.zones));

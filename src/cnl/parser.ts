@@ -106,22 +106,22 @@ export function parseGameSpec(markdown: string, options: ParseGameSpecOptions = 
     }
 
     const parsedRoot = yamlDoc.toJSON();
-    const resolution = resolveSectionsFromBlock(parsedRoot);
-    if (resolution.issue !== undefined) {
+    const stages = resolveSectionsFromBlock(parsedRoot);
+    if (stages.issue !== undefined) {
       diagnostics.push({
         code:
-          resolution.issue.code === 'UNKNOWN_EXPLICIT_SECTION'
+          stages.issue.code === 'UNKNOWN_EXPLICIT_SECTION'
             ? 'CNL_PARSER_SECTION_UNKNOWN'
             : 'CNL_PARSER_SECTION_AMBIGUOUS',
         path: `yaml.block.${index}.section`,
         severity: 'warning',
-        message: resolution.issue.message,
-        ...(resolution.issue.alternatives !== undefined ? { alternatives: resolution.issue.alternatives } : {}),
+        message: stages.issue.message,
+        ...(stages.issue.alternatives !== undefined ? { alternatives: stages.issue.alternatives } : {}),
       });
       continue;
     }
 
-    for (const resolved of resolution.resolved) {
+    for (const resolved of stages.resolved) {
       const anchoredPaths = mergeSection(doc, resolved.section, resolved.value, diagnostics);
       const span: SourceSpan = {
         blockIndex: index,
@@ -221,7 +221,7 @@ function mergeSection(
     case 'zones':
     case 'tokenTypes':
     case 'setup':
-    case 'operationProfiles':
+    case 'actionPipelines':
     case 'actions':
     case 'triggers':
     case 'endConditions':
@@ -359,7 +359,7 @@ function mergeListSection(
     | 'zones'
     | 'tokenTypes'
     | 'setup'
-    | 'operationProfiles'
+    | 'actionPipelines'
     | 'actions'
     | 'triggers'
     | 'endConditions'
@@ -394,10 +394,10 @@ function mergeListSection(
     case 'setup':
       (doc as MutableGameSpecDoc).setup = (doc.setup === null ? listValue : [...doc.setup, ...listValue]) as MutableGameSpecDoc['setup'];
       return buildAnchoredPaths(section, listValue, existingLength);
-    case 'operationProfiles':
-      (doc as MutableGameSpecDoc).operationProfiles = (
-        doc.operationProfiles === null ? listValue : [...doc.operationProfiles, ...listValue]
-      ) as MutableGameSpecDoc['operationProfiles'];
+    case 'actionPipelines':
+      (doc as MutableGameSpecDoc).actionPipelines = (
+        doc.actionPipelines === null ? listValue : [...doc.actionPipelines, ...listValue]
+      ) as MutableGameSpecDoc['actionPipelines'];
       return buildAnchoredPaths(section, listValue, existingLength);
     case 'actions':
       (doc as MutableGameSpecDoc).actions =
@@ -445,7 +445,7 @@ function getListSectionLength(
     | 'zones'
     | 'tokenTypes'
     | 'setup'
-    | 'operationProfiles'
+    | 'actionPipelines'
     | 'actions'
     | 'triggers'
     | 'endConditions'

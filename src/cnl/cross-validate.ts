@@ -28,12 +28,12 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     }
   }
 
-  if (sections.operationProfiles !== null && sections.actions !== null) {
-    for (const [profileIndex, profile] of sections.operationProfiles.entries()) {
+  if (sections.actionPipelines !== null && sections.actions !== null) {
+    for (const [profileIndex, profile] of sections.actionPipelines.entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
         'CNL_XREF_PROFILE_ACTION_MISSING',
-        `doc.operationProfiles.${profileIndex}.actionId`,
+        `doc.actionPipelines.${profileIndex}.actionId`,
         String(profile.actionId),
         actionTargets,
         `Operation profile "${profile.id}" references unknown action "${String(profile.actionId)}".`,
@@ -42,13 +42,13 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     }
   }
 
-  if (sections.operationProfiles !== null && sections.turnFlow !== null) {
-    for (const [profileIndex, profile] of sections.operationProfiles.entries()) {
-      for (const [windowIndex, windowId] of (profile.linkedSpecialActivityWindows ?? []).entries()) {
+  if (sections.actionPipelines !== null && sections.turnFlow !== null) {
+    for (const [profileIndex, profile] of sections.actionPipelines.entries()) {
+      for (const [windowIndex, windowId] of (profile.linkedWindows ?? []).entries()) {
         pushMissingIdentifierDiagnostic(
           diagnostics,
           'CNL_XREF_PROFILE_WINDOW_MISSING',
-          `doc.operationProfiles.${profileIndex}.linkedSpecialActivityWindows.${windowIndex}`,
+          `doc.actionPipelines.${profileIndex}.linkedWindows.${windowIndex}`,
           windowId,
           windowTargets,
           `Operation profile "${profile.id}" references unknown eligibility override window "${windowId}".`,

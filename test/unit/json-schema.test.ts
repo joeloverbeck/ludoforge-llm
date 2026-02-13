@@ -45,16 +45,16 @@ const fullGameDef: GameDef = {
     phases: [{ id: asPhaseId('main'), onEnter: [{ addVar: { scope: 'global', var: 'round', delta: 1 } }] }],
     activePlayerOrder: 'roundRobin',
   },
-  operationProfiles: [
+  actionPipelines: [
     {
       id: 'play-card-profile',
       actionId: asActionId('playCard'),
-      legality: {},
-      cost: {},
+      legality: null,
+      costValidation: null, costEffects: [],
       targeting: {},
-      resolution: [{ effects: [] }],
-      partialExecution: { mode: 'forbid' },
-      linkedSpecialActivityWindows: ['window-a'],
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
+      linkedWindows: ['window-a'],
     },
   ],
   actions: [

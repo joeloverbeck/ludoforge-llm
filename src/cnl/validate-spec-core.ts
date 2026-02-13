@@ -2,7 +2,7 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import type { GameSpecSourceMap } from './source-map.js';
 import { validateActions, validateEndConditions, validateTurnStructure } from './validate-actions.js';
-import { validateDataAssets, validateOperationProfiles, validateTurnFlow, dropZoneMissingDiagnostic } from './validate-extensions.js';
+import { validateActionPipelines, validateDataAssets, validateTurnFlow, dropZoneMissingDiagnostic } from './validate-extensions.js';
 import { validateMetadata, validateVariables } from './validate-metadata.js';
 import {
   TRIGGER_EVENT_KEYS,
@@ -39,7 +39,7 @@ export function validateGameSpec(
   const actionIds = validateActions(doc, diagnostics);
   const phaseIds = validateTurnStructure(doc, diagnostics);
   validateTurnFlow(doc, diagnostics);
-  validateOperationProfiles(doc, actionIds, diagnostics);
+  validateActionPipelines(doc, actionIds, diagnostics);
 
   validateCrossReferences(doc, zoneIds, actionIds, phaseIds, diagnostics);
   validateDuplicateIdentifiers(doc, diagnostics);
@@ -101,11 +101,11 @@ function validateCrossReferences(
     }
   }
 
-  if (doc.operationProfiles !== null) {
-    const operationProfileIds = doc.operationProfiles
+  if (doc.actionPipelines !== null) {
+    const operationProfileIds = doc.actionPipelines
       .map((profile) => (isRecord(profile) && typeof profile.id === 'string' ? normalizeIdentifier(profile.id) : undefined))
       .filter((value): value is string => value !== undefined && value.length > 0);
-    pushDuplicateNormalizedIdDiagnostics(diagnostics, operationProfileIds, 'doc.operationProfiles', 'operation profile id');
+    pushDuplicateNormalizedIdDiagnostics(diagnostics, operationProfileIds, 'doc.actionPipelines', 'operation profile id');
   }
 
   if (doc.triggers !== null) {

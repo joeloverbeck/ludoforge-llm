@@ -62,7 +62,7 @@
     },
     "turnStructure": { "$ref": "#/definitions/turnStructure" },
     "turnFlow": { "$ref": "#/definitions/turnFlowDef" },
-    "operationProfiles": {
+    "actionPipelines": {
       "type": "array",
       "items": { "$ref": "#/definitions/operationProfileDef" }
     },
@@ -892,43 +892,54 @@
         "id",
         "actionId",
         "legality",
-        "cost",
+        "costValidation",
+        "costEffects",
         "targeting",
-        "resolution",
-        "partialExecution"
+        "stages",
+        "atomicity"
       ],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "actionId": { "type": "string", "minLength": 1 },
         "legality": {
-          "type": "object",
-          "additionalProperties": true
+          "anyOf": [
+            { "$ref": "#/definitions/conditionAST" },
+            { "type": "boolean" },
+            { "type": "null" }
+          ]
         },
-        "cost": {
-          "type": "object",
-          "additionalProperties": true
+        "costValidation": {
+          "anyOf": [
+            { "$ref": "#/definitions/conditionAST" },
+            { "type": "boolean" },
+            { "type": "null" }
+          ]
+        },
+        "costEffects": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/effectAST" }
         },
         "targeting": {
           "type": "object",
           "additionalProperties": true
         },
-        "resolution": {
+        "stages": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": false,
+            "required": ["effects"],
+            "properties": {
+              "stage": { "type": "string" },
+              "effects": { "type": "array", "items": { "$ref": "#/definitions/effectAST" } }
+            }
           }
         },
-        "partialExecution": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["mode"],
-          "properties": {
-            "mode": { "enum": ["forbid", "allow"] }
-          }
+        "atomicity": {
+          "enum": ["atomic", "partial"]
         },
-        "linkedSpecialActivityWindows": {
+        "linkedWindows": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         }

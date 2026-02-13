@@ -49,10 +49,10 @@ export function expandZoneMacros(
 }
 
 export function expandEffectSections(
-  sections: Pick<GameSpecDoc, 'setup' | 'actions' | 'triggers' | 'turnStructure' | 'operationProfiles'>,
+  sections: Pick<GameSpecDoc, 'setup' | 'actions' | 'triggers' | 'turnStructure' | 'actionPipelines'>,
   maxExpandedEffects: number,
   diagnostics: Diagnostic[],
-): Pick<GameSpecDoc, 'setup' | 'actions' | 'triggers' | 'turnStructure' | 'operationProfiles'> {
+): Pick<GameSpecDoc, 'setup' | 'actions' | 'triggers' | 'turnStructure' | 'actionPipelines'> {
   const state: ExpansionState = {
     maxExpandedEffects,
     expandedEffects: 0,
@@ -77,7 +77,7 @@ export function expandEffectSections(
             expandTriggerEffects(trigger, triggerIndex, state),
           ) as GameSpecDoc['triggers']),
     turnStructure: expandTurnStructureEffects(sections.turnStructure, state),
-    operationProfiles: expandOperationProfileEffects(sections.operationProfiles, state),
+    actionPipelines: expandActionPipelineEffects(sections.actionPipelines, state),
   };
 }
 
@@ -142,42 +142,38 @@ function expandTriggerEffects(trigger: unknown, triggerIndex: number, state: Exp
   };
 }
 
-function expandOperationProfileEffects(
-  profiles: GameSpecDoc['operationProfiles'],
+function expandActionPipelineEffects(
+  pipelines: GameSpecDoc['actionPipelines'],
   state: ExpansionState,
-): GameSpecDoc['operationProfiles'] {
-  if (profiles === null) {
+): GameSpecDoc['actionPipelines'] {
+  if (pipelines === null) {
     return null;
   }
-  return profiles.map((profile, profileIndex) => {
-    if (!isRecord(profile)) return profile;
-    const resolution = profile.resolution;
-    if (!Array.isArray(resolution)) return profile;
-    const expandedResolution = resolution.map((stage, stageIndex) => {
+  return pipelines.map((pipeline, pipelineIndex) => {
+    if (!isRecord(pipeline)) return pipeline;
+    const stages = pipeline.stages;
+    if (!Array.isArray(stages)) return pipeline;
+    const expandedStages = stages.map((stage, stageIndex) => {
       if (!isRecord(stage) || !Array.isArray(stage.effects)) return stage;
       return {
         ...stage,
         effects: expandEffectArray(
           stage.effects,
-          `doc.operationProfiles.${profileIndex}.resolution.${stageIndex}.effects`,
+          `doc.actionPipelines.${pipelineIndex}.stages.${stageIndex}.effects`,
           state,
         ),
       };
     });
-    // Also expand cost.spend if present
-    let expandedCost = profile.cost;
-    if (isRecord(profile.cost) && Array.isArray(profile.cost.spend)) {
-      expandedCost = {
-        ...profile.cost,
-        spend: expandEffectArray(
-          profile.cost.spend,
-          `doc.operationProfiles.${profileIndex}.cost.spend`,
-          state,
-        ),
-      };
+    let expandedCostEffects = pipeline.costEffects;
+    if (Array.isArray(pipeline.costEffects)) {
+      expandedCostEffects = expandEffectArray(
+        pipeline.costEffects,
+        `doc.actionPipelines.${pipelineIndex}.costEffects`,
+        state,
+      );
     }
-    return { ...profile, resolution: expandedResolution, cost: expandedCost };
-  }) as GameSpecDoc['operationProfiles'];
+    return { ...pipeline, stages: expandedStages, costEffects: expandedCostEffects };
+  }) as GameSpecDoc['actionPipelines'];
 }
 
 function expandEffectArray(effects: readonly unknown[], path: string, state: ExpansionState): readonly unknown[] {

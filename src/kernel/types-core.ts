@@ -19,7 +19,7 @@ import type { EventCardDef } from './types-events.js';
 import type {
   OperationFreeTraceEntry,
   OperationPartialTraceEntry,
-  OperationProfileDef,
+  ActionPipelineDef,
 } from './types-operations.js';
 import type {
   CoupPlanDef,
@@ -152,7 +152,7 @@ export interface GameDef {
   readonly setup: readonly EffectAST[];
   readonly turnStructure: TurnStructure;
   readonly turnFlow?: TurnFlowDef;
-  readonly operationProfiles?: readonly OperationProfileDef[];
+  readonly actionPipelines?: readonly ActionPipelineDef[];
   readonly coupPlan?: CoupPlanDef;
   readonly victory?: VictoryDef;
   readonly actions: readonly ActionDef[];

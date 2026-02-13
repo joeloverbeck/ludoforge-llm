@@ -166,7 +166,7 @@ describe('compiler structured section results', () => {
       'setup',
       'turnStructure',
       'turnFlow',
-      'operationProfiles',
+      'actionPipelines',
       'coupPlan',
       'victory',
       'actions',
@@ -194,7 +194,7 @@ describe('compiler structured section results', () => {
       | 'setup'
       | 'turnStructure'
       | 'turnFlow'
-      | 'operationProfiles'
+      | 'actionPipelines'
       | 'coupPlan'
       | 'victory'
       | 'actions'

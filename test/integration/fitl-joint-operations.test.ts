@@ -19,7 +19,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
   it('compiles joint operation profiles from production spec', () => {
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
-    const profiles = compiled.gameDef!.operationProfiles ?? [];
+    const profiles = compiled.gameDef!.actionPipelines ?? [];
     const profileMap = profiles.map((p) => ({ id: p.id, actionId: String(p.actionId) }));
     for (const expected of [
       { id: 'us-op-profile', actionId: 'usOp' },
@@ -41,7 +41,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
     const result = applyMove(gameDef, state, { actionId: asActionId('usOp'), params: {} });
 
     assert.equal(result.state.perPlayerVars['1']!.resources, 15, 'ARVN resources reduced by 5');
-    assert.equal(result.state.globalVars.usOpCount, 1, 'resolution effect executed');
+    assert.equal(result.state.globalVars.usOpCount, 1, 'stages effect executed');
     assert.equal(result.state.globalVars.fallbackUsed, 0, 'profile used, not fallback');
   });
 
@@ -54,7 +54,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
     const result = applyMove(gameDef, state, { actionId: asActionId('usOp'), params: {} });
 
     assert.equal(result.state.perPlayerVars['1']!.resources, 10, 'ARVN resources reduced to exactly Total Econ');
-    assert.equal(result.state.globalVars.usOpCount, 1, 'resolution effect executed');
+    assert.equal(result.state.globalVars.usOpCount, 1, 'stages effect executed');
   });
 
   it('blocks US operation when ARVN resources minus cost would go below Total Econ (14 - 5 = 9 < 10)', () => {
@@ -98,7 +98,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
     const result = applyMove(gameDef, state, { actionId: asActionId('arvnOp'), params: {} });
 
     assert.equal(result.state.perPlayerVars['1']!.resources, 15, 'ARVN resources reduced by 5');
-    assert.equal(result.state.globalVars.arvnOpCount, 1, 'resolution effect executed');
+    assert.equal(result.state.globalVars.arvnOpCount, 1, 'stages effect executed');
   });
 
   it('allows free US operation regardless of cost constraint (freeOperation bypasses cost validation)', () => {
@@ -110,6 +110,6 @@ describe('FITL Joint Operation cost constraint integration', () => {
     const result = applyMove(gameDef, state, move);
 
     assert.equal(result.state.perPlayerVars['1']!.resources, 14, 'ARVN resources unchanged — cost bypassed');
-    assert.equal(result.state.globalVars.usOpCount, 1, 'resolution effects still execute');
+    assert.equal(result.state.globalVars.usOpCount, 1, 'stages effects still execute');
   });
 });

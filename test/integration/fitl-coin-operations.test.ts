@@ -11,7 +11,7 @@ describe('FITL COIN operations integration', () => {
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
-    const profiles = compiled.gameDef!.operationProfiles ?? [];
+    const profiles = compiled.gameDef!.actionPipelines ?? [];
     const profileMap = profiles.map((profile) => ({ id: profile.id, actionId: String(profile.actionId) }));
     for (const expected of [
       { id: 'train-us-profile', actionId: 'train' },
@@ -27,7 +27,7 @@ describe('FITL COIN operations integration', () => {
     }
   });
 
-  it('executes stub COIN operations through compiled operationProfiles instead of fallback action effects', () => {
+  it('executes stub COIN operations through compiled actionPipelines instead of fallback action effects', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);
@@ -53,7 +53,7 @@ describe('FITL COIN operations integration', () => {
     const getArvnProfile = () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
-      const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'train-arvn-profile');
+      const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'train-arvn-profile');
       assert.ok(profile, 'train-arvn-profile must exist');
       return profile;
     };
@@ -62,10 +62,10 @@ describe('FITL COIN operations integration', () => {
       getArvnProfile();
     });
 
-    it('has three resolution stages: select-spaces, resolve-per-space, sub-action', () => {
+    it('has three stages stages: select-spaces, resolve-per-space, sub-action', () => {
       const profile = getArvnProfile();
       assert.deepEqual(
-        profile.resolution.map((s) => s.stage),
+        profile.stages.map((s) => s.stage),
         ['select-spaces', 'resolve-per-space', 'sub-action'],
       );
     });
@@ -77,17 +77,17 @@ describe('FITL COIN operations integration', () => {
 
     it('has legality when: true (always legal)', () => {
       const profile = getArvnProfile();
-      assert.equal(profile.legality.when, true);
+      assert.equal(profile.legality, true);
     });
 
-    it('has no top-level cost (cost is per-space in resolution)', () => {
+    it('has no top-level cost (cost is per-space in stages)', () => {
       const profile = getArvnProfile();
-      assert.equal(profile.cost.spend, undefined);
+      assert.deepEqual(profile.costEffects, []);
     });
 
     it('forbids partial execution', () => {
       const profile = getArvnProfile();
-      assert.equal(profile.partialExecution.mode, 'forbid');
+      assert.equal(profile.atomicity, 'atomic');
     });
   });
 
@@ -95,7 +95,7 @@ describe('FITL COIN operations integration', () => {
     const compileArvnProfile = () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
-      const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'train-arvn-profile');
+      const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'train-arvn-profile');
       assert.ok(profile, 'train-arvn-profile must exist');
       return profile;
     };
@@ -104,7 +104,7 @@ describe('FITL COIN operations integration', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parseArvnProfile = (): any => {
       const { parsed } = compileProductionSpec();
-      const profile = parsed.doc.operationProfiles?.find(
+      const profile = parsed.doc.actionPipelines?.find(
         (p: { id: string }) => p.id === 'train-arvn-profile',
       );
       assert.ok(profile, 'train-arvn-profile must exist in parsed doc');
@@ -130,7 +130,7 @@ describe('FITL COIN operations integration', () => {
       // Verify the compiled GameDef preserves zones query ConditionAST filters
       // including the NVA Control exclusion.
       const profile = compileArvnProfile();
-      const selectSpaces = profile.resolution[0]!;
+      const selectSpaces = profile.stages[0]!;
       assert.equal(selectSpaces.stage, 'select-spaces');
 
       // Both LimOp (then) and normal (else) branches must exclude NVA-controlled spaces
@@ -160,7 +160,7 @@ describe('FITL COIN operations integration', () => {
 
     it('AC3: costs 3 ARVN Resources when placing pieces', () => {
       const profile = compileArvnProfile();
-      const resolvePerSpace = profile.resolution[1]!;
+      const resolvePerSpace = profile.stages[1]!;
       assert.equal(resolvePerSpace.stage, 'resolve-per-space');
 
       // Both placement branches (rangers and cubes) must deduct 3 ARVN Resources
@@ -176,7 +176,7 @@ describe('FITL COIN operations integration', () => {
     it('AC4: places Rangers up to 2', () => {
       // Verify macro args at YAML level (rangers, maxPieces: 2) and compiled forEach limit
       const parsed = parseArvnProfile();
-      const resolvePerSpace = parsed.resolution[1];
+      const resolvePerSpace = parsed.stages[1];
 
       // Pre-compilation: macro call specifies pieceType: rangers, maxPieces: 2
       const rangerMacro = findDeep(resolvePerSpace!.effects, (node: any) =>
@@ -188,7 +188,7 @@ describe('FITL COIN operations integration', () => {
 
       // Post-compilation: forEach with limit 2 sourcing from available-ARVN with type filter
       const compiled = compileArvnProfile();
-      const compiledRps = compiled.resolution[1]!;
+      const compiledRps = compiled.stages[1]!;
       const rangerForEach = findDeep(compiledRps.effects, (node: any) =>
         node?.forEach !== undefined &&
         node.forEach.limit === 2 &&
@@ -208,7 +208,7 @@ describe('FITL COIN operations integration', () => {
     it('AC5: places cubes at Cities or at COIN Bases up to 6', () => {
       // Verify macro args at YAML level (troops, maxPieces: 6)
       const parsed = parseArvnProfile();
-      const resolvePerSpace = parsed.resolution[1];
+      const resolvePerSpace = parsed.stages[1];
 
       const cubeMacro = findDeep(resolvePerSpace.effects, (node: any) =>
         node?.macro === 'place-from-available-or-map' &&
@@ -219,7 +219,7 @@ describe('FITL COIN operations integration', () => {
 
       // Post-compilation: forEach with limit 6 and city-or-COIN-base condition
       const compiled = compileArvnProfile();
-      const compiledRps = compiled.resolution[1]!;
+      const compiledRps = compiled.stages[1]!;
       const cubeForEach = findDeep(compiledRps.effects, (node: any) =>
         node?.forEach !== undefined &&
         node.forEach.limit === 6 &&
@@ -250,7 +250,7 @@ describe('FITL COIN operations integration', () => {
       // The compiler now preserves tokensInZone filters in compiled output.
       // Verify the compiled GameDef has distinct token type filters for ARVN troops and police.
       const profile = compileArvnProfile();
-      const subAction = profile.resolution[2]!;
+      const subAction = profile.stages[2]!;
       assert.equal(subAction.stage, 'sub-action');
 
       const pacifyCondition = findDeep(subAction.effects, (node: any) =>
@@ -273,7 +273,7 @@ describe('FITL COIN operations integration', () => {
 
     it('AC7: replace cubes with Base requires 3+ ARVN cubes and stacking check (< 2 bases)', () => {
       const profile = compileArvnProfile();
-      const subAction = profile.resolution[2]!;
+      const subAction = profile.stages[2]!;
 
       const replaceCondition = findDeep(subAction.effects, (node: any) =>
         node?.op === 'and' &&
@@ -290,7 +290,7 @@ describe('FITL COIN operations integration', () => {
 
     it('AC8: replace cubes with Base costs 3 ARVN even if free operation', () => {
       const profile = compileArvnProfile();
-      const subAction = profile.resolution[2]!;
+      const subAction = profile.stages[2]!;
 
       const replaceIfNodes = findDeep(subAction.effects, (node: any) =>
         node?.if !== undefined &&
@@ -307,7 +307,7 @@ describe('FITL COIN operations integration', () => {
 
     it('AC9: LimOp variant limits to max 1 space', () => {
       const profile = compileArvnProfile();
-      const selectSpaces = profile.resolution[0]!;
+      const selectSpaces = profile.stages[0]!;
 
       const limOpIf = findDeep(selectSpaces.effects, (node: any) =>
         node?.if?.when?.op === '==' &&
@@ -330,7 +330,7 @@ describe('FITL COIN operations integration', () => {
 
     it('AC10: free operation variant skips per-space cost (but base replacement still costs)', () => {
       const profile = compileArvnProfile();
-      const resolvePerSpace = profile.resolution[1]!;
+      const resolvePerSpace = profile.stages[1]!;
 
       const freeOpGuards = findDeep(resolvePerSpace.effects, (node: any) =>
         node?.if?.when?.op === '!=' &&
@@ -358,8 +358,8 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
 
-      const usProfile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'train-us-profile');
-      const arvnProfile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'train-arvn-profile');
+      const usProfile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'train-us-profile');
+      const arvnProfile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'train-arvn-profile');
       assert.ok(usProfile, 'train-us-profile must exist');
       assert.ok(arvnProfile, 'train-arvn-profile must exist');
 
@@ -371,7 +371,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
 
-      const patrolProfile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'patrol-us-profile');
+      const patrolProfile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'patrol-us-profile');
       assert.ok(patrolProfile, 'patrol-us-profile must exist');
       assert.deepEqual(patrolProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: '0' });
     });
@@ -381,7 +381,7 @@ describe('FITL COIN operations integration', () => {
       assert.notEqual(compiled.gameDef, null);
 
       for (const id of ['sweep-profile', 'assault-profile']) {
-        const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === id);
+        const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === id);
         assert.ok(profile, `${id} must exist`);
         assert.equal(profile.applicability, undefined);
       }
@@ -393,14 +393,14 @@ describe('FITL COIN operations integration', () => {
     const getPatrolProfile = () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
-      const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'patrol-us-profile');
+      const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'patrol-us-profile');
       assert.ok(profile, 'patrol-us-profile must exist');
       return profile;
     };
 
     const parsePatrolProfile = (): any => {
       const { parsed } = compileProductionSpec();
-      const profile = parsed.doc.operationProfiles?.find(
+      const profile = parsed.doc.actionPipelines?.find(
         (p: { id: string }) => p.id === 'patrol-us-profile',
       );
       assert.ok(profile, 'patrol-us-profile must exist in parsed doc');
@@ -428,17 +428,17 @@ describe('FITL COIN operations integration', () => {
 
     it('AC2: US Patrol costs 0 (no resource deduction)', () => {
       const profile = getPatrolProfile();
-      assert.deepEqual(profile.cost.spend, undefined);
+      assert.deepEqual(profile.costEffects, []);
     });
 
     it('AC2b: legality is always true (no cost check)', () => {
       const profile = getPatrolProfile();
-      assert.equal(profile.legality.when, true);
+      assert.equal(profile.legality, true);
     });
 
     it('AC3: targets LoCs only (spaceType filter)', () => {
       const profile = getPatrolProfile();
-      const selectLoCs = profile.resolution[0]!;
+      const selectLoCs = profile.stages[0]!;
       assert.equal(selectLoCs.stage, 'select-locs');
 
       const locFilters = findDeep(selectLoCs.effects, (node: any) =>
@@ -455,7 +455,7 @@ describe('FITL COIN operations integration', () => {
 
     it('AC4: move-cubes stage uses tokensInAdjacentZones for US cubes', () => {
       const parsed = parsePatrolProfile();
-      const moveCubes = parsed.resolution[1];
+      const moveCubes = parsed.stages[1];
       assert.equal(moveCubes.stage, 'move-cubes');
 
       const adjacentQueries = findDeep(moveCubes.effects, (node: any) =>
@@ -468,7 +468,7 @@ describe('FITL COIN operations integration', () => {
 
     it('AC5: activation stage — 1 guerrilla per US cube (1:1 ratio)', () => {
       const profile = getPatrolProfile();
-      const activateStage = profile.resolution[2]!;
+      const activateStage = profile.stages[2]!;
       assert.equal(activateStage.stage, 'activate-guerrillas');
 
       const guerrillaForEach = findDeep(activateStage.effects, (node: any) =>
@@ -487,7 +487,7 @@ describe('FITL COIN operations integration', () => {
 
     it('AC6: free Assault uses coin-assault-removal-order macro', () => {
       const parsed = parsePatrolProfile();
-      const freeAssault = parsed.resolution[3];
+      const freeAssault = parsed.stages[3];
       assert.equal(freeAssault.stage, 'free-assault');
 
       const macroRef = findDeep(freeAssault.effects, (node: any) =>
@@ -498,7 +498,7 @@ describe('FITL COIN operations integration', () => {
 
     it('AC7: free Assault damage formula considers US Base (doubled with base)', () => {
       const profile = getPatrolProfile();
-      const freeAssault = profile.resolution[3]!;
+      const freeAssault = profile.stages[3]!;
       assert.equal(freeAssault.stage, 'free-assault');
 
       const damageConditional = findDeep(freeAssault.effects, (node: any) =>
@@ -516,7 +516,7 @@ describe('FITL COIN operations integration', () => {
 
     it('AC8: LimOp variant — max 1 LoC', () => {
       const profile = getPatrolProfile();
-      const selectLoCs = profile.resolution[0]!;
+      const selectLoCs = profile.stages[0]!;
 
       const limOpIf = findDeep(selectLoCs.effects, (node: any) =>
         node?.if?.when?.op === '==' &&
@@ -539,7 +539,7 @@ describe('FITL COIN operations integration', () => {
 
     it('AC9: free Assault limited to at most 1 LoC', () => {
       const profile = getPatrolProfile();
-      const freeAssault = profile.resolution[3]!;
+      const freeAssault = profile.stages[3]!;
 
       const assaultChooseN = findDeep(freeAssault.effects, (node: any) =>
         node?.chooseN?.max === 1 && node?.chooseN?.min === 0,
@@ -547,17 +547,17 @@ describe('FITL COIN operations integration', () => {
       assert.ok(assaultChooseN.length >= 1, 'Expected chooseN max:1 for free assault LoC selection');
     });
 
-    it('has four resolution stages: select-locs, move-cubes, activate-guerrillas, free-assault', () => {
+    it('has four stages stages: select-locs, move-cubes, activate-guerrillas, free-assault', () => {
       const profile = getPatrolProfile();
       assert.deepEqual(
-        profile.resolution.map((s: any) => s.stage),
+        profile.stages.map((s: any) => s.stage),
         ['select-locs', 'move-cubes', 'activate-guerrillas', 'free-assault'],
       );
     });
 
     it('forbids partial execution', () => {
       const profile = getPatrolProfile();
-      assert.equal(profile.partialExecution.mode, 'forbid');
+      assert.equal(profile.atomicity, 'atomic');
     });
   });
   /* eslint-enable @typescript-eslint/no-explicit-any */

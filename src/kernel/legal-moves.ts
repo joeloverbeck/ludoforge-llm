@@ -115,9 +115,9 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
 
     const profile = resolveOperationProfile(def, action, actorCtx);
     if (profile !== undefined) {
-      if (profile.legality.when !== undefined) {
+      if (profile.legality !== null) {
         try {
-          if (!evalCondition(profile.legality.when, actorCtx)) {
+          if (!evalCondition(profile.legality, actorCtx)) {
             continue;
           }
         } catch {
@@ -126,11 +126,11 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       }
 
       if (
-        profile.cost.validate !== undefined &&
-        profile.partialExecution.mode === 'forbid'
+        profile.costValidation !== null &&
+        profile.atomicity === 'atomic'
       ) {
         try {
-          if (!evalCondition(profile.cost.validate, actorCtx)) {
+          if (!evalCondition(profile.costValidation, actorCtx)) {
             continue;
           }
         } catch {

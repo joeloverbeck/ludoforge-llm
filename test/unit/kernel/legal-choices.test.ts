@@ -12,12 +12,12 @@ import {
   type GameDef,
   type GameState,
   type Move,
-  type OperationProfileDef,
+  type ActionPipelineDef,
 } from '../../../src/kernel/index.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
-  operationProfiles?: readonly OperationProfileDef[];
+  actionPipelines?: readonly ActionPipelineDef[];
   globalVars?: GameDef['globalVars'];
 }): GameDef =>
   ({
@@ -36,7 +36,7 @@ const makeBaseDef = (overrides?: {
       activePlayerOrder: 'roundRobin',
     },
     actions: overrides?.actions ?? [],
-    operationProfiles: overrides?.operationProfiles,
+    actionPipelines: overrides?.actionPipelines,
     triggers: [],
     endConditions: [],
   }) as unknown as GameDef;
@@ -428,7 +428,7 @@ describe('legalChoices()', () => {
   });
 
   describe('operation profile support', () => {
-    it('walks resolution stage effects for profiled actions', () => {
+    it('walks stages stage effects for profiled actions', () => {
       const action: ActionDef = {
         id: asActionId('trainOp'),
         actor: 'active',
@@ -440,13 +440,13 @@ describe('legalChoices()', () => {
         limits: [],
       };
 
-      const profile: OperationProfileDef = {
+      const profile: ActionPipelineDef = {
         id: 'trainProfile',
         actionId: asActionId('trainOp'),
-        legality: {},
-        cost: {},
+        legality: null,
+        costValidation: null, costEffects: [],
         targeting: {},
-        resolution: [
+        stages: [
           {
             stage: 'selectSpaces',
             effects: [
@@ -461,10 +461,10 @@ describe('legalChoices()', () => {
             ],
           },
         ],
-        partialExecution: { mode: 'allow' },
+        atomicity: 'partial',
       };
 
-      const def = makeBaseDef({ actions: [action], operationProfiles: [profile] });
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
       const state = makeBaseState();
 
       const result = legalChoices(def, state, makeMove('trainOp'));
@@ -476,7 +476,7 @@ describe('legalChoices()', () => {
       assert.equal(result.max, 3); // clamped from 10
     });
 
-    it('returns complete when legality.when fails for profiled action', () => {
+    it('returns complete when legality fails for profiled action', () => {
       const action: ActionDef = {
         id: asActionId('blockedOp'),
         actor: 'active',
@@ -488,19 +488,17 @@ describe('legalChoices()', () => {
         limits: [],
       };
 
-      const profile: OperationProfileDef = {
+      const profile: ActionPipelineDef = {
         id: 'blockedProfile',
         actionId: asActionId('blockedOp'),
         legality: {
-          when: {
             op: '>=',
             left: { ref: 'gvar', var: 'resources' },
             right: 5,
           },
-        },
-        cost: {},
+        costValidation: null, costEffects: [],
         targeting: {},
-        resolution: [
+        stages: [
           {
             effects: [
               {
@@ -512,12 +510,12 @@ describe('legalChoices()', () => {
             ],
           },
         ],
-        partialExecution: { mode: 'allow' },
+        atomicity: 'partial',
       };
 
       const def = makeBaseDef({
         actions: [action],
-        operationProfiles: [profile],
+        actionPipelines: [profile],
         globalVars: [{ name: 'resources', type: 'int', init: 0, min: 0, max: 100 }],
       });
       const state = makeBaseState({ globalVars: { resources: 2 } });

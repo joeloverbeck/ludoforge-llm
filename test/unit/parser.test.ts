@@ -18,7 +18,7 @@ describe('parseGameSpec API shape', () => {
       setup: null,
       turnStructure: null,
       turnFlow: null,
-      operationProfiles: null,
+      actionPipelines: null,
       coupPlan: null,
       victory: null,
       actions: null,
@@ -222,25 +222,26 @@ describe('parseGameSpec API shape', () => {
     assert.ok(result.sourceMap.byPath['dataAssets[0].kind'] !== undefined);
   });
 
-  it('parses operationProfiles section and anchors merged list paths', () => {
+  it('parses actionPipelines section and anchors merged list paths', () => {
     const result = parseGameSpec([
       '```yaml',
-      'operationProfiles:',
+      'actionPipelines:',
       '  - id: patrol-profile',
       '    actionId: patrol',
-      '    legality: { when: always }',
-      '    cost: { spend: 0 }',
-      '    targeting: { select: none }',
-      '    resolution:',
+      '    legality: true',
+      '    costValidation: null',
+      '    costEffects: []',
+      '    targeting: {}',
+      '    stages:',
       '      - stage: apply',
-      '    partialExecution: { mode: forbid }',
+      '    atomicity: atomic',
       '```',
     ].join('\n'));
 
-    assert.equal(result.doc.operationProfiles?.length, 1);
-    assert.equal(result.doc.operationProfiles?.[0]?.id, 'patrol-profile');
-    assert.ok(result.sourceMap.byPath['operationProfiles[0].id'] !== undefined);
-    assert.ok(result.sourceMap.byPath['operationProfiles[0].partialExecution.mode'] !== undefined);
+    assert.equal(result.doc.actionPipelines?.length, 1);
+    assert.equal(result.doc.actionPipelines?.[0]?.id, 'patrol-profile');
+    assert.ok(result.sourceMap.byPath['actionPipelines[0].id'] !== undefined);
+    assert.ok(result.sourceMap.byPath['actionPipelines[0].atomicity'] !== undefined);
   });
 
   it('parses coupPlan and victory singleton sections', () => {

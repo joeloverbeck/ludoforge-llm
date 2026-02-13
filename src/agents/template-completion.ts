@@ -13,7 +13,7 @@ import type {
 export const MAX_CHOICES = 50;
 
 export const isTemplateMoveForProfile = (def: GameDef, move: Move): boolean =>
-  def.operationProfiles?.some((p) => p.actionId === move.actionId) === true
+  def.actionPipelines?.some((p) => p.actionId === move.actionId) === true
   && Object.keys(move.params).length === 0;
 
 const selectFromChooseOne = (

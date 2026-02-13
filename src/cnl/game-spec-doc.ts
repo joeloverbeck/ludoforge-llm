@@ -150,20 +150,17 @@ export interface GameSpecTurnFlow {
   readonly pivotal?: GameSpecTurnFlowPivotal;
 }
 
-export interface GameSpecOperationProfilePartialExecution {
-  readonly mode: 'forbid' | 'allow';
-}
-
-export interface GameSpecOperationProfileDef {
+export interface GameSpecActionPipelineDef {
   readonly id: string;
   readonly actionId: string;
   readonly applicability?: unknown;
-  readonly legality: Readonly<Record<string, unknown>>;
-  readonly cost: Readonly<Record<string, unknown>>;
+  readonly legality: unknown;
+  readonly costValidation: unknown;
+  readonly costEffects: readonly unknown[];
   readonly targeting: Readonly<Record<string, unknown>>;
-  readonly resolution: readonly Readonly<Record<string, unknown>>[];
-  readonly partialExecution: GameSpecOperationProfilePartialExecution;
-  readonly linkedSpecialActivityWindows?: readonly string[];
+  readonly stages: readonly Readonly<Record<string, unknown>>[];
+  readonly atomicity: 'atomic' | 'partial';
+  readonly linkedWindows?: readonly string[];
 }
 
 export interface GameSpecCoupPlanPhase {
@@ -223,7 +220,7 @@ export interface GameSpecDoc {
   readonly setup: readonly GameSpecEffect[] | null;
   readonly turnStructure: GameSpecTurnStructure | null;
   readonly turnFlow: GameSpecTurnFlow | null;
-  readonly operationProfiles: readonly GameSpecOperationProfileDef[] | null;
+  readonly actionPipelines: readonly GameSpecActionPipelineDef[] | null;
   readonly coupPlan: GameSpecCoupPlan | null;
   readonly victory: GameSpecVictory | null;
   readonly actions: readonly GameSpecActionDef[] | null;
@@ -244,7 +241,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     setup: null,
     turnStructure: null,
     turnFlow: null,
-    operationProfiles: null,
+    actionPipelines: null,
     coupPlan: null,
     victory: null,
     actions: null,

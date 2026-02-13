@@ -58,16 +58,16 @@ const fullGameDef = {
     passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: 3 }],
     durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
   },
-  operationProfiles: [
+  actionPipelines: [
     {
       id: 'play-card-profile',
       actionId: 'playCard',
-      legality: {},
-      cost: {},
+      legality: null,
+      costValidation: null, costEffects: [],
       targeting: {},
-      resolution: [{ effects: [] }],
-      partialExecution: { mode: 'forbid' },
-      linkedSpecialActivityWindows: ['window-a'],
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
+      linkedWindows: ['window-a'],
     },
   ],
   coupPlan: {
@@ -359,19 +359,19 @@ describe('top-level runtime schemas', () => {
     assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'turnFlow.durationWindows.1'));
   });
 
-  it('fails on invalid operationProfiles partialExecution mode with actionable nested path', () => {
+  it('fails on invalid actionPipelines atomicity mode with actionable nested path', () => {
     const result = GameDefSchema.safeParse({
       ...fullGameDef,
-      operationProfiles: [
+      actionPipelines: [
         {
-          ...fullGameDef.operationProfiles[0],
-          partialExecution: { mode: 'sometimes' },
+          ...fullGameDef.actionPipelines[0],
+          atomicity: 'sometimes',
         },
       ],
     });
 
     assert.equal(result.success, false);
-    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'operationProfiles.0.partialExecution.mode'));
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'actionPipelines.0.atomicity'));
   });
 
   it('enforces strict top-level object policy', () => {

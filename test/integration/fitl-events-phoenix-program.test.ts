@@ -5,7 +5,7 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 describe('FITL Phoenix Program event-card production spec', () => {
-  it('compiles card 27 with dual-use sides and qualifier/cardinality constraints for constrained resolution', () => {
+  it('compiles card 27 with dual-use sides and qualifier/cardinality constraints for constrained stages', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);

@@ -11,7 +11,7 @@ describe('FITL insurgent operations integration', () => {
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
-    const profiles = compiled.gameDef!.operationProfiles ?? [];
+    const profiles = compiled.gameDef!.actionPipelines ?? [];
     const profileMap = profiles.map((profile) => ({ id: profile.id, actionId: String(profile.actionId) }));
     for (const expected of [
       { id: 'rally-profile', actionId: 'rally' },
@@ -26,7 +26,7 @@ describe('FITL insurgent operations integration', () => {
     }
   });
 
-  it('executes insurgent operations through compiled operationProfiles instead of fallback action effects', () => {
+  it('executes insurgent operations through compiled actionPipelines instead of fallback action effects', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);
@@ -49,7 +49,7 @@ describe('FITL insurgent operations integration', () => {
     assert.equal(final.globalVars.fallbackUsed, 0);
   });
 
-  it('rejects attack when profile cost validation fails under partialExecution forbid', () => {
+  it('rejects attack when profile cost validation fails under atomicity forbid', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);

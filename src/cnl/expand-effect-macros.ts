@@ -229,7 +229,7 @@ export function expandEffectMacros(
   // handles arrays (detecting macro invocations), objects, and
   // primitives. Sections without macros pass through unchanged.
   // This avoids enumerating sections explicitly so any new section
-  // (e.g. operationProfiles) automatically benefits from expansion.
+  // (e.g. actionPipelines) automatically benefits from expansion.
   const expanded: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(doc)) {
     if (key === 'effectMacros') {

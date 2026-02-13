@@ -11,11 +11,11 @@ describe('FITL NVA/VC special activities integration', () => {
 
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
-    const profiles = compiled.gameDef!.operationProfiles ?? [];
+    const profiles = compiled.gameDef!.actionPipelines ?? [];
     const profileSummaries = profiles.map((profile) => ({
       id: profile.id,
       actionId: String(profile.actionId),
-      windows: profile.linkedSpecialActivityWindows ?? [],
+      windows: profile.linkedWindows ?? [],
     }));
     for (const expected of [
       { id: 'infiltrate-profile', actionId: 'infiltrate', windows: ['nva-special-window'] },
@@ -37,7 +37,7 @@ describe('FITL NVA/VC special activities integration', () => {
     assert.equal(vcAmbush?.targeting.tieBreak, 'lexicographicSpaceId');
   });
 
-  it('executes NVA/VC special activities through compiled operationProfiles instead of fallback action effects', () => {
+  it('executes NVA/VC special activities through compiled actionPipelines instead of fallback action effects', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);
@@ -98,7 +98,7 @@ describe('FITL NVA/VC special activities integration', () => {
     );
   });
 
-  it('rejects subvert when profile cost validation fails under partialExecution forbid', () => {
+  it('rejects subvert when profile cost validation fails under atomicity forbid', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);

@@ -35,7 +35,7 @@ describe('FITL removal ordering macros', () => {
 
       // Verify the macros were expanded by checking that the production spec contains
       // profiles referencing removal-order related effects
-      const profiles = compiled.gameDef!.operationProfiles ?? [];
+      const profiles = compiled.gameDef!.actionPipelines ?? [];
       const sweepProfile = profiles.find((p) => p.id === 'sweep-profile');
       const assaultProfile = profiles.find((p) => p.id === 'assault-profile');
       assert.ok(sweepProfile, 'Expected sweep-profile to exist');

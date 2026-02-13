@@ -53,16 +53,16 @@ function createRichCompilableDoc(): GameSpecDoc {
         limits: [],
       },
     ],
-    operationProfiles: [
+    actionPipelines: [
       {
         id: 'act-profile',
         actionId: 'act',
-        legality: {},
-        cost: {},
+        legality: null,
+        costValidation: null, costEffects: [],
         targeting: {},
-        resolution: [{ effects: [] }],
-        partialExecution: { mode: 'forbid' as const },
-        linkedSpecialActivityWindows: ['window-a'],
+        stages: [{ effects: [] }],
+        atomicity: 'atomic',
+        linkedWindows: ['window-a'],
       },
     ],
     triggers: [{ id: 'on-act', event: { type: 'actionResolved', action: 'act' }, effects: [] }],
@@ -114,10 +114,10 @@ describe('crossValidateSpec', () => {
 
   it('profile referencing nonexistent action emits CNL_XREF_PROFILE_ACTION_MISSING', () => {
     const sections = compileRichSections();
-    const profile = requireValue(sections.operationProfiles?.[0]);
+    const profile = requireValue(sections.actionPipelines?.[0]);
     const diagnostics = crossValidateSpec({
       ...sections,
-      operationProfiles: [
+      actionPipelines: [
         {
           ...profile,
           actionId: asActionId('acx'),
@@ -127,7 +127,7 @@ describe('crossValidateSpec', () => {
 
     const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_PROFILE_ACTION_MISSING');
     assert.notEqual(diagnostic, undefined);
-    assert.equal(diagnostic?.path, 'doc.operationProfiles.0.actionId');
+    assert.equal(diagnostic?.path, 'doc.actionPipelines.0.actionId');
     assert.equal(diagnostic?.suggestion, 'Did you mean "act"?');
   });
 
@@ -187,11 +187,11 @@ describe('crossValidateSpec', () => {
   it('multiple cross-ref errors are sorted deterministically', () => {
     const sections = compileRichSections();
     const action = requireValue(sections.actions?.[0]);
-    const profile = requireValue(sections.operationProfiles?.[0]);
+    const profile = requireValue(sections.actionPipelines?.[0]);
     const withMultipleErrors: CompileSectionResults = {
       ...sections,
       actions: [{ ...action, phase: asPhaseId('maim') }],
-      operationProfiles: [{ ...profile, actionId: asActionId('acx') }],
+      actionPipelines: [{ ...profile, actionId: asActionId('acx') }],
     };
 
     const first = crossValidateSpec(withMultipleErrors);

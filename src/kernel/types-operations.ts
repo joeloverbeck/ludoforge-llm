@@ -1,20 +1,7 @@
 import type { ActionId } from './branded.js';
 import type { ConditionAST, EffectAST } from './types-ast.js';
 
-export interface OperationProfilePartialExecutionDef {
-  readonly mode: 'forbid' | 'allow';
-}
-
-export interface OperationLegalityDef {
-  readonly when?: ConditionAST;
-}
-
-export interface OperationCostDef {
-  readonly validate?: ConditionAST;
-  readonly spend?: readonly EffectAST[];
-}
-
-export interface OperationTargetingDef {
+export interface ActionTargetingDef {
   readonly select?: 'upToN' | 'allEligible' | 'exactN';
   readonly max?: number;
   readonly filter?: ConditionAST;
@@ -22,21 +9,22 @@ export interface OperationTargetingDef {
   readonly tieBreak?: string;
 }
 
-export interface OperationResolutionStageDef {
+export interface ActionResolutionStageDef {
   readonly stage?: string;
   readonly effects: readonly EffectAST[];
 }
 
-export interface OperationProfileDef {
+export interface ActionPipelineDef {
   readonly id: string;
   readonly actionId: ActionId;
   readonly applicability?: ConditionAST;
-  readonly legality: OperationLegalityDef;
-  readonly cost: OperationCostDef;
-  readonly targeting: OperationTargetingDef;
-  readonly resolution: readonly OperationResolutionStageDef[];
-  readonly partialExecution: OperationProfilePartialExecutionDef;
-  readonly linkedSpecialActivityWindows?: readonly string[];
+  readonly legality: ConditionAST | null;
+  readonly costValidation: ConditionAST | null;
+  readonly costEffects: readonly EffectAST[];
+  readonly targeting: ActionTargetingDef;
+  readonly stages: readonly ActionResolutionStageDef[];
+  readonly atomicity: 'atomic' | 'partial';
+  readonly linkedWindows?: readonly string[];
 }
 
 export interface OperationPartialTraceEntry {

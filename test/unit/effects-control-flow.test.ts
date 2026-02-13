@@ -8,12 +8,15 @@ import {
   applyEffects,
   asPhaseId,
   asPlayerId,
+  asTokenId,
+  asZoneId,
   createRng,
   isEvalErrorCode,
   type EffectAST,
   type EffectContext,
   type GameDef,
   type GameState,
+  type Token,
   createCollector,
 } from '../../src/kernel/index.js';
 
@@ -65,6 +68,12 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   moveParams: {},
   collector: createCollector(),
   ...overrides,
+});
+
+const makeToken = (id: string, type: string, faction: string): Token => ({
+  id: asTokenId(id),
+  type,
+  props: { faction, type },
 });
 
 describe('effects control-flow handlers', () => {
@@ -338,6 +347,139 @@ describe('effects control-flow handlers', () => {
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.x, 0);
+  });
+
+  it('removeByPriority removes tokens in group order and binds group counts/remaining budget', () => {
+    const def: GameDef = {
+      metadata: { id: 'remove-priority-order', players: { min: 1, max: 2 } },
+      constants: {},
+      globalVars: [
+        { name: 'count', type: 'int', init: 0, min: 0, max: 50 },
+        { name: 'bonus', type: 'int', init: 0, min: 0, max: 50 },
+      ],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('space:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('available-F1:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('available-F2:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      tokenTypes: [{ id: 'troops', props: { faction: 'string' } }, { id: 'guerrilla', props: { faction: 'string' } }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    };
+    const state: GameState = {
+      globalVars: { count: 0, bonus: 0 },
+      perPlayerVars: {},
+      playerCount: 2,
+      zones: {
+        'space:none': [
+          makeToken('t1', 'troops', 'F1'),
+          makeToken('t2', 'troops', 'F1'),
+          makeToken('g1', 'guerrilla', 'F2'),
+        ],
+        'available-F1:none': [],
+        'available-F2:none': [],
+      },
+      nextTokenOrdinal: 4,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnCount: 1,
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
+      stateHash: 0n,
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      markers: {},
+    };
+    const ctx = makeCtx({ def, state });
+    const effect: EffectAST = {
+      removeByPriority: {
+        budget: 2,
+        groups: [
+          {
+            bind: '$tok',
+            over: { query: 'tokensInZone', zone: 'space:none', filter: [{ prop: 'type', op: 'eq', value: 'troops' }] },
+            to: { zoneExpr: { concat: ['available-', { ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
+            countBind: '$troopsRemoved',
+          },
+          {
+            bind: '$tok',
+            over: { query: 'tokensInZone', zone: 'space:none', filter: [{ prop: 'type', op: 'eq', value: 'guerrilla' }] },
+            to: { zoneExpr: { concat: ['available-', { ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
+            countBind: '$guerrillasRemoved',
+          },
+        ],
+        remainingBind: '$remaining',
+        in: [
+          { setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$troopsRemoved' } } },
+          { setVar: { scope: 'global', var: 'bonus', value: { ref: 'binding', name: '$remaining' } } },
+        ],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.zones['space:none']?.length, 1);
+    assert.equal(result.state.zones['available-F1:none']?.length, 2);
+    assert.equal(result.state.zones['available-F2:none']?.length, 0);
+    assert.equal(result.state.globalVars.count, 2);
+    assert.equal(result.state.globalVars.bonus, 0);
+  });
+
+  it('removeByPriority with zero budget is a deterministic no-op and reports zero counts', () => {
+    const def: GameDef = {
+      metadata: { id: 'remove-priority-zero', players: { min: 1, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'count', type: 'int', init: 0, min: 0, max: 50 }],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('space:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('available-F1:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      tokenTypes: [{ id: 'troops', props: { faction: 'string' } }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    };
+    const state: GameState = {
+      globalVars: { count: 0 },
+      perPlayerVars: {},
+      playerCount: 2,
+      zones: {
+        'space:none': [makeToken('t1', 'troops', 'F1')],
+        'available-F1:none': [],
+      },
+      nextTokenOrdinal: 2,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnCount: 1,
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
+      stateHash: 0n,
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      markers: {},
+    };
+    const ctx = makeCtx({ def, state });
+    const effect: EffectAST = {
+      removeByPriority: {
+        budget: 0,
+        groups: [
+          {
+            bind: '$tok',
+            over: { query: 'tokensInZone', zone: 'space:none' },
+            to: { zoneExpr: { concat: ['available-', { ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
+            countBind: '$removed',
+          },
+        ],
+        in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$removed' } } }],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.deepEqual(result.state, ctx.state);
   });
 
   it('rollRandom generates a deterministic integer and binds it within scope', () => {

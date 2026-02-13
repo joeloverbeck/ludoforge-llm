@@ -179,6 +179,20 @@ export type EffectAST =
       };
     }
   | {
+      readonly removeByPriority: {
+        readonly budget: ValueExpr;
+        readonly groups: readonly {
+          readonly bind: string;
+          readonly over: OptionsQuery;
+          readonly to: ZoneRef;
+          readonly from?: ZoneRef;
+          readonly countBind?: string;
+        }[];
+        readonly remainingBind?: string;
+        readonly in?: readonly EffectAST[];
+      };
+    }
+  | {
       readonly let: {
         readonly bind: string;
         readonly value: ValueExpr;
@@ -233,4 +247,3 @@ export type EffectAST =
 
 export type MoveParamScalar = number | string | boolean | TokenId | ZoneId | PlayerId;
 export type MoveParamValue = MoveParamScalar | readonly MoveParamScalar[];
-

@@ -24,6 +24,7 @@ const SUPPORTED_EFFECT_KINDS = [
   'setTokenProp',
   'if',
   'forEach',
+  'removeByPriority',
   'let',
   'chooseOne',
   'chooseN',
@@ -112,6 +113,9 @@ function lowerEffectNode(
   }
   if (isRecord(source.forEach)) {
     return lowerForEachEffect(source.forEach, context, scope, `${path}.forEach`);
+  }
+  if (isRecord(source.removeByPriority)) {
+    return lowerRemoveByPriorityEffect(source.removeByPriority, context, scope, `${path}.removeByPriority`);
   }
   if (isRecord(source.let)) {
     return lowerLetEffect(source.let, context, scope, `${path}.let`);
@@ -578,6 +582,119 @@ function lowerForEachEffect(
         ...(loweredLimit !== undefined ? { limit: loweredLimit } : {}),
         ...(countBind !== undefined ? { countBind } : {}),
         ...(loweredIn !== undefined ? { in: loweredIn } : {}),
+      },
+    },
+    diagnostics,
+  };
+}
+
+function lowerRemoveByPriorityEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (!Array.isArray(source.groups)) {
+    return missingCapability(path, 'removeByPriority effect', source, [
+      '{ removeByPriority: { budget, groups: [{ bind, over, to, from?, countBind? }...], remainingBind?, in? } }',
+    ]);
+  }
+
+  const budgetResult = lowerValueNode(source.budget, makeConditionContext(context, scope), `${path}.budget`);
+  const diagnostics: Diagnostic[] = [...budgetResult.diagnostics];
+  const loweredGroups: Array<{
+    bind: string;
+    over: NonNullable<ReturnType<typeof lowerQueryNode>['value']>;
+    to: NonNullable<ReturnType<typeof lowerZoneSelector>['value']>;
+    from?: NonNullable<ReturnType<typeof lowerZoneSelector>['value']>;
+    countBind?: string;
+  }> = [];
+
+  source.groups.forEach((entry, index) => {
+    const groupPath = `${path}.groups.${index}`;
+    if (!isRecord(entry) || typeof entry.bind !== 'string') {
+      diagnostics.push({
+        code: 'CNL_COMPILER_MISSING_CAPABILITY',
+        path: groupPath,
+        severity: 'error',
+        message:
+          'Cannot lower removeByPriority group to kernel AST: expected { bind, over, to, from?, countBind? }.',
+        suggestion: 'Define each group with bind, over query, and destination zone selector.',
+      });
+      return;
+    }
+
+    diagnostics.push(...scope.shadowWarning(entry.bind, `${groupPath}.bind`));
+    const condCtx = makeConditionContext(context, scope);
+    const over = lowerQueryNode(entry.over, condCtx, `${groupPath}.over`);
+    diagnostics.push(...over.diagnostics);
+
+    const toResult = scope.withBinding(entry.bind, () => lowerZoneSelector(entry.to, context, scope, `${groupPath}.to`));
+    diagnostics.push(...toResult.diagnostics);
+
+    let fromResult: EffectLoweringResult<ZoneRef> | undefined;
+    if (entry.from !== undefined) {
+      fromResult = scope.withBinding(entry.bind, () => lowerZoneSelector(entry.from, context, scope, `${groupPath}.from`));
+      diagnostics.push(...fromResult.diagnostics);
+    }
+
+    const countBind = typeof entry.countBind === 'string' ? entry.countBind : undefined;
+    if (over.value === null || toResult.value === null || fromResult?.value === null) {
+      return;
+    }
+
+    loweredGroups.push({
+      bind: entry.bind,
+      over: over.value,
+      to: toResult.value,
+      ...(fromResult?.value === undefined ? {} : { from: fromResult.value }),
+      ...(countBind === undefined ? {} : { countBind }),
+    });
+  });
+
+  const remainingBind = typeof source.remainingBind === 'string' ? source.remainingBind : undefined;
+  if (remainingBind !== undefined) {
+    diagnostics.push(...scope.shadowWarning(remainingBind, `${path}.remainingBind`));
+  }
+
+  let loweredIn: readonly EffectAST[] | undefined;
+  if (Array.isArray(source.in)) {
+    const inCallback = (): EffectLoweringResult<readonly EffectAST[]> => {
+      const countBinds = loweredGroups.flatMap((group) => (group.countBind === undefined ? [] : [group.countBind]));
+
+      const withCountBindings = (offset: number): EffectLoweringResult<readonly EffectAST[]> => {
+        if (offset >= countBinds.length) {
+          return lowerNestedEffects(source.in as readonly unknown[], context, scope, `${path}.in`);
+        }
+        const bind = countBinds[offset]!;
+        return scope.withBinding(bind, () => withCountBindings(offset + 1));
+      };
+
+      if (remainingBind !== undefined) {
+        return scope.withBinding(remainingBind, () => withCountBindings(0));
+      }
+      return withCountBindings(0);
+    };
+
+    const inResult = inCallback();
+    diagnostics.push(...inResult.diagnostics);
+    if (inResult.value === null) {
+      return { value: null, diagnostics };
+    }
+    loweredIn = inResult.value;
+  }
+
+  if (budgetResult.value === null || diagnostics.some((d) => d.severity === 'error')) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: {
+      removeByPriority: {
+        budget: budgetResult.value,
+        groups: loweredGroups,
+        ...(remainingBind === undefined ? {} : { remainingBind }),
+        ...(loweredIn === undefined ? {} : { in: loweredIn }),
       },
     },
     diagnostics,

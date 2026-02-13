@@ -45,6 +45,44 @@ describe('FITL removal ordering macros', () => {
       assert.ok(assaultUsProfile, 'Expected assault-us-profile to exist');
       assert.ok(assaultArvnProfile, 'Expected assault-arvn-profile to exist');
     });
+
+    it('compiled production spec contains removeByPriority effect usage in removal ordering paths', () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null, 'Expected valid GameDef');
+
+      const hasRemoveByPriority = (effects: readonly EffectAST[]): boolean => {
+        for (const effect of effects) {
+          if ('removeByPriority' in effect) {
+            return true;
+          }
+          if ('if' in effect) {
+            if (hasRemoveByPriority(effect.if.then)) return true;
+            if (effect.if.else && hasRemoveByPriority(effect.if.else)) return true;
+          }
+          if ('forEach' in effect) {
+            if (hasRemoveByPriority(effect.forEach.effects)) return true;
+            if (effect.forEach.in && hasRemoveByPriority(effect.forEach.in)) return true;
+          }
+          if ('let' in effect && hasRemoveByPriority(effect.let.in)) {
+            return true;
+          }
+          if ('rollRandom' in effect && hasRemoveByPriority(effect.rollRandom.in)) {
+            return true;
+          }
+          if ('removeByPriority' in effect) {
+            const removeByPriority = effect.removeByPriority as { readonly in?: readonly EffectAST[] };
+            if (removeByPriority.in && hasRemoveByPriority(removeByPriority.in)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+
+      const profiles = compiled.gameDef!.actionPipelines ?? [];
+      const profileEffects = profiles.flatMap((profile) => profile.stages.flatMap((stage) => stage.effects));
+      assert.equal(hasRemoveByPriority(profileEffects), true, 'Expected removeByPriority in compiled FITL operation effects');
+    });
   });
 
   describe('coin-assault-removal-order runtime behavior', () => {

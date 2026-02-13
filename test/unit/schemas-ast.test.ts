@@ -96,6 +96,21 @@ describe('AST and selector schemas', () => {
         },
       },
       {
+        removeByPriority: {
+          budget: 3,
+          groups: [
+            {
+              bind: '$tok',
+              over: { query: 'tokensInZone', zone: 'board:none' },
+              to: { zoneExpr: { concat: ['available-', { ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
+              countBind: '$removed',
+            },
+          ],
+          remainingBind: '$remaining',
+          in: [{ setVar: { scope: 'global', var: 'seen', value: { ref: 'binding', name: '$removed' } } }],
+        },
+      },
+      {
         let: {
           bind: '$n',
           value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } },

@@ -3441,6 +3441,444 @@
         {
           "type": "object",
           "properties": {
+            "removeByPriority": {
+              "type": "object",
+              "properties": {
+                "budget": {
+                  "$ref": "#/definitions/__schema1"
+                },
+                "groups": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "bind": {
+                        "type": "string"
+                      },
+                      "over": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "query": {
+                                "type": "string",
+                                "const": "tokensInZone"
+                              },
+                              "zone": {
+                                "type": "string"
+                              },
+                              "filter": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "prop": {
+                                      "type": "string"
+                                    },
+                                    "op": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "const": "eq"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "const": "neq"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "const": "in"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "const": "notIn"
+                                        }
+                                      ]
+                                    },
+                                    "value": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/definitions/__schema1"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "prop",
+                                    "op",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "query",
+                              "zone"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "query": {
+                                "type": "string",
+                                "const": "intsInRange"
+                              },
+                              "min": {
+                                "type": "number"
+                              },
+                              "max": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "query",
+                              "min",
+                              "max"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "query": {
+                                "type": "string",
+                                "const": "enums"
+                              },
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "required": [
+                              "query",
+                              "values"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "query": {
+                                "type": "string",
+                                "const": "players"
+                              }
+                            },
+                            "required": [
+                              "query"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "query": {
+                                "type": "string",
+                                "const": "zones"
+                              },
+                              "filter": {
+                                "type": "object",
+                                "properties": {
+                                  "owner": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "const": "actor"
+                                      },
+                                      {
+                                        "type": "string",
+                                        "const": "active"
+                                      },
+                                      {
+                                        "type": "string",
+                                        "const": "all"
+                                      },
+                                      {
+                                        "type": "string",
+                                        "const": "allOther"
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "id"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "chosen": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "chosen"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "relative": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "const": "left"
+                                              },
+                                              {
+                                                "type": "string",
+                                                "const": "right"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "relative"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  "condition": {
+                                    "allOf": [
+                                      {
+                                        "$ref": "#/definitions/__schema2"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "query"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "query": {
+                                "type": "string",
+                                "const": "adjacentZones"
+                              },
+                              "zone": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "query",
+                              "zone"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "query": {
+                                "type": "string",
+                                "const": "tokensInAdjacentZones"
+                              },
+                              "zone": {
+                                "type": "string"
+                              },
+                              "filter": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "prop": {
+                                      "type": "string"
+                                    },
+                                    "op": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "const": "eq"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "const": "neq"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "const": "in"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "const": "notIn"
+                                        }
+                                      ]
+                                    },
+                                    "value": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/definitions/__schema1"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "prop",
+                                    "op",
+                                    "value"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "query",
+                              "zone"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "query": {
+                                "type": "string",
+                                "const": "connectedZones"
+                              },
+                              "zone": {
+                                "type": "string"
+                              },
+                              "via": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/__schema2"
+                                  }
+                                ]
+                              },
+                              "includeStart": {
+                                "type": "boolean"
+                              },
+                              "maxDepth": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "query",
+                              "zone"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "query": {
+                                "type": "string",
+                                "const": "binding"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "query",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "to": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "zoneExpr": {
+                                "$ref": "#/definitions/__schema1"
+                              }
+                            },
+                            "required": [
+                              "zoneExpr"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "from": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "zoneExpr": {
+                                "$ref": "#/definitions/__schema1"
+                              }
+                            },
+                            "required": [
+                              "zoneExpr"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "countBind": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "bind",
+                      "over",
+                      "to"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "remainingBind": {
+                  "type": "string"
+                },
+                "in": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/__schema0"
+                  }
+                }
+              },
+              "required": [
+                "budget",
+                "groups"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "removeByPriority"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
             "let": {
               "type": "object",
               "properties": {

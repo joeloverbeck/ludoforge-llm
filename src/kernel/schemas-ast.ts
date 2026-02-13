@@ -278,6 +278,28 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      removeByPriority: z
+        .object({
+          budget: ValueExprSchema,
+          groups: z.array(
+            z
+              .object({
+                bind: StringSchema,
+                over: OptionsQuerySchema,
+                to: z.union([ZoneSelSchema, z.object({ zoneExpr: ValueExprSchema }).strict()]),
+                from: z.union([ZoneSelSchema, z.object({ zoneExpr: ValueExprSchema }).strict()]).optional(),
+                countBind: StringSchema.optional(),
+              })
+              .strict(),
+          ),
+          remainingBind: StringSchema.optional(),
+          in: z.array(EffectASTSchema).optional(),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
       let: z
         .object({
           bind: StringSchema,
@@ -353,4 +375,3 @@ effectAstSchemaInternal = z.union([
     })
     .strict(),
 ]);
-

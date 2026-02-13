@@ -142,3 +142,114 @@ export const applyForEach = (
 
   return { state: currentState, rng: currentRng };
 };
+
+const resolveRemovalBudget = (budgetExpr: unknown, effectType: string): number => {
+  if (typeof budgetExpr !== 'number' || !Number.isSafeInteger(budgetExpr) || budgetExpr < 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `${effectType}.budget must evaluate to a non-negative integer`, {
+      effectType,
+      budget: budgetExpr,
+    });
+  }
+  return budgetExpr;
+};
+
+const isTokenLike = (value: unknown): value is { readonly id: string } =>
+  typeof value === 'object' && value !== null && 'id' in value && typeof (value as { id: unknown }).id === 'string';
+
+export const applyRemoveByPriority = (
+  effect: Extract<EffectAST, { readonly removeByPriority: unknown }>,
+  ctx: EffectContext,
+  budget: EffectBudgetState,
+  applyEffectsWithBudget: ApplyEffectsWithBudget,
+): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  let remainingBudget = resolveRemovalBudget(evalValue(effect.removeByPriority.budget, evalCtx), 'removeByPriority');
+  let currentState = ctx.state;
+  let currentRng = ctx.rng;
+  const countBindings: Record<string, number> = {};
+
+  for (const group of effect.removeByPriority.groups) {
+    let removedInGroup = 0;
+
+    if (remainingBudget > 0) {
+      const groupEvalCtx = {
+        ...ctx,
+        state: currentState,
+        rng: currentRng,
+        bindings: resolveEffectBindings({ ...ctx, state: currentState, rng: currentRng }),
+      };
+      const queried = evalQuery(group.over, groupEvalCtx);
+      const bounded = queried.slice(0, remainingBudget);
+
+      for (const item of bounded) {
+        if (typeof item !== 'string' && !isTokenLike(item)) {
+          throw new EffectRuntimeError('EFFECT_RUNTIME', 'removeByPriority groups must resolve to token items', {
+            effectType: 'removeByPriority',
+            bind: group.bind,
+            actualType: typeof item,
+            value: item,
+          });
+        }
+
+        const iterationCtx: EffectContext = {
+          ...ctx,
+          state: currentState,
+          rng: currentRng,
+          bindings: {
+            ...ctx.bindings,
+            [group.bind]: item,
+          },
+        };
+
+        const moveResult = applyEffectsWithBudget(
+          [
+            {
+              moveToken: {
+                token: group.bind,
+                from: group.from ?? { zoneExpr: { ref: 'tokenZone', token: group.bind } },
+                to: group.to,
+              },
+            },
+          ],
+          iterationCtx,
+          budget,
+        );
+
+        currentState = moveResult.state;
+        currentRng = moveResult.rng;
+        removedInGroup += 1;
+        remainingBudget -= 1;
+        if (remainingBudget === 0) {
+          break;
+        }
+      }
+    }
+
+    if (group.countBind !== undefined) {
+      countBindings[group.countBind] = removedInGroup;
+    }
+
+    if (remainingBudget === 0) {
+      continue;
+    }
+  }
+
+  if (effect.removeByPriority.in !== undefined) {
+    const inCtx: EffectContext = {
+      ...ctx,
+      state: currentState,
+      rng: currentRng,
+      bindings: {
+        ...ctx.bindings,
+        ...countBindings,
+        ...(effect.removeByPriority.remainingBind === undefined ? {} : { [effect.removeByPriority.remainingBind]: remainingBudget }),
+      },
+    };
+
+    const inResult = applyEffectsWithBudget(effect.removeByPriority.in, inCtx, budget);
+    currentState = inResult.state;
+    currentRng = inResult.rng;
+  }
+
+  return { state: currentState, rng: currentRng };
+};

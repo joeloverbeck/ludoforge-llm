@@ -381,6 +381,24 @@ export const validateEffectAst = (
     return;
   }
 
+  if ('removeByPriority' in effect) {
+    validateValueExpr(diagnostics, effect.removeByPriority.budget, `${path}.removeByPriority.budget`, context);
+
+    effect.removeByPriority.groups.forEach((group, index) => {
+      const groupPath = `${path}.removeByPriority.groups[${index}]`;
+      validateOptionsQuery(diagnostics, group.over, `${groupPath}.over`, context);
+      validateZoneRef(diagnostics, group.to, `${groupPath}.to`, context);
+      if (group.from !== undefined) {
+        validateZoneRef(diagnostics, group.from, `${groupPath}.from`, context);
+      }
+    });
+
+    effect.removeByPriority.in?.forEach((entry, index) => {
+      validateEffectAst(diagnostics, entry, `${path}.removeByPriority.in[${index}]`, context);
+    });
+    return;
+  }
+
   if ('let' in effect) {
     validateValueExpr(diagnostics, effect.let.value, `${path}.let.value`, context);
     effect.let.in.forEach((entry, index) => {

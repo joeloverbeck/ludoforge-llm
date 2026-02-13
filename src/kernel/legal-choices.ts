@@ -75,6 +75,9 @@ function walkEffect(effect: EffectAST, wCtx: WalkContext): ChoiceRequest | null 
   if ('forEach' in effect) {
     return walkForEach(effect, wCtx);
   }
+  if ('removeByPriority' in effect) {
+    return walkRemoveByPriority(effect, wCtx);
+  }
   if ('let' in effect) {
     return walkLet(effect, wCtx);
   }
@@ -228,6 +231,45 @@ function walkLet(
   const evaluatedValue = evalValue(effect.let.value, wCtx.evalCtx);
   const nestedCtx = withBinding(wCtx, effect.let.bind, evaluatedValue);
   return walkEffects(effect.let.in, nestedCtx);
+}
+
+function walkRemoveByPriority(
+  effect: Extract<EffectAST, { readonly removeByPriority: unknown }>,
+  wCtx: WalkContext,
+): ChoiceRequest | null {
+  const budgetValue = evalValue(effect.removeByPriority.budget, wCtx.evalCtx);
+  const totalBudget = typeof budgetValue === 'number' && Number.isSafeInteger(budgetValue) && budgetValue > 0 ? budgetValue : 0;
+  let remaining = totalBudget;
+  const countBindings: Record<string, number> = {};
+
+  for (const group of effect.removeByPriority.groups) {
+    let removed = 0;
+    if (remaining > 0) {
+      const items = evalQuery(group.over, wCtx.evalCtx);
+      removed = Math.min(items.length, remaining);
+      remaining -= removed;
+    }
+    if (group.countBind !== undefined) {
+      countBindings[group.countBind] = removed;
+    }
+  }
+
+  if (effect.removeByPriority.in !== undefined) {
+    const nestedCtx: WalkContext = {
+      evalCtx: {
+        ...wCtx.evalCtx,
+        bindings: {
+          ...wCtx.evalCtx.bindings,
+          ...countBindings,
+          ...(effect.removeByPriority.remainingBind === undefined ? {} : { [effect.removeByPriority.remainingBind]: remaining }),
+        },
+      },
+      moveParams: wCtx.moveParams,
+    };
+    return walkEffects(effect.removeByPriority.in, nestedCtx);
+  }
+
+  return null;
 }
 
 export function legalChoices(def: GameDef, state: GameState, partialMove: Move): ChoiceRequest {

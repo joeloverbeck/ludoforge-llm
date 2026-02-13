@@ -369,6 +369,13 @@ function walkEffects(
       continue;
     }
 
+    if ('removeByPriority' in effect) {
+      if (effect.removeByPriority.in !== undefined) {
+        walkEffects(effect.removeByPriority.in, `${effectPath}.removeByPriority.in`, onEffect);
+      }
+      continue;
+    }
+
     if ('let' in effect) {
       walkEffects(effect.let.in, `${effectPath}.let.in`, onEffect);
       continue;

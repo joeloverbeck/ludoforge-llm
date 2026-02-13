@@ -5,7 +5,7 @@ import {
   effectNotImplementedError,
 } from './effect-error.js';
 import { applyChooseN, applyChooseOne, applyRollRandom, applySetMarker, applyShiftMarker } from './effects-choice.js';
-import { applyForEach, applyIf, applyLet, type EffectBudgetState } from './effects-control.js';
+import { applyForEach, applyIf, applyLet, applyRemoveByPriority, type EffectBudgetState } from './effects-control.js';
 import { applyAddVar, applySetVar } from './effects-var.js';
 import {
   applyCreateToken,
@@ -41,6 +41,7 @@ const effectTypeOf = (effect: EffectAST): string => {
   if ('setTokenProp' in effect) return 'setTokenProp';
   if ('if' in effect) return 'if';
   if ('forEach' in effect) return 'forEach';
+  if ('removeByPriority' in effect) return 'removeByPriority';
   if ('let' in effect) return 'let';
   if ('chooseOne' in effect) return 'chooseOne';
   if ('chooseN' in effect) return 'chooseN';
@@ -110,6 +111,10 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 
   if ('forEach' in effect) {
     return applyForEach(effect, ctx, budget, applyEffectsWithBudget);
+  }
+
+  if ('removeByPriority' in effect) {
+    return applyRemoveByPriority(effect, ctx, budget, applyEffectsWithBudget);
   }
 
   if ('let' in effect) {

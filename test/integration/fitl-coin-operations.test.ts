@@ -995,9 +995,10 @@ describe('FITL COIN operations integration', () => {
       assert.ok(highlandHalfBranch.length >= 1, 'Expected highland floor(usTroops/2) branch');
 
       const macroCall = findDeep(resolvePerSpace.effects, (node: any) =>
-        node?.macro === 'coin-assault-removal-order' && node?.args?.actorFaction === 'US',
+        node?.macro === 'coin-assault-removal-order',
       );
-      assert.ok(macroCall.length >= 1, 'Expected coin-assault-removal-order call with actorFaction US');
+      assert.ok(macroCall.length >= 1, 'Expected coin-assault-removal-order call');
+      assert.equal(macroCall.some((node: any) => node?.args?.actorFaction !== undefined), false, 'Expected no actorFaction arg');
     });
 
     it('AC8/AC9: ARVN follow-up is optional, costs 3, and uses ARVN highland/non-highland formulas', () => {
@@ -1032,9 +1033,10 @@ describe('FITL COIN operations integration', () => {
       assert.ok(nonHighlandHalf.length >= 1, 'Expected non-highland floor(arvnCubes/2) branch');
 
       const macroCall = findDeep(arvnFollowup.effects, (node: any) =>
-        node?.macro === 'coin-assault-removal-order' && node?.args?.actorFaction === 'ARVN',
+        node?.macro === 'coin-assault-removal-order',
       );
       assert.ok(macroCall.length >= 1, 'Expected ARVN follow-up to call coin-assault-removal-order');
+      assert.equal(macroCall.some((node: any) => node?.args?.actorFaction !== undefined), false, 'Expected no actorFaction arg');
     });
 
     it('runtime: highland without US Base uses floor(usTroops / 2)', () => {
@@ -1573,9 +1575,10 @@ describe('FITL COIN operations integration', () => {
       const parsed = parsePatrolProfile();
       const parsedFreeAssault = parsed.stages[3];
       const macroRef = findDeep(parsedFreeAssault.effects, (node: any) =>
-        node?.macro === 'coin-assault-removal-order' && node?.args?.actorFaction === 'ARVN',
+        node?.macro === 'coin-assault-removal-order',
       );
-      assert.ok(macroRef.length >= 1, 'Expected coin-assault-removal-order with actorFaction ARVN');
+      assert.ok(macroRef.length >= 1, 'Expected coin-assault-removal-order in ARVN free-assault');
+      assert.equal(macroRef.some((node: any) => node?.args?.actorFaction !== undefined), false, 'Expected no actorFaction arg');
     });
 
     it('AC7: LimOp variant limits destination selection to max 1 LoC', () => {

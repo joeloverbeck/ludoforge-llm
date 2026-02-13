@@ -18,6 +18,7 @@ import {
   type Token,
   createCollector,
 } from '../../src/kernel/index.js';
+import type { EffectMacroDef, GameSpecEffect } from '../../src/cnl/game-spec-doc.js';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -82,6 +83,98 @@ describe('FITL removal ordering macros', () => {
       const profiles = compiled.gameDef!.actionPipelines ?? [];
       const profileEffects = profiles.flatMap((profile) => profile.stages.flatMap((stage) => stage.effects));
       assert.equal(hasRemoveByPriority(profileEffects), true, 'Expected removeByPriority in compiled FITL operation effects');
+    });
+
+    it('production removal macro contracts are explicit and contain no dead actorFaction threading', () => {
+      const { parsed } = compileProductionSpec();
+      const macros = parsed.doc.effectMacros ?? [];
+
+      const macroById = (id: string): EffectMacroDef | undefined => macros.find((macro) => macro.id === id);
+      const pieceRemovalOrdering = macroById('piece-removal-ordering');
+      const coinAssaultRemoval = macroById('coin-assault-removal-order');
+      const insurgentAttackRemoval = macroById('insurgent-attack-removal-order');
+
+      assert.ok(pieceRemovalOrdering, 'Expected piece-removal-ordering macro');
+      assert.ok(coinAssaultRemoval, 'Expected coin-assault-removal-order macro');
+      assert.ok(insurgentAttackRemoval, 'Expected insurgent-attack-removal-order macro');
+
+      assert.deepEqual(
+        pieceRemovalOrdering.params.map((param) => param.name),
+        ['space', 'damageExpr'],
+        'Expected piece-removal-ordering params to stay minimal',
+      );
+      assert.deepEqual(
+        coinAssaultRemoval.params.map((param) => param.name),
+        ['space', 'damageExpr'],
+        'Expected coin-assault-removal-order to avoid actorFaction parameter',
+      );
+      assert.deepEqual(
+        insurgentAttackRemoval.params.map((param) => param.name),
+        ['space', 'damageExpr', 'attackerFaction'],
+        'Expected insurgent-attack-removal-order to keep explicit attackerFaction',
+      );
+
+      const asRecord = (value: unknown): Record<string, unknown> | null =>
+        typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+      const asEffectList = (value: unknown): readonly GameSpecEffect[] | null =>
+        Array.isArray(value) ? (value as readonly GameSpecEffect[]) : null;
+
+      const flatten = (nodes: readonly GameSpecEffect[]): readonly Record<string, unknown>[] => {
+        const out: Record<string, unknown>[] = [];
+        const walk = (node: unknown): void => {
+          const record = asRecord(node);
+          if (record === null) return;
+          out.push(record);
+
+          const ifNode = asRecord(record.if);
+          if (ifNode !== null) {
+            const thenEffects = asEffectList(ifNode.then);
+            const elseEffects = asEffectList(ifNode.else);
+            thenEffects?.forEach(walk);
+            elseEffects?.forEach(walk);
+          }
+
+          const forEachNode = asRecord(record.forEach);
+          if (forEachNode !== null) {
+            const effects = asEffectList(forEachNode.effects);
+            const inEffects = asEffectList(forEachNode.in);
+            effects?.forEach(walk);
+            inEffects?.forEach(walk);
+          }
+
+          const letNode = asRecord(record.let);
+          asEffectList(letNode?.in)?.forEach(walk);
+
+          const rollRandomNode = asRecord(record.rollRandom);
+          asEffectList(rollRandomNode?.in)?.forEach(walk);
+
+          const removeByPriorityNode = asRecord(record.removeByPriority);
+          asEffectList(removeByPriorityNode?.in)?.forEach(walk);
+        };
+        nodes.forEach(walk);
+        return out;
+      };
+
+      const hasActorFactionArg = (node: Record<string, unknown>): boolean => {
+        const args = asRecord(node.args);
+        return args !== null && Object.hasOwn(args, 'actorFaction');
+      };
+
+      const coinCalls = flatten(coinAssaultRemoval.effects).filter((node) => node.macro === 'piece-removal-ordering');
+      const insurgentCalls = flatten(insurgentAttackRemoval.effects).filter((node) => node.macro === 'piece-removal-ordering');
+
+      assert.equal(coinCalls.length >= 1, true, 'Expected coin-assault-removal-order to call piece-removal-ordering');
+      assert.equal(insurgentCalls.length >= 1, true, 'Expected insurgent-attack-removal-order to call piece-removal-ordering');
+      assert.equal(
+        coinCalls.some(hasActorFactionArg),
+        false,
+        'Expected coin-assault-removal-order to avoid actorFaction passthrough',
+      );
+      assert.equal(
+        insurgentCalls.some(hasActorFactionArg),
+        false,
+        'Expected insurgent-attack-removal-order to avoid actorFaction passthrough',
+      );
     });
   });
 

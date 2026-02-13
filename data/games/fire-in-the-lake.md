@@ -15,7 +15,6 @@ effectMacros:
     params:
       - { name: space, type: string }
       - { name: damageExpr, type: value }
-      - { name: actorFaction, type: string }
     effects:
       - let:
           bind: $damage
@@ -85,7 +84,6 @@ effectMacros:
     params:
       - { name: space, type: string }
       - { name: damageExpr, type: value }
-      - { name: actorFaction, type: string }
     effects:
       - let:
           bind: $basesBefore
@@ -95,7 +93,6 @@ effectMacros:
               args:
                 space: { param: space }
                 damageExpr: { param: damageExpr }
-                actorFaction: { param: actorFaction }
             - let:
                 bind: $basesAfter
                 value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
@@ -122,7 +119,7 @@ effectMacros:
       - { name: attackerFaction, type: string }
     effects:
       - let:
-          bind: usPiecesBefore
+          bind: $usPiecesBefore
           value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: 'US' }] } } }
           in:
             - macro: piece-removal-ordering
@@ -130,11 +127,11 @@ effectMacros:
                 space: { param: space }
                 damageExpr: { param: damageExpr }
             - let:
-                bind: usPiecesAfter
+                bind: $usPiecesAfter
                 value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: 'US' }] } } }
                 in:
                   - let:
-                      bind: usRemoved
+                      bind: $usRemoved
                       value: { op: '-', left: { ref: binding, name: $usPiecesBefore }, right: { ref: binding, name: $usPiecesAfter } }
                       in:
                         - forEach:
@@ -1942,7 +1939,6 @@ actionPipelines:
                                     args:
                                       space: $assaultLoC
                                       damageExpr: { ref: binding, name: $patrolDmg }
-                                      actorFaction: 'US'
     atomicity: atomic
   # ── patrol-arvn-profile ─────────────────────────────────────────────────────
   # ARVN Patrol operation (Rule 3.2.2)
@@ -2054,7 +2050,6 @@ actionPipelines:
                               args:
                                 space: $assaultLoC
                                 damageExpr: { ref: binding, name: $patrolDmg }
-                                actorFaction: 'ARVN'
     atomicity: atomic
   # ── sweep-us-profile ──────────────────────────────────────────────────────────
   # US Sweep operation (Rule 3.2.3)
@@ -2338,7 +2333,6 @@ actionPipelines:
                                     args:
                                       space: $space
                                       damageExpr: { ref: binding, name: $damage }
-                                      actorFaction: 'US'
       - stage: arvn-followup
         effects:
           - if:
@@ -2370,7 +2364,6 @@ actionPipelines:
                                     args:
                                       space: $arvnSpace
                                       damageExpr: { ref: binding, name: $arvnDamage }
-                                      actorFaction: 'ARVN'
     atomicity: atomic
   - id: assault-arvn-profile
     actionId: assault

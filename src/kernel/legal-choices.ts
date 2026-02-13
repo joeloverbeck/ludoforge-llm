@@ -2,7 +2,7 @@ import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
-import { resolveOperationProfile } from './apply-move-pipeline.js';
+import { resolveActionPipeline } from './apply-move-pipeline.js';
 import { createCollector } from './execution-collector.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import type {
@@ -253,18 +253,18 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     collector: createCollector(),
   };
 
-  const profile = resolveOperationProfile(def, action, evalCtx);
+  const pipeline = resolveActionPipeline(def, action, evalCtx);
 
-  if (profile !== undefined) {
-    if (profile.legality !== null) {
-      if (!evalCondition(profile.legality, evalCtx)) {
+  if (pipeline !== undefined) {
+    if (pipeline.legality !== null) {
+      if (!evalCondition(pipeline.legality, evalCtx)) {
         return COMPLETE;
       }
     }
 
     const resolutionEffects: readonly EffectAST[] =
-      profile.stages.length > 0
-        ? profile.stages.flatMap((stage) => stage.effects)
+      pipeline.stages.length > 0
+        ? pipeline.stages.flatMap((stage) => stage.effects)
         : action.effects;
 
     const wCtx: WalkContext = { evalCtx, moveParams: partialMove.params };

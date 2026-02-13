@@ -4,7 +4,7 @@ import { applyEffects } from './effects.js';
 import { createCollector } from './execution-collector.js';
 import { legalChoices } from './legal-choices.js';
 import { legalMoves } from './legal-moves.js';
-import { resolveOperationProfile, toOperationExecutionProfile } from './apply-move-pipeline.js';
+import { resolveActionPipeline, toExecutionPipeline } from './apply-move-pipeline.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { applyTurnFlowEligibilityAfterMove } from './turn-flow-eligibility.js';
@@ -88,9 +88,9 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
     throw illegalMoveError(move, 'unknown action id');
   }
 
-  const hasProfile = (def.actionPipelines ?? []).some((profile) => profile.actionId === action.id);
+  const hasPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
 
-  if (hasProfile) {
+  if (hasPipeline) {
     const legal = legalMoves(def, state);
     const hasTemplate = legal.some((candidate) => candidate.actionId === action.id);
     if (!hasTemplate && move.freeOperation !== true) {
@@ -100,7 +100,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
     try {
       const result = legalChoices(def, state, move);
       if (!result.complete) {
-        throw illegalMoveError(move, 'operation move has incomplete params', {
+        throw illegalMoveError(move, 'pipeline move has incomplete params', {
           code: 'OPERATION_INCOMPLETE_PARAMS',
           nextDecision: result.name,
         });
@@ -110,7 +110,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
         throw err;
       }
       if (err instanceof Error && err.message.startsWith('legalChoices:')) {
-        throw illegalMoveError(move, 'operation move params are invalid', {
+        throw illegalMoveError(move, 'pipeline move params are invalid', {
           code: 'OPERATION_INVALID_PARAMS',
           detail: err.message,
         });
@@ -154,8 +154,8 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
     collector,
   } as const;
 
-  const operationProfile = resolveOperationProfile(def, action, { ...effectCtxBase, state });
-  const executionProfile = operationProfile === undefined ? undefined : toOperationExecutionProfile(action, operationProfile);
+  const actionPipeline = resolveActionPipeline(def, action, { ...effectCtxBase, state });
+  const executionProfile = actionPipeline === undefined ? undefined : toExecutionPipeline(action, actionPipeline);
   const isFreeOp = move.freeOperation === true && executionProfile !== undefined;
 
   if (
@@ -163,9 +163,9 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
     executionProfile.legality !== null &&
     !evalCondition(executionProfile.legality, { ...effectCtxBase, state })
   ) {
-    throw illegalMoveError(move, 'operation profile legality predicate failed', {
+    throw illegalMoveError(move, 'action pipeline legality predicate failed', {
       code: 'OPERATION_LEGALITY_FAILED',
-      profileId: operationProfile?.id,
+      profileId: actionPipeline?.id,
       actionId: action.id,
     });
   }
@@ -175,9 +175,9 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
       ? true
       : evalCondition(executionProfile.costValidation, { ...effectCtxBase, state }));
   if (executionProfile !== undefined && executionProfile.partialMode === 'atomic' && !costValidationPassed) {
-    throw illegalMoveError(move, 'operation profile cost validation failed', {
+    throw illegalMoveError(move, 'action pipeline cost validation failed', {
       code: 'OPERATION_COST_BLOCKED',
-      profileId: operationProfile?.id,
+      profileId: actionPipeline?.id,
       actionId: action.id,
       partialExecutionMode: executionProfile.partialMode,
     });
@@ -211,7 +211,7 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
     executionTraceEntries.push({
       kind: 'operationPartial',
       actionId: action.id,
-      profileId: operationProfile?.id ?? 'unknown',
+      profileId: actionPipeline?.id ?? 'unknown',
       step: 'costSpendSkipped',
       reason: 'costValidationFailed',
     });

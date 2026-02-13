@@ -1,7 +1,7 @@
 import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
-import { resolveOperationProfile } from './apply-move-pipeline.js';
+import { resolveActionPipeline } from './apply-move-pipeline.js';
 import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import type { AdjacencyGraph } from './spatial.js';
@@ -113,11 +113,11 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
 
-    const profile = resolveOperationProfile(def, action, actorCtx);
-    if (profile !== undefined) {
-      if (profile.legality !== null) {
+    const pipeline = resolveActionPipeline(def, action, actorCtx);
+    if (pipeline !== undefined) {
+      if (pipeline.legality !== null) {
         try {
-          if (!evalCondition(profile.legality, actorCtx)) {
+          if (!evalCondition(pipeline.legality, actorCtx)) {
             continue;
           }
         } catch {
@@ -126,11 +126,11 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       }
 
       if (
-        profile.costValidation !== null &&
-        profile.atomicity === 'atomic'
+        pipeline.costValidation !== null &&
+        pipeline.atomicity === 'atomic'
       ) {
         try {
-          if (!evalCondition(profile.costValidation, actorCtx)) {
+          if (!evalCondition(pipeline.costValidation, actorCtx)) {
             continue;
           }
         } catch {

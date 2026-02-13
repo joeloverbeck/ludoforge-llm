@@ -15,9 +15,9 @@ import {
 } from '../../src/kernel/index.js';
 
 /**
- * Shared helpers for multi-profile dispatch tests.
+ * Shared helpers for multi-pipeline dispatch tests.
  *
- * Two operation profiles share actionId 'operate':
+ * Two action pipelines share actionId 'operate':
  *   - profile-player-0: applicability = { activePlayer == '0' }, sets score += 10
  *   - profile-player-1: applicability = { activePlayer == '1' }, sets score += 20
  */
@@ -84,7 +84,7 @@ const createState = (activePlayer: number): GameState => {
   };
 };
 
-describe('applicability-based operation profile dispatch', () => {
+describe('applicability-based action pipeline dispatch', () => {
   it('legalMoves includes the action when the matching profile is applicable', () => {
     const def = createMultiProfileDef();
     const stateP0 = createState(0);
@@ -126,7 +126,7 @@ describe('applicability-based operation profile dispatch', () => {
     assert.equal(result.state.globalVars.score, 10);
   });
 
-  it('single profile without applicability still works (backward compatibility)', () => {
+  it('single pipeline without applicability still works', () => {
     const def: GameDef = {
       ...createMultiProfileDef(),
       actionPipelines: [
@@ -146,7 +146,7 @@ describe('applicability-based operation profile dispatch', () => {
     assert.equal(result.state.globalVars.score, 5);
   });
 
-  it('resolveOperationProfile returns undefined when no candidate applicability matches', () => {
+  it('resolveActionPipeline returns undefined when no candidate applicability matches', () => {
     const def: GameDef = {
       ...createMultiProfileDef(),
       actionPipelines: [
@@ -183,6 +183,28 @@ describe('applicability-based operation profile dispatch', () => {
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
     // Fallback to action.effects: delta: 99
     assert.equal(result.state.globalVars.score, 99);
+  });
+
+  it('single candidate pipeline is selected even when applicability evaluates false', () => {
+    const def: GameDef = {
+      ...createMultiProfileDef(),
+      actionPipelines: [
+        {
+          id: 'single-false-applicability',
+          actionId: asActionId('operate'),
+          applicability: { op: '==', left: { ref: 'activePlayer' }, right: '999' },
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 33 } }] }],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state = createState(0);
+    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
+    assert.equal(result.state.globalVars.score, 33);
   });
 
   it('profile with legality condition blocks move for the matching applicability player', () => {

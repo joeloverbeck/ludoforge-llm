@@ -2,7 +2,7 @@ import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
 import type { ActionDef, ConditionAST, EffectAST, GameDef, ActionPipelineDef } from './types.js';
 
-export interface OperationExecutionProfile {
+export interface ExecutionPipeline {
   readonly legality: ConditionAST | null;
   readonly costValidation: ConditionAST | null;
   readonly costSpend: readonly EffectAST[];
@@ -10,7 +10,7 @@ export interface OperationExecutionProfile {
   readonly partialMode: 'atomic' | 'partial';
 }
 
-export const resolveOperationProfile = (
+export const resolveActionPipeline = (
   def: GameDef,
   action: ActionDef,
   ctx: EvalContext,
@@ -31,10 +31,10 @@ export const resolveOperationProfile = (
   });
 };
 
-export const toOperationExecutionProfile = (
+export const toExecutionPipeline = (
   _action: ActionDef,
   profile: ActionPipelineDef,
-): OperationExecutionProfile => ({
+): ExecutionPipeline => ({
   legality: profile.legality,
   costValidation: profile.costValidation,
   costSpend: profile.costEffects,

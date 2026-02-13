@@ -187,7 +187,7 @@ describe('legalMoves', () => {
             eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
             optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
         },
       },
@@ -286,7 +286,7 @@ describe('legalMoves', () => {
             eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
             optionMatrix: [{ first: 'operation', second: ['limitedOperation'] }],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
         },
       },
@@ -377,7 +377,7 @@ describe('legalMoves', () => {
             eligibility: { factions: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
             monsoon: {
               restrictedActions: [
                 { actionId: 'sweep' },
@@ -488,7 +488,7 @@ describe('legalMoves', () => {
             eligibility: { factions: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
             pivotal: {
               actionIds: ['pivotalA', 'pivotalB'],
               interrupt: {
@@ -571,7 +571,7 @@ describe('legalMoves', () => {
             eligibility: { factions: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
             pivotal: {
               actionIds: ['pivotalA', 'pivotalB'],
               interrupt: {

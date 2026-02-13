@@ -374,19 +374,19 @@
                                 "anyOf": [
                                   {
                                     "type": "string",
-                                    "const": "card"
+                                    "const": "turn"
                                   },
                                   {
                                     "type": "string",
-                                    "const": "nextCard"
+                                    "const": "nextTurn"
                                   },
                                   {
                                     "type": "string",
-                                    "const": "coup"
+                                    "const": "round"
                                   },
                                   {
                                     "type": "string",
-                                    "const": "campaign"
+                                    "const": "cycle"
                                   }
                                 ]
                               }
@@ -492,19 +492,19 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "const": "card"
+                            "const": "turn"
                           },
                           {
                             "type": "string",
-                            "const": "nextCard"
+                            "const": "nextTurn"
                           },
                           {
                             "type": "string",
-                            "const": "coup"
+                            "const": "round"
                           },
                           {
                             "type": "string",
-                            "const": "campaign"
+                            "const": "cycle"
                           }
                         ]
                       }
@@ -2057,19 +2057,19 @@
                                   "anyOf": [
                                     {
                                       "type": "string",
-                                      "const": "card"
+                                      "const": "turn"
                                     },
                                     {
                                       "type": "string",
-                                      "const": "nextCard"
+                                      "const": "nextTurn"
                                     },
                                     {
                                       "type": "string",
-                                      "const": "coup"
+                                      "const": "round"
                                     },
                                     {
                                       "type": "string",
-                                      "const": "campaign"
+                                      "const": "cycle"
                                     }
                                   ]
                                 },
@@ -2171,19 +2171,19 @@
                             "anyOf": [
                               {
                                 "type": "string",
-                                "const": "card"
+                                "const": "turn"
                               },
                               {
                                 "type": "string",
-                                "const": "nextCard"
+                                "const": "nextTurn"
                               },
                               {
                                 "type": "string",
-                                "const": "coup"
+                                "const": "round"
                               },
                               {
                                 "type": "string",
-                                "const": "campaign"
+                                "const": "cycle"
                               }
                             ]
                           },
@@ -2321,19 +2321,19 @@
                                   "anyOf": [
                                     {
                                       "type": "string",
-                                      "const": "card"
+                                      "const": "turn"
                                     },
                                     {
                                       "type": "string",
-                                      "const": "nextCard"
+                                      "const": "nextTurn"
                                     },
                                     {
                                       "type": "string",
-                                      "const": "coup"
+                                      "const": "round"
                                     },
                                     {
                                       "type": "string",
-                                      "const": "campaign"
+                                      "const": "cycle"
                                     }
                                   ]
                                 },
@@ -2435,19 +2435,19 @@
                             "anyOf": [
                               {
                                 "type": "string",
-                                "const": "card"
+                                "const": "turn"
                               },
                               {
                                 "type": "string",
-                                "const": "nextCard"
+                                "const": "nextTurn"
                               },
                               {
                                 "type": "string",
-                                "const": "coup"
+                                "const": "round"
                               },
                               {
                                 "type": "string",
-                                "const": "campaign"
+                                "const": "cycle"
                               }
                             ]
                           },

@@ -302,7 +302,7 @@ describe('validateGameDef reference checks', () => {
             eligibility: { factions: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
           coupPlan: {
             phases: [{ id: 'victory', steps: ['check-thresholds'] }],
@@ -335,7 +335,7 @@ describe('validateGameDef reference checks', () => {
             eligibility: { factions: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
           coupPlan: {
             phases: [],
@@ -366,7 +366,7 @@ describe('validateGameDef reference checks', () => {
             eligibility: { factions: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
           coupPlan: {
             phases: [{ id: 'victory', steps: ['check-thresholds'] }],

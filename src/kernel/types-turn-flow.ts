@@ -1,4 +1,4 @@
-export type TurnFlowDuration = 'card' | 'nextCard' | 'coup' | 'campaign';
+export type TurnFlowDuration = 'turn' | 'nextTurn' | 'round' | 'cycle';
 
 export type TurnFlowActionClass =
   | 'pass'

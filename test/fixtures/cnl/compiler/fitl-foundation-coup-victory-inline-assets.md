@@ -84,7 +84,7 @@ turnOrder:
         overrideWindows: []
       optionMatrix: []
       passRewards: []
-      durationWindows: [card, nextCard, coup, campaign]
+      durationWindows: [turn, nextTurn, round, cycle]
     coupPlan:
       phases:
         - id: victory

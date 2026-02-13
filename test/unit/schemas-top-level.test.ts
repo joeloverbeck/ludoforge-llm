@@ -54,11 +54,11 @@ const fullGameDef = {
         cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
         eligibility: {
           factions: ['us', 'arvn', 'nva', 'vc'],
-          overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+          overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' }],
         },
         optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
         passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: 3 }],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+        durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
       },
       coupPlan: {
         phases: [{ id: 'victory', steps: ['check-thresholds'] }],
@@ -266,7 +266,7 @@ describe('top-level runtime schemas', () => {
             lastingEffects: [
               {
                 id: 'aid-mod',
-                duration: 'nextCard',
+                duration: 'nextTurn',
                 setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -9 } }],
               },
             ],
@@ -415,7 +415,7 @@ describe('top-level runtime schemas', () => {
           ...fullGameDef.turnOrder.config,
           turnFlow: {
             ...fullGameDef.turnOrder.config.turnFlow,
-            durationWindows: ['card', 'season'],
+            durationWindows: ['turn', 'season'],
           },
         },
       },

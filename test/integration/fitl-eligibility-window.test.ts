@@ -48,13 +48,13 @@ const createDef = (): GameDef =>
           eligibility: {
             factions: ['0', '1', '2', '3'],
             overrideWindows: [
-              { id: 'remain-eligible', duration: 'nextCard' },
-              { id: 'force-ineligible', duration: 'nextCard' },
+              { id: 'remain-eligible', duration: 'nextTurn' },
+              { id: 'force-ineligible', duration: 'nextTurn' },
             ],
           },
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
-          durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
         },
       },
     },
@@ -89,7 +89,7 @@ const createDef = (): GameDef =>
   }) as unknown as GameDef;
 
 describe('FITL eligibility window integration', () => {
-  it('applies declared nextCard overrides at card end', () => {
+  it('applies declared nextTurn overrides at card end', () => {
     const def = createDef();
     const start = initialState(def, 41, 4);
 

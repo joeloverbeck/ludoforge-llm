@@ -257,7 +257,7 @@ describe('parseGameSpec API shape', () => {
       '        overrideWindows: []',
       '      optionMatrix: []',
       '      passRewards: []',
-      '      durationWindows: [card]',
+      '      durationWindows: [turn]',
       '    coupPlan:',
       '      phases:',
       '        - id: victory',

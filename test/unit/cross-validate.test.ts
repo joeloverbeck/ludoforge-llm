@@ -39,10 +39,10 @@ function createRichCompilableDoc(): GameSpecDoc {
       config: {
         turnFlow: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-          eligibility: { factions: ['us', 'arvn'], overrideWindows: [{ id: 'window-a', duration: 'nextCard' as const }] },
+          eligibility: { factions: ['us', 'arvn'], overrideWindows: [{ id: 'window-a', duration: 'nextTurn' as const }] },
           optionMatrix: [{ first: 'event' as const, second: ['pass' as const] }],
           passRewards: [{ factionClass: 'coin', resource: 'resources', amount: 2 }],
-          durationWindows: ['card' as const],
+          durationWindows: ['turn' as const],
         },
         coupPlan: { phases: [{ id: 'main', steps: ['check-thresholds'] }] },
       },

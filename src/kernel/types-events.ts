@@ -65,9 +65,9 @@ export interface ActiveLastingEffect {
   readonly duration: TurnFlowDuration;
   readonly setupEffects: readonly EffectAST[];
   readonly teardownEffects?: readonly EffectAST[];
-  readonly remainingCardBoundaries?: number;
-  readonly remainingCoupBoundaries?: number;
-  readonly remainingCampaignBoundaries?: number;
+  readonly remainingTurnBoundaries?: number;
+  readonly remainingRoundBoundaries?: number;
+  readonly remainingCycleBoundaries?: number;
 }
 
 export interface ScenarioPiecePlacement {

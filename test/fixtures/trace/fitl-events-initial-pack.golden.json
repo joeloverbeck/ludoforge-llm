@@ -88,7 +88,7 @@
           "faction": "0",
           "eligible": true,
           "windowId": "remain-eligible",
-          "duration": "nextCard"
+          "duration": "nextTurn"
         }
       ]
     }
@@ -116,7 +116,7 @@
           "faction": "0",
           "eligible": true,
           "windowId": "remain-eligible",
-          "duration": "nextCard"
+          "duration": "nextTurn"
         }
       ],
       "currentCard": {

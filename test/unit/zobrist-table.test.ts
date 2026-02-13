@@ -188,6 +188,18 @@ describe('zobrist table canonicalization and feature keying', () => {
       zobristKey(table, { kind: 'activePlayer', playerId: asPlayerId(1) }),
       zobristKey(table, { kind: 'currentPhase', phaseId: asPhaseId('main') }),
       zobristKey(table, { kind: 'actionUsage', actionId: asActionId('playCard'), scope: 'turn', count: 1 }),
+      zobristKey(table, {
+        kind: 'lastingEffect',
+        slot: 0,
+        id: 'aid-shift',
+        sourceCardId: 'card-1',
+        side: 'unshaded',
+        branchId: '',
+        duration: 'nextTurn',
+        remainingTurnBoundaries: 2,
+        remainingRoundBoundaries: -1,
+        remainingCycleBoundaries: -1,
+      }),
     ];
 
     assert.equal(new Set(keys).size, keys.length);

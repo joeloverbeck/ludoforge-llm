@@ -159,7 +159,7 @@ const extractPendingEligibilityOverrides = (
       const faction = resolveDirectiveFaction(factionToken, activeFaction, factionOrder);
       const eligible = resolveDirectiveEligibility(eligibilityToken);
       const duration = windowById[windowId];
-      if (faction === null || eligible === null || duration !== 'nextCard') {
+      if (faction === null || eligible === null || duration !== 'nextTurn') {
         continue;
       }
       overrides.push({
@@ -357,14 +357,14 @@ export const applyTurnFlowEligibilityAfterMove = (
     endedReason = 'twoNonPass';
   }
 
-  let nextCard = currentCard;
+  let nextTurn = currentCard;
   let nextEligibility = runtime.eligibility;
   let nextPendingOverrides = pendingOverrides;
   if (endedReason !== undefined) {
     nextEligibility = computePostCardEligibility(runtime.factionOrder, currentCard, pendingOverrides);
     nextPendingOverrides = [];
     const resetCandidates = computeCandidates(runtime.factionOrder, nextEligibility, new Set());
-    nextCard = {
+    nextTurn = {
       firstEligible: resetCandidates.first,
       secondEligible: resetCandidates.second,
       actedFactions: [],
@@ -377,7 +377,7 @@ export const applyTurnFlowEligibilityAfterMove = (
       step: 'cardEnd',
       faction: activeFaction,
       before: cardSnapshot(currentCard),
-      after: cardSnapshot(nextCard),
+      after: cardSnapshot(nextTurn),
       eligibilityBefore: runtime.eligibility,
       eligibilityAfter: nextEligibility,
       ...(pendingOverrides.length === 0 ? {} : { overrides: pendingOverrides }),
@@ -393,13 +393,13 @@ export const applyTurnFlowEligibilityAfterMove = (
         ...runtime,
         eligibility: nextEligibility,
         pendingEligibilityOverrides: nextPendingOverrides,
-        currentCard: nextCard,
+        currentCard: nextTurn,
       },
     },
   };
 
   return {
-    state: withActiveFromFirstEligible(stateWithTurnFlow, nextCard.firstEligible),
+    state: withActiveFromFirstEligible(stateWithTurnFlow, nextTurn.firstEligible),
     traceEntries,
   };
 };

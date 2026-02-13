@@ -103,7 +103,7 @@ export interface GameSpecDataAsset {
   readonly payload: unknown;
 }
 
-export type GameSpecTurnFlowDuration = 'card' | 'nextCard' | 'coup' | 'campaign';
+export type GameSpecTurnFlowDuration = 'turn' | 'nextTurn' | 'round' | 'cycle';
 
 export type GameSpecTurnFlowActionClass =
   | 'pass'

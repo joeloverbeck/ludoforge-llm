@@ -70,9 +70,9 @@ turnFlow:
     factions: ["0", "1", "2", "3"]
     overrideWindows:
       - id: remain-eligible
-        duration: nextCard
+        duration: nextTurn
       - id: force-ineligible
-        duration: nextCard
+        duration: nextTurn
   optionMatrix:
     - first: event
       second: [operation, operationPlusSpecialActivity]
@@ -87,7 +87,7 @@ turnFlow:
     - factionClass: "1"
       resource: coinPassReward
       amount: 3
-  durationWindows: [card, nextCard, coup, campaign]
+  durationWindows: [turn, nextTurn, round, cycle]
   monsoon:
     restrictedActions:
       - actionId: sweep

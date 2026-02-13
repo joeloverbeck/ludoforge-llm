@@ -9,7 +9,7 @@ const minimalCardDrivenTurnFlow = {
   eligibility: { factions: ['us', 'arvn', 'nva', 'vc'], overrideWindows: [] },
   optionMatrix: [],
   passRewards: [],
-  durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
+  durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
 };
 
 describe('compile top-level actions/triggers/end conditions', () => {
@@ -102,14 +102,14 @@ describe('compile top-level actions/triggers/end conditions', () => {
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: {
               factions: ['us', 'arvn', 'nva', 'vc'],
-              overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' as const }],
+              overrideWindows: [{ id: 'remain-eligible', duration: 'nextTurn' as const }],
             },
             optionMatrix: [{ first: 'event' as const, second: ['operation', 'operationPlusSpecialActivity'] as const }],
             passRewards: [
               { factionClass: 'coin', resource: 'arvnResources', amount: 3 },
               { factionClass: 'insurgent', resource: 'factionResource', amount: 1 },
             ],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
           },
         },
       },
@@ -129,7 +129,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
     assert.deepEqual(
       result.gameDef?.turnOrder?.type === 'cardDriven' ? result.gameDef.turnOrder.config.turnFlow.durationWindows : undefined,
-      ['card', 'nextCard', 'coup', 'campaign'],
+      ['turn', 'nextTurn', 'round', 'cycle'],
     );
   });
 
@@ -240,7 +240,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
               { first: 'event' as const, second: ['operationPlusSpecialActivity'] as const },
             ],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
             pivotal: {
               actionIds: ['pivotalA', 'pivotalB'],
               interrupt: {
@@ -422,7 +422,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
             },
             optionMatrix: [{ first: 'event' as const, second: ['operation'] as const }],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'] as const,
             pivotal: {
               actionIds: ['pivotalA', 'pivotalB'],
             },

@@ -335,7 +335,7 @@ describe('applyMove', () => {
               { factionClass: '0', resource: 'res0', amount: 1 },
               { factionClass: '1', resource: 'res1', amount: 3 },
             ],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
         },
       },
@@ -397,7 +397,7 @@ describe('applyMove', () => {
             eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
             optionMatrix: [{ first: 'operation', second: ['limitedOperation', 'operation'] }],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
         },
       },
@@ -445,7 +445,7 @@ describe('applyMove', () => {
     );
   });
 
-  it('applies nextCard eligibility override directives and traces override creation', () => {
+  it('applies nextTurn eligibility override directives and traces override creation', () => {
     const selfOverride = 'eligibilityOverride:self:eligible:remain-eligible';
     const targetOverride = 'eligibilityOverride:2:ineligible:force-ineligible';
     const noOverride = 'none';
@@ -467,13 +467,13 @@ describe('applyMove', () => {
             eligibility: {
               factions: ['0', '1', '2', '3'],
               overrideWindows: [
-                { id: 'remain-eligible', duration: 'nextCard' },
-                { id: 'force-ineligible', duration: 'nextCard' },
+                { id: 'remain-eligible', duration: 'nextTurn' },
+                { id: 'force-ineligible', duration: 'nextTurn' },
               ],
             },
             optionMatrix: [{ first: 'event', second: ['operation'] }],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
         },
       },
@@ -891,7 +891,7 @@ describe('applyMove', () => {
             eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
         },
       },
@@ -1255,7 +1255,7 @@ describe('applyMove', () => {
             eligibility: { factions: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
         },
       },
@@ -1273,7 +1273,7 @@ describe('applyMove', () => {
                 lastingEffects: [
                   {
                     id: 'aid-shift',
-                    duration: 'nextCard',
+                    duration: 'nextTurn',
                     setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 3 } }],
                     teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -3 } }],
                   },
@@ -1336,7 +1336,82 @@ describe('applyMove', () => {
     assert.equal(result.state.globalVars.aid, 3);
     assert.equal(result.state.activeLastingEffects?.length, 1);
     assert.equal(result.state.activeLastingEffects?.[0]?.id, 'aid-shift');
-    assert.equal(result.state.activeLastingEffects?.[0]?.remainingCardBoundaries, 2);
+    assert.equal(result.state.activeLastingEffects?.[0]?.remainingTurnBoundaries, 2);
+  });
+
+  it('activates lasting effects for event moves without cardDriven turnOrder by resolving from deck discard zones', () => {
+    const def: GameDef = {
+      metadata: { id: 'event-lasting-non-card-driven', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'aid', type: 'int', init: 0, min: -99, max: 99 }],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('discard:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [{ id: 'card', props: {} }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      eventDecks: [
+        {
+          id: 'deck-a',
+          drawZone: 'deck:none',
+          discardZone: 'discard:none',
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Card 1',
+              sideMode: 'single',
+              unshaded: {
+                lastingEffects: [
+                  {
+                    id: 'aid-shift',
+                    duration: 'turn',
+                    setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 2 } }],
+                    teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -2 } }],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('event'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [{ name: 'side', domain: { query: 'enums', values: ['unshaded'] } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      globalVars: { aid: 0 },
+      zones: {
+        'deck:none': [],
+        'discard:none': [{ id: asTokenId('card-1'), type: 'card', props: {} }],
+      },
+      actionUsage: {},
+    };
+
+    const result = applyMove(def, state, {
+      actionId: asActionId('event'),
+      actionClass: 'event',
+      params: { side: 'unshaded' },
+    });
+
+    assert.equal(result.state.globalVars.aid, 2);
+    assert.equal(result.state.activeLastingEffects?.length, 1);
+    assert.equal(result.state.activeLastingEffects?.[0]?.id, 'aid-shift');
+    assert.equal(result.state.activeLastingEffects?.[0]?.sourceCardId, 'card-1');
   });
 
   it('executes compound SA before operation stages when timing is "before"', () => {

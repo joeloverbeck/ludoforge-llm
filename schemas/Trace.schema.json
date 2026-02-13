@@ -188,7 +188,7 @@
       }
     },
     "turnFlowDuration": {
-      "enum": ["card", "nextCard", "coup", "campaign"]
+      "enum": ["turn", "nextTurn", "round", "cycle"]
     },
     "turnFlowPendingEligibilityOverride": {
       "type": "object",

@@ -11,6 +11,7 @@ import type {
   Move,
   Rng,
   Token,
+  TriggerLogEntry,
   TriggerEvent,
   TurnFlowDuration,
 } from './types.js';
@@ -20,6 +21,31 @@ interface LastingEffectApplyResult {
   readonly rng: Rng;
   readonly emittedEvents: readonly TriggerEvent[];
 }
+
+interface EventExecutionContext {
+  readonly card: EventCardDef;
+  readonly sideId: 'unshaded' | 'shaded';
+  readonly side: NonNullable<EventCardDef['unshaded']>;
+  readonly branch: EventBranchDef | null;
+}
+
+const isTurnFlowLifecycleEntry = (
+  entry: TriggerLogEntry,
+): entry is Extract<TriggerLogEntry, { readonly kind: 'turnFlowLifecycle' }> =>
+  entry.kind === 'turnFlowLifecycle';
+
+export const resolveBoundaryDurationsAtTurnEnd = (
+  traceEntries: readonly TriggerLogEntry[],
+): readonly TurnFlowDuration[] => {
+  const boundaries: TurnFlowDuration[] = ['turn'];
+  const hasCoupHandoff = traceEntries.some(
+    (entry) => isTurnFlowLifecycleEntry(entry) && entry.step === 'coupHandoff',
+  );
+  if (hasCoupHandoff) {
+    boundaries.push('round', 'cycle');
+  }
+  return boundaries;
+};
 
 const withActiveLastingEffects = (
   state: GameState,
@@ -35,17 +61,17 @@ const withActiveLastingEffects = (
 
 const durationCounters = (
   duration: TurnFlowDuration,
-): Pick<ActiveLastingEffect, 'remainingCardBoundaries' | 'remainingCoupBoundaries' | 'remainingCampaignBoundaries'> => {
-  if (duration === 'card') {
-    return { remainingCardBoundaries: 1 };
+): Pick<ActiveLastingEffect, 'remainingTurnBoundaries' | 'remainingRoundBoundaries' | 'remainingCycleBoundaries'> => {
+  if (duration === 'turn') {
+    return { remainingTurnBoundaries: 1 };
   }
-  if (duration === 'nextCard') {
-    return { remainingCardBoundaries: 2 };
+  if (duration === 'nextTurn') {
+    return { remainingTurnBoundaries: 2 };
   }
-  if (duration === 'coup') {
-    return { remainingCoupBoundaries: 1 };
+  if (duration === 'round') {
+    return { remainingRoundBoundaries: 1 };
   }
-  return { remainingCampaignBoundaries: 1 };
+  return { remainingCycleBoundaries: 1 };
 };
 
 const resolveEventCardTokenId = (token: Token): string => {
@@ -59,18 +85,35 @@ const resolveCurrentEventCard = (def: GameDef, state: GameState): EventCardDef |
   if (eventDecks === undefined || eventDecks.length === 0) {
     return null;
   }
-  const cardLifecycle = def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config.turnFlow.cardLifecycle : null;
-  if (cardLifecycle === null) {
-    return null;
-  }
-  const playedZone = state.zones[cardLifecycle.played];
-  const topToken = playedZone?.[0];
-  if (topToken === undefined) {
-    return null;
-  }
-  const tokenCardId = resolveEventCardTokenId(topToken);
   for (const deck of eventDecks) {
+    const topToken = state.zones[deck.discardZone]?.[0];
+    if (topToken === undefined) {
+      continue;
+    }
+    const tokenCardId = resolveEventCardTokenId(topToken);
     const card = deck.cards.find((candidate) => candidate.id === tokenCardId);
+    if (card !== undefined) {
+      return card;
+    }
+  }
+  return null;
+};
+
+const resolveEventCardFromMove = (def: GameDef, move: Move): EventCardDef | null => {
+  const explicitCardId = move.params.eventCardId;
+  if (typeof explicitCardId !== 'string' || explicitCardId.length === 0) {
+    return null;
+  }
+  const eventDecks = def.eventDecks;
+  if (eventDecks === undefined || eventDecks.length === 0) {
+    return null;
+  }
+  const explicitDeckId = move.params.eventDeckId;
+  const decks = typeof explicitDeckId === 'string' && explicitDeckId.length > 0
+    ? eventDecks.filter((deck) => deck.id === explicitDeckId)
+    : eventDecks;
+  for (const deck of decks) {
+    const card = deck.cards.find((candidate) => candidate.id === explicitCardId);
     if (card !== undefined) {
       return card;
     }
@@ -113,6 +156,28 @@ const resolveSelectedBranch = (
   return branches.length === 1 ? branches[0]! : null;
 };
 
+const resolveEventExecutionContext = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): EventExecutionContext | null => {
+  const card = resolveEventCardFromMove(def, move) ?? resolveCurrentEventCard(def, state);
+  if (card === null) {
+    return null;
+  }
+  const selectedSide = resolveSelectedSide(card, move);
+  if (selectedSide === null) {
+    return null;
+  }
+  const selectedBranch = resolveSelectedBranch(selectedSide.side, move);
+  return {
+    card,
+    sideId: selectedSide.sideId,
+    side: selectedSide.side,
+    branch: selectedBranch,
+  };
+};
+
 const applyEffectList = (
   def: GameDef,
   state: GameState,
@@ -142,7 +207,7 @@ const applyEffectList = (
 const decrementCount = (value: number | undefined): number | undefined =>
   value === undefined ? undefined : Math.max(0, value - 1);
 
-export const activateEventLastingEffects = (
+export const executeEventMove = (
   def: GameDef,
   state: GameState,
   rng: Rng,
@@ -153,20 +218,14 @@ export const activateEventLastingEffects = (
     return { state, rng, emittedEvents: [] };
   }
 
-  const card = resolveCurrentEventCard(def, state);
-  if (card === null) {
+  const context = resolveEventExecutionContext(def, state, move);
+  if (context === null) {
     return { state, rng, emittedEvents: [] };
   }
 
-  const selectedSide = resolveSelectedSide(card, move);
-  if (selectedSide === null) {
-    return { state, rng, emittedEvents: [] };
-  }
-
-  const selectedBranch = resolveSelectedBranch(selectedSide.side, move);
   const lastingEffects = [
-    ...(selectedSide.side.lastingEffects ?? []),
-    ...(selectedBranch?.lastingEffects ?? []),
+    ...(context.side.lastingEffects ?? []),
+    ...(context.branch?.lastingEffects ?? []),
   ];
 
   if (lastingEffects.length === 0) {
@@ -191,9 +250,9 @@ export const activateEventLastingEffects = (
     emittedEvents.push(...setupResult.emittedEvents);
     activeEffects.push({
       id: lastingEffect.id,
-      sourceCardId: card.id,
-      side: selectedSide.sideId,
-      ...(selectedBranch === null ? {} : { branchId: selectedBranch.id }),
+      sourceCardId: context.card.id,
+      side: context.sideId,
+      ...(context.branch === null ? {} : { branchId: context.branch.id }),
       duration: lastingEffect.duration,
       setupEffects: lastingEffect.setupEffects,
       ...(lastingEffect.teardownEffects === undefined ? {} : { teardownEffects: lastingEffect.teardownEffects }),
@@ -226,27 +285,27 @@ export const expireLastingEffectsAtBoundaries = (
   const emittedEvents: TriggerEvent[] = [];
 
   for (const active of activeEffects) {
-    const nextCardCount = boundarySet.has('card')
-      ? decrementCount(active.remainingCardBoundaries)
-      : active.remainingCardBoundaries;
-    const nextCoupCount = boundarySet.has('coup')
-      ? decrementCount(active.remainingCoupBoundaries)
-      : active.remainingCoupBoundaries;
-    const nextCampaignCount = boundarySet.has('campaign')
-      ? decrementCount(active.remainingCampaignBoundaries)
-      : active.remainingCampaignBoundaries;
+    const nextTurnCount = boundarySet.has('turn')
+      ? decrementCount(active.remainingTurnBoundaries)
+      : active.remainingTurnBoundaries;
+    const nextRoundCount = boundarySet.has('round')
+      ? decrementCount(active.remainingRoundBoundaries)
+      : active.remainingRoundBoundaries;
+    const nextCycleCount = boundarySet.has('cycle')
+      ? decrementCount(active.remainingCycleBoundaries)
+      : active.remainingCycleBoundaries;
 
     const expired =
-      (active.remainingCardBoundaries !== undefined && nextCardCount === 0) ||
-      (active.remainingCoupBoundaries !== undefined && nextCoupCount === 0) ||
-      (active.remainingCampaignBoundaries !== undefined && nextCampaignCount === 0);
+      (active.remainingTurnBoundaries !== undefined && nextTurnCount === 0) ||
+      (active.remainingRoundBoundaries !== undefined && nextRoundCount === 0) ||
+      (active.remainingCycleBoundaries !== undefined && nextCycleCount === 0);
 
     if (!expired) {
       retained.push({
         ...active,
-        ...(nextCardCount === undefined ? {} : { remainingCardBoundaries: nextCardCount }),
-        ...(nextCoupCount === undefined ? {} : { remainingCoupBoundaries: nextCoupCount }),
-        ...(nextCampaignCount === undefined ? {} : { remainingCampaignBoundaries: nextCampaignCount }),
+        ...(nextTurnCount === undefined ? {} : { remainingTurnBoundaries: nextTurnCount }),
+        ...(nextRoundCount === undefined ? {} : { remainingRoundBoundaries: nextRoundCount }),
+        ...(nextCycleCount === undefined ? {} : { remainingCycleBoundaries: nextCycleCount }),
       });
       continue;
     }

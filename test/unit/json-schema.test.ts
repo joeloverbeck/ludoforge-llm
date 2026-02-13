@@ -119,7 +119,7 @@ const validRuntimeTrace: GameTrace = {
             nonPassCount: 1,
             firstActionClass: 'event',
           },
-          overrides: [{ faction: '0', eligible: true, windowId: 'remain-eligible', duration: 'nextCard' }],
+          overrides: [{ faction: '0', eligible: true, windowId: 'remain-eligible', duration: 'nextTurn' }],
         },
         {
           kind: 'operationPartial',
@@ -158,7 +158,7 @@ const validRuntimeTrace: GameTrace = {
           nonPassCount: 0,
           firstActionClass: null,
         },
-        pendingEligibilityOverrides: [{ faction: '0', eligible: true, windowId: 'remain-eligible', duration: 'nextCard' }],
+        pendingEligibilityOverrides: [{ faction: '0', eligible: true, windowId: 'remain-eligible', duration: 'nextTurn' }],
         consecutiveCoupRounds: 0,
       },
     },

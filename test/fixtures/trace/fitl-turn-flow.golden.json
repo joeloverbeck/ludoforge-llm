@@ -392,7 +392,7 @@
               "faction": "1",
               "eligible": true,
               "windowId": "remain-eligible",
-              "duration": "nextCard"
+              "duration": "nextTurn"
             }
           ]
         }
@@ -485,7 +485,7 @@
                 "faction": "1",
                 "eligible": true,
                 "windowId": "remain-eligible",
-                "duration": "nextCard"
+                "duration": "nextTurn"
               }
             ],
             "currentCard": {
@@ -670,7 +670,7 @@
                 "faction": "1",
                 "eligible": true,
                 "windowId": "remain-eligible",
-                "duration": "nextCard"
+                "duration": "nextTurn"
               }
             ],
             "currentCard": {

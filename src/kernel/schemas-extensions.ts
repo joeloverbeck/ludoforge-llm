@@ -11,10 +11,10 @@ import {
 } from './schemas-ast.js';
 
 export const TurnFlowDurationSchema = z.union([
-  z.literal('card'),
-  z.literal('nextCard'),
-  z.literal('coup'),
-  z.literal('campaign'),
+  z.literal('turn'),
+  z.literal('nextTurn'),
+  z.literal('round'),
+  z.literal('cycle'),
 ]);
 
 export const EventCardTargetCardinalitySchema = z.union([

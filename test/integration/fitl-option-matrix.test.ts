@@ -35,7 +35,7 @@ const createDef = (): GameDef =>
             { first: 'operationPlusSpecialActivity', second: ['limitedOperation', 'event'] },
           ],
           passRewards: [],
-          durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
         },
       },
     },

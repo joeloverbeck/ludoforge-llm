@@ -17,6 +17,7 @@ export * from './effect-context.js';
 export * from './effect-error.js';
 export * from './execution-collector.js';
 export * from './effects.js';
+export * from './event-execution.js';
 export * from './eval-condition.js';
 export * from './eval-context.js';
 export * from './eval-error.js';

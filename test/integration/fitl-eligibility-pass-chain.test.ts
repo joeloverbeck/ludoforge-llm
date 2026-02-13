@@ -29,7 +29,7 @@ const createDef = (): GameDef =>
             { factionClass: '0', resource: 'res0', amount: 1 },
             { factionClass: '1', resource: 'res1', amount: 3 },
           ],
-          durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
         },
       },
     },

@@ -345,7 +345,7 @@ describe('phase advancement', () => {
             eligibility: { factions: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
         },
       },
@@ -423,7 +423,7 @@ describe('phase advancement', () => {
             eligibility: { factions: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
           coupPlan: {
             phases: [{ id: 'victory', steps: ['check-thresholds'] }],
@@ -511,7 +511,7 @@ describe('phase advancement', () => {
             eligibility: { factions: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
         },
       },
@@ -553,10 +553,10 @@ describe('phase advancement', () => {
           id: 'aid-shift',
           sourceCardId: 'card-0',
           side: 'unshaded',
-          duration: 'card',
+          duration: 'turn',
           setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 3 } }],
           teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -3 } }],
-          remainingCardBoundaries: 1,
+          remainingTurnBoundaries: 1,
         },
       ],
     };
@@ -566,7 +566,47 @@ describe('phase advancement', () => {
     assert.equal(next.activeLastingEffects, undefined);
   });
 
-  it('keeps nextCard lasting effects for one boundary and expires on the second boundary', () => {
+  it('expires card-duration lasting effects at turn boundary even without cardDriven turnOrder', () => {
+    const def: GameDef = {
+      metadata: { id: 'phase-generic-card-lasting-expiry', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'aid', type: 'int', init: 0, min: -99, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState({
+        currentPhase: asPhaseId('main'),
+      }),
+      globalVars: { aid: 3 },
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      activeLastingEffects: [
+        {
+          id: 'aid-shift',
+          sourceCardId: 'card-0',
+          side: 'unshaded',
+          duration: 'turn',
+          setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 3 } }],
+          teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -3 } }],
+          remainingTurnBoundaries: 1,
+        },
+      ],
+    };
+
+    const next = advancePhase(def, state);
+    assert.equal(next.globalVars.aid, 0);
+    assert.equal(next.activeLastingEffects, undefined);
+  });
+
+  it('keeps nextTurn lasting effects for one boundary and expires on the second boundary', () => {
     const def: GameDef = {
       metadata: { id: 'phase-next-card-lasting-expiry', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
@@ -589,7 +629,7 @@ describe('phase advancement', () => {
             eligibility: { factions: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
         },
       },
@@ -631,17 +671,17 @@ describe('phase advancement', () => {
           id: 'aid-shift',
           sourceCardId: 'card-0',
           side: 'unshaded',
-          duration: 'nextCard',
+          duration: 'nextTurn',
           setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 3 } }],
           teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -3 } }],
-          remainingCardBoundaries: 2,
+          remainingTurnBoundaries: 2,
         },
       ],
     };
 
     const afterOne = advancePhase(def, state);
     assert.equal(afterOne.globalVars.aid, 3);
-    assert.equal(afterOne.activeLastingEffects?.[0]?.remainingCardBoundaries, 1);
+    assert.equal(afterOne.activeLastingEffects?.[0]?.remainingTurnBoundaries, 1);
 
     const afterTwo = advancePhase(def, afterOne);
     assert.equal(afterTwo.globalVars.aid, 0);
@@ -671,7 +711,7 @@ describe('phase advancement', () => {
             eligibility: { factions: ['0', '1'], overrideWindows: [] },
             optionMatrix: [],
             passRewards: [],
-            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
           },
         },
       },
@@ -713,10 +753,10 @@ describe('phase advancement', () => {
           id: 'campaign-aid-shift',
           sourceCardId: 'coup-card-0',
           side: 'unshaded',
-          duration: 'campaign',
+          duration: 'cycle',
           setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 3 } }],
           teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -3 } }],
-          remainingCampaignBoundaries: 1,
+          remainingCycleBoundaries: 1,
         },
       ],
     };

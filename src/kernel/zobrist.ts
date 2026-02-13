@@ -86,6 +86,19 @@ const encodeFeature = (feature: ZobristFeature): string => {
       return `kind=actionUsage|actionId=${String(feature.actionId)}|scope=${feature.scope}|count=${feature.count}`;
     case 'markerState':
       return `kind=markerState|spaceId=${feature.spaceId}|markerId=${feature.markerId}|state=${feature.state}`;
+    case 'lastingEffect':
+      return [
+        'kind=lastingEffect',
+        `slot=${feature.slot}`,
+        `id=${feature.id}`,
+        `sourceCardId=${feature.sourceCardId}`,
+        `side=${feature.side}`,
+        `branchId=${feature.branchId}`,
+        `duration=${feature.duration}`,
+        `remainingTurnBoundaries=${feature.remainingTurnBoundaries}`,
+        `remainingRoundBoundaries=${feature.remainingRoundBoundaries}`,
+        `remainingCycleBoundaries=${feature.remainingCycleBoundaries}`,
+      ].join('|');
   }
 };
 
@@ -212,6 +225,22 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
       }
     }
   }
+
+  const activeLastingEffects = state.activeLastingEffects ?? [];
+  activeLastingEffects.forEach((effect, slot) => {
+    hash ^= zobristKey(table, {
+      kind: 'lastingEffect',
+      slot,
+      id: effect.id,
+      sourceCardId: effect.sourceCardId,
+      side: effect.side,
+      branchId: effect.branchId ?? '',
+      duration: effect.duration,
+      remainingTurnBoundaries: effect.remainingTurnBoundaries ?? -1,
+      remainingRoundBoundaries: effect.remainingRoundBoundaries ?? -1,
+      remainingCycleBoundaries: effect.remainingCycleBoundaries ?? -1,
+    });
+  });
 
   return hash;
 };

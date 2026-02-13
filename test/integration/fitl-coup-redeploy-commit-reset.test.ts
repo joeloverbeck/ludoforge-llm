@@ -153,7 +153,7 @@ const createRedeployCommitResetDef = (options: CoupFixtureOptions): GameDef => {
           eligibility: { factions: ['0', '1'], overrideWindows: [] },
           optionMatrix: [],
           passRewards: [],
-          durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
         },
       },
     },

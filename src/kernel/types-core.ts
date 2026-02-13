@@ -28,6 +28,7 @@ import type {
   TurnOrderStrategy,
   TurnFlowEligibilityTraceEntry,
   TurnFlowLifecycleTraceEntry,
+  TurnFlowDuration,
 } from './types-turn-flow.js';
 import type {
   VictoryCheckpointDef,
@@ -322,6 +323,18 @@ export type ZobristFeature =
       readonly spaceId: string;
       readonly markerId: string;
       readonly state: string;
+    }
+  | {
+      readonly kind: 'lastingEffect';
+      readonly slot: number;
+      readonly id: string;
+      readonly sourceCardId: string;
+      readonly side: 'unshaded' | 'shaded';
+      readonly branchId: string;
+      readonly duration: TurnFlowDuration;
+      readonly remainingTurnBoundaries: number;
+      readonly remainingRoundBoundaries: number;
+      readonly remainingCycleBoundaries: number;
     };
 
 export interface ActionUsageRecord {

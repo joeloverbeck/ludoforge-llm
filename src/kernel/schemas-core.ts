@@ -209,9 +209,9 @@ export const ActiveLastingEffectSchema = z
     duration: TurnFlowDurationSchema,
     setupEffects: z.array(EffectASTSchema),
     teardownEffects: z.array(EffectASTSchema).optional(),
-    remainingCardBoundaries: IntegerSchema.min(0).optional(),
-    remainingCoupBoundaries: IntegerSchema.min(0).optional(),
-    remainingCampaignBoundaries: IntegerSchema.min(0).optional(),
+    remainingTurnBoundaries: IntegerSchema.min(0).optional(),
+    remainingRoundBoundaries: IntegerSchema.min(0).optional(),
+    remainingCycleBoundaries: IntegerSchema.min(0).optional(),
   })
   .strict();
 

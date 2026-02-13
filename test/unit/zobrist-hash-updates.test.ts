@@ -281,4 +281,52 @@ describe('zobrist full hash and incremental update helpers', () => {
 
     assert.notEqual(computeFullHash(table, oneToken), computeFullHash(table, twoTokens));
   });
+
+  it('lasting effect state contributes to hash', () => {
+    const table = createZobristTable(createGameDef());
+    const base = createBaseState();
+    const withoutEffects = computeFullHash(table, base);
+    const withEffects = computeFullHash(table, {
+      ...base,
+      activeLastingEffects: [
+        {
+          id: 'aid-shift',
+          sourceCardId: 'card-1',
+          side: 'unshaded',
+          duration: 'nextTurn',
+          setupEffects: [],
+          teardownEffects: [],
+          remainingTurnBoundaries: 2,
+        },
+      ],
+    });
+
+    assert.notEqual(withEffects, withoutEffects);
+  });
+
+  it('lasting effect ordering contributes to hash deterministically', () => {
+    const table = createZobristTable(createGameDef());
+    const base = createBaseState();
+    const effectA = {
+      id: 'a',
+      sourceCardId: 'card-a',
+      side: 'unshaded',
+      duration: 'turn',
+      setupEffects: [],
+      remainingTurnBoundaries: 1,
+    } as const;
+    const effectB = {
+      id: 'b',
+      sourceCardId: 'card-b',
+      side: 'shaded',
+      duration: 'round',
+      setupEffects: [],
+      remainingRoundBoundaries: 1,
+    } as const;
+
+    const ab = computeFullHash(table, { ...base, activeLastingEffects: [effectA, effectB] });
+    const ba = computeFullHash(table, { ...base, activeLastingEffects: [effectB, effectA] });
+
+    assert.notEqual(ab, ba);
+  });
 });

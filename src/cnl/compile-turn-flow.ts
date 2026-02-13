@@ -169,7 +169,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
       path: 'doc.turnOrder.config.turnFlow.durationWindows',
       severity: 'error',
       message: 'turnFlow.durationWindows is required and must be an array.',
-      suggestion: 'Declare supported duration windows such as card/nextCard/coup/campaign.',
+      suggestion: 'Declare supported duration windows such as turn/nextTurn/round/cycle.',
     });
   }
 

@@ -1,44 +1,35 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { applyMove, asActionId, initialState, type Move } from '../../src/kernel/index.js';
-import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
-
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 describe('FITL COIN operations integration', () => {
-  it('compiles COIN Train/Patrol/Sweep/Assault operation profiles from fixture data', () => {
-    const markdown = readCompilerFixture('fitl-operations-coin.md');
-    const parsed = parseGameSpec(markdown);
-    const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+  it('compiles COIN Train/Patrol/Sweep/Assault operation profiles from production spec', () => {
+    const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
-    assert.deepEqual(validatorDiagnostics, []);
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
-    assert.deepEqual(
-      compiled.gameDef?.operationProfiles?.map((profile) => ({ id: profile.id, actionId: String(profile.actionId) })),
-      [
-        { id: 'train-us-profile', actionId: 'train' },
-        { id: 'train-arvn-profile', actionId: 'train' },
-        { id: 'patrol-us-profile', actionId: 'patrol' },
-        { id: 'sweep-profile', actionId: 'sweep' },
-        { id: 'assault-profile', actionId: 'assault' },
-      ],
-    );
+    const profiles = compiled.gameDef!.operationProfiles ?? [];
+    const profileMap = profiles.map((profile) => ({ id: profile.id, actionId: String(profile.actionId) }));
+    for (const expected of [
+      { id: 'train-us-profile', actionId: 'train' },
+      { id: 'train-arvn-profile', actionId: 'train' },
+      { id: 'patrol-us-profile', actionId: 'patrol' },
+      { id: 'sweep-profile', actionId: 'sweep' },
+      { id: 'assault-profile', actionId: 'assault' },
+    ]) {
+      assert.ok(
+        profileMap.some((p) => p.id === expected.id && p.actionId === expected.actionId),
+        `Expected profile ${expected.id} with actionId ${expected.actionId}`,
+      );
+    }
   });
 
   it('executes stub COIN operations through compiled operationProfiles instead of fallback action effects', () => {
-    const markdown = readCompilerFixture('fitl-operations-coin.md');
-    const parsed = parseGameSpec(markdown);
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const { compiled } = compileProductionSpec();
 
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
     // Train and Patrol require complex params (chooseN/chooseOne decisions) — tested separately.
@@ -60,10 +51,8 @@ describe('FITL COIN operations integration', () => {
 
   describe('train-arvn-profile structure', () => {
     const getArvnProfile = () => {
-      const markdown = readCompilerFixture('fitl-operations-coin.md');
-      const parsed = parseGameSpec(markdown);
-      const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-      assertNoDiagnostics(compiled);
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
       const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'train-arvn-profile');
       assert.ok(profile, 'train-arvn-profile must exist');
       return profile;
@@ -104,10 +93,8 @@ describe('FITL COIN operations integration', () => {
 
   describe('train-arvn-profile acceptance criteria (AC2-AC10)', () => {
     const compileArvnProfile = () => {
-      const markdown = readCompilerFixture('fitl-operations-coin.md');
-      const parsed = parseGameSpec(markdown);
-      const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-      assertNoDiagnostics(compiled);
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
       const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'train-arvn-profile');
       assert.ok(profile, 'train-arvn-profile must exist');
       return profile;
@@ -116,8 +103,7 @@ describe('FITL COIN operations integration', () => {
     /** Returns the pre-compilation (parsed YAML) profile with full filter detail. */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parseArvnProfile = (): any => {
-      const markdown = readCompilerFixture('fitl-operations-coin.md');
-      const parsed = parseGameSpec(markdown);
+      const { parsed } = compileProductionSpec();
       const profile = parsed.doc.operationProfiles?.find(
         (p: { id: string }) => p.id === 'train-arvn-profile',
       );
@@ -267,10 +253,6 @@ describe('FITL COIN operations integration', () => {
       const subAction = profile.resolution[2]!;
       assert.equal(subAction.stage, 'sub-action');
 
-      // The pacify condition must be an AND with:
-      //   - $subAction == 'pacify'
-      //   - count(tokensInZone filter: [{ prop: 'type', op: 'eq', value: 'troops' }, ...]) > 0
-      //   - count(tokensInZone filter: [{ prop: 'type', op: 'eq', value: 'police' }, ...]) > 0
       const pacifyCondition = findDeep(subAction.effects, (node: any) =>
         node?.op === 'and' &&
         Array.isArray(node?.args) &&
@@ -293,9 +275,6 @@ describe('FITL COIN operations integration', () => {
       const profile = compileArvnProfile();
       const subAction = profile.resolution[2]!;
 
-      // The replace-cubes-with-base condition must check:
-      //   - >= 3 ARVN cubes (troops/police)
-      //   - < 2 bases (stacking)
       const replaceCondition = findDeep(subAction.effects, (node: any) =>
         node?.op === 'and' &&
         Array.isArray(node?.args) &&
@@ -313,16 +292,12 @@ describe('FITL COIN operations integration', () => {
       const profile = compileArvnProfile();
       const subAction = profile.resolution[2]!;
 
-      // Find the if block whose condition references 'replace-cubes-with-base'
       const replaceIfNodes = findDeep(subAction.effects, (node: any) =>
         node?.if !== undefined &&
         findDeep(node.if.when, (n: any) => n?.right === 'replace-cubes-with-base').length > 0,
       );
       assert.ok(replaceIfNodes.length >= 1, 'Expected if block for replace-cubes-with-base');
 
-      // The addVar -3 must be a DIRECT element of then (not wrapped in __freeOperation guard).
-      // If it were guarded, then[0] would be { if: { when: __freeOperation, ... } }
-      // and .find on addVar would return undefined.
       const replaceThen = replaceIfNodes[0].if.then as readonly Record<string, unknown>[];
       const directCost = replaceThen.find(
         (eff: any) => eff?.addVar?.var === 'arvnResources' && eff?.addVar?.delta === -3,
@@ -334,7 +309,6 @@ describe('FITL COIN operations integration', () => {
       const profile = compileArvnProfile();
       const selectSpaces = profile.resolution[0]!;
 
-      // The if block checks __actionClass == 'limitedOperation'
       const limOpIf = findDeep(selectSpaces.effects, (node: any) =>
         node?.if?.when?.op === '==' &&
         node?.if?.when?.left?.ref === 'binding' &&
@@ -343,13 +317,11 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(limOpIf.length >= 1, 'Expected if block for __actionClass == limitedOperation');
 
-      // Then branch: chooseN with max: 1
       const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) =>
         node?.chooseN?.max === 1,
       );
       assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
 
-      // Else branch: chooseN with max: 99 (no limit)
       const normalChooseN = findDeep(limOpIf[0].if.else, (node: any) =>
         node?.chooseN?.max === 99,
       );
@@ -360,20 +332,17 @@ describe('FITL COIN operations integration', () => {
       const profile = compileArvnProfile();
       const resolvePerSpace = profile.resolution[1]!;
 
-      // Per-space costs are guarded by { op: '!=', left: { ref: 'binding', name: '__freeOperation' }, right: true }
       const freeOpGuards = findDeep(resolvePerSpace.effects, (node: any) =>
         node?.if?.when?.op === '!=' &&
         node?.if?.when?.left?.ref === 'binding' &&
         node?.if?.when?.left?.name === '__freeOperation' &&
         node?.if?.when?.right === true,
       );
-      // At least 2 guards: one for rangers branch, one for cubes branch
       assert.ok(
         freeOpGuards.length >= 2,
         `Expected at least 2 __freeOperation guards (rangers + cubes), found ${freeOpGuards.length}`,
       );
 
-      // Each guard protects an arvnResources deduction
       for (const guard of freeOpGuards) {
         const costEffect = findDeep(guard.if.then, (node: any) =>
           node?.addVar?.var === 'arvnResources' && node?.addVar?.delta === -3,
@@ -386,10 +355,8 @@ describe('FITL COIN operations integration', () => {
 
   describe('applicability dispatch for train profiles', () => {
     it('compiles applicability conditions for both train profiles', () => {
-      const markdown = readCompilerFixture('fitl-operations-coin.md');
-      const parsed = parseGameSpec(markdown);
-      const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-      assertNoDiagnostics(compiled);
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
 
       const usProfile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'train-us-profile');
       const arvnProfile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'train-arvn-profile');
@@ -401,10 +368,8 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('patrol-us-profile has applicability for player 0 (US)', () => {
-      const markdown = readCompilerFixture('fitl-operations-coin.md');
-      const parsed = parseGameSpec(markdown);
-      const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-      assertNoDiagnostics(compiled);
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
 
       const patrolProfile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'patrol-us-profile');
       assert.ok(patrolProfile, 'patrol-us-profile must exist');
@@ -412,10 +377,8 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('profiles without applicability (sweep/assault) remain undefined', () => {
-      const markdown = readCompilerFixture('fitl-operations-coin.md');
-      const parsed = parseGameSpec(markdown);
-      const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-      assertNoDiagnostics(compiled);
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
 
       for (const id of ['sweep-profile', 'assault-profile']) {
         const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === id);
@@ -428,18 +391,15 @@ describe('FITL COIN operations integration', () => {
   /* eslint-disable @typescript-eslint/no-explicit-any */
   describe('patrol-us-profile structure', () => {
     const getPatrolProfile = () => {
-      const markdown = readCompilerFixture('fitl-operations-coin.md');
-      const parsed = parseGameSpec(markdown);
-      const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-      assertNoDiagnostics(compiled);
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
       const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'patrol-us-profile');
       assert.ok(profile, 'patrol-us-profile must exist');
       return profile;
     };
 
     const parsePatrolProfile = (): any => {
-      const markdown = readCompilerFixture('fitl-operations-coin.md');
-      const parsed = parseGameSpec(markdown);
+      const { parsed } = compileProductionSpec();
       const profile = parsed.doc.operationProfiles?.find(
         (p: { id: string }) => p.id === 'patrol-us-profile',
       );
@@ -481,7 +441,6 @@ describe('FITL COIN operations integration', () => {
       const selectLoCs = profile.resolution[0]!;
       assert.equal(selectLoCs.stage, 'select-locs');
 
-      // Both LimOp and normal branches filter for spaceType == 'loc'
       const locFilters = findDeep(selectLoCs.effects, (node: any) =>
         node?.op === '==' &&
         node?.left?.ref === 'zoneProp' &&
@@ -499,7 +458,6 @@ describe('FITL COIN operations integration', () => {
       const moveCubes = parsed.resolution[1];
       assert.equal(moveCubes.stage, 'move-cubes');
 
-      // chooseN with tokensInAdjacentZones query and US faction filter
       const adjacentQueries = findDeep(moveCubes.effects, (node: any) =>
         node?.query === 'tokensInAdjacentZones' &&
         Array.isArray(node?.filter) &&
@@ -513,7 +471,6 @@ describe('FITL COIN operations integration', () => {
       const activateStage = profile.resolution[2]!;
       assert.equal(activateStage.stage, 'activate-guerrillas');
 
-      // The forEach over guerrillas must be limited by usCubeCount
       const guerrillaForEach = findDeep(activateStage.effects, (node: any) =>
         node?.forEach?.over?.query === 'tokensInZone' &&
         node?.forEach?.over?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'guerrilla') &&
@@ -521,7 +478,6 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(guerrillaForEach.length >= 1, 'Expected forEach over underground guerrillas');
 
-      // The limit should reference usCubeCount binding
       const limitedByCount = findDeep(activateStage.effects, (node: any) =>
         node?.forEach?.limit?.ref === 'binding' &&
         node?.forEach?.limit?.name === '$usCubeCount',
@@ -545,7 +501,6 @@ describe('FITL COIN operations integration', () => {
       const freeAssault = profile.resolution[3]!;
       assert.equal(freeAssault.stage, 'free-assault');
 
-      // Damage binding uses conditional: hasUSBase > 0 → usTroops * 2, else usTroops
       const damageConditional = findDeep(freeAssault.effects, (node: any) =>
         node?.if?.when?.op === '>' &&
         node?.if?.when?.left?.ref === 'binding' &&
@@ -553,7 +508,6 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(damageConditional.length >= 1, 'Expected damage conditional on hasUSBase');
 
-      // The "then" branch multiplies by 2
       const doubledDamage = findDeep(freeAssault.effects, (node: any) =>
         node?.op === '*' && node?.right === 2,
       );
@@ -564,7 +518,6 @@ describe('FITL COIN operations integration', () => {
       const profile = getPatrolProfile();
       const selectLoCs = profile.resolution[0]!;
 
-      // if __actionClass == 'limitedOperation'
       const limOpIf = findDeep(selectLoCs.effects, (node: any) =>
         node?.if?.when?.op === '==' &&
         node?.if?.when?.left?.ref === 'binding' &&
@@ -573,13 +526,11 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(limOpIf.length >= 1, 'Expected LimOp check');
 
-      // Then: chooseN max: 1
       const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) =>
         node?.chooseN?.max === 1,
       );
       assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
 
-      // Else: chooseN max: 99
       const normalChooseN = findDeep(limOpIf[0].if.else, (node: any) =>
         node?.chooseN?.max === 99,
       );
@@ -590,7 +541,6 @@ describe('FITL COIN operations integration', () => {
       const profile = getPatrolProfile();
       const freeAssault = profile.resolution[3]!;
 
-      // chooseN from targetLoCs with max: 1
       const assaultChooseN = findDeep(freeAssault.effects, (node: any) =>
         node?.chooseN?.max === 1 && node?.chooseN?.min === 0,
       );

@@ -1,6 +1,4 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import {
@@ -12,9 +10,7 @@ import {
 } from '../../src/cnl/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { validateGameDef } from '../../src/kernel/index.js';
-
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
+import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
 describe('compile pipeline integration', () => {
   it('is deterministic when compiling raw vs pre-expanded docs', () => {

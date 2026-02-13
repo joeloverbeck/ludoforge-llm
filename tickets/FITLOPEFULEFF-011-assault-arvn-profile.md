@@ -23,8 +23,7 @@ Key behaviors:
 
 ## Files to Touch
 
-- `test/fixtures/cnl/compiler/fitl-operations-coin.md` — Add `assault-arvn-profile` YAML
-- `data/games/fire-in-the-lake.md` — Add `assault-arvn-profile` operation profile
+- `data/games/fire-in-the-lake.md` — Replace stub in production spec with `assault-arvn-profile` YAML
 - `test/integration/fitl-coin-operations.test.ts` — Add ARVN Assault test cases
 
 ## Out of Scope

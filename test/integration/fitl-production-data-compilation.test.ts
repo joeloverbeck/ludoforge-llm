@@ -1,10 +1,8 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 interface MapSpaceLike {
   readonly id: string;
@@ -30,25 +28,22 @@ interface InventoryEntryLike {
   readonly total: number;
 }
 
+interface EventCardLike {
+  readonly id: string;
+  readonly title: string;
+}
+
 describe('FITL production data integration compilation', () => {
   it('parses and validates the canonical production GameSpecDoc with required invariants', () => {
-    const markdown = readFileSync(join(process.cwd(), 'data', 'games', 'fire-in-the-lake.md'), 'utf8');
-    const parsed = parseGameSpec(markdown);
-    const validationDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
+    const { parsed, validatorDiagnostics, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
-    const actualValidationProfile = new Set(validationDiagnostics.map((diagnostic) => `${diagnostic.code}|${diagnostic.path}`));
-    const expectedValidationProfile = new Set([
-      'CNL_VALIDATOR_REQUIRED_SECTION_MISSING|doc.actions',
-      'CNL_VALIDATOR_REQUIRED_SECTION_MISSING|doc.endConditions',
-      'CNL_VALIDATOR_METADATA_PLAYERS_INVALID|doc.metadata.players',
-      'CNL_VALIDATOR_REQUIRED_SECTION_MISSING|doc.turnStructure',
-      // train-us-profile, train-arvn-profile, and patrol-us-profile all reference actionIds but no actions section exists yet
-      'CNL_VALIDATOR_REFERENCE_MISSING|doc.operationProfiles.0.actionId',
-      'CNL_VALIDATOR_REFERENCE_MISSING|doc.operationProfiles.1.actionId',
-      'CNL_VALIDATOR_REFERENCE_MISSING|doc.operationProfiles.2.actionId',
-    ]);
-    assert.deepEqual(actualValidationProfile, expectedValidationProfile);
+    // All required sections now present — no expected validation warnings
+    const actualValidationProfile = new Set(validatorDiagnostics.map((diagnostic) => `${diagnostic.code}|${diagnostic.path}`));
+    assert.deepEqual(actualValidationProfile, new Set());
+
+    // Compilation must succeed (gameDef non-null)
+    assert.notEqual(compiled.gameDef, null, 'Expected gameDef to compile successfully');
 
     const mapAsset = (parsed.doc.dataAssets ?? []).find((asset) => asset.id === 'fitl-map-production' && asset.kind === 'map');
     assert.ok(mapAsset, 'Expected fitl-map-production map asset');
@@ -121,5 +116,14 @@ describe('FITL production data integration compilation', () => {
       false,
       'Placeholder fitl-scenario-production must not exist',
     );
+
+    // Event card set data asset
+    const eventCardAsset = allAssets.find((asset) => asset.id === 'fitl-events-initial-card-pack' && asset.kind === 'eventCardSet');
+    assert.ok(eventCardAsset, 'Expected fitl-events-initial-card-pack event card set asset');
+    const eventCardPayload = eventCardAsset.payload as { readonly cards?: readonly EventCardLike[] };
+    assert.ok(Array.isArray(eventCardPayload.cards), 'Expected cards array');
+    assert.equal(eventCardPayload.cards.length, 2, 'Expected 2 event cards (82 Domino Theory, 27 Phoenix Program)');
+    const cardIds = new Set(eventCardPayload.cards.map((card) => card.id));
+    assert.deepEqual(cardIds, new Set(['card-82', 'card-27']));
   });
 });

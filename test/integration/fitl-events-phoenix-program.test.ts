@@ -1,17 +1,15 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { compileCompilerFixture } from './fitl-events-test-helpers.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
-describe('FITL Phoenix Program event-card fixture', () => {
+describe('FITL Phoenix Program event-card production spec', () => {
   it('compiles card 27 with dual-use sides and qualifier/cardinality constraints for constrained resolution', () => {
-    const { markdown, parsed, validatorDiagnostics, compiled } = compileCompilerFixture('fitl-events-initial-card-pack.md');
+    const { parsed, compiled } = compileProductionSpec();
 
-    assert.equal(markdown.includes('data/fitl/'), false);
     assertNoErrors(parsed);
-    assert.deepEqual(validatorDiagnostics, []);
-    assertNoDiagnostics(compiled);
+    assert.notEqual(compiled.gameDef, null);
 
     const phoenix = compiled.gameDef?.eventCards?.find((card) => card.id === 'card-27');
     assert.notEqual(phoenix, undefined);

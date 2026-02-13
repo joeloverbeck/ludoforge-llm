@@ -21,8 +21,7 @@ This is the most complex March profile due to the Trail chain mechanic. The spec
 
 ## Files to Touch
 
-- `test/fixtures/cnl/compiler/fitl-operations-insurgent.md` — Replace `march-profile` stub with `march-nva-profile` YAML
-- `data/games/fire-in-the-lake.md` — Add `march-nva-profile` operation profile
+- `data/games/fire-in-the-lake.md` — Replace stub in production spec with `march-nva-profile` YAML
 - `test/integration/fitl-insurgent-operations.test.ts` — Update profile ID, add test cases
 
 ## Out of Scope

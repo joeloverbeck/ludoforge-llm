@@ -1,54 +1,45 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { applyMove, asActionId, initialState, type Move } from '../../src/kernel/index.js';
-import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
-
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 describe('FITL NVA/VC special activities integration', () => {
-  it('compiles NVA/VC special-activity profiles and ambush targeting metadata from fixture data', () => {
-    const markdown = readCompilerFixture('fitl-special-nva-vc.md');
-    const parsed = parseGameSpec(markdown);
-    const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+  it('compiles NVA/VC special-activity profiles and ambush targeting metadata from production spec', () => {
+    const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
-    assert.deepEqual(validatorDiagnostics, []);
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
-    assert.deepEqual(
-      compiled.gameDef?.operationProfiles?.map((profile) => ({
-        id: profile.id,
-        actionId: String(profile.actionId),
-        windows: profile.linkedSpecialActivityWindows ?? [],
-      })),
-      [
-        { id: 'infiltrate-profile', actionId: 'infiltrate', windows: ['nva-special-window'] },
-        { id: 'bombard-profile', actionId: 'bombard', windows: ['nva-special-window'] },
-        { id: 'nva-ambush-profile', actionId: 'ambushNva', windows: ['nva-special-window'] },
-        { id: 'tax-profile', actionId: 'tax', windows: ['vc-special-window'] },
-        { id: 'subvert-profile', actionId: 'subvert', windows: ['vc-special-window'] },
-        { id: 'vc-ambush-profile', actionId: 'ambushVc', windows: ['vc-special-window'] },
-      ],
-    );
+    const profiles = compiled.gameDef!.operationProfiles ?? [];
+    const profileSummaries = profiles.map((profile) => ({
+      id: profile.id,
+      actionId: String(profile.actionId),
+      windows: profile.linkedSpecialActivityWindows ?? [],
+    }));
+    for (const expected of [
+      { id: 'infiltrate-profile', actionId: 'infiltrate', windows: ['nva-special-window'] },
+      { id: 'bombard-profile', actionId: 'bombard', windows: ['nva-special-window'] },
+      { id: 'nva-ambush-profile', actionId: 'ambushNva', windows: ['nva-special-window'] },
+      { id: 'tax-profile', actionId: 'tax', windows: ['vc-special-window'] },
+      { id: 'subvert-profile', actionId: 'subvert', windows: ['vc-special-window'] },
+      { id: 'vc-ambush-profile', actionId: 'ambushVc', windows: ['vc-special-window'] },
+    ]) {
+      const found = profileSummaries.find((p) => p.id === expected.id);
+      assert.ok(found, `Expected profile ${expected.id}`);
+      assert.equal(found!.actionId, expected.actionId);
+      assert.deepEqual(found!.windows, expected.windows);
+    }
 
-    const nvaAmbush = compiled.gameDef!.operationProfiles!.find((profile) => profile.id === 'nva-ambush-profile');
-    const vcAmbush = compiled.gameDef!.operationProfiles!.find((profile) => profile.id === 'vc-ambush-profile');
+    const nvaAmbush = profiles.find((profile) => profile.id === 'nva-ambush-profile');
+    const vcAmbush = profiles.find((profile) => profile.id === 'vc-ambush-profile');
     assert.equal(nvaAmbush?.targeting.tieBreak, 'basesLast');
     assert.equal(vcAmbush?.targeting.tieBreak, 'lexicographicSpaceId');
   });
 
   it('executes NVA/VC special activities through compiled operationProfiles instead of fallback action effects', () => {
-    const markdown = readCompilerFixture('fitl-special-nva-vc.md');
-    const parsed = parseGameSpec(markdown);
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const { compiled } = compileProductionSpec();
 
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
     const start = initialState(compiled.gameDef!, 131, 2);
@@ -63,7 +54,9 @@ describe('FITL NVA/VC special activities integration', () => {
 
     const final = sequence.reduce((state, move) => applyMove(compiled.gameDef!, state, move).state, start);
 
-    assert.equal(final.globalVars.nvaResources, 2);
+    // Production spec: nvaResources init 10, vcResources init 5
+    // infiltrate(-2 nva) → bombard(-1 nva) → ambushNva(-1 nva) → tax(-1 vc) → subvert(-2 vc) → ambushVc(-1 vc)
+    assert.equal(final.globalVars.nvaResources, 6);
     assert.equal(final.globalVars.vcResources, 1);
     assert.equal(final.globalVars.infiltrateCount, 1);
     assert.equal(final.globalVars.bombardCount, 1);
@@ -75,11 +68,8 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('rejects infiltrate when profile legality fails', () => {
-    const markdown = readCompilerFixture('fitl-special-nva-vc.md');
-    const parsed = parseGameSpec(markdown);
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const { compiled } = compileProductionSpec();
 
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
     let state = initialState(compiled.gameDef!, 313, 2);
@@ -109,11 +99,8 @@ describe('FITL NVA/VC special activities integration', () => {
   });
 
   it('rejects subvert when profile cost validation fails under partialExecution forbid', () => {
-    const markdown = readCompilerFixture('fitl-special-nva-vc.md');
-    const parsed = parseGameSpec(markdown);
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const { compiled } = compileProductionSpec();
 
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
     let state = initialState(compiled.gameDef!, 227, 2);

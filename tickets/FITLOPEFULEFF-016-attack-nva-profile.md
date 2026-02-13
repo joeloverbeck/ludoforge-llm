@@ -21,8 +21,7 @@ Key behaviors:
 
 ## Files to Touch
 
-- `test/fixtures/cnl/compiler/fitl-operations-insurgent.md` — Replace `attack-profile` stub with `attack-nva-profile` YAML
-- `data/games/fire-in-the-lake.md` — Add `attack-nva-profile` operation profile
+- `data/games/fire-in-the-lake.md` — Replace stub in production spec with `attack-nva-profile` YAML
 - `test/integration/fitl-insurgent-operations.test.ts` — Update profile ID, add test cases
 - `test/integration/fitl-attack-die-roll.test.ts` — **New file**: deterministic die roll tests with seeded PRNG
 

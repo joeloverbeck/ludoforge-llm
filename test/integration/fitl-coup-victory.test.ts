@@ -1,10 +1,9 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 import {
   applyMove,
   asActionId,
@@ -12,9 +11,6 @@ import {
   terminalResult,
   type GameDef,
 } from '../../src/kernel/index.js';
-
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
 
 const compileFixture = (): { readonly markdown: string; readonly def: GameDef } => {
   const markdown = readCompilerFixture('fitl-foundation-coup-victory-inline-assets.md');

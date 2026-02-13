@@ -23,8 +23,7 @@ Key behaviors:
 
 ## Files to Touch
 
-- `test/fixtures/cnl/compiler/fitl-operations-coin.md` — Replace `assault-profile` stub with `assault-us-profile` YAML
-- `data/games/fire-in-the-lake.md` — Add `assault-us-profile` operation profile
+- `data/games/fire-in-the-lake.md` — Replace stub in production spec with `assault-us-profile` YAML
 - `test/integration/fitl-coin-operations.test.ts` — Update profile ID, add test cases
 
 ## Out of Scope

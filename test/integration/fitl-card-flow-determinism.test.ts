@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
-import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
   applyMove,
   asActionId,
@@ -99,19 +99,7 @@ const scriptedMoves: readonly Move[] = [
   { actionId: asActionId('operation'), params: {} },
 ];
 
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
-
 const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
-
-const compileFixtureDef = (name: string): GameDef => {
-  const parsed = parseGameSpec(readCompilerFixture(name));
-  const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-  assertNoErrors(parsed);
-  assertNoDiagnostics(compiled);
-  assert.notEqual(compiled.gameDef, null);
-  return compiled.gameDef!;
-};
 
 const runScriptedOperations = (def: GameDef, seed: number, actions: readonly string[]) => {
   let state = initialState(def, seed, 2);
@@ -255,32 +243,27 @@ describe('FITL card-flow determinism integration', () => {
     }
   });
 
-  it('produces byte-identical operation-heavy traces across FITL operation/special-activity fixtures', () => {
+  it('produces byte-identical operation-heavy traces across production spec operation profiles', () => {
+    const { parsed, compiled } = compileProductionSpec();
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    // Coin operations (sweep, assault use coinResources)
+    // Insurgent operations (rally, march, attack, terror use insurgentResources)
+    // US/ARVN specials (advise, airLift, airStrike, govern, transport, raid)
+    // NVA/VC specials (infiltrate, bombard, ambushNva, tax, subvert, ambushVc)
     const scenarios = [
-      {
-        fixture: 'fitl-operations-coin.md',
-        // train/patrol require complex params (chooseN/chooseOne decisions) — excluded from determinism stub test.
-        actions: ['sweep', 'assault'],
-      },
-      {
-        fixture: 'fitl-operations-insurgent.md',
-        actions: ['rally', 'march', 'attack', 'terror'],
-      },
-      {
-        fixture: 'fitl-special-us-arvn.md',
-        actions: ['advise', 'airLift', 'airStrike', 'govern', 'transport', 'raid'],
-      },
-      {
-        fixture: 'fitl-special-nva-vc.md',
-        actions: ['infiltrate', 'bombard', 'ambushNva', 'tax', 'subvert', 'ambushVc'],
-      },
+      { label: 'coin', actions: ['sweep', 'assault'] },
+      { label: 'insurgent', actions: ['rally', 'march', 'attack', 'terror'] },
+      { label: 'us-arvn-specials', actions: ['advise', 'airLift', 'airStrike', 'govern', 'transport', 'raid'] },
+      { label: 'nva-vc-specials', actions: ['infiltrate', 'bombard', 'ambushNva', 'tax', 'subvert', 'ambushVc'] },
     ] as const;
 
     for (const scenario of scenarios) {
-      const def = compileFixtureDef(scenario.fixture);
       const first = runScriptedOperations(def, 97, scenario.actions);
       const second = runScriptedOperations(def, 97, scenario.actions);
-      assert.deepEqual(second, first);
+      assert.deepEqual(second, first, `Determinism failed for ${scenario.label}`);
     }
   });
 

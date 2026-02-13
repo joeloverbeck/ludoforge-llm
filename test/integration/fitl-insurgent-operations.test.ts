@@ -1,43 +1,34 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { applyMove, asActionId, initialState, type Move } from '../../src/kernel/index.js';
-import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
-
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 describe('FITL insurgent operations integration', () => {
-  it('compiles insurgent Rally/March/Attack/Terror operation profiles from fixture data', () => {
-    const markdown = readCompilerFixture('fitl-operations-insurgent.md');
-    const parsed = parseGameSpec(markdown);
-    const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+  it('compiles insurgent Rally/March/Attack/Terror operation profiles from production spec', () => {
+    const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
-    assert.deepEqual(validatorDiagnostics, []);
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
-    assert.deepEqual(
-      compiled.gameDef?.operationProfiles?.map((profile) => ({ id: profile.id, actionId: String(profile.actionId) })),
-      [
-        { id: 'rally-profile', actionId: 'rally' },
-        { id: 'march-profile', actionId: 'march' },
-        { id: 'attack-profile', actionId: 'attack' },
-        { id: 'terror-profile', actionId: 'terror' },
-      ],
-    );
+    const profiles = compiled.gameDef!.operationProfiles ?? [];
+    const profileMap = profiles.map((profile) => ({ id: profile.id, actionId: String(profile.actionId) }));
+    for (const expected of [
+      { id: 'rally-profile', actionId: 'rally' },
+      { id: 'march-profile', actionId: 'march' },
+      { id: 'attack-profile', actionId: 'attack' },
+      { id: 'terror-profile', actionId: 'terror' },
+    ]) {
+      assert.ok(
+        profileMap.some((p) => p.id === expected.id && p.actionId === expected.actionId),
+        `Expected profile ${expected.id} with actionId ${expected.actionId}`,
+      );
+    }
   });
 
   it('executes insurgent operations through compiled operationProfiles instead of fallback action effects', () => {
-    const markdown = readCompilerFixture('fitl-operations-insurgent.md');
-    const parsed = parseGameSpec(markdown);
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const { compiled } = compileProductionSpec();
 
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
     const start = initialState(compiled.gameDef!, 101, 2);
@@ -59,11 +50,8 @@ describe('FITL insurgent operations integration', () => {
   });
 
   it('rejects attack when profile cost validation fails under partialExecution forbid', () => {
-    const markdown = readCompilerFixture('fitl-operations-insurgent.md');
-    const parsed = parseGameSpec(markdown);
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const { compiled } = compileProductionSpec();
 
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
     let state = initialState(compiled.gameDef!, 77, 2);

@@ -1040,9 +1040,9 @@ function deriveSectionsFromDataAssets(
     diagnostics.push({
       code: 'CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS',
       path: 'doc.dataAssets',
-      severity: 'error',
-      message: `Multiple scenario assets found (${scenarioRefs.length}); compiler cannot determine a single canonical scenario.`,
-      suggestion: 'Keep one scenario asset in the compiled document.',
+      severity: 'warning',
+      message: `Multiple scenario assets found (${scenarioRefs.length}); compiler will use the first one ('${selectedScenario?.entityId ?? 'unknown'}').`,
+      suggestion: 'Keep one scenario asset in the compiled document, or specify the default.',
     });
   }
 

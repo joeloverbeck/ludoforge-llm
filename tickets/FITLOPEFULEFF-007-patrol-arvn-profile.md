@@ -18,8 +18,7 @@ Key behaviors:
 
 ## Files to Touch
 
-- `test/fixtures/cnl/compiler/fitl-operations-coin.md` — Add `patrol-arvn-profile` YAML
-- `data/games/fire-in-the-lake.md` — Add `patrol-arvn-profile` operation profile
+- `data/games/fire-in-the-lake.md` — Replace stub in production spec with `patrol-arvn-profile` YAML
 - `test/integration/fitl-coin-operations.test.ts` — Add ARVN Patrol test cases
 - `test/integration/fitl-patrol-sweep-movement.test.ts` — Add ARVN movement/activation tests
 

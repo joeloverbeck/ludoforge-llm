@@ -20,8 +20,7 @@ Key behaviors:
 
 ## Files to Touch
 
-- `test/fixtures/cnl/compiler/fitl-operations-insurgent.md` — Add `attack-vc-profile` YAML
-- `data/games/fire-in-the-lake.md` — Add `attack-vc-profile` operation profile
+- `data/games/fire-in-the-lake.md` — Replace stub in production spec with `attack-vc-profile` YAML
 - `test/integration/fitl-insurgent-operations.test.ts` — Add VC Attack test cases
 - `test/integration/fitl-attack-die-roll.test.ts` — Add VC die roll tests
 

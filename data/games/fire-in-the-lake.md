@@ -3,8 +3,87 @@
 ```yaml
 metadata:
   id: fire-in-the-lake
+  players:
+    min: 2
+    max: 4
 
 effectMacros:
+  # ── piece-removal-ordering ────────────────────────────────────────────────
+  # Core removal-ordering macro shared by COIN Assault and Insurgent Attack.
+  # Priority: enemy troops → active guerrillas (first-faction chosen, then other) → untunneled bases (tunneled roll ≥4 to flip).
+  - id: piece-removal-ordering
+    params:
+      - { name: space, type: string }
+      - { name: damageExpr, type: value }
+      - { name: actorFaction, type: string }
+    effects:
+      - let:
+          bind: $damage
+          value: { param: damageExpr }
+          in:
+            - forEach:
+                bind: $target
+                over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: troops }, { prop: faction, op: neq, value: { param: actorFaction } }] }
+                limit: { ref: binding, name: $damage }
+                effects:
+                  - moveToken: { token: $target, from: { param: space }, to: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }] } }
+                countBind: $troopsRemoved
+                in:
+                  - let:
+                      bind: $remainingDamage
+                      value: { op: '-', left: { ref: binding, name: $damage }, right: { ref: binding, name: $troopsRemoved } }
+                      in:
+                        - chooseOne:
+                            bind: $targetFactionFirst
+                            options: { query: enums, values: ['NVA', 'VC'] }
+                        - forEach:
+                            bind: $target2
+                            over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, eq: { ref: binding, name: $targetFactionFirst } }, { prop: activity, eq: active }] }
+                            limit: { ref: binding, name: $remainingDamage }
+                            effects:
+                              - moveToken: { token: $target2, from: { param: space }, to: { concat: ['available-', { ref: binding, name: $targetFactionFirst }] } }
+                            countBind: $guerrillas1Removed
+                            in:
+                              - let:
+                                  bind: $remainingDamage2
+                                  value: { op: '-', left: { ref: binding, name: $remainingDamage }, right: { ref: binding, name: $guerrillas1Removed } }
+                                  in:
+                                    - let:
+                                        bind: $targetFactionSecond
+                                        value: { if: { when: { op: '==', left: { ref: binding, name: $targetFactionFirst }, right: 'NVA' }, then: 'VC', else: 'NVA' } }
+                                        in:
+                                          - forEach:
+                                              bind: $target3
+                                              over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, eq: { ref: binding, name: $targetFactionSecond } }, { prop: activity, eq: active }] }
+                                              limit: { ref: binding, name: $remainingDamage2 }
+                                              effects:
+                                                - moveToken: { token: $target3, from: { param: space }, to: { concat: ['available-', { ref: binding, name: $targetFactionSecond }] } }
+                                          - let:
+                                              bind: $guerrillasRemaining
+                                              value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, op: neq, value: { param: actorFaction } }, { prop: activity, eq: active }] } } }
+                                              in:
+                                                - if:
+                                                    when: { op: '==', left: { ref: binding, name: $guerrillasRemaining }, right: 0 }
+                                                    then:
+                                                      - forEach:
+                                                          bind: $baseTarget
+                                                          over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: neq, value: { param: actorFaction } }] }
+                                                          effects:
+                                                            - if:
+                                                                when: { op: '==', left: { ref: tokenProp, token: $baseTarget, prop: tunnel }, right: 'tunneled' }
+                                                                then:
+                                                                  - rollRandom:
+                                                                      bind: $dieRoll
+                                                                      min: 1
+                                                                      max: 6
+                                                                      in:
+                                                                        - if:
+                                                                            when: { op: '>=', left: { ref: binding, name: $dieRoll }, right: 4 }
+                                                                            then:
+                                                                              - setTokenProp: { token: $baseTarget, prop: tunnel, value: 'untunneled' }
+                                                                else:
+                                                                  - moveToken: { token: $baseTarget, from: { param: space }, to: { concat: ['available-', { ref: tokenProp, token: $baseTarget, prop: faction }] } }
+
   # ── coin-assault-removal-order ─────────────────────────────────────────────
   # Wraps piece-removal-ordering with COIN-specific behavior:
   # each insurgent Base removed adds +6 Aid.
@@ -1320,6 +1399,108 @@ dataAssets:
         # Sihanoukville: NVA 1 Base, 2 Guerrillas
         - { spaceId: "sihanoukville:none", pieceTypeId: "nva-bases", faction: "nva", count: 1 }
         - { spaceId: "sihanoukville:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 2 }
+  # ── Event Card Set (initial card pack) ──
+  - id: fitl-events-initial-card-pack
+    kind: eventCardSet
+    payload:
+      cards:
+        - id: card-82
+          title: Domino Theory
+          sideMode: dual
+          order: 82
+          unshaded:
+            branches:
+              - id: resources-and-aid
+                order: 2
+                effects:
+                  - op: addTrack
+                    track: arvnResources
+                    delta: 9
+                    clamp: { min: 0, max: 75 }
+                  - op: addTrack
+                    track: aid
+                    delta: 9
+                    clamp: { min: 0, max: 75 }
+              - id: return-from-out-of-play
+                order: 1
+                targets:
+                  - id: us-out-of-play
+                    selector:
+                      query: piecesInPool
+                      pool: outOfPlay
+                      filters:
+                        faction: us
+                    cardinality: { max: 3 }
+                  - id: arvn-out-of-play
+                    selector:
+                      query: piecesInPool
+                      pool: outOfPlay
+                      filters:
+                        faction: arvn
+                    cardinality: { max: 6 }
+                effects:
+                  - op: chooseOneTargetSet
+                    options: [us-out-of-play, arvn-out-of-play]
+                  - op: moveSelectedToPool
+                    toPool: available
+          shaded:
+            targets:
+              - id: us-troops-available
+                selector:
+                  query: piecesInPool
+                  pool: available
+                  filters:
+                    faction: us
+                    pieceType: troop
+                cardinality: { max: 3 }
+            effects:
+              - op: moveSelectedToPool
+                toPool: outOfPlay
+              - op: addTrack
+                track: aid
+                delta: -9
+                clamp: { min: 0, max: 75 }
+        - id: card-27
+          title: Phoenix Program
+          sideMode: dual
+          order: 27
+          unshaded:
+            targets:
+              - id: vc-in-coin-control
+                selector:
+                  query: piecesInSpaces
+                  orderBy: [spaceIdAsc, pieceIdAsc]
+                  filters:
+                    faction: vc
+                    coinControl: true
+                    allowTunneledBaseRemoval: false
+                cardinality: { max: 3 }
+            effects:
+              - op: removeSelectedPieces
+          shaded:
+            targets:
+              - id: terror-spaces
+                selector:
+                  query: spaces
+                  orderBy: [spaceIdAsc]
+                  filters:
+                    coinControl: true
+                    hasFactionPieces: vc
+                    excludeIds: [saigon:none]
+                cardinality: { max: 2 }
+            effects:
+              - op: addTerrorToSelectedSpaces
+              - op: setSupportOpposition
+                to: activeOpposition
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Pool Zones (piece availability pools — supplement map-derived board zones)
+# ══════════════════════════════════════════════════════════════════════════════
+zones:
+  - { id: available-US, owner: none, visibility: public, ordering: set }
+  - { id: available-ARVN, owner: none, visibility: public, ordering: set }
+  - { id: available-NVA, owner: none, visibility: public, ordering: set }
+  - { id: available-VC, owner: none, visibility: public, ordering: set }
 
 operationProfiles:
   # ── train-us-profile ──────────────────────────────────────────────────────────
@@ -1804,4 +1985,847 @@ operationProfiles:
                                       actorFaction: 'US'
     partialExecution:
       mode: forbid
+  # ── COIN stub profiles (sweep, assault) ──
+  - id: sweep-profile
+    actionId: sweep
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: coinResources
+        right: 1
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: coinResources
+        right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: coinResources
+            delta: -1
+    targeting:
+      select: allEligible
+      terrainFilter: [lowland, urban]
+    resolution:
+      - stage: sweep-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: sweepCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+  - id: assault-profile
+    actionId: assault
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: coinResources
+        right: 3
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: coinResources
+        right: 3
+      spend:
+        - addVar:
+            scope: global
+            var: coinResources
+            delta: -3
+    targeting:
+      select: exactlyN
+      count: 1
+      tieBreak: basesLast
+    resolution:
+      - stage: assault-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: assaultCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+  # ── Insurgent stub profiles (rally, march, attack, terror) ──
+  - id: rally-profile
+    actionId: rally
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: insurgentResources
+        right: 1
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: insurgentResources
+        right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: insurgentResources
+            delta: -1
+    targeting:
+      select: upToN
+      max: 2
+      placementPolicy: placeUndergroundFirst
+    resolution:
+      - stage: rally-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: rallyCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+  - id: march-profile
+    actionId: march
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: insurgentResources
+        right: 1
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: insurgentResources
+        right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: insurgentResources
+            delta: -1
+    targeting:
+      select: allEligible
+      movementOrder: deterministicSpaceOrder
+      activationPolicy: activateWhenEnteringCOINControl
+    resolution:
+      - stage: march-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: marchCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+  - id: attack-profile
+    actionId: attack
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: insurgentResources
+        right: 0
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: insurgentResources
+        right: 2
+      spend:
+        - addVar:
+            scope: global
+            var: insurgentResources
+            delta: -2
+    targeting:
+      select: exactlyN
+      count: 1
+      removalPolicy:
+        tieBreak: basesLast
+        tunnelConstraint: removeUntunneledBeforeTunneled
+    resolution:
+      - stage: attack-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: attackCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+  - id: terror-profile
+    actionId: terror
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: insurgentResources
+        right: 1
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: insurgentResources
+        right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: insurgentResources
+            delta: -1
+    targeting:
+      select: upToN
+      max: 2
+      order: lexicographicSpaceId
+      supportShiftPolicy: setOppositionTowardActive
+    resolution:
+      - stage: terror-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: terrorCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+  # ── US/ARVN special-activity stub profiles ──
+  - id: advise-profile
+    actionId: advise
+    legality:
+      when:
+        op: and
+        args:
+          - op: ">="
+            left:
+              ref: gvar
+              var: usResources
+            right: 1
+          - op: ">="
+            left:
+              ref: gvar
+              var: arvnResources
+            right: 1
+    cost:
+      validate:
+        op: and
+        args:
+          - op: ">="
+            left:
+              ref: gvar
+              var: usResources
+            right: 1
+          - op: ">="
+            left:
+              ref: gvar
+              var: arvnResources
+            right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: arvnResources
+            delta: -1
+    targeting:
+      select: upToN
+      max: 2
+    resolution:
+      - stage: advise-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: adviseCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+    linkedSpecialActivityWindows: [us-special-window]
+  - id: air-lift-profile
+    actionId: airLift
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: usResources
+        right: 1
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: usResources
+        right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: usResources
+            delta: -1
+    targeting:
+      select: allEligible
+      order: lexicographicSpaceId
+    resolution:
+      - stage: air-lift-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: airLiftCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+    linkedSpecialActivityWindows: [us-special-window]
+  - id: air-strike-profile
+    actionId: airStrike
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: usResources
+        right: 2
+    cost:
+      validate:
+        op: and
+        args:
+          - op: ">="
+            left:
+              ref: gvar
+              var: usResources
+            right: 2
+          - op: ">="
+            left:
+              ref: gvar
+              var: arvnResources
+            right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: usResources
+            delta: -2
+    targeting:
+      select: exactlyN
+      count: 1
+      tieBreak: basesLast
+    resolution:
+      - stage: air-strike-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: airStrikeCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+    linkedSpecialActivityWindows: [us-special-window]
+  - id: govern-profile
+    actionId: govern
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: arvnResources
+        right: 1
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: arvnResources
+        right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: arvnResources
+            delta: -1
+    targeting:
+      select: upToN
+      max: 1
+    resolution:
+      - stage: govern-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: governCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+    linkedSpecialActivityWindows: [arvn-special-window]
+  - id: transport-profile
+    actionId: transport
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: arvnResources
+        right: 1
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: arvnResources
+        right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: arvnResources
+            delta: -1
+    targeting:
+      select: allEligible
+      movementOrder: deterministicSpaceOrder
+    resolution:
+      - stage: transport-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: transportCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+    linkedSpecialActivityWindows: [arvn-special-window]
+  - id: raid-profile
+    actionId: raid
+    legality:
+      when:
+        op: and
+        args:
+          - op: ">="
+            left:
+              ref: gvar
+              var: arvnResources
+            right: 2
+          - op: ">="
+            left:
+              ref: gvar
+              var: usResources
+            right: 1
+    cost:
+      validate:
+        op: and
+        args:
+          - op: ">="
+            left:
+              ref: gvar
+              var: arvnResources
+            right: 2
+          - op: ">="
+            left:
+              ref: gvar
+              var: usResources
+            right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: arvnResources
+            delta: -2
+    targeting:
+      select: upToN
+      max: 2
+      tieBreak: lexicographicSpaceId
+    resolution:
+      - stage: raid-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: raidCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+    linkedSpecialActivityWindows: [arvn-special-window]
+  # ── NVA/VC special-activity stub profiles ──
+  - id: infiltrate-profile
+    actionId: infiltrate
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: nvaResources
+        right: 2
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: nvaResources
+        right: 2
+      spend:
+        - addVar:
+            scope: global
+            var: nvaResources
+            delta: -2
+    targeting:
+      select: upToN
+      max: 2
+      placementPolicy: baseThenGuerrilla
+    resolution:
+      - stage: infiltrate-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: infiltrateCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+    linkedSpecialActivityWindows: [nva-special-window]
+  - id: bombard-profile
+    actionId: bombard
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: nvaResources
+        right: 1
+    cost:
+      validate:
+        op: and
+        args:
+          - op: ">="
+            left:
+              ref: gvar
+              var: nvaResources
+            right: 1
+          - op: ">="
+            left:
+              ref: gvar
+              var: vcResources
+            right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: nvaResources
+            delta: -1
+    targeting:
+      select: allEligible
+      order: lexicographicSpaceId
+    resolution:
+      - stage: bombard-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: bombardCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+    linkedSpecialActivityWindows: [nva-special-window]
+  - id: nva-ambush-profile
+    actionId: ambushNva
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: nvaResources
+        right: 1
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: nvaResources
+        right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: nvaResources
+            delta: -1
+    targeting:
+      select: exactlyN
+      count: 1
+      tieBreak: basesLast
+      removalPolicy: removeActiveGuerrillasBeforeBases
+    resolution:
+      - stage: ambush-nva-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: nvaAmbushCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+    linkedSpecialActivityWindows: [nva-special-window]
+  - id: tax-profile
+    actionId: tax
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: vcResources
+        right: 1
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: vcResources
+        right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: vcResources
+            delta: -1
+    targeting:
+      select: upToN
+      max: 2
+      order: lexicographicSpaceId
+    resolution:
+      - stage: tax-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: taxCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+    linkedSpecialActivityWindows: [vc-special-window]
+  - id: subvert-profile
+    actionId: subvert
+    legality:
+      when:
+        op: and
+        args:
+          - op: ">="
+            left:
+              ref: gvar
+              var: vcResources
+            right: 1
+          - op: ">="
+            left:
+              ref: gvar
+              var: nvaResources
+            right: 1
+    cost:
+      validate:
+        op: and
+        args:
+          - op: ">="
+            left:
+              ref: gvar
+              var: vcResources
+            right: 2
+          - op: ">="
+            left:
+              ref: gvar
+              var: nvaResources
+            right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: vcResources
+            delta: -2
+    targeting:
+      select: upToN
+      max: 1
+      supportShiftPolicy: setTowardOpposition
+    resolution:
+      - stage: subvert-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: subvertCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+    linkedSpecialActivityWindows: [vc-special-window]
+  - id: vc-ambush-profile
+    actionId: ambushVc
+    legality:
+      when:
+        op: ">="
+        left:
+          ref: gvar
+          var: vcResources
+        right: 1
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: gvar
+          var: vcResources
+        right: 1
+      spend:
+        - addVar:
+            scope: global
+            var: vcResources
+            delta: -1
+    targeting:
+      select: exactlyN
+      count: 1
+      tieBreak: lexicographicSpaceId
+      removalPolicy: removeUndergroundGuerrillaFirst
+    resolution:
+      - stage: ambush-vc-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: vcAmbushCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+    linkedSpecialActivityWindows: [vc-special-window]
+  # ── Joint operation stub profiles ──
+  - id: us-op-profile
+    actionId: usOp
+    legality:
+      when: null
+    cost:
+      validate:
+        op: ">="
+        left:
+          op: "-"
+          left:
+            ref: pvar
+            player:
+              id: 1
+            var: resources
+          right: 5
+        right:
+          ref: gvar
+          var: totalEcon
+      spend:
+        - addVar:
+            scope: pvar
+            player:
+              id: 1
+            var: resources
+            delta: -5
+    targeting:
+      select: allEligible
+      order: lexicographicSpaceId
+    resolution:
+      - stage: us-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: usOpCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+  - id: arvn-op-profile
+    actionId: arvnOp
+    legality:
+      when: null
+    cost:
+      validate:
+        op: ">="
+        left:
+          ref: pvar
+          player: active
+          var: resources
+        right: 5
+      spend:
+        - addVar:
+            scope: pvar
+            player: active
+            var: resources
+            delta: -5
+    targeting:
+      select: allEligible
+      order: lexicographicSpaceId
+    resolution:
+      - stage: arvn-resolve
+        effects:
+          - addVar:
+              scope: global
+              var: arvnOpCount
+              delta: 1
+    partialExecution:
+      mode: forbid
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Global / Per-Player Variables
+# ══════════════════════════════════════════════════════════════════════════════
+globalVars:
+  # ── Real game resource tracks ──
+  - { name: nvaResources, type: int, init: 10, min: 0, max: 75 }
+  - { name: vcResources, type: int, init: 5, min: 0, max: 75 }
+  - { name: arvnResources, type: int, init: 30, min: 0, max: 75 }
+  - { name: aid, type: int, init: 15, min: 0, max: 75 }
+  - { name: patronage, type: int, init: 15, min: 0, max: 75 }
+  - { name: trail, type: int, init: 1, min: 0, max: 4 }
+  - { name: totalEcon, type: int, init: 10, min: 0, max: 75 }
+  - { name: terrorSabotageMarkersPlaced, type: int, init: 0, min: 0, max: 15 }
+  # ── Stub vars for COIN operation testing ──
+  - { name: coinResources, type: int, init: 10, min: 0, max: 50 }
+  - { name: trainCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: patrolCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: sweepCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: assaultCount, type: int, init: 0, min: 0, max: 20 }
+  # ── Stub vars for insurgent operation testing ──
+  - { name: insurgentResources, type: int, init: 7, min: 0, max: 50 }
+  - { name: rallyCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: marchCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: attackCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: terrorCount, type: int, init: 0, min: 0, max: 20 }
+  # ── Stub vars for US/ARVN special-activity testing ──
+  - { name: usResources, type: int, init: 7, min: 0, max: 50 }
+  - { name: adviseCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: airLiftCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: airStrikeCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: governCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: transportCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: raidCount, type: int, init: 0, min: 0, max: 20 }
+  # ── Stub vars for NVA/VC special-activity testing ──
+  - { name: infiltrateCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: bombardCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: nvaAmbushCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: taxCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: subvertCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: vcAmbushCount, type: int, init: 0, min: 0, max: 20 }
+  # ── Stub vars for joint-operation testing ──
+  - { name: usOpCount, type: int, init: 0, min: 0, max: 50 }
+  - { name: arvnOpCount, type: int, init: 0, min: 0, max: 50 }
+  # ── Fallback-detection var (shared across all operation test suites) ──
+  - { name: fallbackUsed, type: int, init: 0, min: 0, max: 300 }
+
+perPlayerVars:
+  - { name: resources, type: int, init: 20, min: 0, max: 50 }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Turn Structure (stub — to be replaced by real COIN-series turn flow)
+# ══════════════════════════════════════════════════════════════════════════════
+turnStructure:
+  phases:
+    - id: main
+  activePlayerOrder: roundRobin
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Actions (stubs — each fallback adds +100 to fallbackUsed for override detection)
+# ══════════════════════════════════════════════════════════════════════════════
+actions:
+  - { id: pass, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: train, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: patrol, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: sweep, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: assault, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: rally, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: march, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: attack, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: terror, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: advise, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: airLift, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: airStrike, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: govern, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: transport, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: raid, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: infiltrate, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: bombard, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: ambushNva, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: tax, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: subvert, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: ambushVc, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: usOp, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: arvnOp, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# End Conditions (stub — to be replaced by real victory conditions)
+# ══════════════════════════════════════════════════════════════════════════════
+endConditions:
+  - when: { op: "==", left: 1, right: 2 }
+    result: { type: draw }
 ```

@@ -19,8 +19,7 @@ Key behaviors:
 
 ## Files to Touch
 
-- `test/fixtures/cnl/compiler/fitl-operations-insurgent.md` — Add `march-vc-profile` YAML
-- `data/games/fire-in-the-lake.md` — Add `march-vc-profile` operation profile
+- `data/games/fire-in-the-lake.md` — Replace stub in production spec with `march-vc-profile` YAML
 - `test/integration/fitl-insurgent-operations.test.ts` — Add VC March test cases
 
 ## Out of Scope

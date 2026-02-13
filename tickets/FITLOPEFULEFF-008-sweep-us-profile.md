@@ -20,8 +20,7 @@ Key behaviors:
 
 ## Files to Touch
 
-- `test/fixtures/cnl/compiler/fitl-operations-coin.md` — Replace `sweep-profile` stub with `sweep-us-profile` YAML
-- `data/games/fire-in-the-lake.md` — Add `sweep-us-profile` operation profile
+- `data/games/fire-in-the-lake.md` — Replace stub in production spec with `sweep-us-profile` YAML
 - `test/integration/fitl-coin-operations.test.ts` — Update profile ID references, add test cases
 - `test/integration/fitl-patrol-sweep-movement.test.ts` — Add US Sweep movement/activation tests
 

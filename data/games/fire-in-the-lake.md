@@ -1318,4 +1318,185 @@ dataAssets:
         # Sihanoukville: NVA 1 Base, 2 Guerrillas
         - { spaceId: "sihanoukville:none", pieceTypeId: "nva-bases", faction: "nva", count: 1 }
         - { spaceId: "sihanoukville:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 2 }
+
+operationProfiles:
+  # ── train-us-profile ──────────────────────────────────────────────────────────
+  # US Train operation (Rule 3.2.1)
+  # Spaces: Provinces/Cities with US pieces; LimOp: max 1 space
+  # Cost: 0 for US; 3 ARVN Resources only when placing ARVN pieces
+  # Resolution: Per-space choice of place Irregulars or at-Base train (Rangers / ARVN cubes)
+  # Sub-action: Pacification or Saigon patronage transfer in 1 selected space
+  - id: train-us-profile
+    actionId: train
+    legality:
+      when: true
+    cost:
+      spend: []
+    targeting: {}
+    resolution:
+      - stage: select-spaces
+        effects:
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'US' }] } } }
+                            right: 0
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'US' }] } } }
+                            right: 0
+                    min: 1
+                    max: 99
+
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - chooseOne:
+                    bind: $trainChoice
+                    options: { query: enums, values: ['place-irregulars', 'place-at-base'] }
+
+                - if:
+                    when: { op: '==', left: { ref: binding, name: $trainChoice }, right: 'place-irregulars' }
+                    then:
+                      - macro: place-from-available-or-map
+                        args:
+                          pieceType: irregulars
+                          faction: 'US'
+                          targetSpace: $space
+                          maxPieces: 2
+
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: binding, name: $trainChoice }, right: 'place-at-base' }
+                        - op: '>'
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }] } } }
+                          right: 0
+                    then:
+                      - chooseOne:
+                          bind: $baseTrainChoice
+                          options: { query: enums, values: ['rangers', 'arvn-cubes'] }
+                      - if:
+                          when: { op: '==', left: { ref: binding, name: $baseTrainChoice }, right: 'rangers' }
+                          then:
+                            - macro: place-from-available-or-map
+                              args:
+                                pieceType: rangers
+                                faction: 'ARVN'
+                                targetSpace: $space
+                                maxPieces: 2
+                      - if:
+                          when: { op: '==', left: { ref: binding, name: $baseTrainChoice }, right: 'arvn-cubes' }
+                          then:
+                            # Cost: 3 ARVN Resources for placing ARVN pieces
+                            - if:
+                                when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                                then:
+                                  - addVar: { scope: global, var: arvnResources, delta: -3 }
+                            # Place up to 6 ARVN cubes (any mix of Troops and Police)
+                            - chooseN:
+                                bind: $arvnCubeTypes
+                                options: { query: enums, values: ['troops', 'police'] }
+                                min: 1
+                                max: 6
+                            - forEach:
+                                bind: $cubeType
+                                over: { query: binding, name: $arvnCubeTypes }
+                                effects:
+                                  - macro: place-from-available-or-map
+                                    args:
+                                      pieceType: { ref: binding, name: $cubeType }
+                                      faction: 'ARVN'
+                                      targetSpace: $space
+                                      maxPieces: 1
+
+      - stage: sub-action
+        effects:
+          - chooseN:
+              bind: $subActionSpaces
+              options:
+                query: binding
+                name: targetSpaces
+              min: 0
+              max: 1
+          - forEach:
+              bind: $subSpace
+              over: { query: binding, name: $subActionSpaces }
+              effects:
+                - chooseOne:
+                    bind: $subAction
+                    options: { query: enums, values: ['pacify', 'saigon-transfer', 'none'] }
+
+                # Pacification: needs US piece + COIN Control
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: binding, name: $subAction }, right: 'pacify' }
+                        - op: '>'
+                          left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: [{ prop: faction, eq: 'US' }] } } }
+                          right: 0
+                    then:
+                      # Remove Terror marker first (if present)
+                      - if:
+                          when: { op: '==', left: { ref: markerState, space: $subSpace, marker: terror }, right: 'terror' }
+                          then:
+                            # Costs 3 ARVN Resources per Terror removed (even if free op!)
+                            - addVar: { scope: global, var: arvnResources, delta: -3 }
+                            - setMarker: { space: $subSpace, marker: terror, state: none }
+                      # Shift up to 2 levels toward Active Support
+                      - chooseOne:
+                          bind: $pacLevels
+                          options: { query: intsInRange, min: 1, max: 2 }
+                      # Costs 3 ARVN Resources per level shifted (even if free op!)
+                      - addVar:
+                          scope: global
+                          var: arvnResources
+                          delta: { op: '*', left: { ref: binding, name: $pacLevels }, right: -3 }
+                      - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
+
+                # Saigon patronage transfer (US only, space must be Saigon)
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: binding, name: $subAction }, right: 'saigon-transfer' }
+                        - { op: '==', left: { ref: zoneProp, zone: $subSpace, prop: spaceId }, right: 'saigon' }
+                    then:
+                      - chooseOne:
+                          bind: $transferAmount
+                          options: { query: intsInRange, min: 1, max: 3 }
+                      - addVar: { scope: global, var: patronage, delta: { op: '*', left: { ref: binding, name: $transferAmount }, right: -1 } }
+                      - addVar: { scope: global, var: arvnResources, delta: { ref: binding, name: $transferAmount } }
+    partialExecution:
+      mode: forbid
 ```

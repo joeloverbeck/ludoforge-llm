@@ -191,4 +191,164 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.diagnostics, []);
     assert.equal(result.value, false);
   });
+
+  it('lowers zones query with ConditionAST filter', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'zones',
+        filter: {
+          op: 'and',
+          args: [
+            { op: '==', left: { ref: 'zoneProp', zone: 'board', prop: 'spaceType' }, right: 'province' },
+            { op: 'not', arg: { op: '==', left: { ref: 'zoneProp', zone: 'board', prop: 'control' }, right: 'NVA' } },
+          ],
+        },
+      },
+      context,
+      'doc.operationProfiles.0.resolution.0.effects.0.chooseN.options',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, {
+      query: 'zones',
+      filter: {
+        condition: {
+          op: 'and',
+          args: [
+            { op: '==', left: { ref: 'zoneProp', zone: 'board:none', prop: 'spaceType' }, right: 'province' },
+            { op: 'not', arg: { op: '==', left: { ref: 'zoneProp', zone: 'board:none', prop: 'control' }, right: 'NVA' } },
+          ],
+        },
+      },
+    });
+  });
+
+  it('lowers tokensInZone query with string literal token filters', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: [
+          { prop: 'type', eq: 'troops' },
+          { prop: 'faction', eq: 'ARVN' },
+        ],
+      },
+      context,
+      'doc.operationProfiles.0.resolution.0.effects.0.forEach.over',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'board:none',
+      filter: [
+        { prop: 'type', op: 'eq', value: 'troops' },
+        { prop: 'faction', op: 'eq', value: 'ARVN' },
+      ],
+    });
+  });
+
+  it('lowers tokensInZone filter with explicit op and reference value', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: [
+          { prop: 'faction', op: 'neq', value: { ref: 'activePlayer' } },
+        ],
+      },
+      context,
+      'doc.operationProfiles.0.resolution.0.effects.0.forEach.over',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'board:none',
+      filter: [
+        { prop: 'faction', op: 'neq', value: { ref: 'activePlayer' } },
+      ],
+    });
+  });
+
+  it('lowers tokensInZone filter with in operator and string array value', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'deck',
+        filter: [
+          { prop: 'faction', op: 'in', value: ['NVA', 'VC'] },
+        ],
+      },
+      context,
+      'doc.actions.0.effects.0.forEach.over',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'deck:none',
+      filter: [
+        { prop: 'faction', op: 'in', value: ['NVA', 'VC'] },
+      ],
+    });
+  });
+
+  it('lowers tokensInAdjacentZones filter identically to tokensInZone', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInAdjacentZones',
+        zone: 'board',
+        filter: [{ prop: 'type', eq: 'guerrilla' }],
+      },
+      context,
+      'doc.effects.0.forEach.over',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, {
+      query: 'tokensInAdjacentZones',
+      zone: 'board:none',
+      filter: [{ prop: 'type', op: 'eq', value: 'guerrilla' }],
+    });
+  });
+
+  it('emits diagnostic for zones filter that is neither ConditionAST nor owner', () => {
+    const result = lowerQueryNode(
+      { query: 'zones', filter: { bogus: true } },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+  });
+
+  it('emits diagnostic for tokensInZone filter entry missing prop', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'board',
+        filter: [{ eq: 'troops' }],
+      },
+      context,
+      'doc.actions.0.effects.0.forEach.over',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+  });
+
+  it('preserves tokensInZone without filter when no filter specified', () => {
+    const result = lowerQueryNode(
+      { query: 'tokensInZone', zone: 'deck' },
+      context,
+      'doc.actions.0.effects.0.forEach.over',
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.value, { query: 'tokensInZone', zone: 'deck:none' });
+  });
 });

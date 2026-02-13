@@ -141,17 +141,16 @@ describe('FITL COIN operations integration', () => {
       walk(obj);
       return results;
     };
-    /* eslint-enable @typescript-eslint/no-explicit-any */
-
     it('AC2: space filter excludes spaces with NVA Control', () => {
-      // The compiler drops complex zone filters (only preserves owner-based filters).
-      // Verify at the parsed YAML level that the zones query filter includes NVA Control exclusion.
-      const profile = parseArvnProfile();
+      // Verify the compiled GameDef preserves zones query ConditionAST filters
+      // including the NVA Control exclusion.
+      const profile = compileArvnProfile();
       const selectSpaces = profile.resolution[0]!;
       assert.equal(selectSpaces.stage, 'select-spaces');
 
       // Both LimOp (then) and normal (else) branches must exclude NVA-controlled spaces
-      // via: { op: 'not', arg: { op: '==', left: { ref: 'zoneProp', prop: 'control' }, right: 'NVA' } }
+      // via a compiled zones filter condition containing:
+      //   { op: 'not', arg: { op: '==', left: { ref: 'zoneProp', ... prop: 'control' }, right: 'NVA' } }
       const nvaExclusions = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === 'not' &&
         node?.arg?.op === '==' &&
@@ -162,6 +161,15 @@ describe('FITL COIN operations integration', () => {
       assert.ok(
         nvaExclusions.length >= 2,
         `Expected NVA Control exclusion in both LimOp and normal branches, found ${nvaExclusions.length}`,
+      );
+
+      // Verify the filter is inside a compiled zones query filter.condition (not just floating)
+      const zonesWithConditionFilter = findDeep(selectSpaces.effects, (node: any) =>
+        node?.query === 'zones' && node?.filter?.condition !== undefined,
+      );
+      assert.ok(
+        zonesWithConditionFilter.length >= 2,
+        `Expected compiled zones queries with condition filters in both branches, found ${zonesWithConditionFilter.length}`,
       );
     });
 
@@ -193,7 +201,7 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(rangerMacro.length >= 1, 'Expected place-from-available-or-map macro for rangers with maxPieces: 2');
 
-      // Post-compilation: forEach with limit 2 sourcing from available-ARVN
+      // Post-compilation: forEach with limit 2 sourcing from available-ARVN with type filter
       const compiled = compileArvnProfile();
       const compiledRps = compiled.resolution[1]!;
       const rangerForEach = findDeep(compiledRps.effects, (node: any) =>
@@ -203,6 +211,13 @@ describe('FITL COIN operations integration', () => {
         node.forEach.over?.zone === 'available-ARVN:none',
       );
       assert.ok(rangerForEach.length >= 1, 'Expected compiled forEach with limit 2 from available-ARVN');
+
+      // Verify compiled token filter preserves piece type
+      const rangerFiltered = findDeep(compiledRps.effects, (node: any) =>
+        node?.forEach?.over?.query === 'tokensInZone' &&
+        node?.forEach?.over?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'rangers'),
+      );
+      assert.ok(rangerFiltered.length >= 1, 'Expected compiled tokensInZone filter for type=rangers');
     });
 
     it('AC5: places cubes at Cities or at COIN Bases up to 6', () => {
@@ -237,20 +252,26 @@ describe('FITL COIN operations integration', () => {
         ).length > 0,
       );
       assert.ok(cityOrBaseCondition.length >= 1, 'Expected city-or-COIN-base condition for cube placement');
+
+      // Verify compiled token filter preserves piece type
+      const troopsFiltered = findDeep(compiledRps.effects, (node: any) =>
+        node?.forEach?.over?.query === 'tokensInZone' &&
+        node?.forEach?.over?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'troops'),
+      );
+      assert.ok(troopsFiltered.length >= 1, 'Expected compiled tokensInZone filter for type=troops');
     });
 
     it('AC6: Pacification requires ARVN Troops AND Police in space', () => {
-      // The compiler drops tokensInZone filters, making troops/police counts indistinguishable
-      // in compiled output. Verify at parsed YAML level that the pacify condition includes
-      // distinct token type filters for ARVN troops and ARVN police.
-      const profile = parseArvnProfile();
-      const subAction = profile.resolution[2];
+      // The compiler now preserves tokensInZone filters in compiled output.
+      // Verify the compiled GameDef has distinct token type filters for ARVN troops and police.
+      const profile = compileArvnProfile();
+      const subAction = profile.resolution[2]!;
       assert.equal(subAction.stage, 'sub-action');
 
       // The pacify condition must be an AND with:
       //   - $subAction == 'pacify'
-      //   - count(tokensInZone filter: type=troops) > 0
-      //   - count(tokensInZone filter: type=police) > 0
+      //   - count(tokensInZone filter: [{ prop: 'type', op: 'eq', value: 'troops' }, ...]) > 0
+      //   - count(tokensInZone filter: [{ prop: 'type', op: 'eq', value: 'police' }, ...]) > 0
       const pacifyCondition = findDeep(subAction.effects, (node: any) =>
         node?.op === 'and' &&
         Array.isArray(node?.args) &&
@@ -258,12 +279,12 @@ describe('FITL COIN operations integration', () => {
         findDeep(node.args, (n: any) =>
           n?.op === '>' &&
           n?.left?.aggregate?.op === 'count' &&
-          n?.left?.aggregate?.query?.filter?.some?.((f: any) => f.prop === 'type' && f.eq === 'troops'),
+          n?.left?.aggregate?.query?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'troops'),
         ).length > 0 &&
         findDeep(node.args, (n: any) =>
           n?.op === '>' &&
           n?.left?.aggregate?.op === 'count' &&
-          n?.left?.aggregate?.query?.filter?.some?.((f: any) => f.prop === 'type' && f.eq === 'police'),
+          n?.left?.aggregate?.query?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'police'),
         ).length > 0,
       );
       assert.ok(pacifyCondition.length >= 1, 'Expected pacify condition requiring ARVN Troops AND Police');
@@ -362,6 +383,7 @@ describe('FITL COIN operations integration', () => {
       }
     });
   });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   describe('applicability dispatch for train profiles', () => {
     it('compiles applicability conditions for both train profiles', () => {

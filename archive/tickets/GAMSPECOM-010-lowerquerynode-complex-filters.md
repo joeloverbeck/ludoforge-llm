@@ -1,6 +1,6 @@
 # GAMSPECOM-010: Support Complex Filters in lowerQueryNode
 
-**Status**: Pending
+**Status**: COMPLETED
 **Priority**: P1
 **Estimated effort**: Medium (4-6 hours)
 **Spec reference**: N/A (compiler infrastructure gap discovered during FITLOPEFULEFF-005)
@@ -83,3 +83,22 @@ The kernel's `legalMoves` enumeration and `forEach` iteration must respect the n
 ## Discovery Context
 
 Found during FITLOPEFULEFF-005 (train-arvn-profile). Tests AC2, AC4, AC5, AC6 had to be written against the **parsed YAML** instead of the compiled GameDef because the compiler drops their filters. The workaround verifies correctness at the YAML level, but the compiled GameDef remains incomplete.
+
+## Outcome
+
+**Completion date**: 2026-02-13
+
+**What was changed**:
+- `src/kernel/types.ts`: Extended `OptionsQuery` zones filter to `{ owner?: PlayerSel; condition?: ConditionAST }` and `TokenFilterPredicate.value` to `ValueExpr | readonly string[]`
+- `src/kernel/schemas.ts`: Updated Zod schemas for new filter shapes
+- `src/cnl/compile-conditions.ts`: Added `lowerTokenFilterEntry`/`lowerTokenFilterArray` helpers; fixed `tokensInZone`, `tokensInAdjacentZones`, and `zones` cases to lower complex filters instead of silently dropping them
+- `src/kernel/eval-query.ts`: Added `resolveFilterValue` helper, updated `tokenMatchesPredicate`/`applyTokenFilters` to resolve `ValueExpr` references at runtime via `evalValue()`
+- `src/kernel/validate-gamedef.ts`: Added `validateTokenFilterPredicates` helper, zones `condition` validation
+- `test/unit/compile-conditions.test.ts`: 8 new unit tests (22 total)
+- `test/integration/fitl-coin-operations.test.ts`: AC2/AC4/AC5/AC6 updated to verify compiled AST filters
+
+**Deviations from plan**:
+- Kept `owner` as first-class zones filter concept (not backward compat — it's semantically meaningful), extended with `condition` field
+- Kernel runtime enforcement was done in this ticket (not deferred) — `resolveFilterValue` resolves `ValueExpr` values in token predicates
+
+**Verification**: 1019/1019 tests pass, build clean, lint clean

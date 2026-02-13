@@ -1,9 +1,10 @@
 import { getMaxQueryResults, type EvalContext } from './eval-context.js';
 import { missingVarError, queryBoundsExceededError } from './eval-error.js';
+import { evalValue } from './eval-value.js';
 import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
-import type { OptionsQuery, Token, TokenFilterPredicate } from './types.js';
+import type { OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
 
 type QueryResult = Token | number | string | PlayerId | ZoneId;
 
@@ -17,21 +18,33 @@ function assertWithinBounds(length: number, query: OptionsQuery, maxQueryResults
   }
 }
 
-function tokenMatchesPredicate(token: Token, predicate: TokenFilterPredicate): boolean {
+function resolveFilterValue(value: TokenFilterPredicate['value'], ctx: EvalContext): string | number | boolean | readonly string[] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value;
+  }
+  return evalValue(value as ValueExpr, ctx);
+}
+
+function tokenMatchesPredicate(token: Token, predicate: TokenFilterPredicate, ctx: EvalContext): boolean {
   const propValue = token.props[predicate.prop];
   if (propValue === undefined) {
     return false;
   }
 
+  const resolved = resolveFilterValue(predicate.value, ctx);
+
   switch (predicate.op) {
     case 'eq':
-      return propValue === predicate.value;
+      return propValue === resolved;
     case 'neq':
-      return propValue !== predicate.value;
+      return propValue !== resolved;
     case 'in':
-      return Array.isArray(predicate.value) && predicate.value.includes(String(propValue));
+      return Array.isArray(resolved) && resolved.includes(String(propValue));
     case 'notIn':
-      return Array.isArray(predicate.value) && !predicate.value.includes(String(propValue));
+      return Array.isArray(resolved) && !resolved.includes(String(propValue));
     default: {
       const _exhaustive: never = predicate.op;
       return _exhaustive;
@@ -39,12 +52,12 @@ function tokenMatchesPredicate(token: Token, predicate: TokenFilterPredicate): b
   }
 }
 
-function applyTokenFilters(tokens: readonly Token[], filters: readonly TokenFilterPredicate[]): readonly Token[] {
+function applyTokenFilters(tokens: readonly Token[], filters: readonly TokenFilterPredicate[], ctx: EvalContext): readonly Token[] {
   if (filters.length === 0) {
     return [...tokens];
   }
 
-  return tokens.filter((token) => filters.every((predicate) => tokenMatchesPredicate(token, predicate)));
+  return tokens.filter((token) => filters.every((predicate) => tokenMatchesPredicate(token, predicate, ctx)));
 }
 
 function extractOwnerQualifier(zoneId: ZoneId): string | null {
@@ -97,7 +110,7 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
         });
       }
 
-      const filtered = query.filter !== undefined ? applyTokenFilters(zoneTokens, query.filter) : [...zoneTokens];
+      const filtered = query.filter !== undefined ? applyTokenFilters(zoneTokens, query.filter, ctx) : [...zoneTokens];
       assertWithinBounds(filtered.length, query, maxQueryResults);
       return filtered;
     }
@@ -140,7 +153,7 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
     case 'tokensInAdjacentZones': {
       const zoneId = resolveSingleZoneSel(query.zone, ctx);
       const tokens = queryTokensInAdjacentZones(ctx.adjacencyGraph, ctx.state, zoneId);
-      const filtered = query.filter !== undefined ? applyTokenFilters(tokens, query.filter) : tokens;
+      const filtered = query.filter !== undefined ? applyTokenFilters(tokens, query.filter, ctx) : tokens;
       assertWithinBounds(filtered.length, query, maxQueryResults);
       return filtered;
     }

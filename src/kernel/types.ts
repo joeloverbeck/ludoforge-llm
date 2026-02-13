@@ -89,7 +89,7 @@ export type ConditionAST =
 export interface TokenFilterPredicate {
   readonly prop: string;
   readonly op: 'eq' | 'neq' | 'in' | 'notIn';
-  readonly value: string | readonly string[];
+  readonly value: ValueExpr | readonly string[];
 }
 
 export type OptionsQuery =
@@ -97,7 +97,7 @@ export type OptionsQuery =
   | { readonly query: 'intsInRange'; readonly min: number; readonly max: number }
   | { readonly query: 'enums'; readonly values: readonly string[] }
   | { readonly query: 'players' }
-  | { readonly query: 'zones'; readonly filter?: { readonly owner?: PlayerSel } }
+  | { readonly query: 'zones'; readonly filter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST } }
   | { readonly query: 'adjacentZones'; readonly zone: ZoneSel }
   | { readonly query: 'tokensInAdjacentZones'; readonly zone: ZoneSel; readonly filter?: readonly TokenFilterPredicate[] }
   | {

@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { ConditionAST, OptionsQuery, PlayerSel, Reference, ValueExpr } from '../kernel/types.js';
+import type { ConditionAST, OptionsQuery, PlayerSel, Reference, TokenFilterPredicate, ValueExpr } from '../kernel/types.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
 
@@ -230,6 +230,88 @@ export function lowerValueNode(
   ]);
 }
 
+const SUPPORTED_TOKEN_FILTER_OPS = ['eq', 'neq', 'in', 'notIn'] as const;
+
+function lowerTokenFilterEntry(
+  source: unknown,
+  context: ConditionLoweringContext,
+  path: string,
+): ConditionLoweringResult<TokenFilterPredicate> {
+  if (!isRecord(source) || typeof source.prop !== 'string') {
+    return missingCapability(path, 'token filter entry', source, ['{ prop: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }']);
+  }
+
+  // Normalize shorthand: { prop, eq: <value> } → { prop, op: 'eq', value }
+  const resolvedOp =
+    source.op !== undefined ? source.op :
+    source.eq !== undefined ? 'eq' :
+    source.neq !== undefined ? 'neq' :
+    source.in !== undefined ? 'in' :
+    source.notIn !== undefined ? 'notIn' :
+    undefined;
+
+  if (typeof resolvedOp !== 'string' || !SUPPORTED_TOKEN_FILTER_OPS.includes(resolvedOp as typeof SUPPORTED_TOKEN_FILTER_OPS[number])) {
+    return missingCapability(path, 'token filter operator', resolvedOp, [...SUPPORTED_TOKEN_FILTER_OPS]);
+  }
+
+  const op = resolvedOp as TokenFilterPredicate['op'];
+
+  // Resolve value: from explicit `value` key or from shorthand key
+  const rawValue =
+    source.value !== undefined ? source.value :
+    source.eq !== undefined ? source.eq :
+    source.neq !== undefined ? source.neq :
+    source.in !== undefined ? source.in :
+    source.notIn !== undefined ? source.notIn :
+    undefined;
+
+  if (rawValue === undefined) {
+    return missingCapability(path, 'token filter value', source, ['{ prop, op, value: <string|string[]|ValueExpr> }']);
+  }
+
+  // For 'in'/'notIn', value must be a string array
+  if (op === 'in' || op === 'notIn') {
+    if (!Array.isArray(rawValue) || rawValue.some((item: unknown) => typeof item !== 'string')) {
+      return missingCapability(`${path}.value`, 'token filter set value', rawValue, ['string[]']);
+    }
+    return {
+      value: { prop: source.prop, op, value: [...rawValue] as readonly string[] },
+      diagnostics: [],
+    };
+  }
+
+  // For 'eq'/'neq', value is a ValueExpr (string, number, boolean, or reference)
+  const loweredValue = lowerValueNode(rawValue, context, `${path}.value`);
+  if (loweredValue.value === null) {
+    return { value: null, diagnostics: loweredValue.diagnostics };
+  }
+
+  return {
+    value: { prop: source.prop, op, value: loweredValue.value },
+    diagnostics: loweredValue.diagnostics,
+  };
+}
+
+function lowerTokenFilterArray(
+  source: readonly unknown[],
+  context: ConditionLoweringContext,
+  path: string,
+): ConditionLoweringResult<readonly TokenFilterPredicate[]> {
+  const diagnostics: Diagnostic[] = [];
+  const predicates: TokenFilterPredicate[] = [];
+
+  for (let i = 0; i < source.length; i++) {
+    const lowered = lowerTokenFilterEntry(source[i], context, `${path}[${i}]`);
+    diagnostics.push(...lowered.diagnostics);
+    if (lowered.value === null) {
+      return { value: null, diagnostics };
+    }
+    predicates.push(lowered.value);
+  }
+
+  return { value: predicates, diagnostics };
+}
+
 export function lowerQueryNode(
   source: unknown,
   context: ConditionLoweringContext,
@@ -244,6 +326,19 @@ export function lowerQueryNode(
       const zone = lowerZoneSelector(source.zone, context, `${path}.zone`);
       if (zone.value === null) {
         return { value: null, diagnostics: zone.diagnostics };
+      }
+      if (source.filter !== undefined) {
+        if (!Array.isArray(source.filter)) {
+          return missingCapability(`${path}.filter`, 'tokensInZone filter', source.filter, ['Array<{ prop, op, value }>']);
+        }
+        const loweredFilter = lowerTokenFilterArray(source.filter as readonly unknown[], context, `${path}.filter`);
+        if (loweredFilter.value === null) {
+          return { value: null, diagnostics: [...zone.diagnostics, ...loweredFilter.diagnostics] };
+        }
+        return {
+          value: { query: 'tokensInZone', zone: zone.value, filter: loweredFilter.value },
+          diagnostics: [...zone.diagnostics, ...loweredFilter.diagnostics],
+        };
       }
       return {
         value: { query: 'tokensInZone', zone: zone.value },
@@ -278,19 +373,53 @@ export function lowerQueryNode(
         return { value: { query: 'zones' }, diagnostics: [] };
       }
       if (!isRecord(source.filter)) {
-        return missingCapability(path, 'zones query', source, ['{ query: "zones" }', '{ query: "zones", filter: { owner: <PlayerSel> } }']);
+        return missingCapability(path, 'zones query filter', source.filter, [
+          '{ owner: <PlayerSel> }',
+          '{ op: "and"|"or"|..., args: [...] }',
+        ]);
       }
-      if (source.filter.owner === undefined) {
-        return { value: { query: 'zones' }, diagnostics: [] };
+
+      // ConditionAST filter: has 'op' property (e.g., { op: 'and', args: [...] })
+      if (typeof source.filter.op === 'string') {
+        const lowered = lowerConditionNode(source.filter, context, `${path}.filter`);
+        if (lowered.value === null) {
+          return { value: null, diagnostics: lowered.diagnostics };
+        }
+        return {
+          value: { query: 'zones', filter: { condition: lowered.value } },
+          diagnostics: lowered.diagnostics,
+        };
       }
-      const owner = normalizePlayerSelector(source.filter.owner, `${path}.filter.owner`);
-      if (owner.value === null) {
-        return { value: null, diagnostics: owner.diagnostics };
+
+      // Owner-based filter: { owner: <PlayerSel> }
+      if (source.filter.owner !== undefined) {
+        const owner = normalizePlayerSelector(source.filter.owner, `${path}.filter.owner`);
+        if (owner.value === null) {
+          return { value: null, diagnostics: owner.diagnostics };
+        }
+        const filterObj: { readonly owner: PlayerSel; readonly condition?: ConditionAST } = { owner: owner.value };
+        // If condition is also present alongside owner
+        if (source.filter.condition !== undefined) {
+          const loweredCondition = lowerConditionNode(source.filter.condition, context, `${path}.filter.condition`);
+          if (loweredCondition.value === null) {
+            return { value: null, diagnostics: [...owner.diagnostics, ...loweredCondition.diagnostics] };
+          }
+          return {
+            value: { query: 'zones', filter: { ...filterObj, condition: loweredCondition.value } },
+            diagnostics: [...owner.diagnostics, ...loweredCondition.diagnostics],
+          };
+        }
+        return {
+          value: { query: 'zones', filter: filterObj },
+          diagnostics: owner.diagnostics,
+        };
       }
-      return {
-        value: { query: 'zones', filter: { owner: owner.value } },
-        diagnostics: owner.diagnostics,
-      };
+
+      // No recognized filter properties
+      return missingCapability(`${path}.filter`, 'zones query filter', source.filter, [
+        '{ owner: <PlayerSel> }',
+        '{ op: "and"|"or"|..., args: [...] }',
+      ]);
     }
     case 'adjacentZones': {
       const zone = lowerZoneSelector(source.zone, context, `${path}.zone`);
@@ -306,6 +435,19 @@ export function lowerQueryNode(
       const zone = lowerZoneSelector(source.zone, context, `${path}.zone`);
       if (zone.value === null) {
         return { value: null, diagnostics: zone.diagnostics };
+      }
+      if (source.filter !== undefined) {
+        if (!Array.isArray(source.filter)) {
+          return missingCapability(`${path}.filter`, 'tokensInAdjacentZones filter', source.filter, ['Array<{ prop, op, value }>']);
+        }
+        const loweredFilter = lowerTokenFilterArray(source.filter as readonly unknown[], context, `${path}.filter`);
+        if (loweredFilter.value === null) {
+          return { value: null, diagnostics: [...zone.diagnostics, ...loweredFilter.diagnostics] };
+        }
+        return {
+          value: { query: 'tokensInAdjacentZones', zone: zone.value, filter: loweredFilter.value },
+          diagnostics: [...zone.diagnostics, ...loweredFilter.diagnostics],
+        };
       }
       return {
         value: { query: 'tokensInAdjacentZones', zone: zone.value },

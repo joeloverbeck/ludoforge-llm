@@ -53,7 +53,7 @@ export const TokenFilterPredicateSchema = z
   .object({
     prop: StringSchema,
     op: z.union([z.literal('eq'), z.literal('neq'), z.literal('in'), z.literal('notIn')]),
-    value: z.union([StringSchema, z.array(StringSchema)]),
+    value: z.union([ValueExprSchema, z.array(StringSchema)]),
   })
   .strict();
 
@@ -74,6 +74,7 @@ optionsQuerySchemaInternal = z.union([
       filter: z
         .object({
           owner: PlayerSelSchema.optional(),
+          condition: ConditionASTSchema.optional(),
         })
         .strict()
         .optional(),

@@ -9,6 +9,7 @@ import type {
   Reference,
   ScenarioPiecePlacement,
   StackingConstraint,
+  TokenFilterPredicate,
   ValueExpr,
 } from './types.js';
 import { buildAdjacencyGraph, validateAdjacency } from './spatial.js';
@@ -374,6 +375,20 @@ const validateZoneSelector = (
   }
 };
 
+const validateTokenFilterPredicates = (
+  diagnostics: Diagnostic[],
+  filters: readonly TokenFilterPredicate[],
+  path: string,
+  context: ValidationContext,
+): void => {
+  for (let i = 0; i < filters.length; i++) {
+    const filterValue = filters[i]!.value;
+    if (!Array.isArray(filterValue)) {
+      validateValueExpr(diagnostics, filterValue as ValueExpr, `${path}[${i}].value`, context);
+    }
+  }
+};
+
 const validateOptionsQuery = (
   diagnostics: Diagnostic[],
   query: OptionsQuery,
@@ -381,10 +396,22 @@ const validateOptionsQuery = (
   context: ValidationContext,
 ): void => {
   switch (query.query) {
-    case 'tokensInZone':
-    case 'adjacentZones':
+    case 'tokensInZone': {
+      validateZoneSelector(diagnostics, query.zone, `${path}.zone`, context);
+      if (query.filter) {
+        validateTokenFilterPredicates(diagnostics, query.filter, `${path}.filter`, context);
+      }
+      return;
+    }
+    case 'adjacentZones': {
+      validateZoneSelector(diagnostics, query.zone, `${path}.zone`, context);
+      return;
+    }
     case 'tokensInAdjacentZones': {
       validateZoneSelector(diagnostics, query.zone, `${path}.zone`, context);
+      if (query.filter) {
+        validateTokenFilterPredicates(diagnostics, query.filter, `${path}.filter`, context);
+      }
       return;
     }
     case 'connectedZones': {
@@ -408,6 +435,9 @@ const validateOptionsQuery = (
     case 'zones': {
       if (query.filter?.owner) {
         validatePlayerSelector(diagnostics, query.filter.owner, `${path}.filter.owner`, context);
+      }
+      if (query.filter?.condition) {
+        validateConditionAst(diagnostics, query.filter.condition, `${path}.filter.condition`, context);
       }
       return;
     }

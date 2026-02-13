@@ -30,7 +30,6 @@ const makeBaseDef = (overrides?: {
     setup: [],
     turnStructure: {
       phases: [{ id: asPhaseId('main') }],
-      activePlayerOrder: 'roundRobin',
     },
     actions: overrides?.actions ?? [],
     actionPipelines: overrides?.actionPipelines,
@@ -52,6 +51,7 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
   stateHash: 0n,
   actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
   ...overrides,
 });

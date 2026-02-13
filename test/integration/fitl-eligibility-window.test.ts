@@ -15,6 +15,7 @@ import {
   createFreeOpGrantedDirective,
   FITL_NO_OVERRIDE,
 } from './fitl-events-test-helpers.js';
+import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const selfOverride = createEligibilityOverrideDirective({
   target: 'self',
@@ -38,19 +39,24 @@ const createDef = (): GameDef =>
     zones: [],
     tokenTypes: [],
     setup: [],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-    turnFlow: {
-      cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-      eligibility: {
-        factions: ['0', '1', '2', '3'],
-        overrideWindows: [
-          { id: 'remain-eligible', duration: 'nextCard' },
-          { id: 'force-ineligible', duration: 'nextCard' },
-        ],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: {
+            factions: ['0', '1', '2', '3'],
+            overrideWindows: [
+              { id: 'remain-eligible', duration: 'nextCard' },
+              { id: 'force-ineligible', duration: 'nextCard' },
+            ],
+          },
+          optionMatrix: [{ first: 'event', second: ['operation'] }],
+          passRewards: [],
+          durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+        },
       },
-      optionMatrix: [{ first: 'event', second: ['operation'] }],
-      passRewards: [],
-      durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
     },
     actions: [
       {
@@ -93,9 +99,9 @@ describe('FITL eligibility window integration', () => {
     }).state;
     const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} });
 
-    assert.deepEqual(second.state.turnFlow?.eligibility, { '0': true, '1': false, '2': false, '3': true });
-    assert.equal(second.state.turnFlow?.currentCard.firstEligible, '0');
-    assert.equal(second.state.turnFlow?.currentCard.secondEligible, '3');
+    assert.deepEqual(requireCardDrivenRuntime(second.state).eligibility, { '0': true, '1': false, '2': false, '3': true });
+    assert.equal(requireCardDrivenRuntime(second.state).currentCard.firstEligible, '0');
+    assert.equal(requireCardDrivenRuntime(second.state).currentCard.secondEligible, '3');
   });
 
   it('does not mutate eligibility for non-executing factions when free-op metadata is present', () => {
@@ -123,9 +129,9 @@ describe('FITL eligibility window integration', () => {
     assert.equal(cardEndEntry?.kind, 'turnFlowEligibility');
     assert.equal(cardEndEntry?.overrides, undefined);
 
-    assert.deepEqual(second.turnFlow?.eligibility, { '0': false, '1': false, '2': true, '3': true });
+    assert.deepEqual(requireCardDrivenRuntime(second).eligibility, { '0': false, '1': false, '2': true, '3': true });
     assert.equal(second.activePlayer, asPlayerId(2));
-    assert.equal(second.turnFlow?.currentCard.firstEligible, '2');
-    assert.equal(second.turnFlow?.currentCard.secondEligible, '3');
+    assert.equal(requireCardDrivenRuntime(second).currentCard.firstEligible, '2');
+    assert.equal(requireCardDrivenRuntime(second).currentCard.secondEligible, '3');
   });
 });

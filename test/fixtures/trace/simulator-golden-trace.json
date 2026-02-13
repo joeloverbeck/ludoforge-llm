@@ -158,7 +158,10 @@
         "gameCount": 2
       }
     },
-    "markers": {}
+    "markers": {},
+    "turnOrderState": {
+      "type": "roundRobin"
+    }
   },
   "result": {
     "type": "draw"

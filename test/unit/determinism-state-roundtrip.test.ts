@@ -24,6 +24,7 @@ const fixtureState: GameState = {
   actionUsage: {
     pass: { turnCount: 1, phaseCount: 1, gameCount: 3 },
   },
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
 };
 

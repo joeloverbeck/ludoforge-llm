@@ -43,12 +43,51 @@ const firstPhaseId = (def: GameDef): GameState['currentPhase'] => {
   return phaseId;
 };
 
-const nextActivePlayer = (def: GameDef, state: GameState): GameState['activePlayer'] => {
-  if (def.turnStructure.activePlayerOrder === 'fixed') {
-    return state.activePlayer;
+const parseFixedOrderPlayer = (playerId: string, playerCount: number): number | null => {
+  const numeric = Number(playerId);
+  if (!Number.isInteger(numeric) || numeric < 0 || numeric >= playerCount) {
+    return null;
+  }
+  return numeric;
+};
+
+const advanceTurnOrder = (def: GameDef, state: GameState): Pick<GameState, 'activePlayer' | 'turnOrderState'> => {
+  const strategy = def.turnOrder;
+  if (strategy === undefined || strategy.type === 'roundRobin') {
+    return {
+      activePlayer: asPlayerId((Number(state.activePlayer) + 1) % state.playerCount),
+      turnOrderState: { type: 'roundRobin' },
+    };
+  }
+  if (strategy.type === 'fixedOrder') {
+    const currentIndex = state.turnOrderState.type === 'fixedOrder' ? state.turnOrderState.currentIndex : 0;
+    const nextIndex = strategy.order.length === 0 ? 0 : (currentIndex + 1) % strategy.order.length;
+    const nextPlayerId = strategy.order[nextIndex];
+    const parsed = nextPlayerId === undefined ? null : parseFixedOrderPlayer(nextPlayerId, state.playerCount);
+    return {
+      activePlayer: parsed === null ? state.activePlayer : asPlayerId(parsed),
+      turnOrderState: {
+        type: 'fixedOrder',
+        currentIndex: nextIndex,
+      },
+    };
+  }
+  if (strategy.type === 'simultaneous') {
+    return {
+      activePlayer: state.activePlayer,
+      turnOrderState: {
+        type: 'simultaneous',
+        submitted: Object.fromEntries(
+          Array.from({ length: state.playerCount }, (_unused, index) => [String(index), false]),
+        ),
+      },
+    };
   }
 
-  return asPlayerId((Number(state.activePlayer) + 1) % state.playerCount);
+  return {
+    activePlayer: state.activePlayer,
+    turnOrderState: state.turnOrderState.type === 'cardDriven' ? state.turnOrderState : { type: 'roundRobin' },
+  };
 };
 
 export const advancePhase = (
@@ -84,13 +123,14 @@ export const advancePhase = (
   if (triggerLogCollector !== undefined) {
     triggerLogCollector.push(...turnFlowLifecycle.traceEntries);
   }
-  const newActivePlayer = nextActivePlayer(def, nextState);
+  const turnOrderAdvance = advanceTurnOrder(def, nextState);
   const initialPhase = firstPhaseId(def);
   const rolledState = resetPhaseUsage(
     resetTurnUsage({
       ...nextState,
       turnCount: nextState.turnCount + 1,
-      activePlayer: newActivePlayer,
+      activePlayer: turnOrderAdvance.activePlayer,
+      turnOrderState: turnOrderAdvance.turnOrderState,
       currentPhase: initialPhase,
     }),
   );

@@ -38,8 +38,8 @@ describe('parse + validate full-spec integration', () => {
     assert.deepEqual(second, first);
     assert.equal(first.length > 0, true);
     assert.equal(first.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_PLAYERS_MIN_TOO_LOW'), true);
-    assert.equal(first.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_ACTION_EFFECTS_SHAPE_INVALID'), true);
     assert.equal(first.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_TURN_STRUCTURE_PHASES_INVALID'), true);
+    assert.equal(first.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_REQUIRED_SECTION_MISSING'), true);
     assert.equal(first.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_UNKNOWN_KEY'), true);
   });
 

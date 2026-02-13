@@ -19,7 +19,7 @@ function makeMinimalDoc() {
       { id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       { id: 'hand', owner: 'player', visibility: 'owner', ordering: 'set' },
     ],
-    turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+    turnStructure: { phases: [{ id: 'main' }] },
     endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
   };
 }

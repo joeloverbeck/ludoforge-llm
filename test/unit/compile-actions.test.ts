@@ -14,7 +14,7 @@ describe('compile actions', () => {
         { id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' },
         { id: 'hand', owner: 'player', visibility: 'hidden', ordering: 'stack' },
       ],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: 'main' }] },
       actions: [
         {
           id: 'play',

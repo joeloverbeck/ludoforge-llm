@@ -4,23 +4,35 @@ import { validateConditionAst, validateValueExpr } from './validate-gamedef-beha
 import { type ValidationContext, checkDuplicateIds, pushMissingReferenceDiagnostic } from './validate-gamedef-structure.js';
 
 export const validateCoupPlan = (diagnostics: Diagnostic[], def: GameDef): void => {
-  if (!def.coupPlan) {
+  const coupPlan = def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config.coupPlan : undefined;
+  if (!coupPlan) {
+    return;
+  }
+
+  if (coupPlan.phases.length === 0) {
+    diagnostics.push({
+      code: 'COUP_PLAN_PHASES_EMPTY',
+      path: 'turnOrder.config.coupPlan.phases',
+      severity: 'error',
+      message: 'coupPlan.phases must include at least one phase definition.',
+      suggestion: 'Declare one or more deterministic coup phases.',
+    });
     return;
   }
 
   checkDuplicateIds(
     diagnostics,
-    def.coupPlan.phases.map((phase) => phase.id),
+    coupPlan.phases.map((phase) => phase.id),
     'DUPLICATE_COUP_PLAN_PHASE_ID',
     'coup phase id',
-    'coupPlan.phases',
+    'turnOrder.config.coupPlan.phases',
   );
 
-  def.coupPlan.phases.forEach((phase, phaseIndex) => {
+  coupPlan.phases.forEach((phase, phaseIndex) => {
     if (phase.steps.length === 0) {
       diagnostics.push({
         code: 'COUP_PLAN_PHASE_STEPS_EMPTY',
-        path: `coupPlan.phases[${phaseIndex}].steps`,
+        path: `turnOrder.config.coupPlan.phases[${phaseIndex}].steps`,
         severity: 'error',
         message: `coupPlan phase "${phase.id}" must declare at least one step.`,
         suggestion: 'Add one or more deterministic symbolic step ids.',
@@ -29,24 +41,24 @@ export const validateCoupPlan = (diagnostics: Diagnostic[], def: GameDef): void 
   });
 
   if (
-    def.coupPlan.maxConsecutiveRounds !== undefined &&
-    (!Number.isInteger(def.coupPlan.maxConsecutiveRounds) || def.coupPlan.maxConsecutiveRounds < 1)
+    coupPlan.maxConsecutiveRounds !== undefined &&
+    (!Number.isInteger(coupPlan.maxConsecutiveRounds) || coupPlan.maxConsecutiveRounds < 1)
   ) {
     diagnostics.push({
       code: 'COUP_PLAN_MAX_CONSECUTIVE_INVALID',
-      path: 'coupPlan.maxConsecutiveRounds',
+      path: 'turnOrder.config.coupPlan.maxConsecutiveRounds',
       severity: 'error',
-      message: `coupPlan.maxConsecutiveRounds must be an integer >= 1; received ${def.coupPlan.maxConsecutiveRounds}.`,
+      message: `coupPlan.maxConsecutiveRounds must be an integer >= 1; received ${coupPlan.maxConsecutiveRounds}.`,
       suggestion: 'Set maxConsecutiveRounds to 1 or greater.',
     });
   }
 
-  const declaredPhases = new Set(def.coupPlan.phases.map((phase) => phase.id));
-  def.coupPlan.finalRoundOmitPhases?.forEach((phaseId, index) => {
+  const declaredPhases = new Set(coupPlan.phases.map((phase) => phase.id));
+  coupPlan.finalRoundOmitPhases?.forEach((phaseId, index) => {
     if (!declaredPhases.has(phaseId)) {
       diagnostics.push({
         code: 'COUP_PLAN_FINAL_ROUND_OMIT_UNKNOWN_PHASE',
-        path: `coupPlan.finalRoundOmitPhases[${index}]`,
+        path: `turnOrder.config.coupPlan.finalRoundOmitPhases[${index}]`,
         severity: 'error',
         message: `Unknown coupPlan phase id "${phaseId}" in finalRoundOmitPhases.`,
         suggestion: 'Reference ids declared in coupPlan.phases.',

@@ -17,9 +17,8 @@ describe('parseGameSpec API shape', () => {
       tokenTypes: null,
       setup: null,
       turnStructure: null,
-      turnFlow: null,
+      turnOrder: null,
       actionPipelines: null,
-      coupPlan: null,
       victory: null,
       actions: null,
       triggers: null,
@@ -126,7 +125,6 @@ describe('parseGameSpec API shape', () => {
       'turnStructure:',
       '  phases:',
       '    - id: main',
-      '  activePlayerOrder: roundRobin',
       '```',
     ].join('\n'));
     const reversed = parseGameSpec([
@@ -134,7 +132,6 @@ describe('parseGameSpec API shape', () => {
       'turnStructure:',
       '  phases:',
       '    - id: main',
-      '  activePlayerOrder: roundRobin',
       '```',
       '```yaml',
       'metadata:',
@@ -244,14 +241,28 @@ describe('parseGameSpec API shape', () => {
     assert.ok(result.sourceMap.byPath['actionPipelines[0].atomicity'] !== undefined);
   });
 
-  it('parses coupPlan and victory singleton sections', () => {
+  it('parses turnOrder cardDriven config and victory singleton sections', () => {
     const result = parseGameSpec([
       '```yaml',
-      'coupPlan:',
-      '  phases:',
-      '    - id: victory',
-      '      steps: [check-thresholds]',
-      '  maxConsecutiveRounds: 1',
+      'turnOrder:',
+      '  type: cardDriven',
+      '  config:',
+      '    turnFlow:',
+      '      cardLifecycle:',
+      '        played: played:none',
+      '        lookahead: lookahead:none',
+      '        leader: leader:none',
+      '      eligibility:',
+      '        factions: [us, nva]',
+      '        overrideWindows: []',
+      '      optionMatrix: []',
+      '      passRewards: []',
+      '      durationWindows: [card]',
+      '    coupPlan:',
+      '      phases:',
+      '        - id: victory',
+      '          steps: [check-thresholds]',
+      '      maxConsecutiveRounds: 1',
       'victory:',
       '  checkpoints:',
       '    - id: us-threshold',
@@ -261,9 +272,10 @@ describe('parseGameSpec API shape', () => {
       '```',
     ].join('\n'));
 
-    assert.equal(result.doc.coupPlan?.phases[0]?.id, 'victory');
+    assert.equal(result.doc.turnOrder?.type, 'cardDriven');
+    assert.equal(result.doc.turnOrder?.type === 'cardDriven' ? result.doc.turnOrder.config.coupPlan?.phases[0]?.id : undefined, 'victory');
     assert.equal(result.doc.victory?.checkpoints[0]?.id, 'us-threshold');
-    assert.ok(result.sourceMap.byPath['coupPlan.phases[0].id'] !== undefined);
+    assert.ok(result.sourceMap.byPath['turnOrder.config.coupPlan.phases[0].id'] !== undefined);
     assert.ok(result.sourceMap.byPath['victory.checkpoints[0].id'] !== undefined);
   });
 

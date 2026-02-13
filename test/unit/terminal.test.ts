@@ -12,7 +12,7 @@ const createBaseDef = (): GameDef =>
     zones: [],
     tokenTypes: [],
     setup: [],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
     actions: [],
     triggers: [],
     endConditions: [],
@@ -34,6 +34,7 @@ const createBaseState = (overrides: Partial<GameState> = {}): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [11n, 22n] },
   stateHash: 0n,
   actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
   ...overrides,
 });
@@ -130,12 +131,17 @@ describe('terminalResult', () => {
   it('resolves during-coup victory checkpoints before endConditions', () => {
     const def: GameDef = {
       ...createBaseDef(),
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: ['us', 'nva', 'arvn'], overrideWindows: [] },
-        optionMatrix: [],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['us', 'nva', 'arvn'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
       },
       victory: {
         checkpoints: [
@@ -152,16 +158,20 @@ describe('terminalResult', () => {
     const state = createBaseState({
       globalVars: { done: 1 },
       playerCount: 3,
-      turnFlow: {
-        factionOrder: ['us', 'nva', 'arvn'],
-        eligibility: { us: true, nva: true, arvn: true },
-        currentCard: {
-          firstEligible: 'us',
-          secondEligible: 'nva',
-          actedFactions: [],
-          passedFactions: [],
-          nonPassCount: 0,
-          firstActionClass: null,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['us', 'nva', 'arvn'],
+          eligibility: { us: true, nva: true, arvn: true },
+          currentCard: {
+            firstEligible: 'us',
+            secondEligible: 'nva',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
         },
       },
     });
@@ -186,12 +196,17 @@ describe('terminalResult', () => {
         { name: 'mNva', type: 'int', init: 0, min: -99, max: 99 },
         { name: 'mArvn', type: 'int', init: 0, min: -99, max: 99 },
       ],
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: ['us', 'nva', 'arvn'], overrideWindows: [] },
-        optionMatrix: [],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['us', 'nva', 'arvn'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
       },
       victory: {
         checkpoints: [
@@ -214,16 +229,20 @@ describe('terminalResult', () => {
     const state = createBaseState({
       globalVars: { finalCoup: 1, mUs: 8, mNva: 8, mArvn: 2 },
       playerCount: 3,
-      turnFlow: {
-        factionOrder: ['us', 'nva', 'arvn'],
-        eligibility: { us: true, nva: true, arvn: true },
-        currentCard: {
-          firstEligible: 'us',
-          secondEligible: 'nva',
-          actedFactions: [],
-          passedFactions: [],
-          nonPassCount: 0,
-          firstActionClass: null,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['us', 'nva', 'arvn'],
+          eligibility: { us: true, nva: true, arvn: true },
+          currentCard: {
+            firstEligible: 'us',
+            secondEligible: 'nva',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
         },
       },
     });

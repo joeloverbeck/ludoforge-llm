@@ -9,7 +9,8 @@ export const DATA_ASSET_KEYS = ['id', 'kind', 'payload'] as const;
 export const VARIABLE_KEYS = ['name', 'type', 'init', 'min', 'max'] as const;
 export const ZONE_KEYS = ['id', 'owner', 'visibility', 'ordering', 'adjacentTo'] as const;
 export const ACTION_KEYS = ['id', 'actor', 'phase', 'params', 'pre', 'cost', 'effects', 'limits'] as const;
-export const TURN_STRUCTURE_KEYS = ['phases', 'activePlayerOrder'] as const;
+export const TURN_STRUCTURE_KEYS = ['phases'] as const;
+export const TURN_ORDER_KEYS = ['type', 'order', 'config'] as const;
 export const TURN_FLOW_KEYS = ['cardLifecycle', 'eligibility', 'optionMatrix', 'passRewards', 'durationWindows', 'monsoon', 'pivotal'] as const;
 export const TURN_FLOW_CARD_LIFECYCLE_KEYS = ['played', 'lookahead', 'leader'] as const;
 export const TURN_FLOW_ELIGIBILITY_KEYS = ['factions', 'overrideWindows'] as const;
@@ -42,6 +43,7 @@ export const TURN_FLOW_ACTION_CLASS_VALUES: readonly string[] = [
   'operationPlusSpecialActivity',
 ];
 export const TURN_FLOW_FIRST_ACTION_VALUES: readonly string[] = ['event', 'operation', 'operationPlusSpecialActivity'];
+export const TURN_ORDER_TYPE_VALUES: readonly string[] = ['roundRobin', 'fixedOrder', 'cardDriven', 'simultaneous'];
 
 export function validateEnumField(
   record: Record<string, unknown>,

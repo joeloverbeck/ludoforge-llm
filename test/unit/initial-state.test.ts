@@ -18,6 +18,7 @@ import {
   type GameDef,
   type SerializedGameState,
 } from '../../src/kernel/index.js';
+import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 
@@ -36,7 +37,7 @@ const createDef = (): GameDef =>
       { setVar: { scope: 'global', var: 'coins', value: 5 } },
       { createToken: { type: 'card', zone: 'deck:none' } },
     ],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
     actions: [],
     triggers: [
       {
@@ -73,6 +74,19 @@ describe('initialState', () => {
   it('defaults omitted playerCount to metadata.players.min', () => {
     const state = initialState(createDef(), 11);
     assert.equal(state.playerCount, 2);
+  });
+
+  it('keeps default activePlayer at 0 for fixed order when turnFlow is absent', () => {
+    const def: GameDef = {
+      ...createDef(),
+      turnStructure: {
+        phases: [{ id: asPhaseId('main') }],
+      },
+      triggers: [],
+    };
+
+    const state = initialState(def, 11, 3);
+    assert.equal(state.activePlayer, asPlayerId(0));
   });
 
   it('throws descriptive errors for invalid playerCount', () => {
@@ -149,13 +163,18 @@ describe('initialState', () => {
         { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },
         { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
       ],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: [], overrideWindows: [] },
-        optionMatrix: [],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: [], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
       },
       actions: [
         {
@@ -190,13 +209,18 @@ describe('initialState', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: ['1', '0'], overrideWindows: [] },
-        optionMatrix: [],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['1', '0'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
       },
       actions: [],
       triggers: [],
@@ -205,9 +229,9 @@ describe('initialState', () => {
 
     const state = initialState(def, 1, 2);
     assert.equal(state.activePlayer, asPlayerId(1));
-    assert.deepEqual(state.turnFlow?.factionOrder, ['1', '0']);
-    assert.deepEqual(state.turnFlow?.eligibility, { '1': true, '0': true });
-    assert.equal(state.turnFlow?.currentCard.firstEligible, '1');
-    assert.equal(state.turnFlow?.currentCard.secondEligible, '0');
+    assert.deepEqual(requireCardDrivenRuntime(state).factionOrder, ['1', '0']);
+    assert.deepEqual(requireCardDrivenRuntime(state).eligibility, { '1': true, '0': true });
+    assert.equal(requireCardDrivenRuntime(state).currentCard.firstEligible, '1');
+    assert.equal(requireCardDrivenRuntime(state).currentCard.secondEligible, '0');
   });
 });

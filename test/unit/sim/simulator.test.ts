@@ -81,7 +81,7 @@ const createDef = (options?: {
     zones: [],
     tokenTypes: [],
     setup: [],
-    turnStructure: { phases, activePlayerOrder: 'roundRobin' },
+    turnStructure: { phases },
     actions,
     triggers: [],
     endConditions:
@@ -180,7 +180,7 @@ describe('runGame', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actions: [
         {
           id: asActionId('event'),

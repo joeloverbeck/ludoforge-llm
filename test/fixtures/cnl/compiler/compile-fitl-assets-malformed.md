@@ -32,8 +32,7 @@ dataAssets:
 turnStructure:
   phases:
     - id: main
-  activePlayerOrder: roundRobin
-actions:
+  actions:
   - id: pass
     actor: active
     phase: main

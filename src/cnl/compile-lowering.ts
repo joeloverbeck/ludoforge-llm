@@ -120,6 +120,16 @@ export function lowerTurnStructure(
   ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>>,
   diagnostics: Diagnostic[],
 ): TurnStructure {
+  if ('activePlayerOrder' in turnStructure) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_TURN_STRUCTURE_LEGACY_FIELD_UNSUPPORTED',
+      path: 'doc.turnStructure.activePlayerOrder',
+      severity: 'error',
+      message: 'turnStructure.activePlayerOrder is no longer supported.',
+      suggestion: 'Move sequencing configuration to doc.turnOrder.',
+    });
+  }
+
   const phasesSource = Array.isArray(turnStructure.phases) ? turnStructure.phases : [];
   const phases: PhaseDef[] = phasesSource.map((phase, phaseIndex) => {
     const path = `doc.turnStructure.phases.${phaseIndex}`;
@@ -144,23 +154,8 @@ export function lowerTurnStructure(
     };
   });
 
-  const activePlayerOrder =
-    turnStructure.activePlayerOrder === 'roundRobin' || turnStructure.activePlayerOrder === 'fixed'
-      ? turnStructure.activePlayerOrder
-      : 'roundRobin';
-
-  if (activePlayerOrder !== turnStructure.activePlayerOrder) {
-    diagnostics.push(
-      missingCapabilityDiagnostic('doc.turnStructure.activePlayerOrder', 'turnStructure.activePlayerOrder', turnStructure.activePlayerOrder, [
-        'roundRobin',
-        'fixed',
-      ]),
-    );
-  }
-
   return {
     phases,
-    activePlayerOrder,
   };
 }
 

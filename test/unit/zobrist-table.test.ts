@@ -54,7 +54,6 @@ const createBaseGameDef = (): GameDef =>
     setup: [],
     turnStructure: {
       phases: [{ id: 'draw' }, { id: 'main' }],
-      activePlayerOrder: 'roundRobin',
     },
     actions: [
       {
@@ -124,7 +123,6 @@ const createEquivalentReorderedGameDef = (): GameDef =>
     setup: [],
     turnStructure: {
       phases: [{ id: 'main' }, { id: 'draw' }],
-      activePlayerOrder: 'roundRobin',
     },
     actions: [
       {

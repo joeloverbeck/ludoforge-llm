@@ -29,7 +29,7 @@ const minimalDef: GameDef = {
   ],
   tokenTypes: [{ id: 'piece', props: { faction: 'string' } }],
   setup: [],
-  turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+  turnStructure: { phases: [{ id: asPhaseId('main') }] },
   actions: [],
   triggers: [],
   endConditions: [],
@@ -51,6 +51,7 @@ function makeCtx(zones: Record<string, Token[]>, bindings?: Record<string, unkno
     rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
     stateHash: 0n,
     actionUsage: {},
+    turnOrderState: { type: 'roundRobin' },
     markers: {},
   };
   const zoneDefs: readonly ZoneDef[] = minimalDef.zones;

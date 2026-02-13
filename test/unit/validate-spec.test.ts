@@ -22,7 +22,7 @@ function createStructurallyValidDoc() {
     globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 10 }],
     perPlayerVars: [{ name: 'health', type: 'int', init: 5, min: 0, max: 10 }],
     zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-    turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+    turnStructure: { phases: [{ id: 'main' }] },
     actions: [validAction],
     endConditions: [{ when: { always: false }, result: { type: 'draw' } }],
   };
@@ -209,62 +209,71 @@ describe('validateGameSpec structural rules', () => {
   it('validates turn structure shape', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),
-      turnStructure: { phases: [], activePlayerOrder: 'zigzag' },
+      turnStructure: { phases: [] },
     });
     assert.deepEqual(diagnostics.map((diagnostic) => diagnostic.path), [
       'doc.actions.0.phase',
-      'doc.turnStructure.activePlayerOrder',
       'doc.turnStructure.phases',
     ]);
   });
 
-  it('accepts a valid optional turnFlow section', () => {
+  it('accepts a valid optional turnOrder section', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: {
-          factions: ['us', 'arvn', 'nva', 'vc'],
-          overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: {
+              factions: ['us', 'arvn', 'nva', 'vc'],
+              overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+            },
+            optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
+            passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: 3 }],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
         },
-        optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
-        passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: 3 }],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
       },
     });
 
-    assert.equal(diagnostics.some((diagnostic) => diagnostic.path.startsWith('doc.turnFlow')), false);
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path.startsWith('doc.turnOrder')), false);
   });
 
-  it('reports malformed turnFlow with explicit nested paths', () => {
+  it('reports malformed turnOrder cardDriven flow with explicit nested paths', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: '', leader: 'leader:none' },
-        eligibility: {
-          factions: ['us', ''],
-          overrideWindows: [{ id: 'window-a', duration: 'season' }],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: '', leader: 'leader:none' },
+            eligibility: {
+              factions: ['us', ''],
+              overrideWindows: [{ id: 'window-a', duration: 'season' }],
+            },
+            optionMatrix: [{ first: 'event', second: ['operation', 'invalid'] }],
+            passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: '3' }],
+            durationWindows: ['campaign', 'epoch'],
+          },
         },
-        optionMatrix: [{ first: 'event', second: ['operation', 'invalid'] }],
-        passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: '3' }],
-        durationWindows: ['campaign', 'epoch'],
       },
     } as unknown as Parameters<typeof validateGameSpec>[0]);
 
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnFlow.eligibility.overrideWindows.0.duration'),
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnOrder.config.turnFlow.eligibility.overrideWindows.0.duration'),
       true,
     );
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnFlow.optionMatrix.0.second.1'),
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnOrder.config.turnFlow.optionMatrix.0.second.1'),
       true,
     );
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnFlow.passRewards.0.amount'),
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnOrder.config.turnFlow.passRewards.0.amount'),
       true,
     );
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnFlow.durationWindows.1'),
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.turnOrder.config.turnFlow.durationWindows.1'),
       true,
     );
   });

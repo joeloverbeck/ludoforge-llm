@@ -98,7 +98,7 @@ const createDecisionSequenceDef = (): GameDef =>
       { createToken: { type: 'piece', zone: 'reserve:none' } },
       { createToken: { type: 'piece', zone: 'reserve:none' } },
     ],
-    turnStructure: { phases: [{ id: PHASE_MAIN }], activePlayerOrder: 'roundRobin' },
+    turnStructure: { phases: [{ id: PHASE_MAIN }] },
     actionPipelines: [DEPLOY_PROFILE],
     actions: [
       {

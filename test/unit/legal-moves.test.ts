@@ -26,7 +26,7 @@ const createDef = (): GameDef =>
     ],
     tokenTypes: [],
     setup: [],
-    turnStructure: { phases: [{ id: asPhaseId('main') }, { id: asPhaseId('other') }], activePlayerOrder: 'roundRobin' },
+    turnStructure: { phases: [{ id: asPhaseId('main') }, { id: asPhaseId('other') }] },
     actions: [
       {
         id: asActionId('wrongPhase'),
@@ -107,6 +107,7 @@ const createState = (): GameState => ({
   actionUsage: {
     limitedTurn: { turnCount: 1, phaseCount: 0, gameCount: 0 },
   },
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
 });
 
@@ -153,7 +154,9 @@ describe('legalMoves', () => {
   it('returns no legal moves when active faction is not a current turnFlow candidate', () => {
     const state: GameState = {
       ...createState(),
-      turnFlow: {
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
         factionOrder: ['0', '1', '2'],
         eligibility: { '0': true, '1': true, '2': true },
         currentCard: {
@@ -163,6 +166,8 @@ describe('legalMoves', () => {
           passedFactions: [],
           nonPassCount: 0,
           firstActionClass: null,
+        },
+        pendingEligibilityOverrides: [],
         },
       },
     };
@@ -174,12 +179,17 @@ describe('legalMoves', () => {
     const def: GameDef = {
       ...createDef(),
       metadata: { id: 'turnflow-matrix-event', players: { min: 3, max: 3 } },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
-        optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
+            optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
       },
       actions: [
         {
@@ -240,7 +250,9 @@ describe('legalMoves', () => {
       playerCount: 3,
       activePlayer: asPlayerId(1),
       actionUsage: {},
-      turnFlow: {
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
         factionOrder: ['0', '1', '2'],
         eligibility: { '0': true, '1': true, '2': true },
         currentCard: {
@@ -250,6 +262,8 @@ describe('legalMoves', () => {
           passedFactions: [],
           nonPassCount: 1,
           firstActionClass: 'event',
+        },
+        pendingEligibilityOverrides: [],
         },
       },
     };
@@ -264,12 +278,17 @@ describe('legalMoves', () => {
     const def: GameDef = {
       ...createDef(),
       metadata: { id: 'turnflow-matrix-operation', players: { min: 3, max: 3 } },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
-        optionMatrix: [{ first: 'operation', second: ['limitedOperation'] }],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
+            optionMatrix: [{ first: 'operation', second: ['limitedOperation'] }],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
       },
       actions: [
         {
@@ -320,7 +339,9 @@ describe('legalMoves', () => {
       playerCount: 3,
       activePlayer: asPlayerId(1),
       actionUsage: {},
-      turnFlow: {
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
         factionOrder: ['0', '1', '2'],
         eligibility: { '0': true, '1': true, '2': true },
         currentCard: {
@@ -330,6 +351,8 @@ describe('legalMoves', () => {
           passedFactions: [],
           nonPassCount: 1,
           firstActionClass: 'operation',
+        },
+        pendingEligibilityOverrides: [],
         },
       },
     };
@@ -346,22 +369,27 @@ describe('legalMoves', () => {
         { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
         { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
       ],
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: ['0', '1'], overrideWindows: [] },
-        optionMatrix: [],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
-        monsoon: {
-          restrictedActions: [
-            { actionId: 'sweep' },
-            { actionId: 'airLift', maxParam: { name: 'spaces', max: 2 } },
-          ],
-          blockPivotal: true,
-          pivotalOverrideToken: 'monsoonPivotalAllowed',
-        },
-        pivotal: {
-          actionIds: ['pivotalEvent'],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            monsoon: {
+              restrictedActions: [
+                { actionId: 'sweep' },
+                { actionId: 'airLift', maxParam: { name: 'spaces', max: 2 } },
+              ],
+              blockPivotal: true,
+              pivotalOverrideToken: 'monsoonPivotalAllowed',
+            },
+            pivotal: {
+              actionIds: ['pivotalEvent'],
+            },
+          },
         },
       },
       tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
@@ -422,7 +450,9 @@ describe('legalMoves', () => {
         'leader:none': [],
       },
       actionUsage: {},
-      turnFlow: {
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
         factionOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },
         currentCard: {
@@ -432,6 +462,8 @@ describe('legalMoves', () => {
           passedFactions: [],
           nonPassCount: 0,
           firstActionClass: null,
+        },
+        pendingEligibilityOverrides: [],
         },
       },
     };
@@ -448,16 +480,21 @@ describe('legalMoves', () => {
     const def: GameDef = {
       ...createDef(),
       metadata: { id: 'turnflow-pivotal-precedence', players: { min: 2, max: 2 } },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: ['0', '1'], overrideWindows: [] },
-        optionMatrix: [],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
-        pivotal: {
-          actionIds: ['pivotalA', 'pivotalB'],
-          interrupt: {
-            precedence: ['1', '0'],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            pivotal: {
+              actionIds: ['pivotalA', 'pivotalB'],
+              interrupt: {
+                precedence: ['1', '0'],
+              },
+            },
           },
         },
       },
@@ -498,7 +535,9 @@ describe('legalMoves', () => {
     const state: GameState = {
       ...createState(),
       actionUsage: {},
-      turnFlow: {
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
         factionOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },
         currentCard: {
@@ -508,6 +547,8 @@ describe('legalMoves', () => {
           passedFactions: [],
           nonPassCount: 0,
           firstActionClass: null,
+        },
+        pendingEligibilityOverrides: [],
         },
       },
     };
@@ -522,17 +563,22 @@ describe('legalMoves', () => {
     const def: GameDef = {
       ...createDef(),
       metadata: { id: 'turnflow-pivotal-cancellation', players: { min: 2, max: 2 } },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: ['0', '1'], overrideWindows: [] },
-        optionMatrix: [],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
-        pivotal: {
-          actionIds: ['pivotalA', 'pivotalB'],
-          interrupt: {
-            precedence: ['1', '0'],
-            cancellation: [{ winnerActionId: 'pivotalA', canceledActionId: 'pivotalB' }],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+            pivotal: {
+              actionIds: ['pivotalA', 'pivotalB'],
+              interrupt: {
+                precedence: ['1', '0'],
+                cancellation: [{ winnerActionId: 'pivotalA', canceledActionId: 'pivotalB' }],
+              },
+            },
           },
         },
       },
@@ -574,7 +620,9 @@ describe('legalMoves', () => {
       ...createState(),
       activePlayer: asPlayerId(1),
       actionUsage: {},
-      turnFlow: {
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
         factionOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },
         currentCard: {
@@ -584,6 +632,8 @@ describe('legalMoves', () => {
           passedFactions: [],
           nonPassCount: 0,
           firstActionClass: null,
+        },
+        pendingEligibilityOverrides: [],
         },
       },
     };

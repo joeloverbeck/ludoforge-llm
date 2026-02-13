@@ -10,6 +10,7 @@ import {
   type GameDef,
   type Move,
 } from '../../src/kernel/index.js';
+import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const createDef = (): GameDef =>
   ({
@@ -29,24 +30,29 @@ const createDef = (): GameDef =>
       { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },
       { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
     ],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-    turnFlow: {
-      cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-      eligibility: { factions: ['0', '1'], overrideWindows: [] },
-      optionMatrix: [],
-      passRewards: [],
-      durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
-      monsoon: {
-        restrictedActions: [
-          { actionId: 'sweep' },
-          { actionId: 'airLift', maxParam: { name: 'spaces', max: 2 } },
-        ],
-        blockPivotal: true,
-        pivotalOverrideToken: 'monsoonPivotalAllowed',
-      },
-      pivotal: {
-        actionIds: ['pivotalEvent'],
-        requirePreActionWindow: true,
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: { factions: ['0', '1'], overrideWindows: [] },
+          optionMatrix: [],
+          passRewards: [],
+          durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          monsoon: {
+            restrictedActions: [
+              { actionId: 'sweep' },
+              { actionId: 'airLift', maxParam: { name: 'spaces', max: 2 } },
+            ],
+            blockPivotal: true,
+            pivotalOverrideToken: 'monsoonPivotalAllowed',
+          },
+          pivotal: {
+            actionIds: ['pivotalEvent'],
+            requirePreActionWindow: true,
+          },
+        },
       },
     },
     actions: [
@@ -127,6 +133,6 @@ describe('FITL monsoon/pivotal windows integration', () => {
 
     const actions = legalMoves(def, afterFirst.state).map((move: Move) => move.actionId);
     assert.equal(actions.includes(asActionId('pivotalEvent')), false);
-    assert.equal(afterFirst.state.turnFlow?.currentCard.nonPassCount, 1);
+    assert.equal(requireCardDrivenRuntime(afterFirst.state).currentCard.nonPassCount, 1);
   });
 });

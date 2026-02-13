@@ -11,6 +11,12 @@ interface LifecycleResult {
   readonly traceEntries: readonly TriggerLogEntry[];
 }
 
+const cardDrivenConfig = (def: GameDef) =>
+  def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
+
+const cardDrivenRuntime = (state: GameState) =>
+  state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
+
 const topCardId = (state: GameState, zoneId: string): string | null => state.zones[zoneId]?.[0]?.id ?? null;
 
 const snapshot = (state: GameState, slots: LifecycleSlots) => ({
@@ -36,7 +42,7 @@ const pushLifecycleEntry = (
 };
 
 const resolveLifecycleSlots = (def: GameDef, state: GameState): LifecycleSlots | null => {
-  const cardLifecycle = def.turnFlow?.cardLifecycle;
+  const cardLifecycle = cardDrivenConfig(def)?.turnFlow.cardLifecycle;
   if (cardLifecycle === undefined) {
     return null;
   }
@@ -132,16 +138,19 @@ const prependToken = (state: GameState, zoneId: string, token: Token): GameState
 const isCoupCard = (token: Token): boolean => token.props.isCoup === true;
 
 const withConsecutiveCoupRounds = (state: GameState, rounds: number): GameState => {
-  const runtime = state.turnFlow;
-  if (runtime === undefined || runtime.consecutiveCoupRounds === rounds) {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null || runtime.consecutiveCoupRounds === rounds) {
     return state;
   }
 
   return {
     ...state,
-    turnFlow: {
-      ...runtime,
-      consecutiveCoupRounds: rounds,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: {
+        ...runtime,
+        consecutiveCoupRounds: rounds,
+      },
     },
   };
 };
@@ -191,8 +200,8 @@ export const applyTurnFlowCardBoundary = (def: GameDef, state: GameState): Lifec
   let nextState = state;
   const removed = popTopToken(nextState, slots.played);
   nextState = removed.state;
-  const maxConsecutiveRounds = def.coupPlan?.maxConsecutiveRounds;
-  const previousConsecutiveCoupRounds = state.turnFlow?.consecutiveCoupRounds ?? 0;
+  const maxConsecutiveRounds = cardDrivenConfig(def)?.coupPlan?.maxConsecutiveRounds;
+  const previousConsecutiveCoupRounds = cardDrivenRuntime(state)?.consecutiveCoupRounds ?? 0;
   const canRunCoupHandoff =
     removed.popped !== null &&
     isCoupCard(removed.popped) &&

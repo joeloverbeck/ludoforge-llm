@@ -10,8 +10,9 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
   const actionTargets = collectIdentifierTargets(sections.actions?.map((action) => action.id));
   const zoneTargets = collectIdentifierTargets(sections.zones?.map((zone) => zone.id));
   const tokenTypeTargets = collectIdentifierTargets(sections.tokenTypes?.map((tokenType) => tokenType.id));
-  const factionTargets = collectIdentifierTargets(sections.turnFlow?.eligibility.factions);
-  const windowTargets = collectIdentifierTargets(sections.turnFlow?.eligibility.overrideWindows.map((window) => window.id));
+  const cardDrivenTurnFlow = sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow : null;
+  const factionTargets = collectIdentifierTargets(cardDrivenTurnFlow?.eligibility.factions);
+  const windowTargets = collectIdentifierTargets(cardDrivenTurnFlow?.eligibility.overrideWindows.map((window) => window.id));
   const globalVarTargets = collectIdentifierTargets(sections.globalVars?.map((globalVar) => globalVar.name));
 
   if (sections.actions !== null && sections.turnStructure !== null) {
@@ -42,7 +43,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     }
   }
 
-  if (sections.actionPipelines !== null && sections.turnFlow !== null) {
+  if (sections.actionPipelines !== null && cardDrivenTurnFlow !== null) {
     for (const [profileIndex, profile] of sections.actionPipelines.entries()) {
       for (const [windowIndex, windowId] of (profile.linkedWindows ?? []).entries()) {
         pushMissingIdentifierDiagnostic(
@@ -92,7 +93,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     }
   }
 
-  if (sections.victory !== null && sections.turnFlow !== null) {
+  if (sections.victory !== null && cardDrivenTurnFlow !== null) {
     for (const [checkpointIndex, checkpoint] of sections.victory.checkpoints.entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
@@ -195,45 +196,45 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     }
   }
 
-  if (sections.turnFlow !== null && sections.zones !== null) {
+  if (cardDrivenTurnFlow !== null && sections.zones !== null) {
     pushMissingIdentifierDiagnostic(
       diagnostics,
       'CNL_XREF_LIFECYCLE_ZONE_MISSING',
-      'doc.turnFlow.cardLifecycle.played',
-      sections.turnFlow.cardLifecycle.played,
+      'doc.turnOrder.config.turnFlow.cardLifecycle.played',
+      cardDrivenTurnFlow.cardLifecycle.played,
       zoneTargets,
-      `turnFlow.cardLifecycle.played references unknown zone "${sections.turnFlow.cardLifecycle.played}".`,
+      `turnOrder.config.turnFlow.cardLifecycle.played references unknown zone "${cardDrivenTurnFlow.cardLifecycle.played}".`,
       'Use one of the declared zone ids.',
     );
     pushMissingIdentifierDiagnostic(
       diagnostics,
       'CNL_XREF_LIFECYCLE_ZONE_MISSING',
-      'doc.turnFlow.cardLifecycle.lookahead',
-      sections.turnFlow.cardLifecycle.lookahead,
+      'doc.turnOrder.config.turnFlow.cardLifecycle.lookahead',
+      cardDrivenTurnFlow.cardLifecycle.lookahead,
       zoneTargets,
-      `turnFlow.cardLifecycle.lookahead references unknown zone "${sections.turnFlow.cardLifecycle.lookahead}".`,
+      `turnOrder.config.turnFlow.cardLifecycle.lookahead references unknown zone "${cardDrivenTurnFlow.cardLifecycle.lookahead}".`,
       'Use one of the declared zone ids.',
     );
     pushMissingIdentifierDiagnostic(
       diagnostics,
       'CNL_XREF_LIFECYCLE_ZONE_MISSING',
-      'doc.turnFlow.cardLifecycle.leader',
-      sections.turnFlow.cardLifecycle.leader,
+      'doc.turnOrder.config.turnFlow.cardLifecycle.leader',
+      cardDrivenTurnFlow.cardLifecycle.leader,
       zoneTargets,
-      `turnFlow.cardLifecycle.leader references unknown zone "${sections.turnFlow.cardLifecycle.leader}".`,
+      `turnOrder.config.turnFlow.cardLifecycle.leader references unknown zone "${cardDrivenTurnFlow.cardLifecycle.leader}".`,
       'Use one of the declared zone ids.',
     );
   }
 
-  if (sections.turnFlow !== null && sections.globalVars !== null) {
-    for (const [rewardIndex, reward] of sections.turnFlow.passRewards.entries()) {
+  if (cardDrivenTurnFlow !== null && sections.globalVars !== null) {
+    for (const [rewardIndex, reward] of cardDrivenTurnFlow.passRewards.entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
         'CNL_XREF_REWARD_VAR_MISSING',
-        `doc.turnFlow.passRewards.${rewardIndex}.resource`,
+        `doc.turnOrder.config.turnFlow.passRewards.${rewardIndex}.resource`,
         reward.resource,
         globalVarTargets,
-        `turnFlow.passRewards[${rewardIndex}] references unknown global var "${reward.resource}".`,
+        `turnOrder.config.turnFlow.passRewards[${rewardIndex}] references unknown global var "${reward.resource}".`,
         'Use one of the declared globalVars names.',
       );
     }

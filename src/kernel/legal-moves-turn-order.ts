@@ -1,9 +1,15 @@
 import { resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
 import type { GameDef, GameState, Move, MoveParamValue } from './types.js';
 
+const cardDrivenConfig = (def: GameDef) =>
+  def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
+
+const cardDrivenRuntime = (state: GameState) =>
+  state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
+
 export function isMoveAllowedByTurnFlowOptionMatrix(def: GameDef, state: GameState, move: Move): boolean {
-  const runtime = state.turnFlow;
-  if (runtime === undefined) {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
     return true;
   }
 
@@ -17,7 +23,7 @@ export function isMoveAllowedByTurnFlowOptionMatrix(def: GameDef, state: GameSta
     return true;
   }
 
-  const row = def.turnFlow?.optionMatrix.find((matrixRow) => matrixRow.first === firstActionClass);
+  const row = cardDrivenConfig(def)?.turnFlow.optionMatrix.find((matrixRow) => matrixRow.first === firstActionClass);
   if (row === undefined || moveClass === null) {
     return row === undefined;
   }
@@ -43,7 +49,7 @@ function hasOverrideToken(move: Move, token: string | undefined): boolean {
 }
 
 function isLookaheadCardCoup(def: GameDef, state: GameState): boolean {
-  const lookaheadZone = def.turnFlow?.cardLifecycle.lookahead;
+  const lookaheadZone = cardDrivenConfig(def)?.turnFlow.cardLifecycle.lookahead;
   if (lookaheadZone === undefined) {
     return false;
   }
@@ -69,7 +75,7 @@ function resolveInterruptWinnerFaction(
   state: GameState,
   precedence: readonly string[],
 ): string | null {
-  const currentCard = state.turnFlow?.currentCard;
+  const currentCard = cardDrivenRuntime(state)?.currentCard;
   if (currentCard === undefined) {
     return null;
   }
@@ -94,14 +100,14 @@ function toConstrainedNumericValue(paramValue: MoveParamValue | undefined): numb
 }
 
 export function applyTurnFlowWindowFilters(def: GameDef, state: GameState, moves: readonly Move[]): readonly Move[] {
-  const turnFlow = def.turnFlow;
+  const turnFlow = cardDrivenConfig(def)?.turnFlow;
   if (turnFlow === undefined) {
     return moves;
   }
 
   const monsoonActive = turnFlow.monsoon !== undefined && isLookaheadCardCoup(def, state);
   const pivotalActionIds = new Set(turnFlow.pivotal?.actionIds ?? []);
-  const inPreActionWindow = (state.turnFlow?.currentCard.nonPassCount ?? 0) === 0;
+  const inPreActionWindow = (cardDrivenRuntime(state)?.currentCard.nonPassCount ?? 0) === 0;
   const activeFaction = String(state.activePlayer);
   const precedence = turnFlow.pivotal?.interrupt?.precedence ?? [];
   const interruptWinnerFaction =

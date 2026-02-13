@@ -12,7 +12,7 @@ describe('compiler structured section results', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'asset-cascade', players: { min: 2, max: 2 } },
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }] as const,
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' } as const,
+      turnStructure: { phases: [{ id: 'main' }] } as const,
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }] as const,
       endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] as const,
     };
@@ -46,7 +46,7 @@ describe('compiler structured section results', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'broken-actions', players: { min: 2, max: 2 } },
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: 'main' }] },
       actions: [
         { id: 'bad', actor: 42, phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
@@ -65,7 +65,7 @@ describe('compiler structured section results', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: 'main' }] },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
     };
@@ -165,9 +165,8 @@ describe('compiler structured section results', () => {
       'tokenTypes',
       'setup',
       'turnStructure',
-      'turnFlow',
+      'turnOrder',
       'actionPipelines',
-      'coupPlan',
       'victory',
       'actions',
       'triggers',
@@ -193,9 +192,8 @@ describe('compiler structured section results', () => {
       | 'tokenTypes'
       | 'setup'
       | 'turnStructure'
-      | 'turnFlow'
+      | 'turnOrder'
       | 'actionPipelines'
-      | 'coupPlan'
       | 'victory'
       | 'actions'
       | 'triggers'

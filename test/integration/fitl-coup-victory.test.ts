@@ -36,7 +36,8 @@ describe('FITL coup victory integration', () => {
       def.zones.map((zone) => String(zone.id)),
       ['hue:none', 'quang-tri:none'],
     );
-    assert.equal(def.coupPlan?.phases[0]?.id, 'victory');
+    assert.equal(def.turnOrder?.type, 'cardDriven');
+    assert.equal(def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config.coupPlan?.phases[0]?.id : undefined, 'victory');
     assert.equal(def.victory?.checkpoints[0]?.id, 'us-threshold');
     assert.deepEqual(terminal, {
       type: 'win',

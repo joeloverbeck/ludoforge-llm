@@ -11,6 +11,7 @@ import {
   type GameDef,
   type Move,
 } from '../../src/kernel/index.js';
+import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const createDef = (): GameDef =>
   ({
@@ -21,17 +22,22 @@ const createDef = (): GameDef =>
     zones: [],
     tokenTypes: [],
     setup: [],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-    turnFlow: {
-      cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-      eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
-      optionMatrix: [
-        { first: 'event', second: ['operation', 'operationPlusSpecialActivity'] },
-        { first: 'operation', second: ['limitedOperation'] },
-        { first: 'operationPlusSpecialActivity', second: ['limitedOperation', 'event'] },
-      ],
-      passRewards: [],
-      durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: { factions: ['0', '1', '2'], overrideWindows: [] },
+          optionMatrix: [
+            { first: 'event', second: ['operation', 'operationPlusSpecialActivity'] },
+            { first: 'operation', second: ['limitedOperation'] },
+            { first: 'operationPlusSpecialActivity', second: ['limitedOperation', 'event'] },
+          ],
+          passRewards: [],
+          durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+        },
+      },
     },
     actions: [
       {
@@ -97,7 +103,7 @@ describe('FITL option matrix integration', () => {
     const afterFirst = applyMove(def, start, firstMove).state;
 
     assert.equal(afterFirst.activePlayer, asPlayerId(1));
-    assert.equal(afterFirst.turnFlow?.currentCard.firstActionClass, 'event');
+    assert.equal(requireCardDrivenRuntime(afterFirst).currentCard.firstActionClass, 'event');
     assert.deepEqual(
       legalMoves(def, afterFirst).map((move) => move.actionId),
       [asActionId('pass'), asActionId('operation'), asActionId('operationPlusSpecialActivity')],
@@ -111,7 +117,7 @@ describe('FITL option matrix integration', () => {
     const afterFirst = applyMove(def, start, firstMove).state;
 
     assert.equal(afterFirst.activePlayer, asPlayerId(1));
-    assert.equal(afterFirst.turnFlow?.currentCard.firstActionClass, 'operation');
+    assert.equal(requireCardDrivenRuntime(afterFirst).currentCard.firstActionClass, 'operation');
     assert.deepEqual(
       legalMoves(def, afterFirst).map((move) => move.actionId),
       [asActionId('pass'), asActionId('limitedOperation')],
@@ -125,7 +131,7 @@ describe('FITL option matrix integration', () => {
     const afterFirst = applyMove(def, start, firstMove).state;
 
     assert.equal(afterFirst.activePlayer, asPlayerId(1));
-    assert.equal(afterFirst.turnFlow?.currentCard.firstActionClass, 'operationPlusSpecialActivity');
+    assert.equal(requireCardDrivenRuntime(afterFirst).currentCard.firstActionClass, 'operationPlusSpecialActivity');
     assert.deepEqual(
       legalMoves(def, afterFirst).map((move) => move.actionId),
       [asActionId('pass'), asActionId('event'), asActionId('limitedOperation')],

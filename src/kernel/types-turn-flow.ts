@@ -76,6 +76,17 @@ export interface TurnFlowDef {
   readonly pivotal?: TurnFlowPivotalDef;
 }
 
+export interface CardDrivenTurnOrderConfig {
+  readonly turnFlow: TurnFlowDef;
+  readonly coupPlan?: CoupPlanDef;
+}
+
+export type TurnOrderStrategy =
+  | { readonly type: 'roundRobin' }
+  | { readonly type: 'fixedOrder'; readonly order: readonly string[] }
+  | { readonly type: 'cardDriven'; readonly config: CardDrivenTurnOrderConfig }
+  | { readonly type: 'simultaneous' };
+
 export interface CoupPlanPhaseDef {
   readonly id: string;
   readonly steps: readonly string[];
@@ -116,6 +127,12 @@ export interface TurnFlowRuntimeState {
   readonly consecutiveCoupRounds?: number;
   readonly compoundAction?: CompoundActionState;
 }
+
+export type TurnOrderRuntimeState =
+  | { readonly type: 'roundRobin' }
+  | { readonly type: 'fixedOrder'; readonly currentIndex: number }
+  | { readonly type: 'cardDriven'; readonly runtime: TurnFlowRuntimeState }
+  | { readonly type: 'simultaneous'; readonly submitted: Readonly<Record<string, boolean>> };
 
 export type TurnFlowLifecycleStep =
   | 'initialRevealPlayed'

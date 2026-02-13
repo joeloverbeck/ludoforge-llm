@@ -51,7 +51,9 @@ function scoreRanking(def: GameDef, adjacencyGraph: AdjacencyGraph, state: GameS
 }
 
 function resolveFactionPlayer(state: GameState, faction: string): ReturnType<typeof asPlayerId> | null {
-  const fromOrder = state.turnFlow?.factionOrder.indexOf(faction) ?? -1;
+  const fromOrder = state.turnOrderState.type === 'cardDriven'
+    ? state.turnOrderState.runtime.factionOrder.indexOf(faction)
+    : -1;
   if (fromOrder >= 0 && fromOrder < state.playerCount) {
     return asPlayerId(fromOrder);
   }

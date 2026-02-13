@@ -22,13 +22,18 @@ const createLifecycleDef = (): GameDef =>
       { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },
       { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
     ],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-    turnFlow: {
-      cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-      eligibility: { factions: [], overrideWindows: [] },
-      optionMatrix: [],
-      passRewards: [],
-      durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: { factions: [], overrideWindows: [] },
+          optionMatrix: [],
+          passRewards: [],
+          durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+        },
+      },
     },
     actions: [
       {
@@ -78,6 +83,13 @@ describe('FITL card lifecycle integration', () => {
 
   it('enforces coupPlan.maxConsecutiveRounds by suppressing repeated coup handoffs', () => {
     const baseDef = createLifecycleDef();
+    assert.equal(baseDef.turnOrder?.type, 'cardDriven');
+    const baseTurnOrderConfig =
+      baseDef.turnOrder?.type === 'cardDriven'
+        ? baseDef.turnOrder.config
+        : (() => {
+            throw new Error('Expected cardDriven turnOrder in lifecycle fixture');
+          })();
     const def: GameDef = {
       ...baseDef,
       setup: [
@@ -86,9 +98,15 @@ describe('FITL card lifecycle integration', () => {
         { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },
         { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
       ],
-      coupPlan: {
-        phases: [{ id: 'victory', steps: ['check-thresholds'] }],
-        maxConsecutiveRounds: 1,
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          ...baseTurnOrderConfig,
+          coupPlan: {
+            phases: [{ id: 'victory', steps: ['check-thresholds'] }],
+            maxConsecutiveRounds: 1,
+          },
+        },
       },
     };
 

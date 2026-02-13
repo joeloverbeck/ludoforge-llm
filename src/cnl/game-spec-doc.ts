@@ -29,8 +29,34 @@ export interface GameSpecTokenTypeDef {
 
 export interface GameSpecTurnStructure {
   readonly phases: readonly GameSpecPhaseDef[];
-  readonly activePlayerOrder: string;
 }
+
+export interface GameSpecFixedOrderTurnOrder {
+  readonly type: 'fixedOrder';
+  readonly order: readonly string[];
+}
+
+export interface GameSpecCardDrivenTurnOrder {
+  readonly type: 'cardDriven';
+  readonly config: {
+    readonly turnFlow: GameSpecTurnFlow;
+    readonly coupPlan?: GameSpecCoupPlan;
+  };
+}
+
+export interface GameSpecRoundRobinTurnOrder {
+  readonly type: 'roundRobin';
+}
+
+export interface GameSpecSimultaneousTurnOrder {
+  readonly type: 'simultaneous';
+}
+
+export type GameSpecTurnOrder =
+  | GameSpecRoundRobinTurnOrder
+  | GameSpecFixedOrderTurnOrder
+  | GameSpecCardDrivenTurnOrder
+  | GameSpecSimultaneousTurnOrder;
 
 export interface GameSpecPhaseDef {
   readonly id: string;
@@ -219,9 +245,8 @@ export interface GameSpecDoc {
   readonly tokenTypes: readonly GameSpecTokenTypeDef[] | null;
   readonly setup: readonly GameSpecEffect[] | null;
   readonly turnStructure: GameSpecTurnStructure | null;
-  readonly turnFlow: GameSpecTurnFlow | null;
+  readonly turnOrder: GameSpecTurnOrder | null;
   readonly actionPipelines: readonly GameSpecActionPipelineDef[] | null;
-  readonly coupPlan: GameSpecCoupPlan | null;
   readonly victory: GameSpecVictory | null;
   readonly actions: readonly GameSpecActionDef[] | null;
   readonly triggers: readonly GameSpecTriggerDef[] | null;
@@ -240,9 +265,8 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     tokenTypes: null,
     setup: null,
     turnStructure: null,
-    turnFlow: null,
+    turnOrder: null,
     actionPipelines: null,
-    coupPlan: null,
     victory: null,
     actions: null,
     triggers: null,

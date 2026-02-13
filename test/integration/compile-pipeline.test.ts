@@ -21,7 +21,7 @@ describe('compile pipeline integration', () => {
         { id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' },
         { id: 'hand', owner: 'player', visibility: 'owner', ordering: 'set' },
       ],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: 'main' }] },
       actions: [
         {
           id: 'drawEach',
@@ -50,7 +50,7 @@ describe('compile pipeline integration', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'pipeline-adjacency-error', players: { min: 2, max: 2 } },
       zones: [{ id: 'board', owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: ['missing-zone'] }],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: 'main' }] },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
     };
@@ -101,7 +101,11 @@ describe('compile pipeline integration', () => {
       compiled.gameDef?.zones.map((zone) => String(zone.id)),
       ['hue:none', 'quang-tri:none'],
     );
-    assert.equal(compiled.gameDef?.coupPlan?.phases[0]?.id, 'victory');
+    assert.equal(compiled.gameDef?.turnOrder?.type, 'cardDriven');
+    assert.equal(
+      compiled.gameDef?.turnOrder?.type === 'cardDriven' ? compiled.gameDef.turnOrder.config.coupPlan?.phases[0]?.id : undefined,
+      'victory',
+    );
     assert.equal(compiled.gameDef?.victory?.checkpoints[0]?.id, 'us-threshold');
   });
 
@@ -139,7 +143,6 @@ describe('compile pipeline integration', () => {
       'turnStructure:',
       '  phases:',
       '    - id: main',
-      '  activePlayerOrder: roundRobin',
       'actions:',
       '  - id: pass',
       '    actor: active',
@@ -205,7 +208,6 @@ describe('compile pipeline integration', () => {
       'turnStructure:',
       '  phases:',
       '    - id: main',
-      '  activePlayerOrder: roundRobin',
       'actions:',
       '  - id: pass',
       '    actor: active',
@@ -276,7 +278,6 @@ describe('compile pipeline integration', () => {
       'turnStructure:',
       '  phases:',
       '    - id: main',
-      '  activePlayerOrder: roundRobin',
       'actions:',
       '  - id: pass',
       '    actor: active',
@@ -357,7 +358,6 @@ describe('compile pipeline integration', () => {
       'turnStructure:',
       '  phases:',
       '    - id: main',
-      '  activePlayerOrder: roundRobin',
       'actions:',
       '  - id: pass',
       '    actor: active',
@@ -418,7 +418,6 @@ describe('compile pipeline integration', () => {
       'turnStructure:',
       '  phases:',
       '    - id: main',
-      '  activePlayerOrder: roundRobin',
       'actions:',
       '  - id: pass',
       '    actor: active',

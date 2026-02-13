@@ -267,11 +267,28 @@ export const CoupPlanPhaseSchema = z
 
 export const CoupPlanSchema = z
   .object({
-    phases: z.array(CoupPlanPhaseSchema),
+    phases: z.array(CoupPlanPhaseSchema).min(1),
     finalRoundOmitPhases: z.array(StringSchema.min(1)).optional(),
     maxConsecutiveRounds: IntegerSchema.min(1).optional(),
   })
   .strict();
+
+export const TurnOrderSchema = z.union([
+  z.object({ type: z.literal('roundRobin') }).strict(),
+  z.object({ type: z.literal('fixedOrder'), order: z.array(StringSchema.min(1)).min(1) }).strict(),
+  z
+    .object({
+      type: z.literal('cardDriven'),
+      config: z
+        .object({
+          turnFlow: TurnFlowSchema,
+          coupPlan: CoupPlanSchema.optional(),
+        })
+        .strict(),
+    })
+    .strict(),
+  z.object({ type: z.literal('simultaneous') }).strict(),
+]);
 
 export const VictoryTimingSchema = z.union([z.literal('duringCoup'), z.literal('finalCoup')]);
 
@@ -345,6 +362,13 @@ export const TurnFlowRuntimeStateSchema = z
       .optional(),
   })
   .strict();
+
+export const TurnOrderRuntimeStateSchema = z.union([
+  z.object({ type: z.literal('roundRobin') }).strict(),
+  z.object({ type: z.literal('fixedOrder'), currentIndex: IntegerSchema.min(0) }).strict(),
+  z.object({ type: z.literal('cardDriven'), runtime: TurnFlowRuntimeStateSchema }).strict(),
+  z.object({ type: z.literal('simultaneous'), submitted: z.record(StringSchema, BooleanSchema) }).strict(),
+]);
 
 export const TurnFlowLifecycleStepSchema = z.union([
   z.literal('initialRevealPlayed'),

@@ -43,7 +43,6 @@ const fullGameDef: GameDef = {
   setup: [{ shuffle: { zone: 'deck:none' } }],
   turnStructure: {
     phases: [{ id: asPhaseId('main'), onEnter: [{ addVar: { scope: 'global', var: 'round', delta: 1 } }] }],
-    activePlayerOrder: 'roundRobin',
   },
   actionPipelines: [
     {
@@ -144,21 +143,24 @@ const validRuntimeTrace: GameTrace = {
     rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 3n] },
     stateHash: 42n,
     actionUsage: {},
-    markers: {},
-    turnFlow: {
-      factionOrder: ['0', '1'],
-      eligibility: { '0': true, '1': true },
-      currentCard: {
-        firstEligible: '0',
-        secondEligible: '1',
-        actedFactions: [],
-        passedFactions: [],
-        nonPassCount: 0,
-        firstActionClass: null,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: {
+        factionOrder: ['0', '1'],
+        eligibility: { '0': true, '1': true },
+        currentCard: {
+          firstEligible: '0',
+          secondEligible: '1',
+          actedFactions: [],
+          passedFactions: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+        pendingEligibilityOverrides: [{ faction: '0', eligible: true, windowId: 'remain-eligible', duration: 'nextCard' }],
+        consecutiveCoupRounds: 0,
       },
-      pendingEligibilityOverrides: [{ faction: '0', eligible: true, windowId: 'remain-eligible', duration: 'nextCard' }],
-      consecutiveCoupRounds: 0,
     },
+    markers: {},
   },
   result: { type: 'draw' },
   turnsCount: 1,

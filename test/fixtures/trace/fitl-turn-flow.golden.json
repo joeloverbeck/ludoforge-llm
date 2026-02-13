@@ -153,31 +153,34 @@
           }
         },
         "markers": {},
-        "turnFlow": {
-          "factionOrder": [
-            "0",
-            "1",
-            "2",
-            "3"
-          ],
-          "eligibility": {
-            "0": true,
-            "1": true,
-            "2": true,
-            "3": true
-          },
-          "pendingEligibilityOverrides": [],
-          "currentCard": {
-            "firstEligible": "1",
-            "secondEligible": "2",
-            "actedFactions": [
-              "0"
+        "turnOrderState": {
+          "type": "cardDriven",
+          "runtime": {
+            "factionOrder": [
+              "0",
+              "1",
+              "2",
+              "3"
             ],
-            "passedFactions": [
-              "0"
-            ],
-            "nonPassCount": 0,
-            "firstActionClass": null
+            "eligibility": {
+              "0": true,
+              "1": true,
+              "2": true,
+              "3": true
+            },
+            "pendingEligibilityOverrides": [],
+            "currentCard": {
+              "firstEligible": "1",
+              "secondEligible": "2",
+              "actedFactions": [
+                "0"
+              ],
+              "passedFactions": [
+                "0"
+              ],
+              "nonPassCount": 0,
+              "firstActionClass": null
+            }
           }
         }
       },
@@ -265,7 +268,7 @@
         },
         "nextTokenOrdinal": 4,
         "currentPhase": "main",
-        "activePlayer": 2,
+        "activePlayer": 1,
         "turnCount": 1,
         "rng": {
           "algorithm": "pcg-dxsm-128",
@@ -284,31 +287,34 @@
           }
         },
         "markers": {},
-        "turnFlow": {
-          "factionOrder": [
-            "0",
-            "1",
-            "2",
-            "3"
-          ],
-          "eligibility": {
-            "0": true,
-            "1": true,
-            "2": true,
-            "3": true
-          },
-          "pendingEligibilityOverrides": [],
-          "currentCard": {
-            "firstEligible": "1",
-            "secondEligible": "2",
-            "actedFactions": [
-              "0"
+        "turnOrderState": {
+          "type": "cardDriven",
+          "runtime": {
+            "factionOrder": [
+              "0",
+              "1",
+              "2",
+              "3"
             ],
-            "passedFactions": [
-              "0"
-            ],
-            "nonPassCount": 0,
-            "firstActionClass": null
+            "eligibility": {
+              "0": true,
+              "1": true,
+              "2": true,
+              "3": true
+            },
+            "pendingEligibilityOverrides": [],
+            "currentCard": {
+              "firstEligible": "1",
+              "secondEligible": "2",
+              "actedFactions": [
+                "0"
+              ],
+              "passedFactions": [
+                "0"
+              ],
+              "nonPassCount": 0,
+              "firstActionClass": null
+            }
           }
         }
       }
@@ -324,7 +330,7 @@
         {
           "kind": "turnFlowEligibility",
           "step": "candidateScan",
-          "faction": "2",
+          "faction": "1",
           "before": {
             "firstEligible": "1",
             "secondEligible": "2",
@@ -338,11 +344,11 @@
             "firstActionClass": null
           },
           "after": {
-            "firstEligible": "1",
+            "firstEligible": "2",
             "secondEligible": "3",
             "actedFactions": [
               "0",
-              "2"
+              "1"
             ],
             "passedFactions": [
               "0"
@@ -354,13 +360,13 @@
         {
           "kind": "turnFlowEligibility",
           "step": "overrideCreate",
-          "faction": "2",
+          "faction": "1",
           "before": {
-            "firstEligible": "1",
+            "firstEligible": "2",
             "secondEligible": "3",
             "actedFactions": [
               "0",
-              "2"
+              "1"
             ],
             "passedFactions": [
               "0"
@@ -369,11 +375,11 @@
             "firstActionClass": "event"
           },
           "after": {
-            "firstEligible": "1",
+            "firstEligible": "2",
             "secondEligible": "3",
             "actedFactions": [
               "0",
-              "2"
+              "1"
             ],
             "passedFactions": [
               "0"
@@ -383,7 +389,7 @@
           },
           "overrides": [
             {
-              "faction": "2",
+              "faction": "1",
               "eligible": true,
               "windowId": "remain-eligible",
               "duration": "nextCard"
@@ -435,7 +441,7 @@
         },
         "nextTokenOrdinal": 4,
         "currentPhase": "main",
-        "activePlayer": 1,
+        "activePlayer": 2,
         "turnCount": 1,
         "rng": {
           "algorithm": "pcg-dxsm-128",
@@ -445,7 +451,7 @@
             "0xda3e39cb94b95b55"
           ]
         },
-        "stateHash": "0xd1de1b28bcbcf098",
+        "stateHash": "0xd1de1828bcbcf6cd",
         "actionUsage": {
           "pass": {
             "turnCount": 0,
@@ -459,39 +465,42 @@
           }
         },
         "markers": {},
-        "turnFlow": {
-          "factionOrder": [
-            "0",
-            "1",
-            "2",
-            "3"
-          ],
-          "eligibility": {
-            "0": true,
-            "1": true,
-            "2": true,
-            "3": true
-          },
-          "pendingEligibilityOverrides": [
-            {
-              "faction": "2",
-              "eligible": true,
-              "windowId": "remain-eligible",
-              "duration": "nextCard"
-            }
-          ],
-          "currentCard": {
-            "firstEligible": "1",
-            "secondEligible": "3",
-            "actedFactions": [
+        "turnOrderState": {
+          "type": "cardDriven",
+          "runtime": {
+            "factionOrder": [
               "0",
-              "2"
+              "1",
+              "2",
+              "3"
             ],
-            "passedFactions": [
-              "0"
+            "eligibility": {
+              "0": true,
+              "1": true,
+              "2": true,
+              "3": true
+            },
+            "pendingEligibilityOverrides": [
+              {
+                "faction": "1",
+                "eligible": true,
+                "windowId": "remain-eligible",
+                "duration": "nextCard"
+              }
             ],
-            "nonPassCount": 1,
-            "firstActionClass": "event"
+            "currentCard": {
+              "firstEligible": "2",
+              "secondEligible": "3",
+              "actedFactions": [
+                "0",
+                "1"
+              ],
+              "passedFactions": [
+                "0"
+              ],
+              "nonPassCount": 1,
+              "firstActionClass": "event"
+            }
           }
         }
       },
@@ -627,7 +636,7 @@
             "0xda3e39cb94b95b55"
           ]
         },
-        "stateHash": "0xd1de1b28bcbcf098",
+        "stateHash": "0xd1de1828bcbcf6cd",
         "actionUsage": {
           "pass": {
             "turnCount": 0,
@@ -641,39 +650,42 @@
           }
         },
         "markers": {},
-        "turnFlow": {
-          "factionOrder": [
-            "0",
-            "1",
-            "2",
-            "3"
-          ],
-          "eligibility": {
-            "0": true,
-            "1": true,
-            "2": true,
-            "3": true
-          },
-          "pendingEligibilityOverrides": [
-            {
-              "faction": "2",
-              "eligible": true,
-              "windowId": "remain-eligible",
-              "duration": "nextCard"
-            }
-          ],
-          "currentCard": {
-            "firstEligible": "1",
-            "secondEligible": "3",
-            "actedFactions": [
+        "turnOrderState": {
+          "type": "cardDriven",
+          "runtime": {
+            "factionOrder": [
               "0",
-              "2"
+              "1",
+              "2",
+              "3"
             ],
-            "passedFactions": [
-              "0"
+            "eligibility": {
+              "0": true,
+              "1": true,
+              "2": true,
+              "3": true
+            },
+            "pendingEligibilityOverrides": [
+              {
+                "faction": "1",
+                "eligible": true,
+                "windowId": "remain-eligible",
+                "duration": "nextCard"
+              }
             ],
-            "nonPassCount": 1,
-            "firstActionClass": "event"
+            "currentCard": {
+              "firstEligible": "2",
+              "secondEligible": "3",
+              "actedFactions": [
+                "0",
+                "1"
+              ],
+              "passedFactions": [
+                "0"
+              ],
+              "nonPassCount": 1,
+              "firstActionClass": "event"
+            }
           }
         }
       }

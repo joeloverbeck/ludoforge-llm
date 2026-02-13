@@ -2726,8 +2726,7 @@ perPlayerVars:
 turnStructure:
   phases:
     - id: main
-  activePlayerOrder: roundRobin
-
+  
 # ══════════════════════════════════════════════════════════════════════════════
 # Actions (stubs — each fallback adds +100 to fallbackUsed for override detection)
 # ══════════════════════════════════════════════════════════════════════════════

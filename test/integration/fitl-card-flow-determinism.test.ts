@@ -16,6 +16,7 @@ import {
   type Move,
 } from '../../src/kernel/index.js';
 import { createEligibilityOverrideDirective, FITL_NO_OVERRIDE } from './fitl-events-test-helpers.js';
+import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const selfOverride = createEligibilityOverrideDirective({
   target: 'self',
@@ -44,16 +45,21 @@ const createDef = (): GameDef =>
       { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
       { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
     ],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-    turnFlow: {
-      cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-      eligibility: {
-        factions: ['0', '1', '2', '3'],
-        overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: {
+            factions: ['0', '1', '2', '3'],
+            overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+          },
+          optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
+          passRewards: [],
+          durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+        },
       },
-      optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
-      passRewards: [],
-      durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
     },
     actions: [
       { id: asActionId('pass'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
@@ -124,7 +130,7 @@ interface FitlEventInitialPackGolden {
   readonly triggerFirings: readonly unknown[];
   readonly postState: {
     readonly globalVars: Readonly<Record<string, number>>;
-    readonly turnFlow: ReturnType<typeof initialState>['turnFlow'];
+    readonly turnFlow: ReturnType<typeof requireCardDrivenRuntime>;
   };
 }
 
@@ -150,16 +156,21 @@ const createEventTraceDef = (): GameDef =>
       { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },
       { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
     ],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-    turnFlow: {
-      cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-      eligibility: {
-        factions: ['0', '1', '2', '3'],
-        overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: {
+            factions: ['0', '1', '2', '3'],
+            overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+          },
+          optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
+          passRewards: [],
+          durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+        },
       },
-      optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
-      passRewards: [],
-      durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
     },
     actionPipelines: [
       {
@@ -299,7 +310,7 @@ describe('FITL card-flow determinism integration', () => {
         triggerFirings: result.triggerFirings,
         postState: {
           globalVars: result.state.globalVars,
-          turnFlow: result.state.turnFlow,
+          turnFlow: requireCardDrivenRuntime(result.state),
         },
       };
     };

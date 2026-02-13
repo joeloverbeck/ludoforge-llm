@@ -149,7 +149,6 @@ const createResourcesFixtureDef = (options: ResourcesFixtureOptions): GameDef =>
     setup,
     turnStructure: {
       phases: [{ id: asPhaseId('main') }, { id: asPhaseId('resources') }],
-      activePlayerOrder: 'roundRobin',
     },
     actions: [
       {

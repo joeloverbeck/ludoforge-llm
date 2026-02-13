@@ -79,6 +79,15 @@ export function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[
   }
 
   validateUnknownKeys(turnStructure, TURN_STRUCTURE_KEYS, 'doc.turnStructure', diagnostics, 'turnStructure');
+  if ('activePlayerOrder' in turnStructure) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_TURN_STRUCTURE_LEGACY_FIELD_UNSUPPORTED',
+      path: 'doc.turnStructure.activePlayerOrder',
+      severity: 'error',
+      message: 'turnStructure.activePlayerOrder is no longer supported.',
+      suggestion: 'Move sequencing to doc.turnOrder and remove activePlayerOrder.',
+    });
+  }
 
   if (!Array.isArray(turnStructure.phases) || turnStructure.phases.length === 0) {
     diagnostics.push({
@@ -108,17 +117,6 @@ export function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[
         collectedPhaseIds.push(phaseId);
       }
     }
-  }
-
-  const activePlayerOrder = turnStructure.activePlayerOrder;
-  if (activePlayerOrder !== 'roundRobin' && activePlayerOrder !== 'fixed') {
-    diagnostics.push({
-      code: 'CNL_VALIDATOR_TURN_STRUCTURE_ORDER_INVALID',
-      path: 'doc.turnStructure.activePlayerOrder',
-      severity: 'error',
-      message: 'turnStructure.activePlayerOrder must be "roundRobin" or "fixed".',
-      suggestion: 'Set activePlayerOrder to "roundRobin" or "fixed".',
-    });
   }
 
   return uniqueSorted(collectedPhaseIds);

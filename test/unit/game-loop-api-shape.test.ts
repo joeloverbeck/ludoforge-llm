@@ -28,7 +28,7 @@ const gameDefStub: GameDef = {
   zones: [],
   tokenTypes: [],
   setup: [],
-  turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+  turnStructure: { phases: [{ id: asPhaseId('main') }] },
   actions: [],
   triggers: [],
   endConditions: [],
@@ -46,6 +46,7 @@ const gameStateStub: GameState = {
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 0n] },
   stateHash: 0n,
   actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
 };
 

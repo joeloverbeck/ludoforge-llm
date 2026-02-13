@@ -13,8 +13,7 @@ zones:
     ordering: ring
 turnStructure:
   phases: []
-  activePlayerOrder: zigzag
-actions:
+  actions:
   - id: draw
     actor: null
     phase: mian

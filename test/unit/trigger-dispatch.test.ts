@@ -30,6 +30,7 @@ const createState = (overrides: Partial<GameState> = {}): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [5n, 9n] },
   stateHash: 0n,
   actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
   ...overrides,
 });
@@ -44,7 +45,7 @@ describe('dispatchTriggers', () => {
       zones: [{ id: asZoneId('a:none'), owner: 'none', visibility: 'public', ordering: 'stack' }],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actions: [],
       triggers: [],
       endConditions: [],
@@ -74,7 +75,7 @@ describe('dispatchTriggers', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actions: [],
       triggers: [
         {
@@ -133,7 +134,7 @@ describe('dispatchTriggers', () => {
       ],
       tokenTypes: [{ id: 'card', props: {} }],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actions: [],
       triggers: [
         {
@@ -195,7 +196,7 @@ describe('dispatchTriggers', () => {
       ],
       tokenTypes: [{ id: 'card', props: {} }],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actions: [],
       triggers: [
         {

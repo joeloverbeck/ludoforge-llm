@@ -10,8 +10,7 @@
   "tokenTypes": [{ "id": "card", "props": {} }],
   "setup": [{ "shuffle": { "zone": "deck:none" } }],
   "turnStructure": {
-    "phases": [{ "id": "main" }],
-    "activePlayerOrder": "roundRobin"
+    "phases": [{ "id": "main" }]
   },
   "actions": [
     {

@@ -1,8 +1,5 @@
 {
-  "globalVars": {
-    "insurgentPassReward": 0,
-    "coinPassReward": 0
-  },
+  "globalVars": {},
   "perPlayerVars": {
     "0": {},
     "1": {}
@@ -24,30 +21,10 @@
       "0xda3e39cb94b95bf9"
     ]
   },
-  "stateHash": "0xe2cbdb795863e92d",
+  "stateHash": "0x923045bcd6a462e9",
   "actionUsage": {},
   "markers": {},
-  "turnFlow": {
-    "factionOrder": [
-      "0",
-      "1",
-      "2",
-      "3"
-    ],
-    "eligibility": {
-      "0": true,
-      "1": true,
-      "2": true,
-      "3": true
-    },
-    "pendingEligibilityOverrides": [],
-    "currentCard": {
-      "firstEligible": "0",
-      "secondEligible": "1",
-      "actedFactions": [],
-      "passedFactions": [],
-      "nonPassCount": 0,
-      "firstActionClass": null
-    }
+  "turnOrderState": {
+    "type": "roundRobin"
   }
 }

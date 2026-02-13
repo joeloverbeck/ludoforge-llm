@@ -21,7 +21,7 @@ const minimalGameDef = {
   zones: [],
   tokenTypes: [],
   setup: [],
-  turnStructure: { phases: [], activePlayerOrder: 'roundRobin' },
+  turnStructure: { phases: [] },
   actions: [],
   triggers: [],
   endConditions: [],
@@ -46,17 +46,26 @@ const fullGameDef = {
   setup: [{ shuffle: { zone: 'deck:none' } }],
   turnStructure: {
     phases: [{ id: 'main', onEnter: [{ addVar: { scope: 'global', var: 'round', delta: 1 } }] }],
-    activePlayerOrder: 'roundRobin',
   },
-  turnFlow: {
-    cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-    eligibility: {
-      factions: ['us', 'arvn', 'nva', 'vc'],
-      overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+  turnOrder: {
+    type: 'cardDriven',
+    config: {
+      turnFlow: {
+        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        eligibility: {
+          factions: ['us', 'arvn', 'nva', 'vc'],
+          overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+        },
+        optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
+        passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: 3 }],
+        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      },
+      coupPlan: {
+        phases: [{ id: 'victory', steps: ['check-thresholds'] }],
+        finalRoundOmitPhases: ['victory'],
+        maxConsecutiveRounds: 1,
+      },
     },
-    optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
-    passRewards: [{ factionClass: 'coin', resource: 'arvnResources', amount: 3 }],
-    durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
   },
   actionPipelines: [
     {
@@ -70,11 +79,6 @@ const fullGameDef = {
       linkedWindows: ['window-a'],
     },
   ],
-  coupPlan: {
-    phases: [{ id: 'victory', steps: ['check-thresholds'] }],
-    finalRoundOmitPhases: ['victory'],
-    maxConsecutiveRounds: 1,
-  },
   victory: {
     checkpoints: [
       { id: 'us-threshold', faction: 'us', timing: 'duringCoup', when: { op: '>', left: 51, right: 50 } },
@@ -117,6 +121,7 @@ const validGameState = {
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 3n] },
   stateHash: 42n,
   actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
 } as const;
 
@@ -311,11 +316,33 @@ describe('top-level runtime schemas', () => {
   it('fails on invalid coupPlan.maxConsecutiveRounds path', () => {
     const result = GameDefSchema.safeParse({
       ...minimalGameDef,
-      coupPlan: { phases: [{ id: 'victory', steps: ['check-thresholds'] }], maxConsecutiveRounds: 0 },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: fullGameDef.turnOrder.config.turnFlow,
+          coupPlan: { phases: [{ id: 'victory', steps: ['check-thresholds'] }], maxConsecutiveRounds: 0 },
+        },
+      },
     });
 
     assert.equal(result.success, false);
-    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'coupPlan.maxConsecutiveRounds'));
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'turnOrder.config.coupPlan.maxConsecutiveRounds'));
+  });
+
+  it('fails on empty coupPlan.phases path', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: fullGameDef.turnOrder.config.turnFlow,
+          coupPlan: { phases: [] },
+        },
+      },
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'turnOrder.config.coupPlan.phases'));
   });
 
   it('fails on missing metadata with path metadata', () => {
@@ -326,7 +353,7 @@ describe('top-level runtime schemas', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [] },
       actions: [],
       triggers: [],
       endConditions: [],
@@ -346,17 +373,23 @@ describe('top-level runtime schemas', () => {
     assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'globalVars.0.init'));
   });
 
-  it('fails on invalid turnFlow duration with actionable nested path', () => {
+  it('fails on invalid turnOrder turnFlow duration with actionable nested path', () => {
     const result = GameDefSchema.safeParse({
       ...fullGameDef,
-      turnFlow: {
-        ...fullGameDef.turnFlow,
-        durationWindows: ['card', 'season'],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          ...fullGameDef.turnOrder.config,
+          turnFlow: {
+            ...fullGameDef.turnOrder.config.turnFlow,
+            durationWindows: ['card', 'season'],
+          },
+        },
       },
     });
 
     assert.equal(result.success, false);
-    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'turnFlow.durationWindows.1'));
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'turnOrder'));
   });
 
   it('fails on invalid actionPipelines atomicity mode with actionable nested path', () => {

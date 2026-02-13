@@ -71,26 +71,28 @@ globalVars:
 turnStructure:
   phases:
     - id: main
-  activePlayerOrder: roundRobin
-turnFlow:
-  cardLifecycle:
-    played: hue:none
-    lookahead: quang-tri:none
-    leader: hue:none
-  eligibility:
-    factions: [us, nva]
-    overrideWindows: []
-  optionMatrix: []
-  passRewards: []
-  durationWindows: [card, nextCard, coup, campaign]
-coupPlan:
-  phases:
-    - id: victory
-      steps: [check-thresholds]
-    - id: resources
-      steps: [compute-income]
-  finalRoundOmitPhases: [resources]
-  maxConsecutiveRounds: 1
+turnOrder:
+  type: cardDriven
+  config:
+    turnFlow:
+      cardLifecycle:
+        played: hue:none
+        lookahead: quang-tri:none
+        leader: hue:none
+      eligibility:
+        factions: [us, nva]
+        overrideWindows: []
+      optionMatrix: []
+      passRewards: []
+      durationWindows: [card, nextCard, coup, campaign]
+    coupPlan:
+      phases:
+        - id: victory
+          steps: [check-thresholds]
+        - id: resources
+          steps: [compute-income]
+      finalRoundOmitPhases: [resources]
+      maxConsecutiveRounds: 1
 victory:
   checkpoints:
     - id: us-threshold

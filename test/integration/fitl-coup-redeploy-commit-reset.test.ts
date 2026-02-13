@@ -9,6 +9,7 @@ import {
   type GameDef,
   type TriggerLogEntry,
 } from '../../src/kernel/index.js';
+import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 interface CoupFixtureOptions {
   readonly isFinalCoup: boolean;
@@ -143,14 +144,18 @@ const createRedeployCommitResetDef = (options: CoupFixtureOptions): GameDef => {
         { id: asPhaseId('commitment') },
         { id: asPhaseId('reset') },
       ],
-      activePlayerOrder: 'roundRobin',
     },
-    turnFlow: {
-      cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-      eligibility: { factions: ['0', '1'], overrideWindows: [] },
-      optionMatrix: [],
-      passRewards: [],
-      durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: { factions: ['0', '1'], overrideWindows: [] },
+          optionMatrix: [],
+          passRewards: [],
+          durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+        },
+      },
     },
     actions: [
       {
@@ -214,9 +219,9 @@ describe('FITL coup redeploy/commitment/reset integration', () => {
 
     assert.equal(nextTurn.currentPhase, asPhaseId('main'));
     assert.equal(nextTurn.turnCount, 1);
-    assert.equal(nextTurn.turnFlow?.currentCard.nonPassCount, 0);
-    assert.equal(nextTurn.turnFlow?.currentCard.firstActionClass, null);
-    assert.deepEqual(nextTurn.turnFlow?.eligibility, { '0': true, '1': true });
+    assert.equal(requireCardDrivenRuntime(nextTurn).currentCard.nonPassCount, 0);
+    assert.equal(requireCardDrivenRuntime(nextTurn).currentCard.firstActionClass, null);
+    assert.deepEqual(requireCardDrivenRuntime(nextTurn).eligibility, { '0': true, '1': true });
 
     const lifecycleSteps = lifecycleLog
       .filter((entry) => entry.kind === 'turnFlowLifecycle')

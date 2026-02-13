@@ -8,9 +8,8 @@ export const CANONICAL_SECTION_KEYS = [
   'tokenTypes',
   'setup',
   'turnStructure',
-  'turnFlow',
+  'turnOrder',
   'actionPipelines',
-  'coupPlan',
   'victory',
   'actions',
   'triggers',
@@ -140,14 +139,11 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isTurnStructureShape(value)) {
     matches.push('turnStructure');
   }
-  if (isTurnFlowShape(value)) {
-    matches.push('turnFlow');
+  if (isTurnOrderShape(value)) {
+    matches.push('turnOrder');
   }
-  if (isOperationProfilesShape(value)) {
+  if (isActionPipelinesShape(value)) {
     matches.push('actionPipelines');
-  }
-  if (isCoupPlanShape(value)) {
-    matches.push('coupPlan');
   }
   if (isVictoryShape(value)) {
     matches.push('victory');
@@ -188,16 +184,16 @@ function isConstantsShape(value: Record<string, unknown>): boolean {
 }
 
 function isTurnStructureShape(value: Record<string, unknown>): boolean {
-  return Array.isArray(value.phases) && typeof value.activePlayerOrder === 'string';
+  return Array.isArray(value.phases);
 }
 
-function isTurnFlowShape(value: Record<string, unknown>): boolean {
+function isTurnOrderShape(value: Record<string, unknown>): boolean {
   return (
-    isRecord(value.cardLifecycle) &&
-    isRecord(value.eligibility) &&
-    Array.isArray(value.optionMatrix) &&
-    Array.isArray(value.passRewards) &&
-    Array.isArray(value.durationWindows)
+    typeof value.type === 'string' &&
+    (value.type === 'roundRobin' ||
+      value.type === 'fixedOrder' ||
+      value.type === 'cardDriven' ||
+      value.type === 'simultaneous')
   );
 }
 
@@ -210,19 +206,12 @@ function isDataAssetsShape(value: Record<string, unknown>): boolean {
   );
 }
 
-function isOperationProfilesShape(value: Record<string, unknown>): boolean {
+function isActionPipelinesShape(value: Record<string, unknown>): boolean {
   return (
     Array.isArray(value.actionPipelines) &&
     value.actionPipelines.every(
       (entry) => isRecord(entry) && typeof entry.id === 'string' && typeof entry.actionId === 'string',
     )
-  );
-}
-
-function isCoupPlanShape(value: Record<string, unknown>): boolean {
-  return (
-    Array.isArray(value.phases) &&
-    value.phases.every((entry) => isRecord(entry) && typeof entry.id === 'string' && Array.isArray(entry.steps))
   );
 }
 

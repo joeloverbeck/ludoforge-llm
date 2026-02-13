@@ -16,7 +16,6 @@ zones:
 turnStructure:
   phases:
     - id: main
-  activePlayerOrder: roundRobin
 actions:
   - id: draw
     actor:

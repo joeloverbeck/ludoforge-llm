@@ -33,7 +33,6 @@ const createValidGameDef = (): GameDef =>
     setup: [{ shuffle: { zone: 'deck:none' } }],
     turnStructure: {
       phases: [{ id: 'main' }],
-      activePlayerOrder: 'roundRobin',
     },
     actions: [
       {
@@ -295,10 +294,22 @@ describe('validateGameDef reference checks', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      coupPlan: {
-        phases: [{ id: 'victory', steps: ['check-thresholds'] }],
-        finalRoundOmitPhases: ['resources'],
-        maxConsecutiveRounds: 1,
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+          coupPlan: {
+            phases: [{ id: 'victory', steps: ['check-thresholds'] }],
+            finalRoundOmitPhases: ['resources'],
+            maxConsecutiveRounds: 1,
+          },
+        },
       },
     } as unknown as GameDef;
 
@@ -306,8 +317,36 @@ describe('validateGameDef reference checks', () => {
     assert.ok(
       diagnostics.some(
         (diag) =>
-          diag.code === 'COUP_PLAN_FINAL_ROUND_OMIT_UNKNOWN_PHASE' && diag.path === 'coupPlan.finalRoundOmitPhases[0]',
+          diag.code === 'COUP_PLAN_FINAL_ROUND_OMIT_UNKNOWN_PHASE' &&
+          diag.path === 'turnOrder.config.coupPlan.finalRoundOmitPhases[0]',
       ),
+    );
+  });
+
+  it('reports empty coupPlan phases when coupPlan is declared', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+          coupPlan: {
+            phases: [],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'COUP_PLAN_PHASES_EMPTY' && diag.path === 'turnOrder.config.coupPlan.phases'),
     );
   });
 
@@ -317,13 +356,24 @@ describe('validateGameDef reference checks', () => {
       ...base,
       turnStructure: {
         phases: [{ id: 'operations' }],
-        activePlayerOrder: 'roundRobin',
       },
       actions: [{ ...base.actions[0], phase: 'operations' }],
-      coupPlan: {
-        phases: [{ id: 'victory', steps: ['check-thresholds'] }],
-        finalRoundOmitPhases: ['victory'],
-        maxConsecutiveRounds: 1,
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+          coupPlan: {
+            phases: [{ id: 'victory', steps: ['check-thresholds'] }],
+            finalRoundOmitPhases: ['victory'],
+            maxConsecutiveRounds: 1,
+          },
+        },
       },
     } as unknown as GameDef;
 

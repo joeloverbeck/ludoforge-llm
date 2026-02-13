@@ -25,6 +25,7 @@ const makeState = (zoneIds: readonly string[]): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 2n] },
   stateHash: 0n,
   actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
 });
 
@@ -46,7 +47,7 @@ const makeDef = (id: string, zones: GameDef['zones']): GameDef => ({
   zones,
   tokenTypes: [],
   setup: [],
-  turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+  turnStructure: { phases: [{ id: asPhaseId('main') }] },
   actions: [],
   triggers: [],
   endConditions: [],

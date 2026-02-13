@@ -33,13 +33,19 @@ function createRichCompilableDoc(): GameSpecDoc {
     ],
     tokenTypes: [{ id: 'cube', props: {} }],
     setup: [{ createToken: { type: 'cube', zone: 'discard:none' } }],
-    turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
-    turnFlow: {
-      cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-      eligibility: { factions: ['us', 'arvn'], overrideWindows: [{ id: 'window-a', duration: 'nextCard' as const }] },
-      optionMatrix: [{ first: 'event' as const, second: ['pass' as const] }],
-      passRewards: [{ factionClass: 'coin', resource: 'resources', amount: 2 }],
-      durationWindows: ['card' as const],
+    turnStructure: { phases: [{ id: 'main' }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: { factions: ['us', 'arvn'], overrideWindows: [{ id: 'window-a', duration: 'nextCard' as const }] },
+          optionMatrix: [{ first: 'event' as const, second: ['pass' as const] }],
+          passRewards: [{ factionClass: 'coin', resource: 'resources', amount: 2 }],
+          durationWindows: ['card' as const],
+        },
+        coupPlan: { phases: [{ id: 'main', steps: ['check-thresholds'] }] },
+      },
     },
     actions: [
       {
@@ -66,7 +72,6 @@ function createRichCompilableDoc(): GameSpecDoc {
       },
     ],
     triggers: [{ id: 'on-act', event: { type: 'actionResolved', action: 'act' }, effects: [] }],
-    coupPlan: { phases: [{ id: 'main', steps: ['check-thresholds'] }] },
     victory: {
       checkpoints: [{ id: 'cp-1', faction: 'us', timing: 'duringCoup' as const, when: { op: '==', left: 1, right: 1 } }],
       margins: [{ faction: 'arvn', value: 1 }],
@@ -148,13 +153,24 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
   });
 
-  it('turnFlow.cardLifecycle.played referencing nonexistent zone emits CNL_XREF_LIFECYCLE_ZONE_MISSING', () => {
+  it('turnOrder.config.turnFlow.cardLifecycle.played referencing nonexistent zone emits CNL_XREF_LIFECYCLE_ZONE_MISSING', () => {
     const sections = compileRichSections();
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
     const diagnostics = crossValidateSpec({
       ...sections,
-      turnFlow: {
-        ...sections.turnFlow!,
-        cardLifecycle: { ...sections.turnFlow!.cardLifecycle, played: 'plaeyd:none' },
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            cardLifecycle: {
+              ...turnOrder.config.turnFlow.cardLifecycle,
+              played: 'plaeyd:none',
+            },
+          },
+        },
       },
     });
 
@@ -211,12 +227,22 @@ describe('crossValidateSpec', () => {
 
   it('passRewards referencing nonexistent globalVar emits CNL_XREF_REWARD_VAR_MISSING', () => {
     const sections = compileRichSections();
-    const reward = requireValue(sections.turnFlow?.passRewards[0]);
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const reward = requireValue(
+      turnOrder.config.turnFlow.passRewards[0],
+    );
     const diagnostics = crossValidateSpec({
       ...sections,
-      turnFlow: {
-        ...sections.turnFlow!,
-        passRewards: [{ ...reward, resource: 'resorces' }],
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            passRewards: [{ ...reward, resource: 'resorces' }],
+          },
+        },
       },
     });
 

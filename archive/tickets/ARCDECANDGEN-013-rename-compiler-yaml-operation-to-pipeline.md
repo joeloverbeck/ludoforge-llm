@@ -1,4 +1,5 @@
 # ARCDECANDGEN-013: Rename Compiler + YAML from Operations to Pipelines
+**Status**: ✅ COMPLETED
 
 **Phase**: 4A — part 3 (Unified Action Resolution Pipeline — compiler + YAML layer)
 **Priority**: P1
@@ -40,3 +41,16 @@ Complete the operation → pipeline rename in the compiler and GameSpecDoc layer
 - FITL production spec compiles successfully with renamed YAML
 - `compileProductionSpec()` produces a valid `gameDef` with `actionPipelines` field
 - All FITL integration tests pass
+
+## Outcome
+
+- Completion date: February 13, 2026
+- What changed:
+  - Compiler/GameSpecDoc extension layer and FITL production YAML were renamed from `operationProfiles` to `actionPipelines`.
+  - Field mappings were flattened to pipeline terminology (`legality`, `costValidation`, `costEffects`, `stages`, `atomicity`, `linkedWindows`).
+  - CNL compiler wiring, section identification, and extension validation paths now resolve `actionPipelines`.
+- Deviations from original plan:
+  - None noted in the archived ticket.
+- Verification results:
+  - Archive-time grep check showed no remaining `operationProfiles` references in `src/cnl`, `data/games/fire-in-the-lake.md`, or `test/fixtures`.
+  - Archive-time grep check confirmed `actionPipelines` usage in compiler/doc/validation/section files and FITL YAML.

@@ -246,6 +246,48 @@
         }
       }
     },
+    "turnOrderRuntimeState": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "roundRobin" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "currentIndex"],
+          "properties": {
+            "type": { "const": "fixedOrder" },
+            "currentIndex": { "type": "number" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "runtime"],
+          "properties": {
+            "type": { "const": "cardDriven" },
+            "runtime": { "$ref": "#/definitions/turnFlowRuntimeState" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "submitted"],
+          "properties": {
+            "type": { "const": "simultaneous" },
+            "submitted": {
+              "type": "object",
+              "additionalProperties": { "type": "boolean" }
+            }
+          }
+        }
+      ]
+    },
     "turnFlowLifecycleStep": {
       "enum": [
         "initialRevealPlayed",
@@ -408,6 +450,7 @@
         "rng",
         "stateHash",
         "actionUsage",
+        "turnOrderState",
         "markers"
       ],
       "properties": {
@@ -447,7 +490,7 @@
             "additionalProperties": { "type": "string" }
           }
         },
-        "turnFlow": { "$ref": "#/definitions/turnFlowRuntimeState" }
+        "turnOrderState": { "$ref": "#/definitions/turnOrderRuntimeState" }
       }
     },
     "serializedMoveLog": {

@@ -22,11 +22,10 @@ import type {
   ActionPipelineDef,
 } from './types-operations.js';
 import type {
-  CoupPlanDef,
-  TurnFlowDef,
+  TurnOrderRuntimeState,
+  TurnOrderStrategy,
   TurnFlowEligibilityTraceEntry,
   TurnFlowLifecycleTraceEntry,
-  TurnFlowRuntimeState,
 } from './types-turn-flow.js';
 import type { VictoryDef, VictoryTerminalMetadata } from './types-victory.js';
 
@@ -92,7 +91,6 @@ export interface PhaseDef {
 
 export interface TurnStructure {
   readonly phases: readonly PhaseDef[];
-  readonly activePlayerOrder: 'roundRobin' | 'fixed';
 }
 
 export interface ActionDef {
@@ -151,9 +149,8 @@ export interface GameDef {
   readonly tokenTypes: readonly TokenTypeDef[];
   readonly setup: readonly EffectAST[];
   readonly turnStructure: TurnStructure;
-  readonly turnFlow?: TurnFlowDef;
+  readonly turnOrder?: TurnOrderStrategy;
   readonly actionPipelines?: readonly ActionPipelineDef[];
-  readonly coupPlan?: CoupPlanDef;
   readonly victory?: VictoryDef;
   readonly actions: readonly ActionDef[];
   readonly triggers: readonly TriggerDef[];
@@ -332,7 +329,7 @@ export interface GameState {
   readonly rng: RngState;
   readonly stateHash: bigint;
   readonly actionUsage: Readonly<Record<string, ActionUsageRecord>>;
-  readonly turnFlow?: TurnFlowRuntimeState;
+  readonly turnOrderState: TurnOrderRuntimeState;
   readonly markers: Readonly<Record<string, Readonly<Record<string, string>>>>;
 }
 

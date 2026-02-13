@@ -20,7 +20,7 @@ const createGoldenDef = (): GameDef =>
     zones: [],
     tokenTypes: [],
     setup: [],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
     actions: [
       {
         id: asActionId('boost'),

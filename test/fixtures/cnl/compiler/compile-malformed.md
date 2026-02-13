@@ -14,7 +14,6 @@ zones:
 turnStructure:
   phases:
     - id: main
-  activePlayerOrder: zigzag
 actions:
   - id: draw
     actor:

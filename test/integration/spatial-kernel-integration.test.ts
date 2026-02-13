@@ -33,7 +33,7 @@ const makeRuntimeDef = (): GameDef => ({
   ],
   tokenTypes: [{ id: 'pawn', props: {} }],
   setup: [{ createToken: { type: 'pawn', zone: 'a:none' } }],
-  turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+  turnStructure: { phases: [{ id: asPhaseId('main') }] },
   actions: [
     {
       id: asActionId('step'),
@@ -72,6 +72,7 @@ const makeRuntimeState = (): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [3n, 7n] },
   stateHash: 0n,
   actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
 });
 
@@ -96,7 +97,7 @@ const makeMacroBackedDef = (zones: GameDef['zones']): GameDef => ({
   zones,
   tokenTypes: [],
   setup: [],
-  turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+  turnStructure: { phases: [{ id: asPhaseId('main') }] },
   actions: [],
   triggers: [],
   endConditions: [],

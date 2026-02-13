@@ -10,7 +10,7 @@ function createBaseDoc() {
     ...createEmptyGameSpecDoc(),
     metadata: { id: 'demo', players: { min: 2, max: 4 } },
     zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-    turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+    turnStructure: { phases: [{ id: 'main' }] },
     actions: [
       {
         id: 'draw',

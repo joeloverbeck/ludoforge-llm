@@ -50,8 +50,7 @@ dataAssets:
 turnStructure:
   phases:
     - id: main
-  activePlayerOrder: roundRobin
-globalVars:
+  globalVars:
   - name: insurgentPassReward
     type: int
     init: 0

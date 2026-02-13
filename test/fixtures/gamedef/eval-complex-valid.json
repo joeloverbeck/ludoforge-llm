@@ -11,8 +11,7 @@
   "tokenTypes": [{ "id": "card", "props": { "cost": "int", "vp": "int" } }],
   "setup": [],
   "turnStructure": {
-    "phases": [{ "id": "main" }],
-    "activePlayerOrder": "roundRobin"
+    "phases": [{ "id": "main" }]
   },
   "actions": [],
   "triggers": [],

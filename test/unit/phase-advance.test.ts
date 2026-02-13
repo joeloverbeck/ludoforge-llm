@@ -15,6 +15,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const createBaseDef = (): GameDef =>
   ({
@@ -30,7 +31,6 @@ const createBaseDef = (): GameDef =>
     setup: [],
     turnStructure: {
       phases: [{ id: asPhaseId('p1') }, { id: asPhaseId('p2') }],
-      activePlayerOrder: 'roundRobin',
     },
     actions: [],
     triggers: [],
@@ -51,6 +51,7 @@ const createState = (overrides: Partial<GameState> = {}): GameState => ({
   actionUsage: {
     pass: { turnCount: 3, phaseCount: 2, gameCount: 9 },
   },
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
   ...overrides,
 });
@@ -80,6 +81,27 @@ describe('phase advancement', () => {
     assert.equal(next.currentPhase, asPhaseId('p1'));
     assert.equal(next.turnCount, 5);
     assert.equal(next.activePlayer, asPlayerId(1));
+  });
+
+  it('advances active player at turn boundary according to fixed order', () => {
+    const baseDef = createBaseDef();
+    const def: GameDef = {
+      ...baseDef,
+      turnOrder: { type: 'fixedOrder', order: ['1', '0'] },
+    };
+    const state = createState({
+      currentPhase: asPhaseId('p2'),
+      turnCount: 4,
+      activePlayer: asPlayerId(1),
+      turnOrderState: { type: 'fixedOrder', currentIndex: 0 },
+    });
+
+    const next = advancePhase(def, state);
+
+    assert.equal(next.currentPhase, asPhaseId('p1'));
+    assert.equal(next.turnCount, 5);
+    assert.equal(next.activePlayer, asPlayerId(0));
+    assert.deepEqual(next.turnOrderState, { type: 'fixedOrder', currentIndex: 1 });
   });
 
   it('resets phase counters on phase boundary and preserves gameCount', () => {
@@ -236,13 +258,18 @@ describe('phase advancement', () => {
       ],
       tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: [], overrideWindows: [] },
-        optionMatrix: [],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
       },
       actions: [],
       triggers: [],
@@ -261,6 +288,22 @@ describe('phase advancement', () => {
       }),
       globalVars: {},
       actionUsage: {},
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
       markers: {},
     };
     const logs: TriggerLogEntry[] = [];
@@ -268,7 +311,7 @@ describe('phase advancement', () => {
     const next = advancePhase(def, state, logs);
 
     assert.equal(next.turnCount, 1);
-    assert.equal(next.activePlayer, asPlayerId(1));
+    assert.equal(next.activePlayer, asPlayerId(0));
     assert.equal(next.zones['leader:none']?.[0]?.id, 'tok_card_0');
     assert.equal(next.zones['played:none']?.[0]?.id, 'tok_card_1');
     assert.equal(next.zones['lookahead:none']?.[0]?.id, 'tok_card_2');
@@ -293,17 +336,22 @@ describe('phase advancement', () => {
       ],
       tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: ['0', '1'], overrideWindows: [] },
-        optionMatrix: [],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
-      },
-      coupPlan: {
-        phases: [{ id: 'victory', steps: ['check-thresholds'] }],
-        maxConsecutiveRounds: 1,
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+          coupPlan: {
+            phases: [{ id: 'victory', steps: ['check-thresholds'] }],
+            maxConsecutiveRounds: 1,
+          },
+        },
       },
       actions: [],
       triggers: [],
@@ -322,21 +370,24 @@ describe('phase advancement', () => {
       }),
       globalVars: {},
       actionUsage: {},
-      markers: {},
-      turnFlow: {
-        factionOrder: ['0', '1'],
-        eligibility: { '0': true, '1': true },
-        currentCard: {
-          firstEligible: '0',
-          secondEligible: '1',
-          actedFactions: [],
-          passedFactions: [],
-          nonPassCount: 0,
-          firstActionClass: null,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          consecutiveCoupRounds: 0,
         },
-        pendingEligibilityOverrides: [],
-        consecutiveCoupRounds: 0,
       },
+      markers: {},
     };
 
     const firstLogs: TriggerLogEntry[] = [];
@@ -356,6 +407,6 @@ describe('phase advancement', () => {
     assert.deepEqual(secondLifecycleSteps, ['promoteLookaheadToPlayed']);
     assert.equal(afterSecond.zones['leader:none']?.length, 1);
     assert.equal(afterSecond.zones['leader:none']?.[0]?.id, 'tok_card_0');
-    assert.equal(afterSecond.turnFlow?.consecutiveCoupRounds, 1);
+    assert.equal(requireCardDrivenRuntime(afterSecond).consecutiveCoupRounds, 1);
   });
 });

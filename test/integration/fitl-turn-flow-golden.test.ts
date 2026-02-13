@@ -52,30 +52,35 @@ const createDef = (): GameDef =>
       { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },
       { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
     ],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-    turnFlow: {
-      cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-      eligibility: {
-        factions: ['0', '1', '2', '3'],
-        overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
-      },
-      optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
-      passRewards: [
-        { factionClass: '0', resource: 'res0', amount: 1 },
-        { factionClass: '1', resource: 'res1', amount: 3 },
-      ],
-      durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
-      monsoon: {
-        restrictedActions: [
-          { actionId: 'sweep' },
-          { actionId: 'airLift', maxParam: { name: 'spaces', max: 2 } },
-        ],
-        blockPivotal: true,
-        pivotalOverrideToken: 'monsoonPivotalAllowed',
-      },
-      pivotal: {
-        actionIds: ['pivotalEvent'],
-        requirePreActionWindow: true,
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: {
+            factions: ['0', '1', '2', '3'],
+            overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' }],
+          },
+          optionMatrix: [{ first: 'event', second: ['operation', 'operationPlusSpecialActivity'] }],
+          passRewards: [
+            { factionClass: '0', resource: 'res0', amount: 1 },
+            { factionClass: '1', resource: 'res1', amount: 3 },
+          ],
+          durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          monsoon: {
+            restrictedActions: [
+              { actionId: 'sweep' },
+              { actionId: 'airLift', maxParam: { name: 'spaces', max: 2 } },
+            ],
+            blockPivotal: true,
+            pivotalOverrideToken: 'monsoonPivotalAllowed',
+          },
+          pivotal: {
+            actionIds: ['pivotalEvent'],
+            requirePreActionWindow: true,
+          },
+        },
       },
     },
     actions: [

@@ -39,7 +39,6 @@ const createGameDef = (): GameDef =>
     setup: [],
     turnStructure: {
       phases: [{ id: 'draw' }, { id: 'main' }],
-      activePlayerOrder: 'roundRobin',
     },
     actions: [
       {
@@ -80,6 +79,7 @@ const createBaseState = (): GameState => ({
   actionUsage: {
     playCard: { turnCount: 1, phaseCount: 2, gameCount: 4 },
   },
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
 });
 

@@ -60,7 +60,7 @@ describe('FITL removal ordering macros', () => {
         ],
         tokenTypes: [{ id: 'base', props: { faction: 'string', tunnel: 'string' } }, { id: 'troops', props: { faction: 'string' } }, { id: 'guerrilla', props: { faction: 'string', activity: 'string' } }],
         setup: [],
-        turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+        turnStructure: { phases: [{ id: asPhaseId('main') }] },
         actions: [],
         triggers: [],
         endConditions: [],
@@ -86,6 +86,7 @@ describe('FITL removal ordering macros', () => {
         rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
         stateHash: 0n,
         actionUsage: {},
+        turnOrderState: { type: 'roundRobin' },
         markers: {},
       });
 
@@ -134,7 +135,7 @@ describe('FITL removal ordering macros', () => {
         zones: [{ id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' }],
         tokenTypes: [],
         setup: [],
-        turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+        turnStructure: { phases: [{ id: asPhaseId('main') }] },
         actions: [],
         triggers: [],
         endConditions: [],
@@ -152,6 +153,7 @@ describe('FITL removal ordering macros', () => {
         rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
         stateHash: 0n,
         actionUsage: {},
+        turnOrderState: { type: 'roundRobin' },
         markers: {},
       };
 
@@ -193,7 +195,7 @@ describe('FITL removal ordering macros', () => {
           { id: 'guerrilla', props: { faction: 'string', activity: 'string' } },
         ],
         setup: [],
-        turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+        turnStructure: { phases: [{ id: asPhaseId('main') }] },
         actions: [],
         triggers: [],
         endConditions: [],
@@ -220,6 +222,7 @@ describe('FITL removal ordering macros', () => {
         rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
         stateHash: 0n,
         actionUsage: {},
+        turnOrderState: { type: 'roundRobin' },
         markers: {},
       };
 

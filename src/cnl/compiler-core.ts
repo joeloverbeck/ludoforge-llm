@@ -16,9 +16,9 @@ import {
   lowerTurnStructure,
   lowerVarDefs,
 } from './compile-lowering.js';
-import { lowerTurnFlow } from './compile-turn-flow.js';
+import { lowerTurnOrder } from './compile-turn-flow.js';
 import { lowerActionPipelines } from './compile-operations.js';
-import { lowerCoupPlan, lowerVictory } from './compile-victory.js';
+import { lowerVictory } from './compile-victory.js';
 import { deriveSectionsFromDataAssets } from './compile-data-assets.js';
 import { expandEffectSections, expandZoneMacros } from './compile-macro-expansion.js';
 import { crossValidateSpec } from './cross-validate.js';
@@ -43,9 +43,8 @@ export interface CompileSectionResults {
   readonly tokenTypes: GameDef['tokenTypes'] | null;
   readonly setup: GameDef['setup'] | null;
   readonly turnStructure: GameDef['turnStructure'] | null;
-  readonly turnFlow: Exclude<GameDef['turnFlow'], undefined> | null;
+  readonly turnOrder: Exclude<GameDef['turnOrder'], undefined> | null;
   readonly actionPipelines: Exclude<GameDef['actionPipelines'], undefined> | null;
-  readonly coupPlan: Exclude<GameDef['coupPlan'], undefined> | null;
   readonly victory: Exclude<GameDef['victory'], undefined> | null;
   readonly actions: GameDef['actions'] | null;
   readonly triggers: GameDef['triggers'] | null;
@@ -176,9 +175,8 @@ function compileExpandedDoc(
     tokenTypes: null,
     setup: null,
     turnStructure: null,
-    turnFlow: null,
+    turnOrder: null,
     actionPipelines: null,
-    coupPlan: null,
     victory: null,
     actions: null,
     triggers: null,
@@ -254,9 +252,9 @@ function compileExpandedDoc(
     sections.turnStructure = turnStructureSection.failed ? null : turnStructureSection.value;
   }
 
-  if (doc.turnFlow !== null) {
-    const turnFlow = compileSection(diagnostics, () => lowerTurnFlow(doc.turnFlow, diagnostics));
-    sections.turnFlow = turnFlow.failed || turnFlow.value === undefined ? null : turnFlow.value;
+  if (doc.turnOrder !== null) {
+    const turnOrder = compileSection(diagnostics, () => lowerTurnOrder(doc.turnOrder, diagnostics));
+    sections.turnOrder = turnOrder.failed || turnOrder.value === undefined ? null : turnOrder.value;
   }
 
   if (doc.actionPipelines !== null) {
@@ -265,11 +263,6 @@ function compileExpandedDoc(
     );
     sections.actionPipelines =
       actionPipelines.failed || actionPipelines.value === undefined ? null : actionPipelines.value;
-  }
-
-  if (doc.coupPlan !== null) {
-    const coupPlan = compileSection(diagnostics, () => lowerCoupPlan(doc.coupPlan, diagnostics));
-    sections.coupPlan = coupPlan.failed || coupPlan.value === undefined ? null : coupPlan.value;
   }
 
   if (doc.victory !== null) {
@@ -318,9 +311,8 @@ function compileExpandedDoc(
     tokenTypes: tokenTypes.value,
     setup: setup.value,
     turnStructure,
-    ...(sections.turnFlow === null ? {} : { turnFlow: sections.turnFlow }),
+    ...(sections.turnOrder === null ? {} : { turnOrder: sections.turnOrder }),
     ...(sections.actionPipelines === null ? {} : { actionPipelines: sections.actionPipelines }),
-    ...(sections.coupPlan === null ? {} : { coupPlan: sections.coupPlan }),
     ...(sections.victory === null ? {} : { victory: sections.victory }),
     actions,
     triggers: triggers.value,

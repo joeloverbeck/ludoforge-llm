@@ -18,6 +18,7 @@ import {
   type OperationFreeTraceEntry,
   type TriggerLogEntry,
 } from '../../src/kernel/index.js';
+import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const createDef = (): GameDef =>
   ({
@@ -32,7 +33,7 @@ const createDef = (): GameDef =>
     zones: [],
     tokenTypes: [],
     setup: [],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
     actions: [
       {
         id: asActionId('play'),
@@ -77,6 +78,7 @@ const createState = (): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [7n, 11n] },
   stateHash: 0n,
   actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
 });
 
@@ -151,7 +153,6 @@ describe('applyMove', () => {
       globalVars: [],
       turnStructure: {
         phases: [{ id: asPhaseId('p1') }, { id: asPhaseId('p2') }],
-        activePlayerOrder: 'roundRobin',
       },
       actions: [
         {
@@ -207,16 +208,21 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
-        optionMatrix: [],
-        passRewards: [
-          { factionClass: '0', resource: 'res0', amount: 1 },
-          { factionClass: '1', resource: 'res1', amount: 3 },
-        ],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [
+              { factionClass: '0', resource: 'res0', amount: 1 },
+              { factionClass: '1', resource: 'res1', amount: 3 },
+            ],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
       },
       actions: [
         {
@@ -244,8 +250,8 @@ describe('applyMove', () => {
     assert.equal(first.state.globalVars.res0, 1);
     assert.equal(second.state.globalVars.res1, 3);
     assert.equal(fourth.state.activePlayer, asPlayerId(0));
-    assert.equal(fourth.state.turnFlow?.currentCard.firstEligible, '0');
-    assert.equal(fourth.state.turnFlow?.currentCard.secondEligible, '1');
+    assert.equal(requireCardDrivenRuntime(fourth.state).currentCard.firstEligible, '0');
+    assert.equal(requireCardDrivenRuntime(fourth.state).currentCard.secondEligible, '1');
 
     const eligibilityEntries = fourth.triggerFirings.filter(
       (entry): entry is Extract<TriggerLogEntry, { kind: 'turnFlowEligibility' }> => entry.kind === 'turnFlowEligibility',
@@ -267,13 +273,18 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
-        optionMatrix: [{ first: 'operation', second: ['limitedOperation', 'operation'] }],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
+            optionMatrix: [{ first: 'operation', second: ['limitedOperation', 'operation'] }],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
       },
       actions: [
         {
@@ -305,9 +316,9 @@ describe('applyMove', () => {
     const first = applyMove(def, start, { actionId: asActionId('operation'), params: {} }).state;
     const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} });
 
-    assert.deepEqual(second.state.turnFlow?.eligibility, { '0': false, '1': false, '2': true, '3': true });
-    assert.equal(second.state.turnFlow?.currentCard.firstEligible, '2');
-    assert.equal(second.state.turnFlow?.currentCard.secondEligible, '3');
+    assert.deepEqual(requireCardDrivenRuntime(second.state).eligibility, { '0': false, '1': false, '2': true, '3': true });
+    assert.equal(requireCardDrivenRuntime(second.state).currentCard.firstEligible, '2');
+    assert.equal(requireCardDrivenRuntime(second.state).currentCard.secondEligible, '3');
     assert.equal(second.state.activePlayer, asPlayerId(2));
 
     const cardEndEntry = second.triggerFirings.find(
@@ -332,19 +343,24 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: {
-          factions: ['0', '1', '2', '3'],
-          overrideWindows: [
-            { id: 'remain-eligible', duration: 'nextCard' },
-            { id: 'force-ineligible', duration: 'nextCard' },
-          ],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: {
+              factions: ['0', '1', '2', '3'],
+              overrideWindows: [
+                { id: 'remain-eligible', duration: 'nextCard' },
+                { id: 'force-ineligible', duration: 'nextCard' },
+              ],
+            },
+            optionMatrix: [{ first: 'event', second: ['operation'] }],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
         },
-        optionMatrix: [{ first: 'event', second: ['operation'] }],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
       },
       actions: [
         {
@@ -382,9 +398,9 @@ describe('applyMove', () => {
     });
     const second = applyMove(def, first.state, { actionId: asActionId('operation'), params: {} });
 
-    assert.deepEqual(second.state.turnFlow?.eligibility, { '0': true, '1': false, '2': false, '3': true });
-    assert.equal(second.state.turnFlow?.currentCard.firstEligible, '0');
-    assert.equal(second.state.turnFlow?.currentCard.secondEligible, '3');
+    assert.deepEqual(requireCardDrivenRuntime(second.state).eligibility, { '0': true, '1': false, '2': false, '3': true });
+    assert.equal(requireCardDrivenRuntime(second.state).currentCard.firstEligible, '0');
+    assert.equal(requireCardDrivenRuntime(second.state).currentCard.secondEligible, '3');
     assert.equal(second.state.activePlayer, asPlayerId(0));
 
     const overrideCreateEntry = first.triggerFirings.find(
@@ -414,7 +430,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'operate-profile',
@@ -468,7 +484,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'operate-profile',
@@ -523,7 +539,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'operate-profile',
@@ -582,7 +598,7 @@ describe('applyMove', () => {
       zones: [{ id: asZoneId('bag:none'), owner: 'none', visibility: 'public', ordering: 'stack' }],
       tokenTypes: [{ id: 'piece', props: {} }],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'operate-profile',
@@ -651,7 +667,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'operate-profile',
@@ -703,7 +719,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'operate-profile',
@@ -751,13 +767,18 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
-        optionMatrix: [],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'],
+          },
+        },
       },
       actionPipelines: [
         {
@@ -787,15 +808,15 @@ describe('applyMove', () => {
     } as unknown as GameDef;
 
     const start = initialState(def, 7, 4);
-    const beforeEligibility = start.turnFlow?.eligibility;
-    const beforeCard = start.turnFlow?.currentCard;
+    const beforeEligibility = requireCardDrivenRuntime(start).eligibility;
+    const beforeCard = requireCardDrivenRuntime(start).currentCard;
 
     const result = applyMove(def, start, { actionId: asActionId('operate'), params: {}, freeOperation: true });
 
-    assert.deepEqual(result.state.turnFlow?.eligibility, beforeEligibility, 'eligibility should be unchanged');
-    assert.equal(result.state.turnFlow?.currentCard.firstEligible, beforeCard?.firstEligible);
-    assert.equal(result.state.turnFlow?.currentCard.secondEligible, beforeCard?.secondEligible);
-    assert.deepEqual(result.state.turnFlow?.currentCard.actedFactions, beforeCard?.actedFactions);
+    assert.deepEqual(requireCardDrivenRuntime(result.state).eligibility, beforeEligibility, 'eligibility should be unchanged');
+    assert.equal(requireCardDrivenRuntime(result.state).currentCard.firstEligible, beforeCard.firstEligible);
+    assert.equal(requireCardDrivenRuntime(result.state).currentCard.secondEligible, beforeCard.secondEligible);
+    assert.deepEqual(requireCardDrivenRuntime(result.state).currentCard.actedFactions, beforeCard.actedFactions);
     const eligibilityEntries = result.triggerFirings.filter(
       (entry) => entry.kind === 'turnFlowEligibility',
     );
@@ -814,7 +835,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'operate-profile',
@@ -865,7 +886,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'operate-profile',
@@ -919,7 +940,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'operate-profile',
@@ -983,7 +1004,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'operate-profile',
@@ -1042,7 +1063,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actions: [
         {
           id: asActionId('event'),
@@ -1105,7 +1126,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'op-profile',
@@ -1148,7 +1169,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'op-profile',
@@ -1191,7 +1212,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'op-profile',
@@ -1238,7 +1259,7 @@ describe('applyMove', () => {
       zones: [],
       tokenTypes: [],
       setup: [],
-      turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actionPipelines: [
         {
           id: 'op-profile',

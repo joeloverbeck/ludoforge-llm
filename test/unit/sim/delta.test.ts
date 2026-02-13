@@ -30,6 +30,7 @@ const makeState = (overrides: Partial<GameState> = {}): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [11n, 22n] },
   stateHash: 123n,
   actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
   ...overrides,
 });

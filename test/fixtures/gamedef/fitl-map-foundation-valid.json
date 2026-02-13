@@ -56,8 +56,7 @@
   "tokenTypes": [],
   "setup": [],
   "turnStructure": {
-    "phases": [],
-    "activePlayerOrder": "roundRobin"
+    "phases": []
   },
   "actions": [],
   "triggers": [],

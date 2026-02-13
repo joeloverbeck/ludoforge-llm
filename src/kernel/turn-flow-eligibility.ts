@@ -17,6 +17,12 @@ interface TurnFlowTransitionResult {
 const isPassAction = (move: Move): boolean => String(move.actionId) === 'pass';
 const ELIGIBILITY_OVERRIDE_PREFIX = 'eligibilityOverride:';
 
+const cardDrivenConfig = (def: GameDef) =>
+  def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
+
+const cardDrivenRuntime = (state: GameState) =>
+  state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
+
 const isTurnFlowActionClass = (
   value: string,
 ): value is 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity' =>
@@ -68,8 +74,8 @@ const parseFactionPlayer = (faction: string, playerCount: number): number | null
 };
 
 const resolveActiveFaction = (state: GameState): string | null => {
-  const runtime = state.turnFlow;
-  if (runtime === undefined) {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
     return null;
   }
   const faction = String(state.activePlayer);
@@ -100,7 +106,7 @@ const cardSnapshot = (card: TurnFlowRuntimeCardState) => ({
 const indexOverrideWindows = (
   def: GameDef,
 ): Readonly<Record<string, TurnFlowDuration>> =>
-  Object.fromEntries((def.turnFlow?.eligibility.overrideWindows ?? []).map((windowDef) => [windowDef.id, windowDef.duration]));
+  Object.fromEntries((cardDrivenConfig(def)?.turnFlow.eligibility.overrideWindows ?? []).map((windowDef) => [windowDef.id, windowDef.duration]));
 
 const extractOverrideDirectiveTokens = (value: Move['params'][string]): readonly string[] => {
   if (typeof value === 'string') {
@@ -199,7 +205,7 @@ const withActiveFromFirstEligible = (state: GameState, firstEligible: string | n
 };
 
 export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameState): GameState => {
-  const flow = def.turnFlow;
+  const flow = cardDrivenConfig(def)?.turnFlow;
   if (flow === undefined) {
     return state;
   }
@@ -210,19 +216,22 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
   const candidates = computeCandidates(factionOrder, eligibility, new Set());
   const nextState: GameState = {
     ...state,
-    turnFlow: {
-      factionOrder,
-      eligibility,
-      pendingEligibilityOverrides: [],
-      currentCard: {
-        firstEligible: candidates.first,
-        secondEligible: candidates.second,
-        actedFactions: [],
-        passedFactions: [],
-        nonPassCount: 0,
-        firstActionClass: null,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: {
+        factionOrder,
+        eligibility,
+        pendingEligibilityOverrides: [],
+        currentCard: {
+          firstEligible: candidates.first,
+          secondEligible: candidates.second,
+          actedFactions: [],
+          passedFactions: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+        ...(cardDrivenConfig(def)?.coupPlan?.maxConsecutiveRounds === undefined ? {} : { consecutiveCoupRounds: 0 }),
       },
-      ...(def.coupPlan?.maxConsecutiveRounds === undefined ? {} : { consecutiveCoupRounds: 0 }),
     },
   };
 
@@ -230,8 +239,8 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
 };
 
 export const isActiveFactionEligibleForTurnFlow = (state: GameState): boolean => {
-  const runtime = state.turnFlow;
-  if (runtime === undefined) {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
     return true;
   }
 
@@ -251,8 +260,8 @@ export const applyTurnFlowEligibilityAfterMove = (
   state: GameState,
   move: Move,
 ): TurnFlowTransitionResult => {
-  const runtime = state.turnFlow;
-  if (runtime === undefined) {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
     return { state, traceEntries: [] };
   }
 
@@ -272,7 +281,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   if (isPassAction(move)) {
     step = 'passChain';
     passed.add(activeFaction);
-    for (const reward of def.turnFlow?.passRewards ?? []) {
+    for (const reward of cardDrivenConfig(def)?.turnFlow.passRewards ?? []) {
       if (reward.factionClass !== activeFaction) {
         continue;
       }
@@ -374,11 +383,14 @@ export const applyTurnFlowEligibilityAfterMove = (
 
   const stateWithTurnFlow: GameState = {
     ...rewardState,
-    turnFlow: {
-      ...runtime,
-      eligibility: nextEligibility,
-      pendingEligibilityOverrides: nextPendingOverrides,
-      currentCard: nextCard,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: {
+        ...runtime,
+        eligibility: nextEligibility,
+        pendingEligibilityOverrides: nextPendingOverrides,
+        currentCard: nextCard,
+      },
     },
   };
 

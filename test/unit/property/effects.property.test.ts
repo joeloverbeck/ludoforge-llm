@@ -30,7 +30,7 @@ const makeDef = (): GameDef => ({
   ],
   tokenTypes: [{ id: 'card', props: {} }],
   setup: [],
-  turnStructure: { phases: [], activePlayerOrder: 'roundRobin' },
+  turnStructure: { phases: [] },
   actions: [],
   triggers: [],
   endConditions: [],
@@ -51,6 +51,7 @@ const makeState = (): GameState => ({
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
   stateHash: 0n,
   actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
   markers: {},
 });
 

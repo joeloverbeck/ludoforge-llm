@@ -128,7 +128,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
         { id: 'guerrilla', props: { faction: 'string' } },
       ],
       setup: [],
-      turnStructure: { phases: [], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [] },
       actions: [],
       triggers: [],
       endConditions: [],
@@ -159,6 +159,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
       stateHash: 0n,
       actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
       markers: {},
     });
 

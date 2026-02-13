@@ -34,7 +34,6 @@ const createGameDef = (): GameDef =>
     setup: [],
     turnStructure: {
       phases: [{ id: 'main' }],
-      activePlayerOrder: 'roundRobin',
     },
     actions: [
       {
@@ -79,6 +78,7 @@ const createInitialState = (seed: bigint): GameState => {
     rng: serialize(createRng(seed)),
     stateHash: 0n,
     actionUsage: {},
+    turnOrderState: { type: 'roundRobin' },
     markers: {},
   };
 };

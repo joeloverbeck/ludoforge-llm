@@ -4,6 +4,14 @@ import { describe, it } from 'node:test';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
+const minimalCardDrivenTurnFlow = {
+  cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
+  eligibility: { factions: ['us', 'arvn', 'nva', 'vc'], overrideWindows: [] },
+  optionMatrix: [],
+  passRewards: [],
+  durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
+};
+
 describe('compile top-level actions/triggers/end conditions', () => {
   it('preserves trigger/end-condition order and generates deterministic trigger ids', () => {
     const doc = {
@@ -11,7 +19,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       metadata: { id: 'top-level', players: { min: 2, max: 2 } },
       globalVars: [{ name: 'tick', type: 'int', init: 0, min: 0, max: 10 }],
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: 'main' }] },
       actions: [
         { id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
@@ -52,7 +60,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'bad-trigger-action', players: { min: 2, max: 2 } },
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: 'main' }] },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [{ event: { type: 'actionResolved', action: 'psas' }, effects: [] }],
       endConditions: [{ when: { op: '>=', left: 1, right: 2 }, result: { type: 'draw' } }],
@@ -84,19 +92,24 @@ describe('compile top-level actions/triggers/end conditions', () => {
         { id: 'lookahead:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
         { id: 'leader:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: {
-          factions: ['us', 'arvn', 'nva', 'vc'],
-          overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' as const }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: {
+              factions: ['us', 'arvn', 'nva', 'vc'],
+              overrideWindows: [{ id: 'remain-eligible', duration: 'nextCard' as const }],
+            },
+            optionMatrix: [{ first: 'event' as const, second: ['operation', 'operationPlusSpecialActivity'] as const }],
+            passRewards: [
+              { factionClass: 'coin', resource: 'arvnResources', amount: 3 },
+              { factionClass: 'insurgent', resource: 'factionResource', amount: 1 },
+            ],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
+          },
         },
-        optionMatrix: [{ first: 'event' as const, second: ['operation', 'operationPlusSpecialActivity'] as const }],
-        passRewards: [
-          { factionClass: 'coin', resource: 'arvnResources', amount: 3 },
-          { factionClass: 'insurgent', resource: 'factionResource', amount: 1 },
-        ],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
       },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
@@ -107,8 +120,15 @@ describe('compile top-level actions/triggers/end conditions', () => {
 
     assert.equal(result.gameDef !== null, true);
     assertNoDiagnostics(result);
-    assert.equal(result.gameDef?.turnFlow?.cardLifecycle.played, 'played:none');
-    assert.deepEqual(result.gameDef?.turnFlow?.durationWindows, ['card', 'nextCard', 'coup', 'campaign']);
+    assert.equal(result.gameDef?.turnOrder?.type, 'cardDriven');
+    assert.equal(
+      result.gameDef?.turnOrder?.type === 'cardDriven' ? result.gameDef.turnOrder.config.turnFlow.cardLifecycle.played : undefined,
+      'played:none',
+    );
+    assert.deepEqual(
+      result.gameDef?.turnOrder?.type === 'cardDriven' ? result.gameDef.turnOrder.config.turnFlow.durationWindows : undefined,
+      ['card', 'nextCard', 'coup', 'campaign'],
+    );
   });
 
   it('returns blocking diagnostics for malformed turnFlow metadata', () => {
@@ -116,10 +136,15 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'turn-flow-invalid', players: { min: 2, max: 4 } },
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none' },
-        eligibility: { factions: ['us'], overrideWindows: [] },
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none' },
+            eligibility: { factions: ['us'], overrideWindows: [] },
+          },
+        },
       },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
@@ -133,7 +158,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING' &&
-          diagnostic.path === 'doc.turnFlow.optionMatrix',
+          diagnostic.path === 'doc.turnOrder.config.turnFlow.optionMatrix',
       ),
       true,
     );
@@ -144,23 +169,28 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'turn-flow-ordering-invalid', players: { min: 2, max: 4 } },
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: {
-          factions: ['us', 'arvn', 'us'],
-          overrideWindows: [],
-        },
-        optionMatrix: [
-          { first: 'event' as const, second: ['operation'] as const },
-          { first: 'event' as const, second: ['operationPlusSpecialActivity'] as const },
-        ],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
-        pivotal: {
-          actionIds: ['pivotalA', 'pivotalB'],
-          interrupt: {
-            precedence: ['us', 'vc', 'us'],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: {
+              factions: ['us', 'arvn', 'us'],
+              overrideWindows: [],
+            },
+            optionMatrix: [
+              { first: 'event' as const, second: ['operation'] as const },
+              { first: 'event' as const, second: ['operationPlusSpecialActivity'] as const },
+            ],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
+            pivotal: {
+              actionIds: ['pivotalA', 'pivotalB'],
+              interrupt: {
+                precedence: ['us', 'vc', 'us'],
+              },
+            },
           },
         },
       },
@@ -180,7 +210,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_FACTION' &&
-          diagnostic.path === 'doc.turnFlow.eligibility.factions.2',
+          diagnostic.path === 'doc.turnOrder.config.turnFlow.eligibility.factions.2',
       ),
       true,
     );
@@ -188,7 +218,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_DUPLICATE_OPTION_ROW' &&
-          diagnostic.path === 'doc.turnFlow.optionMatrix.1.first',
+          diagnostic.path === 'doc.turnOrder.config.turnFlow.optionMatrix.1.first',
       ),
       true,
     );
@@ -196,7 +226,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_UNKNOWN_FACTION' &&
-          diagnostic.path === 'doc.turnFlow.pivotal.interrupt.precedence.1',
+          diagnostic.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.1',
       ),
       true,
     );
@@ -204,7 +234,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_DUPLICATE' &&
-          diagnostic.path === 'doc.turnFlow.pivotal.interrupt.precedence.2',
+          diagnostic.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence.2',
       ),
       true,
     );
@@ -215,7 +245,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'operation-profile-pass-through', players: { min: 2, max: 4 } },
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: 'main' }] },
       actions: [{ id: 'patrol', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       actionPipelines: [
         {
@@ -246,7 +276,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'operation-profile-invalid', players: { min: 2, max: 4 } },
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
+      turnStructure: { phases: [{ id: 'main' }] },
       actions: [
         { id: 'patrol', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
         { id: 'sweep', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
@@ -324,18 +354,23 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'turn-flow-ordering-missing-precedence', players: { min: 2, max: 4 } },
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
-      turnFlow: {
-        cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
-        eligibility: {
-          factions: ['us', 'arvn', 'nva', 'vc'],
-          overrideWindows: [],
-        },
-        optionMatrix: [{ first: 'event' as const, second: ['operation'] as const }],
-        passRewards: [],
-        durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
-        pivotal: {
-          actionIds: ['pivotalA', 'pivotalB'],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: {
+              factions: ['us', 'arvn', 'nva', 'vc'],
+              overrideWindows: [],
+            },
+            optionMatrix: [{ first: 'event' as const, second: ['operation'] as const }],
+            passRewards: [],
+            durationWindows: ['card', 'nextCard', 'coup', 'campaign'] as const,
+            pivotal: {
+              actionIds: ['pivotalA', 'pivotalB'],
+            },
+          },
         },
       },
       actions: [
@@ -354,7 +389,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_PRECEDENCE_REQUIRED' &&
-          diagnostic.path === 'doc.turnFlow.pivotal.interrupt.precedence',
+          diagnostic.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.precedence',
       ),
       true,
     );
@@ -365,14 +400,20 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'coup-victory-pass-through', players: { min: 2, max: 4 } },
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
-      coupPlan: {
-        phases: [
-          { id: 'victory', steps: ['check-thresholds'] },
-          { id: 'resources', steps: ['resource-income', 'aid-penalty'] },
-        ],
-        finalRoundOmitPhases: ['resources'],
-        maxConsecutiveRounds: 1,
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: minimalCardDrivenTurnFlow,
+          coupPlan: {
+            phases: [
+              { id: 'victory', steps: ['check-thresholds'] },
+              { id: 'resources', steps: ['resource-income', 'aid-penalty'] },
+            ],
+            finalRoundOmitPhases: ['resources'],
+            maxConsecutiveRounds: 1,
+          },
+        },
       },
       victory: {
         checkpoints: [
@@ -395,7 +436,11 @@ describe('compile top-level actions/triggers/end conditions', () => {
 
     assert.equal(result.gameDef !== null, true);
     assertNoDiagnostics(result);
-    assert.equal(result.gameDef?.coupPlan?.phases[0]?.id, 'victory');
+    assert.equal(result.gameDef?.turnOrder?.type, 'cardDriven');
+    assert.equal(
+      result.gameDef?.turnOrder?.type === 'cardDriven' ? result.gameDef.turnOrder.config.coupPlan?.phases[0]?.id : undefined,
+      'victory',
+    );
     assert.equal(result.gameDef?.victory?.checkpoints[0]?.id, 'us-threshold');
   });
 
@@ -404,11 +449,17 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ...createEmptyGameSpecDoc(),
       metadata: { id: 'coup-victory-invalid', players: { min: 2, max: 4 } },
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
-      turnStructure: { phases: [{ id: 'main' }], activePlayerOrder: 'roundRobin' },
-      coupPlan: {
-        phases: [{ id: 'victory', steps: [] }],
-        finalRoundOmitPhases: ['missing-phase'],
-        maxConsecutiveRounds: 0,
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: minimalCardDrivenTurnFlow,
+          coupPlan: {
+            phases: [{ id: 'victory', steps: [] }],
+            finalRoundOmitPhases: ['missing-phase'],
+            maxConsecutiveRounds: 0,
+          },
+        },
       },
       victory: {
         checkpoints: [{ id: 'c1', faction: 'us', timing: 'not-valid', when: null }],
@@ -427,7 +478,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_COUP_PLAN_PHASE_STEPS_INVALID' &&
-          diagnostic.path === 'doc.coupPlan.phases.0.steps',
+          diagnostic.path === 'doc.turnOrder.config.coupPlan.phases.0.steps',
       ),
       true,
     );
@@ -435,7 +486,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_COUP_PLAN_FINAL_ROUND_OMIT_UNKNOWN_PHASE' &&
-          diagnostic.path === 'doc.coupPlan.finalRoundOmitPhases.0',
+          diagnostic.path === 'doc.turnOrder.config.coupPlan.finalRoundOmitPhases.0',
       ),
       true,
     );
@@ -452,6 +503,38 @@ describe('compile top-level actions/triggers/end conditions', () => {
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_VICTORY_RANKING_ORDER_INVALID' &&
           diagnostic.path === 'doc.victory.ranking.order',
+      ),
+      true,
+    );
+  });
+
+  it('returns blocking diagnostics when coupPlan.phases is empty', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'coup-plan-empty-phases', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: minimalCardDrivenTurnFlow,
+          coupPlan: {
+            phases: [],
+          },
+        },
+      },
+      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+
+    const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_COUP_PLAN_PHASES_EMPTY' &&
+          diagnostic.path === 'doc.turnOrder.config.coupPlan.phases',
       ),
       true,
     );

@@ -163,7 +163,6 @@ const createSupportFixtureDef = (): GameDef => {
     setup: [],
     turnStructure: {
       phases: [{ id: asPhaseId('main') }, { id: asPhaseId('support') }],
-      activePlayerOrder: 'roundRobin',
     },
     actions: [
       {

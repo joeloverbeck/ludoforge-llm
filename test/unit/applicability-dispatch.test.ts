@@ -35,7 +35,7 @@ const createMultiProfileDef = (): GameDef =>
     ],
     tokenTypes: [],
     setup: [],
-    turnStructure: { phases: [{ id: asPhaseId('main') }], activePlayerOrder: 'roundRobin' },
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
     actionPipelines: [
       {
         id: 'profile-player-0',

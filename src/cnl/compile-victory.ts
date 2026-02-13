@@ -3,7 +3,11 @@ import type { CoupPlanDef, VictoryDef } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord } from './compile-lowering.js';
 
-export function lowerCoupPlan(rawCoupPlan: GameSpecDoc['coupPlan'], diagnostics: Diagnostic[]): CoupPlanDef | undefined {
+export function lowerCoupPlan(
+  rawCoupPlan: unknown,
+  diagnostics: Diagnostic[],
+  pathPrefix = 'doc.coupPlan',
+): CoupPlanDef | undefined {
   if (rawCoupPlan === null) {
     return undefined;
   }
@@ -11,7 +15,7 @@ export function lowerCoupPlan(rawCoupPlan: GameSpecDoc['coupPlan'], diagnostics:
   if (!isRecord(rawCoupPlan)) {
     diagnostics.push({
       code: 'CNL_COMPILER_COUP_PLAN_INVALID',
-      path: 'doc.coupPlan',
+      path: pathPrefix,
       severity: 'error',
       message: 'coupPlan must be an object when declared.',
       suggestion: 'Provide coupPlan.phases and optional finalRoundOmitPhases/maxConsecutiveRounds.',
@@ -22,7 +26,7 @@ export function lowerCoupPlan(rawCoupPlan: GameSpecDoc['coupPlan'], diagnostics:
   if (!Array.isArray(rawCoupPlan.phases)) {
     diagnostics.push({
       code: 'CNL_COMPILER_COUP_PLAN_REQUIRED_FIELD_MISSING',
-      path: 'doc.coupPlan.phases',
+      path: `${pathPrefix}.phases`,
       severity: 'error',
       message: 'coupPlan.phases is required and must be an array.',
       suggestion: 'Define coupPlan.phases as an ordered list of phase objects.',
@@ -30,9 +34,20 @@ export function lowerCoupPlan(rawCoupPlan: GameSpecDoc['coupPlan'], diagnostics:
     return undefined;
   }
 
+  if (rawCoupPlan.phases.length === 0) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_COUP_PLAN_PHASES_EMPTY',
+      path: `${pathPrefix}.phases`,
+      severity: 'error',
+      message: 'coupPlan.phases must include at least one phase definition.',
+      suggestion: 'Define one or more coup phases with stable id/steps entries.',
+    });
+    return undefined;
+  }
+
   const seenPhaseIds = new Set<string>();
   for (const [index, phase] of rawCoupPlan.phases.entries()) {
-    const phasePath = `doc.coupPlan.phases.${index}`;
+    const phasePath = `${pathPrefix}.phases.${index}`;
     if (!isRecord(phase)) {
       diagnostics.push({
         code: 'CNL_COMPILER_COUP_PLAN_PHASE_INVALID',
@@ -79,13 +94,14 @@ export function lowerCoupPlan(rawCoupPlan: GameSpecDoc['coupPlan'], diagnostics:
     }
   }
 
+  const maxConsecutiveRounds = rawCoupPlan.maxConsecutiveRounds;
   if (
-    rawCoupPlan.maxConsecutiveRounds !== undefined &&
-    (!Number.isInteger(rawCoupPlan.maxConsecutiveRounds) || rawCoupPlan.maxConsecutiveRounds < 1)
+    maxConsecutiveRounds !== undefined &&
+    (typeof maxConsecutiveRounds !== 'number' || !Number.isInteger(maxConsecutiveRounds) || maxConsecutiveRounds < 1)
   ) {
     diagnostics.push({
       code: 'CNL_COMPILER_COUP_PLAN_MAX_CONSECUTIVE_INVALID',
-      path: 'doc.coupPlan.maxConsecutiveRounds',
+      path: `${pathPrefix}.maxConsecutiveRounds`,
       severity: 'error',
       message: 'coupPlan.maxConsecutiveRounds must be an integer >= 1 when declared.',
       suggestion: 'Set maxConsecutiveRounds to 1 or greater.',
@@ -102,7 +118,7 @@ export function lowerCoupPlan(rawCoupPlan: GameSpecDoc['coupPlan'], diagnostics:
     if (!Array.isArray(rawCoupPlan.finalRoundOmitPhases)) {
       diagnostics.push({
         code: 'CNL_COMPILER_COUP_PLAN_FINAL_ROUND_OMIT_INVALID',
-        path: 'doc.coupPlan.finalRoundOmitPhases',
+        path: `${pathPrefix}.finalRoundOmitPhases`,
         severity: 'error',
         message: 'coupPlan.finalRoundOmitPhases must be an array of phase ids when declared.',
         suggestion: 'Set finalRoundOmitPhases to an array of coupPlan phase ids.',
@@ -112,7 +128,7 @@ export function lowerCoupPlan(rawCoupPlan: GameSpecDoc['coupPlan'], diagnostics:
         if (typeof phaseId !== 'string' || phaseId.trim() === '') {
           diagnostics.push({
             code: 'CNL_COMPILER_COUP_PLAN_FINAL_ROUND_OMIT_INVALID',
-            path: `doc.coupPlan.finalRoundOmitPhases.${index}`,
+            path: `${pathPrefix}.finalRoundOmitPhases.${index}`,
             severity: 'error',
             message: 'finalRoundOmitPhases entries must be non-empty strings.',
             suggestion: 'Use coupPlan phase ids.',
@@ -123,7 +139,7 @@ export function lowerCoupPlan(rawCoupPlan: GameSpecDoc['coupPlan'], diagnostics:
         if (!declaredPhaseIds.has(phaseId)) {
           diagnostics.push({
             code: 'CNL_COMPILER_COUP_PLAN_FINAL_ROUND_OMIT_UNKNOWN_PHASE',
-            path: `doc.coupPlan.finalRoundOmitPhases.${index}`,
+            path: `${pathPrefix}.finalRoundOmitPhases.${index}`,
             severity: 'error',
             message: `Unknown coupPlan phase id "${phaseId}" in finalRoundOmitPhases.`,
             suggestion: 'Reference ids declared in coupPlan.phases.',
@@ -133,7 +149,7 @@ export function lowerCoupPlan(rawCoupPlan: GameSpecDoc['coupPlan'], diagnostics:
     }
   }
 
-  return rawCoupPlan as CoupPlanDef;
+  return rawCoupPlan as unknown as CoupPlanDef;
 }
 
 export function lowerVictory(rawVictory: GameSpecDoc['victory'], diagnostics: Diagnostic[]): VictoryDef | undefined {

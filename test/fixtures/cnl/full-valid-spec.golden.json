@@ -28,12 +28,10 @@
         {
           "id": "main"
         }
-      ],
-      "activePlayerOrder": "roundRobin"
+      ]
     },
-    "turnFlow": null,
+    "turnOrder": null,
     "actionPipelines": null,
-    "coupPlan": null,
     "victory": null,
     "actions": [
       {

@@ -15,13 +15,12 @@ import {
   OperationPartialTraceEntrySchema,
   TurnFlowEligibilityTraceEntrySchema,
   TurnFlowLifecycleTraceEntrySchema,
-  TurnFlowRuntimeStateSchema,
+  TurnOrderRuntimeStateSchema,
   VictorySchema,
   VictoryTerminalMetadataSchema,
-  CoupPlanSchema,
   EventCardSchema,
   ActionPipelineSchema,
-  TurnFlowSchema
+  TurnOrderSchema
 } from './schemas-extensions.js';
 import { SpaceMarkerLatticeSchema, StackingConstraintSchema } from './schemas-gamespec.js';
 
@@ -94,7 +93,6 @@ export const PhaseDefSchema = z
 export const TurnStructureSchema = z
   .object({
     phases: z.array(PhaseDefSchema),
-    activePlayerOrder: z.union([z.literal('roundRobin'), z.literal('fixed')]),
   })
   .strict();
 
@@ -168,9 +166,8 @@ export const GameDefSchema = z
     tokenTypes: z.array(TokenTypeDefSchema),
     setup: z.array(EffectASTSchema),
     turnStructure: TurnStructureSchema,
-    turnFlow: TurnFlowSchema.optional(),
+    turnOrder: TurnOrderSchema.optional(),
     actionPipelines: z.array(ActionPipelineSchema).optional(),
-    coupPlan: CoupPlanSchema.optional(),
     victory: VictorySchema.optional(),
     actions: z.array(ActionDefSchema),
     triggers: z.array(TriggerDefSchema),
@@ -211,8 +208,8 @@ export const GameStateSchema = z
     rng: RngStateSchema,
     stateHash: z.bigint(),
     actionUsage: z.record(StringSchema, ActionUsageRecordSchema),
+    turnOrderState: TurnOrderRuntimeStateSchema,
     markers: z.record(StringSchema, z.record(StringSchema, StringSchema)),
-    turnFlow: TurnFlowRuntimeStateSchema.optional(),
   })
   .strict();
 

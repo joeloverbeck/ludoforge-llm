@@ -70,7 +70,7 @@ const createDef = (options?: {
     zones: [],
     tokenTypes: [],
     setup: [],
-    turnStructure: { phases, activePlayerOrder: 'roundRobin' },
+    turnStructure: { phases },
     actions,
     triggers: [],
     endConditions:

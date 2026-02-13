@@ -209,10 +209,8 @@ function mergeSection(
       return mergeSingletonConstants(doc, section, value, diagnostics);
     case 'turnStructure':
       return mergeSingletonTurnStructure(doc, section, value, diagnostics);
-    case 'turnFlow':
-      return mergeSingletonTurnFlow(doc, section, value, diagnostics);
-    case 'coupPlan':
-      return mergeSingletonCoupPlan(doc, section, value, diagnostics);
+    case 'turnOrder':
+      return mergeSingletonTurnOrder(doc, section, value, diagnostics);
     case 'victory':
       return mergeSingletonVictory(doc, section, value, diagnostics);
     case 'dataAssets':
@@ -290,43 +288,23 @@ function mergeSingletonTurnStructure(
   return buildAnchoredPaths(section, value);
 }
 
-function mergeSingletonTurnFlow(
+function mergeSingletonTurnOrder(
   doc: GameSpecDoc,
-  section: 'turnFlow',
+  section: 'turnOrder',
   value: unknown,
   diagnostics: Diagnostic[],
 ): readonly string[] {
-  if (doc.turnFlow !== null) {
+  if (doc.turnOrder !== null) {
     diagnostics.push({
       code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
-      path: 'doc.turnFlow',
+      path: 'doc.turnOrder',
       severity: 'warning',
-      message: 'Duplicate singleton section "turnFlow" ignored; first definition wins.',
+      message: 'Duplicate singleton section "turnOrder" ignored; first definition wins.',
     });
     return [];
   }
 
-  (doc as MutableGameSpecDoc).turnFlow = asObjectOrNull(value) as MutableGameSpecDoc['turnFlow'];
-  return buildAnchoredPaths(section, value);
-}
-
-function mergeSingletonCoupPlan(
-  doc: GameSpecDoc,
-  section: 'coupPlan',
-  value: unknown,
-  diagnostics: Diagnostic[],
-): readonly string[] {
-  if (doc.coupPlan !== null) {
-    diagnostics.push({
-      code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
-      path: 'doc.coupPlan',
-      severity: 'warning',
-      message: 'Duplicate singleton section "coupPlan" ignored; first definition wins.',
-    });
-    return [];
-  }
-
-  (doc as MutableGameSpecDoc).coupPlan = asObjectOrNull(value) as MutableGameSpecDoc['coupPlan'];
+  (doc as MutableGameSpecDoc).turnOrder = asObjectOrNull(value) as MutableGameSpecDoc['turnOrder'];
   return buildAnchoredPaths(section, value);
 }
 

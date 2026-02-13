@@ -11,9 +11,18 @@ import { computeFullHash, createZobristTable } from './zobrist.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
 
+const parseFixedOrderPlayer = (playerId: string, playerCount: number): number | null => {
+  const numeric = Number(playerId);
+  if (!Number.isInteger(numeric) || numeric < 0 || numeric >= playerCount) {
+    return null;
+  }
+  return numeric;
+};
+
 export const initialState = (def: GameDef, seed: number, playerCount?: number): GameState => {
   const resolvedPlayerCount = resolvePlayerCount(def, playerCount);
   const initialPhase = resolveInitialPhase(def);
+  const initialTurnOrderState = resolveInitialTurnOrderState(def, resolvedPlayerCount);
   const rng = createRng(BigInt(seed));
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
 
@@ -35,15 +44,17 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     stateHash: 0n,
     actionUsage: {},
     markers: {},
+    turnOrderState: initialTurnOrderState,
   };
+  const withInitialActivePlayer = resolveInitialActivePlayer(baseState, def.turnOrder);
 
   const setupResult = applyEffects(def.setup, {
     def,
     adjacencyGraph,
-    state: baseState,
+    state: withInitialActivePlayer,
     rng,
-    activePlayer: baseState.activePlayer,
-    actorPlayer: baseState.activePlayer,
+    activePlayer: withInitialActivePlayer.activePlayer,
+    actorPlayer: withInitialActivePlayer.activePlayer,
     bindings: {},
     moveParams: {},
     collector: createCollector(),
@@ -96,6 +107,56 @@ const resolvePlayerCount = (def: GameDef, playerCount: number | undefined): numb
   }
 
   return resolved;
+};
+
+const resolveInitialTurnOrderState = (def: GameDef, playerCount: number): GameState['turnOrderState'] => {
+  const strategy = def.turnOrder;
+  if (strategy === undefined || strategy.type === 'roundRobin') {
+    return { type: 'roundRobin' };
+  }
+  if (strategy.type === 'fixedOrder') {
+    return { type: 'fixedOrder', currentIndex: 0 };
+  }
+  if (strategy.type === 'simultaneous') {
+    return {
+      type: 'simultaneous',
+      submitted: Object.fromEntries(Array.from({ length: playerCount }, (_unused, index) => [String(index), false])),
+    };
+  }
+  return {
+    type: 'cardDriven',
+    runtime: {
+      factionOrder: [],
+      eligibility: {},
+      currentCard: {
+        firstEligible: null,
+        secondEligible: null,
+        actedFactions: [],
+        passedFactions: [],
+        nonPassCount: 0,
+        firstActionClass: null,
+      },
+      pendingEligibilityOverrides: [],
+    },
+  };
+};
+
+const resolveInitialActivePlayer = (state: GameState, strategy: GameDef['turnOrder']): GameState => {
+  if (strategy?.type !== 'fixedOrder') {
+    return state;
+  }
+  const first = strategy.order[0];
+  if (first === undefined) {
+    return state;
+  }
+  const player = parseFixedOrderPlayer(first, state.playerCount);
+  if (player === null) {
+    return state;
+  }
+  return {
+    ...state,
+    activePlayer: asPlayerId(player),
+  };
 };
 
 const resolveInitialPhase = (def: GameDef): GameState['currentPhase'] => {

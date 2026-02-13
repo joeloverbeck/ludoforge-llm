@@ -16,11 +16,6 @@
       "suggestion": "Rewrite this node to a supported kernel-compatible shape."
     },
     {
-      "code": "CNL_COMPILER_MISSING_CAPABILITY",
-      "path": "doc.turnStructure.activePlayerOrder",
-      "suggestion": "Use one of the supported forms."
-    },
-    {
       "code": "CNL_COMPILER_ZONE_OWNER_INVALID",
       "path": "doc.zones.0.owner",
       "suggestion": "Use owner \"none\" or \"player\"."

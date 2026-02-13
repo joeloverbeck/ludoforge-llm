@@ -174,6 +174,12 @@ describe('applicability-based operation profile dispatch', () => {
     } as unknown as GameDef;
     // Player 999 matches no applicability — falls back to action effects
     const state: GameState = { ...createState(0), activePlayer: asPlayerId(999) };
+    const legal = legalMoves(def, state);
+    assert.ok(legal.some((move) => move.actionId === asActionId('operate')));
+
+    const choices = legalChoices(def, state, { actionId: asActionId('operate'), params: {} });
+    assert.equal(choices.complete, true);
+
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
     // Fallback to action.effects: delta: 99
     assert.equal(result.state.globalVars.score, 99);

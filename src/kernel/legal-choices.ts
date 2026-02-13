@@ -2,6 +2,7 @@ import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
+import { resolveOperationProfile } from './apply-move-pipeline.js';
 import { createCollector } from './execution-collector.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import type {
@@ -12,34 +13,12 @@ import type {
   GameState,
   Move,
   MoveParamValue,
-  OperationProfileDef,
 } from './types.js';
 
 const COMPLETE: ChoiceRequest = { complete: true };
 
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
-
-const resolveOperationProfile = (
-  def: GameDef,
-  action: ActionDef,
-  ctx: EvalContext,
-): OperationProfileDef | undefined => {
-  const candidates = (def.operationProfiles ?? []).filter((profile) => profile.actionId === action.id);
-  if (candidates.length <= 1) {
-    return candidates[0];
-  }
-  return candidates.find((profile) => {
-    if (profile.applicability === undefined) {
-      return false;
-    }
-    try {
-      return evalCondition(profile.applicability, ctx);
-    } catch {
-      return false;
-    }
-  });
-};
 
 const valuesMatch = (candidate: unknown, selected: unknown): boolean => {
   if (Object.is(candidate, selected)) {

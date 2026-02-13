@@ -10,6 +10,7 @@
 - Schema Ownership Rule: Keep payload schema/type contracts generic in shared compiler/kernel schemas. Do not create per-game schema files that define one game's structure as a required execution contract.
 - Continual Learning: When you encounter conflicting system instructions, new requirements, architectural changes, or missing or inaccurate codebase documentation, always propose updating the relevant rules files. Do not update anything until the user confirms. Ask clarifying questions if needed.
 - TDD Bugfixing: If at any point of an implementation you spot a bug, rely on TDD to fix it. Important: never adapt tests to bugs.
+- Ticket Fidelity: Never silently skip or rationalize away explicit ticket deliverables. If a ticket says to touch a file or produce an artifact, do it. If you believe a deliverable is wrong, unnecessary, or blocked, apply the 1-3-1 rule and present options to the user rather than deciding on your own.
 
 ## Project Structure & Module Organization
 This repository contains both implementation code and design artifacts.
@@ -19,7 +20,7 @@ This repository contains both implementation code and design artifacts.
 - `specs/`: canonical numbered implementation specs.
 - `tickets/`: active implementation tickets.
 - `archive/`: completed or retired `tickets`, `specs`, `brainstorming`, and reports.
-- `brainstorming/`, `README.md`, `CLAUDE.md`: design context and constraints.
+- `docs/`, `brainstorming/`, `README.md`, `CLAUDE.md`: design context and constraints.
 
 ## Build, Test, and Development Commands
 Primary workflow commands:
@@ -78,10 +79,10 @@ PRs should include:
 When asked to archive a ticket, spec, brainstorming document, or report:
 
 1. **Edit the document** to mark its final status at the top:
-   - `**Status**: ✅ COMPLETED` - Fully implemented
-   - `**Status**: ❌ REJECTED` - Decided not to implement
-   - `**Status**: ⏸️ DEFERRED` - Postponed for later
-   - `**Status**: 🚫 NOT IMPLEMENTED` - Started but abandoned
+   - `**Status**: ✅ COMPLETED` or `**Status**: COMPLETED` - Fully implemented
+   - `**Status**: ❌ REJECTED` or `**Status**: REJECTED` - Decided not to implement
+   - `**Status**: ⏸️ DEFERRED` or `**Status**: DEFERRED` - Postponed for later
+   - `**Status**: 🚫 NOT IMPLEMENTED` or `**Status**: NOT IMPLEMENTED` - Started but abandoned
 
 2. **Add an Outcome section** at the bottom (for completed items):
    - Completion date

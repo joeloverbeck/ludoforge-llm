@@ -311,6 +311,29 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('does not require coupPlan phase ids to match turnStructure phase ids', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      turnStructure: {
+        phases: [{ id: 'operations' }],
+        activePlayerOrder: 'roundRobin',
+      },
+      actions: [{ ...base.actions[0], phase: 'operations' }],
+      coupPlan: {
+        phases: [{ id: 'victory', steps: ['check-thresholds'] }],
+        finalRoundOmitPhases: ['victory'],
+        maxConsecutiveRounds: 1,
+      },
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code.startsWith('COUP_PLAN_')),
+      false,
+    );
+  });
+
   it('reports missing references inside victory expressions', () => {
     const base = createValidGameDef();
     const def = {

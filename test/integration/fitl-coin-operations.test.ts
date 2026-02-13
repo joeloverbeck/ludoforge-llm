@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { applyMove, asActionId, initialState, type Move } from '../../src/kernel/index.js';
+import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 
 const readCompilerFixture = (name: string): string =>
   readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
@@ -16,9 +17,9 @@ describe('FITL COIN operations integration', () => {
     const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assertNoErrors(parsed);
     assert.deepEqual(validatorDiagnostics, []);
-    assert.deepEqual(compiled.diagnostics, []);
+    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
     assert.deepEqual(
       compiled.gameDef?.operationProfiles?.map((profile) => ({ id: profile.id, actionId: String(profile.actionId) })),
@@ -37,7 +38,7 @@ describe('FITL COIN operations integration', () => {
     const parsed = parseGameSpec(markdown);
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-    assert.deepEqual(compiled.diagnostics, []);
+    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
     // Train and Patrol require complex params (chooseN/chooseOne decisions) — tested separately.
@@ -62,7 +63,7 @@ describe('FITL COIN operations integration', () => {
       const markdown = readCompilerFixture('fitl-operations-coin.md');
       const parsed = parseGameSpec(markdown);
       const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-      assert.deepEqual(compiled.diagnostics, []);
+      assertNoDiagnostics(compiled);
       const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'train-arvn-profile');
       assert.ok(profile, 'train-arvn-profile must exist');
       return profile;
@@ -106,7 +107,7 @@ describe('FITL COIN operations integration', () => {
       const markdown = readCompilerFixture('fitl-operations-coin.md');
       const parsed = parseGameSpec(markdown);
       const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-      assert.deepEqual(compiled.diagnostics, []);
+      assertNoDiagnostics(compiled);
       const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'train-arvn-profile');
       assert.ok(profile, 'train-arvn-profile must exist');
       return profile;
@@ -388,7 +389,7 @@ describe('FITL COIN operations integration', () => {
       const markdown = readCompilerFixture('fitl-operations-coin.md');
       const parsed = parseGameSpec(markdown);
       const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-      assert.deepEqual(compiled.diagnostics, []);
+      assertNoDiagnostics(compiled);
 
       const usProfile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'train-us-profile');
       const arvnProfile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'train-arvn-profile');
@@ -403,7 +404,7 @@ describe('FITL COIN operations integration', () => {
       const markdown = readCompilerFixture('fitl-operations-coin.md');
       const parsed = parseGameSpec(markdown);
       const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-      assert.deepEqual(compiled.diagnostics, []);
+      assertNoDiagnostics(compiled);
 
       const patrolProfile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'patrol-us-profile');
       assert.ok(patrolProfile, 'patrol-us-profile must exist');
@@ -414,7 +415,7 @@ describe('FITL COIN operations integration', () => {
       const markdown = readCompilerFixture('fitl-operations-coin.md');
       const parsed = parseGameSpec(markdown);
       const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-      assert.deepEqual(compiled.diagnostics, []);
+      assertNoDiagnostics(compiled);
 
       for (const id of ['sweep-profile', 'assault-profile']) {
         const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === id);
@@ -430,7 +431,7 @@ describe('FITL COIN operations integration', () => {
       const markdown = readCompilerFixture('fitl-operations-coin.md');
       const parsed = parseGameSpec(markdown);
       const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-      assert.deepEqual(compiled.diagnostics, []);
+      assertNoDiagnostics(compiled);
       const profile = compiled.gameDef!.operationProfiles!.find((p) => p.id === 'patrol-us-profile');
       assert.ok(profile, 'patrol-us-profile must exist');
       return profile;

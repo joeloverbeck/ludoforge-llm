@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileCompilerFixture } from './fitl-events-test-helpers.js';
 
 describe('FITL Phoenix Program event-card fixture', () => {
@@ -8,9 +9,9 @@ describe('FITL Phoenix Program event-card fixture', () => {
     const { markdown, parsed, validatorDiagnostics, compiled } = compileCompilerFixture('fitl-events-initial-card-pack.md');
 
     assert.equal(markdown.includes('data/fitl/'), false);
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assertNoErrors(parsed);
     assert.deepEqual(validatorDiagnostics, []);
-    assert.deepEqual(compiled.diagnostics, []);
+    assertNoDiagnostics(compiled);
 
     const phoenix = compiled.gameDef?.eventCards?.find((card) => card.id === 'card-27');
     assert.notEqual(phoenix, undefined);

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
+import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import {
   applyMove,
   asActionId,
@@ -20,8 +21,8 @@ const compileFixture = (): { readonly markdown: string; readonly def: GameDef } 
   const parsed = parseGameSpec(markdown);
   const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-  assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
-  assert.deepEqual(compiled.diagnostics, []);
+  assertNoErrors(parsed);
+  assertNoDiagnostics(compiled);
   assert.notEqual(compiled.gameDef, null);
 
   return { markdown, def: compiled.gameDef! };

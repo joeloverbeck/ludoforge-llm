@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { applyMove, asActionId, initialState, type GameState, type Move } from '../../src/kernel/index.js';
+import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 
 const readCompilerFixture = (name: string): string =>
   readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
@@ -25,9 +26,9 @@ describe('FITL Joint Operation cost constraint integration', () => {
   it('compiles joint operation profiles from fixture data', () => {
     const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
 
-    assert.equal(parsed.diagnostics.filter((d) => d.severity === 'error').length, 0);
+    assertNoErrors(parsed);
     assert.deepEqual(validatorDiagnostics, []);
-    assert.deepEqual(compiled.diagnostics, []);
+    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
     assert.deepEqual(
       compiled.gameDef?.operationProfiles?.map((p) => ({ id: p.id, actionId: String(p.actionId) })),

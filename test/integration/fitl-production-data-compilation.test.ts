@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 
 interface MapSpaceLike {
   readonly id: string;
@@ -35,7 +36,7 @@ describe('FITL production data integration compilation', () => {
     const parsed = parseGameSpec(markdown);
     const validationDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
 
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assertNoErrors(parsed);
     const actualValidationProfile = new Set(validationDiagnostics.map((diagnostic) => `${diagnostic.code}|${diagnostic.path}`));
     const expectedValidationProfile = new Set([
       'CNL_VALIDATOR_REQUIRED_SECTION_MISSING|doc.actions',

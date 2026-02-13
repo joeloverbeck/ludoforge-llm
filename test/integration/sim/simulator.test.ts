@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../../src/cnl/index.js';
+import { assertNoDiagnostics, assertNoErrors } from '../../helpers/diagnostic-helpers.js';
 import { asActionId, asPhaseId, nextInt, serializeTrace, type Agent, type GameDef } from '../../../src/kernel/index.js';
 import { runGames } from '../../../src/sim/index.js';
 
@@ -61,9 +62,9 @@ describe('runGames integration', () => {
     const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assertNoErrors(parsed);
     assert.deepEqual(validatorDiagnostics, []);
-    assert.deepEqual(compiled.diagnostics, []);
+    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
     const [trace] = runGames(compiled.gameDef!, [41], [rngDrivenAgent, rngDrivenAgent], 3);

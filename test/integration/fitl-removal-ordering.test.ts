@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
+import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import {
   applyEffects,
   asPhaseId,
@@ -36,9 +37,9 @@ describe('FITL removal ordering macros', () => {
       const validatorDiags = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
       const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-      assert.equal(parsed.diagnostics.filter((d) => d.severity === 'error').length, 0, 'Parser errors');
+      assertNoErrors(parsed);
       assert.deepEqual(validatorDiags, [], 'Validator diagnostics');
-      assert.deepEqual(compiled.diagnostics, [], 'Compiler diagnostics');
+      assertNoDiagnostics(compiled);
       assert.notEqual(compiled.gameDef, null, 'Expected valid GameDef');
     });
 
@@ -196,9 +197,9 @@ describe('FITL removal ordering macros', () => {
       const validatorDiags = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
       const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-      assert.equal(parsed.diagnostics.filter((d) => d.severity === 'error').length, 0, 'Parser errors');
+      assertNoErrors(parsed);
       assert.deepEqual(validatorDiags, [], 'Validator diagnostics');
-      assert.deepEqual(compiled.diagnostics, [], 'Compiler diagnostics');
+      assertNoDiagnostics(compiled);
       assert.notEqual(compiled.gameDef, null, 'Expected valid GameDef');
     });
   });

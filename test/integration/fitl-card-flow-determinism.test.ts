@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
+import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import {
   applyMove,
   asActionId,
@@ -106,8 +107,8 @@ const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join
 const compileFixtureDef = (name: string): GameDef => {
   const parsed = parseGameSpec(readCompilerFixture(name));
   const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-  assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
-  assert.deepEqual(compiled.diagnostics, []);
+  assertNoErrors(parsed);
+  assertNoDiagnostics(compiled);
   assert.notEqual(compiled.gameDef, null);
   return compiled.gameDef!;
 };

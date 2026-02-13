@@ -10,6 +10,7 @@ import {
   parseGameSpec,
   validateGameSpec,
 } from '../../src/cnl/index.js';
+import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { validateGameDef } from '../../src/kernel/index.js';
 
 const readCompilerFixture = (name: string): string =>
@@ -43,8 +44,8 @@ describe('compile pipeline integration', () => {
     const raw = compileGameSpecToGameDef(doc);
     const expanded = compileGameSpecToGameDef(expandMacros(doc).doc);
 
-    assert.deepEqual(raw.diagnostics, []);
-    assert.deepEqual(expanded.diagnostics, []);
+    assertNoDiagnostics(raw);
+    assertNoDiagnostics(expanded);
     assert.deepEqual(raw, expanded);
   });
 
@@ -80,10 +81,10 @@ describe('compile pipeline integration', () => {
     const raw = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
     const preExpanded = compileGameSpecToGameDef(expanded.doc, { sourceMap: parsed.sourceMap });
 
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assertNoErrors(parsed);
     assert.deepEqual(validatorDiagnostics, []);
-    assert.deepEqual(expanded.diagnostics, []);
-    assert.deepEqual(raw.diagnostics, []);
+    assertNoDiagnostics(expanded);
+    assertNoDiagnostics(raw);
     assert.deepEqual(raw, preExpanded);
     assert.notEqual(raw.gameDef, null);
     assert.deepEqual(validateGameDef(raw.gameDef!), []);
@@ -96,9 +97,9 @@ describe('compile pipeline integration', () => {
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
     assert.equal(markdown.includes('data/fitl/'), false);
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assertNoErrors(parsed);
     assert.deepEqual(validatorDiagnostics, []);
-    assert.deepEqual(compiled.diagnostics, []);
+    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
     assert.deepEqual(
       compiled.gameDef?.zones.map((zone) => String(zone.id)),
@@ -162,9 +163,9 @@ describe('compile pipeline integration', () => {
     const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assertNoErrors(parsed);
     assert.deepEqual(validatorDiagnostics, []);
-    assert.deepEqual(compiled.diagnostics, []);
+    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
     assert.deepEqual(
       compiled.gameDef?.zones.map((zone) => String(zone.id)),
@@ -228,9 +229,9 @@ describe('compile pipeline integration', () => {
     const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assertNoErrors(parsed);
     assert.deepEqual(validatorDiagnostics, []);
-    assert.deepEqual(compiled.diagnostics, []);
+    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
     assert.deepEqual(
       compiled.gameDef?.zones.map((zone) => String(zone.id)),
@@ -379,8 +380,8 @@ describe('compile pipeline integration', () => {
     const parsed = parseGameSpec(markdown);
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
-    assert.deepEqual(compiled.diagnostics, []);
+    assertNoErrors(parsed);
+    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
     assert.deepEqual(compiled.gameDef?.eventCards?.map((card) => card.id), ['card-a', 'card-b']);
     assert.deepEqual(compiled.gameDef?.eventCards?.[1]?.unshaded?.branches?.map((branch) => branch.id), ['a', 'z']);

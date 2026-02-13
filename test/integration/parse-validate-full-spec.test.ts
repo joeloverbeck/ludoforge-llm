@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 
 const readFixture = (name: string): string => readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', name), 'utf8');
 const readCompilerFixture = (name: string): string =>
@@ -15,7 +16,7 @@ describe('parse + validate full-spec integration', () => {
     const parsed = parseGameSpec(markdown);
     const diagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
 
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assertNoErrors(parsed);
     assert.deepEqual(diagnostics, []);
 
     assert.equal(parsed.doc.metadata?.id, 'fixture-valid');

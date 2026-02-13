@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { applyMove, asActionId, initialState, type Move } from '../../src/kernel/index.js';
+import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 
 const readCompilerFixture = (name: string): string =>
   readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
@@ -16,9 +17,9 @@ describe('FITL US/ARVN special activities integration', () => {
     const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assertNoErrors(parsed);
     assert.deepEqual(validatorDiagnostics, []);
-    assert.deepEqual(compiled.diagnostics, []);
+    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
     assert.deepEqual(
       compiled.gameDef?.operationProfiles?.map((profile) => ({
@@ -42,7 +43,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const parsed = parseGameSpec(markdown);
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-    assert.deepEqual(compiled.diagnostics, []);
+    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
     const start = initialState(compiled.gameDef!, 113, 2);
@@ -73,7 +74,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const parsed = parseGameSpec(markdown);
     const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-    assert.deepEqual(compiled.diagnostics, []);
+    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
     let state = initialState(compiled.gameDef!, 211, 2);

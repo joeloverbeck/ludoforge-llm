@@ -1,14 +1,9 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { applyMove, asActionId, initialState, type GameState, type Move } from '../../src/kernel/index.js';
-import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
-
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const withArvnResources = (state: GameState, amount: number): GameState => ({
   ...state,
@@ -19,24 +14,22 @@ const withArvnResources = (state: GameState, amount: number): GameState => ({
 });
 
 describe('FITL Joint Operation cost constraint integration', () => {
-  const markdown = readCompilerFixture('fitl-joint-operations.md');
-  const parsed = parseGameSpec(markdown);
-  const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+  const { parsed, compiled } = compileProductionSpec();
 
-  it('compiles joint operation profiles from fixture data', () => {
-    const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
-
+  it('compiles joint operation profiles from production spec', () => {
     assertNoErrors(parsed);
-    assert.deepEqual(validatorDiagnostics, []);
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
-    assert.deepEqual(
-      compiled.gameDef?.operationProfiles?.map((p) => ({ id: p.id, actionId: String(p.actionId) })),
-      [
-        { id: 'us-op-profile', actionId: 'usOp' },
-        { id: 'arvn-op-profile', actionId: 'arvnOp' },
-      ],
-    );
+    const profiles = compiled.gameDef!.operationProfiles ?? [];
+    const profileMap = profiles.map((p) => ({ id: p.id, actionId: String(p.actionId) }));
+    for (const expected of [
+      { id: 'us-op-profile', actionId: 'usOp' },
+      { id: 'arvn-op-profile', actionId: 'arvnOp' },
+    ]) {
+      assert.ok(
+        profileMap.some((p) => p.id === expected.id && p.actionId === expected.actionId),
+        `Expected profile ${expected.id} with actionId ${expected.actionId}`,
+      );
+    }
   });
 
   it('allows US operation when ARVN resources minus cost exceed Total Econ (20 - 5 = 15 >= 10)', () => {

@@ -45,9 +45,7 @@ This is a verification-only ticket. If issues are found, they should be addresse
 
 ## Files to Touch
 
-- `test/fixtures/cnl/compiler/fitl-operations-coin.md` — Verify no stubs remain
-- `test/fixtures/cnl/compiler/fitl-operations-insurgent.md` — Verify no stubs remain
-- `data/games/fire-in-the-lake.md` — Verify all 16 profiles present
+- `data/games/fire-in-the-lake.md` — Verify all 16 profiles present, no stubs remain
 - `test/integration/fitl-coin-operations.test.ts` — Verify updated for real profiles
 - `test/integration/fitl-insurgent-operations.test.ts` — Verify updated for real profiles
 

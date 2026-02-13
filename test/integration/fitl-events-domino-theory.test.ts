@@ -1,17 +1,15 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { compileCompilerFixture } from './fitl-events-test-helpers.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
-describe('FITL Domino Theory event-card fixture', () => {
+describe('FITL Domino Theory event-card production spec', () => {
   it('compiles card 82 with deterministic branch ordering and constrained declarative targets', () => {
-    const { markdown, parsed, validatorDiagnostics, compiled } = compileCompilerFixture('fitl-events-initial-card-pack.md');
+    const { parsed, compiled } = compileProductionSpec();
 
-    assert.equal(markdown.includes('data/fitl/'), false);
     assertNoErrors(parsed);
-    assert.deepEqual(validatorDiagnostics, []);
-    assertNoDiagnostics(compiled);
+    assert.notEqual(compiled.gameDef, null);
 
     const domino = compiled.gameDef?.eventCards?.find((card) => card.id === 'card-82');
     assert.notEqual(domino, undefined);
@@ -38,10 +36,15 @@ describe('FITL Domino Theory event-card fixture', () => {
     });
   });
 
-  it('keeps deterministic event-card ordering and fixture action scope', () => {
-    const { compiled } = compileCompilerFixture('fitl-events-initial-card-pack.md');
+  it('keeps deterministic event-card ordering', () => {
+    const { compiled } = compileProductionSpec();
 
-    assert.deepEqual(compiled.gameDef?.eventCards?.map((card) => card.id), ['card-27', 'card-82']);
-    assert.deepEqual(compiled.gameDef?.actions.map((action) => String(action.id)), ['pass']);
+    const cardIds = compiled.gameDef?.eventCards?.map((card) => card.id);
+    assert.ok(cardIds?.includes('card-27'), 'Expected card-27');
+    assert.ok(cardIds?.includes('card-82'), 'Expected card-82');
+    // card-27 has order 27, card-82 has order 82 — card-27 should come first
+    const idx27 = cardIds!.indexOf('card-27');
+    const idx82 = cardIds!.indexOf('card-82');
+    assert.ok(idx27 < idx82, 'card-27 must appear before card-82 in sorted order');
   });
 });

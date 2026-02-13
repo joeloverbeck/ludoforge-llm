@@ -1,10 +1,9 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
 import type { GameDef } from '../../src/kernel/index.js';
+import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
 interface ValidCompileGolden {
   readonly expectedGameDef: GameDef;
@@ -19,9 +18,6 @@ interface MalformedCompileGolden {
     readonly entityId?: string;
   }[];
 }
-
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
 
 const readCompilerGolden = <T>(name: string): T => JSON.parse(readCompilerFixture(name)) as T;
 

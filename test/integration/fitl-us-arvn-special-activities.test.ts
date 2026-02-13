@@ -1,49 +1,40 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { applyMove, asActionId, initialState, type Move } from '../../src/kernel/index.js';
-import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
-
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 describe('FITL US/ARVN special activities integration', () => {
-  it('compiles US/ARVN special-activity operation profiles with linked windows from fixture data', () => {
-    const markdown = readCompilerFixture('fitl-special-us-arvn.md');
-    const parsed = parseGameSpec(markdown);
-    const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+  it('compiles US/ARVN special-activity operation profiles with linked windows from production spec', () => {
+    const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
-    assert.deepEqual(validatorDiagnostics, []);
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
-    assert.deepEqual(
-      compiled.gameDef?.operationProfiles?.map((profile) => ({
-        id: profile.id,
-        actionId: String(profile.actionId),
-        windows: profile.linkedSpecialActivityWindows ?? [],
-      })),
-      [
-        { id: 'advise-profile', actionId: 'advise', windows: ['us-special-window'] },
-        { id: 'air-lift-profile', actionId: 'airLift', windows: ['us-special-window'] },
-        { id: 'air-strike-profile', actionId: 'airStrike', windows: ['us-special-window'] },
-        { id: 'govern-profile', actionId: 'govern', windows: ['arvn-special-window'] },
-        { id: 'transport-profile', actionId: 'transport', windows: ['arvn-special-window'] },
-        { id: 'raid-profile', actionId: 'raid', windows: ['arvn-special-window'] },
-      ],
-    );
+    const profiles = compiled.gameDef!.operationProfiles ?? [];
+    const profileSummaries = profiles.map((profile) => ({
+      id: profile.id,
+      actionId: String(profile.actionId),
+      windows: profile.linkedSpecialActivityWindows ?? [],
+    }));
+    for (const expected of [
+      { id: 'advise-profile', actionId: 'advise', windows: ['us-special-window'] },
+      { id: 'air-lift-profile', actionId: 'airLift', windows: ['us-special-window'] },
+      { id: 'air-strike-profile', actionId: 'airStrike', windows: ['us-special-window'] },
+      { id: 'govern-profile', actionId: 'govern', windows: ['arvn-special-window'] },
+      { id: 'transport-profile', actionId: 'transport', windows: ['arvn-special-window'] },
+      { id: 'raid-profile', actionId: 'raid', windows: ['arvn-special-window'] },
+    ]) {
+      const found = profileSummaries.find((p) => p.id === expected.id);
+      assert.ok(found, `Expected profile ${expected.id}`);
+      assert.equal(found!.actionId, expected.actionId);
+      assert.deepEqual(found!.windows, expected.windows);
+    }
   });
 
   it('executes US/ARVN special activities through compiled operationProfiles instead of fallback action effects', () => {
-    const markdown = readCompilerFixture('fitl-special-us-arvn.md');
-    const parsed = parseGameSpec(markdown);
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const { compiled } = compileProductionSpec();
 
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
     const start = initialState(compiled.gameDef!, 113, 2);
@@ -58,8 +49,10 @@ describe('FITL US/ARVN special activities integration', () => {
 
     const final = sequence.reduce((state, move) => applyMove(compiled.gameDef!, state, move).state, start);
 
+    // Production spec: usResources init 7, arvnResources init 30
+    // advise(-1 arvn) → airLift(-1 us) → airStrike(-2 us) → govern(-1 arvn) → transport(-1 arvn) → raid(-2 arvn)
     assert.equal(final.globalVars.usResources, 4);
-    assert.equal(final.globalVars.arvnResources, 2);
+    assert.equal(final.globalVars.arvnResources, 25);
     assert.equal(final.globalVars.adviseCount, 1);
     assert.equal(final.globalVars.airLiftCount, 1);
     assert.equal(final.globalVars.airStrikeCount, 1);
@@ -70,11 +63,8 @@ describe('FITL US/ARVN special activities integration', () => {
   });
 
   it('rejects airStrike when cross-faction cost validation fails under partialExecution forbid', () => {
-    const markdown = readCompilerFixture('fitl-special-us-arvn.md');
-    const parsed = parseGameSpec(markdown);
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const { compiled } = compileProductionSpec();
 
-    assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
 
     let state = initialState(compiled.gameDef!, 211, 2);

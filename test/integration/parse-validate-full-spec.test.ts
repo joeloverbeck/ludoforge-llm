@@ -5,10 +5,9 @@ import { describe, it } from 'node:test';
 
 import { parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
 const readFixture = (name: string): string => readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', name), 'utf8');
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
 
 describe('parse + validate full-spec integration', () => {
   it('accepts a realistic valid full markdown spec end-to-end', () => {

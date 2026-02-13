@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 import {
   asActionId,
   asPhaseId,
@@ -17,9 +18,6 @@ import {
   type GameDef,
   type SerializedGameState,
 } from '../../src/kernel/index.js';
-
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
 
 const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 

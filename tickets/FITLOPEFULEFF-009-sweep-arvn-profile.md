@@ -20,8 +20,7 @@ Key behaviors:
 
 ## Files to Touch
 
-- `test/fixtures/cnl/compiler/fitl-operations-coin.md` — Add `sweep-arvn-profile` YAML
-- `data/games/fire-in-the-lake.md` — Add `sweep-arvn-profile` operation profile
+- `data/games/fire-in-the-lake.md` — Replace stub in production spec with `sweep-arvn-profile` YAML
 - `test/integration/fitl-coin-operations.test.ts` — Add ARVN Sweep test cases
 - `test/integration/fitl-patrol-sweep-movement.test.ts` — Add ARVN Sweep tests
 

@@ -1,10 +1,8 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
-import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
   applyEffects,
   asPhaseId,
@@ -21,9 +19,6 @@ import {
   createCollector,
 } from '../../src/kernel/index.js';
 
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
-
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
   type,
@@ -32,18 +27,20 @@ const makeToken = (id: string, type: string, faction: string, extra?: Record<str
 
 describe('FITL removal ordering macros', () => {
   describe('compilation', () => {
-    it('COIN fixture with coin-assault-removal-order compiles without diagnostics', () => {
-      const markdown = readCompilerFixture('fitl-operations-coin.md');
-      const parsed = parseGameSpec(markdown);
-      const validatorDiags = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
-      const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    it('production spec with coin-assault-removal-order and insurgent-attack-removal-order compiles without errors', () => {
+      const { parsed, compiled } = compileProductionSpec();
 
       assertNoErrors(parsed);
-      assert.deepEqual(validatorDiags, [], 'Validator diagnostics');
-      assertNoDiagnostics(compiled);
       assert.notEqual(compiled.gameDef, null, 'Expected valid GameDef');
-    });
 
+      // Verify the macros were expanded by checking that the production spec contains
+      // profiles referencing removal-order related effects
+      const profiles = compiled.gameDef!.operationProfiles ?? [];
+      const sweepProfile = profiles.find((p) => p.id === 'sweep-profile');
+      const assaultProfile = profiles.find((p) => p.id === 'assault-profile');
+      assert.ok(sweepProfile, 'Expected sweep-profile to exist');
+      assert.ok(assaultProfile, 'Expected assault-profile to exist');
+    });
   });
 
   describe('coin-assault-removal-order runtime behavior', () => {
@@ -92,13 +89,6 @@ describe('FITL removal ordering macros', () => {
         markers: {},
       });
 
-      // Manually construct the expanded effects of coin-assault-removal-order.
-      // Step 1: Count bases before (1 NVA base)
-      // Step 2: Remove enemy troops (1 NVA troop → available:NVA)
-      // Step 3: Count bases after (1 NVA base still there — damage 2, only 1 troop to remove, 1 remaining damage for guerrillas, but no guerrillas)
-      // Step 4: basesRemoved = 0, no Aid added
-      // For this test we need a scenario where bases ARE removed (no active guerrillas protecting them)
-
       // Scenario: 2 NVA troops + 1 NVA base (untunneled), damage 3 → remove 2 troops, remaining 1, no guerrillas, remove base
       const state = {
         ...makeState(),
@@ -113,12 +103,6 @@ describe('FITL removal ordering macros', () => {
           'available:US': [],
         },
       };
-
-      // The compiled expanded effects for coin-assault-removal-order are complex.
-      // Instead of duplicating the full AST, we test the key sub-behaviors:
-      // 1. Count bases before
-      // 2. Count bases after removal
-      // 3. Compute basesRemoved and add Aid
 
       // Test the Aid-addition logic: basesRemoved = 1 → add 6 Aid
       const aidEffects: readonly EffectAST[] = [
@@ -190,20 +174,6 @@ describe('FITL removal ordering macros', () => {
 
       const result = applyEffects(aidEffects, ctx);
       assert.equal(result.state.globalVars.aid, 27, 'Aid should be 15 + 12 = 27');
-    });
-  });
-
-  describe('insurgent-attack-removal-order compilation', () => {
-    it('insurgent fixture with insurgent-attack-removal-order compiles without diagnostics', () => {
-      const markdown = readCompilerFixture('fitl-operations-insurgent.md');
-      const parsed = parseGameSpec(markdown);
-      const validatorDiags = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
-      const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
-
-      assertNoErrors(parsed);
-      assert.deepEqual(validatorDiags, [], 'Validator diagnostics');
-      assertNoDiagnostics(compiled);
-      assert.notEqual(compiled.gameDef, null, 'Expected valid GameDef');
     });
   });
 

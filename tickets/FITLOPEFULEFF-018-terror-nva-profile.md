@@ -21,8 +21,7 @@ Key behaviors:
 
 ## Files to Touch
 
-- `test/fixtures/cnl/compiler/fitl-operations-insurgent.md` — Replace `terror-profile` stub with `terror-nva-profile` YAML
-- `data/games/fire-in-the-lake.md` — Add `terror-nva-profile` operation profile
+- `data/games/fire-in-the-lake.md` — Replace stub in production spec with `terror-nva-profile` YAML
 - `test/integration/fitl-insurgent-operations.test.ts` — Update profile ID, add test cases
 
 ## Out of Scope

@@ -1,14 +1,10 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec } from '../../../src/cnl/index.js';
 import { validateGameDef } from '../../../src/kernel/index.js';
 import { assertNoDiagnostics } from '../../helpers/diagnostic-helpers.js';
-
-const readCompilerFixture = (name: string): string =>
-  readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
+import { readCompilerFixture } from '../../helpers/production-spec-helpers.js';
 
 const reorderedValidMarkdown = [
   '# Compiler Valid Fixture (Reordered)',

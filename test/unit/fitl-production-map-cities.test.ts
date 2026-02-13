@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { parseGameSpec } from '../../src/cnl/index.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 
 type CitySpace = {
   readonly id: string;
@@ -19,7 +20,7 @@ type CitySpace = {
 const readCitySpaces = (): CitySpace[] => {
   const markdown = readFileSync(join(process.cwd(), 'data', 'games', 'fire-in-the-lake.md'), 'utf8');
   const parsed = parseGameSpec(markdown);
-  assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+  assertNoErrors(parsed);
 
   const mapAsset = parsed.doc.dataAssets?.find((asset) => asset.id === 'fitl-map-production' && asset.kind === 'map');
   if (mapAsset === undefined) {

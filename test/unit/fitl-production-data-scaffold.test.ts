@@ -4,13 +4,14 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { parseGameSpec } from '../../src/cnl/index.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 
 describe('fitl production data scaffold', () => {
   it('parses data/games/fire-in-the-lake.md and exposes required scaffold envelopes', () => {
     const markdown = readFileSync(join(process.cwd(), 'data', 'games', 'fire-in-the-lake.md'), 'utf8');
     const parsed = parseGameSpec(markdown);
 
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assertNoErrors(parsed);
     assert.equal(parsed.doc.metadata?.id, 'fire-in-the-lake');
 
     const dataAssets = parsed.doc.dataAssets;

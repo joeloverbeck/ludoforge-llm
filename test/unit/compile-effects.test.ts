@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { lowerEffectArray, type EffectLoweringContext } from '../../src/cnl/compile-effects.js';
+import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 const context: EffectLoweringContext = {
   ownershipByBase: {
@@ -37,7 +38,7 @@ describe('compile-effects lowering', () => {
     const second = lowerEffectArray(source, context, 'doc.actions.0.effects');
 
     assert.deepEqual(first, second);
-    assert.deepEqual(first.diagnostics, []);
+    assertNoDiagnostics(first);
     assert.deepEqual(first.value, [
       { draw: { from: 'deck:none', to: 'hand:$actor', count: 1 } },
       {
@@ -79,7 +80,7 @@ describe('compile-effects lowering', () => {
 
     const result = lowerEffectArray(source, context, 'doc.actions.0.effects');
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, [
       { chooseN: { bind: '$upToTwo', options: { query: 'players' }, max: 2 } },
       { chooseN: { bind: '$oneToThree', options: { query: 'players' }, min: 1, max: 3 } },
@@ -116,7 +117,7 @@ describe('compile-effects lowering', () => {
       'doc.actions.0.effects',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.ok(result.value !== null && result.value.length === 1);
     const effect = result.value[0]!;
     assert.ok('moveToken' in effect);
@@ -139,7 +140,7 @@ describe('compile-effects lowering', () => {
       'doc.actions.0.effects',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.ok(result.value !== null && result.value.length === 1);
     const effect = result.value[0]!;
     assert.ok('moveToken' in effect);
@@ -156,7 +157,7 @@ describe('compile-effects lowering', () => {
       'doc.actions.0.effects',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.ok(result.value !== null && result.value.length === 1);
     const effect = result.value[0]!;
     assert.ok('shuffle' in effect);

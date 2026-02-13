@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
+import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 describe('compile top-level actions/triggers/end conditions', () => {
   it('preserves trigger/end-condition order and generates deterministic trigger ids', () => {
@@ -31,7 +32,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
     const result = compileGameSpecToGameDef(doc);
 
     assert.equal(result.gameDef !== null, true);
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(
       result.gameDef?.triggers.map((trigger) => trigger.id),
       ['trigger_0', 'afterPass'],
@@ -96,7 +97,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
     const result = compileGameSpecToGameDef(doc);
 
     assert.equal(result.gameDef !== null, true);
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.equal(result.gameDef?.turnFlow?.cardLifecycle.played, 'played:none');
     assert.deepEqual(result.gameDef?.turnFlow?.durationWindows, ['card', 'nextCard', 'coup', 'campaign']);
   });
@@ -226,7 +227,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
     const result = compileGameSpecToGameDef(doc);
 
     assert.equal(result.gameDef !== null, true);
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.equal(result.gameDef?.operationProfiles?.[0]?.id, 'patrol-profile');
     assert.equal(result.gameDef?.operationProfiles?.[0]?.partialExecution.mode, 'forbid');
   });
@@ -387,7 +388,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
     const result = compileGameSpecToGameDef(doc);
 
     assert.equal(result.gameDef !== null, true);
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.equal(result.gameDef?.coupPlan?.phases[0]?.id, 'victory');
     assert.equal(result.gameDef?.victory?.checkpoints[0]?.id, 'us-threshold');
   });

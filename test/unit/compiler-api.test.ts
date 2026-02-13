@@ -8,6 +8,7 @@ import {
   expandMacros,
   resolveCompileLimits,
 } from '../../src/cnl/index.js';
+import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 describe('compiler API foundation', () => {
   it('uses spec-aligned default compile limits', () => {
@@ -32,7 +33,7 @@ describe('compiler API foundation', () => {
     const result = expandMacros(doc, { limits: { maxExpandedEffects: 25 } });
 
     assert.deepEqual(result.doc, doc);
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
   });
 
   it('returns total compile contract with deterministic diagnostics shape', () => {

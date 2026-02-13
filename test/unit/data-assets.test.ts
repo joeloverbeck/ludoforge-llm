@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { describe, it } from 'node:test';
 
 import { loadDataAssetEnvelopeFromFile, validateDataAssetEnvelope } from '../../src/kernel/index.js';
+import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 describe('data asset loader scaffold', () => {
   it('loads a valid JSON map envelope', () => {
@@ -103,7 +104,7 @@ describe('data asset loader scaffold', () => {
       });
 
       assert.equal(result.asset?.kind, 'map');
-      assert.deepEqual(result.diagnostics, []);
+      assertNoDiagnostics(result);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

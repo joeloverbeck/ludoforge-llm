@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec } from '../../../src/cnl/index.js';
 import { validateGameDef } from '../../../src/kernel/index.js';
+import { assertNoDiagnostics } from '../../helpers/diagnostic-helpers.js';
 
 const readCompilerFixture = (name: string): string =>
   readFileSync(join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler', name), 'utf8');
@@ -98,7 +99,7 @@ describe('compiler property-style invariants', () => {
       const parsed = parseGameSpec(markdown);
       const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-      assert.deepEqual(compiled.diagnostics, []);
+      assertNoDiagnostics(compiled);
       const { gameDef } = compiled;
       assert.notEqual(gameDef, null);
       if (gameDef === null) {

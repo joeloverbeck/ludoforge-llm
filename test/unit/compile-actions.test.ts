@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
+import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 describe('compile actions', () => {
   it('lowers action actor/params/pre/cost/effects/limits into GameDef', () => {
@@ -37,7 +38,7 @@ describe('compile actions', () => {
     const result = compileGameSpecToGameDef(doc);
 
     assert.equal(result.gameDef !== null, true);
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
 
     const action = result.gameDef?.actions[0];
     assert.equal(action?.id, 'play');

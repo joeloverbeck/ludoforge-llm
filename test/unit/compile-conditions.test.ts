@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { lowerConditionNode, lowerQueryNode, lowerValueNode, type ConditionLoweringContext } from '../../src/cnl/compile-conditions.js';
+import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 const context: ConditionLoweringContext = {
   ownershipByBase: {
@@ -28,7 +29,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.pre',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       op: '>=',
       left: {
@@ -48,7 +49,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.params.0.domain',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       query: 'zones',
       filter: { owner: 'active' },
@@ -58,7 +59,7 @@ describe('compile-conditions lowering', () => {
   it('lowers zoneCount shorthand value node and canonicalizes zone selector', () => {
     const result = lowerValueNode({ zoneCount: 'deck' }, context, 'doc.actions.0.effects.0.addVar.delta');
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       ref: 'zoneCount',
       zone: 'deck:none',
@@ -88,7 +89,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.effects.0.addVar.delta',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, { op: '/', left: 10, right: 3 });
   });
 
@@ -99,7 +100,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.pre.left',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, { ref: 'markerState', space: 'board:none', marker: 'support' });
   });
 
@@ -122,7 +123,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.effects.0.moveToken.to',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, { ref: 'tokenZone', token: '$piece' });
   });
 
@@ -133,7 +134,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.pre.left',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, { ref: 'zoneProp', zone: 'board:none', prop: 'population' });
   });
 
@@ -144,7 +145,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.pre',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       op: 'zonePropIncludes',
       zone: 'board:none',
@@ -176,19 +177,19 @@ describe('compile-conditions lowering', () => {
       'doc.operationProfiles.0.resolution.0.effects.0.forEach.over',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, { query: 'binding', name: '$targetSpaces' });
   });
 
   it('lowers boolean literal true as ConditionAST passthrough', () => {
     const result = lowerConditionNode(true, context, 'doc.operationProfiles.0.legality.when');
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.equal(result.value, true);
   });
 
   it('lowers boolean literal false as ConditionAST passthrough', () => {
     const result = lowerConditionNode(false, context, 'doc.operationProfiles.0.legality.when');
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.equal(result.value, false);
   });
 
@@ -208,7 +209,7 @@ describe('compile-conditions lowering', () => {
       'doc.operationProfiles.0.resolution.0.effects.0.chooseN.options',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       query: 'zones',
       filter: {
@@ -237,7 +238,7 @@ describe('compile-conditions lowering', () => {
       'doc.operationProfiles.0.resolution.0.effects.0.forEach.over',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'board:none',
@@ -261,7 +262,7 @@ describe('compile-conditions lowering', () => {
       'doc.operationProfiles.0.resolution.0.effects.0.forEach.over',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'board:none',
@@ -284,7 +285,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.effects.0.forEach.over',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'deck:none',
@@ -305,7 +306,7 @@ describe('compile-conditions lowering', () => {
       'doc.effects.0.forEach.over',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       query: 'tokensInAdjacentZones',
       zone: 'board:none',
@@ -348,7 +349,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.effects.0.forEach.over',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, { query: 'tokensInZone', zone: 'deck:none' });
   });
 
@@ -365,7 +366,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.effects.0.setVar.value',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       if: {
         when: { op: '>', left: { ref: 'gvar', var: 'score' }, right: 10 },
@@ -394,7 +395,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.effects.0.setVar.value',
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.ok(result.value !== null);
   });
 

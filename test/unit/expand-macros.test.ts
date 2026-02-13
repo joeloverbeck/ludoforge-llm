@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { createEmptyGameSpecDoc, expandMacros } from '../../src/cnl/index.js';
+import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 describe('expandMacros', () => {
   it('expands board macro zones into deterministic zone definitions', () => {
@@ -15,7 +16,7 @@ describe('expandMacros', () => {
 
     const result = expandMacros(doc);
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(
       result.doc.zones?.map((zone) => (zone as { readonly id?: string }).id),
       ['cell_0_0', 'cell_0_1', 'cell_1_0', 'cell_1_1', 'deck'],
@@ -54,7 +55,7 @@ describe('expandMacros', () => {
     const result = expandMacros(doc);
     const setup = result.doc.setup as readonly Record<string, unknown>[];
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.equal((setup[0]?.forEach as { readonly bind?: string }).bind, '$p');
 
     const nestedThen = (
@@ -99,7 +100,7 @@ describe('expandMacros', () => {
     const result = expandMacros(doc);
     const setup = result.doc.setup as readonly Record<string, unknown>[];
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.equal(setup.length, 3);
 
     for (const effect of setup) {
@@ -149,7 +150,7 @@ describe('expandMacros', () => {
       readonly then?: readonly Record<string, unknown>[];
     };
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.equal(forEach.bind, '$tok');
     assert.deepEqual(forEach.over, { query: 'tokensInZone', zone: 'hand:actor' });
     assert.deepEqual(ifNode.when, {

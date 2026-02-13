@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { canonicalizeZoneSelector, materializeZoneDefs } from '../../src/cnl/compile-zones.js';
+import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 describe('materializeZoneDefs', () => {
   it('materializes unowned zones to :none and player zones to :0..max-1', () => {
@@ -13,7 +14,7 @@ describe('materializeZoneDefs', () => {
       3,
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.deepEqual(
       result.value.zones.map((zone) => zone.id),
       ['deck:none', 'hand:0', 'hand:1', 'hand:2'],
@@ -30,7 +31,7 @@ describe('materializeZoneDefs', () => {
       2,
     );
 
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
     assert.equal(result.value.zones[0]?.id, 'market:none');
     assert.equal(result.value.ownershipByBase.market, 'none');
   });
@@ -46,7 +47,7 @@ describe('canonicalizeZoneSelector', () => {
   it('canonicalizes bare unowned base to :none', () => {
     const result = canonicalizeZoneSelector('deck', ownershipByBase, 'doc.actions.0.effects.0.draw.from');
     assert.equal(result.value, 'deck:none');
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
   });
 
   it('reports ambiguity for bare player-owned or mixed bases', () => {
@@ -62,11 +63,11 @@ describe('canonicalizeZoneSelector', () => {
   it('canonicalizes explicit selectors to zoneBase:qualifier form', () => {
     const activeAlias = canonicalizeZoneSelector('hand:activePlayer', ownershipByBase, 'doc.actions.0.effects.0.draw.to');
     assert.equal(activeAlias.value, 'hand:active');
-    assert.deepEqual(activeAlias.diagnostics, []);
+    assertNoDiagnostics(activeAlias);
 
     const numeric = canonicalizeZoneSelector('hand:2', ownershipByBase, 'doc.actions.0.effects.0.draw.to');
     assert.equal(numeric.value, 'hand:2');
-    assert.deepEqual(numeric.diagnostics, []);
+    assertNoDiagnostics(numeric);
   });
 
   it('returns stable diagnostic paths for invalid selectors', () => {
@@ -92,7 +93,7 @@ describe('canonicalizeZoneSelector', () => {
       'doc.effects.0.moveToken.to',
     );
     assert.equal(result.value, 'available-US:none');
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
   });
 
   it('resolves { concat: [...] } with number parts', () => {
@@ -103,7 +104,7 @@ describe('canonicalizeZoneSelector', () => {
       'doc.effects.0.moveToken.to',
     );
     assert.equal(result.value, 'zone42:none');
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
   });
 
   it('falls through to invalid selector for dynamic concat (handled by caller)', () => {
@@ -119,6 +120,6 @@ describe('canonicalizeZoneSelector', () => {
   it('passes through $-prefixed binding references without canonicalization', () => {
     const result = canonicalizeZoneSelector('$targetSpace', ownershipByBase, 'doc.effects.0.moveToken.to');
     assert.equal(result.value, '$targetSpace');
-    assert.deepEqual(result.diagnostics, []);
+    assertNoDiagnostics(result);
   });
 });

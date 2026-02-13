@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { parseGameSpec } from '../../src/cnl/index.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 
 interface PieceTypeLike {
   readonly id: string;
@@ -25,7 +26,7 @@ describe('fitl production piece inventory and visual metadata', () => {
   it('encodes the full 229-piece inventory with visual metadata', () => {
     const markdown = readFileSync(join(process.cwd(), 'data', 'games', 'fire-in-the-lake.md'), 'utf8');
     const parsed = parseGameSpec(markdown);
-    assert.equal(parsed.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length, 0);
+    assertNoErrors(parsed);
 
     const pieceCatalogAsset = (parsed.doc.dataAssets ?? []).find(
       (asset) => asset.id === 'fitl-piece-catalog-production' && asset.kind === 'pieceCatalog',

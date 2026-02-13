@@ -1,6 +1,7 @@
 import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
+import { isMoveDecisionSequenceSatisfiable } from './move-decision-sequence.js';
 import { resolveActionPipeline } from './apply-move-pipeline.js';
 import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
@@ -46,7 +47,6 @@ function withinActionLimits(action: ActionDef, state: GameState): boolean {
 
   return true;
 }
-
 
 function enumerateParams(
   action: ActionDef,
@@ -135,6 +135,10 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
         } catch {
           continue;
         }
+      }
+
+      if (!isMoveDecisionSequenceSatisfiable(def, state, { actionId: action.id, params: {} })) {
+        continue;
       }
 
       moves.push({ actionId: action.id, params: {} });

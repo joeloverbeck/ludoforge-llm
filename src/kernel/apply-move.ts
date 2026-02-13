@@ -3,8 +3,8 @@ import { evalCondition } from './eval-condition.js';
 import { applyEffects } from './effects.js';
 import { executeEventMove } from './event-execution.js';
 import { createCollector } from './execution-collector.js';
-import { legalChoices } from './legal-choices.js';
 import { legalMoves } from './legal-moves.js';
+import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipeline, toExecutionPipeline } from './apply-move-pipeline.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -100,11 +100,13 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
     }
 
     try {
-      const result = legalChoices(def, state, move);
+      const result = resolveMoveDecisionSequence(def, state, move, {
+        choose: () => undefined,
+      });
       if (!result.complete) {
         throw illegalMoveError(move, 'pipeline move has incomplete params', {
           code: 'OPERATION_INCOMPLETE_PARAMS',
-          nextDecision: result.name,
+          nextDecision: result.nextDecision?.name,
         });
       }
     } catch (err) {

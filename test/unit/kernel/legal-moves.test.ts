@@ -373,7 +373,87 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
     assert.equal(Object.keys(move.params).length, 0);
   });
 
-  it('9. map-aware profile legality evaluates against def.mapSpaces', () => {
+  it('9. unsatisfiable chooseN template move is excluded', () => {
+    const action: ActionDef = {
+      id: asActionId('unsatChooseNOp'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'unsatChooseNProfile',
+      actionId: asActionId('unsatChooseNOp'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseN: {
+                bind: '$spaces',
+                options: { query: 'enums', values: [] },
+                min: 1,
+                max: 1,
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const moves = legalMoves(def, makeBaseState());
+    assert.equal(moves.length, 0);
+  });
+
+  it('10. unsatisfiable chooseOne template move is excluded', () => {
+    const action: ActionDef = {
+      id: asActionId('unsatChooseOneOp'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'unsatChooseOneProfile',
+      actionId: asActionId('unsatChooseOneOp'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                bind: '$space',
+                options: { query: 'enums', values: [] },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const moves = legalMoves(def, makeBaseState());
+    assert.equal(moves.length, 0);
+  });
+
+  it('11. map-aware profile legality evaluates against def.mapSpaces', () => {
     const action: ActionDef = {
       id: asActionId('mapAwareOp'),
       actor: 'active',

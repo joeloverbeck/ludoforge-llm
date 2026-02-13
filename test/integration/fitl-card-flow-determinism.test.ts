@@ -10,8 +10,8 @@ import {
   asActionId,
   asPhaseId,
   initialState,
-  legalChoices,
   legalMoves,
+  resolveMoveDecisionSequence,
   serializeGameState,
   type ChoiceRequest,
   type GameDef,
@@ -128,26 +128,26 @@ const completeProfileMoveDeterministically = (
   baseMove: Move,
   def: GameDef,
   state: ReturnType<typeof initialState>,
-): Move | null => {
-  let move = baseMove;
-  for (let guard = 0; guard < 128; guard += 1) {
-    const request = legalChoices(def, state, move);
-    if (request.complete) return move;
-    const min = request.min ?? 0;
-    const options = request.options ?? [];
-    if (options.length < min) {
-      return null;
-    }
-
-    move = {
-      ...move,
-      params: {
-        ...move.params,
-        [request.name!]: pickDeterministicValue(request),
-      },
-    };
+): Move => {
+  const result = resolveMoveDecisionSequence(def, state, baseMove, {
+    choose: (request) => {
+      const min = request.min ?? 0;
+      const options = request.options ?? [];
+      if (request.type === 'chooseN' && options.length < min) {
+        return undefined;
+      }
+      return pickDeterministicValue(request);
+    },
+  });
+  if (!result.complete) {
+    const nextDecision = result.nextDecision;
+    const min = nextDecision?.min ?? 0;
+    const optionsCount = nextDecision?.options?.length ?? 0;
+    throw new Error(
+      `Scripted move is unsatisfiable for choice "${nextDecision?.name ?? '<unknown>'}": options=${optionsCount}, min=${min}`,
+    );
   }
-  throw new Error('Exceeded decision-sequence completion guard while building deterministic move');
+  return result.move;
 };
 
 const runScriptedOperations = (def: GameDef, seed: number, actions: readonly string[]) => {
@@ -156,11 +156,10 @@ const runScriptedOperations = (def: GameDef, seed: number, actions: readonly str
 
   for (const action of actions) {
     const template = legalMoves(def, state).find((move) => move.actionId === asActionId(action));
-    const baseMove = template ?? { actionId: asActionId(action), params: {} };
-    const selectedMove = completeProfileMoveDeterministically(baseMove, def, state);
-    if (selectedMove === null) {
-      continue;
+    if (template === undefined) {
+      throw new Error(`Expected scripted action "${action}" to be legal, but no legal move was returned`);
     }
+    const selectedMove = completeProfileMoveDeterministically(template, def, state);
     const result = applyMove(def, state, selectedMove);
     logs.push(result.triggerFirings);
     state = result.state;
@@ -307,12 +306,12 @@ describe('FITL card-flow determinism integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    // Coin operations (assault currently used here; sweep requires map-space-driven decisions)
+    // Coin operations (use action legal at scenario start under satisfiability filtering)
     // Insurgent operations (rally, march, attack, terror use insurgentResources)
     // US/ARVN specials (advise, airLift, airStrike, govern, transport, raid)
     // NVA/VC specials (infiltrate, bombard, ambushNva, tax, subvert, ambushVc)
     const scenarios = [
-      { label: 'coin', actions: ['assault'] },
+      { label: 'coin', actions: ['sweep'] },
       { label: 'insurgent', actions: ['rally', 'march', 'attack', 'terror'] },
       { label: 'us-arvn-specials', actions: ['advise', 'airLift', 'airStrike', 'govern', 'transport', 'raid'] },
       { label: 'nva-vc-specials', actions: ['infiltrate', 'bombard', 'ambushNva', 'tax', 'subvert', 'ambushVc'] },

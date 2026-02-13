@@ -7,8 +7,8 @@ import {
   asPlayerId,
   asTokenId,
   initialState,
-  legalChoices,
   legalMoves,
+  resolveMoveDecisionSequence,
   type ChoiceRequest,
   type GameDef,
   type GameState,
@@ -26,23 +26,11 @@ describe('FITL COIN operations integration', () => {
     def: GameDef,
     state: GameState,
   ): Move => {
-    let move = baseMove;
-    for (let guard = 0; guard < 128; guard += 1) {
-      const request = legalChoices(def, state, move);
-      if (request.complete) {
-        return move;
-      }
-
-      const selected = choose(request);
-      move = {
-        ...move,
-        params: {
-          ...move.params,
-          [request.name!]: selected,
-        },
-      };
+    const result = resolveMoveDecisionSequence(def, state, baseMove, { choose });
+    if (!result.complete) {
+      throw new Error(`Expected scripted move to be completable for actionId=${String(baseMove.actionId)}`);
     }
-    throw new Error('Exceeded decision-sequence completion guard while building profiled move');
+    return result.move;
   };
 
   const pickDeterministicValue = (request: ChoiceRequest): MoveParamValue => {

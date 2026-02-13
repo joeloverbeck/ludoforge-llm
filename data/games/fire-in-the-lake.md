@@ -29,7 +29,7 @@ effectMacros:
                       over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: troops }, { prop: faction, op: in, value: ['NVA', 'VC'] }] }
                       limit: { ref: binding, name: $damage }
                       effects:
-                        - moveToken: { token: $target, from: { param: space }, to: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
+                        - moveToken: { token: $target, from: { param: space }, to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } } }
                       countBind: $troopsRemoved
                       in:
                         - let:
@@ -47,7 +47,7 @@ effectMacros:
                                         over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, eq: { ref: binding, name: $targetFactionFirst } }, { prop: activity, eq: active }] }
                                         limit: { ref: binding, name: $remainingDamage }
                                         effects:
-                                          - moveToken: { token: $target2, from: { param: space }, to: { concat: ['available-', { ref: binding, name: $targetFactionFirst }, ':none'] } }
+                                          - moveToken: { token: $target2, from: { param: space }, to: { zoneExpr: { concat: ['available-', { ref: binding, name: $targetFactionFirst }, ':none'] } } }
                                         countBind: $guerrillas1Removed
                                         in:
                                           - let:
@@ -66,7 +66,7 @@ effectMacros:
                                                                 over: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: guerrilla }, { prop: faction, eq: { ref: binding, name: $targetFactionSecond } }, { prop: activity, eq: active }] }
                                                                 limit: { ref: binding, name: $remainingDamage2 }
                                                                 effects:
-                                                                  - moveToken: { token: $target3, from: { param: space }, to: { concat: ['available-', { ref: binding, name: $targetFactionSecond }, ':none'] } }
+                                                                  - moveToken: { token: $target3, from: { param: space }, to: { zoneExpr: { concat: ['available-', { ref: binding, name: $targetFactionSecond }, ':none'] } } }
                                                                 countBind: $guerrillas2Removed
                                                                 in:
                                                                   - let:
@@ -101,7 +101,7 @@ effectMacros:
                                                                                                                 then:
                                                                                                                   - setTokenProp: { token: $baseTarget, prop: tunnel, value: 'untunneled' }
                                                                                                     else:
-                                                                                                      - moveToken: { token: $baseTarget, from: { param: space }, to: { concat: ['available-', { ref: tokenProp, token: $baseTarget, prop: faction }, ':none'] } }
+                                                                                                      - moveToken: { token: $baseTarget, from: { param: space }, to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $baseTarget, prop: faction }, ':none'] } } }
 
   # ── coin-assault-removal-order ─────────────────────────────────────────────
   # Wraps piece-removal-ordering with COIN-specific behavior:
@@ -173,7 +173,7 @@ effectMacros:
                               - moveToken:
                                   token: $attritionPiece
                                   from: { param: space }
-                                  to: { concat: ['available-', { param: attackerFaction }, ':none'] }
+                                  to: { zoneExpr: { concat: ['available-', { param: attackerFaction }, ':none'] } }
 
   # ── per-province-city-cost ─────────────────────────────────────────────────
   # Faction-conditional per-space cost that charges 0 for LoCs.
@@ -211,7 +211,7 @@ effectMacros:
           effects:
             - moveToken:
                 token: $piece
-                from: { concat: ['available-', { param: faction }, ':none'] }
+                from: { zoneExpr: { concat: ['available-', { param: faction }, ':none'] } }
                 to: { param: targetSpace }
           countBind: $placed
           in:
@@ -1913,7 +1913,7 @@ actionPipelines:
                     effects:
                       - moveToken:
                           token: $cube
-                          from: { ref: tokenZone, token: $cube }
+                          from: { zoneExpr: { ref: tokenZone, token: $cube } }
                           to: $loc
 
       - stage: activate-guerrillas
@@ -2033,7 +2033,7 @@ actionPipelines:
                     effects:
                       - moveToken:
                           token: $cube
-                          from: { ref: tokenZone, token: $cube }
+                          from: { zoneExpr: { ref: tokenZone, token: $cube } }
                           to: $loc
 
       - stage: activate-guerrillas
@@ -2152,7 +2152,7 @@ actionPipelines:
                     effects:
                       - moveToken:
                           token: $troop
-                          from: { ref: tokenZone, token: $troop }
+                          from: { zoneExpr: { ref: tokenZone, token: $troop } }
                           to: $space
                 - chooseN:
                     bind: $hopLocs
@@ -2197,7 +2197,7 @@ actionPipelines:
                                 effects:
                                   - moveToken:
                                       token: $hopTroop
-                                      from: { ref: tokenZone, token: $hopTroop }
+                                      from: { zoneExpr: { ref: tokenZone, token: $hopTroop } }
                                       to: $space
 
       - stage: activate-guerrillas
@@ -2281,7 +2281,7 @@ actionPipelines:
                     effects:
                       - moveToken:
                           token: $troop
-                          from: { ref: tokenZone, token: $troop }
+                          from: { zoneExpr: { ref: tokenZone, token: $troop } }
                           to: $space
                 - macro: sweep-activation
                   args:

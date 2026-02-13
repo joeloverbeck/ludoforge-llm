@@ -838,9 +838,12 @@ function lowerZoneSelector(
   scope: BindingScope,
   path: string,
 ): EffectLoweringResult<ZoneRef> {
-  // Try static canonicalization first (handles strings and static concats)
-  const zone = canonicalizeZoneSelector(source, context.ownershipByBase, path);
-  if (zone.value !== null) {
+  if (typeof source === 'string') {
+    const zone = canonicalizeZoneSelector(source, context.ownershipByBase, path);
+    if (zone.value === null) {
+      return { value: null, diagnostics: zone.diagnostics };
+    }
+
     const diagnostics = validateZoneQualifierBinding(zone.value, scope, path);
     if (diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
       return { value: null, diagnostics };
@@ -848,18 +851,41 @@ function lowerZoneSelector(
     return { value: zone.value, diagnostics };
   }
 
-  // Static resolution failed — try dynamic expression path if source is a record
-  if (isRecord(source)) {
-    const valueResult = lowerValueNode(source, makeConditionContext(context, scope), path);
-    if (valueResult.value !== null) {
-      return { value: { zoneExpr: valueResult.value }, diagnostics: valueResult.diagnostics };
-    }
-    // Both static and dynamic paths failed — combine diagnostics
-    return { value: null, diagnostics: [...zone.diagnostics, ...valueResult.diagnostics] };
+  if (!isRecord(source)) {
+    return {
+      value: null,
+      diagnostics: [
+        {
+          code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+          path,
+          severity: 'error',
+          message: 'Zone selector must be a string or { zoneExpr: <ValueExpr> }.',
+          suggestion: 'Use "zoneBase:qualifier" for static selectors, or wrap dynamic selectors in { zoneExpr: ... }.',
+        },
+      ],
+    };
   }
 
-  // Not a string and not a record — return original canonicalization errors
-  return { value: null, diagnostics: zone.diagnostics };
+  if (!('zoneExpr' in source)) {
+    return {
+      value: null,
+      diagnostics: [
+        {
+          code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+          path,
+          severity: 'error',
+          message: 'Dynamic zone selectors must use explicit { zoneExpr: <ValueExpr> }.',
+          suggestion: 'Wrap dynamic zone selectors in { zoneExpr: ... }.',
+        },
+      ],
+    };
+  }
+
+  const valueResult = lowerValueNode(source.zoneExpr, makeConditionContext(context, scope), `${path}.zoneExpr`);
+  if (valueResult.value === null) {
+    return { value: null, diagnostics: valueResult.diagnostics };
+  }
+  return { value: { zoneExpr: valueResult.value }, diagnostics: valueResult.diagnostics };
 }
 
 function lowerPlayerSelector(source: unknown, scope: BindingScope, path: string): EffectLoweringResult<PlayerSel> {

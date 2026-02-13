@@ -108,7 +108,7 @@ describe('compile-effects lowering', () => {
         {
           moveToken: {
             token: '$cube',
-            from: { ref: 'tokenZone', token: '$cube' },
+            from: { zoneExpr: { ref: 'tokenZone', token: '$cube' } },
             to: 'discard',
           },
         },
@@ -132,7 +132,7 @@ describe('compile-effects lowering', () => {
           moveToken: {
             token: '$cube',
             from: 'deck',
-            to: { concat: ['available:', { ref: 'binding', name: '$faction' }] },
+            to: { zoneExpr: { concat: ['available:', { ref: 'binding', name: '$faction' }] } },
           },
         },
       ],
@@ -150,9 +150,9 @@ describe('compile-effects lowering', () => {
     });
   });
 
-  it('lowers static concat zone expression to string', () => {
+  it('lowers explicit zoneExpr wrapper with static concat', () => {
     const result = lowerEffectArray(
-      [{ shuffle: { zone: { concat: ['deck:', 'none'] } } }],
+      [{ shuffle: { zone: { zoneExpr: { concat: ['deck:', 'none'] } } } }],
       context,
       'doc.actions.0.effects',
     );
@@ -161,6 +161,19 @@ describe('compile-effects lowering', () => {
     assert.ok(result.value !== null && result.value.length === 1);
     const effect = result.value[0]!;
     assert.ok('shuffle' in effect);
-    assert.equal(effect.shuffle.zone, 'deck:none');
+    assert.deepEqual(effect.shuffle.zone, { zoneExpr: { concat: ['deck:', 'none'] } });
+  });
+
+  it('rejects implicit object-based dynamic zone selectors', () => {
+    const result = lowerEffectArray(
+      [{ shuffle: { zone: { concat: ['deck:', 'none'] } } }],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_SELECTOR_INVALID');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0.shuffle.zone');
   });
 });

@@ -1,6 +1,6 @@
 # FITLOPEFULEFF-005: Train ARVN Profile
 
-**Status**: Pending
+**Status**: COMPLETED
 **Priority**: P1
 **Estimated effort**: Medium (3-4 hours)
 **Spec reference**: Spec 26, Task 26.3 — `train-arvn-profile` (Rule 3.2.1, ARVN variant)
@@ -52,3 +52,13 @@ Key behaviors:
 - Stacking limit (max 2 Bases) enforced
 - Build passes (`npm run build`)
 - Typecheck passes (`npm run typecheck`)
+
+## Outcome
+
+- **Completed**: 2026-02-13
+- **What changed**:
+  - `test/integration/fitl-coin-operations.test.ts` — Added 9 acceptance criteria tests (AC2-AC10) with `findDeep` AST walker and `parseArvnProfile` helper
+  - YAML profile and production data were already present from commit `9779abb` (FITLOPEFULEFF-005 initial implementation)
+- **Deviations**:
+  - AC2, AC4, AC5, AC6 tests verify at the **parsed GameSpecDoc level** (pre-compilation) rather than the compiled AST, because the compiler's `lowerQueryNode` silently drops complex zone/token filters. Filed `GAMSPECOM-010` to address this compiler limitation.
+- **Verification**: 1011 tests pass (9 new), build clean, typecheck clean

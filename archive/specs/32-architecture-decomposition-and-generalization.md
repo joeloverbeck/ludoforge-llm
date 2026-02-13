@@ -1,6 +1,6 @@
 # Spec 32: Architecture Decomposition and Generalization
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P0 (structural debt blocking universal game support)
 **Complexity**: XL
 **Dependencies**: None (all changes are refactoring of existing code)
@@ -1175,3 +1175,18 @@ Each phase can be implemented and merged independently. Phase 1 is a prerequisit
 | Lasting effects add complexity to GameState | State bloat, hash instability | Cap `activeLastingEffects` array size, add Zobrist tests |
 | `eventCardSet` backward compatibility may mask migration issues | Silent data loss | Emit deprecation warning with migration instructions |
 | Compilation order (7B) may reveal latent dependency bugs | Compile failures | Add integration test that compiles sections out of order to verify independence claims |
+
+## Outcome
+
+- **Completion date**: February 13, 2026
+- **What was actually changed**:
+  - Implemented decomposition/generalization workstream across ARCDECANDGEN tickets, including event deck subsystem and card-driven interaction.
+  - Finalized ARCDECANDGEN-023 with architecture-aligned lasting effect expiry at turn-boundary orchestration (`phase-advance.ts`) and strengthened unit coverage.
+- **Deviations from original plan**:
+  - Lasting effect expiry orchestration remained in phase advancement instead of `turn-flow-lifecycle.ts`; this preserved cleaner boundary between lifecycle token movement and boundary effect processing.
+  - Non-`cardDriven` turn boundaries also process `turn`/`nextTurn` lasting-effect expiry, while `round`/`cycle` boundaries remain card-driven lifecycle-dependent.
+- **Verification results**:
+  - `npm run build` passed.
+  - `npm run typecheck` passed.
+  - `npm run lint` passed.
+  - `npm test` passed.

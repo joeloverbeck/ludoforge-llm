@@ -606,6 +606,58 @@ describe('phase advancement', () => {
     assert.equal(next.activeLastingEffects, undefined);
   });
 
+  it('expires multiple lasting effects independently on the same turn boundary', () => {
+    const def: GameDef = {
+      metadata: { id: 'phase-multi-lasting-expiry', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'aid', type: 'int', init: 0, min: -99, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState({
+        currentPhase: asPhaseId('main'),
+      }),
+      globalVars: { aid: 7 },
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      activeLastingEffects: [
+        {
+          id: 'aid-shift-expire-now',
+          sourceCardId: 'card-0',
+          side: 'unshaded',
+          duration: 'turn',
+          setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 3 } }],
+          teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -3 } }],
+          remainingTurnBoundaries: 1,
+        },
+        {
+          id: 'aid-shift-expire-later',
+          sourceCardId: 'card-1',
+          side: 'unshaded',
+          duration: 'nextTurn',
+          setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 4 } }],
+          teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -4 } }],
+          remainingTurnBoundaries: 2,
+        },
+      ],
+    };
+
+    const next = advancePhase(def, state);
+
+    assert.equal(next.globalVars.aid, 4);
+    assert.equal(next.activeLastingEffects?.length, 1);
+    assert.equal(next.activeLastingEffects?.[0]?.id, 'aid-shift-expire-later');
+    assert.equal(next.activeLastingEffects?.[0]?.remainingTurnBoundaries, 1);
+  });
+
   it('keeps nextTurn lasting effects for one boundary and expires on the second boundary', () => {
     const def: GameDef = {
       metadata: { id: 'phase-next-card-lasting-expiry', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },

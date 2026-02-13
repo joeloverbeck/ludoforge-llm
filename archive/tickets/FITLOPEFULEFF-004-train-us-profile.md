@@ -1,6 +1,6 @@
 # FITLOPEFULEFF-004: Train US Profile
 
-**Status**: Pending
+**Status**: COMPLETED
 **Priority**: P1
 **Estimated effort**: Medium (3-4 hours)
 **Spec reference**: Spec 26, Task 26.3 — `train-us-profile` (Rule 3.2.1, US variant)
@@ -54,3 +54,28 @@ Key behaviors:
 - `place-from-available-or-map` macro behavior unchanged
 - Build passes (`npm run build`)
 - Typecheck passes (`npm run typecheck`)
+
+## Outcome
+
+**Completion date**: 2026-02-13
+
+**What changed** (across two commits merged to `main`):
+
+1. **`36695f5`** — Core implementation:
+   - `test/fixtures/cnl/compiler/fitl-operations-coin.md`: Replaced `train-profile` stub with full `train-us-profile` (LimOp-aware space selection, per-space Irregulars/Base training choices, ARVN cost model, free-op guards, Pacification sub-action with Terror removal and support shifting, Saigon patronage transfer)
+   - `test/integration/fitl-coin-operations.test.ts`: Updated profile ID references to `train-us-profile`
+   - 7 compiler/kernel infrastructure fixes to support the profile (global mechanics vars, tracks, marker lattices)
+
+2. **`ca09203`** — Production data file entry:
+   - `data/games/fire-in-the-lake.md`: Added matching `train-us-profile` operationProfile
+
+**Deviations**: None. All 12 acceptance criteria met.
+
+**Verification results**:
+- `npm run build`: pass (zero errors)
+- `npm run typecheck`: pass (zero errors)
+- `fitl-coin-operations.test.js`: 2/2 tests pass
+- `fitl-production-data-compilation.test.js`: 1/1 test pass
+- All 12 acceptance criteria confirmed in code
+- No kernel or compiler source files modified
+- `place-from-available-or-map` macro unchanged

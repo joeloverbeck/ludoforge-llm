@@ -39,6 +39,7 @@ function makeDef(zones: readonly ZoneDef[]): GameDef {
     tokenTypes: [
       { id: 'troops', props: { faction: 'string' } },
       { id: 'police', props: { faction: 'string' } },
+      { id: 'rangers', props: { faction: 'string' } },
       { id: 'guerrilla', props: { faction: 'string', activity: 'string' } },
       { id: 'base', props: { faction: 'string' } },
     ],
@@ -150,6 +151,19 @@ function buildActivateGuerrillaEffects(zone: string, activationLimit: number): r
       },
     },
   ];
+}
+
+/**
+ * Simulates ARVN Sweep activation limit:
+ * cubes (troops+police) + rangers, halved in Jungle (round down).
+ */
+function buildArvnSweepActivationEffects(
+  zone: string,
+  totalSweepers: number,
+  isJungle: boolean,
+): readonly EffectAST[] {
+  const activationLimit = isJungle ? Math.floor(totalSweepers / 2) : totalSweepers;
+  return buildActivateGuerrillaEffects(zone, activationLimit);
 }
 
 /**
@@ -444,6 +458,55 @@ describe('FITL patrol movement and activation', () => {
 
       assert.equal(activatedCount, 2, 'Exactly 2 guerrillas should activate for 2 ARVN cubes');
       assert.equal(undergroundCount, 1, 'One guerrilla should remain underground');
+    });
+  });
+
+  describe('ARVN sweep parity checks', () => {
+    it('moves ARVN troops from adjacent province into target province', () => {
+      const movingTroop = makeToken('arvn-sweep-t1', 'troops', 'ARVN');
+      const state = makeState({
+        [locId]: [],
+        [adjProvince1Id]: [movingTroop],
+        [adjProvince2Id]: [],
+        [availableUS]: [],
+        [availableARVN]: [],
+      });
+
+      const moveEffects = buildMoveCubeEffects(['$movingTroop'], adjProvince2Id);
+      const moveCtx = makeCtx(state, { $movingTroop: movingTroop });
+      const result = applyEffects(moveEffects, moveCtx);
+
+      assert.equal(result.state.zones[adjProvince2Id]!.some((token) => token.id === movingTroop.id), true);
+      assert.equal(result.state.zones[adjProvince1Id]!.some((token) => token.id === movingTroop.id), false);
+    });
+
+    it('applies jungle halving to ARVN sweep activation (cubes + rangers)', () => {
+      const state = makeState({
+        [locId]: [
+          makeToken('arvn-t1', 'troops', 'ARVN'),
+          makeToken('arvn-p1', 'police', 'ARVN'),
+          makeToken('arvn-r1', 'rangers', 'ARVN'),
+          makeToken('nva-g1', 'guerrilla', 'NVA', { activity: 'underground' }),
+          makeToken('nva-g2', 'guerrilla', 'NVA', { activity: 'underground' }),
+          makeToken('vc-g1', 'guerrilla', 'VC', { activity: 'underground' }),
+        ],
+        [adjProvince1Id]: [],
+        [adjProvince2Id]: [],
+        [availableUS]: [],
+        [availableARVN]: [],
+      });
+
+      // 3 sweepers in Jungle => floor(3 / 2) = 1 activation.
+      const effects = buildArvnSweepActivationEffects(locId, 3, true);
+      const ctx = makeCtx(state);
+      const result = applyEffects(effects, ctx);
+
+      const guerrillas = result.state.zones[locId]!.filter((token) => token.type === 'guerrilla');
+      const activatedCount = guerrillas.filter((token) => token.props.activity === 'active').length;
+      const undergroundCount = guerrillas.filter((token) => token.props.activity === 'underground').length;
+
+      assert.equal(activatedCount, 1, 'Exactly one guerrilla should activate under jungle halving');
+      assert.equal(undergroundCount, 2, 'Two guerrillas should remain underground');
     });
   });
 

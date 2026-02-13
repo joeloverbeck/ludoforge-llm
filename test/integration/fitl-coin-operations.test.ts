@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   applyMove,
   asActionId,
+  asPlayerId,
   asTokenId,
   initialState,
   legalChoices,
@@ -304,6 +305,246 @@ describe('FITL COIN operations integration', () => {
     });
   });
   /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  describe('sweep-arvn-profile structure', () => {
+    const getSweepArvnProfile = () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'sweep-arvn-profile');
+      assert.ok(profile, 'sweep-arvn-profile must exist');
+      return profile;
+    };
+
+    const parseSweepArvnProfile = (): any => {
+      const { parsed } = compileProductionSpec();
+      const profile = parsed.doc.actionPipelines?.find(
+        (p: { id: string }) => p.id === 'sweep-arvn-profile',
+      );
+      assert.ok(profile, 'sweep-arvn-profile must exist in parsed doc');
+      return profile;
+    };
+
+    const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => {
+      const results: any[] = [];
+      const walk = (node: any): void => {
+        if (node === null || node === undefined) return;
+        if (predicate(node)) results.push(node);
+        if (Array.isArray(node)) {
+          for (const item of node) walk(item);
+        } else if (typeof node === 'object') {
+          for (const value of Object.values(node)) walk(value);
+        }
+      };
+      walk(obj);
+      return results;
+    };
+
+    it('AC1: compiles sweep-arvn-profile without diagnostics', () => {
+      getSweepArvnProfile();
+    });
+
+    it('AC2: ARVN Sweep has top-level legality/costValidation at arvnResources >= 3', () => {
+      const profile = getSweepArvnProfile();
+      const expected = { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 };
+      assert.deepEqual(profile.legality, expected);
+      assert.deepEqual(profile.costValidation, expected);
+      assert.deepEqual(profile.costEffects, []);
+    });
+
+    it('AC3: has two stages: select-spaces and resolve-per-space', () => {
+      const profile = getSweepArvnProfile();
+      assert.deepEqual(
+        profile.stages.map((stage) => stage.stage),
+        ['select-spaces', 'resolve-per-space'],
+      );
+    });
+
+    it('AC4: select-spaces is LimOp-aware and filters province/city excluding northVietnam', () => {
+      const profile = getSweepArvnProfile();
+      const selectSpaces = profile.stages[0]!;
+      assert.equal(selectSpaces.stage, 'select-spaces');
+
+      const limOpIf = findDeep(selectSpaces.effects, (node: any) =>
+        node?.if?.when?.op === '==' &&
+        node?.if?.when?.left?.ref === 'binding' &&
+        node?.if?.when?.left?.name === '__actionClass' &&
+        node?.if?.when?.right === 'limitedOperation',
+      );
+      assert.ok(limOpIf.length >= 1, 'Expected LimOp check');
+
+      const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) => node?.chooseN?.max === 1);
+      const normalChooseN = findDeep(limOpIf[0].if.else, (node: any) => node?.chooseN?.max === 99);
+      assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
+      assert.ok(normalChooseN.length >= 1, 'Expected chooseN max:99 in full-op branch');
+
+      const spaceTypeGuards = findDeep(selectSpaces.effects, (node: any) =>
+        node?.op === '==' &&
+        node?.left?.ref === 'zoneProp' &&
+        node?.left?.prop === 'spaceType' &&
+        (node?.right === 'province' || node?.right === 'city'),
+      );
+      assert.ok(spaceTypeGuards.length >= 4, 'Expected province/city filters in both branches');
+
+      const northVietnamExclusions = findDeep(selectSpaces.effects, (node: any) =>
+        node?.op === '!=' &&
+        node?.left?.ref === 'zoneProp' &&
+        node?.left?.prop === 'country' &&
+        node?.right === 'northVietnam',
+      );
+      assert.ok(northVietnamExclusions.length >= 2, 'Expected northVietnam exclusion in both branches');
+    });
+
+    it('AC5/AC6: resolve-per-space uses free-op guarded per-space cost and adjacent ARVN troop movement', () => {
+      const parsed = parseSweepArvnProfile();
+      const resolvePerSpace = parsed.stages[1];
+      assert.equal(resolvePerSpace.stage, 'resolve-per-space');
+
+      const freeOpGuard = findDeep(resolvePerSpace.effects, (node: any) =>
+        node?.if?.when?.op === '!=' &&
+        node?.if?.when?.left?.ref === 'binding' &&
+        node?.if?.when?.left?.name === '__freeOperation' &&
+        node?.if?.when?.right === true &&
+        findDeep(node?.if?.then, (thenNode: any) =>
+          thenNode?.addVar?.var === 'arvnResources' && thenNode?.addVar?.delta === -3,
+        ).length > 0,
+      );
+      assert.ok(freeOpGuard.length >= 1, 'Expected __freeOperation guard around per-space -3 ARVN cost');
+
+      const adjacentMoveQuery = findDeep(resolvePerSpace.effects, (node: any) =>
+        node?.query === 'tokensInAdjacentZones' &&
+        node?.zone === '$space' &&
+        Array.isArray(node?.filter) &&
+        node.filter.some((f: any) => f.prop === 'faction' && f.eq === 'ARVN') &&
+        node.filter.some((f: any) => f.prop === 'type' && f.eq === 'troops'),
+      );
+      assert.ok(adjacentMoveQuery.length >= 1, 'Expected adjacent ARVN troop movement query');
+    });
+
+    it('AC7: resolve-per-space invokes sweep-activation with ARVN cubes + Rangers', () => {
+      const parsed = parseSweepArvnProfile();
+      const resolvePerSpace = parsed.stages[1];
+
+      const sweepMacroCall = findDeep(resolvePerSpace.effects, (node: any) =>
+        node?.macro === 'sweep-activation' &&
+        node?.args?.cubeFaction === 'ARVN' &&
+        node?.args?.sfType === 'rangers',
+      );
+      assert.ok(sweepMacroCall.length >= 1, 'Expected sweep-activation macro call with ARVN/rangers args');
+    });
+  });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  describe('sweep-arvn-profile runtime behavior', () => {
+    const chooseSweepArvnParams = (targetSpace: string, movingTroops: readonly string[]) =>
+      (request: ChoiceRequest): MoveParamValue => {
+        if (request.name === 'targetSpaces') return [targetSpace];
+        if (request.name === '$movingTroops') return [...movingTroops];
+        return pickDeterministicValue(request);
+      };
+
+    it('AC8: free operation skips per-space ARVN resource cost', () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const def = compiled.gameDef!;
+      const start = initialState(def, 97, 2);
+      const sourceSpace = 'saigon:none';
+      const targetSpace = 'tay-ninh:none';
+      const troopId = 'arvn-sweep-freeop-1';
+      const troopToken = { id: asTokenId(troopId), type: 'troops', props: { faction: 'ARVN', type: 'troops' } };
+
+      const modifiedStart: GameState = {
+        ...start,
+        activePlayer: asPlayerId(1),
+        zones: {
+          ...start.zones,
+          [sourceSpace]: [...(start.zones[sourceSpace] ?? []), troopToken],
+          [targetSpace]: [
+            ...(start.zones[targetSpace] ?? []),
+            { id: asTokenId('arvn-sweep-freeop-nva-g1'), type: 'guerrilla', props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' } },
+          ],
+        },
+      };
+
+      const template = legalMoves(def, modifiedStart).find(
+        (move) => move.actionId === asActionId('sweep') && Object.keys(move.params).length === 0,
+      );
+      assert.ok(template, 'Expected template move for sweep');
+
+      const selected = completeProfileMoveDeterministically(
+        { ...template!, freeOperation: true, actionClass: 'limitedOperation' },
+        chooseSweepArvnParams(targetSpace, [troopId]),
+        def,
+        modifiedStart,
+      );
+
+      const beforeArvnResources = Number(modifiedStart.globalVars.arvnResources);
+      const result = applyMove(def, modifiedStart, selected);
+      const final = result.state;
+      const targetTokens = final.zones[targetSpace] ?? [];
+      const guerrillas = targetTokens.filter((token) => token.type === 'guerrilla');
+      const activeGuerrillas = guerrillas.filter((token) => token.props.activity === 'active');
+
+      assert.equal(final.globalVars.arvnResources, beforeArvnResources, 'Free ARVN Sweep should not spend arvnResources');
+      assert.equal(final.globalVars.fallbackUsed, 0, 'Sweep must execute through operation profile, not fallback');
+      assert.equal(activeGuerrillas.length, 0, 'Jungle sweep with 1 sweeper should activate 0 guerrillas (no runtime error)');
+    });
+
+    it('AC9: jungle activation uses floor((ARVN cubes + Rangers) / 2)', () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const def = compiled.gameDef!;
+      const start = initialState(def, 101, 2);
+      const sourceSpace = 'saigon:none';
+      const targetSpace = 'tay-ninh:none';
+      const movingTroopIds = ['arvn-sweep-jungle-move-1', 'arvn-sweep-jungle-move-2'];
+
+      const modifiedStart: GameState = {
+        ...start,
+        activePlayer: asPlayerId(1),
+        zones: {
+          ...start.zones,
+          [sourceSpace]: [
+            ...(start.zones[sourceSpace] ?? []),
+            { id: asTokenId(movingTroopIds[0]!), type: 'troops', props: { faction: 'ARVN', type: 'troops' } },
+            { id: asTokenId(movingTroopIds[1]!), type: 'troops', props: { faction: 'ARVN', type: 'troops' } },
+          ],
+          [targetSpace]: [
+            ...(start.zones[targetSpace] ?? []),
+            { id: asTokenId('arvn-sweep-jungle-police-1'), type: 'police', props: { faction: 'ARVN', type: 'police' } },
+            { id: asTokenId('arvn-sweep-jungle-ranger-1'), type: 'rangers', props: { faction: 'ARVN', type: 'rangers' } },
+            { id: asTokenId('arvn-sweep-jungle-nva-g1'), type: 'guerrilla', props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' } },
+            { id: asTokenId('arvn-sweep-jungle-nva-g2'), type: 'guerrilla', props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' } },
+            { id: asTokenId('arvn-sweep-jungle-vc-g1'), type: 'guerrilla', props: { faction: 'VC', type: 'guerrilla', activity: 'underground' } },
+          ],
+        },
+      };
+
+      const template = legalMoves(def, modifiedStart).find(
+        (move) => move.actionId === asActionId('sweep') && Object.keys(move.params).length === 0,
+      );
+      assert.ok(template, 'Expected template move for sweep');
+
+      const selected = completeProfileMoveDeterministically(
+        { ...template!, actionClass: 'limitedOperation' },
+        chooseSweepArvnParams(targetSpace, movingTroopIds),
+        def,
+        modifiedStart,
+      );
+
+      const beforeArvnResources = Number(modifiedStart.globalVars.arvnResources);
+      const result = applyMove(def, modifiedStart, selected);
+      const final = result.state;
+      const targetTokens = final.zones[targetSpace] ?? [];
+      const guerrillas = targetTokens.filter((token) => token.type === 'guerrilla');
+      const activeGuerrillas = guerrillas.filter((token) => token.props.activity === 'active');
+      const movedTroopsInTarget = targetTokens.filter((token) => movingTroopIds.includes(String(token.id)));
+
+      assert.equal(final.globalVars.arvnResources, beforeArvnResources - 3, 'Non-free ARVN Sweep should spend 3 resources for one space');
+      assert.equal(movedTroopsInTarget.length, 2, 'Both selected adjacent ARVN troops should move into the target');
+      assert.equal(activeGuerrillas.length, 2, 'Jungle should activate floor((2 moved troops + 1 police + 1 ranger) / 2) = 2 guerrillas');
+    });
+  });
 
   describe('train-arvn-profile structure', () => {
     const getArvnProfile = () => {

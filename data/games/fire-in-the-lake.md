@@ -262,15 +262,18 @@ effectMacros:
                                 then: { op: '/', left: { ref: binding, name: $totalSweepers }, right: 2 }
                                 else: { ref: binding, name: $totalSweepers }
                             in:
-                              - forEach:
-                                  bind: $guerrilla
-                                  over:
-                                    query: tokensInZone
-                                    zone: { param: space }
-                                    filter: [{ prop: type, eq: guerrilla }, { prop: activity, eq: underground }]
-                                  limit: { ref: binding, name: $activationLimit }
-                                  effects:
-                                    - setTokenProp: { token: $guerrilla, prop: activity, value: active }
+                              - if:
+                                  when: { op: '>', left: { ref: binding, name: $activationLimit }, right: 0 }
+                                  then:
+                                    - forEach:
+                                        bind: $guerrilla
+                                        over:
+                                          query: tokensInZone
+                                          zone: { param: space }
+                                          filter: [{ prop: type, eq: guerrilla }, { prop: activity, eq: underground }]
+                                        limit: { ref: binding, name: $activationLimit }
+                                        effects:
+                                          - setTokenProp: { token: $guerrilla, prop: activity, value: active }
 
 dataAssets:
   - id: fitl-map-production
@@ -2193,33 +2196,79 @@ actionPipelines:
   - id: sweep-arvn-profile
     actionId: sweep
     applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: coinResources
-        right: 1
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: coinResources
-        right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: coinResources
-            delta: -1
-    targeting:
-      select: allEligible
-      terrainFilter: [lowland, urban]
+    legality: { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
+    costValidation: { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
+    costEffects: []
+    targeting: {}
     stages:
-      - stage: sweep-resolve
+      - stage: select-spaces
         effects:
-          - addVar:
-              scope: global
-              var: sweepCount
-              delta: 1
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
+                    min: 1
+                    max: 99
+
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - if:
+                    when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                    then:
+                      - addVar: { scope: global, var: arvnResources, delta: -3 }
+                - chooseN:
+                    bind: $movingTroops
+                    options:
+                      query: tokensInAdjacentZones
+                      zone: $space
+                      filter:
+                        - { prop: faction, eq: 'ARVN' }
+                        - { prop: type, eq: troops }
+                    min: 0
+                    max: 99
+                - forEach:
+                    bind: $troop
+                    over: { query: binding, name: $movingTroops }
+                    effects:
+                      - moveToken:
+                          token: $troop
+                          from: { ref: tokenZone, token: $troop }
+                          to: $space
+                - macro: sweep-activation
+                  args:
+                    space: $space
+                    cubeFaction: 'ARVN'
+                    sfType: rangers
     atomicity: atomic
   - id: assault-us-profile
     actionId: assault

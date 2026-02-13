@@ -46,7 +46,7 @@ function makeDef(zones: readonly ZoneDef[]): GameDef {
     turnStructure: { phases: [{ id: asPhaseId('main') }] },
     actions: [],
     triggers: [],
-    endConditions: [],
+    terminal: { conditions: [] },
   };
 }
 

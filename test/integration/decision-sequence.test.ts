@@ -123,7 +123,7 @@ const createDecisionSequenceDef = (): GameDef =>
       },
     ],
     triggers: [],
-    endConditions: [],
+    terminal: { conditions: [] },
   }) as unknown as GameDef;
 
 // ---------------------------------------------------------------------------

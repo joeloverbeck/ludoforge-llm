@@ -163,7 +163,7 @@ const createResourcesFixtureDef = (options: ResourcesFixtureOptions): GameDef =>
       },
     ],
     triggers: [{ id: 'on_resources_enter', event: { type: 'phaseEnter', phase: asPhaseId('resources') }, effects: resourcesPhaseEffects }],
-    endConditions: [],
+    terminal: { conditions: [] },
   } as unknown as GameDef;
 };
 

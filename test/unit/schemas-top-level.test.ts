@@ -24,7 +24,7 @@ const minimalGameDef = {
   turnStructure: { phases: [] },
   actions: [],
   triggers: [],
-  endConditions: [],
+  terminal: { conditions: [] },
 } as const;
 
 const fullGameDef = {
@@ -79,13 +79,6 @@ const fullGameDef = {
       linkedWindows: ['window-a'],
     },
   ],
-  victory: {
-    checkpoints: [
-      { id: 'us-threshold', faction: 'us', timing: 'duringCoup', when: { op: '>', left: 51, right: 50 } },
-    ],
-    margins: [{ faction: 'us', value: { op: '-', left: 55, right: 50 } }],
-    ranking: { order: 'desc' },
-  },
   actions: [
     {
       id: 'playCard',
@@ -105,8 +98,15 @@ const fullGameDef = {
       effects: [{ shuffle: { zone: 'deck:none' } }],
     },
   ],
-  endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
-  scoring: { method: 'highest', value: 1 },
+  terminal: {
+    conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
+    checkpoints: [
+      { id: 'us-threshold', faction: 'us', timing: 'duringCoup', when: { op: '>', left: 51, right: 50 } },
+    ],
+    margins: [{ faction: 'us', value: { op: '-', left: 55, right: 50 } }],
+    ranking: { order: 'desc' },
+    scoring: { method: 'highest', value: 1 },
+  },
 } as const;
 
 const validGameState = {
@@ -356,7 +356,7 @@ describe('top-level runtime schemas', () => {
       turnStructure: { phases: [] },
       actions: [],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     });
 
     assert.equal(result.success, false);

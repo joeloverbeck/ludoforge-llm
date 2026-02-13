@@ -48,7 +48,7 @@ const createGameDef = (): GameDef =>
       },
     ],
     triggers: [],
-    endConditions: [{ when: { op: '==', left: 0, right: 1 }, result: { type: 'draw' } }],
+    terminal: { conditions: [{ when: { op: '==', left: 0, right: 1 }, result: { type: 'draw' } }] },
   }) as unknown as GameDef;
 
 const createInitialState = (seed: bigint): GameState => {

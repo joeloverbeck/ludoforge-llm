@@ -67,15 +67,15 @@ export const validateCoupPlan = (diagnostics: Diagnostic[], def: GameDef): void 
   });
 };
 
-export const validateVictory = (diagnostics: Diagnostic[], def: GameDef, context: ValidationContext): void => {
-  if (!def.victory) {
+export const validateTerminal = (diagnostics: Diagnostic[], def: GameDef, context: ValidationContext): void => {
+  if (!def.terminal || !def.terminal.checkpoints) {
     return;
   }
 
-  if (def.victory.checkpoints.length === 0) {
+  if (def.terminal.checkpoints.length === 0) {
     diagnostics.push({
       code: 'VICTORY_CHECKPOINTS_EMPTY',
-      path: 'victory.checkpoints',
+      path: 'terminal.checkpoints',
       severity: 'error',
       message: 'victory.checkpoints must include at least one checkpoint definition.',
       suggestion: 'Define one or more deterministic checkpoint entries.',
@@ -84,41 +84,41 @@ export const validateVictory = (diagnostics: Diagnostic[], def: GameDef, context
 
   checkDuplicateIds(
     diagnostics,
-    def.victory.checkpoints.map((checkpoint) => checkpoint.id),
+    def.terminal.checkpoints.map((checkpoint) => checkpoint.id),
     'DUPLICATE_VICTORY_CHECKPOINT_ID',
     'victory checkpoint id',
-    'victory.checkpoints',
+    'terminal.checkpoints',
   );
 
-  def.victory.checkpoints.forEach((checkpoint, index) => {
+  def.terminal.checkpoints.forEach((checkpoint, index) => {
     if (typeof checkpoint.when !== 'object' || checkpoint.when === null || Array.isArray(checkpoint.when)) {
       diagnostics.push({
         code: 'VICTORY_CHECKPOINT_WHEN_INVALID',
-        path: `victory.checkpoints[${index}].when`,
+        path: `terminal.checkpoints[${index}].when`,
         severity: 'error',
         message: 'victory checkpoint "when" must be a condition object.',
         suggestion: 'Set checkpoint.when to a valid Condition AST object.',
       });
       return;
     }
-    validateConditionAst(diagnostics, checkpoint.when as ConditionAST, `victory.checkpoints[${index}].when`, context);
+    validateConditionAst(diagnostics, checkpoint.when as ConditionAST, `terminal.checkpoints[${index}].when`, context);
   });
 
-  def.victory.margins?.forEach((margin, index) => {
+  def.terminal.margins?.forEach((margin, index) => {
     const isLiteral =
       typeof margin.value === 'number' || typeof margin.value === 'string' || typeof margin.value === 'boolean';
     const isObject = typeof margin.value === 'object' && margin.value !== null && !Array.isArray(margin.value);
     if (!isLiteral && !isObject) {
       diagnostics.push({
         code: 'VICTORY_MARGIN_VALUE_INVALID',
-        path: `victory.margins[${index}].value`,
+        path: `terminal.margins[${index}].value`,
         severity: 'error',
         message: 'victory margin value must be a ValueExpr-compatible literal or object.',
         suggestion: 'Use a literal or ValueExpr object.',
       });
       return;
     }
-    validateValueExpr(diagnostics, margin.value as ValueExpr, `victory.margins[${index}].value`, context);
+    validateValueExpr(diagnostics, margin.value as ValueExpr, `terminal.margins[${index}].value`, context);
   });
 };
 

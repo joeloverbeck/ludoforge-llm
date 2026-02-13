@@ -72,20 +72,10 @@
     },
     {
       "code": "CNL_YAML_004",
-      "path": "yaml.block.0.line.24",
+      "path": "yaml.block.0.line.25",
       "severity": "warning",
       "message": "Boolean-like string is unquoted.",
       "suggestion": "Wrap the value in quotes when it should be a string."
-    },
-    {
-      "code": "CNL_VALIDATOR_UNKNOWN_KEY",
-      "path": "doc.endConditions.0.reslt",
-      "severity": "warning",
-      "message": "Unknown key \"reslt\" in end condition.",
-      "suggestion": "Did you mean \"result\"?",
-      "alternatives": [
-        "result"
-      ]
     },
     {
       "code": "CNL_VALIDATOR_IDENTIFIER_INVALID",
@@ -107,6 +97,16 @@
       "severity": "error",
       "message": "metadata.players.min must be >= 1.",
       "suggestion": "Set players.min to 1 or greater."
+    },
+    {
+      "code": "CNL_VALIDATOR_UNKNOWN_KEY",
+      "path": "doc.terminal.conditions.0.reslt",
+      "severity": "warning",
+      "message": "Unknown key \"reslt\" in end condition.",
+      "suggestion": "Did you mean \"result\"?",
+      "alternatives": [
+        "result"
+      ]
     },
     {
       "code": "CNL_VALIDATOR_UNKNOWN_KEY",

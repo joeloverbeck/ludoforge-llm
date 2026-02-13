@@ -25,5 +25,7 @@
     }
   ],
   "triggers": [{ "id": "onPlay", "event": { "type": "actionResolved", "action": "playCrad" }, "effects": [] }],
-  "endConditions": [{ "when": { "op": "==", "left": 1, "right": 1 }, "result": { "type": "draw" } }]
+  "terminal": {
+    "conditions": [{ "when": { "op": "==", "left": 1, "right": 1 }, "result": { "type": "draw" } }]
+  }
 }

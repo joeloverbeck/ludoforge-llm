@@ -35,7 +35,7 @@ const makeDef = (): GameDef => ({
   },
   actions: [],
   triggers: [],
-  endConditions: [],
+  terminal: { conditions: [] },
 });
 
 const makeState = (): GameState => ({

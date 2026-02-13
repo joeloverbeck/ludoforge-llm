@@ -26,9 +26,11 @@ const CANONICAL_SECTION_KEYS = new Set<string>([
   'tokenTypes',
   'setup',
   'turnStructure',
+  'turnOrder',
+  'actionPipelines',
+  'terminal',
   'actions',
   'triggers',
-  'endConditions',
 ]);
 
 const BOOLEAN_LIKE = new Set(['yes', 'no', 'true', 'false', 'on', 'off']);

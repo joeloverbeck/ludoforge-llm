@@ -31,11 +31,12 @@ actions:
           to: hand:each
           count: 1
     limits: []
-endConditions:
-  - when:
-      op: "=="
-      left: 1
-      right: 1
-    result:
-      type: draw
+terminal:
+  conditions:
+    - when:
+        op: "=="
+        left: 1
+        right: 1
+      result:
+        type: draw
 ```

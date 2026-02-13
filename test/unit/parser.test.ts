@@ -19,10 +19,9 @@ describe('parseGameSpec API shape', () => {
       turnStructure: null,
       turnOrder: null,
       actionPipelines: null,
-      victory: null,
+      terminal: null,
       actions: null,
       triggers: null,
-      endConditions: null,
       effectMacros: null,
     });
     assert.deepEqual(result.sourceMap.byPath, {});
@@ -241,7 +240,7 @@ describe('parseGameSpec API shape', () => {
     assert.ok(result.sourceMap.byPath['actionPipelines[0].atomicity'] !== undefined);
   });
 
-  it('parses turnOrder cardDriven config and victory singleton sections', () => {
+  it('parses turnOrder cardDriven config and terminal singleton sections', () => {
     const result = parseGameSpec([
       '```yaml',
       'turnOrder:',
@@ -263,7 +262,10 @@ describe('parseGameSpec API shape', () => {
       '        - id: victory',
       '          steps: [check-thresholds]',
       '      maxConsecutiveRounds: 1',
-      'victory:',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
       '  checkpoints:',
       '    - id: us-threshold',
       '      faction: us',
@@ -274,9 +276,9 @@ describe('parseGameSpec API shape', () => {
 
     assert.equal(result.doc.turnOrder?.type, 'cardDriven');
     assert.equal(result.doc.turnOrder?.type === 'cardDriven' ? result.doc.turnOrder.config.coupPlan?.phases[0]?.id : undefined, 'victory');
-    assert.equal(result.doc.victory?.checkpoints[0]?.id, 'us-threshold');
+    assert.equal(result.doc.terminal?.checkpoints?.[0]?.id, 'us-threshold');
     assert.ok(result.sourceMap.byPath['turnOrder.config.coupPlan.phases[0].id'] !== undefined);
-    assert.ok(result.sourceMap.byPath['victory.checkpoints[0].id'] !== undefined);
+    assert.ok(result.sourceMap.byPath['terminal.checkpoints[0].id'] !== undefined);
   });
 
   it('anchors appended list entries using canonical merged indexes', () => {

@@ -34,7 +34,7 @@ const createBaseDef = (): GameDef =>
     },
     actions: [],
     triggers: [],
-    endConditions: [],
+    terminal: { conditions: [] },
   }) as unknown as GameDef;
 
 const createState = (overrides: Partial<GameState> = {}): GameState => ({
@@ -310,7 +310,7 @@ describe('phase advancement', () => {
   it('does not auto-advance when current state is terminal with zero legal moves', () => {
     const def: GameDef = {
       ...createBaseDef(),
-      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
     const state = createState({ currentPhase: asPhaseId('p1') });
 
@@ -351,7 +351,7 @@ describe('phase advancement', () => {
       },
       actions: [],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const state: GameState = {
@@ -433,7 +433,7 @@ describe('phase advancement', () => {
       },
       actions: [],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const state: GameState = {

@@ -48,7 +48,7 @@ const createLifecycleDef = (): GameDef =>
       },
     ],
     triggers: [],
-    endConditions: [],
+    terminal: { conditions: [] },
   }) as unknown as GameDef;
 
 const lifecycleSteps = (entries: readonly TriggerLogEntry[]): readonly string[] =>

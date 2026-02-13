@@ -48,7 +48,7 @@ const createDef = (actions: readonly ActionDef[], endConditions: readonly EndCon
   turnStructure: { phases: [{ id: phaseId }] },
   actions,
   triggers: [],
-  endConditions,
+  terminal: { conditions: endConditions },
 });
 
 const choose = (def: GameDef, seed = 5n) => {
@@ -138,7 +138,7 @@ const createDefWithProfile = (
   turnStructure: { phases: [{ id: phaseId }] },
   actions,
   triggers: [],
-  endConditions: [],
+  terminal: { conditions: [] },
   actionPipelines: profiles,
 });
 

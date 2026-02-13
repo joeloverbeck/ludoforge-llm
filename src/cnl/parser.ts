@@ -211,8 +211,8 @@ function mergeSection(
       return mergeSingletonTurnStructure(doc, section, value, diagnostics);
     case 'turnOrder':
       return mergeSingletonTurnOrder(doc, section, value, diagnostics);
-    case 'victory':
-      return mergeSingletonVictory(doc, section, value, diagnostics);
+    case 'terminal':
+      return mergeSingletonTerminal(doc, section, value, diagnostics);
     case 'dataAssets':
     case 'globalVars':
     case 'perPlayerVars':
@@ -222,7 +222,6 @@ function mergeSection(
     case 'actionPipelines':
     case 'actions':
     case 'triggers':
-    case 'endConditions':
     case 'effectMacros':
       return mergeListSection(doc, section, value);
   }
@@ -308,23 +307,23 @@ function mergeSingletonTurnOrder(
   return buildAnchoredPaths(section, value);
 }
 
-function mergeSingletonVictory(
+function mergeSingletonTerminal(
   doc: GameSpecDoc,
-  section: 'victory',
+  section: 'terminal',
   value: unknown,
   diagnostics: Diagnostic[],
 ): readonly string[] {
-  if (doc.victory !== null) {
+  if (doc.terminal !== null) {
     diagnostics.push({
       code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
-      path: 'doc.victory',
+      path: 'doc.terminal',
       severity: 'warning',
-      message: 'Duplicate singleton section "victory" ignored; first definition wins.',
+      message: 'Duplicate singleton section "terminal" ignored; first definition wins.',
     });
     return [];
   }
 
-  (doc as MutableGameSpecDoc).victory = asObjectOrNull(value) as MutableGameSpecDoc['victory'];
+  (doc as MutableGameSpecDoc).terminal = asObjectOrNull(value) as MutableGameSpecDoc['terminal'];
   return buildAnchoredPaths(section, value);
 }
 
@@ -340,7 +339,6 @@ function mergeListSection(
     | 'actionPipelines'
     | 'actions'
     | 'triggers'
-    | 'endConditions'
     | 'effectMacros',
   value: unknown,
 ): readonly string[] {
@@ -385,10 +383,6 @@ function mergeListSection(
       (doc as MutableGameSpecDoc).triggers =
         (doc.triggers === null ? listValue : [...doc.triggers, ...listValue]) as MutableGameSpecDoc['triggers'];
       return buildAnchoredPaths(section, listValue, existingLength);
-    case 'endConditions':
-      (doc as MutableGameSpecDoc).endConditions =
-        (doc.endConditions === null ? listValue : [...doc.endConditions, ...listValue]) as MutableGameSpecDoc['endConditions'];
-      return buildAnchoredPaths(section, listValue, existingLength);
     case 'effectMacros':
       (doc as MutableGameSpecDoc).effectMacros =
         (doc.effectMacros === null ? listValue : [...doc.effectMacros, ...listValue]) as MutableGameSpecDoc['effectMacros'];
@@ -426,7 +420,6 @@ function getListSectionLength(
     | 'actionPipelines'
     | 'actions'
     | 'triggers'
-    | 'endConditions'
     | 'effectMacros',
 ): number {
   const current = doc[section];

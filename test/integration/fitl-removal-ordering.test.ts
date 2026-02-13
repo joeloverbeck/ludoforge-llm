@@ -63,7 +63,7 @@ describe('FITL removal ordering macros', () => {
         turnStructure: { phases: [{ id: asPhaseId('main') }] },
         actions: [],
         triggers: [],
-        endConditions: [],
+        terminal: { conditions: [] },
       });
 
       const makeState = (): GameState => ({
@@ -138,7 +138,7 @@ describe('FITL removal ordering macros', () => {
         turnStructure: { phases: [{ id: asPhaseId('main') }] },
         actions: [],
         triggers: [],
-        endConditions: [],
+        terminal: { conditions: [] },
       };
 
       const state: GameState = {
@@ -198,7 +198,7 @@ describe('FITL removal ordering macros', () => {
         turnStructure: { phases: [{ id: asPhaseId('main') }] },
         actions: [],
         triggers: [],
-        endConditions: [],
+        terminal: { conditions: [] },
       };
 
       // Attacker NVA has 3 guerrillas in space. After removing 2 US pieces,

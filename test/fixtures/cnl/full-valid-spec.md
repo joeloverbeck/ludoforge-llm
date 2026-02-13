@@ -26,11 +26,12 @@ actions:
     cost: []
     effects: []
     limits: []
-endConditions:
-  - when:
-      op: ">="
-      left: 1
-      right: 999
-    result:
-      type: draw
+terminal:
+  conditions:
+    - when:
+        op: ">="
+        left: 1
+        right: 999
+      result:
+        type: draw
 ```

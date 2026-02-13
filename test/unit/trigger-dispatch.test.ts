@@ -48,7 +48,7 @@ describe('dispatchTriggers', () => {
       turnStructure: { phases: [{ id: asPhaseId('main') }] },
       actions: [],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     };
 
     const state = createState({
@@ -96,7 +96,7 @@ describe('dispatchTriggers', () => {
           effects: [{ addVar: { scope: 'global', var: 'score', delta: 50 } }],
         },
       ],
-      endConditions: [],
+      terminal: { conditions: [] },
     };
 
     const result = dispatchTriggers(
@@ -156,7 +156,7 @@ describe('dispatchTriggers', () => {
           effects: [{ addVar: { scope: 'global', var: 'enteredC', delta: 1 } }],
         },
       ],
-      endConditions: [],
+      terminal: { conditions: [] },
     };
 
     const state = createState({
@@ -218,7 +218,7 @@ describe('dispatchTriggers', () => {
           effects: [{ addVar: { scope: 'global', var: 'enteredC', delta: 1 } }],
         },
       ],
-      endConditions: [],
+      terminal: { conditions: [] },
     };
 
     const state = createState({

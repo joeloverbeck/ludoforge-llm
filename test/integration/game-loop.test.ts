@@ -48,7 +48,7 @@ const createProgressionDef = (): GameDef =>
         effects: [{ addVar: { scope: 'global', var: 'triggerHits', delta: 1 } }],
       },
     ],
-    endConditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 3 }, result: { type: 'draw' } }],
+    terminal: { conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 3 }, result: { type: 'draw' } }] },
   }) as unknown as GameDef;
 
 const createDeterminismDef = (): GameDef =>
@@ -90,7 +90,7 @@ const createDeterminismDef = (): GameDef =>
         effects: [],
       },
     ],
-    endConditions: [],
+    terminal: { conditions: [] },
   }) as unknown as GameDef;
 
 const serializeLogs = (entries: readonly TriggerLogEntry[]): readonly string[] =>

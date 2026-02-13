@@ -544,30 +544,35 @@ export const validatePostAdjacencyBehavior = (
     });
   });
 
-  def.endConditions.forEach((endCondition, endConditionIndex) => {
+  const terminal = def.terminal;
+  if (!terminal) {
+    return;
+  }
+
+  terminal.conditions.forEach((endCondition, endConditionIndex) => {
     if (endCondition.result.type === 'win') {
-      validatePlayerSelector(diagnostics, endCondition.result.player, `endConditions[${endConditionIndex}].result.player`, context);
+      validatePlayerSelector(diagnostics, endCondition.result.player, `terminal.conditions[${endConditionIndex}].result.player`, context);
     }
-    if (endCondition.result.type === 'score' && !def.scoring) {
+    if (endCondition.result.type === 'score' && !terminal.scoring) {
       diagnostics.push({
         code: 'SCORING_REQUIRED_FOR_SCORE_RESULT',
-        path: `endConditions[${endConditionIndex}].result`,
+        path: `terminal.conditions[${endConditionIndex}].result`,
         severity: 'error',
         message: 'End condition with result.type "score" requires a scoring definition.',
-        suggestion: 'Add def.scoring or change end condition result.type.',
+        suggestion: 'Add def.terminal.scoring or change end condition result.type.',
       });
     }
 
-    validateConditionAst(diagnostics, endCondition.when, `endConditions[${endConditionIndex}].when`, context);
+    validateConditionAst(diagnostics, endCondition.when, `terminal.conditions[${endConditionIndex}].when`, context);
   });
 
-  if (def.scoring) {
-    validateValueExpr(diagnostics, def.scoring.value, 'scoring.value', context);
-    const usesScoreResult = def.endConditions.some((endCondition) => endCondition.result.type === 'score');
+  if (terminal.scoring) {
+    validateValueExpr(diagnostics, terminal.scoring.value, 'terminal.scoring.value', context);
+    const usesScoreResult = terminal.conditions.some((endCondition) => endCondition.result.type === 'score');
     if (!usesScoreResult) {
       diagnostics.push({
         code: 'SCORING_UNUSED',
-        path: 'scoring',
+        path: 'terminal.scoring',
         severity: 'warning',
         message: 'scoring is configured but no end condition uses result.type "score".',
         suggestion: 'Add a score-based end condition or remove scoring.',

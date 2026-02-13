@@ -19,10 +19,9 @@ describe('game-spec-doc', () => {
       turnStructure: null,
       turnOrder: null,
       actionPipelines: null,
-      victory: null,
+      terminal: null,
       actions: null,
       triggers: null,
-      endConditions: null,
       effectMacros: null,
     };
 

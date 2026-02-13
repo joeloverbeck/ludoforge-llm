@@ -34,7 +34,7 @@ describe('compile pipeline integration', () => {
           limits: [],
         },
       ],
-      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const raw = compileGameSpecToGameDef(doc);
@@ -52,7 +52,7 @@ describe('compile pipeline integration', () => {
       zones: [{ id: 'board', owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: ['missing-zone'] }],
       turnStructure: { phases: [{ id: 'main' }] },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
-      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const first = compileGameSpecToGameDef(doc);
@@ -106,7 +106,7 @@ describe('compile pipeline integration', () => {
       compiled.gameDef?.turnOrder?.type === 'cardDriven' ? compiled.gameDef.turnOrder.config.coupPlan?.phases[0]?.id : undefined,
       'victory',
     );
-    assert.equal(compiled.gameDef?.victory?.checkpoints[0]?.id, 'us-threshold');
+    assert.equal(compiled.gameDef?.terminal.checkpoints?.[0]?.id, 'us-threshold');
   });
 
   it('compiles map-driven zones from embedded dataAssets with no zones section', () => {
@@ -152,9 +152,10 @@ describe('compile pipeline integration', () => {
       '    cost: []',
       '    effects: []',
       '    limits: []',
-      'endConditions:',
-      '  - when: { op: "==", left: 1, right: 1 }',
-      '    result: { type: draw }',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
       '```',
     ].join('\n');
 
@@ -217,9 +218,10 @@ describe('compile pipeline integration', () => {
       '    cost: []',
       '    effects: []',
       '    limits: []',
-      'endConditions:',
-      '  - when: { op: "==", left: 1, right: 1 }',
-      '    result: { type: draw }',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
       '```',
     ].join('\n');
 
@@ -287,9 +289,10 @@ describe('compile pipeline integration', () => {
       '    cost: []',
       '    effects: []',
       '    limits: []',
-      'endConditions:',
-      '  - when: { op: "==", left: 1, right: 1 }',
-      '    result: { type: draw }',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
       '```',
     ].join('\n');
 
@@ -367,9 +370,10 @@ describe('compile pipeline integration', () => {
       '    cost: []',
       '    effects: []',
       '    limits: []',
-      'endConditions:',
-      '  - when: { op: "==", left: 1, right: 1 }',
-      '    result: { type: draw }',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
       '```',
     ].join('\n');
 
@@ -427,9 +431,10 @@ describe('compile pipeline integration', () => {
       '    cost: []',
       '    effects: []',
       '    limits: []',
-      'endConditions:',
-      '  - when: { op: "==", left: 1, right: 1 }',
-      '    result: { type: draw }',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
       '```',
     ].join('\n');
 

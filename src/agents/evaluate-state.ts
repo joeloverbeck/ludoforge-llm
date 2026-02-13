@@ -16,7 +16,7 @@ const playerVarValue = (state: GameState, playerId: PlayerId, varName: string): 
   state.perPlayerVars[String(playerId)]?.[varName] ?? 0;
 
 const evalScoringValue = (def: GameDef, state: GameState, playerId: PlayerId): number => {
-  if (!def.scoring) {
+  if (!def.terminal.scoring) {
     return 0;
   }
 
@@ -29,7 +29,7 @@ const evalScoringValue = (def: GameDef, state: GameState, playerId: PlayerId): n
     bindings: {},
     collector: createCollector(),
   };
-  const score = evalValue(def.scoring.value, ctx);
+  const score = evalValue(def.terminal.scoring.value, ctx);
   if (typeof score !== 'number') {
     throw new Error('Greedy evaluator scoring expression must evaluate to a number');
   }

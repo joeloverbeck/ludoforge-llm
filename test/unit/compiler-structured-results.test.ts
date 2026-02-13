@@ -14,7 +14,7 @@ describe('compiler structured section results', () => {
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }] as const,
       turnStructure: { phases: [{ id: 'main' }] } as const,
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }] as const,
-      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] as const,
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] } as const,
     };
   }
 
@@ -35,7 +35,7 @@ describe('compiler structured section results', () => {
     assert.notEqual(result.sections.turnStructure, null);
     assert.notEqual(result.sections.actions, null);
     assert.notEqual(result.sections.triggers, null);
-    assert.notEqual(result.sections.endConditions, null);
+    assert.notEqual(result.sections.terminal, null);
     assert.deepEqual(result.sections.zones, result.gameDef?.zones);
     assert.deepEqual(result.sections.actions, result.gameDef?.actions);
     assert.deepEqual(result.sections.turnStructure, result.gameDef?.turnStructure);
@@ -50,7 +50,7 @@ describe('compiler structured section results', () => {
       actions: [
         { id: 'bad', actor: 42, phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
-      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const result = compileGameSpecToGameDef(doc);
@@ -67,7 +67,7 @@ describe('compiler structured section results', () => {
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
-      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const result = compileGameSpecToGameDef(doc);
@@ -167,10 +167,9 @@ describe('compiler structured section results', () => {
       'turnStructure',
       'turnOrder',
       'actionPipelines',
-      'victory',
+      'terminal',
       'actions',
       'triggers',
-      'endConditions',
       'eventCards',
     ];
 
@@ -194,10 +193,9 @@ describe('compiler structured section results', () => {
       | 'turnStructure'
       | 'turnOrder'
       | 'actionPipelines'
-      | 'victory'
+      | 'terminal'
       | 'actions'
       | 'triggers'
-      | 'endConditions'
       | 'eventCards';
 
     type Missing = Exclude<ExpectedKeys, keyof CompileSectionResults>;

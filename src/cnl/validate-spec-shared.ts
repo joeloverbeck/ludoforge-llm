@@ -34,6 +34,7 @@ export const PHASE_KEYS = ['id', 'onEnter', 'onExit'] as const;
 export const TRIGGER_KEYS = ['id', 'event', 'when', 'match', 'effects'] as const;
 export const TRIGGER_EVENT_KEYS = ['type', 'phase', 'action', 'zone'] as const;
 export const END_CONDITION_KEYS = ['when', 'result'] as const;
+export const TERMINAL_KEYS = ['conditions', 'checkpoints', 'margins', 'ranking', 'scoring'] as const;
 export const TURN_FLOW_DURATION_VALUES: readonly string[] = ['card', 'nextCard', 'coup', 'campaign'];
 export const TURN_FLOW_ACTION_CLASS_VALUES: readonly string[] = [
   'pass',

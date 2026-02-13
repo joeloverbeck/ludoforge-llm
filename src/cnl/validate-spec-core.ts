@@ -1,8 +1,14 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import type { GameSpecSourceMap } from './source-map.js';
-import { validateActions, validateEndConditions, validateTurnStructure } from './validate-actions.js';
-import { validateActionPipelines, validateDataAssets, validateTurnOrder, dropZoneMissingDiagnostic } from './validate-extensions.js';
+import { validateActions, validateTerminal, validateTurnStructure } from './validate-actions.js';
+import {
+  validateActionPipelines,
+  validateDataAssets,
+  validateScoring,
+  validateTurnOrder,
+  dropZoneMissingDiagnostic,
+} from './validate-extensions.js';
 import { validateMetadata, validateVariables } from './validate-metadata.js';
 import {
   TRIGGER_EVENT_KEYS,
@@ -40,10 +46,11 @@ export function validateGameSpec(
   const phaseIds = validateTurnStructure(doc, diagnostics);
   validateTurnOrder(doc, diagnostics);
   validateActionPipelines(doc, actionIds, diagnostics);
+  validateScoring(doc, diagnostics);
 
   validateCrossReferences(doc, zoneIds, actionIds, phaseIds, diagnostics);
   validateDuplicateIdentifiers(doc, diagnostics);
-  validateEndConditions(doc, diagnostics);
+  validateTerminal(doc, diagnostics);
 
   diagnostics.sort((left, right) => compareDiagnostics(left, right, options?.sourceMap));
   return diagnostics;
@@ -52,8 +59,8 @@ export function validateGameSpec(
 function validateRequiredSections(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
   const requiredSections: ReadonlyArray<keyof Pick<
     GameSpecDoc,
-    'metadata' | 'zones' | 'turnStructure' | 'actions' | 'endConditions'
-  >> = ['metadata', 'zones', 'turnStructure', 'actions', 'endConditions'];
+    'metadata' | 'zones' | 'turnStructure' | 'actions' | 'terminal'
+  >> = ['metadata', 'zones', 'turnStructure', 'actions', 'terminal'];
 
   for (const section of requiredSections) {
     if (doc[section] === null) {

@@ -181,6 +181,43 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
   return { hasMapAsset };
 }
 
+export function validateScoring(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
+  if (doc.terminal === null || !isRecord(doc.terminal) || doc.terminal.scoring === undefined || doc.terminal.scoring === null) {
+    return;
+  }
+
+  if (!isRecord(doc.terminal.scoring)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_SCORING_SHAPE_INVALID',
+      path: 'doc.terminal.scoring',
+      severity: 'error',
+      message: 'scoring must be an object when declared.',
+      suggestion: 'Provide scoring.method and scoring.value.',
+    });
+    return;
+  }
+
+  if (doc.terminal.scoring.method !== 'highest' && doc.terminal.scoring.method !== 'lowest') {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_SCORING_METHOD_INVALID',
+      path: 'doc.terminal.scoring.method',
+      severity: 'error',
+      message: 'scoring.method must be "highest" or "lowest".',
+      suggestion: 'Set scoring.method to one of: highest, lowest.',
+    });
+  }
+
+  if (doc.terminal.scoring.value === undefined || doc.terminal.scoring.value === null) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_SCORING_VALUE_MISSING',
+      path: 'doc.terminal.scoring.value',
+      severity: 'error',
+      message: 'scoring.value is required.',
+      suggestion: 'Provide a ValueExpr-compatible scoring value.',
+    });
+  }
+}
+
 export function dropZoneMissingDiagnostic(diagnostics: Diagnostic[]): void {
   const index = diagnostics.findIndex(
     (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_REQUIRED_SECTION_MISSING' && diagnostic.path === 'doc.zones',

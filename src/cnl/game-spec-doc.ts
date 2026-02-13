@@ -92,6 +92,11 @@ export interface GameSpecEndCondition {
   readonly result: unknown;
 }
 
+export interface GameSpecScoring {
+  readonly method: 'highest' | 'lowest';
+  readonly value: ValueExpr;
+}
+
 export interface GameSpecDataAsset {
   readonly id: string;
   readonly kind: string;
@@ -224,6 +229,14 @@ export interface GameSpecVictory {
   readonly ranking?: GameSpecVictoryRanking;
 }
 
+export interface GameSpecTerminal {
+  readonly conditions: readonly GameSpecEndCondition[];
+  readonly checkpoints?: readonly GameSpecVictoryCheckpoint[];
+  readonly margins?: readonly GameSpecVictoryMargin[];
+  readonly ranking?: GameSpecVictoryRanking;
+  readonly scoring?: GameSpecScoring;
+}
+
 export interface EffectMacroParam {
   readonly name: string;
   readonly type: 'string' | 'number' | 'effect' | 'effects' | 'value' | 'condition' | 'query';
@@ -247,10 +260,9 @@ export interface GameSpecDoc {
   readonly turnStructure: GameSpecTurnStructure | null;
   readonly turnOrder: GameSpecTurnOrder | null;
   readonly actionPipelines: readonly GameSpecActionPipelineDef[] | null;
-  readonly victory: GameSpecVictory | null;
+  readonly terminal: GameSpecTerminal | null;
   readonly actions: readonly GameSpecActionDef[] | null;
   readonly triggers: readonly GameSpecTriggerDef[] | null;
-  readonly endConditions: readonly GameSpecEndCondition[] | null;
   readonly effectMacros: readonly EffectMacroDef[] | null;
 }
 
@@ -267,10 +279,9 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     turnStructure: null,
     turnOrder: null,
     actionPipelines: null,
-    victory: null,
+    terminal: null,
     actions: null,
     triggers: null,
-    endConditions: null,
     effectMacros: null,
   };
 }

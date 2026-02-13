@@ -28,7 +28,7 @@ const defStub: GameDef = {
   turnStructure: { phases: [{ id: phaseId }] },
   actions: [],
   triggers: [],
-  endConditions: [],
+  terminal: { conditions: [] },
 };
 
 const stateStub: GameState = {

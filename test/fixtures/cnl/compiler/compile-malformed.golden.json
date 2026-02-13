@@ -12,7 +12,7 @@
     },
     {
       "code": "CNL_COMPILER_MISSING_CAPABILITY",
-      "path": "doc.endConditions.0.when",
+      "path": "doc.terminal.conditions.0.when",
       "suggestion": "Rewrite this node to a supported kernel-compatible shape."
     },
     {

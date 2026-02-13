@@ -131,7 +131,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       turnStructure: { phases: [] },
       actions: [],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
       stackingConstraints: [...fitlConstraints],
     });
 

@@ -41,9 +41,10 @@ turnStructure:
     cost: []
     effects: []
     limits: []
-endConditions:
-  - when: { op: "==", left: 1, right: 1 }
-    result: { type: draw }
+terminal:
+  conditions:
+    - when: { op: "==", left: 1, right: 1 }
+      result: { type: draw }
 zones:
   - id: fallback:none
     owner: none

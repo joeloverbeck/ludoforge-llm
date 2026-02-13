@@ -95,7 +95,7 @@ const createDef = (): GameDef =>
       },
     ],
     triggers: [],
-    endConditions: [],
+    terminal: { conditions: [] },
   }) as unknown as GameDef;
 
 const scriptedMoves: readonly Move[] = [
@@ -224,7 +224,7 @@ const createEventTraceDef = (): GameDef =>
       },
     ],
     triggers: [],
-    endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+    terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
   }) as unknown as GameDef;
 
 describe('FITL card-flow determinism integration', () => {

@@ -47,7 +47,7 @@ const createValidGameDef = (): GameDef =>
       },
     ],
     triggers: [{ id: 'onPlay', event: { type: 'actionResolved', action: 'playCard' }, effects: [] }],
-    endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+    terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
   }) as unknown as GameDef;
 
 describe('validateGameDef reference checks', () => {
@@ -388,7 +388,8 @@ describe('validateGameDef reference checks', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      victory: {
+      terminal: {
+        ...base.terminal,
         checkpoints: [
           {
             id: 'us-threshold',
@@ -404,10 +405,10 @@ describe('validateGameDef reference checks', () => {
 
     const diagnostics = validateGameDef(def);
     assert.ok(
-      diagnostics.some((diag) => diag.code === 'REF_GVAR_MISSING' && diag.path === 'victory.checkpoints[0].when.left.var'),
+      diagnostics.some((diag) => diag.code === 'REF_GVAR_MISSING' && diag.path === 'terminal.checkpoints[0].when.left.var'),
     );
     assert.ok(
-      diagnostics.some((diag) => diag.code === 'REF_PVAR_MISSING' && diag.path === 'victory.margins[0].value.var'),
+      diagnostics.some((diag) => diag.code === 'REF_PVAR_MISSING' && diag.path === 'terminal.margins[0].value.var'),
     );
   });
 });
@@ -471,14 +472,13 @@ describe('validateGameDef constraints and warnings', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
-      scoring: undefined,
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }] },
     } as unknown as GameDef;
 
     const diagnostics = validateGameDef(def);
     assert.ok(
       diagnostics.some(
-        (diag) => diag.code === 'SCORING_REQUIRED_FOR_SCORE_RESULT' && diag.path === 'endConditions[0].result',
+        (diag) => diag.code === 'SCORING_REQUIRED_FOR_SCORE_RESULT' && diag.path === 'terminal.conditions[0].result',
       ),
     );
   });
@@ -487,12 +487,15 @@ describe('validateGameDef constraints and warnings', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      scoring: { method: 'highest', value: 1 },
+      terminal: {
+        ...base.terminal,
+        scoring: { method: 'highest', value: 1 },
+      },
     } as unknown as GameDef;
 
     const diagnostics = validateGameDef(def);
     assert.ok(
-      diagnostics.some((diag) => diag.code === 'SCORING_UNUSED' && diag.path === 'scoring' && diag.severity === 'warning'),
+      diagnostics.some((diag) => diag.code === 'SCORING_UNUSED' && diag.path === 'terminal.scoring' && diag.severity === 'warning'),
     );
   });
 

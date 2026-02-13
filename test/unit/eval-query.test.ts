@@ -69,7 +69,7 @@ const makeDef = (): GameDef => ({
   turnStructure: { phases: [] },
   actions: [],
   triggers: [],
-  endConditions: [],
+  terminal: { conditions: [] },
 });
 
 const makeToken = (id: string): Token => ({

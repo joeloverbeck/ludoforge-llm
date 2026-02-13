@@ -84,10 +84,12 @@ const createDef = (options?: {
     turnStructure: { phases },
     actions,
     triggers: [],
-    endConditions:
-      terminalAtScore === undefined
-        ? []
-        : [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: terminalAtScore }, result: { type: 'draw' } }],
+    terminal: {
+      conditions:
+        terminalAtScore === undefined
+          ? []
+          : [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: terminalAtScore }, result: { type: 'draw' } }],
+    },
   } as unknown as GameDef;
 };
 
@@ -197,7 +199,7 @@ describe('runGame', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const sideBranchAgent: Agent = {

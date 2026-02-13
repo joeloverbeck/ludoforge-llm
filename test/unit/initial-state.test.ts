@@ -51,7 +51,7 @@ const createDef = (): GameDef =>
         effects: [{ addVar: { scope: 'global', var: 'coins', delta: { ref: 'gvar', var: 'coins' } } }],
       },
     ],
-    endConditions: [],
+    terminal: { conditions: [] },
   }) as unknown as GameDef;
 
 describe('initialState', () => {
@@ -223,7 +223,7 @@ describe('initialState', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const state = initialState(def, 1, 2);
@@ -258,7 +258,7 @@ describe('initialState', () => {
       },
       actions: [],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const state = initialState(def, 1, 2);

@@ -120,7 +120,7 @@ const createDef = (): GameDef =>
       },
     ],
     triggers: [],
-    endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
+    terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
   }) as unknown as GameDef;
 
 describe('FITL turn-flow golden trace', () => {

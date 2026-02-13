@@ -26,14 +26,15 @@ function buildEvalContext(
 }
 
 function scoreRanking(def: GameDef, adjacencyGraph: AdjacencyGraph, state: GameState): readonly PlayerScore[] {
-  if (!def.scoring) {
-    throw new Error('End condition result.type "score" requires def.scoring');
+  const scoring = def.terminal.scoring;
+  if (!scoring) {
+    throw new Error('End condition result.type "score" requires def.terminal.scoring');
   }
 
   const ranking = Array.from({ length: state.playerCount }, (_, index) => {
     const player = asPlayerId(index);
     const ctx = buildEvalContext(def, adjacencyGraph, state, player);
-    const score = evalValue(def.scoring!.value, ctx);
+    const score = evalValue(scoring.value, ctx);
     if (typeof score !== 'number') {
       throw new Error('Scoring value expression must evaluate to a number');
     }
@@ -46,7 +47,7 @@ function scoreRanking(def: GameDef, adjacencyGraph: AdjacencyGraph, state: GameS
       return left.player - right.player;
     }
 
-    return def.scoring!.method === 'highest' ? right.score - left.score : left.score - right.score;
+    return scoring.method === 'highest' ? right.score - left.score : left.score - right.score;
   });
 }
 
@@ -71,8 +72,8 @@ function finalVictoryRanking(
   adjacencyGraph: AdjacencyGraph,
   state: GameState,
 ): readonly VictoryTerminalRankingEntry[] {
-  const margins = def.victory?.margins ?? [];
-  const order = def.victory?.ranking?.order ?? 'desc';
+  const margins = def.terminal.margins ?? [];
+  const order = def.terminal.ranking?.order ?? 'desc';
   const rows = margins.map((marginDef) => {
     const margin = evalValue(marginDef.value, buildEvalContext(def, adjacencyGraph, state));
     if (typeof margin !== 'number') {
@@ -101,13 +102,13 @@ function finalVictoryRanking(
 }
 
 function evaluateVictory(def: GameDef, adjacencyGraph: AdjacencyGraph, state: GameState): TerminalResult | null {
-  const victory = def.victory;
-  if (victory === undefined) {
+  const checkpoints = def.terminal.checkpoints;
+  if (checkpoints === undefined) {
     return null;
   }
 
   const baseCtx = buildEvalContext(def, adjacencyGraph, state);
-  const duringCheckpoint = victory.checkpoints.find(
+  const duringCheckpoint = checkpoints.find(
     (checkpoint) => checkpoint.timing === 'duringCoup' && evalCondition(checkpoint.when, baseCtx),
   );
   if (duringCheckpoint !== undefined) {
@@ -127,7 +128,7 @@ function evaluateVictory(def: GameDef, adjacencyGraph: AdjacencyGraph, state: Ga
     };
   }
 
-  const finalCheckpoint = victory.checkpoints.find(
+  const finalCheckpoint = checkpoints.find(
     (checkpoint) => checkpoint.timing === 'finalCoup' && evalCondition(checkpoint.when, baseCtx),
   );
   if (finalCheckpoint === undefined) {
@@ -161,7 +162,7 @@ export const terminalResult = (def: GameDef, state: GameState): TerminalResult |
     return victory;
   }
 
-  for (const endCondition of def.endConditions) {
+  for (const endCondition of def.terminal.conditions) {
     if (!evalCondition(endCondition.when, baseCtx)) {
       continue;
     }

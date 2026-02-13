@@ -31,10 +31,12 @@ describe('compile top-level actions/triggers/end conditions', () => {
           effects: [{ addVar: { scope: 'global', var: 'tick', delta: 1 } }],
         },
       ],
-      endConditions: [
-        { when: { op: '>=', left: { ref: 'gvar', var: 'tick' }, right: 3 }, result: { type: 'win', player: 'activePlayer' } },
-        { when: { op: '>=', left: { ref: 'gvar', var: 'tick' }, right: 5 }, result: { type: 'draw' } },
-      ],
+      terminal: {
+        conditions: [
+          { when: { op: '>=', left: { ref: 'gvar', var: 'tick' }, right: 3 }, result: { type: 'win', player: 'activePlayer' } },
+          { when: { op: '>=', left: { ref: 'gvar', var: 'tick' }, right: 5 }, result: { type: 'draw' } },
+        ],
+      },
     };
 
     const result = compileGameSpecToGameDef(doc);
@@ -46,12 +48,12 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ['trigger_0', 'afterPass'],
     );
     assert.deepEqual(
-      result.gameDef?.endConditions.map((condition) => condition.result.type),
+      result.gameDef?.terminal.conditions.map((condition) => condition.result.type),
       ['win', 'draw'],
     );
-    assert.equal(result.gameDef?.endConditions[0]?.result.type, 'win');
-    if (result.gameDef?.endConditions[0]?.result.type === 'win') {
-      assert.equal(result.gameDef.endConditions[0].result.player, 'active');
+    assert.equal(result.gameDef?.terminal.conditions[0]?.result.type, 'win');
+    if (result.gameDef?.terminal.conditions[0]?.result.type === 'win') {
+      assert.equal(result.gameDef.terminal.conditions[0].result.player, 'active');
     }
   });
 
@@ -63,7 +65,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       turnStructure: { phases: [{ id: 'main' }] },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [{ event: { type: 'actionResolved', action: 'psas' }, effects: [] }],
-      endConditions: [{ when: { op: '>=', left: 1, right: 2 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 2 }, result: { type: 'draw' } }] },
     };
 
     const first = compileGameSpecToGameDef(doc);
@@ -113,7 +115,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
-      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const result = compileGameSpecToGameDef(doc);
@@ -140,7 +142,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       turnOrder: { type: 'simultaneous' as const },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
-      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const result = compileGameSpecToGameDef(doc);
@@ -168,7 +170,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       turnOrder: { type: 'fixedOrder' as const, order: [] },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
-      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const result = compileGameSpecToGameDef(doc);
@@ -202,7 +204,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
-      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
@@ -254,7 +256,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
         { id: 'pivotalB', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       triggers: [],
-      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const result = compileGameSpecToGameDef(doc);
@@ -314,7 +316,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
         },
       ],
       triggers: [],
-      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const result = compileGameSpecToGameDef(doc);
@@ -374,7 +376,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
         },
       ],
       triggers: [],
-      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
@@ -433,7 +435,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
         { id: 'pivotalB', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       triggers: [],
-      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const result = compileGameSpecToGameDef(doc);
@@ -469,7 +471,10 @@ describe('compile top-level actions/triggers/end conditions', () => {
           },
         },
       },
-      victory: {
+      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: {
+        conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
         checkpoints: [
           {
             id: 'us-threshold',
@@ -481,9 +486,6 @@ describe('compile top-level actions/triggers/end conditions', () => {
         margins: [{ faction: 'us', value: { op: '-' as const, left: 55, right: 50 } }],
         ranking: { order: 'desc' as const },
       },
-      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
-      triggers: [],
-      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
     };
 
     const result = compileGameSpecToGameDef(doc);
@@ -495,7 +497,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.gameDef?.turnOrder?.type === 'cardDriven' ? result.gameDef.turnOrder.config.coupPlan?.phases[0]?.id : undefined,
       'victory',
     );
-    assert.equal(result.gameDef?.victory?.checkpoints[0]?.id, 'us-threshold');
+    assert.equal(result.gameDef?.terminal.checkpoints?.[0]?.id, 'us-threshold');
   });
 
   it('returns blocking diagnostics for malformed coupPlan and victory metadata', () => {
@@ -515,14 +517,14 @@ describe('compile top-level actions/triggers/end conditions', () => {
           },
         },
       },
-      victory: {
+      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: {
+        conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
         checkpoints: [{ id: 'c1', faction: 'us', timing: 'not-valid', when: null }],
         margins: [{ faction: '', value: null }],
         ranking: { order: 'up' },
       },
-      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
-      triggers: [],
-      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
     };
 
     const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
@@ -548,7 +550,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_VICTORY_CHECKPOINT_TIMING_INVALID' &&
-          diagnostic.path === 'doc.victory.checkpoints.0.timing',
+          diagnostic.path === 'doc.terminal.checkpoints.0.timing',
       ),
       true,
     );
@@ -556,7 +558,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_VICTORY_RANKING_ORDER_INVALID' &&
-          diagnostic.path === 'doc.victory.ranking.order',
+          diagnostic.path === 'doc.terminal.ranking.order',
       ),
       true,
     );
@@ -579,7 +581,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       },
       actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
-      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
     const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);

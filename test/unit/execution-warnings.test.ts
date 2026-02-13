@@ -32,7 +32,7 @@ const minimalDef: GameDef = {
   turnStructure: { phases: [{ id: asPhaseId('main') }] },
   actions: [],
   triggers: [],
-  endConditions: [],
+  terminal: { conditions: [] },
 } as unknown as GameDef;
 
 const z1 = asZoneId('z1:none');

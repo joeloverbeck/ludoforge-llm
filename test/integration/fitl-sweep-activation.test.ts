@@ -43,7 +43,7 @@ function makeDef(): GameDef {
     turnStructure: { phases: [{ id: asPhaseId('main') }] },
     actions: [],
     triggers: [],
-    endConditions: [],
+    terminal: { conditions: [] },
   };
 }
 

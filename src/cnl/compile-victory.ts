@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { CoupPlanDef, VictoryDef } from '../kernel/types.js';
+import type { CoupPlanDef, TerminalEvaluationDef } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord } from './compile-lowering.js';
 
@@ -152,36 +152,42 @@ export function lowerCoupPlan(
   return rawCoupPlan as unknown as CoupPlanDef;
 }
 
-export function lowerVictory(rawVictory: GameSpecDoc['victory'], diagnostics: Diagnostic[]): VictoryDef | undefined {
-  if (rawVictory === null) {
+export function lowerVictory(
+  rawTerminal: GameSpecDoc['terminal'],
+  diagnostics: Diagnostic[],
+): Pick<TerminalEvaluationDef, 'checkpoints' | 'margins' | 'ranking'> | undefined {
+  if (rawTerminal === null) {
+    return undefined;
+  }
+
+  const rawVictory = {
+    checkpoints: rawTerminal.checkpoints,
+    margins: rawTerminal.margins,
+    ranking: rawTerminal.ranking,
+  };
+
+  if (rawVictory.checkpoints === undefined) {
     return undefined;
   }
 
   if (!isRecord(rawVictory)) {
-    diagnostics.push({
-      code: 'CNL_COMPILER_VICTORY_INVALID',
-      path: 'doc.victory',
-      severity: 'error',
-      message: 'victory must be an object when declared.',
-      suggestion: 'Provide victory.checkpoints and optional margins/ranking.',
-    });
     return undefined;
   }
 
   if (!Array.isArray(rawVictory.checkpoints)) {
     diagnostics.push({
       code: 'CNL_COMPILER_VICTORY_REQUIRED_FIELD_MISSING',
-      path: 'doc.victory.checkpoints',
+      path: 'doc.terminal.checkpoints',
       severity: 'error',
-      message: 'victory.checkpoints is required and must be an array.',
-      suggestion: 'Declare one or more victory checkpoint definitions.',
+      message: 'terminal.checkpoints must be an array when declared.',
+      suggestion: 'Declare one or more terminal checkpoint definitions.',
     });
     return undefined;
   }
 
   const seenCheckpointIds = new Set<string>();
   for (const [index, checkpoint] of rawVictory.checkpoints.entries()) {
-    const checkpointPath = `doc.victory.checkpoints.${index}`;
+    const checkpointPath = `doc.terminal.checkpoints.${index}`;
     if (!isRecord(checkpoint)) {
       diagnostics.push({
         code: 'CNL_COMPILER_VICTORY_CHECKPOINT_INVALID',
@@ -248,14 +254,14 @@ export function lowerVictory(rawVictory: GameSpecDoc['victory'], diagnostics: Di
     if (!Array.isArray(rawVictory.margins)) {
       diagnostics.push({
         code: 'CNL_COMPILER_VICTORY_MARGINS_INVALID',
-        path: 'doc.victory.margins',
+        path: 'doc.terminal.margins',
         severity: 'error',
         message: 'victory.margins must be an array when declared.',
         suggestion: 'Set margins to an array of faction/value definitions.',
       });
     } else {
       for (const [index, margin] of rawVictory.margins.entries()) {
-        const marginPath = `doc.victory.margins.${index}`;
+        const marginPath = `doc.terminal.margins.${index}`;
         if (!isRecord(margin)) {
           diagnostics.push({
             code: 'CNL_COMPILER_VICTORY_MARGIN_INVALID',
@@ -299,7 +305,7 @@ export function lowerVictory(rawVictory: GameSpecDoc['victory'], diagnostics: Di
     if (!isRecord(rawVictory.ranking)) {
       diagnostics.push({
         code: 'CNL_COMPILER_VICTORY_RANKING_INVALID',
-        path: 'doc.victory.ranking',
+        path: 'doc.terminal.ranking',
         severity: 'error',
         message: 'victory.ranking must be an object when declared.',
         suggestion: 'Set ranking.order to "desc" or "asc".',
@@ -307,7 +313,7 @@ export function lowerVictory(rawVictory: GameSpecDoc['victory'], diagnostics: Di
     } else if (rawVictory.ranking.order !== 'desc' && rawVictory.ranking.order !== 'asc') {
       diagnostics.push({
         code: 'CNL_COMPILER_VICTORY_RANKING_ORDER_INVALID',
-        path: 'doc.victory.ranking.order',
+        path: 'doc.terminal.ranking.order',
         severity: 'error',
         message: 'victory.ranking.order must be "desc" or "asc".',
         suggestion: 'Use "desc" for high-to-low or "asc" for low-to-high ranking.',
@@ -315,5 +321,5 @@ export function lowerVictory(rawVictory: GameSpecDoc['victory'], diagnostics: Di
     }
   }
 
-  return rawVictory as VictoryDef;
+  return rawVictory as Pick<TerminalEvaluationDef, 'checkpoints' | 'margins' | 'ranking'>;
 }

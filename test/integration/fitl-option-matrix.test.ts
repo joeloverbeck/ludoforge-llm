@@ -92,7 +92,7 @@ const createDef = (): GameDef =>
       },
     ],
     triggers: [],
-    endConditions: [],
+    terminal: { conditions: [] },
   }) as unknown as GameDef;
 
 describe('FITL option matrix integration', () => {

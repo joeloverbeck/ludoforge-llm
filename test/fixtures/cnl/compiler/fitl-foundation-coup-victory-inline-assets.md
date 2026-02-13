@@ -93,7 +93,7 @@ turnOrder:
           steps: [compute-income]
       finalRoundOmitPhases: [resources]
       maxConsecutiveRounds: 1
-victory:
+terminal:
   checkpoints:
     - id: us-threshold
       faction: us
@@ -124,6 +124,13 @@ victory:
         var: nvaMargin
   ranking:
     order: desc
+  conditions:
+    - when:
+        op: "=="
+        left: 0
+        right: 1
+      result:
+        type: draw
 actions:
   - id: pass
     actor: active
@@ -157,11 +164,4 @@ actions:
           var: isFinalCoup
           value: 1
     limits: []
-endConditions:
-  - when:
-      op: "=="
-      left: 0
-      right: 1
-    result:
-      type: draw
 ```

@@ -18,7 +18,9 @@ import {
   TurnFlowEligibilityTraceEntrySchema,
   TurnFlowLifecycleTraceEntrySchema,
   TurnOrderRuntimeStateSchema,
-  VictorySchema,
+  VictoryCheckpointSchema,
+  VictoryMarginSchema,
+  VictoryRankingSchema,
   VictoryTerminalMetadataSchema,
   EventCardSchema,
   ActionPipelineSchema,
@@ -151,6 +153,16 @@ export const ScoringDefSchema = z
   })
   .strict();
 
+export const TerminalEvaluationDefSchema = z
+  .object({
+    conditions: z.array(EndConditionSchema),
+    checkpoints: z.array(VictoryCheckpointSchema).optional(),
+    margins: z.array(VictoryMarginSchema).optional(),
+    ranking: VictoryRankingSchema.optional(),
+    scoring: ScoringDefSchema.optional(),
+  })
+  .strict();
+
 
 export const GameDefSchema = z
   .object({
@@ -170,11 +182,9 @@ export const GameDefSchema = z
     turnStructure: TurnStructureSchema,
     turnOrder: TurnOrderSchema.optional(),
     actionPipelines: z.array(ActionPipelineSchema).optional(),
-    victory: VictorySchema.optional(),
     actions: z.array(ActionDefSchema),
     triggers: z.array(TriggerDefSchema),
-    endConditions: z.array(EndConditionSchema),
-    scoring: ScoringDefSchema.optional(),
+    terminal: TerminalEvaluationDefSchema,
     eventCards: z.array(EventCardSchema).optional(),
     stackingConstraints: z.array(StackingConstraintSchema).optional(),
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),

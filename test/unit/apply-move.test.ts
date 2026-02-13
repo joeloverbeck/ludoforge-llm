@@ -63,7 +63,7 @@ const createDef = (): GameDef =>
         effects: [{ addVar: { scope: 'global', var: 'triggered', delta: 1 } }],
       },
     ],
-    endConditions: [],
+    terminal: { conditions: [] },
   }) as unknown as GameDef;
 
 const createState = (): GameState => ({
@@ -177,7 +177,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -220,7 +220,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -279,7 +279,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -352,7 +352,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const passMove: Move = { actionId: asActionId('pass'), params: {} };
@@ -424,7 +424,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const start = initialState(def, 13, 4);
@@ -503,7 +503,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const start = initialState(def, 17, 4);
@@ -570,7 +570,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -625,7 +625,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -680,7 +680,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -739,7 +739,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -810,7 +810,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -860,7 +860,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -919,7 +919,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const start = initialState(def, 7, 4);
@@ -979,7 +979,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -1026,7 +1026,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -1081,7 +1081,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -1155,7 +1155,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
     const state: GameState = {
       ...createState(),
@@ -1210,7 +1210,7 @@ describe('applyMove', () => {
         },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const state: GameState = {
@@ -1258,7 +1258,7 @@ describe('applyMove', () => {
         { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [{ setVar: { scope: 'global', var: 'order', value: 1 } }], limits: [] },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, order: 0 } };
@@ -1301,7 +1301,7 @@ describe('applyMove', () => {
         { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [{ addVar: { scope: 'global', var: 'order', delta: 5 } }], limits: [] },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, order: 0 } };
@@ -1347,7 +1347,7 @@ describe('applyMove', () => {
         { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [{ addVar: { scope: 'global', var: 'order', delta: 5 } }], limits: [] },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, order: 0 } };
@@ -1390,7 +1390,7 @@ describe('applyMove', () => {
         { id: asActionId('operate'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       triggers: [],
-      endConditions: [],
+      terminal: { conditions: [] },
     } as unknown as GameDef;
 
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };

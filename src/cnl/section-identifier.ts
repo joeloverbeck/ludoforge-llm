@@ -10,10 +10,9 @@ export const CANONICAL_SECTION_KEYS = [
   'turnStructure',
   'turnOrder',
   'actionPipelines',
-  'victory',
+  'terminal',
   'actions',
   'triggers',
-  'endConditions',
   'effectMacros',
 ] as const;
 
@@ -145,8 +144,8 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isActionPipelinesShape(value)) {
     matches.push('actionPipelines');
   }
-  if (isVictoryShape(value)) {
-    matches.push('victory');
+  if (isTerminalShape(value)) {
+    matches.push('terminal');
   }
   if (isGlobalVarsShape(value)) {
     matches.push('globalVars');
@@ -163,9 +162,6 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   }
   if (isTriggersShape(value)) {
     matches.push('triggers');
-  }
-  if (isEndConditionsShape(value)) {
-    matches.push('endConditions');
   }
   if (isSetupShape(value)) {
     matches.push('setup');
@@ -215,12 +211,10 @@ function isActionPipelinesShape(value: Record<string, unknown>): boolean {
   );
 }
 
-function isVictoryShape(value: Record<string, unknown>): boolean {
+function isTerminalShape(value: Record<string, unknown>): boolean {
   return (
-    Array.isArray(value.checkpoints) &&
-    value.checkpoints.every(
-      (entry) => isRecord(entry) && typeof entry.id === 'string' && typeof entry.faction === 'string',
-    )
+    Array.isArray(value.conditions) &&
+    value.conditions.every((entry) => isRecord(entry) && 'when' in entry && 'result' in entry)
   );
 }
 
@@ -247,13 +241,6 @@ function isTriggersShape(value: Record<string, unknown>): boolean {
   return (
     Array.isArray(value.triggers) &&
     value.triggers.every((entry) => isRecord(entry) && (entry.effects === undefined || Array.isArray(entry.effects)))
-  );
-}
-
-function isEndConditionsShape(value: Record<string, unknown>): boolean {
-  return (
-    Array.isArray(value.endConditions) &&
-    value.endConditions.every((entry) => isRecord(entry) && 'when' in entry && 'result' in entry)
   );
 }
 

@@ -177,7 +177,7 @@ const createSupportFixtureDef = (): GameDef => {
       },
     ],
     triggers: [{ id: 'on_support_enter', event: { type: 'phaseEnter', phase: asPhaseId('support') }, effects: supportEffects }],
-    endConditions: [],
+    terminal: { conditions: [] },
   } as unknown as GameDef;
 };
 

@@ -4,6 +4,7 @@ import {
   ACTION_KEYS,
   END_CONDITION_KEYS,
   PHASE_KEYS,
+  TERMINAL_KEYS,
   TURN_STRUCTURE_KEYS,
   isRecord,
   uniqueSorted,
@@ -122,15 +123,28 @@ export function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[
   return uniqueSorted(collectedPhaseIds);
 }
 
-export function validateEndConditions(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
-  if (doc.endConditions === null) {
+export function validateTerminal(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
+  if (doc.terminal === null || !isRecord(doc.terminal)) {
     return;
   }
 
-  for (const [index, endCondition] of doc.endConditions.entries()) {
+  validateUnknownKeys(doc.terminal, TERMINAL_KEYS, 'doc.terminal', diagnostics, 'terminal');
+
+  if (!Array.isArray(doc.terminal.conditions)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_TERMINAL_CONDITIONS_INVALID',
+      path: 'doc.terminal.conditions',
+      severity: 'error',
+      message: 'terminal.conditions must be an array.',
+      suggestion: 'Set terminal.conditions to an array of end-condition objects.',
+    });
+    return;
+  }
+
+  for (const [index, endCondition] of doc.terminal.conditions.entries()) {
     if (!isRecord(endCondition)) {
       continue;
     }
-    validateUnknownKeys(endCondition, END_CONDITION_KEYS, `doc.endConditions.${index}`, diagnostics, 'end condition');
+    validateUnknownKeys(endCondition, END_CONDITION_KEYS, `doc.terminal.conditions.${index}`, diagnostics, 'end condition');
   }
 }

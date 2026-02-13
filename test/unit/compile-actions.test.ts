@@ -32,7 +32,7 @@ describe('compile actions', () => {
         },
       ],
       triggers: [],
-      endConditions: [{ when: { op: '>=', left: 1, right: 999 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 999 }, result: { type: 'draw' } }] },
     };
 
     const result = compileGameSpecToGameDef(doc);

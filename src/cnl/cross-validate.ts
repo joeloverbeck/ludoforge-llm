@@ -93,12 +93,12 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     }
   }
 
-  if (sections.victory !== null && cardDrivenTurnFlow !== null) {
-    for (const [checkpointIndex, checkpoint] of sections.victory.checkpoints.entries()) {
+  if (sections.terminal?.checkpoints !== undefined && cardDrivenTurnFlow !== null) {
+    for (const [checkpointIndex, checkpoint] of sections.terminal.checkpoints.entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
         'CNL_XREF_VICTORY_FACTION_MISSING',
-        `doc.victory.checkpoints.${checkpointIndex}.faction`,
+        `doc.terminal.checkpoints.${checkpointIndex}.faction`,
         checkpoint.faction,
         factionTargets,
         `Victory checkpoint "${checkpoint.id}" references unknown faction "${checkpoint.faction}".`,
@@ -106,11 +106,11 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
       );
     }
 
-    for (const [marginIndex, margin] of (sections.victory.margins ?? []).entries()) {
+    for (const [marginIndex, margin] of (sections.terminal.margins ?? []).entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
         'CNL_XREF_MARGIN_FACTION_MISSING',
-        `doc.victory.margins.${marginIndex}.faction`,
+        `doc.terminal.margins.${marginIndex}.faction`,
         margin.faction,
         factionTargets,
         `Victory margin references unknown faction "${margin.faction}".`,

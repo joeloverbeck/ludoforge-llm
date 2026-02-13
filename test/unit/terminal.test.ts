@@ -15,7 +15,7 @@ const createBaseDef = (): GameDef =>
     turnStructure: { phases: [{ id: asPhaseId('main') }] },
     actions: [],
     triggers: [],
-    endConditions: [],
+    terminal: { conditions: [] },
   }) as unknown as GameDef;
 
 const createBaseState = (overrides: Partial<GameState> = {}): GameState => ({
@@ -43,7 +43,7 @@ describe('terminalResult', () => {
   it('returns null when no end condition matches', () => {
     const def: GameDef = {
       ...createBaseDef(),
-      endConditions: [{ when: { op: '==', left: 1, right: 0 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 0 }, result: { type: 'draw' } }] },
     };
 
     assert.equal(terminalResult(def, createBaseState()), null);
@@ -52,7 +52,7 @@ describe('terminalResult', () => {
   it('resolves win result player selector to a concrete player', () => {
     const def: GameDef = {
       ...createBaseDef(),
-      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'win', player: 'active' } }],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'win', player: 'active' } }] },
     };
 
     assert.deepEqual(terminalResult(def, createBaseState({ activePlayer: asPlayerId(2) })), {
@@ -64,11 +64,11 @@ describe('terminalResult', () => {
   it('resolves lossAll and draw result variants', () => {
     const lossAllDef: GameDef = {
       ...createBaseDef(),
-      endConditions: [{ when: { op: '==', left: 2, right: 2 }, result: { type: 'lossAll' } }],
+      terminal: { conditions: [{ when: { op: '==', left: 2, right: 2 }, result: { type: 'lossAll' } }] },
     };
     const drawDef: GameDef = {
       ...createBaseDef(),
-      endConditions: [{ when: { op: '==', left: 2, right: 2 }, result: { type: 'draw' } }],
+      terminal: { conditions: [{ when: { op: '==', left: 2, right: 2 }, result: { type: 'draw' } }] },
     };
     const state = createBaseState();
 
@@ -87,14 +87,18 @@ describe('terminalResult', () => {
 
     const highestDef: GameDef = {
       ...createBaseDef(),
-      scoring: { method: 'highest', value: { ref: 'pvar', player: 'actor', var: 'points' } },
-      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
+      terminal: {
+        conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
+        scoring: { method: 'highest', value: { ref: 'pvar', player: 'actor', var: 'points' } },
+      },
     };
 
     const lowestDef: GameDef = {
       ...createBaseDef(),
-      scoring: { method: 'lowest', value: { ref: 'pvar', player: 'actor', var: 'points' } },
-      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
+      terminal: {
+        conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
+        scoring: { method: 'lowest', value: { ref: 'pvar', player: 'actor', var: 'points' } },
+      },
     };
 
     assert.deepEqual(terminalResult(highestDef, scoreState), {
@@ -118,11 +122,13 @@ describe('terminalResult', () => {
   it('uses first matching end condition in declaration order', () => {
     const def: GameDef = {
       ...createBaseDef(),
-      scoring: { method: 'highest', value: 99 },
-      endConditions: [
-        { when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } },
-        { when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } },
-      ],
+      terminal: {
+        conditions: [
+          { when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } },
+          { when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } },
+        ],
+        scoring: { method: 'highest', value: 99 },
+      },
     };
 
     assert.deepEqual(terminalResult(def, createBaseState()), { type: 'draw' });
@@ -143,7 +149,8 @@ describe('terminalResult', () => {
           },
         },
       },
-      victory: {
+      terminal: {
+        conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
         checkpoints: [
           {
             id: 'us-threshold',
@@ -153,7 +160,6 @@ describe('terminalResult', () => {
           },
         ],
       },
-      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
     };
     const state = createBaseState({
       globalVars: { done: 1 },
@@ -208,7 +214,8 @@ describe('terminalResult', () => {
           },
         },
       },
-      victory: {
+      terminal: {
+        conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
         checkpoints: [
           {
             id: 'final-coup',
@@ -224,7 +231,6 @@ describe('terminalResult', () => {
         ],
         ranking: { order: 'desc' },
       },
-      endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
     };
     const state = createBaseState({
       globalVars: { finalCoup: 1, mUs: 8, mNva: 8, mArvn: 2 },

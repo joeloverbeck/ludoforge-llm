@@ -72,12 +72,12 @@ function createRichCompilableDoc(): GameSpecDoc {
       },
     ],
     triggers: [{ id: 'on-act', event: { type: 'actionResolved', action: 'act' }, effects: [] }],
-    victory: {
+    terminal: {
+      conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
       checkpoints: [{ id: 'cp-1', faction: 'us', timing: 'duringCoup' as const, when: { op: '==', left: 1, right: 1 } }],
       margins: [{ faction: 'arvn', value: 1 }],
       ranking: { order: 'desc' as const },
     },
-    endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }],
   };
 }
 
@@ -138,18 +138,18 @@ describe('crossValidateSpec', () => {
 
   it('victory checkpoint referencing nonexistent faction emits CNL_XREF_VICTORY_FACTION_MISSING', () => {
     const sections = compileRichSections();
-    const checkpoint = requireValue(sections.victory?.checkpoints[0]);
+    const checkpoint = requireValue(sections.terminal?.checkpoints?.[0]);
     const diagnostics = crossValidateSpec({
       ...sections,
-      victory: {
-        ...sections.victory!,
+      terminal: {
+        ...sections.terminal!,
         checkpoints: [{ ...checkpoint, faction: 'uss' }],
       },
     });
 
     const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_VICTORY_FACTION_MISSING');
     assert.notEqual(diagnostic, undefined);
-    assert.equal(diagnostic?.path, 'doc.victory.checkpoints.0.faction');
+    assert.equal(diagnostic?.path, 'doc.terminal.checkpoints.0.faction');
     assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
   });
 

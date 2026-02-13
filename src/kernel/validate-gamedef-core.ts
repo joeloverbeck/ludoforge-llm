@@ -2,7 +2,7 @@ import type { Diagnostic } from './diagnostics.js';
 import { buildAdjacencyGraph, validateAdjacency } from './spatial.js';
 import type { GameDef } from './types.js';
 import { validateConditionAst, validateEffectAst, validateOptionsQuery, validatePostAdjacencyBehavior } from './validate-gamedef-behavior.js';
-import { validateActionPipelines, validateCoupPlan, validateVictory } from './validate-gamedef-extensions.js';
+import { validateActionPipelines, validateCoupPlan, validateTerminal } from './validate-gamedef-extensions.js';
 import {
   buildValidationContext,
   pushMissingReferenceDiagnostic,
@@ -19,7 +19,7 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
   const { context, phaseCandidates, actionCandidates } = buildValidationContext(def);
 
   validateCoupPlan(diagnostics, def);
-  validateVictory(diagnostics, def, context);
+  validateTerminal(diagnostics, def, context);
 
   def.setup.forEach((effect, index) => {
     validateEffectAst(diagnostics, effect, `setup[${index}]`, context);

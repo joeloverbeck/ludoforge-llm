@@ -2756,9 +2756,10 @@ actions:
   - { id: arvnOp, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
 
 # ══════════════════════════════════════════════════════════════════════════════
-# End Conditions (stub — to be replaced by real victory conditions)
+# Terminal (stub — to be replaced by real victory conditions)
 # ══════════════════════════════════════════════════════════════════════════════
-endConditions:
-  - when: { op: "==", left: 1, right: 2 }
-    result: { type: draw }
+terminal:
+  conditions:
+    - when: { op: "==", left: 1, right: 2 }
+      result: { type: draw }
 ```

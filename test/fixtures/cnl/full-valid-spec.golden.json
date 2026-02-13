@@ -32,7 +32,20 @@
     },
     "turnOrder": null,
     "actionPipelines": null,
-    "victory": null,
+    "terminal": {
+      "conditions": [
+        {
+          "when": {
+            "op": ">=",
+            "left": 1,
+            "right": 999
+          },
+          "result": {
+            "type": "draw"
+          }
+        }
+      ]
+    },
     "actions": [
       {
         "id": "draw",
@@ -48,18 +61,6 @@
       }
     ],
     "triggers": null,
-    "endConditions": [
-      {
-        "when": {
-          "op": ">=",
-          "left": 1,
-          "right": 999
-        },
-        "result": {
-          "type": "draw"
-        }
-      }
-    ],
     "effectMacros": null
   },
   "requiredSourceMapAnchors": [
@@ -68,7 +69,7 @@
     "zones[0].id",
     "turnStructure.phases[0].id",
     "actions[0].id",
-    "endConditions[0].result.type"
+    "terminal.conditions[0].result.type"
   ],
   "expectedParseDiagnosticCodes": [
     "CNL_YAML_002",

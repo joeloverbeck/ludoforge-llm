@@ -71,7 +71,7 @@ const createMultiProfileDef = (): GameDef =>
       },
     ],
     triggers: [],
-    endConditions: [],
+    terminal: { conditions: [] },
   }) as unknown as GameDef;
 
 const createState = (activePlayer: number): GameState => {

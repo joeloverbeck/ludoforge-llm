@@ -24,9 +24,10 @@ actions:
     cost: []
     effects: {}
     limits: []
-endConditions:
-  - when:
-      always: false
-    result:
-      type: draw
+terminal:
+  conditions:
+    - when:
+        always: false
+      result:
+        type: draw
 ```

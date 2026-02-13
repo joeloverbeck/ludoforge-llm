@@ -9,13 +9,14 @@ import type {
   LimitDef,
   ParamDef,
   PhaseDef,
+  ScoringDef,
   TokenTypeDef,
   TriggerDef,
   TriggerEvent,
   TurnStructure,
   VariableDef,
 } from '../kernel/types.js';
-import { lowerConditionNode, lowerQueryNode } from './compile-conditions.js';
+import { lowerConditionNode, lowerQueryNode, lowerValueNode } from './compile-conditions.js';
 import { lowerEffectArray } from './compile-effects.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
@@ -372,7 +373,7 @@ export function lowerEndConditions(
 ): readonly EndCondition[] {
   const lowered: EndCondition[] = [];
   for (const [index, endCondition] of endConditions.entries()) {
-    const path = `doc.endConditions.${index}`;
+    const path = `doc.terminal.conditions.${index}`;
     if (!isRecord(endCondition)) {
       diagnostics.push(missingCapabilityDiagnostic(path, 'end condition', endCondition));
       continue;
@@ -392,6 +393,38 @@ export function lowerEndConditions(
     });
   }
   return lowered;
+}
+
+export function lowerScoring(
+  scoring: unknown,
+  diagnostics: Diagnostic[],
+): ScoringDef | undefined {
+  if (scoring === null) {
+    return undefined;
+  }
+  if (!isRecord(scoring)) {
+    diagnostics.push(missingCapabilityDiagnostic('doc.terminal.scoring', 'scoring definition', scoring, ['object']));
+    return undefined;
+  }
+
+  const method = scoring.method;
+  if (method !== 'highest' && method !== 'lowest') {
+    diagnostics.push(
+      missingCapabilityDiagnostic('doc.terminal.scoring.method', 'scoring method', method, ['highest', 'lowest']),
+    );
+    return undefined;
+  }
+
+  const loweredValue = lowerValueNode(scoring.value, { ownershipByBase: {} }, 'doc.terminal.scoring.value');
+  diagnostics.push(...loweredValue.diagnostics);
+  if (loweredValue.value === null) {
+    return undefined;
+  }
+
+  return {
+    method,
+    value: loweredValue.value,
+  };
 }
 
 function lowerTerminalResult(

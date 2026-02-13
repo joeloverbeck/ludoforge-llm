@@ -174,7 +174,7 @@ const createRedeployCommitResetDef = (options: CoupFixtureOptions): GameDef => {
       { id: 'on_commitment_enter', event: { type: 'phaseEnter', phase: asPhaseId('commitment') }, effects: commitmentEffects },
       { id: 'on_reset_enter', event: { type: 'phaseEnter', phase: asPhaseId('reset') }, effects: resetEffects },
     ],
-    endConditions: [],
+    terminal: { conditions: [] },
   } as unknown as GameDef;
 };
 

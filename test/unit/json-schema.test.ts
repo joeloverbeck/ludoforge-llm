@@ -75,8 +75,10 @@ const fullGameDef: GameDef = {
       effects: [{ shuffle: { zone: 'deck:none' } }],
     },
   ],
-  endConditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
-  scoring: { method: 'highest', value: 1 },
+  terminal: {
+    conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
+    scoring: { method: 'highest', value: 1 },
+  },
 };
 
 const validRuntimeTrace: GameTrace = {

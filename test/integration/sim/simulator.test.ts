@@ -52,7 +52,7 @@ const createDef = (): GameDef =>
       },
     ],
     triggers: [],
-    endConditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 6 }, result: { type: 'draw' } }],
+    terminal: { conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 6 }, result: { type: 'draw' } }] },
   }) as unknown as GameDef;
 
 describe('runGames integration', () => {

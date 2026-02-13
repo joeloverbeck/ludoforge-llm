@@ -50,7 +50,7 @@ const makeDef = (id: string, zones: GameDef['zones']): GameDef => ({
   turnStructure: { phases: [{ id: asPhaseId('main') }] },
   actions: [],
   triggers: [],
-  endConditions: [],
+  terminal: { conditions: [] },
 });
 
 describe('spatial property-style invariants', () => {

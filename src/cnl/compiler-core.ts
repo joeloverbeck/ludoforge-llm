@@ -11,6 +11,7 @@ import {
   lowerConstants,
   lowerEndConditions,
   lowerEffectsWithDiagnostics,
+  lowerScoring,
   lowerTokenTypes,
   lowerTriggers,
   lowerTurnStructure,
@@ -45,10 +46,9 @@ export interface CompileSectionResults {
   readonly turnStructure: GameDef['turnStructure'] | null;
   readonly turnOrder: Exclude<GameDef['turnOrder'], undefined> | null;
   readonly actionPipelines: Exclude<GameDef['actionPipelines'], undefined> | null;
-  readonly victory: Exclude<GameDef['victory'], undefined> | null;
+  readonly terminal: GameDef['terminal'] | null;
   readonly actions: GameDef['actions'] | null;
   readonly triggers: GameDef['triggers'] | null;
-  readonly endConditions: GameDef['endConditions'] | null;
   readonly eventCards: Exclude<GameDef['eventCards'], undefined> | null;
 }
 
@@ -177,10 +177,9 @@ function compileExpandedDoc(
     turnStructure: null,
     turnOrder: null,
     actionPipelines: null,
-    victory: null,
+    terminal: null,
     actions: null,
     triggers: null,
-    endConditions: null,
     eventCards: null,
   };
 
@@ -265,11 +264,6 @@ function compileExpandedDoc(
       actionPipelines.failed || actionPipelines.value === undefined ? null : actionPipelines.value;
   }
 
-  if (doc.victory !== null) {
-    const victory = compileSection(diagnostics, () => lowerVictory(doc.victory, diagnostics));
-    sections.victory = victory.failed || victory.value === undefined ? null : victory.value;
-  }
-
   let actions: GameDef['actions'] | null = null;
   const rawActions = doc.actions;
   if (rawActions === null) {
@@ -283,22 +277,29 @@ function compileExpandedDoc(
   const triggers = compileSection(diagnostics, () => lowerTriggers(doc.triggers ?? [], ownershipByBase, diagnostics));
   sections.triggers = triggers.failed ? null : triggers.value;
 
-  let endConditions: GameDef['endConditions'] | null = null;
-  const rawEndConditions = doc.endConditions;
-  if (rawEndConditions === null) {
-    diagnostics.push(requiredSectionDiagnostic('doc.endConditions', 'endConditions'));
+  let terminal: GameDef['terminal'] | null = null;
+  const rawTerminal = doc.terminal;
+  if (rawTerminal === null) {
+    diagnostics.push(requiredSectionDiagnostic('doc.terminal', 'terminal'));
   } else {
     const endConditionsSection = compileSection(diagnostics, () =>
-      lowerEndConditions(rawEndConditions, ownershipByBase, diagnostics),
+      lowerEndConditions(rawTerminal.conditions, ownershipByBase, diagnostics),
     );
-    endConditions = endConditionsSection.value;
-    sections.endConditions = endConditionsSection.failed ? null : endConditionsSection.value;
+    const victorySection = compileSection(diagnostics, () => lowerVictory(rawTerminal, diagnostics));
+    const scoringSection = compileSection(diagnostics, () => lowerScoring(rawTerminal.scoring ?? null, diagnostics));
+
+    terminal = {
+      conditions: endConditionsSection.value,
+      ...(victorySection.value === undefined ? {} : victorySection.value),
+      ...(scoringSection.value === undefined ? {} : { scoring: scoringSection.value }),
+    };
+    sections.terminal = endConditionsSection.failed || victorySection.failed || scoringSection.failed ? null : terminal;
   }
 
   sections.eventCards = derivedFromAssets.eventCards ?? null;
   diagnostics.push(...crossValidateSpec(sections));
 
-  if (metadata === null || zones === null || turnStructure === null || actions === null || endConditions === null) {
+  if (metadata === null || zones === null || turnStructure === null || actions === null || terminal === null) {
     return { gameDef: null, sections };
   }
 
@@ -313,10 +314,9 @@ function compileExpandedDoc(
     turnStructure,
     ...(sections.turnOrder === null ? {} : { turnOrder: sections.turnOrder }),
     ...(sections.actionPipelines === null ? {} : { actionPipelines: sections.actionPipelines }),
-    ...(sections.victory === null ? {} : { victory: sections.victory }),
     actions,
     triggers: triggers.value,
-    endConditions,
+    terminal,
     ...(sections.eventCards === null ? {} : { eventCards: sections.eventCards }),
   };
 

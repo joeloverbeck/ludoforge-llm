@@ -37,7 +37,7 @@ const makeBaseDef = (overrides?: {
     actions: overrides?.actions ?? [],
     actionPipelines: overrides?.actionPipelines,
     triggers: [],
-    endConditions: [],
+    terminal: { conditions: [] },
   }) as unknown as GameDef;
 
 const makeBaseState = (overrides?: Partial<GameState>): GameState => ({

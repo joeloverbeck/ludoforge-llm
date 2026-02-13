@@ -78,7 +78,7 @@ const createBaseGameDef = (): GameDef =>
       },
     ],
     triggers: [],
-    endConditions: [{ when: { op: '==', left: 1, right: 0 }, result: { type: 'draw' } }],
+    terminal: { conditions: [{ when: { op: '==', left: 1, right: 0 }, result: { type: 'draw' } }] },
   }) as unknown as GameDef;
 
 const createEquivalentReorderedGameDef = (): GameDef =>
@@ -147,7 +147,7 @@ const createEquivalentReorderedGameDef = (): GameDef =>
       },
     ],
     triggers: [],
-    endConditions: [{ when: { op: '==', left: 1, right: 0 }, result: { type: 'draw' } }],
+    terminal: { conditions: [{ when: { op: '==', left: 1, right: 0 }, result: { type: 'draw' } }] },
   }) as unknown as GameDef;
 
 describe('zobrist table canonicalization and feature keying', () => {

@@ -18,12 +18,6 @@ export interface VictoryRankingDef {
   readonly order: 'desc' | 'asc';
 }
 
-export interface VictoryDef {
-  readonly checkpoints: readonly VictoryCheckpointDef[];
-  readonly margins?: readonly VictoryMarginDef[];
-  readonly ranking?: VictoryRankingDef;
-}
-
 export interface VictoryTerminalRankingEntry {
   readonly faction: string;
   readonly margin: number;

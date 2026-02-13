@@ -53,7 +53,7 @@ const makeRuntimeDef = (): GameDef => ({
       effects: [{ addVar: { scope: 'global', var: 'entered', delta: 1 } }],
     },
   ],
-  endConditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'entered' }, right: 1 }, result: { type: 'draw' } }],
+  terminal: { conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'entered' }, right: 1 }, result: { type: 'draw' } }] },
 });
 
 const makeRuntimeState = (): GameState => ({
@@ -100,7 +100,7 @@ const makeMacroBackedDef = (zones: GameDef['zones']): GameDef => ({
   turnStructure: { phases: [{ id: asPhaseId('main') }] },
   actions: [],
   triggers: [],
-  endConditions: [],
+  terminal: { conditions: [] },
 });
 
 describe('spatial kernel integration', () => {

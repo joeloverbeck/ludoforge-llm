@@ -24,7 +24,7 @@ function createStructurallyValidDoc() {
     zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
     turnStructure: { phases: [{ id: 'main' }] },
     actions: [validAction],
-    endConditions: [{ when: { always: false }, result: { type: 'draw' } }],
+    terminal: { conditions: [{ when: { always: false }, result: { type: 'draw' } }] },
   };
 }
 
@@ -44,7 +44,7 @@ describe('validateGameSpec structural rules', () => {
     assert.equal(diagnostics.length, 5);
     assert.deepEqual(
       diagnostics.map((diagnostic) => diagnostic.path).sort(),
-      ['doc.actions', 'doc.endConditions', 'doc.metadata', 'doc.turnStructure', 'doc.zones'],
+      ['doc.actions', 'doc.metadata', 'doc.terminal', 'doc.turnStructure', 'doc.zones'],
     );
   });
 

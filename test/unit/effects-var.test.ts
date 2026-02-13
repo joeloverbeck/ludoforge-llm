@@ -35,7 +35,7 @@ const makeDef = (): GameDef => ({
   },
   actions: [],
   triggers: [],
-  endConditions: [],
+  terminal: { conditions: [] },
 });
 
 const makeState = (): GameState => ({
@@ -220,7 +220,7 @@ describe('lattice marker shift via addVar', () => {
     turnStructure: { phases: [] },
     actions: [],
     triggers: [],
-    endConditions: [],
+    terminal: { conditions: [] },
   });
 
   const makeLatticeState = (markerValue: number): GameState => ({

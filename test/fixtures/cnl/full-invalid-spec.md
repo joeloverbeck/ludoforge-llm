@@ -22,9 +22,10 @@ turnStructure:
     cost: []
     effects: {}
     limits: []
-endConditions:
-  - when:
-      always: false
-    reslt:
-      type: draw
+terminal:
+  conditions:
+    - when:
+        always: false
+      reslt:
+        type: draw
 ```

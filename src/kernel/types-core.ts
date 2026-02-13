@@ -29,7 +29,12 @@ import type {
   TurnFlowEligibilityTraceEntry,
   TurnFlowLifecycleTraceEntry,
 } from './types-turn-flow.js';
-import type { VictoryDef, VictoryTerminalMetadata } from './types-victory.js';
+import type {
+  VictoryCheckpointDef,
+  VictoryMarginDef,
+  VictoryRankingDef,
+  VictoryTerminalMetadata,
+} from './types-victory.js';
 
 export interface RngState {
   readonly algorithm: 'pcg-dxsm-128';
@@ -138,6 +143,14 @@ export interface ScoringDef {
   readonly value: ValueExpr;
 }
 
+export interface TerminalEvaluationDef {
+  readonly conditions: readonly EndCondition[];
+  readonly checkpoints?: readonly VictoryCheckpointDef[];
+  readonly margins?: readonly VictoryMarginDef[];
+  readonly ranking?: VictoryRankingDef;
+  readonly scoring?: ScoringDef;
+}
+
 export interface GameDef {
   readonly metadata: {
     readonly id: string;
@@ -153,11 +166,9 @@ export interface GameDef {
   readonly turnStructure: TurnStructure;
   readonly turnOrder?: TurnOrderStrategy;
   readonly actionPipelines?: readonly ActionPipelineDef[];
-  readonly victory?: VictoryDef;
   readonly actions: readonly ActionDef[];
   readonly triggers: readonly TriggerDef[];
-  readonly endConditions: readonly EndCondition[];
-  readonly scoring?: ScoringDef;
+  readonly terminal: TerminalEvaluationDef;
   readonly eventCards?: readonly EventCardDef[];
   readonly stackingConstraints?: readonly StackingConstraint[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];

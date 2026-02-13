@@ -25,8 +25,10 @@ const createBaseDef = (): GameDef => ({
   turnStructure: { phases: [{ id: asPhaseId('main') }] },
   actions: [{ id: asActionId('noop'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] }],
   triggers: [],
-  endConditions: [],
-  scoring: { method: 'highest', value: { ref: 'pvar', player: 'actor', var: 'vp' } },
+  terminal: {
+    conditions: [],
+    scoring: { method: 'highest', value: { ref: 'pvar', player: 'actor', var: 'vp' } },
+  },
 });
 
 describe('evaluateState', () => {
@@ -49,12 +51,15 @@ describe('evaluateState', () => {
   it('terminal scores dominate nonterminal heuristics', () => {
     const def: GameDef = {
       ...createBaseDef(),
-      endConditions: [
-        {
-          when: { op: '==', left: { ref: 'gvar', var: 'ended' }, right: 1 },
-          result: { type: 'win', player: { id: asPlayerId(0) } },
-        },
-      ],
+      terminal: {
+        ...createBaseDef().terminal,
+        conditions: [
+          {
+            when: { op: '==', left: { ref: 'gvar', var: 'ended' }, right: 1 },
+            result: { type: 'win', player: { id: asPlayerId(0) } },
+          },
+        ],
+      },
     };
     const baseState = initialState(def, 2, 2);
     const state: GameState = {
@@ -84,7 +89,7 @@ describe('evaluateState', () => {
       turnStructure: baseDef.turnStructure,
       actions: baseDef.actions,
       triggers: baseDef.triggers,
-      endConditions: baseDef.endConditions,
+      terminal: { conditions: baseDef.terminal.conditions },
     };
     const baseState = initialState(def, 3, 2);
     const state: GameState = {

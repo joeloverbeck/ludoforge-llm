@@ -83,6 +83,28 @@ describe('phase advancement', () => {
     assert.equal(next.activePlayer, asPlayerId(1));
   });
 
+  it('cycles roundRobin order across players and wraps to player 0', () => {
+    const def: GameDef = {
+      ...createBaseDef(),
+      metadata: { ...createBaseDef().metadata, players: { min: 2, max: 4 } },
+      turnStructure: { phases: [{ id: asPhaseId('p1') }] },
+    };
+    const state = createState({
+      playerCount: 3,
+      currentPhase: asPhaseId('p1'),
+      activePlayer: asPlayerId(0),
+      turnOrderState: { type: 'roundRobin' },
+    });
+
+    const afterOne = advancePhase(def, state);
+    const afterTwo = advancePhase(def, afterOne);
+    const afterThree = advancePhase(def, afterTwo);
+
+    assert.equal(afterOne.activePlayer, asPlayerId(1));
+    assert.equal(afterTwo.activePlayer, asPlayerId(2));
+    assert.equal(afterThree.activePlayer, asPlayerId(0));
+  });
+
   it('advances active player at turn boundary according to fixed order', () => {
     const baseDef = createBaseDef();
     const def: GameDef = {
@@ -102,6 +124,33 @@ describe('phase advancement', () => {
     assert.equal(next.turnCount, 5);
     assert.equal(next.activePlayer, asPlayerId(0));
     assert.deepEqual(next.turnOrderState, { type: 'fixedOrder', currentIndex: 1 });
+  });
+
+  it('follows fixedOrder sequence and wraps after the final entry', () => {
+    const baseDef = createBaseDef();
+    const def: GameDef = {
+      ...baseDef,
+      metadata: { ...baseDef.metadata, players: { min: 2, max: 4 } },
+      turnStructure: { phases: [{ id: asPhaseId('p1') }] },
+      turnOrder: { type: 'fixedOrder', order: ['2', '0', '1'] },
+    };
+    const state = createState({
+      playerCount: 3,
+      currentPhase: asPhaseId('p1'),
+      activePlayer: asPlayerId(2),
+      turnOrderState: { type: 'fixedOrder', currentIndex: 0 },
+    });
+
+    const afterOne = advancePhase(def, state);
+    const afterTwo = advancePhase(def, afterOne);
+    const afterThree = advancePhase(def, afterTwo);
+    const afterFour = advancePhase(def, afterThree);
+
+    assert.equal(afterOne.activePlayer, asPlayerId(0));
+    assert.equal(afterTwo.activePlayer, asPlayerId(1));
+    assert.equal(afterThree.activePlayer, asPlayerId(2));
+    assert.equal(afterFour.activePlayer, asPlayerId(0));
+    assert.deepEqual(afterFour.turnOrderState, { type: 'fixedOrder', currentIndex: 1 });
   });
 
   it('resets simultaneous submitted flags at turn boundary', () => {

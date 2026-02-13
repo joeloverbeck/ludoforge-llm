@@ -76,6 +76,23 @@ describe('initialState', () => {
     assert.equal(state.playerCount, 2);
   });
 
+  it('always initializes turnOrderState, defaulting to roundRobin when turnOrder is omitted', () => {
+    const state = initialState(createDef(), 11, 3);
+    assert.deepEqual(state.turnOrderState, { type: 'roundRobin' });
+  });
+
+  it('sets activePlayer to the first fixedOrder entry when it is a valid numeric player id', () => {
+    const def: GameDef = {
+      ...createDef(),
+      turnOrder: { type: 'fixedOrder', order: ['2', '0', '1'] },
+      triggers: [],
+    };
+
+    const state = initialState(def, 11, 3);
+    assert.equal(state.activePlayer, asPlayerId(2));
+    assert.deepEqual(state.turnOrderState, { type: 'fixedOrder', currentIndex: 0 });
+  });
+
   it('keeps default activePlayer at 0 for fixed order when turnFlow is absent', () => {
     const def: GameDef = {
       ...createDef(),

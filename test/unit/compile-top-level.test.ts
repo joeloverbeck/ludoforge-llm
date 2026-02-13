@@ -159,6 +159,32 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
   });
 
+  it('returns a blocking diagnostic when fixedOrder is declared with an empty order array', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-order-fixed-empty', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: { type: 'fixedOrder' as const, order: [] },
+      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      endConditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_FIXED_ORDER_EMPTY'
+          && diagnostic.path === 'doc.turnOrder.order'
+          && diagnostic.severity === 'error',
+      ),
+      true,
+    );
+  });
+
   it('returns blocking diagnostics for malformed turnFlow metadata', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

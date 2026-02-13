@@ -16,10 +16,15 @@ describe('fitl production data scaffold', () => {
 
     const dataAssets = parsed.doc.dataAssets;
     assert.ok(dataAssets !== null);
-    assert.equal(dataAssets.length, 6);
+    assert.equal(dataAssets.length, 5);
     assert.deepEqual(
       dataAssets.map((asset) => asset.kind),
-      ['map', 'pieceCatalog', 'scenario', 'scenario', 'scenario', 'eventCardSet'],
+      ['map', 'pieceCatalog', 'scenario', 'scenario', 'scenario'],
     );
+
+    const eventDecks = parsed.doc.eventDecks;
+    assert.ok(eventDecks !== null);
+    assert.equal(eventDecks.length, 1);
+    assert.equal(eventDecks[0]?.id, 'fitl-events-initial-card-pack');
   });
 });

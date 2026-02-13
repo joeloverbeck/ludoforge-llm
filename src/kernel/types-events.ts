@@ -47,7 +47,8 @@ export interface EventCardDef {
   readonly shaded?: EventCardSideDef;
 }
 
-export interface EventCardSetPayload {
+export interface EventDeckDef {
+  readonly id: string;
   readonly cards: readonly EventCardDef[];
 }
 
@@ -70,7 +71,7 @@ export interface ScenarioDeckComposition {
 export interface ScenarioPayload {
   readonly mapAssetId: string;
   readonly pieceCatalogAssetId: string;
-  readonly eventCardSetAssetId?: string;
+  readonly eventDeckAssetId?: string;
   readonly scenarioName: string;
   readonly yearRange: string;
   readonly initialPlacements?: readonly ScenarioPiecePlacement[];

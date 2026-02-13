@@ -4,7 +4,7 @@ import { parse as parseYaml } from 'yaml';
 import type { Diagnostic } from './diagnostics.js';
 import { validateMapPayload } from './map-model.js';
 import { validatePieceCatalogPayload } from './piece-catalog.js';
-import { DataAssetEnvelopeSchema, EventCardSetPayloadSchema } from './schemas.js';
+import { DataAssetEnvelopeSchema } from './schemas.js';
 import type { DataAssetEnvelope, DataAssetKind } from './types.js';
 
 export interface LoadDataAssetEnvelopeOptions {
@@ -92,22 +92,6 @@ export function validateDataAssetEnvelope(
         entityId: envelope.id,
       }),
     );
-  }
-
-  if (envelope.kind === 'eventCardSet') {
-    const payloadResult = EventCardSetPayloadSchema.safeParse(envelope.payload);
-    if (!payloadResult.success) {
-      diagnostics.push(
-        ...payloadResult.error.issues.map((issue) => ({
-          code: 'DATA_ASSET_EVENT_CARD_SCHEMA_INVALID',
-          path: issue.path.length > 0 ? `${pathPrefix}.payload.${issue.path.join('.')}` : `${pathPrefix}.payload`,
-          severity: 'error' as const,
-          message: issue.message,
-          ...(options.assetPath === undefined ? {} : { assetPath: options.assetPath }),
-          entityId: envelope.id,
-        })),
-      );
-    }
   }
 
   if (diagnostics.length > 0) {

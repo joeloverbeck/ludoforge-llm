@@ -93,7 +93,7 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
-  it('accepts event-card-set data assets through the shared data-asset validator path', () => {
+  it('rejects legacy eventCardSet data assets through the shared data-asset validator path', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),
       dataAssets: [
@@ -118,32 +118,31 @@ describe('validateGameSpec structural rules', () => {
     });
 
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.0.kind' && diagnostic.code === 'DATA_ASSET_KIND_UNSUPPORTED'),
-      false,
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.0.kind' && diagnostic.code === 'DATA_ASSET_SCHEMA_INVALID'),
+      true,
     );
   });
 
-  it('surfaces malformed event-card-set diagnostics with nested payload paths', () => {
+  it('validates eventDecks card identifiers', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),
-      dataAssets: [
+      eventDecks: [
         {
-          id: 'fitl-event-cards-invalid',
-          kind: 'eventCardSet',
-          payload: {
-            cards: [
-              {
-                id: 'card-82',
-                title: 'Domino Theory',
-                sideMode: 'dual',
-                unshaded: { effects: [{ op: 'branch-a' }] },
-                shaded: {
-                  targets: [{ id: 't', selector: { query: 'piecesInPool' }, cardinality: { min: 2, max: 1 } }],
-                  lastingEffects: [{ id: 'l', duration: 'season', effect: { op: 'aidDelta', value: -9 } }],
-                },
-              },
-            ],
-          },
+          id: 'fitl-events-initial',
+          cards: [
+            {
+              id: 'card-82',
+              title: 'Domino Theory',
+              sideMode: 'single',
+              unshaded: { effects: [{ op: 'branch-a' }] },
+            },
+            {
+              id: 'card-82',
+              title: 'Domino Theory Duplicate',
+              sideMode: 'single',
+              unshaded: { effects: [{ op: 'branch-b' }] },
+            },
+          ],
         },
       ],
     } as unknown as Parameters<typeof validateGameSpec>[0]);
@@ -151,16 +150,8 @@ describe('validateGameSpec structural rules', () => {
     assert.equal(
       diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'DATA_ASSET_EVENT_CARD_SCHEMA_INVALID' &&
-          diagnostic.path === 'doc.dataAssets.0.payload.cards.0.shaded.targets.0.cardinality.min',
-      ),
-      true,
-    );
-    assert.equal(
-      diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === 'DATA_ASSET_EVENT_CARD_SCHEMA_INVALID' &&
-          diagnostic.path === 'doc.dataAssets.0.payload.cards.0.shaded.lastingEffects.0.duration',
+          diagnostic.code === 'CNL_VALIDATOR_IDENTIFIER_DUPLICATE_NORMALIZED' &&
+          diagnostic.path === 'doc.eventDecks.0.cards.1',
       ),
       true,
     );

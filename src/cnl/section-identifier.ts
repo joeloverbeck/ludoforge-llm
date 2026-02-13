@@ -10,6 +10,7 @@ export const CANONICAL_SECTION_KEYS = [
   'turnStructure',
   'turnOrder',
   'actionPipelines',
+  'eventDecks',
   'terminal',
   'actions',
   'triggers',
@@ -144,6 +145,9 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isActionPipelinesShape(value)) {
     matches.push('actionPipelines');
   }
+  if (isEventDecksShape(value)) {
+    matches.push('eventDecks');
+  }
   if (isTerminalShape(value)) {
     matches.push('terminal');
   }
@@ -207,6 +211,15 @@ function isActionPipelinesShape(value: Record<string, unknown>): boolean {
     Array.isArray(value.actionPipelines) &&
     value.actionPipelines.every(
       (entry) => isRecord(entry) && typeof entry.id === 'string' && typeof entry.actionId === 'string',
+    )
+  );
+}
+
+function isEventDecksShape(value: Record<string, unknown>): boolean {
+  return (
+    Array.isArray(value.eventDecks) &&
+    value.eventDecks.every(
+      (entry) => isRecord(entry) && typeof entry.id === 'string' && Array.isArray(entry.cards),
     )
   );
 }

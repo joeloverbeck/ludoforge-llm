@@ -19,6 +19,7 @@ describe('parseGameSpec API shape', () => {
       turnStructure: null,
       turnOrder: null,
       actionPipelines: null,
+      eventDecks: null,
       terminal: null,
       actions: null,
       triggers: null,

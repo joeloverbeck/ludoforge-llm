@@ -22,7 +22,7 @@ import {
   VictoryMarginSchema,
   VictoryRankingSchema,
   VictoryTerminalMetadataSchema,
-  EventCardSchema,
+  EventDeckSchema,
   ActionPipelineSchema,
   TurnOrderSchema
 } from './schemas-extensions.js';
@@ -185,7 +185,7 @@ export const GameDefSchema = z
     actions: z.array(ActionDefSchema),
     triggers: z.array(TriggerDefSchema),
     terminal: TerminalEvaluationDefSchema,
-    eventCards: z.array(EventCardSchema).optional(),
+    eventDecks: z.array(EventDeckSchema).optional(),
     stackingConstraints: z.array(StackingConstraintSchema).optional(),
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),
   })

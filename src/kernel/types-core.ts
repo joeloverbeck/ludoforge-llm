@@ -15,7 +15,7 @@ import type {
   PlayerSel,
   ValueExpr,
 } from './types-ast.js';
-import type { EventCardDef } from './types-events.js';
+import type { EventDeckDef } from './types-events.js';
 import type {
   OperationFreeTraceEntry,
   OperationPartialTraceEntry,
@@ -169,12 +169,12 @@ export interface GameDef {
   readonly actions: readonly ActionDef[];
   readonly triggers: readonly TriggerDef[];
   readonly terminal: TerminalEvaluationDef;
-  readonly eventCards?: readonly EventCardDef[];
+  readonly eventDecks?: readonly EventDeckDef[];
   readonly stackingConstraints?: readonly StackingConstraint[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];
 }
 
-export type DataAssetKind = 'map' | 'scenario' | 'pieceCatalog' | 'eventCardSet';
+export type DataAssetKind = 'map' | 'scenario' | 'pieceCatalog';
 
 export type PieceStatusDimension = 'activity' | 'tunnel';
 

@@ -320,7 +320,7 @@ describe('compile pipeline integration', () => {
     );
   });
 
-  it('lowers embedded event-card sets into GameDef with deterministic card and branch ordering', () => {
+  it('lowers embedded event decks into GameDef with deterministic card and branch ordering', () => {
     const markdown = [
       '```yaml',
       'metadata:',
@@ -328,29 +328,27 @@ describe('compile pipeline integration', () => {
       '  players:',
       '    min: 2',
       '    max: 2',
-      'dataAssets:',
+      'eventDecks:',
       '  - id: fitl-events-foundation',
-      '    kind: eventCardSet',
-      '    payload:',
-      '      cards:',
-      '        - id: card-b',
-      '          title: B Card',
-      '          sideMode: single',
-      '          order: 2',
-      '          unshaded:',
-      '            branches:',
-      '              - id: z',
-      '                order: 2',
-      '                effects: [{ op: z }]',
-      '              - id: a',
-      '                order: 1',
-      '                effects: [{ op: a }]',
-      '        - id: card-a',
-      '          title: A Card',
-      '          sideMode: single',
-      '          order: 1',
-      '          unshaded:',
-      '            effects: [{ op: alpha }]',
+      '    cards:',
+      '      - id: card-b',
+      '        title: B Card',
+      '        sideMode: single',
+      '        order: 2',
+      '        unshaded:',
+      '          branches:',
+      '            - id: z',
+      '              order: 2',
+      '              effects: [{ op: z }]',
+      '            - id: a',
+      '              order: 1',
+      '              effects: [{ op: a }]',
+      '      - id: card-a',
+      '        title: A Card',
+      '        sideMode: single',
+      '        order: 1',
+      '        unshaded:',
+      '          effects: [{ op: alpha }]',
       '```',
       '```yaml',
       'zones:',
@@ -383,11 +381,11 @@ describe('compile pipeline integration', () => {
     assertNoErrors(parsed);
     assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
-    assert.deepEqual(compiled.gameDef?.eventCards?.map((card) => card.id), ['card-a', 'card-b']);
-    assert.deepEqual(compiled.gameDef?.eventCards?.[1]?.unshaded?.branches?.map((branch) => branch.id), ['a', 'z']);
+    assert.deepEqual(compiled.gameDef?.eventDecks?.[0]?.cards.map((card) => card.id), ['card-a', 'card-b']);
+    assert.deepEqual(compiled.gameDef?.eventDecks?.[0]?.cards[1]?.unshaded?.branches?.map((branch) => branch.id), ['a', 'z']);
   });
 
-  it('rejects ambiguous duplicate ordering declarations in embedded event-card lowering', () => {
+  it('rejects ambiguous duplicate ordering declarations in embedded event-deck lowering', () => {
     const markdown = [
       '```yaml',
       'metadata:',
@@ -395,23 +393,21 @@ describe('compile pipeline integration', () => {
       '  players:',
       '    min: 2',
       '    max: 2',
-      'dataAssets:',
+      'eventDecks:',
       '  - id: fitl-events-foundation',
-      '    kind: eventCardSet',
-      '    payload:',
-      '      cards:',
-      '        - id: card-a',
-      '          title: A Card',
-      '          sideMode: single',
-      '          order: 1',
-      '          unshaded:',
-      '            effects: [{ op: alpha }]',
-      '        - id: card-b',
-      '          title: B Card',
-      '          sideMode: single',
-      '          order: 1',
-      '          unshaded:',
-      '            effects: [{ op: beta }]',
+      '    cards:',
+      '      - id: card-a',
+      '        title: A Card',
+      '        sideMode: single',
+      '        order: 1',
+      '        unshaded:',
+      '          effects: [{ op: alpha }]',
+      '      - id: card-b',
+      '        title: B Card',
+      '        sideMode: single',
+      '        order: 1',
+      '        unshaded:',
+      '          effects: [{ op: beta }]',
       '```',
       '```yaml',
       'zones:',
@@ -446,7 +442,7 @@ describe('compile pipeline integration', () => {
       compiled.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_EVENT_CARD_ORDER_AMBIGUOUS' &&
-          diagnostic.path === 'doc.dataAssets.0.payload.cards.1.order',
+          diagnostic.path === 'doc.eventDecks.0.cards.1.order',
       ),
       true,
     );

@@ -220,6 +220,7 @@ function mergeSection(
     case 'tokenTypes':
     case 'setup':
     case 'actionPipelines':
+    case 'eventDecks':
     case 'actions':
     case 'triggers':
     case 'effectMacros':
@@ -337,6 +338,7 @@ function mergeListSection(
     | 'tokenTypes'
     | 'setup'
     | 'actionPipelines'
+    | 'eventDecks'
     | 'actions'
     | 'triggers'
     | 'effectMacros',
@@ -374,6 +376,11 @@ function mergeListSection(
       (doc as MutableGameSpecDoc).actionPipelines = (
         doc.actionPipelines === null ? listValue : [...doc.actionPipelines, ...listValue]
       ) as MutableGameSpecDoc['actionPipelines'];
+      return buildAnchoredPaths(section, listValue, existingLength);
+    case 'eventDecks':
+      (doc as MutableGameSpecDoc).eventDecks = (
+        doc.eventDecks === null ? listValue : [...doc.eventDecks, ...listValue]
+      ) as MutableGameSpecDoc['eventDecks'];
       return buildAnchoredPaths(section, listValue, existingLength);
     case 'actions':
       (doc as MutableGameSpecDoc).actions =
@@ -418,6 +425,7 @@ function getListSectionLength(
     | 'tokenTypes'
     | 'setup'
     | 'actionPipelines'
+    | 'eventDecks'
     | 'actions'
     | 'triggers'
     | 'effectMacros',

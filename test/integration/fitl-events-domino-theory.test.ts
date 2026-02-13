@@ -11,7 +11,7 @@ describe('FITL Domino Theory event-card production spec', () => {
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
 
-    const domino = compiled.gameDef?.eventCards?.find((card) => card.id === 'card-82');
+    const domino = compiled.gameDef?.eventDecks?.[0]?.cards.find((card) => card.id === 'card-82');
     assert.notEqual(domino, undefined);
     assert.equal(domino?.title, 'Domino Theory');
     assert.equal(domino?.sideMode, 'dual');
@@ -39,7 +39,7 @@ describe('FITL Domino Theory event-card production spec', () => {
   it('keeps deterministic event-card ordering', () => {
     const { compiled } = compileProductionSpec();
 
-    const cardIds = compiled.gameDef?.eventCards?.map((card) => card.id);
+    const cardIds = compiled.gameDef?.eventDecks?.[0]?.cards.map((card) => card.id);
     assert.ok(cardIds?.includes('card-27'), 'Expected card-27');
     assert.ok(cardIds?.includes('card-82'), 'Expected card-82');
     // card-27 has order 27, card-82 has order 82 — card-27 should come first

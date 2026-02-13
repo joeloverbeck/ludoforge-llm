@@ -1,9 +1,8 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
-import type { EventCardDef, EventCardSetPayload, MapPayload, PieceCatalogPayload } from '../kernel/types.js';
+import type { MapPayload, PieceCatalogPayload } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord, normalizeIdentifier } from './compile-lowering.js';
-import { lowerEventCards } from './compile-event-cards.js';
 
 export function deriveSectionsFromDataAssets(
   doc: GameSpecDoc,
@@ -11,7 +10,6 @@ export function deriveSectionsFromDataAssets(
 ): {
   readonly zones: GameSpecDoc['zones'];
   readonly tokenTypes: GameSpecDoc['tokenTypes'];
-  readonly eventCards?: readonly EventCardDef[];
   readonly derivationFailures: {
     readonly map: boolean;
     readonly pieceCatalog: boolean;
@@ -36,11 +34,6 @@ export function deriveSectionsFromDataAssets(
     readonly path: string;
     readonly entityId: string;
   }> = [];
-  const eventCardSetAssets: Array<{
-    readonly id: string;
-    readonly payload: EventCardSetPayload;
-    readonly path: string;
-  }> = [];
   let mapDerivationFailed = false;
   let pieceCatalogDerivationFailed = false;
 
@@ -50,7 +43,7 @@ export function deriveSectionsFromDataAssets(
     }
     const pathPrefix = `doc.dataAssets.${index}`;
     const validated = validateDataAssetEnvelope(rawAsset, {
-      expectedKinds: ['map', 'scenario', 'pieceCatalog', 'eventCardSet'],
+      expectedKinds: ['map', 'scenario', 'pieceCatalog'],
       pathPrefix,
     });
     diagnostics.push(...validated.diagnostics);
@@ -100,13 +93,6 @@ export function deriveSectionsFromDataAssets(
       continue;
     }
 
-    if (validated.asset.kind === 'eventCardSet') {
-      eventCardSetAssets.push({
-        id: validated.asset.id,
-        payload: validated.asset.payload as EventCardSetPayload,
-        path: `${pathPrefix}.payload.cards`,
-      });
-    }
   }
 
   const selectedScenario = scenarioRefs.length > 0 ? scenarioRefs[0] : undefined;
@@ -164,29 +150,9 @@ export function deriveSectionsFromDataAssets(
           ),
         }));
 
-  let eventCards: readonly EventCardDef[] | undefined;
-  if (eventCardSetAssets.length === 1) {
-    const [selectedSet] = eventCardSetAssets;
-    if (selectedSet !== undefined) {
-      eventCards = lowerEventCards(selectedSet.payload.cards, diagnostics, selectedSet.path);
-    }
-  } else if (eventCardSetAssets.length > 1) {
-    diagnostics.push({
-      code: 'CNL_COMPILER_EVENT_CARD_SET_AMBIGUOUS',
-      path: 'doc.dataAssets',
-      severity: 'error',
-      message: `Multiple eventCardSet assets found (${eventCardSetAssets.length}); compiler cannot determine a single canonical event-card source.`,
-      suggestion: 'Keep one eventCardSet asset in the compiled document.',
-      alternatives: eventCardSetAssets
-        .map((asset) => asset.id)
-        .sort((left, right) => left.localeCompare(right)),
-    });
-  }
-
   return {
     zones,
     tokenTypes,
-    ...(eventCards === undefined ? {} : { eventCards }),
     derivationFailures: {
       map: mapDerivationFailed,
       pieceCatalog: pieceCatalogDerivationFailed,

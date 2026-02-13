@@ -1,4 +1,4 @@
-import type { ConditionAST, ValueExpr } from '../kernel/types.js';
+import type { ConditionAST, EventDeckDef, ValueExpr } from '../kernel/types.js';
 
 export interface GameSpecMetadata {
   readonly id: string;
@@ -260,6 +260,7 @@ export interface GameSpecDoc {
   readonly turnStructure: GameSpecTurnStructure | null;
   readonly turnOrder: GameSpecTurnOrder | null;
   readonly actionPipelines: readonly GameSpecActionPipelineDef[] | null;
+  readonly eventDecks: readonly EventDeckDef[] | null;
   readonly terminal: GameSpecTerminal | null;
   readonly actions: readonly GameSpecActionDef[] | null;
   readonly triggers: readonly GameSpecTriggerDef[] | null;
@@ -279,6 +280,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     turnStructure: null,
     turnOrder: null,
     actionPipelines: null,
+    eventDecks: null,
     terminal: null,
     actions: null,
     triggers: null,

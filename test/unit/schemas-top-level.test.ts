@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import {
   DataAssetEnvelopeSchema,
   EvalReportSchema,
-  EventCardSetPayloadSchema,
+  EventDeckSchema,
   GameDefSchema,
   GameTraceSchema,
   MapPayloadSchema,
@@ -229,7 +229,7 @@ describe('top-level runtime schemas', () => {
     assert.equal(result.success, true);
   });
 
-  it('accepts event-card-set data-asset envelope kind', () => {
+  it('rejects event-card-set data-asset envelope kind', () => {
     const result = DataAssetEnvelopeSchema.safeParse({
       id: 'fitl-event-cards-initial',
       kind: 'eventCardSet',
@@ -238,11 +238,12 @@ describe('top-level runtime schemas', () => {
       },
     });
 
-    assert.equal(result.success, true);
+    assert.equal(result.success, false);
   });
 
-  it('parses valid event-card-set payloads with dual-use sides and lasting effects', () => {
-    const result = EventCardSetPayloadSchema.safeParse({
+  it('parses valid event-deck payloads with dual-use sides and lasting effects', () => {
+    const result = EventDeckSchema.safeParse({
+      id: 'fitl-events-initial',
       cards: [
         {
           id: 'card-82',
@@ -269,8 +270,9 @@ describe('top-level runtime schemas', () => {
     assert.equal(result.success, true);
   });
 
-  it('rejects malformed event-card-set payload cardinality ranges', () => {
-    const result = EventCardSetPayloadSchema.safeParse({
+  it('rejects malformed event-deck payload cardinality ranges', () => {
+    const result = EventDeckSchema.safeParse({
+      id: 'fitl-events-initial',
       cards: [
         {
           id: 'card-82',
@@ -284,7 +286,7 @@ describe('top-level runtime schemas', () => {
     });
 
     assert.equal(result.success, false);
-    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'cards.0.unshaded.targets.0.cardinality.min'));
+    assert.ok(result.error.issues.some((issue: { path: readonly PropertyKey[] }) => issue.path.join('.') === 'cards.0.unshaded.targets.0.cardinality.min'));
   });
 
   it('parses valid piece-catalog payload contracts', () => {

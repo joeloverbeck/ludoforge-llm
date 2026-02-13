@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { EventCardDef } from '../kernel/types.js';
+import type { EventCardDef, EventDeckDef } from '../kernel/types.js';
 import { normalizeIdentifier } from './compile-lowering.js';
 
 export function lowerEventCards(
@@ -20,7 +20,7 @@ export function lowerEventCards(
         path: `${cardPath}.id`,
         severity: 'error',
         message: `Duplicate event card id "${card.id}".`,
-        suggestion: 'Use unique event card ids inside one eventCardSet payload.',
+        suggestion: 'Use unique event card ids inside one event deck.',
       });
     } else {
       idFirstIndexByNormalized.set(normalizedId, index);
@@ -33,7 +33,7 @@ export function lowerEventCards(
           code: 'CNL_COMPILER_EVENT_CARD_ORDER_AMBIGUOUS',
           path: `${cardPath}.order`,
           severity: 'error',
-          message: `Event card order ${card.order} is declared more than once in the same eventCardSet.`,
+          message: `Event card order ${card.order} is declared more than once in the same event deck.`,
           suggestion: 'Use unique order values or omit order and rely on deterministic id ordering.',
         });
       } else {
@@ -79,6 +79,48 @@ export function lowerEventCards(
   });
 
   return lowered.map((entry) => entry.card);
+}
+
+export function lowerEventDecks(
+  decks: readonly EventDeckDef[],
+  diagnostics: Diagnostic[],
+  pathPrefix: string,
+): readonly EventDeckDef[] {
+  const idFirstIndexByNormalized = new Map<string, number>();
+  const lowered = decks.map((deck, index) => {
+    const deckPath = `${pathPrefix}.${index}`;
+    const normalizedId = normalizeIdentifier(deck.id);
+    const existingIdIndex = idFirstIndexByNormalized.get(normalizedId);
+    if (existingIdIndex !== undefined) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_EVENT_DECK_ID_DUPLICATE',
+        path: `${deckPath}.id`,
+        severity: 'error',
+        message: `Duplicate event deck id "${deck.id}".`,
+        suggestion: 'Use unique event deck ids within eventDecks.',
+      });
+    } else {
+      idFirstIndexByNormalized.set(normalizedId, index);
+    }
+
+    return {
+      index,
+      deck: {
+        ...deck,
+        cards: lowerEventCards(deck.cards, diagnostics, `${deckPath}.cards`),
+      },
+    };
+  });
+
+  lowered.sort((left, right) => {
+    const byId = normalizeIdentifier(left.deck.id).localeCompare(normalizeIdentifier(right.deck.id));
+    if (byId !== 0) {
+      return byId;
+    }
+    return left.index - right.index;
+  });
+
+  return lowered.map((entry) => entry.deck);
 }
 
 export function lowerEventCardSide(

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { EventCardSchema } from './schemas-extensions.js';
 import { BooleanSchema, IntegerSchema, NumberSchema, StringSchema } from './schemas-ast.js';
 
 export const PieceStatusDimensionSchema = z.union([z.literal('activity'), z.literal('tunnel')]);
@@ -177,7 +176,7 @@ export const ScenarioPayloadSchema = z
   .object({
     mapAssetId: StringSchema.min(1),
     pieceCatalogAssetId: StringSchema.min(1),
-    eventCardSetAssetId: StringSchema.min(1).optional(),
+    eventDeckAssetId: StringSchema.min(1).optional(),
     scenarioName: StringSchema.min(1),
     yearRange: StringSchema.min(1),
     initialPlacements: z.array(ScenarioPiecePlacementSchema).optional(),
@@ -244,7 +243,6 @@ export const DataAssetKindSchema = z.union([
   z.literal('map'),
   z.literal('scenario'),
   z.literal('pieceCatalog'),
-  z.literal('eventCardSet'),
 ]);
 
 export const DataAssetRefSchema = z
@@ -259,12 +257,5 @@ export const DataAssetEnvelopeSchema = z
     id: StringSchema.min(1),
     kind: DataAssetKindSchema,
     payload: z.unknown(),
-  })
-  .strict();
-
-
-export const EventCardSetPayloadSchema = z
-  .object({
-    cards: z.array(EventCardSchema),
   })
   .strict();

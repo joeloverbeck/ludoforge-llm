@@ -23,6 +23,7 @@ import { lowerVictory } from './compile-victory.js';
 import { deriveSectionsFromDataAssets } from './compile-data-assets.js';
 import { expandEffectSections, expandZoneMacros } from './compile-macro-expansion.js';
 import { crossValidateSpec } from './cross-validate.js';
+import { lowerEventDecks } from './compile-event-cards.js';
 
 export interface CompileLimits {
   readonly maxExpandedEffects: number;
@@ -49,7 +50,7 @@ export interface CompileSectionResults {
   readonly terminal: GameDef['terminal'] | null;
   readonly actions: GameDef['actions'] | null;
   readonly triggers: GameDef['triggers'] | null;
-  readonly eventCards: Exclude<GameDef['eventCards'], undefined> | null;
+  readonly eventDecks: Exclude<GameDef['eventDecks'], undefined> | null;
 }
 
 export interface CompileResult {
@@ -180,7 +181,7 @@ function compileExpandedDoc(
     terminal: null,
     actions: null,
     triggers: null,
-    eventCards: null,
+    eventDecks: null,
   };
 
   const metadata = doc.metadata;
@@ -296,7 +297,11 @@ function compileExpandedDoc(
     sections.terminal = endConditionsSection.failed || victorySection.failed || scoringSection.failed ? null : terminal;
   }
 
-  sections.eventCards = derivedFromAssets.eventCards ?? null;
+  const rawEventDecks = doc.eventDecks;
+  if (rawEventDecks !== null) {
+    const eventDecks = compileSection(diagnostics, () => lowerEventDecks(rawEventDecks, diagnostics, 'doc.eventDecks'));
+    sections.eventDecks = eventDecks.failed ? null : eventDecks.value;
+  }
   diagnostics.push(...crossValidateSpec(sections));
 
   if (metadata === null || zones === null || turnStructure === null || actions === null || terminal === null) {
@@ -317,7 +322,7 @@ function compileExpandedDoc(
     actions,
     triggers: triggers.value,
     terminal,
-    ...(sections.eventCards === null ? {} : { eventCards: sections.eventCards }),
+    ...(sections.eventDecks === null ? {} : { eventDecks: sections.eventDecks }),
   };
 
   return { gameDef, sections };

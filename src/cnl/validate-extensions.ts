@@ -69,7 +69,7 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
 
     const validated = validateDataAssetEnvelope(entry, {
       pathPrefix: path,
-      expectedKinds: ['map', 'scenario', 'pieceCatalog', 'eventCardSet'],
+      expectedKinds: ['map', 'scenario', 'pieceCatalog'],
     });
     diagnostics.push(...validated.diagnostics);
     if (validated.asset === null) {
@@ -216,6 +216,65 @@ export function validateScoring(doc: GameSpecDoc, diagnostics: Diagnostic[]): vo
       suggestion: 'Provide a ValueExpr-compatible scoring value.',
     });
   }
+}
+
+export function validateEventDecks(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
+  if (doc.eventDecks === null) {
+    return;
+  }
+
+  const deckIds: string[] = [];
+  for (const [deckIndex, deck] of doc.eventDecks.entries()) {
+    const deckPath = `doc.eventDecks.${deckIndex}`;
+    if (!isRecord(deck)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_EVENT_DECK_SHAPE_INVALID',
+        path: deckPath,
+        severity: 'error',
+        message: 'Event deck must be an object.',
+        suggestion: 'Provide event deck id and cards fields.',
+      });
+      continue;
+    }
+
+    const deckId = validateIdentifierField(deck, 'id', `${deckPath}.id`, diagnostics, 'event deck id');
+    if (deckId !== undefined) {
+      deckIds.push(deckId);
+    }
+
+    if (!Array.isArray(deck.cards)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_EVENT_DECK_CARDS_INVALID',
+        path: `${deckPath}.cards`,
+        severity: 'error',
+        message: 'eventDeck.cards must be an array.',
+        suggestion: 'Provide one or more event card definitions.',
+      });
+      continue;
+    }
+
+    const cardIds: string[] = [];
+    for (const [cardIndex, card] of deck.cards.entries()) {
+      if (!isRecord(card)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_EVENT_CARD_SHAPE_INVALID',
+          path: `${deckPath}.cards.${cardIndex}`,
+          severity: 'error',
+          message: 'Event card must be an object.',
+          suggestion: 'Provide card id/title/sideMode fields.',
+        });
+        continue;
+      }
+      const cardId = validateIdentifierField(card, 'id', `${deckPath}.cards.${cardIndex}.id`, diagnostics, 'event card id');
+      if (cardId !== undefined) {
+        cardIds.push(cardId);
+      }
+    }
+
+    pushDuplicateNormalizedIdDiagnostics(diagnostics, cardIds, `${deckPath}.cards`, 'event card id');
+  }
+
+  pushDuplicateNormalizedIdDiagnostics(diagnostics, deckIds, 'doc.eventDecks', 'event deck id');
 }
 
 export function dropZoneMissingDiagnostic(diagnostics: Diagnostic[]): void {

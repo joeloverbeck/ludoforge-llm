@@ -1744,573 +1744,6 @@
       ],
       "additionalProperties": false
     },
-    "eventCards": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "title": {
-            "type": "string",
-            "minLength": 1
-          },
-          "sideMode": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "single"
-              },
-              {
-                "type": "string",
-                "const": "dual"
-              }
-            ]
-          },
-          "order": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "unshaded": {
-            "type": "object",
-            "properties": {
-              "effects": {
-                "minItems": 1,
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                }
-              },
-              "branches": {
-                "minItems": 1,
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "order": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "effects": {
-                      "minItems": 1,
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {}
-                      }
-                    },
-                    "targets": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "selector": {
-                            "type": "object",
-                            "propertyNames": {
-                              "type": "string"
-                            },
-                            "additionalProperties": {}
-                          },
-                          "cardinality": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "n": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  }
-                                },
-                                "required": [
-                                  "n"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "min": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "max": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  }
-                                },
-                                "required": [
-                                  "max"
-                                ],
-                                "additionalProperties": false
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "selector",
-                          "cardinality"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "lastingEffects": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "duration": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "card"
-                              },
-                              {
-                                "type": "string",
-                                "const": "nextCard"
-                              },
-                              {
-                                "type": "string",
-                                "const": "coup"
-                              },
-                              {
-                                "type": "string",
-                                "const": "campaign"
-                              }
-                            ]
-                          },
-                          "effect": {
-                            "type": "object",
-                            "propertyNames": {
-                              "type": "string"
-                            },
-                            "additionalProperties": {}
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "duration",
-                          "effect"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "id"
-                  ],
-                  "additionalProperties": false
-                }
-              },
-              "targets": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "selector": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {}
-                    },
-                    "cardinality": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "n": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "n"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "min": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "max": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "max"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "selector",
-                    "cardinality"
-                  ],
-                  "additionalProperties": false
-                }
-              },
-              "lastingEffects": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "duration": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "card"
-                        },
-                        {
-                          "type": "string",
-                          "const": "nextCard"
-                        },
-                        {
-                          "type": "string",
-                          "const": "coup"
-                        },
-                        {
-                          "type": "string",
-                          "const": "campaign"
-                        }
-                      ]
-                    },
-                    "effect": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {}
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "duration",
-                    "effect"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            },
-            "additionalProperties": false
-          },
-          "shaded": {
-            "type": "object",
-            "properties": {
-              "effects": {
-                "minItems": 1,
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                }
-              },
-              "branches": {
-                "minItems": 1,
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "order": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "effects": {
-                      "minItems": 1,
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {}
-                      }
-                    },
-                    "targets": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "selector": {
-                            "type": "object",
-                            "propertyNames": {
-                              "type": "string"
-                            },
-                            "additionalProperties": {}
-                          },
-                          "cardinality": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "n": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  }
-                                },
-                                "required": [
-                                  "n"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "min": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "max": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  }
-                                },
-                                "required": [
-                                  "max"
-                                ],
-                                "additionalProperties": false
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "selector",
-                          "cardinality"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "lastingEffects": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "duration": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "card"
-                              },
-                              {
-                                "type": "string",
-                                "const": "nextCard"
-                              },
-                              {
-                                "type": "string",
-                                "const": "coup"
-                              },
-                              {
-                                "type": "string",
-                                "const": "campaign"
-                              }
-                            ]
-                          },
-                          "effect": {
-                            "type": "object",
-                            "propertyNames": {
-                              "type": "string"
-                            },
-                            "additionalProperties": {}
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "duration",
-                          "effect"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "id"
-                  ],
-                  "additionalProperties": false
-                }
-              },
-              "targets": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "selector": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {}
-                    },
-                    "cardinality": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "n": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "n"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "min": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "max": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "max"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "selector",
-                    "cardinality"
-                  ],
-                  "additionalProperties": false
-                }
-              },
-              "lastingEffects": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "duration": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "card"
-                        },
-                        {
-                          "type": "string",
-                          "const": "nextCard"
-                        },
-                        {
-                          "type": "string",
-                          "const": "coup"
-                        },
-                        {
-                          "type": "string",
-                          "const": "campaign"
-                        }
-                      ]
-                    },
-                    "effect": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {}
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "duration",
-                    "effect"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "id",
-          "title",
-          "sideMode"
-        ],
-        "additionalProperties": false
-      }
-    },
     "stackingConstraints": {
       "type": "array",
       "items": {
@@ -2466,6 +1899,590 @@
           "id",
           "states",
           "defaultState"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "eventDecks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sideMode": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "single"
+                    },
+                    {
+                      "type": "string",
+                      "const": "dual"
+                    }
+                  ]
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "unshaded": {
+                  "type": "object",
+                  "properties": {
+                    "effects": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "branches": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "order": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "effects": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
+                          },
+                          "targets": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "selector": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                "cardinality": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "n": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        }
+                                      },
+                                      "required": [
+                                        "n"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "max": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        }
+                                      },
+                                      "required": [
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "selector",
+                                "cardinality"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "lastingEffects": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "duration": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "const": "card"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "nextCard"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "coup"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "campaign"
+                                    }
+                                  ]
+                                },
+                                "effect": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {}
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "duration",
+                                "effect"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "targets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "selector": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {}
+                          },
+                          "cardinality": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "n": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "n"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "min": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "max": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "max"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "selector",
+                          "cardinality"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "lastingEffects": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "duration": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "card"
+                              },
+                              {
+                                "type": "string",
+                                "const": "nextCard"
+                              },
+                              {
+                                "type": "string",
+                                "const": "coup"
+                              },
+                              {
+                                "type": "string",
+                                "const": "campaign"
+                              }
+                            ]
+                          },
+                          "effect": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {}
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "duration",
+                          "effect"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "shaded": {
+                  "type": "object",
+                  "properties": {
+                    "effects": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "branches": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "order": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "effects": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
+                          },
+                          "targets": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "selector": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                "cardinality": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "n": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        }
+                                      },
+                                      "required": [
+                                        "n"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "max": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        }
+                                      },
+                                      "required": [
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "selector",
+                                "cardinality"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "lastingEffects": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "duration": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "const": "card"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "nextCard"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "coup"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "campaign"
+                                    }
+                                  ]
+                                },
+                                "effect": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {}
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "duration",
+                                "effect"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "targets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "selector": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {}
+                          },
+                          "cardinality": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "n": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "n"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "min": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "max": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "max"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "selector",
+                          "cardinality"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "lastingEffects": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "duration": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "card"
+                              },
+                              {
+                                "type": "string",
+                                "const": "nextCard"
+                              },
+                              {
+                                "type": "string",
+                                "const": "coup"
+                              },
+                              {
+                                "type": "string",
+                                "const": "campaign"
+                              }
+                            ]
+                          },
+                          "effect": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {}
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "duration",
+                          "effect"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "sideMode"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "cards"
         ],
         "additionalProperties": false
       }

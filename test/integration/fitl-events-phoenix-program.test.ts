@@ -11,7 +11,7 @@ describe('FITL Phoenix Program event-card production spec', () => {
     assertNoErrors(parsed);
     assert.notEqual(compiled.gameDef, null);
 
-    const phoenix = compiled.gameDef?.eventCards?.find((card) => card.id === 'card-27');
+    const phoenix = compiled.gameDef?.eventDecks?.[0]?.cards.find((card) => card.id === 'card-27');
     assert.notEqual(phoenix, undefined);
     assert.equal(phoenix?.title, 'Phoenix Program');
     assert.equal(phoenix?.sideMode, 'dual');

@@ -161,7 +161,7 @@ describe('exhaustive kernel unions', () => {
     const payload: ScenarioPayload = {
       mapAssetId: 'fitl-map-v1',
       pieceCatalogAssetId: 'fitl-piece-catalog-v1',
-      eventCardSetAssetId: 'fitl-event-cards-v1',
+      eventDeckAssetId: 'fitl-event-cards-v1',
       scenarioName: 'Foundation',
       yearRange: '1964-1967',
       initialPlacements: [placement],

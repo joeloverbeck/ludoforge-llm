@@ -127,77 +127,38 @@ describe('data asset loader scaffold', () => {
     assert.equal(result.diagnostics.length, 0);
   });
 
-  it('validates embedded event-card-set envelopes with dual-use payloads', () => {
+  it('rejects legacy eventCardSet data-asset kind', () => {
     const result = validateDataAssetEnvelope(
       {
         id: 'fitl-event-cards-initial',
         kind: 'eventCardSet',
-        payload: {
-          cards: [
-            {
-              id: 'card-82',
-              title: 'Domino Theory',
-              sideMode: 'dual',
-              unshaded: {
-                branches: [{ id: 'a', effects: [{ op: 'branch-a' }] }],
-              },
-              shaded: {
-                targets: [{ id: 't', selector: { query: 'piecesInPool' }, cardinality: { max: 3 } }],
-                lastingEffects: [{ id: 'l', duration: 'nextCard', effect: { op: 'aidDelta', value: -9 } }],
-              },
-            },
-          ],
-        },
+        payload: { cards: [] },
       },
       {
-        expectedKinds: ['map', 'scenario', 'pieceCatalog', 'eventCardSet'],
-        pathPrefix: 'doc.dataAssets.0',
-      },
-    );
-
-    assert.notEqual(result.asset, null);
-    assert.equal(result.diagnostics.length, 0);
-  });
-
-  it('reports actionable diagnostics for malformed event-card-set payloads', () => {
-    const result = validateDataAssetEnvelope(
-      {
-        id: 'fitl-event-cards-invalid',
-        kind: 'eventCardSet',
-        payload: {
-          cards: [
-            {
-              id: 'card-82',
-              title: 'Domino Theory',
-              sideMode: 'dual',
-              unshaded: {
-                branches: { a: { effects: [] } },
-              },
-              shaded: {
-                targets: [{ id: 't', selector: { query: 'piecesInPool' }, cardinality: { min: 3, max: 2 } }],
-                lastingEffects: [{ id: 'l', duration: 'season', effect: { op: 'aidDelta', value: -9 } }],
-              },
-            },
-          ],
-        },
-      },
-      {
-        expectedKinds: ['map', 'scenario', 'pieceCatalog', 'eventCardSet'],
+        expectedKinds: ['map', 'scenario', 'pieceCatalog'],
         pathPrefix: 'doc.dataAssets.0',
       },
     );
 
     assert.equal(result.asset, null);
-    assert.equal(result.diagnostics.some((diag) => diag.code === 'DATA_ASSET_EVENT_CARD_SCHEMA_INVALID'), true);
-    assert.equal(result.diagnostics.some((diag) => diag.path === 'doc.dataAssets.0.payload.cards.0.unshaded.branches'), true);
-    assert.equal(
-      result.diagnostics.some((diag) => diag.path === 'doc.dataAssets.0.payload.cards.0.shaded.targets.0.cardinality.min'),
-      true,
+    assert.equal(result.diagnostics.some((diag) => diag.code === 'DATA_ASSET_SCHEMA_INVALID'), true);
+  });
+
+  it('rejects unsupported kinds when expectedKinds is constrained', () => {
+    const result = validateDataAssetEnvelope(
+      {
+        id: 'fitl-scenario',
+        kind: 'scenario',
+        payload: {},
+      },
+      {
+        expectedKinds: ['map', 'pieceCatalog'],
+        pathPrefix: 'doc.dataAssets.0',
+      },
     );
-    assert.equal(
-      result.diagnostics.some((diag) => diag.path === 'doc.dataAssets.0.payload.cards.0.shaded.lastingEffects.0.duration'),
-      true,
-    );
+
+    assert.equal(result.asset, null);
+    assert.equal(result.diagnostics.some((diag) => diag.code === 'DATA_ASSET_KIND_UNSUPPORTED'), true);
   });
 
   it('reports schema failures with assetPath and entityId when available', () => {

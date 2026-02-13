@@ -61,6 +61,27 @@ describe('compiler structured section results', () => {
     assert.equal(result.sections.actions, null);
   });
 
+  it('actions failure does not prevent later independent sections from compiling', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'actions-fail-later-sections-still-compile', players: { min: 2, max: 2 } },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        { id: 'bad', actor: 42, phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [{ id: 'after-turn', event: { type: 'turnEnd' }, effects: [] }],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(result.sections.actions, null);
+    assert.notEqual(result.sections.triggers, null);
+    assert.notEqual(result.sections.terminal, null);
+  });
+
   it('missing metadata nulls gameDef while allowing zones section compilation', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),
@@ -133,20 +154,22 @@ describe('compiler structured section results', () => {
     );
   });
 
-  it('eventCardSet failure does not emit cascade diagnostics', () => {
+  it('eventDecks section compiles when declared', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
       ...base,
-      dataAssets: [{ id: 'broken-event-cards', kind: 'eventCardSet', payload: { cards: {} } }],
+      eventDecks: [
+        {
+          id: 'foundation',
+          cards: [{ id: 'card-a', title: 'Card A', sideMode: 'single' as const, unshaded: { effects: [{ op: 'noop' }] } }],
+        },
+      ],
     };
 
     const result = compileGameSpecToGameDef(doc);
 
-    assert.equal(result.sections.eventCards, null);
-    assert.equal(
-      result.diagnostics.some((diagnostic) => diagnostic.code.startsWith('CNL_DATA_ASSET_CASCADE_')),
-      false,
-    );
+    assert.notEqual(result.sections.eventDecks, null);
+    assert.equal(result.sections.eventDecks?.[0]?.id, 'foundation');
   });
 
   it('production FITL section values align with gameDef for populated section fields', () => {
@@ -170,7 +193,7 @@ describe('compiler structured section results', () => {
       'terminal',
       'actions',
       'triggers',
-      'eventCards',
+      'eventDecks',
     ];
 
     for (const key of keys) {
@@ -196,7 +219,7 @@ describe('compiler structured section results', () => {
       | 'terminal'
       | 'actions'
       | 'triggers'
-      | 'eventCards';
+      | 'eventDecks';
 
     type Missing = Exclude<ExpectedKeys, keyof CompileSectionResults>;
     type Extra = Exclude<keyof CompileSectionResults, ExpectedKeys>;

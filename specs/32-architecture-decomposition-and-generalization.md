@@ -880,50 +880,42 @@ After phases 4-6, the YAML authoring sections and their compiled targets are:
 | `setup` | `GameDef.setup` | No |
 | `turnStructure` | `GameDef.turnStructure` | Yes |
 | `turnOrder` | `GameDef.turnOrder` | No (defaults to `roundRobin`) |
-| `turnOrder.config.coupPlan` | `GameDef.turnOrder.config.coupPlan` | No (`cardDriven` only) |
-| `actions` | `GameDef.actions` | Yes |
 | `actionPipelines` | `GameDef.actionPipelines` | No |
+| `eventDecks` | `GameDef.eventDecks` | No |
+| `terminal` | `GameDef.terminal` | Yes |
+| `actions` | `GameDef.actions` | Yes |
 | `triggers` | `GameDef.triggers` | No |
-| `endConditions` | `GameDef.terminal.conditions` | Yes (may be empty `[]`) |
-| `victory` | `GameDef.terminal.checkpoints` + `terminal.margins` + `terminal.ranking` | No |
-| `scoring` | `GameDef.terminal.scoring` | No |
-| `eventDecks` | `GameDef.eventDecks` | No (preferred) |
-| `eventCards` (via dataAssets) | `GameDef.eventDecks` | No (deprecated — backward compat) |
 | `effectMacros` | consumed during compilation, not in GameDef | No |
-| `dataAssets` | consumed during compilation (derives zones, tokenTypes, eventDecks) | No |
-| `stackingConstraints` | `GameDef.stackingConstraints` | No |
-| `markerLattices` | `GameDef.markerLattices` | No |
+| `dataAssets` | consumed during compilation (derives zones, tokenTypes) | No |
 
-**Note**: `coupPlan` is folded into `turnOrder.config` for `cardDriven` games. It is not a separate GameDef field. Event cards have two paths: the new `eventDecks` YAML section (preferred, uses proper ASTs) and the legacy `eventCardSet` data asset path (deprecated, uses `Record<string, unknown>`). Both compile to `GameDef.eventDecks`.
+**Note**: `coupPlan` is authored only inside `turnOrder.config` for `cardDriven` games. It is not a standalone GameSpecDoc section or a top-level GameDef field.
 
 ### 7B: Compilation Order
 
-The compiler processes YAML sections in a defined order. Each section may depend on previously compiled sections for cross-referencing or lowering:
+The compiler processes YAML sections in a defined order. Each stage may depend on previously compiled sections for lowering or cross-referencing:
 
 ```
- 1. metadata
- 2. constants
- 3. dataAssets            (derives zones, tokenTypes, eventDecks)
- 4. zones                 (may come from dataAssets)
- 5. tokenTypes            (may come from dataAssets)
+ 1. effectMacros expansion (pre-lowering transform)
+ 2. zone/effect macro expansion for section payloads
+ 3. metadata
+ 4. constants
+ 5. dataAssets derivation  (derives zones, tokenTypes)
  6. globalVars
  7. perPlayerVars
- 8. effectMacros          (consumed during lowering, not in GameDef)
- 9. turnStructure
-10. turnOrder             (refs turnStructure phases)
-11. actions               (refs turnStructure phases)
-12. actionPipelines       (refs actions)
-13. triggers              (refs actions, turnStructure phases)
-14. setup                 (refs zones, tokenTypes)
-15. endConditions         (refs globalVars, perPlayerVars)
-16. victory               (refs turnOrder factions)
-17. scoring
-18. eventDecks            (refs zones, actions, globalVars)
-19. stackingConstraints   (refs tokenTypes, zones)
-20. markerLattices        (refs zones)
+ 8. zones                  (explicit YAML or derived)
+ 9. tokenTypes             (explicit YAML or derived)
+10. setup                  (lowered with ownership context from zones)
+11. turnStructure
+12. turnOrder              (optional)
+13. actionPipelines        (optional)
+14. actions
+15. triggers
+16. terminal               (conditions/checkpoints/margins/ranking/scoring)
+17. eventDecks             (optional)
+18. cross-validation pass  (`crossValidateSpec` over compiled sections)
 ```
 
-**Dependencies**: Steps 4-5 depend on step 3 (data assets may derive zones/tokenTypes). Steps 10-20 depend on steps 4-9 (core definitions must exist before referencing them). Cross-validation (Phase 3) runs after all 20 steps complete.
+**Dependencies**: Zones/tokenTypes may be satisfied by data-asset derivation. `setup` lowering depends on zone ownership materialization. Cross-validation runs after all section lowering completes.
 
 ### Phase 7 Invariants
 
@@ -935,7 +927,7 @@ The compiler processes YAML sections in a defined order. Each section may depend
 
 ### Phase 7 Tests
 
-No new tests — this is documentation and verification of the mapping established by Phases 4-6.
+Add/maintain compiler structured-results tests to pin section-order and section-independence behavior so the mapping doc cannot silently drift from implementation.
 
 ---
 

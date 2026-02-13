@@ -124,6 +124,13 @@ export const EventCardSchema = z
     }
   });
 
+export const EventDeckSchema = z
+  .object({
+    id: StringSchema.min(1),
+    cards: z.array(EventCardSchema),
+  })
+  .strict();
+
 export const TurnFlowActionClassSchema = z.union([
   z.literal('pass'),
   z.literal('event'),

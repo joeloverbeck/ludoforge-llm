@@ -117,13 +117,10 @@ describe('FITL production data integration compilation', () => {
       'Placeholder fitl-scenario-production must not exist',
     );
 
-    // Event card set data asset
-    const eventCardAsset = allAssets.find((asset) => asset.id === 'fitl-events-initial-card-pack' && asset.kind === 'eventCardSet');
-    assert.ok(eventCardAsset, 'Expected fitl-events-initial-card-pack event card set asset');
-    const eventCardPayload = eventCardAsset.payload as { readonly cards?: readonly EventCardLike[] };
-    assert.ok(Array.isArray(eventCardPayload.cards), 'Expected cards array');
-    assert.equal(eventCardPayload.cards.length, 2, 'Expected 2 event cards (82 Domino Theory, 27 Phoenix Program)');
-    const cardIds = new Set(eventCardPayload.cards.map((card) => card.id));
+    const eventDeck = parsed.doc.eventDecks?.find((deck) => deck.id === 'fitl-events-initial-card-pack');
+    assert.ok(eventDeck, 'Expected fitl-events-initial-card-pack event deck');
+    assert.equal(eventDeck?.cards.length, 2, 'Expected 2 event cards (82 Domino Theory, 27 Phoenix Program)');
+    const cardIds = new Set((eventDeck?.cards ?? []).map((card: EventCardLike) => card.id));
     assert.deepEqual(cardIds, new Set(['card-82', 'card-27']));
   });
 });

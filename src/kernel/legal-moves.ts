@@ -7,28 +7,10 @@ import { applyPendingFreeOperationVariants, applyTurnFlowWindowFilters, isMoveAl
 import { resolvePlayerSel } from './resolve-selectors.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
+import { pipelinePredicateEvaluationError } from './runtime-error.js';
 import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue } from './types.js';
-
-const pipelinePredicateEvaluationError = (
-  action: ActionDef,
-  profileId: string,
-  predicate: 'legality' | 'costValidation',
-  cause: unknown,
-): Error => {
-  const error = new Error(
-    `action pipeline ${predicate} evaluation failed for actionId=${String(action.id)} profileId=${profileId}`,
-  );
-  Object.assign(error, {
-    actionId: action.id,
-    profileId,
-    predicate,
-    reason: 'pipelinePredicateEvaluationFailed',
-    cause,
-  });
-  return error;
-};
 
 function makeEvalContext(
   def: GameDef,

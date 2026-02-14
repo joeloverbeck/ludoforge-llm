@@ -2,6 +2,7 @@ import { asPlayerId } from './branded.js';
 import { evalCondition } from './eval-condition.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { evalValue } from './eval-value.js';
+import { kernelRuntimeError } from './runtime-error.js';
 import type { EvalContext } from './eval-context.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -28,7 +29,10 @@ function buildEvalContext(
 function scoreRanking(def: GameDef, adjacencyGraph: AdjacencyGraph, state: GameState): readonly PlayerScore[] {
   const scoring = def.terminal.scoring;
   if (!scoring) {
-    throw new Error('End condition result.type "score" requires def.terminal.scoring');
+    throw kernelRuntimeError(
+      'TERMINAL_SCORING_CONFIG_MISSING',
+      'End condition result.type "score" requires def.terminal.scoring',
+    );
   }
 
   const ranking = Array.from({ length: state.playerCount }, (_, index) => {
@@ -36,7 +40,10 @@ function scoreRanking(def: GameDef, adjacencyGraph: AdjacencyGraph, state: GameS
     const ctx = buildEvalContext(def, adjacencyGraph, state, player);
     const score = evalValue(scoring.value, ctx);
     if (typeof score !== 'number') {
-      throw new Error('Scoring value expression must evaluate to a number');
+      throw kernelRuntimeError(
+        'TERMINAL_SCORING_NON_NUMERIC',
+        'Scoring value expression must evaluate to a number',
+      );
     }
 
     return { player, score };
@@ -77,7 +84,11 @@ function finalVictoryRanking(
   const rows = margins.map((marginDef) => {
     const margin = evalValue(marginDef.value, buildEvalContext(def, adjacencyGraph, state));
     if (typeof margin !== 'number') {
-      throw new Error(`Victory margin "${marginDef.faction}" must evaluate to a number`);
+      throw kernelRuntimeError(
+        'TERMINAL_MARGIN_NON_NUMERIC',
+        `Victory margin "${marginDef.faction}" must evaluate to a number`,
+        { faction: marginDef.faction },
+      );
     }
 
     return {
@@ -114,7 +125,11 @@ function evaluateVictory(def: GameDef, adjacencyGraph: AdjacencyGraph, state: Ga
   if (duringCheckpoint !== undefined) {
     const player = resolveFactionPlayer(state, duringCheckpoint.faction);
     if (player === null) {
-      throw new Error(`Victory checkpoint faction "${duringCheckpoint.faction}" cannot be mapped to a player`);
+      throw kernelRuntimeError(
+        'TERMINAL_CHECKPOINT_FACTION_UNMAPPED',
+        `Victory checkpoint faction "${duringCheckpoint.faction}" cannot be mapped to a player`,
+        { faction: duringCheckpoint.faction, checkpointId: duringCheckpoint.id },
+      );
     }
 
     return {
@@ -139,7 +154,11 @@ function evaluateVictory(def: GameDef, adjacencyGraph: AdjacencyGraph, state: Ga
   const winnerFaction = ranking[0]?.faction ?? finalCheckpoint.faction;
   const player = resolveFactionPlayer(state, winnerFaction);
   if (player === null) {
-    throw new Error(`Victory winner faction "${winnerFaction}" cannot be mapped to a player`);
+    throw kernelRuntimeError(
+      'TERMINAL_WINNER_FACTION_UNMAPPED',
+      `Victory winner faction "${winnerFaction}" cannot be mapped to a player`,
+      { winnerFaction, checkpointId: finalCheckpoint.id },
+    );
   }
 
   return {

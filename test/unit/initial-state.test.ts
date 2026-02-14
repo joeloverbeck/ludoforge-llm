@@ -196,7 +196,16 @@ describe('initialState', () => {
       turnStructure: { ...def.turnStructure, phases: [] },
     };
 
-    assert.throws(() => initialState(noPhaseDef, 1, 2), /at least one phase/);
+    assert.throws(
+      () => initialState(noPhaseDef, 1, 2),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown };
+        assert.equal(details.code, 'INITIAL_STATE_NO_PHASES');
+        assert.match(details.message, /at least one phase/);
+        return true;
+      },
+    );
   });
 
   it('matches FITL foundation initial-state golden snapshot from embedded dataAssets', () => {

@@ -232,10 +232,11 @@ describe('applicability-based action pipeline dispatch', () => {
       assert.throws(run, (error: unknown) => {
         assert.ok(error instanceof Error);
         assert.match(error.message, /action pipeline applicability evaluation failed/);
-        const details = error as Error & { actionId?: unknown; profileId?: unknown; reason?: unknown };
-        assert.equal(details.actionId, asActionId('operate'));
-        assert.equal(details.profileId, 'broken-applicability');
-        assert.equal(details.reason, 'applicabilityEvaluationFailed');
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'ACTION_PIPELINE_APPLICABILITY_EVALUATION_FAILED');
+        assert.equal(details.context?.actionId, asActionId('operate'));
+        assert.equal(details.context?.profileId, 'broken-applicability');
+        assert.equal(details.context?.reason, 'applicabilityEvaluationFailed');
         return true;
       });
     }

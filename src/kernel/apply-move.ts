@@ -8,8 +8,10 @@ import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
 import { extractResolvedBindFromDecisionId } from './decision-id.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
+import { illegalMoveError, isKernelErrorCode, isKernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { applyTurnFlowEligibilityAfterMove, consumeTurnFlowFreeOperationGrant, isFreeOperationGrantedForMove } from './turn-flow-eligibility.js';
+import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import type {
   ActionDef,
@@ -243,23 +245,6 @@ const violatesCompoundParamConstraints = (
   return null;
 };
 
-const illegalMoveError = (
-  move: Move,
-  reason: string,
-  metadata?: Readonly<Record<string, unknown>>,
-): Error => {
-  const error = new Error(
-    `Illegal move: actionId=${String(move.actionId)} reason=${reason} params=${JSON.stringify(move.params)}`,
-  );
-  Object.assign(error, {
-    actionId: move.actionId,
-    params: move.params,
-    reason,
-    ...(metadata === undefined ? {} : { metadata }),
-  });
-  return error;
-};
-
 const validateMove = (def: GameDef, state: GameState, move: Move): void => {
   const action = findAction(def, move.actionId);
   if (action === undefined) {
@@ -331,14 +316,17 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
         });
       }
     } catch (err) {
-      if (err instanceof Error && 'reason' in err) {
-        throw err;
-      }
-      if (err instanceof Error && err.message.startsWith('legalChoices:')) {
+      if (isKernelErrorCode(err, 'LEGAL_CHOICES_VALIDATION_FAILED')) {
         throw illegalMoveError(move, 'pipeline move params are invalid', {
           code: 'OPERATION_INVALID_PARAMS',
           detail: err.message,
         });
+      }
+      if (isKernelRuntimeError(err)) {
+        throw err;
+      }
+      if (isTurnFlowErrorCode(err, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
+        throw err;
       }
       throw err;
     }
@@ -596,8 +584,8 @@ const applyMoveCore = (
     ...triggerResult.state,
     rng: triggerResult.rng.state,
   };
-  const turnFlowResult = isFreeOp
-    ? { state: consumeTurnFlowFreeOperationGrant(stateWithRng, move), traceEntries: [] as readonly TriggerLogEntry[] }
+  const turnFlowResult = move.freeOperation === true
+    ? { state: consumeTurnFlowFreeOperationGrant(def, stateWithRng, move), traceEntries: [] as readonly TriggerLogEntry[] }
     : applyTurnFlowEligibilityAfterMove(def, stateWithRng, move);
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
   const progressedState = coreOptions?.skipAdvanceToDecisionPoint === true

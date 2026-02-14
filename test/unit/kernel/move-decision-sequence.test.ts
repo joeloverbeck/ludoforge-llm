@@ -188,6 +188,53 @@ describe('move decision sequence helpers', () => {
     assert.equal(result.move.params['decision:$target'], 'c');
   });
 
+  it('throws typed error when maxSteps is exceeded', () => {
+    const action: ActionDef = {
+      id: asActionId('stuck-op'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'stuck-profile',
+      actionId: asActionId('stuck-op'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: ['a'] },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    assert.throws(
+      () => resolveMoveDecisionSequence(def, makeBaseState(), makeMove('stuck-op'), { maxSteps: 0 }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown };
+        assert.equal(details.code, 'MOVE_DECISION_SEQUENCE_MAX_STEPS_EXCEEDED');
+        return true;
+      },
+    );
+  });
+
   it('discovers nested templated decision ids in deterministic order', () => {
     const action: ActionDef = {
       id: asActionId('nested-op'),
@@ -386,6 +433,7 @@ describe('move decision sequence helpers', () => {
           pendingEligibilityOverrides: [],
           pendingFreeOperationGrants: [
             {
+              grantId: 'grant-0',
               faction: '0',
               actionIds: ['operation'],
               zoneFilter: {
@@ -393,6 +441,7 @@ describe('move decision sequence helpers', () => {
                 left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
                 right: 'cambodia',
               },
+              remainingUses: 1,
             },
           ],
         },
@@ -507,6 +556,7 @@ describe('move decision sequence helpers', () => {
           pendingEligibilityOverrides: [],
           pendingFreeOperationGrants: [
             {
+              grantId: 'grant-0',
               faction: '0',
               actionIds: ['operation'],
               zoneFilter: {
@@ -514,6 +564,7 @@ describe('move decision sequence helpers', () => {
                 left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
                 right: 'cambodia',
               },
+              remainingUses: 1,
             },
           ],
         },

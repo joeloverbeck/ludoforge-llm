@@ -384,3 +384,80 @@ describe('applyMove() map-aware pipeline evaluation', () => {
     assert.equal(result.state.globalVars['mapFlag'], 1);
   });
 });
+
+describe('applyMove() free-operation zone-filter diagnostics', () => {
+  it('throws typed error for malformed free-operation zone filters during final validation', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action], globalVars: [] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-0',
+              faction: '0',
+              actionIds: ['operation'],
+              zoneFilter: {
+                op: '==',
+                left: { ref: 'gvar', var: 'missingVar' },
+                right: 1,
+              },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+      globalVars: {},
+    });
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED');
+        assert.equal(details.context?.surface, 'turnFlowEligibility');
+        assert.equal(details.context?.actionId, 'operation');
+        return true;
+      },
+    );
+  });
+});

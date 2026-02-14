@@ -26,9 +26,11 @@ export interface EventLastingEffectDef {
 }
 
 export interface EventFreeOperationGrantDef {
+  readonly id?: string;
   readonly faction: string;
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: ConditionAST;
+  readonly uses?: number;
 }
 
 export interface EventBranchDef {

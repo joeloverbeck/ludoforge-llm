@@ -4,6 +4,7 @@ import { createRng } from './prng.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { initializeTurnFlowEligibilityState } from './turn-flow-eligibility.js';
 import { applyTurnFlowInitialReveal } from './turn-flow-lifecycle.js';
+import { kernelRuntimeError } from './runtime-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import { createCollector } from './execution-collector.js';
 import type { GameDef, GameState } from './types.js';
@@ -166,7 +167,10 @@ const resolveInitialActivePlayer = (state: GameState, strategy: GameDef['turnOrd
 const resolveInitialPhase = (def: GameDef): GameState['currentPhase'] => {
   const initialPhase = def.turnStructure.phases.at(0)?.id;
   if (initialPhase === undefined) {
-    throw new Error('initialState requires at least one phase in turnStructure.phases');
+    throw kernelRuntimeError(
+      'INITIAL_STATE_NO_PHASES',
+      'initialState requires at least one phase in turnStructure.phases',
+    );
   }
 
   return initialPhase;

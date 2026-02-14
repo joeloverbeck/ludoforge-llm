@@ -45,7 +45,7 @@ const createDef = (): GameDef =>
         actor: 'active',
         phase: asPhaseId('main'),
         params: [
-          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2'] } },
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
           { name: 'branch', domain: { query: 'enums', values: ['branch-grant-nva', 'none'] } },
         ],
@@ -63,6 +63,18 @@ const createDef = (): GameDef =>
         cost: [],
         effects: [],
         limits: [],
+      },
+    ],
+    actionPipelines: [
+      {
+        id: 'operation-profile',
+        actionId: asActionId('operation'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [{ effects: [] }],
+        atomicity: 'atomic',
       },
     ],
     triggers: [],
@@ -94,6 +106,27 @@ const createDef = (): GameDef =>
                   freeOperationGrants: [{ faction: '2', actionIds: ['operation'] }],
                 },
               ],
+            },
+          },
+          {
+            id: 'card-3',
+            title: 'Two Independent VC Grants',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Grant VC two free operations.',
+              freeOperationGrants: [
+                { faction: '3', actionIds: ['operation'] },
+                { faction: '3', actionIds: ['operation'] },
+              ],
+            },
+          },
+          {
+            id: 'card-4',
+            title: 'Reusable VC Grant',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Grant VC a reusable free operation.',
+              freeOperationGrants: [{ id: 'vc-reusable-op', faction: '3', actionIds: ['operation'], uses: 2 }],
             },
           },
         ],
@@ -246,7 +279,11 @@ describe('event free-operation grants integration', () => {
     const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} }).state;
 
     const runtime = requireCardDrivenRuntime(second);
-    assert.deepEqual(runtime.pendingFreeOperationGrants, [{ faction: '3', actionIds: ['operation'] }]);
+    assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.faction, '3');
+    assert.deepEqual(runtime.pendingFreeOperationGrants?.[0]?.actionIds, ['operation']);
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.remainingUses, 1);
+    assert.equal(typeof runtime.pendingFreeOperationGrants?.[0]?.grantId, 'string');
     assert.equal(second.activePlayer, asPlayerId(2));
 
     const nvaMoves = legalMoves(def, second).filter((move) => String(move.actionId) === 'operation');
@@ -269,9 +306,65 @@ describe('event free-operation grants integration', () => {
     const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} }).state;
 
     const runtime = requireCardDrivenRuntime(second);
-    assert.deepEqual(runtime.pendingFreeOperationGrants, [{ faction: '2', actionIds: ['operation'] }]);
+    assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.faction, '2');
+    assert.deepEqual(runtime.pendingFreeOperationGrants?.[0]?.actionIds, ['operation']);
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.remainingUses, 1);
+    assert.equal(typeof runtime.pendingFreeOperationGrants?.[0]?.grantId, 'string');
     const nvaMoves = legalMoves(def, second).filter((move) => String(move.actionId) === 'operation');
     assert.equal(nvaMoves.some((move) => move.freeOperation === true), true);
+  });
+
+  it('supports two consecutive free operations when two grants exist for one faction', () => {
+    const def = createDef();
+    const start = initialState(def, 17, 4);
+
+    const first = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-3', side: 'unshaded', branch: 'none' },
+    }).state;
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} }).state;
+    const runtimeAfterCardPlay = requireCardDrivenRuntime(second);
+    assert.equal(runtimeAfterCardPlay.pendingFreeOperationGrants?.length, 2);
+    assert.equal(second.activePlayer, asPlayerId(2));
+
+    const third = applyMove(def, second, { actionId: asActionId('operation'), params: {} }).state;
+    assert.equal(third.activePlayer, asPlayerId(3));
+    const vcMovesFirstWindow = legalMoves(def, third).filter((move) => String(move.actionId) === 'operation');
+    assert.equal(vcMovesFirstWindow.some((move) => move.freeOperation === true), true);
+
+    const fourth = applyMove(def, third, { actionId: asActionId('operation'), params: {}, freeOperation: true }).state;
+    assert.equal(requireCardDrivenRuntime(fourth).pendingFreeOperationGrants?.length, 1);
+    const vcMovesSecondWindow = legalMoves(def, fourth).filter((move) => String(move.actionId) === 'operation');
+    assert.equal(vcMovesSecondWindow.some((move) => move.freeOperation === true), true);
+
+    const fifth = applyMove(def, fourth, { actionId: asActionId('operation'), params: {}, freeOperation: true }).state;
+    assert.deepEqual(requireCardDrivenRuntime(fifth).pendingFreeOperationGrants ?? [], []);
+  });
+
+  it('tracks reusable grants with remainingUses and stable explicit grant id', () => {
+    const def = createDef();
+    const start = initialState(def, 18, 4);
+
+    const first = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-4', side: 'unshaded', branch: 'none' },
+    }).state;
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} }).state;
+    const third = applyMove(def, second, { actionId: asActionId('operation'), params: {} }).state;
+    const beforeFreeUse = requireCardDrivenRuntime(third).pendingFreeOperationGrants ?? [];
+    assert.equal(beforeFreeUse.length, 1);
+    assert.equal(beforeFreeUse[0]?.grantId, 'vc-reusable-op');
+    assert.equal(beforeFreeUse[0]?.remainingUses, 2);
+
+    const fourth = applyMove(def, third, { actionId: asActionId('operation'), params: {}, freeOperation: true }).state;
+    const afterFirstUse = requireCardDrivenRuntime(fourth).pendingFreeOperationGrants ?? [];
+    assert.equal(afterFirstUse.length, 1);
+    assert.equal(afterFirstUse[0]?.grantId, 'vc-reusable-op');
+    assert.equal(afterFirstUse[0]?.remainingUses, 1);
+
+    const fifth = applyMove(def, fourth, { actionId: asActionId('operation'), params: {}, freeOperation: true }).state;
+    assert.deepEqual(requireCardDrivenRuntime(fifth).pendingFreeOperationGrants ?? [], []);
   });
 
   it('enforces Cambodia-only free-operation grants across discovery, decision flow, and final apply', () => {

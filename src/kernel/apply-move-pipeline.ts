@@ -1,5 +1,6 @@
 import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
+import { pipelineApplicabilityEvaluationError } from './runtime-error.js';
 import type { ActionDef, ConditionAST, EffectAST, GameDef, ActionPipelineDef } from './types.js';
 
 export interface ExecutionPipeline {
@@ -15,23 +16,6 @@ export type ActionPipelineDispatch =
   | { readonly kind: 'configuredNoMatch' }
   | { readonly kind: 'matched'; readonly profile: ActionPipelineDef };
 
-const applicabilityEvaluationError = (
-  action: ActionDef,
-  profile: ActionPipelineDef,
-  cause: unknown,
-): Error => {
-  const error = new Error(
-    `action pipeline applicability evaluation failed for actionId=${String(action.id)} profileId=${profile.id}`,
-  );
-  Object.assign(error, {
-    actionId: action.id,
-    profileId: profile.id,
-    reason: 'applicabilityEvaluationFailed',
-    cause,
-  });
-  return error;
-};
-
 export const resolveActionPipelineDispatch = (
   def: GameDef,
   action: ActionDef,
@@ -44,7 +28,7 @@ export const resolveActionPipelineDispatch = (
     try {
       return evalCondition(profile.applicability, ctx);
     } catch (error) {
-      throw applicabilityEvaluationError(action, profile, error);
+      throw pipelineApplicabilityEvaluationError(action, profile.id, error);
     }
   };
 

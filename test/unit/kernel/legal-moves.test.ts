@@ -571,11 +571,12 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
       (error: unknown) => {
         assert.ok(error instanceof Error);
         assert.match(error.message, /action pipeline legality evaluation failed/);
-        const details = error as Error & { actionId?: unknown; profileId?: unknown; predicate?: unknown; reason?: unknown };
-        assert.equal(details.actionId, asActionId('badLegalityOp'));
-        assert.equal(details.profileId, 'badLegalityProfile');
-        assert.equal(details.predicate, 'legality');
-        assert.equal(details.reason, 'pipelinePredicateEvaluationFailed');
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'ACTION_PIPELINE_PREDICATE_EVALUATION_FAILED');
+        assert.equal(details.context?.actionId, asActionId('badLegalityOp'));
+        assert.equal(details.context?.profileId, 'badLegalityProfile');
+        assert.equal(details.context?.predicate, 'legality');
+        assert.equal(details.context?.reason, 'pipelinePredicateEvaluationFailed');
         return true;
       },
     );
@@ -616,11 +617,12 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
       (error: unknown) => {
         assert.ok(error instanceof Error);
         assert.match(error.message, /action pipeline costValidation evaluation failed/);
-        const details = error as Error & { actionId?: unknown; profileId?: unknown; predicate?: unknown; reason?: unknown };
-        assert.equal(details.actionId, asActionId('badCostValidationOp'));
-        assert.equal(details.profileId, 'badCostValidationProfile');
-        assert.equal(details.predicate, 'costValidation');
-        assert.equal(details.reason, 'pipelinePredicateEvaluationFailed');
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'ACTION_PIPELINE_PREDICATE_EVALUATION_FAILED');
+        assert.equal(details.context?.actionId, asActionId('badCostValidationOp'));
+        assert.equal(details.context?.profileId, 'badCostValidationProfile');
+        assert.equal(details.context?.predicate, 'costValidation');
+        assert.equal(details.context?.reason, 'pipelinePredicateEvaluationFailed');
         return true;
       },
     );
@@ -664,5 +666,102 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
     const state = makeBaseState();
 
     assert.throws(() => legalMoves(def, state));
+  });
+
+  it('16. malformed free-operation zone filters fail with typed diagnostics during template variant generation', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operationProfile',
+      actionId: asActionId('operation'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$zone',
+                bind: '$zone',
+                options: { query: 'zones' },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-0',
+              faction: '0',
+              actionIds: ['operation'],
+              zoneFilter: {
+                op: '==',
+                left: { ref: 'gvar', var: 'missingVar' },
+                right: 1,
+              },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    assert.throws(
+      () => legalMoves(def, state),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED');
+        assert.equal(details.context?.surface, 'legalChoices');
+        assert.equal(details.context?.actionId, 'operation');
+        return true;
+      },
+    );
   });
 });

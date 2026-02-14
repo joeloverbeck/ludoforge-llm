@@ -4,6 +4,12 @@ import type { ConditionAST, ExecutionCollector, GameDef, GameState, MapSpaceDef 
 
 export const DEFAULT_MAX_QUERY_RESULTS = 10_000;
 
+export interface FreeOperationZoneFilterDiagnostics {
+  readonly source: 'legalChoices';
+  readonly actionId: string;
+  readonly moveParams: Readonly<Record<string, unknown>>;
+}
+
 export interface EvalContext {
   readonly def: GameDef;
   readonly adjacencyGraph: AdjacencyGraph;
@@ -13,6 +19,7 @@ export interface EvalContext {
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly mapSpaces?: readonly MapSpaceDef[];
   readonly freeOperationZoneFilter?: ConditionAST;
+  readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
   readonly maxQueryResults?: number;
   readonly collector: ExecutionCollector;
 }

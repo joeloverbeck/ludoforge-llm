@@ -146,7 +146,11 @@ describe('FITL eligibility window integration', () => {
     const second = secondResult.state;
 
     const pendingFreeOperationGrants = requireCardDrivenRuntime(second).pendingFreeOperationGrants ?? [];
-    assert.deepEqual(pendingFreeOperationGrants, [{ faction: '2', actionIds: ['operation'] }]);
+    assert.equal(pendingFreeOperationGrants.length, 1);
+    assert.equal(pendingFreeOperationGrants[0]?.faction, '2');
+    assert.deepEqual(pendingFreeOperationGrants[0]?.actionIds, ['operation']);
+    assert.equal(pendingFreeOperationGrants[0]?.remainingUses, 1);
+    assert.equal(typeof pendingFreeOperationGrants[0]?.grantId, 'string');
 
     const grantedMoves = legalMoves(def, second).filter((move) => String(move.actionId) === 'operation');
     assert.equal(

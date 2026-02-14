@@ -1,4 +1,5 @@
 import { legalChoices } from './legal-choices.js';
+import { kernelRuntimeError } from './runtime-error.js';
 import type {
   ChoiceIllegalRequest,
   ChoicePendingRequest,
@@ -74,7 +75,11 @@ export const resolveMoveDecisionSequence = (
     };
   }
 
-  throw new Error(`resolveMoveDecisionSequence: exceeded maxSteps=${String(maxSteps)}`);
+  throw kernelRuntimeError(
+    'MOVE_DECISION_SEQUENCE_MAX_STEPS_EXCEEDED',
+    `resolveMoveDecisionSequence: exceeded maxSteps=${String(maxSteps)}`,
+    { maxSteps },
+  );
 };
 
 export const isMoveDecisionSequenceSatisfiable = (

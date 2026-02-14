@@ -534,4 +534,24 @@ describe('computeVictoryMarker', () => {
     };
     assert.equal(computeVictoryMarker(state, arvnSpaces, {}, DEFAULT_FACTION_CONFIG, formula), 22);
   });
+
+  it('throws typed error when controlledPopulationPlusGlobalVar references a non-numeric global var', () => {
+    const spaces: readonly MapSpaceDef[] = [makeSpace({ id: 's1', population: 2 })];
+    const state = makeState({ s1: [makeFactionToken('u1', 'US')] });
+    const formula: VictoryFormula = {
+      type: 'controlledPopulationPlusGlobalVar',
+      controlFn: 'coin',
+      varName: 'patronage',
+    };
+
+    assert.throws(
+      () => computeVictoryMarker(state, spaces, {}, DEFAULT_FACTION_CONFIG, formula),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown };
+        assert.equal(details.code, 'DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR');
+        return true;
+      },
+    );
+  });
 });

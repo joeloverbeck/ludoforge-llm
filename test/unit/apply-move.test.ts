@@ -121,10 +121,18 @@ describe('applyMove', () => {
 
     assert.throws(() => applyMove(def, state, badMove), (error: unknown) => {
       assert.ok(error instanceof Error);
-      const details = error as Error & { actionId?: unknown; params?: unknown; reason?: unknown };
+      const details = error as Error & {
+        code?: unknown;
+        actionId?: unknown;
+        params?: unknown;
+        reason?: unknown;
+        context?: Record<string, unknown>;
+      };
+      assert.equal(details.code, 'ILLEGAL_MOVE');
       assert.equal(details.actionId, asActionId('play'));
       assert.deepEqual(details.params, { boost: 99 });
       assert.equal(typeof details.reason, 'string');
+      assert.equal(details.context?.reason, details.reason);
       assert.match(details.message, /Illegal move/);
       return true;
     });
@@ -937,6 +945,81 @@ describe('applyMove', () => {
       (entry) => entry.kind === 'turnFlowEligibility',
     );
     assert.equal(eligibilityEntries.length, 0, 'no eligibility trace entries for free operations');
+  });
+
+  it('consumes exactly one matching grant instance per free operation use', () => {
+    const def: GameDef = {
+      metadata: { id: 'free-op-consume-single-grant', players: { min: 4, max: 4 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1', '2', '3'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+      actionPipelines: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [{ effects: [] }],
+          atomicity: 'atomic',
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('operate'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const start = initialState(def, 71, 4);
+    const withOneGrant = withPendingFreeOperationGrant(start, { actionIds: ['operate'] });
+    const withTwoGrants = withPendingFreeOperationGrant(withOneGrant, { actionIds: ['operate'] });
+    assert.equal(requireCardDrivenRuntime(withTwoGrants).pendingFreeOperationGrants?.length, 2);
+
+    const firstFree = applyMove(def, withTwoGrants, {
+      actionId: asActionId('operate'),
+      params: {},
+      freeOperation: true,
+    }).state;
+    const firstPending = requireCardDrivenRuntime(firstFree).pendingFreeOperationGrants ?? [];
+    assert.equal(firstPending.length, 1);
+    assert.equal(firstPending[0]?.faction, '0');
+    assert.deepEqual(firstPending[0]?.actionIds, ['operate']);
+    assert.equal(firstPending[0]?.remainingUses, 1);
+    assert.equal(typeof firstPending[0]?.grantId, 'string');
+
+    const secondFree = applyMove(def, firstFree, {
+      actionId: asActionId('operate'),
+      params: {},
+      freeOperation: true,
+    }).state;
+    assert.equal(requireCardDrivenRuntime(secondFree).pendingFreeOperationGrants, undefined);
   });
 
   it('executes stages stage effects normally for free operations', () => {

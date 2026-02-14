@@ -3,6 +3,7 @@ import { resetPhaseUsage, resetTurnUsage } from './action-usage.js';
 import { expireLastingEffectsAtBoundaries, resolveBoundaryDurationsAtTurnEnd } from './event-execution.js';
 import { legalMoves } from './legal-moves.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
+import { kernelRuntimeError } from './runtime-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import { terminalResult } from './terminal.js';
 import type { GameDef, GameState, TriggerEvent, TriggerLogEntry } from './types.js';
@@ -38,7 +39,10 @@ const dispatchLifecycleEvent = (
 const firstPhaseId = (def: GameDef): GameState['currentPhase'] => {
   const phaseId = def.turnStructure.phases.at(0)?.id;
   if (phaseId === undefined) {
-    throw new Error('advancePhase requires at least one phase in turnStructure.phases');
+    throw kernelRuntimeError(
+      'PHASE_ADVANCE_NO_PHASES',
+      'advancePhase requires at least one phase in turnStructure.phases',
+    );
   }
 
   return phaseId;
@@ -100,7 +104,11 @@ export const advancePhase = (
   const phases = def.turnStructure.phases;
   const currentPhaseIndex = phases.findIndex((phase) => phase.id === state.currentPhase);
   if (currentPhaseIndex < 0) {
-    throw new Error(`advancePhase could not find current phase ${String(state.currentPhase)} in turnStructure.phases`);
+    throw kernelRuntimeError(
+      'PHASE_ADVANCE_CURRENT_PHASE_NOT_FOUND',
+      `advancePhase could not find current phase ${String(state.currentPhase)} in turnStructure.phases`,
+      { currentPhase: state.currentPhase },
+    );
   }
 
   let nextState = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector);
@@ -109,7 +117,11 @@ export const advancePhase = (
   if (!isLastPhase) {
     const nextPhase = phases[currentPhaseIndex + 1];
     if (nextPhase === undefined) {
-      throw new Error(`advancePhase could not resolve phase at index ${String(currentPhaseIndex + 1)}`);
+      throw kernelRuntimeError(
+        'PHASE_ADVANCE_NEXT_PHASE_NOT_FOUND',
+        `advancePhase could not resolve phase at index ${String(currentPhaseIndex + 1)}`,
+        { nextPhaseIndex: currentPhaseIndex + 1 },
+      );
     }
 
     nextState = resetPhaseUsage({
@@ -161,7 +173,10 @@ export const advanceToDecisionPoint = (
 ): GameState => {
   const phaseCount = def.turnStructure.phases.length;
   if (phaseCount <= 0) {
-    throw new Error('advanceToDecisionPoint requires at least one phase in turnStructure.phases');
+    throw kernelRuntimeError(
+      'DECISION_POINT_NO_PHASES',
+      'advanceToDecisionPoint requires at least one phase in turnStructure.phases',
+    );
   }
 
   const maxAutoAdvancesPerMove = state.playerCount * phaseCount + 1;
@@ -170,7 +185,11 @@ export const advanceToDecisionPoint = (
 
   while (terminalResult(def, nextState) === null && legalMoves(def, nextState).length === 0) {
     if (advances >= maxAutoAdvancesPerMove) {
-      throw new Error(`STALL_LOOP_DETECTED: exceeded maxAutoAdvancesPerMove=${maxAutoAdvancesPerMove}`);
+      throw kernelRuntimeError(
+        'DECISION_POINT_STALL_LOOP_DETECTED',
+        `STALL_LOOP_DETECTED: exceeded maxAutoAdvancesPerMove=${maxAutoAdvancesPerMove}`,
+        { maxAutoAdvancesPerMove },
+      );
     }
 
     nextState = advancePhase(def, nextState, triggerLogCollector);

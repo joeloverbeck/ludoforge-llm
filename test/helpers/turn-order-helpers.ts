@@ -14,16 +14,21 @@ export function requireCardDrivenRuntime(state: GameState) {
 export function withPendingFreeOperationGrant(
   state: GameState,
   grant?: {
+    readonly grantId?: string;
     readonly faction?: string;
     readonly actionIds?: readonly string[];
     readonly zoneFilter?: TurnFlowPendingFreeOperationGrant['zoneFilter'];
+    readonly remainingUses?: number;
   },
 ): GameState {
   const runtime = requireCardDrivenRuntime(state);
+  const nextIndex = (runtime.pendingFreeOperationGrants ?? []).length;
   const nextGrant: TurnFlowPendingFreeOperationGrant = {
+    grantId: grant?.grantId ?? `test-grant-${nextIndex}`,
     faction: grant?.faction ?? String(state.activePlayer),
     ...(grant?.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
     ...(grant?.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
+    remainingUses: grant?.remainingUses ?? 1,
   };
   return {
     ...state,

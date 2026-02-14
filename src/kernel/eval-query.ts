@@ -7,6 +7,7 @@ import { resolveBindingTemplate } from './binding-template.js';
 import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
+import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import type { OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
 
 type QueryResult = Token | number | string | PlayerId | ZoneId;
@@ -80,11 +81,8 @@ function applyZonesFilter(
   ctx: EvalContext,
 ): readonly ZoneId[] {
   let filteredZones = [...zones];
-  const combinedCondition = queryFilter?.condition === undefined
-    ? ctx.freeOperationZoneFilter
-    : ctx.freeOperationZoneFilter === undefined
-      ? queryFilter.condition
-      : { op: 'and' as const, args: [queryFilter.condition, ctx.freeOperationZoneFilter] };
+  const queryCondition = queryFilter?.condition;
+  const freeOperationZoneFilter = ctx.freeOperationZoneFilter;
 
   if (queryFilter?.owner !== undefined) {
     const owners = new Set(resolvePlayerSel(queryFilter.owner, ctx));
@@ -103,15 +101,42 @@ function applyZonesFilter(
     });
   }
 
-  if (combinedCondition !== undefined) {
+  if (queryCondition !== undefined) {
     filteredZones = filteredZones.filter((zone) => {
-      return evalCondition(combinedCondition, {
+      return evalCondition(queryCondition, {
         ...ctx,
         bindings: {
           ...ctx.bindings,
           $zone: zone.id,
         },
       });
+    });
+  }
+
+  if (freeOperationZoneFilter !== undefined) {
+    filteredZones = filteredZones.filter((zone) => {
+      try {
+        return evalCondition(freeOperationZoneFilter, {
+          ...ctx,
+          bindings: {
+            ...ctx.bindings,
+            $zone: zone.id,
+          },
+        });
+      } catch (cause) {
+        const diagnostics = ctx.freeOperationZoneFilterDiagnostics;
+        if (diagnostics !== undefined) {
+          throw freeOperationZoneFilterEvaluationError({
+            surface: diagnostics.source,
+            actionId: diagnostics.actionId,
+            moveParams: diagnostics.moveParams,
+            zoneFilter: freeOperationZoneFilter,
+            candidateZone: zone.id,
+            cause,
+          });
+        }
+        throw cause;
+      }
     });
   }
 

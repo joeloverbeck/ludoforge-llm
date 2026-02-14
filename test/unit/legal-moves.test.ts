@@ -748,6 +748,7 @@ describe('legalMoves', () => {
           pendingEligibilityOverrides: [],
           pendingFreeOperationGrants: [
             {
+              grantId: 'grant-0',
               faction: '0',
               actionIds: ['operation'],
               zoneFilter: {
@@ -755,6 +756,7 @@ describe('legalMoves', () => {
                 left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
                 right: 'cambodia',
               },
+              remainingUses: 1,
             },
           ],
         },

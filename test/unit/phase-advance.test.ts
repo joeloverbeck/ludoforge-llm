@@ -304,7 +304,16 @@ describe('phase advancement', () => {
     const def = createBaseDef();
     const state = createState({ currentPhase: asPhaseId('p1') });
 
-    assert.throws(() => advanceToDecisionPoint(def, state), /STALL_LOOP_DETECTED/);
+    assert.throws(
+      () => advanceToDecisionPoint(def, state),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown };
+        assert.equal(details.code, 'DECISION_POINT_STALL_LOOP_DETECTED');
+        assert.match(details.message, /STALL_LOOP_DETECTED/);
+        return true;
+      },
+    );
   });
 
   it('does not auto-advance when current state is terminal with zero legal moves', () => {

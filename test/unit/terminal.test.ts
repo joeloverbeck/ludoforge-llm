@@ -119,6 +119,45 @@ describe('terminalResult', () => {
     });
   });
 
+  it('throws typed error when score result is configured without terminal.scoring', () => {
+    const def: GameDef = {
+      ...createBaseDef(),
+      terminal: {
+        conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
+      },
+    };
+
+    assert.throws(
+      () => terminalResult(def, createBaseState()),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown };
+        assert.equal(details.code, 'TERMINAL_SCORING_CONFIG_MISSING');
+        return true;
+      },
+    );
+  });
+
+  it('throws typed error when scoring expression is non-numeric', () => {
+    const def: GameDef = {
+      ...createBaseDef(),
+      terminal: {
+        conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
+        scoring: { method: 'highest', value: true },
+      },
+    };
+
+    assert.throws(
+      () => terminalResult(def, createBaseState()),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown };
+        assert.equal(details.code, 'TERMINAL_SCORING_NON_NUMERIC');
+        return true;
+      },
+    );
+  });
+
   it('uses first matching end condition in declaration order', () => {
     const def: GameDef = {
       ...createBaseDef(),

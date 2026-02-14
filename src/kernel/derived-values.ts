@@ -1,4 +1,5 @@
 import type { GameState, MapSpaceDef, Token } from './types.js';
+import { kernelRuntimeError } from './runtime-error.js';
 
 // ─── Configuration Types ─────────────────────────────────────────────────────
 
@@ -289,7 +290,11 @@ export function computeVictoryMarker(
       const pop = sumControlledPopulation(state, spaces, controlFn, factionConfig);
       const varValue = state.globalVars[formula.varName];
       if (typeof varValue !== 'number') {
-        throw new Error(`Derived value formula requires numeric global var: ${formula.varName}`);
+        throw kernelRuntimeError(
+          'DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR',
+          `Derived value formula requires numeric global var: ${formula.varName}`,
+          { varName: formula.varName },
+        );
       }
       return pop + varValue;
     }

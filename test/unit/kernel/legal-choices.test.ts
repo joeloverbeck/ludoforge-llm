@@ -842,6 +842,103 @@ describe('legalChoices()', () => {
       }));
       assert.deepStrictEqual(result, { kind: 'complete', complete: true });
     });
+
+    it('throws typed errors for malformed free-operation zone filters instead of silently denying zones', () => {
+      const action: ActionDef = {
+        id: asActionId('operation'),
+        actor: 'active',
+        phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'operation-profile',
+        actionId: asActionId('operation'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseOne: {
+                  internalDecisionId: 'decision:$zone',
+                  bind: '$zone',
+                  options: { query: 'zones' },
+                },
+              } as EffectAST,
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      };
+
+      const def: GameDef = {
+        ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+        turnOrder: {
+          type: 'cardDriven',
+          config: {
+            turnFlow: {
+              cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+              eligibility: { factions: ['0', '1'], overrideWindows: [] },
+              optionMatrix: [],
+              passRewards: [],
+              freeOperationActionIds: ['operation'],
+              durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            },
+          },
+        },
+      } as unknown as GameDef;
+
+      const state = makeBaseState({
+        turnOrderState: {
+          type: 'cardDriven',
+          runtime: {
+            factionOrder: ['0', '1'],
+            eligibility: { '0': true, '1': true },
+            currentCard: {
+              firstEligible: '0',
+              secondEligible: '1',
+              actedFactions: [],
+              passedFactions: [],
+              nonPassCount: 0,
+              firstActionClass: null,
+            },
+            pendingEligibilityOverrides: [],
+            pendingFreeOperationGrants: [
+              {
+                grantId: 'grant-0',
+                faction: '0',
+                actionIds: ['operation'],
+                zoneFilter: {
+                  op: '==',
+                  left: { ref: 'gvar', var: 'missingVar' },
+                  right: 1,
+                },
+                remainingUses: 1,
+              },
+            ],
+          },
+        },
+      });
+
+      assert.throws(
+        () => legalChoices(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+        (error: unknown) => {
+          assert.ok(error instanceof Error);
+          const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+          assert.equal(details.code, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED');
+          assert.equal(details.context?.surface, 'legalChoices');
+          assert.equal(details.context?.actionId, 'operation');
+          return true;
+        },
+      );
+    });
   });
 
   describe('purity invariant', () => {

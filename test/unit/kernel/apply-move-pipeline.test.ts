@@ -133,10 +133,11 @@ describe('resolveActionPipelineDispatch()', () => {
       (error: unknown) => {
         assert.ok(error instanceof Error);
         assert.match(error.message, /action pipeline applicability evaluation failed/);
-        const details = error as Error & { actionId?: unknown; profileId?: unknown; reason?: unknown };
-        assert.equal(details.actionId, asActionId('attack'));
-        assert.equal(details.profileId, 'attack-broken-profile');
-        assert.equal(details.reason, 'applicabilityEvaluationFailed');
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'ACTION_PIPELINE_APPLICABILITY_EVALUATION_FAILED');
+        assert.equal(details.context?.actionId, asActionId('attack'));
+        assert.equal(details.context?.profileId, 'attack-broken-profile');
+        assert.equal(details.context?.reason, 'applicabilityEvaluationFailed');
         return true;
       },
     );

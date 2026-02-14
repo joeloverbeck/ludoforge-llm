@@ -10,6 +10,7 @@ import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { createCollector } from './execution-collector.js';
 import { buildAdjacencyGraph } from './spatial.js';
+import { kernelRuntimeError } from './runtime-error.js';
 import { resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
 import type {
   ActionDef,
@@ -57,6 +58,11 @@ interface WalkOutcome {
   readonly pending: ChoicePendingRequest | null;
   readonly wCtx: WalkContext;
 }
+
+const legalChoicesValidationError = (
+  message: string,
+  context?: Readonly<Record<string, unknown>>,
+): Error => kernelRuntimeError('LEGAL_CHOICES_VALIDATION_FAILED', message, context);
 
 const withBinding = (wCtx: WalkContext, name: string, value: unknown): WalkContext => ({
   evalCtx: {
@@ -148,7 +154,7 @@ function walkChooseOne(
   if (Object.prototype.hasOwnProperty.call(wCtx.moveParams, decisionId)) {
     const selected = wCtx.moveParams[decisionId];
     if (!isInDomain(selected, options)) {
-      throw new Error(
+      throw legalChoicesValidationError(
         `legalChoices: invalid selection for chooseOne "${bind}" (${decisionId}): ${JSON.stringify(selected)} is not in options domain (${options.length} options)`,
       );
     }
@@ -177,21 +183,21 @@ function walkChooseN(
   const decisionId = composeDecisionId(chooseN.internalDecisionId, chooseN.bind, bind);
   const { minCardinality, maxCardinality } = resolveChooseNCardinality(chooseN, wCtx.evalCtx, (issue) => {
     if (issue.code === 'CHOOSE_N_MODE_INVALID') {
-      throw new Error(`legalChoices: chooseN "${bind}" must use either exact n or range max/min cardinality`);
+      throw legalChoicesValidationError(`legalChoices: chooseN "${bind}" must use either exact n or range max/min cardinality`);
     }
     if (issue.code === 'CHOOSE_N_MIN_EVAL_INVALID') {
-      throw new Error(`legalChoices: chooseN "${bind}" (${decisionId}) minimum cardinality must evaluate to a non-negative integer`);
+      throw legalChoicesValidationError(`legalChoices: chooseN "${bind}" (${decisionId}) minimum cardinality must evaluate to a non-negative integer`);
     }
     if (issue.code === 'CHOOSE_N_MAX_EVAL_INVALID') {
-      throw new Error(`legalChoices: chooseN "${bind}" (${decisionId}) maximum cardinality must evaluate to a non-negative integer`);
+      throw legalChoicesValidationError(`legalChoices: chooseN "${bind}" (${decisionId}) maximum cardinality must evaluate to a non-negative integer`);
     }
     if (issue.code === 'CHOOSE_N_MIN_INVALID') {
-      throw new Error(`legalChoices: chooseN "${bind}" (${decisionId}) minimum cardinality must be a non-negative integer`);
+      throw legalChoicesValidationError(`legalChoices: chooseN "${bind}" (${decisionId}) minimum cardinality must be a non-negative integer`);
     }
     if (issue.code === 'CHOOSE_N_MAX_INVALID') {
-      throw new Error(`legalChoices: chooseN "${bind}" (${decisionId}) maximum cardinality must be a non-negative integer`);
+      throw legalChoicesValidationError(`legalChoices: chooseN "${bind}" (${decisionId}) maximum cardinality must be a non-negative integer`);
     }
-    throw new Error(`legalChoices: chooseN "${bind}" (${decisionId}) requires max >= min cardinality`);
+    throw legalChoicesValidationError(`legalChoices: chooseN "${bind}" (${decisionId}) requires max >= min cardinality`);
   });
 
   const options = evalQuery(chooseN.options, wCtx.evalCtx);
@@ -203,18 +209,18 @@ function walkChooseN(
   if (Object.prototype.hasOwnProperty.call(wCtx.moveParams, decisionId)) {
     const selectedValue = wCtx.moveParams[decisionId];
     if (!Array.isArray(selectedValue)) {
-      throw new Error(
+      throw legalChoicesValidationError(
         `legalChoices: chooseN "${bind}" (${decisionId}) expects array selection, got ${typeof selectedValue}`,
       );
     }
     if (selectedValue.length < minCardinality || selectedValue.length > clampedMax) {
-      throw new Error(
+      throw legalChoicesValidationError(
         `legalChoices: invalid cardinality for chooseN "${bind}" (${decisionId}): selected ${selectedValue.length}, expected [${minCardinality}, ${clampedMax}]`,
       );
     }
     for (const item of selectedValue) {
       if (!isInDomain(item, options)) {
-        throw new Error(
+        throw legalChoicesValidationError(
           `legalChoices: invalid selection for chooseN "${bind}" (${decisionId}): ${JSON.stringify(item)} is not in options domain`,
         );
       }
@@ -347,7 +353,11 @@ function walkRemoveByPriority(
 export function legalChoices(def: GameDef, state: GameState, partialMove: Move): ChoiceRequest {
   const action = findAction(def, partialMove.actionId);
   if (action === undefined) {
-    throw new Error(`legalChoices: unknown action id: ${String(partialMove.actionId)}`);
+    throw kernelRuntimeError(
+      'LEGAL_CHOICES_UNKNOWN_ACTION',
+      `legalChoices: unknown action id: ${String(partialMove.actionId)}`,
+      { actionId: partialMove.actionId },
+    );
   }
 
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
@@ -368,7 +378,16 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     actorPlayer: state.activePlayer,
     bindings: baseBindings,
     collector: createCollector(),
-    ...(freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter }),
+    ...(freeOperationZoneFilter === undefined
+      ? {}
+      : {
+          freeOperationZoneFilter,
+          freeOperationZoneFilterDiagnostics: {
+            source: 'legalChoices',
+            actionId: String(partialMove.actionId),
+            moveParams: partialMove.params,
+          },
+        }),
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   };
 

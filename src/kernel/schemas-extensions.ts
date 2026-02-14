@@ -59,9 +59,11 @@ export const EventCardLastingEffectSchema = z
 
 export const EventCardFreeOperationGrantSchema = z
   .object({
+    id: StringSchema.min(1).optional(),
     faction: StringSchema.min(1),
     actionIds: z.array(StringSchema.min(1)).min(1).optional(),
     zoneFilter: ConditionASTSchema.optional(),
+    uses: IntegerSchema.min(1).optional(),
   })
   .strict();
 
@@ -416,9 +418,11 @@ export const TurnFlowRuntimeStateSchema = z
       .array(
         z
           .object({
+            grantId: StringSchema.min(1),
             faction: StringSchema.min(1),
             actionIds: z.array(StringSchema.min(1)).min(1).optional(),
             zoneFilter: ConditionASTSchema.optional(),
+            remainingUses: IntegerSchema.min(1),
           })
           .strict(),
       )

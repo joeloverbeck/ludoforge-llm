@@ -2423,34 +2423,85 @@ actionPipelines:
   - id: assault-arvn-profile
     actionId: assault
     applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: coinResources
-        right: 3
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: coinResources
-        right: 3
-    costEffects:
-        - addVar:
-            scope: global
-            var: coinResources
-            delta: -3
-    targeting:
-      select: exactlyN
-      count: 1
-      tieBreak: basesLast
+    legality: { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
+    costValidation: { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
+    costEffects: []
+    targeting: {}
     stages:
-      - stage: assault-resolve
+      - stage: select-spaces
         effects:
-          - addVar:
-              scope: global
-              var: assaultCount
-              delta: 1
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
+                            right: 0
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
+                            right: 0
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
+                            right: 0
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
+                            right: 0
+                    min: 1
+                    max: 99
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - if:
+                    when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                    then:
+                      - addVar: { scope: global, var: arvnResources, delta: -3 }
+                - let:
+                    bind: $isProvince
+                    value:
+                      if:
+                        when: { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: 'province' }
+                        then: 1
+                        else: 0
+                    in:
+                      - let:
+                          bind: $arvnCubes
+                          value:
+                            if:
+                              when: { op: '==', left: { ref: binding, name: $isProvince }, right: 1 }
+                              then: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: troops }] } } }
+                              else: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
+                          in:
+                            - let:
+                                bind: $damage
+                                value:
+                                  if:
+                                    when: { op: zonePropIncludes, zone: $space, prop: terrainTags, value: 'highland' }
+                                    then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
+                                    else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
+                                in:
+                                  - macro: coin-assault-removal-order
+                                    args:
+                                      space: $space
+                                      damageExpr: { ref: binding, name: $damage }
     atomicity: atomic
   # ── Insurgent stub profiles (rally, march, attack, terror) ──
   - id: rally-profile

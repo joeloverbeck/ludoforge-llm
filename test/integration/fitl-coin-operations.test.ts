@@ -17,6 +17,7 @@ import {
   type MoveParamValue,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { findDeep } from '../helpers/ast-search-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 describe('FITL COIN operations integration', () => {
@@ -225,20 +226,6 @@ describe('FITL COIN operations integration', () => {
       return profile;
     };
 
-    const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => {
-      const results: any[] = [];
-      const walk = (node: any): void => {
-        if (node === null || node === undefined) return;
-        if (predicate(node)) results.push(node);
-        if (Array.isArray(node)) {
-          for (const item of node) walk(item);
-        } else if (typeof node === 'object') {
-          for (const value of Object.values(node)) walk(value);
-        }
-      };
-      walk(obj);
-      return results;
-    };
     it('compiles sweep-us-profile without diagnostics', () => {
       getSweepUsProfile();
     });
@@ -364,21 +351,6 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(profile, 'sweep-arvn-profile must exist in parsed doc');
       return profile;
-    };
-
-    const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => {
-      const results: any[] = [];
-      const walk = (node: any): void => {
-        if (node === null || node === undefined) return;
-        if (predicate(node)) results.push(node);
-        if (Array.isArray(node)) {
-          for (const item of node) walk(item);
-        } else if (typeof node === 'object') {
-          for (const value of Object.values(node)) walk(value);
-        }
-      };
-      walk(obj);
-      return results;
     };
 
     it('AC1: compiles sweep-arvn-profile without diagnostics', () => {
@@ -649,20 +621,6 @@ describe('FITL COIN operations integration', () => {
     };
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
-    const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => {
-      const results: any[] = [];
-      const walk = (node: any): void => {
-        if (node === null || node === undefined) return;
-        if (predicate(node)) results.push(node);
-        if (Array.isArray(node)) {
-          for (const item of node) walk(item);
-        } else if (typeof node === 'object') {
-          for (const value of Object.values(node)) walk(value);
-        }
-      };
-      walk(obj);
-      return results;
-    };
     it('AC2: space filter excludes spaces with NVA Control', () => {
       // Verify the compiled GameDef preserves zones query ConditionAST filters
       // including the NVA Control exclusion.
@@ -907,21 +865,6 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(profile, 'assault-us-profile must exist in parsed doc');
       return profile;
-    };
-
-    const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => {
-      const results: any[] = [];
-      const walk = (node: any): void => {
-        if (node === null || node === undefined) return;
-        if (predicate(node)) results.push(node);
-        if (Array.isArray(node)) {
-          for (const item of node) walk(item);
-        } else if (typeof node === 'object') {
-          for (const value of Object.values(node)) walk(value);
-        }
-      };
-      walk(obj);
-      return results;
     };
 
     it('AC1/AC2: compiles with zero-cost top-level fields', () => {
@@ -1259,6 +1202,238 @@ describe('FITL COIN operations integration', () => {
   });
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  describe('assault-arvn-profile structure and runtime', () => {
+    const getAssaultArvnProfile = () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'assault-arvn-profile');
+      assert.ok(profile, 'assault-arvn-profile must exist');
+      return profile;
+    };
+
+    const parseAssaultArvnProfile = (): any => {
+      const { parsed } = compileProductionSpec();
+      const profile = parsed.doc.actionPipelines?.find(
+        (p: { id: string }) => p.id === 'assault-arvn-profile',
+      );
+      assert.ok(profile, 'assault-arvn-profile must exist in parsed doc');
+      return profile;
+    };
+
+    it('AC1/AC2/AC3: compiles with arvnResources gating and per-space cost model', () => {
+      const profile = getAssaultArvnProfile();
+      const expected = { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 };
+      assert.deepEqual(profile.legality, expected);
+      assert.deepEqual(profile.costValidation, expected);
+      assert.deepEqual(profile.costEffects, []);
+
+      const parsed = parseAssaultArvnProfile();
+      const resolvePerSpace = parsed.stages[1];
+      const guardedCost = findDeep(resolvePerSpace.effects, (node: any) =>
+        node?.if?.when?.op === '!=' &&
+        node?.if?.when?.left?.ref === 'binding' &&
+        node?.if?.when?.left?.name === '__freeOperation' &&
+        node?.if?.when?.right === true &&
+        node?.if?.then?.some?.((eff: any) => eff?.addVar?.var === 'arvnResources' && eff?.addVar?.delta === -3),
+      );
+      assert.ok(guardedCost.length >= 1, 'Expected per-space arvnResources spend guarded by __freeOperation');
+    });
+
+    it('AC4/AC5/AC6/AC7/AC10: selects ARVN+enemy spaces with LimOp max 1 and ARVN damage branches', () => {
+      const parsed = parseAssaultArvnProfile();
+      const selectSpaces = parsed.stages[0];
+      assert.equal(selectSpaces.stage, 'select-spaces');
+
+      const limOpIf = findDeep(selectSpaces.effects, (node: any) =>
+        node?.if?.when?.op === '==' &&
+        node?.if?.when?.left?.ref === 'binding' &&
+        node?.if?.when?.left?.name === '__actionClass' &&
+        node?.if?.when?.right === 'limitedOperation',
+      );
+      assert.ok(limOpIf.length >= 1, 'Expected LimOp branch for __actionClass == limitedOperation');
+      const limOpChooseN = findDeep(limOpIf[0].if.then, (node: any) => node?.chooseN?.max === 1);
+      assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
+
+      const arvnCubeFilter = findDeep(selectSpaces.effects, (node: any) =>
+        node?.op === '>' &&
+        node?.left?.aggregate?.query?.filter?.some((f: any) => f.prop === 'faction' && f.eq === 'ARVN') &&
+        node?.left?.aggregate?.query?.filter?.some((f: any) => f.prop === 'type' && f.op === 'in'),
+      );
+      assert.ok(arvnCubeFilter.length >= 2, 'Expected ARVN cube filter in both selection branches');
+
+      const enemyFilter = findDeep(selectSpaces.effects, (node: any) =>
+        node?.op === '>' &&
+        node?.left?.aggregate?.query?.filter?.some(
+          (f: any) =>
+            f.prop === 'faction' &&
+            f.op === 'in' &&
+            Array.isArray(f.value) &&
+            f.value.includes('NVA') &&
+            f.value.includes('VC'),
+        ),
+      );
+      assert.ok(enemyFilter.length >= 2, 'Expected enemy filter in both selection branches');
+
+      const resolvePerSpace = parsed.stages[1];
+      assert.equal(resolvePerSpace.stage, 'resolve-per-space');
+      const provinceTroopsOnly = findDeep(resolvePerSpace.effects, (node: any) =>
+        node?.if?.when?.op === '==' &&
+        node?.if?.when?.left?.ref === 'binding' &&
+        node?.if?.when?.left?.name === '$isProvince' &&
+        node?.if?.then?.aggregate?.query?.filter?.some((f: any) => f.prop === 'type' && f.eq === 'troops'),
+      );
+      assert.ok(provinceTroopsOnly.length >= 1, 'Expected province branch to count ARVN troops only');
+
+      const cityLocCubes = findDeep(resolvePerSpace.effects, (node: any) =>
+        node?.if?.else?.aggregate?.query?.filter?.some((f: any) => f.prop === 'type' && f.op === 'in'),
+      );
+      assert.ok(cityLocCubes.length >= 1, 'Expected city/LoC branch to count ARVN troops+police');
+
+      const highlandThird = findDeep(resolvePerSpace.effects, (node: any) =>
+        node?.if?.when?.op === 'zonePropIncludes' &&
+        node?.if?.when?.value === 'highland' &&
+        node?.if?.then?.op === '/' &&
+        node?.if?.then?.right === 3,
+      );
+      assert.ok(highlandThird.length >= 1, 'Expected highland floor(arvnCubes/3) branch');
+
+      const nonHighlandHalf = findDeep(resolvePerSpace.effects, (node: any) =>
+        node?.if?.else?.op === '/' && node?.if?.else?.right === 2,
+      );
+      assert.ok(nonHighlandHalf.length >= 1, 'Expected non-highland floor(arvnCubes/2) branch');
+
+      const macroCall = findDeep(resolvePerSpace.effects, (node: any) => node?.macro === 'coin-assault-removal-order');
+      assert.ok(macroCall.length >= 1, 'Expected coin-assault-removal-order usage');
+    });
+
+    it('AC4/AC9: runtime province assault excludes police from damage and free operation skips cost', () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const def = compiled.gameDef!;
+      const start = initialState(def, 96, 2);
+      const space = 'quang-tin-quang-ngai:none';
+
+      const modifiedStart: GameState = {
+        ...start,
+        activePlayer: asPlayerId(1),
+        zones: {
+          ...start.zones,
+          [space]: [
+            { id: asTokenId('arvn-assault-prov-t-1'), type: 'troops', props: { faction: 'ARVN', type: 'troops' } },
+            { id: asTokenId('arvn-assault-prov-p-1'), type: 'police', props: { faction: 'ARVN', type: 'police' } },
+            { id: asTokenId('arvn-assault-prov-p-2'), type: 'police', props: { faction: 'ARVN', type: 'police' } },
+            {
+              id: asTokenId('arvn-assault-prov-enemy-1'),
+              type: 'guerrilla',
+              props: { faction: 'NVA', type: 'guerrilla', activity: 'active' },
+            },
+          ],
+        },
+      };
+
+      const template = legalMoves(def, modifiedStart).find((move) => move.actionId === asActionId('assault'));
+      assert.ok(template, 'Expected ARVN assault template move');
+      const selected = completeProfileMoveDeterministically(
+        { ...template!, freeOperation: true, actionClass: 'limitedOperation' },
+        (request) => {
+          if (request.name === 'targetSpaces') return [space];
+          return pickDeterministicValue(request);
+        },
+        def,
+        modifiedStart,
+      );
+
+      const beforeArvnResources = modifiedStart.globalVars.arvnResources;
+      const final = applyMove(def, modifiedStart, selected).state;
+      assert.equal(final.globalVars.arvnResources, beforeArvnResources, 'Free ARVN Assault should skip per-space cost');
+      assert.equal(
+        countFactionTokensInSpace(final, space, ['NVA', 'VC']),
+        1,
+        'Province damage should use troops only; 1 troop => floor(1/2)=0 removals',
+      );
+    });
+
+    it('AC5/AC6/AC7/AC8: runtime city/highland formulas and aid-on-base removal apply', () => {
+      const { compiled } = compileProductionSpec();
+      assert.notEqual(compiled.gameDef, null);
+      const def = compiled.gameDef!;
+      const start = initialState(def, 97, 2);
+      const citySpace = 'hue:none';
+      const highlandSpace = 'quang-nam:none';
+
+      const modifiedStart: GameState = {
+        ...start,
+        activePlayer: asPlayerId(1),
+        zones: {
+          ...start.zones,
+          [citySpace]: [
+            { id: asTokenId('arvn-assault-city-t-1'), type: 'troops', props: { faction: 'ARVN', type: 'troops' } },
+            { id: asTokenId('arvn-assault-city-p-1'), type: 'police', props: { faction: 'ARVN', type: 'police' } },
+            { id: asTokenId('arvn-assault-city-p-2'), type: 'police', props: { faction: 'ARVN', type: 'police' } },
+            { id: asTokenId('arvn-assault-city-p-3'), type: 'police', props: { faction: 'ARVN', type: 'police' } },
+            {
+              id: asTokenId('arvn-assault-city-enemy-g'),
+              type: 'guerrilla',
+              props: { faction: 'NVA', type: 'guerrilla', activity: 'active' },
+            },
+            {
+              id: asTokenId('arvn-assault-city-enemy-b'),
+              type: 'base',
+              props: { faction: 'VC', type: 'base', tunnel: 'untunneled' },
+            },
+          ],
+          [highlandSpace]: [
+            { id: asTokenId('arvn-assault-hi-t-1'), type: 'troops', props: { faction: 'ARVN', type: 'troops' } },
+            { id: asTokenId('arvn-assault-hi-t-2'), type: 'troops', props: { faction: 'ARVN', type: 'troops' } },
+            { id: asTokenId('arvn-assault-hi-t-3'), type: 'troops', props: { faction: 'ARVN', type: 'troops' } },
+            { id: asTokenId('arvn-assault-hi-p-1'), type: 'police', props: { faction: 'ARVN', type: 'police' } },
+            {
+              id: asTokenId('arvn-assault-hi-enemy-1'),
+              type: 'guerrilla',
+              props: { faction: 'NVA', type: 'guerrilla', activity: 'active' },
+            },
+            {
+              id: asTokenId('arvn-assault-hi-enemy-2'),
+              type: 'guerrilla',
+              props: { faction: 'VC', type: 'guerrilla', activity: 'active' },
+            },
+          ],
+        },
+      };
+
+      const template = legalMoves(def, modifiedStart).find((move) => move.actionId === asActionId('assault'));
+      assert.ok(template, 'Expected ARVN assault template move');
+      const selected = completeProfileMoveDeterministically(
+        { ...template!, actionClass: 'operation' },
+        (request) => {
+          if (request.name === 'targetSpaces') return [citySpace, highlandSpace];
+          return pickDeterministicValue(request);
+        },
+        def,
+        modifiedStart,
+      );
+
+      const beforeAid = modifiedStart.globalVars.aid ?? 0;
+      const beforeArvnResources = modifiedStart.globalVars.arvnResources ?? 0;
+      const final = applyMove(def, modifiedStart, selected).state;
+
+      assert.equal(final.globalVars.arvnResources, beforeArvnResources - 6, 'Expected -3 ARVN Resources per selected space');
+      assert.equal(
+        countFactionTokensInSpace(final, citySpace, ['NVA', 'VC']),
+        0,
+        'City should count troops+police: floor(4/2)=2 removes guerrilla then base',
+      );
+      assert.equal(
+        countFactionTokensInSpace(final, highlandSpace, ['NVA', 'VC']),
+        1,
+        'Highland should use floor(arvnCubes/3)=1 removal',
+      );
+      assert.equal(final.globalVars.aid, beforeAid + 6, 'Expected +6 Aid when one insurgent base is removed');
+    });
+  });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
   describe('applicability dispatch for train profiles', () => {
     it('compiles applicability conditions for both train profiles', () => {
       const { compiled } = compileProductionSpec();
@@ -1326,21 +1501,6 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(profile, 'patrol-us-profile must exist in parsed doc');
       return profile;
-    };
-
-    const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => {
-      const results: any[] = [];
-      const walk = (node: any): void => {
-        if (node === null || node === undefined) return;
-        if (predicate(node)) results.push(node);
-        if (Array.isArray(node)) {
-          for (const item of node) walk(item);
-        } else if (typeof node === 'object') {
-          for (const value of Object.values(node)) walk(value);
-        }
-      };
-      walk(obj);
-      return results;
     };
 
     it('AC1: compiles patrol-us-profile without diagnostics', () => {
@@ -1498,21 +1658,6 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(profile, 'patrol-arvn-profile must exist in parsed doc');
       return profile;
-    };
-
-    const findDeep = (obj: any, predicate: (node: any) => boolean): any[] => {
-      const results: any[] = [];
-      const walk = (node: any): void => {
-        if (node === null || node === undefined) return;
-        if (predicate(node)) results.push(node);
-        if (Array.isArray(node)) {
-          for (const item of node) walk(item);
-        } else if (typeof node === 'object') {
-          for (const value of Object.values(node)) walk(value);
-        }
-      };
-      walk(obj);
-      return results;
     };
 
     it('AC1: compiles patrol-arvn-profile without diagnostics', () => {

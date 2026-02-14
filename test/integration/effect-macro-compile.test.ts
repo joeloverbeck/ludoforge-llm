@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   compileGameSpecToGameDef,
   createEmptyGameSpecDoc,
+  parseGameSpec,
   type EffectMacroDef,
 } from '../../src/cnl/index.js';
 
@@ -220,6 +221,74 @@ describe('effect macro → compile pipeline integration', () => {
       .filter((d) => d.code === 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION')
       .map((d) => d.path);
     assert.deepEqual(violationPaths, ['setup[0].args.faction', 'setup[0].args.tier']);
+  });
+
+  it('nested macro constraint failures expose deterministic invocation and declaration provenance with source-map spans', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: macro-provenance-test',
+      '  players: { min: 2, max: 2 }',
+      'globalVars:',
+      '  - name: score',
+      '    type: int',
+      '    init: 0',
+      'zones:',
+      '  - id: deck',
+      '    owner: none',
+      '    visibility: hidden',
+      '    ordering: stack',
+      'turnStructure:',
+      '  phases: [{ id: main }]',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      'effectMacros:',
+      '  - id: inner',
+      '    params:',
+      '      - name: faction',
+      '        type: { kind: enum, values: [NVA, VC] }',
+      '    exports: []',
+      '    effects:',
+      '      - setVar: { scope: global, var: score, value: { param: faction } }',
+      '  - id: outer',
+      '    params: []',
+      '    exports: []',
+      '    effects:',
+      '      - macro: inner',
+      '        args: { faction: US }',
+      'setup:',
+      '  - macro: outer',
+      '    args: {}',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown, { sourceId: 'macro-provenance.md' });
+    const first = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const second = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    const firstViolation = first.diagnostics.find((d) => d.code === 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION');
+    const secondViolation = second.diagnostics.find((d) => d.code === 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION');
+
+    assert.ok(firstViolation, 'Expected macro arg constraint violation');
+    assert.ok(secondViolation, 'Expected macro arg constraint violation on repeat compile');
+    assert.equal(firstViolation?.macroOrigin?.invocation?.path, 'setup[0][macro:outer][0]');
+    assert.equal(firstViolation?.macroOrigin?.declaration?.path, 'effectMacros[0].params[0]');
+    assert.equal(firstViolation?.macroOrigin?.expanded?.path, 'setup[0][macro:outer][0].args.faction');
+    assert.equal(firstViolation?.macroOrigin?.invocation?.span?.sourceId, 'macro-provenance.md');
+    assert.equal(firstViolation?.macroOrigin?.declaration?.span?.sourceId, 'macro-provenance.md');
+    assert.equal(firstViolation?.macroOrigin?.invocation?.span?.blockIndex, 0);
+    assert.equal(firstViolation?.macroOrigin?.declaration?.span?.blockIndex, 0);
+    assert.deepEqual(firstViolation?.macroOrigin, secondViolation?.macroOrigin);
   });
 
   it('binding-aware macro param kinds rewrite nested macro args without heuristic rewrites', () => {

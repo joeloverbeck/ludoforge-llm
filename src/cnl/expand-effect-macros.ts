@@ -44,6 +44,7 @@ interface IndexedMacroParam {
 
 interface IndexedMacroDef {
   readonly def: EffectMacroDef;
+  readonly declarationPath: string;
   readonly params: readonly IndexedMacroParam[];
   readonly declaredBindings: ReadonlySet<string>;
   readonly exportedBindings: ReadonlySet<string>;
@@ -83,6 +84,34 @@ function isMacroInvocation(node: unknown): node is { readonly macro: string; rea
     'macro' in node &&
     typeof (node as Record<string, unknown>).macro === 'string'
   );
+}
+
+function macroOrigin(
+  invocationPath: string | undefined,
+  declarationPath: string | undefined,
+  expandedPath?: string,
+): Diagnostic['macroOrigin'] {
+  if (invocationPath === undefined && declarationPath === undefined && expandedPath === undefined) {
+    return undefined;
+  }
+
+  return {
+    ...(invocationPath === undefined ? {} : { invocation: { path: invocationPath } }),
+    ...(declarationPath === undefined ? {} : { declaration: { path: declarationPath } }),
+    ...(expandedPath === undefined ? {} : { expanded: { path: expandedPath } }),
+  };
+}
+
+function macroOriginFields(
+  invocationPath: string | undefined,
+  declarationPath: string | undefined,
+  expandedPath?: string,
+): Pick<Diagnostic, 'macroOrigin'> | Record<string, never> {
+  const origin = macroOrigin(invocationPath, declarationPath, expandedPath);
+  if (origin === undefined) {
+    return {};
+  }
+  return { macroOrigin: origin };
 }
 
 function substituteParams(
@@ -140,11 +169,12 @@ function isStringMacroParamType(
 
 function normalizeMacroParamConstraint(
   macroId: string,
+  macroPath: string,
   paramIndex: number,
   type: unknown,
   diagnostics: Diagnostic[],
 ): NormalizedMacroParamConstraint | null {
-  const typePath = `effectMacros.${macroId}.params.${paramIndex}.type`;
+  const typePath = `${macroPath}.params[${paramIndex}].type`;
   if (typeof type === 'string') {
     if (!isStringMacroParamType(type)) {
       diagnostics.push({
@@ -274,6 +304,7 @@ function argumentSatisfiesConstraint(value: unknown, constraint: NormalizedMacro
 
 function normalizeMacroParams(
   macroDef: EffectMacroDef,
+  macroPath: string,
   diagnostics: Diagnostic[],
 ): readonly IndexedMacroParam[] {
   const normalized: IndexedMacroParam[] = [];
@@ -281,7 +312,7 @@ function normalizeMacroParams(
 
   for (const [paramIndex, param] of macroDef.params.entries()) {
     const name = param.name;
-    const basePath = `effectMacros.${macroDef.id}.params.${paramIndex}`;
+    const basePath = `${macroPath}.params[${paramIndex}]`;
     if (typeof name !== 'string' || name.trim() === '') {
       diagnostics.push({
         code: 'EFFECT_MACRO_PARAM_NAME_INVALID',
@@ -303,7 +334,7 @@ function normalizeMacroParams(
     }
     seenNames.add(name);
 
-    const constraint = normalizeMacroParamConstraint(macroDef.id, paramIndex, param.type, diagnostics);
+    const constraint = normalizeMacroParamConstraint(macroDef.id, macroPath, paramIndex, param.type, diagnostics);
     if (constraint === null) {
       continue;
     }
@@ -343,12 +374,14 @@ function validateMacroArgConstraints(
       severity: 'error',
       message: `Macro "${macroId}" arg "${param.name}" violates constraint ${describeConstraint(param.constraint)} (received ${describeArgumentKind(value)}).`,
       suggestion: `Update the arg value to satisfy "${param.name}" as declared at ${param.declarationPath}.`,
+      ...macroOriginFields(invocationPath, param.declarationPath, `${invocationPath}.args.${param.name}`),
     });
     diagnostics.push({
       code: 'EFFECT_MACRO_ARG_CONSTRAINT_DECLARATION',
       path: param.declarationPath,
       severity: 'info',
       message: `Parameter "${param.name}" constraint is declared here.`,
+      ...macroOriginFields(invocationPath, param.declarationPath),
     });
   }
 
@@ -553,6 +586,7 @@ function validateInvocationIntegrity(
   effects: readonly GameSpecEffect[],
   localBindings: ReadonlySet<string>,
   macroId: string,
+  declarationPath: string,
   invocationPath: string,
   diagnostics: Diagnostic[],
 ): boolean {
@@ -577,6 +611,7 @@ function validateInvocationIntegrity(
         severity: 'error',
         message: `Macro "${macroId}" leaked non-exported local binding "${site.value}" into expanded output.`,
         suggestion: 'Declare binding-bearing params with explicit binding-aware kinds and/or export intended public binders.',
+        ...macroOriginFields(invocationPath, declarationPath, site.path),
       });
     }
 
@@ -595,6 +630,7 @@ function validateInvocationIntegrity(
         severity: 'error',
         message: `Macro "${macroId}" left unresolved local binding template "{${placeholderName}}" in expanded output.`,
         suggestion: 'Use binding-aware param kinds so local bindings are rewritten deterministically during expansion.',
+        ...macroOriginFields(invocationPath, declarationPath, site.path),
       });
     }
   }
@@ -975,6 +1011,7 @@ function expandEffect(
       path,
       severity: 'error',
       message: `Unknown effect macro "${macroId}".`,
+      ...macroOriginFields(path, undefined, path),
     });
     return [];
   }
@@ -985,6 +1022,7 @@ function expandEffect(
       path,
       severity: 'error',
       message: `Circular macro expansion detected: ${[...visitedStack, macroId].join(' → ')}.`,
+      ...macroOriginFields(path, indexedMacro.declarationPath, path),
     });
     return [];
   }
@@ -995,6 +1033,7 @@ function expandEffect(
       path,
       severity: 'error',
       message: `Macro expansion depth exceeds maximum (${MAX_EXPANSION_DEPTH}).`,
+      ...macroOriginFields(path, indexedMacro.declarationPath, path),
     });
     return [];
   }
@@ -1011,6 +1050,7 @@ function expandEffect(
       path,
       severity: 'error',
       message: `Macro "${macroId}" missing required args: ${missingParams.map((p) => p.name).join(', ')}.`,
+      ...macroOriginFields(path, indexedMacro.declarationPath, path),
     });
     return [];
   }
@@ -1022,6 +1062,7 @@ function expandEffect(
       path,
       severity: 'error',
       message: `Macro "${macroId}" received unexpected args: ${extraArgs.join(', ')}.`,
+      ...macroOriginFields(path, indexedMacro.declarationPath, path),
     });
     return [];
   }
@@ -1066,6 +1107,7 @@ function expandEffect(
     expanded,
     nonExportedLocalBindings,
     macroId,
+    indexedMacro.declarationPath,
     `${path}[macro:${macroId}]`,
     diagnostics,
   );
@@ -1127,11 +1169,12 @@ function buildMacroIndex(
   diagnostics: Diagnostic[],
 ): MacroIndex {
   const byId = new Map<string, IndexedMacroDef>();
-  for (const macro of macros) {
+  for (const [macroIndex, macro] of macros.entries()) {
+    const declarationPath = `effectMacros[${macroIndex}]`;
     if (byId.has(macro.id)) {
       diagnostics.push({
         code: 'EFFECT_MACRO_DUPLICATE_ID',
-        path: `effectMacros.${macro.id}`,
+        path: `${declarationPath}.id`,
         severity: 'error',
         message: `Duplicate effect macro id "${macro.id}".`,
       });
@@ -1139,13 +1182,14 @@ function buildMacroIndex(
     }
     const declaredBindings = new Set<string>();
     for (let effectIndex = 0; effectIndex < macro.effects.length; effectIndex += 1) {
-      collectDeclaredBinders(macro.effects[effectIndex], `effectMacros.${macro.id}.effects.${effectIndex}`, declaredBindings, diagnostics);
+      collectDeclaredBinders(macro.effects[effectIndex], `${declarationPath}.effects[${effectIndex}]`, declaredBindings, diagnostics);
     }
     const exportedBindings = normalizeExportedBindings(macro, declaredBindings, diagnostics);
 
     byId.set(macro.id, {
       def: macro,
-      params: normalizeMacroParams(macro, diagnostics),
+      declarationPath,
+      params: normalizeMacroParams(macro, declarationPath, diagnostics),
       declaredBindings,
       exportedBindings,
     });

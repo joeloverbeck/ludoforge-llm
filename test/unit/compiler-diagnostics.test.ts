@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import type { Diagnostic } from '../../src/kernel/diagnostics.js';
 import type { GameSpecSourceMap } from '../../src/cnl/source-map.js';
 import {
+  annotateDiagnosticWithSourceSpans,
   capDiagnostics,
   dedupeDiagnostics,
   getDiagnosticSeverityRank,
@@ -33,6 +34,9 @@ function diagnostic(overrides: Partial<Diagnostic>): Diagnostic {
   }
   if (overrides.entityId !== undefined) {
     result = { ...result, entityId: overrides.entityId };
+  }
+  if (overrides.macroOrigin !== undefined) {
+    result = { ...result, macroOrigin: overrides.macroOrigin };
   }
 
   return result;
@@ -152,6 +156,100 @@ describe('compiler diagnostics helpers', () => {
 
     const deduped = dedupeDiagnostics([first, second]);
     assert.deepEqual(deduped, [first, second]);
+  });
+
+  it('does not dedupe diagnostics that only differ by macro provenance', () => {
+    const first = diagnostic({
+      code: 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION',
+      path: 'setup[0].args.faction',
+      message: 'constraint violation',
+      ...( {
+        macroOrigin: {
+          invocation: { path: 'setup[0]' },
+          declaration: { path: 'effectMacros[0].params[0]' },
+          expanded: { path: 'setup[0].args.faction' },
+        },
+      } as const),
+    });
+    const second = diagnostic({
+      code: 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION',
+      path: 'setup[0].args.faction',
+      message: 'constraint violation',
+      ...( {
+        macroOrigin: {
+          invocation: { path: 'setup[1]' },
+          declaration: { path: 'effectMacros[0].params[0]' },
+          expanded: { path: 'setup[0].args.faction' },
+        },
+      } as const),
+    });
+
+    const deduped = dedupeDiagnostics([first, second]);
+    assert.deepEqual(deduped, [first, second]);
+  });
+
+  it('annotates macro provenance pointers with source-map spans', () => {
+    const sourceMap: GameSpecSourceMap = {
+      byPath: {
+        'setup[0]': {
+          blockIndex: 0,
+          markdownLineStart: 10,
+          markdownColStart: 1,
+          markdownLineEnd: 10,
+          markdownColEnd: 20,
+        },
+        'effectMacros[0].params': {
+          blockIndex: 0,
+          markdownLineStart: 2,
+          markdownColStart: 1,
+          markdownLineEnd: 2,
+          markdownColEnd: 30,
+        },
+      },
+    };
+
+    const annotated = annotateDiagnosticWithSourceSpans(
+      diagnostic({
+        code: 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION',
+        path: 'setup[0].args.faction',
+        ...( {
+          macroOrigin: {
+            invocation: { path: 'setup[0]' },
+            declaration: { path: 'effectMacros[0].params[0]' },
+            expanded: { path: 'setup[0].args.faction' },
+          },
+        } as const),
+      }),
+      sourceMap,
+    );
+
+    assert.equal(annotated.macroOrigin?.invocation?.span?.markdownLineStart, 10);
+    assert.equal(annotated.macroOrigin?.declaration?.span?.markdownLineStart, 2);
+    assert.equal(annotated.macroOrigin?.expanded?.span?.markdownLineStart, 10);
+  });
+
+  it('resolves macro-expanded diagnostic paths to nearest source-mapped parent path', () => {
+    const sourceMap: GameSpecSourceMap = {
+      byPath: {
+        'setup[0]': {
+          blockIndex: 0,
+          markdownLineStart: 12,
+          markdownColStart: 1,
+          markdownLineEnd: 12,
+          markdownColEnd: 10,
+        },
+      },
+    };
+
+    const key = getDiagnosticSortKey(
+      diagnostic({
+        path: 'setup[0][macro:outer][0].args.faction',
+        code: 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION',
+      }),
+      sourceMap,
+    );
+
+    assert.equal(key.sourceOrder < Number.POSITIVE_INFINITY, true);
   });
 
   it('caps diagnostics to maxDiagnosticCount', () => {

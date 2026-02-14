@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { GameSpecSourceMap, SourceSpan } from './source-map.js';
+import { compareSourceSpans, resolveSpanForDiagnosticPath } from './diagnostic-source-map.js';
+import type { GameSpecSourceMap } from './source-map.js';
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
 
@@ -246,47 +247,6 @@ export function compareDiagnostics(left: Diagnostic, right: Diagnostic, sourceMa
   }
 
   return left.code.localeCompare(right.code);
-}
-
-function resolveSpanForDiagnosticPath(path: string, sourceMap?: GameSpecSourceMap): SourceSpan | undefined {
-  if (sourceMap === undefined) {
-    return undefined;
-  }
-
-  const direct = sourceMap.byPath[path];
-  if (direct !== undefined) {
-    return direct;
-  }
-
-  const withoutDocPrefix = path.startsWith('doc.') ? path.slice(4) : path;
-  const bracketPath = withoutDocPrefix.replace(/\.([0-9]+)(?=\.|$)/g, '[$1]');
-  return sourceMap.byPath[bracketPath];
-}
-
-function compareSourceSpans(left?: SourceSpan, right?: SourceSpan): number {
-  if (left === undefined && right === undefined) {
-    return 0;
-  }
-  if (left === undefined) {
-    return 1;
-  }
-  if (right === undefined) {
-    return -1;
-  }
-
-  if (left.blockIndex !== right.blockIndex) {
-    return left.blockIndex - right.blockIndex;
-  }
-  if (left.markdownLineStart !== right.markdownLineStart) {
-    return left.markdownLineStart - right.markdownLineStart;
-  }
-  if (left.markdownColStart !== right.markdownColStart) {
-    return left.markdownColStart - right.markdownColStart;
-  }
-  if (left.markdownLineEnd !== right.markdownLineEnd) {
-    return left.markdownLineEnd - right.markdownLineEnd;
-  }
-  return left.markdownColEnd - right.markdownColEnd;
 }
 
 export function normalizeIdentifier(value: string): string {

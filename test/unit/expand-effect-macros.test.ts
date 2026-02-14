@@ -378,8 +378,13 @@ describe('expandEffectMacros', () => {
     const declaration = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_ARG_CONSTRAINT_DECLARATION');
     assert.ok(violation !== undefined);
     assert.equal(violation?.path, 'setup[0].args.faction');
+    assert.equal(violation?.macroOrigin?.invocation?.path, 'setup[0]');
+    assert.equal(violation?.macroOrigin?.declaration?.path, 'effectMacros[0].params[0]');
+    assert.equal(violation?.macroOrigin?.expanded?.path, 'setup[0].args.faction');
     assert.ok(declaration !== undefined);
-    assert.equal(declaration?.path, 'effectMacros.typed.params.0');
+    assert.equal(declaration?.path, 'effectMacros[0].params[0]');
+    assert.equal(declaration?.macroOrigin?.invocation?.path, 'setup[0]');
+    assert.equal(declaration?.macroOrigin?.declaration?.path, 'effectMacros[0].params[0]');
     assert.deepEqual(result.doc.setup, []);
   });
 
@@ -456,7 +461,7 @@ describe('expandEffectMacros', () => {
     assert.ok(violation !== undefined);
     assert.equal(violation?.path, 'setup[0].args.name');
     assert.ok(declaration !== undefined);
-    assert.equal(declaration?.path, 'effectMacros.typed-binding.params.0');
+    assert.equal(declaration?.path, 'effectMacros[0].params[0]');
     assert.deepEqual(result.doc.setup, []);
   });
 
@@ -873,7 +878,7 @@ describe('expandEffectMacros', () => {
     const result = expandEffectMacros(doc);
     assert.ok(result.diagnostics.some((d) => d.code === 'EFFECT_MACRO_BINDING_DECLARATION_INVALID'));
     const diag = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_BINDING_DECLARATION_INVALID');
-    assert.equal(diag?.path, 'effectMacros.dynamic-bind.effects.0.chooseOne.bind');
+    assert.equal(diag?.path, 'effectMacros[0].effects[0].chooseOne.bind');
   });
 
   it('rejects non-exported local binder leakage from nested macro string params', () => {
@@ -929,6 +934,9 @@ describe('expandEffectMacros', () => {
     const unresolved = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_HYGIENE_UNRESOLVED_TEMPLATE');
     assert.ok(unresolved !== undefined);
     assert.match(unresolved?.path ?? '', /setup\[0\]\[macro:outer\]/);
+    assert.equal(unresolved?.macroOrigin?.invocation?.path, 'setup[0][macro:outer]');
+    assert.equal(unresolved?.macroOrigin?.declaration?.path, 'effectMacros[1]');
+    assert.equal(unresolved?.macroOrigin?.expanded?.path, unresolved?.path);
     assert.deepEqual(result.doc.setup, []);
   });
 });

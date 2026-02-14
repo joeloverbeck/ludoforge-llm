@@ -4,7 +4,7 @@ import { validateGameDef } from '../kernel/validate-gamedef.js';
 import { materializeZoneDefs } from './compile-zones.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import type { GameSpecSourceMap } from './source-map.js';
-import { capDiagnostics, dedupeDiagnostics, sortDiagnosticsDeterministic } from './compiler-diagnostics.js';
+import { annotateDiagnosticWithSourceSpans, capDiagnostics, dedupeDiagnostics, sortDiagnosticsDeterministic } from './compiler-diagnostics.js';
 import { expandEffectMacros } from './expand-effect-macros.js';
 import {
   lowerActions,
@@ -373,7 +373,10 @@ function finalizeDiagnostics(
   sourceMap: GameSpecSourceMap | undefined,
   maxDiagnosticCount: number,
 ): readonly Diagnostic[] {
-  const sorted = sortDiagnosticsDeterministic(diagnostics, sourceMap);
+  const sourceAnnotated = sourceMap === undefined
+    ? diagnostics
+    : diagnostics.map((diagnostic) => annotateDiagnosticWithSourceSpans(diagnostic, sourceMap));
+  const sorted = sortDiagnosticsDeterministic(sourceAnnotated, sourceMap);
   const deduped = dedupeDiagnostics(sorted);
   return capDiagnostics(deduped, maxDiagnosticCount);
 }

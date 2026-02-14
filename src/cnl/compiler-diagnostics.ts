@@ -1,5 +1,12 @@
-import type { Diagnostic, DiagnosticSeverity } from '../kernel/diagnostics.js';
-import type { GameSpecSourceMap, SourceSpan } from './source-map.js';
+import type {
+  Diagnostic,
+  DiagnosticMacroOrigin,
+  DiagnosticSeverity,
+  DiagnosticSourcePointer,
+  DiagnosticSourceSpan,
+} from '../kernel/diagnostics.js';
+import { resolveSpanForDiagnosticPath } from './diagnostic-source-map.js';
+import type { GameSpecSourceMap } from './source-map.js';
 
 const DIAGNOSTIC_SEVERITY_RANK: Readonly<Record<DiagnosticSeverity, number>> = {
   error: 0,
@@ -111,7 +118,97 @@ function serializeDiagnosticForDeduping(diagnostic: Diagnostic): string {
     alternatives,
     diagnostic.assetPath ?? '',
     diagnostic.entityId ?? '',
+    serializeMacroOriginForDeduping(diagnostic.macroOrigin),
   ].join('\u001e');
+}
+
+function serializeMacroOriginForDeduping(macroOrigin: Diagnostic['macroOrigin']): string {
+  if (macroOrigin === undefined) {
+    return '';
+  }
+
+  return [
+    serializeSourcePointerForDeduping(macroOrigin.invocation),
+    serializeSourcePointerForDeduping(macroOrigin.declaration),
+    serializeSourcePointerForDeduping(macroOrigin.expanded),
+  ].join('\u001d');
+}
+
+function serializeSourcePointerForDeduping(pointer: DiagnosticSourcePointer | undefined): string {
+  if (pointer === undefined) {
+    return '';
+  }
+
+  return [pointer.path, serializeSourceSpanForDeduping(pointer.span)].join('\u001c');
+}
+
+function serializeSourceSpanForDeduping(span: DiagnosticSourceSpan | undefined): string {
+  if (span === undefined) {
+    return '';
+  }
+
+  return [
+    span.sourceId ?? '',
+    String(span.blockIndex),
+    String(span.markdownLineStart),
+    String(span.markdownColStart),
+    String(span.markdownLineEnd),
+    String(span.markdownColEnd),
+  ].join('\u001b');
+}
+
+export function annotateDiagnosticWithSourceSpans(
+  diagnostic: Diagnostic,
+  sourceMap?: GameSpecSourceMap,
+): Diagnostic {
+  if (sourceMap === undefined) {
+    return diagnostic;
+  }
+
+  const origin = diagnostic.macroOrigin;
+  if (origin === undefined) {
+    return diagnostic;
+  }
+
+  const annotatedOrigin = annotateMacroOrigin(origin, sourceMap);
+  if (annotatedOrigin === origin) {
+    return diagnostic;
+  }
+
+  return {
+    ...diagnostic,
+    macroOrigin: annotatedOrigin,
+  };
+}
+
+function annotateMacroOrigin(origin: DiagnosticMacroOrigin, sourceMap: GameSpecSourceMap): DiagnosticMacroOrigin {
+  const invocation = annotateSourcePointer(origin.invocation, sourceMap);
+  const declaration = annotateSourcePointer(origin.declaration, sourceMap);
+  const expanded = annotateSourcePointer(origin.expanded, sourceMap);
+  if (invocation === origin.invocation && declaration === origin.declaration && expanded === origin.expanded) {
+    return origin;
+  }
+  return {
+    ...(invocation === undefined ? {} : { invocation }),
+    ...(declaration === undefined ? {} : { declaration }),
+    ...(expanded === undefined ? {} : { expanded }),
+  };
+}
+
+function annotateSourcePointer(
+  pointer: DiagnosticSourcePointer | undefined,
+  sourceMap: GameSpecSourceMap,
+): DiagnosticSourcePointer | undefined {
+  if (pointer === undefined || pointer.span !== undefined) {
+    return pointer;
+  }
+
+  const span = resolveSpanForDiagnosticPath(pointer.path, sourceMap);
+  if (span === undefined) {
+    return pointer;
+  }
+
+  return { ...pointer, span };
 }
 
 function resolveSourceOrder(path: string, sourceMap?: GameSpecSourceMap): number {
@@ -127,19 +224,4 @@ function resolveSourceOrder(path: string, sourceMap?: GameSpecSourceMap): number
     span.markdownLineEnd * 10 +
     span.markdownColEnd
   );
-}
-
-function resolveSpanForDiagnosticPath(path: string, sourceMap?: GameSpecSourceMap): SourceSpan | undefined {
-  if (sourceMap === undefined) {
-    return undefined;
-  }
-
-  const direct = sourceMap.byPath[path];
-  if (direct !== undefined) {
-    return direct;
-  }
-
-  const withoutDocPrefix = path.startsWith('doc.') ? path.slice(4) : path;
-  const bracketPath = withoutDocPrefix.replace(/\.([0-9]+)(?=\.|$)/g, '[$1]');
-  return sourceMap.byPath[bracketPath];
 }

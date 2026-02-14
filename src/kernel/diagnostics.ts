@@ -1,5 +1,25 @@
 export type DiagnosticSeverity = 'error' | 'warning' | 'info';
 
+export interface DiagnosticSourceSpan {
+  readonly sourceId?: string;
+  readonly blockIndex: number;
+  readonly markdownLineStart: number;
+  readonly markdownColStart: number;
+  readonly markdownLineEnd: number;
+  readonly markdownColEnd: number;
+}
+
+export interface DiagnosticSourcePointer {
+  readonly path: string;
+  readonly span?: DiagnosticSourceSpan;
+}
+
+export interface DiagnosticMacroOrigin {
+  readonly invocation?: DiagnosticSourcePointer;
+  readonly declaration?: DiagnosticSourcePointer;
+  readonly expanded?: DiagnosticSourcePointer;
+}
+
 export interface Diagnostic {
   readonly code: string;
   readonly path: string;
@@ -10,6 +30,7 @@ export interface Diagnostic {
   readonly alternatives?: readonly string[];
   readonly assetPath?: string;
   readonly entityId?: string;
+  readonly macroOrigin?: DiagnosticMacroOrigin;
 }
 
 export enum DegeneracyFlag {

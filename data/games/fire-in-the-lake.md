@@ -180,6 +180,45 @@ effectMacros:
                                         from: { param: space }
                                         to: { zoneExpr: { concat: ['available-', { param: attackerFaction }, ':none'] } }
 
+  # ── insurgent-ambush-remove-coin-piece ───────────────────────────────────
+  # Ambush removal helper: remove exactly 1 COIN piece with bases last.
+  # US removals route to Casualties; ARVN removals route to Available.
+  - id: insurgent-ambush-remove-coin-piece
+    params:
+      - { name: targetSpace, type: string }
+    effects:
+      - removeByPriority:
+          budget: 1
+          groups:
+            - bind: $target
+              over:
+                query: tokensInZone
+                zone: { param: targetSpace }
+                filter: [{ prop: faction, eq: 'US' }, { prop: type, op: neq, value: base }]
+              to:
+                zoneExpr: 'casualties-US:none'
+            - bind: $target
+              over:
+                query: tokensInZone
+                zone: { param: targetSpace }
+                filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: neq, value: base }]
+              to:
+                zoneExpr: 'available-ARVN:none'
+            - bind: $target
+              over:
+                query: tokensInZone
+                zone: { param: targetSpace }
+                filter: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }]
+              to:
+                zoneExpr: 'casualties-US:none'
+            - bind: $target
+              over:
+                query: tokensInZone
+                zone: { param: targetSpace }
+                filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: base }]
+              to:
+                zoneExpr: 'available-ARVN:none'
+
   # ── us-sa-remove-insurgents ────────────────────────────────────────────────
   # Shared US SA piece-removal ordering helper:
   # - troops before guerrillas before bases
@@ -4333,19 +4372,319 @@ actionPipelines:
               delta: 1
     atomicity: atomic
     linkedWindows: [arvn-special-window]
-  # ── NVA/VC special-activity stub profiles ──
+  # ── NVA/VC special-activity profiles ──
   - id: infiltrate-profile
     actionId: infiltrate
     accompanyingOps: [rally, march]
     legality: null
     costValidation: null
     costEffects: []
-    targeting:
-      select: upToN
-      max: 2
-      placementPolicy: baseThenGuerrilla
+    targeting: {}
     stages:
-      - stage: infiltrate-resolve
+      - stage: select-spaces
+        effects:
+          - chooseN:
+              bind: targetSpaces
+              options:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                    - op: or
+                      args:
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, eq: NVA }
+                                  - { prop: type, eq: base }
+                          right: 0
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, eq: NVA }
+                          right:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, eq: VC }
+              min: 1
+              max: 2
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - let:
+                    bind: $nvaBaseCount
+                    value:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInZone
+                          zone: $space
+                          filter:
+                            - { prop: faction, eq: NVA }
+                            - { prop: type, eq: base }
+                    in:
+                      - let:
+                          bind: $nvaPieceCount
+                          value:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $space
+                                filter:
+                                  - { prop: faction, eq: NVA }
+                          in:
+                            - let:
+                                bind: $vcPieceCount
+                                value:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $space
+                                      filter:
+                                        - { prop: faction, eq: VC }
+                                in:
+                                  - if:
+                                      when:
+                                        op: and
+                                        args:
+                                          - { op: '>', left: { ref: binding, name: $nvaBaseCount }, right: 0 }
+                                          - { op: '>', left: { ref: binding, name: $nvaPieceCount }, right: { ref: binding, name: $vcPieceCount } }
+                                      then:
+                                        - chooseOne:
+                                            bind: '$infiltrateMode@{$space}'
+                                            options: { query: enums, values: ['build-up', 'takeover'] }
+                                      else:
+                                        - if:
+                                            when: { op: '>', left: { ref: binding, name: $nvaBaseCount }, right: 0 }
+                                            then:
+                                              - chooseOne:
+                                                  bind: '$infiltrateMode@{$space}'
+                                                  options: { query: enums, values: ['build-up'] }
+                                            else:
+                                              - chooseOne:
+                                                  bind: '$infiltrateMode@{$space}'
+                                                  options: { query: enums, values: ['takeover'] }
+                                  - if:
+                                      when: { op: '==', left: { ref: binding, name: '$infiltrateMode@{$space}' }, right: 'build-up' }
+                                      then:
+                                        - let:
+                                            bind: $buildUpLimit
+                                            value: { op: '+', left: { ref: gvar, var: trail }, right: { ref: binding, name: $nvaBaseCount } }
+                                            in:
+                                              - macro: place-from-available-or-map
+                                                args:
+                                                  pieceType: troops
+                                                  faction: NVA
+                                                  targetSpace: $space
+                                                  maxPieces: { ref: binding, name: $buildUpLimit }
+                                        - chooseN:
+                                            bind: '$infiltrateGuerrillasToReplace@{$space}'
+                                            options:
+                                              query: tokensInZone
+                                              zone: $space
+                                              filter:
+                                                - { prop: faction, eq: NVA }
+                                                - { prop: type, eq: guerrilla }
+                                            min: 0
+                                            max: 99
+                                        - forEach:
+                                            bind: $replacingGuerrilla
+                                            over: { query: binding, name: '$infiltrateGuerrillasToReplace@{$space}' }
+                                            effects:
+                                              - moveToken:
+                                                  token: $replacingGuerrilla
+                                                  from: { zoneExpr: { ref: tokenZone, token: $replacingGuerrilla } }
+                                                  to: { zoneExpr: 'available-NVA:none' }
+                                              - macro: place-from-available-or-map
+                                                args:
+                                                  pieceType: troops
+                                                  faction: NVA
+                                                  targetSpace: $space
+                                                  maxPieces: 1
+                                  - if:
+                                      when: { op: '==', left: { ref: binding, name: '$infiltrateMode@{$space}' }, right: 'takeover' }
+                                      then:
+                                        - if:
+                                            when:
+                                              op: or
+                                              args:
+                                                - { op: '==', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeOpposition }
+                                                - { op: '==', left: { ref: markerState, space: $space, marker: supportOpposition }, right: passiveOpposition }
+                                            then:
+                                              - shiftMarker: { space: $space, marker: supportOpposition, delta: 1 }
+                                        - chooseOne:
+                                            bind: '$infiltrateTakeoverReplace@{$space}'
+                                            options: { query: enums, values: ['yes', 'no'] }
+                                        - if:
+                                            when: { op: '==', left: { ref: binding, name: '$infiltrateTakeoverReplace@{$space}' }, right: yes }
+                                            then:
+                                              - if:
+                                                  when:
+                                                    op: and
+                                                    args:
+                                                      - op: '>'
+                                                        left:
+                                                          aggregate:
+                                                            op: count
+                                                            query:
+                                                              query: tokensInZone
+                                                              zone: $space
+                                                              filter:
+                                                                - { prop: faction, eq: VC }
+                                                                - { prop: type, eq: guerrilla }
+                                                        right: 0
+                                                      - op: '>'
+                                                        left:
+                                                          aggregate:
+                                                            op: count
+                                                            query:
+                                                              query: tokensInZone
+                                                              zone: $space
+                                                              filter:
+                                                                - { prop: faction, eq: VC }
+                                                                - { prop: type, eq: base }
+                                                        right: 0
+                                                  then:
+                                                    - chooseOne:
+                                                        bind: '$infiltrateTakeoverTargetType@{$space}'
+                                                        options: { query: enums, values: [guerrilla, base] }
+                                                  else:
+                                                    - if:
+                                                        when:
+                                                          op: '>'
+                                                          left:
+                                                            aggregate:
+                                                              op: count
+                                                              query:
+                                                                query: tokensInZone
+                                                                zone: $space
+                                                                filter:
+                                                                  - { prop: faction, eq: VC }
+                                                                  - { prop: type, eq: guerrilla }
+                                                          right: 0
+                                                        then:
+                                                          - chooseOne:
+                                                              bind: '$infiltrateTakeoverTargetType@{$space}'
+                                                              options: { query: enums, values: [guerrilla] }
+                                                        else:
+                                                          - chooseOne:
+                                                              bind: '$infiltrateTakeoverTargetType@{$space}'
+                                                              options: { query: enums, values: [base] }
+                                              - if:
+                                                  when: { op: '==', left: { ref: binding, name: '$infiltrateTakeoverTargetType@{$space}' }, right: guerrilla }
+                                                  then:
+                                                    - forEach:
+                                                        bind: $vcGuerrillaTarget
+                                                        over:
+                                                          query: tokensInZone
+                                                          zone: $space
+                                                          filter:
+                                                            - { prop: faction, eq: VC }
+                                                            - { prop: type, eq: guerrilla }
+                                                        limit: 1
+                                                        effects:
+                                                          - moveToken:
+                                                              token: $vcGuerrillaTarget
+                                                              from: $space
+                                                              to: { zoneExpr: 'available-VC:none' }
+                                                    - macro: place-from-available-or-map
+                                                      args:
+                                                        pieceType: guerrilla
+                                                        faction: NVA
+                                                        targetSpace: $space
+                                                        maxPieces: 1
+                                              - if:
+                                                  when: { op: '==', left: { ref: binding, name: '$infiltrateTakeoverTargetType@{$space}' }, right: base }
+                                                  then:
+                                                    - if:
+                                                        when:
+                                                          op: '>'
+                                                          left:
+                                                            aggregate:
+                                                              op: count
+                                                              query:
+                                                                query: tokensInZone
+                                                                zone: $space
+                                                                filter:
+                                                                  - { prop: faction, eq: VC }
+                                                                  - { prop: type, eq: base }
+                                                                  - { prop: tunnel, eq: tunneled }
+                                                          right: 0
+                                                        then:
+                                                          - forEach:
+                                                              bind: $vcTunneledBaseTarget
+                                                              over:
+                                                                query: tokensInZone
+                                                                zone: $space
+                                                                filter:
+                                                                  - { prop: faction, eq: VC }
+                                                                  - { prop: type, eq: base }
+                                                                  - { prop: tunnel, eq: tunneled }
+                                                              limit: 1
+                                                              effects:
+                                                                - moveToken:
+                                                                    token: $vcTunneledBaseTarget
+                                                                    from: $space
+                                                                    to: { zoneExpr: 'available-VC:none' }
+                                                          - macro: place-from-available-or-map
+                                                            args:
+                                                              pieceType: base
+                                                              faction: NVA
+                                                              targetSpace: $space
+                                                              maxPieces: 1
+                                                          - forEach:
+                                                              bind: $nvaTunneledBase
+                                                              over:
+                                                                query: tokensInZone
+                                                                zone: $space
+                                                                filter:
+                                                                  - { prop: faction, eq: NVA }
+                                                                  - { prop: type, eq: base }
+                                                              limit: 1
+                                                              effects:
+                                                                - setTokenProp: { token: $nvaTunneledBase, prop: tunnel, value: tunneled }
+                                                        else:
+                                                          - forEach:
+                                                              bind: $vcUntunneledBaseTarget
+                                                              over:
+                                                                query: tokensInZone
+                                                                zone: $space
+                                                                filter:
+                                                                  - { prop: faction, eq: VC }
+                                                                  - { prop: type, eq: base }
+                                                              limit: 1
+                                                              effects:
+                                                                - moveToken:
+                                                                    token: $vcUntunneledBaseTarget
+                                                                    from: $space
+                                                                    to: { zoneExpr: 'available-VC:none' }
+                                                          - macro: place-from-available-or-map
+                                                            args:
+                                                              pieceType: base
+                                                              faction: NVA
+                                                              targetSpace: $space
+                                                              maxPieces: 1
+      - stage: infiltrate-telemetry
         effects:
           - addVar:
               scope: global
@@ -4359,11 +4698,96 @@ actionPipelines:
     legality: null
     costValidation: null
     costEffects: []
-    targeting:
-      select: allEligible
-      order: lexicographicSpaceId
+    targeting: {}
     stages:
-      - stage: bombard-resolve
+      - stage: select-spaces
+        effects:
+          - chooseN:
+              bind: targetSpaces
+              options:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                    - op: or
+                      args:
+                        - op: '>='
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, op: in, value: [US, ARVN] }
+                                  - { prop: type, eq: troops }
+                          right: 3
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, op: in, value: [US, ARVN] }
+                                  - { prop: type, eq: base }
+                          right: 0
+                    - op: or
+                      args:
+                        - op: '>='
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, eq: NVA }
+                                  - { prop: type, eq: troops }
+                          right: 3
+                        - op: '>='
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInAdjacentZones
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, eq: NVA }
+                                  - { prop: type, eq: troops }
+                          right: 3
+              min: 1
+              max: 2
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - removeByPriority:
+                    budget: 1
+                    groups:
+                      - bind: $usTroop
+                        over:
+                          query: tokensInZone
+                          zone: $space
+                          filter:
+                            - { prop: faction, eq: US }
+                            - { prop: type, eq: troops }
+                        to:
+                          zoneExpr: 'casualties-US:none'
+                      - bind: $arvnTroop
+                        over:
+                          query: tokensInZone
+                          zone: $space
+                          filter:
+                            - { prop: faction, eq: ARVN }
+                            - { prop: type, eq: troops }
+                        to:
+                          zoneExpr: 'available-ARVN:none'
+      - stage: bombard-telemetry
         effects:
           - addVar:
               scope: global
@@ -4374,16 +4798,170 @@ actionPipelines:
   - id: nva-ambush-profile
     actionId: ambushNva
     accompanyingOps: [march, attack]
+    compoundParamConstraints:
+      - relation: subset
+        operationParam: targetSpaces
+        specialActivityParam: targetSpaces
     legality: null
     costValidation: null
     costEffects: []
-    targeting:
-      select: exactlyN
-      count: 1
-      tieBreak: basesLast
-      removalPolicy: removeActiveGuerrillasBeforeBases
+    targeting: {}
     stages:
-      - stage: ambush-nva-resolve
+      - stage: select-spaces
+        effects:
+          - chooseN:
+              bind: targetSpaces
+              options:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: NVA }
+                              - { prop: type, eq: guerrilla }
+                              - { prop: activity, eq: underground }
+                      right: 0
+                    - op: or
+                      args:
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, op: in, value: [US, ARVN] }
+                          right: 0
+                        - op: and
+                          args:
+                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                            - op: '>'
+                              left:
+                                aggregate:
+                                  op: count
+                                  query:
+                                    query: tokensInAdjacentZones
+                                    zone: $zone
+                                    filter:
+                                      - { prop: faction, op: in, value: [US, ARVN] }
+                              right: 0
+              min: 1
+              max: 2
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - forEach:
+                    bind: $ambushingGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $space
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: guerrilla }
+                        - { prop: activity, eq: underground }
+                    limit: 1
+                    effects:
+                      - setTokenProp: { token: $ambushingGuerrilla, prop: activity, value: active }
+                - let:
+                    bind: $enemyInSpace
+                    value:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInZone
+                          zone: $space
+                          filter:
+                            - { prop: faction, op: in, value: [US, ARVN] }
+                    in:
+                      - let:
+                          bind: $enemyInAdjacent
+                          value:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInAdjacentZones
+                                zone: $space
+                                filter:
+                                  - { prop: faction, op: in, value: [US, ARVN] }
+                          in:
+                            - if:
+                                when: { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: loc }
+                                then:
+                                  - if:
+                                      when:
+                                        op: and
+                                        args:
+                                          - { op: '>', left: { ref: binding, name: $enemyInSpace }, right: 0 }
+                                          - { op: '>', left: { ref: binding, name: $enemyInAdjacent }, right: 0 }
+                                      then:
+                                        - chooseOne:
+                                            bind: '$nvaAmbushTargetMode@{$space}'
+                                            options: { query: enums, values: ['self', 'adjacent'] }
+                                      else:
+                                        - if:
+                                            when: { op: '>', left: { ref: binding, name: $enemyInAdjacent }, right: 0 }
+                                            then:
+                                              - chooseOne:
+                                                  bind: '$nvaAmbushTargetMode@{$space}'
+                                                  options: { query: enums, values: ['adjacent'] }
+                                            else:
+                                              - chooseOne:
+                                                  bind: '$nvaAmbushTargetMode@{$space}'
+                                                  options: { query: enums, values: ['self'] }
+                                else:
+                                  - chooseOne:
+                                      bind: '$nvaAmbushTargetMode@{$space}'
+                                      options: { query: enums, values: ['self'] }
+                            - if:
+                                when: { op: '==', left: { ref: binding, name: '$nvaAmbushTargetMode@{$space}' }, right: self }
+                                then:
+                                  - macro: insurgent-ambush-remove-coin-piece
+                                    args:
+                                      targetSpace: $space
+                            - if:
+                                when: { op: '==', left: { ref: binding, name: '$nvaAmbushTargetMode@{$space}' }, right: adjacent }
+                                then:
+                                  - chooseN:
+                                      bind: '$nvaAmbushAdjacentTargets@{$space}'
+                                      options:
+                                        query: mapSpaces
+                                        filter:
+                                          op: and
+                                          args:
+                                            - op: adjacent
+                                              left: $space
+                                              right: $zone
+                                            - op: '>'
+                                              left:
+                                                aggregate:
+                                                  op: count
+                                                  query:
+                                                    query: tokensInZone
+                                                    zone: $zone
+                                                    filter:
+                                                      - { prop: faction, op: in, value: [US, ARVN] }
+                                              right: 0
+                                      n: 1
+                                  - forEach:
+                                      bind: $adjacentAmbushTarget
+                                      over: { query: binding, name: '$nvaAmbushAdjacentTargets@{$space}' }
+                                      effects:
+                                        - macro: insurgent-ambush-remove-coin-piece
+                                          args:
+                                            targetSpace: $adjacentAmbushTarget
+      - stage: ambush-nva-telemetry
         effects:
           - addVar:
               scope: global
@@ -4432,6 +5010,10 @@ actionPipelines:
   - id: vc-ambush-profile
     actionId: ambushVc
     accompanyingOps: [march, attack]
+    compoundParamConstraints:
+      - relation: subset
+        operationParam: targetSpaces
+        specialActivityParam: targetSpaces
     legality: null
     costValidation: null
     costEffects: []

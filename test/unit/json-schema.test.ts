@@ -49,7 +49,10 @@ const fullGameDef: GameDef = {
       id: 'play-card-profile',
       actionId: asActionId('playCard'),
       accompanyingOps: 'any',
-      compoundParamConstraints: [{ relation: 'disjoint', operationParam: 'targets', specialActivityParam: 'targets' }],
+      compoundParamConstraints: [
+        { relation: 'disjoint', operationParam: 'targets', specialActivityParam: 'targets' },
+        { relation: 'subset', operationParam: 'targets', specialActivityParam: 'saTargets' },
+      ],
       legality: null,
       costValidation: null, costEffects: [],
       targeting: {},

@@ -219,7 +219,7 @@ export function lowerActionPipelines(
 
     let compoundParamConstraints:
       | readonly {
-        readonly relation: 'disjoint';
+        readonly relation: 'disjoint' | 'subset';
         readonly operationParam: string;
         readonly specialActivityParam: string;
       }[]
@@ -230,7 +230,7 @@ export function lowerActionPipelines(
         || rawPipeline.compoundParamConstraints.some(
           (entry) =>
             !isRecord(entry)
-            || entry.relation !== 'disjoint'
+            || (entry.relation !== 'disjoint' && entry.relation !== 'subset')
             || typeof entry.operationParam !== 'string'
             || entry.operationParam.trim() === ''
             || typeof entry.specialActivityParam !== 'string'
@@ -241,13 +241,13 @@ export function lowerActionPipelines(
           code: 'CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING',
           path: `${basePath}.compoundParamConstraints`,
           severity: 'error',
-          message: 'action pipeline compoundParamConstraints must be an array of { relation:\"disjoint\", operationParam, specialActivityParam }.',
+          message: 'action pipeline compoundParamConstraints must be an array of { relation:\"disjoint\"|\"subset\", operationParam, specialActivityParam }.',
           suggestion: 'Provide valid compoundParamConstraints entries or omit the field.',
         });
         continue;
       }
       compoundParamConstraints = rawPipeline.compoundParamConstraints.map((entry) => ({
-        relation: 'disjoint',
+        relation: String(entry.relation) === 'subset' ? 'subset' : 'disjoint',
         operationParam: String(entry.operationParam).trim(),
         specialActivityParam: String(entry.specialActivityParam).trim(),
       }));

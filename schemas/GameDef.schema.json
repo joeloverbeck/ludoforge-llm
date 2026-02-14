@@ -804,7 +804,10 @@
               "properties": {
                 "relation": {
                   "type": "string",
-                  "const": "disjoint"
+                  "enum": [
+                    "disjoint",
+                    "subset"
+                  ]
                 },
                 "operationParam": {
                   "type": "string",

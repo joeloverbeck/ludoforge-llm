@@ -90,7 +90,7 @@ const playMove = (boost: number): Move => ({
 describe('applyMove', () => {
   it('applies cost then effects, increments action usage, dispatches actionResolved trigger, and updates hash', () => {
     const def = createDef();
-    const state = createState();
+    const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
     const result = applyMove(def, state, playMove(2));
 
     assert.equal(result.state.globalVars.energy, 3);
@@ -113,7 +113,7 @@ describe('applyMove', () => {
 
   it('throws descriptive illegal-move error with actionId, params, and reason', () => {
     const def = createDef();
-    const state = createState();
+    const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
     const badMove: Move = {
       actionId: asActionId('play'),
       params: { boost: 99 },
@@ -132,7 +132,7 @@ describe('applyMove', () => {
 
   it('keeps input state unchanged when applyMove fails during effect execution', () => {
     const def = createDef();
-    const state = createState();
+    const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
     const originalSnapshot = structuredClone(state);
 
     assert.throws(
@@ -1098,7 +1098,7 @@ describe('applyMove', () => {
 
   it('executes all effects normally when freeOperation is true but no operation profile exists (plain action)', () => {
     const def = createDef();
-    const state = createState();
+    const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
 
     const result = applyMove(def, state, { ...playMove(2), freeOperation: true });
     assert.equal(result.state.globalVars.energy, 3, 'cost effects should still execute for plain actions');
@@ -1756,5 +1756,147 @@ describe('applyMove', () => {
         return true;
       },
     );
+  });
+
+  it('rejects compound SA when subset constraint is violated', () => {
+    const def: GameDef = {
+      metadata: { id: 'compound-param-subset-reject', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actionPipelines: [
+        {
+          id: 'train-profile',
+          actionId: asActionId('train'),
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'v', delta: 10 } }] }],
+          atomicity: 'atomic',
+        },
+        {
+          id: 'sa-profile',
+          actionId: asActionId('sa'),
+          accompanyingOps: ['train'],
+          compoundParamConstraints: [{ relation: 'subset', operationParam: 'targetSpaces', specialActivityParam: 'targetSpaces' }],
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'v', delta: 1 } }] }],
+          atomicity: 'atomic',
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('train'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [{ name: 'targetSpaces', domain: { query: 'enums', values: ['a', 'b', 'c'] } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('sa'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [{ name: 'targetSpaces', domain: { query: 'enums', values: ['a', 'b', 'c'] } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state = createState();
+    assert.throws(
+      () => applyMove(def, state, {
+        actionId: asActionId('train'),
+        params: { targetSpaces: ['a'] },
+        compound: { specialActivity: { actionId: asActionId('sa'), params: { targetSpaces: ['b'] } }, timing: 'after' },
+      }),
+      (error: unknown) => {
+        const details = error as { readonly reason?: string; readonly metadata?: { readonly code?: string; readonly relation?: string } };
+        assert.equal(details.reason, 'special activity violates compound param constraints');
+        assert.equal(details.metadata?.code, 'SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED');
+        assert.equal(details.metadata?.relation, 'subset');
+        return true;
+      },
+    );
+  });
+
+  it('allows compound SA when subset constraint is satisfied', () => {
+    const def: GameDef = {
+      metadata: { id: 'compound-param-subset-allow', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actionPipelines: [
+        {
+          id: 'train-profile',
+          actionId: asActionId('train'),
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'v', delta: 10 } }] }],
+          atomicity: 'atomic',
+        },
+        {
+          id: 'sa-profile',
+          actionId: asActionId('sa'),
+          accompanyingOps: ['train'],
+          compoundParamConstraints: [{ relation: 'subset', operationParam: 'targetSpaces', specialActivityParam: 'targetSpaces' }],
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'v', delta: 1 } }] }],
+          atomicity: 'atomic',
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('train'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [{ name: 'targetSpaces', domain: { query: 'enums', values: ['a', 'b', 'c'] } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('sa'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [{ name: 'targetSpaces', domain: { query: 'enums', values: ['a', 'b', 'c'] } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
+    const result = applyMove(def, state, {
+      actionId: asActionId('train'),
+      params: { targetSpaces: ['a', 'b'] },
+      compound: { specialActivity: { actionId: asActionId('sa'), params: { targetSpaces: ['b'] } }, timing: 'after' },
+    });
+    assert.equal(result.state.globalVars.v, 11);
   });
 });

@@ -188,7 +188,7 @@ export interface GameSpecActionPipelineDef {
   readonly applicability?: unknown;
   readonly accompanyingOps?: 'any' | readonly string[];
   readonly compoundParamConstraints?: readonly {
-    readonly relation: 'disjoint';
+    readonly relation: 'disjoint' | 'subset';
     readonly operationParam: string;
     readonly specialActivityParam: string;
   }[];

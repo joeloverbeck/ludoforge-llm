@@ -15,7 +15,7 @@ export interface ActionResolutionStageDef {
 }
 
 export interface CompoundParamConstraintDef {
-  readonly relation: 'disjoint';
+  readonly relation: 'disjoint' | 'subset';
   readonly operationParam: string;
   readonly specialActivityParam: string;
 }

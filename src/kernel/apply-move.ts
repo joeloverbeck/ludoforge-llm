@@ -133,24 +133,33 @@ const violatesCompoundParamConstraints = (
 ): {
   readonly operationParam: string;
   readonly specialActivityParam: string;
-  readonly relation: 'disjoint';
+  readonly relation: 'disjoint' | 'subset';
 } | null => {
   const constraints = saPipeline.compoundParamConstraints;
   if (constraints === undefined || constraints.length === 0) {
     return null;
   }
   for (const constraint of constraints) {
-    if (constraint.relation !== 'disjoint') {
-      continue;
-    }
     const left = toParamValueSet(operationMove.params[constraint.operationParam]);
     const right = toParamValueSet(specialActivityMove.params[constraint.specialActivityParam]);
-    if (left.size === 0 || right.size === 0) {
+    if (constraint.relation === 'disjoint') {
+      if (left.size === 0 || right.size === 0) {
+        continue;
+      }
+      const overlaps = [...left].some((entry) => right.has(entry));
+      if (overlaps) {
+        return constraint;
+      }
       continue;
     }
-    const overlaps = [...left].some((entry) => right.has(entry));
-    if (overlaps) {
-      return constraint;
+    if (constraint.relation === 'subset') {
+      if (right.size === 0) {
+        continue;
+      }
+      const isSubset = [...right].every((entry) => left.has(entry));
+      if (!isSubset) {
+        return constraint;
+      }
     }
   }
   return null;

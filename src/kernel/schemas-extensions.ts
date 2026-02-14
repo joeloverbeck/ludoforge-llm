@@ -263,7 +263,7 @@ export const ActionPipelineStageSchema = z
 
 export const ActionPipelineCompoundParamConstraintSchema = z
   .object({
-    relation: z.literal('disjoint'),
+    relation: z.union([z.literal('disjoint'), z.literal('subset')]),
     operationParam: StringSchema.min(1),
     specialActivityParam: StringSchema.min(1),
   })

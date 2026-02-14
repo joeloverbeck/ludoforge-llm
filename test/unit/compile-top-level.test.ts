@@ -308,7 +308,10 @@ describe('compile top-level actions/triggers/end conditions', () => {
           id: 'patrol-profile',
           actionId: 'patrol',
           accompanyingOps: ['train', 'patrol'],
-          compoundParamConstraints: [{ relation: 'disjoint' as const, operationParam: 'targetSpaces', specialActivityParam: 'targetSpaces' }],
+          compoundParamConstraints: [
+            { relation: 'disjoint' as const, operationParam: 'targetSpaces', specialActivityParam: 'targetSpaces' },
+            { relation: 'subset' as const, operationParam: 'targetSpaces', specialActivityParam: 'saTargetSpaces' },
+          ],
           legality: null,
           costValidation: null, costEffects: [],
           targeting: {},
@@ -330,6 +333,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
     assert.deepEqual(result.gameDef?.actionPipelines?.[0]?.accompanyingOps, ['train', 'patrol']);
     assert.deepEqual(result.gameDef?.actionPipelines?.[0]?.compoundParamConstraints, [
       { relation: 'disjoint', operationParam: 'targetSpaces', specialActivityParam: 'targetSpaces' },
+      { relation: 'subset', operationParam: 'targetSpaces', specialActivityParam: 'saTargetSpaces' },
     ]);
   });
 

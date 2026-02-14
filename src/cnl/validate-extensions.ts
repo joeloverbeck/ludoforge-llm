@@ -629,13 +629,13 @@ export function validateActionPipelines(
             });
             continue;
           }
-          if (constraint.relation !== 'disjoint') {
+          if (constraint.relation !== 'disjoint' && constraint.relation !== 'subset') {
             diagnostics.push({
               code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
               path: `${basePath}.compoundParamConstraints.${constraintIndex}.relation`,
               severity: 'error',
-              message: 'compoundParamConstraints relation must be "disjoint".',
-              suggestion: 'Set relation to "disjoint".',
+              message: 'compoundParamConstraints relation must be "disjoint" or "subset".',
+              suggestion: 'Set relation to "disjoint" or "subset".',
             });
           }
           if (typeof constraint.operationParam !== 'string' || constraint.operationParam.trim() === '') {

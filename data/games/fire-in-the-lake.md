@@ -1208,6 +1208,56 @@ effectMacros:
                       space: $m48Space
                       damageExpr: 2
 
+  # ── cap-train-caps-unshaded-bonus-police ─────────────────────────────────
+  # CAPs unshaded: each Train space places +1 ARVN Police.
+  - id: cap-train-caps-unshaded-bonus-police
+    params:
+      - { name: space, type: zoneSelector }
+    exports: []
+    effects:
+      - if:
+          when: { op: '==', left: { ref: globalMarkerState, marker: cap_caps }, right: unshaded }
+          then:
+            - macro: place-from-available-or-map
+              args:
+                pieceType: police
+                faction: 'ARVN'
+                targetSpace: { param: space }
+                maxPieces: 1
+
+  # ── cap-patrol-m48-shaded-moved-cube-penalty ─────────────────────────────
+  # M48 Patton shaded: on roll 1-3, remove one moved cube to Available.
+  - id: cap-patrol-m48-shaded-moved-cube-penalty
+    params:
+      - { name: movedCubes, type: bindingName }
+      - { name: loc, type: zoneSelector }
+    exports: []
+    effects:
+      - if:
+          when: { op: '==', left: { ref: globalMarkerState, marker: cap_m48Patton }, right: shaded }
+          then:
+            - rollRandom:
+                bind: $m48PatrolDie
+                min: 1
+                max: 6
+                in:
+                  - if:
+                      when: { op: '<=', left: { ref: binding, name: $m48PatrolDie }, right: 3 }
+                      then:
+                        - chooseN:
+                            bind: $m48PenaltyCube
+                            options: { query: binding, name: { param: movedCubes } }
+                            min: 0
+                            max: 1
+                        - forEach:
+                            bind: $m48Cube
+                            over: { query: binding, name: $m48PenaltyCube }
+                            effects:
+                              - moveToken:
+                                  token: $m48Cube
+                                  from: { param: loc }
+                                  to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $m48Cube, prop: faction }, ':none'] } }
+
 dataAssets:
   - id: fitl-map-production
     kind: map
@@ -2485,6 +2535,9 @@ actionPipelines:
                           faction: 'US'
                           targetSpace: $space
                           maxPieces: 2
+                      - macro: cap-train-caps-unshaded-bonus-police
+                        args:
+                          space: $space
 
                 - if:
                     when:
@@ -2507,6 +2560,9 @@ actionPipelines:
                                 faction: 'ARVN'
                                 targetSpace: $space
                                 maxPieces: 2
+                            - macro: cap-train-caps-unshaded-bonus-police
+                              args:
+                                space: $space
                       - if:
                           when: { op: '==', left: { ref: binding, name: $baseTrainChoice }, right: 'arvn-cubes' }
                           then:
@@ -2531,16 +2587,30 @@ actionPipelines:
                                       faction: 'ARVN'
                                       targetSpace: $space
                                       maxPieces: 1
+                            - macro: cap-train-caps-unshaded-bonus-police
+                              args:
+                                space: $space
 
       - stage: sub-action
         effects:
-          - chooseN:
-              bind: $subActionSpaces
-              options:
-                query: binding
-                name: targetSpaces
-              min: 0
-              max: 1
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_cords }, right: unshaded }
+              then:
+                - chooseN:
+                    bind: $subActionSpaces
+                    options:
+                      query: binding
+                      name: targetSpaces
+                    min: 0
+                    max: 2
+              else:
+                - chooseN:
+                    bind: $subActionSpaces
+                    options:
+                      query: binding
+                      name: targetSpaces
+                    min: 0
+                    max: 1
           - forEach:
               bind: $subSpace
               over: { query: binding, name: $subActionSpaces }
@@ -2566,16 +2636,29 @@ actionPipelines:
                             # Costs 3 ARVN Resources per Terror removed (even if free op!)
                             - addVar: { scope: global, var: arvnResources, delta: -3 }
                             - setMarker: { space: $subSpace, marker: terror, state: none }
-                      # Shift up to 2 levels toward Active Support
-                      - chooseOne:
-                          bind: $pacLevels
-                          options: { query: intsInRange, min: 1, max: 2 }
-                      # Costs 3 ARVN Resources per level shifted (even if free op!)
-                      - addVar:
-                          scope: global
-                          var: arvnResources
-                          delta: { op: '*', left: { ref: binding, name: $pacLevels }, right: -3 }
-                      - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
+                      - if:
+                          when: { op: '==', left: { ref: globalMarkerState, marker: cap_cords }, right: shaded }
+                          then:
+                            - if:
+                                when:
+                                  op: and
+                                  args:
+                                    - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: passiveSupport }
+                                    - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: activeSupport }
+                                then:
+                                  - addVar: { scope: global, var: arvnResources, delta: -3 }
+                                  - setMarker: { space: $subSpace, marker: supportOpposition, state: passiveSupport }
+                          else:
+                            # Shift up to 2 levels toward Active Support
+                            - chooseOne:
+                                bind: $pacLevels
+                                options: { query: intsInRange, min: 1, max: 2 }
+                            # Costs 3 ARVN Resources per level shifted (even if free op!)
+                            - addVar:
+                                scope: global
+                                var: arvnResources
+                                delta: { op: '*', left: { ref: binding, name: $pacLevels }, right: -3 }
+                            - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
 
                 # Saigon patronage transfer (US only, space must be Saigon)
                 - if:
@@ -2699,6 +2782,9 @@ actionPipelines:
                           faction: 'ARVN'
                           targetSpace: $space
                           maxPieces: 2
+                      - macro: cap-train-caps-unshaded-bonus-police
+                        args:
+                          space: $space
 
                 - if:
                     when:
@@ -2725,17 +2811,29 @@ actionPipelines:
                           faction: 'ARVN'
                           targetSpace: $space
                           maxPieces: 6
+                      - macro: cap-train-caps-unshaded-bonus-police
+                        args:
+                          space: $space
 
       - stage: sub-action
         effects:
-          # In 1 selected space (even if LimOp), choose one of:
+          # In selected spaces (up to 2 with CORDS unshaded), choose one of:
           # A) Pacification (ARVN needs ARVN Troops AND Police + COIN Control)
           # B) Replace 3 ARVN cubes with 1 ARVN Base
-          - chooseN:
-              bind: $subActionSpaces
-              options: { query: binding, name: targetSpaces }
-              min: 0
-              max: 1
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_cords }, right: unshaded }
+              then:
+                - chooseN:
+                    bind: $subActionSpaces
+                    options: { query: binding, name: targetSpaces }
+                    min: 0
+                    max: 2
+              else:
+                - chooseN:
+                    bind: $subActionSpaces
+                    options: { query: binding, name: targetSpaces }
+                    min: 0
+                    max: 1
           - forEach:
               bind: $subSpace
               over: { query: binding, name: $subActionSpaces }
@@ -2762,14 +2860,27 @@ actionPipelines:
                           then:
                             - addVar: { scope: global, var: arvnResources, delta: -3 }
                             - setMarker: { space: $subSpace, marker: terror, state: none }
-                      - chooseOne:
-                          bind: $pacLevels
-                          options: { query: intsInRange, min: 1, max: 2 }
-                      - addVar:
-                          scope: global
-                          var: arvnResources
-                          delta: { op: '*', left: { ref: binding, name: $pacLevels }, right: -3 }
-                      - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
+                      - if:
+                          when: { op: '==', left: { ref: globalMarkerState, marker: cap_cords }, right: shaded }
+                          then:
+                            - if:
+                                when:
+                                  op: and
+                                  args:
+                                    - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: passiveSupport }
+                                    - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: activeSupport }
+                                then:
+                                  - addVar: { scope: global, var: arvnResources, delta: -3 }
+                                  - setMarker: { space: $subSpace, marker: supportOpposition, state: passiveSupport }
+                          else:
+                            - chooseOne:
+                                bind: $pacLevels
+                                options: { query: intsInRange, min: 1, max: 2 }
+                            - addVar:
+                                scope: global
+                                var: arvnResources
+                                delta: { op: '*', left: { ref: binding, name: $pacLevels }, right: -3 }
+                            - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
 
                 # Replace 3 ARVN cubes with 1 ARVN Base (costs 3 even if free op)
                 - if:
@@ -2865,6 +2976,10 @@ actionPipelines:
                           token: $cube
                           from: { zoneExpr: { ref: tokenZone, token: $cube } }
                           to: $loc
+                - macro: cap-patrol-m48-shaded-moved-cube-penalty
+                  args:
+                    movedCubes: $movingCubes
+                    loc: $loc
 
       - stage: activate-guerrillas
         effects:
@@ -2984,6 +3099,10 @@ actionPipelines:
                           token: $cube
                           from: { zoneExpr: { ref: tokenZone, token: $cube } }
                           to: $loc
+                - macro: cap-patrol-m48-shaded-moved-cube-penalty
+                  args:
+                    movedCubes: $movingCubes
+                    loc: $loc
 
       - stage: activate-guerrillas
         effects:
@@ -3689,8 +3808,56 @@ actionPipelines:
                 - if:
                     when: { op: '==', left: { ref: binding, name: $improveTrail }, right: 'yes' }
                     then:
-                      - addVar: { scope: global, var: nvaResources, delta: -2 }
-                      - addVar: { scope: global, var: trail, delta: 1 }
+                      - if:
+                          when: { op: '==', left: { ref: globalMarkerState, marker: cap_aaa }, right: unshaded }
+                          then:
+                            - chooseN:
+                                bind: $trailImproveSpaces
+                                options:
+                                  query: mapSpaces
+                                  filter:
+                                    op: or
+                                    args:
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                                min: 1
+                                max: 1
+                          else:
+                            - chooseN:
+                                bind: $trailImproveSpaces
+                                options:
+                                  query: mapSpaces
+                                  filter:
+                                    op: or
+                                    args:
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+                                min: 1
+                                max: 99
+                      - forEach:
+                          bind: $trailSpace
+                          over: { query: binding, name: $trailImproveSpaces }
+                          effects:
+                            - if:
+                                when:
+                                  op: and
+                                  args:
+                                    - { op: '>=', left: { ref: gvar, var: nvaResources }, right: 2 }
+                                    - { op: '<', left: { ref: gvar, var: trail }, right: 4 }
+                                then:
+                                  - addVar: { scope: global, var: nvaResources, delta: -2 }
+                                  - addVar:
+                                      scope: global
+                                      var: trail
+                                      delta:
+                                        if:
+                                          when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: shaded }
+                                          then:
+                                            if:
+                                              when: { op: '>=', left: { ref: gvar, var: trail }, right: 3 }
+                                              then: 1
+                                              else: 2
+                                          else: 1
     atomicity: atomic
   - id: rally-vc-profile
     actionId: rally
@@ -3828,6 +3995,44 @@ actionPipelines:
                                         filter: [{ prop: faction, eq: 'VC' }, { prop: type, eq: guerrilla }, { prop: activity, eq: active }]
                                       effects:
                                         - setTokenProp: { token: $g, prop: activity, value: underground }
+      - stage: cap-cadres-rally-agitate
+        effects:
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_cadres }, right: shaded }
+              then:
+                - chooseN:
+                    bind: $cadresAgitateSpaces
+                    options: { query: binding, name: targetSpaces }
+                    min: 0
+                    max: 1
+                - forEach:
+                    bind: $cadresSpace
+                    over: { query: binding, name: $cadresAgitateSpaces }
+                    effects:
+                      - if:
+                          when:
+                            op: and
+                            args:
+                              - op: '>'
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $cadresSpace
+                                      filter: [{ prop: faction, eq: 'VC' }, { prop: type, eq: base }]
+                                right: 0
+                              - op: or
+                                args:
+                                  - { op: '==', left: { ref: zoneProp, zone: $cadresSpace, prop: spaceType }, right: city }
+                                  - { op: '==', left: { ref: zoneProp, zone: $cadresSpace, prop: spaceType }, right: province }
+                              - { op: '>', left: { ref: zoneProp, zone: $cadresSpace, prop: population }, right: 0 }
+                              - { op: '!=', left: { ref: markerState, space: $cadresSpace, marker: supportOpposition }, right: activeOpposition }
+                          then:
+                            - shiftMarker:
+                                space: $cadresSpace
+                                marker: supportOpposition
+                                delta: -1
     atomicity: atomic
   - id: march-nva-profile
     actionId: march

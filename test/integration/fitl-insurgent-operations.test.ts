@@ -1743,7 +1743,7 @@ describe('FITL insurgent operations integration', () => {
     const limitedNoSpace = applyMoveWithResolvedDecisionIds(def, nva, {
       actionId: asActionId('rally'),
       actionClass: 'limitedOperation',
-      params: { targetSpaces: [], $improveTrail: 'yes' },
+      params: { targetSpaces: [], $improveTrail: 'yes', $trailImproveSpaces: [CENTRAL_LAOS] },
     }).state;
     assert.equal(limitedNoSpace.globalVars.nvaResources, 5, 'Trail improvement should cost 2 during LimOp even with zero spaces');
     assert.equal(limitedNoSpace.globalVars.trail, 2, 'Trail improvement should increase trail by 1');
@@ -1751,7 +1751,7 @@ describe('FITL insurgent operations integration', () => {
     const freeNoSpace = applyMoveWithResolvedDecisionIds(def, nva, {
       actionId: asActionId('rally'),
       freeOperation: true,
-      params: { targetSpaces: [], $improveTrail: 'yes' },
+      params: { targetSpaces: [], $improveTrail: 'yes', $trailImproveSpaces: [CENTRAL_LAOS] },
     }).state;
     assert.equal(freeNoSpace.globalVars.nvaResources, 5, 'Trail improvement cost should not be waived by freeOperation');
     assert.equal(freeNoSpace.globalVars.trail, 2, 'Free operation should still apply trail increase');

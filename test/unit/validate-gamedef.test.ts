@@ -30,6 +30,13 @@ const createValidGameDef = (): GameDef =>
       { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
     ],
     tokenTypes: [{ id: 'card', props: {} }],
+    markerLattices: [
+      {
+        id: 'supportOpposition',
+        states: ['activeOpposition', 'passiveOpposition', 'neutral', 'passiveSupport', 'activeSupport'],
+        defaultState: 'neutral',
+      },
+    ],
     setup: [{ shuffle: { zone: 'deck:none' } }],
     turnStructure: {
       phases: [{ id: 'main' }],
@@ -231,6 +238,107 @@ describe('validateGameDef reference checks', () => {
           diag.severity === 'error',
       ),
     );
+  });
+
+  it('reports unknown marker lattice references in setMarker effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [{ setMarker: { space: 'market:none', marker: 'unknownMarker', state: 'neutral' } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_MARKER_LATTICE_MISSING' && diag.path === 'actions[0].effects[0].setMarker.marker',
+      ),
+    );
+  });
+
+  it('reports unknown marker lattice references in shiftMarker effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [{ shiftMarker: { space: 'market:none', marker: 'unknownMarker', delta: 1 } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_MARKER_LATTICE_MISSING' && diag.path === 'actions[0].effects[0].shiftMarker.marker',
+      ),
+    );
+  });
+
+  it('reports invalid static marker state literals in setMarker effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [{ setMarker: { space: 'market:none', marker: 'supportOpposition', state: 'notAState' } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_MARKER_STATE_MISSING' && diag.path === 'actions[0].effects[0].setMarker.state',
+      ),
+    );
+  });
+
+  it('reports unknown marker lattice references in markerState refs', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          pre: {
+            op: '==',
+            left: { ref: 'markerState', space: 'market:none', marker: 'unknownMarker' },
+            right: 'neutral',
+          },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(diagnostics.some((diag) => diag.code === 'REF_MARKER_LATTICE_MISSING' && diag.path === 'actions[0].pre.left.marker'));
+  });
+
+  it('reports invalid static marker-state comparisons against marker lattices', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          pre: {
+            op: '==',
+            left: { ref: 'markerState', space: 'market:none', marker: 'supportOpposition' },
+            right: 'illegalState',
+          },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(diagnostics.some((diag) => diag.code === 'REF_MARKER_STATE_MISSING' && diag.path === 'actions[0].pre.right'));
   });
 
   it('reports operation profile action references missing from actions', () => {

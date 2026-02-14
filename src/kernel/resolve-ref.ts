@@ -154,7 +154,11 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
       return lattice.defaultState;
     }
 
-    return 'none';
+    throw missingVarError(`Marker lattice not found: ${ref.marker}`, {
+      reference: ref,
+      markerId: ref.marker,
+      availableMarkerLattices: (ctx.def.markerLattices ?? []).map((candidate) => candidate.id).sort(),
+    });
   }
 
   if (ref.ref === 'activePlayer') {

@@ -287,4 +287,36 @@ describe('effects choice assertions', () => {
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
   });
+
+  it('setMarker throws when marker lattice is missing', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      setMarker: {
+        space: 'discard:none',
+        marker: 'unknownMarker',
+        state: 'neutral',
+      },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Unknown marker lattice'),
+    );
+  });
+
+  it('shiftMarker throws when marker lattice is missing', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      shiftMarker: {
+        space: 'discard:none',
+        marker: 'unknownMarker',
+        delta: 1,
+      },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Unknown marker lattice'),
+    );
+  });
 });

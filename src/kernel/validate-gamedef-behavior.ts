@@ -52,7 +52,69 @@ const validateReference = (
 
   if (reference.ref === 'zoneCount') {
     validateZoneSelector(diagnostics, reference.zone, `${path}.zone`, context);
+    return;
   }
+
+  if (reference.ref === 'markerState') {
+    validateZoneSelector(diagnostics, reference.space, `${path}.space`, context);
+    if (!context.markerLatticeNames.has(reference.marker)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_MARKER_LATTICE_MISSING',
+        `${path}.marker`,
+        `Unknown marker lattice "${reference.marker}".`,
+        reference.marker,
+        context.markerLatticeCandidates,
+      );
+    }
+  }
+};
+
+const tryStaticStringValue = (valueExpr: ValueExpr): string | null => {
+  if (typeof valueExpr === 'string') {
+    return valueExpr;
+  }
+
+  if (typeof valueExpr === 'object' && valueExpr !== null && 'concat' in valueExpr) {
+    const parts: string[] = [];
+    for (const entry of valueExpr.concat) {
+      const part = tryStaticStringValue(entry);
+      if (part === null) {
+        return null;
+      }
+      parts.push(part);
+    }
+    return parts.join('');
+  }
+
+  return null;
+};
+
+const validateMarkerStateLiteral = (
+  diagnostics: Diagnostic[],
+  markerId: string,
+  markerStateExpr: ValueExpr,
+  path: string,
+  context: ValidationContext,
+): void => {
+  const validStates = context.markerLatticeStatesById.get(markerId);
+  if (validStates === undefined) {
+    return;
+  }
+
+  const markerState = tryStaticStringValue(markerStateExpr);
+  if (markerState === null || validStates.includes(markerState)) {
+    return;
+  }
+
+  pushMissingReferenceDiagnostic(
+    diagnostics,
+    'REF_MARKER_STATE_MISSING',
+    path,
+    `Unknown marker state "${markerState}" for marker lattice "${markerId}".`,
+    markerState,
+    validStates,
+  );
 };
 
 export const validateValueExpr = (
@@ -141,6 +203,29 @@ export const validateConditionAst = (
     default: {
       validateValueExpr(diagnostics, condition.left, `${path}.left`, context);
       validateValueExpr(diagnostics, condition.right, `${path}.right`, context);
+      if ((condition.op === '==' || condition.op === '!=') && typeof condition.left === 'object' && condition.left !== null) {
+        if ('ref' in condition.left && condition.left.ref === 'markerState') {
+          validateMarkerStateLiteral(
+            diagnostics,
+            condition.left.marker,
+            condition.right,
+            `${path}.right`,
+            context,
+          );
+        }
+      }
+
+      if ((condition.op === '==' || condition.op === '!=') && typeof condition.right === 'object' && condition.right !== null) {
+        if ('ref' in condition.right && condition.right.ref === 'markerState') {
+          validateMarkerStateLiteral(
+            diagnostics,
+            condition.right.marker,
+            condition.left,
+            `${path}.left`,
+            context,
+          );
+        }
+      }
     }
   }
 };
@@ -428,12 +513,39 @@ export const validateEffectAst = (
 
   if ('setMarker' in effect) {
     validateZoneRef(diagnostics, effect.setMarker.space, `${path}.setMarker.space`, context);
+    if (!context.markerLatticeNames.has(effect.setMarker.marker)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_MARKER_LATTICE_MISSING',
+        `${path}.setMarker.marker`,
+        `Unknown marker lattice "${effect.setMarker.marker}".`,
+        effect.setMarker.marker,
+        context.markerLatticeCandidates,
+      );
+    }
+    validateMarkerStateLiteral(
+      diagnostics,
+      effect.setMarker.marker,
+      effect.setMarker.state,
+      `${path}.setMarker.state`,
+      context,
+    );
     validateValueExpr(diagnostics, effect.setMarker.state, `${path}.setMarker.state`, context);
     return;
   }
 
   if ('shiftMarker' in effect) {
     validateZoneRef(diagnostics, effect.shiftMarker.space, `${path}.shiftMarker.space`, context);
+    if (!context.markerLatticeNames.has(effect.shiftMarker.marker)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_MARKER_LATTICE_MISSING',
+        `${path}.shiftMarker.marker`,
+        `Unknown marker lattice "${effect.shiftMarker.marker}".`,
+        effect.shiftMarker.marker,
+        context.markerLatticeCandidates,
+      );
+    }
     validateValueExpr(diagnostics, effect.shiftMarker.delta, `${path}.shiftMarker.delta`, context);
     return;
   }

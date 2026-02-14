@@ -37,6 +37,7 @@ describe('FITL insurgent operations integration', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
+    assertNoErrors(compiled);
     assert.notEqual(compiled.gameDef, null);
     const profiles = compiled.gameDef!.actionPipelines ?? [];
     const profileMap = profiles.map((profile) => ({ id: profile.id, actionId: String(profile.actionId) }));

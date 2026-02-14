@@ -1,6 +1,6 @@
 # FITLOPEFULEFF-032: Compile-Time Marker Semantics Validation
 
-**Status**: Pending  
+**Status**: ✅ COMPLETED  
 **Priority**: P1  
 **Estimated effort**: Medium (3-5 hours)  
 **Spec reference**: Spec 26 architecture hardening follow-up  
@@ -48,3 +48,18 @@ No fallback execution behavior for undefined markers.
 - Lint passes (`npm run lint`)
 - Tests pass (`npm test`)
 
+## Outcome
+
+- Completion date: February 14, 2026
+- What changed:
+  - Added compile-time semantic diagnostics for marker lattice references in `setMarker`, `shiftMarker`, and `markerState` references.
+  - Added compile-time validation for statically-known marker state literals against declared lattice states.
+  - Removed runtime fallback behavior for unknown marker lattices in `markerState` resolution.
+  - Added/updated unit and integration tests covering compile-time marker diagnostics and runtime safety behavior.
+- Deviations from plan:
+  - Included a direct runtime behavior hardening update in `resolve-ref` to align with the no-fallback invariant.
+- Verification results:
+  - `npm run build` passed.
+  - `npm run typecheck` passed.
+  - `npm run lint` passed.
+  - `npm test` passed.

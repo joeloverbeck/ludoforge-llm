@@ -296,15 +296,15 @@ describe('resolveRef', () => {
     );
   });
 
-  it('returns \"none\" marker state when neither explicit state nor marker lattice exists', () => {
+  it('throws MISSING_VAR when marker lattice does not exist', () => {
     const ctx = makeCtx({
       state: makeState(),
       bindings: { '$space': 'quang-nam:none' },
     });
 
-    assert.equal(
-      resolveRef({ ref: 'markerState', space: '$space', marker: 'supportOpposition' }, ctx),
-      'none',
+    assert.throws(
+      () => resolveRef({ ref: 'markerState', space: '$space', marker: 'supportOpposition' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
     );
   });
 

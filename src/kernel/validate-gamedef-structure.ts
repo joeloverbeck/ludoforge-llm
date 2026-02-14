@@ -9,6 +9,9 @@ export type ValidationContext = {
   perPlayerVarNames: Set<string>;
   globalVarCandidates: readonly string[];
   perPlayerVarCandidates: readonly string[];
+  markerLatticeNames: Set<string>;
+  markerLatticeCandidates: readonly string[];
+  markerLatticeStatesById: ReadonlyMap<string, readonly string[]>;
   zoneNames: Set<string>;
   zoneCandidates: readonly string[];
   zoneOwners: ReadonlyMap<string, GameDef['zones'][number]['owner']>;
@@ -399,6 +402,9 @@ export const buildValidationContext = (
   const tokenTypeCandidates = [...new Set(def.tokenTypes.map((tokenType) => tokenType.id))].sort((left, right) =>
     left.localeCompare(right),
   );
+  const markerLatticeCandidates = [...new Set((def.markerLattices ?? []).map((lattice) => lattice.id))].sort((left, right) =>
+    left.localeCompare(right),
+  );
   const phaseCandidates = [...new Set(def.turnStructure.phases.map((phase) => phase.id))].sort((left, right) =>
     left.localeCompare(right),
   );
@@ -414,6 +420,9 @@ export const buildValidationContext = (
     globalVarCandidates,
     perPlayerVarNames: new Set(perPlayerVarCandidates),
     perPlayerVarCandidates,
+    markerLatticeNames: new Set(markerLatticeCandidates),
+    markerLatticeCandidates,
+    markerLatticeStatesById: new Map((def.markerLattices ?? []).map((lattice) => [lattice.id, lattice.states])),
     tokenTypeNames: new Set(tokenTypeCandidates),
     tokenTypeCandidates,
     playerIdMin: 0,

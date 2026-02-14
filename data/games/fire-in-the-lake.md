@@ -730,6 +730,7 @@ effectMacros:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: resourceVar, type: string }
       - { name: allowTrailCountryFreeCost, type: value }
+      - { name: maxActivatedGuerrillas, type: value }
     effects:
       - chooseN:
           bind: $movingGuerrillas
@@ -836,6 +837,7 @@ effectMacros:
                                     - forEach:
                                         bind: $movedPiece
                                         over: { query: binding, name: $movingGuerrillas }
+                                        limit: { param: maxActivatedGuerrillas }
                                         effects:
                                           - setTokenProp: { token: $movedPiece, prop: activity, value: active }
 
@@ -903,6 +905,72 @@ effectMacros:
                         right: 0
                 min: 1
                 max: 99
+
+  # ── bombard-select-spaces ──────────────────────────────────────────────────
+  # Shared Bombard target-space selector with capability-conditioned max spaces.
+  - id: bombard-select-spaces
+    params:
+      - { name: maxSpaces, type: number }
+    exports: [targetSpaces]
+    effects:
+      - chooseN:
+          bind: targetSpaces
+          options:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                - op: or
+                  args:
+                    - op: '>='
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: [US, ARVN] }
+                              - { prop: type, eq: troops }
+                      right: 3
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: [US, ARVN] }
+                              - { prop: type, eq: base }
+                      right: 0
+                - op: or
+                  args:
+                    - op: '>='
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: NVA }
+                              - { prop: type, eq: troops }
+                      right: 3
+                    - op: '>='
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInAdjacentZones
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: NVA }
+                              - { prop: type, eq: troops }
+                      right: 3
+          min: 1
+          max: { param: maxSpaces }
 
   # ── place-from-available-or-map ────────────────────────────────────────────
   # Dynamic piece sourcing (Rule 1.4.1): place from Available, then from map if not US.
@@ -4059,6 +4127,7 @@ actionPipelines:
                     faction: 'NVA'
                     resourceVar: nvaResources
                     allowTrailCountryFreeCost: true
+                    maxActivatedGuerrillas: 99
       - stage: select-trail-chain-destinations
         effects:
           - if:
@@ -4098,6 +4167,7 @@ actionPipelines:
                           faction: 'NVA'
                           resourceVar: nvaResources
                           allowTrailCountryFreeCost: true
+                          maxActivatedGuerrillas: 99
     atomicity: atomic
   - id: march-vc-profile
     actionId: march
@@ -4124,6 +4194,11 @@ actionPipelines:
                     faction: 'VC'
                     resourceVar: vcResources
                     allowTrailCountryFreeCost: false
+                    maxActivatedGuerrillas:
+                      if:
+                        when: { op: '==', left: { ref: globalMarkerState, marker: cap_mainForceBns }, right: unshaded }
+                        then: 99
+                        else: 1
     atomicity: atomic
   - id: attack-nva-profile
     actionId: attack
@@ -4147,7 +4222,23 @@ actionPipelines:
                 - if:
                     when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
                     then:
-                      - addVar: { scope: global, var: nvaResources, delta: -1 }
+                      - if:
+                          when: { op: '==', left: { ref: globalMarkerState, marker: cap_pt76 }, right: unshaded }
+                          then:
+                            - removeByPriority:
+                                budget: 1
+                                groups:
+                                  - bind: $pt76CostTroop
+                                    over:
+                                      query: tokensInZone
+                                      zone: $space
+                                      filter:
+                                        - { prop: faction, eq: NVA }
+                                        - { prop: type, eq: troops }
+                                    to:
+                                      zoneExpr: 'available-NVA:none'
+                          else:
+                            - addVar: { scope: global, var: nvaResources, delta: -1 }
                 - chooseOne:
                     bind: $attackMode
                     options: { query: enums, values: ['guerrilla-attack', 'troops-attack'] }
@@ -4188,7 +4279,11 @@ actionPipelines:
                           in:
                             - let:
                                 bind: $damage
-                                value: { op: '/', left: { ref: binding, name: $nvaTroops }, right: 2 }
+                                value:
+                                  if:
+                                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_pt76 }, right: shaded }
+                                    then: { ref: binding, name: $nvaTroops }
+                                    else: { op: '/', left: { ref: binding, name: $nvaTroops }, right: 2 }
                                 in:
                                   - macro: insurgent-attack-removal-order
                                     args:
@@ -5632,64 +5727,23 @@ actionPipelines:
     stages:
       - stage: select-spaces
         effects:
-          - chooseN:
-              bind: targetSpaces
-              options:
-                query: mapSpaces
-                filter:
-                  op: and
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_longRangeGuns }, right: unshaded }
+              then:
+                - macro: bombard-select-spaces
                   args:
-                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                    - op: or
-                      args:
-                        - op: '>='
-                          left:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  - { prop: faction, op: in, value: [US, ARVN] }
-                                  - { prop: type, eq: troops }
-                          right: 3
-                        - op: '>'
-                          left:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  - { prop: faction, op: in, value: [US, ARVN] }
-                                  - { prop: type, eq: base }
-                          right: 0
-                    - op: or
-                      args:
-                        - op: '>='
-                          left:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  - { prop: faction, eq: NVA }
-                                  - { prop: type, eq: troops }
-                          right: 3
-                        - op: '>='
-                          left:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInAdjacentZones
-                                zone: $zone
-                                filter:
-                                  - { prop: faction, eq: NVA }
-                                  - { prop: type, eq: troops }
-                          right: 3
-              min: 1
-              max: 2
+                    maxSpaces: 1
+              else:
+                - if:
+                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_longRangeGuns }, right: shaded }
+                    then:
+                      - macro: bombard-select-spaces
+                        args:
+                          maxSpaces: 3
+                    else:
+                      - macro: bombard-select-spaces
+                        args:
+                          maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - forEach:

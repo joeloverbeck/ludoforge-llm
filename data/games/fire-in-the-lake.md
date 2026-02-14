@@ -224,114 +224,64 @@ effectMacros:
               to:
                 zoneExpr: 'available-ARVN:none'
 
-  # ── insurgent-ambush-select-spaces ───────────────────────────────────────
-  # Shared ambush selector (NVA/VC):
-  # - 1-2 spaces
+  # ── insurgent-ambush-select-spaces-base ──────────────────────────────────
+  # Shared ambush selector body (NVA/VC):
+  # - 1-N spaces
   # - underground attacker guerrilla required
   # - either enemy in space OR LoC with adjacent enemy
-  - id: insurgent-ambush-select-spaces
+  - id: insurgent-ambush-select-spaces-base
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
+      - { name: maxSpaces, type: number }
     exports: [targetSpaces]
     effects:
-      - if:
-          when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: unshaded }
-          then:
-            - chooseN:
-                bind: targetSpaces
-                options:
-                  query: mapSpaces
-                  filter:
-                    op: and
-                    args:
-                      - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                      - op: '>'
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                - { prop: faction, eq: { param: faction } }
-                                - { prop: type, eq: guerrilla }
-                                - { prop: activity, eq: underground }
-                        right: 0
-                      - op: or
-                        args:
-                          - op: '>'
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    - { prop: faction, op: in, value: [US, ARVN] }
-                            right: 0
-                          - op: and
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
-                              - op: '>'
-                                left:
-                                  aggregate:
-                                    op: count
-                                    query:
-                                      query: tokensInAdjacentZones
-                                      zone: $zone
-                                      filter:
-                                        - { prop: faction, op: in, value: [US, ARVN] }
-                                right: 0
-                min: 1
-                max: 1
-          else:
-            - chooseN:
-                bind: targetSpaces
-                options:
-                  query: mapSpaces
-                  filter:
-                    op: and
-                    args:
-                      - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                      - op: '>'
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                - { prop: faction, eq: { param: faction } }
-                                - { prop: type, eq: guerrilla }
-                                - { prop: activity, eq: underground }
-                        right: 0
-                      - op: or
-                        args:
-                          - op: '>'
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    - { prop: faction, op: in, value: [US, ARVN] }
-                            right: 0
-                          - op: and
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
-                              - op: '>'
-                                left:
-                                  aggregate:
-                                    op: count
-                                    query:
-                                      query: tokensInAdjacentZones
-                                      zone: $zone
-                                      filter:
-                                        - { prop: faction, op: in, value: [US, ARVN] }
-                                right: 0
-                min: 1
-                max: 2
+      - chooseN:
+          bind: targetSpaces
+          options:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          - { prop: faction, eq: { param: faction } }
+                          - { prop: type, eq: guerrilla }
+                          - { prop: activity, eq: underground }
+                  right: 0
+                - op: or
+                  args:
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: [US, ARVN] }
+                      right: 0
+                    - op: and
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInAdjacentZones
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, op: in, value: [US, ARVN] }
+                          right: 0
+          min: 1
+          max: { param: maxSpaces }
 
   # ── insurgent-ambush-resolve-spaces ──────────────────────────────────────
   # Shared ambush resolver (NVA/VC):
@@ -1031,6 +981,249 @@ effectMacros:
                               - { prop: faction, eq: NVA }
                               - { prop: type, eq: troops }
                       right: 3
+          min: 1
+          max: { param: maxSpaces }
+
+  # ── advise-select-spaces ──────────────────────────────────────────────────
+  - id: advise-select-spaces
+    params:
+      - { name: maxSpaces, type: number }
+    exports: [targetSpaces]
+    effects:
+      - chooseN:
+          bind: targetSpaces
+          options:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - op: or
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+          min: 1
+          max: { param: maxSpaces }
+
+  # ── govern-select-spaces-standard ─────────────────────────────────────────
+  - id: govern-select-spaces-standard
+    params:
+      - { name: maxSpaces, type: number }
+    exports: [targetSpaces]
+    effects:
+      - chooseN:
+          bind: targetSpaces
+          options:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - op: or
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                - op: or
+                  args:
+                    - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
+                    - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
+                - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          - { prop: faction, op: in, value: ['NVA', 'VC'] }
+          min: 1
+          max: { param: maxSpaces }
+
+  # ── raid-select-spaces ────────────────────────────────────────────────────
+  - id: raid-select-spaces
+    params:
+      - { name: maxSpaces, type: number }
+    exports: [targetSpaces]
+    effects:
+      - chooseN:
+          bind: targetSpaces
+          options:
+            query: mapSpaces
+            filter:
+              op: '!='
+              left: { ref: zoneProp, zone: $zone, prop: country }
+              right: northVietnam
+          min: 1
+          max: { param: maxSpaces }
+
+  # ── infiltrate-select-spaces ──────────────────────────────────────────────
+  - id: infiltrate-select-spaces
+    params:
+      - { name: maxSpaces, type: number }
+    exports: [targetSpaces]
+    effects:
+      - chooseN:
+          bind: targetSpaces
+          options:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                - op: or
+                  args:
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: NVA }
+                              - { prop: type, eq: base }
+                      right: 0
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: NVA }
+                      right:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: VC }
+          min: 1
+          max: { param: maxSpaces }
+
+  # ── tax-select-spaces ─────────────────────────────────────────────────────
+  - id: tax-select-spaces
+    params:
+      - { name: maxSpaces, type: number }
+    exports: [targetSpaces]
+    effects:
+      - chooseN:
+          bind: targetSpaces
+          options:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
+                          - { prop: activity, eq: underground }
+                  right: 0
+                - op: or
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                    - op: <=
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: [US, ARVN] }
+                      right:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: [NVA, VC] }
+          min: 1
+          max: { param: maxSpaces }
+
+  # ── subvert-select-spaces ─────────────────────────────────────────────────
+  - id: subvert-select-spaces
+    params:
+      - { name: maxSpaces, type: number }
+    exports: [targetSpaces]
+    effects:
+      - chooseN:
+          bind: targetSpaces
+          options:
+            query: mapSpaces
+            filter:
+              op: and
+              args:
+                - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                - op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          - { prop: faction, eq: VC }
+                          - { prop: type, eq: guerrilla }
+                          - { prop: activity, eq: underground }
+                  right: 0
+                - op: or
+                  args:
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, op: in, value: [troops, police] }
+                      right: 1
+                    - op: and
+                      args:
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, eq: ARVN }
+                                  - { prop: type, op: in, value: [troops, police] }
+                          right: 0
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: 'available-VC:none'
+                                filter:
+                                  - { prop: faction, eq: VC }
+                                  - { prop: type, eq: guerrilla }
+                          right: 0
           min: 1
           max: { param: maxSpaces }
 
@@ -3547,7 +3740,7 @@ actionPipelines:
   - id: assault-us-profile
     actionId: assault
     applicability: { op: '==', left: { ref: activePlayer }, right: '0' }
-    legality: true
+    legality: { op: '!=', left: { ref: gvar, var: mom_generalLansdale }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
@@ -3931,6 +4124,7 @@ actionPipelines:
                 args:
                   - { op: '>=', left: { ref: gvar, var: nvaResources }, right: 2 }
                   - { op: '<', left: { ref: gvar, var: trail }, right: 4 }
+                  - { op: '!=', left: { ref: gvar, var: mom_mcnamaraLine }, right: true }
               then:
                 - chooseOne:
                     bind: $improveTrail
@@ -4484,35 +4678,20 @@ actionPipelines:
                         - { prop: isCoup, eq: true }
                 right: 0
               then:
-                - chooseN:
-                    bind: targetSpaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
-                        args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
-                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                    min: 1
-                    max: 1
+                - macro: advise-select-spaces
+                  args:
+                    maxSpaces: 1
               else:
-                - chooseN:
-                    bind: targetSpaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
+                - if:
+                    when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                    then:
+                      - macro: advise-select-spaces
                         args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
-                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                    min: 1
-                    max: 2
+                          maxSpaces: 1
+                    else:
+                      - macro: advise-select-spaces
+                        args:
+                          maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -4604,7 +4783,11 @@ actionPipelines:
   - id: air-lift-profile
     actionId: airLift
     accompanyingOps: any
-    legality: true
+    legality:
+      op: and
+      args:
+        - { op: '!=', left: { ref: gvar, var: mom_medevacShaded }, right: true }
+        - { op: '!=', left: { ref: gvar, var: mom_typhoonKate }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
@@ -4792,7 +4975,12 @@ actionPipelines:
   - id: air-strike-profile
     actionId: airStrike
     accompanyingOps: any
-    legality: true
+    legality:
+      op: and
+      args:
+        - { op: '!=', left: { ref: gvar, var: mom_rollingThunder }, right: true }
+        - { op: '!=', left: { ref: gvar, var: mom_daNang }, right: true }
+        - { op: '!=', left: { ref: gvar, var: mom_bombingPause }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
@@ -4983,6 +5171,7 @@ actionPipelines:
                 args:
                   - { op: '==', left: { ref: binding, name: $degradeTrail }, right: 'yes' }
                   - { op: '>', left: { ref: gvar, var: trail }, right: 0 }
+                  - { op: '!=', left: { ref: gvar, var: mom_oriskany }, right: true }
               then:
                 - if:
                     when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: shaded }
@@ -5200,42 +5389,16 @@ actionPipelines:
                     min: 1
                     max: 1
               else:
-                - chooseN:
-                    bind: targetSpaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
+                - if:
+                    when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                    then:
+                      - macro: govern-select-spaces-standard
                         args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
-                              - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
-                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
-                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                          - op: '>'
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                            right:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                    min: 1
-                    max: 2
+                          maxSpaces: 1
+                    else:
+                      - macro: govern-select-spaces-standard
+                        args:
+                          maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - if:
@@ -5317,7 +5480,7 @@ actionPipelines:
   - id: transport-profile
     actionId: transport
     accompanyingOps: any
-    legality: true
+    legality: { op: '!=', left: { ref: gvar, var: mom_typhoonKate }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
@@ -5480,16 +5643,16 @@ actionPipelines:
     stages:
       - stage: select-spaces
         effects:
-          - chooseN:
-              bind: targetSpaces
-              options:
-                query: mapSpaces
-                filter:
-                  op: '!='
-                  left: { ref: zoneProp, zone: $zone, prop: country }
-                  right: northVietnam
-              min: 1
-              max: 2
+          - if:
+              when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+              then:
+                - macro: raid-select-spaces
+                  args:
+                    maxSpaces: 1
+              else:
+                - macro: raid-select-spaces
+                  args:
+                    maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -5570,53 +5733,23 @@ actionPipelines:
   - id: infiltrate-profile
     actionId: infiltrate
     accompanyingOps: [rally, march]
-    legality: null
+    legality: { op: '!=', left: { ref: gvar, var: mom_mcnamaraLine }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
     stages:
       - stage: select-spaces
         effects:
-          - chooseN:
-              bind: targetSpaces
-              options:
-                query: mapSpaces
-                filter:
-                  op: and
+          - if:
+              when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+              then:
+                - macro: infiltrate-select-spaces
                   args:
-                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                    - op: or
-                      args:
-                        - op: '>'
-                          left:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  - { prop: faction, eq: NVA }
-                                  - { prop: type, eq: base }
-                          right: 0
-                        - op: '>'
-                          left:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  - { prop: faction, eq: NVA }
-                          right:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  - { prop: faction, eq: VC }
-              min: 1
-              max: 2
+                    maxSpaces: 1
+              else:
+                - macro: infiltrate-select-spaces
+                  args:
+                    maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -5889,7 +6022,7 @@ actionPipelines:
   - id: bombard-profile
     actionId: bombard
     accompanyingOps: any
-    legality: null
+    legality: { op: '!=', left: { ref: gvar, var: mom_typhoonKate }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
@@ -5955,16 +6088,33 @@ actionPipelines:
       - relation: subset
         operationParam: targetSpaces
         specialActivityParam: targetSpaces
-    legality: null
+    legality: { op: '!=', left: { ref: gvar, var: mom_claymores }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
     stages:
       - stage: select-spaces
         effects:
-          - macro: insurgent-ambush-select-spaces
-            args:
-              faction: NVA
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: unshaded }
+              then:
+                - macro: insurgent-ambush-select-spaces-base
+                  args:
+                    faction: NVA
+                    maxSpaces: 1
+              else:
+                - if:
+                    when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                    then:
+                      - macro: insurgent-ambush-select-spaces-base
+                        args:
+                          faction: NVA
+                          maxSpaces: 1
+                    else:
+                      - macro: insurgent-ambush-select-spaces-base
+                        args:
+                          faction: NVA
+                          maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - macro: insurgent-ambush-resolve-spaces
@@ -5989,48 +6139,16 @@ actionPipelines:
     stages:
       - stage: select-spaces
         effects:
-          - chooseN:
-              bind: targetSpaces
-              options:
-                query: mapSpaces
-                filter:
-                  op: and
+          - if:
+              when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+              then:
+                - macro: tax-select-spaces
                   args:
-                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                    - op: '>'
-                      left:
-                        aggregate:
-                          op: count
-                          query:
-                            query: tokensInZone
-                            zone: $zone
-                            filter:
-                              - { prop: faction, eq: VC }
-                              - { prop: type, eq: guerrilla }
-                              - { prop: activity, eq: underground }
-                      right: 0
-                    - op: or
-                      args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
-                        - op: <=
-                          left:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  - { prop: faction, op: in, value: [US, ARVN] }
-                          right:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  - { prop: faction, op: in, value: [NVA, VC] }
-              min: 1
-              max: 4
+                    maxSpaces: 1
+              else:
+                - macro: tax-select-spaces
+                  args:
+                    maxSpaces: 4
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -6090,65 +6208,16 @@ actionPipelines:
     stages:
       - stage: select-spaces
         effects:
-          - chooseN:
-              bind: targetSpaces
-              options:
-                query: mapSpaces
-                filter:
-                  op: and
+          - if:
+              when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+              then:
+                - macro: subvert-select-spaces
                   args:
-                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                    - op: '>'
-                      left:
-                        aggregate:
-                          op: count
-                          query:
-                            query: tokensInZone
-                            zone: $zone
-                            filter:
-                              - { prop: faction, eq: VC }
-                              - { prop: type, eq: guerrilla }
-                              - { prop: activity, eq: underground }
-                      right: 0
-                    - op: or
-                      args:
-                        - op: '>'
-                          left:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInZone
-                                zone: $zone
-                                filter:
-                                  - { prop: faction, eq: ARVN }
-                                  - { prop: type, op: in, value: [troops, police] }
-                          right: 1
-                        - op: and
-                          args:
-                            - op: '>'
-                              left:
-                                aggregate:
-                                  op: count
-                                  query:
-                                    query: tokensInZone
-                                    zone: $zone
-                                    filter:
-                                      - { prop: faction, eq: ARVN }
-                                      - { prop: type, op: in, value: [troops, police] }
-                              right: 0
-                            - op: '>'
-                              left:
-                                aggregate:
-                                  op: count
-                                  query:
-                                    query: tokensInZone
-                                    zone: 'available-VC:none'
-                                    filter:
-                                      - { prop: faction, eq: VC }
-                                      - { prop: type, eq: guerrilla }
-                              right: 0
-              min: 1
-              max: 2
+                    maxSpaces: 1
+              else:
+                - macro: subvert-select-spaces
+                  args:
+                    maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - let:
@@ -6327,16 +6396,33 @@ actionPipelines:
       - relation: subset
         operationParam: targetSpaces
         specialActivityParam: targetSpaces
-    legality: null
+    legality: { op: '!=', left: { ref: gvar, var: mom_claymores }, right: true }
     costValidation: null
     costEffects: []
     targeting: {}
     stages:
       - stage: select-spaces
         effects:
-          - macro: insurgent-ambush-select-spaces
-            args:
-              faction: VC
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: unshaded }
+              then:
+                - macro: insurgent-ambush-select-spaces-base
+                  args:
+                    faction: VC
+                    maxSpaces: 1
+              else:
+                - if:
+                    when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                    then:
+                      - macro: insurgent-ambush-select-spaces-base
+                        args:
+                          faction: VC
+                          maxSpaces: 1
+                    else:
+                      - macro: insurgent-ambush-select-spaces-base
+                        args:
+                          faction: VC
+                          maxSpaces: 2
       - stage: resolve-per-space
         effects:
           - macro: insurgent-ambush-resolve-spaces

@@ -866,10 +866,14 @@ describe('FITL COIN operations integration', () => {
       return profile;
     };
 
-    it('AC1/AC2: compiles with zero-cost top-level fields', () => {
+    it('AC1/AC2: compiles with momentum-aware legality and zero-cost top-level fields', () => {
       const profile = getAssaultUsProfile();
       assert.equal(String(profile.actionId), 'assault');
-      assert.equal(profile.legality, true);
+      assert.deepEqual(profile.legality, {
+        op: '!=',
+        left: { ref: 'gvar', var: 'mom_generalLansdale' },
+        right: true,
+      });
       assert.equal(profile.costValidation, null);
       assert.deepEqual(profile.costEffects, []);
     });

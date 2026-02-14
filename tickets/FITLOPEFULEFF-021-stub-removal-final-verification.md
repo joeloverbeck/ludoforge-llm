@@ -4,7 +4,7 @@
 **Priority**: P1
 **Estimated effort**: Small (1-2 hours)
 **Spec reference**: Spec 26, Acceptance Criteria 1, 21-23
-**Depends on**: ALL previous FITLOPEFULEFF tickets (001-020), FITLOPEFULEFF-022, FITLOPEFULEFF-023, FITLOPEFULEFF-024, FITLOPEFULEFF-025
+**Depends on**: ALL previous FITLOPEFULEFF tickets (001-020), FITLOPEFULEFF-022, FITLOPEFULEFF-023, FITLOPEFULEFF-024, FITLOPEFULEFF-025, FITLOPEFULEFF-026, FITLOPEFULEFF-027, FITLOPEFULEFF-028, FITLOPEFULEFF-029, FITLOPEFULEFF-030
 
 ## Summary
 
@@ -48,6 +48,11 @@ This is a verification-only ticket. If issues are found, they should be addresse
 - [ ] Typed zone-reference path is in use where required; no fragile string-concat zone-id construction remains in scoped FITL operation paths (FITLOPEFULEFF-023)
 - [ ] Generic priority-removal primitive is in place and validated by tests (FITLOPEFULEFF-024)
 - [ ] FITL removal macros are decomposed by responsibility and pass removal-ordering regressions (FITLOPEFULEFF-025)
+- [ ] Strict profile dispatch prevents action-level fallback when no profile applies (FITLOPEFULEFF-026)
+- [ ] Applicability evaluation errors surface as explicit failures (FITLOPEFULEFF-027)
+- [ ] Attack casualty-routing contract is explicit and behaviorally verified (FITLOPEFULEFF-028)
+- [ ] Attack regression matrix covers hit/miss, mode formulas, attrition, free-op, and LimOp behavior (FITLOPEFULEFF-029)
+- [ ] FITL production spec no longer depends on fallback action-effect stubs for operations (FITLOPEFULEFF-030)
 
 ## Files to Touch
 

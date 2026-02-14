@@ -15,20 +15,26 @@ export const resolveActionPipeline = (
   action: ActionDef,
   ctx: EvalContext,
 ): ActionPipelineDef | undefined => {
-  const candidates = (def.actionPipelines ?? []).filter((profile) => profile.actionId === action.id);
-  if (candidates.length <= 1) {
-    return candidates[0];
-  }
-  return candidates.find((profile) => {
+  const applicabilityMatches = (profile: ActionPipelineDef): boolean => {
     if (profile.applicability === undefined) {
-      return false;
+      return true;
     }
     try {
       return evalCondition(profile.applicability, ctx);
     } catch {
       return false;
     }
-  });
+  };
+
+  const candidates = (def.actionPipelines ?? []).filter((profile) => profile.actionId === action.id);
+  if (candidates.length === 0) {
+    return undefined;
+  }
+  if (candidates.length === 1) {
+    const onlyCandidate = candidates[0];
+    return onlyCandidate !== undefined && applicabilityMatches(onlyCandidate) ? onlyCandidate : undefined;
+  }
+  return candidates.find(applicabilityMatches);
 };
 
 export const toExecutionPipeline = (

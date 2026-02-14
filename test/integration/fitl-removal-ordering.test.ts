@@ -162,9 +162,11 @@ describe('FITL removal ordering macros', () => {
 
       const coinCalls = flatten(coinAssaultRemoval.effects).filter((node) => node.macro === 'piece-removal-ordering');
       const insurgentCalls = flatten(insurgentAttackRemoval.effects).filter((node) => node.macro === 'piece-removal-ordering');
+      const insurgentRemoveByPriority = flatten(insurgentAttackRemoval.effects).filter((node) => 'removeByPriority' in node);
 
       assert.equal(coinCalls.length >= 1, true, 'Expected coin-assault-removal-order to call piece-removal-ordering');
-      assert.equal(insurgentCalls.length >= 1, true, 'Expected insurgent-attack-removal-order to call piece-removal-ordering');
+      assert.equal(insurgentCalls.length, 0, 'Expected insurgent-attack-removal-order to own COIN removal logic directly');
+      assert.equal(insurgentRemoveByPriority.length >= 1, true, 'Expected insurgent-attack-removal-order to use removeByPriority');
       assert.equal(
         coinCalls.some(hasActorFactionArg),
         false,
@@ -173,7 +175,7 @@ describe('FITL removal ordering macros', () => {
       assert.equal(
         insurgentCalls.some(hasActorFactionArg),
         false,
-        'Expected insurgent-attack-removal-order to avoid actorFaction passthrough',
+        'Expected insurgent-attack-removal-order to avoid actorFaction passthrough when delegating',
       );
     });
   });
@@ -315,7 +317,7 @@ describe('FITL removal ordering macros', () => {
   });
 
   describe('insurgent-attack-removal-order runtime behavior', () => {
-    it('attacker loses 1 piece per US piece removed (attrition)', () => {
+    it('removes COIN defenders first, then applies attacker attrition per US removed', () => {
       const def: GameDef = {
         metadata: { id: 'insurgent-attrition', players: { min: 2, max: 2 } },
         constants: {},
@@ -323,11 +325,14 @@ describe('FITL removal ordering macros', () => {
         perPlayerVars: [],
         zones: [
           { id: asZoneId('quangTri:none'), owner: 'none', visibility: 'public', ordering: 'set' },
-          { id: asZoneId('nvaAvailable:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+          { id: asZoneId('available-NVA:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+          { id: asZoneId('available-US:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+          { id: asZoneId('available-ARVN:none'), owner: 'none', visibility: 'public', ordering: 'set' },
         ],
         tokenTypes: [
-          { id: 'troops', props: { faction: 'string' } },
+          { id: 'troops', props: { faction: 'string', type: 'string' } },
           { id: 'guerrilla', props: { faction: 'string', activity: 'string' } },
+          { id: 'base', props: { faction: 'string', type: 'string' } },
         ],
         setup: [],
         turnStructure: { phases: [{ id: asPhaseId('main') }] },
@@ -336,19 +341,22 @@ describe('FITL removal ordering macros', () => {
         terminal: { conditions: [] },
       };
 
-      // Attacker NVA has 3 guerrillas in space. After removing 2 US pieces,
-      // attacker must lose 2 guerrillas to nvaAvailable:none.
+      // NVA attacker + US/ARVN defenders in one space.
       const state: GameState = {
         globalVars: {},
         perPlayerVars: {},
         playerCount: 2,
         zones: {
           'quangTri:none': [
+            makeToken('us1', 'troops', 'US', { type: 'troops' }),
+            makeToken('arvn1', 'troops', 'ARVN', { type: 'troops' }),
             makeToken('g1', 'guerrilla', 'NVA', { activity: 'active' }),
             makeToken('g2', 'guerrilla', 'NVA', { activity: 'active' }),
-            makeToken('g3', 'guerrilla', 'NVA', { activity: 'active' }),
+            makeToken('b1', 'base', 'US', { type: 'base' }),
           ],
-          'nvaAvailable:none': [],
+          'available-NVA:none': [],
+          'available-US:none': [],
+          'available-ARVN:none': [],
         },
         nextTokenOrdinal: 10,
         currentPhase: asPhaseId('main'),
@@ -361,14 +369,52 @@ describe('FITL removal ordering macros', () => {
         markers: {},
       };
 
-      // The attrition effect: move 2 NVA pieces from quangTri to nvaAvailable
-      // (simulating usRemoved = 2)
-      const attritionEffects: readonly EffectAST[] = [
-        { forEach: {
-          bind: '$attritionPiece',
-          over: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'NVA' }] },
-          limit: 2,
-          effects: [{ moveToken: { token: '$attritionPiece', from: 'quangTri:none', to: 'nvaAvailable:none' } }],
+      const effects: readonly EffectAST[] = [
+        { let: {
+          bind: '$usPiecesBefore',
+          value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'US' }] } } },
+          in: [
+            {
+              removeByPriority: {
+                budget: 2,
+                groups: [
+                  {
+                    bind: '$target',
+                    over: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'US' }, { prop: 'type', op: 'neq', value: 'base' }] },
+                    to: { zoneExpr: 'available-US:none' },
+                  },
+                  {
+                    bind: '$target',
+                    over: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'ARVN' }, { prop: 'type', op: 'neq', value: 'base' }] },
+                    to: { zoneExpr: 'available-ARVN:none' },
+                  },
+                  {
+                    bind: '$target',
+                    over: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'US' }, { prop: 'type', op: 'eq', value: 'base' }] },
+                    to: { zoneExpr: 'available-US:none' },
+                  },
+                ],
+              },
+            },
+            { let: {
+              bind: '$usPiecesAfter',
+              value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'US' }] } } },
+              in: [{
+                let: {
+                  bind: '$usRemoved',
+                  value: { op: '-', left: { ref: 'binding', name: '$usPiecesBefore' }, right: { ref: 'binding', name: '$usPiecesAfter' } },
+                  in: [{
+                    forEach: {
+                      bind: '$attritionPiece',
+                      over: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'NVA' }] },
+                      limit: { ref: 'binding', name: '$usRemoved' },
+                      effects: [{ moveToken: { token: '$attritionPiece', from: 'quangTri:none', to: 'available-NVA:none' } }],
+                    },
+                  }],
+                },
+              }],
+            } },
+          ],
         } },
       ];
 
@@ -384,9 +430,11 @@ describe('FITL removal ordering macros', () => {
         collector: createCollector(),
       };
 
-      const result = applyEffects(attritionEffects, ctx);
-      assert.equal(result.state.zones['quangTri:none']?.length, 1, 'Should have 1 NVA guerrilla left in space');
-      assert.equal(result.state.zones['nvaAvailable:none']?.length, 2, 'Should have 2 NVA pieces in available');
+      const result = applyEffects(effects, ctx);
+      assert.equal(result.state.zones['available-US:none']?.length, 1, 'US defender should be removed first');
+      assert.equal(result.state.zones['available-ARVN:none']?.length, 1, 'ARVN defender should be removed second');
+      assert.equal(result.state.zones['available-NVA:none']?.length, 1, 'Attacker should lose 1 NVA piece per US piece removed');
+      assert.equal(result.state.zones['quangTri:none']?.some((token) => token.id === 'b1'), true, 'US Base should remain while non-base defenders exist');
     });
   });
 });

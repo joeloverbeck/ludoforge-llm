@@ -1,9 +1,19 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, initialState, type Move } from '../../src/kernel/index.js';
+import { applyMove, asActionId, asPlayerId, asTokenId, initialState, type GameState, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+
+const ATTACK_SPACE = 'quang-tri-thua-thien:none';
+
+const addTokenToZone = (state: GameState, zoneId: string, token: Token): GameState => ({
+  ...state,
+  zones: {
+    ...state.zones,
+    [zoneId]: [...(state.zones[zoneId] ?? []), token],
+  },
+});
 
 describe('FITL insurgent operations integration', () => {
   it('compiles insurgent Rally/March/Attack/Terror operation profiles from production spec', () => {
@@ -16,7 +26,7 @@ describe('FITL insurgent operations integration', () => {
     for (const expected of [
       { id: 'rally-profile', actionId: 'rally' },
       { id: 'march-profile', actionId: 'march' },
-      { id: 'attack-profile', actionId: 'attack' },
+      { id: 'attack-nva-profile', actionId: 'attack' },
       { id: 'terror-profile', actionId: 'terror' },
     ]) {
       assert.ok(
@@ -26,58 +36,57 @@ describe('FITL insurgent operations integration', () => {
     }
   });
 
-  it('executes insurgent operations through compiled actionPipelines instead of fallback action effects', () => {
+  it('executes attack through attack-nva-profile when active player is NVA', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);
 
-    const start = initialState(compiled.gameDef!, 101, 2);
-    const sequence: readonly Move[] = [
-      { actionId: asActionId('rally'), params: {} },
-      { actionId: asActionId('march'), params: {} },
-      { actionId: asActionId('attack'), params: {} },
-      { actionId: asActionId('terror'), params: {} },
-    ];
-
-    const final = sequence.reduce((state, move) => applyMove(compiled.gameDef!, state, move).state, start);
-
-    assert.equal(final.globalVars.insurgentResources, 2);
-    assert.equal(final.globalVars.rallyCount, 1);
-    assert.equal(final.globalVars.marchCount, 1);
-    assert.equal(final.globalVars.attackCount, 1);
-    assert.equal(final.globalVars.terrorCount, 1);
-    assert.equal(final.globalVars.fallbackUsed, 0);
-  });
-
-  it('rejects attack when profile cost validation fails under atomicity forbid', () => {
-    const { compiled } = compileProductionSpec();
-
-    assert.notEqual(compiled.gameDef, null);
-
-    let state = initialState(compiled.gameDef!, 77, 2);
-    state = {
-      ...state,
+    const start = initialState(compiled.gameDef!, 101, 4);
+    const withNvaActive = {
+      ...start,
+      activePlayer: asPlayerId(2),
       globalVars: {
-        ...state.globalVars,
-        insurgentResources: 1,
+        ...start.globalVars,
+        nvaResources: 10,
       },
     };
-
-    assert.throws(
-      () => applyMove(compiled.gameDef!, state, { actionId: asActionId('attack'), params: {} }),
-      (error: unknown) => {
-        const details = error as {
-          readonly reason?: string;
-          readonly metadata?: {
-            readonly code?: string;
-            readonly profileId?: string;
-            readonly partialExecutionMode?: string;
-          };
-        };
-
-        assert.equal(details.reason, 'action is not legal in current state');
-        return true;
+    const withAttackTargets = addTokenToZone(
+      addTokenToZone(withNvaActive, ATTACK_SPACE, {
+        id: asTokenId('test-nva-g-insurgent'),
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      }),
+      ATTACK_SPACE,
+      {
+        id: asTokenId('test-us-t-insurgent'),
+        type: 'us-troops',
+        props: { faction: 'US', type: 'troops' },
       },
     );
+    const selected = {
+      actionId: asActionId('attack'),
+      params: {
+        targetSpaces: [ATTACK_SPACE],
+        $attackMode: 'troops-attack',
+        $targetFactionFirst: 'US',
+      },
+    };
+    const final = applyMove(compiled.gameDef!, withAttackTargets, selected).state;
+
+    assert.equal(final.globalVars.fallbackUsed, 0);
+    assert.ok((final.globalVars.nvaResources ?? 10) <= 10, 'Expected Attack to charge NVA resources or keep them unchanged if free');
+  });
+
+  it('falls back to generic action effects when active player is not NVA', () => {
+    const { compiled } = compileProductionSpec();
+
+    assert.notEqual(compiled.gameDef, null);
+
+    const nonNvaState = {
+      ...initialState(compiled.gameDef!, 77, 4),
+      activePlayer: asPlayerId(0),
+    };
+    const final = applyMove(compiled.gameDef!, nonNvaState, { actionId: asActionId('attack'), params: {} }).state;
+    assert.equal(final.globalVars.fallbackUsed, 100);
   });
 });

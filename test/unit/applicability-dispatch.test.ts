@@ -185,7 +185,7 @@ describe('applicability-based action pipeline dispatch', () => {
     assert.equal(result.state.globalVars.score, 99);
   });
 
-  it('single candidate pipeline is selected even when applicability evaluates false', () => {
+  it('single candidate with false applicability falls back to action effects', () => {
     const def: GameDef = {
       ...createMultiProfileDef(),
       actionPipelines: [
@@ -204,7 +204,7 @@ describe('applicability-based action pipeline dispatch', () => {
 
     const state = createState(0);
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
-    assert.equal(result.state.globalVars.score, 33);
+    assert.equal(result.state.globalVars.score, 99);
   });
 
   it('profile with legality condition blocks move for the matching applicability player', () => {

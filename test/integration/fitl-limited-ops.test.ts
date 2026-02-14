@@ -69,7 +69,6 @@ describe('FITL limited operation integration', () => {
           params: {
             targetSpaces: [SPACE_A, SPACE_B],
             $attackMode: 'troops-attack',
-            $targetFactionFirst: 'US',
           },
         }),
       /Illegal move/,
@@ -82,10 +81,78 @@ describe('FITL limited operation integration', () => {
       params: {
         targetSpaces: [SPACE_A],
         $attackMode: 'troops-attack',
-        $targetFactionFirst: 'US',
       },
     }).state;
 
     assert.equal(singleSpace.globalVars.nvaResources, 9, 'Limited attack should resolve and spend one NVA resource for one targeted space');
+  });
+
+  it('enforces VC attack limitedOperation to at most one selected target space', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 510, 4);
+    const withVcActive = {
+      ...start,
+      activePlayer: asPlayerId(3),
+      globalVars: {
+        ...start.globalVars,
+        vcResources: 10,
+      },
+    };
+
+    const withTargets = addTokenToZone(
+      addTokenToZone(
+        addTokenToZone(
+          addTokenToZone(withVcActive, SPACE_A, {
+            id: asTokenId('limop-vc-a'),
+            type: 'vc-guerrillas',
+            props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+          }),
+          SPACE_A,
+          {
+            id: asTokenId('limop-vc-us-a'),
+            type: 'us-troops',
+            props: { faction: 'US', type: 'troops' },
+          },
+        ),
+        SPACE_B,
+        {
+          id: asTokenId('limop-vc-b'),
+          type: 'vc-guerrillas',
+          props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+        },
+      ),
+      SPACE_B,
+      {
+        id: asTokenId('limop-vc-us-b'),
+        type: 'us-troops',
+        props: { faction: 'US', type: 'troops' },
+      },
+    );
+
+    assert.throws(
+      () =>
+        applyMove(def, withTargets, {
+          actionId: asActionId('attack'),
+          actionClass: 'limitedOperation',
+          params: {
+            targetSpaces: [SPACE_A, SPACE_B],
+          },
+        }),
+      /Illegal move/,
+      'Limited operation VC attack should reject multiple target spaces',
+    );
+
+    const singleSpace = applyMove(def, withTargets, {
+      actionId: asActionId('attack'),
+      actionClass: 'limitedOperation',
+      params: {
+        targetSpaces: [SPACE_A],
+      },
+    }).state;
+
+    assert.equal(singleSpace.globalVars.vcResources, 9, 'Limited VC attack should resolve and spend one VC resource for one targeted space');
   });
 });

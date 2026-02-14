@@ -21,6 +21,24 @@ const hasRollRandom = (effects: readonly EffectAST[]): boolean =>
     return false;
   });
 
+const hasAttackModeChoice = (effects: readonly EffectAST[]): boolean =>
+  effects.some((effect) => {
+    if ('chooseOne' in effect) {
+      const serializedOptions = JSON.stringify(effect.chooseOne.options);
+      return serializedOptions.includes('"guerrilla-attack"') || serializedOptions.includes('"troops-attack"');
+    }
+    if ('if' in effect) {
+      return hasAttackModeChoice(effect.if.then) || (effect.if.else !== undefined && hasAttackModeChoice(effect.if.else));
+    }
+    if ('forEach' in effect) {
+      return hasAttackModeChoice(effect.forEach.effects) || (effect.forEach.in !== undefined && hasAttackModeChoice(effect.forEach.in));
+    }
+    if ('let' in effect) return hasAttackModeChoice(effect.let.in);
+    if ('rollRandom' in effect) return hasAttackModeChoice(effect.rollRandom.in);
+    if ('removeByPriority' in effect) return effect.removeByPriority.in !== undefined && hasAttackModeChoice(effect.removeByPriority.in);
+    return false;
+  });
+
 const collectIfBranches = (effects: readonly EffectAST[]): readonly Extract<EffectAST, { if: unknown }>[] => {
   const branches: Extract<EffectAST, { if: unknown }>[] = [];
   for (const effect of effects) {
@@ -81,6 +99,29 @@ const makeAttackReadyState = (def: GameDef, seed: number): GameState => {
   return addToken(addToken(withNvaPlayer, ATTACK_SPACE, nvaGuerrilla), ATTACK_SPACE, usTroop);
 };
 
+const makeVcAttackReadyState = (def: GameDef, seed: number): GameState => {
+  const start = initialState(def, seed, 4);
+  const withVcPlayer = {
+    ...start,
+    activePlayer: asPlayerId(3),
+    globalVars: {
+      ...start.globalVars,
+      vcResources: 20,
+    },
+  };
+  const vcGuerrilla: Token = {
+    id: asTokenId(`test-vc-g-${seed}`),
+    type: 'vc-guerrillas',
+    props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+  };
+  const usTroop: Token = {
+    id: asTokenId(`test-vc-us-t-${seed}`),
+    type: 'us-troops',
+    props: { faction: 'US', type: 'troops' },
+  };
+  return addToken(addToken(withVcPlayer, ATTACK_SPACE, vcGuerrilla), ATTACK_SPACE, usTroop);
+};
+
 const countFactionTokens = (state: GameState, zoneId: string, faction: string): number =>
   (state.zones[zoneId] ?? []).filter((token) => String(token.props.faction) === faction).length;
 
@@ -95,6 +136,19 @@ const countActiveNvaGuerrillas = (state: GameState, zoneId: string): number =>
 const countNvaGuerrillas = (state: GameState, zoneId: string): number =>
   (state.zones[zoneId] ?? []).filter(
     (token) => String(token.props.faction) === 'NVA' && String(token.props.type) === 'guerrilla',
+  ).length;
+
+const countVcGuerrillas = (state: GameState, zoneId: string): number =>
+  (state.zones[zoneId] ?? []).filter(
+    (token) => String(token.props.faction) === 'VC' && String(token.props.type) === 'guerrilla',
+  ).length;
+
+const countActiveVcGuerrillas = (state: GameState, zoneId: string): number =>
+  (state.zones[zoneId] ?? []).filter(
+    (token) =>
+      String(token.props.faction) === 'VC' &&
+      String(token.props.type) === 'guerrilla' &&
+      String(token.props.activity) === 'active',
   ).length;
 
 describe('FITL attack die roll integration', () => {
@@ -117,6 +171,19 @@ describe('FITL attack die roll integration', () => {
     assert.equal(hasRollRandom(troopsBranch.if.then), false, 'Troops branch should not include rollRandom');
   });
 
+  it('attack-vc-profile always uses rollRandom and does not expose attack mode selection', () => {
+    const { parsed, compiled } = compileProductionSpec();
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const profile = compiled.gameDef!.actionPipelines?.find((entry) => entry.id === 'attack-vc-profile');
+    assert.ok(profile, 'Expected attack-vc-profile in production pipelines');
+
+    const allEffects = profile.stages.flatMap((stage) => stage.effects);
+    assert.equal(hasRollRandom(allEffects), true, 'VC Attack should include rollRandom');
+    assert.equal(hasAttackModeChoice(allEffects), false, 'VC Attack should not include attack mode choice');
+  });
+
   it('guerrilla attack die roll is deterministic for the same seed and same choices', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
@@ -129,7 +196,6 @@ describe('FITL attack die roll integration', () => {
         params: {
           targetSpaces: [ATTACK_SPACE],
           $attackMode: 'guerrilla-attack',
-          $targetFactionFirst: 'US',
         },
       };
       const next = applyMove(def, state, move).state;
@@ -153,7 +219,6 @@ describe('FITL attack die roll integration', () => {
         params: {
           targetSpaces: [ATTACK_SPACE],
           $attackMode: 'guerrilla-attack',
-          $targetFactionFirst: 'US',
         },
       };
       return applyMove(def, state, move).state;
@@ -189,5 +254,50 @@ describe('FITL attack die roll integration', () => {
     assert.equal(countFactionTokens(missState!, ATTACK_SPACE, 'US'), 1, 'Miss should leave US defender in place');
     assert.equal(countFactionTokens(missState!, 'casualties-US:none', 'US'), 0, 'Miss should not remove a US defender');
     assert.equal(countActiveNvaGuerrillas(missState!, ATTACK_SPACE), 1, 'NVA guerrilla should become active on miss');
+  });
+
+  it('vc attack die roll covers hit and miss outcomes and preserves attacker/defender invariants', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const run = (seed: number): GameState =>
+      applyMove(def, makeVcAttackReadyState(def, seed), {
+        actionId: asActionId('attack'),
+        params: {
+          targetSpaces: [ATTACK_SPACE],
+        },
+      }).state;
+
+    let hitState: GameState | null = null;
+    let missState: GameState | null = null;
+
+    for (let seed = 1; seed <= 64; seed += 1) {
+      const next = run(seed);
+      const usRemainingInSpace = countFactionTokens(next, ATTACK_SPACE, 'US');
+      const usInCasualties = countFactionTokens(next, 'casualties-US:none', 'US');
+      if (usInCasualties >= 1 && hitState === null) {
+        hitState = next;
+      }
+      if (usRemainingInSpace >= 1 && usInCasualties === 0 && missState === null) {
+        missState = next;
+      }
+      if (hitState !== null && missState !== null) break;
+    }
+
+    assert.ok(hitState !== null, 'Expected at least one deterministic seed in [1..64] to hit in VC attack mode');
+    assert.ok(missState !== null, 'Expected at least one deterministic seed in [1..64] to miss in VC attack mode');
+
+    assert.equal(countFactionTokens(hitState!, ATTACK_SPACE, 'US'), 0, 'Hit should remove US defender from the attacked space');
+    assert.equal(countFactionTokens(hitState!, 'casualties-US:none', 'US'), 1, 'Hit should route US loss to casualties');
+    assert.equal(
+      countVcGuerrillas(hitState!, ATTACK_SPACE) + countVcGuerrillas(hitState!, 'available-VC:none'),
+      1,
+      'Hit should preserve VC attacker count (activate first, then attrition can remove exactly one attacker)',
+    );
+
+    assert.equal(countFactionTokens(missState!, ATTACK_SPACE, 'US'), 1, 'Miss should leave US defender in place');
+    assert.equal(countFactionTokens(missState!, 'casualties-US:none', 'US'), 0, 'Miss should not remove a US defender');
+    assert.equal(countActiveVcGuerrillas(missState!, ATTACK_SPACE), 1, 'VC guerrilla should become active on miss');
   });
 });

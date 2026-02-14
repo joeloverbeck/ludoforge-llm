@@ -122,61 +122,39 @@ effectMacros:
           bind: $usPiecesBefore
           value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: 'US' }] } } }
           in:
-            - chooseOne:
-                bind: $targetFactionFirst
-                options: { query: enums, values: ['US', 'ARVN'] }
-            - let:
-                bind: $targetFactionSecond
-                value: { if: { when: { op: '==', left: { ref: binding, name: $targetFactionFirst }, right: 'US' }, then: 'ARVN', else: 'US' } }
-                in:
-                  - removeByPriority:
-                      budget: { param: damageExpr }
-                      groups:
-                        # Non-base COIN pieces are removed before any base.
-                        - bind: $target
-                          over:
-                            query: tokensInZone
-                            zone: { param: space }
-                            filter: [{ prop: faction, eq: { ref: binding, name: $targetFactionFirst } }, { prop: type, op: neq, value: base }]
-                          to:
-                            zoneExpr:
-                              if:
-                                when: { op: '==', left: { ref: binding, name: $targetFactionFirst }, right: 'US' }
-                                then: 'casualties-US:none'
-                                else: { concat: ['available-', { ref: binding, name: $targetFactionFirst }, ':none'] }
-                        - bind: $target
-                          over:
-                            query: tokensInZone
-                            zone: { param: space }
-                            filter: [{ prop: faction, eq: { ref: binding, name: $targetFactionSecond } }, { prop: type, op: neq, value: base }]
-                          to:
-                            zoneExpr:
-                              if:
-                                when: { op: '==', left: { ref: binding, name: $targetFactionSecond }, right: 'US' }
-                                then: 'casualties-US:none'
-                                else: { concat: ['available-', { ref: binding, name: $targetFactionSecond }, ':none'] }
-                        - bind: $target
-                          over:
-                            query: tokensInZone
-                            zone: { param: space }
-                            filter: [{ prop: faction, eq: { ref: binding, name: $targetFactionFirst } }, { prop: type, eq: base }]
-                          to:
-                            zoneExpr:
-                              if:
-                                when: { op: '==', left: { ref: binding, name: $targetFactionFirst }, right: 'US' }
-                                then: 'casualties-US:none'
-                                else: { concat: ['available-', { ref: binding, name: $targetFactionFirst }, ':none'] }
-                        - bind: $target
-                          over:
-                            query: tokensInZone
-                            zone: { param: space }
-                            filter: [{ prop: faction, eq: { ref: binding, name: $targetFactionSecond } }, { prop: type, eq: base }]
-                          to:
-                            zoneExpr:
-                              if:
-                                when: { op: '==', left: { ref: binding, name: $targetFactionSecond }, right: 'US' }
-                                then: 'casualties-US:none'
-                                else: { concat: ['available-', { ref: binding, name: $targetFactionSecond }, ':none'] }
+            - removeByPriority:
+                budget: { param: damageExpr }
+                groups:
+                  # Non-base COIN pieces are removed before any base.
+                  # Deterministic order: US first, then ARVN.
+                  - bind: $target
+                    over:
+                      query: tokensInZone
+                      zone: { param: space }
+                      filter: [{ prop: faction, eq: 'US' }, { prop: type, op: neq, value: base }]
+                    to:
+                      zoneExpr: 'casualties-US:none'
+                  - bind: $target
+                    over:
+                      query: tokensInZone
+                      zone: { param: space }
+                      filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: neq, value: base }]
+                    to:
+                      zoneExpr: 'available-ARVN:none'
+                  - bind: $target
+                    over:
+                      query: tokensInZone
+                      zone: { param: space }
+                      filter: [{ prop: faction, eq: 'US' }, { prop: type, eq: base }]
+                    to:
+                      zoneExpr: 'casualties-US:none'
+                  - bind: $target
+                    over:
+                      query: tokensInZone
+                      zone: { param: space }
+                      filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, eq: base }]
+                    to:
+                      zoneExpr: 'available-ARVN:none'
             - let:
                 bind: $usPiecesAfter
                 value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: 'US' }] } } }
@@ -3155,6 +3133,86 @@ actionPipelines:
                                       space: $space
                                       damageExpr: { ref: binding, name: $damage }
                                       attackerFaction: 'NVA'
+    atomicity: atomic
+  - id: attack-vc-profile
+    actionId: attack
+    applicability: { op: '==', left: { ref: activePlayer }, right: '3' }
+    legality: true
+    costValidation: null
+    costEffects: []
+    targeting: {}
+    stages:
+      - stage: select-spaces
+        effects:
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'VC' }] } } }
+                            right: 0
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } }
+                            right: 0
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'VC' }] } } }
+                            right: 0
+                          - op: '>'
+                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } }
+                            right: 0
+                    min: 1
+                    max: 99
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - if:
+                    when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                    then:
+                      - addVar: { scope: global, var: vcResources, delta: -1 }
+                - forEach:
+                    bind: $g
+                    over:
+                      query: tokensInZone
+                      zone: $space
+                      filter: [{ prop: faction, eq: 'VC' }, { prop: type, eq: guerrilla }]
+                    effects:
+                      - setTokenProp: { token: $g, prop: activity, value: active }
+                - let:
+                    bind: $guerrillaCount
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: [{ prop: faction, eq: 'VC' }, { prop: type, eq: guerrilla }] } } }
+                    in:
+                      - rollRandom:
+                          bind: $dieRoll
+                          min: 1
+                          max: 6
+                          in:
+                            - if:
+                                when: { op: '<=', left: { ref: binding, name: $dieRoll }, right: { ref: binding, name: $guerrillaCount } }
+                                then:
+                                  - macro: insurgent-attack-removal-order
+                                    args:
+                                      space: $space
+                                      damageExpr: 2
+                                      attackerFaction: 'VC'
     atomicity: atomic
   - id: terror-profile
     actionId: terror

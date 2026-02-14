@@ -186,8 +186,13 @@ describe('FITL removal ordering macros', () => {
       );
       assert.match(
         insurgentSerialized,
-        /"else":\{"concat":\["available-"/,
-        'Expected insurgent-attack-removal-order to route non-US removals to available-* via dynamic zoneExpr',
+        /available-ARVN:none/,
+        'Expected insurgent-attack-removal-order to route ARVN removals explicitly to available-ARVN:none',
+      );
+      assert.doesNotMatch(
+        insurgentSerialized,
+        /targetFactionFirst/,
+        'Expected insurgent-attack-removal-order to avoid hidden target-faction choice bindings',
       );
     });
   });

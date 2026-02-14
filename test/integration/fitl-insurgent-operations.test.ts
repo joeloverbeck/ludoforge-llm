@@ -46,6 +46,7 @@ describe('FITL insurgent operations integration', () => {
       { id: 'march-nva-profile', actionId: 'march' },
       { id: 'march-vc-profile', actionId: 'march' },
       { id: 'attack-nva-profile', actionId: 'attack' },
+      { id: 'attack-vc-profile', actionId: 'attack' },
       { id: 'terror-profile', actionId: 'terror' },
     ]) {
       assert.ok(
@@ -87,12 +88,53 @@ describe('FITL insurgent operations integration', () => {
       params: {
         targetSpaces: [ATTACK_SPACE],
         $attackMode: 'troops-attack',
-        $targetFactionFirst: 'US',
       },
     };
     const final = applyMove(compiled.gameDef!, withAttackTargets, selected).state;
 
     assert.ok((final.globalVars.nvaResources ?? 10) <= 10, 'Expected Attack to charge NVA resources or keep them unchanged if free');
+  });
+
+  it('executes attack through attack-vc-profile when active player is VC', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 102, 4);
+    const withVcActive = {
+      ...start,
+      activePlayer: asPlayerId(3),
+      globalVars: {
+        ...start.globalVars,
+        vcResources: 10,
+      },
+    };
+    const withAttackTargets = addTokenToZone(
+      addTokenToZone(withVcActive, ATTACK_SPACE, {
+        id: asTokenId('test-vc-g-insurgent'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      }),
+      ATTACK_SPACE,
+      {
+        id: asTokenId('test-us-t-vc-insurgent'),
+        type: 'us-troops',
+        props: { faction: 'US', type: 'troops' },
+      },
+    );
+    const final = applyMove(def, withAttackTargets, {
+      actionId: asActionId('attack'),
+      params: {
+        targetSpaces: [ATTACK_SPACE],
+      },
+    }).state;
+
+    assert.equal(final.globalVars.vcResources, 9, 'VC Attack should spend 1 VC resource per selected space');
+    const vcInSpace = (final.zones[ATTACK_SPACE] ?? []).filter((token) => token.props.faction === 'VC');
+    assert.ok(
+      vcInSpace.some((token) => token.props.type === 'guerrilla' && token.props.activity === 'active'),
+      'VC guerrillas in attacked space should activate',
+    );
   });
 
   it('march moves NVA pieces from adjacent spaces and charges Province/City but not LoC destinations', () => {
@@ -669,7 +711,7 @@ describe('FITL insurgent operations integration', () => {
     assert.equal(final.globalVars.nvaResources, 6, 'Trail=4 should make Laos/Cambodia March destinations free');
   });
 
-  it('treats attack as illegal when active player is not NVA', () => {
+  it('treats attack as illegal when active player is not an insurgent faction', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);
@@ -752,7 +794,6 @@ describe('FITL insurgent operations integration', () => {
       params: {
         targetSpaces: [ATTACK_SPACE],
         $attackMode: 'troops-attack',
-        $targetFactionFirst: 'US',
       },
     };
     const final = applyMove(def, withAttackTargets, selected).state;
@@ -801,7 +842,6 @@ describe('FITL insurgent operations integration', () => {
       params: {
         targetSpaces: [ATTACK_SPACE],
         $attackMode: 'troops-attack',
-        $targetFactionFirst: 'US',
       },
     }).state;
     const free = applyMove(def, withTargets, {
@@ -810,12 +850,57 @@ describe('FITL insurgent operations integration', () => {
       params: {
         targetSpaces: [ATTACK_SPACE],
         $attackMode: 'troops-attack',
-        $targetFactionFirst: 'US',
       },
     }).state;
 
     assert.equal(nonFree.globalVars.nvaResources, 6, 'Non-free attack should spend 1 NVA resource per targeted space');
     assert.equal(free.globalVars.nvaResources, 7, 'Free attack should skip per-space NVA resource spend');
+  });
+
+  it('skips vcResources attack spend when move is marked freeOperation', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 212, 4);
+    const withVcActive = {
+      ...start,
+      activePlayer: asPlayerId(3),
+      globalVars: {
+        ...start.globalVars,
+        vcResources: 7,
+      },
+    };
+    const withTargets = addTokenToZone(
+      addTokenToZone(withVcActive, ATTACK_SPACE, {
+        id: asTokenId('test-free-vc-g'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      }),
+      ATTACK_SPACE,
+      {
+        id: asTokenId('test-free-us-vc-t'),
+        type: 'us-troops',
+        props: { faction: 'US', type: 'troops' },
+      },
+    );
+
+    const nonFree = applyMove(def, withTargets, {
+      actionId: asActionId('attack'),
+      params: {
+        targetSpaces: [ATTACK_SPACE],
+      },
+    }).state;
+    const free = applyMove(def, withTargets, {
+      actionId: asActionId('attack'),
+      freeOperation: true,
+      params: {
+        targetSpaces: [ATTACK_SPACE],
+      },
+    }).state;
+
+    assert.equal(nonFree.globalVars.vcResources, 6, 'Non-free VC attack should spend 1 resource per targeted space');
+    assert.equal(free.globalVars.vcResources, 7, 'Free VC attack should skip per-space VC resource spend');
   });
 
   it('treats rally as illegal when active player is not an insurgent faction', () => {

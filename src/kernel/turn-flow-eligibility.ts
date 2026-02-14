@@ -436,6 +436,24 @@ const activePendingFreeOperationGrants = (
   return pending.filter((grant) => grant.faction === activeFaction);
 };
 
+const applicableActivePendingFreeOperationGrants = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): readonly TurnFlowPendingFreeOperationGrant[] =>
+  activePendingFreeOperationGrants(state).filter((grant) => doesGrantApplyToMove(def, grant, move));
+
+export const isFreeOperationApplicableForMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): boolean => {
+  if (move.freeOperation !== true) {
+    return true;
+  }
+  return applicableActivePendingFreeOperationGrants(def, state, move).length > 0;
+};
+
 export const resolveFreeOperationZoneFilter = (
   def: GameDef,
   state: GameState,
@@ -444,8 +462,7 @@ export const resolveFreeOperationZoneFilter = (
   if (move.freeOperation !== true) {
     return undefined;
   }
-  const applicable = activePendingFreeOperationGrants(state)
-    .filter((grant) => doesGrantApplyToMove(def, grant, move))
+  const applicable = applicableActivePendingFreeOperationGrants(def, state, move)
     .flatMap((grant) => (grant.zoneFilter === undefined ? [] : [grant.zoneFilter]));
   if (applicable.length === 0) {
     return undefined;
@@ -461,14 +478,13 @@ export const isFreeOperationGrantedForMove = (
   state: GameState,
   move: Move,
 ): boolean => {
+  if (!isFreeOperationApplicableForMove(def, state, move)) {
+    return false;
+  }
   if (move.freeOperation !== true) {
     return true;
   }
-  const applicable = activePendingFreeOperationGrants(state)
-    .filter((grant) => doesGrantApplyToMove(def, grant, move));
-  if (applicable.length === 0) {
-    return false;
-  }
+  const applicable = applicableActivePendingFreeOperationGrants(def, state, move);
   return applicable.some((grant) =>
     grant.zoneFilter === undefined || evaluateZoneFilterForMove(def, state, move, grant.zoneFilter));
 };

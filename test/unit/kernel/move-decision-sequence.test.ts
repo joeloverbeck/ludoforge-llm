@@ -34,7 +34,7 @@ const makeBaseDef = (overrides?: {
     terminal: { conditions: [] },
   }) as unknown as GameDef;
 
-const makeBaseState = (): GameState => ({
+const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: {},
   perPlayerVars: {},
   playerCount: 2,
@@ -48,6 +48,7 @@ const makeBaseState = (): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  ...overrides,
 });
 
 const makeMove = (actionId: string): Move => ({
@@ -287,5 +288,246 @@ describe('move decision sequence helpers', () => {
     const move = makeMove('broken-decision-op');
 
     assert.throws(() => isMoveDecisionSequenceSatisfiable(def, state, move));
+  });
+
+  it('applies free-operation zone filters at decision checkpoints for template moves', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operation-profile',
+      actionId: asActionId('operation'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$zone',
+                bind: '$zone',
+                options: { query: 'zones' },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def: GameDef = {
+      ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+      zones: [
+        { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('board:vietnam'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      mapSpaces: [
+        {
+          id: 'board:cambodia',
+          spaceType: 'province',
+          population: 1,
+          econ: 0,
+          terrainTags: [],
+          country: 'cambodia',
+          coastal: false,
+          adjacentTo: [],
+        },
+        {
+          id: 'board:vietnam',
+          spaceType: 'province',
+          population: 1,
+          econ: 0,
+          terrainTags: [],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      zones: { 'board:cambodia': [], 'board:vietnam': [] },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              faction: '0',
+              actionIds: ['operation'],
+              zoneFilter: {
+                op: '==',
+                left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                right: 'cambodia',
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    const result = resolveMoveDecisionSequence(
+      def,
+      state,
+      { actionId: asActionId('operation'), params: {}, freeOperation: true },
+      { choose: () => undefined },
+    );
+
+    assert.equal(result.complete, false);
+    assert.equal(result.nextDecision?.decisionId, 'decision:$zone');
+    assert.deepEqual(result.nextDecision?.options, ['board:cambodia']);
+  });
+
+  it('rejects decision selections outside the free-operation zone filter domain', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operation-profile',
+      actionId: asActionId('operation'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$zone',
+                bind: '$zone',
+                options: { query: 'zones' },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def: GameDef = {
+      ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+      zones: [
+        { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('board:vietnam'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      mapSpaces: [
+        {
+          id: 'board:cambodia',
+          spaceType: 'province',
+          population: 1,
+          econ: 0,
+          terrainTags: [],
+          country: 'cambodia',
+          coastal: false,
+          adjacentTo: [],
+        },
+        {
+          id: 'board:vietnam',
+          spaceType: 'province',
+          population: 1,
+          econ: 0,
+          terrainTags: [],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      zones: { 'board:cambodia': [], 'board:vietnam': [] },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              faction: '0',
+              actionIds: ['operation'],
+              zoneFilter: {
+                op: '==',
+                left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                right: 'cambodia',
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    assert.throws(
+      () =>
+        resolveMoveDecisionSequence(def, state, {
+          actionId: asActionId('operation'),
+          params: { 'decision:$zone': 'board:vietnam' },
+          freeOperation: true,
+        }),
+      (error: unknown) => error instanceof Error && error.message.includes('invalid selection for chooseOne'),
+    );
   });
 });

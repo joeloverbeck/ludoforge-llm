@@ -1,4 +1,5 @@
-import { isFreeOperationGrantedForMove, resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
+import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
+import { isFreeOperationApplicableForMove, isFreeOperationGrantedForMove, resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
 import type { GameDef, GameState, Move, MoveParamValue } from './types.js';
 
 const cardDrivenConfig = (def: GameDef) =>
@@ -194,9 +195,21 @@ export function applyPendingFreeOperationVariants(
       ...move,
       freeOperation: true,
     };
-    if (!isFreeOperationGrantedForMove(def, state, candidate)) {
+    if (!isFreeOperationApplicableForMove(def, state, candidate)) {
       continue;
     }
+
+    const checkpoint = resolveMoveDecisionSequence(def, state, candidate, {
+      choose: () => undefined,
+    }).complete;
+    const unresolvedDecisionCheckpoint = !checkpoint;
+    if (unresolvedDecisionCheckpoint && !isMoveDecisionSequenceSatisfiable(def, state, candidate)) {
+      continue;
+    }
+    if (!unresolvedDecisionCheckpoint && !isFreeOperationGrantedForMove(def, state, candidate)) {
+      continue;
+    }
+
     variants.push(candidate);
   }
   return variants;

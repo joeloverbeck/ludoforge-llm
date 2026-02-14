@@ -11,23 +11,7 @@ import {
   type GameDef,
   type Move,
 } from '../../src/kernel/index.js';
-import {
-  createEligibilityOverrideDirective,
-  FITL_NO_OVERRIDE,
-} from './fitl-events-test-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
-
-const selfOverride = createEligibilityOverrideDirective({
-  target: 'self',
-  eligibility: 'eligible',
-  windowId: 'remain-eligible',
-});
-const targetOverride = createEligibilityOverrideDirective({
-  target: 2,
-  eligibility: 'ineligible',
-  windowId: 'force-ineligible',
-});
-const noOverride = FITL_NO_OVERRIDE;
 
 const createDef = (): GameDef =>
   ({
@@ -66,8 +50,6 @@ const createDef = (): GameDef =>
         params: [
           { name: 'eventCardId', domain: { query: 'enums', values: ['card-overrides', 'card-free-op'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
-          { name: 'selfOverride', domain: { query: 'enums', values: [noOverride, selfOverride] } },
-          { name: 'targetOverride', domain: { query: 'enums', values: [noOverride, targetOverride] } },
         ],
         pre: null,
         cost: [],
@@ -99,6 +81,10 @@ const createDef = (): GameDef =>
             sideMode: 'single',
             unshaded: {
               text: 'No free operation grant.',
+              eligibilityOverrides: [
+                { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
+                { target: { kind: 'faction', faction: '2' }, eligible: false, windowId: 'force-ineligible' },
+              ],
             },
           },
           {
@@ -122,7 +108,7 @@ describe('FITL eligibility window integration', () => {
 
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
-      params: { eventCardId: 'card-overrides', side: 'unshaded', selfOverride, targetOverride },
+      params: { eventCardId: 'card-overrides', side: 'unshaded' },
     }).state;
     const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} });
 
@@ -137,7 +123,7 @@ describe('FITL eligibility window integration', () => {
 
     const firstMove: Move = {
       actionId: asActionId('event'),
-      params: { eventCardId: 'card-free-op', side: 'unshaded', selfOverride: noOverride, targetOverride: noOverride },
+      params: { eventCardId: 'card-free-op', side: 'unshaded' },
     };
     const firstResult = applyMove(def, start, firstMove);
 

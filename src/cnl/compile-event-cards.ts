@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { EventCardDef, EventDeckDef, EventFreeOperationGrantDef } from '../kernel/types.js';
+import type { EventCardDef, EventDeckDef, EventEligibilityOverrideDef, EventFreeOperationGrantDef } from '../kernel/types.js';
 import { lowerConditionNode, lowerQueryNode } from './compile-conditions.js';
 import { lowerEffectArray } from './compile-effects.js';
 import { normalizeIdentifier } from './compile-lowering.js';
@@ -157,6 +157,7 @@ export function lowerEventCardSide(
     diagnostics,
     `${pathPrefix}.freeOperationGrants`,
   );
+  const loweredEligibilityOverrides = lowerEventEligibilityOverrides(side.eligibilityOverrides);
   const loweredLastingEffects = lowerEventLastingEffects(
     side.lastingEffects,
     ownershipByBase,
@@ -170,6 +171,7 @@ export function lowerEventCardSide(
       ...side,
       ...(loweredTargets === undefined ? {} : { targets: loweredTargets }),
       ...(loweredFreeOperationGrants === undefined ? {} : { freeOperationGrants: loweredFreeOperationGrants }),
+      ...(loweredEligibilityOverrides === undefined ? {} : { eligibilityOverrides: loweredEligibilityOverrides }),
       ...(loweredEffects === undefined ? {} : { effects: loweredEffects }),
       ...(loweredLastingEffects === undefined ? {} : { lastingEffects: loweredLastingEffects }),
     };
@@ -229,6 +231,7 @@ export function lowerEventCardSide(
       diagnostics,
       `${branchPath}.freeOperationGrants`,
     );
+    const loweredBranchEligibilityOverrides = lowerEventEligibilityOverrides(branch.eligibilityOverrides);
     const loweredBranchLastingEffects = lowerEventLastingEffects(
       branch.lastingEffects,
       ownershipByBase,
@@ -243,6 +246,7 @@ export function lowerEventCardSide(
         ...branch,
         ...(loweredBranchTargets === undefined ? {} : { targets: loweredBranchTargets }),
         ...(loweredBranchFreeOperationGrants === undefined ? {} : { freeOperationGrants: loweredBranchFreeOperationGrants }),
+        ...(loweredBranchEligibilityOverrides === undefined ? {} : { eligibilityOverrides: loweredBranchEligibilityOverrides }),
         ...(loweredBranchEffects === undefined ? {} : { effects: loweredBranchEffects }),
         ...(loweredBranchLastingEffects === undefined ? {} : { lastingEffects: loweredBranchLastingEffects }),
       },
@@ -274,10 +278,28 @@ export function lowerEventCardSide(
     ...side,
     ...(loweredTargets === undefined ? {} : { targets: loweredTargets }),
     ...(loweredFreeOperationGrants === undefined ? {} : { freeOperationGrants: loweredFreeOperationGrants }),
+    ...(loweredEligibilityOverrides === undefined ? {} : { eligibilityOverrides: loweredEligibilityOverrides }),
     ...(loweredEffects === undefined ? {} : { effects: loweredEffects }),
     ...(loweredLastingEffects === undefined ? {} : { lastingEffects: loweredLastingEffects }),
     branches: loweredBranches.map((entry) => entry.branch),
   };
+}
+
+function lowerEventEligibilityOverrides(
+  overrides: readonly EventEligibilityOverrideDef[] | undefined,
+): readonly EventEligibilityOverrideDef[] | undefined {
+  if (overrides === undefined) {
+    return undefined;
+  }
+  return overrides.map((override) => ({
+    ...override,
+    target:
+      override.target.kind === 'active'
+        ? override.target
+        : {
+            ...override.target,
+          },
+  }));
 }
 
 function lowerEventFreeOperationGrants(

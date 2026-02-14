@@ -464,4 +464,96 @@ describe('crossValidateSpec', () => {
       entry.code === 'CNL_XREF_EVENT_DECK_GRANT_ACTION_MISSING');
     assert.deepEqual(grantDiagnostics, []);
   });
+
+  it('eventDeck eligibilityOverrides with unknown faction emits CNL_XREF_EVENT_DECK_OVERRIDE_FACTION_MISSING', () => {
+    const sections = compileRichSections();
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                ...(card.unshaded ?? {}),
+                eligibilityOverrides: [{ target: { kind: 'faction', faction: 'uss' }, eligible: true, windowId: 'window-a' }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_FACTION_MISSING');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.eligibilityOverrides.0.target.faction');
+    assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
+  });
+
+  it('eventDeck branch eligibilityOverrides with unknown window emits CNL_XREF_EVENT_DECK_OVERRIDE_WINDOW_MISSING', () => {
+    const sections = compileRichSections();
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                ...(card.unshaded ?? {}),
+                branches: [
+                  {
+                    id: 'branch-a',
+                    eligibilityOverrides: [{ target: { kind: 'active' }, eligible: false, windowId: 'window-b' }],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_WINDOW_MISSING');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.branches.0.eligibilityOverrides.0.windowId');
+    assert.equal(diagnostic?.suggestion, 'Did you mean "window-a"?');
+  });
+
+  it('eventDeck eligibilityOverrides with valid references produce no override cross-ref diagnostics', () => {
+    const sections = compileRichSections();
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                ...(card.unshaded ?? {}),
+                eligibilityOverrides: [
+                  { target: { kind: 'active' }, eligible: true, windowId: 'window-a' },
+                  { target: { kind: 'faction', faction: 'us' }, eligible: false, windowId: 'window-a' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const overrideDiagnostics = diagnostics.filter((entry) =>
+      entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_FACTION_MISSING' ||
+      entry.code === 'CNL_XREF_EVENT_DECK_OVERRIDE_WINDOW_MISSING');
+    assert.deepEqual(overrideDiagnostics, []);
+  });
 });

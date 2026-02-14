@@ -67,11 +67,34 @@ export const EventCardFreeOperationGrantSchema = z
   })
   .strict();
 
+export const EventCardEligibilityOverrideTargetSchema = z.union([
+  z
+    .object({
+      kind: z.literal('active'),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('faction'),
+      faction: StringSchema.min(1),
+    })
+    .strict(),
+]);
+
+export const EventCardEligibilityOverrideSchema = z
+  .object({
+    target: EventCardEligibilityOverrideTargetSchema,
+    eligible: BooleanSchema,
+    windowId: StringSchema.min(1),
+  })
+  .strict();
+
 export const EventCardBranchSchema: z.ZodTypeAny = z
   .object({
     id: StringSchema.min(1),
     order: IntegerSchema.min(0).optional(),
     freeOperationGrants: z.array(EventCardFreeOperationGrantSchema).min(1).optional(),
+    eligibilityOverrides: z.array(EventCardEligibilityOverrideSchema).min(1).optional(),
     effects: z.array(EffectASTSchema).min(1).optional(),
     targets: z.array(EventCardTargetSchema).optional(),
     lastingEffects: z.array(EventCardLastingEffectSchema).optional(),
@@ -80,13 +103,14 @@ export const EventCardBranchSchema: z.ZodTypeAny = z
   .superRefine((value, ctx) => {
     if (
       value.freeOperationGrants === undefined &&
+      value.eligibilityOverrides === undefined &&
       value.effects === undefined &&
       value.targets === undefined &&
       value.lastingEffects === undefined
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Branch must declare at least one of freeOperationGrants, effects, targets, or lastingEffects.',
+        message: 'Branch must declare at least one of freeOperationGrants, eligibilityOverrides, effects, targets, or lastingEffects.',
         path: [],
       });
     }
@@ -96,6 +120,7 @@ export const EventCardSideSchema = z
   .object({
     text: StringSchema.optional(),
     freeOperationGrants: z.array(EventCardFreeOperationGrantSchema).min(1).optional(),
+    eligibilityOverrides: z.array(EventCardEligibilityOverrideSchema).min(1).optional(),
     effects: z.array(EffectASTSchema).min(1).optional(),
     branches: z.array(EventCardBranchSchema).min(1).optional(),
     targets: z.array(EventCardTargetSchema).optional(),
@@ -106,6 +131,7 @@ export const EventCardSideSchema = z
     if (
       value.text === undefined &&
       value.freeOperationGrants === undefined &&
+      value.eligibilityOverrides === undefined &&
       value.effects === undefined &&
       value.branches === undefined &&
       value.targets === undefined &&
@@ -113,7 +139,7 @@ export const EventCardSideSchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Event side must declare at least one of text, freeOperationGrants, effects, branches, targets, or lastingEffects.',
+        message: 'Event side must declare at least one of text, freeOperationGrants, eligibilityOverrides, effects, branches, targets, or lastingEffects.',
         path: [],
       });
     }

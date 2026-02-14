@@ -21,7 +21,7 @@
   "selectedMove": {
     "actionId": "event",
     "params": {
-      "selfOverride": "eligibilityOverride:self:eligible:remain-eligible",
+      "eventCardId": "trace-card",
       "side": "shaded",
       "branch": "b",
       "targetPrimary": "space-b",

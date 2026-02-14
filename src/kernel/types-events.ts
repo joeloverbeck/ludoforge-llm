@@ -33,10 +33,30 @@ export interface EventFreeOperationGrantDef {
   readonly uses?: number;
 }
 
+export interface EventEligibilityOverrideTargetActive {
+  readonly kind: 'active';
+}
+
+export interface EventEligibilityOverrideTargetFaction {
+  readonly kind: 'faction';
+  readonly faction: string;
+}
+
+export type EventEligibilityOverrideTarget =
+  | EventEligibilityOverrideTargetActive
+  | EventEligibilityOverrideTargetFaction;
+
+export interface EventEligibilityOverrideDef {
+  readonly target: EventEligibilityOverrideTarget;
+  readonly eligible: boolean;
+  readonly windowId: string;
+}
+
 export interface EventBranchDef {
   readonly id: string;
   readonly order?: number;
   readonly freeOperationGrants?: readonly EventFreeOperationGrantDef[];
+  readonly eligibilityOverrides?: readonly EventEligibilityOverrideDef[];
   readonly effects?: readonly EffectAST[];
   readonly targets?: readonly EventTargetDef[];
   readonly lastingEffects?: readonly EventLastingEffectDef[];
@@ -45,6 +65,7 @@ export interface EventBranchDef {
 export interface EventSideDef {
   readonly text?: string;
   readonly freeOperationGrants?: readonly EventFreeOperationGrantDef[];
+  readonly eligibilityOverrides?: readonly EventEligibilityOverrideDef[];
   readonly effects?: readonly EffectAST[];
   readonly branches?: readonly EventBranchDef[];
   readonly targets?: readonly EventTargetDef[];

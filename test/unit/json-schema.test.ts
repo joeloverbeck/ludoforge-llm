@@ -115,6 +115,38 @@ const fullGameDef: GameDef = {
   },
 };
 
+const gameDefWithModernEventDeck: GameDef = {
+  ...fullGameDef,
+  eventDecks: [
+    {
+      id: 'events',
+      drawZone: 'deck:none',
+      discardZone: 'discard:none',
+      shuffleOnSetup: true,
+      cards: [
+        {
+          id: 'card-1',
+          title: 'Card One',
+          sideMode: 'single',
+          unshaded: {
+            text: 'Test payload',
+            freeOperationGrants: [{ faction: '0', actionIds: ['playCard'], uses: 1 }],
+            eligibilityOverrides: [{ target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' }],
+            lastingEffects: [
+              {
+                id: 'lasting-1',
+                duration: 'nextTurn',
+                setupEffects: [{ addVar: { scope: 'global', var: 'round', delta: 1 } }],
+                teardownEffects: [{ addVar: { scope: 'global', var: 'round', delta: -1 } }],
+              },
+            ],
+          },
+        },
+      ],
+    },
+  ],
+};
+
 const validRuntimeTrace: GameTrace = {
   gameDefId: 'full-game',
   seed: 1234,
@@ -272,6 +304,62 @@ describe('json schema artifacts', () => {
     const validate = ajv.compile(gameDefSchema);
 
     assert.equal(validate(fullGameDef), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('game def with modern eventDeck fields validates against GameDef.schema.json', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+
+    assert.equal(validate(gameDefWithModernEventDeck), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('game def with legacy event lastingEffects.effect fails GameDef.schema.json validation', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const legacy = {
+      ...gameDefWithModernEventDeck,
+      eventDecks: [
+        {
+          ...gameDefWithModernEventDeck.eventDecks![0],
+          cards: [
+            {
+              ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0],
+              unshaded: {
+                ...gameDefWithModernEventDeck.eventDecks![0]!.cards[0]!.unshaded!,
+                lastingEffects: [{ id: 'legacy', duration: 'nextTurn', effect: { noop: {} } }],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(legacy), false);
+    assert.ok(
+      validate.errors?.some((error) => error.instancePath.includes('/eventDecks/0/cards/0/unshaded/lastingEffects/0')),
+      JSON.stringify(validate.errors, null, 2),
+    );
+  });
+
+  it('eventDeck missing drawZone fails GameDef.schema.json validation', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const missingDrawZone = {
+      ...gameDefWithModernEventDeck,
+      eventDecks: [
+        {
+          id: 'events',
+          discardZone: 'discard:none',
+          cards: gameDefWithModernEventDeck.eventDecks![0]!.cards,
+        },
+      ],
+    };
+
+    assert.equal(validate(missingDrawZone), false);
+    assert.ok(
+      validate.errors?.some((error) => error.instancePath === '/eventDecks/0'),
+      JSON.stringify(validate.errors, null, 2),
+    );
   });
 
   it('trace with non-hex RNG word fails schema validation', () => {

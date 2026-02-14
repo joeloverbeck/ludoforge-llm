@@ -2,32 +2,35 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  createEligibilityOverrideDirective,
-  FITL_NO_OVERRIDE,
+  createEligibilityOverride,
 } from './fitl-events-test-helpers.js';
 
 describe('FITL events test helpers', () => {
-  it('composes deterministic eligibility override directives for self and faction targets', () => {
-    assert.equal(
-      createEligibilityOverrideDirective({
+  it('composes deterministic typed eligibility overrides for active and faction targets', () => {
+    assert.deepEqual(
+      createEligibilityOverride({
         target: 'self',
-        eligibility: 'eligible',
+        eligible: true,
         windowId: 'remain-eligible',
       }),
-      'eligibilityOverride:self:eligible:remain-eligible',
+      {
+        target: { kind: 'active' },
+        eligible: true,
+        windowId: 'remain-eligible',
+      },
     );
 
-    assert.equal(
-      createEligibilityOverrideDirective({
+    assert.deepEqual(
+      createEligibilityOverride({
         target: 2,
-        eligibility: 'ineligible',
+        eligible: false,
         windowId: 'force-ineligible',
       }),
-      'eligibilityOverride:2:ineligible:force-ineligible',
+      {
+        target: { kind: 'faction', faction: '2' },
+        eligible: false,
+        windowId: 'force-ineligible',
+      },
     );
-  });
-
-  it('exposes the canonical no-override token', () => {
-    assert.equal(FITL_NO_OVERRIDE, 'none');
   });
 });

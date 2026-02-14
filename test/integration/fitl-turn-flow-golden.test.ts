@@ -89,7 +89,10 @@ const createDef = (): GameDef =>
         id: asActionId('event'),
         actor: 'active',
         phase: asPhaseId('main'),
-        params: [{ name: 'selfOverride', domain: { query: 'enums', values: ['none', 'eligibilityOverride:self:eligible:remain-eligible'] } }],
+        params: [
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-overrides'] } },
+          { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+        ],
         pre: null,
         cost: [],
         effects: [],
@@ -119,6 +122,24 @@ const createDef = (): GameDef =>
         limits: [],
       },
     ],
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: 'deck:none',
+        discardZone: 'played:none',
+        cards: [
+          {
+            id: 'card-overrides',
+            title: 'Typed Override',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Keep acting faction eligible.',
+              eligibilityOverrides: [{ target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' }],
+            },
+          },
+        ],
+      },
+    ],
     triggers: [],
     terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
   }) as unknown as GameDef;
@@ -144,7 +165,7 @@ describe('FITL turn-flow golden trace', () => {
 
     const eventMove: Move = {
       actionId: asActionId('event'),
-      params: { selfOverride: 'eligibilityOverride:self:eligible:remain-eligible' },
+      params: { eventCardId: 'card-overrides', side: 'unshaded' },
     };
     const second = applyMove(def, firstBoundary, eventMove);
     const secondBoundaryTrace: TriggerLogEntry[] = [];

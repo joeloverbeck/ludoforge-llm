@@ -15,17 +15,10 @@ import {
   type GameDef,
   type Move,
 } from '../../src/kernel/index.js';
-import { createEligibilityOverrideDirective, FITL_NO_OVERRIDE } from './fitl-events-test-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 import { completeMoveDecisionSequenceOrThrow, pickDeterministicDecisionValue } from '../helpers/move-decision-helpers.js';
 
-const selfOverride = createEligibilityOverrideDirective({
-  target: 'self',
-  eligibility: 'eligible',
-  windowId: 'remain-eligible',
-});
 const REPEATED_RUN_COUNT = 20;
-const noOverride = FITL_NO_OVERRIDE;
 
 const createDef = (): GameDef =>
   ({
@@ -68,7 +61,10 @@ const createDef = (): GameDef =>
         id: asActionId('event'),
         actor: 'active',
         phase: asPhaseId('main'),
-        params: [{ name: 'selfOverride', domain: { query: 'enums', values: [noOverride, selfOverride] } }],
+        params: [
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-overrides'] } },
+          { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+        ],
         pre: null,
         cost: [],
         effects: [],
@@ -95,12 +91,30 @@ const createDef = (): GameDef =>
         limits: [],
       },
     ],
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: 'deck:none',
+        discardZone: 'played:none',
+        cards: [
+          {
+            id: 'card-overrides',
+            title: 'Typed Override',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Keep acting faction eligible.',
+              eligibilityOverrides: [{ target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' }],
+            },
+          },
+        ],
+      },
+    ],
     triggers: [],
     terminal: { conditions: [] },
   }) as unknown as GameDef;
 
 const scriptedMoves: readonly Move[] = [
-  { actionId: asActionId('event'), params: { selfOverride } },
+  { actionId: asActionId('event'), params: { eventCardId: 'card-overrides', side: 'unshaded' } },
   { actionId: asActionId('operation'), params: {} },
   { actionId: asActionId('pass'), params: {} },
   { actionId: asActionId('operation'), params: {} },
@@ -228,7 +242,7 @@ const createEventTraceDef = (): GameDef =>
         actor: 'active',
         phase: asPhaseId('main'),
         params: [
-          { name: 'selfOverride', domain: { query: 'enums', values: [noOverride, selfOverride] } },
+          { name: 'eventCardId', domain: { query: 'enums', values: ['trace-card'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
           { name: 'branch', domain: { query: 'enums', values: ['a', 'b'] } },
           { name: 'targetPrimary', domain: { query: 'enums', values: ['space-a', 'space-b'] } },
@@ -258,6 +272,28 @@ const createEventTraceDef = (): GameDef =>
         cost: [],
         effects: [],
         limits: [],
+      },
+    ],
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: 'deck:none',
+        discardZone: 'played:none',
+        cards: [
+          {
+            id: 'trace-card',
+            title: 'Trace Card',
+            sideMode: 'dual',
+            unshaded: {
+              text: 'Unshaded payload.',
+              eligibilityOverrides: [{ target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' }],
+            },
+            shaded: {
+              text: 'Shaded payload.',
+              eligibilityOverrides: [{ target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' }],
+            },
+          },
+        ],
       },
     ],
     triggers: [],
@@ -328,7 +364,7 @@ describe('FITL card-flow determinism integration', () => {
       const eventMove: Move = {
         actionId: asActionId('event'),
         params: {
-          selfOverride,
+          eventCardId: 'trace-card',
           side: 'shaded',
           branch: 'b',
           targetPrimary: 'space-b',

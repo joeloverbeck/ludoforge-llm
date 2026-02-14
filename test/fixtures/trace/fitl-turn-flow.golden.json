@@ -8,13 +8,8 @@
     {
       "actionId": "event",
       "params": {
-        "selfOverride": "none"
-      }
-    },
-    {
-      "actionId": "event",
-      "params": {
-        "selfOverride": "eligibilityOverride:self:eligible:remain-eligible"
+        "eventCardId": "card-overrides",
+        "side": "unshaded"
       }
     },
     {
@@ -325,7 +320,8 @@
       "move": {
         "actionId": "event",
         "params": {
-          "selfOverride": "eligibilityOverride:self:eligible:remain-eligible"
+          "eventCardId": "card-overrides",
+          "side": "unshaded"
         }
       },
       "applyTrace": [

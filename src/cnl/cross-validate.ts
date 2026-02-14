@@ -234,6 +234,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
           zoneTargets,
           card.id,
           factionTargets,
+          windowTargets,
           actionTargets,
           cardDrivenTurnFlow !== null,
         );
@@ -244,6 +245,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
           zoneTargets,
           card.id,
           factionTargets,
+          windowTargets,
           actionTargets,
           cardDrivenTurnFlow !== null,
         );
@@ -464,6 +466,7 @@ function validateEventCardSide(
   zoneTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   cardId: string,
   factionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  windowTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   actionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   validateFactions: boolean,
 ): void {
@@ -478,6 +481,15 @@ function validateEventCardSide(
     cardId,
     factionTargets,
     actionTargets,
+    validateFactions,
+  );
+  validateEventEligibilityOverrides(
+    diagnostics,
+    side.eligibilityOverrides,
+    `${pathPrefix}.eligibilityOverrides`,
+    cardId,
+    factionTargets,
+    windowTargets,
     validateFactions,
   );
 
@@ -502,6 +514,15 @@ function validateEventCardSide(
       cardId,
       factionTargets,
       actionTargets,
+      validateFactions,
+    );
+    validateEventEligibilityOverrides(
+      diagnostics,
+      branch.eligibilityOverrides,
+      `${pathPrefix}.branches.${branchIndex}.eligibilityOverrides`,
+      cardId,
+      factionTargets,
+      windowTargets,
       validateFactions,
     );
 
@@ -587,6 +608,44 @@ function validateEventFreeOperationGrants(
         'Use one of the declared action ids.',
       );
     }
+  }
+}
+
+function validateEventEligibilityOverrides(
+  diagnostics: Diagnostic[],
+  overrides: EventSideDef['eligibilityOverrides'],
+  pathPrefix: string,
+  cardId: string,
+  factionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  windowTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  validateFactions: boolean,
+): void {
+  if (overrides === undefined) {
+    return;
+  }
+
+  for (const [overrideIndex, override] of overrides.entries()) {
+    if (validateFactions && override.target.kind === 'faction') {
+      pushMissingIdentifierDiagnostic(
+        diagnostics,
+        'CNL_XREF_EVENT_DECK_OVERRIDE_FACTION_MISSING',
+        `${pathPrefix}.${overrideIndex}.target.faction`,
+        override.target.faction,
+        factionTargets,
+        `Event card "${cardId}" eligibilityOverride references unknown faction "${override.target.faction}".`,
+        'Use one of the declared turnFlow.eligibility.factions ids.',
+      );
+    }
+
+    pushMissingIdentifierDiagnostic(
+      diagnostics,
+      'CNL_XREF_EVENT_DECK_OVERRIDE_WINDOW_MISSING',
+      `${pathPrefix}.${overrideIndex}.windowId`,
+      override.windowId,
+      windowTargets,
+      `Event card "${cardId}" eligibilityOverride references unknown window "${override.windowId}".`,
+      'Use one of the declared turnFlow.eligibility.overrideWindows ids.',
+    );
   }
 }
 

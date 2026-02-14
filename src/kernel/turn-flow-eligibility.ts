@@ -1,6 +1,6 @@
 import { asPlayerId } from './branded.js';
 import { createCollector } from './execution-collector.js';
-import { resolveEventFreeOperationGrants } from './event-execution.js';
+import { resolveEventEligibilityOverrides, resolveEventFreeOperationGrants } from './event-execution.js';
 import { evalCondition } from './eval-condition.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -25,7 +25,6 @@ interface TurnFlowTransitionResult {
 }
 
 const isPassAction = (move: Move): boolean => String(move.actionId) === 'pass';
-const ELIGIBILITY_OVERRIDE_PREFIX = 'eligibilityOverride:';
 
 const cardDrivenConfig = (def: GameDef) =>
   def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
@@ -133,17 +132,14 @@ const indexOverrideWindows = (
 ): Readonly<Record<string, TurnFlowDuration>> =>
   Object.fromEntries((cardDrivenConfig(def)?.turnFlow.eligibility.overrideWindows ?? []).map((windowDef) => [windowDef.id, windowDef.duration]));
 
-const extractOverrideDirectiveTokens = (value: Move['params'][string]): readonly string[] => {
-  if (typeof value === 'string') {
-    return [value];
-  }
-  if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === 'string');
-  }
-  return [];
+const resolveFactionId = (
+  faction: string,
+  factionOrder: readonly string[],
+): string | null => {
+  return factionOrder.includes(faction) ? faction : null;
 };
 
-const resolveDirectiveFaction = (
+const resolveGrantFaction = (
   token: string,
   activeFaction: string,
   factionOrder: readonly string[],
@@ -151,49 +147,33 @@ const resolveDirectiveFaction = (
   if (token === 'self') {
     return activeFaction;
   }
-  return factionOrder.includes(token) ? token : null;
-};
-
-const resolveDirectiveEligibility = (token: string): boolean | null => {
-  if (token === 'eligible' || token === 'true') {
-    return true;
-  }
-  if (token === 'ineligible' || token === 'false') {
-    return false;
-  }
-  return null;
+  return resolveFactionId(token, factionOrder);
 };
 
 const extractPendingEligibilityOverrides = (
   def: GameDef,
+  state: GameState,
   move: Move,
   activeFaction: string,
   factionOrder: readonly string[],
 ): readonly TurnFlowPendingEligibilityOverride[] => {
   const windowById = indexOverrideWindows(def);
   const overrides: TurnFlowPendingEligibilityOverride[] = [];
-  for (const paramValue of Object.values(move.params)) {
-    for (const token of extractOverrideDirectiveTokens(paramValue)) {
-      if (!token.startsWith(ELIGIBILITY_OVERRIDE_PREFIX)) {
-        continue;
-      }
-      const [factionToken, eligibilityToken, windowId] = token.slice(ELIGIBILITY_OVERRIDE_PREFIX.length).split(':');
-      if (factionToken === undefined || eligibilityToken === undefined || windowId === undefined || windowId.length === 0) {
-        continue;
-      }
-      const faction = resolveDirectiveFaction(factionToken, activeFaction, factionOrder);
-      const eligible = resolveDirectiveEligibility(eligibilityToken);
-      const duration = windowById[windowId];
-      if (faction === null || eligible === null || duration !== 'nextTurn') {
-        continue;
-      }
-      overrides.push({
-        faction,
-        eligible,
-        windowId,
-        duration,
-      });
+  for (const declaration of resolveEventEligibilityOverrides(def, state, move)) {
+    const faction =
+      declaration.target.kind === 'active'
+        ? activeFaction
+        : resolveFactionId(declaration.target.faction, factionOrder);
+    const duration = windowById[declaration.windowId];
+    if (faction === null || duration !== 'nextTurn') {
+      continue;
     }
+    overrides.push({
+      faction,
+      eligible: declaration.eligible,
+      windowId: declaration.windowId,
+      duration,
+    });
   }
 
   return overrides;
@@ -245,7 +225,7 @@ const extractPendingFreeOperationGrants = (
 ): readonly TurnFlowPendingFreeOperationGrant[] => {
   const extracted: TurnFlowPendingFreeOperationGrant[] = [];
   for (const [grantIndex, grant] of resolveEventFreeOperationGrants(def, state, move).entries()) {
-    const faction = resolveDirectiveFaction(grant.faction, activeFaction, factionOrder);
+    const faction = resolveGrantFaction(grant.faction, activeFaction, factionOrder);
     if (faction === null) {
       continue;
     }
@@ -575,7 +555,7 @@ export const applyTurnFlowEligibilityAfterMove = (
 
   const moveClass = resolveTurnFlowActionClass(move);
   const existingPendingFreeOperationGrants = runtime.pendingFreeOperationGrants ?? [];
-  const newOverrides = extractPendingEligibilityOverrides(def, move, activeFaction, runtime.factionOrder);
+  const newOverrides = extractPendingEligibilityOverrides(def, state, move, activeFaction, runtime.factionOrder);
   const newFreeOpGrants = extractPendingFreeOperationGrants(
     def,
     state,

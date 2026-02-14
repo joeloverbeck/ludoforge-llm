@@ -453,13 +453,9 @@ describe('applyMove', () => {
     );
   });
 
-  it('applies nextTurn eligibility override directives and traces override creation', () => {
-    const selfOverride = 'eligibilityOverride:self:eligible:remain-eligible';
-    const targetOverride = 'eligibilityOverride:2:ineligible:force-ineligible';
-    const noOverride = 'none';
-
+  it('applies typed nextTurn eligibility overrides and traces override creation', () => {
     const def: GameDef = {
-      metadata: { id: 'turn-flow-override-directives', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
+      metadata: { id: 'turn-flow-override-typed', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [],
       perPlayerVars: [],
@@ -491,8 +487,8 @@ describe('applyMove', () => {
           actor: 'active',
           phase: asPhaseId('main'),
           params: [
-            { name: 'selfOverride', domain: { query: 'enums', values: [noOverride, selfOverride] } },
-            { name: 'targetOverride', domain: { query: 'enums', values: [noOverride, targetOverride] } },
+            { name: 'eventCardId', domain: { query: 'enums', values: ['card-overrides'] } },
+            { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
           ],
           pre: null,
           cost: [],
@@ -510,6 +506,27 @@ describe('applyMove', () => {
           limits: [],
         },
       ],
+      eventDecks: [
+        {
+          id: 'event-deck',
+          drawZone: 'deck:none',
+          discardZone: 'played:none',
+          cards: [
+            {
+              id: 'card-overrides',
+              title: 'Typed Overrides',
+              sideMode: 'single',
+              unshaded: {
+                text: 'Declare next-turn eligibility updates.',
+                eligibilityOverrides: [
+                  { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
+                  { target: { kind: 'faction', faction: '2' }, eligible: false, windowId: 'force-ineligible' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
       triggers: [],
       terminal: { conditions: [] },
     } as unknown as GameDef;
@@ -517,7 +534,7 @@ describe('applyMove', () => {
     const start = initialState(def, 17, 4);
     const first = applyMove(def, start, {
       actionId: asActionId('event'),
-      params: { selfOverride, targetOverride },
+      params: { eventCardId: 'card-overrides', side: 'unshaded' },
     });
     const second = applyMove(def, first.state, { actionId: asActionId('operation'), params: {} });
 

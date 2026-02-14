@@ -7,6 +7,7 @@ import type {
   EffectAST,
   EventBranchDef,
   EventCardDef,
+  EventEligibilityOverrideDef,
   EventFreeOperationGrantDef,
   GameDef,
   GameState,
@@ -40,6 +41,17 @@ const collectFreeOperationGrants = (context: EventExecutionContext): readonly Ev
     grants.push(grant);
   }
   return grants;
+};
+
+const collectEligibilityOverrides = (context: EventExecutionContext): readonly EventEligibilityOverrideDef[] => {
+  const overrides: EventEligibilityOverrideDef[] = [];
+  for (const override of context.side.eligibilityOverrides ?? []) {
+    overrides.push(override);
+  }
+  for (const override of context.branch?.eligibilityOverrides ?? []) {
+    overrides.push(override);
+  }
+  return overrides;
 };
 
 const isTurnFlowLifecycleEntry = (
@@ -325,6 +337,37 @@ export const resolveEventFreeOperationGrants = (
     }
   }
   return collectFreeOperationGrants(context);
+};
+
+export const resolveEventEligibilityOverrides = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): readonly EventEligibilityOverrideDef[] => {
+  const eventClass = move.actionClass ?? String(move.actionId);
+  if (eventClass !== 'event') {
+    return [];
+  }
+  const context = resolveEventExecutionContext(def, state, move);
+  if (context === null) {
+    return [];
+  }
+  if (context.card.playCondition !== undefined) {
+    const adjacencyGraph = buildAdjacencyGraph(def.zones);
+    const conditionMet = evalCondition(context.card.playCondition, {
+      def,
+      adjacencyGraph,
+      state,
+      activePlayer: state.activePlayer,
+      actorPlayer: state.activePlayer,
+      bindings: { ...move.params },
+      collector: createCollector(),
+    });
+    if (!conditionMet) {
+      return [];
+    }
+  }
+  return collectEligibilityOverrides(context);
 };
 
 export const expireLastingEffectsAtBoundaries = (

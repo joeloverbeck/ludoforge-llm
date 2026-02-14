@@ -59,6 +59,13 @@ describe('FITL production data integration compilation', () => {
         leader: 'leader:none',
       });
       assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.durationWindows, ['turn', 'nextTurn', 'round', 'cycle']);
+      assert.equal(
+        compiled.gameDef.turnOrder.config.turnFlow.eligibility.overrideWindows.some(
+          (windowDef) => windowDef.id === 'remain-eligible' && windowDef.duration === 'nextTurn',
+        ),
+        true,
+        'Expected remain-eligible nextTurn override window for stay-eligible event cards',
+      );
       assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.monsoon, { restrictedActions: [] });
     }
     const profileBackedActionIds = new Set((compiled.gameDef!.actionPipelines ?? []).map((profile) => String(profile.actionId)));
@@ -262,9 +269,13 @@ describe('FITL production data integration compilation', () => {
     assert.ok(cardIds.includes('card-27'), 'Expected card-27');
     assert.ok(cardIds.includes('card-68'), 'Expected card-68');
     assert.ok(cardIds.includes('card-82'), 'Expected card-82');
+    assert.ok(cardIds.includes('card-17'), 'Expected card-17');
+    assert.ok(cardIds.includes('card-101'), 'Expected card-101');
     const cardOrderById = new Map((eventDeck?.cards ?? []).map((card: EventCardLike) => [card.id, card.order]));
+    assert.equal(cardOrderById.get('card-17'), 17);
     assert.equal(cardOrderById.get('card-27'), 27);
     assert.equal(cardOrderById.get('card-68'), 68);
     assert.equal(cardOrderById.get('card-82'), 82);
+    assert.equal(cardOrderById.get('card-101'), 101);
   });
 });

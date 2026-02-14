@@ -3404,6 +3404,99 @@ eventDecks:
                       scope: global
                       var: nvaResources
                       delta: { ref: binding, name: $dieRoll }
+      - id: card-101
+        title: Booby Traps
+        sideMode: dual
+        order: 101
+        tags: [capability, VC]
+        metadata:
+          period: "1964"
+          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          flavorText: "Preparations tip off enemy."
+        unshaded:
+          text: "VC and NVA Ambush in max 1 space."
+          effects:
+            - setGlobalMarker: { marker: cap_boobyTraps, state: unshaded }
+        shaded:
+          text: "Mines and punji: each Sweep space risks 1 Sweeping Troop loss on roll 1-3."
+          effects:
+            - setGlobalMarker: { marker: cap_boobyTraps, state: shaded }
+      - id: card-17
+        title: Claymores
+        sideMode: dual
+        order: 17
+        tags: [momentum]
+        metadata:
+          period: "1964"
+          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          flavorText: "Perimeter."
+        unshaded:
+          text: "Stay Eligible. Until Coup, no Ambush; remove 1 Guerrilla from each Marching group that Activates."
+          eligibilityOverrides:
+            - { target: { kind: active }, eligible: true, windowId: remain-eligible }
+          lastingEffects:
+            - id: mom-claymores
+              duration: round
+              setupEffects:
+                - setVar: { scope: global, var: mom_claymores, value: true }
+              teardownEffects:
+                - setVar: { scope: global, var: mom_claymores, value: false }
+        shaded:
+          text: "Infiltrators turn mines around: remove 1 COIN Base and 1 Underground Insurgent from a space with both."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                              - { prop: type, eq: base }
+                      right: 0
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                              - { prop: type, eq: guerrilla }
+                              - { prop: activity, eq: underground }
+                      right: 0
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: targetCoinBase
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        - { prop: type, eq: base }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $targetCoinBase, prop: faction }, ':none'] }
+                  - bind: targetInsurgent
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                        - { prop: type, eq: guerrilla }
+                        - { prop: activity, eq: underground }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $targetInsurgent, prop: faction }, ':none'] }
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Pool Zones (piece availability pools — supplement map-derived board zones)
@@ -7319,6 +7412,8 @@ turnOrder:
       eligibility:
         factions: ['0', '1', '2', '3']
         overrideWindows:
+          - id: remain-eligible
+            duration: nextTurn
           - id: us-special-window
             duration: turn
           - id: arvn-special-window

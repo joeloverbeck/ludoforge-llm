@@ -88,6 +88,7 @@ export type OptionsQuery =
   | { readonly query: 'enums'; readonly values: readonly string[] }
   | { readonly query: 'players' }
   | { readonly query: 'zones'; readonly filter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST } }
+  | { readonly query: 'mapSpaces'; readonly filter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST } }
   | { readonly query: 'adjacentZones'; readonly zone: ZoneSel }
   | { readonly query: 'tokensInAdjacentZones'; readonly zone: ZoneSel; readonly filter?: readonly TokenFilterPredicate[] }
   | {

@@ -207,7 +207,7 @@ describe('evalQuery', () => {
     );
   });
 
-  it('treats non-map zones as non-matches for zoneProp-based zones filter conditions', () => {
+  it('mapSpaces query evaluates zoneProp filters only across map spaces', () => {
     const ctx = makeCtx({
       mapSpaces: [
         {
@@ -236,7 +236,7 @@ describe('evalQuery', () => {
     assert.deepEqual(
       evalQuery(
         {
-          query: 'zones',
+          query: 'mapSpaces',
           filter: {
             condition: {
               op: '==',
@@ -248,6 +248,41 @@ describe('evalQuery', () => {
         ctx,
       ),
       ['tableau:2'],
+    );
+  });
+
+  it('zones query no longer suppresses zoneProp lookup errors from non-map zones', () => {
+    const ctx = makeCtx({
+      mapSpaces: [
+        {
+          id: 'battlefield:none',
+          spaceType: 'province',
+          population: 1,
+          econ: 0,
+          terrainTags: ['lowland'],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
+    });
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'zones',
+            filter: {
+              condition: {
+                op: '==',
+                left: { ref: 'zoneProp', zone: '$zone', prop: 'spaceType' },
+                right: 'city',
+              },
+            },
+          },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND'),
     );
   });
 

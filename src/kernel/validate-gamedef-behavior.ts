@@ -287,7 +287,8 @@ export const validateOptionsQuery = (
       }
       return;
     }
-    case 'zones': {
+    case 'zones':
+    case 'mapSpaces': {
       if (query.filter?.owner) {
         validatePlayerSelector(diagnostics, query.filter.owner, `${path}.filter.owner`, context);
       }

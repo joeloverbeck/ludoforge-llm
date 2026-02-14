@@ -602,7 +602,7 @@ describe('legalChoices()', () => {
                 chooseN: {
                   bind: '$spaces',
                   options: {
-                    query: 'zones',
+                    query: 'mapSpaces',
                     filter: {
                       condition: {
                         op: '==',

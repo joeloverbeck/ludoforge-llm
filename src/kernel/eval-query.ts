@@ -1,5 +1,5 @@
 import { getMaxQueryResults, type EvalContext } from './eval-context.js';
-import { isEvalErrorCode, missingVarError, queryBoundsExceededError } from './eval-error.js';
+import { missingVarError, queryBoundsExceededError } from './eval-error.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitWarning } from './execution-collector.js';
@@ -71,12 +71,17 @@ function extractOwnerQualifier(zoneId: ZoneId): string | null {
   return zoneId.slice(delimiter + 1);
 }
 
-function evalZonesQuery(query: Extract<OptionsQuery, { readonly query: 'zones' }>, ctx: EvalContext): readonly ZoneId[] {
-  const allZones = [...ctx.def.zones].sort((left, right) => left.id.localeCompare(right.id));
-  let filteredZones = allZones;
+type ZoneQueryFilter = Extract<OptionsQuery, { readonly query: 'zones' }>['filter'];
 
-  if (query.filter?.owner !== undefined) {
-    const owners = new Set(resolvePlayerSel(query.filter.owner, ctx));
+function applyZonesFilter(
+  zones: readonly { readonly id: ZoneId; readonly owner: 'none' | 'player' }[],
+  queryFilter: ZoneQueryFilter,
+  ctx: EvalContext,
+): readonly ZoneId[] {
+  let filteredZones = [...zones];
+
+  if (queryFilter?.owner !== undefined) {
+    const owners = new Set(resolvePlayerSel(queryFilter.owner, ctx));
     filteredZones = filteredZones.filter((zone) => {
       if (zone.owner !== 'player') {
         return false;
@@ -92,29 +97,36 @@ function evalZonesQuery(query: Extract<OptionsQuery, { readonly query: 'zones' }
     });
   }
 
-  if (query.filter?.condition !== undefined) {
-    const { condition } = query.filter;
+  if (queryFilter?.condition !== undefined) {
+    const { condition } = queryFilter;
     filteredZones = filteredZones.filter((zone) => {
-      try {
-        return evalCondition(condition, {
-          ...ctx,
-          bindings: {
-            ...ctx.bindings,
-            $zone: zone.id,
-          },
-        });
-      } catch (error) {
-        // zones query may include non-map utility zones (available/discard/etc.).
-        // Map-property predicates should treat those as non-matches, not hard failures.
-        if (isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND')) {
-          return false;
-        }
-        throw error;
-      }
+      return evalCondition(condition, {
+        ...ctx,
+        bindings: {
+          ...ctx.bindings,
+          $zone: zone.id,
+        },
+      });
     });
   }
 
   return filteredZones.map((zone) => zone.id);
+}
+
+function evalZonesQuery(query: Extract<OptionsQuery, { readonly query: 'zones' }>, ctx: EvalContext): readonly ZoneId[] {
+  const allZones = [...ctx.def.zones].sort((left, right) => left.id.localeCompare(right.id));
+  return applyZonesFilter(allZones, query.filter, ctx);
+}
+
+function evalMapSpacesQuery(
+  query: Extract<OptionsQuery, { readonly query: 'mapSpaces' }>,
+  ctx: EvalContext,
+): readonly ZoneId[] {
+  const mapSpaceIds = new Set((ctx.mapSpaces ?? []).map((space) => space.id));
+  const mapSpaceZones = [...ctx.def.zones]
+    .filter((zone) => mapSpaceIds.has(zone.id))
+    .sort((left, right) => left.id.localeCompare(right.id));
+  return applyZonesFilter(mapSpaceZones, query.filter, ctx);
 }
 
 export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly QueryResult[] {
@@ -171,6 +183,12 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       const zones = evalZonesQuery(query, ctx);
       assertWithinBounds(zones.length, query, maxQueryResults);
       return zones;
+    }
+
+    case 'mapSpaces': {
+      const mapSpaces = evalMapSpacesQuery(query, ctx);
+      assertWithinBounds(mapSpaces.length, query, maxQueryResults);
+      return mapSpaces;
     }
 
     case 'adjacentZones': {

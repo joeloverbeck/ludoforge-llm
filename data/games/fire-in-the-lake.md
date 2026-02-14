@@ -333,7 +333,7 @@ effectMacros:
             - chooseN:
                 bind: targetSpaces
                 options:
-                  query: zones
+                  query: mapSpaces
                   filter:
                     op: and
                     args:
@@ -359,7 +359,7 @@ effectMacros:
             - chooseN:
                 bind: targetSpaces
                 options:
-                  query: zones
+                  query: mapSpaces
                   filter:
                     op: and
                     args:
@@ -419,7 +419,7 @@ effectMacros:
                         - chooseN:
                             bind: $sourceSpaces
                             options:
-                              query: zones
+                              query: mapSpaces
                               filter:
                                 op: '>'
                                 left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: type, eq: { param: pieceType } }, { prop: faction, eq: { param: faction } }] } } }
@@ -1709,7 +1709,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -1726,7 +1726,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -1887,7 +1887,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -1896,15 +1896,30 @@ actionPipelines:
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
                           # Without NVA Control (NVA pieces <= COIN+VC pieces)
-                          - op: not
-                            arg: { op: '==', left: { ref: zoneProp, zone: $zone, prop: control }, right: 'NVA' }
+                          - op: <=
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: eq, value: 'NVA' }
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
                     min: 1
                     max: 1
               else:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -1912,8 +1927,23 @@ actionPipelines:
                             args:
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
                               - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                          - op: not
-                            arg: { op: '==', left: { ref: zoneProp, zone: $zone, prop: control }, right: 'NVA' }
+                          - op: <=
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: eq, value: 'NVA' }
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['US', 'ARVN', 'VC'] }
                     min: 1
                     max: 99
 
@@ -2072,7 +2102,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetLoCs
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
                     min: 1
                     max: 1
@@ -2080,7 +2110,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetLoCs
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
                     min: 1
                     max: 99
@@ -2191,7 +2221,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetLoCs
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
                     min: 1
                     max: 1
@@ -2199,7 +2229,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetLoCs
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
                     min: 1
                     max: 99
@@ -2295,7 +2325,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -2310,7 +2340,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -2420,7 +2450,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -2435,7 +2465,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -2497,7 +2527,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -2513,7 +2543,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -2603,7 +2633,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -2619,7 +2649,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -2687,7 +2717,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -2703,7 +2733,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -2824,7 +2854,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -2840,7 +2870,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -2982,7 +3012,7 @@ actionPipelines:
                 - chooseN:
                     bind: chainSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: or
                         args:
@@ -3052,7 +3082,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -3068,7 +3098,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -3154,7 +3184,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -3170,7 +3200,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -3234,7 +3264,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:
@@ -3257,7 +3287,7 @@ actionPipelines:
                 - chooseN:
                     bind: targetSpaces
                     options:
-                      query: zones
+                      query: mapSpaces
                       filter:
                         op: and
                         args:

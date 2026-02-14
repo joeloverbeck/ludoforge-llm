@@ -22,6 +22,7 @@ const SUPPORTED_QUERY_KINDS = [
   'enums',
   'players',
   'zones',
+  'mapSpaces',
   'adjacentZones',
   'tokensInAdjacentZones',
   'connectedZones',
@@ -384,9 +385,10 @@ export function lowerQueryNode(
         value: { query: 'players' },
         diagnostics: [],
       };
-    case 'zones': {
+    case 'zones':
+    case 'mapSpaces': {
       if (source.filter === undefined) {
-        return { value: { query: 'zones' }, diagnostics: [] };
+        return { value: { query: source.query }, diagnostics: [] };
       }
       if (!isRecord(source.filter)) {
         return missingCapability(path, 'zones query filter', source.filter, [
@@ -402,7 +404,7 @@ export function lowerQueryNode(
           return { value: null, diagnostics: lowered.diagnostics };
         }
         return {
-          value: { query: 'zones', filter: { condition: lowered.value } },
+          value: { query: source.query, filter: { condition: lowered.value } },
           diagnostics: lowered.diagnostics,
         };
       }
@@ -421,12 +423,12 @@ export function lowerQueryNode(
             return { value: null, diagnostics: [...owner.diagnostics, ...loweredCondition.diagnostics] };
           }
           return {
-            value: { query: 'zones', filter: { ...filterObj, condition: loweredCondition.value } },
+            value: { query: source.query, filter: { ...filterObj, condition: loweredCondition.value } },
             diagnostics: [...owner.diagnostics, ...loweredCondition.diagnostics],
           };
         }
         return {
-          value: { query: 'zones', filter: filterObj },
+          value: { query: source.query, filter: filterObj },
           diagnostics: owner.diagnostics,
         };
       }

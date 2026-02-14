@@ -198,6 +198,20 @@ describe('AST and selector schemas', () => {
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
   });
 
+  it('parses mapSpaces query with filter condition', () => {
+    const query: OptionsQuery = {
+      query: 'mapSpaces',
+      filter: {
+        condition: {
+          op: '==',
+          left: 'city',
+          right: 'city',
+        },
+      },
+    };
+    assert.deepEqual(OptionsQuerySchema.parse(query), query);
+  });
+
   it('rejects malformed tokensInZone filter payloads', () => {
     const badOp = OptionsQuerySchema.safeParse({
       query: 'tokensInZone',

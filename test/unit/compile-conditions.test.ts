@@ -224,6 +224,33 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers mapSpaces query with ConditionAST filter', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'mapSpaces',
+        filter: {
+          op: '==',
+          left: { ref: 'zoneProp', zone: 'board', prop: 'spaceType' },
+          right: 'province',
+        },
+      },
+      context,
+      'doc.actionPipelines.0.stages.0.effects.0.chooseN.options',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'mapSpaces',
+      filter: {
+        condition: {
+          op: '==',
+          left: { ref: 'zoneProp', zone: 'board:none', prop: 'spaceType' },
+          right: 'province',
+        },
+      },
+    });
+  });
+
   it('lowers tokensInZone query with string literal token filters', () => {
     const result = lowerQueryNode(
       {

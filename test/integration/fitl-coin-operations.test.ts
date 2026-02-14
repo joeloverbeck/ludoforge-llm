@@ -622,34 +622,33 @@ describe('FITL COIN operations integration', () => {
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     it('AC2: space filter excludes spaces with NVA Control', () => {
-      // Verify the compiled GameDef preserves zones query ConditionAST filters
-      // including the NVA Control exclusion.
+      // Verify the compiled GameDef preserves map-space query filters including
+      // explicit "without NVA control" token-count predicate.
       const profile = compileArvnProfile();
       const selectSpaces = profile.stages[0]!;
       assert.equal(selectSpaces.stage, 'select-spaces');
 
-      // Both LimOp (then) and normal (else) branches must exclude NVA-controlled spaces
-      // via a compiled zones filter condition containing:
-      //   { op: 'not', arg: { op: '==', left: { ref: 'zoneProp', ... prop: 'control' }, right: 'NVA' } }
+      // Both LimOp (then) and normal (else) branches must include:
+      //   nvaCount <= coinPlusVcCount
       const nvaExclusions = findDeep(selectSpaces.effects, (node: any) =>
-        node?.op === 'not' &&
-        node?.arg?.op === '==' &&
-        node?.arg?.left?.ref === 'zoneProp' &&
-        node?.arg?.left?.prop === 'control' &&
-        node?.arg?.right === 'NVA',
+        node?.op === '<=' &&
+        node?.left?.aggregate?.op === 'count' &&
+        node?.right?.aggregate?.op === 'count' &&
+        node?.left?.aggregate?.query?.query === 'tokensInZone' &&
+        node?.right?.aggregate?.query?.query === 'tokensInZone',
       );
       assert.ok(
         nvaExclusions.length >= 2,
         `Expected NVA Control exclusion in both LimOp and normal branches, found ${nvaExclusions.length}`,
       );
 
-      // Verify the filter is inside a compiled zones query filter.condition (not just floating)
+      // Verify the filter is inside a compiled mapSpaces query filter.condition.
       const zonesWithConditionFilter = findDeep(selectSpaces.effects, (node: any) =>
-        node?.query === 'zones' && node?.filter?.condition !== undefined,
+        node?.query === 'mapSpaces' && node?.filter?.condition !== undefined,
       );
       assert.ok(
         zonesWithConditionFilter.length >= 2,
-        `Expected compiled zones queries with condition filters in both branches, found ${zonesWithConditionFilter.length}`,
+        `Expected compiled mapSpaces queries with condition filters in both branches, found ${zonesWithConditionFilter.length}`,
       );
     });
 

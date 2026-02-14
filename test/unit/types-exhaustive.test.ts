@@ -91,6 +91,7 @@ const exhaustOptionsQuery = (query: OptionsQuery): string => {
     case 'enums':
     case 'players':
     case 'zones':
+    case 'mapSpaces':
     case 'adjacentZones':
     case 'tokensInAdjacentZones':
     case 'connectedZones':
@@ -128,12 +129,12 @@ describe('exhaustive kernel unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
     const conditionVariants: UnionSize<ConditionAST> = 10;
     const effectVariants: UnionSize<EffectAST> = 19;
-    const queryVariants: UnionSize<OptionsQuery> = 9;
+    const queryVariants: UnionSize<OptionsQuery> = 10;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 10);
     assert.equal(effectVariants, 19);
-    assert.equal(queryVariants, 9);
+    assert.equal(queryVariants, 10);
   });
 
   it('ensures MoveLog includes legalMoveCount', () => {

@@ -79,6 +79,18 @@ optionsQuerySchemaInternal = z.union([
         .optional(),
     })
     .strict(),
+  z
+    .object({
+      query: z.literal('mapSpaces'),
+      filter: z
+        .object({
+          owner: PlayerSelSchema.optional(),
+          condition: ConditionASTSchema.optional(),
+        })
+        .strict()
+        .optional(),
+    })
+    .strict(),
   z.object({ query: z.literal('adjacentZones'), zone: ZoneSelSchema }).strict(),
   z
     .object({

@@ -211,10 +211,11 @@ describe('FITL production free-operation guard and exception contracts', () => {
     );
     assert.ok(pacifyBranch.length >= 1, 'Expected pacify branch');
     const pacifyDirectCost = findDeep(pacifyBranch[0].if.then, (node) =>
-      node?.addVar?.var === 'arvnResources' &&
-      (node?.addVar?.delta === -3 || node?.addVar?.delta?.op === '*'),
+      (node?.addVar?.var === 'arvnResources' &&
+        (node?.addVar?.delta === -3 || node?.addVar?.delta?.op === '*')) ||
+      node?.macro === 'rvn-leader-pacification-cost',
     );
-    assert.ok(pacifyDirectCost.length >= 1, 'Expected ARVN pacification costs in pacify branch');
+    assert.ok(pacifyDirectCost.length >= 1, 'Expected ARVN pacification costs (direct or macro) in pacify branch');
   });
 
   it('keeps NVA trail-improvement cost unguarded by free operation', () => {

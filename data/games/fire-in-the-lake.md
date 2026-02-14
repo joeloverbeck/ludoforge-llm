@@ -9,6 +9,64 @@ metadata:
   defaultScenarioAssetId: fitl-scenario-full
 
 effectMacros:
+  # ── rvn-leader-pacification-cost ───────────────────────────────────────────
+  # Shared ARVN pacification resource cost helper.
+  # Ky modifies per-step/per-terror cost from 3 to 4.
+  - id: rvn-leader-pacification-cost
+    params:
+      - { name: stepCountExpr, type: value }
+    exports: []
+    effects:
+      - addVar:
+          scope: global
+          var: arvnResources
+          delta:
+            op: '*'
+            left: { param: stepCountExpr }
+            right:
+              if:
+                when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: ky }
+                then: -4
+                else: -3
+
+  # ── rvn-leader-failed-attempt-desertion ────────────────────────────────────
+  # Deferred-use helper for cards 129-130 (Spec 29 wiring):
+  # remove floor(ARVN cubes / 3) in each map space.
+  - id: rvn-leader-failed-attempt-desertion
+    params: []
+    exports: []
+    effects:
+      - forEach:
+          bind: $space
+          over: { query: mapSpaces }
+          effects:
+            - let:
+                bind: $arvnCubes
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: $space
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, op: in, value: [troops, police] }
+                in:
+                  - forEach:
+                      bind: $desertingCube
+                      over:
+                        query: tokensInZone
+                        zone: $space
+                        filter:
+                          - { prop: faction, eq: ARVN }
+                          - { prop: type, op: in, value: [troops, police] }
+                      limit: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
+                      effects:
+                        - moveToken:
+                            token: $desertingCube
+                            from: $space
+                            to: { zoneExpr: 'available-ARVN:none' }
+
   # ── piece-removal-ordering ────────────────────────────────────────────────
   # Core removal-ordering macro shared by COIN Assault and Insurgent Attack.
   # Priority: enemy troops → active guerrillas (first-faction chosen, then other) → untunneled bases (tunneled roll ≥4 to flip).
@@ -3005,7 +3063,9 @@ actionPipelines:
                           when: { op: '==', left: { ref: markerState, space: $subSpace, marker: terror }, right: 'terror' }
                           then:
                             # Costs 3 ARVN Resources per Terror removed (even if free op!)
-                            - addVar: { scope: global, var: arvnResources, delta: -3 }
+                            - macro: rvn-leader-pacification-cost
+                              args:
+                                stepCountExpr: 1
                             - setMarker: { space: $subSpace, marker: terror, state: none }
                       - if:
                           when: { op: '==', left: { ref: globalMarkerState, marker: cap_cords }, right: shaded }
@@ -3017,7 +3077,9 @@ actionPipelines:
                                     - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: passiveSupport }
                                     - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: activeSupport }
                                 then:
-                                  - addVar: { scope: global, var: arvnResources, delta: -3 }
+                                  - macro: rvn-leader-pacification-cost
+                                    args:
+                                      stepCountExpr: 1
                                   - setMarker: { space: $subSpace, marker: supportOpposition, state: passiveSupport }
                           else:
                             # Shift up to 2 levels toward Active Support
@@ -3025,10 +3087,9 @@ actionPipelines:
                                 bind: $pacLevels
                                 options: { query: intsInRange, min: 1, max: 2 }
                             # Costs 3 ARVN Resources per level shifted (even if free op!)
-                            - addVar:
-                                scope: global
-                                var: arvnResources
-                                delta: { op: '*', left: { ref: binding, name: $pacLevels }, right: -3 }
+                            - macro: rvn-leader-pacification-cost
+                              args:
+                                stepCountExpr: { ref: binding, name: $pacLevels }
                             - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
 
                 # Saigon patronage transfer (US only, space must be Saigon)
@@ -3229,7 +3290,9 @@ actionPipelines:
                       - if:
                           when: { op: '==', left: { ref: markerState, space: $subSpace, marker: terror }, right: 'terror' }
                           then:
-                            - addVar: { scope: global, var: arvnResources, delta: -3 }
+                            - macro: rvn-leader-pacification-cost
+                              args:
+                                stepCountExpr: 1
                             - setMarker: { space: $subSpace, marker: terror, state: none }
                       - if:
                           when: { op: '==', left: { ref: globalMarkerState, marker: cap_cords }, right: shaded }
@@ -3241,16 +3304,17 @@ actionPipelines:
                                     - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: passiveSupport }
                                     - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: activeSupport }
                                 then:
-                                  - addVar: { scope: global, var: arvnResources, delta: -3 }
+                                  - macro: rvn-leader-pacification-cost
+                                    args:
+                                      stepCountExpr: 1
                                   - setMarker: { space: $subSpace, marker: supportOpposition, state: passiveSupport }
                           else:
                             - chooseOne:
                                 bind: $pacLevels
                                 options: { query: intsInRange, min: 1, max: 2 }
-                            - addVar:
-                                scope: global
-                                var: arvnResources
-                                delta: { op: '*', left: { ref: binding, name: $pacLevels }, right: -3 }
+                            - macro: rvn-leader-pacification-cost
+                              args:
+                                stepCountExpr: { ref: binding, name: $pacLevels }
                             - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
 
                 # Replace 3 ARVN cubes with 1 ARVN Base (costs 3 even if free op)
@@ -3287,6 +3351,12 @@ actionPipelines:
                           faction: 'ARVN'
                           targetSpace: $subSpace
                           maxPieces: 1
+      - stage: rvn-leader-minh-aid-bonus
+        effects:
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: minh }
+              then:
+                - addVar: { scope: global, var: aid, delta: 5 }
     atomicity: atomic
   # ── patrol-us-profile ────────────────────────────────────────────────────────
   # US Patrol operation (Rule 3.2.2)
@@ -5515,6 +5585,10 @@ actionPipelines:
                             - shiftMarker: { space: $space, marker: supportOpposition, delta: -1 }
       - stage: govern-telemetry
         effects:
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: youngTurks }
+              then:
+                - addVar: { scope: global, var: patronage, delta: 2 }
           - addVar:
               scope: global
               var: governCount
@@ -5583,27 +5657,57 @@ actionPipelines:
                   op: and
                   args:
                     - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                    - op: connected
-                      from: $transportOrigin
-                      to: $zone
-                      via:
-                        op: and
-                        args:
-                          - op: or
-                            args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
-                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                          - op: '=='
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                            right: 0
+                    - op: or
+                      args:
+                        - op: and
+                          args:
+                            - { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: khanh }
+                            - op: connected
+                              from: $transportOrigin
+                              to: $zone
+                              maxDepth: 2
+                              via:
+                                op: and
+                                args:
+                                  - op: or
+                                    args:
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                                  - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                                  - op: '=='
+                                    left:
+                                      aggregate:
+                                        op: count
+                                        query:
+                                          query: tokensInZone
+                                          zone: $zone
+                                          filter:
+                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                    right: 0
+                        - op: and
+                          args:
+                            - { op: '!=', left: { ref: globalMarkerState, marker: activeLeader }, right: khanh }
+                            - op: connected
+                              from: $transportOrigin
+                              to: $zone
+                              via:
+                                op: and
+                                args:
+                                  - op: or
+                                    args:
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                                  - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                                  - op: '=='
+                                    left:
+                                      aggregate:
+                                        op: count
+                                        query:
+                                          query: tokensInZone
+                                          zone: $zone
+                                          filter:
+                                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                    right: 0
       - stage: move-selected-pieces
         effects:
           - if:

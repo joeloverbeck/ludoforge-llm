@@ -552,11 +552,11 @@ describe('FITL COIN operations integration', () => {
       getArvnProfile();
     });
 
-    it('has three stages stages: select-spaces, resolve-per-space, sub-action', () => {
+    it('has four stages: select-spaces, resolve-per-space, sub-action, rvn-leader-minh-aid-bonus', () => {
       const profile = getArvnProfile();
       assert.deepEqual(
         profile.stages.map((s) => s.stage),
-        ['select-spaces', 'resolve-per-space', 'sub-action'],
+        ['select-spaces', 'resolve-per-space', 'sub-action', 'rvn-leader-minh-aid-bonus'],
       );
     });
 

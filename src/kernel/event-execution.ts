@@ -1,5 +1,6 @@
 import { buildAdjacencyGraph } from './spatial.js';
 import { applyEffects } from './effects.js';
+import { evalCondition } from './eval-condition.js';
 import { createCollector } from './execution-collector.js';
 import type {
   ActiveLastingEffect,
@@ -221,6 +222,22 @@ export const executeEventMove = (
   const context = resolveEventExecutionContext(def, state, move);
   if (context === null) {
     return { state, rng, emittedEvents: [] };
+  }
+
+  if (context.card.playCondition !== undefined) {
+    const adjacencyGraph = buildAdjacencyGraph(def.zones);
+    const conditionMet = evalCondition(context.card.playCondition, {
+      def,
+      adjacencyGraph,
+      state,
+      activePlayer: state.activePlayer,
+      actorPlayer: state.activePlayer,
+      bindings: { ...move.params },
+      collector: createCollector(),
+    });
+    if (!conditionMet) {
+      return { state, rng, emittedEvents: [] };
+    }
   }
 
   const lastingEffects = [

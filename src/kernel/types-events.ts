@@ -1,4 +1,4 @@
-import type { EffectAST, OptionsQuery } from './types-ast.js';
+import type { ConditionAST, EffectAST, OptionsQuery } from './types-ast.js';
 import type { TurnFlowDuration } from './types-turn-flow.js';
 
 export interface EventTargetCardinalityExact {
@@ -34,10 +34,15 @@ export interface EventBranchDef {
 }
 
 export interface EventSideDef {
+  readonly text?: string;
   readonly effects?: readonly EffectAST[];
   readonly branches?: readonly EventBranchDef[];
   readonly targets?: readonly EventTargetDef[];
   readonly lastingEffects?: readonly EventLastingEffectDef[];
+}
+
+export interface EventCardMetadata {
+  readonly [key: string]: string | number | boolean | readonly string[];
 }
 
 export interface EventCardDef {
@@ -45,6 +50,9 @@ export interface EventCardDef {
   readonly title: string;
   readonly sideMode: 'single' | 'dual';
   readonly order?: number;
+  readonly tags?: readonly string[];
+  readonly metadata?: EventCardMetadata;
+  readonly playCondition?: ConditionAST;
   readonly unshaded?: EventSideDef;
   readonly shaded?: EventSideDef;
 }

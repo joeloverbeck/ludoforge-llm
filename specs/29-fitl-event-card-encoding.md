@@ -78,18 +78,22 @@ Coup cards trigger coup rounds and may change RVN Leader. Pivotal events are fac
 
 ## Card Definition Format
 
-Each card encoded as `EventCardDef` in the GameSpecDoc YAML:
+Each card encoded as `EventCardDef` in the GameSpecDoc YAML. The `tags` and `metadata` fields are game-agnostic extensions — `tags` classifies cards for filtering/UI, `metadata` holds game-specific display data (period, factionOrder, flavorText) not interpreted by the kernel. Pivotal cards additionally declare a `playCondition` precondition.
+
+**Standard Dual-Use Card:**
 
 ```yaml
 eventCards:
   - id: "107"
     title: "Burning Bonze"
-    period: "1964"
-    factionOrder: ["VC", "NVA", "ARVN", "US"]
-    flavorText: "Gruesome protests close elite ranks."
     sideMode: "dual"
+    tags: []
+    metadata:
+      period: "1964"
+      factionOrder: ["VC", "NVA", "ARVN", "US"]
+      flavorText: "Gruesome protests close elite ranks."
     unshaded:
-      text: "Patronage +3 or, if Saigon at Active Support, +6"
+      text: "Patronage +3 or, if Saigon at Active Support, +6."
       effects:
         - if:
             when: { op: "==", left: { markerState: { space: "Saigon", marker: "supportOpposition" } }, right: "activeSupport" }
@@ -103,6 +107,63 @@ eventCards:
         - { shiftMarker: { space: "Saigon", marker: "supportOpposition", direction: "toward", target: "activeOpposition", steps: 1 } }
         - { addVar: { scope: "global", var: "aid", delta: -12 } }
 ```
+
+**Pivotal Event Card:**
+
+```yaml
+  - id: "124"
+    title: "Tet Offensive"
+    sideMode: "single"
+    tags: ["pivotal", "VC"]
+    metadata:
+      factionOrder: ["VC", "NVA", "US", "ARVN"]
+      flavorText: "General uprising."
+    playCondition:
+      op: "and"
+      args:
+        - { op: ">=", left: { ref: "gvar", var: "leaderBoxCardCount" }, right: 2 }
+        - { op: ">", left: { aggregate: { op: "count", query: { zone: "map", filter: { prop: "type", eq: "guerrilla" }, faction: "VC" } } }, right: 20 }
+    unshaded:
+      text: "Free Terror with 1 Underground VC per space. Place 6 VC pieces in any cities. VC + NVA Guerrillas free Attack where enemies."
+      effects: []
+```
+
+**Coup Card:**
+
+```yaml
+  - id: "125"
+    title: "Nguyen Khanh"
+    sideMode: "single"
+    tags: ["coup"]
+    metadata:
+      flavorText: "Corps commanders ascendant."
+    unshaded:
+      text: "Transport uses max 1 LoC space."
+      effects:
+        - { setGlobalMarker: { marker: "activeLeader", state: "khanh" } }
+        - { addVar: { scope: "global", var: "leaderBoxCardCount", delta: 1 } }
+      lastingEffects:
+        - id: "khanh-transport-restriction"
+          duration: "round"
+          setupEffects:
+            - { setVar: { scope: "global", var: "transportLocMax", value: 1 } }
+          teardownEffects:
+            - { setVar: { scope: "global", var: "transportLocMax", value: 999 } }
+```
+
+## Type Prerequisites
+
+The following kernel type extensions must land before card encoding begins:
+
+1. **`EventCardDef` extensions** (`src/kernel/types-events.ts`): `tags` (readonly string[]), `metadata` (EventCardMetadata), `playCondition` (ConditionAST)
+2. **`EventSideDef.text` field** (`src/kernel/types-events.ts`): Display text per side, pure metadata for UI rendering
+3. **`EventCardMetadata` type** (`src/kernel/types-events.ts`): Free-form `Record<string, string | number | boolean | readonly string[]>` for game-specific display data
+4. **Zod schema updates** (`src/kernel/schemas-extensions.ts`): Mirror type changes in `EventCardSchema` and `EventCardSideSchema`
+5. **JSON Schema updates** (`schemas/GameDef.schema.json`): Mirror Zod changes
+6. **`playCondition` check** (`src/kernel/event-execution.ts`): Evaluate card precondition before allowing event execution
+7. **Cross-validation rule** (`src/cnl/cross-validate.ts`): Warn if pivotal-tagged cards lack `playCondition`
+
+**Design rationale**: `tags` + `playCondition` are game-agnostic. A discriminated union (`RegularEventCardDef | CoupEventCardDef | PivotalEventCardDef`) would encode FITL's card taxonomy into the kernel. Other games have different taxonomies — `tags` lets any game classify cards without kernel changes.
 
 ## Implementation Tasks
 
@@ -152,7 +213,9 @@ For each card that grants a capability: verify the `setVar` effect targets the c
 
 ### Task 29.8: Momentum-Granting Card Validation
 
-For each card that grants momentum: verify the `EventCardLastingEffectDef` uses `duration: 'coup'` and targets the correct momentum ID from Spec 28 (Task 28.3).
+For each card that grants momentum: verify the `EventCardLastingEffectDef` uses `duration: 'round'` and targets the correct momentum ID from Spec 28 (Task 28.3).
+
+> **Note**: The kernel's `'round'` duration corresponds to FITL's "until Coup" semantics. Lasting effects with `duration: 'round'` expire when the coup round boundary fires (triggered by `coupHandoff` lifecycle entry).
 
 ## Open Questions
 
@@ -210,7 +273,9 @@ For each card that grants momentum: verify the `EventCardLastingEffectDef` uses 
 - New tests per card batch
 
 
-## Specific cards
+## Specific Cards
+
+> The following is reference data transcribed from physical cards. During encoding, each card will be converted to the YAML format shown above with proper effects, conditions, and metadata.
 
 Period Event (Set Up Option): 1964
 Faction Order: US, NVA, ARVN, VC
@@ -222,7 +287,7 @@ Lasting Effects Indicator (5.3): None.
 Shaded Text (see Dual Use 5.2): "Congressional regrets: Aid -1 per Casualty. All Casualties out of play."
 
 Period Event (Set Up Option): 1968
-Faction Order: US, NVA, ARVN, US
+Faction Order: US, NVA, ARVN, VC
 Card Number: 2
 Title: Kissinger
 Italized Flavor Text: "Operation Menu."
@@ -806,7 +871,7 @@ Event Text: "Aid and ARVN Resources each +9. Up to 2 US pieces from out-of-play 
 Lasting Effects Indicator (5.3): None
 Shaded Text (see Dual Use 5.2): "Saigon seen as US puppet: Remove Support from 3 spaces outside Saigon. Patronage -3."
 
-Period Event (Set Up Option): 1963
+Period Event (Set Up Option): 1965
 Faction Order: ARVN, US, VC, NVA
 Card Number: 67
 Title: Amphib Landing
@@ -842,7 +907,7 @@ Event Text: "US or ARVN free Sweep into/in then free Assault Phu Bon and adjacen
 Lasting Effects Indicator (5.3): None
 Shaded Text (see Dual Use 5.2): "UN troops abuse locals: Shift Qui Nhon, Phu Bon, and Khanh Hoa each 1 level toward Active Opposition."
 
-Period Event (Set Up Option): 71
+Period Event (Set Up Option): 1968
 Faction Order: ARVN, NVA, US, VC
 Card Number: 71
 Title: An Loc
@@ -929,8 +994,8 @@ Card Number: 80
 Title: Light at the End of the Tunnel
 Italized Flavor Text: "Wind down seen."
 Event Text: "Remove 1-4 US pieces from map to Available. For each piece, Patronage +2, shift a space 1 level toward Active Opposition, and place 4 NVA Troops outside the South. Stay Eligible."
-Lasting Effects Indicator (5.3):
-Shaded Text (see Dual Use 5.2):
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): None
 
 Period Event (Set Up Option): 1965
 Faction Order: ARVN, VC, US, NVA
@@ -1166,7 +1231,7 @@ Event Text: "In each of 2 Provinces adjacent to Saigon, shift Support/Opposition
 Lasting Effects Indicator (5.3): None
 Shaded Text (see Dual Use 5.2): None
 
-Period Event (Set Up Option): 1064
+Period Event (Set Up Option): 1964
 Faction Order: VC, NVA, ARVN, US
 Card Number: 107
 Title: Burning Bonze
@@ -1255,6 +1320,15 @@ Italized Flavor Text: "Manpower to political sections."
 Event Text: "VC to Terror or Agitate must remove 2 VC Guerrillas per space."
 Lasting Effects Indicator (5.3): VC CAPABILITY
 Shaded Text (see Dual Use 5.2): "NLF village committees: VC Rally in 1 space where VC already had a Base may Agitate as if Support Phase even if COIN Control."
+
+Period Event (Set Up Option): 1968
+Faction Order: VC, ARVN, NVA, US
+Card Number: 117
+Title: Corps Commander
+Italized Flavor Text: "Loyal generals."
+Event Text: "ARVN brings 3 ARVN Troops onto the map (from Available and/or out-of-play) into 1-2 adjacent spaces, then free Sweeps in each of those spaces."
+Lasting Effects Indicator (5.3): None
+Shaded Text (see Dual Use 5.2): "Roll a die and remove that many ARVN pieces from 1-2 adjacent spaces. ARVN Ineligible through next card."
 
 Period Event (Set Up Option): 1964
 Faction Order: VC, ARVN, NVA, US

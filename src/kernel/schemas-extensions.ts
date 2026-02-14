@@ -78,6 +78,7 @@ export const EventCardBranchSchema: z.ZodTypeAny = z
 
 export const EventCardSideSchema = z
   .object({
+    text: StringSchema.optional(),
     effects: z.array(EffectASTSchema).min(1).optional(),
     branches: z.array(EventCardBranchSchema).min(1).optional(),
     targets: z.array(EventCardTargetSchema).optional(),
@@ -85,14 +86,25 @@ export const EventCardSideSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.effects === undefined && value.branches === undefined && value.targets === undefined && value.lastingEffects === undefined) {
+    if (
+      value.text === undefined &&
+      value.effects === undefined &&
+      value.branches === undefined &&
+      value.targets === undefined &&
+      value.lastingEffects === undefined
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Event side must declare at least one of effects, branches, targets, or lastingEffects.',
+        message: 'Event side must declare at least one of text, effects, branches, targets, or lastingEffects.',
         path: [],
       });
     }
   });
+
+export const EventCardMetadataSchema = z.record(
+  StringSchema,
+  z.union([StringSchema, NumberSchema, z.boolean(), z.array(StringSchema)]),
+);
 
 export const EventCardSchema = z
   .object({
@@ -100,6 +112,9 @@ export const EventCardSchema = z
     title: StringSchema.min(1),
     sideMode: z.union([z.literal('single'), z.literal('dual')]),
     order: IntegerSchema.min(0).optional(),
+    tags: z.array(StringSchema.min(1)).optional(),
+    metadata: EventCardMetadataSchema.optional(),
+    playCondition: ConditionASTSchema.optional(),
     unshaded: EventCardSideSchema.optional(),
     shaded: EventCardSideSchema.optional(),
   })

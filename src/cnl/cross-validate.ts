@@ -227,6 +227,20 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
           zoneTargets,
           card.id,
         );
+
+        if (
+          card.tags !== undefined &&
+          card.tags.includes('pivotal') &&
+          card.playCondition === undefined
+        ) {
+          diagnostics.push({
+            code: 'CNL_XREF_PIVOTAL_PLAY_CONDITION_MISSING',
+            severity: 'warning',
+            path: `${deckPath}.cards.${cardIndex}.playCondition`,
+            message: `Pivotal event card "${card.id}" has tag "pivotal" but no playCondition defined.`,
+            suggestion: 'Add a playCondition to specify when this pivotal event can be played.',
+          });
+        }
       }
     }
   }

@@ -100,13 +100,13 @@ describe('FITL removal ordering macros', () => {
 
       assert.deepEqual(
         pieceRemovalOrdering.params.map((param) => param.name),
-        ['space', 'damageExpr'],
-        'Expected piece-removal-ordering params to stay minimal',
+        ['space', 'damageExpr', 'bodyCountEligible'],
+        'Expected piece-removal-ordering params to expose explicit Body Count eligibility input',
       );
       assert.deepEqual(
         coinAssaultRemoval.params.map((param) => param.name),
-        ['space', 'damageExpr'],
-        'Expected coin-assault-removal-order to avoid actorFaction parameter',
+        ['space', 'damageExpr', 'bodyCountEligible'],
+        'Expected coin-assault-removal-order to avoid actorFaction parameter and pass explicit Body Count eligibility',
       );
       assert.deepEqual(
         insurgentAttackRemoval.params.map((param) => param.name),
@@ -169,6 +169,10 @@ describe('FITL removal ordering macros', () => {
         const args = asRecord(node.args);
         return args !== null && Object.hasOwn(args, 'actorFaction');
       };
+      const hasBodyCountEligibleArg = (node: Record<string, unknown>): boolean => {
+        const args = asRecord(node.args);
+        return args !== null && Object.hasOwn(args, 'bodyCountEligible');
+      };
 
       const coinCalls = flatten(coinAssaultRemoval.effects).filter((node) => node.macro === 'piece-removal-ordering');
       const insurgentCalls = flatten(insurgentAttackRemoval.effects).filter((node) => node.macro === 'piece-removal-ordering');
@@ -181,6 +185,11 @@ describe('FITL removal ordering macros', () => {
         coinCalls.some(hasActorFactionArg),
         false,
         'Expected coin-assault-removal-order to avoid actorFaction passthrough',
+      );
+      assert.equal(
+        coinCalls.every(hasBodyCountEligibleArg),
+        true,
+        'Expected coin-assault-removal-order to forward explicit bodyCountEligible arg into piece-removal-ordering',
       );
       assert.equal(
         insurgentCalls.some(hasActorFactionArg),

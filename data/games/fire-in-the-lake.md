@@ -16,6 +16,7 @@ effectMacros:
     params:
       - { name: space, type: zoneSelector }
       - { name: damageExpr, type: value }
+      - { name: bodyCountEligible, type: value }
     exports: [$damage, $targetFactionFirst]
     effects:
       - let:
@@ -49,6 +50,27 @@ effectMacros:
                                 countBind: $guerrillas2Removed
                             remainingBind: $remainingDamage
                             in:
+                              - let:
+                                  bind: $guerrillasRemoved
+                                  value:
+                                    op: '+'
+                                    left: { ref: binding, name: $guerrillas1Removed }
+                                    right: { ref: binding, name: $guerrillas2Removed }
+                                  in:
+                                    - if:
+                                        when:
+                                          op: and
+                                          args:
+                                            - { op: '==', left: { param: bodyCountEligible }, right: true }
+                                            - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+                                        then:
+                                          - addVar:
+                                              scope: global
+                                              var: aid
+                                              delta:
+                                                op: '*'
+                                                left: { ref: binding, name: $guerrillasRemoved }
+                                                right: 3
                               - if:
                                   when: { op: '>', left: { ref: binding, name: $remainingDamage }, right: 0 }
                                   then:
@@ -86,6 +108,7 @@ effectMacros:
     params:
       - { name: space, type: zoneSelector }
       - { name: damageExpr, type: value }
+      - { name: bodyCountEligible, type: value }
     exports: []
     effects:
       - let:
@@ -96,6 +119,7 @@ effectMacros:
               args:
                 space: { param: space }
                 damageExpr: { param: damageExpr }
+                bodyCountEligible: { param: bodyCountEligible }
             - let:
                 bind: $basesAfter
                 value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: type, eq: base }, { prop: faction, op: in, value: ['NVA', 'VC'] }] } } }
@@ -728,40 +752,6 @@ effectMacros:
               - { op: '!=', left: { ref: zoneProp, zone: { param: space }, prop: spaceType }, right: 'loc' }
           then:
             - addVar: { scope: global, var: { param: resource }, delta: { param: amount } }
-
-  # ── mom-body-count-award-aid ──────────────────────────────────────────────
-  # Body Count (card #72, unshaded): +3 Aid per guerrilla removed by Assault/Patrol.
-  - id: mom-body-count-award-aid
-    params:
-      - { name: space, type: string }
-      - { name: guerrillasBefore, type: value }
-    exports: []
-    effects:
-      - if:
-          when: { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
-          then:
-            - let:
-                bind: $guerrillasAfter
-                value:
-                  aggregate:
-                    op: count
-                    query:
-                      query: tokensInZone
-                      zone: { param: space }
-                      filter:
-                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                        - { prop: type, eq: guerrilla }
-                in:
-                  - addVar:
-                      scope: global
-                      var: aid
-                      delta:
-                        op: '*'
-                        left:
-                          op: '-'
-                          left: { param: guerrillasBefore }
-                          right: { ref: binding, name: $guerrillasAfter }
-                        right: 3
 
   # ── insurgent-march-resolve-destination ────────────────────────────────────
   # Shared insurgent March destination resolution:
@@ -1587,6 +1577,7 @@ effectMacros:
                     args:
                       space: $m48Space
                       damageExpr: 2
+                      bodyCountEligible: false
 
   # ── cap-train-caps-unshaded-bonus-police ─────────────────────────────────
   # CAPs unshaded: each Train space places +1 ARVN Police.
@@ -3408,26 +3399,11 @@ actionPipelines:
                                     then: { op: '*', left: { ref: binding, name: $usTroops }, right: 2 }
                                     else: { ref: binding, name: $usTroops }
                                 in:
-                                  - let:
-                                      bind: $bodyCountGuerrillasBefore
-                                      value:
-                                        aggregate:
-                                          op: count
-                                          query:
-                                            query: tokensInZone
-                                            zone: $assaultLoC
-                                            filter:
-                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                              - { prop: type, eq: guerrilla }
-                                      in:
-                                        - macro: coin-assault-removal-order
-                                          args:
-                                            space: $assaultLoC
-                                            damageExpr: { ref: binding, name: $patrolDmg }
-                                        - macro: mom-body-count-award-aid
-                                          args:
-                                            space: $assaultLoC
-                                            guerrillasBefore: { ref: binding, name: $bodyCountGuerrillasBefore }
+                                  - macro: coin-assault-removal-order
+                                    args:
+                                      space: $assaultLoC
+                                      damageExpr: { ref: binding, name: $patrolDmg }
+                                      bodyCountEligible: true
     atomicity: atomic
   # ── patrol-arvn-profile ─────────────────────────────────────────────────────
   # ARVN Patrol operation (Rule 3.2.2)
@@ -3544,26 +3520,11 @@ actionPipelines:
                           bind: $patrolDmg
                           value: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
                           in:
-                            - let:
-                                bind: $bodyCountGuerrillasBefore
-                                value:
-                                  aggregate:
-                                    op: count
-                                    query:
-                                      query: tokensInZone
-                                      zone: $assaultLoC
-                                      filter:
-                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                        - { prop: type, eq: guerrilla }
-                                in:
-                                  - macro: coin-assault-removal-order
-                                    args:
-                                      space: $assaultLoC
-                                      damageExpr: { ref: binding, name: $patrolDmg }
-                                  - macro: mom-body-count-award-aid
-                                    args:
-                                      space: $assaultLoC
-                                      guerrillasBefore: { ref: binding, name: $bodyCountGuerrillasBefore }
+                            - macro: coin-assault-removal-order
+                              args:
+                                space: $assaultLoC
+                                damageExpr: { ref: binding, name: $patrolDmg }
+                                bodyCountEligible: true
     atomicity: atomic
   # ── sweep-us-profile ──────────────────────────────────────────────────────────
   # US Sweep operation (Rule 3.2.3)
@@ -3923,26 +3884,11 @@ actionPipelines:
                                         then: { op: '/', left: { ref: binding, name: $usTroops }, right: 2 }
                                         else: { ref: binding, name: $usTroops }
                                 in:
-                                  - let:
-                                      bind: $bodyCountGuerrillasBefore
-                                      value:
-                                        aggregate:
-                                          op: count
-                                          query:
-                                            query: tokensInZone
-                                            zone: $space
-                                            filter:
-                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                              - { prop: type, eq: guerrilla }
-                                      in:
-                                        - macro: coin-assault-removal-order
-                                          args:
-                                            space: $space
-                                            damageExpr: { ref: binding, name: $damage }
-                                        - macro: mom-body-count-award-aid
-                                          args:
-                                            space: $space
-                                            guerrillasBefore: { ref: binding, name: $bodyCountGuerrillasBefore }
+                                  - macro: coin-assault-removal-order
+                                    args:
+                                      space: $space
+                                      damageExpr: { ref: binding, name: $damage }
+                                      bodyCountEligible: true
                 - macro: cap-assault-search-and-destroy
                   args:
                     space: $space
@@ -3990,26 +3936,11 @@ actionPipelines:
                                     then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
                                     else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
                                 in:
-                                  - let:
-                                      bind: $bodyCountGuerrillasBefore
-                                      value:
-                                        aggregate:
-                                          op: count
-                                          query:
-                                            query: tokensInZone
-                                            zone: $arvnSpace
-                                            filter:
-                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                              - { prop: type, eq: guerrilla }
-                                      in:
-                                        - macro: coin-assault-removal-order
-                                          args:
-                                            space: $arvnSpace
-                                            damageExpr: { ref: binding, name: $arvnDamage }
-                                        - macro: mom-body-count-award-aid
-                                          args:
-                                            space: $arvnSpace
-                                            guerrillasBefore: { ref: binding, name: $bodyCountGuerrillasBefore }
+                                  - macro: coin-assault-removal-order
+                                    args:
+                                      space: $arvnSpace
+                                      damageExpr: { ref: binding, name: $arvnDamage }
+                                      bodyCountEligible: true
     atomicity: atomic
   - id: assault-arvn-profile
     actionId: assault
@@ -4123,26 +4054,11 @@ actionPipelines:
                                     then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
                                     else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
                                 in:
-                                  - let:
-                                      bind: $bodyCountGuerrillasBefore
-                                      value:
-                                        aggregate:
-                                          op: count
-                                          query:
-                                            query: tokensInZone
-                                            zone: $space
-                                            filter:
-                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
-                                              - { prop: type, eq: guerrilla }
-                                      in:
-                                        - macro: coin-assault-removal-order
-                                          args:
-                                            space: $space
-                                            damageExpr: { ref: binding, name: $damage }
-                                        - macro: mom-body-count-award-aid
-                                          args:
-                                            space: $space
-                                            guerrillasBefore: { ref: binding, name: $bodyCountGuerrillasBefore }
+                                  - macro: coin-assault-removal-order
+                                    args:
+                                      space: $space
+                                      damageExpr: { ref: binding, name: $damage }
+                                      bodyCountEligible: true
                 - macro: cap-assault-search-and-destroy
                   args:
                     space: $space
@@ -4901,6 +4817,7 @@ actionPipelines:
                                           args:
                                             space: $space
                                             damageExpr: { ref: binding, name: $damage }
+                                            bodyCountEligible: false
                 - if:
                     when: { op: '==', left: { ref: binding, name: '$adviseMode@{$space}' }, right: activate-remove }
                     then:

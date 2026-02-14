@@ -233,6 +233,9 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
           `${deckPath}.cards.${cardIndex}.unshaded`,
           zoneTargets,
           card.id,
+          factionTargets,
+          actionTargets,
+          cardDrivenTurnFlow !== null,
         );
         validateEventCardSide(
           diagnostics,
@@ -240,6 +243,9 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
           `${deckPath}.cards.${cardIndex}.shaded`,
           zoneTargets,
           card.id,
+          factionTargets,
+          actionTargets,
+          cardDrivenTurnFlow !== null,
         );
 
         if (
@@ -457,10 +463,23 @@ function validateEventCardSide(
   pathPrefix: string,
   zoneTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   cardId: string,
+  factionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  actionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  validateFactions: boolean,
 ): void {
   if (side === undefined) {
     return;
   }
+
+  validateEventFreeOperationGrants(
+    diagnostics,
+    side.freeOperationGrants,
+    `${pathPrefix}.freeOperationGrants`,
+    cardId,
+    factionTargets,
+    actionTargets,
+    validateFactions,
+  );
 
   if (side.effects !== undefined) {
     walkEffects(side.effects, `${pathPrefix}.effects`, (effect, path) => {
@@ -476,6 +495,16 @@ function validateEventCardSide(
   }
 
   for (const [branchIndex, branch] of (side.branches ?? []).entries()) {
+    validateEventFreeOperationGrants(
+      diagnostics,
+      branch.freeOperationGrants,
+      `${pathPrefix}.branches.${branchIndex}.freeOperationGrants`,
+      cardId,
+      factionTargets,
+      actionTargets,
+      validateFactions,
+    );
+
     if (branch.effects === undefined) {
       continue;
     }
@@ -516,6 +545,46 @@ function validateEventCardSide(
             `Event card "${cardId}" references unknown zone`,
           );
         },
+      );
+    }
+  }
+}
+
+function validateEventFreeOperationGrants(
+  diagnostics: Diagnostic[],
+  grants: EventSideDef['freeOperationGrants'],
+  pathPrefix: string,
+  cardId: string,
+  factionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  actionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  validateFactions: boolean,
+): void {
+  if (grants === undefined) {
+    return;
+  }
+
+  for (const [grantIndex, grant] of grants.entries()) {
+    if (validateFactions) {
+      pushMissingIdentifierDiagnostic(
+        diagnostics,
+        'CNL_XREF_EVENT_DECK_GRANT_FACTION_MISSING',
+        `${pathPrefix}.${grantIndex}.faction`,
+        grant.faction,
+        factionTargets,
+        `Event card "${cardId}" freeOperationGrant references unknown faction "${grant.faction}".`,
+        'Use one of the declared turnFlow.eligibility.factions ids.',
+      );
+    }
+
+    for (const [actionIndex, actionId] of (grant.actionIds ?? []).entries()) {
+      pushMissingIdentifierDiagnostic(
+        diagnostics,
+        'CNL_XREF_EVENT_DECK_GRANT_ACTION_MISSING',
+        `${pathPrefix}.${grantIndex}.actionIds.${actionIndex}`,
+        actionId,
+        actionTargets,
+        `Event card "${cardId}" freeOperationGrant references unknown action "${actionId}".`,
+        'Use one of the declared action ids.',
       );
     }
   }

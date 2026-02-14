@@ -93,4 +93,136 @@ describe('FITL insurgent operations integration', () => {
       /Illegal move/,
     );
   });
+
+  it('applies troops-attack damage as floor(nvaTroops/2) and applies attrition equal to US removed', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 181, 4);
+    const withNvaActive = {
+      ...start,
+      activePlayer: asPlayerId(2),
+      globalVars: {
+        ...start.globalVars,
+        nvaResources: 10,
+      },
+    };
+
+    const withAttackTargets = addTokenToZone(
+      addTokenToZone(
+        addTokenToZone(
+          addTokenToZone(
+            addTokenToZone(
+              addTokenToZone(withNvaActive, ATTACK_SPACE, {
+                id: asTokenId('test-floor-nva-t1'),
+                type: 'nva-troops',
+                props: { faction: 'NVA', type: 'troops' },
+              }),
+              ATTACK_SPACE,
+              {
+                id: asTokenId('test-floor-nva-t2'),
+                type: 'nva-troops',
+                props: { faction: 'NVA', type: 'troops' },
+              },
+            ),
+            ATTACK_SPACE,
+            {
+              id: asTokenId('test-floor-nva-t3'),
+              type: 'nva-troops',
+              props: { faction: 'NVA', type: 'troops' },
+            },
+          ),
+          ATTACK_SPACE,
+          {
+            id: asTokenId('test-floor-us-t1'),
+            type: 'us-troops',
+            props: { faction: 'US', type: 'troops' },
+          },
+        ),
+        ATTACK_SPACE,
+        {
+          id: asTokenId('test-floor-us-t2'),
+          type: 'us-troops',
+          props: { faction: 'US', type: 'troops' },
+        },
+      ),
+      ATTACK_SPACE,
+      {
+        id: asTokenId('test-floor-us-t3'),
+        type: 'us-troops',
+        props: { faction: 'US', type: 'troops' },
+      },
+    );
+
+    const selected = {
+      actionId: asActionId('attack'),
+      params: {
+        targetSpaces: [ATTACK_SPACE],
+        $attackMode: 'troops-attack',
+        $targetFactionFirst: 'US',
+      },
+    };
+    const final = applyMove(def, withAttackTargets, selected).state;
+
+    const usInSpace = (final.zones[ATTACK_SPACE] ?? []).filter((token) => token.props.faction === 'US').length;
+    const usInCasualties = (final.zones['casualties-US:none'] ?? []).filter((token) => token.props.faction === 'US').length;
+    const nvaInSpace = (final.zones[ATTACK_SPACE] ?? []).filter((token) => token.props.faction === 'NVA').length;
+    const nvaInAvailable = (final.zones['available-NVA:none'] ?? []).filter((token) => token.props.faction === 'NVA').length;
+
+    assert.equal(usInSpace, 2, '3 NVA troops should inflict floor(3/2)=1 damage in troops mode');
+    assert.equal(usInCasualties, 1, 'Exactly one US piece should be removed to casualties');
+    assert.equal(nvaInSpace, 2, 'NVA should lose exactly one piece to attrition per US removed');
+    assert.equal(nvaInAvailable, 1, 'NVA attrition loss should route to available-NVA:none');
+  });
+
+  it('skips nvaResources attack spend when move is marked freeOperation', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 211, 4);
+    const withNvaActive = {
+      ...start,
+      activePlayer: asPlayerId(2),
+      globalVars: {
+        ...start.globalVars,
+        nvaResources: 7,
+      },
+    };
+    const withTargets = addTokenToZone(
+      addTokenToZone(withNvaActive, ATTACK_SPACE, {
+        id: asTokenId('test-free-nva-t'),
+        type: 'nva-troops',
+        props: { faction: 'NVA', type: 'troops' },
+      }),
+      ATTACK_SPACE,
+      {
+        id: asTokenId('test-free-us-t'),
+        type: 'us-troops',
+        props: { faction: 'US', type: 'troops' },
+      },
+    );
+
+    const nonFree = applyMove(def, withTargets, {
+      actionId: asActionId('attack'),
+      params: {
+        targetSpaces: [ATTACK_SPACE],
+        $attackMode: 'troops-attack',
+        $targetFactionFirst: 'US',
+      },
+    }).state;
+    const free = applyMove(def, withTargets, {
+      actionId: asActionId('attack'),
+      freeOperation: true,
+      params: {
+        targetSpaces: [ATTACK_SPACE],
+        $attackMode: 'troops-attack',
+        $targetFactionFirst: 'US',
+      },
+    }).state;
+
+    assert.equal(nonFree.globalVars.nvaResources, 6, 'Non-free attack should spend 1 NVA resource per targeted space');
+    assert.equal(free.globalVars.nvaResources, 7, 'Free attack should skip per-space NVA resource spend');
+  });
 });

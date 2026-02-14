@@ -1,6 +1,6 @@
 # Spec 26: FITL Operations Full Effects (Revised)
 
-**Status**: Draft (ready for implementation)
+**Status**: ✅ COMPLETED
 **Priority**: P0
 **Complexity**: XL
 **Dependencies**: Spec 23 (map + pieces — COMPLETED), Spec 25a (kernel operation primitives — COMPLETED), Spec 25b (decision sequence model — COMPLETED), Spec 25c (extended kernel primitives — COMPLETED), Spec 13a (effect macros — COMPLETED)
@@ -1972,3 +1972,20 @@ Spec 13a (Completed) ─┘
 ```
 
 All prerequisites completed. No external blockers.
+
+## Outcome
+
+- **Completion date**: 2026-02-14
+- **What was actually changed**:
+  - Replaced stub operation behavior with 16 faction-specific operation profiles in production FITL data.
+  - Removed operation-level fallback action effects and enforced strict applicability-based profile dispatch.
+  - Landed supporting hardening work across the FITLOPEFULEFF chain (satisfiability guard, typed zone references, removal primitives/macros, applicability-fatal errors, attack contract/regression coverage).
+  - Added/updated integration coverage to validate operation behavior, limited-op constraints, and production compilation invariants.
+- **Deviations from original plan**:
+  - The early draft concern about missing production `actions`/`turnStructure` wiring was resolved during implementation and is no longer an open gap.
+  - Final closure added explicit invariant checks for exact operation-profile IDs/count and applicability presence in production compilation tests.
+- **Verification results**:
+  - `npm run build` passed.
+  - `npm run typecheck` passed.
+  - `npm run lint` passed.
+  - `npm test` passed.

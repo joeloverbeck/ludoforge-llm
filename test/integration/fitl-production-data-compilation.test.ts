@@ -51,6 +51,42 @@ describe('FITL production data integration compilation', () => {
       }
       assert.deepEqual(action.effects, [], `Expected profile-backed action ${String(action.id)} to have no fallback action effects`);
     }
+    const operationActionIds = new Set(['train', 'patrol', 'sweep', 'assault', 'rally', 'march', 'attack', 'terror']);
+    const operationProfiles = (compiled.gameDef!.actionPipelines ?? []).filter((profile) =>
+      operationActionIds.has(String(profile.actionId)),
+    );
+    assert.equal(operationProfiles.length, 16, 'Expected exactly 16 operation profiles (8 operations x 2 factions)');
+    assert.deepEqual(
+      new Set(operationProfiles.map((profile) => String(profile.id))),
+      new Set([
+        'train-us-profile',
+        'train-arvn-profile',
+        'patrol-us-profile',
+        'patrol-arvn-profile',
+        'sweep-us-profile',
+        'sweep-arvn-profile',
+        'assault-us-profile',
+        'assault-arvn-profile',
+        'rally-nva-profile',
+        'rally-vc-profile',
+        'march-nva-profile',
+        'march-vc-profile',
+        'attack-nva-profile',
+        'attack-vc-profile',
+        'terror-nva-profile',
+        'terror-vc-profile',
+      ]),
+      'Expected canonical FITL faction-specific operation profile IDs',
+    );
+    for (const actionId of operationActionIds) {
+      const profilesForAction = operationProfiles.filter((profile) => String(profile.actionId) === actionId);
+      assert.equal(profilesForAction.length, 2, `Expected exactly 2 profiles for operation action ${actionId}`);
+      assert.equal(
+        profilesForAction.every((profile) => profile.applicability !== undefined),
+        true,
+        `Expected explicit applicability on all profiles for operation action ${actionId}`,
+      );
+    }
 
     const mapAsset = (parsed.doc.dataAssets ?? []).find((asset) => asset.id === 'fitl-map-production' && asset.kind === 'map');
     assert.ok(mapAsset, 'Expected fitl-map-production map asset');

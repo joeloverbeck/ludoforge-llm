@@ -283,6 +283,9 @@ effectMacros:
   # - canonical decision bindings:
   #   $ambushTargetMode@{space}, $ambushAdjacentTargets@{space}
   - id: insurgent-ambush-resolve-spaces
+    exports:
+      - '$ambushTargetMode@{$space}'
+      - '$ambushAdjacentTargets@{$space}'
     params:
       - { name: faction, type: string }
     effects:

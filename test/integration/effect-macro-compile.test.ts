@@ -245,4 +245,51 @@ describe('effect macro → compile pipeline integration', () => {
     assert.deepEqual(errors, [], `Unexpected errors: ${JSON.stringify(errors, null, 2)}`);
     assert.ok(result.gameDef !== null, 'Expected valid GameDef');
   });
+
+  it('multiple macro invocations produce deterministic non-colliding decision binds', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'choose-mode',
+      params: [],
+      exports: [],
+      effects: [{ chooseOne: { bind: '$mode', options: { query: 'enums', values: ['a', 'b'] } } }],
+    };
+
+    const makeDoc = () => ({
+      ...makeMinimalDoc(),
+      effectMacros: [macroDef],
+      actions: [
+        {
+          id: 'mode-action',
+          actor: 'active',
+          phase: 'main',
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            { macro: 'choose-mode', args: {} },
+            { macro: 'choose-mode', args: {} },
+          ],
+          limits: [],
+        },
+      ],
+    });
+
+    const first = compileGameSpecToGameDef(makeDoc());
+    const second = compileGameSpecToGameDef(makeDoc());
+    const firstErrors = first.diagnostics.filter((d) => d.severity === 'error');
+    const secondErrors = second.diagnostics.filter((d) => d.severity === 'error');
+    assert.deepEqual(firstErrors, [], `Unexpected errors: ${JSON.stringify(firstErrors, null, 2)}`);
+    assert.deepEqual(secondErrors, [], `Unexpected errors: ${JSON.stringify(secondErrors, null, 2)}`);
+    assert.ok(first.gameDef !== null);
+    assert.ok(second.gameDef !== null);
+
+    const firstEffects = first.gameDef.actions[0]?.effects ?? [];
+    const secondEffects = second.gameDef.actions[0]?.effects ?? [];
+    const firstBinds = firstEffects.flatMap((effect) => ('chooseOne' in effect ? [effect.chooseOne.bind] : []));
+    const secondBinds = secondEffects.flatMap((effect) => ('chooseOne' in effect ? [effect.chooseOne.bind] : []));
+
+    assert.deepEqual(firstBinds, secondBinds, 'bind naming should be deterministic across compiles');
+    assert.equal(firstBinds.length, 2);
+    assert.notEqual(firstBinds[0], firstBinds[1], 'each invocation should have an isolated bind');
+  });
 });

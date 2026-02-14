@@ -257,6 +257,7 @@ export interface EffectMacroDef {
   readonly id: string;
   readonly params: readonly EffectMacroParam[];
   readonly effects: readonly GameSpecEffect[];
+  readonly exports?: readonly string[];
 }
 
 export interface GameSpecDoc {

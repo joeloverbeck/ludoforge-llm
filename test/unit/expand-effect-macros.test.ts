@@ -346,4 +346,91 @@ describe('expandEffectMacros', () => {
       { addVar: { scope: 'global', var: 'count', delta: 1 } },
     ]);
   });
+
+  it('renames non-exported macro bindings per invocation deterministically', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'pick',
+      params: [],
+      effects: [
+        { chooseOne: { bind: '$choice@{$slot}', options: { query: 'enums', values: ['a', 'b'] } } },
+        { setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$choice@{$slot}' } } },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [
+        { macro: 'pick', args: {} },
+        { macro: 'pick', args: {} },
+      ],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const firstChoose = result.doc.setup?.[0] as { chooseOne: { bind: string } };
+    const firstSetVar = result.doc.setup?.[1] as { setVar: { value: { ref: 'binding'; name: string } } };
+    const secondChoose = result.doc.setup?.[2] as { chooseOne: { bind: string } };
+    const secondSetVar = result.doc.setup?.[3] as { setVar: { value: { ref: 'binding'; name: string } } };
+
+    assert.notEqual(firstChoose.chooseOne.bind, '$choice@{$slot}');
+    assert.notEqual(secondChoose.chooseOne.bind, '$choice@{$slot}');
+    assert.notEqual(firstChoose.chooseOne.bind, secondChoose.chooseOne.bind);
+    assert.equal(firstSetVar.setVar.value.name, firstChoose.chooseOne.bind);
+    assert.equal(secondSetVar.setVar.value.name, secondChoose.chooseOne.bind);
+  });
+
+  it('preserves exported macro bindings without renaming', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'pick-exported',
+      params: [],
+      exports: ['$choice'],
+      effects: [
+        { chooseOne: { bind: '$choice', options: { query: 'enums', values: ['a', 'b'] } } },
+        { setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$choice' } } },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'pick-exported', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.doc.setup, [
+      { chooseOne: { bind: '$choice', options: { query: 'enums', values: ['a', 'b'] } } },
+      { setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$choice' } } },
+    ]);
+  });
+
+  it('reports unknown exported bindings', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'bad-export',
+      params: [],
+      exports: ['$missing'],
+      effects: [{ chooseOne: { bind: '$local', options: { query: 'enums', values: ['a'] } } }],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'bad-export', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.ok(result.diagnostics.some((d) => d.code === 'EFFECT_MACRO_EXPORT_UNKNOWN_BINDING'));
+  });
+
+  it('reports duplicate exported bindings', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'dup-export',
+      params: [],
+      exports: ['$x', '$x'],
+      effects: [{ chooseOne: { bind: '$x', options: { query: 'enums', values: ['a'] } } }],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'dup-export', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.ok(result.diagnostics.some((d) => d.code === 'EFFECT_MACRO_EXPORT_DUPLICATE'));
+  });
 });

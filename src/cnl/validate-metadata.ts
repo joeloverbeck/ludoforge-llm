@@ -105,7 +105,7 @@ function validateVariableSection(
         path: basePath,
         severity: 'error',
         message: 'Variable definition must be an object.',
-        suggestion: 'Provide variable fields name, type, init, min, and max.',
+        suggestion: 'Provide variable fields name/type/init and bounds min/max for int variables.',
       });
       continue;
     }
@@ -126,37 +126,62 @@ function validateVariableSection(
       }
     }
 
-    const min = variable.min;
-    const max = variable.max;
-    const init = variable.init;
-    if (!isFiniteNumber(min) || !isFiniteNumber(max) || !isFiniteNumber(init)) {
-      diagnostics.push({
-        code: 'CNL_VALIDATOR_VARIABLE_RANGE_FIELDS_INVALID',
-        path: basePath,
-        severity: 'error',
-        message: 'Variable fields init, min, and max must be finite numbers.',
-        suggestion: 'Set numeric init/min/max values for the variable.',
-      });
+    const type = variable.type;
+    if (type === 'int') {
+      const min = variable.min;
+      const max = variable.max;
+      const init = variable.init;
+      if (!isFiniteNumber(min) || !isFiniteNumber(max) || !isFiniteNumber(init)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_VARIABLE_RANGE_FIELDS_INVALID',
+          path: basePath,
+          severity: 'error',
+          message: 'Int variable fields init, min, and max must be finite numbers.',
+          suggestion: 'Set numeric init/min/max values for int variables.',
+        });
+        continue;
+      }
+
+      if (min > max) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_VARIABLE_MIN_GT_MAX',
+          path: `${basePath}.min`,
+          severity: 'error',
+          message: 'Variable min must be <= max.',
+          suggestion: 'Adjust min/max to satisfy min <= max.',
+        });
+      }
+      if (init < min || init > max) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_VARIABLE_INIT_OUT_OF_RANGE',
+          path: `${basePath}.init`,
+          severity: 'error',
+          message: 'Variable init must satisfy min <= init <= max.',
+          suggestion: 'Adjust init to be within variable bounds.',
+        });
+      }
       continue;
     }
 
-    if (min > max) {
-      diagnostics.push({
-        code: 'CNL_VALIDATOR_VARIABLE_MIN_GT_MAX',
-        path: `${basePath}.min`,
-        severity: 'error',
-        message: 'Variable min must be <= max.',
-        suggestion: 'Adjust min/max to satisfy min <= max.',
-      });
+    if (type === 'boolean') {
+      if (typeof variable.init !== 'boolean') {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_VARIABLE_BOOLEAN_INIT_INVALID',
+          path: `${basePath}.init`,
+          severity: 'error',
+          message: 'Boolean variable init must be true or false.',
+          suggestion: 'Set boolean variable init to true or false.',
+        });
+      }
+      continue;
     }
-    if (init < min || init > max) {
-      diagnostics.push({
-        code: 'CNL_VALIDATOR_VARIABLE_INIT_OUT_OF_RANGE',
-        path: `${basePath}.init`,
-        severity: 'error',
-        message: 'Variable init must satisfy min <= init <= max.',
-        suggestion: 'Adjust init to be within variable bounds.',
-      });
-    }
+
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_VARIABLE_TYPE_INVALID',
+      path: `${basePath}.type`,
+      severity: 'error',
+      message: 'Variable type must be either "int" or "boolean".',
+      suggestion: 'Set variable.type to "int" or "boolean".',
+    });
   }
 }

@@ -1133,7 +1133,7 @@ describe('FITL COIN operations integration', () => {
         modifiedStart,
       );
 
-      const beforeAid = modifiedStart.globalVars.aid ?? 0;
+      const beforeAid = Number(modifiedStart.globalVars.aid ?? 0);
       const final = applyMove(def, modifiedStart, selected).state;
       assert.equal(final.globalVars.aid, beforeAid + 6, 'Expected +6 Aid from one insurgent Base removed');
     });
@@ -1186,7 +1186,7 @@ describe('FITL COIN operations integration', () => {
         modifiedStart,
       );
 
-      const beforeArvnResources = modifiedStart.globalVars.arvnResources ?? 0;
+      const beforeArvnResources = Number(modifiedStart.globalVars.arvnResources ?? 0);
       const final = applyMove(def, modifiedStart, selected).state;
       assert.equal(
         final.globalVars.arvnResources,
@@ -1414,8 +1414,8 @@ describe('FITL COIN operations integration', () => {
         modifiedStart,
       );
 
-      const beforeAid = modifiedStart.globalVars.aid ?? 0;
-      const beforeArvnResources = modifiedStart.globalVars.arvnResources ?? 0;
+      const beforeAid = Number(modifiedStart.globalVars.aid ?? 0);
+      const beforeArvnResources = Number(modifiedStart.globalVars.arvnResources ?? 0);
       const final = applyMove(def, modifiedStart, selected).state;
 
       assert.equal(final.globalVars.arvnResources, beforeArvnResources - 6, 'Expected -3 ARVN Resources per selected space');

@@ -46,65 +46,59 @@
     "globalVars": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string", "const": "int" },
+              "init": { "type": "number" },
+              "min": { "type": "number" },
+              "max": { "type": "number" }
+            },
+            "required": ["name", "type", "init", "min", "max"],
+            "additionalProperties": false
           },
-          "type": {
-            "type": "string",
-            "const": "int"
-          },
-          "init": {
-            "type": "number"
-          },
-          "min": {
-            "type": "number"
-          },
-          "max": {
-            "type": "number"
+          {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string", "const": "boolean" },
+              "init": { "type": "boolean" }
+            },
+            "required": ["name", "type", "init"],
+            "additionalProperties": false
           }
-        },
-        "required": [
-          "name",
-          "type",
-          "init",
-          "min",
-          "max"
-        ],
-        "additionalProperties": false
+        ]
       }
     },
     "perPlayerVars": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string", "const": "int" },
+              "init": { "type": "number" },
+              "min": { "type": "number" },
+              "max": { "type": "number" }
+            },
+            "required": ["name", "type", "init", "min", "max"],
+            "additionalProperties": false
           },
-          "type": {
-            "type": "string",
-            "const": "int"
-          },
-          "init": {
-            "type": "number"
-          },
-          "min": {
-            "type": "number"
-          },
-          "max": {
-            "type": "number"
+          {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string", "const": "boolean" },
+              "init": { "type": "boolean" }
+            },
+            "required": ["name", "type", "init"],
+            "additionalProperties": false
           }
-        },
-        "required": [
-          "name",
-          "type",
-          "init",
-          "min",
-          "max"
-        ],
-        "additionalProperties": false
+        ]
       }
     },
     "zones": {

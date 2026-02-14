@@ -7,6 +7,8 @@ const PLAYER_ZONE_QUALIFIER_PATTERN = /^[0-9]+$/;
 export type ValidationContext = {
   globalVarNames: Set<string>;
   perPlayerVarNames: Set<string>;
+  globalVarTypesByName: ReadonlyMap<string, GameDef['globalVars'][number]['type']>;
+  perPlayerVarTypesByName: ReadonlyMap<string, GameDef['perPlayerVars'][number]['type']>;
   globalVarCandidates: readonly string[];
   perPlayerVarCandidates: readonly string[];
   markerLatticeNames: Set<string>;
@@ -277,7 +279,7 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
   }
 
   def.globalVars.forEach((variable, index) => {
-    if (variable.min > variable.init || variable.init > variable.max) {
+    if (variable.type === 'int' && (variable.min > variable.init || variable.init > variable.max)) {
       diagnostics.push({
         code: 'VAR_BOUNDS_INVALID',
         path: `globalVars[${index}]`,
@@ -287,7 +289,7 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
     }
   });
   def.perPlayerVars.forEach((variable, index) => {
-    if (variable.min > variable.init || variable.init > variable.max) {
+    if (variable.type === 'int' && (variable.min > variable.init || variable.init > variable.max)) {
       diagnostics.push({
         code: 'VAR_BOUNDS_INVALID',
         path: `perPlayerVars[${index}]`,
@@ -458,8 +460,10 @@ export const buildValidationContext = (
     zoneCandidates,
     zoneOwners: new Map(def.zones.map((zone) => [zone.id, zone.owner])),
     globalVarNames: new Set(globalVarCandidates),
+    globalVarTypesByName: new Map(def.globalVars.map((variable) => [variable.name, variable.type])),
     globalVarCandidates,
     perPlayerVarNames: new Set(perPlayerVarCandidates),
+    perPlayerVarTypesByName: new Map(def.perPlayerVars.map((variable) => [variable.name, variable.type])),
     perPlayerVarCandidates,
     markerLatticeNames: new Set(markerLatticeCandidates),
     markerLatticeCandidates,

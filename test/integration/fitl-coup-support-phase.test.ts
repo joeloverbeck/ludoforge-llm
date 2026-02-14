@@ -220,7 +220,7 @@ describe('FITL coup support phase integration', () => {
     ];
 
     for (const counter of perSpaceCounters) {
-      assert.ok((counter ?? 0) <= 2);
+      assert.ok(Number(counter ?? 0) <= 2);
     }
 
     const supportEnterFirings = triggerLog.filter(

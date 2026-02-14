@@ -73,6 +73,17 @@ const parseFactionPlayer = (faction: string, playerCount: number): number | null
   return parsed;
 };
 
+const readNumericResource = (vars: Readonly<Record<string, number | boolean>>, name: string): number => {
+  const value = vars[name];
+  if (value === undefined) {
+    return 0;
+  }
+  if (typeof value !== 'number') {
+    throw new Error(`Turn-flow pass reward requires numeric global var: ${name}`);
+  }
+  return value;
+};
+
 const resolveActiveFaction = (state: GameState): string | null => {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
@@ -320,10 +331,10 @@ export const applyTurnFlowEligibilityAfterMove = (
       ? state
       : {
           ...state,
-          globalVars: rewards.reduce<Readonly<Record<string, number>>>(
+          globalVars: rewards.reduce<Readonly<Record<string, number | boolean>>>(
             (vars, reward) => ({
               ...vars,
-              [reward.resource]: (vars[reward.resource] ?? 0) + reward.amount,
+              [reward.resource]: readNumericResource(vars, reward.resource) + reward.amount,
             }),
             state.globalVars,
           ),

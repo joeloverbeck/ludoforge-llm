@@ -10,9 +10,9 @@ export interface GameSpecMetadata {
 export interface GameSpecVarDef {
   readonly name: string;
   readonly type: string;
-  readonly init: number;
-  readonly min: number;
-  readonly max: number;
+  readonly init: unknown;
+  readonly min?: unknown;
+  readonly max?: unknown;
 }
 
 export interface GameSpecGlobalMarkerLatticeDef {

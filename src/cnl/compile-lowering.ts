@@ -58,25 +58,40 @@ export function lowerVarDefs(
       continue;
     }
 
-    if (
-      typeof variable.name !== 'string' ||
-      variable.name.trim() === '' ||
-      variable.type !== 'int' ||
-      !isFiniteNumber(variable.init) ||
-      !isFiniteNumber(variable.min) ||
-      !isFiniteNumber(variable.max)
-    ) {
+    if (typeof variable.name !== 'string' || variable.name.trim() === '') {
       diagnostics.push(missingCapabilityDiagnostic(path, 'variable definition', variable));
       continue;
     }
 
-    lowered.push({
-      name: variable.name,
-      type: 'int',
-      init: variable.init,
-      min: variable.min,
-      max: variable.max,
-    });
+    if (variable.type === 'int') {
+      if (!isFiniteNumber(variable.init) || !isFiniteNumber(variable.min) || !isFiniteNumber(variable.max)) {
+        diagnostics.push(missingCapabilityDiagnostic(path, 'int variable definition', variable));
+        continue;
+      }
+      lowered.push({
+        name: variable.name,
+        type: 'int',
+        init: variable.init,
+        min: variable.min,
+        max: variable.max,
+      });
+      continue;
+    }
+
+    if (variable.type === 'boolean') {
+      if (typeof variable.init !== 'boolean') {
+        diagnostics.push(missingCapabilityDiagnostic(path, 'boolean variable definition', variable, ['boolean init']));
+        continue;
+      }
+      lowered.push({
+        name: variable.name,
+        type: 'boolean',
+        init: variable.init,
+      });
+      continue;
+    }
+
+    diagnostics.push(missingCapabilityDiagnostic(path, 'variable definition', variable, ['type: int|boolean']));
   }
   return lowered;
 }

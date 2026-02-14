@@ -456,13 +456,17 @@
       "properties": {
         "globalVars": {
           "type": "object",
-          "additionalProperties": { "type": "number" }
+          "additionalProperties": {
+            "anyOf": [{ "type": "number" }, { "type": "boolean" }]
+          }
         },
         "perPlayerVars": {
           "type": "object",
           "additionalProperties": {
             "type": "object",
-            "additionalProperties": { "type": "number" }
+            "additionalProperties": {
+              "anyOf": [{ "type": "number" }, { "type": "boolean" }]
+            }
           }
         },
         "playerCount": { "type": "number" },

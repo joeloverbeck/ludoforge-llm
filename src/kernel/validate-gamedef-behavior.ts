@@ -426,6 +426,20 @@ export const validateEffectAst = (
       validatePlayerSelector(diagnostics, effect.addVar.player, `${path}.addVar.player`, context);
     }
 
+    const varType =
+      effect.addVar.scope === 'global'
+        ? context.globalVarTypesByName.get(effect.addVar.var)
+        : context.perPlayerVarTypesByName.get(effect.addVar.var);
+    if (varType === 'boolean') {
+      diagnostics.push({
+        code: 'ADDVAR_BOOLEAN_TARGET_INVALID',
+        path: `${path}.addVar.var`,
+        severity: 'error',
+        message: `addVar cannot target boolean variable "${effect.addVar.var}".`,
+        suggestion: 'Use setVar with a boolean value expression for boolean variables.',
+      });
+    }
+
     validateValueExpr(diagnostics, effect.addVar.delta, `${path}.addVar.delta`, context);
     return;
   }

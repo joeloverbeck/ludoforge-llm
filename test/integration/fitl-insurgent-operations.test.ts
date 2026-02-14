@@ -702,7 +702,7 @@ describe('FITL insurgent operations integration', () => {
     };
     const final = applyMoveWithResolvedDecisionIds(compiled.gameDef!, withAttackTargets, selected).state;
 
-    assert.ok((final.globalVars.nvaResources ?? 10) <= 10, 'Expected Attack to charge NVA resources or keep them unchanged if free');
+    assert.ok(Number(final.globalVars.nvaResources ?? 10) <= 10, 'Expected Attack to charge NVA resources or keep them unchanged if free');
   });
 
   it('executes attack through attack-vc-profile when active player is VC', () => {

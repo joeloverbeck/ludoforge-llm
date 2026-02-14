@@ -20,13 +20,10 @@ const fnv1a64 = (input: string): bigint => {
   return hash;
 };
 
-const encodeVariableDef = (def: {
-  readonly name: string;
-  readonly type: 'int';
-  readonly init: number;
-  readonly min: number;
-  readonly max: number;
-}): string => `name=${def.name}|type=${def.type}|init=${def.init}|min=${def.min}|max=${def.max}`;
+const encodeVariableDef = (def: GameDef['globalVars'][number]): string =>
+  def.type === 'int'
+    ? `name=${def.name}|type=${def.type}|init=${def.init}|min=${def.min}|max=${def.max}`
+    : `name=${def.name}|type=${def.type}|init=${def.init}`;
 
 const canonicalizeGameDefFingerprint = (def: GameDef): string => {
   const zones = [...def.zones]

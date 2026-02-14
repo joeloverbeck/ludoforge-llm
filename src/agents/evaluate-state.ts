@@ -13,7 +13,7 @@ const OPPONENT_VAR_WEIGHT = 2_500;
 const SCORING_WEIGHT = 100;
 
 const playerVarValue = (state: GameState, playerId: PlayerId, varName: string): number =>
-  state.perPlayerVars[String(playerId)]?.[varName] ?? 0;
+  typeof state.perPlayerVars[String(playerId)]?.[varName] === 'number' ? (state.perPlayerVars[String(playerId)]?.[varName] as number) : 0;
 
 const evalScoringValue = (def: GameDef, state: GameState, playerId: PlayerId): number => {
   if (!def.terminal.scoring) {
@@ -73,6 +73,9 @@ export const evaluateState = (def: GameDef, state: GameState, playerId: PlayerId
   let score = evalScoringValue(def, state, playerId);
 
   for (const variable of def.perPlayerVars) {
+    if (variable.type !== 'int') {
+      continue;
+    }
     const range = Math.max(1, variable.max - variable.min);
     const ownValue = playerVarValue(state, playerId, variable.name) - variable.min;
     score += Math.trunc((ownValue * OWN_VAR_WEIGHT) / range);

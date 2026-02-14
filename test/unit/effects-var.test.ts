@@ -22,10 +22,12 @@ const makeDef = (): GameDef => ({
   globalVars: [
     { name: 'score', type: 'int', init: 0, min: 0, max: 10 },
     { name: 'round', type: 'int', init: 1, min: 1, max: 9 },
+    { name: 'flag', type: 'boolean', init: false },
   ],
   perPlayerVars: [
     { name: 'hp', type: 'int', init: 0, min: 0, max: 20 },
     { name: 'mana', type: 'int', init: 0, min: 0, max: 9 },
+    { name: 'ready', type: 'boolean', init: false },
   ],
   zones: [],
   tokenTypes: [],
@@ -39,10 +41,10 @@ const makeDef = (): GameDef => ({
 });
 
 const makeState = (): GameState => ({
-  globalVars: { score: 3, round: 2 },
+  globalVars: { score: 3, round: 2, flag: false },
   perPlayerVars: {
-    '0': { hp: 6, mana: 1 },
-    '1': { hp: 8, mana: 4 },
+    '0': { hp: 6, mana: 1, ready: false },
+    '1': { hp: 8, mana: 4, ready: false },
   },
   playerCount: 2,
   zones: {},
@@ -97,6 +99,16 @@ describe('effects var handlers', () => {
     assert.equal(result.state.globalVars, ctx.state.globalVars);
   });
 
+  it('setVar supports boolean variables for global and per-player scopes', () => {
+    const ctx = makeCtx();
+
+    const globalResult = applyEffect({ setVar: { scope: 'global', var: 'flag', value: true } }, ctx);
+    assert.equal(globalResult.state.globalVars.flag, true);
+
+    const pvarResult = applyEffect({ setVar: { scope: 'pvar', player: 'actor', var: 'ready', value: true } }, ctx);
+    assert.equal(pvarResult.state.perPlayerVars['0']?.ready, true);
+  });
+
   it('setVar clamps values to min/max bounds', () => {
     const ctx = makeCtx();
 
@@ -144,6 +156,18 @@ describe('effects var handlers', () => {
 
     assert.throws(() => applyEffect({ addVar: { scope: 'global', var: 'score', delta: 'x' } }, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('addVar.delta');
+    });
+  });
+
+  it('throws EFFECT_RUNTIME for invalid boolean setVar/addVar usage', () => {
+    const ctx = makeCtx();
+
+    assert.throws(() => applyEffect({ setVar: { scope: 'global', var: 'flag', value: 1 } }, ctx), (error: unknown) => {
+      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('setVar.value');
+    });
+
+    assert.throws(() => applyEffect({ addVar: { scope: 'global', var: 'flag', delta: 1 } }, ctx), (error: unknown) => {
+      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('addVar cannot target non-int variable');
     });
   });
 

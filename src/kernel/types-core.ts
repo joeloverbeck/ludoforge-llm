@@ -47,13 +47,23 @@ export interface Rng {
   readonly state: RngState;
 }
 
-export interface VariableDef {
+export interface IntVariableDef {
   readonly name: string;
   readonly type: 'int';
   readonly init: number;
   readonly min: number;
   readonly max: number;
 }
+
+export interface BooleanVariableDef {
+  readonly name: string;
+  readonly type: 'boolean';
+  readonly init: boolean;
+}
+
+export type VariableDef = IntVariableDef | BooleanVariableDef;
+
+export type VariableValue = number | boolean;
 
 export interface ZoneDef {
   readonly id: ZoneId;
@@ -312,12 +322,12 @@ export interface ZobristTable {
 
 export type ZobristFeature =
   | { readonly kind: 'tokenPlacement'; readonly tokenId: TokenId; readonly zoneId: ZoneId; readonly slot: number }
-  | { readonly kind: 'globalVar'; readonly varName: string; readonly value: number }
+  | { readonly kind: 'globalVar'; readonly varName: string; readonly value: VariableValue }
   | {
       readonly kind: 'perPlayerVar';
       readonly playerId: PlayerId;
       readonly varName: string;
-      readonly value: number;
+      readonly value: VariableValue;
     }
   | { readonly kind: 'activePlayer'; readonly playerId: PlayerId }
   | { readonly kind: 'currentPhase'; readonly phaseId: PhaseId }
@@ -359,8 +369,8 @@ export interface ActionUsageRecord {
 }
 
 export interface GameState {
-  readonly globalVars: Readonly<Record<string, number>>;
-  readonly perPlayerVars: Readonly<Record<string, Readonly<Record<string, number>>>>;
+  readonly globalVars: Readonly<Record<string, VariableValue>>;
+  readonly perPlayerVars: Readonly<Record<string, Readonly<Record<string, VariableValue>>>>;
   readonly playerCount: number;
   readonly zones: Readonly<Record<string, readonly Token[]>>;
   readonly nextTokenOrdinal: number;

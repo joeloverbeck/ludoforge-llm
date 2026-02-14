@@ -287,7 +287,10 @@ export function computeVictoryMarker(
     case 'controlledPopulationPlusGlobalVar': {
       const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloFactionControlled;
       const pop = sumControlledPopulation(state, spaces, controlFn, factionConfig);
-      const varValue = state.globalVars[formula.varName] ?? 0;
+      const varValue = state.globalVars[formula.varName];
+      if (typeof varValue !== 'number') {
+        throw new Error(`Derived value formula requires numeric global var: ${formula.varName}`);
+      }
       return pop + varValue;
     }
   }

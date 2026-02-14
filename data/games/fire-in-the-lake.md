@@ -6511,6 +6511,22 @@ globalVars:
   # ── Stub vars for joint-operation testing ──
   - { name: usOpCount, type: int, init: 0, min: 0, max: 50 }
   - { name: arvnOpCount, type: int, init: 0, min: 0, max: 50 }
+  # ── Momentum markers (boolean globals) ──
+  - { name: mom_wildWeasels, type: boolean, init: false }
+  - { name: mom_adsid, type: boolean, init: false }
+  - { name: mom_rollingThunder, type: boolean, init: false }
+  - { name: mom_medevacUnshaded, type: boolean, init: false }
+  - { name: mom_medevacShaded, type: boolean, init: false }
+  - { name: mom_blowtorchKomer, type: boolean, init: false }
+  - { name: mom_claymores, type: boolean, init: false }
+  - { name: mom_daNang, type: boolean, init: false }
+  - { name: mom_mcnamaraLine, type: boolean, init: false }
+  - { name: mom_oriskany, type: boolean, init: false }
+  - { name: mom_bombingPause, type: boolean, init: false }
+  - { name: mom_559thTransportGrp, type: boolean, init: false }
+  - { name: mom_bodyCount, type: boolean, init: false }
+  - { name: mom_generalLansdale, type: boolean, init: false }
+  - { name: mom_typhoonKate, type: boolean, init: false }
 
 perPlayerVars:
   - { name: resources, type: int, init: 20, min: 0, max: 50 }

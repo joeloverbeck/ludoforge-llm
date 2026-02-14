@@ -95,7 +95,9 @@ describe('effects property-style invariants', () => {
     for (const value of candidates) {
       const setResult = applyEffect({ setVar: { scope: 'global', var: 'meter', value } }, makeCtx());
       const meter = setResult.state.globalVars.meter;
-      assert.ok(meter !== undefined);
+      if (typeof meter !== 'number') {
+        throw new Error('Expected numeric meter');
+      }
       assert.ok(meter >= 0);
       assert.ok(meter <= 10);
     }
@@ -103,7 +105,9 @@ describe('effects property-style invariants', () => {
     for (const delta of candidates) {
       const addResult = applyEffect({ addVar: { scope: 'global', var: 'meter', delta } }, makeCtx());
       const meter = addResult.state.globalVars.meter;
-      assert.ok(meter !== undefined);
+      if (typeof meter !== 'number') {
+        throw new Error('Expected numeric meter');
+      }
       assert.ok(meter >= 0);
       assert.ok(meter <= 10);
     }

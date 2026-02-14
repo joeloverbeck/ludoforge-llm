@@ -187,7 +187,7 @@ interface FitlEventInitialPackGolden {
   readonly selectedMove: Move;
   readonly triggerFirings: readonly unknown[];
   readonly postState: {
-    readonly globalVars: Readonly<Record<string, number>>;
+    readonly globalVars: Readonly<Record<string, number | boolean>>;
     readonly turnFlow: ReturnType<typeof requireCardDrivenRuntime>;
   };
 }

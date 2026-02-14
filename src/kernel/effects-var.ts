@@ -25,6 +25,19 @@ const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: '
   return value;
 };
 
+const expectBoolean = (value: unknown, effectType: 'setVar', field: 'value'): boolean => {
+  if (typeof value !== 'boolean') {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `${effectType}.${field} must evaluate to boolean`, {
+      effectType,
+      field,
+      actualType: typeof value,
+      value,
+    });
+  }
+
+  return value;
+};
+
 const resolveGlobalVarDef = (ctx: EffectContext, varName: string, effectType: 'setVar' | 'addVar') => {
   const variableDef = ctx.def.globalVars.find((variable) => variable.name === varName);
   if (variableDef === undefined) {
@@ -33,15 +46,6 @@ const resolveGlobalVarDef = (ctx: EffectContext, varName: string, effectType: 's
       scope: 'global',
       var: varName,
       availableGlobalVars: ctx.def.globalVars.map((variable) => variable.name).sort(),
-    });
-  }
-
-  if (variableDef.type !== 'int') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Variable ${varName} must be int`, {
-      effectType,
-      scope: 'global',
-      var: varName,
-      actualType: variableDef.type,
     });
   }
 
@@ -59,27 +63,18 @@ const resolvePerPlayerVarDef = (ctx: EffectContext, varName: string, effectType:
     });
   }
 
-  if (variableDef.type !== 'int') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Variable ${varName} must be int`, {
-      effectType,
-      scope: 'pvar',
-      var: varName,
-      actualType: variableDef.type,
-    });
-  }
-
   return variableDef;
 };
 
 export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknown }>, ctx: EffectContext): EffectResult => {
   const { scope, var: variableName, player, value } = effect.setVar;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const evaluatedValue = expectInteger(evalValue(value, evalCtx), 'setVar', 'value');
+  const evaluatedValue = evalValue(value, evalCtx);
 
   if (scope === 'global') {
     const variableDef = resolveGlobalVarDef(ctx, variableName, 'setVar');
     const currentValue = ctx.state.globalVars[variableName];
-    if (typeof currentValue !== 'number') {
+    if (typeof currentValue !== 'number' && typeof currentValue !== 'boolean') {
       throw new EffectRuntimeError('EFFECT_RUNTIME', `Global variable state is missing: ${variableName}`, {
         effectType: 'setVar',
         scope: 'global',
@@ -88,7 +83,10 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
       });
     }
 
-    const nextValue = clamp(evaluatedValue, variableDef.min, variableDef.max);
+    const nextValue =
+      variableDef.type === 'int'
+        ? clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max)
+        : expectBoolean(evaluatedValue, 'setVar', 'value');
     if (nextValue === currentValue) {
       return { state: ctx.state, rng: ctx.rng };
     }
@@ -138,7 +136,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
   }
 
   const currentValue = playerVars[variableName];
-  if (typeof currentValue !== 'number') {
+  if (typeof currentValue !== 'number' && typeof currentValue !== 'boolean') {
     throw new EffectRuntimeError('EFFECT_RUNTIME', `Per-player variable state is missing: ${variableName}`, {
       effectType: 'setVar',
       scope: 'pvar',
@@ -148,7 +146,10 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     });
   }
 
-  const nextValue = clamp(evaluatedValue, variableDef.min, variableDef.max);
+  const nextValue =
+    variableDef.type === 'int'
+      ? clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max)
+      : expectBoolean(evaluatedValue, 'setVar', 'value');
   if (nextValue === currentValue) {
     return { state: ctx.state, rng: ctx.rng };
   }
@@ -175,6 +176,14 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
 
   if (scope === 'global') {
     const variableDef = resolveGlobalVarDef(ctx, variableName, 'addVar');
+    if (variableDef.type !== 'int') {
+      throw new EffectRuntimeError('EFFECT_RUNTIME', `addVar cannot target non-int variable: ${variableName}`, {
+        effectType: 'addVar',
+        scope: 'global',
+        var: variableName,
+        actualType: variableDef.type,
+      });
+    }
     const currentValue = ctx.state.globalVars[variableName];
     if (typeof currentValue !== 'number') {
       throw new EffectRuntimeError('EFFECT_RUNTIME', `Global variable state is missing: ${variableName}`, {
@@ -230,6 +239,14 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
 
   const playerId = resolvedPlayers[0]!;
   const variableDef = resolvePerPlayerVarDef(ctx, variableName, 'addVar');
+  if (variableDef.type !== 'int') {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `addVar cannot target non-int variable: ${variableName}`, {
+      effectType: 'addVar',
+      scope: 'pvar',
+      var: variableName,
+      actualType: variableDef.type,
+    });
+  }
   const playerKey = String(playerId);
   const playerVars = ctx.state.perPlayerVars[playerKey];
   if (playerVars === undefined) {

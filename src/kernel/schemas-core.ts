@@ -36,7 +36,7 @@ import {
   StackingConstraintSchema,
 } from './schemas-gamespec.js';
 
-export const VariableDefSchema = z
+export const IntVariableDefSchema = z
   .object({
     name: StringSchema,
     type: z.literal('int'),
@@ -45,6 +45,16 @@ export const VariableDefSchema = z
     max: NumberSchema,
   })
   .strict();
+
+export const BooleanVariableDefSchema = z
+  .object({
+    name: StringSchema,
+    type: z.literal('boolean'),
+    init: BooleanSchema,
+  })
+  .strict();
+
+export const VariableDefSchema = z.discriminatedUnion('type', [IntVariableDefSchema, BooleanVariableDefSchema]);
 
 export const ZoneDefSchema = z
   .object({
@@ -236,8 +246,8 @@ export const RngStateSchema = z
 
 export const GameStateSchema = z
   .object({
-    globalVars: z.record(StringSchema, NumberSchema),
-    perPlayerVars: z.record(StringSchema, z.record(StringSchema, NumberSchema)),
+    globalVars: z.record(StringSchema, z.union([NumberSchema, BooleanSchema])),
+    perPlayerVars: z.record(StringSchema, z.record(StringSchema, z.union([NumberSchema, BooleanSchema]))),
     playerCount: NumberSchema,
     zones: z.record(StringSchema, z.array(TokenSchema)),
     nextTokenOrdinal: NumberSchema,

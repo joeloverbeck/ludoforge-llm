@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, asPlayerId, asTokenId, initialState, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
+import { asActionId, asPlayerId, asTokenId, initialState, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
+import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -150,7 +151,7 @@ describe('FITL limited operation integration', () => {
 
     assert.throws(
       () =>
-        applyMove(def, withTargets, {
+        applyMoveWithResolvedDecisionIds(def, withTargets, {
           actionId: asActionId('attack'),
           actionClass: 'limitedOperation',
           params: {
@@ -162,7 +163,7 @@ describe('FITL limited operation integration', () => {
       'Limited operation attack should reject multiple target spaces',
     );
 
-    const singleSpace = applyMove(def, withTargets, {
+    const singleSpace = applyMoveWithResolvedDecisionIds(def, withTargets, {
       actionId: asActionId('attack'),
       actionClass: 'limitedOperation',
       params: {
@@ -221,7 +222,7 @@ describe('FITL limited operation integration', () => {
 
     assert.throws(
       () =>
-        applyMove(def, withTargets, {
+        applyMoveWithResolvedDecisionIds(def, withTargets, {
           actionId: asActionId('attack'),
           actionClass: 'limitedOperation',
           params: {
@@ -232,7 +233,7 @@ describe('FITL limited operation integration', () => {
       'Limited operation VC attack should reject multiple target spaces',
     );
 
-    const singleSpace = applyMove(def, withTargets, {
+    const singleSpace = applyMoveWithResolvedDecisionIds(def, withTargets, {
       actionId: asActionId('attack'),
       actionClass: 'limitedOperation',
       params: {

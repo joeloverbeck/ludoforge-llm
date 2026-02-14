@@ -71,9 +71,10 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
 
 describe('effects choice assertions', () => {
   it('chooseOne succeeds when selected move param is in evaluated domain', () => {
-    const ctx = makeCtx({ moveParams: { $choice: 'beta' } });
+    const ctx = makeCtx({ moveParams: { 'decision:$choice': 'beta' } });
     const effect: EffectAST = {
       chooseOne: {
+        internalDecisionId: 'decision:$choice',
         bind: '$choice',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
       },
@@ -88,6 +89,7 @@ describe('effects choice assertions', () => {
     const ctx = makeCtx();
     const effect: EffectAST = {
       chooseOne: {
+        internalDecisionId: 'decision:$choice',
         bind: '$choice',
         options: { query: 'enums', values: ['alpha', 'beta'] },
       },
@@ -99,9 +101,10 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseOne throws when selected value is outside domain', () => {
-    const ctx = makeCtx({ moveParams: { $choice: 'delta' } });
+    const ctx = makeCtx({ moveParams: { 'decision:$choice': 'delta' } });
     const effect: EffectAST = {
       chooseOne: {
+        internalDecisionId: 'decision:$choice',
         bind: '$choice',
         options: { query: 'enums', values: ['alpha', 'beta'] },
       },
@@ -115,10 +118,11 @@ describe('effects choice assertions', () => {
   it('chooseOne resolves templated bind names against current bindings', () => {
     const ctx = makeCtx({
       bindings: { $space: 'quang-nam:none' },
-      moveParams: { '$adviseMode@quang-nam:none': 'assault' },
+      moveParams: { 'decision:$adviseMode@{$space}::$adviseMode@quang-nam:none': 'assault' },
     });
     const effect: EffectAST = {
       chooseOne: {
+        internalDecisionId: 'decision:$adviseMode@{$space}',
         bind: '$adviseMode@{$space}',
         options: { query: 'enums', values: ['sweep', 'assault', 'activate-remove'] },
       },
@@ -130,9 +134,10 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN succeeds for exact-length unique in-domain array', () => {
-    const ctx = makeCtx({ moveParams: { $picks: ['alpha', 'gamma'] } });
+    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha', 'gamma'] } });
     const effect: EffectAST = {
       chooseN: {
+        internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         n: 2,
@@ -145,9 +150,10 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN throws on duplicate selections', () => {
-    const ctx = makeCtx({ moveParams: { $picks: ['alpha', 'alpha'] } });
+    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha', 'alpha'] } });
     const effect: EffectAST = {
       chooseN: {
+        internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta'] },
         n: 2,
@@ -160,9 +166,10 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN throws on wrong cardinality', () => {
-    const ctx = makeCtx({ moveParams: { $picks: ['alpha'] } });
+    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha'] } });
     const effect: EffectAST = {
       chooseN: {
+        internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta'] },
         n: 2,
@@ -175,9 +182,10 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN throws on out-of-domain selections', () => {
-    const ctx = makeCtx({ moveParams: { $picks: ['alpha', 'delta'] } });
+    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha', 'delta'] } });
     const effect: EffectAST = {
       chooseN: {
+        internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         n: 2,
@@ -190,9 +198,10 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN supports up-to cardinality with max only', () => {
-    const ctx = makeCtx({ moveParams: { $picks: ['alpha'] } });
+    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha'] } });
     const effect: EffectAST = {
       chooseN: {
+        internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         max: 2,
@@ -205,9 +214,10 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN supports min..max cardinality ranges', () => {
-    const ctx = makeCtx({ moveParams: { $picks: ['alpha', 'beta'] } });
+    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha', 'beta'] } });
     const effect: EffectAST = {
       chooseN: {
+        internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         min: 1,
@@ -221,9 +231,10 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN range throws when selected count is outside min..max', () => {
-    const ctx = makeCtx({ moveParams: { $picks: [] } });
+    const ctx = makeCtx({ moveParams: { 'decision:$picks': [] } });
     const effect: EffectAST = {
       chooseN: {
+        internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         min: 1,
@@ -237,14 +248,15 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN throws when n is negative or non-integer', () => {
-    const negativeCtx = makeCtx({ moveParams: { $picks: [] } });
-    const nonIntegerCtx = makeCtx({ moveParams: { $picks: ['alpha'] } });
+    const negativeCtx = makeCtx({ moveParams: { 'decision:$picks': [] } });
+    const nonIntegerCtx = makeCtx({ moveParams: { 'decision:$picks': ['alpha'] } });
 
     assert.throws(
       () =>
         applyEffect(
           {
             chooseN: {
+              internalDecisionId: 'decision:$picks',
               bind: '$picks',
               options: { query: 'enums', values: ['alpha'] },
               n: -1,
@@ -260,6 +272,7 @@ describe('effects choice assertions', () => {
         applyEffect(
           {
             chooseN: {
+              internalDecisionId: 'decision:$picks',
               bind: '$picks',
               options: { query: 'enums', values: ['alpha'] },
               n: 1.5,
@@ -272,9 +285,10 @@ describe('effects choice assertions', () => {
   });
 
   it('chooseN throws when cardinality declaration mixes n with max', () => {
-    const ctx = makeCtx({ moveParams: { $picks: ['alpha'] } });
+    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha'] } });
     const effect = {
       chooseN: {
+        internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         n: 1,
@@ -290,11 +304,12 @@ describe('effects choice assertions', () => {
 
   it('bindings shadow moveParams in options query evaluation for chooseOne', () => {
     const ctx = makeCtx({
-      moveParams: { $owner: asPlayerId(0), $pickedZone: 'hand:1' },
+      moveParams: { $owner: asPlayerId(0), 'decision:$pickedZone': 'hand:1' },
       bindings: { $owner: asPlayerId(1) },
     });
     const effect: EffectAST = {
       chooseOne: {
+        internalDecisionId: 'decision:$pickedZone',
         bind: '$pickedZone',
         options: { query: 'zones', filter: { owner: { chosen: '$owner' } } },
       },

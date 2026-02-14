@@ -1,8 +1,9 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, asTokenId, initialState, type EffectAST, type GameState, type Token } from '../../src/kernel/index.js';
+import { asActionId, asTokenId, initialState, type EffectAST, type GameState, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
@@ -93,7 +94,7 @@ describe('FITL US/ARVN special activities integration', () => {
       },
     };
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('advise'),
       params: {
         targetSpaces: [space],
@@ -172,7 +173,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const eligibleBefore = eligible(modifiedStart, origin);
     const usTroopsBefore = countTokens(modifiedStart, origin, (token) => token.props.faction === 'US' && token.type === 'troops');
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('airLift'),
       params: {
         spaces: [origin, destination],
@@ -248,7 +249,7 @@ describe('FITL US/ARVN special activities integration', () => {
 
     const beforeSupport = modifiedStart.markers[space]?.supportOpposition;
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('airStrike'),
       params: {
         spaces: [space],
@@ -323,7 +324,7 @@ describe('FITL US/ARVN special activities integration', () => {
       },
     };
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('govern'),
       params: {
         targetSpaces: [aidSpace, patronageSpace],
@@ -347,7 +348,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const state = initialState(def, 509, 2);
     assert.throws(
       () =>
-        applyMove(def, state, {
+        applyMoveWithResolvedDecisionIds(def, state, {
           actionId: asActionId('govern'),
           params: {
             targetSpaces: ['saigon:none'],
@@ -383,7 +384,7 @@ describe('FITL US/ARVN special activities integration', () => {
       },
     };
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('transport'),
       params: {
         $transportOrigin: origin,
@@ -429,7 +430,7 @@ describe('FITL US/ARVN special activities integration', () => {
       },
     };
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('raid'),
       params: {
         targetSpaces: [targetSpace],
@@ -475,7 +476,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const state = initialState(compiled.gameDef!, 211, 2);
 
     assert.throws(
-      () => applyMove(compiled.gameDef!, state, {
+      () => applyMoveWithResolvedDecisionIds(compiled.gameDef!, state, {
         actionId: asActionId('usOp'),
         params: {},
         compound: {
@@ -515,7 +516,7 @@ describe('FITL US/ARVN special activities integration', () => {
 
     assert.throws(
       () =>
-        applyMove(compiled.gameDef!, state, {
+        applyMoveWithResolvedDecisionIds(compiled.gameDef!, state, {
           actionId: asActionId('train'),
           params: {
             targetSpaces: [space],
@@ -572,7 +573,7 @@ describe('FITL US/ARVN special activities integration', () => {
       },
     };
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('advise'),
       params: {
         targetSpaces: [spaceActivate, spaceAssault],
@@ -608,7 +609,7 @@ describe('FITL US/ARVN special activities integration', () => {
     const monsoonState = withMonsoonLookahead(initialState(def, 449, 2));
     assert.throws(
       () =>
-        applyMove(def, monsoonState, {
+        applyMoveWithResolvedDecisionIds(def, monsoonState, {
           actionId: asActionId('advise'),
           params: {
             targetSpaces: [spaceA, spaceB],
@@ -640,7 +641,7 @@ describe('FITL US/ARVN special activities integration', () => {
 
     assert.throws(
       () =>
-        applyMove(def, monsoonState, {
+        applyMoveWithResolvedDecisionIds(def, monsoonState, {
           actionId: asActionId('airLift'),
           params: {
             spaces: [spaceA, spaceB],
@@ -652,7 +653,7 @@ describe('FITL US/ARVN special activities integration', () => {
 
     assert.throws(
       () =>
-        applyMove(def, monsoonState, {
+        applyMoveWithResolvedDecisionIds(def, monsoonState, {
           actionId: asActionId('airStrike'),
           params: {
             spaces: [spaceA, spaceB],

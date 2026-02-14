@@ -95,6 +95,7 @@ const ifEffect: EffectAST = {
 
 const chooseOneEffect: EffectAST = {
   chooseOne: {
+    internalDecisionId: 'decision:$choice',
     bind: '$choice',
     options: { query: 'enums', values: ['a', 'b'] },
   },
@@ -131,7 +132,7 @@ describe('effects runtime foundation', () => {
   });
 
   it('applies dispatcher in list order through chooseOne assertions', () => {
-    const ctx = makeCtx({ maxEffectOps: 10, moveParams: { $choice: 'a' } });
+    const ctx = makeCtx({ maxEffectOps: 10, moveParams: { 'decision:$choice': 'a' } });
     const result = applyEffects([setVarEffect, addVarEffect, ifEffect, chooseOneEffect], ctx);
 
     assert.equal(result.state.globalVars.x, 2);

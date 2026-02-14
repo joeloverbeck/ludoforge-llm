@@ -92,6 +92,7 @@ const createActionWithChooseOne = (id: string): ActionDef => ({
   effects: [
     {
       chooseOne: {
+        internalDecisionId: 'decision:$target',
         bind: '$target',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
       },
@@ -112,6 +113,7 @@ const createProfileForAction = (actionId: string): ActionPipelineDef => ({
       effects: [
         {
           chooseOne: {
+            internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
           },
@@ -291,8 +293,8 @@ describe('GreedyAgent core', () => {
     });
 
     assert.equal(result.move.actionId, asActionId('op1'));
-    assert.ok('$target' in result.move.params, 'should have $target param filled');
-    const target = result.move.params['$target'];
+    assert.ok('decision:$target' in result.move.params, 'should have decision:$target param filled');
+    const target = result.move.params['decision:$target'];
     assert.ok(
       target === 'alpha' || target === 'beta' || target === 'gamma',
       `selected target "${String(target)}" should be one of the enum options`,
@@ -349,6 +351,6 @@ describe('GreedyAgent core', () => {
 
     // Should still produce a valid complete move despite cap
     assert.equal(result.move.actionId, asActionId('op1'));
-    assert.ok('$target' in result.move.params);
+    assert.ok('decision:$target' in result.move.params);
   });
 });

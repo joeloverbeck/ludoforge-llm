@@ -82,8 +82,23 @@ describe('compile-effects lowering', () => {
 
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, [
-      { chooseN: { bind: '$upToTwo', options: { query: 'players' }, max: 2 } },
-      { chooseN: { bind: '$oneToThree', options: { query: 'players' }, min: 1, max: 3 } },
+      {
+        chooseN: {
+          internalDecisionId: 'decision:doc.actions.0.effects.0.chooseN',
+          bind: '$upToTwo',
+          options: { query: 'players' },
+          max: 2,
+        },
+      },
+      {
+        chooseN: {
+          internalDecisionId: 'decision:doc.actions.0.effects.1.chooseN',
+          bind: '$oneToThree',
+          options: { query: 'players' },
+          min: 1,
+          max: 3,
+        },
+      },
     ]);
   });
 

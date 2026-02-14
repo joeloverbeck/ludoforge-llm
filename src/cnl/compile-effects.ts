@@ -23,6 +23,8 @@ export interface EffectLoweringResult<TValue> {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+const toInternalDecisionId = (path: string): string => `decision:${path}`;
+
 export function lowerEffectArray(
   source: readonly unknown[],
   context: EffectLoweringContext,
@@ -822,6 +824,7 @@ function lowerChooseOneEffect(
   return {
     value: {
       chooseOne: {
+        internalDecisionId: toInternalDecisionId(path),
         bind: source.bind,
         options: options.value,
       },
@@ -898,6 +901,7 @@ function lowerChooseNEffect(
   return {
     value: {
       chooseN: {
+        internalDecisionId: toInternalDecisionId(path),
         bind: source.bind,
         options: options.value,
         ...cardinality,

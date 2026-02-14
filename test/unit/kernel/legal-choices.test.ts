@@ -105,6 +105,7 @@ describe('legalChoices()', () => {
       effects: [
         {
           chooseOne: {
+            internalDecisionId: 'decision:$color',
             bind: '$color',
             options: { query: 'enums', values: ['red', 'blue', 'green'] },
           },
@@ -119,12 +120,13 @@ describe('legalChoices()', () => {
     // First call: no params → returns choice request
     const result1 = legalChoices(def, state, makeMove('pickColor'));
     assert.equal(result1.complete, false);
+    assert.equal(result1.decisionId, 'decision:$color');
     assert.equal(result1.name, '$color');
     assert.equal(result1.type, 'chooseOne');
     assert.deepStrictEqual(result1.options, ['red', 'blue', 'green']);
 
     // Second call: param filled → complete
-    const result2 = legalChoices(def, state, makeMove('pickColor', { $color: 'blue' }));
+    const result2 = legalChoices(def, state, makeMove('pickColor', { 'decision:$color': 'blue' }));
     assert.deepStrictEqual(result2, { kind: 'complete', complete: true });
   });
 
@@ -139,6 +141,7 @@ describe('legalChoices()', () => {
       effects: [
         {
           chooseN: {
+            internalDecisionId: 'decision:$targets',
             bind: '$targets',
             options: { query: 'enums', values: ['a', 'b', 'c'] },
             min: 1,
@@ -172,12 +175,14 @@ describe('legalChoices()', () => {
       effects: [
         {
           chooseOne: {
+            internalDecisionId: 'decision:$first',
             bind: '$first',
             options: { query: 'enums', values: ['x', 'y'] },
           },
         },
         {
           chooseOne: {
+            internalDecisionId: 'decision:$second',
             bind: '$second',
             options: { query: 'enums', values: ['a', 'b', 'c'] },
           },
@@ -195,12 +200,12 @@ describe('legalChoices()', () => {
     assert.equal(r1.complete, false);
 
     // First param filled → second choice
-    const r2 = legalChoices(def, state, makeMove('multiChoice', { $first: 'x' }));
+    const r2 = legalChoices(def, state, makeMove('multiChoice', { 'decision:$first': 'x' }));
     assert.equal(r2.name, '$second');
     assert.equal(r2.complete, false);
 
     // Both params filled → complete
-    const r3 = legalChoices(def, state, makeMove('multiChoice', { $first: 'x', $second: 'b' }));
+    const r3 = legalChoices(def, state, makeMove('multiChoice', { 'decision:$first': 'x', 'decision:$second': 'b' }));
     assert.deepStrictEqual(r3, { kind: 'complete', complete: true });
   });
 
@@ -215,6 +220,7 @@ describe('legalChoices()', () => {
       effects: [
         {
           chooseOne: {
+            internalDecisionId: 'decision:$color',
             bind: '$color',
             options: { query: 'enums', values: ['red', 'blue'] },
           },
@@ -227,7 +233,7 @@ describe('legalChoices()', () => {
     const state = makeBaseState();
 
     assert.throws(
-      () => legalChoices(def, state, makeMove('pickColor', { $color: 'purple' })),
+      () => legalChoices(def, state, makeMove('pickColor', { 'decision:$color': 'purple' })),
       (err: Error) => {
         assert.ok(err.message.includes('invalid selection'));
         assert.ok(err.message.includes('$color'));
@@ -255,6 +261,7 @@ describe('legalChoices()', () => {
             then: [
               {
                 chooseOne: {
+                  internalDecisionId: 'decision:$bonus',
                   bind: '$bonus',
                   options: { query: 'enums', values: ['gold', 'silver'] },
                 },
@@ -295,6 +302,7 @@ describe('legalChoices()', () => {
       effects: [
         {
           chooseN: {
+            internalDecisionId: 'decision:$targets',
             bind: '$targets',
             options: { query: 'tokensInZone', zone: 'board:none' },
             min: 1,
@@ -333,6 +341,7 @@ describe('legalChoices()', () => {
             in: [
               {
                 chooseOne: {
+                  internalDecisionId: 'decision:$pick',
                   bind: '$pick',
                   options: {
                     query: 'intsInRange',
@@ -375,6 +384,7 @@ describe('legalChoices()', () => {
             in: [
               {
                 chooseOne: {
+                  internalDecisionId: 'decision:$innerChoice',
                   bind: '$innerChoice',
                   options: { query: 'enums', values: ['a', 'b'] },
                 },
@@ -405,6 +415,7 @@ describe('legalChoices()', () => {
       effects: [
         {
           chooseN: {
+            internalDecisionId: 'decision:$exactTargets',
             bind: '$exactTargets',
             options: { query: 'enums', values: ['alpha', 'beta', 'gamma', 'delta'] },
             n: 2,
@@ -426,7 +437,7 @@ describe('legalChoices()', () => {
     assert.equal(result.max, 2);
 
     // Filled with valid exact-2 selection → complete
-    const r2 = legalChoices(def, state, makeMove('exactPick', { $exactTargets: ['alpha', 'gamma'] }));
+    const r2 = legalChoices(def, state, makeMove('exactPick', { 'decision:$exactTargets': ['alpha', 'gamma'] }));
     assert.deepStrictEqual(r2, { kind: 'complete', complete: true });
   });
 
@@ -455,6 +466,7 @@ describe('legalChoices()', () => {
             effects: [
               {
                 chooseN: {
+                  internalDecisionId: 'decision:$spaces',
                   bind: '$spaces',
                   options: { query: 'enums', values: ['saigon', 'hue', 'danang'] },
                   min: 1,
@@ -506,6 +518,7 @@ describe('legalChoices()', () => {
             effects: [
               {
                 chooseOne: {
+                  internalDecisionId: 'decision:$target',
                   bind: '$target',
                   options: { query: 'enums', values: ['a', 'b'] },
                 },
@@ -538,6 +551,7 @@ describe('legalChoices()', () => {
         effects: [
           {
             chooseOne: {
+              internalDecisionId: 'decision:$fallbackChoice',
               bind: '$fallbackChoice',
               options: { query: 'enums', values: ['fallback'] },
             },
@@ -559,6 +573,7 @@ describe('legalChoices()', () => {
             effects: [
               {
                 chooseOne: {
+                  internalDecisionId: 'decision:$profileChoice',
                   bind: '$profileChoice',
                   options: { query: 'enums', values: ['profile'] },
                 },
@@ -600,6 +615,7 @@ describe('legalChoices()', () => {
             effects: [
               {
                 chooseN: {
+                  internalDecisionId: 'decision:$spaces',
                   bind: '$spaces',
                   options: {
                     query: 'mapSpaces',
@@ -679,6 +695,7 @@ describe('legalChoices()', () => {
             effects: [
               {
                 chooseN: {
+                  internalDecisionId: 'decision:targetSpaces',
                   bind: 'targetSpaces',
                   options: { query: 'enums', values: ['b:none', 'c:none'] },
                   n: 2,
@@ -691,6 +708,7 @@ describe('legalChoices()', () => {
                   effects: [
                     {
                       chooseN: {
+                        internalDecisionId: 'decision:$moving',
                         bind: '$moving',
                         options: {
                           query: 'tokensInAdjacentZones',
@@ -751,8 +769,8 @@ describe('legalChoices()', () => {
       });
 
       const result = legalChoices(def, state, makeMove('chainOp', {
-        targetSpaces: ['b:none', 'c:none'],
-        $moving: ['g1'],
+        'decision:targetSpaces': ['b:none', 'c:none'],
+        'decision:$moving': ['g1'],
       }));
       assert.deepStrictEqual(result, { kind: 'complete', complete: true });
     });
@@ -770,6 +788,7 @@ describe('legalChoices()', () => {
         effects: [
           {
             chooseOne: {
+              internalDecisionId: 'decision:$choice',
               bind: '$choice',
               options: { query: 'enums', values: ['a', 'b'] },
             },

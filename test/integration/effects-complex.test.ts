@@ -89,8 +89,8 @@ describe('effects complex integration chains', () => {
     const ctx = makeCtx({
       rng: seedRng,
       moveParams: {
-        $zoneChoice: 'discard:none',
-        $tags: ['alpha', 'beta'],
+        'decision:$zoneChoice': 'discard:none',
+        'decision:$tags': ['alpha', 'beta'],
         $label: 'spawned',
       },
       bindings: {
@@ -100,8 +100,21 @@ describe('effects complex integration chains', () => {
     });
 
     const effects: readonly EffectAST[] = [
-      { chooseOne: { bind: '$zoneChoice', options: { query: 'enums', values: ['deck:none', 'discard:none'] } } },
-      { chooseN: { bind: '$tags', options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] }, n: 2 } },
+      {
+        chooseOne: {
+          internalDecisionId: 'decision:$zoneChoice',
+          bind: '$zoneChoice',
+          options: { query: 'enums', values: ['deck:none', 'discard:none'] },
+        },
+      },
+      {
+        chooseN: {
+          internalDecisionId: 'decision:$tags',
+          bind: '$tags',
+          options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
+          n: 2,
+        },
+      },
       {
         let: {
           bind: '$base',

@@ -1,5 +1,6 @@
 import { resolveActionPipelineDispatch } from './apply-move-pipeline.js';
 import { resolveBindingTemplate } from './binding-template.js';
+import { composeDecisionId } from './decision-id.js';
 import { applyEffect } from './effect-dispatch.js';
 import type { EffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
@@ -136,16 +137,17 @@ function walkChooseOne(
   wCtx: WalkContext,
 ): WalkOutcome {
   const bind = resolveBindingTemplate(effect.chooseOne.bind, wCtx.evalCtx.bindings);
+  const decisionId = composeDecisionId(effect.chooseOne.internalDecisionId, effect.chooseOne.bind, bind);
   const options = evalQuery(effect.chooseOne.options, wCtx.evalCtx);
   const asParamValues = options.map((o) =>
     typeof o === 'object' && o !== null && 'id' in o ? (o.id as MoveParamValue) : (o as MoveParamValue),
   );
 
-  if (Object.prototype.hasOwnProperty.call(wCtx.moveParams, bind)) {
-    const selected = wCtx.moveParams[bind];
+  if (Object.prototype.hasOwnProperty.call(wCtx.moveParams, decisionId)) {
+    const selected = wCtx.moveParams[decisionId];
     if (!isInDomain(selected, options)) {
       throw new Error(
-        `legalChoices: invalid selection for chooseOne "${bind}": ${JSON.stringify(selected)} is not in options domain (${options.length} options)`,
+        `legalChoices: invalid selection for chooseOne "${bind}" (${decisionId}): ${JSON.stringify(selected)} is not in options domain (${options.length} options)`,
       );
     }
     return { pending: null, wCtx: withBinding(wCtx, bind, selected) };
@@ -155,6 +157,7 @@ function walkChooseOne(
     pending: {
       kind: 'pending',
       complete: false,
+      decisionId,
       name: bind,
       type: 'chooseOne',
       options: asParamValues,
@@ -169,6 +172,7 @@ function walkChooseN(
 ): WalkOutcome {
   const chooseN = effect.chooseN;
   const bind = resolveBindingTemplate(chooseN.bind, wCtx.evalCtx.bindings);
+  const decisionId = composeDecisionId(chooseN.internalDecisionId, chooseN.bind, bind);
   const hasN = 'n' in chooseN && chooseN.n !== undefined;
   const hasMax = 'max' in chooseN && chooseN.max !== undefined;
   const hasMin = 'min' in chooseN && chooseN.min !== undefined;
@@ -192,22 +196,22 @@ function walkChooseN(
   );
   const clampedMax = Math.min(maxCardinality, asParamValues.length);
 
-  if (Object.prototype.hasOwnProperty.call(wCtx.moveParams, bind)) {
-    const selectedValue = wCtx.moveParams[bind];
+  if (Object.prototype.hasOwnProperty.call(wCtx.moveParams, decisionId)) {
+    const selectedValue = wCtx.moveParams[decisionId];
     if (!Array.isArray(selectedValue)) {
       throw new Error(
-        `legalChoices: chooseN "${bind}" expects array selection, got ${typeof selectedValue}`,
+        `legalChoices: chooseN "${bind}" (${decisionId}) expects array selection, got ${typeof selectedValue}`,
       );
     }
     if (selectedValue.length < minCardinality || selectedValue.length > clampedMax) {
       throw new Error(
-        `legalChoices: invalid cardinality for chooseN "${bind}": selected ${selectedValue.length}, expected [${minCardinality}, ${clampedMax}]`,
+        `legalChoices: invalid cardinality for chooseN "${bind}" (${decisionId}): selected ${selectedValue.length}, expected [${minCardinality}, ${clampedMax}]`,
       );
     }
     for (const item of selectedValue) {
       if (!isInDomain(item, options)) {
         throw new Error(
-          `legalChoices: invalid selection for chooseN "${bind}": ${JSON.stringify(item)} is not in options domain`,
+          `legalChoices: invalid selection for chooseN "${bind}" (${decisionId}): ${JSON.stringify(item)} is not in options domain`,
         );
       }
     }
@@ -218,6 +222,7 @@ function walkChooseN(
     pending: {
       kind: 'pending',
       complete: false,
+      decisionId,
       name: bind,
       type: 'chooseN',
       options: asParamValues,

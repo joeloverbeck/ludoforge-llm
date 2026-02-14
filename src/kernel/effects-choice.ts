@@ -1,5 +1,6 @@
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
+import { composeDecisionId } from './decision-id.js';
 import { EffectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
@@ -10,10 +11,21 @@ import type { EffectBudgetState } from './effects-control.js';
 
 type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
 
-const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
-  ...ctx.moveParams,
-  ...ctx.bindings,
-});
+const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
+  const merged: Record<string, unknown> = {
+    ...ctx.moveParams,
+    ...ctx.bindings,
+  };
+
+  for (const [bindingKey, value] of Object.entries(merged)) {
+    const resolvedKey = resolveBindingTemplate(bindingKey, ctx.bindings);
+    if (resolvedKey !== bindingKey && !Object.prototype.hasOwnProperty.call(merged, resolvedKey)) {
+      merged[resolvedKey] = value;
+    }
+  }
+
+  return merged;
+};
 
 const valuesMatch = (candidate: unknown, selected: unknown): boolean => {
   if (Object.is(candidate, selected)) {
@@ -51,16 +63,18 @@ const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: 
 
 export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: unknown }>, ctx: EffectContext): EffectResult => {
   const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, ctx.bindings);
-  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, resolvedBind)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseOne missing move param binding: ${resolvedBind}`, {
+  const decisionId = composeDecisionId(effect.chooseOne.internalDecisionId, effect.chooseOne.bind, resolvedBind);
+  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseOne missing move param binding: ${resolvedBind} (${decisionId})`, {
       effectType: 'chooseOne',
       bind: resolvedBind,
+      decisionId,
       bindTemplate: effect.chooseOne.bind,
       availableMoveParams: Object.keys(ctx.moveParams).sort(),
     });
   }
 
-  const selected = ctx.moveParams[resolvedBind];
+  const selected = ctx.moveParams[decisionId];
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const options = evalQuery(effect.chooseOne.options, evalCtx);
   if (!isInDomain(selected, options)) {
@@ -80,6 +94,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const chooseN = effect.chooseN;
   const bindTemplate = chooseN.bind;
   const bind = resolveBindingTemplate(bindTemplate, ctx.bindings);
+  const decisionId = composeDecisionId(chooseN.internalDecisionId, bindTemplate, bind);
   const hasN = 'n' in chooseN && chooseN.n !== undefined;
   const hasMax = 'max' in chooseN && chooseN.max !== undefined;
   const hasMin = 'min' in chooseN && chooseN.min !== undefined;
@@ -137,15 +152,16 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     });
   }
 
-  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, bind)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN missing move param binding: ${bind}`, {
+  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN missing move param binding: ${bind} (${decisionId})`, {
       effectType: 'chooseN',
       bind,
+      decisionId,
       availableMoveParams: Object.keys(ctx.moveParams).sort(),
     });
   }
 
-  const selectedValue = ctx.moveParams[bind];
+  const selectedValue = ctx.moveParams[decisionId];
   if (!Array.isArray(selectedValue)) {
     throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN move param must be an array: ${bind}`, {
       effectType: 'chooseN',

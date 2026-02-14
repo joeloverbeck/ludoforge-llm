@@ -354,6 +354,7 @@ effectAstSchemaInternal = z.union([
     .object({
       chooseOne: z
         .object({
+          internalDecisionId: StringSchema,
           bind: StringSchema,
           options: OptionsQuerySchema,
         })
@@ -365,6 +366,7 @@ effectAstSchemaInternal = z.union([
       chooseN: z.union([
         z
           .object({
+            internalDecisionId: StringSchema,
             bind: StringSchema,
             options: OptionsQuerySchema,
             n: NumberSchema,
@@ -372,6 +374,7 @@ effectAstSchemaInternal = z.union([
           .strict(),
         z
           .object({
+            internalDecisionId: StringSchema,
             bind: StringSchema,
             options: OptionsQuerySchema,
             min: NumberSchema.optional(),

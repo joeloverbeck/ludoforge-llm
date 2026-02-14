@@ -41,9 +41,23 @@ const DEPLOY_PROFILE: ActionPipelineDef = {
       stage: 'select',
       effects: [
         // Decision 1: choose a mode (chooseOne from enums)
-        { chooseOne: { bind: '$mode', options: { query: 'enums', values: ['normal', 'bonus'] } } },
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$mode',
+            bind: '$mode',
+            options: { query: 'enums', values: ['normal', 'bonus'] },
+          },
+        },
         // Decision 2: choose 1-3 tokens from reserve (chooseN range mode)
-        { chooseN: { bind: '$selectedTokens', options: { query: 'tokensInZone', zone: 'reserve:none' }, min: 1, max: 3 } },
+        {
+          chooseN: {
+            internalDecisionId: 'decision:$selectedTokens',
+            bind: '$selectedTokens',
+            options: { query: 'tokensInZone', zone: 'reserve:none' },
+            min: 1,
+            max: 3,
+          },
+        },
       ],
     },
     {
@@ -191,10 +205,10 @@ describe('decision sequence integration', () => {
 
     // If the agent chose the deploy action, verify state changes
     if (move.actionId === ACTION_DEPLOY) {
-      assert.ok('$mode' in move.params, 'completed move should have $mode param');
-      assert.ok('$selectedTokens' in move.params, 'completed move should have $selectedTokens param');
+      assert.ok('decision:$mode' in move.params, 'completed move should have decision:$mode param');
+      assert.ok('decision:$selectedTokens' in move.params, 'completed move should have decision:$selectedTokens param');
 
-      const selectedTokens = move.params['$selectedTokens'] as readonly string[];
+      const selectedTokens = move.params['decision:$selectedTokens'] as readonly string[];
       assert.ok(Array.isArray(selectedTokens), '$selectedTokens should be an array');
       assert.ok(selectedTokens.length >= 1 && selectedTokens.length <= 3, 'should select 1-3 tokens');
 
@@ -204,7 +218,7 @@ describe('decision sequence integration', () => {
       assert.equal(fieldAfter.length, selectedTokens.length, 'field should gain selected tokens');
 
       // Score = 1 per token + 1 if bonus mode
-      const expectedScore = selectedTokens.length + (move.params['$mode'] === 'bonus' ? 1 : 0);
+      const expectedScore = selectedTokens.length + (move.params['decision:$mode'] === 'bonus' ? 1 : 0);
       assert.equal(after.globalVars.score, expectedScore, 'score should reflect token count + bonus');
 
       // Resources deducted: 3 per token (not free)
@@ -223,17 +237,17 @@ describe('decision sequence integration', () => {
     const { state: after, move } = runGreedyAgentTurn(def, state, 200);
 
     if (move.actionId === ACTION_DEPLOY) {
-      assert.ok('$mode' in move.params, 'completed move should have $mode param');
-      assert.ok('$selectedTokens' in move.params, 'completed move should have $selectedTokens param');
+      assert.ok('decision:$mode' in move.params, 'completed move should have decision:$mode param');
+      assert.ok('decision:$selectedTokens' in move.params, 'completed move should have decision:$selectedTokens param');
 
-      const selectedTokens = move.params['$selectedTokens'] as readonly string[];
+      const selectedTokens = move.params['decision:$selectedTokens'] as readonly string[];
       const reserveAfter = after.zones[String(ZONE_RESERVE)]!;
       const fieldAfter = after.zones[String(ZONE_FIELD)]!;
 
       assert.equal(reserveAfter.length + fieldAfter.length, 3, 'total tokens should be conserved');
       assert.equal(fieldAfter.length, selectedTokens.length, 'field should have selected tokens');
 
-      const expectedScore = selectedTokens.length + (move.params['$mode'] === 'bonus' ? 1 : 0);
+      const expectedScore = selectedTokens.length + (move.params['decision:$mode'] === 'bonus' ? 1 : 0);
       assert.equal(after.globalVars.score, expectedScore, 'score should be correct');
     } else {
       assert.equal(after.globalVars.score, 1, 'simpleScore should add 1');
@@ -275,13 +289,13 @@ describe('decision sequence integration', () => {
     const freeMove: Move = { ...completed.move, freeOperation: true };
     const result = applyMove(def, state, freeMove);
 
-    const selectedTokens = freeMove.params['$selectedTokens'] as readonly string[];
+    const selectedTokens = freeMove.params['decision:$selectedTokens'] as readonly string[];
 
     // Resources should be UNCHANGED (per-space cost skipped via __freeOperation)
     assert.equal(result.state.globalVars.resources, 10, 'resources should not be deducted for free operation');
 
     // Score should still reflect token count + bonus
-    const expectedScore = selectedTokens.length + (freeMove.params['$mode'] === 'bonus' ? 1 : 0);
+    const expectedScore = selectedTokens.length + (freeMove.params['decision:$mode'] === 'bonus' ? 1 : 0);
     assert.equal(result.state.globalVars.score, expectedScore, 'score should still be awarded');
 
     // Tokens should still move
@@ -304,7 +318,7 @@ describe('decision sequence integration', () => {
     // Apply without freeOperation (defaults to false)
     const result = applyMove(def, state, completed.move);
 
-    const selectedTokens = completed.move.params['$selectedTokens'] as readonly string[];
+    const selectedTokens = completed.move.params['decision:$selectedTokens'] as readonly string[];
     const expectedResources = 10 - selectedTokens.length * 3;
     assert.equal(result.state.globalVars.resources, expectedResources, 'resources should be deducted per token');
   });
@@ -340,12 +354,14 @@ describe('decision sequence integration', () => {
     const withActionClass: Move = { ...template, actionClass: 'limitedOperation' };
     const choices = legalChoices(def, state, withActionClass);
     assert.equal(choices.complete, false, 'should still have pending decisions');
+    assert.equal(choices.decisionId, 'decision:$mode', 'first decision should be decision:$mode');
     assert.equal(choices.name, '$mode', 'first decision should be $mode');
 
     // Without actionClass (default 'operation'), same behavior
     const withoutActionClass: Move = { ...template };
     const choicesDefault = legalChoices(def, state, withoutActionClass);
     assert.equal(choicesDefault.complete, false, 'should still have pending decisions');
+    assert.equal(choicesDefault.decisionId, 'decision:$mode', 'first decision should be decision:$mode');
     assert.equal(choicesDefault.name, '$mode', 'first decision should be $mode');
   });
 
@@ -360,14 +376,16 @@ describe('decision sequence integration', () => {
     // First call: should ask for $mode (chooseOne)
     const first = legalChoices(def, state, template);
     assert.equal(first.complete, false);
+    assert.equal(first.decisionId, 'decision:$mode');
     assert.equal(first.name, '$mode');
     assert.equal(first.type, 'chooseOne');
     assert.deepEqual(first.options, ['normal', 'bonus']);
 
     // Fill $mode, second call: should ask for $selectedTokens (chooseN)
-    const withMode: Move = { ...template, params: { ...template.params, $mode: 'normal' } };
+    const withMode: Move = { ...template, params: { ...template.params, 'decision:$mode': 'normal' } };
     const second = legalChoices(def, state, withMode);
     assert.equal(second.complete, false);
+    assert.equal(second.decisionId, 'decision:$selectedTokens');
     assert.equal(second.name, '$selectedTokens');
     assert.equal(second.type, 'chooseN');
     assert.equal(second.min, 1);
@@ -377,7 +395,7 @@ describe('decision sequence integration', () => {
     // Fill $selectedTokens, third call: should be complete
     // chooseN expects an array of scalars as the param value
     const tokenIds = second.options!.slice(0, 2) as unknown as readonly import('../../src/kernel/types.js').MoveParamScalar[];
-    const withTokens: Move = { ...withMode, params: { ...withMode.params, $selectedTokens: tokenIds } };
+    const withTokens: Move = { ...withMode, params: { ...withMode.params, 'decision:$selectedTokens': tokenIds } };
     const third = legalChoices(def, state, withTokens);
     assert.equal(third.complete, true, 'all decisions filled → complete');
   });

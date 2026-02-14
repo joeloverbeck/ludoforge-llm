@@ -37,6 +37,7 @@ describe('binder-surface-registry', () => {
         remainingBind: '$remaining',
       },
       chooseOne: {
+        internalDecisionId: 'decision:$picked',
         bind: '$picked',
       },
     });
@@ -65,7 +66,14 @@ describe('binder-surface-registry', () => {
 
   it('returns only sequentially-visible bindings for stage carry-over', () => {
     assert.deepEqual(
-      collectSequentialBindings({ chooseN: { bind: '$targets', options: { query: 'players' }, max: 1 } }),
+      collectSequentialBindings({
+        chooseN: {
+          internalDecisionId: 'decision:$targets',
+          bind: '$targets',
+          options: { query: 'players' },
+          max: 1,
+        },
+      }),
       ['$targets'],
     );
     assert.deepEqual(

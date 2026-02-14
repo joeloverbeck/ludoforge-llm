@@ -80,6 +80,7 @@ describe('move decision sequence helpers', () => {
           effects: [
             {
               chooseOne: {
+                internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: ['a', 'b'] },
               },
@@ -93,7 +94,7 @@ describe('move decision sequence helpers', () => {
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('choose-one-op'));
     assert.equal(result.complete, true);
-    assert.equal(result.move.params.$target, 'a');
+    assert.equal(result.move.params['decision:$target'], 'a');
   });
 
   it('returns incomplete for unsatisfiable chooseN', () => {
@@ -120,6 +121,7 @@ describe('move decision sequence helpers', () => {
           effects: [
             {
               chooseN: {
+                internalDecisionId: 'decision:$targets',
                 bind: '$targets',
                 options: { query: 'enums', values: [] },
                 min: 1,
@@ -166,6 +168,7 @@ describe('move decision sequence helpers', () => {
           effects: [
             {
               chooseOne: {
+                internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: ['a', 'b', 'c'] },
               },
@@ -181,7 +184,7 @@ describe('move decision sequence helpers', () => {
       choose: (request) => request.options?.[2],
     });
     assert.equal(result.complete, true);
-    assert.equal(result.move.params.$target, 'c');
+    assert.equal(result.move.params['decision:$target'], 'c');
   });
 
   it('throws for malformed decision-path expressions instead of treating them as unsatisfiable', () => {

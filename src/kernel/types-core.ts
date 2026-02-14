@@ -380,6 +380,7 @@ export interface Move {
 export interface ChoiceCompleteRequest {
   readonly kind: 'complete';
   readonly complete: true;
+  readonly decisionId?: string;
   readonly name?: string;
   readonly type?: 'chooseOne' | 'chooseN';
   readonly options?: readonly MoveParamValue[];
@@ -391,6 +392,7 @@ export interface ChoiceCompleteRequest {
 export interface ChoicePendingRequest {
   readonly kind: 'pending';
   readonly complete: false;
+  readonly decisionId: string;
   readonly name: string;
   readonly type: 'chooseOne' | 'chooseN';
   readonly options: readonly MoveParamValue[];
@@ -402,6 +404,7 @@ export interface ChoicePendingRequest {
 export interface ChoiceIllegalRequest {
   readonly kind: 'illegal';
   readonly complete: false;
+  readonly decisionId?: string;
   readonly name?: string;
   readonly type?: 'chooseOne' | 'chooseN';
   readonly options?: readonly MoveParamValue[];

@@ -60,8 +60,6 @@ export const resolveMoveDecisionSequence = (
       return { complete: false, move, illegal: request };
     }
 
-    const name = request.name;
-
     const selected = choose(request);
     if (selected === undefined) {
       return { complete: false, move, nextDecision: request };
@@ -71,7 +69,7 @@ export const resolveMoveDecisionSequence = (
       ...move,
       params: {
         ...move.params,
-        [name]: selected,
+        [request.decisionId]: selected,
       },
     };
   }

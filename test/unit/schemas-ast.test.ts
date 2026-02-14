@@ -162,13 +162,34 @@ describe('AST and selector schemas', () => {
         let: {
           bind: '$n',
           value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } },
-          in: [{ chooseN: { bind: '$pick', options: { query: 'players' }, n: 1 } }],
+          in: [{ chooseN: { internalDecisionId: 'decision:$pick', bind: '$pick', options: { query: 'players' }, n: 1 } }],
         },
       },
-      { chooseOne: { bind: '$zone', options: { query: 'zones', filter: { owner: 'active' } } } },
-      { chooseN: { bind: '$token', options: { query: 'tokensInAdjacentZones', zone: 'board:actor' }, n: 2 } },
-      { chooseN: { bind: '$opt', options: { query: 'players' }, max: 2 } },
-      { chooseN: { bind: '$range', options: { query: 'players' }, min: 1, max: 3 } },
+      {
+        chooseOne: {
+          internalDecisionId: 'decision:$zone',
+          bind: '$zone',
+          options: { query: 'zones', filter: { owner: 'active' } },
+        },
+      },
+      {
+        chooseN: {
+          internalDecisionId: 'decision:$token',
+          bind: '$token',
+          options: { query: 'tokensInAdjacentZones', zone: 'board:actor' },
+          n: 2,
+        },
+      },
+      { chooseN: { internalDecisionId: 'decision:$opt', bind: '$opt', options: { query: 'players' }, max: 2 } },
+      {
+        chooseN: {
+          internalDecisionId: 'decision:$range',
+          bind: '$range',
+          options: { query: 'players' },
+          min: 1,
+          max: 3,
+        },
+      },
       { setMarker: { space: 'saigon:none', marker: 'support', state: 'activeSupport' } },
       { setMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', state: 'activeSupport' } },
       { shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } },
@@ -306,6 +327,7 @@ describe('AST and selector schemas', () => {
   it('rejects chooseN payloads that mix exact and range cardinality', () => {
     const result = EffectASTSchema.safeParse({
       chooseN: {
+        internalDecisionId: 'decision:$pick',
         bind: '$pick',
         options: { query: 'players' },
         n: 1,

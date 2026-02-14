@@ -81,7 +81,7 @@ export const completeTemplateMove = (
         : selectFromChooseOne(choices, cursor);
 
     cursor = nextRng;
-    current = { ...current, params: { ...current.params, [choices.name]: selected } };
+    current = { ...current, params: { ...current.params, [choices.decisionId]: selected } };
     choices = legalChoices(def, state, current);
   }
 

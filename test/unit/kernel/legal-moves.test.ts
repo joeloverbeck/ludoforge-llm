@@ -85,6 +85,7 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
           effects: [
             {
               chooseN: {
+                internalDecisionId: 'decision:$spaces',
                 bind: '$spaces',
                 options: { query: 'enums', values: ['saigon', 'hue', 'danang'] },
                 min: 1,
@@ -397,6 +398,7 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
           effects: [
             {
               chooseN: {
+                internalDecisionId: 'decision:$spaces',
                 bind: '$spaces',
                 options: { query: 'enums', values: [] },
                 min: 1,
@@ -438,6 +440,7 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
           effects: [
             {
               chooseOne: {
+                internalDecisionId: 'decision:$space',
                 bind: '$space',
                 options: { query: 'enums', values: [] },
               },

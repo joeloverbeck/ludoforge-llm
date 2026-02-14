@@ -1,8 +1,9 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, asPlayerId, asTokenId, initialState, type EffectAST, type GameState, type MapPayload, type Token } from '../../src/kernel/index.js';
+import { asActionId, asPlayerId, asTokenId, initialState, type EffectAST, type GameState, type MapPayload, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const operationInitialState = (
@@ -110,7 +111,7 @@ describe('FITL NVA/VC special activities integration', () => {
       },
     };
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('infiltrate'),
       params: {
         targetSpaces: [space],
@@ -168,7 +169,7 @@ describe('FITL NVA/VC special activities integration', () => {
       },
     };
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('infiltrate'),
       params: {
         targetSpaces: [space],
@@ -229,7 +230,7 @@ describe('FITL NVA/VC special activities integration', () => {
     };
 
     const casualtiesBefore = modifiedStart.zones['casualties-US:none']?.length ?? 0;
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('bombard'),
       params: { targetSpaces: [space] },
     });
@@ -270,7 +271,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const nvaBefore = countTokens(modifiedStart, locSpace, (token) => token.props.faction === 'NVA');
     const casualtiesBefore = modifiedStart.zones['casualties-US:none']?.length ?? 0;
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('ambushNva'),
       params: {
         targetSpaces: [locSpace],
@@ -331,7 +332,7 @@ describe('FITL NVA/VC special activities integration', () => {
       },
     };
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('tax'),
       params: {
         targetSpaces: [locSpace, provinceSpace],
@@ -395,7 +396,7 @@ describe('FITL NVA/VC special activities integration', () => {
       },
     };
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('subvert'),
       params: {
         targetSpaces: [removeSpace, replaceSpace],
@@ -454,7 +455,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const vcBefore = countTokens(modifiedStart, locSpace, (token) => token.props.faction === 'VC');
     const casualtiesBefore = modifiedStart.zones['casualties-US:none']?.length ?? 0;
 
-    const result = applyMove(def, modifiedStart, {
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
       actionId: asActionId('ambushVc'),
       params: {
         targetSpaces: [locSpace],
@@ -484,7 +485,7 @@ describe('FITL NVA/VC special activities integration', () => {
     const state = operationInitialState(compiled.gameDef!, 313, 2);
 
     assert.throws(
-      () => applyMove(compiled.gameDef!, state, {
+      () => applyMoveWithResolvedDecisionIds(compiled.gameDef!, state, {
         actionId: asActionId('usOp'),
         params: {},
         compound: {
@@ -537,7 +538,7 @@ describe('FITL NVA/VC special activities integration', () => {
       },
     };
 
-    const result = applyMove(compiled.gameDef!, seeded, {
+    const result = applyMoveWithResolvedDecisionIds(compiled.gameDef!, seeded, {
       actionId: asActionId('rally'),
       params: { targetSpaces: [] },
       compound: {
@@ -565,7 +566,7 @@ describe('FITL NVA/VC special activities integration', () => {
     };
 
     assert.throws(
-      () => applyMove(compiled.gameDef!, seeded, {
+      () => applyMoveWithResolvedDecisionIds(compiled.gameDef!, seeded, {
         actionId: asActionId('march'),
         params: {
           targetSpaces: ['quang-tri-thua-thien:none'],

@@ -1,8 +1,9 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, asPlayerId, asTokenId, initialState, serializeGameState, type EffectAST, type GameDef, type GameState, type SerializedGameState, type Token } from '../../src/kernel/index.js';
+import { asActionId, asPlayerId, asTokenId, initialState, serializeGameState, type EffectAST, type GameDef, type GameState, type SerializedGameState, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const ATTACK_SPACE = 'quang-tri-thua-thien:none';
@@ -202,7 +203,7 @@ describe('FITL attack die roll integration', () => {
           $attackMode: 'guerrilla-attack',
         },
       };
-      const next = applyMove(def, state, move).state;
+      const next = applyMoveWithResolvedDecisionIds(def, state, move).state;
       return serializeGameState(next);
     };
 
@@ -225,7 +226,7 @@ describe('FITL attack die roll integration', () => {
           $attackMode: 'guerrilla-attack',
         },
       };
-      return applyMove(def, state, move).state;
+      return applyMoveWithResolvedDecisionIds(def, state, move).state;
     };
 
     let hitState: GameState | null = null;
@@ -266,7 +267,7 @@ describe('FITL attack die roll integration', () => {
     const def = compiled.gameDef!;
 
     const run = (seed: number): GameState =>
-      applyMove(def, makeVcAttackReadyState(def, seed), {
+      applyMoveWithResolvedDecisionIds(def, makeVcAttackReadyState(def, seed), {
         actionId: asActionId('attack'),
         params: {
           targetSpaces: [ATTACK_SPACE],

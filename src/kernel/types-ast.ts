@@ -202,12 +202,14 @@ export type EffectAST =
     }
   | {
       readonly chooseOne: {
+        readonly internalDecisionId: string;
         readonly bind: string;
         readonly options: OptionsQuery;
       };
     }
   | {
       readonly chooseN: {
+        readonly internalDecisionId: string;
         readonly bind: string;
         readonly options: OptionsQuery;
       } & (

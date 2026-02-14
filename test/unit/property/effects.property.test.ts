@@ -166,10 +166,11 @@ describe('effects property-style invariants', () => {
     ];
 
     for (const picks of selections) {
-      const ctx = makeCtx({ moveParams: { $picks: [...picks] } });
+      const ctx = makeCtx({ moveParams: { 'decision:$picks': [...picks] } });
       const result = applyEffect(
         {
           chooseN: {
+            internalDecisionId: 'decision:$picks',
             bind: '$picks',
             options: { query: 'enums', values: ['alpha', 'beta', 'gamma', 'delta'] },
             n: picks.length,
@@ -178,7 +179,7 @@ describe('effects property-style invariants', () => {
         ctx,
       );
 
-      const selected = result.state === ctx.state ? (ctx.moveParams.$picks as string[]) : [];
+      const selected = result.state === ctx.state ? (ctx.moveParams['decision:$picks'] as string[]) : [];
       assert.equal(selected.length, picks.length);
       assert.equal(new Set(selected).size, picks.length);
       assert.equal(result.state, ctx.state);

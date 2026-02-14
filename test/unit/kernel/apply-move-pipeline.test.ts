@@ -112,6 +112,36 @@ describe('resolveActionPipelineDispatch()', () => {
     assert.equal(result.kind, 'configuredNoMatch');
   });
 
+  it('throws contextual error when applicability evaluation fails', () => {
+    const def = makeDef({
+      actionPipelines: [{
+        id: 'attack-broken-profile',
+        actionId: asActionId('attack'),
+        applicability: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [],
+        atomicity: 'atomic',
+      }],
+    });
+    const action = def.actions[0]!;
+
+    assert.throws(
+      () => resolveActionPipelineDispatch(def, action, makeCtx(def, makeState(0))),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /action pipeline applicability evaluation failed/);
+        const details = error as Error & { actionId?: unknown; profileId?: unknown; reason?: unknown };
+        assert.equal(details.actionId, asActionId('attack'));
+        assert.equal(details.profileId, 'attack-broken-profile');
+        assert.equal(details.reason, 'applicabilityEvaluationFailed');
+        return true;
+      },
+    );
+  });
+
   it('selects the matching profile when multiple candidates exist', () => {
     const def = makeDef({
       actionPipelines: [

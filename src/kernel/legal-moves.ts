@@ -11,6 +11,25 @@ import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue } from './types.js';
 
+const pipelinePredicateEvaluationError = (
+  action: ActionDef,
+  profileId: string,
+  predicate: 'legality' | 'costValidation',
+  cause: unknown,
+): Error => {
+  const error = new Error(
+    `action pipeline ${predicate} evaluation failed for actionId=${String(action.id)} profileId=${profileId}`,
+  );
+  Object.assign(error, {
+    actionId: action.id,
+    profileId,
+    predicate,
+    reason: 'pipelinePredicateEvaluationFailed',
+    cause,
+  });
+  return error;
+};
+
 function makeEvalContext(
   def: GameDef,
   adjacencyGraph: AdjacencyGraph,
@@ -120,8 +139,8 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
           if (!evalCondition(pipeline.legality, actorCtx)) {
             continue;
           }
-        } catch {
-          continue;
+        } catch (error) {
+          throw pipelinePredicateEvaluationError(action, pipeline.id, 'legality', error);
         }
       }
 
@@ -133,8 +152,8 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
           if (!evalCondition(pipeline.costValidation, actorCtx)) {
             continue;
           }
-        } catch {
-          continue;
+        } catch (error) {
+          throw pipelinePredicateEvaluationError(action, pipeline.id, 'costValidation', error);
         }
       }
 

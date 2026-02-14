@@ -550,7 +550,7 @@ describe('applyMove', () => {
         {
           id: 'operate-profile',
           actionId: asActionId('operate'),
-          legality: { op: '>=', left: { ref: 'gvar', var: 'energy' , right: 2 } },
+          legality: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
           costValidation: null, costEffects: [],
           targeting: {},
           stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }] }],

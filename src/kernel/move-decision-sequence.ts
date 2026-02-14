@@ -84,9 +84,5 @@ export const isMoveDecisionSequenceSatisfiable = (
   state: GameState,
   baseMove: Move,
 ): boolean => {
-  try {
-    return resolveMoveDecisionSequence(def, state, baseMove).complete;
-  } catch {
-    return false;
-  }
+  return resolveMoveDecisionSequence(def, state, baseMove).complete;
 };

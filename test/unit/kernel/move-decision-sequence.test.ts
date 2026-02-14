@@ -183,4 +183,45 @@ describe('move decision sequence helpers', () => {
     assert.equal(result.complete, true);
     assert.equal(result.move.params.$target, 'c');
   });
+
+  it('throws for malformed decision-path expressions instead of treating them as unsatisfiable', () => {
+    const action: ActionDef = {
+      id: asActionId('broken-decision-op'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'broken-decision-profile',
+      actionId: asActionId('broken-decision-op'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              if: {
+                when: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+                then: [],
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const state = makeBaseState();
+    const move = makeMove('broken-decision-op');
+
+    assert.throws(() => isMoveDecisionSequenceSatisfiable(def, state, move));
+  });
 });

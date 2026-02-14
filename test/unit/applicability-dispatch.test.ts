@@ -206,6 +206,41 @@ describe('applicability-based action pipeline dispatch', () => {
     assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), /Illegal move/);
   });
 
+  it('surfaces malformed applicability errors in legalMoves, legalChoices, and applyMove', () => {
+    const def: GameDef = {
+      ...createMultiProfileDef(),
+      actionPipelines: [
+        {
+          id: 'broken-applicability',
+          actionId: asActionId('operate'),
+          applicability: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as GameDef;
+    const state = createState(0);
+
+    for (const run of [
+      () => legalMoves(def, state),
+      () => legalChoices(def, state, { actionId: asActionId('operate'), params: {} }),
+      () => applyMove(def, state, { actionId: asActionId('operate'), params: {} }),
+    ]) {
+      assert.throws(run, (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /action pipeline applicability evaluation failed/);
+        const details = error as Error & { actionId?: unknown; profileId?: unknown; reason?: unknown };
+        assert.equal(details.actionId, asActionId('operate'));
+        assert.equal(details.profileId, 'broken-applicability');
+        assert.equal(details.reason, 'applicabilityEvaluationFailed');
+        return true;
+      });
+    }
+  });
+
   it('profile with legality condition blocks move for the matching applicability player', () => {
     const def: GameDef = {
       ...createMultiProfileDef(),

@@ -532,4 +532,134 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
     const moves = legalMoves(def, state);
     assert.equal(moves.length, 0);
   });
+
+  it('13. malformed profile legality is fatal with profile/action context', () => {
+    const action: ActionDef = {
+      id: asActionId('badLegalityOp'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'badLegalityProfile',
+      actionId: asActionId('badLegalityOp'),
+      legality: {
+        op: '==',
+        left: { ref: 'gvar', var: 'missingVar' },
+        right: 1,
+      },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const state = makeBaseState();
+
+    assert.throws(
+      () => legalMoves(def, state),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /action pipeline legality evaluation failed/);
+        const details = error as Error & { actionId?: unknown; profileId?: unknown; predicate?: unknown; reason?: unknown };
+        assert.equal(details.actionId, asActionId('badLegalityOp'));
+        assert.equal(details.profileId, 'badLegalityProfile');
+        assert.equal(details.predicate, 'legality');
+        assert.equal(details.reason, 'pipelinePredicateEvaluationFailed');
+        return true;
+      },
+    );
+  });
+
+  it('14. malformed atomic costValidation is fatal with profile/action context', () => {
+    const action: ActionDef = {
+      id: asActionId('badCostValidationOp'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'badCostValidationProfile',
+      actionId: asActionId('badCostValidationOp'),
+      legality: null,
+      costValidation: {
+        op: '==',
+        left: { ref: 'gvar', var: 'missingVar' },
+        right: 1,
+      },
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const state = makeBaseState();
+
+    assert.throws(
+      () => legalMoves(def, state),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /action pipeline costValidation evaluation failed/);
+        const details = error as Error & { actionId?: unknown; profileId?: unknown; predicate?: unknown; reason?: unknown };
+        assert.equal(details.actionId, asActionId('badCostValidationOp'));
+        assert.equal(details.profileId, 'badCostValidationProfile');
+        assert.equal(details.predicate, 'costValidation');
+        assert.equal(details.reason, 'pipelinePredicateEvaluationFailed');
+        return true;
+      },
+    );
+  });
+
+  it('15. malformed decision-path expressions are fatal during template satisfiability checks', () => {
+    const action: ActionDef = {
+      id: asActionId('brokenDecisionPathOp'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'brokenDecisionPathProfile',
+      actionId: asActionId('brokenDecisionPathOp'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              if: {
+                when: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+                then: [],
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'atomic',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const state = makeBaseState();
+
+    assert.throws(() => legalMoves(def, state));
+  });
 });

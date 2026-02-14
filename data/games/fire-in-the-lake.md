@@ -1900,7 +1900,7 @@ actionPipelines:
       - stage: move-cubes
         effects:
           - forEach:
-              bind: loc
+              bind: $loc
               over: { query: binding, name: targetLoCs }
               effects:
                 - chooseN:
@@ -2019,7 +2019,7 @@ actionPipelines:
       - stage: move-cubes
         effects:
           - forEach:
-              bind: loc
+              bind: $loc
               over: { query: binding, name: targetLoCs }
               effects:
                 - chooseN:

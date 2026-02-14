@@ -15,6 +15,23 @@ export type ActionPipelineDispatch =
   | { readonly kind: 'configuredNoMatch' }
   | { readonly kind: 'matched'; readonly profile: ActionPipelineDef };
 
+const applicabilityEvaluationError = (
+  action: ActionDef,
+  profile: ActionPipelineDef,
+  cause: unknown,
+): Error => {
+  const error = new Error(
+    `action pipeline applicability evaluation failed for actionId=${String(action.id)} profileId=${profile.id}`,
+  );
+  Object.assign(error, {
+    actionId: action.id,
+    profileId: profile.id,
+    reason: 'applicabilityEvaluationFailed',
+    cause,
+  });
+  return error;
+};
+
 export const resolveActionPipelineDispatch = (
   def: GameDef,
   action: ActionDef,
@@ -26,8 +43,8 @@ export const resolveActionPipelineDispatch = (
     }
     try {
       return evalCondition(profile.applicability, ctx);
-    } catch {
-      return false;
+    } catch (error) {
+      throw applicabilityEvaluationError(action, profile, error);
     }
   };
 

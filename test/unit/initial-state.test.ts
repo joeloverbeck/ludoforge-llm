@@ -71,6 +71,24 @@ describe('initialState', () => {
     assert.equal(state.nextTokenOrdinal, 1);
   });
 
+  it('materializes map-provided space markers into initial state', () => {
+    const baseDef = createDef();
+    const def: GameDef = {
+      ...baseDef,
+      zones: [
+        ...baseDef.zones,
+        { id: asZoneId('alpha:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      spaceMarkers: [{ spaceId: 'alpha:none', markerId: 'supportOpposition', state: 'support' }],
+      triggers: [],
+    };
+
+    const state = initialState(def, 9, 2);
+    assert.deepEqual(state.markers, {
+      'alpha:none': { supportOpposition: 'support' },
+    });
+  });
+
   it('defaults omitted playerCount to metadata.players.min', () => {
     const state = initialState(createDef(), 11);
     assert.equal(state.playerCount, 2);

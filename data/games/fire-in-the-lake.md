@@ -1166,6 +1166,7 @@ dataAssets:
         - { trackId: "aid", value: 15 }
         - { trackId: "patronage", value: 15 }
         - { trackId: "trail", value: 1 }
+        - { trackId: "totalEcon", value: 10 }
         - { trackId: "vcResources", value: 5 }
         - { trackId: "nvaResources", value: 10 }
         - { trackId: "arvnResources", value: 30 }
@@ -1300,6 +1301,7 @@ dataAssets:
         - { trackId: "aid", value: 15 }
         - { trackId: "patronage", value: 18 }
         - { trackId: "trail", value: 2 }
+        - { trackId: "totalEcon", value: 10 }
         - { trackId: "vcResources", value: 10 }
         - { trackId: "nvaResources", value: 15 }
         - { trackId: "arvnResources", value: 30 }
@@ -1448,6 +1450,7 @@ dataAssets:
         - { trackId: "aid", value: 30 }
         - { trackId: "patronage", value: 15 }
         - { trackId: "trail", value: 3 }
+        - { trackId: "totalEcon", value: 10 }
         - { trackId: "vcResources", value: 15 }
         - { trackId: "nvaResources", value: 20 }
         - { trackId: "arvnResources", value: 30 }
@@ -3829,15 +3832,6 @@ actionPipelines:
 # Global / Per-Player Variables
 # ══════════════════════════════════════════════════════════════════════════════
 globalVars:
-  # ── Real game resource tracks ──
-  - { name: nvaResources, type: int, init: 10, min: 0, max: 75 }
-  - { name: vcResources, type: int, init: 5, min: 0, max: 75 }
-  - { name: arvnResources, type: int, init: 30, min: 0, max: 75 }
-  - { name: aid, type: int, init: 15, min: 0, max: 75 }
-  - { name: patronage, type: int, init: 15, min: 0, max: 75 }
-  - { name: trail, type: int, init: 1, min: 0, max: 4 }
-  - { name: totalEcon, type: int, init: 10, min: 0, max: 75 }
-  - { name: terrorSabotageMarkersPlaced, type: int, init: 0, min: 0, max: 15 }
   # ── Stub vars for COIN operation testing ──
   - { name: coinResources, type: int, init: 10, min: 0, max: 50 }
   - { name: trainCount, type: int, init: 0, min: 0, max: 20 }

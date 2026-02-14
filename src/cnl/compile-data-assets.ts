@@ -1,6 +1,15 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
-import type { MapPayload, MapSpaceDef, PieceCatalogPayload, SpaceMarkerLatticeDef } from '../kernel/types.js';
+import type {
+  MapPayload,
+  MapSpaceDef,
+  NumericTrackDef,
+  PieceCatalogPayload,
+  ScenarioPayload,
+  SpaceMarkerLatticeDef,
+  SpaceMarkerValueDef,
+  StackingConstraint,
+} from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord, normalizeIdentifier } from './compile-lowering.js';
 
@@ -11,7 +20,11 @@ export function deriveSectionsFromDataAssets(
   readonly zones: GameSpecDoc['zones'];
   readonly tokenTypes: GameSpecDoc['tokenTypes'];
   readonly mapSpaces: readonly MapSpaceDef[] | null;
+  readonly tracks: readonly NumericTrackDef[] | null;
+  readonly scenarioInitialTrackValues: ReadonlyArray<{ readonly trackId: string; readonly value: number }> | null;
   readonly markerLattices: readonly SpaceMarkerLatticeDef[] | null;
+  readonly spaceMarkers: readonly SpaceMarkerValueDef[] | null;
+  readonly stackingConstraints: readonly StackingConstraint[] | null;
   readonly derivationFailures: {
     readonly map: boolean;
     readonly pieceCatalog: boolean;
@@ -22,7 +35,11 @@ export function deriveSectionsFromDataAssets(
       zones: null,
       tokenTypes: null,
       mapSpaces: null,
+      tracks: null,
+      scenarioInitialTrackValues: null,
       markerLattices: null,
+      spaceMarkers: null,
+      stackingConstraints: null,
       derivationFailures: {
         map: false,
         pieceCatalog: false,
@@ -35,6 +52,7 @@ export function deriveSectionsFromDataAssets(
   const scenarioRefs: Array<{
     readonly mapAssetId?: string;
     readonly pieceCatalogAssetId?: string;
+    readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number }>;
     readonly path: string;
     readonly entityId: string;
   }> = [];
@@ -78,10 +96,7 @@ export function deriveSectionsFromDataAssets(
     }
 
     if (validated.asset.kind === 'scenario') {
-      const payload = validated.asset.payload;
-      if (!isRecord(payload)) {
-        continue;
-      }
+      const payload = validated.asset.payload as ScenarioPayload;
       const mapAssetId =
         typeof payload.mapAssetId === 'string' && payload.mapAssetId.trim() !== '' ? payload.mapAssetId.trim() : undefined;
       const pieceCatalogAssetId =
@@ -91,6 +106,7 @@ export function deriveSectionsFromDataAssets(
       scenarioRefs.push({
         ...(mapAssetId === undefined ? {} : { mapAssetId }),
         ...(pieceCatalogAssetId === undefined ? {} : { pieceCatalogAssetId }),
+        ...(payload.initialTrackValues === undefined ? {} : { initialTrackValues: payload.initialTrackValues }),
         path: `${pathPrefix}.payload`,
         entityId: validated.asset.id,
       });
@@ -158,7 +174,11 @@ export function deriveSectionsFromDataAssets(
     zones,
     tokenTypes,
     mapSpaces: selectedMap?.payload.spaces ?? null,
+    tracks: selectedMap?.payload.tracks ?? null,
+    scenarioInitialTrackValues: selectedScenario?.initialTrackValues ?? null,
     markerLattices: selectedMap?.payload.markerLattices ?? null,
+    spaceMarkers: selectedMap?.payload.spaceMarkers ?? null,
+    stackingConstraints: selectedMap?.payload.stackingConstraints ?? null,
     derivationFailures: {
       map: mapDerivationFailed,
       pieceCatalog: pieceCatalogDerivationFailed,

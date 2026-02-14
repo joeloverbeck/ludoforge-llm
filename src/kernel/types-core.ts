@@ -163,6 +163,8 @@ export interface GameDef {
   readonly perPlayerVars: readonly VariableDef[];
   readonly zones: readonly ZoneDef[];
   readonly mapSpaces?: readonly MapSpaceDef[];
+  readonly tracks?: readonly NumericTrackDef[];
+  readonly spaceMarkers?: readonly SpaceMarkerValueDef[];
   readonly tokenTypes: readonly TokenTypeDef[];
   readonly setup: readonly EffectAST[];
   readonly turnStructure: TurnStructure;

@@ -27,7 +27,13 @@ import {
   ActionPipelineSchema,
   TurnOrderSchema
 } from './schemas-extensions.js';
-import { MapSpaceSchema, SpaceMarkerLatticeSchema, StackingConstraintSchema } from './schemas-gamespec.js';
+import {
+  MapSpaceSchema,
+  NumericTrackSchema,
+  SpaceMarkerLatticeSchema,
+  SpaceMarkerValueSchema,
+  StackingConstraintSchema,
+} from './schemas-gamespec.js';
 
 export const VariableDefSchema = z
   .object({
@@ -179,6 +185,8 @@ export const GameDefSchema = z
     perPlayerVars: z.array(VariableDefSchema),
     zones: z.array(ZoneDefSchema),
     mapSpaces: z.array(MapSpaceSchema).optional(),
+    tracks: z.array(NumericTrackSchema).optional(),
+    spaceMarkers: z.array(SpaceMarkerValueSchema).optional(),
     tokenTypes: z.array(TokenTypeDefSchema),
     setup: z.array(EffectASTSchema),
     turnStructure: TurnStructureSchema,

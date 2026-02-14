@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { GameDef } from '../kernel/types.js';
+import type { GameDef, NumericTrackDef } from '../kernel/types.js';
 import { validateGameDef } from '../kernel/validate-gamedef.js';
 import { materializeZoneDefs } from './compile-zones.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
@@ -195,7 +195,13 @@ function compileExpandedDoc(
   sections.constants = constants.failed ? null : constants.value;
 
   const globalVars = compileSection(diagnostics, () => lowerVarDefs(doc.globalVars, diagnostics, 'doc.globalVars'));
-  sections.globalVars = globalVars.failed ? null : globalVars.value;
+  const mergedGlobalVars = mergeTrackGlobalVars(
+    globalVars.value,
+    derivedFromAssets.tracks,
+    derivedFromAssets.scenarioInitialTrackValues,
+    diagnostics,
+  );
+  sections.globalVars = globalVars.failed ? null : mergedGlobalVars;
 
   const perPlayerVars = compileSection(diagnostics, () => lowerVarDefs(doc.perPlayerVars, diagnostics, 'doc.perPlayerVars'));
   sections.perPlayerVars = perPlayerVars.failed ? null : perPlayerVars.value;
@@ -311,11 +317,16 @@ function compileExpandedDoc(
   const gameDef: GameDef = {
     metadata,
     constants: constants.value,
-    globalVars: globalVars.value,
+    globalVars: mergedGlobalVars,
     perPlayerVars: perPlayerVars.value,
     zones,
     ...(derivedFromAssets.mapSpaces === null ? {} : { mapSpaces: derivedFromAssets.mapSpaces }),
+    ...(derivedFromAssets.tracks === null ? {} : { tracks: derivedFromAssets.tracks }),
     ...(derivedFromAssets.markerLattices === null ? {} : { markerLattices: derivedFromAssets.markerLattices }),
+    ...(derivedFromAssets.spaceMarkers === null ? {} : { spaceMarkers: derivedFromAssets.spaceMarkers }),
+    ...(derivedFromAssets.stackingConstraints === null
+      ? {}
+      : { stackingConstraints: derivedFromAssets.stackingConstraints }),
     tokenTypes: tokenTypes.value,
     setup: setup.value,
     turnStructure,
@@ -414,4 +425,71 @@ function mergeZoneSections(
     return explicitZones;
   }
   return [...derivedZones, ...explicitZones];
+}
+
+function mergeTrackGlobalVars(
+  explicitGlobalVars: GameDef['globalVars'],
+  tracks: readonly NumericTrackDef[] | null,
+  scenarioInitialTrackValues: ReadonlyArray<{ readonly trackId: string; readonly value: number }> | null,
+  diagnostics: Diagnostic[],
+): GameDef['globalVars'] {
+  if (tracks === null || tracks.length === 0) {
+    return explicitGlobalVars;
+  }
+
+  const explicitByName = new Map(explicitGlobalVars.map((globalVar) => [globalVar.name, globalVar]));
+  const trackById = new Map(tracks.map((track) => [track.id, track]));
+  const trackNames = new Set(tracks.map((track) => track.id));
+  const nonTrackGlobalVars = explicitGlobalVars.filter((globalVar) => !trackNames.has(globalVar.name));
+  const trackInitOverrides = new Map<string, number>();
+
+  if (scenarioInitialTrackValues !== null) {
+    for (const [index, entry] of scenarioInitialTrackValues.entries()) {
+      const track = trackById.get(entry.trackId);
+      if (track === undefined) {
+        diagnostics.push({
+          code: 'CNL_TRACK_SCENARIO_INIT_UNKNOWN',
+          path: `doc.dataAssets.scenario.initialTrackValues.${index}.trackId`,
+          severity: 'error',
+          message: `Scenario initialTrackValues references unknown track "${entry.trackId}".`,
+          suggestion: 'Declare the track in the selected map payload.tracks array.',
+        });
+        continue;
+      }
+      if (entry.value < track.min || entry.value > track.max) {
+        diagnostics.push({
+          code: 'CNL_TRACK_SCENARIO_INIT_OUT_OF_BOUNDS',
+          path: `doc.dataAssets.scenario.initialTrackValues.${index}.value`,
+          severity: 'error',
+          message: `Scenario initial value ${entry.value} for track "${entry.trackId}" is outside [${track.min}, ${track.max}].`,
+          suggestion: 'Use a scenario initial value within declared track bounds.',
+        });
+        continue;
+      }
+      trackInitOverrides.set(entry.trackId, entry.value);
+    }
+  }
+
+  const projectedTrackGlobalVars: GameDef['globalVars'] = tracks.map((track) => {
+    const existing = explicitByName.get(track.id);
+    if (existing !== undefined) {
+      diagnostics.push({
+        code: 'CNL_TRACK_GLOBAL_VAR_DUPLICATE',
+        path: 'doc.globalVars',
+        severity: 'error',
+        message: `Global var "${track.id}" duplicates map track "${track.id}".`,
+        suggestion: 'Remove track declarations from doc.globalVars and keep map payload.tracks as the only source.',
+      });
+    }
+
+    return {
+      name: track.id,
+      type: 'int' as const,
+      init: trackInitOverrides.get(track.id) ?? track.initial,
+      min: track.min,
+      max: track.max,
+    };
+  });
+
+  return [...nonTrackGlobalVars, ...projectedTrackGlobalVars];
 }

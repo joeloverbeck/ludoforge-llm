@@ -93,6 +93,35 @@ describe('FITL production data integration compilation', () => {
     const supportOpposition = mapPayload.markerLattices.find((lattice) => lattice.id === 'supportOpposition');
     assert.ok(supportOpposition, 'Expected supportOpposition lattice');
     assert.equal(supportOpposition.states.length, 5);
+    assert.deepEqual(
+      new Set((compiled.gameDef?.tracks ?? []).map((track) => track.id)),
+      trackIds,
+      'Compiled GameDef tracks must be lowered from selected map asset',
+    );
+    const globalTrackVars = new Map(
+      (compiled.gameDef?.globalVars ?? [])
+        .filter((variable) => trackIds.has(variable.name))
+        .map((variable) => [variable.name, variable.init] as const),
+    );
+    assert.deepEqual(
+      globalTrackVars,
+      new Map([
+        ['aid', 15],
+        ['patronage', 15],
+        ['trail', 1],
+        ['vcResources', 5],
+        ['nvaResources', 10],
+        ['arvnResources', 30],
+        ['totalEcon', 10],
+        ['terrorSabotageMarkersPlaced', 0],
+      ]),
+      'Track globalVars must be initialized from selected scenario initialTrackValues with map defaults for omitted tracks',
+    );
+    assert.deepEqual(
+      new Set((compiled.gameDef?.markerLattices ?? []).map((lattice) => lattice.id)),
+      new Set(mapPayload.markerLattices.map((lattice) => lattice.id)),
+      'Compiled GameDef marker lattices must be lowered from selected map asset',
+    );
 
     const pieceCatalogAsset = (parsed.doc.dataAssets ?? []).find(
       (asset) => asset.id === 'fitl-piece-catalog-production' && asset.kind === 'pieceCatalog',

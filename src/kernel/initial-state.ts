@@ -25,6 +25,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
   const initialTurnOrderState = resolveInitialTurnOrderState(def, resolvedPlayerCount);
   const rng = createRng(BigInt(seed));
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const initialMarkers = buildInitialMarkers(def.spaceMarkers);
 
   const baseState: GameState = {
     globalVars: Object.fromEntries(def.globalVars.map((variable) => [variable.name, variable.init])),
@@ -43,7 +44,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     rng: rng.state,
     stateHash: 0n,
     actionUsage: {},
-    markers: {},
+    markers: initialMarkers,
     turnOrderState: initialTurnOrderState,
   };
   const withInitialActivePlayer = resolveInitialActivePlayer(baseState, def.turnOrder);
@@ -167,4 +168,20 @@ const resolveInitialPhase = (def: GameDef): GameState['currentPhase'] => {
   }
 
   return initialPhase;
+};
+
+const buildInitialMarkers = (spaceMarkers: GameDef['spaceMarkers']): GameState['markers'] => {
+  if (spaceMarkers === undefined || spaceMarkers.length === 0) {
+    return {};
+  }
+
+  const markers: Record<string, Record<string, string>> = {};
+  for (const marker of spaceMarkers) {
+    const currentSpaceMarkers = markers[marker.spaceId] ?? {};
+    markers[marker.spaceId] = {
+      ...currentSpaceMarkers,
+      [marker.markerId]: marker.state,
+    };
+  }
+  return markers;
 };

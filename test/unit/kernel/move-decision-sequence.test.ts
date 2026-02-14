@@ -187,6 +187,67 @@ describe('move decision sequence helpers', () => {
     assert.equal(result.move.params['decision:$target'], 'c');
   });
 
+  it('discovers nested templated decision ids in deterministic order', () => {
+    const action: ActionDef = {
+      id: asActionId('nested-op'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'nested-profile',
+      actionId: asActionId('nested-op'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              forEach: {
+                over: { query: 'enums', values: ['north', 'south'] },
+                bind: '$region',
+                effects: [
+                  {
+                    chooseOne: {
+                      internalDecisionId: 'decision:$mode@{$region}',
+                      bind: '$mode@{$region}',
+                      options: { query: 'enums', values: ['a', 'b'] },
+                    },
+                  },
+                ],
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const selectedDecisionIds: string[] = [];
+    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('nested-op'), {
+      choose: (request) => {
+        selectedDecisionIds.push(request.decisionId);
+        return request.options?.[1];
+      },
+    });
+
+    assert.equal(result.complete, true);
+    assert.deepEqual(selectedDecisionIds, [
+      'decision:$mode@{$region}::$mode@north',
+      'decision:$mode@{$region}::$mode@south',
+    ]);
+    assert.equal(result.move.params['decision:$mode@{$region}::$mode@north'], 'b');
+    assert.equal(result.move.params['decision:$mode@{$region}::$mode@south'], 'b');
+  });
+
   it('throws for malformed decision-path expressions instead of treating them as unsatisfiable', () => {
     const action: ActionDef = {
       id: asActionId('broken-decision-op'),

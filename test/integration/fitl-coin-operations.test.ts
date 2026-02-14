@@ -8,43 +8,24 @@ import {
   asTokenId,
   initialState,
   legalMoves,
-  resolveMoveDecisionSequence,
   type ChoicePendingRequest,
   type GameDef,
   type GameState,
   type Move,
-  type MoveParamScalar,
-  type MoveParamValue,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
+import { completeMoveDecisionSequenceOrThrow, pickDeterministicDecisionValue } from '../helpers/move-decision-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 describe('FITL COIN operations integration', () => {
   const completeProfileMoveDeterministically = (
     baseMove: Move,
-    choose: (request: ChoicePendingRequest) => MoveParamValue,
+    choose: Parameters<typeof completeMoveDecisionSequenceOrThrow>[3],
     def: GameDef,
     state: GameState,
   ): Move => {
-    const result = resolveMoveDecisionSequence(def, state, baseMove, { choose });
-    if (!result.complete) {
-      throw new Error(`Expected scripted move to be completable for actionId=${String(baseMove.actionId)}`);
-    }
-    return result.move;
-  };
-
-  const pickDeterministicValue = (request: ChoicePendingRequest): MoveParamValue => {
-    if (request.type === 'chooseOne') {
-      return (request.options?.[0] ?? null) as MoveParamScalar;
-    }
-
-    const min = request.min ?? 0;
-    const options = request.options ?? [];
-    if (options.length === 0) {
-      return [];
-    }
-    return options.slice(0, min) as MoveParamScalar[];
+    return completeMoveDecisionSequenceOrThrow(baseMove, def, state, choose);
   };
 
   const countFactionTokensInSpace = (
@@ -125,7 +106,7 @@ describe('FITL COIN operations integration', () => {
       (request) => {
         if (request.name === 'targetSpaces') return [space];
         if (request.name === '$arvnFollowupSpaces') return [];
-        return pickDeterministicValue(request);
+        return pickDeterministicDecisionValue(request);
       },
       def,
       modifiedStart,
@@ -184,7 +165,7 @@ describe('FITL COIN operations integration', () => {
         if (request.name === '$movingAdjacentTroops') return [troopId];
         if (request.name === '$hopLocs') return [];
         if (request.name === '$movingHopTroops') return [];
-        return pickDeterministicValue(request);
+        return pickDeterministicDecisionValue(request);
       },
       def,
       modifiedStart,
@@ -450,10 +431,10 @@ describe('FITL COIN operations integration', () => {
 
   describe('sweep-arvn-profile runtime behavior', () => {
     const chooseSweepArvnParams = (targetSpace: string, movingTroops: readonly string[]) =>
-      (request: ChoicePendingRequest): MoveParamValue => {
+      (request: ChoicePendingRequest) => {
         if (request.name === 'targetSpaces') return [targetSpace];
         if (request.name === '$movingTroops') return [...movingTroops];
-        return pickDeterministicValue(request);
+        return pickDeterministicDecisionValue(request);
       };
 
     it('AC8: free operation skips per-space ARVN resource cost', () => {
@@ -1023,7 +1004,7 @@ describe('FITL COIN operations integration', () => {
         (request) => {
           if (request.name === 'targetSpaces') return [space];
           if (request.name === '$arvnFollowupSpaces') return [];
-          return pickDeterministicValue(request);
+          return pickDeterministicDecisionValue(request);
         },
         def,
         modifiedStart,
@@ -1077,7 +1058,7 @@ describe('FITL COIN operations integration', () => {
         (request) => {
           if (request.name === 'targetSpaces') return [space];
           if (request.name === '$arvnFollowupSpaces') return [];
-          return pickDeterministicValue(request);
+          return pickDeterministicDecisionValue(request);
         },
         def,
         modifiedStart,
@@ -1130,7 +1111,7 @@ describe('FITL COIN operations integration', () => {
         (request) => {
           if (request.name === 'targetSpaces') return [space];
           if (request.name === '$arvnFollowupSpaces') return [];
-          return pickDeterministicValue(request);
+          return pickDeterministicDecisionValue(request);
         },
         def,
         modifiedStart,
@@ -1183,7 +1164,7 @@ describe('FITL COIN operations integration', () => {
         (request) => {
           if (request.name === 'targetSpaces') return [space];
           if (request.name === '$arvnFollowupSpaces') return [space];
-          return pickDeterministicValue(request);
+          return pickDeterministicDecisionValue(request);
         },
         def,
         modifiedStart,
@@ -1344,7 +1325,7 @@ describe('FITL COIN operations integration', () => {
         { ...template!, freeOperation: true, actionClass: 'limitedOperation' },
         (request) => {
           if (request.name === 'targetSpaces') return [space];
-          return pickDeterministicValue(request);
+          return pickDeterministicDecisionValue(request);
         },
         def,
         modifiedStart,
@@ -1414,7 +1395,7 @@ describe('FITL COIN operations integration', () => {
         { ...template!, actionClass: 'operation' },
         (request) => {
           if (request.name === 'targetSpaces') return [citySpace, highlandSpace];
-          return pickDeterministicValue(request);
+          return pickDeterministicDecisionValue(request);
         },
         def,
         modifiedStart,

@@ -11,16 +11,13 @@ import {
   asPhaseId,
   initialState,
   legalMoves,
-  resolveMoveDecisionSequence,
   serializeGameState,
-  type ChoicePendingRequest,
   type GameDef,
   type Move,
-  type MoveParamScalar,
-  type MoveParamValue,
 } from '../../src/kernel/index.js';
 import { createEligibilityOverrideDirective, FITL_NO_OVERRIDE } from './fitl-events-test-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
+import { completeMoveDecisionSequenceOrThrow, pickDeterministicDecisionValue } from '../helpers/move-decision-helpers.js';
 
 const selfOverride = createEligibilityOverrideDirective({
   target: 'self',
@@ -111,43 +108,25 @@ const scriptedMoves: readonly Move[] = [
 
 const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 
-const pickDeterministicValue = (request: ChoicePendingRequest): MoveParamValue => {
-  if (request.type === 'chooseOne') {
-    return (request.options?.[0] ?? null) as MoveParamScalar;
-  }
-
-  const min = request.min ?? 0;
-  const options = request.options ?? [];
-  if (options.length === 0) {
-    return [];
-  }
-  return options.slice(0, min) as MoveParamScalar[];
-};
-
 const completeProfileMoveDeterministically = (
   baseMove: Move,
   def: GameDef,
   state: ReturnType<typeof initialState>,
 ): Move => {
-  const result = resolveMoveDecisionSequence(def, state, baseMove, {
-    choose: (request) => {
+  return completeMoveDecisionSequenceOrThrow(
+    baseMove,
+    def,
+    state,
+    (request) => {
       const min = request.min ?? 0;
       const options = request.options ?? [];
       if (request.type === 'chooseN' && options.length < min) {
         return undefined;
       }
-      return pickDeterministicValue(request);
+      return pickDeterministicDecisionValue(request);
     },
-  });
-  if (!result.complete) {
-    const nextDecision = result.nextDecision;
-    const min = nextDecision?.min ?? 0;
-    const optionsCount = nextDecision?.options?.length ?? 0;
-    throw new Error(
-      `Scripted move is unsatisfiable for choice "${nextDecision?.name ?? '<unknown>'}": options=${optionsCount}, min=${min}`,
-    );
-  }
-  return result.move;
+    `Scripted move is unsatisfiable for actionId=${String(baseMove.actionId)}`,
+  );
 };
 
 const runScriptedOperations = (def: GameDef, seed: number, actions: readonly string[]) => {

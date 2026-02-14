@@ -252,29 +252,47 @@ describe('FITL momentum formula modifiers', () => {
     );
   });
 
-  it('Body Count makes ARVN Assault/Patrol cost-eligible at 0 resources and wires telemetry-driven +3 Aid in coin-assault removal macro', () => {
-    const { parsed, compiled } = compileProductionSpec();
+  it('Body Count makes ARVN Assault/Patrol cost-eligible at 0 resources and awards +3 Aid on ARVN Assault removals', () => {
+    const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const assaultProfile = parsed.doc.actionPipelines?.find((profile) => profile.id === 'assault-arvn-profile');
-    assert.ok(assaultProfile, 'Expected assault-arvn-profile in parsed production doc');
-    assert.equal(
-      JSON.stringify(assaultProfile.legality).includes('mom_bodyCount'),
-      true,
-      'Expected Body Count legality override on ARVN Assault',
+    const assaultSpace = 'quang-tin-quang-ngai:none';
+    const assaultState = withActivePlayer(
+      {
+        ...initialState(def, 9105, 2),
+        globalVars: {
+          ...initialState(def, 9105, 2).globalVars,
+          arvnResources: 0,
+          aid: 12,
+        },
+        zones: {
+          ...initialState(def, 9105, 2).zones,
+          [assaultSpace]: [
+            makeToken('bodycount-arvn-assault', 'troops', 'ARVN', { type: 'troops' }),
+            makeToken('bodycount-arvn-assault-2', 'troops', 'ARVN', { type: 'troops' }),
+            makeToken('bodycount-vc-guerrilla', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          ],
+        },
+      },
+      1,
     );
-    const assaultStagesSerialized = JSON.stringify(assaultProfile.stages);
-    assert.equal(
-      assaultStagesSerialized.includes('"bodyCountEligible":true'),
-      true,
-      'Expected Body Count-enabled coin assault removal wiring in ARVN Assault resolution',
-    );
-    assert.equal(
-      assaultStagesSerialized.includes('mom-body-count-award-aid'),
-      false,
-      'Expected ARVN Assault resolution to avoid legacy before/after Body Count helper macro',
-    );
+
+    const assaultWithoutBodyCount = legalMoves(def, assaultState).some((move) => move.actionId === asActionId('assault'));
+    const assaultWithBodyCountState = withMom(assaultState, { mom_bodyCount: true });
+    const assaultWithBodyCount = legalMoves(def, assaultWithBodyCountState).some((move) => move.actionId === asActionId('assault'));
+    assert.equal(assaultWithoutBodyCount, false, 'ARVN Assault should be unavailable at 0 resources without Body Count');
+    assert.equal(assaultWithBodyCount, true, 'ARVN Assault should become available at 0 resources with Body Count');
+
+    const assaultBeforeAid = Number(assaultWithBodyCountState.globalVars.aid ?? 0);
+    const assaultFinal = applyMoveWithResolvedDecisionIds(def, assaultWithBodyCountState, {
+      actionId: asActionId('assault'),
+      params: {
+        targetSpaces: [assaultSpace],
+        $arvnFollowupSpaces: [],
+      },
+    }).state;
+    assert.equal(assaultFinal.globalVars.aid, assaultBeforeAid + 3, 'Body Count should add +3 Aid on ARVN Assault removals');
 
     const patrolState = withActivePlayer(
       {
@@ -282,6 +300,12 @@ describe('FITL momentum formula modifiers', () => {
         globalVars: {
           ...initialState(def, 9106, 2).globalVars,
           arvnResources: 0,
+        },
+        zones: {
+          ...initialState(def, 9106, 2).zones,
+          [RALLY_SPACE]: [
+            makeToken('bodycount-arvn-patrol', 'troops', 'ARVN', { type: 'troops' }),
+          ],
         },
       },
       1,
@@ -293,19 +317,5 @@ describe('FITL momentum formula modifiers', () => {
     );
     assert.equal(withoutBodyCount, false, 'ARVN Patrol should be unavailable at 0 resources without Body Count');
     assert.equal(withBodyCount, true, 'ARVN Patrol should become available at 0 resources with Body Count');
-
-    const patrolProfile = parsed.doc.actionPipelines?.find((profile) => profile.id === 'patrol-arvn-profile');
-    assert.ok(patrolProfile, 'Expected patrol-arvn-profile in parsed production doc');
-    const patrolStagesSerialized = JSON.stringify(patrolProfile.stages);
-    assert.equal(
-      patrolStagesSerialized.includes('"bodyCountEligible":true'),
-      true,
-      'Expected Body Count-enabled coin assault removal wiring in ARVN Patrol free-assault resolution',
-    );
-    assert.equal(
-      patrolStagesSerialized.includes('mom-body-count-award-aid'),
-      false,
-      'Expected ARVN Patrol free-assault resolution to avoid legacy before/after Body Count helper macro',
-    );
   });
 });

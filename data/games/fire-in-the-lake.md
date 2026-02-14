@@ -6,6 +6,7 @@ metadata:
   players:
     min: 2
     max: 4
+  defaultScenarioAssetId: fitl-scenario-full
 
 effectMacros:
   # ── piece-removal-ordering ────────────────────────────────────────────────

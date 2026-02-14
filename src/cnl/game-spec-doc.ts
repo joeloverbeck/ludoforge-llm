@@ -4,6 +4,7 @@ export interface GameSpecMetadata {
   readonly id: string;
   readonly players: { readonly min: number; readonly max: number };
   readonly maxTriggerDepth?: number;
+  readonly defaultScenarioAssetId?: string;
 }
 
 export interface GameSpecVarDef {

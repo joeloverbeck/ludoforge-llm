@@ -16,6 +16,9 @@ import { isRecord, normalizeIdentifier } from './compile-lowering.js';
 export function deriveSectionsFromDataAssets(
   doc: GameSpecDoc,
   diagnostics: Diagnostic[],
+  options: {
+    readonly defaultScenarioAssetId?: string;
+  } = {},
 ): {
   readonly zones: GameSpecDoc['zones'];
   readonly tokenTypes: GameSpecDoc['tokenTypes'];
@@ -115,20 +118,13 @@ export function deriveSectionsFromDataAssets(
 
   }
 
-  const selectedScenario = scenarioRefs.length > 0 ? scenarioRefs[0] : undefined;
-  if (scenarioRefs.length > 1) {
-    diagnostics.push({
-      code: 'CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS',
-      path: 'doc.dataAssets',
-      severity: 'warning',
-      message: `Multiple scenario assets found (${scenarioRefs.length}); compiler will use the first one ('${selectedScenario?.entityId ?? 'unknown'}').`,
-      suggestion: 'Keep one scenario asset in the compiled document, or specify the default.',
-    });
-  }
+  const scenarioSelection = selectScenarioRef(scenarioRefs, options.defaultScenarioAssetId, diagnostics);
+  const selectedScenario = scenarioSelection.selected;
+  const skipAssetInference = scenarioSelection.failed;
 
   const selectedMapResult = selectAssetById(
-    mapAssets,
-    selectedScenario?.mapAssetId,
+    skipAssetInference ? [] : mapAssets,
+    skipAssetInference ? undefined : selectedScenario?.mapAssetId,
     diagnostics,
     'map',
     selectedScenario?.path ?? 'doc.dataAssets',
@@ -137,8 +133,8 @@ export function deriveSectionsFromDataAssets(
   mapDerivationFailed = mapDerivationFailed || selectedMapResult.failed;
   const selectedMap = selectedMapResult.selected;
   const selectedPieceCatalogResult = selectAssetById(
-    pieceCatalogAssets,
-    selectedScenario?.pieceCatalogAssetId,
+    skipAssetInference ? [] : pieceCatalogAssets,
+    skipAssetInference ? undefined : selectedScenario?.pieceCatalogAssetId,
     diagnostics,
     'pieceCatalog',
     selectedScenario?.path ?? 'doc.dataAssets',
@@ -183,6 +179,73 @@ export function deriveSectionsFromDataAssets(
       map: mapDerivationFailed,
       pieceCatalog: pieceCatalogDerivationFailed,
     },
+  };
+}
+
+function selectScenarioRef(
+  scenarios: ReadonlyArray<{
+    readonly mapAssetId?: string;
+    readonly pieceCatalogAssetId?: string;
+    readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number }>;
+    readonly path: string;
+    readonly entityId: string;
+  }>,
+  selectedScenarioAssetId: string | undefined,
+  diagnostics: Diagnostic[],
+): {
+  readonly selected:
+    | {
+        readonly mapAssetId?: string;
+        readonly pieceCatalogAssetId?: string;
+        readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number }>;
+        readonly path: string;
+        readonly entityId: string;
+      }
+    | undefined;
+  readonly failed: boolean;
+} {
+  if (selectedScenarioAssetId !== undefined) {
+    const normalizedSelectedId = normalizeIdentifier(selectedScenarioAssetId);
+    const matched = scenarios.find((scenario) => normalizeIdentifier(scenario.entityId) === normalizedSelectedId);
+    if (matched !== undefined) {
+      return {
+        selected: matched,
+        failed: false,
+      };
+    }
+
+    diagnostics.push({
+      code: 'CNL_COMPILER_DATA_ASSET_SCENARIO_SELECTOR_MISSING',
+      path: 'doc.metadata.defaultScenarioAssetId',
+      severity: 'error',
+      message: `metadata.defaultScenarioAssetId references unknown scenario asset "${selectedScenarioAssetId}".`,
+      suggestion: 'Set metadata.defaultScenarioAssetId to an existing doc.dataAssets scenario id.',
+      alternatives: scenarios.map((scenario) => scenario.entityId).sort((left, right) => left.localeCompare(right)),
+    });
+    return {
+      selected: undefined,
+      failed: true,
+    };
+  }
+
+  if (scenarios.length <= 1) {
+    return {
+      selected: scenarios[0],
+      failed: false,
+    };
+  }
+
+  diagnostics.push({
+    code: 'CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS',
+    path: 'doc.dataAssets',
+    severity: 'error',
+    message: `Multiple scenario assets found (${scenarios.length}); explicit metadata.defaultScenarioAssetId is required.`,
+    suggestion: 'Set metadata.defaultScenarioAssetId to one scenario id.',
+    alternatives: scenarios.map((scenario) => scenario.entityId).sort((left, right) => left.localeCompare(right)),
+  });
+  return {
+    selected: undefined,
+    failed: true,
   };
 }
 

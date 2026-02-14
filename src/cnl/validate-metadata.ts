@@ -65,6 +65,22 @@ export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
       suggestion: 'Adjust player bounds so min is not greater than max.',
     });
   }
+
+  const defaultScenarioAssetId = metadata.defaultScenarioAssetId;
+  if (
+    defaultScenarioAssetId !== undefined &&
+    (typeof defaultScenarioAssetId !== 'string' ||
+      defaultScenarioAssetId.trim() === '' ||
+      defaultScenarioAssetId !== defaultScenarioAssetId.trim())
+  ) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_METADATA_DEFAULT_SCENARIO_INVALID',
+      path: 'doc.metadata.defaultScenarioAssetId',
+      severity: 'error',
+      message: 'metadata.defaultScenarioAssetId must be a non-empty trimmed string when provided.',
+      suggestion: 'Set defaultScenarioAssetId to an existing scenario data-asset id, for example "scenario-foundation".',
+    });
+  }
 }
 
 export function validateVariables(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {

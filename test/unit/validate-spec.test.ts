@@ -172,6 +172,38 @@ describe('validateGameSpec structural rules', () => {
     ]);
   });
 
+  it('accepts metadata.defaultScenarioAssetId when it is a non-empty trimmed string', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        players: { min: 2, max: 4 },
+        defaultScenarioAssetId: 'fitl-scenario-foundation',
+      },
+    });
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.metadata.defaultScenarioAssetId'),
+      false,
+    );
+  });
+
+  it('rejects invalid metadata.defaultScenarioAssetId values', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        players: { min: 2, max: 4 },
+        defaultScenarioAssetId: '  ',
+      },
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_DEFAULT_SCENARIO_INVALID'),
+      true,
+    );
+  });
+
   it('validates zone enums', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

@@ -459,6 +459,166 @@ describe('compile pipeline integration', () => {
     assert.equal(compiled.gameDef?.globalVars.find((variable) => variable.name === 'aid')?.init, 17);
   });
 
+  it('fails compile when multiple scenarios exist without metadata.defaultScenarioAssetId', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-assets-ambiguous-scenario',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: map-foundation',
+      '    kind: map',
+      '    payload:',
+      '      spaces:',
+      '        - id: alpha:none',
+      '          spaceType: province',
+      '          population: 1',
+      '          econ: 1',
+      '          terrainTags: [lowland]',
+      '          country: south-vietnam',
+      '          coastal: false',
+      '          adjacentTo: []',
+      '      tracks:',
+      '        - id: aid',
+      '          scope: global',
+      '          min: 0',
+      '          max: 80',
+      '          initial: 0',
+      '  - id: pieces-foundation',
+      '    kind: pieceCatalog',
+      '    payload:',
+      '      pieceTypes: []',
+      '      inventory: []',
+      '  - id: scenario-foundation',
+      '    kind: scenario',
+      '    payload:',
+      '      mapAssetId: map-foundation',
+      '      pieceCatalogAssetId: pieces-foundation',
+      '      initialTrackValues:',
+      '        - trackId: aid',
+      '          value: 17',
+      '  - id: scenario-late-war',
+      '    kind: scenario',
+      '    payload:',
+      '      mapAssetId: map-foundation',
+      '      pieceCatalogAssetId: pieces-foundation',
+      '      initialTrackValues:',
+      '        - trackId: aid',
+      '          value: 33',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_DATA_ASSET_SCENARIO_AMBIGUOUS'),
+      true,
+    );
+  });
+
+  it('uses metadata.defaultScenarioAssetId for deterministic scenario selection', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-assets-explicit-scenario',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      '  defaultScenarioAssetId: scenario-late-war',
+      'dataAssets:',
+      '  - id: map-foundation',
+      '    kind: map',
+      '    payload:',
+      '      spaces:',
+      '        - id: alpha:none',
+      '          spaceType: province',
+      '          population: 1',
+      '          econ: 1',
+      '          terrainTags: [lowland]',
+      '          country: south-vietnam',
+      '          coastal: false',
+      '          adjacentTo: []',
+      '      tracks:',
+      '        - id: aid',
+      '          scope: global',
+      '          min: 0',
+      '          max: 80',
+      '          initial: 0',
+      '  - id: pieces-foundation',
+      '    kind: pieceCatalog',
+      '    payload:',
+      '      pieceTypes: []',
+      '      inventory: []',
+      '  - id: scenario-foundation',
+      '    kind: scenario',
+      '    payload:',
+      '      mapAssetId: map-foundation',
+      '      pieceCatalogAssetId: pieces-foundation',
+      '      initialTrackValues:',
+      '        - trackId: aid',
+      '          value: 17',
+      '  - id: scenario-late-war',
+      '    kind: scenario',
+      '    payload:',
+      '      mapAssetId: map-foundation',
+      '      pieceCatalogAssetId: pieces-foundation',
+      '      initialTrackValues:',
+      '        - trackId: aid',
+      '          value: 33',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assertNoDiagnostics(compiled);
+    assert.notEqual(compiled.gameDef, null);
+    assert.equal('defaultScenarioAssetId' in (compiled.gameDef?.metadata ?? {}), false);
+    assert.equal(compiled.gameDef?.globalVars.find((variable) => variable.name === 'aid')?.init, 33);
+  });
+
   it('fails compile when scenario initialTrackValues references unknown track ids', () => {
     const markdown = [
       '```yaml',

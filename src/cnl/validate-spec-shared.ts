@@ -3,7 +3,7 @@ import type { GameSpecSourceMap, SourceSpan } from './source-map.js';
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
 
-export const METADATA_KEYS = ['id', 'players', 'maxTriggerDepth'] as const;
+export const METADATA_KEYS = ['id', 'players', 'maxTriggerDepth', 'defaultScenarioAssetId'] as const;
 export const PLAYERS_KEYS = ['min', 'max'] as const;
 export const DATA_ASSET_KEYS = ['id', 'kind', 'payload'] as const;
 export const VARIABLE_KEYS = ['name', 'type', 'init', 'min', 'max'] as const;

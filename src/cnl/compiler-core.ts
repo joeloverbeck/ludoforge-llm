@@ -164,7 +164,11 @@ function compileExpandedDoc(
   readonly gameDef: GameDef | null;
   readonly sections: CompileSectionResults;
 } {
-  const derivedFromAssets = deriveSectionsFromDataAssets(doc, diagnostics);
+  const derivedFromAssets = deriveSectionsFromDataAssets(doc, diagnostics, {
+    ...(doc.metadata?.defaultScenarioAssetId === undefined
+      ? {}
+      : { defaultScenarioAssetId: doc.metadata.defaultScenarioAssetId }),
+  });
   const effectiveZones = mergeZoneSections(doc.zones, derivedFromAssets.zones);
   const effectiveTokenTypes = doc.tokenTypes ?? derivedFromAssets.tokenTypes;
   const sections: MutableCompileSectionResults = {
@@ -185,10 +189,18 @@ function compileExpandedDoc(
   };
 
   const metadata = doc.metadata;
+  const runtimeMetadata =
+    metadata === null
+      ? null
+      : {
+          id: metadata.id,
+          players: metadata.players,
+          ...(metadata.maxTriggerDepth === undefined ? {} : { maxTriggerDepth: metadata.maxTriggerDepth }),
+        };
   if (metadata === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.metadata', 'metadata'));
   } else {
-    sections.metadata = metadata;
+    sections.metadata = runtimeMetadata;
   }
 
   const constants = compileSection(diagnostics, () => lowerConstants(doc.constants, diagnostics));
@@ -310,12 +322,12 @@ function compileExpandedDoc(
   }
   diagnostics.push(...crossValidateSpec(sections));
 
-  if (metadata === null || zones === null || turnStructure === null || actions === null || terminal === null) {
+  if (runtimeMetadata === null || zones === null || turnStructure === null || actions === null || terminal === null) {
     return { gameDef: null, sections };
   }
 
   const gameDef: GameDef = {
-    metadata,
+    metadata: runtimeMetadata,
     constants: constants.value,
     globalVars: mergedGlobalVars,
     perPlayerVars: perPlayerVars.value,

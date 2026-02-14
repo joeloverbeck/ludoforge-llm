@@ -2827,7 +2827,13 @@ eventDecks:
         title: Domino Theory
         sideMode: dual
         order: 82
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          flavorText: "U.S. prestige is on the line."
         unshaded:
+          text: "Aid and ARVN Resources each +9. Return pieces from Out of Play."
           branches:
             - id: resources-and-aid
               order: 2
@@ -2848,6 +2854,7 @@ eventDecks:
               effects:
                 - addVar: { scope: global, var: aid, delta: 1 }
         shaded:
+          text: "Containment falters: Aid -9."
           targets:
             - id: us-troops-available
               selector:
@@ -2855,11 +2862,101 @@ eventDecks:
               cardinality: { max: 3 }
           effects:
             - addVar: { scope: global, var: aid, delta: -9 }
+      - id: card-68
+        title: Green Berets
+        sideMode: dual
+        order: 68
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          flavorText: "Elite trainers."
+        unshaded:
+          text: "Place 3 Irregulars or 3 Rangers in a Province without NVA Control. Set it to Active Support."
+          branches:
+            - id: place-irregulars-and-support
+              order: 1
+              targets:
+                - id: $targetProvince
+                  selector:
+                    query: mapSpaces
+                  cardinality: { max: 1 }
+              effects:
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: irregular
+                        over:
+                          query: tokensInZone
+                          zone: available-US:none
+                          filter:
+                            - { prop: faction, eq: US }
+                            - { prop: type, eq: irregular }
+                        to:
+                          zoneExpr: $targetProvince
+                - setMarker:
+                    space: $targetProvince
+                    marker: supportOpposition
+                    state: activeSupport
+            - id: place-rangers-and-support
+              order: 2
+              targets:
+                - id: $targetProvince
+                  selector:
+                    query: mapSpaces
+                  cardinality: { max: 1 }
+              effects:
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: ranger
+                        over:
+                          query: tokensInZone
+                          zone: available-ARVN:none
+                          filter:
+                            - { prop: faction, eq: ARVN }
+                            - { prop: type, eq: ranger }
+                        to:
+                          zoneExpr: $targetProvince
+                - setMarker:
+                    space: $targetProvince
+                    marker: supportOpposition
+                    state: activeSupport
+        shaded:
+          text: "Reluctant trainees: Remove any 3 Irregulars to Available and set 1 of their Provinces to Active Opposition."
+          targets:
+            - id: $sourceProvince
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: irregular
+                    over:
+                      query: tokensInZone
+                      zone: $sourceProvince
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: irregular }
+                    to:
+                      zoneExpr: available-US:none
+            - setMarker:
+                space: $sourceProvince
+                marker: supportOpposition
+                state: activeOpposition
       - id: card-27
         title: Phoenix Program
         sideMode: dual
         order: 27
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "VC", "ARVN", "NVA"]
+          flavorText: "Neutralization campaigns expand."
         unshaded:
+          text: "Intelligence campaign: Aid -1."
           targets:
             - id: vc-in-coin-control
               selector:
@@ -2868,10 +2965,11 @@ eventDecks:
           effects:
             - addVar: { scope: global, var: aid, delta: -1 }
         shaded:
+          text: "Repression backlash: Aid -2 and ARVN Resources -1."
           targets:
             - id: terror-spaces
               selector:
-                query: spaces
+                query: mapSpaces
               cardinality: { max: 2 }
           effects:
             - addVar: { scope: global, var: aid, delta: -2 }

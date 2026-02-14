@@ -15,6 +15,12 @@ describe('FITL Phoenix Program event-card production spec', () => {
     assert.notEqual(phoenix, undefined);
     assert.equal(phoenix?.title, 'Phoenix Program');
     assert.equal(phoenix?.sideMode, 'dual');
+    assert.deepEqual(phoenix?.tags, []);
+    assert.equal(phoenix?.metadata?.period, '1968');
+    assert.deepEqual(phoenix?.metadata?.factionOrder, ['US', 'VC', 'ARVN', 'NVA']);
+    assert.equal(typeof phoenix?.metadata?.flavorText, 'string');
+    assert.equal(typeof phoenix?.unshaded?.text, 'string');
+    assert.equal(typeof phoenix?.shaded?.text, 'string');
 
     const unshadedTarget = phoenix?.unshaded?.targets?.[0];
     assert.equal(unshadedTarget?.id, 'vc-in-coin-control');
@@ -27,7 +33,7 @@ describe('FITL Phoenix Program event-card production spec', () => {
     assert.equal(shadedTarget?.id, 'terror-spaces');
     assert.deepEqual(shadedTarget?.cardinality, { max: 2 });
     assert.deepEqual(shadedTarget?.selector, {
-      query: 'spaces',
+      query: 'mapSpaces',
     });
 
     assert.deepEqual(phoenix?.shaded?.effects, [

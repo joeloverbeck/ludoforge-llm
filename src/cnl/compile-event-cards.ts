@@ -1,9 +1,14 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { EventCardDef, EventDeckDef } from '../kernel/types.js';
+import { lowerConditionNode, lowerQueryNode } from './compile-conditions.js';
+import { lowerEffectArray } from './compile-effects.js';
 import { normalizeIdentifier } from './compile-lowering.js';
+
+type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 
 export function lowerEventCards(
   cards: readonly EventCardDef[],
+  ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>,
   diagnostics: Diagnostic[],
   pathPrefix: string,
 ): readonly EventCardDef[] {
@@ -41,16 +46,28 @@ export function lowerEventCards(
       }
     }
 
+    const playCondition =
+      card.playCondition === undefined
+        ? undefined
+        : lowerConditionNode(card.playCondition, { ownershipByBase }, `${cardPath}.playCondition`);
+    if (playCondition !== undefined) {
+      diagnostics.push(...playCondition.diagnostics);
+    }
+
     const unshaded =
       card.unshaded === undefined
         ? undefined
-        : lowerEventCardSide(card.unshaded, diagnostics, `${cardPath}.unshaded`);
-    const shaded = card.shaded === undefined ? undefined : lowerEventCardSide(card.shaded, diagnostics, `${cardPath}.shaded`);
+        : lowerEventCardSide(card.unshaded, ownershipByBase, diagnostics, `${cardPath}.unshaded`);
+    const shaded =
+      card.shaded === undefined
+        ? undefined
+        : lowerEventCardSide(card.shaded, ownershipByBase, diagnostics, `${cardPath}.shaded`);
 
     return {
       index,
       card: {
         ...card,
+        ...(playCondition === undefined || playCondition.value === null ? {} : { playCondition: playCondition.value }),
         ...(unshaded === undefined ? {} : { unshaded }),
         ...(shaded === undefined ? {} : { shaded }),
       },
@@ -83,6 +100,7 @@ export function lowerEventCards(
 
 export function lowerEventDecks(
   decks: readonly EventDeckDef[],
+  ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>,
   diagnostics: Diagnostic[],
   pathPrefix: string,
 ): readonly EventDeckDef[] {
@@ -107,7 +125,7 @@ export function lowerEventDecks(
       index,
       deck: {
         ...deck,
-        cards: lowerEventCards(deck.cards, diagnostics, `${deckPath}.cards`),
+        cards: lowerEventCards(deck.cards, ownershipByBase, diagnostics, `${deckPath}.cards`),
       },
     };
   });
@@ -125,11 +143,29 @@ export function lowerEventDecks(
 
 export function lowerEventCardSide(
   side: NonNullable<EventCardDef['unshaded']>,
+  ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>,
   diagnostics: Diagnostic[],
   pathPrefix: string,
 ): NonNullable<EventCardDef['unshaded']> {
+  const loweredTargets = lowerEventTargets(side.targets, ownershipByBase, diagnostics, `${pathPrefix}.targets`);
+  const sideBindingScope = collectBindingScopeFromTargets(loweredTargets);
+
+  const loweredEffects = lowerOptionalEffects(side.effects, ownershipByBase, sideBindingScope, diagnostics, `${pathPrefix}.effects`);
+  const loweredLastingEffects = lowerEventLastingEffects(
+    side.lastingEffects,
+    ownershipByBase,
+    sideBindingScope,
+    diagnostics,
+    `${pathPrefix}.lastingEffects`,
+  );
+
   if (side.branches === undefined) {
-    return side;
+    return {
+      ...side,
+      ...(loweredTargets === undefined ? {} : { targets: loweredTargets }),
+      ...(loweredEffects === undefined ? {} : { effects: loweredEffects }),
+      ...(loweredLastingEffects === undefined ? {} : { lastingEffects: loweredLastingEffects }),
+    };
   }
 
   const idFirstIndexByNormalized = new Map<string, number>();
@@ -165,9 +201,37 @@ export function lowerEventCardSide(
       }
     }
 
+    const loweredBranchTargets = lowerEventTargets(
+      branch.targets,
+      ownershipByBase,
+      diagnostics,
+      `${branchPath}.targets`,
+      sideBindingScope,
+    );
+    const branchBindingScope = [...sideBindingScope, ...collectBindingScopeFromTargets(loweredBranchTargets)];
+    const loweredBranchEffects = lowerOptionalEffects(
+      branch.effects,
+      ownershipByBase,
+      branchBindingScope,
+      diagnostics,
+      `${branchPath}.effects`,
+    );
+    const loweredBranchLastingEffects = lowerEventLastingEffects(
+      branch.lastingEffects,
+      ownershipByBase,
+      branchBindingScope,
+      diagnostics,
+      `${branchPath}.lastingEffects`,
+    );
+
     return {
       index,
-      branch,
+      branch: {
+        ...branch,
+        ...(loweredBranchTargets === undefined ? {} : { targets: loweredBranchTargets }),
+        ...(loweredBranchEffects === undefined ? {} : { effects: loweredBranchEffects }),
+        ...(loweredBranchLastingEffects === undefined ? {} : { lastingEffects: loweredBranchLastingEffects }),
+      },
     };
   });
 
@@ -194,6 +258,153 @@ export function lowerEventCardSide(
 
   return {
     ...side,
+    ...(loweredTargets === undefined ? {} : { targets: loweredTargets }),
+    ...(loweredEffects === undefined ? {} : { effects: loweredEffects }),
+    ...(loweredLastingEffects === undefined ? {} : { lastingEffects: loweredLastingEffects }),
     branches: loweredBranches.map((entry) => entry.branch),
   };
+}
+
+function lowerEventTargets(
+  targets: NonNullable<EventCardDef['unshaded']>['targets'],
+  ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>,
+  diagnostics: Diagnostic[],
+  pathPrefix: string,
+  bindingScope?: readonly string[],
+): NonNullable<EventCardDef['unshaded']>['targets'] {
+  if (targets === undefined) {
+    return undefined;
+  }
+
+  return targets.map((target, index) => {
+    const targetPath = `${pathPrefix}.${index}`;
+    if (typeof target.id !== 'string' || target.id.trim() === '') {
+      diagnostics.push(
+        missingCapabilityDiagnostic(
+          `${targetPath}.id`,
+          'event target id',
+          target.id,
+          ['non-empty string'],
+        ),
+      );
+      return target;
+    }
+
+    const selector = lowerQueryNode(
+      target.selector,
+      { ownershipByBase, ...(bindingScope === undefined ? {} : { bindingScope }) },
+      `${targetPath}.selector`,
+    );
+    diagnostics.push(...selector.diagnostics);
+    if (selector.value === null) {
+      return target;
+    }
+
+    return {
+      ...target,
+      selector: selector.value,
+    };
+  });
+}
+
+function lowerOptionalEffects(
+  effects: NonNullable<EventCardDef['unshaded']>['effects'],
+  ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>,
+  bindingScope: readonly string[],
+  diagnostics: Diagnostic[],
+  path: string,
+): NonNullable<EventCardDef['unshaded']>['effects'] {
+  if (effects === undefined) {
+    return undefined;
+  }
+
+  const lowered = lowerEffectArray(effects as readonly unknown[], { ownershipByBase, bindingScope }, path);
+  diagnostics.push(...lowered.diagnostics);
+  return lowered.value === null ? effects : lowered.value;
+}
+
+function lowerEventLastingEffects(
+  lastingEffects: NonNullable<EventCardDef['unshaded']>['lastingEffects'],
+  ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>,
+  bindingScope: readonly string[],
+  diagnostics: Diagnostic[],
+  pathPrefix: string,
+): NonNullable<EventCardDef['unshaded']>['lastingEffects'] {
+  if (lastingEffects === undefined) {
+    return undefined;
+  }
+
+  return lastingEffects.map((lastingEffect, index) => {
+    const path = `${pathPrefix}.${index}`;
+    const setup = lowerEffectArray(
+      lastingEffect.setupEffects as readonly unknown[],
+      { ownershipByBase, bindingScope },
+      `${path}.setupEffects`,
+    );
+    diagnostics.push(...setup.diagnostics);
+
+    const teardown =
+      lastingEffect.teardownEffects === undefined
+        ? undefined
+        : lowerEffectArray(
+            lastingEffect.teardownEffects as readonly unknown[],
+            { ownershipByBase, bindingScope },
+            `${path}.teardownEffects`,
+          );
+    if (teardown !== undefined) {
+      diagnostics.push(...teardown.diagnostics);
+    }
+
+    return {
+      ...lastingEffect,
+      setupEffects: setup.value === null ? lastingEffect.setupEffects : setup.value,
+      ...(teardown === undefined
+        ? {}
+        : {
+            teardownEffects:
+              teardown.value === null ? lastingEffect.teardownEffects : teardown.value,
+          }),
+    };
+  });
+}
+
+function collectBindingScopeFromTargets(
+  targets: NonNullable<EventCardDef['unshaded']>['targets'],
+): readonly string[] {
+  if (targets === undefined) {
+    return [];
+  }
+  return targets
+    .map((target) => target.id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+}
+
+function missingCapabilityDiagnostic(
+  path: string,
+  construct: string,
+  actual: unknown,
+  alternatives?: readonly string[],
+): Diagnostic {
+  return {
+    code: 'CNL_COMPILER_MISSING_CAPABILITY',
+    path,
+    severity: 'error',
+    message: `Cannot lower ${construct} to kernel AST: ${formatValue(actual)}.`,
+    suggestion: 'Rewrite this node to a supported kernel-compatible shape.',
+    ...(alternatives === undefined ? {} : { alternatives: [...alternatives] }),
+  };
+}
+
+function formatValue(value: unknown): string {
+  if (typeof value === 'string') {
+    return `"${value}"`;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return Object.prototype.toString.call(value);
+  }
 }

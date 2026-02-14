@@ -37,6 +37,7 @@ interface InventoryEntryLike {
 interface EventCardLike {
   readonly id: string;
   readonly title: string;
+  readonly order?: number;
 }
 
 describe('FITL production data integration compilation', () => {
@@ -257,8 +258,13 @@ describe('FITL production data integration compilation', () => {
 
     const eventDeck = parsed.doc.eventDecks?.find((deck) => deck.id === 'fitl-events-initial-card-pack');
     assert.ok(eventDeck, 'Expected fitl-events-initial-card-pack event deck');
-    assert.equal(eventDeck?.cards.length, 2, 'Expected 2 event cards (82 Domino Theory, 27 Phoenix Program)');
-    const cardIds = new Set((eventDeck?.cards ?? []).map((card: EventCardLike) => card.id));
-    assert.deepEqual(cardIds, new Set(['card-82', 'card-27']));
+    const cardIds = (eventDeck?.cards ?? []).map((card: EventCardLike) => card.id);
+    assert.ok(cardIds.includes('card-27'), 'Expected card-27');
+    assert.ok(cardIds.includes('card-68'), 'Expected card-68');
+    assert.ok(cardIds.includes('card-82'), 'Expected card-82');
+    const cardOrderById = new Map((eventDeck?.cards ?? []).map((card: EventCardLike) => [card.id, card.order]));
+    assert.equal(cardOrderById.get('card-27'), 27);
+    assert.equal(cardOrderById.get('card-68'), 68);
+    assert.equal(cardOrderById.get('card-82'), 82);
   });
 });

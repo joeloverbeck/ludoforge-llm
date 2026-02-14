@@ -322,7 +322,9 @@ function compileExpandedDoc(
 
   const rawEventDecks = doc.eventDecks;
   if (rawEventDecks !== null) {
-    const eventDecks = compileSection(diagnostics, () => lowerEventDecks(rawEventDecks, diagnostics, 'doc.eventDecks'));
+    const eventDecks = compileSection(diagnostics, () =>
+      lowerEventDecks(rawEventDecks, ownershipByBase, diagnostics, 'doc.eventDecks'),
+    );
     sections.eventDecks = eventDecks.failed ? null : eventDecks.value;
   }
   diagnostics.push(...crossValidateSpec(sections));

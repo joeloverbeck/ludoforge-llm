@@ -1,8 +1,10 @@
+import { resolveActionPipelineDispatch } from './apply-move-pipeline.js';
+import { applyEffect } from './effect-dispatch.js';
+import type { EffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
-import { resolveActionPipelineDispatch } from './apply-move-pipeline.js';
 import { createCollector } from './execution-collector.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import type {
@@ -14,6 +16,7 @@ import type {
   GameState,
   Move,
   MoveParamValue,
+  Rng,
 } from './types.js';
 
 const COMPLETE: ChoiceRequest = { kind: 'complete', complete: true };
@@ -42,7 +45,13 @@ const isInDomain = (selected: unknown, domain: readonly unknown[]): boolean =>
 
 interface WalkContext {
   readonly evalCtx: EvalContext;
+  readonly rng: Rng;
   readonly moveParams: Readonly<Record<string, MoveParamValue>>;
+}
+
+interface WalkOutcome {
+  readonly pending: ChoicePendingRequest | null;
+  readonly wCtx: WalkContext;
 }
 
 const withBinding = (wCtx: WalkContext, name: string, value: unknown): WalkContext => ({
@@ -50,20 +59,52 @@ const withBinding = (wCtx: WalkContext, name: string, value: unknown): WalkConte
     ...wCtx.evalCtx,
     bindings: { ...wCtx.evalCtx.bindings, [name]: value },
   },
+  rng: wCtx.rng,
   moveParams: wCtx.moveParams,
 });
 
-function walkEffects(effects: readonly EffectAST[], wCtx: WalkContext): ChoicePendingRequest | null {
+const withStateAndRng = (wCtx: WalkContext, state: GameState, rng: Rng): WalkContext => ({
+  evalCtx: {
+    ...wCtx.evalCtx,
+    state,
+  },
+  rng,
+  moveParams: wCtx.moveParams,
+});
+
+const mergeStateAndRng = (outer: WalkContext, inner: WalkContext): WalkContext =>
+  withStateAndRng(outer, inner.evalCtx.state, inner.rng);
+
+const applyResolvedEffect = (effect: EffectAST, wCtx: WalkContext): WalkContext => {
+  const effectCtx: EffectContext = {
+    def: wCtx.evalCtx.def,
+    adjacencyGraph: wCtx.evalCtx.adjacencyGraph,
+    state: wCtx.evalCtx.state,
+    rng: wCtx.rng,
+    activePlayer: wCtx.evalCtx.activePlayer,
+    actorPlayer: wCtx.evalCtx.actorPlayer,
+    bindings: wCtx.evalCtx.bindings,
+    moveParams: wCtx.moveParams,
+    collector: wCtx.evalCtx.collector,
+    ...(wCtx.evalCtx.mapSpaces === undefined ? {} : { mapSpaces: wCtx.evalCtx.mapSpaces }),
+  };
+  const result = applyEffect(effect, effectCtx);
+  return withStateAndRng(wCtx, result.state, result.rng);
+};
+
+function walkEffects(effects: readonly EffectAST[], initialCtx: WalkContext): WalkOutcome {
+  let wCtx = initialCtx;
   for (const effect of effects) {
     const result = walkEffect(effect, wCtx);
-    if (result !== null) {
+    if (result.pending !== null) {
       return result;
     }
+    wCtx = result.wCtx;
   }
-  return null;
+  return { pending: null, wCtx };
 }
 
-function walkEffect(effect: EffectAST, wCtx: WalkContext): ChoicePendingRequest | null {
+function walkEffect(effect: EffectAST, wCtx: WalkContext): WalkOutcome {
   if ('chooseOne' in effect) {
     return walkChooseOne(effect, wCtx);
   }
@@ -83,16 +124,16 @@ function walkEffect(effect: EffectAST, wCtx: WalkContext): ChoicePendingRequest 
     return walkLet(effect, wCtx);
   }
   if ('rollRandom' in effect) {
-    return null;
+    // Choice discovery should not execute stochastic branches while parameters are still being validated.
+    return { pending: null, wCtx };
   }
-  // All side-effect types: skip
-  return null;
+  return { pending: null, wCtx: applyResolvedEffect(effect, wCtx) };
 }
 
 function walkChooseOne(
   effect: Extract<EffectAST, { readonly chooseOne: unknown }>,
   wCtx: WalkContext,
-): ChoicePendingRequest | null {
+): WalkOutcome {
   const bind = effect.chooseOne.bind;
   const options = evalQuery(effect.chooseOne.options, wCtx.evalCtx);
   const asParamValues = options.map((o) =>
@@ -106,22 +147,25 @@ function walkChooseOne(
         `legalChoices: invalid selection for chooseOne "${bind}": ${JSON.stringify(selected)} is not in options domain (${options.length} options)`,
       );
     }
-    return null;
+    return { pending: null, wCtx: withBinding(wCtx, bind, selected) };
   }
 
   return {
-    kind: 'pending',
-    complete: false,
-    name: bind,
-    type: 'chooseOne',
-    options: asParamValues,
+    pending: {
+      kind: 'pending',
+      complete: false,
+      name: bind,
+      type: 'chooseOne',
+      options: asParamValues,
+    },
+    wCtx,
   };
 }
 
 function walkChooseN(
   effect: Extract<EffectAST, { readonly chooseN: unknown }>,
   wCtx: WalkContext,
-): ChoicePendingRequest | null {
+): WalkOutcome {
   const chooseN = effect.chooseN;
   const bind = chooseN.bind;
   const hasN = 'n' in chooseN && chooseN.n !== undefined;
@@ -166,24 +210,27 @@ function walkChooseN(
         );
       }
     }
-    return null;
+    return { pending: null, wCtx: withBinding(wCtx, bind, selectedValue) };
   }
 
   return {
-    kind: 'pending',
-    complete: false,
-    name: bind,
-    type: 'chooseN',
-    options: asParamValues,
-    min: minCardinality,
-    max: clampedMax,
+    pending: {
+      kind: 'pending',
+      complete: false,
+      name: bind,
+      type: 'chooseN',
+      options: asParamValues,
+      min: minCardinality,
+      max: clampedMax,
+    },
+    wCtx,
   };
 }
 
 function walkIf(
   effect: Extract<EffectAST, { readonly if: unknown }>,
   wCtx: WalkContext,
-): ChoicePendingRequest | null {
+): WalkOutcome {
   const conditionResult = evalCondition(effect.if.when, wCtx.evalCtx);
   if (conditionResult) {
     return walkEffects(effect.if.then, wCtx);
@@ -191,13 +238,13 @@ function walkIf(
   if (effect.if.else !== undefined) {
     return walkEffects(effect.if.else, wCtx);
   }
-  return null;
+  return { pending: null, wCtx };
 }
 
 function walkForEach(
   effect: Extract<EffectAST, { readonly forEach: unknown }>,
   wCtx: WalkContext,
-): ChoicePendingRequest | null {
+): WalkOutcome {
   const items = evalQuery(effect.forEach.over, wCtx.evalCtx);
   let limit = 100;
   if (effect.forEach.limit !== undefined) {
@@ -208,38 +255,45 @@ function walkForEach(
   }
   const bounded = items.slice(0, limit);
 
+  let currentCtx = wCtx;
   for (const item of bounded) {
-    const iterCtx = withBinding(wCtx, effect.forEach.bind, item);
+    const iterCtx = withBinding(currentCtx, effect.forEach.bind, item);
     const result = walkEffects(effect.forEach.effects, iterCtx);
-    if (result !== null) {
+    if (result.pending !== null) {
       return result;
     }
+    currentCtx = mergeStateAndRng(currentCtx, result.wCtx);
   }
 
   if (effect.forEach.countBind !== undefined && effect.forEach.in !== undefined) {
-    const countCtx = withBinding(wCtx, effect.forEach.countBind, bounded.length);
+    const countCtx = withBinding(currentCtx, effect.forEach.countBind, bounded.length);
     const result = walkEffects(effect.forEach.in, countCtx);
-    if (result !== null) {
+    if (result.pending !== null) {
       return result;
     }
+    currentCtx = mergeStateAndRng(currentCtx, result.wCtx);
   }
 
-  return null;
+  return { pending: null, wCtx: currentCtx };
 }
 
 function walkLet(
   effect: Extract<EffectAST, { readonly let: unknown }>,
   wCtx: WalkContext,
-): ChoicePendingRequest | null {
+): WalkOutcome {
   const evaluatedValue = evalValue(effect.let.value, wCtx.evalCtx);
   const nestedCtx = withBinding(wCtx, effect.let.bind, evaluatedValue);
-  return walkEffects(effect.let.in, nestedCtx);
+  const nestedResult = walkEffects(effect.let.in, nestedCtx);
+  if (nestedResult.pending !== null) {
+    return nestedResult;
+  }
+  return { pending: null, wCtx: mergeStateAndRng(wCtx, nestedResult.wCtx) };
 }
 
 function walkRemoveByPriority(
   effect: Extract<EffectAST, { readonly removeByPriority: unknown }>,
   wCtx: WalkContext,
-): ChoicePendingRequest | null {
+): WalkOutcome {
   const budgetValue = evalValue(effect.removeByPriority.budget, wCtx.evalCtx);
   const totalBudget = typeof budgetValue === 'number' && Number.isSafeInteger(budgetValue) && budgetValue > 0 ? budgetValue : 0;
   let remaining = totalBudget;
@@ -267,12 +321,17 @@ function walkRemoveByPriority(
           ...(effect.removeByPriority.remainingBind === undefined ? {} : { [effect.removeByPriority.remainingBind]: remaining }),
         },
       },
+      rng: wCtx.rng,
       moveParams: wCtx.moveParams,
     };
-    return walkEffects(effect.removeByPriority.in, nestedCtx);
+    const nestedResult = walkEffects(effect.removeByPriority.in, nestedCtx);
+    if (nestedResult.pending !== null) {
+      return nestedResult;
+    }
+    return { pending: null, wCtx: mergeStateAndRng(wCtx, nestedResult.wCtx) };
   }
 
-  return null;
+  return { pending: null, wCtx };
 }
 
 export function legalChoices(def: GameDef, state: GameState, partialMove: Move): ChoiceRequest {
@@ -314,15 +373,16 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
         ? pipeline.stages.flatMap((stage) => stage.effects)
         : action.effects;
 
-    const wCtx: WalkContext = { evalCtx, moveParams: partialMove.params };
+    const wCtx: WalkContext = { evalCtx, rng: { state: state.rng }, moveParams: partialMove.params };
     const result = walkEffects(resolutionEffects, wCtx);
-    return result ?? COMPLETE;
+    return result.pending ?? COMPLETE;
   }
+
   if (pipelineDispatch.kind === 'configuredNoMatch') {
     return { kind: 'illegal', complete: false, reason: 'pipelineNotApplicable' };
   }
 
-  const wCtx: WalkContext = { evalCtx, moveParams: partialMove.params };
+  const wCtx: WalkContext = { evalCtx, rng: { state: state.rng }, moveParams: partialMove.params };
   const result = walkEffects(action.effects, wCtx);
-  return result ?? COMPLETE;
+  return result.pending ?? COMPLETE;
 }

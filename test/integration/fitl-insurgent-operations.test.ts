@@ -6,8 +6,12 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const ATTACK_SPACE = 'quang-tri-thua-thien:none';
+const LOC_SPACE = 'loc-hue-da-nang:none';
 const RALLY_SPACE = 'quang-nam:none';
 const RALLY_SPACE_2 = 'quang-tin-quang-ngai:none';
+const CENTRAL_LAOS = 'central-laos:none';
+const SOUTHERN_LAOS = 'southern-laos:none';
+const NE_CAMBODIA = 'northeast-cambodia:none';
 
 const addTokenToZone = (state: GameState, zoneId: string, token: Token): GameState => ({
   ...state,
@@ -39,7 +43,7 @@ describe('FITL insurgent operations integration', () => {
     for (const expected of [
       { id: 'rally-nva-profile', actionId: 'rally' },
       { id: 'rally-vc-profile', actionId: 'rally' },
-      { id: 'march-profile', actionId: 'march' },
+      { id: 'march-nva-profile', actionId: 'march' },
       { id: 'attack-nva-profile', actionId: 'attack' },
       { id: 'terror-profile', actionId: 'terror' },
     ]) {
@@ -88,6 +92,369 @@ describe('FITL insurgent operations integration', () => {
     const final = applyMove(compiled.gameDef!, withAttackTargets, selected).state;
 
     assert.ok((final.globalVars.nvaResources ?? 10) <= 10, 'Expected Attack to charge NVA resources or keep them unchanged if free');
+  });
+
+  it('march moves NVA pieces from adjacent spaces and charges Province/City but not LoC destinations', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const provinceMover = asTokenId('march-province-nva-g');
+    const provinceSetup = addTokenToZone(
+      {
+        ...initialState(def, 111, 4),
+        activePlayer: asPlayerId(2),
+        globalVars: {
+          ...initialState(def, 111, 4).globalVars,
+          nvaResources: 5,
+        },
+      },
+      RALLY_SPACE,
+      {
+        id: provinceMover,
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const provinceFinal = applyMove(def, provinceSetup, {
+      actionId: asActionId('march'),
+      params: { targetSpaces: [ATTACK_SPACE], chainSpaces: [], $movingGuerrillas: [provinceMover], $movingTroops: [] },
+    }).state;
+
+    assert.equal(provinceFinal.globalVars.nvaResources, 4, 'Province/City destination should spend 1 NVA resource');
+    assert.ok((provinceFinal.zones[RALLY_SPACE] ?? []).every((token) => token.id !== provinceMover), 'Moved piece should leave origin space');
+    assert.ok((provinceFinal.zones[ATTACK_SPACE] ?? []).some((token) => token.id === provinceMover), 'Moved piece should enter destination space');
+
+    const locMover = asTokenId('march-loc-nva-t');
+    const locSetup = addTokenToZone(
+      {
+        ...initialState(def, 112, 4),
+        activePlayer: asPlayerId(2),
+        globalVars: {
+          ...initialState(def, 112, 4).globalVars,
+          nvaResources: 5,
+        },
+      },
+      RALLY_SPACE,
+      {
+        id: locMover,
+        type: 'nva-troops',
+        props: { faction: 'NVA', type: 'troops' },
+      },
+    );
+    const locFinal = applyMove(def, locSetup, {
+      actionId: asActionId('march'),
+      params: { targetSpaces: [LOC_SPACE], chainSpaces: [], $movingGuerrillas: [], $movingTroops: [locMover] },
+    }).state;
+
+    assert.equal(locFinal.globalVars.nvaResources, 5, 'LoC destination should be free for March');
+  });
+
+  it('activates moving NVA guerrillas when destination is LoC/support and moving+COIN > 3', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const mover = asTokenId('march-activate-nva-g');
+    const setup = addTokenToZone(
+      addTokenToZone(
+        addTokenToZone(
+          addTokenToZone(
+            {
+              ...initialState(def, 113, 4),
+              activePlayer: asPlayerId(2),
+              globalVars: {
+                ...initialState(def, 113, 4).globalVars,
+                nvaResources: 6,
+              },
+            },
+            RALLY_SPACE,
+            {
+              id: mover,
+              type: 'nva-guerrillas',
+              props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+            },
+          ),
+          LOC_SPACE,
+          { id: asTokenId('march-activate-us-t1'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+        ),
+        LOC_SPACE,
+        { id: asTokenId('march-activate-us-t2'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+      ),
+      LOC_SPACE,
+      { id: asTokenId('march-activate-us-t3'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+    );
+
+    const final = applyMove(def, setup, {
+      actionId: asActionId('march'),
+      params: { targetSpaces: [LOC_SPACE], chainSpaces: [], $movingGuerrillas: [mover], $movingTroops: [] },
+    }).state;
+    const moved = (final.zones[LOC_SPACE] ?? []).find((token) => token.id === mover);
+
+    assert.ok(moved, 'Expected moved guerrilla to be present in destination');
+    assert.equal(moved.props.activity, 'active', 'Moving guerrilla should activate when LoC condition and >3 threshold are met');
+  });
+
+  it('does not activate moving guerrillas when destination is neither LoC nor support', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const mover = asTokenId('march-no-activate-nva-g');
+    const setup = addTokenToZone(
+      addTokenToZone(
+        addTokenToZone(
+          addTokenToZone(
+            withSupportState(
+              {
+                ...initialState(def, 114, 4),
+                activePlayer: asPlayerId(2),
+                globalVars: {
+                  ...initialState(def, 114, 4).globalVars,
+                  nvaResources: 6,
+                },
+              },
+              ATTACK_SPACE,
+              'activeOpposition',
+            ),
+            RALLY_SPACE,
+            {
+              id: mover,
+              type: 'nva-guerrillas',
+              props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+            },
+          ),
+          ATTACK_SPACE,
+          { id: asTokenId('march-no-activate-us-t1'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+        ),
+        ATTACK_SPACE,
+        { id: asTokenId('march-no-activate-us-t2'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+      ),
+      ATTACK_SPACE,
+      { id: asTokenId('march-no-activate-us-t3'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+    );
+
+    const final = applyMove(def, setup, {
+      actionId: asActionId('march'),
+      params: { targetSpaces: [ATTACK_SPACE], chainSpaces: [], $movingGuerrillas: [mover], $movingTroops: [] },
+    }).state;
+    const moved = (final.zones[ATTACK_SPACE] ?? []).find((token) => token.id === mover);
+
+    assert.ok(moved, 'Expected moved guerrilla to be present in destination');
+    assert.equal(moved.props.activity, 'underground', 'Guerrilla should remain underground when LoC/support condition is not met');
+  });
+
+  it('skips March per-space Province/City cost when move is marked freeOperation', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const mover = asTokenId('march-free-nva-g');
+    const setup = addTokenToZone(
+      {
+        ...initialState(def, 115, 4),
+        activePlayer: asPlayerId(2),
+        globalVars: {
+          ...initialState(def, 115, 4).globalVars,
+          nvaResources: 5,
+        },
+      },
+      RALLY_SPACE,
+      {
+        id: mover,
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    const nonFree = applyMove(def, setup, {
+      actionId: asActionId('march'),
+      params: { targetSpaces: [ATTACK_SPACE], chainSpaces: [], $movingGuerrillas: [mover], $movingTroops: [] },
+    }).state;
+    const free = applyMove(def, setup, {
+      actionId: asActionId('march'),
+      freeOperation: true,
+      params: { targetSpaces: [ATTACK_SPACE], chainSpaces: [], $movingGuerrillas: [mover], $movingTroops: [] },
+    }).state;
+
+    assert.equal(nonFree.globalVars.nvaResources, 4, 'Non-free March should spend 1 NVA resource for Province/City destination');
+    assert.equal(free.globalVars.nvaResources, 5, 'Free March should skip per-space Province/City spend');
+  });
+
+  it('enforces March LimOp max=1 destination', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const setup = addTokenToZone(
+      {
+        ...initialState(def, 116, 4),
+        activePlayer: asPlayerId(2),
+        globalVars: {
+          ...initialState(def, 116, 4).globalVars,
+          nvaResources: 10,
+        },
+      },
+      RALLY_SPACE,
+      {
+        id: asTokenId('march-limop-nva-g'),
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    assert.throws(
+      () =>
+        applyMove(def, setup, {
+          actionId: asActionId('march'),
+          actionClass: 'limitedOperation',
+          params: { targetSpaces: [ATTACK_SPACE, RALLY_SPACE_2] },
+        }),
+      /Illegal move/,
+      'March LimOp should enforce max one selected destination',
+    );
+  });
+
+  it('supports NVA Trail-chain continuation through Laos/Cambodia when trail > 0 and not LimOp', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const mover = asTokenId('march-chain-nva-g');
+    const setup = addTokenToZone(
+      {
+        ...initialState(def, 117, 4),
+        activePlayer: asPlayerId(2),
+        globalVars: {
+          ...initialState(def, 117, 4).globalVars,
+          nvaResources: 6,
+          trail: 1,
+        },
+      },
+      CENTRAL_LAOS,
+      {
+        id: mover,
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    const final = applyMove(def, setup, {
+      actionId: asActionId('march'),
+      params: {
+        targetSpaces: [SOUTHERN_LAOS],
+        chainSpaces: [NE_CAMBODIA],
+        $movingGuerrillas: [mover],
+        $movingTroops: [],
+      },
+    }).state;
+
+    assert.ok((final.zones[NE_CAMBODIA] ?? []).some((token) => token.id === mover), 'Trail-chain should allow continued movement into Cambodia');
+    assert.equal(final.globalVars.nvaResources, 4, 'Two Province destinations should each cost 1 resource when trail < 4');
+  });
+
+  it('blocks NVA Trail-chain continuation when trail is 0 or action is LimOp', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const moverNoTrail = asTokenId('march-chain-no-trail-nva-g');
+    const noTrailSetup = addTokenToZone(
+      {
+        ...initialState(def, 118, 4),
+        activePlayer: asPlayerId(2),
+        globalVars: {
+          ...initialState(def, 118, 4).globalVars,
+          nvaResources: 6,
+          trail: 0,
+        },
+      },
+      CENTRAL_LAOS,
+      {
+        id: moverNoTrail,
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const noTrailFinal = applyMove(def, noTrailSetup, {
+      actionId: asActionId('march'),
+      params: {
+        targetSpaces: [SOUTHERN_LAOS],
+        chainSpaces: [NE_CAMBODIA],
+        $movingGuerrillas: [moverNoTrail],
+        $movingTroops: [],
+      },
+    }).state;
+    assert.ok((noTrailFinal.zones[SOUTHERN_LAOS] ?? []).some((token) => token.id === moverNoTrail));
+    assert.ok(!(noTrailFinal.zones[NE_CAMBODIA] ?? []).some((token) => token.id === moverNoTrail), 'Trail=0 should disable continuation');
+
+    const moverLimOp = asTokenId('march-chain-limop-nva-g');
+    const limOpSetup = addTokenToZone(
+      {
+        ...initialState(def, 119, 4),
+        activePlayer: asPlayerId(2),
+        globalVars: {
+          ...initialState(def, 119, 4).globalVars,
+          nvaResources: 6,
+          trail: 2,
+        },
+      },
+      CENTRAL_LAOS,
+      {
+        id: moverLimOp,
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const limOpFinal = applyMove(def, limOpSetup, {
+      actionId: asActionId('march'),
+      actionClass: 'limitedOperation',
+      params: {
+        targetSpaces: [SOUTHERN_LAOS],
+        chainSpaces: [NE_CAMBODIA],
+        $movingGuerrillas: [moverLimOp],
+        $movingTroops: [],
+      },
+    }).state;
+    assert.ok((limOpFinal.zones[SOUTHERN_LAOS] ?? []).some((token) => token.id === moverLimOp));
+    assert.ok(!(limOpFinal.zones[NE_CAMBODIA] ?? []).some((token) => token.id === moverLimOp), 'LimOp should disable continuation');
+  });
+
+  it('makes NVA March free in Laos/Cambodia when Trail is 4', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const mover = asTokenId('march-trail4-free-nva-g');
+    const setup = addTokenToZone(
+      {
+        ...initialState(def, 120, 4),
+        activePlayer: asPlayerId(2),
+        globalVars: {
+          ...initialState(def, 120, 4).globalVars,
+          nvaResources: 6,
+          trail: 4,
+        },
+      },
+      CENTRAL_LAOS,
+      {
+        id: mover,
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const final = applyMove(def, setup, {
+      actionId: asActionId('march'),
+      params: {
+        targetSpaces: [SOUTHERN_LAOS],
+        chainSpaces: [NE_CAMBODIA],
+        $movingGuerrillas: [mover],
+        $movingTroops: [],
+      },
+    }).state;
+
+    assert.ok((final.zones[NE_CAMBODIA] ?? []).some((token) => token.id === mover));
+    assert.equal(final.globalVars.nvaResources, 6, 'Trail=4 should make Laos/Cambodia March destinations free');
   });
 
   it('treats attack as illegal when active player is not NVA', () => {

@@ -218,6 +218,122 @@ effectMacros:
           then:
             - addVar: { scope: global, var: { param: resource }, delta: { param: amount } }
 
+  # ── nva-march-resolve-destination ──────────────────────────────────────────
+  # NVA March destination resolution:
+  # - Cost: 1 per Province/City, 0 LoC; Trail=4 makes Laos/Cambodia moves free.
+  # - Move NVA guerrillas/troops from adjacent spaces.
+  # - Activate moved guerrillas if (LoC or Support) and (moving + COIN pieces > 3).
+  - id: nva-march-resolve-destination
+    params:
+      - { name: destSpace, type: string }
+    effects:
+      - chooseN:
+          bind: $movingGuerrillas
+          options:
+            query: tokensInAdjacentZones
+            zone: { param: destSpace }
+            filter:
+              - { prop: faction, eq: 'NVA' }
+              - { prop: type, eq: guerrilla }
+          min: 0
+          max: 99
+      - chooseN:
+          bind: $movingTroops
+          options:
+            query: tokensInAdjacentZones
+            zone: { param: destSpace }
+            filter:
+              - { prop: faction, eq: 'NVA' }
+              - { prop: type, eq: troops }
+          min: 0
+          max: 99
+      - let:
+          bind: $movingCount
+          value:
+            op: '+'
+            left: { aggregate: { op: count, query: { query: binding, name: $movingGuerrillas } } }
+            right: { aggregate: { op: count, query: { query: binding, name: $movingTroops } } }
+          in:
+            - if:
+                when: { op: '>', left: { ref: binding, name: $movingCount }, right: 0 }
+                then:
+                  - if:
+                      when:
+                        op: and
+                        args:
+                          - { op: '==', left: { ref: gvar, var: trail }, right: 4 }
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: { param: destSpace }, prop: country }, right: 'laos' }
+                              - { op: '==', left: { ref: zoneProp, zone: { param: destSpace }, prop: country }, right: 'cambodia' }
+                      then: []
+                      else:
+                        - macro: per-province-city-cost
+                          args:
+                            space: { param: destSpace }
+                            resource: nvaResources
+                            amount: -1
+                  - forEach:
+                      bind: $piece
+                      over: { query: binding, name: $movingGuerrillas }
+                      effects:
+                        - moveToken:
+                            token: $piece
+                            from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                            to: { param: destSpace }
+                  - forEach:
+                      bind: $piece
+                      over: { query: binding, name: $movingTroops }
+                      effects:
+                        - moveToken:
+                            token: $piece
+                            from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                            to: { param: destSpace }
+                  - let:
+                      bind: $isLocOrSupport
+                      value:
+                        if:
+                          when:
+                            op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: { param: destSpace }, prop: spaceType }, right: 'loc' }
+                              - op: or
+                                args:
+                                  - { op: '==', left: { ref: markerState, space: { param: destSpace }, marker: supportOpposition }, right: 'passiveSupport' }
+                                  - { op: '==', left: { ref: markerState, space: { param: destSpace }, marker: supportOpposition }, right: 'activeSupport' }
+                          then: true
+                          else: false
+                      in:
+                        - let:
+                            bind: $coinCount
+                            value:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: { param: destSpace }
+                                  filter:
+                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                    - { prop: type, op: in, value: ['troops', 'police', 'irregulars', 'rangers'] }
+                            in:
+                              - if:
+                                  when:
+                                    op: and
+                                    args:
+                                      - { op: '==', left: { ref: binding, name: $isLocOrSupport }, right: true }
+                                      - op: '>'
+                                        left:
+                                          op: '+'
+                                          left: { ref: binding, name: $movingCount }
+                                          right: { ref: binding, name: $coinCount }
+                                        right: 3
+                                  then:
+                                    - forEach:
+                                        bind: $movedPiece
+                                        over: { query: binding, name: $movingGuerrillas }
+                                        effects:
+                                          - setTokenProp: { token: $movedPiece, prop: activity, value: active }
+
   # ── place-from-available-or-map ────────────────────────────────────────────
   # Dynamic piece sourcing (Rule 1.4.1): place from Available, then from map if not US.
   - id: place-from-available-or-map
@@ -2778,36 +2894,115 @@ actionPipelines:
                                       effects:
                                         - setTokenProp: { token: $g, prop: activity, value: underground }
     atomicity: atomic
-  - id: march-profile
+  - id: march-nva-profile
     actionId: march
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: insurgentResources
-        right: 1
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: insurgentResources
-        right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: insurgentResources
-            delta: -1
-    targeting:
-      select: allEligible
-      movementOrder: deterministicSpaceOrder
-      activationPolicy: activateWhenEnteringCOINControl
+    applicability: { op: '==', left: { ref: activePlayer }, right: '2' }
+    legality: true
+    costValidation: null
+    costEffects: []
+    targeting: {}
     stages:
-      - stage: march-resolve
+      - stage: select-destinations
         effects:
-          - addVar:
-              scope: global
-              var: marchCount
-              delta: 1
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInAdjacentZones
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, eq: 'NVA' }
+                                    - { prop: type, op: in, value: ['guerrilla', 'troops'] }
+                            right: 0
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInAdjacentZones
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, eq: 'NVA' }
+                                    - { prop: type, op: in, value: ['guerrilla', 'troops'] }
+                            right: 0
+                    min: 1
+                    max: 99
+      - stage: resolve-per-destination
+        effects:
+          - forEach:
+              bind: $destSpace
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - macro: nva-march-resolve-destination
+                  args:
+                    destSpace: $destSpace
+      - stage: select-trail-chain-destinations
+        effects:
+          - if:
+              when:
+                op: and
+                args:
+                  - { op: '>', left: { ref: gvar, var: trail }, right: 0 }
+                  - { op: '!=', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: chainSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: or
+                        args:
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'laos' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'cambodia' }
+                    min: 0
+                    max: 99
+      - stage: resolve-trail-chain-destinations
+        effects:
+          - if:
+              when:
+                op: and
+                args:
+                  - { op: '>', left: { ref: gvar, var: trail }, right: 0 }
+                  - { op: '!=', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - forEach:
+                    bind: $chainSpace
+                    over: { query: binding, name: chainSpaces }
+                    effects:
+                      - macro: nva-march-resolve-destination
+                        args:
+                          destSpace: $chainSpace
     atomicity: atomic
   - id: attack-nva-profile
     actionId: attack

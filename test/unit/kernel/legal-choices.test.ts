@@ -5,6 +5,7 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   asZoneId,
   legalChoices,
   type ActionDef,
@@ -652,6 +653,108 @@ describe('legalChoices()', () => {
       assert.equal(result.name, '$spaces');
       assert.equal(result.type, 'chooseN');
       assert.deepStrictEqual(result.options, ['hand:0']);
+    });
+
+    it('validates sequential dependent choices against progressed state across pipeline stages', () => {
+      const action: ActionDef = {
+        id: asActionId('chainOp'),
+        actor: 'active',
+        phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'chainProfile',
+        actionId: asActionId('chainOp'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseN: {
+                  bind: 'targetSpaces',
+                  options: { query: 'enums', values: ['b:none', 'c:none'] },
+                  n: 2,
+                },
+              } as EffectAST,
+              {
+                forEach: {
+                  bind: '$dest',
+                  over: { query: 'binding', name: 'targetSpaces' },
+                  effects: [
+                    {
+                      chooseN: {
+                        bind: '$moving',
+                        options: {
+                          query: 'tokensInAdjacentZones',
+                          zone: '$dest',
+                          filter: [{ prop: 'type', op: 'eq', value: 'guerrilla' }],
+                        },
+                        min: 0,
+                        max: 99,
+                      },
+                    } as EffectAST,
+                    {
+                      forEach: {
+                        bind: '$piece',
+                        over: { query: 'binding', name: '$moving' },
+                        effects: [
+                          {
+                            moveToken: {
+                              token: '$piece',
+                              from: { zoneExpr: { ref: 'tokenZone', token: '$piece' } },
+                              to: '$dest',
+                            },
+                          },
+                        ],
+                      },
+                    } as EffectAST,
+                  ],
+                },
+              } as EffectAST,
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      };
+
+      const def = {
+        ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+        zones: [
+          { id: asZoneId('a:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('b:none')] },
+          { id: asZoneId('b:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('a:none'), asZoneId('c:none')] },
+          { id: asZoneId('c:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('b:none')] },
+          { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' },
+        ],
+      } as GameDef;
+
+      const state = makeBaseState({
+        zones: {
+          'a:none': [
+            {
+              id: asTokenId('g1'),
+              type: 'nva-guerrillas',
+              props: { type: 'guerrilla', faction: 'NVA' },
+            },
+          ],
+          'b:none': [],
+          'c:none': [],
+          'hand:0': [],
+        },
+      });
+
+      const result = legalChoices(def, state, makeMove('chainOp', {
+        targetSpaces: ['b:none', 'c:none'],
+        $moving: ['g1'],
+      }));
+      assert.deepStrictEqual(result, { kind: 'complete', complete: true });
     });
   });
 

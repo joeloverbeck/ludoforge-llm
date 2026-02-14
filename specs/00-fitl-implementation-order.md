@@ -124,14 +124,20 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 **Criteria**: All 8 operations and 12 special activities have complete effect implementations (no stubs).
 
 - Multi-space targeting via `chooseN` + `forEach`
-- Piece removal follows ordering constraints (Troops first, Bases last) using cascading `let` bindings
+- Piece removal follows ordering constraints (Bases last, Tunneled Bases immune) using cascading `let` bindings
 - Operation/SA interleaving model resolved and implemented
-- Monsoon restrictions enforced on SAs
+- Monsoon restrictions enforced on SAs (Air Lift 4->2 spaces, Air Strike 6->2 spaces, Advise Sweep unavailable)
 - Limited Operations: max 1 space, no SA (via `__actionClass` binding)
 - US Joint Operations constraint enforced (ARVN resources - Total Econ >= cost)
 - Patrol/Sweep include cube movement from adjacent spaces
 - Rally includes base-building and with-Base extras
 - March uses tokenZone for source zone reference
+- SA accompanying operation constraints enforced (Advise: Train/Patrol only, etc.)
+- SA sub-decisions modeled via `chooseOne` (Advise 3 options, Govern 2, Infiltrate 2, Subvert 2)
+- Zero resource cost for all SAs
+- Casualties routing: US Troops removed by Bombard/Ambush -> casualties-US
+- No die rolls for Air Strike or Bombard (automatic effects)
+- Transport global Rangers flip (all Rangers on map -> Underground)
 - All existing integration tests pass or are updated
 
 **Note**: Spec 13a (Effect Macros) is optional for Milestone C. Operations can inline macro patterns if 13a is deferred. The macros reduce ~200 lines of duplicated YAML but are functionally identical to inline patterns.
@@ -263,3 +269,4 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 | Tutorial turns 2-13 narrative not fully documented | Medium | High | Note as "data to be obtained from physical rulebook" in Spec 31 |
 | Piece removal ordering requires mutable damage counter | Medium | Medium | MITIGATED -- Cascading let bindings with count-before/count-after pattern. No mutable global state needed. |
 | Spec 26 correctness issues in YAML patterns | High | Medium | MITIGATED -- Full codebase analysis completed. 4 errors found and fixed in revised spec. Cross-referenced all operations against FITL rules. |
+| Spec 27 SA descriptions had critical rules errors | High | High | MITIGATED -- Full rewrite of Spec 27 completed. All 12 SAs cross-referenced against authoritative rules (4.2-4.5). 6 SAs had completely wrong mechanics, 6 had significant missing mechanics. Corrected: die rolls removed from Air Strike/Bombard, piece counts fixed, accompanying op constraints added, sub-decisions modeled, casualties routing added. |

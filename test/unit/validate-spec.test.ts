@@ -310,6 +310,7 @@ describe('validateGameSpec structural rules', () => {
         {
           id: 'op-pass',
           actionId: 'draw',
+          accompanyingOps: 'any',
           legality: true,
           costValidation: null, costEffects: [],
           targeting: {},
@@ -378,6 +379,29 @@ describe('validateGameSpec structural rules', () => {
           diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING' &&
           diagnostic.path === 'doc.actionPipelines.2.actionId',
       ),
+      true,
+    );
+  });
+
+  it('reports invalid accompanyingOps shape in action pipeline metadata', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      actionPipelines: [
+        {
+          id: 'op-pass',
+          actionId: 'draw',
+          accompanyingOps: [1] as unknown as readonly string[],
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
+        },
+      ],
+    });
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.actionPipelines.0.accompanyingOps.0'),
       true,
     );
   });

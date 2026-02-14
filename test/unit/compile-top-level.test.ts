@@ -307,6 +307,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
         {
           id: 'patrol-profile',
           actionId: 'patrol',
+          accompanyingOps: ['train', 'patrol'],
           legality: null,
           costValidation: null, costEffects: [],
           targeting: {},
@@ -325,6 +326,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
     assertNoDiagnostics(result);
     assert.equal(result.gameDef?.actionPipelines?.[0]?.id, 'patrol-profile');
     assert.equal(result.gameDef?.actionPipelines?.[0]?.atomicity, 'atomic');
+    assert.deepEqual(result.gameDef?.actionPipelines?.[0]?.accompanyingOps, ['train', 'patrol']);
   });
 
   it('returns blocking diagnostics for ambiguous or incomplete actionPipelines metadata', () => {
@@ -374,6 +376,16 @@ describe('compile top-level actions/triggers/end conditions', () => {
           stages: [{ stage: 'resolve' }],
           atomicity: 'atomic',
         },
+        {
+          id: 'invalid-accompanying-profile',
+          actionId: 'sweep',
+          accompanyingOps: [123],
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
+        },
       ],
       triggers: [],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
@@ -394,13 +406,17 @@ describe('compile top-level actions/triggers/end conditions', () => {
       result.diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_COMPILER_ACTION_PIPELINE_UNKNOWN_ACTION' &&
-          diagnostic.path === 'doc.actionPipelines.3.actionId',
+            diagnostic.path === 'doc.actionPipelines.3.actionId',
       ),
       true,
     );
     assert.equal(
       result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actionPipelines.2.stages')
       || result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actionPipelines.2.atomicity'),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actionPipelines.4.accompanyingOps'),
       true,
     );
   });

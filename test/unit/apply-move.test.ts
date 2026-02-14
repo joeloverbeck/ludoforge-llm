@@ -1579,4 +1579,108 @@ describe('applyMove', () => {
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
     assert.equal(result.state.globalVars.v, 42);
   });
+
+  it('rejects compound SA when accompanyingOps excludes the operation action id', () => {
+    const def: GameDef = {
+      metadata: { id: 'compound-accompanying-op-reject', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actionPipelines: [
+        {
+          id: 'operate-profile',
+          actionId: asActionId('operate'),
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [] }],
+          atomicity: 'atomic',
+        },
+        {
+          id: 'sa-profile',
+          actionId: asActionId('sa'),
+          accompanyingOps: ['train'],
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'v', delta: 1 } }] }],
+          atomicity: 'atomic',
+        },
+      ],
+      actions: [
+        { id: asActionId('operate'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('train'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state = createState();
+    assert.throws(
+      () => applyMove(def, state, {
+        actionId: asActionId('operate'),
+        params: {},
+        compound: { specialActivity: { actionId: asActionId('sa'), params: {} }, timing: 'after' },
+      }),
+      (error: unknown) => {
+        const details = error as { readonly reason?: string; readonly metadata?: { readonly code?: string } };
+        assert.equal(details.reason, 'special activity cannot accompany this operation');
+        assert.equal(details.metadata?.code, 'SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED');
+        return true;
+      },
+    );
+  });
+
+  it('allows compound SA when accompanyingOps includes the operation action id', () => {
+    const def: GameDef = {
+      metadata: { id: 'compound-accompanying-op-allow', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actionPipelines: [
+        {
+          id: 'train-profile',
+          actionId: asActionId('train'),
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'v', delta: 10 } }] }],
+          atomicity: 'atomic',
+        },
+        {
+          id: 'sa-profile',
+          actionId: asActionId('sa'),
+          accompanyingOps: ['train'],
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'v', delta: 1 } }] }],
+          atomicity: 'atomic',
+        },
+      ],
+      actions: [
+        { id: asActionId('train'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
+    const result = applyMove(def, state, {
+      actionId: asActionId('train'),
+      params: {},
+      compound: { specialActivity: { actionId: asActionId('sa'), params: {} }, timing: 'after' },
+    });
+    assert.equal(result.state.globalVars.v, 11);
+  });
 });

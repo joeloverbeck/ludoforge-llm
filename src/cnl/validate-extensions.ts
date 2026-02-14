@@ -577,7 +577,7 @@ export function validateActionPipelines(
         path: basePath,
         severity: 'error',
         message: 'Action pipeline entry must be an object.',
-        suggestion: 'Set action pipeline entries to objects with id/actionId/legality/costValidation/costEffects/targeting/stages/atomicity.',
+        suggestion: 'Set action pipeline entries to objects with id/actionId/accompanyingOps/legality/costValidation/costEffects/targeting/stages/atomicity.',
       });
       continue;
     }
@@ -585,6 +585,29 @@ export function validateActionPipelines(
     validateUnknownKeys(profile, ACTION_PIPELINE_KEYS, basePath, diagnostics, 'action pipeline');
     validateIdentifierField(profile, 'id', `${basePath}.id`, diagnostics, 'action pipeline id');
     validateIdentifierField(profile, 'actionId', `${basePath}.actionId`, diagnostics, 'action pipeline actionId');
+    if (profile.accompanyingOps !== undefined) {
+      if (profile.accompanyingOps !== 'any' && !Array.isArray(profile.accompanyingOps)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+          path: `${basePath}.accompanyingOps`,
+          severity: 'error',
+          message: 'action pipeline accompanyingOps must be "any" or an array of non-empty operation ids.',
+          suggestion: 'Set accompanyingOps to "any" or [operationId, ...].',
+        });
+      } else if (Array.isArray(profile.accompanyingOps)) {
+        for (const [opIndex, opId] of profile.accompanyingOps.entries()) {
+          if (typeof opId !== 'string' || opId.trim() === '') {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+              path: `${basePath}.accompanyingOps.${opIndex}`,
+              severity: 'error',
+              message: 'accompanyingOps entries must be non-empty strings.',
+              suggestion: 'Replace invalid entry with a non-empty operation id string.',
+            });
+          }
+        }
+      }
+    }
 
     if (typeof profile.actionId === 'string' && profile.actionId.trim() !== '') {
       const normalizedActionId = normalizeIdentifier(profile.actionId);

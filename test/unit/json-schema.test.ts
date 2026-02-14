@@ -48,6 +48,7 @@ const fullGameDef: GameDef = {
     {
       id: 'play-card-profile',
       actionId: asActionId('playCard'),
+      accompanyingOps: 'any',
       legality: null,
       costValidation: null, costEffects: [],
       targeting: {},

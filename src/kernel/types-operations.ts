@@ -18,6 +18,7 @@ export interface ActionPipelineDef {
   readonly id: string;
   readonly actionId: ActionId;
   readonly applicability?: ConditionAST;
+  readonly accompanyingOps?: 'any' | readonly string[];
   readonly legality: ConditionAST | null;
   readonly costValidation: ConditionAST | null;
   readonly costEffects: readonly EffectAST[];

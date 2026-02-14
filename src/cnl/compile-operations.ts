@@ -47,7 +47,7 @@ export function lowerActionPipelines(
         path: basePath,
         severity: 'error',
         message: 'action pipeline must be an object.',
-        suggestion: 'Provide id/actionId/legality/costValidation/costEffects/targeting/stages/atomicity for each action pipeline.',
+        suggestion: 'Provide id/actionId/accompanyingOps/legality/costValidation/costEffects/targeting/stages/atomicity for each action pipeline.',
       });
       continue;
     }
@@ -196,6 +196,27 @@ export function lowerActionPipelines(
       }
     }
 
+    let accompanyingOps: 'any' | readonly string[] | undefined;
+    if (rawPipeline.accompanyingOps !== undefined) {
+      if (rawPipeline.accompanyingOps === 'any') {
+        accompanyingOps = 'any';
+      } else if (
+        Array.isArray(rawPipeline.accompanyingOps)
+        && rawPipeline.accompanyingOps.every((entry) => typeof entry === 'string' && entry.trim() !== '')
+      ) {
+        accompanyingOps = rawPipeline.accompanyingOps.map((entry) => normalizeIdentifier(entry));
+      } else {
+        diagnostics.push({
+          code: 'CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING',
+          path: `${basePath}.accompanyingOps`,
+          severity: 'error',
+          message: 'action pipeline accompanyingOps must be "any" or an array of non-empty operation ids.',
+          suggestion: 'Set accompanyingOps to "any" or [operationId, ...].',
+        });
+        continue;
+      }
+    }
+
     const costEffects = lowerEffectsWithDiagnostics(
       rawPipeline.costEffects,
       ownershipByBase,
@@ -257,6 +278,7 @@ export function lowerActionPipelines(
       id,
       actionId: asActionId(actionId),
       ...(applicability !== undefined ? { applicability } : {}),
+      ...(accompanyingOps === undefined ? {} : { accompanyingOps }),
       legality,
       costValidation,
       costEffects,

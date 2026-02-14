@@ -3430,37 +3430,10 @@ actionPipelines:
   # ── US/ARVN special-activity stub profiles ──
   - id: advise-profile
     actionId: advise
-    legality:
-        op: and
-        args:
-          - op: ">="
-            left:
-              ref: gvar
-              var: usResources
-            right: 1
-          - op: ">="
-            left:
-              ref: gvar
-              var: arvnResources
-            right: 1
-    costValidation:
-        op: and
-        args:
-          - op: ">="
-            left:
-              ref: gvar
-              var: usResources
-            right: 1
-          - op: ">="
-            left:
-              ref: gvar
-              var: arvnResources
-            right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: arvnResources
-            delta: -1
+    accompanyingOps: [train, patrol]
+    legality: null
+    costValidation: null
+    costEffects: []
     targeting:
       select: upToN
       max: 2
@@ -3475,23 +3448,10 @@ actionPipelines:
     linkedWindows: [us-special-window]
   - id: air-lift-profile
     actionId: airLift
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: usResources
-        right: 1
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: usResources
-        right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: usResources
-            delta: -1
+    accompanyingOps: any
+    legality: null
+    costValidation: null
+    costEffects: []
     targeting:
       select: allEligible
       order: lexicographicSpaceId
@@ -3506,30 +3466,10 @@ actionPipelines:
     linkedWindows: [us-special-window]
   - id: air-strike-profile
     actionId: airStrike
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: usResources
-        right: 2
-    costValidation:
-        op: and
-        args:
-          - op: ">="
-            left:
-              ref: gvar
-              var: usResources
-            right: 2
-          - op: ">="
-            left:
-              ref: gvar
-              var: arvnResources
-            right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: usResources
-            delta: -2
+    accompanyingOps: any
+    legality: null
+    costValidation: null
+    costEffects: []
     targeting:
       select: exactlyN
       count: 1
@@ -3545,23 +3485,10 @@ actionPipelines:
     linkedWindows: [us-special-window]
   - id: govern-profile
     actionId: govern
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: arvnResources
-        right: 1
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: arvnResources
-        right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: arvnResources
-            delta: -1
+    accompanyingOps: [train, patrol]
+    legality: null
+    costValidation: null
+    costEffects: []
     targeting:
       select: upToN
       max: 1
@@ -3576,23 +3503,10 @@ actionPipelines:
     linkedWindows: [arvn-special-window]
   - id: transport-profile
     actionId: transport
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: arvnResources
-        right: 1
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: arvnResources
-        right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: arvnResources
-            delta: -1
+    accompanyingOps: any
+    legality: null
+    costValidation: null
+    costEffects: []
     targeting:
       select: allEligible
       movementOrder: deterministicSpaceOrder
@@ -3607,37 +3521,10 @@ actionPipelines:
     linkedWindows: [arvn-special-window]
   - id: raid-profile
     actionId: raid
-    legality:
-        op: and
-        args:
-          - op: ">="
-            left:
-              ref: gvar
-              var: arvnResources
-            right: 2
-          - op: ">="
-            left:
-              ref: gvar
-              var: usResources
-            right: 1
-    costValidation:
-        op: and
-        args:
-          - op: ">="
-            left:
-              ref: gvar
-              var: arvnResources
-            right: 2
-          - op: ">="
-            left:
-              ref: gvar
-              var: usResources
-            right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: arvnResources
-            delta: -2
+    accompanyingOps: [patrol, sweep, assault]
+    legality: null
+    costValidation: null
+    costEffects: []
     targeting:
       select: upToN
       max: 2
@@ -3654,23 +3541,10 @@ actionPipelines:
   # ── NVA/VC special-activity stub profiles ──
   - id: infiltrate-profile
     actionId: infiltrate
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: nvaResources
-        right: 2
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: nvaResources
-        right: 2
-    costEffects:
-        - addVar:
-            scope: global
-            var: nvaResources
-            delta: -2
+    accompanyingOps: [rally, march]
+    legality: null
+    costValidation: null
+    costEffects: []
     targeting:
       select: upToN
       max: 2
@@ -3686,30 +3560,10 @@ actionPipelines:
     linkedWindows: [nva-special-window]
   - id: bombard-profile
     actionId: bombard
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: nvaResources
-        right: 1
-    costValidation:
-        op: and
-        args:
-          - op: ">="
-            left:
-              ref: gvar
-              var: nvaResources
-            right: 1
-          - op: ">="
-            left:
-              ref: gvar
-              var: vcResources
-            right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: nvaResources
-            delta: -1
+    accompanyingOps: any
+    legality: null
+    costValidation: null
+    costEffects: []
     targeting:
       select: allEligible
       order: lexicographicSpaceId
@@ -3724,23 +3578,10 @@ actionPipelines:
     linkedWindows: [nva-special-window]
   - id: nva-ambush-profile
     actionId: ambushNva
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: nvaResources
-        right: 1
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: nvaResources
-        right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: nvaResources
-            delta: -1
+    accompanyingOps: [march, attack]
+    legality: null
+    costValidation: null
+    costEffects: []
     targeting:
       select: exactlyN
       count: 1
@@ -3757,23 +3598,10 @@ actionPipelines:
     linkedWindows: [nva-special-window]
   - id: tax-profile
     actionId: tax
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: vcResources
-        right: 1
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: vcResources
-        right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: vcResources
-            delta: -1
+    accompanyingOps: any
+    legality: null
+    costValidation: null
+    costEffects: []
     targeting:
       select: upToN
       max: 2
@@ -3789,37 +3617,10 @@ actionPipelines:
     linkedWindows: [vc-special-window]
   - id: subvert-profile
     actionId: subvert
-    legality:
-        op: and
-        args:
-          - op: ">="
-            left:
-              ref: gvar
-              var: vcResources
-            right: 1
-          - op: ">="
-            left:
-              ref: gvar
-              var: nvaResources
-            right: 1
-    costValidation:
-        op: and
-        args:
-          - op: ">="
-            left:
-              ref: gvar
-              var: vcResources
-            right: 2
-          - op: ">="
-            left:
-              ref: gvar
-              var: nvaResources
-            right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: vcResources
-            delta: -2
+    accompanyingOps: [rally, march, terror]
+    legality: null
+    costValidation: null
+    costEffects: []
     targeting:
       select: upToN
       max: 1
@@ -3835,23 +3636,10 @@ actionPipelines:
     linkedWindows: [vc-special-window]
   - id: vc-ambush-profile
     actionId: ambushVc
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: vcResources
-        right: 1
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: vcResources
-        right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: vcResources
-            delta: -1
+    accompanyingOps: [march, attack]
+    legality: null
+    costValidation: null
+    costEffects: []
     targeting:
       select: exactlyN
       count: 1

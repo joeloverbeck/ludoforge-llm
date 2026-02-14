@@ -49,10 +49,9 @@ describe('FITL US/ARVN special activities integration', () => {
 
     const final = sequence.reduce((state, move) => applyMove(compiled.gameDef!, state, move).state, start);
 
-    // Production spec: usResources init 7, arvnResources init 30
-    // advise(-1 arvn) → airLift(-1 us) → airStrike(-2 us) → govern(-1 arvn) → transport(-1 arvn) → raid(-2 arvn)
-    assert.equal(final.globalVars.usResources, 4);
-    assert.equal(final.globalVars.arvnResources, 25);
+    // Special activities are zero-cost per Rule 4.1.
+    assert.equal(final.globalVars.usResources, 7);
+    assert.equal(final.globalVars.arvnResources, 30);
     assert.equal(final.globalVars.adviseCount, 1);
     assert.equal(final.globalVars.airLiftCount, 1);
     assert.equal(final.globalVars.airStrikeCount, 1);
@@ -61,33 +60,33 @@ describe('FITL US/ARVN special activities integration', () => {
     assert.equal(final.globalVars.raidCount, 1);
   });
 
-  it('rejects airStrike when cross-faction cost validation fails under atomicity forbid', () => {
+  it('rejects advise when accompanied by an operation outside accompanyingOps', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);
 
-    let state = initialState(compiled.gameDef!, 211, 2);
-    state = {
-      ...state,
-      globalVars: {
-        ...state.globalVars,
-        arvnResources: 0,
-      },
-    };
+    const state = initialState(compiled.gameDef!, 211, 2);
 
     assert.throws(
-      () => applyMove(compiled.gameDef!, state, { actionId: asActionId('airStrike'), params: {} }),
+      () => applyMove(compiled.gameDef!, state, {
+        actionId: asActionId('usOp'),
+        params: {},
+        compound: {
+          specialActivity: { actionId: asActionId('advise'), params: {} },
+          timing: 'after',
+        },
+      }),
       (error: unknown) => {
         const details = error as {
           readonly reason?: string;
           readonly metadata?: {
             readonly code?: string;
             readonly profileId?: string;
-            readonly partialExecutionMode?: string;
           };
         };
 
-        assert.equal(details.reason, 'action is not legal in current state');
+        assert.equal(details.reason, 'special activity cannot accompany this operation');
+        assert.equal(details.metadata?.code, 'SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED');
         return true;
       },
     );

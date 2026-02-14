@@ -186,6 +186,7 @@ export interface GameSpecActionPipelineDef {
   readonly id: string;
   readonly actionId: string;
   readonly applicability?: unknown;
+  readonly accompanyingOps?: 'any' | readonly string[];
   readonly legality: unknown;
   readonly costValidation: unknown;
   readonly costEffects: readonly unknown[];

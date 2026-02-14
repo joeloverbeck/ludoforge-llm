@@ -54,10 +54,9 @@ describe('FITL NVA/VC special activities integration', () => {
 
     const final = sequence.reduce((state, move) => applyMove(compiled.gameDef!, state, move).state, start);
 
-    // Production spec: nvaResources init 10, vcResources init 5
-    // infiltrate(-2 nva) → bombard(-1 nva) → ambushNva(-1 nva) → tax(-1 vc) → subvert(-2 vc) → ambushVc(-1 vc)
-    assert.equal(final.globalVars.nvaResources, 6);
-    assert.equal(final.globalVars.vcResources, 1);
+    // Special activities are zero-cost per Rule 4.1.
+    assert.equal(final.globalVars.nvaResources, 10);
+    assert.equal(final.globalVars.vcResources, 5);
     assert.equal(final.globalVars.infiltrateCount, 1);
     assert.equal(final.globalVars.bombardCount, 1);
     assert.equal(final.globalVars.nvaAmbushCount, 1);
@@ -66,22 +65,22 @@ describe('FITL NVA/VC special activities integration', () => {
     assert.equal(final.globalVars.vcAmbushCount, 1);
   });
 
-  it('rejects infiltrate when profile legality fails', () => {
+  it('rejects infiltrate when accompanied by an operation outside accompanyingOps', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);
 
-    let state = initialState(compiled.gameDef!, 313, 2);
-    state = {
-      ...state,
-      globalVars: {
-        ...state.globalVars,
-        nvaResources: 1,
-      },
-    };
+    const state = initialState(compiled.gameDef!, 313, 2);
 
     assert.throws(
-      () => applyMove(compiled.gameDef!, state, { actionId: asActionId('infiltrate'), params: {} }),
+      () => applyMove(compiled.gameDef!, state, {
+        actionId: asActionId('usOp'),
+        params: {},
+        compound: {
+          specialActivity: { actionId: asActionId('infiltrate'), params: {} },
+          timing: 'after',
+        },
+      }),
       (error: unknown) => {
         const details = error as {
           readonly reason?: string;
@@ -91,42 +90,27 @@ describe('FITL NVA/VC special activities integration', () => {
           };
         };
 
-        assert.equal(details.reason, 'action is not legal in current state');
+        assert.equal(details.reason, 'special activity cannot accompany this operation');
+        assert.equal(details.metadata?.code, 'SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED');
         return true;
       },
     );
   });
 
-  it('rejects subvert when profile cost validation fails under atomicity forbid', () => {
+  it('allows bombard when accompanyingOps is any', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);
 
-    let state = initialState(compiled.gameDef!, 227, 2);
-    state = {
-      ...state,
-      globalVars: {
-        ...state.globalVars,
-        vcResources: 1,
-        nvaResources: 2,
+    const state = initialState(compiled.gameDef!, 227, 2);
+    const result = applyMove(compiled.gameDef!, state, {
+      actionId: asActionId('usOp'),
+      params: {},
+      compound: {
+        specialActivity: { actionId: asActionId('bombard'), params: {} },
+        timing: 'after',
       },
-    };
-
-    assert.throws(
-      () => applyMove(compiled.gameDef!, state, { actionId: asActionId('subvert'), params: {} }),
-      (error: unknown) => {
-        const details = error as {
-          readonly reason?: string;
-          readonly metadata?: {
-            readonly code?: string;
-            readonly profileId?: string;
-            readonly partialExecutionMode?: string;
-          };
-        };
-
-        assert.equal(details.reason, 'action is not legal in current state');
-        return true;
-      },
-    );
+    });
+    assert.equal(result.state.globalVars.bombardCount, 1);
   });
 });

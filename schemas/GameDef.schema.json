@@ -782,6 +782,21 @@
               }
             ]
           },
+          "accompanyingOps": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "any"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            ]
+          },
           "legality": {
             "anyOf": [
               {

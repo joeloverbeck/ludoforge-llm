@@ -266,6 +266,7 @@ export const ActionPipelineSchema = z
     id: StringSchema.min(1),
     actionId: StringSchema.min(1),
     applicability: ConditionASTSchema.optional(),
+    accompanyingOps: z.union([z.literal('any'), z.array(StringSchema.min(1))]).optional(),
     legality: ConditionASTSchema.nullable(),
     costValidation: ConditionASTSchema.nullable(),
     costEffects: z.array(EffectASTSchema),

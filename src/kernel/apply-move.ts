@@ -12,6 +12,7 @@ import { applyTurnFlowEligibilityAfterMove } from './turn-flow-eligibility.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import type {
   ActionDef,
+  ActionPipelineDef,
   ApplyMoveResult,
   ExecutionOptions,
   GameDef,
@@ -67,6 +68,46 @@ const isSameMove = (left: Move, right: Move): boolean =>
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
 
+const resolveMatchedPipelineForMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): ActionPipelineDef | undefined => {
+  const action = findAction(def, move.actionId);
+  if (action === undefined) {
+    return undefined;
+  }
+  const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const dispatch = resolveActionPipelineDispatch(def, action, {
+    def,
+    adjacencyGraph,
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer: state.activePlayer,
+    bindings: {
+      ...move.params,
+      __freeOperation: move.freeOperation ?? false,
+      __actionClass: move.actionClass ?? 'operation',
+    },
+    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
+    collector: createCollector(),
+  });
+  if (dispatch.kind !== 'matched') {
+    return undefined;
+  }
+  return dispatch.profile;
+};
+
+const operationAllowsSpecialActivity = (
+  operationActionId: Move['actionId'],
+  accompanyingOps: 'any' | readonly string[] | undefined,
+): boolean => {
+  if (accompanyingOps === undefined || accompanyingOps === 'any') {
+    return true;
+  }
+  return accompanyingOps.includes(String(operationActionId));
+};
+
 const illegalMoveError = (
   move: Move,
   reason: string,
@@ -88,6 +129,19 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
   const action = findAction(def, move.actionId);
   if (action === undefined) {
     throw illegalMoveError(move, 'unknown action id');
+  }
+
+  if (move.compound !== undefined) {
+    const saMove = move.compound.specialActivity;
+    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove);
+    if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
+      throw illegalMoveError(move, 'special activity cannot accompany this operation', {
+        code: 'SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED',
+        operationActionId: action.id,
+        specialActivityActionId: saMove.actionId,
+        profileId: saPipeline.id,
+      });
+    }
   }
 
   const hasPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
@@ -185,6 +239,19 @@ const applyMoveCore = (
   const actionPipeline = pipelineDispatch.kind === 'matched' ? pipelineDispatch.profile : undefined;
   const executionProfile = actionPipeline === undefined ? undefined : toExecutionPipeline(action, actionPipeline);
   const isFreeOp = move.freeOperation === true && executionProfile !== undefined;
+
+  if (move.compound !== undefined) {
+    const saMove = move.compound.specialActivity;
+    const saPipeline = resolveMatchedPipelineForMove(def, state, saMove);
+    if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
+      throw illegalMoveError(move, 'special activity cannot accompany this operation', {
+        code: 'SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED',
+        operationActionId: action.id,
+        specialActivityActionId: saMove.actionId,
+        profileId: saPipeline.id,
+      });
+    }
+  }
 
   if (
     executionProfile !== undefined &&

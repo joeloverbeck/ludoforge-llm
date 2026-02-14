@@ -415,4 +415,26 @@ describe('parseGameSpec API shape', () => {
     assert.equal(result.doc.metadata, null);
     assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_PARSER_MAX_BLOCK_BYTES_EXCEEDED'));
   });
+
+  it('parses production-sized YAML blocks under the default maxBlockBytes', () => {
+    const padding = '# '.padEnd(280_000, 'x');
+    const result = parseGameSpec(
+      [
+        '```yaml',
+        'metadata:',
+        '  id: large-default-limit',
+        '  players:',
+        '    min: 2',
+        '    max: 4',
+        padding,
+        '```',
+      ].join('\n'),
+    );
+
+    assert.equal(result.doc.metadata?.id, 'large-default-limit');
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_PARSER_MAX_BLOCK_BYTES_EXCEEDED'),
+      false,
+    );
+  });
 });

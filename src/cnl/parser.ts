@@ -23,7 +23,7 @@ export interface ParseGameSpecOptions {
 
 const DEFAULT_MAX_INPUT_BYTES = 1024 * 1024;
 const DEFAULT_MAX_YAML_BLOCKS = 128;
-const DEFAULT_MAX_BLOCK_BYTES = 256 * 1024;
+const DEFAULT_MAX_BLOCK_BYTES = 512 * 1024;
 const DEFAULT_MAX_DIAGNOSTICS = 500;
 
 export function parseGameSpec(markdown: string, options: ParseGameSpecOptions = {}): ParseGameSpecResult {

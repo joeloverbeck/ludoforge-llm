@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, asPlayerId, asTokenId, initialState, type EffectAST, type GameState, type Token } from '../../src/kernel/index.js';
+import { applyMove, asActionId, asPlayerId, asTokenId, initialState, type EffectAST, type GameState, type MapPayload, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -26,6 +26,16 @@ const countTokens = (
   zone: string,
   predicate: (token: Token) => boolean,
 ): number => (state.zones[zone] ?? []).filter(predicate).length;
+
+const getMapSpace = (spaceId: string): { readonly population: number; readonly econ: number } => {
+  const { parsed } = compileProductionSpec();
+  const mapAsset = (parsed.doc.dataAssets ?? []).find((asset) => asset.id === 'fitl-map-production' && asset.kind === 'map');
+  assert.ok(mapAsset, 'Expected fitl-map-production map asset');
+  const mapPayload = mapAsset.payload as MapPayload;
+  const space = mapPayload.spaces.find((entry) => entry.id === spaceId);
+  assert.ok(space, `Expected map space ${spaceId}`);
+  return { population: space.population, econ: space.econ };
+};
 
 describe('FITL NVA/VC special activities integration', () => {
   it('compiles NVA/VC special-activity profiles from production spec', () => {
@@ -250,8 +260,8 @@ describe('FITL NVA/VC special activities integration', () => {
       actionId: asActionId('ambushNva'),
       params: {
         targetSpaces: [locSpace],
-        [`$nvaAmbushTargetMode@${locSpace}`]: 'adjacent',
-        [`$nvaAmbushAdjacentTargets@${locSpace}`]: [adjacentTarget],
+        [`$ambushTargetMode@${locSpace}`]: 'adjacent',
+        [`$ambushAdjacentTargets@${locSpace}`]: [adjacentTarget],
       },
     });
 
@@ -264,6 +274,183 @@ describe('FITL NVA/VC special activities integration', () => {
       countTokens(final, locSpace, (token) => token.props.faction === 'NVA' && token.type === 'guerrilla' && token.props.activity === 'active'),
       1,
       'Ambush should activate exactly one underground NVA guerrilla',
+    );
+    assert.equal(countTokens(final, adjacentTarget, (token) => token.props.faction === 'US' && token.type === 'troops'), 0);
+    assert.equal((final.zones['casualties-US:none']?.length ?? 0) - casualtiesBefore, 1, 'LoC ambush may remove from adjacent space');
+  });
+
+  it('executes tax using LoC econ or 2x population gain and shifts province/city support', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const locSpace = 'loc-hue-khe-sanh:none';
+    const provinceSpace = 'quang-nam:none';
+    const locValues = getMapSpace(locSpace);
+    const provinceValues = getMapSpace(provinceSpace);
+
+    const start = operationInitialState(def, 241, 4);
+    const modifiedStart: GameState = {
+      ...start,
+      globalVars: {
+        ...start.globalVars,
+        vcResources: 5,
+      },
+      zones: {
+        ...start.zones,
+        [locSpace]: [
+          makeToken('tax-vc-g-loc', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('tax-arvn-loc', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('tax-us-loc', 'troops', 'US', { type: 'troops' }),
+        ],
+        [provinceSpace]: [
+          makeToken('tax-vc-g-prov', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('tax-arvn-prov', 'troops', 'ARVN', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...start.markers,
+        [provinceSpace]: {
+          ...(start.markers[provinceSpace] ?? {}),
+          supportOpposition: 'neutral',
+        },
+      },
+    };
+
+    const result = applyMove(def, modifiedStart, {
+      actionId: asActionId('tax'),
+      params: {
+        targetSpaces: [locSpace, provinceSpace],
+      },
+    });
+
+    const expectedResourceGain = locValues.econ + (provinceValues.population * 2);
+    const final = result.state;
+    assert.equal(final.globalVars.taxCount, 1);
+    assert.equal(final.globalVars.vcResources, 5 + expectedResourceGain, 'Tax gain should be LoC econ + 2x population');
+    assert.equal(
+      countTokens(final, locSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'active'),
+      1,
+      'Tax should activate one underground VC guerrilla in each selected space',
+    );
+    assert.equal(
+      countTokens(final, provinceSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'active'),
+      1,
+    );
+    assert.equal(final.markers[provinceSpace]?.supportOpposition, 'passiveSupport', 'Tax should shift province/city one level toward Active Support');
+  });
+
+  it('executes subvert remove/replace modes and applies rounded-down patronage penalty', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const removeSpace = 'tay-ninh:none';
+    const replaceSpace = 'quang-tin-quang-ngai:none';
+    const start = operationInitialState(def, 251, 4);
+    const modifiedStart: GameState = {
+      ...start,
+      globalVars: {
+        ...start.globalVars,
+        patronage: 10,
+        vcResources: 4,
+      },
+      zones: {
+        ...start.zones,
+        [removeSpace]: [
+          makeToken('sub-vc-g-remove', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('sub-arvn-t1', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('sub-arvn-t2', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('sub-arvn-base', 'base', 'ARVN', { type: 'base' }),
+        ],
+        [replaceSpace]: [
+          makeToken('sub-vc-g-replace', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('sub-arvn-p1', 'police', 'ARVN', { type: 'police' }),
+        ],
+        'available-VC:none': [
+          ...(start.zones['available-VC:none'] ?? []),
+          makeToken('sub-vc-avail-g1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+      },
+    };
+
+    const result = applyMove(def, modifiedStart, {
+      actionId: asActionId('subvert'),
+      params: {
+        targetSpaces: [removeSpace, replaceSpace],
+        [`$subvertMode@${removeSpace}`]: 'remove-2',
+        [`$subvertRemovedCubes@${removeSpace}`]: [asTokenId('sub-arvn-t1'), asTokenId('sub-arvn-t2')],
+        [`$subvertMode@${replaceSpace}`]: 'replace-1',
+        [`$subvertReplacedCube@${replaceSpace}`]: [asTokenId('sub-arvn-p1')],
+      },
+    });
+
+    const final = result.state;
+    assert.equal(final.globalVars.subvertCount, 1);
+    assert.equal(final.globalVars.vcResources, 4, 'Subvert should have no additional resource cost');
+    assert.equal(final.globalVars.patronage, 9, 'Subvert patronage drop should be floor((2 + 1) / 2) = 1');
+    assert.equal(countTokens(final, removeSpace, (token) => token.props.faction === 'ARVN' && token.type === 'base'), 1, 'Subvert must never remove ARVN bases');
+    assert.equal(countTokens(final, removeSpace, (token) => token.props.faction === 'ARVN' && token.type === 'troops'), 0);
+    assert.equal(countTokens(final, replaceSpace, (token) => token.props.faction === 'ARVN' && token.type === 'police'), 0);
+    assert.equal(countTokens(final, replaceSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla'), 2, 'Replace-1 should place one VC guerrilla from Available');
+    assert.equal(
+      countTokens(final, removeSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'active'),
+      1,
+      'Subvert should activate one underground VC guerrilla in each selected space',
+    );
+    assert.equal(
+      countTokens(final, replaceSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'active'),
+      1,
+    );
+  });
+
+  it('executes VC ambush with one-guerrilla activation, no attacker losses, and LoC-adjacent targeting', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const locSpace = 'loc-hue-khe-sanh:none';
+    const adjacentTarget = 'hue:none';
+    const start = operationInitialState(def, 257, 4);
+    const modifiedStart: GameState = {
+      ...start,
+      globalVars: {
+        ...start.globalVars,
+        vcResources: 6,
+      },
+      zones: {
+        ...start.zones,
+        [locSpace]: [
+          makeToken('vc-amb-g1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('vc-amb-g2', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+        [adjacentTarget]: [
+          makeToken('vc-amb-us-t1', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+    };
+
+    const vcBefore = countTokens(modifiedStart, locSpace, (token) => token.props.faction === 'VC');
+    const casualtiesBefore = modifiedStart.zones['casualties-US:none']?.length ?? 0;
+
+    const result = applyMove(def, modifiedStart, {
+      actionId: asActionId('ambushVc'),
+      params: {
+        targetSpaces: [locSpace],
+        [`$ambushTargetMode@${locSpace}`]: 'adjacent',
+        [`$ambushAdjacentTargets@${locSpace}`]: [adjacentTarget],
+      },
+    });
+
+    const final = result.state;
+    const vcAfter = countTokens(final, locSpace, (token) => token.props.faction === 'VC');
+    assert.equal(final.globalVars.vcAmbushCount, 1);
+    assert.equal(final.globalVars.vcResources, 6, 'VC Ambush should have no additional resource cost');
+    assert.equal(vcAfter, vcBefore, 'VC Ambush should not inflict attacker attrition');
+    assert.equal(
+      countTokens(final, locSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'active'),
+      1,
+      'VC Ambush should activate exactly one underground VC guerrilla',
     );
     assert.equal(countTokens(final, adjacentTarget, (token) => token.props.faction === 'US' && token.type === 'troops'), 0);
     assert.equal((final.zones['casualties-US:none']?.length ?? 0) - casualtiesBefore, 1, 'LoC ambush may remove from adjacent space');
@@ -370,7 +557,7 @@ describe('FITL NVA/VC special activities integration', () => {
             actionId: asActionId('ambushNva'),
             params: {
               targetSpaces: ['quang-nam:none'],
-              '$nvaAmbushTargetMode@quang-nam:none': 'self',
+              '$ambushTargetMode@quang-nam:none': 'self',
             },
           },
           timing: 'after',

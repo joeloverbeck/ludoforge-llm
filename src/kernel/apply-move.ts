@@ -9,7 +9,7 @@ import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move
 import { extractResolvedBindFromDecisionId } from './decision-id.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { buildAdjacencyGraph } from './spatial.js';
-import { applyTurnFlowEligibilityAfterMove } from './turn-flow-eligibility.js';
+import { applyTurnFlowEligibilityAfterMove, consumeTurnFlowFreeOperationGrant, isFreeOperationGrantedForMove } from './turn-flow-eligibility.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import type {
   ActionDef,
@@ -294,6 +294,17 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
   }
 
   const hasPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
+
+  if (
+    move.freeOperation === true &&
+    state.turnOrderState.type === 'cardDriven' &&
+    !isFreeOperationGrantedForMove(def, state, move)
+  ) {
+    throw illegalMoveError(move, 'free operation is not granted in current state', {
+      code: 'FREE_OPERATION_NOT_GRANTED',
+      actionId: action.id,
+    });
+  }
 
   if (hasPipeline) {
     const legal = legalMoves(def, state);
@@ -586,7 +597,7 @@ const applyMoveCore = (
     rng: triggerResult.rng.state,
   };
   const turnFlowResult = isFreeOp
-    ? { state: stateWithRng, traceEntries: [] as readonly TriggerLogEntry[] }
+    ? { state: consumeTurnFlowFreeOperationGrant(stateWithRng, move), traceEntries: [] as readonly TriggerLogEntry[] }
     : applyTurnFlowEligibilityAfterMove(def, stateWithRng, move);
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
   const progressedState = coreOptions?.skipAdvanceToDecisionPoint === true

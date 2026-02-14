@@ -1,6 +1,6 @@
 import type { PlayerId } from './branded.js';
 import type { AdjacencyGraph } from './spatial.js';
-import type { ExecutionCollector, GameDef, GameState, MapSpaceDef } from './types.js';
+import type { ConditionAST, ExecutionCollector, GameDef, GameState, MapSpaceDef } from './types.js';
 
 export const DEFAULT_MAX_QUERY_RESULTS = 10_000;
 
@@ -12,6 +12,7 @@ export interface EvalContext {
   readonly actorPlayer: PlayerId;
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly mapSpaces?: readonly MapSpaceDef[];
+  readonly freeOperationZoneFilter?: ConditionAST;
   readonly maxQueryResults?: number;
   readonly collector: ExecutionCollector;
 }

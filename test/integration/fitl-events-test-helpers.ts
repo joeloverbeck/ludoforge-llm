@@ -14,5 +14,3 @@ export const createEligibilityOverrideDirective = ({
   eligibility: EligibilityRef;
   windowId: string;
 }): string => `eligibilityOverride:${target === 'self' ? 'self' : stringifyFactionRef(target)}:${eligibility}:${windowId}`;
-
-export const createFreeOpGrantedDirective = (faction: FactionRef): string => `freeOpGranted:${stringifyFactionRef(faction)}`;

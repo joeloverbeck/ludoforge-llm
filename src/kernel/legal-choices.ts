@@ -10,6 +10,7 @@ import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { createCollector } from './execution-collector.js';
 import { buildAdjacencyGraph } from './spatial.js';
+import { resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
 import type {
   ActionDef,
   ChoicePendingRequest,
@@ -355,6 +356,9 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     __freeOperation: partialMove.freeOperation ?? false,
     __actionClass: partialMove.actionClass ?? 'operation',
   };
+  const freeOperationZoneFilter = partialMove.freeOperation === true
+    ? resolveFreeOperationZoneFilter(def, state, partialMove)
+    : undefined;
 
   const evalCtx: EvalContext = {
     def,
@@ -364,6 +368,7 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     actorPlayer: state.activePlayer,
     bindings: baseBindings,
     collector: createCollector(),
+    ...(freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter }),
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   };
 

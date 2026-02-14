@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { EventCardDef, EventDeckDef } from '../kernel/types.js';
+import type { EventCardDef, EventDeckDef, EventFreeOperationGrantDef } from '../kernel/types.js';
 import { lowerConditionNode, lowerQueryNode } from './compile-conditions.js';
 import { lowerEffectArray } from './compile-effects.js';
 import { normalizeIdentifier } from './compile-lowering.js';
@@ -151,6 +151,12 @@ export function lowerEventCardSide(
   const sideBindingScope = collectBindingScopeFromTargets(loweredTargets);
 
   const loweredEffects = lowerOptionalEffects(side.effects, ownershipByBase, sideBindingScope, diagnostics, `${pathPrefix}.effects`);
+  const loweredFreeOperationGrants = lowerEventFreeOperationGrants(
+    side.freeOperationGrants,
+    ownershipByBase,
+    diagnostics,
+    `${pathPrefix}.freeOperationGrants`,
+  );
   const loweredLastingEffects = lowerEventLastingEffects(
     side.lastingEffects,
     ownershipByBase,
@@ -163,6 +169,7 @@ export function lowerEventCardSide(
     return {
       ...side,
       ...(loweredTargets === undefined ? {} : { targets: loweredTargets }),
+      ...(loweredFreeOperationGrants === undefined ? {} : { freeOperationGrants: loweredFreeOperationGrants }),
       ...(loweredEffects === undefined ? {} : { effects: loweredEffects }),
       ...(loweredLastingEffects === undefined ? {} : { lastingEffects: loweredLastingEffects }),
     };
@@ -216,6 +223,12 @@ export function lowerEventCardSide(
       diagnostics,
       `${branchPath}.effects`,
     );
+    const loweredBranchFreeOperationGrants = lowerEventFreeOperationGrants(
+      branch.freeOperationGrants,
+      ownershipByBase,
+      diagnostics,
+      `${branchPath}.freeOperationGrants`,
+    );
     const loweredBranchLastingEffects = lowerEventLastingEffects(
       branch.lastingEffects,
       ownershipByBase,
@@ -229,6 +242,7 @@ export function lowerEventCardSide(
       branch: {
         ...branch,
         ...(loweredBranchTargets === undefined ? {} : { targets: loweredBranchTargets }),
+        ...(loweredBranchFreeOperationGrants === undefined ? {} : { freeOperationGrants: loweredBranchFreeOperationGrants }),
         ...(loweredBranchEffects === undefined ? {} : { effects: loweredBranchEffects }),
         ...(loweredBranchLastingEffects === undefined ? {} : { lastingEffects: loweredBranchLastingEffects }),
       },
@@ -259,10 +273,34 @@ export function lowerEventCardSide(
   return {
     ...side,
     ...(loweredTargets === undefined ? {} : { targets: loweredTargets }),
+    ...(loweredFreeOperationGrants === undefined ? {} : { freeOperationGrants: loweredFreeOperationGrants }),
     ...(loweredEffects === undefined ? {} : { effects: loweredEffects }),
     ...(loweredLastingEffects === undefined ? {} : { lastingEffects: loweredLastingEffects }),
     branches: loweredBranches.map((entry) => entry.branch),
   };
+}
+
+function lowerEventFreeOperationGrants(
+  grants: readonly EventFreeOperationGrantDef[] | undefined,
+  ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>,
+  diagnostics: Diagnostic[],
+  pathPrefix: string,
+): readonly EventFreeOperationGrantDef[] | undefined {
+  if (grants === undefined) {
+    return undefined;
+  }
+  return grants.map((grant, index) => {
+    const path = `${pathPrefix}.${index}`;
+    if (grant.zoneFilter === undefined) {
+      return grant;
+    }
+    const loweredZoneFilter = lowerConditionNode(grant.zoneFilter, { ownershipByBase }, `${path}.zoneFilter`);
+    diagnostics.push(...loweredZoneFilter.diagnostics);
+    return {
+      ...grant,
+      ...(loweredZoneFilter.value === null ? {} : { zoneFilter: loweredZoneFilter.value }),
+    };
+  });
 }
 
 function lowerEventTargets(

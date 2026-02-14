@@ -80,6 +80,11 @@ function applyZonesFilter(
   ctx: EvalContext,
 ): readonly ZoneId[] {
   let filteredZones = [...zones];
+  const combinedCondition = queryFilter?.condition === undefined
+    ? ctx.freeOperationZoneFilter
+    : ctx.freeOperationZoneFilter === undefined
+      ? queryFilter.condition
+      : { op: 'and' as const, args: [queryFilter.condition, ctx.freeOperationZoneFilter] };
 
   if (queryFilter?.owner !== undefined) {
     const owners = new Set(resolvePlayerSel(queryFilter.owner, ctx));
@@ -98,10 +103,9 @@ function applyZonesFilter(
     });
   }
 
-  if (queryFilter?.condition !== undefined) {
-    const { condition } = queryFilter;
+  if (combinedCondition !== undefined) {
     filteredZones = filteredZones.filter((zone) => {
-      return evalCondition(condition, {
+      return evalCondition(combinedCondition, {
         ...ctx,
         bindings: {
           ...ctx.bindings,

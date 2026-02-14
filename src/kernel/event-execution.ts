@@ -7,6 +7,7 @@ import type {
   EffectAST,
   EventBranchDef,
   EventCardDef,
+  EventFreeOperationGrantDef,
   GameDef,
   GameState,
   Move,
@@ -29,6 +30,17 @@ interface EventExecutionContext {
   readonly side: NonNullable<EventCardDef['unshaded']>;
   readonly branch: EventBranchDef | null;
 }
+
+const collectFreeOperationGrants = (context: EventExecutionContext): readonly EventFreeOperationGrantDef[] => {
+  const grants: EventFreeOperationGrantDef[] = [];
+  for (const grant of context.side.freeOperationGrants ?? []) {
+    grants.push(grant);
+  }
+  for (const grant of context.branch?.freeOperationGrants ?? []) {
+    grants.push(grant);
+  }
+  return grants;
+};
 
 const isTurnFlowLifecycleEntry = (
   entry: TriggerLogEntry,
@@ -282,6 +294,37 @@ export const executeEventMove = (
     rng: nextRng,
     emittedEvents,
   };
+};
+
+export const resolveEventFreeOperationGrants = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): readonly EventFreeOperationGrantDef[] => {
+  const eventClass = move.actionClass ?? String(move.actionId);
+  if (eventClass !== 'event') {
+    return [];
+  }
+  const context = resolveEventExecutionContext(def, state, move);
+  if (context === null) {
+    return [];
+  }
+  if (context.card.playCondition !== undefined) {
+    const adjacencyGraph = buildAdjacencyGraph(def.zones);
+    const conditionMet = evalCondition(context.card.playCondition, {
+      def,
+      adjacencyGraph,
+      state,
+      activePlayer: state.activePlayer,
+      actorPlayer: state.activePlayer,
+      bindings: { ...move.params },
+      collector: createCollector(),
+    });
+    if (!conditionMet) {
+      return [];
+    }
+  }
+  return collectFreeOperationGrants(context);
 };
 
 export const expireLastingEffectsAtBoundaries = (

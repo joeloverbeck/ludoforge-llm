@@ -183,9 +183,25 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     !Array.isArray(eligibility.overrideWindows) ||
     !Array.isArray(rawTurnFlow.optionMatrix) ||
     !Array.isArray(rawTurnFlow.passRewards) ||
+    (rawTurnFlow.freeOperationActionIds !== undefined && !Array.isArray(rawTurnFlow.freeOperationActionIds)) ||
     !Array.isArray(rawTurnFlow.durationWindows)
   ) {
     return undefined;
+  }
+
+  if (Array.isArray(rawTurnFlow.freeOperationActionIds)) {
+    for (const [index, actionId] of rawTurnFlow.freeOperationActionIds.entries()) {
+      if (typeof actionId === 'string') {
+        continue;
+      }
+      diagnostics.push({
+        code: 'CNL_COMPILER_TURN_FLOW_REQUIRED_FIELD_MISSING',
+        path: `doc.turnOrder.config.turnFlow.freeOperationActionIds.${index}`,
+        severity: 'error',
+        message: 'turnFlow.freeOperationActionIds entries must be non-empty strings.',
+        suggestion: 'Replace invalid entry with an action id string.',
+      });
+    }
   }
 
   const factionOrder = eligibility.factions.filter((faction): faction is string => typeof faction === 'string');

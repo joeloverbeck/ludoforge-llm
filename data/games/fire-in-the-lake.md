@@ -3170,6 +3170,240 @@ eventDecks:
                         - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetProvince
+      - id: card-55
+        title: Trucks
+        sideMode: dual
+        order: 55
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          flavorText: "Logistics under pressure."
+        unshaded:
+          text: "Trail degrades. Remove NVA pieces in Laos/Cambodia."
+          targets:
+            - id: $trailCountrySpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: or
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+              cardinality: { max: 1 }
+          effects:
+            - addVar: { scope: global, var: trail, delta: -1 }
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: nvaTroops
+                    over:
+                      query: tokensInZone
+                      zone: $trailCountrySpace
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: available-NVA:none
+                  - bind: nvaGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $trailCountrySpace
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: available-NVA:none
+        shaded:
+          text: "Resources +6 and reposition an NVA Base from Laos/Cambodia into South Vietnam."
+          targets:
+            - id: $sourceCountrySpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: or
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+              cardinality: { max: 1 }
+            - id: $destSouthSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '=='
+                  left: { ref: zoneProp, zone: $zone, prop: country }
+                  right: southVietnam
+              cardinality: { max: 1 }
+          effects:
+            - addVar: { scope: global, var: nvaResources, delta: 6 }
+            - forEach:
+                bind: $nvaBase
+                over:
+                  query: tokensInZone
+                  zone: $sourceCountrySpace
+                  filter:
+                    - { prop: faction, eq: NVA }
+                    - { prop: type, eq: base }
+                limit: 1
+                effects:
+                  - moveToken:
+                      token: $nvaBase
+                      from: { zoneExpr: $sourceCountrySpace }
+                      to: { zoneExpr: $destSouthSpace }
+      - id: card-97
+        title: Brinks Hotel
+        sideMode: dual
+        order: 97
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["VC", "US", "ARVN", "NVA"]
+          flavorText: "Saigon shaken."
+        unshaded:
+          text: "Aid +10 or transfer Patronage to Aid. Flip RVN leader."
+          branches:
+            - id: aid-plus-ten-and-flip-leader
+              order: 1
+              effects:
+                - addVar: { scope: global, var: aid, delta: 10 }
+                - if:
+                    when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: minh }
+                    then:
+                      - setGlobalMarker: { marker: activeLeader, state: khanh }
+                    else:
+                      - setGlobalMarker: { marker: activeLeader, state: minh }
+            - id: transfer-patronage-to-aid-and-flip-leader
+              order: 2
+              effects:
+                - let:
+                    bind: $transfer
+                    value:
+                      if:
+                        when: { op: '>', left: { ref: gvar, var: patronage }, right: 6 }
+                        then: 6
+                        else: { ref: gvar, var: patronage }
+                    in:
+                      - addVar:
+                          scope: global
+                          var: patronage
+                          delta:
+                            op: '-'
+                            left: 0
+                            right: { ref: binding, name: $transfer }
+                      - addVar:
+                          scope: global
+                          var: aid
+                          delta: { ref: binding, name: $transfer }
+                - if:
+                    when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: minh }
+                    then:
+                      - setGlobalMarker: { marker: activeLeader, state: khanh }
+                    else:
+                      - setGlobalMarker: { marker: activeLeader, state: minh }
+        shaded:
+          text: "Shift a City 1 level toward Active Opposition and increase terror markers."
+          targets:
+            - id: $targetCity
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '=='
+                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  right: city
+              cardinality: { max: 1 }
+          effects:
+            - shiftMarker:
+                space: $targetCity
+                marker: supportOpposition
+                delta: -1
+            - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
+      - id: card-75
+        title: Sihanouk
+        sideMode: dual
+        order: 75
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["ARVN", "NVA", "US", "VC"]
+          flavorText: "Cambodian maneuvering."
+        unshaded:
+          text: "ARVN free Sweep or Assault in Cambodia."
+          freeOperationGrants:
+            - faction: "1"
+              actionIds: [sweep, assault]
+              zoneFilter:
+                op: '=='
+                left: { ref: zoneProp, zone: $zone, prop: country }
+                right: cambodia
+        shaded:
+          text: "VC then NVA each get a free operation."
+          freeOperationGrants:
+            - faction: "3"
+            - faction: "2"
+      - id: card-51
+        title: 301st Supply Bn
+        sideMode: dual
+        order: 51
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          flavorText: "Throughput under strain."
+        unshaded:
+          text: "Remove non-base Insurgents outside South Vietnam."
+          targets:
+            - id: $outsideSouthSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '!='
+                  left: { ref: zoneProp, zone: $zone, prop: country }
+                  right: southVietnam
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: nvaTroops
+                    over:
+                      query: tokensInZone
+                      zone: $outsideSouthSpace
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: available-NVA:none
+                  - bind: nvaGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $outsideSouthSpace
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: available-NVA:none
+                  - bind: vcGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $outsideSouthSpace
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: available-VC:none
+        shaded:
+          text: "Improve Trail 1 box and add NVA Resources equal to a die roll."
+          effects:
+            - addVar: { scope: global, var: trail, delta: 1 }
+            - rollRandom:
+                bind: $dieRoll
+                min: 1
+                max: 6
+                in:
+                  - addVar:
+                      scope: global
+                      var: nvaResources
+                      delta: { ref: binding, name: $dieRoll }
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Pool Zones (piece availability pools — supplement map-derived board zones)
@@ -7095,6 +7329,7 @@ turnOrder:
             duration: turn
       optionMatrix: []
       passRewards: []
+      freeOperationActionIds: [train, patrol, sweep, assault, rally, march, attack, terror]
       durationWindows: [turn, nextTurn, round, cycle]
       monsoon:
         restrictedActions: []

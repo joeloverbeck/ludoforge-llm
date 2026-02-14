@@ -3,7 +3,7 @@ import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { isMoveDecisionSequenceSatisfiable } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch } from './apply-move-pipeline.js';
-import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
+import { applyPendingFreeOperationVariants, applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -171,5 +171,6 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
     enumerateParams(action, def, adjacencyGraph, state, 0, {}, moves);
   }
 
-  return applyTurnFlowWindowFilters(def, state, moves);
+  const windowFilteredMoves = applyTurnFlowWindowFilters(def, state, moves);
+  return applyPendingFreeOperationVariants(def, state, windowFilteredMoves);
 };

@@ -18,7 +18,7 @@ import {
   type OperationFreeTraceEntry,
   type TriggerLogEntry,
 } from '../../src/kernel/index.js';
-import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
+import { requireCardDrivenRuntime, withPendingFreeOperationGrant } from '../helpers/turn-order-helpers.js';
 
 const createDef = (): GameDef =>
   ({
@@ -926,7 +926,8 @@ describe('applyMove', () => {
     const beforeEligibility = requireCardDrivenRuntime(start).eligibility;
     const beforeCard = requireCardDrivenRuntime(start).currentCard;
 
-    const result = applyMove(def, start, { actionId: asActionId('operate'), params: {}, freeOperation: true });
+    const grantedStart = withPendingFreeOperationGrant(start, { actionIds: ['operate'] });
+    const result = applyMove(def, grantedStart, { actionId: asActionId('operate'), params: {}, freeOperation: true });
 
     assert.deepEqual(requireCardDrivenRuntime(result.state).eligibility, beforeEligibility, 'eligibility should be unchanged');
     assert.equal(requireCardDrivenRuntime(result.state).currentCard.firstEligible, beforeCard.firstEligible);

@@ -1,4 +1,4 @@
-import { resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
+import { isFreeOperationGrantedForMove, resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
 import type { GameDef, GameState, Move, MoveParamValue } from './types.js';
 
 const cardDrivenConfig = (def: GameDef) =>
@@ -168,4 +168,36 @@ export function applyTurnFlowWindowFilters(def: GameDef, state: GameState, moves
     return filtered;
   }
   return filtered.filter((move) => !canceledActionIds.has(String(move.actionId)));
+}
+
+export function applyPendingFreeOperationVariants(
+  def: GameDef,
+  state: GameState,
+  moves: readonly Move[],
+): readonly Move[] {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
+    return moves;
+  }
+
+  const pendingGrants = runtime.pendingFreeOperationGrants ?? [];
+  if (!pendingGrants.some((grant) => grant.faction === String(state.activePlayer))) {
+    return moves;
+  }
+
+  const variants: Move[] = [...moves];
+  for (const move of moves) {
+    if (move.freeOperation === true) {
+      continue;
+    }
+    const candidate: Move = {
+      ...move,
+      freeOperation: true,
+    };
+    if (!isFreeOperationGrantedForMove(def, state, candidate)) {
+      continue;
+    }
+    variants.push(candidate);
+  }
+  return variants;
 }

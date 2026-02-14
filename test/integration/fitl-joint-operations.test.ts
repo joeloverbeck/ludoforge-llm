@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { applyMove, asActionId, initialState, type GameState, type Move } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { withPendingFreeOperationGrant } from '../helpers/turn-order-helpers.js';
 
 const withArvnResources = (state: GameState, amount: number): GameState => ({
   ...state,
@@ -103,7 +104,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
   it('allows free US operation regardless of cost constraint (freeOperation bypasses cost validation)', () => {
     const gameDef = compiled.gameDef!;
     // Set ARVN resources to 14 — would normally be blocked (14 - 5 = 9 < 10)
-    const state = withArvnResources(initialState(gameDef, 42, 2), 14);
+    const state = withPendingFreeOperationGrant(withArvnResources(initialState(gameDef, 42, 2), 14), { actionIds: ['usOp'] });
 
     const move: Move = { actionId: asActionId('usOp'), params: {}, freeOperation: true };
     const result = applyMove(gameDef, state, move);

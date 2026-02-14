@@ -60,6 +60,20 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     }
   }
 
+  if (cardDrivenTurnFlow !== null) {
+    for (const [actionIndex, actionId] of (cardDrivenTurnFlow.freeOperationActionIds ?? []).entries()) {
+      pushMissingIdentifierDiagnostic(
+        diagnostics,
+        'CNL_XREF_TURN_FLOW_FREE_OPERATION_ACTION_MISSING',
+        `doc.turnOrder.config.turnFlow.freeOperationActionIds.${actionIndex}`,
+        actionId,
+        actionTargets,
+        `turnFlow.freeOperationActionIds references unknown action "${actionId}".`,
+        'Use one of the declared action ids.',
+      );
+    }
+  }
+
   if (sections.triggers !== null && sections.turnStructure !== null) {
     for (const [triggerIndex, trigger] of sections.triggers.entries()) {
       if (trigger.event.type !== 'phaseEnter' && trigger.event.type !== 'phaseExit') {

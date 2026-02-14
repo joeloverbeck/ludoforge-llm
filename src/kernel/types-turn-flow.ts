@@ -71,6 +71,7 @@ export interface TurnFlowDef {
   readonly eligibility: TurnFlowEligibilityDef;
   readonly optionMatrix: readonly TurnFlowOptionMatrixRowDef[];
   readonly passRewards: readonly TurnFlowPassRewardDef[];
+  readonly freeOperationActionIds?: readonly string[];
   readonly durationWindows: readonly TurnFlowDuration[];
   readonly monsoon?: TurnFlowMonsoonDef;
   readonly pivotal?: TurnFlowPivotalDef;
@@ -114,6 +115,12 @@ export interface TurnFlowPendingEligibilityOverride {
   readonly duration: TurnFlowDuration;
 }
 
+export interface TurnFlowPendingFreeOperationGrant {
+  readonly faction: string;
+  readonly actionIds?: readonly string[];
+  readonly zoneFilter?: import('./types-ast.js').ConditionAST;
+}
+
 export interface CompoundActionState {
   readonly operationProfileId: string;
   readonly saTiming: 'before' | 'during' | 'after' | null;
@@ -145,6 +152,7 @@ export interface TurnFlowRuntimeState {
   readonly eligibility: Readonly<Record<string, boolean>>;
   readonly currentCard: TurnFlowRuntimeCardState;
   readonly pendingEligibilityOverrides?: readonly TurnFlowPendingEligibilityOverride[];
+  readonly pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[];
   readonly consecutiveCoupRounds?: number;
   readonly compoundAction?: CompoundActionState;
 }

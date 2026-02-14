@@ -57,20 +57,34 @@ export const EventCardLastingEffectSchema = z
   })
   .strict();
 
+export const EventCardFreeOperationGrantSchema = z
+  .object({
+    faction: StringSchema.min(1),
+    actionIds: z.array(StringSchema.min(1)).min(1).optional(),
+    zoneFilter: ConditionASTSchema.optional(),
+  })
+  .strict();
+
 export const EventCardBranchSchema: z.ZodTypeAny = z
   .object({
     id: StringSchema.min(1),
     order: IntegerSchema.min(0).optional(),
+    freeOperationGrants: z.array(EventCardFreeOperationGrantSchema).min(1).optional(),
     effects: z.array(EffectASTSchema).min(1).optional(),
     targets: z.array(EventCardTargetSchema).optional(),
     lastingEffects: z.array(EventCardLastingEffectSchema).optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.effects === undefined && value.targets === undefined && value.lastingEffects === undefined) {
+    if (
+      value.freeOperationGrants === undefined &&
+      value.effects === undefined &&
+      value.targets === undefined &&
+      value.lastingEffects === undefined
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Branch must declare at least one of effects, targets, or lastingEffects.',
+        message: 'Branch must declare at least one of freeOperationGrants, effects, targets, or lastingEffects.',
         path: [],
       });
     }
@@ -79,6 +93,7 @@ export const EventCardBranchSchema: z.ZodTypeAny = z
 export const EventCardSideSchema = z
   .object({
     text: StringSchema.optional(),
+    freeOperationGrants: z.array(EventCardFreeOperationGrantSchema).min(1).optional(),
     effects: z.array(EffectASTSchema).min(1).optional(),
     branches: z.array(EventCardBranchSchema).min(1).optional(),
     targets: z.array(EventCardTargetSchema).optional(),
@@ -88,6 +103,7 @@ export const EventCardSideSchema = z
   .superRefine((value, ctx) => {
     if (
       value.text === undefined &&
+      value.freeOperationGrants === undefined &&
       value.effects === undefined &&
       value.branches === undefined &&
       value.targets === undefined &&
@@ -95,7 +111,7 @@ export const EventCardSideSchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Event side must declare at least one of text, effects, branches, targets, or lastingEffects.',
+        message: 'Event side must declare at least one of text, freeOperationGrants, effects, branches, targets, or lastingEffects.',
         path: [],
       });
     }
@@ -253,6 +269,7 @@ export const TurnFlowSchema = z
     eligibility: TurnFlowEligibilitySchema,
     optionMatrix: z.array(TurnFlowOptionMatrixRowSchema),
     passRewards: z.array(TurnFlowPassRewardSchema),
+    freeOperationActionIds: z.array(StringSchema.min(1)).optional(),
     durationWindows: z.array(TurnFlowDurationSchema),
     monsoon: TurnFlowMonsoonSchema.optional(),
     pivotal: TurnFlowPivotalSchema.optional(),
@@ -391,6 +408,17 @@ export const TurnFlowRuntimeStateSchema = z
             eligible: BooleanSchema,
             windowId: StringSchema.min(1),
             duration: TurnFlowDurationSchema,
+          })
+          .strict(),
+      )
+      .optional(),
+    pendingFreeOperationGrants: z
+      .array(
+        z
+          .object({
+            faction: StringSchema.min(1),
+            actionIds: z.array(StringSchema.min(1)).min(1).optional(),
+            zoneFilter: ConditionASTSchema.optional(),
           })
           .strict(),
       )

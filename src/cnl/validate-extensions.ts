@@ -534,6 +534,30 @@ export function validateTurnOrder(doc: GameSpecDoc, diagnostics: Diagnostic[]): 
     }
   }
 
+  if (turnFlow.freeOperationActionIds !== undefined) {
+    if (!Array.isArray(turnFlow.freeOperationActionIds)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_TURN_FLOW_FREE_OPERATION_ACTION_IDS_INVALID',
+        path: 'doc.turnOrder.config.turnFlow.freeOperationActionIds',
+        severity: 'error',
+        message: 'turnFlow.freeOperationActionIds must be an array of non-empty action ids.',
+        suggestion: 'Set freeOperationActionIds to action id strings that may be emitted as free-operation moves.',
+      });
+    } else {
+      for (const [index, actionId] of turnFlow.freeOperationActionIds.entries()) {
+        if (typeof actionId !== 'string' || actionId.trim() === '') {
+          diagnostics.push({
+            code: 'CNL_VALIDATOR_TURN_FLOW_FREE_OPERATION_ACTION_IDS_INVALID',
+            path: `doc.turnOrder.config.turnFlow.freeOperationActionIds.${index}`,
+            severity: 'error',
+            message: 'freeOperationActionIds entries must be non-empty strings.',
+            suggestion: 'Replace invalid entry with a declared action id.',
+          });
+        }
+      }
+    }
+  }
+
   if (!Array.isArray(turnFlow.durationWindows)) {
     diagnostics.push({
       code: 'CNL_VALIDATOR_TURN_FLOW_DURATION_WINDOWS_INVALID',

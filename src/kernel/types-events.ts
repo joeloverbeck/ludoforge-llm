@@ -25,9 +25,16 @@ export interface EventLastingEffectDef {
   readonly teardownEffects?: readonly EffectAST[];
 }
 
+export interface EventFreeOperationGrantDef {
+  readonly faction: string;
+  readonly actionIds?: readonly string[];
+  readonly zoneFilter?: ConditionAST;
+}
+
 export interface EventBranchDef {
   readonly id: string;
   readonly order?: number;
+  readonly freeOperationGrants?: readonly EventFreeOperationGrantDef[];
   readonly effects?: readonly EffectAST[];
   readonly targets?: readonly EventTargetDef[];
   readonly lastingEffects?: readonly EventLastingEffectDef[];
@@ -35,6 +42,7 @@ export interface EventBranchDef {
 
 export interface EventSideDef {
   readonly text?: string;
+  readonly freeOperationGrants?: readonly EventFreeOperationGrantDef[];
   readonly effects?: readonly EffectAST[];
   readonly branches?: readonly EventBranchDef[];
   readonly targets?: readonly EventTargetDef[];

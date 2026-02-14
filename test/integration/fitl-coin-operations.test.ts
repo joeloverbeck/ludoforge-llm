@@ -17,6 +17,7 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { completeMoveDecisionSequenceOrThrow, pickDeterministicDecisionValue } from '../helpers/move-decision-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { withPendingFreeOperationGrant } from '../helpers/turn-order-helpers.js';
 
 describe('FITL COIN operations integration', () => {
   const completeProfileMoveDeterministically = (
@@ -472,8 +473,9 @@ describe('FITL COIN operations integration', () => {
         modifiedStart,
       );
 
-      const beforeArvnResources = Number(modifiedStart.globalVars.arvnResources);
-      const result = applyMove(def, modifiedStart, selected);
+      const stateWithGrant = withPendingFreeOperationGrant(modifiedStart, { actionIds: ['sweep'] });
+      const beforeArvnResources = Number(stateWithGrant.globalVars.arvnResources);
+      const result = applyMove(def, stateWithGrant, selected);
       const final = result.state;
       const targetTokens = final.zones[targetSpace] ?? [];
       const guerrillas = targetTokens.filter((token) => token.type === 'guerrilla');
@@ -1331,8 +1333,9 @@ describe('FITL COIN operations integration', () => {
         modifiedStart,
       );
 
-      const beforeArvnResources = modifiedStart.globalVars.arvnResources;
-      const final = applyMove(def, modifiedStart, selected).state;
+      const stateWithGrant = withPendingFreeOperationGrant(modifiedStart, { actionIds: ['assault'] });
+      const beforeArvnResources = stateWithGrant.globalVars.arvnResources;
+      const final = applyMove(def, stateWithGrant, selected).state;
       assert.equal(final.globalVars.arvnResources, beforeArvnResources, 'Free ARVN Assault should skip per-space cost');
       assert.equal(
         countFactionTokensInSpace(final, space, ['NVA', 'VC']),

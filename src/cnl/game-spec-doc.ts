@@ -187,6 +187,7 @@ export interface GameSpecTurnFlow {
   readonly eligibility: GameSpecTurnFlowEligibility;
   readonly optionMatrix: readonly GameSpecTurnFlowOptionMatrixRow[];
   readonly passRewards: readonly GameSpecTurnFlowPassReward[];
+  readonly freeOperationActionIds?: readonly string[];
   readonly durationWindows: readonly GameSpecTurnFlowDuration[];
   readonly monsoon?: GameSpecTurnFlowMonsoon;
   readonly pivotal?: GameSpecTurnFlowPivotal;

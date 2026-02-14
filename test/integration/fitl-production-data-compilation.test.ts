@@ -196,15 +196,19 @@ describe('FITL production data integration compilation', () => {
       'cap_cadres',
     ]);
     const compiledGlobalMarkerLattices = (compiled.gameDef?.globalMarkerLattices ?? []) as readonly GlobalMarkerLatticeLike[];
-    assert.equal(compiledGlobalMarkerLattices.length, expectedCapabilityMarkers.size);
-    assert.deepEqual(
-      new Set(compiledGlobalMarkerLattices.map((lattice) => lattice.id)),
-      expectedCapabilityMarkers,
+    const globalMarkerById = new Map(compiledGlobalMarkerLattices.map((lattice) => [lattice.id, lattice] as const));
+
+    assert.equal(
+      [...expectedCapabilityMarkers].every((id) => globalMarkerById.has(id)),
+      true,
       'Compiled GameDef global marker lattices must include all capability markers',
     );
+
+    const capabilityLattices = [...expectedCapabilityMarkers].map((id) => globalMarkerById.get(id));
     assert.equal(
-      compiledGlobalMarkerLattices.every(
+      capabilityLattices.every(
         (lattice) =>
+          lattice !== undefined &&
           lattice.defaultState === 'inactive' &&
           lattice.states.length === 3 &&
           new Set(lattice.states).size === 3 &&
@@ -215,6 +219,11 @@ describe('FITL production data integration compilation', () => {
       true,
       'Each capability global marker lattice must be tri-state with inactive default',
     );
+
+    const activeLeader = globalMarkerById.get('activeLeader');
+    assert.notEqual(activeLeader, undefined, 'Expected activeLeader global marker lattice');
+    assert.deepEqual(activeLeader?.states, ['minh', 'khanh', 'youngTurks', 'ky', 'thieu']);
+    assert.equal(activeLeader?.defaultState, 'minh');
 
     const pieceCatalogAsset = (parsed.doc.dataAssets ?? []).find(
       (asset) => asset.id === 'fitl-piece-catalog-production' && asset.kind === 'pieceCatalog',

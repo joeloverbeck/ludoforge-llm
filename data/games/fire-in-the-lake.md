@@ -6613,6 +6613,9 @@ globalMarkerLattices:
   - id: cap_cadres
     states: [inactive, unshaded, shaded]
     defaultState: inactive
+  - id: activeLeader
+    states: [minh, khanh, youngTurks, ky, thieu]
+    defaultState: minh
 
 globalVars:
   # ── Stub vars for COIN operation testing ──
@@ -6661,6 +6664,7 @@ globalVars:
   - { name: mom_bodyCount, type: boolean, init: false }
   - { name: mom_generalLansdale, type: boolean, init: false }
   - { name: mom_typhoonKate, type: boolean, init: false }
+  - { name: leaderBoxCardCount, type: int, init: 0, min: 0, max: 8 }
 
 perPlayerVars:
   - { name: resources, type: int, init: 20, min: 0, max: 50 }

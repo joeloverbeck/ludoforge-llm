@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { applyMove, asActionId, asPlayerId, asTokenId, initialState, legalMoves, type GameState, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { findDeep } from '../helpers/ast-search-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const ATTACK_SPACE = 'quang-tri-thua-thien:none';
@@ -33,6 +34,14 @@ const withSupportState = (state: GameState, zoneId: string, supportState: string
 });
 
 describe('FITL insurgent operations integration', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const parseProfile = (id: string): any => {
+    const { parsed } = compileProductionSpec();
+    const profile = parsed.doc.actionPipelines?.find((p: { id: string }) => p.id === id);
+    assert.ok(profile, `${id} must exist in parsed doc`);
+    return profile;
+  };
+
   it('compiles insurgent Rally/March/Attack/Terror operation profiles from production spec', () => {
     const { parsed, compiled } = compileProductionSpec();
 
@@ -54,6 +63,60 @@ describe('FITL insurgent operations integration', () => {
         profileMap.some((p) => p.id === expected.id && p.actionId === expected.actionId),
         `Expected profile ${expected.id} with actionId ${expected.actionId}`,
       );
+    }
+  });
+
+  it('uses shared march macros in both NVA and VC march profiles', () => {
+    for (const expected of [
+      { id: 'march-nva-profile', faction: 'NVA', resourceVar: 'nvaResources', allowTrailCountryFreeCost: true },
+      { id: 'march-vc-profile', faction: 'VC', resourceVar: 'vcResources', allowTrailCountryFreeCost: false },
+    ]) {
+      const profile = parseProfile(expected.id);
+      const selectDestinations = profile.stages.find((stage: { stage: string }) => stage.stage === 'select-destinations');
+      const resolveDestination = profile.stages.find((stage: { stage: string }) => stage.stage === 'resolve-per-destination');
+      assert.ok(selectDestinations, `${expected.id} should include select-destinations stage`);
+      assert.ok(resolveDestination, `${expected.id} should include resolve-per-destination stage`);
+
+      const selectMacroCalls = findDeep(selectDestinations.effects, (node) =>
+        node?.macro === 'insurgent-march-select-destinations' && node?.args?.faction === expected.faction,
+      );
+      assert.ok(selectMacroCalls.length >= 1, `${expected.id} should call insurgent-march-select-destinations macro`);
+
+      const resolveMacroCalls = findDeep(resolveDestination.effects, (node) =>
+        node?.macro === 'insurgent-march-resolve-destination' &&
+        node?.args?.faction === expected.faction &&
+        node?.args?.resourceVar === expected.resourceVar &&
+        node?.args?.allowTrailCountryFreeCost === expected.allowTrailCountryFreeCost,
+      );
+      assert.ok(resolveMacroCalls.length >= 1, `${expected.id} should call insurgent-march-resolve-destination macro`);
+    }
+  });
+
+  it('uses shared attack selector/removal macros in both NVA and VC attack profiles', () => {
+    for (const expected of [
+      { id: 'attack-nva-profile', faction: 'NVA' },
+      { id: 'attack-vc-profile', faction: 'VC' },
+    ]) {
+      const profile = parseProfile(expected.id);
+      const selectSpaces = profile.stages.find((stage: { stage: string }) => stage.stage === 'select-spaces');
+      const resolvePerSpace = profile.stages.find((stage: { stage: string }) => stage.stage === 'resolve-per-space');
+      assert.ok(selectSpaces, `${expected.id} should include select-spaces stage`);
+      assert.ok(resolvePerSpace, `${expected.id} should include resolve-per-space stage`);
+
+      const selectorMacros = findDeep(selectSpaces.effects, (node) =>
+        node?.macro === 'insurgent-attack-select-spaces' && node?.args?.faction === expected.faction,
+      );
+      assert.ok(selectorMacros.length >= 1, `${expected.id} should call insurgent-attack-select-spaces macro`);
+
+      const inlineSelectorBlocks = findDeep(selectSpaces.effects, (node) =>
+        node?.chooseN?.bind === 'targetSpaces' && node?.chooseN?.options?.query === 'mapSpaces',
+      );
+      assert.equal(inlineSelectorBlocks.length, 0, `${expected.id} should not inline duplicate map-space selector blocks`);
+
+      const removalMacros = findDeep(resolvePerSpace.effects, (node) =>
+        node?.macro === 'insurgent-attack-removal-order' && node?.args?.attackerFaction === expected.faction,
+      );
+      assert.ok(removalMacros.length >= 1, `${expected.id} should call insurgent-attack-removal-order macro`);
     }
   });
 

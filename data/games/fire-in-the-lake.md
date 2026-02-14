@@ -180,6 +180,50 @@ effectMacros:
                                         from: { param: space }
                                         to: { zoneExpr: { concat: ['available-', { param: attackerFaction }, ':none'] } }
 
+  # ── insurgent-attack-select-spaces ────────────────────────────────────────
+  # Shared insurgent Attack map-space selector:
+  # - requires attacker faction presence
+  # - requires COIN (US/ARVN) presence
+  # - LimOp max=1, normal max=99
+  - id: insurgent-attack-select-spaces
+    params:
+      - { name: faction, type: string }
+    effects:
+      - if:
+          when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+          then:
+            - chooseN:
+                bind: targetSpaces
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: '>'
+                        left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: { param: faction } }] } } }
+                        right: 0
+                      - op: '>'
+                        left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } }
+                        right: 0
+                min: 1
+                max: 1
+          else:
+            - chooseN:
+                bind: targetSpaces
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - op: '>'
+                        left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: { param: faction } }] } } }
+                        right: 0
+                      - op: '>'
+                        left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } }
+                        right: 0
+                min: 1
+                max: 99
+
   # ── per-province-city-cost ─────────────────────────────────────────────────
   # Faction-conditional per-space cost that charges 0 for LoCs.
   - id: per-province-city-cost
@@ -3076,40 +3120,9 @@ actionPipelines:
     stages:
       - stage: select-spaces
         effects:
-          - if:
-              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
-              then:
-                - chooseN:
-                    bind: targetSpaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
-                        args:
-                          - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'NVA' }] } } }
-                            right: 0
-                          - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } }
-                            right: 0
-                    min: 1
-                    max: 1
-              else:
-                - chooseN:
-                    bind: targetSpaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
-                        args:
-                          - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'NVA' }] } } }
-                            right: 0
-                          - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } }
-                            right: 0
-                    min: 1
-                    max: 99
+          - macro: insurgent-attack-select-spaces
+            args:
+              faction: 'NVA'
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -3178,40 +3191,9 @@ actionPipelines:
     stages:
       - stage: select-spaces
         effects:
-          - if:
-              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
-              then:
-                - chooseN:
-                    bind: targetSpaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
-                        args:
-                          - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'VC' }] } } }
-                            right: 0
-                          - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } }
-                            right: 0
-                    min: 1
-                    max: 1
-              else:
-                - chooseN:
-                    bind: targetSpaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
-                        args:
-                          - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'VC' }] } } }
-                            right: 0
-                          - op: '>'
-                            left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }] } } }
-                            right: 0
-                    min: 1
-                    max: 99
+          - macro: insurgent-attack-select-spaces
+            args:
+              faction: 'VC'
       - stage: resolve-per-space
         effects:
           - forEach:

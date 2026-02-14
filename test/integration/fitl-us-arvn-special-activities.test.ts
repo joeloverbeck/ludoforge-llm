@@ -284,6 +284,189 @@ describe('FITL US/ARVN special activities integration', () => {
     assert.equal(afterIndex, Math.max(0, beforeIndex - 1), 'Air Strike should shift selected populated spaces toward opposition');
   });
 
+  it('executes Govern per-space Aid vs Patronage with ARVN>US cube guard for patronage', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const aidSpace = 'qui-nhon:none';
+    const patronageSpace = 'can-tho:none';
+    const start = initialState(def, 503, 2);
+    const modifiedStart: GameState = {
+      ...start,
+      globalVars: {
+        ...start.globalVars,
+        aid: 20,
+        patronage: 10,
+      },
+      zones: {
+        ...start.zones,
+        [aidSpace]: [
+          makeToken('govern-aid-arvn', 'troops', 'ARVN', { type: 'troops' }),
+        ],
+        [patronageSpace]: [
+          makeToken('govern-pat-arvn-t', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('govern-pat-arvn-p', 'police', 'ARVN', { type: 'police' }),
+          makeToken('govern-pat-us-t', 'troops', 'US', { type: 'troops' }),
+        ],
+      },
+      markers: {
+        ...start.markers,
+        [aidSpace]: {
+          ...(start.markers[aidSpace] ?? {}),
+          supportOpposition: 'activeSupport',
+        },
+        [patronageSpace]: {
+          ...(start.markers[patronageSpace] ?? {}),
+          supportOpposition: 'passiveSupport',
+        },
+      },
+    };
+
+    const result = applyMove(def, modifiedStart, {
+      actionId: asActionId('govern'),
+      params: {
+        targetSpaces: [aidSpace, patronageSpace],
+        [`$governMode@${aidSpace}`]: 'aid',
+        [`$governMode@${patronageSpace}`]: 'patronage',
+      },
+    });
+
+    const final = result.state;
+    assert.equal(final.globalVars.governCount, 1);
+    assert.equal(final.globalVars.aid, 22, 'Govern should apply +3*Pop Aid in one space and -Pop Aid in patronage space');
+    assert.equal(final.globalVars.patronage, 11, 'Govern patronage should add +Pop to Patronage');
+    assert.equal(final.markers[patronageSpace]?.supportOpposition, 'neutral', 'Govern patronage should shift support one level toward Neutral');
+  });
+
+  it('rejects Govern when selecting Saigon (explicitly excluded by rule)', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const state = initialState(def, 509, 2);
+    assert.throws(
+      () =>
+        applyMove(def, state, {
+          actionId: asActionId('govern'),
+          params: {
+            targetSpaces: ['saigon:none'],
+            '$governMode@saigon:none': 'aid',
+          },
+        }),
+      /Illegal move/,
+    );
+  });
+
+  it('executes Transport moving up to 6 ARVN troops/rangers and flips all Rangers underground globally', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const origin = 'da-nang:none';
+    const destination = 'loc-hue-da-nang:none';
+    const remote = 'tay-ninh:none';
+    const start = initialState(def, 521, 2);
+    const modifiedStart: GameState = {
+      ...start,
+      zones: {
+        ...start.zones,
+        [origin]: [
+          makeToken('transport-arvn-t1', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('transport-arvn-t2', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('transport-arvn-r1', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'active' }),
+        ],
+        [destination]: [],
+        [remote]: [
+          makeToken('transport-remote-ranger', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    };
+
+    const result = applyMove(def, modifiedStart, {
+      actionId: asActionId('transport'),
+      params: {
+        $transportOrigin: origin,
+        $transportDestination: destination,
+      },
+    });
+
+    const final = result.state;
+    assert.equal(final.globalVars.transportCount, 1);
+    assert.equal(
+      countTokens(final, destination, (token) => token.props.faction === 'ARVN' && (token.type === 'troops' || token.type === 'guerrilla')),
+      3,
+      'Transport should move selected ARVN troops/rangers from origin to destination',
+    );
+    const movedRanger = (final.zones[destination] ?? []).find((token) => token.id === asTokenId('transport-arvn-r1'));
+    const remoteRanger = (final.zones[remote] ?? []).find((token) => token.id === asTokenId('transport-remote-ranger'));
+    assert.equal(movedRanger?.props.activity, 'underground', 'Transport should flip moved Rangers underground');
+    assert.equal(remoteRanger?.props.activity, 'underground', 'Transport should flip all Rangers on map underground');
+  });
+
+  it('executes Raid adjacent Ranger movement and optional activate-remove with base-last + tunneled immunity', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const targetSpace = 'quang-nam:none';
+    const adjacentSource = 'da-nang:none';
+    const start = initialState(def, 557, 2);
+    const modifiedStart: GameState = {
+      ...start,
+      zones: {
+        ...start.zones,
+        [adjacentSource]: [
+          makeToken('raid-ranger-underground', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('raid-ranger-active', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'active' }),
+        ],
+        [targetSpace]: [
+          makeToken('raid-target-troop', 'troops', 'NVA', { type: 'troops' }),
+          makeToken('raid-target-guerrilla', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('raid-target-base-untunneled', 'base', 'VC', { type: 'base', tunnel: 'untunneled' }),
+          makeToken('raid-target-base-tunneled', 'base', 'NVA', { type: 'base', tunnel: 'tunneled' }),
+        ],
+      },
+    };
+
+    const result = applyMove(def, modifiedStart, {
+      actionId: asActionId('raid'),
+      params: {
+        targetSpaces: [targetSpace],
+        [`$raidIncomingFrom@${targetSpace}`]: [adjacentSource],
+        [`$raidRemove@${targetSpace}`]: 'yes',
+      },
+    });
+    const final = result.state;
+
+    assert.equal(final.globalVars.raidCount, 1);
+    assert.equal(
+      countTokens(final, targetSpace, (token) => token.props.faction === 'ARVN' && token.type === 'guerrilla'),
+      2,
+      'Raid should move adjacent Rangers into selected space',
+    );
+    assert.equal(
+      countTokens(final, targetSpace, (token) => token.props.faction === 'NVA' && token.type === 'troops'),
+      0,
+      'Raid activate-remove should remove enemy troops first',
+    );
+    assert.equal(
+      countTokens(final, targetSpace, (token) => token.props.faction === 'VC' && token.type === 'guerrilla'),
+      0,
+      'Raid activate-remove should remove enemy guerrillas before bases',
+    );
+    assert.equal(
+      countTokens(final, targetSpace, (token) => token.props.faction === 'VC' && token.type === 'base'),
+      1,
+      'Raid should keep untunneled base when budget was consumed by non-base pieces',
+    );
+    assert.equal(
+      countTokens(final, targetSpace, (token) => token.props.faction === 'NVA' && token.type === 'base' && token.props.tunnel === 'tunneled'),
+      1,
+      'Raid should not remove tunneled bases',
+    );
+  });
+
   it('rejects advise when accompanied by an operation outside accompanyingOps', () => {
     const { compiled } = compileProductionSpec();
 

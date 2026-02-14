@@ -4023,14 +4023,110 @@ actionPipelines:
   - id: govern-profile
     actionId: govern
     accompanyingOps: [train, patrol]
-    legality: null
+    compoundParamConstraints:
+      - relation: disjoint
+        operationParam: targetSpaces
+        specialActivityParam: targetSpaces
+    legality: true
     costValidation: null
     costEffects: []
-    targeting:
-      select: upToN
-      max: 1
+    targeting: {}
     stages:
-      - stage: govern-resolve
+      - stage: select-spaces
+        effects:
+          - chooseN:
+              bind: targetSpaces
+              options:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: or
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                    - op: or
+                      args:
+                        - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
+                        - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
+                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                      right:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+              min: 1
+              max: 2
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - chooseOne:
+                    bind: '$governMode@{$space}'
+                    options: { query: enums, values: ['aid', 'patronage'] }
+                - if:
+                    when: { op: '==', left: { ref: binding, name: '$governMode@{$space}' }, right: aid }
+                    then:
+                      - addVar:
+                          scope: global
+                          var: aid
+                          delta:
+                            op: '*'
+                            left: { ref: zoneProp, zone: $space, prop: population }
+                            right: 3
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: binding, name: '$governMode@{$space}' }, right: patronage }
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $space
+                                filter:
+                                  - { prop: faction, eq: ARVN }
+                                  - { prop: type, op: in, value: [troops, police] }
+                          right:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $space
+                                filter:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: troops }
+                    then:
+                      - addVar:
+                          scope: global
+                          var: aid
+                          delta:
+                            op: '*'
+                            left: { ref: zoneProp, zone: $space, prop: population }
+                            right: -1
+                      - addVar:
+                          scope: global
+                          var: patronage
+                          delta: { ref: zoneProp, zone: $space, prop: population }
+                      - shiftMarker: { space: $space, marker: supportOpposition, delta: -1 }
+      - stage: govern-telemetry
         effects:
           - addVar:
               scope: global
@@ -4041,14 +4137,99 @@ actionPipelines:
   - id: transport-profile
     actionId: transport
     accompanyingOps: any
-    legality: null
+    legality: true
     costValidation: null
     costEffects: []
-    targeting:
-      select: allEligible
-      movementOrder: deterministicSpaceOrder
+    targeting: {}
     stages:
-      - stage: transport-resolve
+      - stage: select-origin
+        effects:
+          - chooseOne:
+              bind: $transportOrigin
+              options:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, op: in, value: [troops, guerrilla] }
+                      right: 0
+      - stage: select-destination
+        effects:
+          - chooseOne:
+              bind: $transportDestination
+              options:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                    - op: connected
+                      from: $transportOrigin
+                      to: $zone
+                      via:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                          - op: '=='
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                            right: 0
+      - stage: move-selected-pieces
+        effects:
+          - forEach:
+              bind: $piece
+              over:
+                query: tokensInZone
+                zone: $transportOrigin
+                filter:
+                  - { prop: faction, eq: ARVN }
+                  - { prop: type, op: in, value: [troops, guerrilla] }
+              limit: 6
+              effects:
+                - if:
+                    when: { op: '!=', left: { ref: tokenZone, token: $piece }, right: { ref: binding, name: $transportDestination } }
+                    then:
+                      - moveToken:
+                          token: $piece
+                          from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                          to: { zoneExpr: { ref: binding, name: $transportDestination } }
+      - stage: flip-rangers-underground
+        effects:
+          - forEach:
+              bind: $mapSpace
+              over: { query: mapSpaces }
+              effects:
+                - forEach:
+                    bind: $ranger
+                    over:
+                      query: tokensInZone
+                      zone: $mapSpace
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: guerrilla }
+                    effects:
+                      - setTokenProp: { token: $ranger, prop: activity, value: underground }
+      - stage: transport-telemetry
         effects:
           - addVar:
               scope: global
@@ -4059,15 +4240,92 @@ actionPipelines:
   - id: raid-profile
     actionId: raid
     accompanyingOps: [patrol, sweep, assault]
-    legality: null
+    legality: true
     costValidation: null
     costEffects: []
-    targeting:
-      select: upToN
-      max: 2
-      tieBreak: lexicographicSpaceId
+    targeting: {}
     stages:
-      - stage: raid-resolve
+      - stage: select-spaces
+        effects:
+          - chooseN:
+              bind: targetSpaces
+              options:
+                query: mapSpaces
+                filter:
+                  op: '!='
+                  left: { ref: zoneProp, zone: $zone, prop: country }
+                  right: northVietnam
+              min: 1
+              max: 2
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - chooseN:
+                    bind: '$raidIncomingFrom@{$space}'
+                    options:
+                      query: adjacentZones
+                      zone: $space
+                    min: 0
+                    max: 99
+                - forEach:
+                    bind: $source
+                    over: { query: binding, name: '$raidIncomingFrom@{$space}' }
+                    effects:
+                      - forEach:
+                          bind: $ranger
+                          over:
+                            query: tokensInZone
+                            zone: $source
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, eq: guerrilla }
+                          effects:
+                            - moveToken:
+                                token: $ranger
+                                from: { zoneExpr: { ref: tokenZone, token: $ranger } }
+                                to: $space
+                - chooseOne:
+                    bind: '$raidRemove@{$space}'
+                    options: { query: enums, values: ['yes', 'no'] }
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: binding, name: '$raidRemove@{$space}' }, right: yes }
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $space
+                                filter:
+                                  - { prop: faction, eq: ARVN }
+                                  - { prop: type, eq: guerrilla }
+                                  - { prop: activity, eq: underground }
+                          right: 0
+                    then:
+                      - forEach:
+                          bind: $activatingRanger
+                          over:
+                            query: tokensInZone
+                            zone: $space
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, eq: guerrilla }
+                              - { prop: activity, eq: underground }
+                          limit: 1
+                          effects:
+                            - setTokenProp: { token: $activatingRanger, prop: activity, value: active }
+                      - macro: us-sa-remove-insurgents
+                        args:
+                          space: $space
+                          budgetExpr: 2
+                          activeGuerrillasOnly: false
+      - stage: raid-telemetry
         effects:
           - addVar:
               scope: global

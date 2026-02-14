@@ -58,6 +58,7 @@ describe('FITL insurgent operations integration', () => {
       { id: 'attack-nva-profile', actionId: 'attack' },
       { id: 'attack-vc-profile', actionId: 'attack' },
       { id: 'terror-nva-profile', actionId: 'terror' },
+      { id: 'terror-vc-profile', actionId: 'terror' },
     ]) {
       assert.ok(
         profileMap.some((p) => p.id === expected.id && p.actionId === expected.actionId),
@@ -117,6 +118,39 @@ describe('FITL insurgent operations integration', () => {
         node?.macro === 'insurgent-attack-removal-order' && node?.args?.attackerFaction === expected.faction,
       );
       assert.ok(removalMacros.length >= 1, `${expected.id} should call insurgent-attack-removal-order macro`);
+    }
+  });
+
+  it('uses shared terror selector/resolution macros in both NVA and VC terror profiles', () => {
+    for (const expected of [
+      { id: 'terror-nva-profile', faction: 'NVA', resourceVar: 'nvaResources', includeTroops: true, shiftFromSupportOnly: true },
+      { id: 'terror-vc-profile', faction: 'VC', resourceVar: 'vcResources', includeTroops: false, shiftFromSupportOnly: false },
+    ]) {
+      const profile = parseProfile(expected.id);
+      const selectSpaces = profile.stages.find((stage: { stage: string }) => stage.stage === 'select-spaces');
+      const resolvePerSpace = profile.stages.find((stage: { stage: string }) => stage.stage === 'resolve-per-space');
+      assert.ok(selectSpaces, `${expected.id} should include select-spaces stage`);
+      assert.ok(resolvePerSpace, `${expected.id} should include resolve-per-space stage`);
+
+      const selectorMacros = findDeep(selectSpaces.effects, (node) =>
+        node?.macro === 'insurgent-terror-select-spaces' &&
+        node?.args?.faction === expected.faction &&
+        node?.args?.includeTroops === expected.includeTroops,
+      );
+      assert.ok(selectorMacros.length >= 1, `${expected.id} should call insurgent-terror-select-spaces macro`);
+
+      const inlineSelectorBlocks = findDeep(selectSpaces.effects, (node) =>
+        node?.chooseN?.bind === 'targetSpaces' && node?.chooseN?.options?.query === 'mapSpaces',
+      );
+      assert.equal(inlineSelectorBlocks.length, 0, `${expected.id} should not inline duplicate Terror map-space selector blocks`);
+
+      const resolutionMacros = findDeep(resolvePerSpace.effects, (node) =>
+        node?.macro === 'insurgent-terror-resolve-space' &&
+        node?.args?.faction === expected.faction &&
+        node?.args?.resourceVar === expected.resourceVar &&
+        node?.args?.shiftFromSupportOnly === expected.shiftFromSupportOnly,
+      );
+      assert.ok(resolutionMacros.length >= 1, `${expected.id} should call insurgent-terror-resolve-space macro`);
     }
   });
 
@@ -347,6 +381,282 @@ describe('FITL insurgent operations integration', () => {
         }),
       /Illegal move/,
       'NVA Terror LimOp should enforce max one selected target space',
+    );
+  });
+
+  it('executes terror through terror-vc-profile with province cost, marker placement, and Opposition shift', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const setup = addTokenToZone(
+      withSupportState(
+        {
+          ...initialState(def, 197, 4),
+          activePlayer: asPlayerId(3),
+          globalVars: {
+            ...initialState(def, 197, 4).globalVars,
+            vcResources: 5,
+            terrorSabotageMarkersPlaced: 0,
+          },
+        },
+        ATTACK_SPACE,
+        'neutral',
+      ),
+      ATTACK_SPACE,
+      {
+        id: asTokenId('terror-vc-province-g'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    const final = applyMove(def, setup, {
+      actionId: asActionId('terror'),
+      params: { targetSpaces: [ATTACK_SPACE] },
+    }).state;
+
+    assert.equal(final.globalVars.vcResources, 4, 'VC Terror should spend 1 resource in a Province/City');
+    assert.equal(final.globalVars.terrorSabotageMarkersPlaced, 1, 'VC Terror should consume one shared terror/sabotage marker');
+    assert.equal(final.markers[ATTACK_SPACE]?.terror, 'terror', 'VC Terror should place a Terror marker in Province/City');
+    assert.equal(final.markers[ATTACK_SPACE]?.supportOpposition, 'passiveOpposition', 'VC Terror should shift one level toward Active Opposition');
+    const movedGuerrilla = (final.zones[ATTACK_SPACE] ?? []).find((token) => token.id === asTokenId('terror-vc-province-g'));
+    assert.ok(movedGuerrilla, 'Expected VC guerrilla to remain in target space');
+    assert.equal(movedGuerrilla.props.activity, 'active', 'VC Terror should activate one underground guerrilla');
+  });
+
+  it('requires underground VC guerrilla for VC Terror target selection', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const setup = addTokenToZone(
+      {
+        ...initialState(def, 198, 4),
+        activePlayer: asPlayerId(3),
+        globalVars: {
+          ...initialState(def, 198, 4).globalVars,
+          vcResources: 5,
+          terrorSabotageMarkersPlaced: 0,
+        },
+      },
+      ATTACK_SPACE,
+      {
+        id: asTokenId('terror-vc-base-only'),
+        type: 'vc-bases',
+        props: { faction: 'VC', type: 'base' },
+      },
+    );
+
+    assert.throws(
+      () =>
+        applyMove(def, setup, {
+          actionId: asActionId('terror'),
+          params: { targetSpaces: [ATTACK_SPACE] },
+        }),
+      /Illegal move/,
+      'VC Terror should reject spaces that do not contain an underground VC guerrilla',
+    );
+  });
+
+  it('places sabotage on LoC and keeps VC Terror LoC free (including free operation)', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const setup = addTokenToZone(
+      {
+        ...initialState(def, 199, 4),
+        activePlayer: asPlayerId(3),
+        globalVars: {
+          ...initialState(def, 199, 4).globalVars,
+          vcResources: 5,
+          terrorSabotageMarkersPlaced: 0,
+        },
+      },
+      LOC_SPACE,
+      {
+        id: asTokenId('terror-vc-loc-g'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    const nonFree = applyMove(def, setup, {
+      actionId: asActionId('terror'),
+      params: { targetSpaces: [LOC_SPACE] },
+    }).state;
+    const free = applyMove(def, setup, {
+      actionId: asActionId('terror'),
+      freeOperation: true,
+      params: { targetSpaces: [LOC_SPACE] },
+    }).state;
+
+    assert.equal(nonFree.globalVars.vcResources, 5, 'LoC VC Terror should not spend resources');
+    assert.equal(free.globalVars.vcResources, 5, 'Free-operation LoC VC Terror should remain free');
+    assert.equal(nonFree.markers[LOC_SPACE]?.sabotage, 'sabotage', 'LoC VC Terror should place Sabotage marker');
+    assert.equal(nonFree.globalVars.terrorSabotageMarkersPlaced, 1, 'LoC VC Terror should consume one shared marker');
+  });
+
+  it('enforces terror/sabotage marker cap + idempotency for VC Terror and keeps shift policy distinct from NVA', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const capSetup = addTokenToZone(
+      withSupportState(
+        {
+          ...initialState(def, 200, 4),
+          activePlayer: asPlayerId(3),
+          globalVars: {
+            ...initialState(def, 200, 4).globalVars,
+            vcResources: 5,
+            terrorSabotageMarkersPlaced: 15,
+          },
+        },
+        ATTACK_SPACE,
+        'neutral',
+      ),
+      ATTACK_SPACE,
+      {
+        id: asTokenId('terror-vc-cap-g'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const capFinal = applyMove(def, capSetup, {
+      actionId: asActionId('terror'),
+      params: { targetSpaces: [ATTACK_SPACE] },
+    }).state;
+
+    assert.notEqual(capFinal.markers[ATTACK_SPACE]?.terror, 'terror', 'VC Terror should not place marker when marker supply is exhausted');
+    assert.equal(capFinal.globalVars.terrorSabotageMarkersPlaced, 15, 'Marker supply counter should remain capped at 15');
+    assert.equal(capFinal.markers[ATTACK_SPACE]?.supportOpposition, 'passiveOpposition', 'VC Terror should still shift toward Opposition even if marker supply is exhausted');
+
+    const idempotentSetup = addTokenToZone(
+      {
+        ...initialState(def, 201, 4),
+        activePlayer: asPlayerId(3),
+        globalVars: {
+          ...initialState(def, 201, 4).globalVars,
+          vcResources: 5,
+          terrorSabotageMarkersPlaced: 1,
+        },
+        markers: {
+          ...initialState(def, 201, 4).markers,
+          [ATTACK_SPACE]: {
+            ...(initialState(def, 201, 4).markers[ATTACK_SPACE] ?? {}),
+            terror: 'terror',
+          },
+        },
+      },
+      ATTACK_SPACE,
+      {
+        id: asTokenId('terror-vc-idempotent-g'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const idempotentFinal = applyMove(def, idempotentSetup, {
+      actionId: asActionId('terror'),
+      params: { targetSpaces: [ATTACK_SPACE] },
+    }).state;
+    assert.equal(idempotentFinal.globalVars.terrorSabotageMarkersPlaced, 1, 'VC Terror should not consume marker supply on pre-marked spaces');
+
+    const nvaSetup = addTokenToZone(
+      withSupportState(
+        {
+          ...initialState(def, 202, 4),
+          activePlayer: asPlayerId(2),
+          globalVars: {
+            ...initialState(def, 202, 4).globalVars,
+            nvaResources: 5,
+            terrorSabotageMarkersPlaced: 0,
+          },
+        },
+        ATTACK_SPACE,
+        'passiveOpposition',
+      ),
+      ATTACK_SPACE,
+      {
+        id: asTokenId('terror-nva-opposition-control'),
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const vcSetup = addTokenToZone(
+      withSupportState(
+        {
+          ...initialState(def, 203, 4),
+          activePlayer: asPlayerId(3),
+          globalVars: {
+            ...initialState(def, 203, 4).globalVars,
+            vcResources: 5,
+            terrorSabotageMarkersPlaced: 0,
+          },
+        },
+        ATTACK_SPACE,
+        'passiveOpposition',
+      ),
+      ATTACK_SPACE,
+      {
+        id: asTokenId('terror-vc-opposition-shift'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const nvaFinal = applyMove(def, nvaSetup, {
+      actionId: asActionId('terror'),
+      params: { targetSpaces: [ATTACK_SPACE] },
+    }).state;
+    const vcFinal = applyMove(def, vcSetup, {
+      actionId: asActionId('terror'),
+      params: { targetSpaces: [ATTACK_SPACE] },
+    }).state;
+
+    assert.equal(nvaFinal.markers[ATTACK_SPACE]?.supportOpposition, 'passiveOpposition', 'NVA Terror should not shift opposition states');
+    assert.equal(vcFinal.markers[ATTACK_SPACE]?.supportOpposition, 'activeOpposition', 'VC Terror should shift opposition states toward Active Opposition');
+  });
+
+  it('enforces VC Terror LimOp max=1 target space', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const setup = addTokenToZone(
+      addTokenToZone(
+        {
+          ...initialState(def, 204, 4),
+          activePlayer: asPlayerId(3),
+          globalVars: {
+            ...initialState(def, 204, 4).globalVars,
+            vcResources: 10,
+          },
+        },
+        ATTACK_SPACE,
+        {
+          id: asTokenId('terror-vc-limop-g1'),
+          type: 'vc-guerrillas',
+          props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+        },
+      ),
+      RALLY_SPACE_2,
+      {
+        id: asTokenId('terror-vc-limop-g2'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    assert.throws(
+      () =>
+        applyMove(def, setup, {
+          actionId: asActionId('terror'),
+          actionClass: 'limitedOperation',
+          params: { targetSpaces: [ATTACK_SPACE, RALLY_SPACE_2] },
+        }),
+      /Illegal move/,
+      'VC Terror LimOp should enforce max one selected target space',
     );
   });
 

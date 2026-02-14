@@ -730,6 +730,47 @@ describe('expandEffectMacros', () => {
     assert.equal(chooseN.chooseN.options.name, remove.removeByPriority.groups[0].bind);
   });
 
+  it('rewrites binding references nested in tokensInZone filters', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'query-filter-binding',
+      params: [],
+      exports: [],
+      effects: [
+        { chooseOne: { bind: '$faction', options: { query: 'enums', values: ['NVA', 'VC'] } } },
+        {
+          setVar: {
+            scope: 'global',
+            var: 'count',
+            value: {
+              aggregate: {
+                op: 'count',
+                query: {
+                  query: 'tokensInZone',
+                  zone: 'map:none',
+                  filter: [{ prop: 'faction', eq: { ref: 'binding', name: '$faction' } }],
+                },
+              },
+            },
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'query-filter-binding', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const choose = result.doc.setup?.[0] as { chooseOne: { bind: string } };
+    const setVar = result.doc.setup?.[1] as {
+      setVar: { value: { aggregate: { query: { filter: [{ eq: { name: string } }] } } } };
+    };
+    assert.notEqual(choose.chooseOne.bind, '$faction');
+    assert.equal(setVar.setVar.value.aggregate.query.filter[0].eq.name, choose.chooseOne.bind);
+  });
+
   it('rewrites binding references in adjacent left/right zone selector fields', () => {
     const macroDef: EffectMacroDef = {
       id: 'adjacent-left-right',
@@ -833,5 +874,61 @@ describe('expandEffectMacros', () => {
     assert.ok(result.diagnostics.some((d) => d.code === 'EFFECT_MACRO_BINDING_DECLARATION_INVALID'));
     const diag = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_BINDING_DECLARATION_INVALID');
     assert.equal(diag?.path, 'effectMacros.dynamic-bind.effects.0.chooseOne.bind');
+  });
+
+  it('rejects non-exported local binder leakage from nested macro string params', () => {
+    const inner: EffectMacroDef = {
+      id: 'inner',
+      params: [{ name: 'name', type: 'string' }],
+      exports: [],
+      effects: [{ setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: { param: 'name' } } } }],
+    };
+    const outer: EffectMacroDef = {
+      id: 'outer',
+      params: [],
+      exports: [],
+      effects: [
+        { chooseOne: { bind: '$choice', options: { query: 'enums', values: ['a', 'b'] } } },
+        { macro: 'inner', args: { name: '$choice' } },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [inner, outer],
+      setup: [{ macro: 'outer', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    const leak = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_HYGIENE_BINDING_LEAK');
+    assert.ok(leak !== undefined);
+    assert.match(leak?.path ?? '', /setup\[0\]\[macro:outer\]/);
+    assert.deepEqual(result.doc.setup, []);
+  });
+
+  it('rejects unresolved local binding templates in binding-bearing output fields', () => {
+    const inner: EffectMacroDef = {
+      id: 'inner',
+      params: [{ name: 'zone', type: 'string' }],
+      exports: [],
+      effects: [{ moveToken: { token: '$t', to: { param: 'zone' } } }],
+    };
+    const outer: EffectMacroDef = {
+      id: 'outer',
+      params: [],
+      exports: [],
+      effects: [
+        { chooseOne: { bind: '$choice', options: { query: 'enums', values: ['a', 'b'] } } },
+        { macro: 'inner', args: { zone: 'discard:{$choice}' } },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [inner, outer],
+      setup: [{ macro: 'outer', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    const unresolved = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_HYGIENE_UNRESOLVED_TEMPLATE');
+    assert.ok(unresolved !== undefined);
+    assert.match(unresolved?.path ?? '', /setup\[0\]\[macro:outer\]/);
+    assert.deepEqual(result.doc.setup, []);
   });
 });

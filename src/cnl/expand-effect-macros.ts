@@ -1,9 +1,11 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import {
+  EFFECT_BINDER_SURFACES,
   collectDeclaredBinderCandidates,
   rewriteDeclaredBindersInEffectNode,
   rewriteKnownReferencersInEffectNode,
 } from './binder-surface-registry.js';
+import { SUPPORTED_EFFECT_KINDS } from './effect-kind-registry.js';
 import type {
   EffectMacroDef,
   EffectMacroParamPrimitiveLiteral,
@@ -12,6 +14,7 @@ import type {
 } from './game-spec-doc.js';
 
 const MAX_EXPANSION_DEPTH = 10;
+const BINDING_TEMPLATE_PATTERN = /\{([^{}]+)\}/g;
 
 interface MacroIndex {
   readonly byId: ReadonlyMap<string, IndexedMacroDef>;
@@ -420,6 +423,185 @@ function rewriteBindingName(name: string, renameMap: ReadonlyMap<string, string>
   return rewriteBindingTemplate(name, renameMap);
 }
 
+interface StringSite {
+  readonly path: string;
+  readonly value: string;
+}
+
+function collectStringSitesAtPath(
+  node: unknown,
+  segments: readonly string[],
+  path: string,
+  into: StringSite[],
+): void {
+  if (segments.length === 0) {
+    if (typeof node === 'string') {
+      into.push({ path, value: node });
+    }
+    return;
+  }
+
+  const [segmentRaw, ...rest] = segments;
+  const segment = segmentRaw!;
+  if (segment === '*') {
+    if (!Array.isArray(node)) {
+      return;
+    }
+    for (let index = 0; index < node.length; index += 1) {
+      collectStringSitesAtPath(node[index], rest, `${path}.${index}`, into);
+    }
+    return;
+  }
+
+  if (!isRecord(node) || !(segment in node)) {
+    return;
+  }
+  collectStringSitesAtPath(node[segment], rest, `${path}.${segment}`, into);
+}
+
+function collectBindingBearingStringSites(node: unknown, path: string, into: StringSite[]): void {
+  if (Array.isArray(node)) {
+    for (let index = 0; index < node.length; index += 1) {
+      collectBindingBearingStringSites(node[index], `${path}[${index}]`, into);
+    }
+    return;
+  }
+  if (!isRecord(node)) {
+    return;
+  }
+
+  for (const effectKind of SUPPORTED_EFFECT_KINDS) {
+    const effectBody = node[effectKind];
+    if (!isRecord(effectBody)) {
+      continue;
+    }
+
+    const surface = EFFECT_BINDER_SURFACES[effectKind];
+    for (const declaredPath of surface.declaredBinderPaths) {
+      collectStringSitesAtPath(effectBody, declaredPath, `${path}.${effectKind}`, into);
+    }
+    for (const referencerPath of surface.bindingTemplateReferencerPaths) {
+      collectStringSitesAtPath(effectBody, referencerPath, `${path}.${effectKind}`, into);
+    }
+    for (const zoneSelectorPath of surface.zoneSelectorReferencerPaths) {
+      collectStringSitesAtPath(effectBody, zoneSelectorPath, `${path}.${effectKind}`, into);
+    }
+  }
+
+  if (node.ref === 'binding' && typeof node.name === 'string') {
+    into.push({ path: `${path}.name`, value: node.name });
+  }
+  if (node.ref === 'tokenProp' && typeof node.token === 'string') {
+    into.push({ path: `${path}.token`, value: node.token });
+  }
+  if (node.ref === 'tokenZone' && typeof node.token === 'string') {
+    into.push({ path: `${path}.token`, value: node.token });
+  }
+  if (node.ref === 'pvar' && isRecord(node.player) && typeof node.player.chosen === 'string') {
+    into.push({ path: `${path}.player.chosen`, value: node.player.chosen });
+  }
+  if (node.ref === 'zoneCount' && typeof node.zone === 'string') {
+    into.push({ path: `${path}.zone`, value: node.zone });
+  }
+  if (node.ref === 'zoneProp' && typeof node.zone === 'string') {
+    into.push({ path: `${path}.zone`, value: node.zone });
+  }
+  if (node.ref === 'markerState' && typeof node.space === 'string') {
+    into.push({ path: `${path}.space`, value: node.space });
+  }
+  if (node.query === 'binding' && typeof node.name === 'string') {
+    into.push({ path: `${path}.name`, value: node.name });
+  }
+  if (
+    (node.query === 'tokensInZone' ||
+      node.query === 'tokensInAdjacentZones' ||
+      node.query === 'adjacentZones' ||
+      node.query === 'connectedZones') &&
+    typeof node.zone === 'string'
+  ) {
+    into.push({ path: `${path}.zone`, value: node.zone });
+  }
+  if ((node.query === 'zones' || node.query === 'mapSpaces') && isRecord(node.filter) && isRecord(node.filter.owner) && typeof node.filter.owner.chosen === 'string') {
+    into.push({ path: `${path}.filter.owner.chosen`, value: node.filter.owner.chosen });
+  }
+  if (node.op === 'adjacent') {
+    if (typeof node.left === 'string') {
+      into.push({ path: `${path}.left`, value: node.left });
+    }
+    if (typeof node.right === 'string') {
+      into.push({ path: `${path}.right`, value: node.right });
+    }
+  }
+  if (node.op === 'connected') {
+    if (typeof node.from === 'string') {
+      into.push({ path: `${path}.from`, value: node.from });
+    }
+    if (typeof node.to === 'string') {
+      into.push({ path: `${path}.to`, value: node.to });
+    }
+  }
+  if (node.op === 'zonePropIncludes' && typeof node.zone === 'string') {
+    into.push({ path: `${path}.zone`, value: node.zone });
+  }
+
+  for (const [key, value] of Object.entries(node)) {
+    collectBindingBearingStringSites(value, `${path}.${key}`, into);
+  }
+}
+
+function validateInvocationIntegrity(
+  effects: readonly GameSpecEffect[],
+  localBindings: ReadonlySet<string>,
+  macroId: string,
+  invocationPath: string,
+  diagnostics: Diagnostic[],
+): boolean {
+  if (localBindings.size === 0) {
+    return false;
+  }
+
+  let hasViolations = false;
+  const seen = new Set<string>();
+  const bindingSites: StringSite[] = [];
+  collectBindingBearingStringSites(effects, invocationPath, bindingSites);
+
+  for (const site of bindingSites) {
+    if (localBindings.has(site.value)) {
+      const key = `leak:${site.path}:${site.value}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      hasViolations = true;
+      diagnostics.push({
+        code: 'EFFECT_MACRO_HYGIENE_BINDING_LEAK',
+        path: site.path,
+        severity: 'error',
+        message: `Macro "${macroId}" leaked non-exported local binding "${site.value}" into expanded output.`,
+        suggestion: 'Declare binding-bearing params with explicit binding-aware kinds and/or export intended public binders.',
+      });
+    }
+
+    for (const match of site.value.matchAll(BINDING_TEMPLATE_PATTERN)) {
+      const placeholderName = match[1]?.trim();
+      if (placeholderName === undefined || !localBindings.has(placeholderName)) {
+        continue;
+      }
+      const key = `template:${site.path}:${placeholderName}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      hasViolations = true;
+      diagnostics.push({
+        code: 'EFFECT_MACRO_HYGIENE_UNRESOLVED_TEMPLATE',
+        path: site.path,
+        severity: 'error',
+        message: `Macro "${macroId}" left unresolved local binding template "{${placeholderName}}" in expanded output.`,
+        suggestion: 'Use binding-aware param kinds so local bindings are rewritten deterministically during expansion.',
+      });
+    }
+  }
+
+  return hasViolations;
+}
+
 function rewriteZoneSelectorBinding(zoneSelector: string, renameMap: ReadonlyMap<string, string>): string {
   const exactMatch = renameMap.get(zoneSelector);
   if (exactMatch !== undefined) {
@@ -558,22 +740,28 @@ function rewriteBindings(
       rewrittenMacroArgsNode.query === 'connectedZones') &&
     typeof rewrittenMacroArgsNode.zone === 'string'
   ) {
-    return { ...rewrittenMacroArgsNode, zone: rewriteZoneSelectorBinding(rewrittenMacroArgsNode.zone, renameMap) };
+    const rewrittenZone = rewriteZoneSelectorBinding(rewrittenMacroArgsNode.zone, renameMap);
+    if (rewrittenZone !== rewrittenMacroArgsNode.zone) {
+      rewrittenMacroArgsNode = { ...rewrittenMacroArgsNode, zone: rewrittenZone };
+    }
   }
   if (rewrittenMacroArgsNode.query === 'zones' || rewrittenMacroArgsNode.query === 'mapSpaces') {
     const filter = isRecord(rewrittenMacroArgsNode.filter) ? rewrittenMacroArgsNode.filter : null;
     const owner = filter !== null && isRecord(filter.owner) ? filter.owner : null;
     if (owner !== null && typeof owner.chosen === 'string') {
-      return {
-        ...rewrittenMacroArgsNode,
-        filter: {
-          ...filter,
-          owner: {
-            ...owner,
-            chosen: rewriteBindingTemplate(owner.chosen, renameMap),
+      const rewrittenChosen = rewriteBindingTemplate(owner.chosen, renameMap);
+      if (rewrittenChosen !== owner.chosen) {
+        rewrittenMacroArgsNode = {
+          ...rewrittenMacroArgsNode,
+          filter: {
+            ...filter,
+            owner: {
+              ...owner,
+              chosen: rewrittenChosen,
+            },
           },
-        },
-      };
+        };
+      }
     }
   }
   if (rewrittenMacroArgsNode.op === 'adjacent') {
@@ -851,11 +1039,11 @@ function expandEffect(
     renameMap.set(bindingName, makeHygienicBindingName(macroId, path, bindingName));
   }
 
-  const hygienicTemplates =
+  const substitutedTemplates = def.effects.map((templateEffect) => substituteParams(templateEffect, args) as GameSpecEffect);
+  const hygienicSubstituted =
     renameMap.size === 0
-      ? def.effects
-      : def.effects.map((templateEffect) => rewriteBindings(templateEffect, index, renameMap) as GameSpecEffect);
-  const hygienicSubstituted = hygienicTemplates.map((templateEffect) => substituteParams(templateEffect, args) as GameSpecEffect);
+      ? substitutedTemplates
+      : substitutedTemplates.map((templateEffect) => rewriteBindings(templateEffect, index, renameMap) as GameSpecEffect);
 
   const nestedVisited = new Set(visitedStack);
   nestedVisited.add(macroId);
@@ -866,6 +1054,23 @@ function expandEffect(
     if (sub === undefined) continue;
     const results = expandEffect(sub, index, diagnostics, `${path}[macro:${macroId}][${i}]`, nestedVisited, depth + 1);
     expanded.push(...results);
+  }
+
+  const nonExportedLocalBindings = new Set<string>();
+  for (const bindingName of indexedMacro.declaredBindings) {
+    if (!indexedMacro.exportedBindings.has(bindingName)) {
+      nonExportedLocalBindings.add(bindingName);
+    }
+  }
+  const hasIntegrityViolations = validateInvocationIntegrity(
+    expanded,
+    nonExportedLocalBindings,
+    macroId,
+    `${path}[macro:${macroId}]`,
+    diagnostics,
+  );
+  if (hasIntegrityViolations) {
+    return [];
   }
 
   return expanded;

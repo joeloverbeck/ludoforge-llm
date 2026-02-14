@@ -98,12 +98,24 @@ describe('evalValue', () => {
     assert.equal(evalValue({ op: '/', left: -7, right: 2 }, ctx), -3);
     assert.equal(evalValue({ op: '/', left: 0, right: 5 }, ctx), 0);
     assert.equal(evalValue({ op: '/', left: 6, right: 3 }, ctx), 2);
+    assert.equal(evalValue({ op: 'floorDiv', left: 7, right: 2 }, ctx), 3);
+    assert.equal(evalValue({ op: 'floorDiv', left: -7, right: 2 }, ctx), -4);
+    assert.equal(evalValue({ op: 'ceilDiv', left: 7, right: 2 }, ctx), 4);
+    assert.equal(evalValue({ op: 'ceilDiv', left: -7, right: 2 }, ctx), -3);
   });
 
   it('throws DIVISION_BY_ZERO for division by zero', () => {
     const ctx = makeCtx();
     assert.throws(
       () => evalValue({ op: '/', left: 10, right: 0 }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'DIVISION_BY_ZERO'),
+    );
+    assert.throws(
+      () => evalValue({ op: 'floorDiv', left: 10, right: 0 }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'DIVISION_BY_ZERO'),
+    );
+    assert.throws(
+      () => evalValue({ op: 'ceilDiv', left: 10, right: 0 }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'DIVISION_BY_ZERO'),
     );
   });

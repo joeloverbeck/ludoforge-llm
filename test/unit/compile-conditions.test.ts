@@ -93,6 +93,24 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, { op: '/', left: 10, right: 3 });
   });
 
+  it('lowers floorDiv and ceilDiv operators in value node', () => {
+    const floorResult = lowerValueNode(
+      { op: 'floorDiv', left: 10, right: 3 },
+      context,
+      'doc.actions.0.effects.0.addVar.delta',
+    );
+    const ceilResult = lowerValueNode(
+      { op: 'ceilDiv', left: 10, right: 3 },
+      context,
+      'doc.actions.0.effects.0.addVar.delta',
+    );
+
+    assertNoDiagnostics(floorResult);
+    assertNoDiagnostics(ceilResult);
+    assert.deepEqual(floorResult.value, { op: 'floorDiv', left: 10, right: 3 });
+    assert.deepEqual(ceilResult.value, { op: 'ceilDiv', left: 10, right: 3 });
+  });
+
   it('lowers markerState reference with zone canonicalization', () => {
     const result = lowerValueNode(
       { ref: 'markerState', space: 'board', marker: 'support' },

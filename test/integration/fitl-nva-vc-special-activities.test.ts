@@ -27,6 +27,20 @@ const countTokens = (
   predicate: (token: Token) => boolean,
 ): number => (state.zones[zone] ?? []).filter(predicate).length;
 
+const containsFloorDivOp = (value: unknown): boolean => {
+  if (Array.isArray(value)) {
+    return value.some((entry) => containsFloorDivOp(entry));
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Readonly<Record<string, unknown>>;
+    if (record.op === 'floorDiv') {
+      return true;
+    }
+    return Object.values(record).some((entry) => containsFloorDivOp(entry));
+  }
+  return false;
+};
+
 const getMapSpace = (spaceId: string): { readonly population: number; readonly econ: number } => {
   const { parsed } = compileProductionSpec();
   const mapAsset = (parsed.doc.dataAssets ?? []).find((asset) => asset.id === 'fitl-map-production' && asset.kind === 'map');
@@ -344,6 +358,13 @@ describe('FITL NVA/VC special activities integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
+    const subvertPipeline = (def.actionPipelines ?? []).find((pipeline) => String(pipeline.actionId) === 'subvert');
+    assert.ok(subvertPipeline, 'Subvert pipeline should exist');
+    assert.equal(
+      containsFloorDivOp(subvertPipeline),
+      true,
+      'Subvert patronage penalty should be encoded using floorDiv instead of threshold branching',
+    );
 
     const removeSpace = 'tay-ninh:none';
     const replaceSpace = 'quang-tin-quang-ngai:none';

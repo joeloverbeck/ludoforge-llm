@@ -117,6 +117,22 @@ export function evalValue(expr: ValueExpr, ctx: EvalContext): number | boolean |
     return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
   }
 
+  if (expr.op === 'floorDiv') {
+    if (right === 0) {
+      throw divisionByZeroError('Division by zero', { expr, left, right });
+    }
+    const result = Math.floor(left / right);
+    return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
+  }
+
+  if (expr.op === 'ceilDiv') {
+    if (right === 0) {
+      throw divisionByZeroError('Division by zero', { expr, left, right });
+    }
+    const result = Math.ceil(left / right);
+    return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
+  }
+
   const result = expr.op === '+' ? left + right : expr.op === '-' ? left - right : left * right;
   return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
 }

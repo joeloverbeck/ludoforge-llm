@@ -30,7 +30,7 @@ export type ValueExpr =
   | string
   | Reference
   | {
-      readonly op: '+' | '-' | '*' | '/';
+      readonly op: '+' | '-' | '*' | '/' | 'floorDiv' | 'ceilDiv';
       readonly left: ValueExpr;
       readonly right: ValueExpr;
     }

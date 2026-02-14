@@ -142,6 +142,19 @@ export const validateValueExpr = (
   if ('op' in valueExpr) {
     validateValueExpr(diagnostics, valueExpr.left, `${path}.left`, context);
     validateValueExpr(diagnostics, valueExpr.right, `${path}.right`, context);
+    if (
+      (valueExpr.op === '/' || valueExpr.op === 'floorDiv' || valueExpr.op === 'ceilDiv') &&
+      typeof valueExpr.right === 'number' &&
+      valueExpr.right === 0
+    ) {
+      diagnostics.push({
+        code: 'VALUE_EXPR_DIVISION_BY_ZERO_STATIC',
+        path: `${path}.right`,
+        severity: 'error',
+        message: `ValueExpr "${valueExpr.op}" denominator must not be 0.`,
+        suggestion: 'Use a non-zero literal denominator or guard the expression with an if condition.',
+      });
+    }
     return;
   }
 

@@ -8,6 +8,7 @@ import {
   OBJECT_STRICTNESS_POLICY,
   OptionsQuerySchema,
   PlayerSelSchema,
+  ValueExprSchema,
   asPlayerId,
 } from '../../src/kernel/index.js';
 
@@ -60,16 +61,63 @@ describe('AST and selector schemas', () => {
     assert.equal(result.success, false);
   });
 
+  it('parses arithmetic ValueExpr operators including integer division variants', () => {
+    const expressions = [
+      { op: '/', left: 7, right: 2 },
+      { op: 'floorDiv', left: 7, right: 2 },
+      { op: 'ceilDiv', left: 7, right: 2 },
+    ] as const;
+
+    for (const expression of expressions) {
+      assert.deepEqual(ValueExprSchema.parse(expression), expression);
+    }
+  });
+
+  it('parses reference ValueExpr variants used by dynamic zone/property logic', () => {
+    const references = [
+      { ref: 'tokenZone', token: '$piece' },
+      { ref: 'zoneProp', zone: 'quang-tri:none', prop: 'spaceType' },
+    ] as const;
+
+    for (const reference of references) {
+      assert.deepEqual(ValueExprSchema.parse(reference), reference);
+    }
+  });
+
+  it('parses value-level conditional ValueExpr', () => {
+    const expression = {
+      if: {
+        when: { op: '==', left: 1, right: 1 },
+        then: 10,
+        else: 0,
+      },
+    } as const;
+
+    assert.deepEqual(ValueExprSchema.parse(expression), expression);
+  });
+
   it('parses all EffectAST variants', () => {
     const effects: EffectAST[] = [
       { setVar: { scope: 'global', var: 'gold', value: 1 } },
       { addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } },
       { moveToken: { token: '$card', from: 'deck:none', to: 'hand:actor', position: 'top' } },
+      {
+        moveToken: {
+          token: '$card',
+          from: { zoneExpr: { ref: 'tokenZone', token: '$card' } },
+          to: { zoneExpr: { concat: ['discard:', { ref: 'activePlayer' }] } },
+        },
+      },
       { moveAll: { from: 'discard:none', to: 'deck:none', filter: { op: 'not', arg: { op: '==', left: 1, right: 2 } } } },
+      { moveAll: { from: { zoneExpr: 'discard:none' }, to: { zoneExpr: 'deck:none' } } },
       { moveTokenAdjacent: { token: '$unit', from: 'board:active', direction: 'north' } },
+      { moveTokenAdjacent: { token: '$unit', from: { zoneExpr: 'board:active' }, direction: 'north' } },
       { draw: { from: 'deck:none', to: 'hand:actor', count: 1 } },
+      { draw: { from: { zoneExpr: 'deck:none' }, to: { zoneExpr: 'hand:actor' }, count: 1 } },
       { shuffle: { zone: 'deck:none' } },
+      { shuffle: { zone: { zoneExpr: 'deck:none' } } },
       { createToken: { type: 'card', zone: 'deck:none', props: { cost: 3, rare: false } } },
+      { createToken: { type: 'card', zone: { zoneExpr: 'deck:none' }, props: { cost: 3, rare: false } } },
       { destroyToken: { token: '$dead' } },
       { setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } },
       {
@@ -122,7 +170,9 @@ describe('AST and selector schemas', () => {
       { chooseN: { bind: '$opt', options: { query: 'players' }, max: 2 } },
       { chooseN: { bind: '$range', options: { query: 'players' }, min: 1, max: 3 } },
       { setMarker: { space: 'saigon:none', marker: 'support', state: 'activeSupport' } },
+      { setMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', state: 'activeSupport' } },
       { shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } },
+      { shiftMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', delta: 1 } },
     ];
 
     for (const effect of effects) {
@@ -141,6 +191,7 @@ describe('AST and selector schemas', () => {
         maxDepth: 3,
       },
       { op: 'connected', from: 'board:a', to: 'board:c' },
+      { op: 'zonePropIncludes', zone: 'board:a', prop: 'terrainTags', value: 'jungle' },
     ];
 
     for (const condition of conditions) {

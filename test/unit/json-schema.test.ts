@@ -67,9 +67,32 @@ const fullGameDef: GameDef = {
       actor: 'active',
       phase: asPhaseId('main'),
       params: [{ name: '$card', domain: { query: 'tokensInZone', zone: 'deck:none' } }],
-      pre: { op: '==', left: 1, right: 1 },
+      pre: { op: 'zonePropIncludes', zone: 'discard:none', prop: 'terrainTags', value: 'urban' },
       cost: [],
-      effects: [{ draw: { from: 'deck:none', to: 'discard:none', count: 1 } }],
+      effects: [
+        { draw: { from: { zoneExpr: 'deck:none' }, to: { zoneExpr: { ref: 'tokenZone', token: '$card' } }, count: 1 } },
+        {
+          setVar: {
+            scope: 'global',
+            var: 'round',
+            value: {
+              if: {
+                when: { op: '==', left: { ref: 'zoneProp', zone: 'discard:none', prop: 'spaceType' }, right: 'city' },
+                then: { op: 'floorDiv', left: 5, right: 2 },
+                else: { op: 'ceilDiv', left: 5, right: 2 },
+              },
+            },
+          },
+        },
+        {
+          setTokenProp: {
+            token: '$card',
+            prop: 'name',
+            value: { concat: ['zone=', { ref: 'tokenZone', token: '$card' }] },
+          },
+        },
+        { setMarker: { space: { zoneExpr: 'discard:none' }, marker: 'support', state: 'neutral' } },
+      ],
       limits: [{ scope: 'turn', max: 1 }],
     },
   ],

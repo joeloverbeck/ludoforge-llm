@@ -21,6 +21,7 @@ export const PlayerSelSchema = z.union([
 
 export const ZoneSelSchema = StringSchema;
 export const TokenSelSchema = StringSchema;
+const ZoneRefSchema: z.ZodTypeAny = z.lazy(() => z.union([ZoneSelSchema, z.object({ zoneExpr: ValueExprSchema }).strict()]));
 
 export const ReferenceSchema = z.union([
   z.object({ ref: z.literal('gvar'), var: StringSchema }).strict(),
@@ -35,6 +36,8 @@ export const ReferenceSchema = z.union([
   z.object({ ref: z.literal('tokenProp'), token: TokenSelSchema, prop: StringSchema }).strict(),
   z.object({ ref: z.literal('binding'), name: StringSchema }).strict(),
   z.object({ ref: z.literal('markerState'), space: ZoneSelSchema, marker: StringSchema }).strict(),
+  z.object({ ref: z.literal('tokenZone'), token: TokenSelSchema }).strict(),
+  z.object({ ref: z.literal('zoneProp'), zone: ZoneSelSchema, prop: StringSchema }).strict(),
   z.object({ ref: z.literal('activePlayer') }).strict(),
 ]);
 
@@ -118,7 +121,14 @@ valueExprSchemaInternal = z.union([
   ReferenceSchema,
   z
     .object({
-      op: z.union([z.literal('+'), z.literal('-'), z.literal('*')]),
+      op: z.union([
+        z.literal('+'),
+        z.literal('-'),
+        z.literal('*'),
+        z.literal('/'),
+        z.literal('floorDiv'),
+        z.literal('ceilDiv'),
+      ]),
       left: ValueExprSchema,
       right: ValueExprSchema,
     })
@@ -135,6 +145,17 @@ valueExprSchemaInternal = z.union([
     })
     .strict(),
   z.object({ concat: z.array(ValueExprSchema) }).strict(),
+  z
+    .object({
+      if: z
+        .object({
+          when: ConditionASTSchema,
+          then: ValueExprSchema,
+          else: ValueExprSchema,
+        })
+        .strict(),
+    })
+    .strict(),
 ]);
 
 conditionAstSchemaInternal = z.union([
@@ -165,6 +186,14 @@ conditionAstSchemaInternal = z.union([
       to: ZoneSelSchema,
       via: ConditionASTSchema.optional(),
       maxDepth: NumberSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal('zonePropIncludes'),
+      zone: ZoneSelSchema,
+      prop: StringSchema,
+      value: ValueExprSchema,
     })
     .strict(),
 ]);
@@ -199,8 +228,8 @@ effectAstSchemaInternal = z.union([
       moveToken: z
         .object({
           token: TokenSelSchema,
-          from: ZoneSelSchema,
-          to: ZoneSelSchema,
+          from: ZoneRefSchema,
+          to: ZoneRefSchema,
           position: z.union([z.literal('top'), z.literal('bottom'), z.literal('random')]).optional(),
         })
         .strict(),
@@ -210,8 +239,8 @@ effectAstSchemaInternal = z.union([
     .object({
       moveAll: z
         .object({
-          from: ZoneSelSchema,
-          to: ZoneSelSchema,
+          from: ZoneRefSchema,
+          to: ZoneRefSchema,
           filter: ConditionASTSchema.optional(),
         })
         .strict(),
@@ -222,7 +251,7 @@ effectAstSchemaInternal = z.union([
       moveTokenAdjacent: z
         .object({
           token: TokenSelSchema,
-          from: ZoneSelSchema,
+          from: ZoneRefSchema,
           direction: StringSchema.optional(),
         })
         .strict(),
@@ -232,20 +261,20 @@ effectAstSchemaInternal = z.union([
     .object({
       draw: z
         .object({
-          from: ZoneSelSchema,
-          to: ZoneSelSchema,
+          from: ZoneRefSchema,
+          to: ZoneRefSchema,
           count: NumberSchema,
         })
         .strict(),
     })
     .strict(),
-  z.object({ shuffle: z.object({ zone: ZoneSelSchema }).strict() }).strict(),
+  z.object({ shuffle: z.object({ zone: ZoneRefSchema }).strict() }).strict(),
   z
     .object({
       createToken: z
         .object({
           type: StringSchema,
-          zone: ZoneSelSchema,
+          zone: ZoneRefSchema,
           props: z.record(StringSchema, ValueExprSchema).optional(),
         })
         .strict(),
@@ -368,7 +397,7 @@ effectAstSchemaInternal = z.union([
     .object({
       setMarker: z
         .object({
-          space: ZoneSelSchema,
+          space: ZoneRefSchema,
           marker: StringSchema,
           state: ValueExprSchema,
         })
@@ -379,7 +408,7 @@ effectAstSchemaInternal = z.union([
     .object({
       shiftMarker: z
         .object({
-          space: ZoneSelSchema,
+          space: ZoneRefSchema,
           marker: StringSchema,
           delta: ValueExprSchema,
         })

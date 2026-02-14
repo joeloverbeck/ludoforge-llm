@@ -5320,13 +5320,18 @@ actionPipelines:
                             right: { ref: binding, name: $arvnCubesInAvailableBefore }
                           in:
                             - if:
-                                when: { op: '>=', left: { ref: binding, name: $arvnCubesAffected }, right: 2 }
+                                when: { op: '>', left: { ref: binding, name: $arvnCubesAffected }, right: 0 }
                                 then:
-                                  - addVar: { scope: global, var: patronage, delta: -1 }
-                            - if:
-                                when: { op: '>=', left: { ref: binding, name: $arvnCubesAffected }, right: 4 }
-                                then:
-                                  - addVar: { scope: global, var: patronage, delta: -1 }
+                                  - addVar:
+                                      scope: global
+                                      var: patronage
+                                      delta:
+                                        op: '*'
+                                        left: -1
+                                        right:
+                                          op: floorDiv
+                                          left: { ref: binding, name: $arvnCubesAffected }
+                                          right: 2
       - stage: subvert-telemetry
         effects:
           - addVar:

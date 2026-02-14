@@ -933,3 +933,39 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
     assert.deepEqual(diagnostics, []);
   });
 });
+
+describe('validateGameDef arithmetic diagnostics', () => {
+  it('reports static divide-by-zero diagnostics for integer division operators', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            { addVar: { scope: 'global', var: 'money', delta: { op: '/', left: 10, right: 0 } } },
+            { addVar: { scope: 'global', var: 'money', delta: { op: 'floorDiv', left: 10, right: 0 } } },
+            { addVar: { scope: 'global', var: 'money', delta: { op: 'ceilDiv', left: 10, right: 0 } } },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    const staticDivideByZeroDiagnostics = diagnostics.filter((diag) => diag.code === 'VALUE_EXPR_DIVISION_BY_ZERO_STATIC');
+
+    assert.equal(staticDivideByZeroDiagnostics.length, 3);
+    assert.equal(
+      staticDivideByZeroDiagnostics.some((diag) => diag.path === 'actions[0].effects[0].addVar.delta.right'),
+      true,
+    );
+    assert.equal(
+      staticDivideByZeroDiagnostics.some((diag) => diag.path === 'actions[0].effects[1].addVar.delta.right'),
+      true,
+    );
+    assert.equal(
+      staticDivideByZeroDiagnostics.some((diag) => diag.path === 'actions[0].effects[2].addVar.delta.right'),
+      true,
+    );
+  });
+});

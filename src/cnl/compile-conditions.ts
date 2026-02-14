@@ -189,7 +189,16 @@ export function lowerValueNode(
     return lowerReference(source, context, path);
   }
 
-  if ('op' in source && typeof source.op === 'string' && (source.op === '+' || source.op === '-' || source.op === '*' || source.op === '/')) {
+  if (
+    'op' in source &&
+    typeof source.op === 'string' &&
+    (source.op === '+' ||
+      source.op === '-' ||
+      source.op === '*' ||
+      source.op === '/' ||
+      source.op === 'floorDiv' ||
+      source.op === 'ceilDiv')
+  ) {
     const left = lowerValueNode(source.left, context, `${path}.left`);
     const right = lowerValueNode(source.right, context, `${path}.right`);
     const diagnostics = [...left.diagnostics, ...right.diagnostics];
@@ -240,7 +249,7 @@ export function lowerValueNode(
     'boolean',
     'string',
     '{ ref: ... }',
-    '{ op: "+|-|*", left, right }',
+    '{ op: "+|-|*|/|floorDiv|ceilDiv", left, right }',
     '{ aggregate: { op, query, prop? } }',
     '{ concat: ValueExpr[] }',
     '{ if: { when, then, else } }',

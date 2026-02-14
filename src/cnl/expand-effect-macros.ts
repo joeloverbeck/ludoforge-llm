@@ -32,9 +32,10 @@ interface IndexedMacroParam {
 interface IndexedMacroDef {
   readonly def: EffectMacroDef;
   readonly params: readonly IndexedMacroParam[];
+  readonly declaredBindings: ReadonlySet<string>;
+  readonly exportedBindings: ReadonlySet<string>;
 }
 
-const BINDING_TOKEN_RE = /\$[A-Za-z0-9_]+/g;
 const LEGACY_PARAM_TYPES = new Set(['string', 'number', 'effect', 'effects', 'value', 'condition', 'query']);
 
 function isParamNode(node: unknown): node is { readonly param: string } {
@@ -303,10 +304,6 @@ function validateMacroArgConstraints(
   return hasViolations;
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 function sanitizeForBindingNamespace(value: string): string {
   return value.replace(/[^A-Za-z0-9_]/g, '_');
 }
@@ -316,10 +313,10 @@ function makeHygienicBindingName(macroId: string, invocationPath: string, bindin
   return `$__macro_${sanitizeForBindingNamespace(macroId)}_${sanitizeForBindingNamespace(invocationPath)}_${sanitizeForBindingNamespace(stem)}`;
 }
 
-function collectDeclaredBinders(node: unknown, into: Set<string>): void {
+function collectDeclaredBinders(node: unknown, path: string, into: Set<string>, diagnostics: Diagnostic[]): void {
   if (Array.isArray(node)) {
-    for (const item of node) {
-      collectDeclaredBinders(item, into);
+    for (let index = 0; index < node.length; index += 1) {
+      collectDeclaredBinders(node[index], `${path}.${index}`, into, diagnostics);
     }
     return;
   }
@@ -328,54 +325,253 @@ function collectDeclaredBinders(node: unknown, into: Set<string>): void {
     return;
   }
 
+  const declareBinding = (value: unknown, fieldPath: string): void => {
+    if (typeof value === 'string') {
+      into.add(value);
+      return;
+    }
+    if (value !== undefined) {
+      diagnostics.push({
+        code: 'EFFECT_MACRO_BINDING_DECLARATION_INVALID',
+        path: fieldPath,
+        severity: 'error',
+        message: 'Macro binding declaration must be a static string literal.',
+        suggestion: 'Use a string bind/countBind/remainingBind value; dynamic binder declarations are unsupported.',
+      });
+    }
+  };
+
+  const forEachNode = node.forEach;
+  if (isRecord(forEachNode)) {
+    declareBinding(forEachNode.bind, `${path}.forEach.bind`);
+    declareBinding(forEachNode.countBind, `${path}.forEach.countBind`);
+  }
+
+  const removeByPriorityNode = node.removeByPriority;
+  if (isRecord(removeByPriorityNode)) {
+    if (Array.isArray(removeByPriorityNode.groups)) {
+      for (let groupIndex = 0; groupIndex < removeByPriorityNode.groups.length; groupIndex += 1) {
+        const group = removeByPriorityNode.groups[groupIndex];
+        if (isRecord(group)) {
+          declareBinding(group.bind, `${path}.removeByPriority.groups.${groupIndex}.bind`);
+          declareBinding(group.countBind, `${path}.removeByPriority.groups.${groupIndex}.countBind`);
+        }
+      }
+    }
+    declareBinding(removeByPriorityNode.remainingBind, `${path}.removeByPriority.remainingBind`);
+  }
+
+  const letNode = node.let;
+  if (isRecord(letNode)) {
+    declareBinding(letNode.bind, `${path}.let.bind`);
+  }
+
   const chooseOneNode = node.chooseOne;
-  if (isRecord(chooseOneNode) && typeof chooseOneNode.bind === 'string') {
-    into.add(chooseOneNode.bind);
+  if (isRecord(chooseOneNode)) {
+    declareBinding(chooseOneNode.bind, `${path}.chooseOne.bind`);
   }
 
   const chooseNNode = node.chooseN;
-  if (isRecord(chooseNNode) && typeof chooseNNode.bind === 'string') {
-    into.add(chooseNNode.bind);
+  if (isRecord(chooseNNode)) {
+    declareBinding(chooseNNode.bind, `${path}.chooseN.bind`);
   }
 
-  for (const value of Object.values(node)) {
-    collectDeclaredBinders(value, into);
+  const rollRandomNode = node.rollRandom;
+  if (isRecord(rollRandomNode)) {
+    declareBinding(rollRandomNode.bind, `${path}.rollRandom.bind`);
+  }
+
+  for (const [key, value] of Object.entries(node)) {
+    collectDeclaredBinders(value, `${path}.${key}`, into, diagnostics);
   }
 }
 
-function renameBindingTokens(value: string, mappingEntries: readonly [string, string][]): string {
-  let output = value;
-  for (const [from, to] of mappingEntries) {
-    if (output === from) {
-      output = to;
-      continue;
+function rewriteBindingTemplate(template: string, renameMap: ReadonlyMap<string, string>): string {
+  const directlyMapped = renameMap.get(template);
+  if (directlyMapped !== undefined) {
+    return directlyMapped;
+  }
+
+  return template.replace(/\{([^{}]+)\}/g, (fullMatch, rawName: string) => {
+    const trimmed = rawName.trim();
+    const renamed = renameMap.get(trimmed);
+    if (renamed === undefined) {
+      return fullMatch;
     }
-
-    const directPattern = new RegExp(`(^|[^A-Za-z0-9_])${escapeRegExp(from)}(?=$|[^A-Za-z0-9_])`, 'g');
-    output = output.replace(directPattern, (_full, prefix: string) => `${prefix}${to}`);
-
-    output = output.replace(BINDING_TOKEN_RE, (token) => (token === from ? to : token));
-  }
-
-  return output;
+    const leadingWhitespace = rawName.match(/^\s*/)?.[0] ?? '';
+    const trailingWhitespace = rawName.match(/\s*$/)?.[0] ?? '';
+    return `{${leadingWhitespace}${renamed}${trailingWhitespace}}`;
+  });
 }
 
-function rewriteBindings(node: unknown, mappingEntries: readonly [string, string][]): unknown {
+function rewriteBindingName(name: string, renameMap: ReadonlyMap<string, string>): string {
+  return rewriteBindingTemplate(name, renameMap);
+}
+
+function rewriteZoneSelectorBinding(zoneSelector: string, renameMap: ReadonlyMap<string, string>): string {
+  const exactMatch = renameMap.get(zoneSelector);
+  if (exactMatch !== undefined) {
+    return exactMatch;
+  }
+
+  const splitIndex = zoneSelector.indexOf(':');
+  if (splitIndex < 0) {
+    return zoneSelector;
+  }
+  const base = zoneSelector.slice(0, splitIndex);
+  const qualifier = zoneSelector.slice(splitIndex + 1);
+  const rewrittenQualifier = rewriteBindingTemplate(qualifier, renameMap);
+  if (rewrittenQualifier === qualifier) {
+    return zoneSelector;
+  }
+  return `${base}:${rewrittenQualifier}`;
+}
+
+function rewriteBindingLikeString(value: string, parentKey: string | undefined, renameMap: ReadonlyMap<string, string>): string {
+  if (parentKey === undefined) {
+    return value;
+  }
+
+  if (parentKey === 'token' || parentKey === 'direction' || parentKey === 'player' || parentKey === 'chosen' || parentKey === 'owner') {
+    return rewriteBindingTemplate(value, renameMap);
+  }
+  if (parentKey === 'from' || parentKey === 'to' || parentKey === 'zone' || parentKey === 'space') {
+    return rewriteZoneSelectorBinding(value, renameMap);
+  }
+  return value;
+}
+
+function rewriteBindings(
+  node: unknown,
+  renameMap: ReadonlyMap<string, string>,
+  parentKey: string | undefined = undefined,
+  insideMacroArgs = false,
+): unknown {
   if (typeof node === 'string') {
-    return renameBindingTokens(node, mappingEntries);
+    if (insideMacroArgs && valueLooksLikeBinding(node)) {
+      return rewriteBindingTemplate(node, renameMap);
+    }
+    return rewriteBindingLikeString(node, parentKey, renameMap);
   }
   if (Array.isArray(node)) {
-    return node.map((item) => rewriteBindings(item, mappingEntries));
+    return node.map((item) => rewriteBindings(item, renameMap, parentKey, insideMacroArgs));
   }
   if (!isRecord(node)) {
     return node;
   }
 
-  const rewritten: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(node)) {
-    rewritten[key] = rewriteBindings(value, mappingEntries);
+  if (node.ref === 'binding' && typeof node.name === 'string') {
+    return { ...node, name: rewriteBindingName(node.name, renameMap) };
+  }
+  if (node.query === 'binding' && typeof node.name === 'string') {
+    return { ...node, name: rewriteBindingName(node.name, renameMap) };
+  }
+
+  const rewritten: Record<string, unknown> = { ...node };
+
+  if (isRecord(node.forEach)) {
+    const forEachNode = node.forEach;
+    rewritten.forEach = {
+      ...forEachNode,
+      ...(typeof forEachNode.bind === 'string' ? { bind: rewriteBindingTemplate(forEachNode.bind, renameMap) } : {}),
+      ...(typeof forEachNode.countBind === 'string'
+        ? { countBind: rewriteBindingTemplate(forEachNode.countBind, renameMap) }
+        : {}),
+      ...(forEachNode.over === undefined ? {} : { over: rewriteBindings(forEachNode.over, renameMap, 'over', insideMacroArgs) }),
+      ...(Array.isArray(forEachNode.effects) ? { effects: rewriteBindings(forEachNode.effects, renameMap, 'effects', insideMacroArgs) } : {}),
+      ...(Array.isArray(forEachNode.in) ? { in: rewriteBindings(forEachNode.in, renameMap, 'in', insideMacroArgs) } : {}),
+      ...(forEachNode.limit === undefined ? {} : { limit: rewriteBindings(forEachNode.limit, renameMap, 'limit', insideMacroArgs) }),
+    };
+    return rewritten;
+  }
+
+  if (isRecord(node.removeByPriority)) {
+    const removeByPriorityNode = node.removeByPriority;
+    rewritten.removeByPriority = {
+      ...removeByPriorityNode,
+      ...(Array.isArray(removeByPriorityNode.groups)
+        ? {
+            groups: removeByPriorityNode.groups.map((group) =>
+              !isRecord(group)
+                ? group
+                : {
+                    ...group,
+                    ...(typeof group.bind === 'string' ? { bind: rewriteBindingTemplate(group.bind, renameMap) } : {}),
+                    ...(typeof group.countBind === 'string'
+                      ? { countBind: rewriteBindingTemplate(group.countBind, renameMap) }
+                      : {}),
+                    ...(group.over === undefined ? {} : { over: rewriteBindings(group.over, renameMap, 'over', insideMacroArgs) }),
+                    ...(group.to === undefined ? {} : { to: rewriteBindings(group.to, renameMap, 'to', insideMacroArgs) }),
+                    ...(group.from === undefined ? {} : { from: rewriteBindings(group.from, renameMap, 'from', insideMacroArgs) }),
+                  },
+            ),
+          }
+        : {}),
+      ...(typeof removeByPriorityNode.remainingBind === 'string'
+        ? { remainingBind: rewriteBindingTemplate(removeByPriorityNode.remainingBind, renameMap) }
+        : {}),
+      ...(Array.isArray(removeByPriorityNode.in) ? { in: rewriteBindings(removeByPriorityNode.in, renameMap, 'in', insideMacroArgs) } : {}),
+      ...(removeByPriorityNode.budget === undefined
+        ? {}
+        : { budget: rewriteBindings(removeByPriorityNode.budget, renameMap, 'budget', insideMacroArgs) }),
+    };
+    return rewritten;
+  }
+
+  if (isRecord(node.let)) {
+    const letNode = node.let;
+    rewritten.let = {
+      ...letNode,
+      ...(typeof letNode.bind === 'string' ? { bind: rewriteBindingTemplate(letNode.bind, renameMap) } : {}),
+      ...(letNode.value === undefined ? {} : { value: rewriteBindings(letNode.value, renameMap, 'value', insideMacroArgs) }),
+      ...(Array.isArray(letNode.in) ? { in: rewriteBindings(letNode.in, renameMap, 'in', insideMacroArgs) } : {}),
+    };
+    return rewritten;
+  }
+
+  if (isRecord(node.chooseOne)) {
+    const chooseOneNode = node.chooseOne;
+    rewritten.chooseOne = {
+      ...chooseOneNode,
+      ...(typeof chooseOneNode.bind === 'string' ? { bind: rewriteBindingTemplate(chooseOneNode.bind, renameMap) } : {}),
+      ...(chooseOneNode.options === undefined ? {} : { options: rewriteBindings(chooseOneNode.options, renameMap, 'options', insideMacroArgs) }),
+    };
+    return rewritten;
+  }
+
+  if (isRecord(node.chooseN)) {
+    const chooseNNode = node.chooseN;
+    rewritten.chooseN = {
+      ...chooseNNode,
+      ...(typeof chooseNNode.bind === 'string' ? { bind: rewriteBindingTemplate(chooseNNode.bind, renameMap) } : {}),
+      ...(chooseNNode.options === undefined ? {} : { options: rewriteBindings(chooseNNode.options, renameMap, 'options', insideMacroArgs) }),
+      ...(chooseNNode.n === undefined ? {} : { n: rewriteBindings(chooseNNode.n, renameMap, 'n', insideMacroArgs) }),
+      ...(chooseNNode.min === undefined ? {} : { min: rewriteBindings(chooseNNode.min, renameMap, 'min', insideMacroArgs) }),
+      ...(chooseNNode.max === undefined ? {} : { max: rewriteBindings(chooseNNode.max, renameMap, 'max', insideMacroArgs) }),
+    };
+    return rewritten;
+  }
+
+  if (isRecord(node.rollRandom)) {
+    const rollRandomNode = node.rollRandom;
+    rewritten.rollRandom = {
+      ...rollRandomNode,
+      ...(typeof rollRandomNode.bind === 'string' ? { bind: rewriteBindingTemplate(rollRandomNode.bind, renameMap) } : {}),
+      ...(rollRandomNode.min === undefined ? {} : { min: rewriteBindings(rollRandomNode.min, renameMap, 'min', insideMacroArgs) }),
+      ...(rollRandomNode.max === undefined ? {} : { max: rewriteBindings(rollRandomNode.max, renameMap, 'max', insideMacroArgs) }),
+      ...(Array.isArray(rollRandomNode.in) ? { in: rewriteBindings(rollRandomNode.in, renameMap, 'in', insideMacroArgs) } : {}),
+    };
+    return rewritten;
+  }
+
+  for (const [key, value] of Object.entries(rewritten)) {
+    rewritten[key] = rewriteBindings(value, renameMap, key, insideMacroArgs || key === 'args');
   }
   return rewritten;
+}
+
+function valueLooksLikeBinding(value: string): boolean {
+  return value.includes('$') || value.includes('{');
 }
 
 function normalizeExportedBindings(
@@ -523,35 +719,30 @@ function expandEffect(
     return [];
   }
 
-  const declaredBindings = new Set<string>();
-  for (const templateEffect of def.effects) {
-    collectDeclaredBinders(templateEffect, declaredBindings);
-  }
-  const exportedBindings = normalizeExportedBindings(def, declaredBindings, diagnostics);
-
   const renameMap = new Map<string, string>();
-  for (const bindingName of declaredBindings) {
-    if (exportedBindings.has(bindingName)) {
+  for (const bindingName of indexedMacro.declaredBindings) {
+    if (indexedMacro.exportedBindings.has(bindingName)) {
       continue;
     }
     renameMap.set(bindingName, makeHygienicBindingName(macroId, path, bindingName));
   }
 
-  const mappingEntries = [...renameMap.entries()].sort((left, right) => right[0].length - left[0].length);
   const hygienicTemplates =
-    mappingEntries.length === 0
+    renameMap.size === 0
       ? def.effects
-      : def.effects.map((templateEffect) => rewriteBindings(templateEffect, mappingEntries) as GameSpecEffect);
-  const hygienicSubstituted = hygienicTemplates.map((templateEffect) =>
-    substituteParams(templateEffect, args) as GameSpecEffect,
-  );
+      : def.effects.map((templateEffect) => rewriteBindings(templateEffect, renameMap) as GameSpecEffect);
+  const hygienicSubstituted = hygienicTemplates.map((templateEffect) => substituteParams(templateEffect, args) as GameSpecEffect);
+  const rewrittenAfterSubstitution =
+    renameMap.size === 0
+      ? hygienicSubstituted
+      : hygienicSubstituted.map((templateEffect) => rewriteBindings(templateEffect, renameMap) as GameSpecEffect);
 
   const nestedVisited = new Set(visitedStack);
   nestedVisited.add(macroId);
 
   const expanded: GameSpecEffect[] = [];
-  for (let i = 0; i < hygienicSubstituted.length; i++) {
-    const sub = hygienicSubstituted[i];
+  for (let i = 0; i < rewrittenAfterSubstitution.length; i++) {
+    const sub = rewrittenAfterSubstitution[i];
     if (sub === undefined) continue;
     const results = expandEffect(sub, index, diagnostics, `${path}[macro:${macroId}][${i}]`, nestedVisited, depth + 1);
     expanded.push(...results);
@@ -621,9 +812,17 @@ function buildMacroIndex(
       });
       continue;
     }
+    const declaredBindings = new Set<string>();
+    for (let effectIndex = 0; effectIndex < macro.effects.length; effectIndex += 1) {
+      collectDeclaredBinders(macro.effects[effectIndex], `effectMacros.${macro.id}.effects.${effectIndex}`, declaredBindings, diagnostics);
+    }
+    const exportedBindings = normalizeExportedBindings(macro, declaredBindings, diagnostics);
+
     byId.set(macro.id, {
       def: macro,
       params: normalizeMacroParams(macro, diagnostics),
+      declaredBindings,
+      exportedBindings,
     });
   }
   return { byId };

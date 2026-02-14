@@ -477,4 +477,151 @@ describe('expandEffectMacros', () => {
     const result = expandEffectMacros(doc);
     assert.ok(result.diagnostics.some((d) => d.code === 'EFFECT_MACRO_EXPORT_DUPLICATE'));
   });
+
+  it('does not rewrite non-binding literals that happen to contain binding-like text', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'literal-safety',
+      params: [],
+      exports: [],
+      effects: [
+        { chooseOne: { bind: '$choice', options: { query: 'enums', values: ['a', 'b'] } } },
+        { setVar: { scope: 'global', var: 'picked', value: { ref: 'binding', name: '$choice' } } },
+        {
+          createToken: {
+            type: '$choice',
+            zone: 'deck:none',
+            props: {
+              label: 'token-$choice',
+              exact: '$choice',
+            },
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'literal-safety', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const choose = result.doc.setup?.[0] as { chooseOne: { bind: string } };
+    const setVar = result.doc.setup?.[1] as { setVar: { value: { ref: 'binding'; name: string } } };
+    const create = result.doc.setup?.[2] as { createToken: { type: string; props: { label: string; exact: string } } };
+    assert.notEqual(choose.chooseOne.bind, '$choice');
+    assert.equal(setVar.setVar.value.name, choose.chooseOne.bind);
+    assert.equal(create.createToken.type, '$choice');
+    assert.equal(create.createToken.props.label, 'token-$choice');
+    assert.equal(create.createToken.props.exact, '$choice');
+  });
+
+  it('rewrites all supported binding-bearing fields consistently', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'all-binders',
+      params: [],
+      exports: [],
+      effects: [
+        {
+          forEach: {
+            bind: '$item',
+            over: { query: 'binding', name: '$source' },
+            effects: [
+              {
+                let: {
+                  bind: '$inner',
+                  value: { ref: 'binding', name: '$item' },
+                  in: [{ setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$inner' } } }],
+                },
+              },
+            ],
+            countBind: '$count',
+            in: [{ setVar: { scope: 'global', var: 'c', value: { ref: 'binding', name: '$count' } } }],
+          },
+        },
+        {
+          removeByPriority: {
+            budget: 1,
+            groups: [{ bind: '$group', over: { query: 'binding', name: '$item' }, to: 'discard:none', countBind: '$removed' }],
+            remainingBind: '$remaining',
+            in: [
+              { setVar: { scope: 'global', var: 'r', value: { ref: 'binding', name: '$remaining' } } },
+              { setVar: { scope: 'global', var: 'rm', value: { ref: 'binding', name: '$removed' } } },
+            ],
+          },
+        },
+        {
+          rollRandom: {
+            bind: '$roll',
+            min: 1,
+            max: 6,
+            in: [{ setVar: { scope: 'global', var: 'd', value: { ref: 'binding', name: '$roll' } } }],
+          },
+        },
+        { chooseN: { bind: '$pick', options: { query: 'binding', name: '$group' }, n: 1 } },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'all-binders', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const forEach = result.doc.setup?.[0] as {
+      forEach: {
+        bind: string;
+        countBind: string;
+        effects: [{ let: { bind: string; value: { ref: 'binding'; name: string }; in: [{ setVar: { value: { ref: 'binding'; name: string } } }] } }];
+        in: [{ setVar: { value: { ref: 'binding'; name: string } } }];
+      };
+    };
+    const remove = result.doc.setup?.[1] as {
+      removeByPriority: {
+        groups: [{ bind: string; countBind: string; over: { query: 'binding'; name: string } }];
+        remainingBind: string;
+        in: [{ setVar: { value: { ref: 'binding'; name: string } } }, { setVar: { value: { ref: 'binding'; name: string } } }];
+      };
+    };
+    const roll = result.doc.setup?.[2] as { rollRandom: { bind: string; in: [{ setVar: { value: { ref: 'binding'; name: string } } }] } };
+    const chooseN = result.doc.setup?.[3] as { chooseN: { bind: string; options: { query: 'binding'; name: string } } };
+
+    assert.notEqual(forEach.forEach.bind, '$item');
+    assert.notEqual(forEach.forEach.countBind, '$count');
+    assert.notEqual(forEach.forEach.effects[0].let.bind, '$inner');
+    assert.equal(forEach.forEach.effects[0].let.value.name, forEach.forEach.bind);
+    assert.equal(forEach.forEach.effects[0].let.in[0].setVar.value.name, forEach.forEach.effects[0].let.bind);
+    assert.equal(forEach.forEach.in[0].setVar.value.name, forEach.forEach.countBind);
+
+    assert.notEqual(remove.removeByPriority.groups[0].bind, '$group');
+    assert.notEqual(remove.removeByPriority.groups[0].countBind, '$removed');
+    assert.notEqual(remove.removeByPriority.remainingBind, '$remaining');
+    assert.equal(remove.removeByPriority.groups[0].over.name, forEach.forEach.bind);
+    assert.equal(remove.removeByPriority.in[0].setVar.value.name, remove.removeByPriority.remainingBind);
+    assert.equal(remove.removeByPriority.in[1].setVar.value.name, remove.removeByPriority.groups[0].countBind);
+
+    assert.notEqual(roll.rollRandom.bind, '$roll');
+    assert.equal(roll.rollRandom.in[0].setVar.value.name, roll.rollRandom.bind);
+
+    assert.notEqual(chooseN.chooseN.bind, '$pick');
+    assert.equal(chooseN.chooseN.options.name, remove.removeByPriority.groups[0].bind);
+  });
+
+  it('reports unsupported dynamic binder declarations during macro expansion', () => {
+    const macroDef = {
+      id: 'dynamic-bind',
+      params: [],
+      effects: [{ chooseOne: { bind: { param: 'x' }, options: { query: 'enums', values: ['a'] } } }],
+    } as unknown as EffectMacroDef;
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'dynamic-bind', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.ok(result.diagnostics.some((d) => d.code === 'EFFECT_MACRO_BINDING_DECLARATION_INVALID'));
+    const diag = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_BINDING_DECLARATION_INVALID');
+    assert.equal(diag?.path, 'effectMacros.dynamic-bind.effects.0.chooseOne.bind');
+  });
 });

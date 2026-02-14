@@ -378,7 +378,7 @@ describe('FITL US/ARVN special activities integration', () => {
     );
   });
 
-  it('executes Transport moving up to 6 ARVN troops/rangers and flips all Rangers underground globally', () => {
+  it('executes baseline Transport moving ARVN troops only when cap_armoredCavalry is inactive', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -414,14 +414,14 @@ describe('FITL US/ARVN special activities integration', () => {
     const final = result.state;
     assert.equal(final.globalVars.transportCount, 1);
     assert.equal(
-      countTokens(final, destination, (token) => token.props.faction === 'ARVN' && (token.type === 'troops' || token.type === 'guerrilla')),
-      3,
-      'Transport should move selected ARVN troops/rangers from origin to destination',
+      countTokens(final, destination, (token) => token.props.faction === 'ARVN' && token.type === 'troops'),
+      2,
+      'Baseline Transport should move ARVN troops from origin to destination',
     );
     const movedRanger = (final.zones[destination] ?? []).find((token) => token.id === asTokenId('transport-arvn-r1'));
     const remoteRanger = (final.zones[remote] ?? []).find((token) => token.id === asTokenId('transport-remote-ranger'));
-    assert.equal(movedRanger?.props.activity, 'underground', 'Transport should flip moved Rangers underground');
-    assert.equal(remoteRanger?.props.activity, 'underground', 'Transport should flip all Rangers on map underground');
+    assert.equal(movedRanger, undefined, 'Baseline Transport should not move Rangers without cap_armoredCavalry shaded');
+    assert.equal(remoteRanger?.props.activity, 'active', 'Baseline Transport should not flip unrelated Rangers');
   });
 
   it('executes Raid adjacent Ranger movement and optional activate-remove with base-last + tunneled immunity', () => {

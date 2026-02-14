@@ -189,10 +189,11 @@ effectMacros:
   - id: insurgent-ambush-remove-coin-piece
     params:
       - { name: targetSpace, type: zoneSelector }
+      - { name: removalBudgetExpr, type: value }
     exports: []
     effects:
       - removeByPriority:
-          budget: 1
+          budget: { param: removalBudgetExpr }
           groups:
             - bind: $target
               over:
@@ -233,53 +234,104 @@ effectMacros:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
     exports: [targetSpaces]
     effects:
-      - chooseN:
-          bind: targetSpaces
-          options:
-            query: mapSpaces
-            filter:
-              op: and
-              args:
-                - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                - op: '>'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: tokensInZone
-                        zone: $zone
-                        filter:
-                          - { prop: faction, eq: { param: faction } }
-                          - { prop: type, eq: guerrilla }
-                          - { prop: activity, eq: underground }
-                  right: 0
-                - op: or
-                  args:
-                    - op: '>'
-                      left:
-                        aggregate:
-                          op: count
-                          query:
-                            query: tokensInZone
-                            zone: $zone
-                            filter:
-                              - { prop: faction, op: in, value: [US, ARVN] }
-                      right: 0
-                    - op: and
-                      args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
-                        - op: '>'
-                          left:
-                            aggregate:
-                              op: count
-                              query:
-                                query: tokensInAdjacentZones
-                                zone: $zone
-                                filter:
-                                  - { prop: faction, op: in, value: [US, ARVN] }
-                          right: 0
-          min: 1
-          max: 2
+      - if:
+          when: { op: '==', left: { ref: globalMarkerState, marker: cap_boobyTraps }, right: unshaded }
+          then:
+            - chooseN:
+                bind: targetSpaces
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                - { prop: faction, eq: { param: faction } }
+                                - { prop: type, eq: guerrilla }
+                                - { prop: activity, eq: underground }
+                        right: 0
+                      - op: or
+                        args:
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: [US, ARVN] }
+                            right: 0
+                          - op: and
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                              - op: '>'
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInAdjacentZones
+                                      zone: $zone
+                                      filter:
+                                        - { prop: faction, op: in, value: [US, ARVN] }
+                                right: 0
+                min: 1
+                max: 1
+          else:
+            - chooseN:
+                bind: targetSpaces
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: and
+                    args:
+                      - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                - { prop: faction, eq: { param: faction } }
+                                - { prop: type, eq: guerrilla }
+                                - { prop: activity, eq: underground }
+                        right: 0
+                      - op: or
+                        args:
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: [US, ARVN] }
+                            right: 0
+                          - op: and
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                              - op: '>'
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInAdjacentZones
+                                      zone: $zone
+                                      filter:
+                                        - { prop: faction, op: in, value: [US, ARVN] }
+                                right: 0
+                min: 1
+                max: 2
 
   # ── insurgent-ambush-resolve-spaces ──────────────────────────────────────
   # Shared ambush resolver (NVA/VC):
@@ -293,6 +345,7 @@ effectMacros:
       - '$ambushAdjacentTargets@{$space}'
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
+      - { name: removalBudgetExpr, type: value }
     effects:
       - forEach:
           bind: $space
@@ -366,6 +419,7 @@ effectMacros:
                               - macro: insurgent-ambush-remove-coin-piece
                                 args:
                                   targetSpace: $space
+                                  removalBudgetExpr: { param: removalBudgetExpr }
                         - if:
                             when: { op: '==', left: { ref: binding, name: '$ambushTargetMode@{$space}' }, right: adjacent }
                             then:
@@ -397,6 +451,7 @@ effectMacros:
                                     - macro: insurgent-ambush-remove-coin-piece
                                       args:
                                         targetSpace: $adjacentAmbushTarget
+                                        removalBudgetExpr: { param: removalBudgetExpr }
 
   # ── us-sa-remove-insurgents ────────────────────────────────────────────────
   # Shared US SA piece-removal ordering helper:
@@ -651,15 +706,22 @@ effectMacros:
           space: { param: space }
           resource: { param: resourceVar }
           amount: -1
-      - forEach:
-          bind: $g
-          over:
-            query: tokensInZone
-            zone: { param: space }
-            filter: [{ prop: faction, eq: { param: faction } }, { prop: type, eq: guerrilla }, { prop: activity, eq: underground }]
-          limit: 1
-          effects:
-            - setTokenProp: { token: $g, prop: activity, value: active }
+      - if:
+          when:
+            op: or
+            args:
+              - { op: '!=', left: { param: faction }, right: VC }
+              - { op: '!=', left: { ref: globalMarkerState, marker: cap_cadres }, right: unshaded }
+          then:
+            - forEach:
+                bind: $g
+                over:
+                  query: tokensInZone
+                  zone: { param: space }
+                  filter: [{ prop: faction, eq: { param: faction } }, { prop: type, eq: guerrilla }, { prop: activity, eq: underground }]
+                limit: 1
+                effects:
+                  - setTokenProp: { token: $g, prop: activity, value: active }
       - if:
           when: { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: spaceType }, right: 'loc' }
           then:
@@ -5098,44 +5160,90 @@ actionPipelines:
     stages:
       - stage: select-spaces
         effects:
-          - chooseN:
-              bind: targetSpaces
-              options:
-                query: mapSpaces
-                filter:
-                  op: and
-                  args:
-                    - op: or
-                      args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
-                    - op: or
-                      args:
-                        - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
-                        - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
-                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
-                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                    - op: '>'
-                      left:
-                        aggregate:
-                          op: count
-                          query:
-                            query: tokensInZone
-                            zone: $zone
-                            filter:
-                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                      right:
-                        aggregate:
-                          op: count
-                          query:
-                            query: tokensInZone
-                            zone: $zone
-                            filter:
-                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
-              min: 1
-              max: 2
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_mandateOfHeaven }, right: shaded }
+              then:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
+                              - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
+                              - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                    min: 1
+                    max: 2
       - stage: resolve-per-space
         effects:
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_mandateOfHeaven }, right: unshaded }
+              then:
+                - chooseOne:
+                    bind: $mandateNoShiftSpace
+                    options: { query: binding, name: targetSpaces }
           - forEach:
               bind: $space
               over: { query: binding, name: targetSpaces }
@@ -5189,7 +5297,15 @@ actionPipelines:
                           scope: global
                           var: patronage
                           delta: { ref: zoneProp, zone: $space, prop: population }
-                      - shiftMarker: { space: $space, marker: supportOpposition, delta: -1 }
+                      - if:
+                          when: { op: '==', left: { ref: globalMarkerState, marker: cap_mandateOfHeaven }, right: unshaded }
+                          then:
+                            - if:
+                                when: { op: '!=', left: { ref: binding, name: $mandateNoShiftSpace }, right: { ref: binding, name: $space } }
+                                then:
+                                  - shiftMarker: { space: $space, marker: supportOpposition, delta: -1 }
+                          else:
+                            - shiftMarker: { space: $space, marker: supportOpposition, delta: -1 }
       - stage: govern-telemetry
         effects:
           - addVar:
@@ -5208,25 +5324,48 @@ actionPipelines:
     stages:
       - stage: select-origin
         effects:
-          - chooseOne:
-              bind: $transportOrigin
-              options:
-                query: mapSpaces
-                filter:
-                  op: and
-                  args:
-                    - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
-                    - op: '>'
-                      left:
-                        aggregate:
-                          op: count
-                          query:
-                            query: tokensInZone
-                            zone: $zone
-                            filter:
-                              - { prop: faction, eq: ARVN }
-                              - { prop: type, op: in, value: [troops, guerrilla] }
-                      right: 0
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_armoredCavalry }, right: shaded }
+              then:
+                - chooseOne:
+                    bind: $transportOrigin
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, eq: ARVN }
+                                    - { prop: type, op: in, value: [troops, guerrilla] }
+                            right: 0
+              else:
+                - chooseOne:
+                    bind: $transportOrigin
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, eq: ARVN }
+                                    - { prop: type, eq: troops }
+                            right: 0
       - stage: select-destination
         effects:
           - chooseOne:
@@ -5260,39 +5399,69 @@ actionPipelines:
                             right: 0
       - stage: move-selected-pieces
         effects:
-          - forEach:
-              bind: $piece
-              over:
-                query: tokensInZone
-                zone: $transportOrigin
-                filter:
-                  - { prop: faction, eq: ARVN }
-                  - { prop: type, op: in, value: [troops, guerrilla] }
-              limit: 6
-              effects:
-                - if:
-                    when: { op: '!=', left: { ref: tokenZone, token: $piece }, right: { ref: binding, name: $transportDestination } }
-                    then:
-                      - moveToken:
-                          token: $piece
-                          from: { zoneExpr: { ref: tokenZone, token: $piece } }
-                          to: { zoneExpr: { ref: binding, name: $transportDestination } }
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_armoredCavalry }, right: shaded }
+              then:
+                - forEach:
+                    bind: $piece
+                    over:
+                      query: tokensInZone
+                      zone: $transportOrigin
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, op: in, value: [troops, guerrilla] }
+                    limit: 6
+                    effects:
+                      - if:
+                          when: { op: '!=', left: { ref: tokenZone, token: $piece }, right: { ref: binding, name: $transportDestination } }
+                          then:
+                            - moveToken:
+                                token: $piece
+                                from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                                to: { zoneExpr: { ref: binding, name: $transportDestination } }
+              else:
+                - forEach:
+                    bind: $piece
+                    over:
+                      query: tokensInZone
+                      zone: $transportOrigin
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: troops }
+                    limit: 6
+                    effects:
+                      - if:
+                          when: { op: '!=', left: { ref: tokenZone, token: $piece }, right: { ref: binding, name: $transportDestination } }
+                          then:
+                            - moveToken:
+                                token: $piece
+                                from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                                to: { zoneExpr: { ref: binding, name: $transportDestination } }
       - stage: flip-rangers-underground
         effects:
-          - forEach:
-              bind: $mapSpace
-              over: { query: mapSpaces }
-              effects:
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_armoredCavalry }, right: shaded }
+              then:
                 - forEach:
                     bind: $ranger
                     over:
                       query: tokensInZone
-                      zone: $mapSpace
+                      zone: $transportDestination
                       filter:
                         - { prop: faction, eq: ARVN }
                         - { prop: type, eq: guerrilla }
                     effects:
                       - setTokenProp: { token: $ranger, prop: activity, value: underground }
+      - stage: cap-armored-cavalry-unshaded-assault
+        effects:
+          - if:
+              when: { op: '==', left: { ref: globalMarkerState, marker: cap_armoredCavalry }, right: unshaded }
+              then:
+                - macro: us-sa-remove-insurgents
+                  args:
+                    space: $transportDestination
+                    budgetExpr: 1
+                    activeGuerrillasOnly: false
       - stage: transport-telemetry
         effects:
           - addVar:
@@ -5801,6 +5970,7 @@ actionPipelines:
           - macro: insurgent-ambush-resolve-spaces
             args:
               faction: NVA
+              removalBudgetExpr: 1
       - stage: ambush-nva-telemetry
         effects:
           - addVar:
@@ -6172,6 +6342,11 @@ actionPipelines:
           - macro: insurgent-ambush-resolve-spaces
             args:
               faction: VC
+              removalBudgetExpr:
+                if:
+                  when: { op: '==', left: { ref: globalMarkerState, marker: cap_mainForceBns }, right: shaded }
+                  then: 2
+                  else: 1
       - stage: ambush-vc-telemetry
         effects:
           - addVar:

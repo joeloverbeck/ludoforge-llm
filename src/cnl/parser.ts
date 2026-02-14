@@ -15,6 +15,7 @@ export interface ParseGameSpecResult {
 }
 
 export interface ParseGameSpecOptions {
+  readonly sourceId?: string;
   readonly maxInputBytes?: number;
   readonly maxYamlBlocks?: number;
   readonly maxBlockBytes?: number;
@@ -124,6 +125,7 @@ export function parseGameSpec(markdown: string, options: ParseGameSpecOptions = 
     for (const resolved of stages.resolved) {
       const anchoredPaths = mergeSection(doc, resolved.section, resolved.value, diagnostics);
       const span: SourceSpan = {
+        ...(options.sourceId === undefined ? {} : { sourceId: options.sourceId }),
         blockIndex: index,
         markdownLineStart: block.markdownLineStart,
         markdownColStart: 1,
@@ -214,6 +216,7 @@ function mergeSection(
     case 'terminal':
       return mergeSingletonTerminal(doc, section, value, diagnostics);
     case 'dataAssets':
+    case 'imports':
     case 'globalVars':
     case 'perPlayerVars':
     case 'zones':
@@ -235,12 +238,7 @@ function mergeSingletonMetadata(
   diagnostics: Diagnostic[],
 ): readonly string[] {
   if (doc.metadata !== null) {
-    diagnostics.push({
-      code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
-      path: 'doc.metadata',
-      severity: 'warning',
-      message: 'Duplicate singleton section "metadata" ignored; first definition wins.',
-    });
+    diagnostics.push(duplicateSingletonSectionDiagnostic('metadata', 'doc.metadata'));
     return [];
   }
 
@@ -255,12 +253,7 @@ function mergeSingletonConstants(
   diagnostics: Diagnostic[],
 ): readonly string[] {
   if (doc.constants !== null) {
-    diagnostics.push({
-      code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
-      path: 'doc.constants',
-      severity: 'warning',
-      message: 'Duplicate singleton section "constants" ignored; first definition wins.',
-    });
+    diagnostics.push(duplicateSingletonSectionDiagnostic('constants', 'doc.constants'));
     return [];
   }
 
@@ -275,12 +268,7 @@ function mergeSingletonTurnStructure(
   diagnostics: Diagnostic[],
 ): readonly string[] {
   if (doc.turnStructure !== null) {
-    diagnostics.push({
-      code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
-      path: 'doc.turnStructure',
-      severity: 'warning',
-      message: 'Duplicate singleton section "turnStructure" ignored; first definition wins.',
-    });
+    diagnostics.push(duplicateSingletonSectionDiagnostic('turnStructure', 'doc.turnStructure'));
     return [];
   }
 
@@ -295,12 +283,7 @@ function mergeSingletonTurnOrder(
   diagnostics: Diagnostic[],
 ): readonly string[] {
   if (doc.turnOrder !== null) {
-    diagnostics.push({
-      code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
-      path: 'doc.turnOrder',
-      severity: 'warning',
-      message: 'Duplicate singleton section "turnOrder" ignored; first definition wins.',
-    });
+    diagnostics.push(duplicateSingletonSectionDiagnostic('turnOrder', 'doc.turnOrder'));
     return [];
   }
 
@@ -315,12 +298,7 @@ function mergeSingletonTerminal(
   diagnostics: Diagnostic[],
 ): readonly string[] {
   if (doc.terminal !== null) {
-    diagnostics.push({
-      code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
-      path: 'doc.terminal',
-      severity: 'warning',
-      message: 'Duplicate singleton section "terminal" ignored; first definition wins.',
-    });
+    diagnostics.push(duplicateSingletonSectionDiagnostic('terminal', 'doc.terminal'));
     return [];
   }
 
@@ -331,6 +309,7 @@ function mergeSingletonTerminal(
 function mergeListSection(
   doc: GameSpecDoc,
   section:
+    | 'imports'
     | 'dataAssets'
     | 'globalVars'
     | 'perPlayerVars'
@@ -347,6 +326,15 @@ function mergeListSection(
   const existingLength = getListSectionLength(doc, section);
   const listValue = asArray(value);
   switch (section) {
+    case 'imports': {
+      const normalizedImports = listValue
+        .filter((entry): entry is string => typeof entry === 'string')
+        .map((entry) => ({ path: entry }));
+      (doc as MutableGameSpecDoc).imports = (
+        doc.imports === null ? normalizedImports : [...doc.imports, ...normalizedImports]
+      ) as MutableGameSpecDoc['imports'];
+      return buildAnchoredPaths(section, listValue, existingLength);
+    }
     case 'dataAssets':
       (doc as MutableGameSpecDoc).dataAssets = (
         doc.dataAssets === null ? listValue : [...doc.dataAssets, ...listValue]
@@ -418,6 +406,7 @@ function asArray(value: unknown): unknown[] {
 function getListSectionLength(
   doc: GameSpecDoc,
   section:
+    | 'imports'
     | 'dataAssets'
     | 'globalVars'
     | 'perPlayerVars'
@@ -484,6 +473,16 @@ function countLines(text: string, endExclusive: number): number {
     }
   }
   return lines;
+}
+
+function duplicateSingletonSectionDiagnostic(section: string, path: string): Diagnostic {
+  return {
+    code: 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION',
+    path,
+    severity: 'error',
+    message: `Duplicate singleton section "${section}" is not allowed.`,
+    suggestion: `Keep exactly one "${section}" section across parsed YAML blocks/imports.`,
+  };
 }
 
 function applyDiagnosticCap(

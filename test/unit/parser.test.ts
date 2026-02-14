@@ -8,6 +8,7 @@ describe('parseGameSpec API shape', () => {
     const result = parseGameSpec('');
 
     assert.deepEqual(result.doc, {
+      imports: null,
       metadata: null,
       constants: null,
       dataAssets: null,
@@ -148,7 +149,7 @@ describe('parseGameSpec API shape', () => {
     assert.ok(reversed.diagnostics.every((diagnostic) => diagnostic.severity !== 'error'));
   });
 
-  it('uses first singleton section and emits a warning for duplicates', () => {
+  it('uses first singleton section and emits an error for duplicates', () => {
     const result = parseGameSpec([
       '```yaml',
       'metadata:',
@@ -167,7 +168,12 @@ describe('parseGameSpec API shape', () => {
     ].join('\n'));
 
     assert.equal(result.doc.metadata?.id, 'first');
-    assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION'));
+    assert.ok(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_PARSER_DUPLICATE_SINGLETON_SECTION' && diagnostic.severity === 'error',
+      ),
+    );
   });
 
   it('appends repeated list sections preserving encounter order', () => {
@@ -200,6 +206,20 @@ describe('parseGameSpec API shape', () => {
       result.doc.actions?.map((action) => action.id),
       ['a1', 'a2'],
     );
+  });
+
+  it('parses imports section as canonical import definitions', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'imports:',
+      '  - ./base.md',
+      '  - ./rules.md',
+      '```',
+    ].join('\n'));
+
+    assert.deepEqual(result.doc.imports, [{ path: './base.md' }, { path: './rules.md' }]);
+    assert.ok(result.sourceMap.byPath['imports[0]'] !== undefined);
+    assert.ok(result.sourceMap.byPath['imports[1]'] !== undefined);
   });
 
   it('parses dataAssets section and anchors merged list paths', () => {
@@ -368,6 +388,23 @@ describe('parseGameSpec API shape', () => {
     const second = parseGameSpec(markdown);
 
     assert.deepEqual(first.sourceMap.byPath, second.sourceMap.byPath);
+  });
+
+  it('anchors sourceId in sourceMap spans when parse options provide sourceId', () => {
+    const result = parseGameSpec(
+      [
+        '```yaml',
+        'metadata:',
+        '  id: with-source',
+        '  players:',
+        '    min: 2',
+        '    max: 2',
+        '```',
+      ].join('\n'),
+      { sourceId: 'fixtures/root.md' },
+    );
+
+    assert.equal(result.sourceMap.byPath.metadata?.sourceId, 'fixtures/root.md');
   });
 
   it('returns a limit diagnostic when maxInputBytes is exceeded', () => {

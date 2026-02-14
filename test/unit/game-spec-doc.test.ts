@@ -8,6 +8,7 @@ describe('game-spec-doc', () => {
     const doc = createEmptyGameSpecDoc();
 
     const expected: GameSpecDoc = {
+      imports: null,
       metadata: null,
       constants: null,
       dataAssets: null,

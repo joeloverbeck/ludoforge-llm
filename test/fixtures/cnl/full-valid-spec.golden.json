@@ -1,5 +1,6 @@
 {
   "expectedDoc": {
+    "imports": null,
     "metadata": {
       "id": "fixture-valid",
       "players": {

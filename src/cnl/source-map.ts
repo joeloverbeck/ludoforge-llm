@@ -1,4 +1,5 @@
 export interface SourceSpan {
+  readonly sourceId?: string;
   readonly blockIndex: number;
   readonly markdownLineStart: number;
   readonly markdownColStart: number;

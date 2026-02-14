@@ -104,6 +104,10 @@ export interface GameSpecDataAsset {
   readonly payload: unknown;
 }
 
+export interface GameSpecImport {
+  readonly path: string;
+}
+
 export type GameSpecTurnFlowDuration = 'turn' | 'nextTurn' | 'round' | 'cycle';
 
 export type GameSpecTurnFlowActionClass =
@@ -256,6 +260,7 @@ export interface EffectMacroDef {
 }
 
 export interface GameSpecDoc {
+  readonly imports: readonly GameSpecImport[] | null;
   readonly metadata: GameSpecMetadata | null;
   readonly constants: Readonly<Record<string, number>> | null;
   readonly dataAssets: readonly GameSpecDataAsset[] | null;
@@ -276,6 +281,7 @@ export interface GameSpecDoc {
 
 export function createEmptyGameSpecDoc(): GameSpecDoc {
   return {
+    imports: null,
     metadata: null,
     constants: null,
     dataAssets: null,

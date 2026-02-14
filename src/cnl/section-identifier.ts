@@ -1,4 +1,5 @@
 export const CANONICAL_SECTION_KEYS = [
+  'imports',
   'metadata',
   'constants',
   'dataAssets',
@@ -130,6 +131,9 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isMetadataShape(value)) {
     matches.push('metadata');
   }
+  if (isImportsShape(value)) {
+    matches.push('imports');
+  }
   if (isConstantsShape(value)) {
     matches.push('constants');
   }
@@ -176,6 +180,10 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
 
 function isMetadataShape(value: Record<string, unknown>): boolean {
   return typeof value.id === 'string' && isRecord(value.players);
+}
+
+function isImportsShape(value: Record<string, unknown>): boolean {
+  return Array.isArray(value.imports) && value.imports.every((entry) => typeof entry === 'string');
 }
 
 function isConstantsShape(value: Record<string, unknown>): boolean {

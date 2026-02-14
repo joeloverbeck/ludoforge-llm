@@ -194,6 +194,8 @@ describe('AST and selector schemas', () => {
       { setMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', state: 'activeSupport' } },
       { shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } },
       { shiftMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', delta: 1 } },
+      { setGlobalMarker: { marker: 'cap_topGun', state: 'unshaded' } },
+      { shiftGlobalMarker: { marker: 'cap_topGun', delta: 1 } },
     ];
 
     for (const effect of effects) {

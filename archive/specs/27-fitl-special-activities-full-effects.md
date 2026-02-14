@@ -1,6 +1,6 @@
 # Spec 27: FITL Special Activities Full Effects
 
-**Status**: Draft (REVISED — full rewrite against authoritative rules)
+**Status**: ✅ COMPLETED (Archived on 2026-02-14)
 **Priority**: P0
 **Complexity**: L
 **Dependencies**: Spec 25 (mechanics infrastructure), Spec 26 (interleaving model)
@@ -329,3 +329,25 @@ Model as conditional `max` on `chooseN` cardinality, reading a `monsoon` game st
 14. Bombard prerequisite: 3+ Troops (not Police/SF) OR Base; AND adjacent 3+ NVA Troops
 15. All existing integration tests pass or are updated
 16. Build passes (`npm run build`)
+
+---
+
+## Outcome
+
+- Completion date: 2026-02-14
+- What was actually changed:
+  - The FITL SA coverage described by this spec is implemented and validated by integration suites, including production-data SA tests and fixture-based turn-flow/monsoon/determinism tests.
+  - Regression checks for no-die-roll Air Strike/Bombard and LoC-adjacent Ambush are present and passing.
+- Deviations from original plan:
+  - No additional implementation changes were required during archival; this archival captures completed state rather than introducing new behavior.
+- Verification results:
+  - `npm run build` passed.
+  - `npm run lint` passed.
+  - `npm run test:integration` passed.
+  - Targeted suites passed:
+    - `node --test dist/test/integration/fitl-us-arvn-special-activities.test.js`
+    - `node --test dist/test/integration/fitl-nva-vc-special-activities.test.js`
+    - `node --test dist/test/integration/fitl-monsoon-pivotal-windows.test.js`
+    - `node --test dist/test/integration/fitl-removal-ordering.test.js`
+    - `node --test dist/test/integration/fitl-turn-flow-golden.test.js`
+    - `node --test dist/test/integration/fitl-card-flow-determinism.test.js`

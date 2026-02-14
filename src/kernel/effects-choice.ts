@@ -61,6 +61,19 @@ const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: 
   return lattice;
 };
 
+const resolveGlobalMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string) => {
+  const lattice = ctx.def.globalMarkerLattices?.find((l) => l.id === markerId);
+  if (lattice === undefined) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Unknown global marker lattice: ${markerId}`, {
+      effectType,
+      markerId,
+      availableLattices: (ctx.def.globalMarkerLattices ?? []).map((l) => l.id).sort(),
+    });
+  }
+
+  return lattice;
+};
+
 export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: unknown }>, ctx: EffectContext): EffectResult => {
   const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, ctx.bindings);
   const decisionId = composeDecisionId(effect.chooseOne.internalDecisionId, effect.chooseOne.bind, resolvedBind);
@@ -340,6 +353,92 @@ export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMark
           ...spaceMarkers,
           [marker]: newState,
         },
+      },
+    },
+    rng: ctx.rng,
+  };
+};
+
+export const applySetGlobalMarker = (
+  effect: Extract<EffectAST, { readonly setGlobalMarker: unknown }>,
+  ctx: EffectContext,
+): EffectResult => {
+  const { marker, state: stateExpr } = effect.setGlobalMarker;
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const evaluatedState = evalValue(stateExpr, evalCtx);
+
+  if (typeof evaluatedState !== 'string') {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'setGlobalMarker.state must evaluate to a string', {
+      effectType: 'setGlobalMarker',
+      actualType: typeof evaluatedState,
+      value: evaluatedState,
+    });
+  }
+
+  const lattice = resolveGlobalMarkerLattice(ctx, marker, 'setGlobalMarker');
+  if (!lattice.states.includes(evaluatedState)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
+      effectType: 'setGlobalMarker',
+      marker,
+      state: evaluatedState,
+      validStates: lattice.states,
+    });
+  }
+
+  return {
+    state: {
+      ...ctx.state,
+      globalMarkers: {
+        ...(ctx.state.globalMarkers ?? {}),
+        [marker]: evaluatedState,
+      },
+    },
+    rng: ctx.rng,
+  };
+};
+
+export const applyShiftGlobalMarker = (
+  effect: Extract<EffectAST, { readonly shiftGlobalMarker: unknown }>,
+  ctx: EffectContext,
+): EffectResult => {
+  const { marker, delta: deltaExpr } = effect.shiftGlobalMarker;
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const evaluatedDelta = evalValue(deltaExpr, evalCtx);
+
+  if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'shiftGlobalMarker.delta must evaluate to a safe integer', {
+      effectType: 'shiftGlobalMarker',
+      actualType: typeof evaluatedDelta,
+      value: evaluatedDelta,
+    });
+  }
+
+  const lattice = resolveGlobalMarkerLattice(ctx, marker, 'shiftGlobalMarker');
+  const currentState = ctx.state.globalMarkers?.[marker] ?? lattice.defaultState;
+  const currentIndex = lattice.states.indexOf(currentState);
+
+  if (currentIndex < 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `Current marker state "${currentState}" not found in lattice "${marker}"`, {
+      effectType: 'shiftGlobalMarker',
+      marker,
+      currentState,
+      validStates: lattice.states,
+    });
+  }
+
+  const newIndex = Math.max(0, Math.min(lattice.states.length - 1, currentIndex + evaluatedDelta));
+  const newState = lattice.states[newIndex]!;
+
+  if (newState === currentState) {
+    return { state: ctx.state, rng: ctx.rng };
+  }
+
+  return {
+    state: {
+      ...ctx.state,
+      globalMarkers: {
+        ...(ctx.state.globalMarkers ?? {}),
+        [marker]: newState,
       },
     },
     rng: ctx.rng,

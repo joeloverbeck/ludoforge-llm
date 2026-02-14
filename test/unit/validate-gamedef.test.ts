@@ -341,6 +341,51 @@ describe('validateGameDef reference checks', () => {
     assert.ok(diagnostics.some((diag) => diag.code === 'REF_MARKER_STATE_MISSING' && diag.path === 'actions[0].pre.right'));
   });
 
+  it('reports unknown global marker lattice references in globalMarkerState refs', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          pre: {
+            op: '==',
+            left: { ref: 'globalMarkerState', marker: 'unknownGlobalMarker' },
+            right: 'inactive',
+          },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_GLOBAL_MARKER_LATTICE_MISSING' && diag.path === 'actions[0].pre.left.marker',
+      ),
+    );
+  });
+
+  it('reports unknown global marker lattice references in setGlobalMarker effects', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [{ setGlobalMarker: { marker: 'unknownGlobalMarker', state: 'inactive' } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_GLOBAL_MARKER_LATTICE_MISSING' && diag.path === 'actions[0].effects[0].setGlobalMarker.marker',
+      ),
+    );
+  });
+
   it('reports operation profile action references missing from actions', () => {
     const base = createValidGameDef();
     const def = {

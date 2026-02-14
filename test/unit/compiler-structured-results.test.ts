@@ -259,6 +259,7 @@ describe('compiler structured section results', () => {
       'metadata',
       'constants',
       'globalVars',
+      'globalMarkerLattices',
       'perPlayerVars',
       'zones',
       'tokenTypes',
@@ -285,6 +286,7 @@ describe('compiler structured section results', () => {
       | 'metadata'
       | 'constants'
       | 'globalVars'
+      | 'globalMarkerLattices'
       | 'perPlayerVars'
       | 'zones'
       | 'tokenTypes'

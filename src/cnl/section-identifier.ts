@@ -3,6 +3,7 @@ export const CANONICAL_SECTION_KEYS = [
   'metadata',
   'constants',
   'dataAssets',
+  'globalMarkerLattices',
   'globalVars',
   'perPlayerVars',
   'zones',

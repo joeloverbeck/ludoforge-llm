@@ -67,6 +67,20 @@ const validateReference = (
         context.markerLatticeCandidates,
       );
     }
+    return;
+  }
+
+  if (reference.ref === 'globalMarkerState') {
+    if (!context.globalMarkerLatticeNames.has(reference.marker)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_GLOBAL_MARKER_LATTICE_MISSING',
+        `${path}.marker`,
+        `Unknown global marker lattice "${reference.marker}".`,
+        reference.marker,
+        context.globalMarkerLatticeCandidates,
+      );
+    }
   }
 };
 
@@ -95,9 +109,9 @@ const validateMarkerStateLiteral = (
   markerId: string,
   markerStateExpr: ValueExpr,
   path: string,
-  context: ValidationContext,
+  statesByMarkerId: ReadonlyMap<string, readonly string[]>,
 ): void => {
-  const validStates = context.markerLatticeStatesById.get(markerId);
+  const validStates = statesByMarkerId.get(markerId);
   if (validStates === undefined) {
     return;
   }
@@ -223,7 +237,16 @@ export const validateConditionAst = (
             condition.left.marker,
             condition.right,
             `${path}.right`,
-            context,
+            context.markerLatticeStatesById,
+          );
+        }
+        if ('ref' in condition.left && condition.left.ref === 'globalMarkerState') {
+          validateMarkerStateLiteral(
+            diagnostics,
+            condition.left.marker,
+            condition.right,
+            `${path}.right`,
+            context.globalMarkerLatticeStatesById,
           );
         }
       }
@@ -235,7 +258,16 @@ export const validateConditionAst = (
             condition.right.marker,
             condition.left,
             `${path}.left`,
-            context,
+            context.markerLatticeStatesById,
+          );
+        }
+        if ('ref' in condition.right && condition.right.ref === 'globalMarkerState') {
+          validateMarkerStateLiteral(
+            diagnostics,
+            condition.right.marker,
+            condition.left,
+            `${path}.left`,
+            context.globalMarkerLatticeStatesById,
           );
         }
       }
@@ -542,7 +574,7 @@ export const validateEffectAst = (
       effect.setMarker.marker,
       effect.setMarker.state,
       `${path}.setMarker.state`,
-      context,
+      context.markerLatticeStatesById,
     );
     validateValueExpr(diagnostics, effect.setMarker.state, `${path}.setMarker.state`, context);
     return;
@@ -561,6 +593,43 @@ export const validateEffectAst = (
       );
     }
     validateValueExpr(diagnostics, effect.shiftMarker.delta, `${path}.shiftMarker.delta`, context);
+    return;
+  }
+
+  if ('setGlobalMarker' in effect) {
+    if (!context.globalMarkerLatticeNames.has(effect.setGlobalMarker.marker)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_GLOBAL_MARKER_LATTICE_MISSING',
+        `${path}.setGlobalMarker.marker`,
+        `Unknown global marker lattice "${effect.setGlobalMarker.marker}".`,
+        effect.setGlobalMarker.marker,
+        context.globalMarkerLatticeCandidates,
+      );
+    }
+    validateMarkerStateLiteral(
+      diagnostics,
+      effect.setGlobalMarker.marker,
+      effect.setGlobalMarker.state,
+      `${path}.setGlobalMarker.state`,
+      context.globalMarkerLatticeStatesById,
+    );
+    validateValueExpr(diagnostics, effect.setGlobalMarker.state, `${path}.setGlobalMarker.state`, context);
+    return;
+  }
+
+  if ('shiftGlobalMarker' in effect) {
+    if (!context.globalMarkerLatticeNames.has(effect.shiftGlobalMarker.marker)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_GLOBAL_MARKER_LATTICE_MISSING',
+        `${path}.shiftGlobalMarker.marker`,
+        `Unknown global marker lattice "${effect.shiftGlobalMarker.marker}".`,
+        effect.shiftGlobalMarker.marker,
+        context.globalMarkerLatticeCandidates,
+      );
+    }
+    validateValueExpr(diagnostics, effect.shiftGlobalMarker.delta, `${path}.shiftGlobalMarker.delta`, context);
     return;
   }
 

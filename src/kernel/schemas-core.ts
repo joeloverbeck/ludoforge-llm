@@ -30,6 +30,7 @@ import {
 import {
   MapSpaceSchema,
   NumericTrackSchema,
+  GlobalMarkerLatticeSchema,
   SpaceMarkerLatticeSchema,
   SpaceMarkerValueSchema,
   StackingConstraintSchema,
@@ -198,6 +199,7 @@ export const GameDefSchema = z
     eventDecks: z.array(EventDeckSchema).optional(),
     stackingConstraints: z.array(StackingConstraintSchema).optional(),
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),
+    globalMarkerLattices: z.array(GlobalMarkerLatticeSchema).optional(),
   })
   .strict();
 
@@ -247,6 +249,7 @@ export const GameStateSchema = z
     actionUsage: z.record(StringSchema, ActionUsageRecordSchema),
     turnOrderState: TurnOrderRuntimeStateSchema,
     markers: z.record(StringSchema, z.record(StringSchema, StringSchema)),
+    globalMarkers: z.record(StringSchema, StringSchema).optional(),
     activeLastingEffects: z.array(ActiveLastingEffectSchema).optional(),
   })
   .strict();

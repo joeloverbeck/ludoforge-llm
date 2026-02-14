@@ -153,6 +153,7 @@
           }
         },
         "markers": {},
+        "globalMarkers": {},
         "turnOrderState": {
           "type": "cardDriven",
           "runtime": {
@@ -287,6 +288,7 @@
           }
         },
         "markers": {},
+        "globalMarkers": {},
         "turnOrderState": {
           "type": "cardDriven",
           "runtime": {
@@ -465,6 +467,7 @@
           }
         },
         "markers": {},
+        "globalMarkers": {},
         "turnOrderState": {
           "type": "cardDriven",
           "runtime": {
@@ -650,6 +653,7 @@
           }
         },
         "markers": {},
+        "globalMarkers": {},
         "turnOrderState": {
           "type": "cardDriven",
           "runtime": {

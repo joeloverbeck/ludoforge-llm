@@ -11,6 +11,7 @@ import {
   lowerConstants,
   lowerEndConditions,
   lowerEffectsWithDiagnostics,
+  lowerGlobalMarkerLattices,
   lowerScoring,
   lowerTokenTypes,
   lowerTriggers,
@@ -40,6 +41,7 @@ export interface CompileSectionResults {
   readonly metadata: GameDef['metadata'] | null;
   readonly constants: GameDef['constants'] | null;
   readonly globalVars: GameDef['globalVars'] | null;
+  readonly globalMarkerLattices: Exclude<GameDef['globalMarkerLattices'], undefined> | null;
   readonly perPlayerVars: GameDef['perPlayerVars'] | null;
   readonly zones: GameDef['zones'] | null;
   readonly tokenTypes: GameDef['tokenTypes'] | null;
@@ -175,6 +177,7 @@ function compileExpandedDoc(
     metadata: null,
     constants: null,
     globalVars: null,
+    globalMarkerLattices: null,
     perPlayerVars: null,
     zones: null,
     tokenTypes: null,
@@ -214,6 +217,8 @@ function compileExpandedDoc(
     diagnostics,
   );
   sections.globalVars = globalVars.failed ? null : mergedGlobalVars;
+  const globalMarkerLattices = compileSection(diagnostics, () => lowerGlobalMarkerLattices(doc.globalMarkerLattices, diagnostics));
+  sections.globalMarkerLattices = globalMarkerLattices.failed ? null : globalMarkerLattices.value;
 
   const perPlayerVars = compileSection(diagnostics, () => lowerVarDefs(doc.perPlayerVars, diagnostics, 'doc.perPlayerVars'));
   sections.perPlayerVars = perPlayerVars.failed ? null : perPlayerVars.value;
@@ -339,6 +344,7 @@ function compileExpandedDoc(
     ...(derivedFromAssets.stackingConstraints === null
       ? {}
       : { stackingConstraints: derivedFromAssets.stackingConstraints }),
+    ...(sections.globalMarkerLattices === null ? {} : { globalMarkerLattices: sections.globalMarkerLattices }),
     tokenTypes: tokenTypes.value,
     setup: setup.value,
     turnStructure,

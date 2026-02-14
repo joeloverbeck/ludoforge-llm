@@ -574,3 +574,39 @@ describe('effects shiftMarker', () => {
     );
   });
 });
+
+describe('effects global marker lifecycle', () => {
+  it('setGlobalMarker sets global marker state', () => {
+    const ctx = makeMarkerCtx({
+      def: {
+        ...makeMarkerDef(),
+        globalMarkerLattices: [{ id: 'cap_topGun', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' }],
+      },
+    });
+    const effect: EffectAST = {
+      setGlobalMarker: { marker: 'cap_topGun', state: 'unshaded' },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalMarkers?.cap_topGun, 'unshaded');
+  });
+
+  it('shiftGlobalMarker shifts and clamps by lattice order', () => {
+    const ctx = makeMarkerCtx({
+      def: {
+        ...makeMarkerDef(),
+        globalMarkerLattices: [{ id: 'cap_topGun', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' }],
+      },
+      state: {
+        ...makeState(),
+        globalMarkers: { cap_topGun: 'inactive' },
+      },
+    });
+    const effect: EffectAST = {
+      shiftGlobalMarker: { marker: 'cap_topGun', delta: 5 },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalMarkers?.cap_topGun, 'shaded');
+  });
+});

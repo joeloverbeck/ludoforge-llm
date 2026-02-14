@@ -20,6 +20,12 @@ interface MarkerLatticeLike {
   readonly states: readonly string[];
 }
 
+interface GlobalMarkerLatticeLike {
+  readonly id: string;
+  readonly states: readonly string[];
+  readonly defaultState: string;
+}
+
 interface PieceTypeLike {
   readonly id: string;
 }
@@ -167,6 +173,47 @@ describe('FITL production data integration compilation', () => {
       new Set((compiled.gameDef?.markerLattices ?? []).map((lattice) => lattice.id)),
       new Set(mapPayload.markerLattices.map((lattice) => lattice.id)),
       'Compiled GameDef marker lattices must be lowered from selected map asset',
+    );
+    const expectedCapabilityMarkers = new Set([
+      'cap_topGun',
+      'cap_arcLight',
+      'cap_abrams',
+      'cap_cobras',
+      'cap_m48Patton',
+      'cap_caps',
+      'cap_cords',
+      'cap_lgbs',
+      'cap_searchAndDestroy',
+      'cap_aaa',
+      'cap_longRangeGuns',
+      'cap_migs',
+      'cap_sa2s',
+      'cap_pt76',
+      'cap_armoredCavalry',
+      'cap_mandateOfHeaven',
+      'cap_boobyTraps',
+      'cap_mainForceBns',
+      'cap_cadres',
+    ]);
+    const compiledGlobalMarkerLattices = (compiled.gameDef?.globalMarkerLattices ?? []) as readonly GlobalMarkerLatticeLike[];
+    assert.equal(compiledGlobalMarkerLattices.length, expectedCapabilityMarkers.size);
+    assert.deepEqual(
+      new Set(compiledGlobalMarkerLattices.map((lattice) => lattice.id)),
+      expectedCapabilityMarkers,
+      'Compiled GameDef global marker lattices must include all capability markers',
+    );
+    assert.equal(
+      compiledGlobalMarkerLattices.every(
+        (lattice) =>
+          lattice.defaultState === 'inactive' &&
+          lattice.states.length === 3 &&
+          new Set(lattice.states).size === 3 &&
+          lattice.states.includes('inactive') &&
+          lattice.states.includes('unshaded') &&
+          lattice.states.includes('shaded'),
+      ),
+      true,
+      'Each capability global marker lattice must be tri-state with inactive default',
     );
 
     const pieceCatalogAsset = (parsed.doc.dataAssets ?? []).find(

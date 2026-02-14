@@ -26,6 +26,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
   const rng = createRng(BigInt(seed));
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const initialMarkers = buildInitialMarkers(def.spaceMarkers);
+  const initialGlobalMarkers = buildInitialGlobalMarkers(def.globalMarkerLattices);
 
   const baseState: GameState = {
     globalVars: Object.fromEntries(def.globalVars.map((variable) => [variable.name, variable.init])),
@@ -45,6 +46,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     stateHash: 0n,
     actionUsage: {},
     markers: initialMarkers,
+    globalMarkers: initialGlobalMarkers,
     turnOrderState: initialTurnOrderState,
   };
   const withInitialActivePlayer = resolveInitialActivePlayer(baseState, def.turnOrder);
@@ -184,4 +186,14 @@ const buildInitialMarkers = (spaceMarkers: GameDef['spaceMarkers']): GameState['
     };
   }
   return markers;
+};
+
+const buildInitialGlobalMarkers = (
+  globalMarkerLattices: GameDef['globalMarkerLattices'],
+): Readonly<Record<string, string>> => {
+  if (globalMarkerLattices === undefined || globalMarkerLattices.length === 0) {
+    return {};
+  }
+
+  return Object.fromEntries(globalMarkerLattices.map((lattice) => [lattice.id, lattice.defaultState]));
 };

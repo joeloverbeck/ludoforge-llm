@@ -28,7 +28,18 @@ const SUPPORTED_QUERY_KINDS = [
   'connectedZones',
   'binding',
 ];
-const SUPPORTED_REFERENCE_KINDS = ['gvar', 'pvar', 'zoneCount', 'tokenProp', 'binding', 'markerState', 'tokenZone', 'zoneProp', 'activePlayer'];
+const SUPPORTED_REFERENCE_KINDS = [
+  'gvar',
+  'pvar',
+  'zoneCount',
+  'tokenProp',
+  'binding',
+  'markerState',
+  'globalMarkerState',
+  'tokenZone',
+  'zoneProp',
+  'activePlayer',
+];
 
 export function lowerConditionNode(
   source: unknown,
@@ -650,6 +661,14 @@ function lowerReference(
         diagnostics: space.diagnostics,
       };
     }
+    case 'globalMarkerState':
+      if (typeof source.marker === 'string') {
+        return {
+          value: { ref: 'globalMarkerState', marker: source.marker },
+          diagnostics: [],
+        };
+      }
+      return missingCapability(path, 'globalMarkerState reference', source, ['{ ref: "globalMarkerState", marker: string }']);
     case 'tokenZone':
       if (typeof source.token === 'string') {
         return {

@@ -8,6 +8,7 @@ import type { GameSpecSourceMap, SourceSpan } from './source-map.js';
 const SINGLETON_SECTIONS = ['metadata', 'constants', 'turnStructure', 'turnOrder', 'terminal'] as const;
 const LIST_SECTIONS = [
   'dataAssets',
+  'globalMarkerLattices',
   'globalVars',
   'perPlayerVars',
   'zones',
@@ -259,6 +260,9 @@ function assignListSection(
   switch (section) {
     case 'dataAssets':
       mutable.dataAssets = value as MutableGameSpecDoc['dataAssets'];
+      break;
+    case 'globalMarkerLattices':
+      mutable.globalMarkerLattices = value as MutableGameSpecDoc['globalMarkerLattices'];
       break;
     case 'globalVars':
       mutable.globalVars = value as MutableGameSpecDoc['globalVars'];

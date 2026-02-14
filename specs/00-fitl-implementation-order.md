@@ -40,7 +40,7 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
          │                                     │
          └─────────────┬───────────────────────┘
                        v
-         Spec 28 (Capabilities + Momentum + RVN Leader)
+         Spec 28 (Capabilities + Momentum + RVN Leader) ←── also Spec 25c
                        │
                        v
          Spec 29 (Event Cards) ──────> Spec 30 (Non-Player AI)
@@ -51,7 +51,7 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 ```
 
 **New specs**:
-- **Spec 25c** (Extended Kernel Primitives): Integer division + tokenZone reference. Required by Spec 26 for Attack/Sweep damage formulas and March/Patrol/Sweep source zone lookups.
+- **Spec 25c** (Extended Kernel Primitives): Integer division + tokenZone reference + GlobalMarkerLatticeDef. Required by Spec 26 for Attack/Sweep damage formulas and March/Patrol/Sweep source zone lookups. GlobalMarkerLatticeDef required by Spec 28 for capability tri-state markers and RVN Leader encoding.
 - **Spec 13a** (GameSpecDoc Effect Macros): Compile-time parameterized macro expansion. Optional for Spec 26 (operations can inline patterns if 13a is deferred). Reduces duplication in piece-removal-ordering and dynamic piece sourcing patterns.
 
 ## Milestones
@@ -110,13 +110,17 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 
 **Status**: Not started
 
-**Criteria**: Integer division and tokenZone reference work correctly.
+**Criteria**: Integer division, tokenZone reference, and GlobalMarkerLatticeDef work correctly.
 
 - `{ op: '/' }` evaluates with floor-toward-zero semantics
 - Division by zero throws EvalRuntimeError
 - `{ ref: tokenZone, token: $binding }` resolves to correct zone ID
 - tokenZone throws on token not found or token in multiple zones
-- Compiler lowers YAML tokenZone references correctly
+- `GlobalMarkerLatticeDef` defines game-wide marker lattices (mirrors `SpaceMarkerLatticeDef`)
+- `setGlobalMarker` and `shiftGlobalMarker` effects update global marker state
+- `{ ref: 'globalMarkerState', marker: '...' }` resolves to current marker state string
+- Global markers included in Zobrist hashing
+- Compiler lowers YAML tokenZone and globalMarkerLattice references correctly
 - All existing tests pass (no regression)
 
 ### Milestone C: Operations + SAs Complete (Specs 26-27)
@@ -144,12 +148,15 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 
 ### Milestone D: Modifiers Active (Spec 28)
 
-**Criteria**: All 19 capabilities, 16 momentum markers, and RVN Leader effects operational.
+**Criteria**: All 19 capabilities (tri-state), 15 momentum markers, and RVN Leader effects operational.
 
-- Capability conditional branches on affected operations
-- Momentum prohibitions and formula modifications
+- Capabilities as tri-state global markers (`inactive`/`unshaded`/`shaded`) via GlobalMarkerLatticeDef
+- Per-side conditional branches on affected operations (each side has distinct effects)
+- Capability flip mechanic supported (Card #52 RAND)
+- 15 momentum markers with prohibitions and formula modifications
 - Momentum expiry at coup Reset
-- RVN Leader bonus applies correctly (e.g., Minh +5 Aid on Train)
+- RVN Leader: 5 leaders + 2 Failed Attempts via `activeLeader` global marker + `leaderBoxCardCount` gvar
+- Immediate vs lingering coup card effects properly distinguished
 
 ### Milestone E: Events Encoded (Spec 29)
 
@@ -229,7 +236,7 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 | 25 | Game Mechanics Infrastructure | P0 | L | 4-5 | |
 | 25a | Kernel Operation Primitives (Depends: 25) | P0 | M | 2-3 | COMPLETED |
 | 25b | Kernel Decision Sequence Model (Depends: 25a) | P0 | M | 2-3 | COMPLETED |
-| 25c | Extended Kernel Primitives (Depends: 25b) | P0 | S | 0.5-1 | NEW |
+| 25c | Extended Kernel Primitives (Depends: 25b) | P0 | S | 1-1.5 | NEW |
 | 13a | GameSpecDoc Effect Macros (Depends: 25c) | P1 | M | 2-3 | NEW, OPTIONAL |
 | 26 | Operations Full Effects (Depends: 25, 25a-c; optional: 13a) | P0 | XL | 6-8 | REVISED |
 | 27 | Special Activities Full Effects | P0 | L | 4-5 | |
@@ -240,10 +247,11 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 | **Total** | | | | **41-57** | |
 
 **Changes from previous estimate**:
-- Added Spec 25c: +0.5-1 day (S complexity, minimal kernel additions)
+- Added Spec 25c: +1-1.5 days (S complexity, integer division + tokenZone + GlobalMarkerLatticeDef)
 - Added Spec 13a: +2-3 days (M complexity, new compile-time system; OPTIONAL for Milestone C)
 - Revised Spec 26: 5-7 -> 6-8 days (more complete but macros reduce duplication if 13a is done first)
-- Total: 38-52 -> 41-57 days
+- Revised Spec 25c: 0.5-1 -> 1-1.5 days (added GlobalMarkerLatticeDef for Spec 28 capability tri-state markers)
+- Total: 38-52 -> 41.5-57.5 days
 
 ## Open Questions (Tracked Across Specs)
 

@@ -12,6 +12,9 @@ export type ValidationContext = {
   markerLatticeNames: Set<string>;
   markerLatticeCandidates: readonly string[];
   markerLatticeStatesById: ReadonlyMap<string, readonly string[]>;
+  globalMarkerLatticeNames: Set<string>;
+  globalMarkerLatticeCandidates: readonly string[];
+  globalMarkerLatticeStatesById: ReadonlyMap<string, readonly string[]>;
   zoneNames: Set<string>;
   zoneCandidates: readonly string[];
   zoneOwners: ReadonlyMap<string, GameDef['zones'][number]['owner']>;
@@ -294,6 +297,34 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
     }
   });
 
+  (def.globalMarkerLattices ?? []).forEach((lattice, index) => {
+    if (lattice.states.length === 0) {
+      diagnostics.push({
+        code: 'GLOBAL_MARKER_LATTICE_STATES_EMPTY',
+        path: `globalMarkerLattices[${index}].states`,
+        severity: 'error',
+        message: `Global marker lattice "${lattice.id}" must declare at least one state.`,
+      });
+      return;
+    }
+    if (!lattice.states.includes(lattice.defaultState)) {
+      diagnostics.push({
+        code: 'GLOBAL_MARKER_LATTICE_DEFAULT_INVALID',
+        path: `globalMarkerLattices[${index}].defaultState`,
+        severity: 'error',
+        message: `Global marker lattice "${lattice.id}" defaultState "${lattice.defaultState}" must exist in states.`,
+        suggestion: 'Set defaultState to one of the declared states.',
+      });
+    }
+    checkDuplicateIds(
+      diagnostics,
+      lattice.states,
+      'DUPLICATE_GLOBAL_MARKER_STATE_ID',
+      'global marker state id',
+      `globalMarkerLattices[${index}].states`,
+    );
+  });
+
   checkDuplicateIds(diagnostics, def.zones.map((zone) => zone.id), 'DUPLICATE_ZONE_ID', 'zone id', 'zones');
   checkDuplicateIds(
     diagnostics,
@@ -343,6 +374,13 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
     'DUPLICATE_OPERATION_PROFILE_ID',
     'operation profile id',
     'actionPipelines',
+  );
+  checkDuplicateIds(
+    diagnostics,
+    (def.globalMarkerLattices ?? []).map((lattice) => lattice.id),
+    'DUPLICATE_GLOBAL_MARKER_LATTICE_ID',
+    'global marker lattice id',
+    'globalMarkerLattices',
   );
 
   def.zones.forEach((zone, index) => {
@@ -405,6 +443,9 @@ export const buildValidationContext = (
   const markerLatticeCandidates = [...new Set((def.markerLattices ?? []).map((lattice) => lattice.id))].sort((left, right) =>
     left.localeCompare(right),
   );
+  const globalMarkerLatticeCandidates = [...new Set((def.globalMarkerLattices ?? []).map((lattice) => lattice.id))].sort(
+    (left, right) => left.localeCompare(right),
+  );
   const phaseCandidates = [...new Set(def.turnStructure.phases.map((phase) => phase.id))].sort((left, right) =>
     left.localeCompare(right),
   );
@@ -423,6 +464,9 @@ export const buildValidationContext = (
     markerLatticeNames: new Set(markerLatticeCandidates),
     markerLatticeCandidates,
     markerLatticeStatesById: new Map((def.markerLattices ?? []).map((lattice) => [lattice.id, lattice.states])),
+    globalMarkerLatticeNames: new Set(globalMarkerLatticeCandidates),
+    globalMarkerLatticeCandidates,
+    globalMarkerLatticeStatesById: new Map((def.globalMarkerLattices ?? []).map((lattice) => [lattice.id, lattice.states])),
     tokenTypeNames: new Set(tokenTypeCandidates),
     tokenTypeCandidates,
     playerIdMin: 0,

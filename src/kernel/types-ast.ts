@@ -20,6 +20,7 @@ export type Reference =
   | { readonly ref: 'tokenProp'; readonly token: TokenSel; readonly prop: string }
   | { readonly ref: 'binding'; readonly name: string }
   | { readonly ref: 'markerState'; readonly space: ZoneSel; readonly marker: string }
+  | { readonly ref: 'globalMarkerState'; readonly marker: string }
   | { readonly ref: 'tokenZone'; readonly token: TokenSel }
   | { readonly ref: 'zoneProp'; readonly zone: ZoneSel; readonly prop: string }
   | { readonly ref: 'activePlayer' };
@@ -243,6 +244,18 @@ export type EffectAST =
   | {
       readonly shiftMarker: {
         readonly space: ZoneRef;
+        readonly marker: string;
+        readonly delta: ValueExpr;
+      };
+    }
+  | {
+      readonly setGlobalMarker: {
+        readonly marker: string;
+        readonly state: ValueExpr;
+      };
+    }
+  | {
+      readonly shiftGlobalMarker: {
         readonly marker: string;
         readonly delta: ValueExpr;
       };

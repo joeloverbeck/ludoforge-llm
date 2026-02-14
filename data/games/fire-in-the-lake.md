@@ -5450,6 +5450,65 @@ actionPipelines:
 # ══════════════════════════════════════════════════════════════════════════════
 # Global / Per-Player Variables
 # ══════════════════════════════════════════════════════════════════════════════
+globalMarkerLattices:
+  - id: cap_topGun
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_arcLight
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_abrams
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_cobras
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_m48Patton
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_caps
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_cords
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_lgbs
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_searchAndDestroy
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_aaa
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_longRangeGuns
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_migs
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_sa2s
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_pt76
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_armoredCavalry
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_mandateOfHeaven
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_boobyTraps
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_mainForceBns
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+  - id: cap_cadres
+    states: [inactive, unshaded, shaded]
+    defaultState: inactive
+
 globalVars:
   # ── Stub vars for COIN operation testing ──
   - { name: coinResources, type: int, init: 10, min: 0, max: 50 }

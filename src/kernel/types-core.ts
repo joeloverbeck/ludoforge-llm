@@ -176,6 +176,7 @@ export interface GameDef {
   readonly eventDecks?: readonly EventDeckDef[];
   readonly stackingConstraints?: readonly StackingConstraint[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];
+  readonly globalMarkerLattices?: readonly GlobalMarkerLatticeDef[];
 }
 
 export type DataAssetKind = 'map' | 'scenario' | 'pieceCatalog';
@@ -261,6 +262,12 @@ export interface SpaceMarkerValueDef {
   readonly state: string;
 }
 
+export interface GlobalMarkerLatticeDef {
+  readonly id: string;
+  readonly states: readonly string[];
+  readonly defaultState: string;
+}
+
 export interface StackingConstraint {
   readonly id: string;
   readonly description: string;
@@ -328,6 +335,11 @@ export type ZobristFeature =
       readonly state: string;
     }
   | {
+      readonly kind: 'globalMarkerState';
+      readonly markerId: string;
+      readonly state: string;
+    }
+  | {
       readonly kind: 'lastingEffect';
       readonly slot: number;
       readonly id: string;
@@ -360,6 +372,7 @@ export interface GameState {
   readonly actionUsage: Readonly<Record<string, ActionUsageRecord>>;
   readonly turnOrderState: TurnOrderRuntimeState;
   readonly markers: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  readonly globalMarkers?: Readonly<Record<string, string>>;
   readonly activeLastingEffects?: readonly ActiveLastingEffect[];
 }
 

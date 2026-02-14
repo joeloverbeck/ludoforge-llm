@@ -101,6 +101,14 @@ export const SpaceMarkerLatticeSchema = z
   })
   .strict();
 
+export const GlobalMarkerLatticeSchema = z
+  .object({
+    id: StringSchema.min(1),
+    states: z.array(StringSchema.min(1)),
+    defaultState: StringSchema.min(1),
+  })
+  .strict();
+
 export const SpaceMarkerValueSchema = z
   .object({
     spaceId: StringSchema.min(1),

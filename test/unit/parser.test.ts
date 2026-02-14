@@ -12,6 +12,7 @@ describe('parseGameSpec API shape', () => {
       metadata: null,
       constants: null,
       dataAssets: null,
+      globalMarkerLattices: null,
       globalVars: null,
       perPlayerVars: null,
       zones: null,
@@ -237,6 +238,22 @@ describe('parseGameSpec API shape', () => {
     assert.equal(result.doc.dataAssets?.[0]?.id, 'fitl-map-foundation');
     assert.ok(result.sourceMap.byPath['dataAssets[0].id'] !== undefined);
     assert.ok(result.sourceMap.byPath['dataAssets[0].kind'] !== undefined);
+  });
+
+  it('parses globalMarkerLattices section and anchors merged list paths', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'globalMarkerLattices:',
+      '  - id: cap_topGun',
+      '    states: [inactive, unshaded, shaded]',
+      '    defaultState: inactive',
+      '```',
+    ].join('\n'));
+
+    assert.equal(result.doc.globalMarkerLattices?.length, 1);
+    assert.equal(result.doc.globalMarkerLattices?.[0]?.id, 'cap_topGun');
+    assert.ok(result.sourceMap.byPath['globalMarkerLattices[0].id'] !== undefined);
+    assert.ok(result.sourceMap.byPath['globalMarkerLattices[0].defaultState'] !== undefined);
   });
 
   it('parses actionPipelines section and anchors merged list paths', () => {

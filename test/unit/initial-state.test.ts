@@ -89,6 +89,24 @@ describe('initialState', () => {
     });
   });
 
+  it('initializes global markers from declared global marker lattice defaults', () => {
+    const baseDef = createDef();
+    const def: GameDef = {
+      ...baseDef,
+      globalMarkerLattices: [
+        { id: 'cap_topGun', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' },
+        { id: 'activeLeader', states: ['minh', 'khanh', 'ky'], defaultState: 'minh' },
+      ],
+      triggers: [],
+    };
+
+    const state = initialState(def, 9, 2);
+    assert.deepEqual(state.globalMarkers, {
+      cap_topGun: 'inactive',
+      activeLeader: 'minh',
+    });
+  });
+
   it('defaults omitted playerCount to metadata.players.min', () => {
     const state = initialState(createDef(), 11);
     assert.equal(state.playerCount, 2);

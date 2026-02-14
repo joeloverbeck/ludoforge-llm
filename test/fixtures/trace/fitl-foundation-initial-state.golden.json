@@ -24,6 +24,7 @@
   "stateHash": "0x923045bcd6a462e9",
   "actionUsage": {},
   "markers": {},
+  "globalMarkers": {},
   "turnOrderState": {
     "type": "roundRobin"
   }

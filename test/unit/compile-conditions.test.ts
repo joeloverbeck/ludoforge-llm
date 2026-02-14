@@ -134,6 +134,17 @@ describe('compile-conditions lowering', () => {
     assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
   });
 
+  it('lowers globalMarkerState reference', () => {
+    const result = lowerValueNode(
+      { ref: 'globalMarkerState', marker: 'cap_topGun' },
+      context,
+      'doc.actions.0.pre.left',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, { ref: 'globalMarkerState', marker: 'cap_topGun' });
+  });
+
   it('lowers tokenZone reference', () => {
     const result = lowerValueNode(
       { ref: 'tokenZone', token: '$piece' },

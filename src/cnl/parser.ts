@@ -216,6 +216,7 @@ function mergeSection(
     case 'terminal':
       return mergeSingletonTerminal(doc, section, value, diagnostics);
     case 'dataAssets':
+    case 'globalMarkerLattices':
     case 'imports':
     case 'globalVars':
     case 'perPlayerVars':
@@ -311,6 +312,7 @@ function mergeListSection(
   section:
     | 'imports'
     | 'dataAssets'
+    | 'globalMarkerLattices'
     | 'globalVars'
     | 'perPlayerVars'
     | 'zones'
@@ -339,6 +341,11 @@ function mergeListSection(
       (doc as MutableGameSpecDoc).dataAssets = (
         doc.dataAssets === null ? listValue : [...doc.dataAssets, ...listValue]
       ) as MutableGameSpecDoc['dataAssets'];
+      return buildAnchoredPaths(section, listValue, existingLength);
+    case 'globalMarkerLattices':
+      (doc as MutableGameSpecDoc).globalMarkerLattices = (
+        doc.globalMarkerLattices === null ? listValue : [...doc.globalMarkerLattices, ...listValue]
+      ) as MutableGameSpecDoc['globalMarkerLattices'];
       return buildAnchoredPaths(section, listValue, existingLength);
     case 'globalVars':
       (doc as MutableGameSpecDoc).globalVars = (
@@ -408,6 +415,7 @@ function getListSectionLength(
   section:
     | 'imports'
     | 'dataAssets'
+    | 'globalMarkerLattices'
     | 'globalVars'
     | 'perPlayerVars'
     | 'zones'

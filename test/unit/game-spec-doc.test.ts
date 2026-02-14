@@ -12,6 +12,7 @@ describe('game-spec-doc', () => {
       metadata: null,
       constants: null,
       dataAssets: null,
+      globalMarkerLattices: null,
       globalVars: null,
       perPlayerVars: null,
       zones: null,

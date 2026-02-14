@@ -117,6 +117,12 @@ function lowerEffectNode(
   if (isRecord(source.shiftMarker)) {
     return lowerShiftMarkerEffect(source.shiftMarker, context, scope, `${path}.shiftMarker`);
   }
+  if (isRecord(source.setGlobalMarker)) {
+    return lowerSetGlobalMarkerEffect(source.setGlobalMarker, context, scope, `${path}.setGlobalMarker`);
+  }
+  if (isRecord(source.shiftGlobalMarker)) {
+    return lowerShiftGlobalMarkerEffect(source.shiftGlobalMarker, context, scope, `${path}.shiftGlobalMarker`);
+  }
 
   return missingCapability(path, 'effect node', source, SUPPORTED_EFFECT_KINDS);
 }
@@ -800,6 +806,60 @@ function lowerShiftMarkerEffect(
     value: {
       shiftMarker: {
         space: space.value,
+        marker: source.marker,
+        delta: delta.value,
+      },
+    },
+    diagnostics,
+  };
+}
+
+function lowerSetGlobalMarkerEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (typeof source.marker !== 'string') {
+    return missingCapability(path, 'setGlobalMarker effect', source, ['{ setGlobalMarker: { marker, state } }']);
+  }
+
+  const state = lowerValueNode(source.state, makeConditionContext(context, scope), `${path}.state`);
+  const diagnostics = [...state.diagnostics];
+  if (state.value === null) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: {
+      setGlobalMarker: {
+        marker: source.marker,
+        state: state.value,
+      },
+    },
+    diagnostics,
+  };
+}
+
+function lowerShiftGlobalMarkerEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (typeof source.marker !== 'string') {
+    return missingCapability(path, 'shiftGlobalMarker effect', source, ['{ shiftGlobalMarker: { marker, delta } }']);
+  }
+
+  const delta = lowerValueNode(source.delta, makeConditionContext(context, scope), `${path}.delta`);
+  const diagnostics = [...delta.diagnostics];
+  if (delta.value === null) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: {
+      shiftGlobalMarker: {
         marker: source.marker,
         delta: delta.value,
       },

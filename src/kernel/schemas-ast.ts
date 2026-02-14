@@ -36,6 +36,7 @@ export const ReferenceSchema = z.union([
   z.object({ ref: z.literal('tokenProp'), token: TokenSelSchema, prop: StringSchema }).strict(),
   z.object({ ref: z.literal('binding'), name: StringSchema }).strict(),
   z.object({ ref: z.literal('markerState'), space: ZoneSelSchema, marker: StringSchema }).strict(),
+  z.object({ ref: z.literal('globalMarkerState'), marker: StringSchema }).strict(),
   z.object({ ref: z.literal('tokenZone'), token: TokenSelSchema }).strict(),
   z.object({ ref: z.literal('zoneProp'), zone: ZoneSelSchema, prop: StringSchema }).strict(),
   z.object({ ref: z.literal('activePlayer') }).strict(),
@@ -412,6 +413,26 @@ effectAstSchemaInternal = z.union([
       shiftMarker: z
         .object({
           space: ZoneRefSchema,
+          marker: StringSchema,
+          delta: ValueExprSchema,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      setGlobalMarker: z
+        .object({
+          marker: StringSchema,
+          state: ValueExprSchema,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      shiftGlobalMarker: z
+        .object({
           marker: StringSchema,
           delta: ValueExprSchema,
         })

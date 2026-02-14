@@ -18,6 +18,8 @@ export const SUPPORTED_EFFECT_KINDS = [
   'rollRandom',
   'setMarker',
   'shiftMarker',
+  'setGlobalMarker',
+  'shiftGlobalMarker',
 ] as const;
 
 export type SupportedEffectKind = typeof SUPPORTED_EFFECT_KINDS[number];

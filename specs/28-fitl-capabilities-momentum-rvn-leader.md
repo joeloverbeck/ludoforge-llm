@@ -3,224 +3,440 @@
 **Status**: Draft
 **Priority**: P1
 **Complexity**: L
-**Dependencies**: Spec 26 (operations), Spec 27 (special activities)
-**Estimated effort**: 3–4 days
-**Source sections**: Brainstorming Sections 4.2 (items 9–11), 5.1–5.2, 7.3, 11 (Capabilities, Momentum)
+**Dependencies**: Spec 26 (operations), Spec 27 (special activities), Spec 25c (GlobalMarkerLatticeDef)
+**Estimated effort**: 3-4 days
+**Source sections**: Brainstorming Sections 4.2 (items 9-11), 5.1-5.2, 7.3, 11 (Capabilities, Momentum)
 
 ## Overview
 
-Implement the 3 persistent modifier systems that alter how operations and special activities resolve: 19 capabilities (permanent), 16 momentum markers (expire at coup Reset), and the RVN Leader bonus. All three are encoded declaratively in the GameSpecDoc — no FITL-specific engine code.
+Implement the 3 persistent modifier systems that alter how operations and special activities resolve: 19 capabilities (permanent two-sided markers), 15 momentum markers (expire at coup Reset), and the RVN Leader bonus. All three are encoded declaratively in the GameSpecDoc -- no FITL-specific engine code.
+
+**Critical design correction**: Capabilities are NOT simple booleans. Each capability is a physical two-sided token with completely different effects on each side (unshaded vs shaded). An event card grants a capability on a specific side. Card #52 (RAND) can flip a capability to the opposite side. This requires a tri-state model: `inactive` / `unshaded` / `shaded`.
 
 ## Scope
 
 ### In Scope
 
-- **19 capabilities**: Global boolean vars checked via `ConditionAST` in operation resolution branches. Persist for the rest of the game once granted. (Section 11 authoritative list — supersedes the outdated "14" count from Section 4.2.)
-- **16 momentum markers**: `EventCardLastingEffectDef` with `duration: 'coup'`. Some prohibit actions entirely, others modify formulas. Expire at coup Reset phase.
-- **RVN Leader** (Open Question #2): Lingering bonuses from the active RVN Leader. Duong Van Minh: "+5 Aid when ARVN Train". Others: Nguyen Khanh, Young Turks, Nguyen Cao Ky.
+- **19 capabilities**: Tri-state global markers (`inactive` | `unshaded` | `shaded`) via `GlobalMarkerLatticeDef`. Each side has a distinct mechanical effect. Persist for the rest of the game once granted. (Section 11 authoritative list.)
+- **15 momentum markers**: Boolean global vars with `duration: 'coup'` semantics. Some prohibit actions entirely, others modify formulas. Expire at coup Reset phase.
+- **RVN Leader**: Lingering bonuses from the active RVN Leader encoded via `activeLeader` global marker + `leaderBoxCardCount` integer gvar.
+- **Kernel dependency**: `GlobalMarkerLatticeDef` (game-wide scope, mirrors `SpaceMarkerLatticeDef`). Specified here; implementation in Spec 25c.
 
 ### Out of Scope
 
 - Event cards that grant capabilities/momentum (Spec 29 encodes the cards)
-- Capability/momentum definitions themselves (already exist as global vars and lasting effects)
 - Coup round Reset that clears momentum (already implemented in foundation)
+- GlobalMarkerLatticeDef kernel implementation (Spec 25c)
 
 ## Key Types & Interfaces
 
-### Capabilities
+### Capabilities (GlobalMarkerLatticeDef)
+
+Capabilities use `GlobalMarkerLatticeDef` -- a new kernel primitive that mirrors the existing `SpaceMarkerLatticeDef` but operates at game-wide scope instead of per-space scope.
+
+```yaml
+# In GameSpecDoc globalMarkerLattices section:
+globalMarkerLattices:
+  - id: "cap_cobras"
+    states: ["inactive", "unshaded", "shaded"]
+    defaultState: "inactive"
+  # ... one entry per capability
+```
 
 ```typescript
-// Capabilities are global boolean variables, already supported by GameState vars.
-// Example: cap_arcLight: boolean (default false, set true by event card)
+// Condition checking capability side in operation effects:
+// { op: '==', left: { ref: 'globalMarkerState', marker: 'cap_cobras' }, right: 'unshaded' }
 //
-// Checked in operation effects via existing ConditionAST:
-// { op: '==', left: { ref: 'gvar', var: 'cap_arcLight' }, right: true }
+// Setting a capability (by event card):
+// { setGlobalMarker: { marker: 'cap_cobras', state: { literal: 'unshaded' } } }
 //
-// No new types needed — just conditional branches in operation/SA fixtures.
+// Flipping a capability (Card #52 RAND):
+// Conditional: if unshaded -> set shaded; if shaded -> set unshaded
 ```
 
 ### Momentum
 
 ```typescript
-// Momentum markers use existing EventCardLastingEffectDef:
-// { id: 'momentum_claymores', duration: 'coup', effects: [...] }
+// Momentum markers are boolean global vars (gvars):
+// { id: 'mom_claymores', type: 'boolean', default: false }
+//
+// Set true by event card effects. Cleared to false at coup Reset phase.
 //
 // Prohibition momentum: checked as a precondition on the prohibited action.
 // Formula-modifying momentum: checked as a condition within effect resolution.
-//
-// Already supported by turn flow infrastructure (cleared at Reset phase).
 ```
 
 ### RVN Leader
 
 ```typescript
-// Open Question #2: TriggerDef vs special system
+// Global marker for active leader:
+// globalMarkerLattices:
+//   - id: "activeLeader"
+//     states: ["minh", "khanh", "youngTurks", "ky", "thieu"]
+//     defaultState: "minh"
 //
-// Recommended: TriggerDef on operation resolution
-// { trigger: {
-//     event: 'operationResolved',
-//     condition: { op: 'and', conditions: [
-//       { op: '==', left: { ref: 'gvar', var: 'activeLeader' }, right: 'minh' },
-//       { op: '==', left: { ref: 'operationType' }, right: 'train' },
-//       { op: '==', left: { ref: 'operatingFaction' }, right: 'ARVN' }
-//     ]},
-//     effects: [{ addVar: { scope: 'global', var: 'aid', delta: 5 } }]
-// }}
+// Integer gvar for leader box card count (for Pivotal Event preconditions):
+// { id: 'leaderBoxCardCount', type: 'integer', default: 0 }
 //
-// Alternative: Leader effect lookup table on the Turn Flow.
+// Leader lingering effects checked via conditions on activeLeader marker:
+// { op: '==', left: { ref: 'globalMarkerState', marker: 'activeLeader' }, right: 'minh' }
 ```
 
 ## Implementation Tasks
 
-### Task 28.1: Capability Variable Definitions
+### Task 28.1: Capability Definitions (GlobalMarkerLatticeDef)
 
-Define all 19 capability global boolean vars in the FITL GameSpecDoc:
+Define all 19 capability global markers in the FITL GameSpecDoc. Each has three states: `inactive` (default), `unshaded`, `shaded`. The unshaded and shaded effects are completely different per capability.
 
-| # | Capability ID | Affects | Rule |
-|---|---|---|---|
-| 4 | `cap_topGun` | Air Strike | Enhanced Air Strike accuracy |
-| 8 | `cap_arcLight` | Air Strike | B-52 strikes remove 2 pieces |
-| 11 | `cap_abrams` | Assault | Improved Assault effectiveness |
-| 13 | `cap_cobras` | Sweep/Assault | 1:1 Guerrilla activation in Jungle |
-| 14 | `cap_m48Patton` | Assault/Patrol | Armor support |
-| 18 | `cap_combinedActionPlatoons` | Train/Sweep | Enhanced training/sweep |
-| 19 | `cap_cords` | Train | Improved pacification |
-| 20 | `cap_laserGuidedBombs` | Air Strike | Precision strikes |
-| 28 | `cap_searchAndDestroy` | Assault | Aggressive search operations |
-| 31 | `cap_aaa` | Rally/Air Strike | Anti-aircraft defense |
-| 32 | `cap_longRangeGuns` | Bombard | Extended Bombard range |
-| 33 | `cap_migs` | NVA Resources/Air Strike | Air defense |
-| 34 | `cap_sa2s` | Air Strike Trail/NVA Rally Trail | SAM defense |
-| 45 | `cap_pt76` | NVA Attack | Amphibious armor |
-| 61 | `cap_armoredCavalry` | ARVN Transport | Armored transport |
-| 86 | `cap_mandateOfHeaven` | ARVN Govern | Enhanced governance |
-| 101 | `cap_boobyTraps` | Ambush/Sweep | Anti-personnel defense |
-| 104 | `cap_mainForceBns` | Insurgent March/VC Ambush | Main force operations |
-| 116 | `cap_cadres` | VC Terror/Agitate/Rally | Political infrastructure |
+| # | ID | Faction | Unshaded Effect | Shaded Effect |
+|---|---|---|---|---|
+| 4 | `cap_topGun` | US | No MiGs. Degrade 2 | Degrade on 4-6 |
+| 8 | `cap_arcLight` | US | 1 Air Strike no COIN | Air Strike >1: shift 2 |
+| 11 | `cap_abrams` | US | 1 Assault: Base 1st | Assault max 2 spaces |
+| 13 | `cap_cobras` | US | 2 Sweep: Remove 1 | Assault 1-3: -1 US Troop |
+| 14 | `cap_m48Patton` | US | 2 Assault: -2 extra | Patrol 1-3: -1 moved cube |
+| 18 | `cap_caps` | US | Train: +1 Police | Sweep max 2 spaces |
+| 19 | `cap_cords` | US | Train: Pacify 2 spaces | Train: Pacify to Passive Support only |
+| 20 | `cap_lgbs` | US | Air Strike No shift if -1 piece | Air Strike -4 max |
+| 28 | `cap_searchAndDestroy` | US | Assault: -1 Under Guer | Assault: +1 Act Opp |
+| 31 | `cap_aaa` | NVA | Rally Trail max 1 space | Air Strike Degrade to 2 only |
+| 32 | `cap_longRangeGuns` | NVA | Bombard max 1 | Bombard max 3 |
+| 33 | `cap_migs` | NVA | Reset: -6 NVA Resources | Air Strike vs Trail: -1 US Trp |
+| 34 | `cap_sa2s` | NVA | Air Strike Trail: -1 NVA | Rally: Improve Trail 2 |
+| 45 | `cap_pt76` | NVA | Attack -1 NVA Troop | 1 Attack: -1 enemy /Troop |
+| 61 | `cap_armoredCavalry` | ARVN | Transport Assault 1 | Transport Rangers |
+| 86 | `cap_mandateOfHeaven` | ARVN | 1 Govern: No shift | Pacify & Gov max 1 |
+| 101 | `cap_boobyTraps` | VC | Ambush max 1 | Sweep 1:3: -1 Trp |
+| 104 | `cap_mainForceBns` | VC | March: Active > 1 | VC 1 Amb: -2 enemy |
+| 116 | `cap_cadres` | VC | VC Terror, Agitate: -2 Guerrillas | Rally: Agitate at 1 Base |
+
+**Capability flip mechanic**: Card #52 (RAND) can flip a capability to its opposite side. The `setGlobalMarker` effect handles this: if currently `'unshaded'`, set to `'shaded'` and vice versa. The event card effect for RAND will use conditional logic to determine the new state.
 
 ### Task 28.2: Capability Conditional Branches
 
-Add `if` branches to operation/SA effect fixtures checking capability vars. For each affected operation:
+Add per-side conditional branches to operation/SA effect fixtures. Each capability check must test the specific side (`unshaded` or `shaded`) since the two sides have completely different effects.
 
-1. **Sweep** (cap_cobras, cap_combinedActionPlatoons, cap_boobyTraps):
-   - Cobras: 1:1 activation ratio in Jungle (instead of 1:2)
-   - Combined Action Platoons: Enhanced activation
-   - Booby Traps: Fewer activations
+**Example -- Cobras (Card #13)**:
 
-2. **Assault** (cap_abrams, cap_cobras, cap_m48Patton, cap_searchAndDestroy):
-   - Abrams: Enhanced damage
-   - Cobras: Additional damage in Jungle
-   - M-48 Patton: Armor bonus
-   - Search and Destroy: More aggressive removal
+```yaml
+# In Sweep operation resolution (unshaded side):
+- if:
+    when:
+      op: '=='
+      left: { ref: 'globalMarkerState', marker: 'cap_cobras' }
+      right: 'unshaded'
+    then:
+      # 2 Sweep spaces each remove 1 Active unTunneled enemy
+      - comment: "Cobras unshaded: 2 Sweep spaces remove 1 Active enemy each"
 
-3. **Air Strike** (cap_topGun, cap_arcLight, cap_laserGuidedBombs, cap_aaa, cap_migs, cap_sa2s):
-   - Top Gun/Laser Guided: Accuracy improvements
-   - Arc Light: Remove 2 pieces instead of 1
-   - AAA/MiGs/SA-2s: Defensive countermeasures
+# In Assault operation resolution (shaded side):
+- if:
+    when:
+      op: '=='
+      left: { ref: 'globalMarkerState', marker: 'cap_cobras' }
+      right: 'shaded'
+    then:
+      # Each Assault space: 1 US Troop to Casualties on roll 1-3
+      - comment: "Cobras shaded: Assault 1-3 roll costs 1 US Troop"
+```
 
-4. **Patrol** (cap_m48Patton): Armor support on patrol
+**Operations affected by capabilities (by side)**:
 
-5. **Train** (cap_combinedActionPlatoons, cap_cords): Enhanced training effects
+1. **Sweep**:
+   - `cap_cobras` (unshaded): 2 Sweep spaces each remove 1 Active unTunneled enemy
+   - `cap_caps` (shaded): Sweep max 2 spaces
+   - `cap_boobyTraps` (shaded): Sweep 1:3 ratio costs -1 Troop
 
-6. **Rally** (cap_aaa, cap_sa2s, cap_cadres): NVA/VC Rally modifications
+2. **Assault**:
+   - `cap_abrams` (unshaded): 1 Assault space targets Base first
+   - `cap_abrams` (shaded): Assault max 2 spaces
+   - `cap_cobras` (shaded): Assault spaces on roll 1-3 cost -1 US Troop
+   - `cap_m48Patton` (unshaded): 2 Assault spaces remove 2 extra
+   - `cap_searchAndDestroy` (unshaded): Assault removes 1 Underground Guerrilla
+   - `cap_searchAndDestroy` (shaded): Assault adds +1 Active Opposition
 
-7. **March** (cap_mainForceBns): Insurgent March modifications
+3. **Air Strike**:
+   - `cap_topGun` (unshaded): No MiGs capability active; Degrade 2 levels
+   - `cap_topGun` (shaded): Degrade only on die roll 4-6
+   - `cap_arcLight` (unshaded): 1 Air Strike space, no COIN pieces affected
+   - `cap_arcLight` (shaded): Air Strike >1 space shifts Support/Opposition by 2
+   - `cap_lgbs` (unshaded): Air Strike does not shift if removing only 1 piece
+   - `cap_lgbs` (shaded): Air Strike removes max 4 pieces
+   - `cap_aaa` (shaded): Air Strike Degrade limited to 2 levels only
+   - `cap_migs` (shaded): Air Strike vs Trail costs -1 US Troop
+   - `cap_sa2s` (unshaded): Air Strike on Trail costs -1 NVA piece
 
-8. **Attack** (cap_pt76): NVA Attack with armor
+4. **Patrol**:
+   - `cap_m48Patton` (shaded): Patrol on roll 1-3 costs -1 moved cube
 
-9. **Bombard** (cap_longRangeGuns): Extended range
+5. **Train**:
+   - `cap_caps` (unshaded): Train places +1 Police
+   - `cap_cords` (unshaded): Train Pacify in 2 spaces
+   - `cap_cords` (shaded): Train Pacify to Passive Support only
 
-10. **Transport** (cap_armoredCavalry): Armored transport benefits
+6. **Rally**:
+   - `cap_aaa` (unshaded): Rally Trail improvement max 1 space
+   - `cap_sa2s` (shaded): Rally improves Trail by 2
+   - `cap_cadres` (shaded): Rally allows Agitate at 1 Base
 
-11. **Govern** (cap_mandateOfHeaven): Enhanced governance
+7. **March**:
+   - `cap_mainForceBns` (unshaded): March allows Activating more than 1 Guerrilla
 
-12. **Ambush** (cap_boobyTraps, cap_mainForceBns): Ambush modifications
+8. **Attack**:
+   - `cap_pt76` (unshaded): Attack costs -1 NVA Troop
+   - `cap_pt76` (shaded): 1 Attack space removes -1 enemy per NVA Troop
 
-13. **Tax/Terror/Agitate** (cap_cadres): VC political modifications
+9. **Bombard**:
+   - `cap_longRangeGuns` (unshaded): Bombard max 1 space
+   - `cap_longRangeGuns` (shaded): Bombard max 3 spaces
+
+10. **Transport**:
+    - `cap_armoredCavalry` (unshaded): Transport allows Assault in 1 destination space
+    - `cap_armoredCavalry` (shaded): Transport can move Rangers
+
+11. **Govern**:
+    - `cap_mandateOfHeaven` (unshaded): 1 Govern space does not shift Support/Opposition
+    - `cap_mandateOfHeaven` (shaded): Pacify and Govern max 1 space
+
+12. **Ambush**:
+    - `cap_boobyTraps` (unshaded): Ambush max 1 space
+    - `cap_mainForceBns` (shaded): VC 1 Ambush removes 2 enemy pieces
+
+13. **Terror/Agitate**:
+    - `cap_cadres` (unshaded): VC Terror and Agitate cost 2 fewer Guerrillas
+
+14. **Reset (Coup Round)**:
+    - `cap_migs` (unshaded): Reset costs -6 NVA Resources
 
 ### Task 28.3: Momentum Marker Definitions
 
-Define all 16 momentum markers as `EventCardLastingEffectDef` with `duration: 'coup'`:
+Define all 15 momentum markers as boolean global vars. Each is set `true` by an event card and cleared to `false` at coup Reset phase.
 
-| # | Momentum ID | Side | Effect |
+| # | Momentum ID | Side | Precise Effect (from card text) |
 |---|---|---|---|
-| 5 | `mom_wildWeasels` | Shaded | Modifies Air Strike |
-| 7 | `mom_adsid` | Unshaded | -6 NVA Resources at any Trail change |
-| 10 | `mom_rollingThunder` | Shaded | Prohibits Air Strike |
-| 15a | `mom_medevacUnshaded` | Unshaded | Affects Commitment Phase |
-| 15b | `mom_medevacShaded` | Shaded | Prohibits Air Lift |
-| 16 | `mom_blowtorchKomer` | Unshaded | Pacify costs 1 Resource per step |
-| 17 | `mom_claymores` | Unshaded | Prohibits Ambush; affects Guerrilla March |
-| 22 | `mom_daNang` | Shaded | Prohibits Air Strike |
-| 38 | `mom_mcnamaraLine` | Single | Prohibits Infiltrate; prohibits Trail improvement by Rally |
-| 39 | `mom_oriskany` | Shaded | Prohibits Trail degrade (Air Strike, Coup, not Events) |
-| 41 | `mom_bombingPause` | Single | Prohibits Air Strike |
+| 5 | `mom_wildWeasels` | Shaded | Air Strike either Degrades Trail or may remove just 1 piece (not 1-6) |
+| 7 | `mom_adsid` | Unshaded | -6 NVA Resources at any Trail# change |
+| 10 | `mom_rollingThunder` | Shaded | No Air Strike until Coup |
+| 15a | `mom_medevacUnshaded` | Unshaded | This Commitment, all Troop Casualties Available |
+| 15b | `mom_medevacShaded` | Shaded | No Air Lift until Coup. Executing Faction remains Eligible. |
+| 16 | `mom_blowtorchKomer` | Unshaded | Pacify costs 1 Resource per step or Terror (during Coup Round Support Phase, rule 6.3.1) |
+| 17 | `mom_claymores` | Unshaded | No Ambush; remove 1 Guerrilla each Marching group that Activates |
+| 22 | `mom_daNang` | Shaded | No Air Strike until Coup |
+| 38 | `mom_mcnamaraLine` | Single | No Infiltrate or Trail Improvement by Rally until Coup |
+| 39 | `mom_oriskany` | Shaded | No Degrade of Trail (by Air Strike or Coup, not Events) |
+| 41 | `mom_bombingPause` | Single | No Air Strike until Coup |
 | 46 | `mom_559thTransportGrp` | Unshaded | Infiltrate max 1 space |
-| 72 | `mom_bodyCount` | Unshaded | Affects Assault and Patrol |
-| 78 | `mom_generalLansdale` | Shaded | Prohibits Assault |
-| 115 | `mom_typhoonKate` | Single | Prohibits Air Lift, Transport, Bombard; all other SAs max 1 space |
+| 72 | `mom_bodyCount` | Unshaded | Assault and Patrol add +3 Aid per Guerrilla removed and cost 0 |
+| 78 | `mom_generalLansdale` | Shaded | No US Assault until Coup |
+| 115 | `mom_typhoonKate` | Single | No Air Lift, Transport, or Bombard; all other SAs max 1 space |
+
+**Medevac mutual exclusion**: Only ONE side of Medevac (card #15) can be active at a time. The executing faction chooses unshaded or shaded when playing the card. `mom_medevacUnshaded` and `mom_medevacShaded` are separate boolean gvars but the event card effect ensures mutual exclusivity.
+
+**Blowtorch Komer timing (card #16)**: This momentum specifically modifies the Coup Round's Support Phase (rule 6.3.1) pacification cost -- not pacification during regular operations.
 
 ### Task 28.4: Momentum Prohibition Checks
 
 Add precondition checks to operations/SAs that are prohibited by active momentum:
-- Air Strike: Rolling Thunder, Da Nang, Bombing Pause
-- Air Lift: Medevac (shaded), Typhoon Kate
-- Assault: General Lansdale
-- Ambush: Claymores
-- Infiltrate: McNamara Line
-- Bombard: Typhoon Kate
-- Transport: Typhoon Kate
-- Trail improvement via Rally: McNamara Line
-- Trail degrade via Air Strike/Coup: Oriskany
+
+- **Air Strike prohibited**: Rolling Thunder (`mom_rollingThunder`), Da Nang (`mom_daNang`), Bombing Pause (`mom_bombingPause`)
+- **Air Lift prohibited**: Medevac shaded (`mom_medevacShaded`), Typhoon Kate (`mom_typhoonKate`)
+- **US Assault prohibited**: General Lansdale (`mom_generalLansdale`)
+- **Ambush prohibited**: Claymores (`mom_claymores`)
+- **Infiltrate prohibited**: McNamara Line (`mom_mcnamaraLine`)
+- **Bombard prohibited**: Typhoon Kate (`mom_typhoonKate`)
+- **Transport prohibited**: Typhoon Kate (`mom_typhoonKate`)
+- **Trail improvement via Rally prohibited**: McNamara Line (`mom_mcnamaraLine`)
+- **Trail degrade via Air Strike/Coup prohibited**: Oriskany (`mom_oriskany`)
+- **All SAs max 1 space**: Typhoon Kate (`mom_typhoonKate`) (except prohibited ones above)
 
 ### Task 28.5: RVN Leader Implementation
 
-Resolve Open Question #2 and implement RVN Leader bonuses:
+#### Leader Data
 
-**Known leaders and effects**:
-- Duong Van Minh: +5 Aid when ARVN performs Train
-- Nguyen Khanh: (effects TBD from rulebook)
-- Young Turks: (effects TBD from rulebook)
-- Nguyen Cao Ky: (effects TBD from rulebook)
+| Card # | Leader | Lingering Effect | Notes |
+|---|---|---|---|
+| (map) | Duong Van Minh | Each ARVN Train adds +5 bonus Aid | Default leader. Not a card. Does not count in leader box. |
+| 125 | Nguyen Khanh | Transport uses max 1 LoC space | |
+| 126 | Young Turks | Each ARVN Govern SA adds +2 Patronage | |
+| 127 | Nguyen Cao Ky | Pacification costs 4 Resources per Terror or level | Effect starts from that Coup Round (rule 2.4.1) |
+| 128 | Nguyen Van Thieu | No effect ("Stabilizer") | |
+| 129-130 | Failed Attempt | Immediate: ARVN removes 1 in 3 cubes per space (round down) | Not a leader change. Placed below previous leader cards. |
 
-**Recommended implementation**: `TriggerDef` that fires on operation resolution, checking the active leader zone and operation type. Leader changes occur at coup cards.
+#### Encoding Model
 
-## Open Questions
+- `activeLeader` global marker via `GlobalMarkerLatticeDef`:
+  ```yaml
+  globalMarkerLattices:
+    - id: "activeLeader"
+      states: ["minh", "khanh", "youngTurks", "ky", "thieu"]
+      defaultState: "minh"
+  ```
 
-### Open Question #2: RVN Leader as TriggerDef vs Special System
+- `leaderBoxCardCount` integer gvar:
+  ```yaml
+  globalVars:
+    - id: "leaderBoxCardCount"
+      type: "integer"
+      default: 0
+  ```
 
-**Recommendation**: Use `TriggerDef` on operation resolution.
+#### Immediate vs Lingering Effects
 
-**Rationale**: Leader bonuses are conditional side-effects of operations. A `TriggerDef` checking leader zone + operation type + operating faction is a natural fit. No new kernel primitive needed.
+Two distinct effect types arise from coup cards:
 
-**Risk**: Low. Even if `TriggerDef` proves awkward for some leader effects, the trigger infrastructure already exists and handles the pattern.
+1. **Immediate effects** (happen once when the coup card is revealed):
+   - Failed Attempt "Desertion": ARVN removes 1 in 3 of its cubes per space (round down)
+   - These are encoded in `EventCardDef.effects` for the coup card
+
+2. **Lingering effects** (persist until a new leader replaces the current one):
+   - Leader text (e.g., Khanh's "Transport max 1 LoC") modifies game behavior
+   - Encoded via conditional checks on the `activeLeader` global marker in operation/SA effects
+
+#### Key Rule Clarifications (Rule 2.4.1)
+
+- **Duong Van Minh** is printed on the map, not a card. He does not count toward `leaderBoxCardCount`.
+- **Failed Attempts** (cards 129-130) cancel only Duong Van Minh's effect. They are placed below any previous RVN Leader cards but do not change `activeLeader` to a new leader. If the current leader is not Minh, the Failed Attempt has no leader effect (only the Desertion immediate effect applies).
+- **Failed Attempts increment `leaderBoxCardCount`** (they are cards placed in the leader box) but do not change `activeLeader`.
+- **Leader replacement**: When a new leader coup card is revealed (125-128), set `activeLeader` to the new leader and increment `leaderBoxCardCount`.
+- **Pivotal Event preconditions**: Some pivotal events check "2+ cards in RVN Leader box" -- this uses `leaderBoxCardCount >= 2`.
+
+#### Leader Effect Conditions in Operations
+
+```yaml
+# Minh: +5 Aid on ARVN Train
+- if:
+    when:
+      op: 'and'
+      conditions:
+        - { op: '==', left: { ref: 'globalMarkerState', marker: 'activeLeader' }, right: 'minh' }
+        - { op: '==', left: { ref: 'operatingFaction' }, right: 'ARVN' }
+    then:
+      - { addVar: { scope: 'global', var: 'aid', delta: 5 } }
+
+# Khanh: Transport max 1 LoC space
+- if:
+    when:
+      op: '=='
+      left: { ref: 'globalMarkerState', marker: 'activeLeader' }
+      right: 'khanh'
+    then:
+      # Limit Transport LoC spaces to 1
+
+# Young Turks: Each ARVN Govern SA adds +2 Patronage
+- if:
+    when:
+      op: '=='
+      left: { ref: 'globalMarkerState', marker: 'activeLeader' }
+      right: 'youngTurks'
+    then:
+      - { addVar: { scope: 'global', var: 'patronage', delta: 2 } }
+
+# Ky: Pacification costs 4 Resources per Terror or level
+- if:
+    when:
+      op: '=='
+      left: { ref: 'globalMarkerState', marker: 'activeLeader' }
+      right: 'ky'
+    then:
+      # Override pacification cost to 4 per step/Terror
+
+# Thieu: No effect (stabilizer)
+# No conditional branch needed
+```
+
+## Kernel Dependency: GlobalMarkerLatticeDef
+
+Spec 28 depends on a new kernel primitive: `GlobalMarkerLatticeDef`. This mirrors the existing `SpaceMarkerLatticeDef` but operates at game-wide scope. Implementation is deferred to **Spec 25c** (Extended Kernel Primitives).
+
+### Specification
+
+**New types** (`src/kernel/types-core.ts`):
+```typescript
+export interface GlobalMarkerLatticeDef {
+  readonly id: string;
+  readonly states: readonly string[];
+  readonly defaultState: string;
+}
+```
+
+Add to `GameDef`:
+```typescript
+readonly globalMarkerLattices?: readonly GlobalMarkerLatticeDef[];
+```
+
+Add to `GameState`:
+```typescript
+readonly globalMarkers: Readonly<Record<string, string>>;
+```
+
+**New AST nodes** (`src/kernel/types-ast.ts`):
+```typescript
+// Effects:
+| { readonly setGlobalMarker: { readonly marker: string; readonly state: ValueExpr } }
+| { readonly shiftGlobalMarker: { readonly marker: string; readonly delta: ValueExpr } }
+
+// References (ValueExpr):
+| { readonly ref: 'globalMarkerState'; readonly marker: string }
+```
+
+**Implementation files to modify** (mirroring space marker pattern):
+
+| File | Change |
+|---|---|
+| `src/kernel/types-core.ts` | Add `GlobalMarkerLatticeDef`, update `GameDef`, update `GameState` |
+| `src/kernel/types-ast.ts` | Add `setGlobalMarker`, `shiftGlobalMarker` effects + `globalMarkerState` ref |
+| `src/kernel/effects-choice.ts` | Add `applySetGlobalMarker`, `applyShiftGlobalMarker` (mirror space marker) |
+| `src/kernel/resolve-ref.ts` | Add `globalMarkerState` resolution case |
+| `src/kernel/effect-dispatch.ts` | Add dispatch cases for new effects |
+| `src/kernel/zobrist.ts` | Add `globalMarkerState` Zobrist feature |
+| `src/kernel/schemas-ast.ts` | Add JSON Schema for new AST nodes |
+| `src/kernel/schemas-core.ts` | Add JSON Schema for `GlobalMarkerLatticeDef` |
+| `src/kernel/validate-gamedef-structure.ts` | Add validation for global marker lattices |
+| `src/kernel/validate-gamedef-behavior.ts` | Add behavioral validation |
+| `src/cnl/compile-effects.ts` | Add compiler support for new effects |
+| `src/cnl/compile-conditions.ts` | Add compiler support for `globalMarkerState` reference |
+| `src/cnl/compile-data-assets.ts` | Add parser for `globalMarkerLattices` in GameSpecDoc |
+| `src/cnl/effect-kind-registry.ts` | Register new effect kinds |
+| `src/cnl/binder-surface-registry.ts` | Register new binder surfaces if needed |
+| `schemas/gamedef.schema.json` | Add GlobalMarkerLatticeDef schema |
+
+**State initialization** (`src/kernel/state-init.ts` or equivalent):
+```typescript
+globalMarkers: Object.fromEntries(
+  (def.globalMarkerLattices ?? []).map(l => [l.id, l.defaultState])
+)
+```
 
 ## Testing Requirements
 
 ### Unit Tests
-- Each capability: verify operation behavior changes when capability is active vs inactive
+- Each capability (both sides): verify operation behavior changes when capability is unshaded vs shaded vs inactive
 - Each momentum prohibition: verify action is blocked when momentum is active
 - Each momentum formula modification: verify formula changes when momentum is active
 - Momentum expiry: verify momentum cleared at coup Reset
 - RVN Leader: verify bonus applies for correct leader + operation + faction combination
+- Leader change: verify `activeLeader` updates correctly and old leader effects stop
+- Failed Attempt: verify Desertion immediate effect and that `activeLeader` is unchanged
 
 ### Integration Tests
-- `test/integration/fitl-capabilities.test.ts`: Exercise all 19 capabilities across affected operations
-- `test/integration/fitl-momentum.test.ts`: Exercise all 16 momentum markers (prohibitions and formula mods)
-- `test/integration/fitl-rvn-leader.test.ts`: Exercise leader bonuses across Train and other leader-affected operations
+- `test/integration/fitl-capabilities.test.ts`: Exercise all 19 capabilities across affected operations (both sides)
+- `test/integration/fitl-momentum.test.ts`: Exercise all 15 momentum markers (prohibitions and formula mods)
+- `test/integration/fitl-rvn-leader.test.ts`: Exercise all 5 leaders + Failed Attempt across affected operations
 
 ## Acceptance Criteria
 
-1. All 19 capabilities defined as global boolean vars with conditional branches on affected operations
-2. All 16 momentum markers with correct prohibitions and formula modifications
+1. All 19 capabilities defined as tri-state global markers (`inactive`/`unshaded`/`shaded`) with per-side conditional branches on affected operations
+2. All 15 momentum markers with correct prohibitions and formula modifications
 3. Momentum markers expire at coup Reset
-4. RVN Leader bonus applies correctly (Minh +5 Aid on ARVN Train verified)
-5. Operations correctly check both capability and momentum conditions
-6. Build passes (`npm run build`)
-7. All existing tests pass (`npm test`)
+4. RVN Leader: all 5 leaders + Failed Attempt encoded; `activeLeader` global marker + `leaderBoxCardCount` gvar
+5. Capability flip mechanic supported via `setGlobalMarker` conditional logic
+6. Operations correctly check both capability side and momentum conditions
+7. Immediate vs lingering coup card effects properly distinguished
+8. GlobalMarkerLatticeDef kernel dependency documented for Spec 25c
+9. Build passes (`npm run build`)
+10. All existing tests pass (`npm test`)
 
-
-## Coup! cards and RVN Leader
+## Appendix A: Coup Cards and RVN Leader (Source Text)
 
 Coup!
 Card Number: 125
@@ -276,3 +492,81 @@ RVN Leader (card printed on map)
 Duong Van Minh
 General pledges democracy.
 Each ARVN Train Operation adds +5 bonus aid.
+
+## Appendix B: Capability Token Text (Source)
+
+Name: Top Gun
+Unshaded: No MiGs. Degrade 2
+Shaded: Degrade on 4-6
+
+Name: Arc Light
+Unshaded: 1 Air Strike no COIN
+Shaded: Air Strike >1: shift 2
+
+Name: Abrams
+Unshaded: 1 Assault: Base 1st
+Shaded: Assault max 2 spaces
+
+Name: Cobras
+Unshaded: 2 Sweep: Remove 1
+Shaded: Assault 1-3: -1 US Troop
+
+Name: M-48 Patton
+Unshaded: 2 Assault: -2 extra
+Shaded: Patrol 1-3: -1 moved cube
+
+Name: CAPs
+Unshaded: Train: +1 Police
+Shaded: Sweep max 2 spaces
+
+Name: CORDS
+Unshaded: Train: Pacify 2 spaces
+Shaded: Train: Pacify to Passive Support only
+
+Name: LGBs
+Unshaded: Air Strike No shift if -1 piece
+Shaded: Air Strike -4 max
+
+Name: Search & Destroy
+Unshaded: Assault: -1 Under Guer
+Shaded: Assault: +1 Act Opp
+
+Name: AAA
+Unshaded: Rally Trail max 1 space
+Shaded: Air Strike Degrade to 2 only
+
+Name: Long Range Guns
+Unshaded: Bombard max 1
+Shaded: Bombard max 3
+
+Name: MiGs
+Unshaded: Reset: -6 NVA Resources
+Shaded: Air Strike vs Trail: -1 US Trp
+
+Name: SA-2s
+Unshaded: Air Strike Trail: -1 NVA
+Shaded: Rally: Improve Trail 2
+
+Name: PT-76
+Unshaded: Attack -1 NVA Troop
+Shaded: 1 Attack: -1 enemy /Troop
+
+Name: Armor Cav
+Unshaded: Transport Assault 1
+Shaded: Transport Rangers
+
+Name: Mandate Heaven
+Unshaded: 1 Govern: No shift
+Shaded: Pacify & Gov max 1
+
+Name: Booby Traps
+Unshaded: Ambush max 1
+Shaded: Sweep 1:3: -1 Trp
+
+Name: Main Force
+Unshaded: March: Active > 1
+Shaded: VC 1 Amb: -2 enemy
+
+Name: Cadres
+Unshaded: VC Terror, Agitate: -2 Guerrillas
+Shaded: Rally: Agitate at 1 Base

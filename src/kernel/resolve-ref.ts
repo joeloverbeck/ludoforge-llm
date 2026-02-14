@@ -162,6 +162,24 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     });
   }
 
+  if (ref.ref === 'globalMarkerState') {
+    const state = ctx.state.globalMarkers?.[ref.marker];
+    if (state !== undefined) {
+      return state;
+    }
+
+    const lattice = ctx.def.globalMarkerLattices?.find((candidate) => candidate.id === ref.marker);
+    if (lattice !== undefined) {
+      return lattice.defaultState;
+    }
+
+    throw missingVarError(`Global marker lattice not found: ${ref.marker}`, {
+      reference: ref,
+      markerId: ref.marker,
+      availableGlobalMarkerLattices: (ctx.def.globalMarkerLattices ?? []).map((candidate) => candidate.id).sort(),
+    });
+  }
+
   if (ref.ref === 'activePlayer') {
     return String(ctx.activePlayer);
   }

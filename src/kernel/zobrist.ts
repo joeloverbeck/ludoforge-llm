@@ -86,6 +86,8 @@ const encodeFeature = (feature: ZobristFeature): string => {
       return `kind=actionUsage|actionId=${String(feature.actionId)}|scope=${feature.scope}|count=${feature.count}`;
     case 'markerState':
       return `kind=markerState|spaceId=${feature.spaceId}|markerId=${feature.markerId}|state=${feature.state}`;
+    case 'globalMarkerState':
+      return `kind=globalMarkerState|markerId=${feature.markerId}|state=${feature.state}`;
     case 'lastingEffect':
       return [
         'kind=lastingEffect',
@@ -223,6 +225,18 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
           state: markerState,
         });
       }
+    }
+  }
+
+  const sortedGlobalMarkerIds = Object.keys(state.globalMarkers ?? {}).sort(compareStrings);
+  for (const markerId of sortedGlobalMarkerIds) {
+    const markerState = state.globalMarkers?.[markerId];
+    if (markerState !== undefined) {
+      hash ^= zobristKey(table, {
+        kind: 'globalMarkerState',
+        markerId,
+        state: markerState,
+      });
     }
   }
 

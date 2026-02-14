@@ -6,6 +6,7 @@ import type {
   EffectAST,
   EndCondition,
   GameDef,
+  GlobalMarkerLatticeDef,
   LimitDef,
   ParamDef,
   PhaseDef,
@@ -77,6 +78,45 @@ export function lowerVarDefs(
       max: variable.max,
     });
   }
+  return lowered;
+}
+
+export function lowerGlobalMarkerLattices(
+  lattices: GameSpecDoc['globalMarkerLattices'],
+  diagnostics: Diagnostic[],
+): readonly GlobalMarkerLatticeDef[] {
+  if (lattices === null) {
+    return [];
+  }
+
+  const lowered: GlobalMarkerLatticeDef[] = [];
+  for (const [index, lattice] of lattices.entries()) {
+    const path = `doc.globalMarkerLattices.${index}`;
+    if (!isRecord(lattice)) {
+      diagnostics.push(missingCapabilityDiagnostic(path, 'global marker lattice definition', lattice));
+      continue;
+    }
+    if (typeof lattice.id !== 'string' || lattice.id.trim() === '') {
+      diagnostics.push(missingCapabilityDiagnostic(`${path}.id`, 'global marker lattice id', lattice.id, ['string']));
+      continue;
+    }
+    if (!Array.isArray(lattice.states) || lattice.states.some((state) => typeof state !== 'string' || state.trim() === '')) {
+      diagnostics.push(missingCapabilityDiagnostic(`${path}.states`, 'global marker lattice states', lattice.states, ['string[]']));
+      continue;
+    }
+    if (typeof lattice.defaultState !== 'string' || lattice.defaultState.trim() === '') {
+      diagnostics.push(
+        missingCapabilityDiagnostic(`${path}.defaultState`, 'global marker lattice default state', lattice.defaultState, ['string']),
+      );
+      continue;
+    }
+    lowered.push({
+      id: lattice.id,
+      states: lattice.states,
+      defaultState: lattice.defaultState,
+    });
+  }
+
   return lowered;
 }
 

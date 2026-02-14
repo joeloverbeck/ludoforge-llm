@@ -4,7 +4,15 @@ import {
   EffectRuntimeError,
   effectNotImplementedError,
 } from './effect-error.js';
-import { applyChooseN, applyChooseOne, applyRollRandom, applySetMarker, applyShiftMarker } from './effects-choice.js';
+import {
+  applyChooseN,
+  applyChooseOne,
+  applyRollRandom,
+  applySetGlobalMarker,
+  applySetMarker,
+  applyShiftGlobalMarker,
+  applyShiftMarker,
+} from './effects-choice.js';
 import { applyForEach, applyIf, applyLet, applyRemoveByPriority, type EffectBudgetState } from './effects-control.js';
 import { applyAddVar, applySetVar } from './effects-var.js';
 import {
@@ -48,6 +56,8 @@ const effectTypeOf = (effect: EffectAST): string => {
   if ('rollRandom' in effect) return 'rollRandom';
   if ('setMarker' in effect) return 'setMarker';
   if ('shiftMarker' in effect) return 'shiftMarker';
+  if ('setGlobalMarker' in effect) return 'setGlobalMarker';
+  if ('shiftGlobalMarker' in effect) return 'shiftGlobalMarker';
 
   const _exhaustive: never = effect;
   return _exhaustive;
@@ -139,6 +149,14 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 
   if ('shiftMarker' in effect) {
     return applyShiftMarker(effect, ctx);
+  }
+
+  if ('setGlobalMarker' in effect) {
+    return applySetGlobalMarker(effect, ctx);
+  }
+
+  if ('shiftGlobalMarker' in effect) {
+    return applyShiftGlobalMarker(effect, ctx);
   }
 
   throw effectNotImplementedError(effectTypeOf(effect), { effect });

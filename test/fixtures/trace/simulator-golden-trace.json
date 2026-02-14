@@ -159,6 +159,7 @@
       }
     },
     "markers": {},
+    "globalMarkers": {},
     "turnOrderState": {
       "type": "roundRobin"
     }

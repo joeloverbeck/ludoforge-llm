@@ -15,6 +15,12 @@ export interface GameSpecVarDef {
   readonly max: number;
 }
 
+export interface GameSpecGlobalMarkerLatticeDef {
+  readonly id: string;
+  readonly states: readonly string[];
+  readonly defaultState: string;
+}
+
 export interface GameSpecZoneDef {
   readonly id: string;
   readonly owner: string;
@@ -283,6 +289,7 @@ export interface GameSpecDoc {
   readonly metadata: GameSpecMetadata | null;
   readonly constants: Readonly<Record<string, number>> | null;
   readonly dataAssets: readonly GameSpecDataAsset[] | null;
+  readonly globalMarkerLattices: readonly GameSpecGlobalMarkerLatticeDef[] | null;
   readonly globalVars: readonly GameSpecVarDef[] | null;
   readonly perPlayerVars: readonly GameSpecVarDef[] | null;
   readonly zones: readonly GameSpecZoneDef[] | null;
@@ -304,6 +311,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     metadata: null,
     constants: null,
     dataAssets: null,
+    globalMarkerLattices: null,
     globalVars: null,
     perPlayerVars: null,
     zones: null,

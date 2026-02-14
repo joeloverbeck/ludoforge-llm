@@ -47,6 +47,17 @@ const makeDefWithMarkers = (): GameDef => ({
   ],
 });
 
+const makeDefWithGlobalMarkers = (): GameDef => ({
+  ...makeDef(),
+  globalMarkerLattices: [
+    {
+      id: 'cap_topGun',
+      states: ['inactive', 'unshaded', 'shaded'],
+      defaultState: 'inactive',
+    },
+  ],
+});
+
 const makeToken = (id: string, props: Readonly<Record<string, number | string | boolean>>): Token => ({
   id: asTokenId(id),
   type: 'card',
@@ -304,6 +315,36 @@ describe('resolveRef', () => {
 
     assert.throws(
       () => resolveRef({ ref: 'markerState', space: '$space', marker: 'supportOpposition' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+  });
+
+  it('resolves globalMarkerState from state when explicitly set', () => {
+    const ctx = makeCtx({
+      def: makeDefWithGlobalMarkers(),
+      state: {
+        ...makeState(),
+        globalMarkers: { cap_topGun: 'unshaded' },
+      },
+    });
+
+    assert.equal(resolveRef({ ref: 'globalMarkerState', marker: 'cap_topGun' }, ctx), 'unshaded');
+  });
+
+  it('resolves globalMarkerState using lattice default when not explicitly set', () => {
+    const ctx = makeCtx({
+      def: makeDefWithGlobalMarkers(),
+      state: makeState(),
+    });
+
+    assert.equal(resolveRef({ ref: 'globalMarkerState', marker: 'cap_topGun' }, ctx), 'inactive');
+  });
+
+  it('throws MISSING_VAR when global marker lattice does not exist', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () => resolveRef({ ref: 'globalMarkerState', marker: 'cap_topGun' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
     );
   });

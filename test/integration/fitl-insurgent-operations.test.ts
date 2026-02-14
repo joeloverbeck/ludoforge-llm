@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, asPlayerId, asTokenId, initialState, type GameState, type Token } from '../../src/kernel/index.js';
+import { applyMove, asActionId, asPlayerId, asTokenId, initialState, legalMoves, type GameState, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -77,7 +77,7 @@ describe('FITL insurgent operations integration', () => {
     assert.ok((final.globalVars.nvaResources ?? 10) <= 10, 'Expected Attack to charge NVA resources or keep them unchanged if free');
   });
 
-  it('falls back to generic action effects when active player is not NVA', () => {
+  it('treats attack as illegal when active player is not NVA', () => {
     const { compiled } = compileProductionSpec();
 
     assert.notEqual(compiled.gameDef, null);
@@ -86,7 +86,11 @@ describe('FITL insurgent operations integration', () => {
       ...initialState(compiled.gameDef!, 77, 4),
       activePlayer: asPlayerId(0),
     };
-    const final = applyMove(compiled.gameDef!, nonNvaState, { actionId: asActionId('attack'), params: {} }).state;
-    assert.equal(final.globalVars.fallbackUsed, 100);
+    const legal = legalMoves(compiled.gameDef!, nonNvaState);
+    assert.ok(!legal.some((move) => move.actionId === asActionId('attack')));
+    assert.throws(
+      () => applyMove(compiled.gameDef!, nonNvaState, { actionId: asActionId('attack'), params: {} }),
+      /Illegal move/,
+    );
   });
 });

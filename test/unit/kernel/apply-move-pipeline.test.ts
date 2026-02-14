@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { resolveActionPipeline } from '../../../src/kernel/apply-move-pipeline.js';
+import { resolveActionPipelineDispatch } from '../../../src/kernel/apply-move-pipeline.js';
 import { createCollector } from '../../../src/kernel/execution-collector.js';
 import { buildAdjacencyGraph } from '../../../src/kernel/spatial.js';
 import {
@@ -69,8 +69,8 @@ const makeCtx = (def: GameDef, state: GameState): EvalContext => ({
   collector: createCollector(),
 });
 
-describe('resolveActionPipeline()', () => {
-  it('returns a single profile when applicability is omitted', () => {
+describe('resolveActionPipelineDispatch()', () => {
+  it('returns matched when a single profile without applicability exists', () => {
     const def = makeDef({
       actionPipelines: [{
         id: 'attack-profile',
@@ -85,11 +85,14 @@ describe('resolveActionPipeline()', () => {
     });
     const action = def.actions[0]!;
 
-    const result = resolveActionPipeline(def, action, makeCtx(def, makeState(0)));
-    assert.equal(result?.id, 'attack-profile');
+    const result = resolveActionPipelineDispatch(def, action, makeCtx(def, makeState(0)));
+    assert.equal(result.kind, 'matched');
+    if (result.kind === 'matched') {
+      assert.equal(result.profile.id, 'attack-profile');
+    }
   });
 
-  it('rejects a single profile when applicability evaluates false', () => {
+  it('returns configuredNoMatch when a single profile applicability evaluates false', () => {
     const def = makeDef({
       actionPipelines: [{
         id: 'attack-nva-profile',
@@ -105,8 +108,8 @@ describe('resolveActionPipeline()', () => {
     });
     const action = def.actions[0]!;
 
-    const result = resolveActionPipeline(def, action, makeCtx(def, makeState(0)));
-    assert.equal(result, undefined);
+    const result = resolveActionPipelineDispatch(def, action, makeCtx(def, makeState(0)));
+    assert.equal(result.kind, 'configuredNoMatch');
   });
 
   it('selects the matching profile when multiple candidates exist', () => {
@@ -138,7 +141,18 @@ describe('resolveActionPipeline()', () => {
     });
     const action = def.actions[0]!;
 
-    const result = resolveActionPipeline(def, action, makeCtx(def, makeState(3)));
-    assert.equal(result?.id, 'attack-vc-profile');
+    const result = resolveActionPipelineDispatch(def, action, makeCtx(def, makeState(3)));
+    assert.equal(result.kind, 'matched');
+    if (result.kind === 'matched') {
+      assert.equal(result.profile.id, 'attack-vc-profile');
+    }
+  });
+
+  it('returns noneConfigured when no pipelines exist for action', () => {
+    const def = makeDef();
+    const action = def.actions[0]!;
+
+    const result = resolveActionPipelineDispatch(def, action, makeCtx(def, makeState(0)));
+    assert.equal(result.kind, 'noneConfigured');
   });
 });

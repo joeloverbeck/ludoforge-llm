@@ -10,11 +10,16 @@ export interface ExecutionPipeline {
   readonly partialMode: 'atomic' | 'partial';
 }
 
-export const resolveActionPipeline = (
+export type ActionPipelineDispatch =
+  | { readonly kind: 'noneConfigured' }
+  | { readonly kind: 'configuredNoMatch' }
+  | { readonly kind: 'matched'; readonly profile: ActionPipelineDef };
+
+export const resolveActionPipelineDispatch = (
   def: GameDef,
   action: ActionDef,
   ctx: EvalContext,
-): ActionPipelineDef | undefined => {
+): ActionPipelineDispatch => {
   const applicabilityMatches = (profile: ActionPipelineDef): boolean => {
     if (profile.applicability === undefined) {
       return true;
@@ -28,13 +33,13 @@ export const resolveActionPipeline = (
 
   const candidates = (def.actionPipelines ?? []).filter((profile) => profile.actionId === action.id);
   if (candidates.length === 0) {
-    return undefined;
+    return { kind: 'noneConfigured' };
   }
-  if (candidates.length === 1) {
-    const onlyCandidate = candidates[0];
-    return onlyCandidate !== undefined && applicabilityMatches(onlyCandidate) ? onlyCandidate : undefined;
+  const matched = candidates.find(applicabilityMatches);
+  if (matched === undefined) {
+    return { kind: 'configuredNoMatch' };
   }
-  return candidates.find(applicabilityMatches);
+  return { kind: 'matched', profile: matched };
 };
 
 export const toExecutionPipeline = (

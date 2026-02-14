@@ -2,7 +2,7 @@ import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { isMoveDecisionSequenceSatisfiable } from './move-decision-sequence.js';
-import { resolveActionPipeline } from './apply-move-pipeline.js';
+import { resolveActionPipelineDispatch } from './apply-move-pipeline.js';
 import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import type { AdjacencyGraph } from './spatial.js';
@@ -112,8 +112,9 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
 
-    const pipeline = resolveActionPipeline(def, action, actorCtx);
-    if (pipeline !== undefined) {
+    const pipelineDispatch = resolveActionPipelineDispatch(def, action, actorCtx);
+    if (pipelineDispatch.kind === 'matched') {
+      const pipeline = pipelineDispatch.profile;
       if (pipeline.legality !== null) {
         try {
           if (!evalCondition(pipeline.legality, actorCtx)) {
@@ -142,6 +143,9 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       }
 
       moves.push({ actionId: action.id, params: {} });
+      continue;
+    }
+    if (pipelineDispatch.kind === 'configuredNoMatch') {
       continue;
     }
 

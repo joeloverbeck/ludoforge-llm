@@ -9,7 +9,7 @@ import {
   initialState,
   legalMoves,
   resolveMoveDecisionSequence,
-  type ChoiceRequest,
+  type ChoicePendingRequest,
   type GameDef,
   type GameState,
   type Move,
@@ -22,7 +22,7 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 describe('FITL COIN operations integration', () => {
   const completeProfileMoveDeterministically = (
     baseMove: Move,
-    choose: (request: ChoiceRequest) => MoveParamValue,
+    choose: (request: ChoicePendingRequest) => MoveParamValue,
     def: GameDef,
     state: GameState,
   ): Move => {
@@ -33,7 +33,7 @@ describe('FITL COIN operations integration', () => {
     return result.move;
   };
 
-  const pickDeterministicValue = (request: ChoiceRequest): MoveParamValue => {
+  const pickDeterministicValue = (request: ChoicePendingRequest): MoveParamValue => {
     if (request.type === 'chooseOne') {
       return (request.options?.[0] ?? null) as MoveParamScalar;
     }
@@ -480,7 +480,7 @@ describe('FITL COIN operations integration', () => {
 
   describe('sweep-arvn-profile runtime behavior', () => {
     const chooseSweepArvnParams = (targetSpace: string, movingTroops: readonly string[]) =>
-      (request: ChoiceRequest): MoveParamValue => {
+      (request: ChoicePendingRequest): MoveParamValue => {
         if (request.name === 'targetSpaces') return [targetSpace];
         if (request.name === '$movingTroops') return [...movingTroops];
         return pickDeterministicValue(request);

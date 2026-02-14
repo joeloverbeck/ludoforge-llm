@@ -5,7 +5,7 @@ import { executeEventMove } from './event-execution.js';
 import { createCollector } from './execution-collector.js';
 import { legalMoves } from './legal-moves.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
-import { resolveActionPipeline, toExecutionPipeline } from './apply-move-pipeline.js';
+import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { applyTurnFlowEligibilityAfterMove } from './turn-flow-eligibility.js';
@@ -104,6 +104,12 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
         choose: () => undefined,
       });
       if (!result.complete) {
+        if (result.illegal !== undefined) {
+          throw illegalMoveError(move, 'pipeline move is not legal in current state', {
+            code: 'OPERATION_NOT_DISPATCHABLE',
+            detail: result.illegal.reason,
+          });
+        }
         throw illegalMoveError(move, 'pipeline move has incomplete params', {
           code: 'OPERATION_INCOMPLETE_PARAMS',
           nextDecision: result.nextDecision?.name,
@@ -172,7 +178,11 @@ const applyMoveCore = (
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   } as const;
 
-  const actionPipeline = resolveActionPipeline(def, action, { ...effectCtxBase, state });
+  const pipelineDispatch = resolveActionPipelineDispatch(def, action, { ...effectCtxBase, state });
+  if (pipelineDispatch.kind === 'configuredNoMatch') {
+    throw illegalMoveError(move, 'action is not legal in current state');
+  }
+  const actionPipeline = pipelineDispatch.kind === 'matched' ? pipelineDispatch.profile : undefined;
   const executionProfile = actionPipeline === undefined ? undefined : toExecutionPipeline(action, actionPipeline);
   const isFreeOp = move.freeOperation === true && executionProfile !== undefined;
 

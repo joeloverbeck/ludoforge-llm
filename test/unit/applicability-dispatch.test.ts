@@ -146,7 +146,7 @@ describe('applicability-based action pipeline dispatch', () => {
     assert.equal(result.state.globalVars.score, 5);
   });
 
-  it('resolveActionPipeline returns undefined when no candidate applicability matches', () => {
+  it('treats action as illegal when no candidate applicability matches', () => {
     const def: GameDef = {
       ...createMultiProfileDef(),
       actionPipelines: [
@@ -172,20 +172,18 @@ describe('applicability-based action pipeline dispatch', () => {
         },
       ],
     } as unknown as GameDef;
-    // Player 999 matches no applicability — falls back to action effects
+    // Player 999 matches no applicability.
     const state: GameState = { ...createState(0), activePlayer: asPlayerId(999) };
     const legal = legalMoves(def, state);
-    assert.ok(legal.some((move) => move.actionId === asActionId('operate')));
+    assert.ok(!legal.some((move) => move.actionId === asActionId('operate')));
 
     const choices = legalChoices(def, state, { actionId: asActionId('operate'), params: {} });
-    assert.equal(choices.complete, true);
+    assert.deepStrictEqual(choices, { kind: 'illegal', complete: false, reason: 'pipelineNotApplicable' });
 
-    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
-    // Fallback to action.effects: delta: 99
-    assert.equal(result.state.globalVars.score, 99);
+    assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), /Illegal move/);
   });
 
-  it('single candidate with false applicability falls back to action effects', () => {
+  it('treats action as illegal when single candidate applicability is false', () => {
     const def: GameDef = {
       ...createMultiProfileDef(),
       actionPipelines: [
@@ -203,8 +201,9 @@ describe('applicability-based action pipeline dispatch', () => {
     } as unknown as GameDef;
 
     const state = createState(0);
-    const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
-    assert.equal(result.state.globalVars.score, 99);
+    const legal = legalMoves(def, state);
+    assert.ok(!legal.some((move) => move.actionId === asActionId('operate')));
+    assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), /Illegal move/);
   });
 
   it('profile with legality condition blocks move for the matching applicability player', () => {
@@ -215,7 +214,7 @@ describe('applicability-based action pipeline dispatch', () => {
           id: 'profile-player-0',
           actionId: asActionId('operate'),
           applicability: { op: '==', left: { ref: 'activePlayer' }, right: '0' },
-          legality: { op: '>=', left: { ref: 'gvar', var: 'score' , right: 50 } },
+          legality: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 50 },
           costValidation: null, costEffects: [],
           targeting: {},
           stages: [{ effects: [{ addVar: { scope: 'global', var: 'score', delta: 10 } }] }],

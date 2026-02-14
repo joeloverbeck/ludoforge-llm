@@ -13,7 +13,7 @@ import {
   legalMoves,
   resolveMoveDecisionSequence,
   serializeGameState,
-  type ChoiceRequest,
+  type ChoicePendingRequest,
   type GameDef,
   type Move,
   type MoveParamScalar,
@@ -111,7 +111,7 @@ const scriptedMoves: readonly Move[] = [
 
 const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 
-const pickDeterministicValue = (request: ChoiceRequest): MoveParamValue => {
+const pickDeterministicValue = (request: ChoicePendingRequest): MoveParamValue => {
   if (request.type === 'chooseOne') {
     return (request.options?.[0] ?? null) as MoveParamScalar;
   }
@@ -307,12 +307,12 @@ describe('FITL card-flow determinism integration', () => {
     const def = compiled.gameDef!;
 
     // Coin operations (use action legal at scenario start under satisfiability filtering)
-    // Insurgent operations (rally, march, attack, terror use insurgentResources)
+    // Insurgent operations (attack is intentionally excluded here because it requires board targets)
     // US/ARVN specials (advise, airLift, airStrike, govern, transport, raid)
     // NVA/VC specials (infiltrate, bombard, ambushNva, tax, subvert, ambushVc)
     const scenarios = [
       { label: 'coin', actions: ['sweep'] },
-      { label: 'insurgent', actions: ['rally', 'march', 'attack', 'terror'] },
+      { label: 'insurgent', actions: ['rally', 'march', 'terror', 'tax'] },
       { label: 'us-arvn-specials', actions: ['advise', 'airLift', 'airStrike', 'govern', 'transport', 'raid'] },
       { label: 'nva-vc-specials', actions: ['infiltrate', 'bombard', 'ambushNva', 'tax', 'subvert', 'ambushVc'] },
     ] as const;

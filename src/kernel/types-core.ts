@@ -375,14 +375,40 @@ export interface Move {
   readonly compound?: CompoundMovePayload;
 }
 
-export interface ChoiceRequest {
-  readonly complete: boolean;
+export interface ChoiceCompleteRequest {
+  readonly kind: 'complete';
+  readonly complete: true;
   readonly name?: string;
   readonly type?: 'chooseOne' | 'chooseN';
   readonly options?: readonly MoveParamValue[];
   readonly min?: number;
   readonly max?: number;
+  readonly reason?: 'pipelineNotApplicable' | 'pipelineLegalityFailed';
 }
+
+export interface ChoicePendingRequest {
+  readonly kind: 'pending';
+  readonly complete: false;
+  readonly name: string;
+  readonly type: 'chooseOne' | 'chooseN';
+  readonly options: readonly MoveParamValue[];
+  readonly min?: number;
+  readonly max?: number;
+  readonly reason?: 'pipelineNotApplicable' | 'pipelineLegalityFailed';
+}
+
+export interface ChoiceIllegalRequest {
+  readonly kind: 'illegal';
+  readonly complete: false;
+  readonly name?: string;
+  readonly type?: 'chooseOne' | 'chooseN';
+  readonly options?: readonly MoveParamValue[];
+  readonly min?: number;
+  readonly max?: number;
+  readonly reason: 'pipelineNotApplicable' | 'pipelineLegalityFailed';
+}
+
+export type ChoiceRequest = ChoiceCompleteRequest | ChoicePendingRequest | ChoiceIllegalRequest;
 
 export interface StateDelta {
   readonly path: string;

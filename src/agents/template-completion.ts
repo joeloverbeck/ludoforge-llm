@@ -1,7 +1,7 @@
 import { legalChoices } from '../kernel/legal-choices.js';
 import { nextInt } from '../kernel/prng.js';
 import type {
-  ChoiceRequest,
+  ChoicePendingRequest,
   GameDef,
   GameState,
   Move,
@@ -17,7 +17,7 @@ export const isTemplateMoveForProfile = (def: GameDef, move: Move): boolean =>
   && Object.keys(move.params).length === 0;
 
 const selectFromChooseOne = (
-  choices: ChoiceRequest,
+  choices: ChoicePendingRequest,
   rng: Rng,
 ): { readonly selected: MoveParamValue; readonly rng: Rng } => {
   const options = choices.options!;
@@ -26,7 +26,7 @@ const selectFromChooseOne = (
 };
 
 const selectFromChooseN = (
-  choices: ChoiceRequest,
+  choices: ChoicePendingRequest,
   rng: Rng,
 ): { readonly selected: MoveParamValue; readonly rng: Rng } => {
   const options = choices.options!;
@@ -64,7 +64,7 @@ export const completeTemplateMove = (
   let cursor = rng;
   let iterations = 0;
 
-  while (!choices.complete) {
+  while (choices.kind === 'pending') {
     if (++iterations > MAX_CHOICES) {
       throw new Error(
         `Choice loop exceeded ${MAX_CHOICES} iterations for action ${String(current.actionId)}`,
@@ -81,8 +81,12 @@ export const completeTemplateMove = (
         : selectFromChooseOne(choices, cursor);
 
     cursor = nextRng;
-    current = { ...current, params: { ...current.params, [choices.name!]: selected } };
+    current = { ...current, params: { ...current.params, [choices.name]: selected } };
     choices = legalChoices(def, state, current);
+  }
+
+  if (choices.kind === 'illegal') {
+    return null;
   }
 
   return { move: current, rng: cursor };

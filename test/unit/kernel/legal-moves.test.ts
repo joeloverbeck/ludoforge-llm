@@ -501,4 +501,35 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
     assert.equal(moves.length, 1);
     assert.equal(moves[0]?.actionId, asActionId('mapAwareOp'));
   });
+
+  it('12. profiled action with no applicable profile emits no move', () => {
+    const action: ActionDef = {
+      id: asActionId('strictProfileOp'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'strictProfile',
+      actionId: asActionId('strictProfileOp'),
+      applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const state = makeBaseState({ activePlayer: asPlayerId(0) });
+
+    const moves = legalMoves(def, state);
+    assert.equal(moves.length, 0);
+  });
 });

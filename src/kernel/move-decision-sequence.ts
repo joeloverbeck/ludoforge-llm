@@ -1,20 +1,29 @@
 import { legalChoices } from './legal-choices.js';
-import type { ChoiceRequest, GameDef, GameState, Move, MoveParamScalar, MoveParamValue } from './types.js';
+import type {
+  ChoiceIllegalRequest,
+  ChoicePendingRequest,
+  GameDef,
+  GameState,
+  Move,
+  MoveParamScalar,
+  MoveParamValue,
+} from './types.js';
 
 const DEFAULT_MAX_STEPS = 128;
 
 export interface ResolveMoveDecisionSequenceOptions {
-  readonly choose?: (request: ChoiceRequest) => MoveParamValue | undefined;
+  readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
   readonly maxSteps?: number;
 }
 
 export interface ResolveMoveDecisionSequenceResult {
   readonly complete: boolean;
   readonly move: Move;
-  readonly nextDecision?: ChoiceRequest;
+  readonly nextDecision?: ChoicePendingRequest;
+  readonly illegal?: ChoiceIllegalRequest;
 }
 
-const defaultChoose = (request: ChoiceRequest): MoveParamValue | undefined => {
+const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefined => {
   const options = request.options ?? [];
   if (request.type === 'chooseOne') {
     const selected = options[0];
@@ -44,14 +53,14 @@ export const resolveMoveDecisionSequence = (
 
   for (let step = 0; step < maxSteps; step += 1) {
     const request = legalChoices(def, state, move);
-    if (request.complete) {
+    if (request.kind === 'complete') {
       return { complete: true, move };
+    }
+    if (request.kind === 'illegal') {
+      return { complete: false, move, illegal: request };
     }
 
     const name = request.name;
-    if (name === undefined) {
-      return { complete: false, move, nextDecision: request };
-    }
 
     const selected = choose(request);
     if (selected === undefined) {

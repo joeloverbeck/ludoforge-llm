@@ -68,7 +68,7 @@ const makeMove = (actionId: string, params: Record<string, unknown> = {}): Move 
 });
 
 describe('legalChoices()', () => {
-  it('1. simple action with no chooseOne/chooseN returns { complete: true }', () => {
+  it('1. simple action with no chooseOne/chooseN returns complete result', () => {
     const action: ActionDef = {
       id: asActionId('simpleAction'),
       actor: 'active',
@@ -90,10 +90,10 @@ describe('legalChoices()', () => {
     const move = makeMove('simpleAction');
 
     const result = legalChoices(def, state, move);
-    assert.deepStrictEqual(result, { complete: true });
+    assert.deepStrictEqual(result, { kind: 'complete', complete: true });
   });
 
-  it('2. action with one chooseOne returns options on first call, { complete: true } after param filled', () => {
+  it('2. action with one chooseOne returns options on first call, complete after param filled', () => {
     const action: ActionDef = {
       id: asActionId('pickColor'),
       actor: 'active',
@@ -124,7 +124,7 @@ describe('legalChoices()', () => {
 
     // Second call: param filled → complete
     const result2 = legalChoices(def, state, makeMove('pickColor', { $color: 'blue' }));
-    assert.deepStrictEqual(result2, { complete: true });
+    assert.deepStrictEqual(result2, { kind: 'complete', complete: true });
   });
 
   it('3. action with one chooseN (range mode) returns options with min/max, max clamped to domain size', () => {
@@ -200,7 +200,7 @@ describe('legalChoices()', () => {
 
     // Both params filled → complete
     const r3 = legalChoices(def, state, makeMove('multiChoice', { $first: 'x', $second: 'b' }));
-    assert.deepStrictEqual(r3, { complete: true });
+    assert.deepStrictEqual(r3, { kind: 'complete', complete: true });
   });
 
   it('5. invalid selection in params throws descriptive error', () => {
@@ -273,7 +273,7 @@ describe('legalChoices()', () => {
     // Condition false (score < 5) → complete (no choice)
     const stateLow = makeBaseState({ globalVars: { score: 2 } });
     const r1 = legalChoices(def, stateLow, makeMove('conditionalChoice'));
-    assert.deepStrictEqual(r1, { complete: true });
+    assert.deepStrictEqual(r1, { kind: 'complete', complete: true });
 
     // Condition true (score >= 5) → choice appears
     const stateHigh = makeBaseState({ globalVars: { score: 7 } });
@@ -390,7 +390,7 @@ describe('legalChoices()', () => {
 
     // rollRandom stops traversal, inner chooseOne not reached
     const result = legalChoices(def, state, makeMove('randomThenChoose'));
-    assert.deepStrictEqual(result, { complete: true });
+    assert.deepStrictEqual(result, { kind: 'complete', complete: true });
   });
 
   it('10. action with chooseN exact-n mode returns options with correct cardinality constraint', () => {
@@ -426,7 +426,7 @@ describe('legalChoices()', () => {
 
     // Filled with valid exact-2 selection → complete
     const r2 = legalChoices(def, state, makeMove('exactPick', { $exactTargets: ['alpha', 'gamma'] }));
-    assert.deepStrictEqual(r2, { complete: true });
+    assert.deepStrictEqual(r2, { kind: 'complete', complete: true });
   });
 
   describe('operation profile support', () => {
@@ -478,7 +478,7 @@ describe('legalChoices()', () => {
       assert.equal(result.max, 3); // clamped from 10
     });
 
-    it('returns complete when legality fails for profiled action', () => {
+    it('returns illegal when legality fails for profiled action', () => {
       const action: ActionDef = {
         id: asActionId('blockedOp'),
         actor: 'active',
@@ -523,7 +523,56 @@ describe('legalChoices()', () => {
       const state = makeBaseState({ globalVars: { resources: 2 } });
 
       const result = legalChoices(def, state, makeMove('blockedOp'));
-      assert.deepStrictEqual(result, { complete: true });
+      assert.deepStrictEqual(result, { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' });
+    });
+
+    it('returns illegal when pipelines exist but none are applicable', () => {
+      const action: ActionDef = {
+        id: asActionId('strictNoFallbackOp'),
+        actor: 'active',
+        phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseOne: {
+              bind: '$fallbackChoice',
+              options: { query: 'enums', values: ['fallback'] },
+            },
+          } as EffectAST,
+        ],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'strictNoFallbackProfile',
+        actionId: asActionId('strictNoFallbackOp'),
+        applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseOne: {
+                  bind: '$profileChoice',
+                  options: { query: 'enums', values: ['profile'] },
+                },
+              } as EffectAST,
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      };
+
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const state = makeBaseState({ activePlayer: asPlayerId(0) });
+
+      const result = legalChoices(def, state, makeMove('strictNoFallbackOp'));
+      assert.deepStrictEqual(result, { kind: 'illegal', complete: false, reason: 'pipelineNotApplicable' });
     });
 
     it('evaluates map-aware zones filters in profile chooseN options via def.mapSpaces', () => {

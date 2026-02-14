@@ -138,25 +138,45 @@ effectMacros:
                             query: tokensInZone
                             zone: { param: space }
                             filter: [{ prop: faction, eq: { ref: binding, name: $targetFactionFirst } }, { prop: type, op: neq, value: base }]
-                          to: { zoneExpr: { concat: ['available-', { ref: binding, name: $targetFactionFirst }, ':none'] } }
+                          to:
+                            zoneExpr:
+                              if:
+                                when: { op: '==', left: { ref: binding, name: $targetFactionFirst }, right: 'US' }
+                                then: 'casualties-US:none'
+                                else: { concat: ['available-', { ref: binding, name: $targetFactionFirst }, ':none'] }
                         - bind: $target
                           over:
                             query: tokensInZone
                             zone: { param: space }
                             filter: [{ prop: faction, eq: { ref: binding, name: $targetFactionSecond } }, { prop: type, op: neq, value: base }]
-                          to: { zoneExpr: { concat: ['available-', { ref: binding, name: $targetFactionSecond }, ':none'] } }
+                          to:
+                            zoneExpr:
+                              if:
+                                when: { op: '==', left: { ref: binding, name: $targetFactionSecond }, right: 'US' }
+                                then: 'casualties-US:none'
+                                else: { concat: ['available-', { ref: binding, name: $targetFactionSecond }, ':none'] }
                         - bind: $target
                           over:
                             query: tokensInZone
                             zone: { param: space }
                             filter: [{ prop: faction, eq: { ref: binding, name: $targetFactionFirst } }, { prop: type, eq: base }]
-                          to: { zoneExpr: { concat: ['available-', { ref: binding, name: $targetFactionFirst }, ':none'] } }
+                          to:
+                            zoneExpr:
+                              if:
+                                when: { op: '==', left: { ref: binding, name: $targetFactionFirst }, right: 'US' }
+                                then: 'casualties-US:none'
+                                else: { concat: ['available-', { ref: binding, name: $targetFactionFirst }, ':none'] }
                         - bind: $target
                           over:
                             query: tokensInZone
                             zone: { param: space }
                             filter: [{ prop: faction, eq: { ref: binding, name: $targetFactionSecond } }, { prop: type, eq: base }]
-                          to: { zoneExpr: { concat: ['available-', { ref: binding, name: $targetFactionSecond }, ':none'] } }
+                          to:
+                            zoneExpr:
+                              if:
+                                when: { op: '==', left: { ref: binding, name: $targetFactionSecond }, right: 'US' }
+                                then: 'casualties-US:none'
+                                else: { concat: ['available-', { ref: binding, name: $targetFactionSecond }, ':none'] }
             - let:
                 bind: $usPiecesAfter
                 value: { aggregate: { op: count, query: { query: tokensInZone, zone: { param: space }, filter: [{ prop: faction, eq: 'US' }] } } }
@@ -1495,6 +1515,7 @@ zones:
   - { id: available-ARVN, owner: none, visibility: public, ordering: set }
   - { id: available-NVA, owner: none, visibility: public, ordering: set }
   - { id: available-VC, owner: none, visibility: public, ordering: set }
+  - { id: casualties-US, owner: none, visibility: public, ordering: set }
   - { id: leader, owner: none, visibility: public, ordering: stack }
   - { id: played, owner: none, visibility: public, ordering: stack }
 

@@ -177,6 +177,18 @@ describe('FITL removal ordering macros', () => {
         false,
         'Expected insurgent-attack-removal-order to avoid actorFaction passthrough when delegating',
       );
+
+      const insurgentSerialized = JSON.stringify(insurgentAttackRemoval.effects);
+      assert.match(
+        insurgentSerialized,
+        /casualties-US:none/,
+        'Expected insurgent-attack-removal-order to route removed US pieces to casualties-US:none',
+      );
+      assert.match(
+        insurgentSerialized,
+        /"else":\{"concat":\["available-"/,
+        'Expected insurgent-attack-removal-order to route non-US removals to available-* via dynamic zoneExpr',
+      );
     });
   });
 
@@ -326,6 +338,7 @@ describe('FITL removal ordering macros', () => {
         zones: [
           { id: asZoneId('quangTri:none'), owner: 'none', visibility: 'public', ordering: 'set' },
           { id: asZoneId('available-NVA:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+          { id: asZoneId('casualties-US:none'), owner: 'none', visibility: 'public', ordering: 'set' },
           { id: asZoneId('available-US:none'), owner: 'none', visibility: 'public', ordering: 'set' },
           { id: asZoneId('available-ARVN:none'), owner: 'none', visibility: 'public', ordering: 'set' },
         ],
@@ -355,6 +368,7 @@ describe('FITL removal ordering macros', () => {
             makeToken('b1', 'base', 'US', { type: 'base' }),
           ],
           'available-NVA:none': [],
+          'casualties-US:none': [],
           'available-US:none': [],
           'available-ARVN:none': [],
         },
@@ -381,7 +395,7 @@ describe('FITL removal ordering macros', () => {
                   {
                     bind: '$target',
                     over: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'US' }, { prop: 'type', op: 'neq', value: 'base' }] },
-                    to: { zoneExpr: 'available-US:none' },
+                    to: { zoneExpr: 'casualties-US:none' },
                   },
                   {
                     bind: '$target',
@@ -391,7 +405,7 @@ describe('FITL removal ordering macros', () => {
                   {
                     bind: '$target',
                     over: { query: 'tokensInZone', zone: 'quangTri:none', filter: [{ prop: 'faction', op: 'eq', value: 'US' }, { prop: 'type', op: 'eq', value: 'base' }] },
-                    to: { zoneExpr: 'available-US:none' },
+                    to: { zoneExpr: 'casualties-US:none' },
                   },
                 ],
               },
@@ -431,7 +445,8 @@ describe('FITL removal ordering macros', () => {
       };
 
       const result = applyEffects(effects, ctx);
-      assert.equal(result.state.zones['available-US:none']?.length, 1, 'US defender should be removed first');
+      assert.equal(result.state.zones['casualties-US:none']?.length, 1, 'US defender should be removed to casualties');
+      assert.equal(result.state.zones['available-US:none']?.length, 0, 'US defender should not route to available');
       assert.equal(result.state.zones['available-ARVN:none']?.length, 1, 'ARVN defender should be removed second');
       assert.equal(result.state.zones['available-NVA:none']?.length, 1, 'Attacker should lose 1 NVA piece per US piece removed');
       assert.equal(result.state.zones['quangTri:none']?.some((token) => token.id === 'b1'), true, 'US Base should remain while non-base defenders exist');

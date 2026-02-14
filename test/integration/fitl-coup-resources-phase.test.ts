@@ -19,6 +19,10 @@ const createResourcesFixtureDef = (options: ResourcesFixtureOptions): GameDef =>
     setup.push({ createToken: { type: 'sabotage', zone: 'marker_pool:none', props: { isSabotage: true, econ: 0 } } });
   }
 
+  for (let index = 0; index < options.casualties; index += 1) {
+    setup.push({ createToken: { type: 'us_casualty', zone: 'casualties-US:none', props: { isCasualty: true } } });
+  }
+
   setup.push(
     { createToken: { type: 'econ', zone: 'loc_a:none', props: { econ: 2 } } },
     { createToken: { type: 'econ', zone: 'loc_b:none', props: { econ: 1 } } },
@@ -114,7 +118,16 @@ const createResourcesFixtureDef = (options: ResourcesFixtureOptions): GameDef =>
         delta: {
           op: '-',
           left: 0,
-          right: { op: '*', left: 3, right: { ref: 'gvar', var: 'casualties' } },
+          right: {
+            op: '*',
+            left: 3,
+            right: {
+              aggregate: {
+                op: 'count',
+                query: { query: 'tokensInZone', zone: 'casualties-US:none' },
+              },
+            },
+          },
         },
       },
     },
@@ -125,7 +138,6 @@ const createResourcesFixtureDef = (options: ResourcesFixtureOptions): GameDef =>
     constants: {},
     globalVars: [
       { name: 'aid', type: 'int', init: options.aid, min: 0, max: 75 },
-      { name: 'casualties', type: 'int', init: options.casualties, min: 0, max: 75 },
       { name: 'trail', type: 'int', init: options.trail, min: 0, max: 4 },
       { name: 'totalEcon', type: 'int', init: 0, min: 0, max: 15 },
       { name: 'arvnResources', type: 'int', init: 0, min: 0, max: 75 },
@@ -140,11 +152,13 @@ const createResourcesFixtureDef = (options: ResourcesFixtureOptions): GameDef =>
       { id: 'loc_c:none', owner: 'none', visibility: 'public', ordering: 'queue' },
       { id: 'laos_coin:none', owner: 'none', visibility: 'public', ordering: 'queue' },
       { id: 'cambodia_coin:none', owner: 'none', visibility: 'public', ordering: 'queue' },
+      { id: 'casualties-US:none', owner: 'none', visibility: 'public', ordering: 'set' },
     ],
     tokenTypes: [
       { id: 'sabotage', props: { isSabotage: 'boolean', econ: 'int' } },
       { id: 'econ', props: { econ: 'int' } },
       { id: 'control', props: { coin: 'boolean' } },
+      { id: 'us_casualty', props: { isCasualty: 'boolean' } },
     ],
     setup,
     turnStructure: {

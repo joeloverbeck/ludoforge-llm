@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { asActionId, asTokenId, initialState, type EffectAST, type GameState, type Token } from '../../src/kernel/index.js';
+import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -214,7 +215,25 @@ describe('FITL US/ARVN special activities integration', () => {
         if ('removeByPriority' in effect) return effect.removeByPriority.in !== undefined && hasRollRandom(effect.removeByPriority.in);
         return false;
       });
-    assert.equal(hasRollRandom(profile!.stages.flatMap((stage) => stage.effects)), false, 'Air Strike should not roll dice');
+    assert.equal(hasRollRandom(profile!.stages.flatMap((stage) => stage.effects)), true, 'Air Strike should include conditional die roll branches');
+
+    const topGunShadedRollGate = findDeep(profile!.stages, (node: unknown) => {
+      const candidate = node as {
+        if?: {
+          when?: { op?: unknown; left?: { ref?: unknown; marker?: unknown }; right?: unknown };
+          then?: unknown[];
+        };
+      };
+      return candidate.if?.when?.op === '==' &&
+        candidate.if?.when?.left?.ref === 'globalMarkerState' &&
+        candidate.if?.when?.left?.marker === 'cap_topGun' &&
+        candidate.if?.when?.right === 'shaded' &&
+        findDeep(candidate.if?.then ?? [], (inner: unknown) => {
+          const innerCandidate = inner as { rollRandom?: unknown };
+          return innerCandidate.rollRandom !== undefined;
+        }).length > 0;
+    });
+    assert.ok(topGunShadedRollGate.length >= 1, 'Expected rollRandom to be gated by cap_topGun shaded branch');
 
     const space = 'saigon:none';
     const start = initialState(def, 277, 2);

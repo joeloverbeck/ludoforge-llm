@@ -113,6 +113,16 @@ describe('FITL removal ordering macros', () => {
         ['space', 'damageExpr', 'attackerFaction'],
         'Expected insurgent-attack-removal-order to keep explicit attackerFaction',
       );
+      assert.equal(
+        pieceRemovalOrdering.params[0]?.type,
+        'zoneSelector',
+        'Expected piece-removal-ordering space param to be binding-aware for nested hygienic macros',
+      );
+      assert.equal(
+        coinAssaultRemoval.params[0]?.type,
+        'zoneSelector',
+        'Expected coin-assault-removal-order space param to be binding-aware for nested hygienic macros',
+      );
 
       const asRecord = (value: unknown): Record<string, unknown> | null =>
         typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;

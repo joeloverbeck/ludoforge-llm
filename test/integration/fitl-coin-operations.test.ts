@@ -238,11 +238,11 @@ describe('FITL COIN operations integration', () => {
       assert.deepEqual(profile.costEffects, []);
     });
 
-    it('has three stages: select-spaces, move-troops, activate-guerrillas', () => {
+    it('has five stages including capability-only Sweep branches', () => {
       const profile = getSweepUsProfile();
       assert.deepEqual(
         profile.stages.map((stage) => stage.stage),
-        ['select-spaces', 'move-troops', 'activate-guerrillas'],
+        ['select-spaces', 'move-troops', 'activate-guerrillas', 'cap-cobras-bonus-removal', 'cap-booby-traps-troop-cost'],
       );
     });
 
@@ -365,11 +365,11 @@ describe('FITL COIN operations integration', () => {
       assert.deepEqual(profile.costEffects, []);
     });
 
-    it('AC3: has two stages: select-spaces and resolve-per-space', () => {
+    it('AC3: has four stages including capability-only Sweep branches', () => {
       const profile = getSweepArvnProfile();
       assert.deepEqual(
         profile.stages.map((stage) => stage.stage),
-        ['select-spaces', 'resolve-per-space'],
+        ['select-spaces', 'resolve-per-space', 'cap-cobras-bonus-removal', 'cap-booby-traps-troop-cost'],
       );
     });
 
@@ -942,7 +942,8 @@ describe('FITL COIN operations integration', () => {
 
     it('AC8/AC9: ARVN follow-up is optional, costs 3, and uses ARVN highland/non-highland formulas', () => {
       const parsed = parseAssaultUsProfile();
-      const arvnFollowup = parsed.stages[2];
+      const arvnFollowup = parsed.stages.find((stage: { stage: string }) => stage.stage === 'arvn-followup');
+      assert.ok(arvnFollowup, 'Expected arvn-followup stage');
       assert.equal(arvnFollowup.stage, 'arvn-followup');
 
       const followupGuard = findDeep(arvnFollowup.effects, (node: any) =>

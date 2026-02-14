@@ -38,6 +38,7 @@ describe('FITL insurgent operations integration', () => {
     const profileMap = profiles.map((profile) => ({ id: profile.id, actionId: String(profile.actionId) }));
     for (const expected of [
       { id: 'rally-nva-profile', actionId: 'rally' },
+      { id: 'rally-vc-profile', actionId: 'rally' },
       { id: 'march-profile', actionId: 'march' },
       { id: 'attack-nva-profile', actionId: 'attack' },
       { id: 'terror-profile', actionId: 'terror' },
@@ -238,21 +239,21 @@ describe('FITL insurgent operations integration', () => {
     assert.equal(free.globalVars.nvaResources, 7, 'Free attack should skip per-space NVA resource spend');
   });
 
-  it('treats rally as illegal when active player is not NVA', () => {
+  it('treats rally as illegal when active player is not an insurgent faction', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const nonNvaState = {
+    const nonInsurgentState = {
       ...initialState(def, 301, 4),
       activePlayer: asPlayerId(0),
     };
 
-    const legal = legalMoves(def, nonNvaState);
+    const legal = legalMoves(def, nonInsurgentState);
     assert.ok(!legal.some((move) => move.actionId === asActionId('rally')));
     assert.throws(
       () =>
-        applyMove(def, nonNvaState, {
+        applyMove(def, nonInsurgentState, {
           actionId: asActionId('rally'),
           params: { targetSpaces: [], $improveTrail: 'no' },
         }),
@@ -522,5 +523,213 @@ describe('FITL insurgent operations integration', () => {
       params: { targetSpaces: [], $improveTrail: 'no' },
     }).state;
     assert.equal(zeroSelected.globalVars.nvaResources, 10, 'LimOp should allow zero selected spaces for Rally');
+  });
+
+  it('executes rally through rally-vc-profile and does not perform trail-improvement behavior', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 307, 4);
+    const vc = withSupportState(
+      {
+        ...start,
+        activePlayer: asPlayerId(3),
+        globalVars: {
+          ...start.globalVars,
+          vcResources: 6,
+          nvaResources: 9,
+          trail: 2,
+        },
+      },
+      RALLY_SPACE,
+      'neutral',
+    );
+    const vcWithAvailable = addTokenToZone(vc, 'available-VC:none', {
+      id: asTokenId('vc-rally-available-g1'),
+      type: 'vc-guerrillas',
+      props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+    });
+
+    const final = applyMove(def, vcWithAvailable, {
+      actionId: asActionId('rally'),
+      params: { targetSpaces: [RALLY_SPACE], $noBaseChoice: 'place-guerrilla' },
+    }).state;
+
+    assert.equal(final.globalVars.vcResources, 5, 'VC rally should spend 1 VC resource per selected space');
+    assert.equal(final.globalVars.nvaResources, 9, 'VC rally should not affect NVA resources');
+    assert.equal(final.globalVars.trail, 2, 'VC rally should not include trail-improvement behavior');
+  });
+
+  it('applies VC rally space filter, free-op cost skip, and LimOp max=1', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 308, 4);
+    const vc = withSupportState(
+      withSupportState(
+        withSupportState(
+          {
+            ...start,
+            activePlayer: asPlayerId(3),
+            globalVars: {
+              ...start.globalVars,
+              vcResources: 8,
+            },
+          },
+          RALLY_SPACE,
+          'activeSupport',
+        ),
+        RALLY_SPACE_2,
+        'neutral',
+      ),
+      ATTACK_SPACE,
+      'activeOpposition',
+    );
+    const vcWithAvailable = addTokenToZone(
+      addTokenToZone(vc, 'available-VC:none', {
+        id: asTokenId('vc-rally-filter-available-g1'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      }),
+      'available-VC:none',
+      {
+        id: asTokenId('vc-rally-filter-available-g2'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    assert.throws(
+      () =>
+        applyMove(def, vcWithAvailable, {
+          actionId: asActionId('rally'),
+          params: { targetSpaces: [RALLY_SPACE], $noBaseChoice: 'place-guerrilla' },
+        }),
+      /Illegal move/,
+      'VC rally should reject activeSupport spaces',
+    );
+
+    const free = applyMove(def, vcWithAvailable, {
+      actionId: asActionId('rally'),
+      freeOperation: true,
+      params: { targetSpaces: [RALLY_SPACE_2], $noBaseChoice: 'place-guerrilla' },
+    }).state;
+    assert.equal(free.globalVars.vcResources, 8, 'Free VC rally should skip per-space VC resource spend');
+
+    assert.throws(
+      () =>
+        applyMove(def, vcWithAvailable, {
+          actionId: asActionId('rally'),
+          actionClass: 'limitedOperation',
+          params: { targetSpaces: [RALLY_SPACE_2, ATTACK_SPACE], $noBaseChoice: 'place-guerrilla' },
+        }),
+      /Illegal move/,
+      'VC rally LimOp should enforce max one selected space',
+    );
+  });
+
+  it('supports VC rally no-base replacement plus with-base place/flip branches', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 309, 4);
+    const vcBaseState = withSupportState(
+      {
+        ...start,
+        activePlayer: asPlayerId(3),
+        globalVars: {
+          ...start.globalVars,
+          vcResources: 12,
+        },
+      },
+      RALLY_SPACE,
+      'neutral',
+    );
+
+    const replacementSetup = addTokenToZone(
+      addTokenToZone(
+        addTokenToZone(vcBaseState, RALLY_SPACE, {
+          id: asTokenId('vc-rally-replace-g1'),
+          type: 'vc-guerrillas',
+          props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+        }),
+        RALLY_SPACE,
+        {
+          id: asTokenId('vc-rally-replace-g2'),
+          type: 'vc-guerrillas',
+          props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+        },
+      ),
+      'available-VC:none',
+      {
+        id: asTokenId('vc-rally-replace-base-source'),
+        type: 'vc-base',
+        props: { faction: 'VC', type: 'base', tunnel: 'untunneled' },
+      },
+    );
+    const replaced = applyMove(def, replacementSetup, {
+      actionId: asActionId('rally'),
+      params: { targetSpaces: [RALLY_SPACE], $noBaseChoice: 'replace-with-base' },
+    }).state;
+    const replacedSpaceTokens = replaced.zones[RALLY_SPACE] ?? [];
+    const replacedBaseCount = replacedSpaceTokens.filter((t) => t.props.faction === 'VC' && t.props.type === 'base').length;
+    const replacedGuerrillaCount = replacedSpaceTokens.filter((t) => t.props.faction === 'VC' && t.props.type === 'guerrilla').length;
+    assert.equal(replacedBaseCount, 1, 'VC no-base replacement should add one VC base');
+    assert.equal(replacedGuerrillaCount, 0, 'VC no-base replacement should remove two VC guerrillas');
+
+    const withBaseSetup = addTokenToZone(
+      addTokenToZone(
+        addTokenToZone(
+          addTokenToZone(vcBaseState, RALLY_SPACE, {
+            id: asTokenId('vc-rally-with-base'),
+            type: 'vc-base',
+            props: { faction: 'VC', type: 'base', tunnel: 'untunneled' },
+          }),
+          RALLY_SPACE,
+          {
+            id: asTokenId('vc-rally-active-g1'),
+            type: 'vc-guerrillas',
+            props: { faction: 'VC', type: 'guerrilla', activity: 'active' },
+          },
+        ),
+        RALLY_SPACE,
+        {
+          id: asTokenId('vc-rally-active-g2'),
+          type: 'vc-guerrillas',
+          props: { faction: 'VC', type: 'guerrilla', activity: 'active' },
+        },
+      ),
+      'available-VC:none',
+      {
+        id: asTokenId('vc-rally-with-base-available-g1'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const withBaseSetup2 = addTokenToZone(withBaseSetup, 'available-VC:none', {
+      id: asTokenId('vc-rally-with-base-available-g2'),
+      type: 'vc-guerrillas',
+      props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+    });
+    const placeChoice = applyMove(def, withBaseSetup2, {
+      actionId: asActionId('rally'),
+      params: { targetSpaces: [RALLY_SPACE], $withBaseChoice: 'place-guerrillas' },
+    }).state;
+    const placedGuerrillas = (placeChoice.zones[RALLY_SPACE] ?? []).filter(
+      (t) => t.props.faction === 'VC' && t.props.type === 'guerrilla',
+    ).length;
+    assert.equal(placedGuerrillas, 4, 'With VC base, place branch should add population(1)+bases(1)=2 guerrillas');
+
+    const flipChoice = applyMove(def, withBaseSetup2, {
+      actionId: asActionId('rally'),
+      params: { targetSpaces: [RALLY_SPACE], $withBaseChoice: 'flip-underground' },
+    }).state;
+    const vcGuerrillasAfterFlip = (flipChoice.zones[RALLY_SPACE] ?? []).filter(
+      (t) => t.props.faction === 'VC' && t.props.type === 'guerrilla',
+    );
+    assert.ok(vcGuerrillasAfterFlip.every((t) => t.props.activity === 'underground'), 'Flip branch should set all VC guerrillas underground');
   });
 });

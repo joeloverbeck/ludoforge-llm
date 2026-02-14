@@ -207,6 +207,20 @@ describe('evalQuery', () => {
     );
   });
 
+  it('resolves templated binding query names against current bindings', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $space: 'hand:0',
+        '$choices@hand:0': [asZoneId('hand:0'), asZoneId('hand:1')],
+      },
+    });
+
+    assert.deepEqual(
+      evalQuery({ query: 'binding', name: '$choices@{$space}' }, ctx),
+      ['hand:0', 'hand:1'],
+    );
+  });
+
   it('mapSpaces query evaluates zoneProp filters only across map spaces', () => {
     const ctx = makeCtx({
       mapSpaces: [

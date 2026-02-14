@@ -151,7 +151,10 @@ const completeProfileMoveDeterministically = (
 };
 
 const runScriptedOperations = (def: GameDef, seed: number, actions: readonly string[]) => {
-  let state = initialState(def, seed, 2);
+  let state: ReturnType<typeof initialState> = {
+    ...initialState(def, seed, 2),
+    turnOrderState: { type: 'roundRobin' },
+  };
   const logs: unknown[] = [];
 
   for (const action of actions) {

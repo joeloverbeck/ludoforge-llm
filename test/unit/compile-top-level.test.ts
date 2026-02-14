@@ -308,6 +308,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
           id: 'patrol-profile',
           actionId: 'patrol',
           accompanyingOps: ['train', 'patrol'],
+          compoundParamConstraints: [{ relation: 'disjoint' as const, operationParam: 'targetSpaces', specialActivityParam: 'targetSpaces' }],
           legality: null,
           costValidation: null, costEffects: [],
           targeting: {},
@@ -327,6 +328,9 @@ describe('compile top-level actions/triggers/end conditions', () => {
     assert.equal(result.gameDef?.actionPipelines?.[0]?.id, 'patrol-profile');
     assert.equal(result.gameDef?.actionPipelines?.[0]?.atomicity, 'atomic');
     assert.deepEqual(result.gameDef?.actionPipelines?.[0]?.accompanyingOps, ['train', 'patrol']);
+    assert.deepEqual(result.gameDef?.actionPipelines?.[0]?.compoundParamConstraints, [
+      { relation: 'disjoint', operationParam: 'targetSpaces', specialActivityParam: 'targetSpaces' },
+    ]);
   });
 
   it('returns blocking diagnostics for ambiguous or incomplete actionPipelines metadata', () => {
@@ -386,6 +390,16 @@ describe('compile top-level actions/triggers/end conditions', () => {
           stages: [{ stage: 'resolve' }],
           atomicity: 'atomic',
         },
+        {
+          id: 'invalid-compound-constraint-profile',
+          actionId: 'sweep',
+          compoundParamConstraints: [{ relation: 'overlap', operationParam: 'targetSpaces', specialActivityParam: 'targetSpaces' }],
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
+        },
       ],
       triggers: [],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
@@ -417,6 +431,10 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
     assert.equal(
       result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actionPipelines.4.accompanyingOps'),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actionPipelines.5.compoundParamConstraints'),
       true,
     );
   });

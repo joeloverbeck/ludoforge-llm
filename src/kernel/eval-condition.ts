@@ -1,5 +1,6 @@
 import type { EvalContext } from './eval-context.js';
 import { typeMismatchError, zonePropNotFoundError } from './eval-error.js';
+import { resolveBindingTemplate } from './binding-template.js';
 import { evalValue } from './eval-value.js';
 import { resolveMapSpaceId, resolveSingleZoneSel } from './resolve-selectors.js';
 import { queryConnectedZones } from './spatial.js';
@@ -11,7 +12,8 @@ function isMembershipCollection(value: unknown): value is readonly unknown[] {
 
 function evalMembershipSet(setExpr: ValueExpr, ctx: EvalContext, cond: ConditionAST): readonly unknown[] {
   if (typeof setExpr === 'object' && setExpr !== null && 'ref' in setExpr && setExpr.ref === 'binding') {
-    const boundValue = ctx.bindings[setExpr.name];
+    const resolvedName = resolveBindingTemplate(setExpr.name, ctx.bindings);
+    const boundValue = ctx.bindings[resolvedName];
     if (isMembershipCollection(boundValue)) {
       return boundValue;
     }

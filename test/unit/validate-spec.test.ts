@@ -406,6 +406,33 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('reports invalid compoundParamConstraints shape in action pipeline metadata', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      actionPipelines: [
+        {
+          id: 'op-pass',
+          actionId: 'draw',
+          compoundParamConstraints: [{ relation: 'overlap', operationParam: '', specialActivityParam: 'targetSpaces' }],
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
+        },
+      ],
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.actionPipelines.0.compoundParamConstraints.0.relation'),
+      true,
+    );
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.actionPipelines.0.compoundParamConstraints.0.operationParam'),
+      true,
+    );
+  });
+
   it('reports missing phase reference in action with alternatives', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

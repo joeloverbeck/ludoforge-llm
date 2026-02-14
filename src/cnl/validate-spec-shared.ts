@@ -22,6 +22,7 @@ export const ACTION_PIPELINE_KEYS = [
   'actionId',
   'applicability',
   'accompanyingOps',
+  'compoundParamConstraints',
   'legality',
   'costValidation',
   'costEffects',

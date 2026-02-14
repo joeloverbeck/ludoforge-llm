@@ -1,5 +1,6 @@
 import { resolveMapSpaceId, resolveSinglePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import type { EvalContext } from './eval-context.js';
+import { resolveBindingTemplate } from './binding-template.js';
 import { missingBindingError, missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import type { Reference, Token } from './types.js';
 
@@ -219,19 +220,22 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     return propValue;
   }
 
-  const value = ctx.bindings[ref.name];
+  const resolvedName = resolveBindingTemplate(ref.name, ctx.bindings);
+  const value = ctx.bindings[resolvedName];
   if (value === undefined) {
-    throw missingBindingError(`Binding not found: ${ref.name}`, {
+    throw missingBindingError(`Binding not found: ${resolvedName}`, {
       reference: ref,
-      binding: ref.name,
+      binding: resolvedName,
+      bindingTemplate: ref.name,
       availableBindings: Object.keys(ctx.bindings).sort(),
     });
   }
 
   if (!isScalarValue(value)) {
-    throw typeMismatchError(`Binding ${ref.name} must resolve to number | boolean | string`, {
+    throw typeMismatchError(`Binding ${resolvedName} must resolve to number | boolean | string`, {
       reference: ref,
-      binding: ref.name,
+      binding: resolvedName,
+      bindingTemplate: ref.name,
       actualType: typeof value,
       value,
     });

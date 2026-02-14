@@ -1,9 +1,18 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, initialState, type Move } from '../../src/kernel/index.js';
+import { applyMove, asActionId, initialState, type GameState, type Move } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+
+const operationInitialState = (
+  def: Parameters<typeof initialState>[0],
+  seed: number,
+  playerCount: number,
+): GameState => ({
+  ...initialState(def, seed, playerCount),
+  turnOrderState: { type: 'roundRobin' },
+});
 
 describe('FITL NVA/VC special activities integration', () => {
   it('compiles NVA/VC special-activity profiles and ambush targeting metadata from production spec', () => {
@@ -42,7 +51,7 @@ describe('FITL NVA/VC special activities integration', () => {
 
     assert.notEqual(compiled.gameDef, null);
 
-    const start = initialState(compiled.gameDef!, 131, 2);
+    const start = operationInitialState(compiled.gameDef!, 131, 2);
     const sequence: readonly Move[] = [
       { actionId: asActionId('infiltrate'), params: {} },
       { actionId: asActionId('bombard'), params: {} },
@@ -70,7 +79,7 @@ describe('FITL NVA/VC special activities integration', () => {
 
     assert.notEqual(compiled.gameDef, null);
 
-    const state = initialState(compiled.gameDef!, 313, 2);
+    const state = operationInitialState(compiled.gameDef!, 313, 2);
 
     assert.throws(
       () => applyMove(compiled.gameDef!, state, {
@@ -102,7 +111,7 @@ describe('FITL NVA/VC special activities integration', () => {
 
     assert.notEqual(compiled.gameDef, null);
 
-    const state = initialState(compiled.gameDef!, 227, 2);
+    const state = operationInitialState(compiled.gameDef!, 227, 2);
     const result = applyMove(compiled.gameDef!, state, {
       actionId: asActionId('usOp'),
       params: {},

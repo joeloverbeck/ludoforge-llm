@@ -112,6 +112,23 @@ describe('effects choice assertions', () => {
     });
   });
 
+  it('chooseOne resolves templated bind names against current bindings', () => {
+    const ctx = makeCtx({
+      bindings: { $space: 'quang-nam:none' },
+      moveParams: { '$adviseMode@quang-nam:none': 'assault' },
+    });
+    const effect: EffectAST = {
+      chooseOne: {
+        bind: '$adviseMode@{$space}',
+        options: { query: 'enums', values: ['sweep', 'assault', 'activate-remove'] },
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state, ctx.state);
+    assert.equal(result.rng, ctx.rng);
+  });
+
   it('chooseN succeeds for exact-length unique in-domain array', () => {
     const ctx = makeCtx({ moveParams: { $picks: ['alpha', 'gamma'] } });
     const effect: EffectAST = {

@@ -15,7 +15,7 @@ describe('FITL Domino Theory event-card production spec', () => {
     assert.notEqual(domino, undefined);
     assert.equal(domino?.title, 'Domino Theory');
     assert.equal(domino?.sideMode, 'dual');
-    assert.equal(compiled.gameDef?.eventDecks?.[0]?.drawZone, 'leader:none');
+    assert.equal(compiled.gameDef?.eventDecks?.[0]?.drawZone, 'deck:none');
     assert.equal(compiled.gameDef?.eventDecks?.[0]?.discardZone, 'played:none');
     assert.equal(compiled.gameDef?.eventDecks?.[0]?.shuffleOnSetup, true);
 

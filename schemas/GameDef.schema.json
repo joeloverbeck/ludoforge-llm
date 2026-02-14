@@ -797,6 +797,32 @@
               }
             ]
           },
+          "compoundParamConstraints": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "relation": {
+                  "type": "string",
+                  "const": "disjoint"
+                },
+                "operationParam": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "specialActivityParam": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "relation",
+                "operationParam",
+                "specialActivityParam"
+              ],
+              "additionalProperties": false
+            }
+          },
           "legality": {
             "anyOf": [
               {

@@ -1683,4 +1683,78 @@ describe('applyMove', () => {
     });
     assert.equal(result.state.globalVars.v, 11);
   });
+
+  it('rejects compound SA when compoundParamConstraints disallow overlapping operation/SA params', () => {
+    const def: GameDef = {
+      metadata: { id: 'compound-param-constraint-reject', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actionPipelines: [
+        {
+          id: 'train-profile',
+          actionId: asActionId('train'),
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'v', delta: 10 } }] }],
+          atomicity: 'atomic',
+        },
+        {
+          id: 'sa-profile',
+          actionId: asActionId('sa'),
+          accompanyingOps: ['train'],
+          compoundParamConstraints: [{ relation: 'disjoint', operationParam: 'targetSpaces', specialActivityParam: 'targetSpaces' }],
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'v', delta: 1 } }] }],
+          atomicity: 'atomic',
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('train'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [{ name: 'targetSpaces', domain: { query: 'enums', values: ['a', 'b'] } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('sa'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [{ name: 'targetSpaces', domain: { query: 'enums', values: ['a', 'b'] } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state = createState();
+    assert.throws(
+      () => applyMove(def, state, {
+        actionId: asActionId('train'),
+        params: { targetSpaces: ['a'] },
+        compound: { specialActivity: { actionId: asActionId('sa'), params: { targetSpaces: ['a'] } }, timing: 'after' },
+      }),
+      (error: unknown) => {
+        const details = error as { readonly reason?: string; readonly metadata?: { readonly code?: string } };
+        assert.equal(details.reason, 'special activity violates compound param constraints');
+        assert.equal(details.metadata?.code, 'SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED');
+        return true;
+      },
+    );
+  });
 });

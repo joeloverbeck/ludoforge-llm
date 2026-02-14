@@ -261,12 +261,21 @@ export const ActionPipelineStageSchema = z
   })
   .strict();
 
+export const ActionPipelineCompoundParamConstraintSchema = z
+  .object({
+    relation: z.literal('disjoint'),
+    operationParam: StringSchema.min(1),
+    specialActivityParam: StringSchema.min(1),
+  })
+  .strict();
+
 export const ActionPipelineSchema = z
   .object({
     id: StringSchema.min(1),
     actionId: StringSchema.min(1),
     applicability: ConditionASTSchema.optional(),
     accompanyingOps: z.union([z.literal('any'), z.array(StringSchema.min(1))]).optional(),
+    compoundParamConstraints: z.array(ActionPipelineCompoundParamConstraintSchema).optional(),
     legality: ConditionASTSchema.nullable(),
     costValidation: ConditionASTSchema.nullable(),
     costEffects: z.array(EffectASTSchema),

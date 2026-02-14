@@ -6,6 +6,10 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const ATTACK_SPACE = 'quang-tri-thua-thien:none';
+const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => ({
+  ...initialState(def, seed, playerCount),
+  turnOrderState: { type: 'roundRobin' },
+});
 
 const hasRollRandom = (effects: readonly EffectAST[]): boolean =>
   effects.some((effect) => {
@@ -77,7 +81,7 @@ const addToken = (state: GameState, zoneId: string, token: Token): GameState => 
 });
 
 const makeAttackReadyState = (def: GameDef, seed: number): GameState => {
-  const start = initialState(def, seed, 4);
+  const start = operationInitialState(def, seed, 4);
   const withNvaPlayer = {
     ...start,
     activePlayer: asPlayerId(2),
@@ -100,7 +104,7 @@ const makeAttackReadyState = (def: GameDef, seed: number): GameState => {
 };
 
 const makeVcAttackReadyState = (def: GameDef, seed: number): GameState => {
-  const start = initialState(def, seed, 4);
+  const start = operationInitialState(def, seed, 4);
   const withVcPlayer = {
     ...start,
     activePlayer: asPlayerId(3),

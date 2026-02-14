@@ -1,4 +1,5 @@
 import { resolveActionPipelineDispatch } from './apply-move-pipeline.js';
+import { resolveBindingTemplate } from './binding-template.js';
 import { applyEffect } from './effect-dispatch.js';
 import type { EffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
@@ -134,7 +135,7 @@ function walkChooseOne(
   effect: Extract<EffectAST, { readonly chooseOne: unknown }>,
   wCtx: WalkContext,
 ): WalkOutcome {
-  const bind = effect.chooseOne.bind;
+  const bind = resolveBindingTemplate(effect.chooseOne.bind, wCtx.evalCtx.bindings);
   const options = evalQuery(effect.chooseOne.options, wCtx.evalCtx);
   const asParamValues = options.map((o) =>
     typeof o === 'object' && o !== null && 'id' in o ? (o.id as MoveParamValue) : (o as MoveParamValue),
@@ -167,7 +168,7 @@ function walkChooseN(
   wCtx: WalkContext,
 ): WalkOutcome {
   const chooseN = effect.chooseN;
-  const bind = chooseN.bind;
+  const bind = resolveBindingTemplate(chooseN.bind, wCtx.evalCtx.bindings);
   const hasN = 'n' in chooseN && chooseN.n !== undefined;
   const hasMax = 'max' in chooseN && chooseN.max !== undefined;
   const hasMin = 'min' in chooseN && chooseN.min !== undefined;

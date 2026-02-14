@@ -577,7 +577,7 @@ export function validateActionPipelines(
         path: basePath,
         severity: 'error',
         message: 'Action pipeline entry must be an object.',
-        suggestion: 'Set action pipeline entries to objects with id/actionId/accompanyingOps/legality/costValidation/costEffects/targeting/stages/atomicity.',
+        suggestion: 'Set action pipeline entries to objects with id/actionId/accompanyingOps/compoundParamConstraints/legality/costValidation/costEffects/targeting/stages/atomicity.',
       });
       continue;
     }
@@ -603,6 +603,57 @@ export function validateActionPipelines(
               severity: 'error',
               message: 'accompanyingOps entries must be non-empty strings.',
               suggestion: 'Replace invalid entry with a non-empty operation id string.',
+            });
+          }
+        }
+      }
+    }
+    if (profile.compoundParamConstraints !== undefined) {
+      if (!Array.isArray(profile.compoundParamConstraints)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+          path: `${basePath}.compoundParamConstraints`,
+          severity: 'error',
+          message: 'action pipeline compoundParamConstraints must be an array when provided.',
+          suggestion: 'Set compoundParamConstraints to an array of { relation, operationParam, specialActivityParam } entries.',
+        });
+      } else {
+        for (const [constraintIndex, constraint] of profile.compoundParamConstraints.entries()) {
+          if (!isRecord(constraint)) {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+              path: `${basePath}.compoundParamConstraints.${constraintIndex}`,
+              severity: 'error',
+              message: 'compoundParamConstraints entries must be objects.',
+              suggestion: 'Replace invalid entries with objects.',
+            });
+            continue;
+          }
+          if (constraint.relation !== 'disjoint') {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+              path: `${basePath}.compoundParamConstraints.${constraintIndex}.relation`,
+              severity: 'error',
+              message: 'compoundParamConstraints relation must be "disjoint".',
+              suggestion: 'Set relation to "disjoint".',
+            });
+          }
+          if (typeof constraint.operationParam !== 'string' || constraint.operationParam.trim() === '') {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+              path: `${basePath}.compoundParamConstraints.${constraintIndex}.operationParam`,
+              severity: 'error',
+              message: 'compoundParamConstraints operationParam must be a non-empty string.',
+              suggestion: 'Set operationParam to an operation move param name.',
+            });
+          }
+          if (typeof constraint.specialActivityParam !== 'string' || constraint.specialActivityParam.trim() === '') {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_ACTION_PIPELINE_REQUIRED_FIELD_INVALID',
+              path: `${basePath}.compoundParamConstraints.${constraintIndex}.specialActivityParam`,
+              severity: 'error',
+              message: 'compoundParamConstraints specialActivityParam must be a non-empty string.',
+              suggestion: 'Set specialActivityParam to a special-activity move param name.',
             });
           }
         }

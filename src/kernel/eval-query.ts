@@ -3,6 +3,7 @@ import { missingVarError, queryBoundsExceededError } from './eval-error.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitWarning } from './execution-collector.js';
+import { resolveBindingTemplate } from './binding-template.js';
 import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
@@ -224,19 +225,22 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
 
     case 'binding': {
       const bindings = ctx.bindings;
-      const boundValue = bindings[query.name];
+      const resolvedName = resolveBindingTemplate(query.name, bindings);
+      const boundValue = bindings[resolvedName];
       if (boundValue === undefined) {
-        throw missingVarError(`Binding not found: ${query.name}`, {
+        throw missingVarError(`Binding not found: ${resolvedName}`, {
           query,
-          binding: query.name,
+          binding: resolvedName,
+          bindingTemplate: query.name,
           availableBindings: Object.keys(bindings).sort(),
         });
       }
 
       if (!Array.isArray(boundValue)) {
-        throw missingVarError(`Binding query requires an array value, got ${typeof boundValue}: ${query.name}`, {
+        throw missingVarError(`Binding query requires an array value, got ${typeof boundValue}: ${resolvedName}`, {
           query,
-          binding: query.name,
+          binding: resolvedName,
+          bindingTemplate: query.name,
           actualType: typeof boundValue,
         });
       }

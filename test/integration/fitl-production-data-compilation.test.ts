@@ -44,6 +44,16 @@ describe('FITL production data integration compilation', () => {
 
     // Compilation must succeed (gameDef non-null)
     assert.notEqual(compiled.gameDef, null, 'Expected gameDef to compile successfully');
+    assert.equal(compiled.gameDef?.turnOrder?.type, 'cardDriven', 'Production FITL should declare cardDriven turnOrder');
+    if (compiled.gameDef?.turnOrder?.type === 'cardDriven') {
+      assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.cardLifecycle, {
+        played: 'played:none',
+        lookahead: 'lookahead:none',
+        leader: 'leader:none',
+      });
+      assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.durationWindows, ['turn', 'nextTurn', 'round', 'cycle']);
+      assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.monsoon, { restrictedActions: [] });
+    }
     const profileBackedActionIds = new Set((compiled.gameDef!.actionPipelines ?? []).map((profile) => String(profile.actionId)));
     for (const action of compiled.gameDef!.actions) {
       if (!profileBackedActionIds.has(String(action.id))) {

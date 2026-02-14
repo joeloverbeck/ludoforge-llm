@@ -47,7 +47,7 @@ export function lowerActionPipelines(
         path: basePath,
         severity: 'error',
         message: 'action pipeline must be an object.',
-        suggestion: 'Provide id/actionId/accompanyingOps/legality/costValidation/costEffects/targeting/stages/atomicity for each action pipeline.',
+        suggestion: 'Provide id/actionId/accompanyingOps/compoundParamConstraints/legality/costValidation/costEffects/targeting/stages/atomicity for each action pipeline.',
       });
       continue;
     }
@@ -217,6 +217,42 @@ export function lowerActionPipelines(
       }
     }
 
+    let compoundParamConstraints:
+      | readonly {
+        readonly relation: 'disjoint';
+        readonly operationParam: string;
+        readonly specialActivityParam: string;
+      }[]
+      | undefined;
+    if (rawPipeline.compoundParamConstraints !== undefined) {
+      if (
+        !Array.isArray(rawPipeline.compoundParamConstraints)
+        || rawPipeline.compoundParamConstraints.some(
+          (entry) =>
+            !isRecord(entry)
+            || entry.relation !== 'disjoint'
+            || typeof entry.operationParam !== 'string'
+            || entry.operationParam.trim() === ''
+            || typeof entry.specialActivityParam !== 'string'
+            || entry.specialActivityParam.trim() === '',
+        )
+      ) {
+        diagnostics.push({
+          code: 'CNL_COMPILER_ACTION_PIPELINE_REQUIRED_FIELD_MISSING',
+          path: `${basePath}.compoundParamConstraints`,
+          severity: 'error',
+          message: 'action pipeline compoundParamConstraints must be an array of { relation:\"disjoint\", operationParam, specialActivityParam }.',
+          suggestion: 'Provide valid compoundParamConstraints entries or omit the field.',
+        });
+        continue;
+      }
+      compoundParamConstraints = rawPipeline.compoundParamConstraints.map((entry) => ({
+        relation: 'disjoint',
+        operationParam: String(entry.operationParam).trim(),
+        specialActivityParam: String(entry.specialActivityParam).trim(),
+      }));
+    }
+
     const costEffects = lowerEffectsWithDiagnostics(
       rawPipeline.costEffects,
       ownershipByBase,
@@ -279,6 +315,7 @@ export function lowerActionPipelines(
       actionId: asActionId(actionId),
       ...(applicability !== undefined ? { applicability } : {}),
       ...(accompanyingOps === undefined ? {} : { accompanyingOps }),
+      ...(compoundParamConstraints === undefined ? {} : { compoundParamConstraints }),
       legality,
       costValidation,
       costEffects,

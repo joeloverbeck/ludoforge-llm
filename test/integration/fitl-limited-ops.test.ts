@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, asPlayerId, asTokenId, initialState, type GameState, type Token } from '../../src/kernel/index.js';
+import { applyMove, asActionId, asPlayerId, asTokenId, initialState, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -30,6 +30,10 @@ const LIMOP_SELECTOR_MACRO_IDS = [
   'insurgent-attack-select-spaces',
   'insurgent-terror-select-spaces',
 ] as const;
+const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => ({
+  ...initialState(def, seed, playerCount),
+  turnOrderState: { type: 'roundRobin' },
+});
 
 const addTokenToZone = (state: GameState, zoneId: string, token: Token): GameState => ({
   ...state,
@@ -104,7 +108,7 @@ describe('FITL limited operation integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 509, 4);
+    const start = operationInitialState(def, 509, 4);
     const withNvaActive = {
       ...start,
       activePlayer: asPlayerId(2),
@@ -175,7 +179,7 @@ describe('FITL limited operation integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 510, 4);
+    const start = operationInitialState(def, 510, 4);
     const withVcActive = {
       ...start,
       activePlayer: asPlayerId(3),

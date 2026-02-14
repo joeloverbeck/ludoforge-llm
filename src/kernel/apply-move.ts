@@ -18,6 +18,7 @@ import type {
   GameDef,
   GameState,
   Move,
+  MoveParamScalar,
   MoveParamValue,
   Rng,
   TriggerLogEntry,
@@ -108,6 +109,53 @@ const operationAllowsSpecialActivity = (
   return accompanyingOps.includes(String(operationActionId));
 };
 
+const toParamValueSet = (
+  value: MoveParamValue | undefined,
+): ReadonlySet<MoveParamScalar> => {
+  const values = new Set<MoveParamScalar>();
+  if (value === undefined) {
+    return values;
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      values.add(entry as MoveParamScalar);
+    }
+    return values;
+  }
+  values.add(value as MoveParamScalar);
+  return values;
+};
+
+const violatesCompoundParamConstraints = (
+  operationMove: Move,
+  specialActivityMove: Move,
+  saPipeline: ActionPipelineDef,
+): {
+  readonly operationParam: string;
+  readonly specialActivityParam: string;
+  readonly relation: 'disjoint';
+} | null => {
+  const constraints = saPipeline.compoundParamConstraints;
+  if (constraints === undefined || constraints.length === 0) {
+    return null;
+  }
+  for (const constraint of constraints) {
+    if (constraint.relation !== 'disjoint') {
+      continue;
+    }
+    const left = toParamValueSet(operationMove.params[constraint.operationParam]);
+    const right = toParamValueSet(specialActivityMove.params[constraint.specialActivityParam]);
+    if (left.size === 0 || right.size === 0) {
+      continue;
+    }
+    const overlaps = [...left].some((entry) => right.has(entry));
+    if (overlaps) {
+      return constraint;
+    }
+  }
+  return null;
+};
+
 const illegalMoveError = (
   move: Move,
   reason: string,
@@ -141,6 +189,20 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
         specialActivityActionId: saMove.actionId,
         profileId: saPipeline.id,
       });
+    }
+    if (saPipeline !== undefined) {
+      const violated = violatesCompoundParamConstraints(move, saMove, saPipeline);
+      if (violated !== null) {
+        throw illegalMoveError(move, 'special activity violates compound param constraints', {
+          code: 'SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED',
+          operationActionId: action.id,
+          specialActivityActionId: saMove.actionId,
+          profileId: saPipeline.id,
+          relation: violated.relation,
+          operationParam: violated.operationParam,
+          specialActivityParam: violated.specialActivityParam,
+        });
+      }
     }
   }
 
@@ -250,6 +312,20 @@ const applyMoveCore = (
         specialActivityActionId: saMove.actionId,
         profileId: saPipeline.id,
       });
+    }
+    if (saPipeline !== undefined) {
+      const violated = violatesCompoundParamConstraints(move, saMove, saPipeline);
+      if (violated !== null) {
+        throw illegalMoveError(move, 'special activity violates compound param constraints', {
+          code: 'SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED',
+          operationActionId: action.id,
+          specialActivityActionId: saMove.actionId,
+          profileId: saPipeline.id,
+          relation: violated.relation,
+          operationParam: violated.operationParam,
+          specialActivityParam: violated.specialActivityParam,
+        });
+      }
     }
   }
 

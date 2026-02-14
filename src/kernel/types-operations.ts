@@ -14,11 +14,18 @@ export interface ActionResolutionStageDef {
   readonly effects: readonly EffectAST[];
 }
 
+export interface CompoundParamConstraintDef {
+  readonly relation: 'disjoint';
+  readonly operationParam: string;
+  readonly specialActivityParam: string;
+}
+
 export interface ActionPipelineDef {
   readonly id: string;
   readonly actionId: ActionId;
   readonly applicability?: ConditionAST;
   readonly accompanyingOps?: 'any' | readonly string[];
+  readonly compoundParamConstraints?: readonly CompoundParamConstraintDef[];
   readonly legality: ConditionAST | null;
   readonly costValidation: ConditionAST | null;
   readonly costEffects: readonly EffectAST[];

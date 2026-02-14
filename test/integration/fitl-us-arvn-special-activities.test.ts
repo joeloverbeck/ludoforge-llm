@@ -1,9 +1,45 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, initialState, type Move } from '../../src/kernel/index.js';
+import { applyMove, asActionId, asTokenId, initialState, type EffectAST, type GameState, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+
+const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
+  id: asTokenId(id),
+  type,
+  props: { faction, ...extra },
+});
+
+const countTokens = (
+  state: GameState,
+  space: string,
+  predicate: (token: Token) => boolean,
+): number => (state.zones[space] ?? []).filter(predicate).length;
+
+const supportTrackOrder = ['activeOpposition', 'passiveOpposition', 'neutral', 'passiveSupport', 'activeSupport'] as const;
+const LOOKAHEAD_ZONE = 'lookahead:none';
+
+const withMonsoonLookahead = (state: GameState): GameState => {
+  const lookahead = state.zones[LOOKAHEAD_ZONE] ?? [];
+  const [top, ...rest] = lookahead;
+  const coupTop: Token = top === undefined
+    ? makeToken('monsoon-lookahead', 'card', 'none', { isCoup: true })
+    : {
+      ...top,
+      props: {
+        ...top.props,
+        isCoup: true,
+      },
+    };
+  return {
+    ...state,
+    zones: {
+      ...state.zones,
+      [LOOKAHEAD_ZONE]: [coupTop, ...rest],
+    },
+  };
+};
 
 describe('FITL US/ARVN special activities integration', () => {
   it('compiles US/ARVN special-activity operation profiles with linked windows from production spec', () => {
@@ -32,32 +68,220 @@ describe('FITL US/ARVN special activities integration', () => {
     }
   });
 
-  it('executes US/ARVN special activities through compiled actionPipelines instead of fallback action effects', () => {
+  it('executes Advise activate-remove with base-last ordering and optional +6 Aid', () => {
     const { compiled } = compileProductionSpec();
-
     assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const space = 'quang-nam:none';
 
-    const start = initialState(compiled.gameDef!, 113, 2);
-    const sequence: readonly Move[] = [
-      { actionId: asActionId('advise'), params: {} },
-      { actionId: asActionId('airLift'), params: {} },
-      { actionId: asActionId('airStrike'), params: {} },
-      { actionId: asActionId('govern'), params: {} },
-      { actionId: asActionId('transport'), params: {} },
-      { actionId: asActionId('raid'), params: {} },
-    ];
+    const start = initialState(def, 113, 2);
+    const modifiedStart: GameState = {
+      ...start,
+      globalVars: {
+        ...start.globalVars,
+        aid: 10,
+      },
+      zones: {
+        ...start.zones,
+        [space]: [
+          makeToken('advise-ranger', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('advise-nva-troop', 'troops', 'NVA', { type: 'troops' }),
+          makeToken('advise-vc-underground', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('advise-vc-base-untunneled', 'base', 'VC', { type: 'base', tunnel: 'untunneled' }),
+          makeToken('advise-nva-base-tunneled', 'base', 'NVA', { type: 'base', tunnel: 'tunneled' }),
+        ],
+      },
+    };
 
-    const final = sequence.reduce((state, move) => applyMove(compiled.gameDef!, state, move).state, start);
+    const result = applyMove(def, modifiedStart, {
+      actionId: asActionId('advise'),
+      params: {
+        targetSpaces: [space],
+        [`$adviseMode@${space}`]: 'activate-remove',
+        $adviseAid: 'yes',
+      },
+    });
 
-    // Special activities are zero-cost per Rule 4.1.
-    assert.equal(final.globalVars.usResources, 7);
-    assert.equal(final.globalVars.arvnResources, 30);
+    const final = result.state;
     assert.equal(final.globalVars.adviseCount, 1);
+    assert.equal(final.globalVars.aid, 16);
+
+    const ranger = (final.zones[space] ?? []).find((token) => token.id === asTokenId('advise-ranger'));
+    assert.equal(ranger?.props.activity, 'active', 'Advise activate-remove should activate 1 Underground Ranger/Irregular');
+
+    assert.equal(
+      countTokens(final, space, (token) => token.props.faction === 'NVA' && token.type === 'troops'),
+      0,
+      'Advise activate-remove should remove troops first',
+    );
+    assert.equal(
+      countTokens(final, space, (token) => token.props.faction === 'VC' && token.type === 'guerrilla'),
+      0,
+      'Advise activate-remove should remove enemy guerrillas before bases',
+    );
+    assert.equal(
+      countTokens(final, space, (token) => token.type === 'base' && token.props.faction === 'VC'),
+      1,
+      'Advise should keep base when non-base insurgents were removed first and budget exhausted',
+    );
+    assert.equal(
+      countTokens(final, space, (token) => token.type === 'base' && token.props.faction === 'NVA' && token.props.tunnel === 'tunneled'),
+      1,
+      'Advise should not remove tunneled bases',
+    );
+  });
+
+  it('executes Air Lift moving all US troops plus at most 4 ARVN/Ranger/Irregular pieces', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const origin = 'da-nang:none';
+    const destination = 'quang-nam:none';
+
+    const start = initialState(def, 191, 2);
+    const modifiedStart: GameState = {
+      ...start,
+      zones: {
+        ...start.zones,
+        [origin]: [
+          makeToken('lift-us-1', 'troops', 'US', { type: 'troops' }),
+          makeToken('lift-us-2', 'troops', 'US', { type: 'troops' }),
+          makeToken('lift-us-3', 'troops', 'US', { type: 'troops' }),
+          makeToken('lift-arvn-1', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('lift-arvn-2', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('lift-arvn-3', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('lift-ranger-1', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('lift-ranger-2', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('lift-irregular-1', 'guerrilla', 'US', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('lift-irregular-2', 'guerrilla', 'US', { type: 'guerrilla', activity: 'underground' }),
+        ],
+        [destination]: [],
+      },
+    };
+
+    const eligible = (state: GameState, space: string): number =>
+      countTokens(
+        state,
+        space,
+        (token) =>
+          (token.props.faction === 'ARVN' && (token.type === 'troops' || token.type === 'guerrilla')) ||
+          (token.props.faction === 'US' && token.type === 'guerrilla'),
+      );
+
+    const eligibleBefore = eligible(modifiedStart, origin);
+    const usTroopsBefore = countTokens(modifiedStart, origin, (token) => token.props.faction === 'US' && token.type === 'troops');
+
+    const result = applyMove(def, modifiedStart, {
+      actionId: asActionId('airLift'),
+      params: {
+        spaces: [origin, destination],
+        $airLiftDestination: destination,
+      },
+    });
+
+    const final = result.state;
+    const eligibleAfter = eligible(final, origin);
+    const usTroopsAfter = countTokens(final, origin, (token) => token.props.faction === 'US' && token.type === 'troops');
+
     assert.equal(final.globalVars.airLiftCount, 1);
+    assert.equal(usTroopsAfter, 0, 'Air Lift should move all selected US troops');
+    assert.equal(
+      usTroopsBefore,
+      countTokens(final, destination, (token) => token.props.faction === 'US' && token.type === 'troops'),
+      'Air Lift should place moved US troops in the chosen destination',
+    );
+    assert.equal(eligibleBefore - eligibleAfter, 4, 'Air Lift should move at most 4 ARVN/Ranger/Irregular pieces total');
+    assert.equal(final.globalVars.airLiftRemaining, 0);
+  });
+
+  it('executes Air Strike removing up to 6 active enemy pieces, shifting support, and optionally degrading Trail', () => {
+    const { parsed, compiled } = compileProductionSpec();
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const profile = (def.actionPipelines ?? []).find((candidate) => candidate.id === 'air-strike-profile');
+    assert.ok(profile, 'Expected air-strike-profile to exist');
+
+    const hasRollRandom = (effects: readonly EffectAST[]): boolean =>
+      effects.some((effect) => {
+        if ('rollRandom' in effect) return true;
+        if ('if' in effect) return hasRollRandom(effect.if.then) || (effect.if.else !== undefined && hasRollRandom(effect.if.else));
+        if ('forEach' in effect) return hasRollRandom(effect.forEach.effects) || (effect.forEach.in !== undefined && hasRollRandom(effect.forEach.in));
+        if ('let' in effect) return hasRollRandom(effect.let.in);
+        if ('removeByPriority' in effect) return effect.removeByPriority.in !== undefined && hasRollRandom(effect.removeByPriority.in);
+        return false;
+      });
+    assert.equal(hasRollRandom(profile!.stages.flatMap((stage) => stage.effects)), false, 'Air Strike should not roll dice');
+
+    const space = 'saigon:none';
+    const start = initialState(def, 277, 2);
+    const modifiedStart: GameState = {
+      ...start,
+      globalVars: {
+        ...start.globalVars,
+        trail: 2,
+      },
+      zones: {
+        ...start.zones,
+        [space]: [
+          makeToken('strike-us-1', 'troops', 'US', { type: 'troops' }),
+          makeToken('strike-nva-t1', 'troops', 'NVA', { type: 'troops' }),
+          makeToken('strike-nva-t2', 'troops', 'NVA', { type: 'troops' }),
+          makeToken('strike-nva-t3', 'troops', 'NVA', { type: 'troops' }),
+          makeToken('strike-nva-t4', 'troops', 'NVA', { type: 'troops' }),
+          makeToken('strike-vc-active-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('strike-vc-active-2', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('strike-vc-underground', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('strike-vc-base', 'base', 'VC', { type: 'base', tunnel: 'untunneled' }),
+        ],
+      },
+      markers: {
+        ...start.markers,
+        [space]: {
+          ...(start.markers[space] ?? {}),
+          supportOpposition: 'passiveSupport',
+        },
+      },
+    };
+
+    const beforeSupport = modifiedStart.markers[space]?.supportOpposition;
+
+    const result = applyMove(def, modifiedStart, {
+      actionId: asActionId('airStrike'),
+      params: {
+        spaces: [space],
+        $degradeTrail: 'yes',
+      },
+    });
+
+    const final = result.state;
+    const afterSupport = final.markers[space]?.supportOpposition;
+
     assert.equal(final.globalVars.airStrikeCount, 1);
-    assert.equal(final.globalVars.governCount, 1);
-    assert.equal(final.globalVars.transportCount, 1);
-    assert.equal(final.globalVars.raidCount, 1);
+    assert.equal(final.globalVars.trail, 1, 'Air Strike should optionally degrade Trail by 1');
+    assert.equal(final.globalVars.airStrikeRemaining, 0, 'Air Strike should remove at most 6 active enemy pieces total');
+
+    assert.equal(countTokens(final, space, (token) => token.props.faction === 'NVA' && token.type === 'troops'), 0);
+    assert.equal(
+      countTokens(final, space, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'active'),
+      0,
+    );
+    assert.equal(
+      countTokens(final, space, (token) => token.props.faction === 'VC' && token.type === 'guerrilla' && token.props.activity === 'underground'),
+      1,
+      'Air Strike should not remove underground enemy guerrillas',
+    );
+    assert.equal(
+      countTokens(final, space, (token) => token.props.faction === 'VC' && token.type === 'base'),
+      1,
+      'Air Strike should not remove bases while underground insurgents remain',
+    );
+
+    const beforeIndex = supportTrackOrder.indexOf((beforeSupport ?? 'neutral') as (typeof supportTrackOrder)[number]);
+    const afterIndex = supportTrackOrder.indexOf((afterSupport ?? 'neutral') as (typeof supportTrackOrder)[number]);
+    assert.equal(afterIndex, Math.max(0, beforeIndex - 1), 'Air Strike should shift selected populated spaces toward opposition');
   });
 
   it('rejects advise when accompanied by an operation outside accompanyingOps', () => {
@@ -72,7 +296,14 @@ describe('FITL US/ARVN special activities integration', () => {
         actionId: asActionId('usOp'),
         params: {},
         compound: {
-          specialActivity: { actionId: asActionId('advise'), params: {} },
+          specialActivity: {
+            actionId: asActionId('advise'),
+            params: {
+              targetSpaces: ['quang-nam:none'],
+              '$adviseMode@quang-nam:none': 'assault',
+              $adviseAid: 'no',
+            },
+          },
           timing: 'after',
         },
       }),
@@ -89,6 +320,163 @@ describe('FITL US/ARVN special activities integration', () => {
         assert.equal(details.metadata?.code, 'SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED');
         return true;
       },
+    );
+  });
+
+  it('rejects Advise during compound Train when SA spaces overlap operation targetSpaces', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+
+    const state = initialState(compiled.gameDef!, 339, 2);
+    const space = 'quang-nam:none';
+
+    assert.throws(
+      () =>
+        applyMove(compiled.gameDef!, state, {
+          actionId: asActionId('train'),
+          params: {
+            targetSpaces: [space],
+            $trainChoice: 'police',
+            $subActionSpaces: [],
+          },
+          compound: {
+            specialActivity: {
+              actionId: asActionId('advise'),
+              params: {
+                targetSpaces: [space],
+                [`$adviseMode@${space}`]: 'assault',
+                $adviseAid: 'no',
+              },
+            },
+            timing: 'after',
+          },
+        }),
+      (error: unknown) => {
+        const details = error as {
+          readonly reason?: string;
+          readonly metadata?: { readonly code?: string; readonly relation?: string };
+        };
+        assert.equal(details.reason, 'special activity violates compound param constraints');
+        assert.equal(details.metadata?.code, 'SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED');
+        assert.equal(details.metadata?.relation, 'disjoint');
+        return true;
+      },
+    );
+  });
+
+  it('supports per-space Advise mode choices in a single action', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const spaceActivate = 'quang-nam:none';
+    const spaceAssault = 'saigon:none';
+    const start = initialState(def, 441, 2);
+    const modifiedStart: GameState = {
+      ...start,
+      zones: {
+        ...start.zones,
+        [spaceActivate]: [
+          makeToken('multi-ranger', 'guerrilla', 'ARVN', { type: 'guerrilla', activity: 'underground' }),
+          makeToken('multi-activate-target-1', 'troops', 'NVA', { type: 'troops' }),
+          makeToken('multi-activate-target-2', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
+        ],
+        [spaceAssault]: [
+          makeToken('multi-arvn-troop-1', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('multi-arvn-troop-2', 'troops', 'ARVN', { type: 'troops' }),
+          makeToken('multi-assault-target-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+        ],
+      },
+    };
+
+    const result = applyMove(def, modifiedStart, {
+      actionId: asActionId('advise'),
+      params: {
+        targetSpaces: [spaceActivate, spaceAssault],
+        [`$adviseMode@${spaceActivate}`]: 'activate-remove',
+        [`$adviseMode@${spaceAssault}`]: 'assault',
+        $targetFactionFirst: 'VC',
+        $adviseAid: 'no',
+      },
+    });
+    const final = result.state;
+
+    const ranger = (final.zones[spaceActivate] ?? []).find((token) => token.id === asTokenId('multi-ranger'));
+    assert.equal(ranger?.props.activity, 'active');
+    assert.equal(
+      countTokens(final, spaceActivate, (token) => token.props.faction === 'NVA' || token.props.faction === 'VC'),
+      0,
+      'Activate-remove branch should clear both enemy pieces in first space',
+    );
+    assert.equal(
+      countTokens(final, spaceAssault, (token) => token.props.faction === 'VC'),
+      0,
+      'Assault branch should remove enemy in second space',
+    );
+  });
+
+  it('enforces Monsoon Advise cap at one selected space', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const spaceA = 'quang-nam:none';
+    const spaceB = 'saigon:none';
+
+    const monsoonState = withMonsoonLookahead(initialState(def, 449, 2));
+    assert.throws(
+      () =>
+        applyMove(def, monsoonState, {
+          actionId: asActionId('advise'),
+          params: {
+            targetSpaces: [spaceA, spaceB],
+            [`$adviseMode@${spaceA}`]: 'activate-remove',
+            [`$adviseMode@${spaceB}`]: 'assault',
+            $adviseAid: 'no',
+          },
+        }),
+      /Illegal move/,
+    );
+  });
+
+  it('enforces Monsoon Air Lift and Air Strike caps at one selected space', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+    const spaceA = 'da-nang:none';
+    const spaceB = 'quang-nam:none';
+
+    const seeded = initialState(def, 457, 2);
+    const monsoonState = withMonsoonLookahead({
+      ...seeded,
+      zones: {
+        ...seeded.zones,
+        [spaceA]: [makeToken('monsoon-us-a', 'troops', 'US', { type: 'troops' })],
+        [spaceB]: [makeToken('monsoon-us-b', 'troops', 'US', { type: 'troops' })],
+      },
+    });
+
+    assert.throws(
+      () =>
+        applyMove(def, monsoonState, {
+          actionId: asActionId('airLift'),
+          params: {
+            spaces: [spaceA, spaceB],
+            $airLiftDestination: spaceB,
+          },
+        }),
+      /Illegal move/,
+    );
+
+    assert.throws(
+      () =>
+        applyMove(def, monsoonState, {
+          actionId: asActionId('airStrike'),
+          params: {
+            spaces: [spaceA, spaceB],
+            $degradeTrail: 'no',
+          },
+        }),
+      /Illegal move/,
     );
   });
 });

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, asPlayerId, asTokenId, initialState, legalMoves, type GameState, type Token } from '../../src/kernel/index.js';
+import { applyMove, asActionId, asPlayerId, asTokenId, initialState, legalMoves, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -20,6 +20,11 @@ const addTokenToZone = (state: GameState, zoneId: string, token: Token): GameSta
     ...state.zones,
     [zoneId]: [...(state.zones[zoneId] ?? []), token],
   },
+});
+
+const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => ({
+  ...initialState(def, seed, playerCount),
+  turnOrderState: { type: 'roundRobin' },
 });
 
 const withSupportState = (state: GameState, zoneId: string, supportState: string): GameState => ({
@@ -162,10 +167,10 @@ describe('FITL insurgent operations integration', () => {
     const setup = addTokenToZone(
       withSupportState(
         {
-          ...initialState(def, 191, 4),
+          ...operationInitialState(def, 191, 4),
           activePlayer: asPlayerId(2),
           globalVars: {
-            ...initialState(def, 191, 4).globalVars,
+            ...operationInitialState(def, 191, 4).globalVars,
             nvaResources: 5,
             terrorSabotageMarkersPlaced: 0,
           },
@@ -203,10 +208,10 @@ describe('FITL insurgent operations integration', () => {
     const setup = addTokenToZone(
       withSupportState(
         {
-          ...initialState(def, 192, 4),
+          ...operationInitialState(def, 192, 4),
           activePlayer: asPlayerId(2),
           globalVars: {
-            ...initialState(def, 192, 4).globalVars,
+            ...operationInitialState(def, 192, 4).globalVars,
             nvaResources: 5,
             terrorSabotageMarkersPlaced: 0,
           },
@@ -243,10 +248,10 @@ describe('FITL insurgent operations integration', () => {
 
     const setup = addTokenToZone(
       {
-        ...initialState(def, 193, 4),
+        ...operationInitialState(def, 193, 4),
         activePlayer: asPlayerId(2),
         globalVars: {
-          ...initialState(def, 193, 4).globalVars,
+          ...operationInitialState(def, 193, 4).globalVars,
           nvaResources: 5,
           terrorSabotageMarkersPlaced: 0,
         },
@@ -283,10 +288,10 @@ describe('FITL insurgent operations integration', () => {
     const capSetup = addTokenToZone(
       withSupportState(
         {
-          ...initialState(def, 194, 4),
+          ...operationInitialState(def, 194, 4),
           activePlayer: asPlayerId(2),
           globalVars: {
-            ...initialState(def, 194, 4).globalVars,
+            ...operationInitialState(def, 194, 4).globalVars,
             nvaResources: 5,
             terrorSabotageMarkersPlaced: 15,
           },
@@ -312,17 +317,17 @@ describe('FITL insurgent operations integration', () => {
 
     const idempotentSetup = addTokenToZone(
       {
-        ...initialState(def, 195, 4),
+        ...operationInitialState(def, 195, 4),
         activePlayer: asPlayerId(2),
         globalVars: {
-          ...initialState(def, 195, 4).globalVars,
+          ...operationInitialState(def, 195, 4).globalVars,
           nvaResources: 5,
           terrorSabotageMarkersPlaced: 1,
         },
         markers: {
-          ...initialState(def, 195, 4).markers,
+          ...operationInitialState(def, 195, 4).markers,
           [ATTACK_SPACE]: {
-            ...(initialState(def, 195, 4).markers[ATTACK_SPACE] ?? {}),
+            ...(operationInitialState(def, 195, 4).markers[ATTACK_SPACE] ?? {}),
             terror: 'terror',
           },
         },
@@ -350,10 +355,10 @@ describe('FITL insurgent operations integration', () => {
     const setup = addTokenToZone(
       addTokenToZone(
         {
-          ...initialState(def, 196, 4),
+          ...operationInitialState(def, 196, 4),
           activePlayer: asPlayerId(2),
           globalVars: {
-            ...initialState(def, 196, 4).globalVars,
+            ...operationInitialState(def, 196, 4).globalVars,
             nvaResources: 10,
           },
         },
@@ -392,10 +397,10 @@ describe('FITL insurgent operations integration', () => {
     const setup = addTokenToZone(
       withSupportState(
         {
-          ...initialState(def, 197, 4),
+          ...operationInitialState(def, 197, 4),
           activePlayer: asPlayerId(3),
           globalVars: {
-            ...initialState(def, 197, 4).globalVars,
+            ...operationInitialState(def, 197, 4).globalVars,
             vcResources: 5,
             terrorSabotageMarkersPlaced: 0,
           },
@@ -432,10 +437,10 @@ describe('FITL insurgent operations integration', () => {
 
     const setup = addTokenToZone(
       {
-        ...initialState(def, 198, 4),
+        ...operationInitialState(def, 198, 4),
         activePlayer: asPlayerId(3),
         globalVars: {
-          ...initialState(def, 198, 4).globalVars,
+          ...operationInitialState(def, 198, 4).globalVars,
           vcResources: 5,
           terrorSabotageMarkersPlaced: 0,
         },
@@ -466,10 +471,10 @@ describe('FITL insurgent operations integration', () => {
 
     const setup = addTokenToZone(
       {
-        ...initialState(def, 199, 4),
+        ...operationInitialState(def, 199, 4),
         activePlayer: asPlayerId(3),
         globalVars: {
-          ...initialState(def, 199, 4).globalVars,
+          ...operationInitialState(def, 199, 4).globalVars,
           vcResources: 5,
           terrorSabotageMarkersPlaced: 0,
         },
@@ -506,10 +511,10 @@ describe('FITL insurgent operations integration', () => {
     const capSetup = addTokenToZone(
       withSupportState(
         {
-          ...initialState(def, 200, 4),
+          ...operationInitialState(def, 200, 4),
           activePlayer: asPlayerId(3),
           globalVars: {
-            ...initialState(def, 200, 4).globalVars,
+            ...operationInitialState(def, 200, 4).globalVars,
             vcResources: 5,
             terrorSabotageMarkersPlaced: 15,
           },
@@ -535,17 +540,17 @@ describe('FITL insurgent operations integration', () => {
 
     const idempotentSetup = addTokenToZone(
       {
-        ...initialState(def, 201, 4),
+        ...operationInitialState(def, 201, 4),
         activePlayer: asPlayerId(3),
         globalVars: {
-          ...initialState(def, 201, 4).globalVars,
+          ...operationInitialState(def, 201, 4).globalVars,
           vcResources: 5,
           terrorSabotageMarkersPlaced: 1,
         },
         markers: {
-          ...initialState(def, 201, 4).markers,
+          ...operationInitialState(def, 201, 4).markers,
           [ATTACK_SPACE]: {
-            ...(initialState(def, 201, 4).markers[ATTACK_SPACE] ?? {}),
+            ...(operationInitialState(def, 201, 4).markers[ATTACK_SPACE] ?? {}),
             terror: 'terror',
           },
         },
@@ -566,10 +571,10 @@ describe('FITL insurgent operations integration', () => {
     const nvaSetup = addTokenToZone(
       withSupportState(
         {
-          ...initialState(def, 202, 4),
+          ...operationInitialState(def, 202, 4),
           activePlayer: asPlayerId(2),
           globalVars: {
-            ...initialState(def, 202, 4).globalVars,
+            ...operationInitialState(def, 202, 4).globalVars,
             nvaResources: 5,
             terrorSabotageMarkersPlaced: 0,
           },
@@ -587,10 +592,10 @@ describe('FITL insurgent operations integration', () => {
     const vcSetup = addTokenToZone(
       withSupportState(
         {
-          ...initialState(def, 203, 4),
+          ...operationInitialState(def, 203, 4),
           activePlayer: asPlayerId(3),
           globalVars: {
-            ...initialState(def, 203, 4).globalVars,
+            ...operationInitialState(def, 203, 4).globalVars,
             vcResources: 5,
             terrorSabotageMarkersPlaced: 0,
           },
@@ -626,10 +631,10 @@ describe('FITL insurgent operations integration', () => {
     const setup = addTokenToZone(
       addTokenToZone(
         {
-          ...initialState(def, 204, 4),
+          ...operationInitialState(def, 204, 4),
           activePlayer: asPlayerId(3),
           globalVars: {
-            ...initialState(def, 204, 4).globalVars,
+            ...operationInitialState(def, 204, 4).globalVars,
             vcResources: 10,
           },
         },
@@ -665,7 +670,7 @@ describe('FITL insurgent operations integration', () => {
 
     assert.notEqual(compiled.gameDef, null);
 
-    const start = initialState(compiled.gameDef!, 101, 4);
+    const start = operationInitialState(compiled.gameDef!, 101, 4);
     const withNvaActive = {
       ...start,
       activePlayer: asPlayerId(2),
@@ -704,7 +709,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 102, 4);
+    const start = operationInitialState(def, 102, 4);
     const withVcActive = {
       ...start,
       activePlayer: asPlayerId(3),
@@ -749,10 +754,10 @@ describe('FITL insurgent operations integration', () => {
     const provinceMover = asTokenId('march-province-nva-g');
     const provinceSetup = addTokenToZone(
       {
-        ...initialState(def, 111, 4),
+        ...operationInitialState(def, 111, 4),
         activePlayer: asPlayerId(2),
         globalVars: {
-          ...initialState(def, 111, 4).globalVars,
+          ...operationInitialState(def, 111, 4).globalVars,
           nvaResources: 5,
         },
       },
@@ -775,10 +780,10 @@ describe('FITL insurgent operations integration', () => {
     const locMover = asTokenId('march-loc-nva-t');
     const locSetup = addTokenToZone(
       {
-        ...initialState(def, 112, 4),
+        ...operationInitialState(def, 112, 4),
         activePlayer: asPlayerId(2),
         globalVars: {
-          ...initialState(def, 112, 4).globalVars,
+          ...operationInitialState(def, 112, 4).globalVars,
           nvaResources: 5,
         },
       },
@@ -808,10 +813,10 @@ describe('FITL insurgent operations integration', () => {
         addTokenToZone(
           addTokenToZone(
             {
-              ...initialState(def, 113, 4),
+              ...operationInitialState(def, 113, 4),
               activePlayer: asPlayerId(2),
               globalVars: {
-                ...initialState(def, 113, 4).globalVars,
+                ...operationInitialState(def, 113, 4).globalVars,
                 nvaResources: 6,
               },
             },
@@ -854,10 +859,10 @@ describe('FITL insurgent operations integration', () => {
           addTokenToZone(
             withSupportState(
               {
-                ...initialState(def, 114, 4),
+                ...operationInitialState(def, 114, 4),
                 activePlayer: asPlayerId(2),
                 globalVars: {
-                  ...initialState(def, 114, 4).globalVars,
+                  ...operationInitialState(def, 114, 4).globalVars,
                   nvaResources: 6,
                 },
               },
@@ -899,10 +904,10 @@ describe('FITL insurgent operations integration', () => {
     const mover = asTokenId('march-free-nva-g');
     const setup = addTokenToZone(
       {
-        ...initialState(def, 115, 4),
+        ...operationInitialState(def, 115, 4),
         activePlayer: asPlayerId(2),
         globalVars: {
-          ...initialState(def, 115, 4).globalVars,
+          ...operationInitialState(def, 115, 4).globalVars,
           nvaResources: 5,
         },
       },
@@ -936,10 +941,10 @@ describe('FITL insurgent operations integration', () => {
     const provinceMover = asTokenId('march-province-vc-g');
     const provinceSetup = addTokenToZone(
       {
-        ...initialState(def, 121, 4),
+        ...operationInitialState(def, 121, 4),
         activePlayer: asPlayerId(3),
         globalVars: {
-          ...initialState(def, 121, 4).globalVars,
+          ...operationInitialState(def, 121, 4).globalVars,
           vcResources: 5,
         },
       },
@@ -962,10 +967,10 @@ describe('FITL insurgent operations integration', () => {
     const locMover = asTokenId('march-loc-vc-g');
     const locSetup = addTokenToZone(
       {
-        ...initialState(def, 122, 4),
+        ...operationInitialState(def, 122, 4),
         activePlayer: asPlayerId(3),
         globalVars: {
-          ...initialState(def, 122, 4).globalVars,
+          ...operationInitialState(def, 122, 4).globalVars,
           vcResources: 5,
         },
       },
@@ -992,10 +997,10 @@ describe('FITL insurgent operations integration', () => {
     const mover = asTokenId('march-free-vc-g');
     const setup = addTokenToZone(
       {
-        ...initialState(def, 126, 4),
+        ...operationInitialState(def, 126, 4),
         activePlayer: asPlayerId(3),
         globalVars: {
-          ...initialState(def, 126, 4).globalVars,
+          ...operationInitialState(def, 126, 4).globalVars,
           vcResources: 5,
         },
       },
@@ -1032,10 +1037,10 @@ describe('FITL insurgent operations integration', () => {
         addTokenToZone(
           addTokenToZone(
             {
-              ...initialState(def, 123, 4),
+              ...operationInitialState(def, 123, 4),
               activePlayer: asPlayerId(3),
               globalVars: {
-                ...initialState(def, 123, 4).globalVars,
+                ...operationInitialState(def, 123, 4).globalVars,
                 vcResources: 6,
               },
             },
@@ -1074,10 +1079,10 @@ describe('FITL insurgent operations integration', () => {
     const mover = asTokenId('march-chain-vc-g');
     const setup = addTokenToZone(
       {
-        ...initialState(def, 124, 4),
+        ...operationInitialState(def, 124, 4),
         activePlayer: asPlayerId(3),
         globalVars: {
-          ...initialState(def, 124, 4).globalVars,
+          ...operationInitialState(def, 124, 4).globalVars,
           vcResources: 6,
           trail: 4,
         },
@@ -1112,10 +1117,10 @@ describe('FITL insurgent operations integration', () => {
 
     const setup = addTokenToZone(
       {
-        ...initialState(def, 125, 4),
+        ...operationInitialState(def, 125, 4),
         activePlayer: asPlayerId(3),
         globalVars: {
-          ...initialState(def, 125, 4).globalVars,
+          ...operationInitialState(def, 125, 4).globalVars,
           vcResources: 10,
         },
       },
@@ -1146,10 +1151,10 @@ describe('FITL insurgent operations integration', () => {
 
     const setup = addTokenToZone(
       {
-        ...initialState(def, 116, 4),
+        ...operationInitialState(def, 116, 4),
         activePlayer: asPlayerId(2),
         globalVars: {
-          ...initialState(def, 116, 4).globalVars,
+          ...operationInitialState(def, 116, 4).globalVars,
           nvaResources: 10,
         },
       },
@@ -1181,10 +1186,10 @@ describe('FITL insurgent operations integration', () => {
     const mover = asTokenId('march-chain-nva-g');
     const setup = addTokenToZone(
       {
-        ...initialState(def, 117, 4),
+        ...operationInitialState(def, 117, 4),
         activePlayer: asPlayerId(2),
         globalVars: {
-          ...initialState(def, 117, 4).globalVars,
+          ...operationInitialState(def, 117, 4).globalVars,
           nvaResources: 6,
           trail: 1,
         },
@@ -1219,10 +1224,10 @@ describe('FITL insurgent operations integration', () => {
     const moverNoTrail = asTokenId('march-chain-no-trail-nva-g');
     const noTrailSetup = addTokenToZone(
       {
-        ...initialState(def, 118, 4),
+        ...operationInitialState(def, 118, 4),
         activePlayer: asPlayerId(2),
         globalVars: {
-          ...initialState(def, 118, 4).globalVars,
+          ...operationInitialState(def, 118, 4).globalVars,
           nvaResources: 6,
           trail: 0,
         },
@@ -1249,10 +1254,10 @@ describe('FITL insurgent operations integration', () => {
     const moverLimOp = asTokenId('march-chain-limop-nva-g');
     const limOpSetup = addTokenToZone(
       {
-        ...initialState(def, 119, 4),
+        ...operationInitialState(def, 119, 4),
         activePlayer: asPlayerId(2),
         globalVars: {
-          ...initialState(def, 119, 4).globalVars,
+          ...operationInitialState(def, 119, 4).globalVars,
           nvaResources: 6,
           trail: 2,
         },
@@ -1286,10 +1291,10 @@ describe('FITL insurgent operations integration', () => {
     const mover = asTokenId('march-trail4-free-nva-g');
     const setup = addTokenToZone(
       {
-        ...initialState(def, 120, 4),
+        ...operationInitialState(def, 120, 4),
         activePlayer: asPlayerId(2),
         globalVars: {
-          ...initialState(def, 120, 4).globalVars,
+          ...operationInitialState(def, 120, 4).globalVars,
           nvaResources: 6,
           trail: 4,
         },
@@ -1321,7 +1326,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
 
     const nonNvaState = {
-      ...initialState(compiled.gameDef!, 77, 4),
+      ...operationInitialState(compiled.gameDef!, 77, 4),
       activePlayer: asPlayerId(0),
     };
     const legal = legalMoves(compiled.gameDef!, nonNvaState);
@@ -1337,7 +1342,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 181, 4);
+    const start = operationInitialState(def, 181, 4);
     const withNvaActive = {
       ...start,
       activePlayer: asPlayerId(2),
@@ -1418,7 +1423,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 211, 4);
+    const start = operationInitialState(def, 211, 4);
     const withNvaActive = {
       ...start,
       activePlayer: asPlayerId(2),
@@ -1466,7 +1471,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 212, 4);
+    const start = operationInitialState(def, 212, 4);
     const withVcActive = {
       ...start,
       activePlayer: asPlayerId(3),
@@ -1513,7 +1518,7 @@ describe('FITL insurgent operations integration', () => {
     const def = compiled.gameDef!;
 
     const nonInsurgentState = {
-      ...initialState(def, 301, 4),
+      ...operationInitialState(def, 301, 4),
       activePlayer: asPlayerId(0),
     };
 
@@ -1534,7 +1539,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 302, 4);
+    const start = operationInitialState(def, 302, 4);
     const nva = {
       ...start,
       activePlayer: asPlayerId(2),
@@ -1590,7 +1595,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 303, 4);
+    const start = operationInitialState(def, 303, 4);
     const nva = withSupportState(
       {
         ...start,
@@ -1628,7 +1633,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 304, 4);
+    const start = operationInitialState(def, 304, 4);
     const nvaBaseState = withSupportState(
       {
         ...start,
@@ -1723,7 +1728,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 305, 4);
+    const start = operationInitialState(def, 305, 4);
     const nva = {
       ...start,
       activePlayer: asPlayerId(2),
@@ -1756,7 +1761,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 306, 4);
+    const start = operationInitialState(def, 306, 4);
     const nva = withSupportState(
       withSupportState(
         {
@@ -1798,7 +1803,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 307, 4);
+    const start = operationInitialState(def, 307, 4);
     const vc = withSupportState(
       {
         ...start,
@@ -1834,7 +1839,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 308, 4);
+    const start = operationInitialState(def, 308, 4);
     const vc = withSupportState(
       withSupportState(
         withSupportState(
@@ -1903,7 +1908,7 @@ describe('FITL insurgent operations integration', () => {
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
 
-    const start = initialState(def, 309, 4);
+    const start = operationInitialState(def, 309, 4);
     const vcBaseState = withSupportState(
       {
         ...start,

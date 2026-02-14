@@ -180,6 +180,116 @@ effectMacros:
                                         from: { param: space }
                                         to: { zoneExpr: { concat: ['available-', { param: attackerFaction }, ':none'] } }
 
+  # ── us-sa-remove-insurgents ────────────────────────────────────────────────
+  # Shared US SA piece-removal ordering helper:
+  # - troops before guerrillas before bases
+  # - tunelled bases are never removed
+  # - when activeGuerrillasOnly=true, underground enemy guerrillas block base removal
+  - id: us-sa-remove-insurgents
+    params:
+      - { name: space, type: string }
+      - { name: budgetExpr, type: value }
+      - { name: activeGuerrillasOnly, type: value }
+    effects:
+      - if:
+          when: { op: '==', left: { param: activeGuerrillasOnly }, right: true }
+          then:
+            - let:
+                bind: $undergroundEnemyCount
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: { param: space }
+                      filter:
+                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                        - { prop: type, eq: guerrilla }
+                        - { prop: activity, eq: underground }
+                in:
+                  - if:
+                      when: { op: '>', left: { ref: binding, name: $undergroundEnemyCount }, right: 0 }
+                      then:
+                        - removeByPriority:
+                            budget: { param: budgetExpr }
+                            groups:
+                              - bind: $target
+                                over:
+                                  query: tokensInZone
+                                  zone: { param: space }
+                                  filter:
+                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                    - { prop: type, eq: troops }
+                                to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
+                              - bind: $target
+                                over:
+                                  query: tokensInZone
+                                  zone: { param: space }
+                                  filter:
+                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                    - { prop: type, eq: guerrilla }
+                                    - { prop: activity, eq: active }
+                                to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
+                      else:
+                        - removeByPriority:
+                            budget: { param: budgetExpr }
+                            groups:
+                              - bind: $target
+                                over:
+                                  query: tokensInZone
+                                  zone: { param: space }
+                                  filter:
+                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                    - { prop: type, eq: troops }
+                                to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
+                              - bind: $target
+                                over:
+                                  query: tokensInZone
+                                  zone: { param: space }
+                                  filter:
+                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                    - { prop: type, eq: guerrilla }
+                                    - { prop: activity, eq: active }
+                                to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
+                              - bind: $target
+                                over:
+                                  query: tokensInZone
+                                  zone: { param: space }
+                                  filter:
+                                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                    - { prop: type, eq: base }
+                                    - { prop: tunnel, op: neq, value: tunneled }
+                                to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
+          else:
+            - removeByPriority:
+                budget: { param: budgetExpr }
+                groups:
+                  - bind: $target
+                    over:
+                      query: tokensInZone
+                      zone: { param: space }
+                      filter:
+                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                        - { prop: type, eq: troops }
+                    to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
+                  - bind: $target
+                    over:
+                      query: tokensInZone
+                      zone: { param: space }
+                      filter:
+                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                        - { prop: type, eq: guerrilla }
+                    to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
+                  - bind: $target
+                    over:
+                      query: tokensInZone
+                      zone: { param: space }
+                      filter:
+                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                        - { prop: type, eq: base }
+                        - { prop: tunnel, op: neq, value: tunneled }
+                    to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $target, prop: faction }, ':none'] } }
+
   # ── insurgent-attack-select-spaces ────────────────────────────────────────
   # Shared insurgent Attack map-space selector:
   # - requires attacker faction presence
@@ -1803,7 +1913,7 @@ dataAssets:
         - { spaceId: "sihanoukville:none", pieceTypeId: "nva-guerrillas", faction: "nva", count: 2 }
 eventDecks:
   - id: fitl-events-initial-card-pack
-    drawZone: leader:none
+    drawZone: deck:none
     discardZone: played:none
     shuffleOnSetup: true
     cards:
@@ -1865,12 +1975,14 @@ eventDecks:
 # Pool Zones (piece availability pools — supplement map-derived board zones)
 # ══════════════════════════════════════════════════════════════════════════════
 zones:
+  - { id: deck, owner: none, visibility: hidden, ordering: stack }
   - { id: available-US, owner: none, visibility: public, ordering: set }
   - { id: available-ARVN, owner: none, visibility: public, ordering: set }
   - { id: available-NVA, owner: none, visibility: public, ordering: set }
   - { id: available-VC, owner: none, visibility: public, ordering: set }
   - { id: casualties-US, owner: none, visibility: public, ordering: set }
   - { id: leader, owner: none, visibility: public, ordering: stack }
+  - { id: lookahead, owner: none, visibility: public, ordering: stack }
   - { id: played, owner: none, visibility: public, ordering: stack }
 
 actionPipelines:
@@ -3427,18 +3539,144 @@ actionPipelines:
                     resourceVar: vcResources
                     shiftFromSupportOnly: false
     atomicity: atomic
-  # ── US/ARVN special-activity stub profiles ──
+  # ── US/ARVN special-activity profiles ──
   - id: advise-profile
     actionId: advise
     accompanyingOps: [train, patrol]
-    legality: null
+    compoundParamConstraints:
+      - relation: disjoint
+        operationParam: targetSpaces
+        specialActivityParam: targetSpaces
+    legality: true
     costValidation: null
     costEffects: []
-    targeting:
-      select: upToN
-      max: 2
+    targeting: {}
     stages:
-      - stage: advise-resolve
+      - stage: select-spaces
+        effects:
+          - if:
+              when:
+                op: '>'
+                left:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: lookahead:none
+                      filter:
+                        - { prop: isCoup, eq: true }
+                right: 0
+              then:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                          - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
+                    min: 1
+                    max: 2
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - chooseOne:
+                    bind: '$adviseMode@{$space}'
+                    options: { query: enums, values: ['sweep', 'assault', 'activate-remove'] }
+                - if:
+                    when: { op: '==', left: { ref: binding, name: '$adviseMode@{$space}' }, right: sweep }
+                    then:
+                      - macro: sweep-activation
+                        args:
+                          space: $space
+                          cubeFaction: ARVN
+                          sfType: rangers
+                - if:
+                    when: { op: '==', left: { ref: binding, name: '$adviseMode@{$space}' }, right: assault }
+                    then:
+                      - let:
+                          bind: $isProvince
+                          value:
+                            if:
+                              when: { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: province }
+                              then: 1
+                              else: 0
+                          in:
+                            - let:
+                                bind: $arvnCubes
+                                value:
+                                  if:
+                                    when: { op: '==', left: { ref: binding, name: $isProvince }, right: 1 }
+                                    then: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: [{ prop: faction, eq: ARVN }, { prop: type, eq: troops }] } } }
+                                    else: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: [{ prop: faction, eq: ARVN }, { prop: type, op: in, value: [troops, police] }] } } }
+                                in:
+                                  - let:
+                                      bind: $damage
+                                      value:
+                                        if:
+                                          when: { op: zonePropIncludes, zone: $space, prop: terrainTags, value: highland }
+                                          then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
+                                          else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
+                                      in:
+                                        - macro: coin-assault-removal-order
+                                          args:
+                                            space: $space
+                                            damageExpr: { ref: binding, name: $damage }
+                - if:
+                    when: { op: '==', left: { ref: binding, name: '$adviseMode@{$space}' }, right: activate-remove }
+                    then:
+                      - forEach:
+                          bind: $friendlySF
+                          over:
+                            query: tokensInZone
+                            zone: $space
+                            filter:
+                              - { prop: faction, op: in, value: [US, ARVN] }
+                              - { prop: type, eq: guerrilla }
+                              - { prop: activity, eq: underground }
+                          limit: 1
+                          effects:
+                            - setTokenProp: { token: $friendlySF, prop: activity, value: active }
+                      - macro: us-sa-remove-insurgents
+                        args:
+                          space: $space
+                          budgetExpr: 2
+                          activeGuerrillasOnly: false
+      - stage: optional-aid
+        effects:
+          - chooseOne:
+              bind: $adviseAid
+              options: { query: enums, values: ['yes', 'no'] }
+          - if:
+              when: { op: '==', left: { ref: binding, name: $adviseAid }, right: 'yes' }
+              then:
+                - addVar:
+                    scope: global
+                    var: aid
+                    delta: 6
+      - stage: advise-telemetry
         effects:
           - addVar:
               scope: global
@@ -3449,14 +3687,184 @@ actionPipelines:
   - id: air-lift-profile
     actionId: airLift
     accompanyingOps: any
-    legality: null
+    legality: true
     costValidation: null
     costEffects: []
-    targeting:
-      select: allEligible
-      order: lexicographicSpaceId
+    targeting: {}
     stages:
-      - stage: air-lift-resolve
+      - stage: select-spaces
+        effects:
+          - if:
+              when:
+                op: '>'
+                left:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: lookahead:none
+                      filter:
+                        - { prop: isCoup, eq: true }
+                right: 0
+              then:
+                - chooseN:
+                    bind: spaces
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: '!='
+                        left: { ref: zoneProp, zone: $zone, prop: country }
+                        right: northVietnam
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: spaces
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: '!='
+                        left: { ref: zoneProp, zone: $zone, prop: country }
+                        right: northVietnam
+                    min: 1
+                    max: 4
+      - stage: select-destination
+        effects:
+          - chooseOne:
+              bind: $airLiftDestination
+              options: { query: binding, name: spaces }
+      - stage: move-us-troops
+        effects:
+          - forEach:
+              bind: $origin
+              over: { query: binding, name: spaces }
+              effects:
+                - forEach:
+                    bind: $usTroop
+                    over:
+                      query: tokensInZone
+                      zone: $origin
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                    effects:
+                      - if:
+                          when: { op: '!=', left: { ref: tokenZone, token: $usTroop }, right: { ref: binding, name: $airLiftDestination } }
+                          then:
+                            - moveToken:
+                                token: $usTroop
+                                from: { zoneExpr: { ref: tokenZone, token: $usTroop } }
+                                to: { zoneExpr: { ref: binding, name: $airLiftDestination } }
+      - stage: move-coin-lift-pieces
+        effects:
+          - setVar: { scope: global, var: airLiftRemaining, value: 4 }
+          - forEach:
+              bind: $origin
+              over: { query: binding, name: spaces }
+              effects:
+                - if:
+                    when: { op: '>', left: { ref: gvar, var: airLiftRemaining }, right: 0 }
+                    then:
+                      - let:
+                          bind: $arvnBefore
+                          value:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $origin
+                                filter:
+                                  - { prop: faction, eq: ARVN }
+                                  - { prop: type, op: in, value: [troops, guerrilla] }
+                          in:
+                            - forEach:
+                                bind: $liftPiece
+                                over:
+                                  query: tokensInZone
+                                  zone: $origin
+                                  filter:
+                                    - { prop: faction, eq: ARVN }
+                                    - { prop: type, op: in, value: [troops, guerrilla] }
+                                limit: { ref: gvar, var: airLiftRemaining }
+                                effects:
+                                  - if:
+                                      when: { op: '!=', left: { ref: tokenZone, token: $liftPiece }, right: { ref: binding, name: $airLiftDestination } }
+                                      then:
+                                        - moveToken:
+                                            token: $liftPiece
+                                            from: { zoneExpr: { ref: tokenZone, token: $liftPiece } }
+                                            to: { zoneExpr: { ref: binding, name: $airLiftDestination } }
+                            - let:
+                                bind: $arvnAfter
+                                value:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $origin
+                                      filter:
+                                        - { prop: faction, eq: ARVN }
+                                        - { prop: type, op: in, value: [troops, guerrilla] }
+                                in:
+                                  - addVar:
+                                      scope: global
+                                      var: airLiftRemaining
+                                      delta:
+                                        op: "-"
+                                        left: { ref: binding, name: $arvnAfter }
+                                        right: { ref: binding, name: $arvnBefore }
+                - if:
+                    when: { op: '>', left: { ref: gvar, var: airLiftRemaining }, right: 0 }
+                    then:
+                      - let:
+                          bind: $irregularBefore
+                          value:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $origin
+                                filter:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: guerrilla }
+                          in:
+                            - forEach:
+                                bind: $liftIrregular
+                                over:
+                                  query: tokensInZone
+                                  zone: $origin
+                                  filter:
+                                    - { prop: faction, eq: US }
+                                    - { prop: type, eq: guerrilla }
+                                limit: { ref: gvar, var: airLiftRemaining }
+                                effects:
+                                  - if:
+                                      when: { op: '!=', left: { ref: tokenZone, token: $liftIrregular }, right: { ref: binding, name: $airLiftDestination } }
+                                      then:
+                                        - moveToken:
+                                            token: $liftIrregular
+                                            from: { zoneExpr: { ref: tokenZone, token: $liftIrregular } }
+                                            to: { zoneExpr: { ref: binding, name: $airLiftDestination } }
+                            - let:
+                                bind: $irregularAfter
+                                value:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $origin
+                                      filter:
+                                        - { prop: faction, eq: US }
+                                        - { prop: type, eq: guerrilla }
+                                in:
+                                  - addVar:
+                                      scope: global
+                                      var: airLiftRemaining
+                                      delta:
+                                        op: "-"
+                                        left: { ref: binding, name: $irregularAfter }
+                                        right: { ref: binding, name: $irregularBefore }
+      - stage: air-lift-telemetry
         effects:
           - addVar:
               scope: global
@@ -3467,15 +3875,144 @@ actionPipelines:
   - id: air-strike-profile
     actionId: airStrike
     accompanyingOps: any
-    legality: null
+    legality: true
     costValidation: null
     costEffects: []
-    targeting:
-      select: exactlyN
-      count: 1
-      tieBreak: basesLast
+    targeting: {}
     stages:
-      - stage: air-strike-resolve
+      - stage: select-spaces
+        effects:
+          - if:
+              when:
+                op: '>'
+                left:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: lookahead:none
+                      filter:
+                        - { prop: isCoup, eq: true }
+                right: 0
+              then:
+                - chooseN:
+                    bind: spaces
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - op: '!='
+                            left: { ref: zoneProp, zone: $zone, prop: country }
+                            right: northVietnam
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                            right: 0
+                    min: 0
+                    max: 1
+              else:
+                - chooseN:
+                    bind: spaces
+                    options:
+                      query: mapSpaces
+                      filter:
+                        op: and
+                        args:
+                          - op: '!='
+                            left: { ref: zoneProp, zone: $zone, prop: country }
+                            right: northVietnam
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                            right: 0
+                    min: 0
+                    max: 6
+      - stage: remove-active-enemy-pieces
+        effects:
+          - setVar: { scope: global, var: airStrikeRemaining, value: 6 }
+          - forEach:
+              bind: $space
+              over: { query: binding, name: spaces }
+              effects:
+                - if:
+                    when: { op: '>', left: { ref: gvar, var: airStrikeRemaining }, right: 0 }
+                    then:
+                      - let:
+                          bind: $enemyBefore
+                          value:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $space
+                                filter:
+                                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                          in:
+                            - macro: us-sa-remove-insurgents
+                              args:
+                                space: $space
+                                budgetExpr: { ref: gvar, var: airStrikeRemaining }
+                                activeGuerrillasOnly: true
+                            - let:
+                                bind: $enemyAfter
+                                value:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $space
+                                      filter:
+                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                in:
+                                  - addVar:
+                                      scope: global
+                                      var: airStrikeRemaining
+                                      delta:
+                                        op: "-"
+                                        left: { ref: binding, name: $enemyAfter }
+                                        right: { ref: binding, name: $enemyBefore }
+                - if:
+                    when:
+                      op: or
+                      args:
+                        - { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: province }
+                        - { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: city }
+                    then:
+                      - if:
+                          when:
+                            op: and
+                            args:
+                              - { op: '>', left: { ref: zoneProp, zone: $space, prop: population }, right: 0 }
+                              - { op: '!=', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeOpposition }
+                          then:
+                            - shiftMarker: { space: $space, marker: supportOpposition, delta: -1 }
+      - stage: optional-trail-degrade
+        effects:
+          - chooseOne:
+              bind: $degradeTrail
+              options: { query: enums, values: ['yes', 'no'] }
+          - if:
+              when:
+                op: and
+                args:
+                  - { op: '==', left: { ref: binding, name: $degradeTrail }, right: 'yes' }
+                  - { op: '>', left: { ref: gvar, var: trail }, right: 0 }
+              then:
+                - addVar: { scope: global, var: trail, delta: -1 }
+      - stage: air-strike-telemetry
         effects:
           - addVar:
               scope: global
@@ -3736,6 +4273,8 @@ globalVars:
   - { name: adviseCount, type: int, init: 0, min: 0, max: 20 }
   - { name: airLiftCount, type: int, init: 0, min: 0, max: 20 }
   - { name: airStrikeCount, type: int, init: 0, min: 0, max: 20 }
+  - { name: airLiftRemaining, type: int, init: 0, min: 0, max: 6 }
+  - { name: airStrikeRemaining, type: int, init: 0, min: 0, max: 6 }
   - { name: governCount, type: int, init: 0, min: 0, max: 20 }
   - { name: transportCount, type: int, init: 0, min: 0, max: 20 }
   - { name: raidCount, type: int, init: 0, min: 0, max: 20 }
@@ -3759,6 +4298,31 @@ perPlayerVars:
 turnStructure:
   phases:
     - id: main
+
+turnOrder:
+  type: cardDriven
+  config:
+    turnFlow:
+      cardLifecycle:
+        played: played:none
+        lookahead: lookahead:none
+        leader: leader:none
+      eligibility:
+        factions: ['0', '1', '2', '3']
+        overrideWindows:
+          - id: us-special-window
+            duration: turn
+          - id: arvn-special-window
+            duration: turn
+          - id: nva-special-window
+            duration: turn
+          - id: vc-special-window
+            duration: turn
+      optionMatrix: []
+      passRewards: []
+      durationWindows: [turn, nextTurn, round, cycle]
+      monsoon:
+        restrictedActions: []
   
 # ══════════════════════════════════════════════════════════════════════════════
 # Actions (profile-backed actions keep empty fallback effects)

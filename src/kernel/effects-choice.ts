@@ -1,6 +1,7 @@
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { EffectRuntimeError } from './effect-error.js';
+import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
@@ -49,21 +50,24 @@ const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: 
 };
 
 export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: unknown }>, ctx: EffectContext): EffectResult => {
-  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, effect.chooseOne.bind)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseOne missing move param binding: ${effect.chooseOne.bind}`, {
+  const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, ctx.bindings);
+  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, resolvedBind)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseOne missing move param binding: ${resolvedBind}`, {
       effectType: 'chooseOne',
-      bind: effect.chooseOne.bind,
+      bind: resolvedBind,
+      bindTemplate: effect.chooseOne.bind,
       availableMoveParams: Object.keys(ctx.moveParams).sort(),
     });
   }
 
-  const selected = ctx.moveParams[effect.chooseOne.bind];
+  const selected = ctx.moveParams[resolvedBind];
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const options = evalQuery(effect.chooseOne.options, evalCtx);
   if (!isInDomain(selected, options)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseOne selection is outside options domain: ${effect.chooseOne.bind}`, {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseOne selection is outside options domain: ${resolvedBind}`, {
       effectType: 'chooseOne',
-      bind: effect.chooseOne.bind,
+      bind: resolvedBind,
+      bindTemplate: effect.chooseOne.bind,
       selected,
       optionsCount: options.length,
     });
@@ -74,7 +78,8 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
 
 export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unknown }>, ctx: EffectContext): EffectResult => {
   const chooseN = effect.chooseN;
-  const bind = chooseN.bind;
+  const bindTemplate = chooseN.bind;
+  const bind = resolveBindingTemplate(bindTemplate, ctx.bindings);
   const hasN = 'n' in chooseN && chooseN.n !== undefined;
   const hasMax = 'max' in chooseN && chooseN.max !== undefined;
   const hasMin = 'min' in chooseN && chooseN.min !== undefined;
@@ -85,6 +90,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN must use either exact n or range max/min cardinality', {
       effectType: 'chooseN',
       bind,
+      bindTemplate,
       chooseN,
     });
   }
@@ -106,7 +112,8 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   if (!Number.isSafeInteger(minCardinality) || minCardinality < 0) {
     throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN minimum cardinality must be a non-negative integer', {
       effectType: 'chooseN',
-      bind: chooseN.bind,
+      bind,
+      bindTemplate,
       min: hasN ? chooseN.n : chooseN.min,
     });
   }
@@ -114,7 +121,8 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   if (!Number.isSafeInteger(maxCardinality) || maxCardinality < 0) {
     throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN maximum cardinality must be a non-negative integer', {
       effectType: 'chooseN',
-      bind: chooseN.bind,
+      bind,
+      bindTemplate,
       max: hasN ? chooseN.n : chooseN.max,
     });
   }
@@ -122,7 +130,8 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   if (minCardinality > maxCardinality) {
     throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN min cannot exceed max', {
       effectType: 'chooseN',
-      bind: chooseN.bind,
+      bind,
+      bindTemplate: chooseN.bind,
       min: minCardinality,
       max: maxCardinality,
     });

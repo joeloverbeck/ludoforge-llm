@@ -16,6 +16,7 @@ effectMacros:
     params:
       - { name: space, type: string }
       - { name: damageExpr, type: value }
+    exports: [$damage, $targetFactionFirst]
     effects:
       - let:
           bind: $damage
@@ -85,6 +86,7 @@ effectMacros:
     params:
       - { name: space, type: string }
       - { name: damageExpr, type: value }
+    exports: []
     effects:
       - let:
           bind: $basesBefore
@@ -118,6 +120,7 @@ effectMacros:
       - { name: space, type: string }
       - { name: damageExpr, type: value }
       - { name: attackerFaction, type: { kind: enum, values: [NVA, VC] } }
+    exports: []
     effects:
       - let:
           bind: $usPiecesBefore
@@ -186,6 +189,7 @@ effectMacros:
   - id: insurgent-ambush-remove-coin-piece
     params:
       - { name: targetSpace, type: string }
+    exports: []
     effects:
       - removeByPriority:
           budget: 1
@@ -227,6 +231,7 @@ effectMacros:
   - id: insurgent-ambush-select-spaces
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
+    exports: [targetSpaces]
     effects:
       - chooseN:
           bind: targetSpaces
@@ -403,6 +408,7 @@ effectMacros:
       - { name: space, type: string }
       - { name: budgetExpr, type: value }
       - { name: activeGuerrillasOnly, type: value }
+    exports: []
     effects:
       - if:
           when: { op: '==', left: { param: activeGuerrillasOnly }, right: true }
@@ -511,6 +517,7 @@ effectMacros:
   - id: insurgent-attack-select-spaces
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
+    exports: [targetSpaces]
     effects:
       - if:
           when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
@@ -556,6 +563,7 @@ effectMacros:
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: includeTroops, type: value }
+    exports: [targetSpaces]
     effects:
       - if:
           when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
@@ -636,6 +644,7 @@ effectMacros:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: resourceVar, type: string }
       - { name: shiftFromSupportOnly, type: value }
+    exports: []
     effects:
       - macro: per-province-city-cost
         args:
@@ -697,6 +706,7 @@ effectMacros:
       - { name: space, type: string }
       - { name: resource, type: string }
       - { name: amount, type: number }
+    exports: []
     effects:
       - if:
           when:
@@ -714,6 +724,7 @@ effectMacros:
   # - Move insurgent guerrillas/troops from adjacent spaces.
   # - Activate moved guerrillas if (LoC or Support) and (moving + COIN pieces > 3).
   - id: insurgent-march-resolve-destination
+    exports: [$movingGuerrillas, $movingTroops]
     params:
       - { name: destSpace, type: string }
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
@@ -836,6 +847,7 @@ effectMacros:
   - id: insurgent-march-select-destinations
     params:
       - { name: faction, type: { kind: enum, values: [NVA, VC] } }
+    exports: [targetSpaces]
     effects:
       - if:
           when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
@@ -900,6 +912,7 @@ effectMacros:
       - { name: faction, type: { kind: enum, values: [US, ARVN, NVA, VC] } }
       - { name: targetSpace, type: string }
       - { name: maxPieces, type: value }
+    exports: []
     effects:
       - forEach:
           bind: $piece
@@ -960,6 +973,7 @@ effectMacros:
       - { name: space, type: string }
       - { name: cubeFaction, type: { kind: enum, values: [US, ARVN] } }
       - { name: sfType, type: string }
+    exports: []
     effects:
       - let:
           bind: $cubeCount

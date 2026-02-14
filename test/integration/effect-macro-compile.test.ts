@@ -29,6 +29,7 @@ describe('effect macro → compile pipeline integration', () => {
     const macroDef: EffectMacroDef = {
       id: 'set-score',
       params: [{ name: 'value', type: 'number' }],
+      exports: [],
       effects: [{ setVar: { scope: 'global', var: 'score', value: { param: 'value' } } }],
     };
 
@@ -64,6 +65,7 @@ describe('effect macro → compile pipeline integration', () => {
     const macroDef: EffectMacroDef = {
       id: 'add-score',
       params: [{ name: 'delta', type: 'number' }],
+      exports: [],
       effects: [{ addVar: { scope: 'global', var: 'score', delta: { param: 'delta' } } }],
     };
 
@@ -103,11 +105,13 @@ describe('effect macro → compile pipeline integration', () => {
         { name: 'varName', type: 'string' },
         { name: 'val', type: 'number' },
       ],
+      exports: [],
       effects: [{ setVar: { scope: 'global', var: { param: 'varName' }, value: { param: 'val' } } }],
     };
     const outerMacro: EffectMacroDef = {
       id: 'init-scores',
       params: [],
+      exports: [],
       effects: [
         { macro: 'set-var', args: { varName: 'score', val: 0 } },
         { macro: 'set-var', args: { varName: 'count', val: 0 } },
@@ -150,6 +154,7 @@ describe('effect macro → compile pipeline integration', () => {
         { name: 'faction', type: { kind: 'enum', values: ['NVA', 'VC'] } },
         { name: 'tier', type: { kind: 'literals', values: [1, 2] } },
       ],
+      exports: [],
       effects: [
         { setVar: { scope: 'global', var: 'score', value: { param: 'tier' } } },
         { setVar: { scope: 'global', var: 'count', value: { if: { when: { op: '==', left: { param: 'faction' }, right: 'VC' }, then: 1, else: 0 } } } },
@@ -187,6 +192,7 @@ describe('effect macro → compile pipeline integration', () => {
         { name: 'faction', type: { kind: 'enum', values: ['NVA', 'VC'] } },
         { name: 'tier', type: { kind: 'literals', values: [1, 2] } },
       ],
+      exports: [],
       effects: [{ setVar: { scope: 'global', var: 'score', value: { param: 'tier' } } }],
     };
 
@@ -364,5 +370,95 @@ describe('effect macro → compile pipeline integration', () => {
     assert.deepEqual(firstBinds, secondBinds, 'bind naming should be deterministic across compiles');
     assert.equal(firstBinds.length, 2);
     assert.notEqual(firstBinds[0], firstBinds[1], 'each invocation should have an isolated bind');
+  });
+
+  it('cross-stage use of non-exported macro binder fails deterministically', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'bind-local',
+      params: [],
+      exports: [],
+      effects: [{ chooseOne: { bind: '$choice', options: { query: 'enums', values: ['a', 'b'] } } }],
+    };
+
+    const doc = {
+      ...makeMinimalDoc(),
+      effectMacros: [macroDef],
+      actions: [
+        {
+          id: 'invalid-cross-stage-binder',
+          actor: 'active',
+          phase: 'main',
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            { macro: 'bind-local', args: {} },
+            { setVar: { scope: 'global', var: 'score', value: { ref: 'binding', name: '$choice' } } },
+          ],
+          limits: [],
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+
+    const unbound = result.diagnostics.find((d) => d.code === 'CNL_COMPILER_BINDING_UNBOUND');
+    assert.ok(unbound, 'Expected deterministic unbound binding diagnostic');
+    assert.equal(unbound?.path, 'doc.actions.0.effects.1.setVar.value.name');
+  });
+
+  it('preserves caller-scope binding refs passed through nested macro args', () => {
+    const innerMacro: EffectMacroDef = {
+      id: 'inner',
+      params: [{ name: 'expr', type: 'value' }],
+      exports: [],
+      effects: [
+        {
+          let: {
+            bind: '$x',
+            value: { param: 'expr' },
+            in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$x' } } }],
+          },
+        },
+      ],
+    };
+    const outerMacro: EffectMacroDef = {
+      id: 'outer',
+      params: [],
+      exports: [],
+      effects: [
+        {
+          let: {
+            bind: '$x',
+            value: 3,
+            in: [{ macro: 'inner', args: { expr: { ref: 'binding', name: '$x' } } }],
+          },
+        },
+      ],
+    };
+
+    const doc = {
+      ...makeMinimalDoc(),
+      effectMacros: [innerMacro, outerMacro],
+      setup: [{ macro: 'outer', args: {} }],
+      actions: [
+        {
+          id: 'pass',
+          actor: 'active',
+          phase: 'main',
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    const errors = result.diagnostics.filter((d) => d.severity === 'error');
+    assert.deepEqual(errors, [], `Unexpected errors: ${JSON.stringify(errors, null, 2)}`);
+    assert.ok(result.gameDef !== null, 'Expected valid GameDef');
   });
 });

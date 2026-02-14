@@ -27,6 +27,7 @@ describe('expandEffectMacros', () => {
     const macroDef: EffectMacroDef = {
       id: 'add-one',
       params: [{ name: 'target', type: 'string' }],
+      exports: [],
       effects: [{ addVar: { scope: 'global', var: { param: 'target' }, delta: 1 } }],
     };
     const doc = makeDoc({
@@ -46,6 +47,7 @@ describe('expandEffectMacros', () => {
     const macroDef: EffectMacroDef = {
       id: 'set-flag',
       params: [{ name: 'val', type: 'number' }],
+      exports: [],
       effects: [{ setVar: { scope: 'global', var: 'flag', value: { param: 'val' } } }],
     };
     const doc = makeDoc({
@@ -76,6 +78,7 @@ describe('expandEffectMacros', () => {
     const macroDef: EffectMacroDef = {
       id: 'bump',
       params: [{ name: 'amount', type: 'number' }],
+      exports: [],
       effects: [{ addVar: { scope: 'global', var: 'counter', delta: { param: 'amount' } } }],
     };
     const doc = makeDoc({
@@ -104,6 +107,7 @@ describe('expandEffectMacros', () => {
         { name: 'zone', type: 'string' },
         { name: 'token', type: 'string' },
       ],
+      exports: [],
       effects: [{ moveToken: { token: { param: 'token' }, to: { param: 'zone' } } }],
     };
     const doc = makeDoc({
@@ -125,6 +129,7 @@ describe('expandEffectMacros', () => {
         { name: 'cond', type: 'condition' },
         { name: 'body', type: 'effects' },
       ],
+      exports: [],
       effects: [{ if: { when: { param: 'cond' }, then: { param: 'body' } } }],
     };
     const doc = makeDoc({
@@ -156,6 +161,7 @@ describe('expandEffectMacros', () => {
     const macroDef: EffectMacroDef = {
       id: 'use-binding',
       params: [{ name: 'zone', type: 'string' }],
+      exports: [],
       effects: [
         { moveToken: { token: '$target', to: { param: 'zone' } } },
       ],
@@ -176,6 +182,7 @@ describe('expandEffectMacros', () => {
     const macroDef: EffectMacroDef = {
       id: 'inc',
       params: [{ name: 'v', type: 'string' }],
+      exports: [],
       effects: [{ addVar: { scope: 'global', var: { param: 'v' }, delta: 1 } }],
     };
     const doc = makeDoc({
@@ -198,11 +205,13 @@ describe('expandEffectMacros', () => {
     const macroB: EffectMacroDef = {
       id: 'inner',
       params: [{ name: 'n', type: 'number' }],
+      exports: [],
       effects: [{ setVar: { scope: 'global', var: 'x', value: { param: 'n' } } }],
     };
     const macroA: EffectMacroDef = {
       id: 'outer',
       params: [{ name: 'val', type: 'number' }],
+      exports: [],
       effects: [{ macro: 'inner', args: { n: { param: 'val' } } }],
     };
     const doc = makeDoc({
@@ -221,11 +230,13 @@ describe('expandEffectMacros', () => {
     const macroA: EffectMacroDef = {
       id: 'a',
       params: [],
+      exports: [],
       effects: [{ macro: 'b', args: {} }],
     };
     const macroB: EffectMacroDef = {
       id: 'b',
       params: [],
+      exports: [],
       effects: [{ macro: 'a', args: {} }],
     };
     const doc = makeDoc({
@@ -241,6 +252,7 @@ describe('expandEffectMacros', () => {
     const macro: EffectMacroDef = {
       id: 'self',
       params: [],
+      exports: [],
       effects: [{ macro: 'self', args: {} }],
     };
     const doc = makeDoc({
@@ -256,6 +268,7 @@ describe('expandEffectMacros', () => {
     const existingMacro: EffectMacroDef = {
       id: 'exists',
       params: [],
+      exports: [],
       effects: [{ setVar: { scope: 'global', var: 'x', value: 1 } }],
     };
     const doc = makeDoc({
@@ -271,11 +284,13 @@ describe('expandEffectMacros', () => {
     const macro1: EffectMacroDef = {
       id: 'dup',
       params: [],
+      exports: [],
       effects: [{ setVar: { scope: 'global', var: 'x', value: 1 } }],
     };
     const macro2: EffectMacroDef = {
       id: 'dup',
       params: [],
+      exports: [],
       effects: [{ setVar: { scope: 'global', var: 'x', value: 2 } }],
     };
     const doc = makeDoc({
@@ -291,6 +306,7 @@ describe('expandEffectMacros', () => {
     const macro: EffectMacroDef = {
       id: 'need-arg',
       params: [{ name: 'x', type: 'number' }],
+      exports: [],
       effects: [{ setVar: { scope: 'global', var: 'v', value: { param: 'x' } } }],
     };
     const doc = makeDoc({
@@ -306,6 +322,7 @@ describe('expandEffectMacros', () => {
     const macro: EffectMacroDef = {
       id: 'simple',
       params: [],
+      exports: [],
       effects: [{ setVar: { scope: 'global', var: 'v', value: 1 } }],
     };
     const doc = makeDoc({
@@ -325,6 +342,7 @@ describe('expandEffectMacros', () => {
         { name: 'faction', type: { kind: 'enum', values: ['NVA', 'VC'] } },
         { name: 'tier', type: { kind: 'literals', values: [1, 2, 3] } },
       ],
+      exports: [],
       effects: [
         { setVar: { scope: 'global', var: 'pickedFaction', value: { param: 'faction' } } },
         { setVar: { scope: 'global', var: 'pickedTier', value: { param: 'tier' } } },
@@ -347,6 +365,7 @@ describe('expandEffectMacros', () => {
     const macro: EffectMacroDef = {
       id: 'typed',
       params: [{ name: 'faction', type: { kind: 'enum', values: ['NVA', 'VC'] } }],
+      exports: [],
       effects: [{ setVar: { scope: 'global', var: 'pickedFaction', value: { param: 'faction' } } }],
     };
     const doc = makeDoc({
@@ -368,6 +387,7 @@ describe('expandEffectMacros', () => {
     const macro: EffectMacroDef = {
       id: 'inc-var',
       params: [{ name: 'v', type: 'string' }],
+      exports: [],
       effects: [{ addVar: { scope: 'global', var: { param: 'v' }, delta: 1 } }],
     };
     const doc = makeDoc({
@@ -395,6 +415,7 @@ describe('expandEffectMacros', () => {
     const macroDef: EffectMacroDef = {
       id: 'pick',
       params: [],
+      exports: [],
       effects: [
         { chooseOne: { bind: '$choice@{$slot}', options: { query: 'enums', values: ['a', 'b'] } } },
         { setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$choice@{$slot}' } } },
@@ -444,6 +465,30 @@ describe('expandEffectMacros', () => {
       { chooseOne: { bind: '$choice', options: { query: 'enums', values: ['a', 'b'] } } },
       { setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$choice' } } },
     ]);
+  });
+
+  it('does not implicitly export non-templated binders when exports is omitted', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'pick-no-implicit-export',
+      params: [],
+      exports: [],
+      effects: [
+        { chooseOne: { bind: '$choice', options: { query: 'enums', values: ['a', 'b'] } } },
+        { setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$choice' } } },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'pick-no-implicit-export', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const choose = result.doc.setup?.[0] as { chooseOne: { bind: string } };
+    const setVar = result.doc.setup?.[1] as { setVar: { value: { ref: 'binding'; name: string } } };
+    assert.notEqual(choose.chooseOne.bind, '$choice');
+    assert.equal(setVar.setVar.value.name, choose.chooseOne.bind);
   });
 
   it('reports unknown exported bindings', () => {

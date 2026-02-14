@@ -580,15 +580,14 @@ function normalizeExportedBindings(
   diagnostics: Diagnostic[],
 ): ReadonlySet<string> {
   if (macroDef.exports === undefined) {
-    const implicitExports = new Set<string>();
-    for (const bindingName of declaredBindings) {
-      // Template-style binders are intended to be invocation-local.
-      // Non-templated binders remain externally visible by default.
-      if (!bindingName.includes('{')) {
-        implicitExports.add(bindingName);
-      }
-    }
-    return implicitExports;
+    diagnostics.push({
+      code: 'EFFECT_MACRO_EXPORTS_REQUIRED',
+      path: `effectMacros.${macroDef.id}.exports`,
+      severity: 'error',
+      message: `Macro "${macroDef.id}" must declare exports explicitly.`,
+      suggestion: 'Set exports to an explicit array (for example [] when no binders are public).',
+    });
+    return new Set<string>();
   }
 
   const exported = new Set<string>();
@@ -732,17 +731,13 @@ function expandEffect(
       ? def.effects
       : def.effects.map((templateEffect) => rewriteBindings(templateEffect, renameMap) as GameSpecEffect);
   const hygienicSubstituted = hygienicTemplates.map((templateEffect) => substituteParams(templateEffect, args) as GameSpecEffect);
-  const rewrittenAfterSubstitution =
-    renameMap.size === 0
-      ? hygienicSubstituted
-      : hygienicSubstituted.map((templateEffect) => rewriteBindings(templateEffect, renameMap) as GameSpecEffect);
 
   const nestedVisited = new Set(visitedStack);
   nestedVisited.add(macroId);
 
   const expanded: GameSpecEffect[] = [];
-  for (let i = 0; i < rewrittenAfterSubstitution.length; i++) {
-    const sub = rewrittenAfterSubstitution[i];
+  for (let i = 0; i < hygienicSubstituted.length; i++) {
+    const sub = hygienicSubstituted[i];
     if (sub === undefined) continue;
     const results = expandEffect(sub, index, diagnostics, `${path}[macro:${macroId}][${i}]`, nestedVisited, depth + 1);
     expanded.push(...results);

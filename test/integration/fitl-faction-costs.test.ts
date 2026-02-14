@@ -15,6 +15,8 @@ import {
   type MapSpaceDef,
   createCollector,
 } from '../../src/kernel/index.js';
+import { findDeep } from '../helpers/ast-search-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 function makeDef(): GameDef {
   return {
@@ -163,3 +165,73 @@ describe('FITL per-province-city-cost macro', () => {
   });
 });
 
+describe('FITL production free-operation guard and exception contracts', () => {
+  it('guards shared per-province-city-cost with __freeOperation != true', () => {
+    const { parsed } = compileProductionSpec();
+    const perSpaceCost = parsed.doc.effectMacros?.find((macro) => macro.id === 'per-province-city-cost');
+    assert.ok(perSpaceCost, 'Expected per-province-city-cost macro');
+
+    const freeOpGuards = findDeep(perSpaceCost.effects, (node) =>
+      node?.if?.when?.op === 'and' &&
+      findDeep(node.if.when, (inner) =>
+        inner?.op === '!=' &&
+        inner?.left?.ref === 'binding' &&
+        inner?.left?.name === '__freeOperation' &&
+        inner?.right === true,
+      ).length >= 1,
+    );
+    assert.ok(freeOpGuards.length >= 1, 'Expected __freeOperation guard in per-province-city-cost macro');
+  });
+
+  it('keeps ARVN Train sub-action pacify and base-replacement costs unguarded by free operation', () => {
+    const { parsed } = compileProductionSpec();
+    const trainArvn = parsed.doc.actionPipelines?.find((profile) => profile.id === 'train-arvn-profile');
+    assert.ok(trainArvn, 'Expected train-arvn-profile');
+
+    const subAction = trainArvn.stages.find((stage) => stage.stage === 'sub-action');
+    assert.ok(subAction, 'Expected sub-action stage in train-arvn-profile');
+
+    const replaceBranch = findDeep(subAction.effects, (node) =>
+      node?.if?.when?.op === 'and' &&
+      findDeep(node.if.when, (inner) => inner?.right === 'replace-cubes-with-base').length >= 1,
+    );
+    assert.ok(replaceBranch.length >= 1, 'Expected replace-cubes-with-base branch');
+    const replaceDirectCost = findDeep(replaceBranch[0].if.then, (node) =>
+      node?.addVar?.var === 'arvnResources' && node?.addVar?.delta === -3,
+    );
+    assert.ok(replaceDirectCost.length >= 1, 'Expected direct ARVN -3 cost in replace-cubes-with-base branch');
+    const replaceFreeGuards = findDeep(replaceBranch[0].if.then, (node) =>
+      node?.if?.when?.left?.ref === 'binding' && node?.if?.when?.left?.name === '__freeOperation',
+    );
+    assert.equal(replaceFreeGuards.length, 0, 'Replace-cubes-with-base cost should not be wrapped by __freeOperation');
+
+    const pacifyBranch = findDeep(subAction.effects, (node) =>
+      node?.if?.when?.op === 'and' &&
+      findDeep(node.if.when, (inner) => inner?.right === 'pacify').length >= 1,
+    );
+    assert.ok(pacifyBranch.length >= 1, 'Expected pacify branch');
+    const pacifyDirectCost = findDeep(pacifyBranch[0].if.then, (node) =>
+      node?.addVar?.var === 'arvnResources' &&
+      (node?.addVar?.delta === -3 || node?.addVar?.delta?.op === '*'),
+    );
+    assert.ok(pacifyDirectCost.length >= 1, 'Expected ARVN pacification costs in pacify branch');
+  });
+
+  it('keeps NVA trail-improvement cost unguarded by free operation', () => {
+    const { parsed } = compileProductionSpec();
+    const rallyNva = parsed.doc.actionPipelines?.find((profile) => profile.id === 'rally-nva-profile');
+    assert.ok(rallyNva, 'Expected rally-nva-profile');
+
+    const trailStage = rallyNva.stages.find((stage) => stage.stage === 'trail-improvement');
+    assert.ok(trailStage, 'Expected trail-improvement stage');
+    const trailCost = findDeep(trailStage.effects, (node) =>
+      node?.addVar?.var === 'nvaResources' && node?.addVar?.delta === -2,
+    );
+    assert.ok(trailCost.length >= 1, 'Expected direct NVA -2 trail-improvement cost');
+
+    const trailFreeGuards = findDeep(trailStage.effects, (node) =>
+      node?.if?.when?.left?.ref === 'binding' && node?.if?.when?.left?.name === '__freeOperation',
+    );
+    assert.equal(trailFreeGuards.length, 0, 'Trail-improvement cost should not be wrapped by __freeOperation');
+  });
+});

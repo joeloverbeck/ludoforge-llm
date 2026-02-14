@@ -142,6 +142,10 @@ describe('compile pipeline integration', () => {
       '          country: south-vietnam',
       '          coastal: true',
       '          adjacentTo: [alpha:none]',
+      '      markerLattices:',
+      '        - id: supportOpposition',
+      '          states: [neutral, support]',
+      '          defaultState: neutral',
       '```',
       '```yaml',
       'turnStructure:',
@@ -178,6 +182,10 @@ describe('compile pipeline integration', () => {
     assert.deepEqual(
       compiled.gameDef?.mapSpaces?.map((space) => space.id),
       ['alpha:none', 'beta:none'],
+    );
+    assert.deepEqual(
+      compiled.gameDef?.markerLattices?.map((lattice) => lattice.id),
+      ['supportOpposition'],
     );
   });
 

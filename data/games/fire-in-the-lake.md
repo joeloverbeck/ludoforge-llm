@@ -3214,37 +3214,114 @@ actionPipelines:
                                       damageExpr: 2
                                       attackerFaction: 'VC'
     atomicity: atomic
-  - id: terror-profile
+  - id: terror-nva-profile
     actionId: terror
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: insurgentResources
-        right: 1
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: insurgentResources
-        right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: insurgentResources
-            delta: -1
-    targeting:
-      select: upToN
-      max: 2
-      order: lexicographicSpaceId
-      supportShiftPolicy: setOppositionTowardActive
+    applicability: { op: '==', left: { ref: activePlayer }, right: '2' }
+    legality: true
+    costValidation: null
+    costEffects: []
+    targeting: {}
     stages:
-      - stage: terror-resolve
+      - stage: select-spaces
         effects:
-          - addVar:
-              scope: global
-              var: terrorCount
-              delta: 1
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - op: '>'
+                                left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }, { prop: activity, eq: underground }] } } }
+                                right: 0
+                              - op: '>'
+                                left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: troops }] } } }
+                                right: 0
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                    min: 1
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - op: '>'
+                                left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }, { prop: activity, eq: underground }] } } }
+                                right: 0
+                              - op: '>'
+                                left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: troops }] } } }
+                                right: 0
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                    min: 1
+                    max: 99
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - macro: per-province-city-cost
+                  args:
+                    space: $space
+                    resource: nvaResources
+                    amount: -1
+                - forEach:
+                    bind: $g
+                    over:
+                      query: tokensInZone
+                      zone: $space
+                      filter: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }, { prop: activity, eq: underground }]
+                    limit: 1
+                    effects:
+                      - setTokenProp: { token: $g, prop: activity, value: active }
+                - if:
+                    when: { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: 'loc' }
+                    then:
+                      - if:
+                          when:
+                            op: and
+                            args:
+                              - { op: '!=', left: { ref: markerState, space: $space, marker: sabotage }, right: 'sabotage' }
+                              - { op: '<', left: { ref: gvar, var: terrorSabotageMarkersPlaced }, right: 15 }
+                          then:
+                            - setMarker: { space: $space, marker: sabotage, state: sabotage }
+                            - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
+                    else:
+                      - if:
+                          when:
+                            op: and
+                            args:
+                              - { op: '!=', left: { ref: markerState, space: $space, marker: terror }, right: 'terror' }
+                              - { op: '<', left: { ref: gvar, var: terrorSabotageMarkersPlaced }, right: 15 }
+                          then:
+                            - setMarker: { space: $space, marker: terror, state: terror }
+                            - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
+                      - if:
+                          when:
+                            op: or
+                            args:
+                              - { op: '==', left: { ref: markerState, space: $space, marker: supportOpposition }, right: 'passiveSupport' }
+                              - { op: '==', left: { ref: markerState, space: $space, marker: supportOpposition }, right: 'activeSupport' }
+                          then:
+                            - shiftMarker: { space: $space, marker: supportOpposition, delta: -1 }
     atomicity: atomic
   # ── US/ARVN special-activity stub profiles ──
   - id: advise-profile
@@ -3768,11 +3845,9 @@ globalVars:
   - { name: sweepCount, type: int, init: 0, min: 0, max: 20 }
   - { name: assaultCount, type: int, init: 0, min: 0, max: 20 }
   # ── Stub vars for insurgent operation testing ──
-  - { name: insurgentResources, type: int, init: 7, min: 0, max: 50 }
   - { name: rallyCount, type: int, init: 0, min: 0, max: 20 }
   - { name: marchCount, type: int, init: 0, min: 0, max: 20 }
   - { name: attackCount, type: int, init: 0, min: 0, max: 20 }
-  - { name: terrorCount, type: int, init: 0, min: 0, max: 20 }
   # ── Stub vars for US/ARVN special-activity testing ──
   - { name: usResources, type: int, init: 7, min: 0, max: 50 }
   - { name: adviseCount, type: int, init: 0, min: 0, max: 20 }

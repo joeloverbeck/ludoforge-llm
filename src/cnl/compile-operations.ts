@@ -6,6 +6,7 @@ import type {
   ActionResolutionStageDef,
   ActionTargetingDef,
 } from '../kernel/types.js';
+import { collectSequentialBindings } from './binder-surface-registry.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import {
   isRecord,
@@ -296,12 +297,7 @@ export function lowerActionPipelines(
       );
       const stageBindings: string[] = [];
       for (const eff of loweredEffects) {
-        if ('chooseOne' in eff && typeof eff.chooseOne === 'object' && eff.chooseOne !== null && 'bind' in eff.chooseOne) {
-          stageBindings.push((eff.chooseOne as { bind: string }).bind);
-        }
-        if ('forEach' in eff && typeof eff.forEach === 'object' && eff.forEach !== null && 'bind' in eff.forEach) {
-          stageBindings.push((eff.forEach as { bind: string }).bind);
-        }
+        stageBindings.push(...collectSequentialBindings(eff));
       }
       accumulatedBindings = [...accumulatedBindings, ...stageBindings];
       stages.push({

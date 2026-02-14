@@ -1,4 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import { collectDeclaredBinderCandidates, rewriteDeclaredBindersInEffectNode } from './binder-surface-registry.js';
 import type {
   EffectMacroDef,
   EffectMacroParamPrimitiveLiteral,
@@ -341,44 +342,8 @@ function collectDeclaredBinders(node: unknown, path: string, into: Set<string>, 
     }
   };
 
-  const forEachNode = node.forEach;
-  if (isRecord(forEachNode)) {
-    declareBinding(forEachNode.bind, `${path}.forEach.bind`);
-    declareBinding(forEachNode.countBind, `${path}.forEach.countBind`);
-  }
-
-  const removeByPriorityNode = node.removeByPriority;
-  if (isRecord(removeByPriorityNode)) {
-    if (Array.isArray(removeByPriorityNode.groups)) {
-      for (let groupIndex = 0; groupIndex < removeByPriorityNode.groups.length; groupIndex += 1) {
-        const group = removeByPriorityNode.groups[groupIndex];
-        if (isRecord(group)) {
-          declareBinding(group.bind, `${path}.removeByPriority.groups.${groupIndex}.bind`);
-          declareBinding(group.countBind, `${path}.removeByPriority.groups.${groupIndex}.countBind`);
-        }
-      }
-    }
-    declareBinding(removeByPriorityNode.remainingBind, `${path}.removeByPriority.remainingBind`);
-  }
-
-  const letNode = node.let;
-  if (isRecord(letNode)) {
-    declareBinding(letNode.bind, `${path}.let.bind`);
-  }
-
-  const chooseOneNode = node.chooseOne;
-  if (isRecord(chooseOneNode)) {
-    declareBinding(chooseOneNode.bind, `${path}.chooseOne.bind`);
-  }
-
-  const chooseNNode = node.chooseN;
-  if (isRecord(chooseNNode)) {
-    declareBinding(chooseNNode.bind, `${path}.chooseN.bind`);
-  }
-
-  const rollRandomNode = node.rollRandom;
-  if (isRecord(rollRandomNode)) {
-    declareBinding(rollRandomNode.bind, `${path}.rollRandom.bind`);
+  for (const candidate of collectDeclaredBinderCandidates(node)) {
+    declareBinding(candidate.value, `${path}.${candidate.path}`);
   }
 
   for (const [key, value] of Object.entries(node)) {
@@ -467,16 +432,13 @@ function rewriteBindings(
     return { ...node, name: rewriteBindingName(node.name, renameMap) };
   }
 
-  const rewritten: Record<string, unknown> = { ...node };
+  const rewrittenFromRegistry = rewriteDeclaredBindersInEffectNode(node, (binding) => rewriteBindingTemplate(binding, renameMap));
+  const rewritten: Record<string, unknown> = rewrittenFromRegistry === node ? { ...node } : rewrittenFromRegistry;
 
-  if (isRecord(node.forEach)) {
-    const forEachNode = node.forEach;
+  if (isRecord(rewritten.forEach)) {
+    const forEachNode = rewritten.forEach;
     rewritten.forEach = {
       ...forEachNode,
-      ...(typeof forEachNode.bind === 'string' ? { bind: rewriteBindingTemplate(forEachNode.bind, renameMap) } : {}),
-      ...(typeof forEachNode.countBind === 'string'
-        ? { countBind: rewriteBindingTemplate(forEachNode.countBind, renameMap) }
-        : {}),
       ...(forEachNode.over === undefined ? {} : { over: rewriteBindings(forEachNode.over, renameMap, 'over', insideMacroArgs) }),
       ...(Array.isArray(forEachNode.effects) ? { effects: rewriteBindings(forEachNode.effects, renameMap, 'effects', insideMacroArgs) } : {}),
       ...(Array.isArray(forEachNode.in) ? { in: rewriteBindings(forEachNode.in, renameMap, 'in', insideMacroArgs) } : {}),
@@ -485,8 +447,8 @@ function rewriteBindings(
     return rewritten;
   }
 
-  if (isRecord(node.removeByPriority)) {
-    const removeByPriorityNode = node.removeByPriority;
+  if (isRecord(rewritten.removeByPriority)) {
+    const removeByPriorityNode = rewritten.removeByPriority;
     rewritten.removeByPriority = {
       ...removeByPriorityNode,
       ...(Array.isArray(removeByPriorityNode.groups)
@@ -496,19 +458,12 @@ function rewriteBindings(
                 ? group
                 : {
                     ...group,
-                    ...(typeof group.bind === 'string' ? { bind: rewriteBindingTemplate(group.bind, renameMap) } : {}),
-                    ...(typeof group.countBind === 'string'
-                      ? { countBind: rewriteBindingTemplate(group.countBind, renameMap) }
-                      : {}),
                     ...(group.over === undefined ? {} : { over: rewriteBindings(group.over, renameMap, 'over', insideMacroArgs) }),
                     ...(group.to === undefined ? {} : { to: rewriteBindings(group.to, renameMap, 'to', insideMacroArgs) }),
                     ...(group.from === undefined ? {} : { from: rewriteBindings(group.from, renameMap, 'from', insideMacroArgs) }),
                   },
             ),
           }
-        : {}),
-      ...(typeof removeByPriorityNode.remainingBind === 'string'
-        ? { remainingBind: rewriteBindingTemplate(removeByPriorityNode.remainingBind, renameMap) }
         : {}),
       ...(Array.isArray(removeByPriorityNode.in) ? { in: rewriteBindings(removeByPriorityNode.in, renameMap, 'in', insideMacroArgs) } : {}),
       ...(removeByPriorityNode.budget === undefined
@@ -518,32 +473,29 @@ function rewriteBindings(
     return rewritten;
   }
 
-  if (isRecord(node.let)) {
-    const letNode = node.let;
+  if (isRecord(rewritten.let)) {
+    const letNode = rewritten.let;
     rewritten.let = {
       ...letNode,
-      ...(typeof letNode.bind === 'string' ? { bind: rewriteBindingTemplate(letNode.bind, renameMap) } : {}),
       ...(letNode.value === undefined ? {} : { value: rewriteBindings(letNode.value, renameMap, 'value', insideMacroArgs) }),
       ...(Array.isArray(letNode.in) ? { in: rewriteBindings(letNode.in, renameMap, 'in', insideMacroArgs) } : {}),
     };
     return rewritten;
   }
 
-  if (isRecord(node.chooseOne)) {
-    const chooseOneNode = node.chooseOne;
+  if (isRecord(rewritten.chooseOne)) {
+    const chooseOneNode = rewritten.chooseOne;
     rewritten.chooseOne = {
       ...chooseOneNode,
-      ...(typeof chooseOneNode.bind === 'string' ? { bind: rewriteBindingTemplate(chooseOneNode.bind, renameMap) } : {}),
       ...(chooseOneNode.options === undefined ? {} : { options: rewriteBindings(chooseOneNode.options, renameMap, 'options', insideMacroArgs) }),
     };
     return rewritten;
   }
 
-  if (isRecord(node.chooseN)) {
-    const chooseNNode = node.chooseN;
+  if (isRecord(rewritten.chooseN)) {
+    const chooseNNode = rewritten.chooseN;
     rewritten.chooseN = {
       ...chooseNNode,
-      ...(typeof chooseNNode.bind === 'string' ? { bind: rewriteBindingTemplate(chooseNNode.bind, renameMap) } : {}),
       ...(chooseNNode.options === undefined ? {} : { options: rewriteBindings(chooseNNode.options, renameMap, 'options', insideMacroArgs) }),
       ...(chooseNNode.n === undefined ? {} : { n: rewriteBindings(chooseNNode.n, renameMap, 'n', insideMacroArgs) }),
       ...(chooseNNode.min === undefined ? {} : { min: rewriteBindings(chooseNNode.min, renameMap, 'min', insideMacroArgs) }),
@@ -552,11 +504,10 @@ function rewriteBindings(
     return rewritten;
   }
 
-  if (isRecord(node.rollRandom)) {
-    const rollRandomNode = node.rollRandom;
+  if (isRecord(rewritten.rollRandom)) {
+    const rollRandomNode = rewritten.rollRandom;
     rewritten.rollRandom = {
       ...rollRandomNode,
-      ...(typeof rollRandomNode.bind === 'string' ? { bind: rewriteBindingTemplate(rollRandomNode.bind, renameMap) } : {}),
       ...(rollRandomNode.min === undefined ? {} : { min: rewriteBindings(rollRandomNode.min, renameMap, 'min', insideMacroArgs) }),
       ...(rollRandomNode.max === undefined ? {} : { max: rewriteBindings(rollRandomNode.max, renameMap, 'max', insideMacroArgs) }),
       ...(Array.isArray(rollRandomNode.in) ? { in: rewriteBindings(rollRandomNode.in, renameMap, 'in', insideMacroArgs) } : {}),

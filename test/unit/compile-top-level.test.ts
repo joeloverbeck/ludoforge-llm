@@ -337,6 +337,100 @@ describe('compile top-level actions/triggers/end conditions', () => {
     ]);
   });
 
+  it('carries only sequentially-visible binders across pipeline stages', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'operation-profile-stage-binding-carry-over', players: { min: 2, max: 4 } },
+      globalVars: [
+        { name: 'pickedTargets', type: 'int', init: 0, min: 0, max: 99 },
+        { name: 'rolled', type: 'int', init: 0, min: 0, max: 99 },
+      ],
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'patrol', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actionPipelines: [
+        {
+          id: 'patrol-profile',
+          actionId: 'patrol',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                { chooseN: { bind: '$targets', options: { query: 'players' }, max: 1 } },
+                { rollRandom: { bind: '$roll', min: 1, max: 6, in: [] } },
+              ],
+            },
+            {
+              effects: [
+                { setVar: { scope: 'global', var: 'pickedTargets', value: { ref: 'binding', name: '$targets' } } },
+                { setVar: { scope: 'global', var: 'rolled', value: { ref: 'binding', name: '$roll' } } },
+              ],
+            },
+          ],
+          atomicity: 'atomic' as const,
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef !== null, true);
+    assertNoDiagnostics(result);
+  });
+
+  it('does not carry lexical-only binders (forEach.bind) across pipeline stages', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'operation-profile-stage-binding-no-leak', players: { min: 2, max: 4 } },
+      globalVars: [{ name: 'pickedTargets', type: 'int', init: 0, min: 0, max: 99 }],
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'patrol', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actionPipelines: [
+        {
+          id: 'patrol-profile',
+          actionId: 'patrol',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                { forEach: { bind: '$tok', over: { query: 'players' }, effects: [] } },
+              ],
+            },
+            {
+              effects: [
+                { setVar: { scope: 'global', var: 'pickedTargets', value: { ref: 'binding', name: '$tok' } } },
+              ],
+            },
+          ],
+          atomicity: 'atomic' as const,
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_BINDING_UNBOUND'
+          && diagnostic.path === 'doc.actionPipelines.0.stages[1].effects.0.setVar.value.name',
+      ),
+      true,
+    );
+  });
+
   it('returns blocking diagnostics for ambiguous or incomplete actionPipelines metadata', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

@@ -1,0 +1,23 @@
+export const SUPPORTED_EFFECT_KINDS = [
+  'setVar',
+  'addVar',
+  'moveToken',
+  'moveAll',
+  'moveTokenAdjacent',
+  'draw',
+  'shuffle',
+  'createToken',
+  'destroyToken',
+  'setTokenProp',
+  'if',
+  'forEach',
+  'removeByPriority',
+  'let',
+  'chooseOne',
+  'chooseN',
+  'rollRandom',
+  'setMarker',
+  'shiftMarker',
+] as const;
+
+export type SupportedEffectKind = typeof SUPPORTED_EFFECT_KINDS[number];

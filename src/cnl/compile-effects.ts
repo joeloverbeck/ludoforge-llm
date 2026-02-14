@@ -1,37 +1,17 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { EffectAST, PlayerSel, ValueExpr, ZoneRef } from '../kernel/types.js';
+import { collectSequentialBindings } from './binder-surface-registry.js';
 import {
   lowerConditionNode,
   lowerQueryNode,
   lowerValueNode,
   type ConditionLoweringContext,
 } from './compile-conditions.js';
+import { SUPPORTED_EFFECT_KINDS } from './effect-kind-registry.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
 
 type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
-
-const SUPPORTED_EFFECT_KINDS = [
-  'setVar',
-  'addVar',
-  'moveToken',
-  'moveAll',
-  'moveTokenAdjacent',
-  'draw',
-  'shuffle',
-  'createToken',
-  'destroyToken',
-  'setTokenProp',
-  'if',
-  'forEach',
-  'removeByPriority',
-  'let',
-  'chooseOne',
-  'chooseN',
-  'rollRandom',
-  'setMarker',
-  'shiftMarker',
-] as const;
 
 export interface EffectLoweringContext {
   readonly ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>;
@@ -1167,12 +1147,9 @@ class BindingScope {
  * scope so subsequent effects in the same array can reference it.
  */
 function registerSequentialBinding(effect: EffectAST, scope: BindingScope): void {
-  if ('chooseOne' in effect) {
-    scope.register(effect.chooseOne.bind);
-  } else if ('chooseN' in effect) {
-    scope.register(effect.chooseN.bind);
-  } else if ('rollRandom' in effect) {
-    scope.register(effect.rollRandom.bind);
+  const bindings = collectSequentialBindings(effect);
+  for (const binding of bindings) {
+    scope.register(binding);
   }
 }
 

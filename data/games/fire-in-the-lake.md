@@ -2948,7 +2948,7 @@ actionPipelines:
       - stage: resolve-per-space
         effects:
           - forEach:
-              bind: space
+              bind: $space
               over: { query: binding, name: targetSpaces }
               effects:
                 - chooseOne:
@@ -3191,7 +3191,7 @@ actionPipelines:
       - stage: resolve-per-space
         effects:
           - forEach:
-              bind: space
+              bind: $space
               over: { query: binding, name: targetSpaces }
               effects:
                 # ARVN Train: place 1-2 Rangers or up to 6 ARVN cubes

@@ -1,6 +1,6 @@
 # Spec 28: FITL Capabilities, Momentum, and RVN Leader
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: Spec 26 (operations), Spec 27 (special activities), Spec 25c (GlobalMarkerLatticeDef)
@@ -570,3 +570,17 @@ Shaded: VC 1 Amb: -2 enemy
 Name: Cadres
 Unshaded: VC Terror, Agitate: -2 Guerrillas
 Shaded: Rally: Agitate at 1 Base
+
+## Outcome
+
+- **Completion date**: 2026-02-14
+- **What was implemented**:
+  - Capabilities: 19 tri-state global marker lattices with side-specific operation/SA branches.
+  - Momentum: 15 boolean momentum globals with prohibition and formula-modifier behavior.
+  - RVN Leader: `activeLeader` marker + `leaderBoxCardCount` gvar with lingering leader behavior coverage.
+  - Cross-system verification: dedicated smoke coverage for capability+momentum, capability+capability, and leader+capability interactions.
+  - Determinism hardening: explicit global-marker hash inclusion tests.
+- **Deviations from original plan**:
+  - During cross-system smoke execution, a generic selector binding edge case surfaced in runtime resolution. It was fixed with strict exact-key lookup in kernel selector resolution (no aliasing), and the FITL Train profile bind declarations were corrected from `space` to `$space` to align with the strict contract.
+- **Verification results**:
+  - Build, lint, and full unit+integration suites pass, including the new smoke and hash invariant tests.

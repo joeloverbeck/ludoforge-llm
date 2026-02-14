@@ -20,6 +20,7 @@ const createGameDef = (): GameDef =>
     metadata: { id: 'zobrist-hash-updates', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [{ name: 'energy', type: 'int', init: 0, min: 0, max: 10 }],
+    globalMarkerLattices: [{ id: 'cap_topGun', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' }],
     perPlayerVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 99 }],
     zones: [
       {
@@ -81,6 +82,7 @@ const createBaseState = (): GameState => ({
   },
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  globalMarkers: { cap_topGun: 'inactive' },
 });
 
 describe('zobrist full hash and incremental update helpers', () => {
@@ -143,6 +145,36 @@ describe('zobrist full hash and incremental update helpers', () => {
     };
 
     assert.equal(incremental, computeFullHash(table, after));
+  });
+
+  it('global marker feature updates match full recomputation', () => {
+    const table = createZobristTable(createGameDef());
+    const before = createBaseState();
+
+    const incremental = updateHashFeatureChange(
+      computeFullHash(table, before),
+      table,
+      { kind: 'globalMarkerState', markerId: 'cap_topGun', state: 'inactive' },
+      { kind: 'globalMarkerState', markerId: 'cap_topGun', state: 'unshaded' },
+    );
+
+    const after: GameState = {
+      ...before,
+      globalMarkers: { cap_topGun: 'unshaded' },
+    };
+
+    assert.equal(incremental, computeFullHash(table, after));
+  });
+
+  it('global marker state contributes to full hash', () => {
+    const table = createZobristTable(createGameDef());
+    const inactiveHash = computeFullHash(table, createBaseState());
+    const shadedHash = computeFullHash(table, {
+      ...createBaseState(),
+      globalMarkers: { cap_topGun: 'shaded' },
+    });
+
+    assert.notEqual(inactiveHash, shadedHash);
   });
 
   it('metadata updates (active player, phase, turn, action usage) match recomputation', () => {

@@ -133,6 +133,13 @@ describe('resolveZoneSel', () => {
     assert.deepEqual(resolveZoneSel('$zones', arrayCtx), ['hand:0', 'hand:2']);
   });
 
+  it('requires exact binding keys without alias fallback', () => {
+    const unprefixedCtx = makeCtx({ bindings: { zone: 'hand:1' } });
+    assert.throws(() => resolveZoneSel('$zone', unprefixedCtx), (error: unknown) =>
+      isEvalErrorCode(error, 'MISSING_BINDING'),
+    );
+  });
+
   it('throws typed errors for missing or invalid bound zone selectors', () => {
     const ctx = makeCtx();
 

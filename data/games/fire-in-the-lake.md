@@ -729,6 +729,51 @@ effectMacros:
           then:
             - addVar: { scope: global, var: { param: resource }, delta: { param: amount } }
 
+  # ── mom-adsid-on-trail-change ─────────────────────────────────────────────
+  # ADSID (card #7, unshaded): -6 NVA resources whenever Trail changes.
+  - id: mom-adsid-on-trail-change
+    params: []
+    exports: []
+    effects:
+      - if:
+          when: { op: '==', left: { ref: gvar, var: mom_adsid }, right: true }
+          then:
+            - addVar: { scope: global, var: nvaResources, delta: -6 }
+
+  # ── mom-body-count-award-aid ──────────────────────────────────────────────
+  # Body Count (card #72, unshaded): +3 Aid per guerrilla removed by Assault/Patrol.
+  - id: mom-body-count-award-aid
+    params:
+      - { name: space, type: string }
+      - { name: guerrillasBefore, type: value }
+    exports: []
+    effects:
+      - if:
+          when: { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+          then:
+            - let:
+                bind: $guerrillasAfter
+                value:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: { param: space }
+                      filter:
+                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                        - { prop: type, eq: guerrilla }
+                in:
+                  - addVar:
+                      scope: global
+                      var: aid
+                      delta:
+                        op: '*'
+                        left:
+                          op: '-'
+                          left: { param: guerrillasBefore }
+                          right: { ref: binding, name: $guerrillasAfter }
+                        right: 3
+
   # ── insurgent-march-resolve-destination ────────────────────────────────────
   # Shared insurgent March destination resolution:
   # - Cost: 1 per Province/City, 0 LoC.
@@ -852,6 +897,29 @@ effectMacros:
                                         limit: { param: maxActivatedGuerrillas }
                                         effects:
                                           - setTokenProp: { token: $movedPiece, prop: activity, value: active }
+                                    - if:
+                                        when:
+                                          op: and
+                                          args:
+                                            - { op: '==', left: { ref: gvar, var: mom_claymores }, right: true }
+                                            - op: '>'
+                                              left: { aggregate: { op: count, query: { query: binding, name: $movingGuerrillas } } }
+                                              right: 0
+                                        then:
+                                          - forEach:
+                                              bind: $claymoresRemoved
+                                              over: { query: binding, name: $movingGuerrillas }
+                                              limit: 1
+                                              effects:
+                                                - moveToken:
+                                                    token: $claymoresRemoved
+                                                    from: { zoneExpr: { ref: tokenZone, token: $claymoresRemoved } }
+                                                    to:
+                                                      zoneExpr:
+                                                        if:
+                                                          when: { op: '==', left: { param: faction }, right: NVA }
+                                                          then: 'available-NVA:none'
+                                                          else: 'available-VC:none'
 
   # ── insurgent-march-select-destinations ────────────────────────────────────
   # Shared insurgent March destination selection:
@@ -3351,10 +3419,26 @@ actionPipelines:
                                     then: { op: '*', left: { ref: binding, name: $usTroops }, right: 2 }
                                     else: { ref: binding, name: $usTroops }
                                 in:
-                                  - macro: coin-assault-removal-order
-                                    args:
-                                      space: $assaultLoC
-                                      damageExpr: { ref: binding, name: $patrolDmg }
+                                  - let:
+                                      bind: $bodyCountGuerrillasBefore
+                                      value:
+                                        aggregate:
+                                          op: count
+                                          query:
+                                            query: tokensInZone
+                                            zone: $assaultLoC
+                                            filter:
+                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                              - { prop: type, eq: guerrilla }
+                                      in:
+                                        - macro: coin-assault-removal-order
+                                          args:
+                                            space: $assaultLoC
+                                            damageExpr: { ref: binding, name: $patrolDmg }
+                                        - macro: mom-body-count-award-aid
+                                          args:
+                                            space: $assaultLoC
+                                            guerrillasBefore: { ref: binding, name: $bodyCountGuerrillasBefore }
     atomicity: atomic
   # ── patrol-arvn-profile ─────────────────────────────────────────────────────
   # ARVN Patrol operation (Rule 3.2.2)
@@ -3366,15 +3450,20 @@ actionPipelines:
     actionId: patrol
     applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
     legality:
-      op: '>='
-      left: { ref: gvar, var: arvnResources }
-      right: 3
+      op: or
+      args:
+        - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+        - { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
     costValidation:
-      op: '>='
-      left: { ref: gvar, var: arvnResources }
-      right: 3
+      op: or
+      args:
+        - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+        - { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
     costEffects:
-      - addVar: { scope: global, var: arvnResources, delta: -3 }
+      - if:
+          when: { op: '!=', left: { ref: gvar, var: mom_bodyCount }, right: true }
+          then:
+            - addVar: { scope: global, var: arvnResources, delta: -3 }
     targeting: {}
     stages:
       - stage: select-locs
@@ -3466,10 +3555,26 @@ actionPipelines:
                           bind: $patrolDmg
                           value: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
                           in:
-                            - macro: coin-assault-removal-order
-                              args:
-                                space: $assaultLoC
-                                damageExpr: { ref: binding, name: $patrolDmg }
+                            - let:
+                                bind: $bodyCountGuerrillasBefore
+                                value:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $assaultLoC
+                                      filter:
+                                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                        - { prop: type, eq: guerrilla }
+                                in:
+                                  - macro: coin-assault-removal-order
+                                    args:
+                                      space: $assaultLoC
+                                      damageExpr: { ref: binding, name: $patrolDmg }
+                                  - macro: mom-body-count-award-aid
+                                    args:
+                                      space: $assaultLoC
+                                      guerrillasBefore: { ref: binding, name: $bodyCountGuerrillasBefore }
     atomicity: atomic
   # ── sweep-us-profile ──────────────────────────────────────────────────────────
   # US Sweep operation (Rule 3.2.3)
@@ -3829,10 +3934,26 @@ actionPipelines:
                                         then: { op: '/', left: { ref: binding, name: $usTroops }, right: 2 }
                                         else: { ref: binding, name: $usTroops }
                                 in:
-                                  - macro: coin-assault-removal-order
-                                    args:
-                                      space: $space
-                                      damageExpr: { ref: binding, name: $damage }
+                                  - let:
+                                      bind: $bodyCountGuerrillasBefore
+                                      value:
+                                        aggregate:
+                                          op: count
+                                          query:
+                                            query: tokensInZone
+                                            zone: $space
+                                            filter:
+                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                              - { prop: type, eq: guerrilla }
+                                      in:
+                                        - macro: coin-assault-removal-order
+                                          args:
+                                            space: $space
+                                            damageExpr: { ref: binding, name: $damage }
+                                        - macro: mom-body-count-award-aid
+                                          args:
+                                            space: $space
+                                            guerrillasBefore: { ref: binding, name: $bodyCountGuerrillasBefore }
                 - macro: cap-assault-search-and-destroy
                   args:
                     space: $space
@@ -3849,7 +3970,11 @@ actionPipelines:
       - stage: arvn-followup
         effects:
           - if:
-              when: { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
+              when:
+                op: or
+                args:
+                  - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+                  - { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
               then:
                 - chooseN:
                     bind: $arvnFollowupSpaces
@@ -3860,7 +3985,10 @@ actionPipelines:
                     bind: $arvnSpace
                     over: { query: binding, name: $arvnFollowupSpaces }
                     effects:
-                      - addVar: { scope: global, var: arvnResources, delta: -3 }
+                      - if:
+                          when: { op: '!=', left: { ref: gvar, var: mom_bodyCount }, right: true }
+                          then:
+                            - addVar: { scope: global, var: arvnResources, delta: -3 }
                       - let:
                           bind: $arvnCubes
                           value: { aggregate: { op: count, query: { query: tokensInZone, zone: $arvnSpace, filter: [{ prop: faction, eq: 'ARVN' }, { prop: type, op: in, value: ['troops', 'police'] }] } } }
@@ -3873,16 +4001,40 @@ actionPipelines:
                                     then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
                                     else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
                                 in:
-                                  - macro: coin-assault-removal-order
-                                    args:
-                                      space: $arvnSpace
-                                      damageExpr: { ref: binding, name: $arvnDamage }
+                                  - let:
+                                      bind: $bodyCountGuerrillasBefore
+                                      value:
+                                        aggregate:
+                                          op: count
+                                          query:
+                                            query: tokensInZone
+                                            zone: $arvnSpace
+                                            filter:
+                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                              - { prop: type, eq: guerrilla }
+                                      in:
+                                        - macro: coin-assault-removal-order
+                                          args:
+                                            space: $arvnSpace
+                                            damageExpr: { ref: binding, name: $arvnDamage }
+                                        - macro: mom-body-count-award-aid
+                                          args:
+                                            space: $arvnSpace
+                                            guerrillasBefore: { ref: binding, name: $bodyCountGuerrillasBefore }
     atomicity: atomic
   - id: assault-arvn-profile
     actionId: assault
     applicability: { op: '==', left: { ref: activePlayer }, right: '1' }
-    legality: { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
-    costValidation: { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
+    legality:
+      op: or
+      args:
+        - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+        - { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
+    costValidation:
+      op: or
+      args:
+        - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
+        - { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
     costEffects: []
     targeting: {}
     stages:
@@ -3948,7 +4100,11 @@ actionPipelines:
               over: { query: binding, name: targetSpaces }
               effects:
                 - if:
-                    when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                    when:
+                      op: and
+                      args:
+                        - { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                        - { op: '!=', left: { ref: gvar, var: mom_bodyCount }, right: true }
                     then:
                       - addVar: { scope: global, var: arvnResources, delta: -3 }
                 - macro: cap-assault-cobras-shaded-cost
@@ -3978,10 +4134,26 @@ actionPipelines:
                                     then: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 3 }
                                     else: { op: '/', left: { ref: binding, name: $arvnCubes }, right: 2 }
                                 in:
-                                  - macro: coin-assault-removal-order
-                                    args:
-                                      space: $space
-                                      damageExpr: { ref: binding, name: $damage }
+                                  - let:
+                                      bind: $bodyCountGuerrillasBefore
+                                      value:
+                                        aggregate:
+                                          op: count
+                                          query:
+                                            query: tokensInZone
+                                            zone: $space
+                                            filter:
+                                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                                              - { prop: type, eq: guerrilla }
+                                      in:
+                                        - macro: coin-assault-removal-order
+                                          args:
+                                            space: $space
+                                            damageExpr: { ref: binding, name: $damage }
+                                        - macro: mom-body-count-award-aid
+                                          args:
+                                            space: $space
+                                            guerrillasBefore: { ref: binding, name: $bodyCountGuerrillasBefore }
                 - macro: cap-assault-search-and-destroy
                   args:
                     space: $space
@@ -4182,6 +4354,7 @@ actionPipelines:
                                               then: 1
                                               else: 2
                                           else: 1
+                                  - macro: mom-adsid-on-trail-change
     atomicity: atomic
   - id: rally-vc-profile
     actionId: rally
@@ -5049,28 +5222,54 @@ actionPipelines:
                           min: 0
                           max: 1
                     else:
-                      - chooseN:
-                          bind: spaces
-                          options:
-                            query: mapSpaces
-                            filter:
-                              op: and
-                              args:
-                                - op: '!='
-                                  left: { ref: zoneProp, zone: $zone, prop: country }
-                                  right: northVietnam
-                                - op: '>'
-                                  left:
-                                    aggregate:
-                                      op: count
-                                      query:
-                                        query: tokensInZone
-                                        zone: $zone
-                                        filter:
-                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                                  right: 0
-                          min: 0
-                          max: 6
+                      - if:
+                          when: { op: '==', left: { ref: gvar, var: mom_wildWeasels }, right: true }
+                          then:
+                            - chooseN:
+                                bind: spaces
+                                options:
+                                  query: mapSpaces
+                                  filter:
+                                    op: and
+                                    args:
+                                      - op: '!='
+                                        left: { ref: zoneProp, zone: $zone, prop: country }
+                                        right: northVietnam
+                                      - op: '>'
+                                        left:
+                                          aggregate:
+                                            op: count
+                                            query:
+                                              query: tokensInZone
+                                              zone: $zone
+                                              filter:
+                                                - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                        right: 0
+                                min: 0
+                                max: 1
+                          else:
+                            - chooseN:
+                                bind: spaces
+                                options:
+                                  query: mapSpaces
+                                  filter:
+                                    op: and
+                                    args:
+                                      - op: '!='
+                                        left: { ref: zoneProp, zone: $zone, prop: country }
+                                        right: northVietnam
+                                      - op: '>'
+                                        left:
+                                          aggregate:
+                                            op: count
+                                            query:
+                                              query: tokensInZone
+                                              zone: $zone
+                                              filter:
+                                                - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                        right: 0
+                                min: 0
+                                max: 6
       - stage: remove-active-enemy-pieces
         effects:
           - setVar:
@@ -5078,9 +5277,13 @@ actionPipelines:
               var: airStrikeRemaining
               value:
                 if:
-                  when: { op: '==', left: { ref: globalMarkerState, marker: cap_lgbs }, right: shaded }
-                  then: 4
-                  else: 6
+                  when: { op: '==', left: { ref: gvar, var: mom_wildWeasels }, right: true }
+                  then: 1
+                  else:
+                    if:
+                      when: { op: '==', left: { ref: globalMarkerState, marker: cap_lgbs }, right: shaded }
+                      then: 4
+                      else: 6
           - let:
               bind: $spaceCount
               value: { aggregate: { op: count, query: { query: binding, name: spaces } } }
@@ -5172,6 +5375,12 @@ actionPipelines:
                   - { op: '==', left: { ref: binding, name: $degradeTrail }, right: 'yes' }
                   - { op: '>', left: { ref: gvar, var: trail }, right: 0 }
                   - { op: '!=', left: { ref: gvar, var: mom_oriskany }, right: true }
+                  - op: or
+                    args:
+                      - { op: '!=', left: { ref: gvar, var: mom_wildWeasels }, right: true }
+                      - op: '=='
+                        left: { aggregate: { op: count, query: { query: binding, name: spaces } } }
+                        right: 0
               then:
                 - if:
                     when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: shaded }
@@ -5203,6 +5412,7 @@ actionPipelines:
                                                 when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
                                                 then: 2
                                                 else: 1
+                                  - macro: mom-adsid-on-trail-change
                                   - if:
                                       when:
                                         op: and
@@ -5275,6 +5485,7 @@ actionPipelines:
                                     when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
                                     then: 2
                                     else: 1
+                      - macro: mom-adsid-on-trail-change
                       - if:
                           when:
                             op: and
@@ -5741,7 +5952,11 @@ actionPipelines:
       - stage: select-spaces
         effects:
           - if:
-              when: { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+              when:
+                op: or
+                args:
+                  - { op: '==', left: { ref: gvar, var: mom_typhoonKate }, right: true }
+                  - { op: '==', left: { ref: gvar, var: mom_559thTransportGrp }, right: true }
               then:
                 - macro: infiltrate-select-spaces
                   args:

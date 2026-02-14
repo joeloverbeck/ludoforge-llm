@@ -950,13 +950,12 @@ describe('FITL COIN operations integration', () => {
       assert.ok(arvnFollowup, 'Expected arvn-followup stage');
       assert.equal(arvnFollowup.stage, 'arvn-followup');
 
-      const followupGuard = findDeep(arvnFollowup.effects, (node: any) =>
-        node?.if?.when?.op === '>=' &&
-        node?.if?.when?.left?.ref === 'gvar' &&
-        node?.if?.when?.left?.var === 'arvnResources' &&
-        node?.if?.when?.right === 3,
+      const followupGuard = findDeep(arvnFollowup.effects, (node: any) => node?.if?.when?.op === 'or');
+      assert.ok(followupGuard.length >= 1, 'Expected momentum-aware follow-up eligibility guard');
+      const hasBodyCountGuard = findDeep(arvnFollowup.effects, (node: any) =>
+        node?.left?.ref === 'gvar' && node?.left?.var === 'mom_bodyCount' && node?.right === true,
       );
-      assert.ok(followupGuard.length >= 1, 'Expected arvnResources >= 3 follow-up guard');
+      assert.ok(hasBodyCountGuard.length >= 1, 'Expected mom_bodyCount override in follow-up guard');
 
       const arvnCost = findDeep(arvnFollowup.effects, (node: any) =>
         node?.addVar?.var === 'arvnResources' && node?.addVar?.delta === -3,
@@ -1225,9 +1224,15 @@ describe('FITL COIN operations integration', () => {
       return profile;
     };
 
-    it('AC1/AC2/AC3: compiles with arvnResources gating and per-space cost model', () => {
+    it('AC1/AC2/AC3: compiles with momentum-aware arvnResources gating and per-space cost model', () => {
       const profile = getAssaultArvnProfile();
-      const expected = { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 };
+      const expected = {
+        op: 'or',
+        args: [
+          { op: '==', left: { ref: 'gvar', var: 'mom_bodyCount' }, right: true },
+          { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 },
+        ],
+      };
       assert.deepEqual(profile.legality, expected);
       assert.deepEqual(profile.costValidation, expected);
       assert.deepEqual(profile.costEffects, []);
@@ -1235,13 +1240,10 @@ describe('FITL COIN operations integration', () => {
       const parsed = parseAssaultArvnProfile();
       const resolvePerSpace = parsed.stages[1];
       const guardedCost = findDeep(resolvePerSpace.effects, (node: any) =>
-        node?.if?.when?.op === '!=' &&
-        node?.if?.when?.left?.ref === 'binding' &&
-        node?.if?.when?.left?.name === '__freeOperation' &&
-        node?.if?.when?.right === true &&
+        node?.if?.when?.op === 'and' &&
         node?.if?.then?.some?.((eff: any) => eff?.addVar?.var === 'arvnResources' && eff?.addVar?.delta === -3),
       );
-      assert.ok(guardedCost.length >= 1, 'Expected per-space arvnResources spend guarded by __freeOperation');
+      assert.ok(guardedCost.length >= 1, 'Expected per-space arvnResources spend guarded by __freeOperation and mom_bodyCount');
     });
 
     it('AC4/AC5/AC6/AC7/AC10: selects ARVN+enemy spaces with LimOp max 1 and ARVN damage branches', () => {
@@ -1668,14 +1670,27 @@ describe('FITL COIN operations integration', () => {
       getPatrolProfile();
     });
 
-    it('AC2: ARVN Patrol costs 3 ARVN resources upfront', () => {
+    it('AC2: ARVN Patrol spends 3 upfront unless Body Count is active', () => {
       const profile = getPatrolProfile();
-      assert.deepEqual(profile.costEffects, [{ addVar: { scope: 'global', var: 'arvnResources', delta: -3 } }]);
+      assert.deepEqual(profile.costEffects, [
+        {
+          if: {
+            when: { op: '!=', left: { ref: 'gvar', var: 'mom_bodyCount' }, right: true },
+            then: [{ addVar: { scope: 'global', var: 'arvnResources', delta: -3 } }],
+          },
+        },
+      ]);
     });
 
-    it('AC3: legality and costValidation require arvnResources >= 3', () => {
+    it('AC3: legality and costValidation allow Body Count override or arvnResources >= 3', () => {
       const profile = getPatrolProfile();
-      const expected = { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 };
+      const expected = {
+        op: 'or',
+        args: [
+          { op: '==', left: { ref: 'gvar', var: 'mom_bodyCount' }, right: true },
+          { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 },
+        ],
+      };
       assert.deepEqual(profile.legality, expected);
       assert.deepEqual(profile.costValidation, expected);
     });

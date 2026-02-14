@@ -1,5 +1,9 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import { collectDeclaredBinderCandidates, rewriteDeclaredBindersInEffectNode } from './binder-surface-registry.js';
+import {
+  collectDeclaredBinderCandidates,
+  rewriteDeclaredBindersInEffectNode,
+  rewriteKnownReferencersInEffectNode,
+} from './binder-surface-registry.js';
 import type {
   EffectMacroDef,
   EffectMacroParamPrimitiveLiteral,
@@ -21,6 +25,11 @@ type NormalizedMacroParamConstraint =
   | { readonly kind: 'value' }
   | { readonly kind: 'condition' }
   | { readonly kind: 'query' }
+  | { readonly kind: 'bindingName' }
+  | { readonly kind: 'bindingTemplate' }
+  | { readonly kind: 'zoneSelector' }
+  | { readonly kind: 'playerSelector' }
+  | { readonly kind: 'tokenSelector' }
   | { readonly kind: 'enum'; readonly values: readonly string[] }
   | { readonly kind: 'literals'; readonly values: readonly EffectMacroParamPrimitiveLiteral[] };
 
@@ -37,7 +46,20 @@ interface IndexedMacroDef {
   readonly exportedBindings: ReadonlySet<string>;
 }
 
-const LEGACY_PARAM_TYPES = new Set(['string', 'number', 'effect', 'effects', 'value', 'condition', 'query']);
+const STRING_PARAM_TYPES = new Set([
+  'string',
+  'number',
+  'effect',
+  'effects',
+  'value',
+  'condition',
+  'query',
+  'bindingName',
+  'bindingTemplate',
+  'zoneSelector',
+  'playerSelector',
+  'tokenSelector',
+]);
 
 function isParamNode(node: unknown): node is { readonly param: string } {
   return (
@@ -95,8 +117,22 @@ function isPrimitiveLiteral(value: unknown): value is EffectMacroParamPrimitiveL
   return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 }
 
-function isLegacyMacroParamType(type: string): type is 'string' | 'number' | 'effect' | 'effects' | 'value' | 'condition' | 'query' {
-  return LEGACY_PARAM_TYPES.has(type);
+function isStringMacroParamType(
+  type: string,
+): type is
+  | 'string'
+  | 'number'
+  | 'effect'
+  | 'effects'
+  | 'value'
+  | 'condition'
+  | 'query'
+  | 'bindingName'
+  | 'bindingTemplate'
+  | 'zoneSelector'
+  | 'playerSelector'
+  | 'tokenSelector' {
+  return STRING_PARAM_TYPES.has(type);
 }
 
 function normalizeMacroParamConstraint(
@@ -107,13 +143,13 @@ function normalizeMacroParamConstraint(
 ): NormalizedMacroParamConstraint | null {
   const typePath = `effectMacros.${macroId}.params.${paramIndex}.type`;
   if (typeof type === 'string') {
-    if (!isLegacyMacroParamType(type)) {
+    if (!isStringMacroParamType(type)) {
       diagnostics.push({
         code: 'EFFECT_MACRO_PARAM_TYPE_INVALID',
         path: typePath,
         severity: 'error',
         message: `Macro "${macroId}" param type "${type}" is unsupported.`,
-        suggestion: 'Use one of: string, number, effect, effects, value, condition, query, or a constrained kind.',
+        suggestion: 'Use one of: string, number, effect, effects, value, condition, query, bindingName, bindingTemplate, zoneSelector, playerSelector, tokenSelector, or a constrained kind.',
       });
       return null;
     }
@@ -185,6 +221,11 @@ function describeConstraint(constraint: NormalizedMacroParamConstraint): string 
     case 'value':
     case 'condition':
     case 'query':
+    case 'bindingName':
+    case 'bindingTemplate':
+    case 'zoneSelector':
+    case 'playerSelector':
+    case 'tokenSelector':
       return constraint.kind;
     case 'enum':
       return `enum(${constraint.values.map((value) => JSON.stringify(value)).join(', ')})`;
@@ -215,6 +256,12 @@ function argumentSatisfiesConstraint(value: unknown, constraint: NormalizedMacro
       return typeof value === 'boolean' || isRecord(value);
     case 'query':
       return isRecord(value) && typeof value.query === 'string';
+    case 'bindingName':
+    case 'bindingTemplate':
+    case 'zoneSelector':
+    case 'playerSelector':
+    case 'tokenSelector':
+      return typeof value === 'string';
     case 'enum':
       return typeof value === 'string' && constraint.values.includes(value);
     case 'literals':
@@ -392,57 +439,188 @@ function rewriteZoneSelectorBinding(zoneSelector: string, renameMap: ReadonlyMap
   return `${base}:${rewrittenQualifier}`;
 }
 
-function rewriteBindingLikeString(value: string, parentKey: string | undefined, renameMap: ReadonlyMap<string, string>): string {
-  if (parentKey === undefined) {
+function isBindingAwareParamConstraint(constraint: NormalizedMacroParamConstraint): boolean {
+  return (
+    constraint.kind === 'bindingName' ||
+    constraint.kind === 'bindingTemplate' ||
+    constraint.kind === 'zoneSelector' ||
+    constraint.kind === 'playerSelector' ||
+    constraint.kind === 'tokenSelector'
+  );
+}
+
+function rewriteBindingAwareMacroArgValue(
+  value: unknown,
+  constraint: NormalizedMacroParamConstraint,
+  renameMap: ReadonlyMap<string, string>,
+): unknown {
+  if (typeof value !== 'string') {
     return value;
   }
 
-  if (parentKey === 'token' || parentKey === 'direction' || parentKey === 'player' || parentKey === 'chosen' || parentKey === 'owner') {
-    return rewriteBindingTemplate(value, renameMap);
+  switch (constraint.kind) {
+    case 'bindingName':
+    case 'bindingTemplate':
+    case 'playerSelector':
+    case 'tokenSelector':
+      return rewriteBindingTemplate(value, renameMap);
+    case 'zoneSelector':
+      return rewriteZoneSelectorBinding(value, renameMap);
+    default:
+      return value;
   }
-  if (parentKey === 'from' || parentKey === 'to' || parentKey === 'zone' || parentKey === 'space') {
-    return rewriteZoneSelectorBinding(value, renameMap);
+}
+
+function rewriteTypedMacroInvocationArgs(
+  node: Record<string, unknown>,
+  index: MacroIndex,
+  renameMap: ReadonlyMap<string, string>,
+): Record<string, unknown> {
+  if (!isMacroInvocation(node) || !isRecord(node.args)) {
+    return node;
   }
-  return value;
+
+  const callee = index.byId.get(node.macro);
+  if (callee === undefined) {
+    return node;
+  }
+
+  let changed = false;
+  const nextArgs: Record<string, unknown> = { ...node.args };
+
+  for (const param of callee.params) {
+    if (!isBindingAwareParamConstraint(param.constraint) || !(param.name in nextArgs)) {
+      continue;
+    }
+
+    const current = nextArgs[param.name];
+    const rewritten = rewriteBindingAwareMacroArgValue(current, param.constraint, renameMap);
+    if (rewritten !== current) {
+      changed = true;
+      nextArgs[param.name] = rewritten;
+    }
+  }
+
+  if (!changed) {
+    return node;
+  }
+
+  return { ...node, args: nextArgs };
 }
 
 function rewriteBindings(
   node: unknown,
+  index: MacroIndex,
   renameMap: ReadonlyMap<string, string>,
-  parentKey: string | undefined = undefined,
-  insideMacroArgs = false,
 ): unknown {
-  if (typeof node === 'string') {
-    if (insideMacroArgs && valueLooksLikeBinding(node)) {
-      return rewriteBindingTemplate(node, renameMap);
-    }
-    return rewriteBindingLikeString(node, parentKey, renameMap);
-  }
   if (Array.isArray(node)) {
-    return node.map((item) => rewriteBindings(item, renameMap, parentKey, insideMacroArgs));
+    return node.map((item) => rewriteBindings(item, index, renameMap));
   }
-  if (!isRecord(node)) {
+  if (typeof node === 'string' || !isRecord(node)) {
     return node;
   }
 
-  if (node.ref === 'binding' && typeof node.name === 'string') {
-    return { ...node, name: rewriteBindingName(node.name, renameMap) };
+  let rewrittenMacroArgsNode = rewriteTypedMacroInvocationArgs(node, index, renameMap);
+  rewrittenMacroArgsNode = rewriteKnownReferencersInEffectNode(
+    rewrittenMacroArgsNode,
+    (binding) => rewriteBindingTemplate(binding, renameMap),
+    (selector) => rewriteZoneSelectorBinding(selector, renameMap),
+  );
+
+  if (rewrittenMacroArgsNode.ref === 'binding' && typeof rewrittenMacroArgsNode.name === 'string') {
+    return { ...rewrittenMacroArgsNode, name: rewriteBindingName(rewrittenMacroArgsNode.name, renameMap) };
   }
-  if (node.query === 'binding' && typeof node.name === 'string') {
-    return { ...node, name: rewriteBindingName(node.name, renameMap) };
+  if (rewrittenMacroArgsNode.ref === 'tokenProp' && typeof rewrittenMacroArgsNode.token === 'string') {
+    return { ...rewrittenMacroArgsNode, token: rewriteBindingTemplate(rewrittenMacroArgsNode.token, renameMap) };
+  }
+  if (rewrittenMacroArgsNode.ref === 'tokenZone' && typeof rewrittenMacroArgsNode.token === 'string') {
+    return { ...rewrittenMacroArgsNode, token: rewriteBindingTemplate(rewrittenMacroArgsNode.token, renameMap) };
+  }
+  if (rewrittenMacroArgsNode.ref === 'pvar' && isRecord(rewrittenMacroArgsNode.player) && typeof rewrittenMacroArgsNode.player.chosen === 'string') {
+    return { ...rewrittenMacroArgsNode, player: { ...rewrittenMacroArgsNode.player, chosen: rewriteBindingTemplate(rewrittenMacroArgsNode.player.chosen, renameMap) } };
+  }
+  if (rewrittenMacroArgsNode.ref === 'zoneCount' && typeof rewrittenMacroArgsNode.zone === 'string') {
+    return { ...rewrittenMacroArgsNode, zone: rewriteZoneSelectorBinding(rewrittenMacroArgsNode.zone, renameMap) };
+  }
+  if (rewrittenMacroArgsNode.ref === 'zoneProp' && typeof rewrittenMacroArgsNode.zone === 'string') {
+    return { ...rewrittenMacroArgsNode, zone: rewriteZoneSelectorBinding(rewrittenMacroArgsNode.zone, renameMap) };
+  }
+  if (rewrittenMacroArgsNode.ref === 'markerState' && typeof rewrittenMacroArgsNode.space === 'string') {
+    return { ...rewrittenMacroArgsNode, space: rewriteZoneSelectorBinding(rewrittenMacroArgsNode.space, renameMap) };
+  }
+  if (rewrittenMacroArgsNode.query === 'binding' && typeof rewrittenMacroArgsNode.name === 'string') {
+    return { ...rewrittenMacroArgsNode, name: rewriteBindingName(rewrittenMacroArgsNode.name, renameMap) };
+  }
+  if (
+    (rewrittenMacroArgsNode.query === 'tokensInZone' ||
+      rewrittenMacroArgsNode.query === 'tokensInAdjacentZones' ||
+      rewrittenMacroArgsNode.query === 'adjacentZones' ||
+      rewrittenMacroArgsNode.query === 'connectedZones') &&
+    typeof rewrittenMacroArgsNode.zone === 'string'
+  ) {
+    return { ...rewrittenMacroArgsNode, zone: rewriteZoneSelectorBinding(rewrittenMacroArgsNode.zone, renameMap) };
+  }
+  if (rewrittenMacroArgsNode.query === 'zones' || rewrittenMacroArgsNode.query === 'mapSpaces') {
+    const filter = isRecord(rewrittenMacroArgsNode.filter) ? rewrittenMacroArgsNode.filter : null;
+    const owner = filter !== null && isRecord(filter.owner) ? filter.owner : null;
+    if (owner !== null && typeof owner.chosen === 'string') {
+      return {
+        ...rewrittenMacroArgsNode,
+        filter: {
+          ...filter,
+          owner: {
+            ...owner,
+            chosen: rewriteBindingTemplate(owner.chosen, renameMap),
+          },
+        },
+      };
+    }
+  }
+  if (rewrittenMacroArgsNode.op === 'adjacent') {
+    const left =
+      typeof rewrittenMacroArgsNode.left === 'string'
+        ? rewriteZoneSelectorBinding(rewrittenMacroArgsNode.left, renameMap)
+        : rewrittenMacroArgsNode.left;
+    const right =
+      typeof rewrittenMacroArgsNode.right === 'string'
+        ? rewriteZoneSelectorBinding(rewrittenMacroArgsNode.right, renameMap)
+        : rewrittenMacroArgsNode.right;
+    if (left !== rewrittenMacroArgsNode.left || right !== rewrittenMacroArgsNode.right) {
+      return { ...rewrittenMacroArgsNode, left, right };
+    }
+  }
+  if (rewrittenMacroArgsNode.op === 'connected') {
+    const from =
+      typeof rewrittenMacroArgsNode.from === 'string'
+        ? rewriteZoneSelectorBinding(rewrittenMacroArgsNode.from, renameMap)
+        : rewrittenMacroArgsNode.from;
+    const to =
+      typeof rewrittenMacroArgsNode.to === 'string'
+        ? rewriteZoneSelectorBinding(rewrittenMacroArgsNode.to, renameMap)
+        : rewrittenMacroArgsNode.to;
+    if (from !== rewrittenMacroArgsNode.from || to !== rewrittenMacroArgsNode.to) {
+      return { ...rewrittenMacroArgsNode, from, to };
+    }
+  }
+  if (rewrittenMacroArgsNode.op === 'zonePropIncludes' && typeof rewrittenMacroArgsNode.zone === 'string') {
+    return { ...rewrittenMacroArgsNode, zone: rewriteZoneSelectorBinding(rewrittenMacroArgsNode.zone, renameMap) };
   }
 
-  const rewrittenFromRegistry = rewriteDeclaredBindersInEffectNode(node, (binding) => rewriteBindingTemplate(binding, renameMap));
-  const rewritten: Record<string, unknown> = rewrittenFromRegistry === node ? { ...node } : rewrittenFromRegistry;
+  const rewrittenFromRegistry = rewriteDeclaredBindersInEffectNode(
+    rewrittenMacroArgsNode,
+    (binding) => rewriteBindingTemplate(binding, renameMap),
+  );
+  const rewritten: Record<string, unknown> =
+    rewrittenFromRegistry === rewrittenMacroArgsNode ? { ...rewrittenMacroArgsNode } : rewrittenFromRegistry;
 
   if (isRecord(rewritten.forEach)) {
     const forEachNode = rewritten.forEach;
     rewritten.forEach = {
       ...forEachNode,
-      ...(forEachNode.over === undefined ? {} : { over: rewriteBindings(forEachNode.over, renameMap, 'over', insideMacroArgs) }),
-      ...(Array.isArray(forEachNode.effects) ? { effects: rewriteBindings(forEachNode.effects, renameMap, 'effects', insideMacroArgs) } : {}),
-      ...(Array.isArray(forEachNode.in) ? { in: rewriteBindings(forEachNode.in, renameMap, 'in', insideMacroArgs) } : {}),
-      ...(forEachNode.limit === undefined ? {} : { limit: rewriteBindings(forEachNode.limit, renameMap, 'limit', insideMacroArgs) }),
+      ...(forEachNode.over === undefined ? {} : { over: rewriteBindings(forEachNode.over, index, renameMap) }),
+      ...(Array.isArray(forEachNode.effects) ? { effects: rewriteBindings(forEachNode.effects, index, renameMap) } : {}),
+      ...(Array.isArray(forEachNode.in) ? { in: rewriteBindings(forEachNode.in, index, renameMap) } : {}),
+      ...(forEachNode.limit === undefined ? {} : { limit: rewriteBindings(forEachNode.limit, index, renameMap) }),
     };
     return rewritten;
   }
@@ -458,17 +636,17 @@ function rewriteBindings(
                 ? group
                 : {
                     ...group,
-                    ...(group.over === undefined ? {} : { over: rewriteBindings(group.over, renameMap, 'over', insideMacroArgs) }),
-                    ...(group.to === undefined ? {} : { to: rewriteBindings(group.to, renameMap, 'to', insideMacroArgs) }),
-                    ...(group.from === undefined ? {} : { from: rewriteBindings(group.from, renameMap, 'from', insideMacroArgs) }),
+                    ...(group.over === undefined ? {} : { over: rewriteBindings(group.over, index, renameMap) }),
+                    ...(group.to === undefined ? {} : { to: rewriteBindings(group.to, index, renameMap) }),
+                    ...(group.from === undefined ? {} : { from: rewriteBindings(group.from, index, renameMap) }),
                   },
             ),
           }
         : {}),
-      ...(Array.isArray(removeByPriorityNode.in) ? { in: rewriteBindings(removeByPriorityNode.in, renameMap, 'in', insideMacroArgs) } : {}),
+      ...(Array.isArray(removeByPriorityNode.in) ? { in: rewriteBindings(removeByPriorityNode.in, index, renameMap) } : {}),
       ...(removeByPriorityNode.budget === undefined
         ? {}
-        : { budget: rewriteBindings(removeByPriorityNode.budget, renameMap, 'budget', insideMacroArgs) }),
+        : { budget: rewriteBindings(removeByPriorityNode.budget, index, renameMap) }),
     };
     return rewritten;
   }
@@ -477,8 +655,8 @@ function rewriteBindings(
     const letNode = rewritten.let;
     rewritten.let = {
       ...letNode,
-      ...(letNode.value === undefined ? {} : { value: rewriteBindings(letNode.value, renameMap, 'value', insideMacroArgs) }),
-      ...(Array.isArray(letNode.in) ? { in: rewriteBindings(letNode.in, renameMap, 'in', insideMacroArgs) } : {}),
+      ...(letNode.value === undefined ? {} : { value: rewriteBindings(letNode.value, index, renameMap) }),
+      ...(Array.isArray(letNode.in) ? { in: rewriteBindings(letNode.in, index, renameMap) } : {}),
     };
     return rewritten;
   }
@@ -487,7 +665,7 @@ function rewriteBindings(
     const chooseOneNode = rewritten.chooseOne;
     rewritten.chooseOne = {
       ...chooseOneNode,
-      ...(chooseOneNode.options === undefined ? {} : { options: rewriteBindings(chooseOneNode.options, renameMap, 'options', insideMacroArgs) }),
+      ...(chooseOneNode.options === undefined ? {} : { options: rewriteBindings(chooseOneNode.options, index, renameMap) }),
     };
     return rewritten;
   }
@@ -496,10 +674,10 @@ function rewriteBindings(
     const chooseNNode = rewritten.chooseN;
     rewritten.chooseN = {
       ...chooseNNode,
-      ...(chooseNNode.options === undefined ? {} : { options: rewriteBindings(chooseNNode.options, renameMap, 'options', insideMacroArgs) }),
-      ...(chooseNNode.n === undefined ? {} : { n: rewriteBindings(chooseNNode.n, renameMap, 'n', insideMacroArgs) }),
-      ...(chooseNNode.min === undefined ? {} : { min: rewriteBindings(chooseNNode.min, renameMap, 'min', insideMacroArgs) }),
-      ...(chooseNNode.max === undefined ? {} : { max: rewriteBindings(chooseNNode.max, renameMap, 'max', insideMacroArgs) }),
+      ...(chooseNNode.options === undefined ? {} : { options: rewriteBindings(chooseNNode.options, index, renameMap) }),
+      ...(chooseNNode.n === undefined ? {} : { n: rewriteBindings(chooseNNode.n, index, renameMap) }),
+      ...(chooseNNode.min === undefined ? {} : { min: rewriteBindings(chooseNNode.min, index, renameMap) }),
+      ...(chooseNNode.max === undefined ? {} : { max: rewriteBindings(chooseNNode.max, index, renameMap) }),
     };
     return rewritten;
   }
@@ -508,21 +686,17 @@ function rewriteBindings(
     const rollRandomNode = rewritten.rollRandom;
     rewritten.rollRandom = {
       ...rollRandomNode,
-      ...(rollRandomNode.min === undefined ? {} : { min: rewriteBindings(rollRandomNode.min, renameMap, 'min', insideMacroArgs) }),
-      ...(rollRandomNode.max === undefined ? {} : { max: rewriteBindings(rollRandomNode.max, renameMap, 'max', insideMacroArgs) }),
-      ...(Array.isArray(rollRandomNode.in) ? { in: rewriteBindings(rollRandomNode.in, renameMap, 'in', insideMacroArgs) } : {}),
+      ...(rollRandomNode.min === undefined ? {} : { min: rewriteBindings(rollRandomNode.min, index, renameMap) }),
+      ...(rollRandomNode.max === undefined ? {} : { max: rewriteBindings(rollRandomNode.max, index, renameMap) }),
+      ...(Array.isArray(rollRandomNode.in) ? { in: rewriteBindings(rollRandomNode.in, index, renameMap) } : {}),
     };
     return rewritten;
   }
 
   for (const [key, value] of Object.entries(rewritten)) {
-    rewritten[key] = rewriteBindings(value, renameMap, key, insideMacroArgs || key === 'args');
+    rewritten[key] = rewriteBindings(value, index, renameMap);
   }
   return rewritten;
-}
-
-function valueLooksLikeBinding(value: string): boolean {
-  return value.includes('$') || value.includes('{');
 }
 
 function normalizeExportedBindings(
@@ -680,7 +854,7 @@ function expandEffect(
   const hygienicTemplates =
     renameMap.size === 0
       ? def.effects
-      : def.effects.map((templateEffect) => rewriteBindings(templateEffect, renameMap) as GameSpecEffect);
+      : def.effects.map((templateEffect) => rewriteBindings(templateEffect, index, renameMap) as GameSpecEffect);
   const hygienicSubstituted = hygienicTemplates.map((templateEffect) => substituteParams(templateEffect, args) as GameSpecEffect);
 
   const nestedVisited = new Set(visitedStack);

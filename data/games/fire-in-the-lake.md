@@ -188,7 +188,7 @@ effectMacros:
   # US removals route to Casualties; ARVN removals route to Available.
   - id: insurgent-ambush-remove-coin-piece
     params:
-      - { name: targetSpace, type: string }
+      - { name: targetSpace, type: zoneSelector }
     exports: []
     effects:
       - removeByPriority:

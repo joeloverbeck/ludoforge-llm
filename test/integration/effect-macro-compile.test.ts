@@ -222,6 +222,77 @@ describe('effect macro → compile pipeline integration', () => {
     assert.deepEqual(violationPaths, ['setup[0].args.faction', 'setup[0].args.tier']);
   });
 
+  it('binding-aware macro param kinds rewrite nested macro args without heuristic rewrites', () => {
+    const innerMacro: EffectMacroDef = {
+      id: 'inner',
+      params: [
+        { name: 'binding', type: 'bindingName' },
+        { name: 'template', type: 'bindingTemplate' },
+        { name: 'zone', type: 'zoneSelector' },
+        { name: 'raw', type: 'string' },
+      ],
+      exports: [],
+      effects: [
+        { setVar: { scope: 'global', var: 'score', value: { param: 'binding' } } },
+        { setVar: { scope: 'global', var: 'count', value: { param: 'template' } } },
+        { setVar: { scope: 'global', var: 'count', value: { param: 'zone' } } },
+        { setVar: { scope: 'global', var: 'count', value: { param: 'raw' } } },
+      ],
+    };
+    const outerMacro: EffectMacroDef = {
+      id: 'outer',
+      params: [],
+      exports: [],
+      effects: [
+        { chooseOne: { bind: '$choice', options: { query: 'enums', values: ['a', 'b'] } } },
+        {
+          macro: 'inner',
+          args: {
+            binding: '$choice',
+            template: 'token-{$choice}',
+            zone: 'discard:{$choice}',
+            raw: 'literal-$choice',
+          },
+        },
+      ],
+    };
+
+    const doc = {
+      ...makeMinimalDoc(),
+      effectMacros: [innerMacro, outerMacro],
+      setup: [{ macro: 'outer', args: {} }],
+      actions: [
+        {
+          id: 'pass',
+          actor: 'active',
+          phase: 'main',
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    const errors = result.diagnostics.filter((d) => d.severity === 'error');
+    assert.deepEqual(errors, [], `Unexpected errors: ${JSON.stringify(errors, null, 2)}`);
+    assert.ok(result.gameDef !== null, 'Expected valid GameDef');
+
+    const choose = result.gameDef.setup[0] as { chooseOne: { bind: string } };
+    const bindingOut = result.gameDef.setup[1] as { setVar: { value: string } };
+    const templateOut = result.gameDef.setup[2] as { setVar: { value: string } };
+    const zoneOut = result.gameDef.setup[3] as { setVar: { value: string } };
+    const rawOut = result.gameDef.setup[4] as { setVar: { value: string } };
+
+    assert.notEqual(choose.chooseOne.bind, '$choice');
+    assert.equal(bindingOut.setVar.value, choose.chooseOne.bind);
+    assert.equal(templateOut.setVar.value, `token-{${choose.chooseOne.bind}}`);
+    assert.equal(zoneOut.setVar.value, `discard:{${choose.chooseOne.bind}}`);
+    assert.equal(rawOut.setVar.value, 'literal-$choice');
+  });
+
   it('concat ValueExpr compiles through the full pipeline', () => {
     const doc = {
       ...makeMinimalDoc(),

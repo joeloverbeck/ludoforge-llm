@@ -383,6 +383,83 @@ describe('expandEffectMacros', () => {
     assert.deepEqual(result.doc.setup, []);
   });
 
+  it('rewrites nested macro args only for binding-aware param kinds', () => {
+    const inner: EffectMacroDef = {
+      id: 'inner',
+      params: [
+        { name: 'binding', type: 'bindingName' },
+        { name: 'template', type: 'bindingTemplate' },
+        { name: 'zone', type: 'zoneSelector' },
+        { name: 'raw', type: 'string' },
+      ],
+      exports: [],
+      effects: [
+        { setVar: { scope: 'global', var: 'bindingOut', value: { param: 'binding' } } },
+        { setVar: { scope: 'global', var: 'templateOut', value: { param: 'template' } } },
+        { setVar: { scope: 'global', var: 'zoneOut', value: { param: 'zone' } } },
+        { setVar: { scope: 'global', var: 'rawOut', value: { param: 'raw' } } },
+      ],
+    };
+    const outer: EffectMacroDef = {
+      id: 'outer',
+      params: [],
+      exports: [],
+      effects: [
+        { chooseOne: { bind: '$choice', options: { query: 'enums', values: ['a', 'b'] } } },
+        {
+          macro: 'inner',
+          args: {
+            binding: '$choice',
+            template: 'token-{$choice}',
+            zone: 'discard:{$choice}',
+            raw: 'literal-$choice',
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [inner, outer],
+      setup: [{ macro: 'outer', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const choose = result.doc.setup?.[0] as { chooseOne: { bind: string } };
+    const bindingOut = result.doc.setup?.[1] as { setVar: { value: string } };
+    const templateOut = result.doc.setup?.[2] as { setVar: { value: string } };
+    const zoneOut = result.doc.setup?.[3] as { setVar: { value: string } };
+    const rawOut = result.doc.setup?.[4] as { setVar: { value: string } };
+
+    assert.notEqual(choose.chooseOne.bind, '$choice');
+    assert.equal(bindingOut.setVar.value, choose.chooseOne.bind);
+    assert.equal(templateOut.setVar.value, `token-{${choose.chooseOne.bind}}`);
+    assert.equal(zoneOut.setVar.value, `discard:{${choose.chooseOne.bind}}`);
+    assert.equal(rawOut.setVar.value, 'literal-$choice');
+  });
+
+  it('rejects invalid non-string arg values for binding-aware param kinds', () => {
+    const macro: EffectMacroDef = {
+      id: 'typed-binding',
+      params: [{ name: 'name', type: 'bindingTemplate' }],
+      exports: [],
+      effects: [{ setVar: { scope: 'global', var: 'x', value: { param: 'name' } } }],
+    };
+    const doc = makeDoc({
+      effectMacros: [macro],
+      setup: [{ macro: 'typed-binding', args: { name: { param: 'x' } } }],
+    });
+
+    const result = expandEffectMacros(doc);
+    const violation = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION');
+    const declaration = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_ARG_CONSTRAINT_DECLARATION');
+    assert.ok(violation !== undefined);
+    assert.equal(violation?.path, 'setup[0].args.name');
+    assert.ok(declaration !== undefined);
+    assert.equal(declaration?.path, 'effectMacros.typed-binding.params.0');
+    assert.deepEqual(result.doc.setup, []);
+  });
+
   it('expands macros nested inside forEach effects', () => {
     const macro: EffectMacroDef = {
       id: 'inc-var',
@@ -651,6 +728,94 @@ describe('expandEffectMacros', () => {
 
     assert.notEqual(chooseN.chooseN.bind, '$pick');
     assert.equal(chooseN.chooseN.options.name, remove.removeByPriority.groups[0].bind);
+  });
+
+  it('rewrites binding references in adjacent left/right zone selector fields', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'adjacent-left-right',
+      params: [],
+      exports: [],
+      effects: [
+        {
+          forEach: {
+            bind: '$space',
+            over: { query: 'binding', name: 'targetSpaces' },
+            effects: [
+              {
+                chooseN: {
+                  bind: '$adjacent@{$space}',
+                  options: {
+                    query: 'mapSpaces',
+                    filter: {
+                      op: 'adjacent',
+                      left: '$space',
+                      right: '$zone',
+                    },
+                  },
+                  min: 0,
+                  max: 1,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'adjacent-left-right', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const forEach = result.doc.setup?.[0] as {
+      forEach: {
+        bind: string;
+        effects: [{ chooseN: { options: { filter: { left: string; right: string } } } }];
+      };
+    };
+
+    assert.notEqual(forEach.forEach.bind, '$space');
+    assert.equal(forEach.forEach.effects[0].chooseN.options.filter.left, forEach.forEach.bind);
+    assert.equal(forEach.forEach.effects[0].chooseN.options.filter.right, '$zone');
+  });
+
+  it('does not rewrite generic left/right string literals outside structured zone selectors', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'literal-left-right',
+      params: [],
+      exports: [],
+      effects: [
+        { chooseOne: { bind: '$choice', options: { query: 'enums', values: ['a', 'b'] } } },
+        {
+          setVar: {
+            scope: 'global',
+            var: 'x',
+            value: {
+              if: {
+                when: { op: '==', left: '$choice', right: '$choice' },
+                then: 1,
+                else: 0,
+              },
+            },
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'literal-left-right', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const setVar = result.doc.setup?.[1] as {
+      setVar: { value: { if: { when: { left: string; right: string } } } };
+    };
+    assert.equal(setVar.setVar.value.if.when.left, '$choice');
+    assert.equal(setVar.setVar.value.if.when.right, '$choice');
   });
 
   it('reports unsupported dynamic binder declarations during macro expansion', () => {

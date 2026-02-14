@@ -7,48 +7,128 @@ type BinderPath = readonly BinderPathSegment[];
 interface EffectBinderSurfaceDefinition {
   readonly declaredBinderPaths: readonly BinderPath[];
   readonly sequentiallyVisibleBinderPaths: readonly BinderPath[];
+  readonly bindingTemplateReferencerPaths: readonly BinderPath[];
+  readonly zoneSelectorReferencerPaths: readonly BinderPath[];
 }
 
 const NO_BINDER_PATHS: readonly BinderPath[] = [];
+const NO_REFERENCER_PATHS: readonly BinderPath[] = [];
 
 export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, EffectBinderSurfaceDefinition>> = {
-  setVar: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
-  addVar: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
-  moveToken: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
-  moveAll: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
-  moveTokenAdjacent: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
-  draw: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
-  shuffle: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
-  createToken: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
-  destroyToken: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
-  setTokenProp: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
-  if: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
+  setVar: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: [['player', 'chosen']],
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
+  addVar: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: [['player', 'chosen']],
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
+  moveToken: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: [['token']],
+    zoneSelectorReferencerPaths: [['from'], ['to']],
+  },
+  moveAll: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: [['from'], ['to']],
+  },
+  moveTokenAdjacent: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: [['token'], ['direction']],
+    zoneSelectorReferencerPaths: [['from']],
+  },
+  draw: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: [['from'], ['to']],
+  },
+  shuffle: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: [['zone']],
+  },
+  createToken: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: [['zone']],
+  },
+  destroyToken: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: [['token']],
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
+  setTokenProp: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: [['token']],
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
+  if: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
   forEach: {
     declaredBinderPaths: [['bind'], ['countBind']],
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
   removeByPriority: {
     declaredBinderPaths: [['groups', '*', 'bind'], ['groups', '*', 'countBind'], ['remainingBind']],
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: [['groups', '*', 'to'], ['groups', '*', 'from']],
   },
   let: {
     declaredBinderPaths: [['bind']],
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
   chooseOne: {
     declaredBinderPaths: [['bind']],
     sequentiallyVisibleBinderPaths: [['bind']],
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
   chooseN: {
     declaredBinderPaths: [['bind']],
     sequentiallyVisibleBinderPaths: [['bind']],
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
   rollRandom: {
     declaredBinderPaths: [['bind']],
     sequentiallyVisibleBinderPaths: [['bind']],
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
-  setMarker: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
-  shiftMarker: { declaredBinderPaths: NO_BINDER_PATHS, sequentiallyVisibleBinderPaths: NO_BINDER_PATHS },
+  setMarker: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: [['space']],
+  },
+  shiftMarker: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: [['space']],
+  },
 };
 
 export interface BinderDeclarationCandidate {
@@ -188,6 +268,30 @@ export function rewriteDeclaredBindersInEffectNode(
     const binderPaths = EFFECT_BINDER_SURFACES[kind].declaredBinderPaths;
     for (const binderPath of binderPaths) {
       changed = rewriteStringLeavesAtPath(effectBody, binderPath, rewrite) || changed;
+    }
+  }
+  return changed ? rewritten : effectNode;
+}
+
+export function rewriteKnownReferencersInEffectNode(
+  effectNode: Record<string, unknown>,
+  rewriteBindingTemplate: (value: string) => string,
+  rewriteZoneSelector: (value: string) => string,
+): Record<string, unknown> {
+  let changed = false;
+  const rewritten = cloneDeep(effectNode) as Record<string, unknown>;
+  for (const kind of SUPPORTED_EFFECT_KINDS) {
+    const effectBody = rewritten[kind];
+    if (!isRecord(effectBody)) {
+      continue;
+    }
+
+    const surface = EFFECT_BINDER_SURFACES[kind];
+    for (const referencerPath of surface.bindingTemplateReferencerPaths) {
+      changed = rewriteStringLeavesAtPath(effectBody, referencerPath, rewriteBindingTemplate) || changed;
+    }
+    for (const referencerPath of surface.zoneSelectorReferencerPaths) {
+      changed = rewriteStringLeavesAtPath(effectBody, referencerPath, rewriteZoneSelector) || changed;
     }
   }
   return changed ? rewritten : effectNode;

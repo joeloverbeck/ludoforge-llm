@@ -258,6 +258,11 @@ export type EffectMacroParamType =
   | 'value'
   | 'condition'
   | 'query'
+  | 'bindingName'
+  | 'bindingTemplate'
+  | 'zoneSelector'
+  | 'playerSelector'
+  | 'tokenSelector'
   | { readonly kind: 'enum'; readonly values: readonly string[] }
   | { readonly kind: 'literals'; readonly values: readonly EffectMacroParamPrimitiveLiteral[] };
 

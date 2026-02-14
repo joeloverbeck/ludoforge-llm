@@ -36,6 +36,17 @@ const makeDef = (): GameDef => ({
   terminal: { conditions: [] },
 });
 
+const makeDefWithMarkers = (): GameDef => ({
+  ...makeDef(),
+  markerLattices: [
+    {
+      id: 'supportOpposition',
+      states: ['activeOpposition', 'passiveOpposition', 'neutral', 'passiveSupport', 'activeSupport'],
+      defaultState: 'neutral',
+    },
+  ],
+});
+
 const makeToken = (id: string, props: Readonly<Record<string, number | string | boolean>>): Token => ({
   id: asTokenId(id),
   type: 'card',
@@ -234,6 +245,66 @@ describe('resolveRef', () => {
         isEvalErrorCode(error, 'TYPE_MISMATCH') &&
         typeof error.message === 'string' &&
         error.message.includes('zonePropIncludes'),
+    );
+  });
+
+  it('resolves markerState using a bound zone selector', () => {
+    const stateWithMarkers: GameState = {
+      ...makeState(),
+      markers: {
+        'quang-nam:none': { supportOpposition: 'neutral' },
+      },
+    };
+    const ctx = makeCtx({
+      state: stateWithMarkers,
+      bindings: {
+        '$space': 'quang-nam:none',
+      },
+    });
+
+    assert.equal(
+      resolveRef({ ref: 'markerState', space: '$space', marker: 'supportOpposition' }, ctx),
+      'neutral',
+    );
+  });
+
+  it('throws MISSING_BINDING for markerState when bound zone selector is absent', () => {
+    const stateWithMarkers: GameState = {
+      ...makeState(),
+      markers: {
+        'quang-nam:none': { supportOpposition: 'neutral' },
+      },
+    };
+    const ctx = makeCtx({ state: stateWithMarkers, bindings: {} });
+
+    assert.throws(
+      () => resolveRef({ ref: 'markerState', space: '$missingSpace', marker: 'supportOpposition' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
+    );
+  });
+
+  it('returns marker lattice default state when marker is not explicitly set on the space', () => {
+    const ctx = makeCtx({
+      def: makeDefWithMarkers(),
+      state: makeState(),
+      bindings: { '$space': 'quang-nam:none' },
+    });
+
+    assert.equal(
+      resolveRef({ ref: 'markerState', space: '$space', marker: 'supportOpposition' }, ctx),
+      'neutral',
+    );
+  });
+
+  it('returns \"none\" marker state when neither explicit state nor marker lattice exists', () => {
+    const ctx = makeCtx({
+      state: makeState(),
+      bindings: { '$space': 'quang-nam:none' },
+    });
+
+    assert.equal(
+      resolveRef({ ref: 'markerState', space: '$space', marker: 'supportOpposition' }, ctx),
+      'none',
     );
   });
 

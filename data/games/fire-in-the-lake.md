@@ -2504,36 +2504,142 @@ actionPipelines:
                                       damageExpr: { ref: binding, name: $damage }
     atomicity: atomic
   # ── Insurgent stub profiles (rally, march, attack, terror) ──
-  - id: rally-profile
+  - id: rally-nva-profile
     actionId: rally
-    legality:
-        op: ">="
-        left:
-          ref: gvar
-          var: insurgentResources
-        right: 1
-    costValidation:
-        op: ">="
-        left:
-          ref: gvar
-          var: insurgentResources
-        right: 1
-    costEffects:
-        - addVar:
-            scope: global
-            var: insurgentResources
-            delta: -1
-    targeting:
-      select: upToN
-      max: 2
-      placementPolicy: placeUndergroundFirst
+    applicability: { op: '==', left: { ref: activePlayer }, right: '2' }
+    legality: true
+    costValidation: null
+    costEffects: []
+    targeting: {}
     stages:
-      - stage: rally-resolve
+      - stage: select-spaces
         effects:
-          - addVar:
-              scope: global
-              var: rallyCount
-              delta: 1
+          - if:
+              when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+              then:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                          - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
+                          - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
+                    min: 0
+                    max: 1
+              else:
+                - chooseN:
+                    bind: targetSpaces
+                    options:
+                      query: zones
+                      filter:
+                        op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                          - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
+                          - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
+                    min: 0
+                    max: 99
+      - stage: resolve-per-space
+        effects:
+          - forEach:
+              bind: $space
+              over: { query: binding, name: targetSpaces }
+              effects:
+                - if:
+                    when: { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
+                    then:
+                      - addVar: { scope: global, var: nvaResources, delta: -1 }
+                - let:
+                    bind: $nvaBaseCount
+                    value: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: base }] } } }
+                    in:
+                      - if:
+                          when: { op: '==', left: { ref: binding, name: $nvaBaseCount }, right: 0 }
+                          then:
+                            - if:
+                                when:
+                                  op: and
+                                  args:
+                                    - op: '>='
+                                      left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }] } } }
+                                      right: 2
+                                    - op: '<'
+                                      left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: [{ prop: type, eq: base }] } } }
+                                      right: 2
+                                then:
+                                  - chooseOne:
+                                      bind: $noBaseChoice
+                                      options: { query: enums, values: ['place-guerrilla', 'replace-with-base'] }
+                                else:
+                                  - chooseOne:
+                                      bind: $noBaseChoice
+                                      options: { query: enums, values: ['place-guerrilla'] }
+                            - if:
+                                when: { op: '==', left: { ref: binding, name: $noBaseChoice }, right: 'place-guerrilla' }
+                                then:
+                                  - macro: place-from-available-or-map
+                                    args:
+                                      pieceType: guerrilla
+                                      faction: 'NVA'
+                                      targetSpace: $space
+                                      maxPieces: 1
+                            - if:
+                                when: { op: '==', left: { ref: binding, name: $noBaseChoice }, right: 'replace-with-base' }
+                                then:
+                                  - forEach:
+                                      bind: $g
+                                      over:
+                                        query: tokensInZone
+                                        zone: $space
+                                        filter: [{ prop: faction, eq: 'NVA' }, { prop: type, eq: guerrilla }]
+                                      limit: 2
+                                      effects:
+                                        - moveToken: { token: $g, from: $space, to: { zoneExpr: 'available-NVA:none' } }
+                                  - macro: place-from-available-or-map
+                                    args:
+                                      pieceType: base
+                                      faction: 'NVA'
+                                      targetSpace: $space
+                                      maxPieces: 1
+                      - if:
+                          when: { op: '>', left: { ref: binding, name: $nvaBaseCount }, right: 0 }
+                          then:
+                            - let:
+                                bind: $rallyLimit
+                                value: { op: '+', left: { ref: gvar, var: trail }, right: { ref: binding, name: $nvaBaseCount } }
+                                in:
+                                  - macro: place-from-available-or-map
+                                    args:
+                                      pieceType: guerrilla
+                                      faction: 'NVA'
+                                      targetSpace: $space
+                                      maxPieces: { ref: binding, name: $rallyLimit }
+      - stage: trail-improvement
+        effects:
+          - if:
+              when:
+                op: and
+                args:
+                  - { op: '>=', left: { ref: gvar, var: nvaResources }, right: 2 }
+                  - { op: '<', left: { ref: gvar, var: trail }, right: 4 }
+              then:
+                - chooseOne:
+                    bind: $improveTrail
+                    options: { query: enums, values: ['yes', 'no'] }
+                - if:
+                    when: { op: '==', left: { ref: binding, name: $improveTrail }, right: 'yes' }
+                    then:
+                      - addVar: { scope: global, var: nvaResources, delta: -2 }
+                      - addVar: { scope: global, var: trail, delta: 1 }
     atomicity: atomic
   - id: march-profile
     actionId: march

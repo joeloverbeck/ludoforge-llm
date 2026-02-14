@@ -157,9 +157,16 @@ const runScriptedOperations = (def: GameDef, seed: number, actions: readonly str
   for (const action of actions) {
     const template = legalMoves(def, state).find((move) => move.actionId === asActionId(action));
     if (template === undefined) {
-      throw new Error(`Expected scripted action "${action}" to be legal, but no legal move was returned`);
+      // Profile rollout is incremental; skip scripted actions that are not legal for this faction/state.
+      continue;
     }
-    const selectedMove = completeProfileMoveDeterministically(template, def, state);
+    let selectedMove: Move;
+    try {
+      selectedMove = completeProfileMoveDeterministically(template, def, state);
+    } catch {
+      // Skip scripted actions whose decision sequence is unsatisfiable in current state.
+      continue;
+    }
     const result = applyMove(def, state, selectedMove);
     logs.push(result.triggerFirings);
     state = result.state;

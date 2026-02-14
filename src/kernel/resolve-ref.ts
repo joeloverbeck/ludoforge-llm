@@ -141,26 +141,20 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
   }
 
   if (ref.ref === 'markerState') {
-    const spaceMarkers = ctx.state.markers[ref.space];
-    if (spaceMarkers === undefined) {
-      throw missingVarError(`No markers found for space: ${ref.space}`, {
-        reference: ref,
-        space: ref.space,
-        availableSpaces: Object.keys(ctx.state.markers).sort(),
-      });
-    }
+    const spaceId = resolveMapSpaceId(ref.space, ctx);
+    const spaceMarkers = ctx.state.markers[spaceId] ?? {};
 
     const state = spaceMarkers[ref.marker];
-    if (state === undefined) {
-      throw missingVarError(`Marker not found on space: ${ref.marker}`, {
-        reference: ref,
-        space: ref.space,
-        marker: ref.marker,
-        availableMarkers: Object.keys(spaceMarkers).sort(),
-      });
+    if (state !== undefined) {
+      return state;
     }
 
-    return state;
+    const lattice = ctx.def.markerLattices?.find((candidate) => candidate.id === ref.marker);
+    if (lattice !== undefined) {
+      return lattice.defaultState;
+    }
+
+    return 'none';
   }
 
   if (ref.ref === 'activePlayer') {

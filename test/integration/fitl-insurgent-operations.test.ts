@@ -6,12 +6,25 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const ATTACK_SPACE = 'quang-tri-thua-thien:none';
+const RALLY_SPACE = 'quang-nam:none';
+const RALLY_SPACE_2 = 'quang-tin-quang-ngai:none';
 
 const addTokenToZone = (state: GameState, zoneId: string, token: Token): GameState => ({
   ...state,
   zones: {
     ...state.zones,
     [zoneId]: [...(state.zones[zoneId] ?? []), token],
+  },
+});
+
+const withSupportState = (state: GameState, zoneId: string, supportState: string): GameState => ({
+  ...state,
+  markers: {
+    ...state.markers,
+    [zoneId]: {
+      ...(state.markers[zoneId] ?? {}),
+      supportOpposition: supportState,
+    },
   },
 });
 
@@ -24,7 +37,7 @@ describe('FITL insurgent operations integration', () => {
     const profiles = compiled.gameDef!.actionPipelines ?? [];
     const profileMap = profiles.map((profile) => ({ id: profile.id, actionId: String(profile.actionId) }));
     for (const expected of [
-      { id: 'rally-profile', actionId: 'rally' },
+      { id: 'rally-nva-profile', actionId: 'rally' },
       { id: 'march-profile', actionId: 'march' },
       { id: 'attack-nva-profile', actionId: 'attack' },
       { id: 'terror-profile', actionId: 'terror' },
@@ -223,5 +236,291 @@ describe('FITL insurgent operations integration', () => {
 
     assert.equal(nonFree.globalVars.nvaResources, 6, 'Non-free attack should spend 1 NVA resource per targeted space');
     assert.equal(free.globalVars.nvaResources, 7, 'Free attack should skip per-space NVA resource spend');
+  });
+
+  it('treats rally as illegal when active player is not NVA', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const nonNvaState = {
+      ...initialState(def, 301, 4),
+      activePlayer: asPlayerId(0),
+    };
+
+    const legal = legalMoves(def, nonNvaState);
+    assert.ok(!legal.some((move) => move.actionId === asActionId('rally')));
+    assert.throws(
+      () =>
+        applyMove(def, nonNvaState, {
+          actionId: asActionId('rally'),
+          params: { targetSpaces: [], $improveTrail: 'no' },
+        }),
+      /Illegal move/,
+    );
+  });
+
+  it('enforces rally space filter: excludes support and includes neutral/opposition', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 302, 4);
+    const nva = {
+      ...start,
+      activePlayer: asPlayerId(2),
+      globalVars: {
+        ...start.globalVars,
+        nvaResources: 10,
+      },
+    };
+    const withMarkers = withSupportState(
+      withSupportState(withSupportState(nva, RALLY_SPACE, 'activeSupport'), RALLY_SPACE_2, 'neutral'),
+      ATTACK_SPACE,
+      'activeOpposition',
+    );
+    const withAvailable = addTokenToZone(
+      addTokenToZone(withMarkers, 'available-NVA:none', {
+        id: asTokenId('rally-filter-available-g1'),
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      }),
+      'available-NVA:none',
+      {
+        id: asTokenId('rally-filter-available-g2'),
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    assert.throws(
+      () =>
+        applyMove(def, withAvailable, {
+          actionId: asActionId('rally'),
+          params: { targetSpaces: [RALLY_SPACE], $noBaseChoice: 'place-guerrilla', $improveTrail: 'no' },
+        }),
+      /Illegal move/,
+      'Rally should reject activeSupport spaces',
+    );
+
+    const neutralResult = applyMove(def, withAvailable, {
+      actionId: asActionId('rally'),
+      params: { targetSpaces: [RALLY_SPACE_2], $noBaseChoice: 'place-guerrilla', $improveTrail: 'no' },
+    }).state;
+    assert.equal(neutralResult.globalVars.nvaResources, 9, 'Neutral space should be eligible and spend 1 resource');
+
+    const oppositionResult = applyMove(def, withAvailable, {
+      actionId: asActionId('rally'),
+      params: { targetSpaces: [ATTACK_SPACE], $noBaseChoice: 'place-guerrilla', $improveTrail: 'no' },
+    }).state;
+    assert.equal(oppositionResult.globalVars.nvaResources, 9, 'Opposition space should be eligible and spend 1 resource');
+  });
+
+  it('charges per-space rally cost normally and skips only that cost on free operations', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 303, 4);
+    const nva = withSupportState(
+      {
+        ...start,
+        activePlayer: asPlayerId(2),
+        globalVars: {
+          ...start.globalVars,
+          nvaResources: 6,
+        },
+      },
+      RALLY_SPACE,
+      'neutral',
+    );
+    const nvaWithAvailable = addTokenToZone(nva, 'available-NVA:none', {
+      id: asTokenId('rally-cost-available-g1'),
+      type: 'nva-guerrillas',
+      props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+    });
+
+    const nonFree = applyMove(def, nvaWithAvailable, {
+      actionId: asActionId('rally'),
+      params: { targetSpaces: [RALLY_SPACE], $noBaseChoice: 'place-guerrilla', $improveTrail: 'no' },
+    }).state;
+    const free = applyMove(def, nvaWithAvailable, {
+      actionId: asActionId('rally'),
+      freeOperation: true,
+      params: { targetSpaces: [RALLY_SPACE], $noBaseChoice: 'place-guerrilla', $improveTrail: 'no' },
+    }).state;
+
+    assert.equal(nonFree.globalVars.nvaResources, 5, 'Non-free rally should spend 1 NVA resource per selected space');
+    assert.equal(free.globalVars.nvaResources, 6, 'Free rally should skip per-space NVA resource spend');
+  });
+
+  it('supports no-base replacement branch and with-base guerrilla placement limit', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 304, 4);
+    const nvaBaseState = withSupportState(
+      {
+        ...start,
+        activePlayer: asPlayerId(2),
+        globalVars: {
+          ...start.globalVars,
+          nvaResources: 15,
+          trail: 2,
+        },
+      },
+      RALLY_SPACE,
+      'neutral',
+    );
+
+    const replacementSetup = addTokenToZone(
+      addTokenToZone(
+        addTokenToZone(nvaBaseState, RALLY_SPACE, {
+          id: asTokenId('rally-replace-g1'),
+          type: 'nva-guerrillas',
+          props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+        }),
+        RALLY_SPACE,
+        {
+          id: asTokenId('rally-replace-g2'),
+          type: 'nva-guerrillas',
+          props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+        },
+      ),
+      'available-NVA:none',
+      {
+        id: asTokenId('rally-replace-base-source'),
+        type: 'nva-base',
+        props: { faction: 'NVA', type: 'base', tunnel: 'untunneled' },
+      },
+    );
+    const replaced = applyMove(def, replacementSetup, {
+      actionId: asActionId('rally'),
+      params: { targetSpaces: [RALLY_SPACE], $noBaseChoice: 'replace-with-base', $improveTrail: 'no' },
+    }).state;
+
+    const replacedSpaceTokens = replaced.zones[RALLY_SPACE] ?? [];
+    const replacedBaseCount = replacedSpaceTokens.filter((t) => t.props.faction === 'NVA' && t.props.type === 'base').length;
+    const replacedGuerrillaCount = replacedSpaceTokens.filter((t) => t.props.faction === 'NVA' && t.props.type === 'guerrilla').length;
+    assert.equal(replacedBaseCount, 1, 'No-base replacement should add one NVA base');
+    assert.equal(replacedGuerrillaCount, 0, 'No-base replacement should remove two NVA guerrillas');
+
+    const withBaseSetup = addTokenToZone(
+      addTokenToZone(
+        addTokenToZone(
+          nvaBaseState,
+          RALLY_SPACE_2,
+          {
+            id: asTokenId('rally-with-base'),
+            type: 'nva-base',
+            props: { faction: 'NVA', type: 'base', tunnel: 'untunneled' },
+          },
+        ),
+        'available-NVA:none',
+        {
+          id: asTokenId('rally-with-base-g1'),
+          type: 'nva-guerrillas',
+          props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+        },
+      ),
+      'available-NVA:none',
+      {
+        id: asTokenId('rally-with-base-g2'),
+        type: 'nva-guerrillas',
+        props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const withBaseSetup2 = addTokenToZone(withBaseSetup, 'available-NVA:none', {
+      id: asTokenId('rally-with-base-g3'),
+      type: 'nva-guerrillas',
+      props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' },
+    });
+    const beforeWithBase = (withBaseSetup2.zones[RALLY_SPACE_2] ?? []).filter(
+      (t) => t.props.faction === 'NVA' && t.props.type === 'guerrilla',
+    ).length;
+    const withBase = applyMove(def, withBaseSetup2, {
+      actionId: asActionId('rally'),
+      params: { targetSpaces: [RALLY_SPACE_2], $improveTrail: 'no' },
+    }).state;
+    const afterWithBase = (withBase.zones[RALLY_SPACE_2] ?? []).filter(
+      (t) => t.props.faction === 'NVA' && t.props.type === 'guerrilla',
+    ).length;
+    assert.equal(afterWithBase - beforeWithBase, 3, 'With NVA base, Rally should place trail(2)+bases(1)=3 guerrillas');
+  });
+
+  it('allows standalone trail improvement (including LimOp) and charges it even on free operations', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 305, 4);
+    const nva = {
+      ...start,
+      activePlayer: asPlayerId(2),
+      globalVars: {
+        ...start.globalVars,
+        nvaResources: 7,
+        trail: 1,
+      },
+    };
+
+    const limitedNoSpace = applyMove(def, nva, {
+      actionId: asActionId('rally'),
+      actionClass: 'limitedOperation',
+      params: { targetSpaces: [], $improveTrail: 'yes' },
+    }).state;
+    assert.equal(limitedNoSpace.globalVars.nvaResources, 5, 'Trail improvement should cost 2 during LimOp even with zero spaces');
+    assert.equal(limitedNoSpace.globalVars.trail, 2, 'Trail improvement should increase trail by 1');
+
+    const freeNoSpace = applyMove(def, nva, {
+      actionId: asActionId('rally'),
+      freeOperation: true,
+      params: { targetSpaces: [], $improveTrail: 'yes' },
+    }).state;
+    assert.equal(freeNoSpace.globalVars.nvaResources, 5, 'Trail improvement cost should not be waived by freeOperation');
+    assert.equal(freeNoSpace.globalVars.trail, 2, 'Free operation should still apply trail increase');
+  });
+
+  it('enforces rally LimOp max=1 with min=0', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const start = initialState(def, 306, 4);
+    const nva = withSupportState(
+      withSupportState(
+        {
+          ...start,
+          activePlayer: asPlayerId(2),
+          globalVars: {
+            ...start.globalVars,
+            nvaResources: 10,
+            trail: 1,
+          },
+        },
+        RALLY_SPACE,
+        'neutral',
+      ),
+      RALLY_SPACE_2,
+      'neutral',
+    );
+
+    assert.throws(
+      () =>
+        applyMove(def, nva, {
+          actionId: asActionId('rally'),
+          actionClass: 'limitedOperation',
+          params: { targetSpaces: [RALLY_SPACE, RALLY_SPACE_2], $noBaseChoice: 'place-guerrilla', $improveTrail: 'no' },
+        }),
+      /Illegal move/,
+    );
+
+    const zeroSelected = applyMove(def, nva, {
+      actionId: asActionId('rally'),
+      actionClass: 'limitedOperation',
+      params: { targetSpaces: [], $improveTrail: 'no' },
+    }).state;
+    assert.equal(zeroSelected.globalVars.nvaResources, 10, 'LimOp should allow zero selected spaces for Rally');
   });
 });

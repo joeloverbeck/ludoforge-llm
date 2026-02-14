@@ -218,3 +218,61 @@ Resolve Open Question #2 and implement RVN Leader bonuses:
 5. Operations correctly check both capability and momentum conditions
 6. Build passes (`npm run build`)
 7. All existing tests pass (`npm test`)
+
+
+## Coup! cards and RVN Leader
+
+Coup!
+Card Number: 125
+Nguyen Khanh
+Corps commanders ascendant: Transport uses max 1 LoC space.
+Conduct Coup Round:
+Victory? to Reset
+Monsoon: If this card next, no Sweep or March, Air Lift & Air Strike max 2.
+
+Coup!
+Card Number: 126
+Young Turks
+Thi, Ky, & Thieu wag the US dog: Each ARVN Govern Special Activity adds +2 Patronage.
+Conduct Coup Round:
+Victory? to Reset
+Monsoon: If this card next, no Sweep or March, Air Lift & Air Strike max 2.
+
+Coup!
+Card Number: 127
+Nguyen Cao Ky
+Brash brass Ky: Pacification costs 4 Resources per Terror or level.
+Conduct Coup Round:
+Victory? to Reset
+Monsoon: If this card next, no Sweep or March, Air Lift & Air Strike max 2.
+
+Coup!
+Card Number: 128
+Nguyen Van Thieu
+Stabilizer: No effect.
+Conduct Coup Round:
+Victory? to Reset
+Monsoon: If this card next, no Sweep or March, Air Lift & Air Strike max 2.
+
+Coup!
+Card Number: 129
+Failed Attempt
+Desertion: ARVN removes 1 in 3 of its cubes per space (round down).
+Place below any RVN Leader card.
+Conduct Coup Round:
+Victory? to Reset.
+Monsoon: If this card next, no Sweep or March, Air Lift & Air Strike max 2.
+
+Coup!
+Card Number: 130
+Failed Attempt
+Desertion: ARVN removes 1 in 3 of its cubes per space (round down).
+Place below any RVN Leader card.
+Conduct Coup Round:
+Victory? to Reset
+Monsoon: If this card next, no Sweep or March, Air Lift & Air Strike max 2.
+
+RVN Leader (card printed on map)
+Duong Van Minh
+General pledges democracy.
+Each ARVN Train Operation adds +5 bonus aid.

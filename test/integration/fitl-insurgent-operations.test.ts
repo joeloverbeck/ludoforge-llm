@@ -44,6 +44,7 @@ describe('FITL insurgent operations integration', () => {
       { id: 'rally-nva-profile', actionId: 'rally' },
       { id: 'rally-vc-profile', actionId: 'rally' },
       { id: 'march-nva-profile', actionId: 'march' },
+      { id: 'march-vc-profile', actionId: 'march' },
       { id: 'attack-nva-profile', actionId: 'attack' },
       { id: 'terror-profile', actionId: 'terror' },
     ]) {
@@ -279,6 +280,217 @@ describe('FITL insurgent operations integration', () => {
 
     assert.equal(nonFree.globalVars.nvaResources, 4, 'Non-free March should spend 1 NVA resource for Province/City destination');
     assert.equal(free.globalVars.nvaResources, 5, 'Free March should skip per-space Province/City spend');
+  });
+
+  it('march moves VC pieces from adjacent spaces and charges Province/City but not LoC destinations', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const provinceMover = asTokenId('march-province-vc-g');
+    const provinceSetup = addTokenToZone(
+      {
+        ...initialState(def, 121, 4),
+        activePlayer: asPlayerId(3),
+        globalVars: {
+          ...initialState(def, 121, 4).globalVars,
+          vcResources: 5,
+        },
+      },
+      RALLY_SPACE,
+      {
+        id: provinceMover,
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const provinceFinal = applyMove(def, provinceSetup, {
+      actionId: asActionId('march'),
+      params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [provinceMover], $movingTroops: [] },
+    }).state;
+
+    assert.equal(provinceFinal.globalVars.vcResources, 4, 'Province/City destination should spend 1 VC resource');
+    assert.ok((provinceFinal.zones[RALLY_SPACE] ?? []).every((token) => token.id !== provinceMover), 'Moved VC piece should leave origin space');
+    assert.ok((provinceFinal.zones[ATTACK_SPACE] ?? []).some((token) => token.id === provinceMover), 'Moved VC piece should enter destination space');
+
+    const locMover = asTokenId('march-loc-vc-g');
+    const locSetup = addTokenToZone(
+      {
+        ...initialState(def, 122, 4),
+        activePlayer: asPlayerId(3),
+        globalVars: {
+          ...initialState(def, 122, 4).globalVars,
+          vcResources: 5,
+        },
+      },
+      RALLY_SPACE,
+      {
+        id: locMover,
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+    const locFinal = applyMove(def, locSetup, {
+      actionId: asActionId('march'),
+      params: { targetSpaces: [LOC_SPACE], $movingGuerrillas: [locMover], $movingTroops: [] },
+    }).state;
+
+    assert.equal(locFinal.globalVars.vcResources, 5, 'LoC destination should be free for VC March');
+  });
+
+  it('skips VC March per-space Province/City cost when move is marked freeOperation', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const mover = asTokenId('march-free-vc-g');
+    const setup = addTokenToZone(
+      {
+        ...initialState(def, 126, 4),
+        activePlayer: asPlayerId(3),
+        globalVars: {
+          ...initialState(def, 126, 4).globalVars,
+          vcResources: 5,
+        },
+      },
+      RALLY_SPACE,
+      {
+        id: mover,
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    const nonFree = applyMove(def, setup, {
+      actionId: asActionId('march'),
+      params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [mover], $movingTroops: [] },
+    }).state;
+    const free = applyMove(def, setup, {
+      actionId: asActionId('march'),
+      freeOperation: true,
+      params: { targetSpaces: [ATTACK_SPACE], $movingGuerrillas: [mover], $movingTroops: [] },
+    }).state;
+
+    assert.equal(nonFree.globalVars.vcResources, 4, 'Non-free VC March should spend 1 resource for Province/City destination');
+    assert.equal(free.globalVars.vcResources, 5, 'Free VC March should skip per-space Province/City spend');
+  });
+
+  it('activates moving VC guerrillas when destination is LoC/support and moving+COIN > 3', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const mover = asTokenId('march-activate-vc-g');
+    const setup = addTokenToZone(
+      addTokenToZone(
+        addTokenToZone(
+          addTokenToZone(
+            {
+              ...initialState(def, 123, 4),
+              activePlayer: asPlayerId(3),
+              globalVars: {
+                ...initialState(def, 123, 4).globalVars,
+                vcResources: 6,
+              },
+            },
+            RALLY_SPACE,
+            {
+              id: mover,
+              type: 'vc-guerrillas',
+              props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+            },
+          ),
+          LOC_SPACE,
+          { id: asTokenId('march-activate-vc-us-t1'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+        ),
+        LOC_SPACE,
+        { id: asTokenId('march-activate-vc-us-t2'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+      ),
+      LOC_SPACE,
+      { id: asTokenId('march-activate-vc-us-t3'), type: 'us-troops', props: { faction: 'US', type: 'troops' } },
+    );
+
+    const final = applyMove(def, setup, {
+      actionId: asActionId('march'),
+      params: { targetSpaces: [LOC_SPACE], $movingGuerrillas: [mover], $movingTroops: [] },
+    }).state;
+    const moved = (final.zones[LOC_SPACE] ?? []).find((token) => token.id === mover);
+
+    assert.ok(moved, 'Expected moved VC guerrilla to be present in destination');
+    assert.equal(moved.props.activity, 'active', 'Moving VC guerrilla should activate when LoC condition and >3 threshold are met');
+  });
+
+  it('does not allow VC March Trail chain continuation', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const mover = asTokenId('march-chain-vc-g');
+    const setup = addTokenToZone(
+      {
+        ...initialState(def, 124, 4),
+        activePlayer: asPlayerId(3),
+        globalVars: {
+          ...initialState(def, 124, 4).globalVars,
+          vcResources: 6,
+          trail: 4,
+        },
+      },
+      CENTRAL_LAOS,
+      {
+        id: mover,
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    const final = applyMove(def, setup, {
+      actionId: asActionId('march'),
+      params: {
+        targetSpaces: [SOUTHERN_LAOS],
+        chainSpaces: [NE_CAMBODIA],
+        $movingGuerrillas: [mover],
+        $movingTroops: [],
+      },
+    }).state;
+
+    assert.ok((final.zones[SOUTHERN_LAOS] ?? []).some((token) => token.id === mover), 'VC March should resolve selected destination normally');
+    assert.ok(!(final.zones[NE_CAMBODIA] ?? []).some((token) => token.id === mover), 'VC March must not apply NVA Trail-chain continuation');
+    assert.equal(final.globalVars.vcResources, 5, 'VC March should still pay normal Province/City cost in Laos/Cambodia');
+  });
+
+  it('enforces VC March LimOp max=1 destination', () => {
+    const { compiled } = compileProductionSpec();
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const setup = addTokenToZone(
+      {
+        ...initialState(def, 125, 4),
+        activePlayer: asPlayerId(3),
+        globalVars: {
+          ...initialState(def, 125, 4).globalVars,
+          vcResources: 10,
+        },
+      },
+      RALLY_SPACE,
+      {
+        id: asTokenId('march-limop-vc-g'),
+        type: 'vc-guerrillas',
+        props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
+      },
+    );
+
+    assert.throws(
+      () =>
+        applyMove(def, setup, {
+          actionId: asActionId('march'),
+          actionClass: 'limitedOperation',
+          params: { targetSpaces: [ATTACK_SPACE, RALLY_SPACE_2] },
+        }),
+      /Illegal move/,
+      'VC March LimOp should enforce max one selected destination',
+    );
   });
 
   it('enforces March LimOp max=1 destination', () => {

@@ -5160,116 +5160,46 @@ actionPipelines:
     stages:
       - stage: select-spaces
         effects:
-          - if:
-              when:
-                op: '>'
-                left:
-                  aggregate:
-                    op: count
-                    query:
-                      query: tokensInZone
-                      zone: lookahead:none
-                      filter:
-                        - { prop: isCoup, eq: true }
-                right: 0
-              then:
-                - chooseN:
-                    bind: spaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        op: and
-                        args:
-                          - op: '!='
-                            left: { ref: zoneProp, zone: $zone, prop: country }
-                            right: northVietnam
-                          - op: '>'
-                            left:
-                              aggregate:
-                                op: count
-                                query:
-                                  query: tokensInZone
-                                  zone: $zone
-                                  filter:
-                                    - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                            right: 0
-                    min: 0
-                    max: 1
-              else:
-                - if:
-                    when: { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: unshaded }
-                    then:
-                      - chooseN:
-                          bind: spaces
-                          options:
-                            query: mapSpaces
+          - chooseN:
+              bind: spaces
+              options:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: '!='
+                      left: { ref: zoneProp, zone: $zone, prop: country }
+                      right: northVietnam
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
                             filter:
-                              op: and
-                              args:
-                                - op: '!='
-                                  left: { ref: zoneProp, zone: $zone, prop: country }
-                                  right: northVietnam
-                                - op: '>'
-                                  left:
-                                    aggregate:
-                                      op: count
-                                      query:
-                                        query: tokensInZone
-                                        zone: $zone
-                                        filter:
-                                          - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                                  right: 0
-                          min: 0
-                          max: 1
-                    else:
-                      - if:
-                          when: { op: '==', left: { ref: gvar, var: mom_wildWeasels }, right: true }
-                          then:
-                            - chooseN:
-                                bind: spaces
-                                options:
-                                  query: mapSpaces
-                                  filter:
-                                    op: and
-                                    args:
-                                      - op: '!='
-                                        left: { ref: zoneProp, zone: $zone, prop: country }
-                                        right: northVietnam
-                                      - op: '>'
-                                        left:
-                                          aggregate:
-                                            op: count
-                                            query:
-                                              query: tokensInZone
-                                              zone: $zone
-                                              filter:
-                                                - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                                        right: 0
-                                min: 0
-                                max: 1
-                          else:
-                            - chooseN:
-                                bind: spaces
-                                options:
-                                  query: mapSpaces
-                                  filter:
-                                    op: and
-                                    args:
-                                      - op: '!='
-                                        left: { ref: zoneProp, zone: $zone, prop: country }
-                                        right: northVietnam
-                                      - op: '>'
-                                        left:
-                                          aggregate:
-                                            op: count
-                                            query:
-                                              query: tokensInZone
-                                              zone: $zone
-                                              filter:
-                                                - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                                        right: 0
-                                min: 0
-                                max: 6
+                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                      right: 0
+              min: 0
+              max:
+                if:
+                  when:
+                    op: or
+                    args:
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: lookahead:none
+                              filter:
+                                - { prop: isCoup, eq: true }
+                        right: 0
+                      - { op: '==', left: { ref: globalMarkerState, marker: cap_arcLight }, right: unshaded }
+                      - { op: '==', left: { ref: gvar, var: mom_wildWeasels }, right: true }
+                  then: 1
+                  else: 6
       - stage: remove-active-enemy-pieces
         effects:
           - setVar:

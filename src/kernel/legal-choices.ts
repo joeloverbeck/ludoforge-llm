@@ -1,5 +1,6 @@
 import { resolveActionPipelineDispatch } from './apply-move-pipeline.js';
 import { resolveBindingTemplate } from './binding-template.js';
+import { resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { composeDecisionId } from './decision-id.js';
 import { applyEffect } from './effect-dispatch.js';
 import type { EffectContext } from './effect-context.js';
@@ -173,22 +174,24 @@ function walkChooseN(
   const chooseN = effect.chooseN;
   const bind = resolveBindingTemplate(chooseN.bind, wCtx.evalCtx.bindings);
   const decisionId = composeDecisionId(chooseN.internalDecisionId, chooseN.bind, bind);
-  const hasN = 'n' in chooseN && chooseN.n !== undefined;
-  const hasMax = 'max' in chooseN && chooseN.max !== undefined;
-  const hasMin = 'min' in chooseN && chooseN.min !== undefined;
-
-  let minCardinality: number;
-  let maxCardinality: number;
-
-  if (hasN) {
-    minCardinality = chooseN.n;
-    maxCardinality = chooseN.n;
-  } else if (hasMax) {
-    minCardinality = hasMin ? chooseN.min : 0;
-    maxCardinality = chooseN.max;
-  } else {
-    throw new Error(`legalChoices: chooseN "${bind}" must use either exact n or range max/min cardinality`);
-  }
+  const { minCardinality, maxCardinality } = resolveChooseNCardinality(chooseN, wCtx.evalCtx, (issue) => {
+    if (issue.code === 'CHOOSE_N_MODE_INVALID') {
+      throw new Error(`legalChoices: chooseN "${bind}" must use either exact n or range max/min cardinality`);
+    }
+    if (issue.code === 'CHOOSE_N_MIN_EVAL_INVALID') {
+      throw new Error(`legalChoices: chooseN "${bind}" (${decisionId}) minimum cardinality must evaluate to a non-negative integer`);
+    }
+    if (issue.code === 'CHOOSE_N_MAX_EVAL_INVALID') {
+      throw new Error(`legalChoices: chooseN "${bind}" (${decisionId}) maximum cardinality must evaluate to a non-negative integer`);
+    }
+    if (issue.code === 'CHOOSE_N_MIN_INVALID') {
+      throw new Error(`legalChoices: chooseN "${bind}" (${decisionId}) minimum cardinality must be a non-negative integer`);
+    }
+    if (issue.code === 'CHOOSE_N_MAX_INVALID') {
+      throw new Error(`legalChoices: chooseN "${bind}" (${decisionId}) maximum cardinality must be a non-negative integer`);
+    }
+    throw new Error(`legalChoices: chooseN "${bind}" (${decisionId}) requires max >= min cardinality`);
+  });
 
   const options = evalQuery(chooseN.options, wCtx.evalCtx);
   const asParamValues = options.map((o) =>

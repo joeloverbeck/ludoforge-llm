@@ -5188,10 +5188,10 @@
                       ]
                     },
                     "min": {
-                      "type": "number"
+                      "$ref": "#/definitions/__schema1"
                     },
                     "max": {
-                      "type": "number"
+                      "$ref": "#/definitions/__schema1"
                     }
                   },
                   "required": [

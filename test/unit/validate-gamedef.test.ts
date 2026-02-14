@@ -800,6 +800,35 @@ describe('validateGameDef constraints and warnings', () => {
     );
   });
 
+  it('accepts chooseN expression-valued range bounds in behavior validation', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      globalVars: [...base.globalVars, { name: 'dynamicMax', type: 'int', init: 2, min: 0, max: 6 }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              chooseN: {
+                bind: '$pick',
+                options: { query: 'players' },
+                min: { if: { when: true, then: 0, else: 1 } },
+                max: { ref: 'gvar', var: 'dynamicMax' },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'EFFECT_CHOOSE_N_CARDINALITY_INVALID'),
+      false,
+    );
+  });
+
   it('returns no diagnostics for fully valid game def', () => {
     const diagnostics = validateGameDef(createValidGameDef());
     assert.deepEqual(diagnostics, []);

@@ -190,6 +190,15 @@ describe('AST and selector schemas', () => {
           max: 3,
         },
       },
+      {
+        chooseN: {
+          internalDecisionId: 'decision:$dynamicRange',
+          bind: '$dynamicRange',
+          options: { query: 'players' },
+          min: { if: { when: true, then: 0, else: 1 } },
+          max: { ref: 'gvar', var: 'maxTargets' },
+        },
+      },
       { setMarker: { space: 'saigon:none', marker: 'support', state: 'activeSupport' } },
       { setMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', state: 'activeSupport' } },
       { shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } },

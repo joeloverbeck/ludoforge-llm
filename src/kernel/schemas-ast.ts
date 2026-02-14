@@ -378,8 +378,8 @@ effectAstSchemaInternal = z.union([
             internalDecisionId: StringSchema,
             bind: StringSchema,
             options: OptionsQuerySchema,
-            min: NumberSchema.optional(),
-            max: NumberSchema,
+            min: ValueExprSchema.optional(),
+            max: ValueExprSchema,
           })
           .strict(),
       ]),

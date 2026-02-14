@@ -1,6 +1,7 @@
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { composeDecisionId } from './decision-id.js';
+import { resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { EffectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
@@ -108,62 +109,58 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const bindTemplate = chooseN.bind;
   const bind = resolveBindingTemplate(bindTemplate, ctx.bindings);
   const decisionId = composeDecisionId(chooseN.internalDecisionId, bindTemplate, bind);
-  const hasN = 'n' in chooseN && chooseN.n !== undefined;
-  const hasMax = 'max' in chooseN && chooseN.max !== undefined;
-  const hasMin = 'min' in chooseN && chooseN.min !== undefined;
-  let minCardinality: number;
-  let maxCardinality: number;
-
-  if (hasN && hasMax) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN must use either exact n or range max/min cardinality', {
-      effectType: 'chooseN',
-      bind,
-      bindTemplate,
-      chooseN,
-    });
-  }
-
-  if (hasN) {
-    minCardinality = chooseN.n;
-    maxCardinality = chooseN.n;
-  } else if (hasMax) {
-    minCardinality = hasMin ? chooseN.min : 0;
-    maxCardinality = chooseN.max;
-  } else {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN must use either exact n or range max/min cardinality', {
-      effectType: 'chooseN',
-      bind,
-      chooseN,
-    });
-  }
-
-  if (!Number.isSafeInteger(minCardinality) || minCardinality < 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN minimum cardinality must be a non-negative integer', {
-      effectType: 'chooseN',
-      bind,
-      bindTemplate,
-      min: hasN ? chooseN.n : chooseN.min,
-    });
-  }
-
-  if (!Number.isSafeInteger(maxCardinality) || maxCardinality < 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN maximum cardinality must be a non-negative integer', {
-      effectType: 'chooseN',
-      bind,
-      bindTemplate,
-      max: hasN ? chooseN.n : chooseN.max,
-    });
-  }
-
-  if (minCardinality > maxCardinality) {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const { minCardinality, maxCardinality } = resolveChooseNCardinality(chooseN, evalCtx, (issue) => {
+    if (issue.code === 'CHOOSE_N_MODE_INVALID') {
+      throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN must use either exact n or range max/min cardinality', {
+        effectType: 'chooseN',
+        bind,
+        bindTemplate,
+        chooseN,
+      });
+    }
+    if (issue.code === 'CHOOSE_N_MIN_EVAL_INVALID') {
+      throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN minimum cardinality must evaluate to a non-negative integer', {
+        effectType: 'chooseN',
+        bind,
+        bindTemplate,
+        min: chooseN.min ?? 0,
+        evaluatedMin: issue.value,
+      });
+    }
+    if (issue.code === 'CHOOSE_N_MAX_EVAL_INVALID') {
+      throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN maximum cardinality must evaluate to a non-negative integer', {
+        effectType: 'chooseN',
+        bind,
+        bindTemplate,
+        max: chooseN.max,
+        evaluatedMax: issue.value,
+      });
+    }
+    if (issue.code === 'CHOOSE_N_MIN_INVALID') {
+      throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN minimum cardinality must be a non-negative integer', {
+        effectType: 'chooseN',
+        bind,
+        bindTemplate,
+        min: issue.value,
+      });
+    }
+    if (issue.code === 'CHOOSE_N_MAX_INVALID') {
+      throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN maximum cardinality must be a non-negative integer', {
+        effectType: 'chooseN',
+        bind,
+        bindTemplate,
+        max: issue.value,
+      });
+    }
     throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN min cannot exceed max', {
       effectType: 'chooseN',
       bind,
-      bindTemplate: chooseN.bind,
-      min: minCardinality,
-      max: maxCardinality,
+      bindTemplate,
+      min: issue.min,
+      max: issue.max,
     });
-  }
+  });
 
   if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
     throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN missing move param binding: ${bind} (${decisionId})`, {
@@ -206,7 +203,6 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     }
   }
 
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const options = evalQuery(chooseN.options, evalCtx);
   for (const selected of selectedValue) {
     if (!isInDomain(selected, options)) {

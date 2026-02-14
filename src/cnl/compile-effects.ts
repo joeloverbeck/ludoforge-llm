@@ -906,6 +906,7 @@ function lowerChooseNEffect(
     ]);
   }
   const options = lowerQueryNode(source.options, makeConditionContext(context, scope), `${path}.options`);
+  const condCtx = makeConditionContext(context, scope);
   const diagnostics = [...options.diagnostics];
 
   const hasN = source.n !== undefined;
@@ -927,17 +928,40 @@ function lowerChooseNEffect(
     diagnostics.push(...missingCapability(path, 'chooseN cardinality', source, ['{ n }', '{ max, min? }']).diagnostics);
   }
 
+  let loweredMin: ValueExpr | undefined;
+  let loweredMax: ValueExpr | undefined;
+
   if (hasN && (!isInteger(source.n) || source.n < 0)) {
     diagnostics.push(...missingCapability(`${path}.n`, 'chooseN n', source.n, ['non-negative integer']).diagnostics);
   }
-  if (hasMax && (!isInteger(source.max) || source.max < 0)) {
-    diagnostics.push(...missingCapability(`${path}.max`, 'chooseN max', source.max, ['non-negative integer']).diagnostics);
+  if (hasMax) {
+    const maxResult = lowerValueNode(source.max, condCtx, `${path}.max`);
+    diagnostics.push(...maxResult.diagnostics);
+    if (maxResult.value !== null) {
+      loweredMax = maxResult.value;
+      if (typeof loweredMax === 'number' && (!isInteger(loweredMax) || loweredMax < 0)) {
+        diagnostics.push(...missingCapability(`${path}.max`, 'chooseN max', source.max, ['non-negative integer']).diagnostics);
+      }
+    }
   }
-  if (hasMin && (!isInteger(source.min) || source.min < 0)) {
-    diagnostics.push(...missingCapability(`${path}.min`, 'chooseN min', source.min, ['non-negative integer']).diagnostics);
+  if (hasMin) {
+    const minResult = lowerValueNode(source.min, condCtx, `${path}.min`);
+    diagnostics.push(...minResult.diagnostics);
+    if (minResult.value !== null) {
+      loweredMin = minResult.value;
+      if (typeof loweredMin === 'number' && (!isInteger(loweredMin) || loweredMin < 0)) {
+        diagnostics.push(...missingCapability(`${path}.min`, 'chooseN min', source.min, ['non-negative integer']).diagnostics);
+      }
+    }
   }
 
-  if (hasMax && hasMin && isInteger(source.max) && isInteger(source.min) && source.min > source.max) {
+  if (
+    loweredMax !== undefined
+    && loweredMin !== undefined
+    && typeof loweredMax === 'number'
+    && typeof loweredMin === 'number'
+    && loweredMin > loweredMax
+  ) {
     diagnostics.push({
       code: 'CNL_COMPILER_MISSING_CAPABILITY',
       path,
@@ -955,8 +979,8 @@ function lowerChooseNEffect(
     hasN && isInteger(source.n)
       ? { n: source.n }
       : {
-          max: source.max as number,
-          ...(hasMin ? { min: source.min as number } : {}),
+          max: loweredMax as ValueExpr,
+          ...(loweredMin === undefined ? {} : { min: loweredMin }),
         };
   return {
     value: {

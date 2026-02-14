@@ -220,8 +220,8 @@ export type EffectAST =
             readonly max?: never;
           }
         | {
-            readonly min?: number;
-            readonly max: number;
+            readonly min?: ValueExpr;
+            readonly max: ValueExpr;
             readonly n?: never;
           }
       );

@@ -672,33 +672,33 @@ export const validateEffectAst = (
     });
   }
 
-  if (hasMax && (!Number.isSafeInteger(chooseN.max) || chooseN.max < 0)) {
-    diagnostics.push({
-      code: 'EFFECT_CHOOSE_N_CARDINALITY_INVALID',
-      path: `${path}.chooseN.max`,
-      severity: 'error',
-      message: 'chooseN.max must be a non-negative integer.',
-      suggestion: 'Set max to an integer >= 0.',
-    });
+  if (hasMax) {
+    validateValueExpr(diagnostics, chooseN.max, `${path}.chooseN.max`, context);
+    if (typeof chooseN.max === 'number' && (!Number.isSafeInteger(chooseN.max) || chooseN.max < 0)) {
+      diagnostics.push({
+        code: 'EFFECT_CHOOSE_N_CARDINALITY_INVALID',
+        path: `${path}.chooseN.max`,
+        severity: 'error',
+        message: 'chooseN.max must be a non-negative integer when provided as a literal.',
+        suggestion: 'Set max literal to an integer >= 0 or use a ValueExpr that evaluates to one.',
+      });
+    }
   }
 
-  if (hasMin && (!Number.isSafeInteger(chooseN.min) || chooseN.min < 0)) {
-    diagnostics.push({
-      code: 'EFFECT_CHOOSE_N_CARDINALITY_INVALID',
-      path: `${path}.chooseN.min`,
-      severity: 'error',
-      message: 'chooseN.min must be a non-negative integer.',
-      suggestion: 'Set min to an integer >= 0.',
-    });
+  if (hasMin) {
+    validateValueExpr(diagnostics, chooseN.min, `${path}.chooseN.min`, context);
+    if (typeof chooseN.min === 'number' && (!Number.isSafeInteger(chooseN.min) || chooseN.min < 0)) {
+      diagnostics.push({
+        code: 'EFFECT_CHOOSE_N_CARDINALITY_INVALID',
+        path: `${path}.chooseN.min`,
+        severity: 'error',
+        message: 'chooseN.min must be a non-negative integer when provided as a literal.',
+        suggestion: 'Set min literal to an integer >= 0 or use a ValueExpr that evaluates to one.',
+      });
+    }
   }
 
-  if (
-    hasMax &&
-    hasMin &&
-    Number.isSafeInteger(chooseN.max) &&
-    Number.isSafeInteger(chooseN.min) &&
-    chooseN.min > chooseN.max
-  ) {
+  if (hasMax && hasMin && typeof chooseN.max === 'number' && typeof chooseN.min === 'number' && chooseN.min > chooseN.max) {
     diagnostics.push({
       code: 'EFFECT_CHOOSE_N_CARDINALITY_INVALID',
       path: `${path}.chooseN`,

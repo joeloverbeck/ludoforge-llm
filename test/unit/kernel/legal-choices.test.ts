@@ -164,6 +164,74 @@ describe('legalChoices()', () => {
     assert.equal(result.max, 3); // clamped from 10 to domain size 3
   });
 
+  it('3b. chooseN evaluates expression-valued min/max at decision time', () => {
+    const action: ActionDef = {
+      id: asActionId('pickDynamicTargets'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseN: {
+            internalDecisionId: 'decision:$targets',
+            bind: '$targets',
+            options: { query: 'enums', values: ['a', 'b', 'c', 'd'] },
+            min: { if: { when: { op: '>', left: { ref: 'gvar', var: 'dynamicMin' }, right: 0 }, then: 1, else: 0 } },
+            max: { ref: 'gvar', var: 'dynamicMax' },
+          },
+        } as EffectAST,
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({
+      actions: [action],
+      globalVars: [
+        { name: 'dynamicMin', type: 'int', init: 0, min: 0, max: 5 },
+        { name: 'dynamicMax', type: 'int', init: 0, min: 0, max: 5 },
+      ],
+    });
+    const state = makeBaseState({ globalVars: { dynamicMin: 1, dynamicMax: 2 } });
+
+    const result = legalChoices(def, state, makeMove('pickDynamicTargets'));
+    assert.equal(result.complete, false);
+    assert.equal(result.type, 'chooseN');
+    assert.equal(result.min, 1);
+    assert.equal(result.max, 2);
+  });
+
+  it('3c. chooseN throws when expression-valued max is non-integer or negative', () => {
+    const action: ActionDef = {
+      id: asActionId('badDynamicBounds'),
+      actor: 'active',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseN: {
+            internalDecisionId: 'decision:$targets',
+            bind: '$targets',
+            options: { query: 'enums', values: ['a', 'b', 'c'] },
+            max: true,
+          },
+        } as EffectAST,
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    assert.throws(
+      () => legalChoices(def, state, makeMove('badDynamicBounds')),
+      (error: unknown) => error instanceof Error && error.message.includes('maximum cardinality must evaluate'),
+    );
+  });
+
   it('4. action with multiple sequential chooseOnes returns them one at a time', () => {
     const action: ActionDef = {
       id: asActionId('multiChoice'),

@@ -230,6 +230,43 @@ describe('effects choice assertions', () => {
     assert.equal(result.rng, ctx.rng);
   });
 
+  it('chooseN evaluates expression-valued min/max bounds', () => {
+    const ctx = makeCtx({
+      state: { ...makeState(), globalVars: { score: 2 } },
+      moveParams: { 'decision:$picks': ['alpha', 'beta'] },
+    });
+    const effect: EffectAST = {
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
+        min: { if: { when: { op: '>', left: { ref: 'gvar', var: 'score' }, right: 0 }, then: 1, else: 0 } },
+        max: { ref: 'gvar', var: 'score' },
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state, ctx.state);
+    assert.equal(result.rng, ctx.rng);
+  });
+
+  it('chooseN throws when expression-valued bounds evaluate to non-integers', () => {
+    const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha'] } });
+    const effect: EffectAST = {
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
+        max: true,
+      },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('must evaluate to a non-negative integer'),
+    );
+  });
+
   it('chooseN range throws when selected count is outside min..max', () => {
     const ctx = makeCtx({ moveParams: { 'decision:$picks': [] } });
     const effect: EffectAST = {

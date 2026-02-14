@@ -34,10 +34,18 @@ const countEnemyGuerrillas = (state: GameState, zone: string): number =>
 
 describe('FITL momentum formula modifiers', () => {
   it('Wild Weasels limits Air Strike removal to 1 and enforces degrade-vs-remove behavior', () => {
-    const { compiled } = compileProductionSpec();
+    const { parsed, compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
     const space = RALLY_SPACE;
+
+    const airStrikeProfile = parsed.doc.actionPipelines?.find((profile) => profile.id === 'air-strike-profile');
+    assert.ok(airStrikeProfile, 'Expected air-strike-profile in parsed production doc');
+    const selectSpacesStage = airStrikeProfile.stages.find((stage) => stage.stage === 'select-spaces');
+    const stageEffects = (selectSpacesStage?.effects ?? []) as Array<{ chooseN?: { max?: unknown } }>;
+    const selectChooseN = stageEffects[0]?.chooseN;
+    assert.ok(selectChooseN, 'Expected chooseN selector in Air Strike select-spaces stage');
+    assert.equal(typeof selectChooseN?.max, 'object', 'Expected expression-valued chooseN.max in Air Strike select stage');
 
     const base = withActivePlayer(
       {

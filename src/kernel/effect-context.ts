@@ -23,6 +23,7 @@ export interface EffectResult {
   readonly state: GameState;
   readonly rng: Rng;
   readonly emittedEvents?: readonly TriggerEvent[];
+  readonly bindings?: Readonly<Record<string, unknown>>;
 }
 
 export function getMaxEffectOps(ctx: Pick<EffectContext, 'maxEffectOps'>): number {

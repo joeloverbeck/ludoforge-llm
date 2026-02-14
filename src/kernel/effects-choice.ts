@@ -101,7 +101,14 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
     });
   }
 
-  return { state: ctx.state, rng: ctx.rng };
+  return {
+    state: ctx.state,
+    rng: ctx.rng,
+    bindings: {
+      ...ctx.bindings,
+      [resolvedBind]: selected,
+    },
+  };
 };
 
 export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unknown }>, ctx: EffectContext): EffectResult => {
@@ -215,7 +222,14 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     }
   }
 
-  return { state: ctx.state, rng: ctx.rng };
+  return {
+    state: ctx.state,
+    rng: ctx.rng,
+    bindings: {
+      ...ctx.bindings,
+      [bind]: selectedValue,
+    },
+  };
 };
 
 export const applyRollRandom = (
@@ -262,7 +276,13 @@ export const applyRollRandom = (
     },
   };
 
-  return applyEffectsWithBudget(effect.rollRandom.in, nestedCtx, budget);
+  const nestedResult = applyEffectsWithBudget(effect.rollRandom.in, nestedCtx, budget);
+  return {
+    state: nestedResult.state,
+    rng: nestedResult.rng,
+    ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
+    bindings: ctx.bindings,
+  };
 };
 
 export const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: unknown }>, ctx: EffectContext): EffectResult => {

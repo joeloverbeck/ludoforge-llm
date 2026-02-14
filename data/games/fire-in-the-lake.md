@@ -2974,6 +2974,202 @@ eventDecks:
           effects:
             - addVar: { scope: global, var: aid, delta: -2 }
             - addVar: { scope: global, var: arvnResources, delta: -1 }
+      - id: card-43
+        title: Economic Aid
+        sideMode: dual
+        order: 43
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          flavorText: "Free World aids Saigon."
+        unshaded:
+          text: "2 ARVN or 2 US Bases out-of-play to Available. Then ARVN Resources +6 or Aid +12."
+          branches:
+            - id: return-us-bases-and-aid
+              order: 1
+              targets:
+                - id: us-out-of-play-bases
+                  selector:
+                    query: players
+                  cardinality: { max: 2 }
+              effects:
+                - addVar: { scope: global, var: aid, delta: 12 }
+            - id: return-arvn-bases-and-resources
+              order: 2
+              targets:
+                - id: arvn-out-of-play-bases
+                  selector:
+                    query: players
+                  cardinality: { max: 2 }
+              effects:
+                - addVar: { scope: global, var: arvnResources, delta: 6 }
+        shaded:
+          text: "Moscow aids Hanoi: Improve the Trail 1 box. Then either Improve it 1 more box or add +10 NVA Resources."
+          branches:
+            - id: improve-trail-twice
+              order: 1
+              effects:
+                - addVar: { scope: global, var: trail, delta: 1 }
+                - addVar: { scope: global, var: trail, delta: 1 }
+            - id: improve-trail-and-add-resources
+              order: 2
+              effects:
+                - addVar: { scope: global, var: trail, delta: 1 }
+                - addVar: { scope: global, var: nvaResources, delta: 10 }
+      - id: card-79
+        title: Henry Cabot Lodge
+        sideMode: dual
+        order: 79
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          flavorText: "Ambassador proposes US protectorate."
+        unshaded:
+          text: "Aid +20."
+          effects:
+            - addVar: { scope: global, var: aid, delta: 20 }
+        shaded:
+          text: "Internecine enabler: Remove up to 3 ARVN pieces. Patronage +2 for each."
+          targets:
+            - id: $sourceSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: arvnTroop
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: available-ARVN:none
+                  - bind: arvnPolice
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: police }
+                    to:
+                      zoneExpr: available-ARVN:none
+                  - bind: arvnRanger
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: ranger }
+                    to:
+                      zoneExpr: available-ARVN:none
+                  - bind: arvnBase
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: base }
+                    to:
+                      zoneExpr: available-ARVN:none
+                remainingBind: $remainingRemovalBudget
+            - addVar:
+                scope: global
+                var: patronage
+                delta:
+                  op: "*"
+                  left: 2
+                  right:
+                    op: "-"
+                    left: 3
+                    right: { ref: binding, name: $remainingRemovalBudget }
+      - id: card-107
+        title: Burning Bonze
+        sideMode: dual
+        order: 107
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["VC", "NVA", "ARVN", "US"]
+          flavorText: "Gruesome protests close elite ranks."
+        unshaded:
+          text: "Patronage +3 or, if Saigon at Active Support, +6."
+          effects:
+            - if:
+                when:
+                  op: "=="
+                  left: { ref: markerState, space: saigon:none, marker: supportOpposition }
+                  right: activeSupport
+                then:
+                  - addVar: { scope: global, var: patronage, delta: 6 }
+                else:
+                  - addVar: { scope: global, var: patronage, delta: 3 }
+        shaded:
+          text: "Anti-regime self-immolation: Shift Saigon 1 level toward Active Opposition. Aid -12."
+          effects:
+            - shiftMarker:
+                space: saigon:none
+                marker: supportOpposition
+                delta: -1
+            - addVar: { scope: global, var: aid, delta: -12 }
+      - id: card-112
+        title: Colonel Chau
+        sideMode: dual
+        order: 112
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["VC", "ARVN", "US", "NVA"]
+          flavorText: "Census-grievance teams."
+        unshaded:
+          text: "Place 1 Police into each of 6 Provinces."
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+              cardinality: { max: 6 }
+          effects:
+            - removeByPriority:
+                budget: 6
+                groups:
+                  - bind: police
+                    over:
+                      query: tokensInZone
+                      zone: available-ARVN:none
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: police }
+                    to:
+                      zoneExpr: $targetProvince
+        shaded:
+          text: "Local Viet Minh tradition: Shift 3 Provinces with ARVN each 1 level toward Active Opposition. Place a VC Guerrilla in each."
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+              cardinality: { max: 3 }
+          effects:
+            - shiftMarker:
+                space: $targetProvince
+                marker: supportOpposition
+                delta: -1
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: guerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-VC:none
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetProvince
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Pool Zones (piece availability pools — supplement map-derived board zones)

@@ -89,7 +89,7 @@ export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, Effect
   },
   removeByPriority: {
     declaredBinderPaths: [['groups', '*', 'bind'], ['groups', '*', 'countBind'], ['remainingBind']],
-    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: [['groups', '*', 'countBind'], ['remainingBind']],
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
     zoneSelectorReferencerPaths: [['groups', '*', 'to'], ['groups', '*', 'from']],
   },

@@ -170,30 +170,43 @@ const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: Ef
     state: result.state,
     rng: result.rng,
     emittedEvents: result.emittedEvents ?? [],
+    bindings: result.bindings ?? ctx.bindings,
   };
 };
 
 const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
   let currentState = ctx.state;
   let currentRng = ctx.rng;
+  let currentBindings = ctx.bindings;
   const emittedEvents: TriggerEvent[] = [];
 
   for (const effect of effects) {
-    const result = applyEffectWithBudget(effect, { ...ctx, state: currentState, rng: currentRng }, budget);
+    const result = applyEffectWithBudget(effect, { ...ctx, state: currentState, rng: currentRng, bindings: currentBindings }, budget);
     currentState = result.state;
     currentRng = result.rng;
+    currentBindings = result.bindings ?? currentBindings;
     emittedEvents.push(...(result.emittedEvents ?? []));
   }
 
-  return { state: currentState, rng: currentRng, emittedEvents };
+  return { state: currentState, rng: currentRng, emittedEvents, bindings: currentBindings };
 };
 
 export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult {
   const budget = createBudgetState(ctx);
-  return applyEffectWithBudget(effect, ctx, budget);
+  const result = applyEffectWithBudget(effect, ctx, budget);
+  return {
+    state: result.state,
+    rng: result.rng,
+    ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
+  };
 }
 
 export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext): EffectResult {
   const budget = createBudgetState(ctx);
-  return applyEffectsWithBudget(effects, ctx, budget);
+  const result = applyEffectsWithBudget(effects, ctx, budget);
+  return {
+    state: result.state,
+    rng: result.rng,
+    ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
+  };
 }

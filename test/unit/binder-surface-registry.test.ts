@@ -78,6 +78,23 @@ describe('binder-surface-registry', () => {
     );
     assert.deepEqual(
       collectSequentialBindings({
+        removeByPriority: {
+          budget: 1,
+          groups: [
+            {
+              bind: '$tok',
+              over: { query: 'players' },
+              to: 'deck:none',
+              countBind: '$removed',
+            },
+          ],
+          remainingBind: '$remaining',
+        },
+      }),
+      ['$removed', '$remaining'],
+    );
+    assert.deepEqual(
+      collectSequentialBindings({
         forEach: {
           bind: '$tok',
           over: { query: 'players' },

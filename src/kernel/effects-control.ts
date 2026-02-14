@@ -28,14 +28,26 @@ export const applyIf = (
   const predicate = evalCondition(effect.if.when, evalCtx);
 
   if (predicate) {
-    return applyEffectsWithBudget(effect.if.then, ctx, budget);
+    const thenResult = applyEffectsWithBudget(effect.if.then, ctx, budget);
+    return {
+      state: thenResult.state,
+      rng: thenResult.rng,
+      ...(thenResult.emittedEvents === undefined ? {} : { emittedEvents: thenResult.emittedEvents }),
+      bindings: ctx.bindings,
+    };
   }
 
   if (effect.if.else !== undefined) {
-    return applyEffectsWithBudget(effect.if.else, ctx, budget);
+    const elseResult = applyEffectsWithBudget(effect.if.else, ctx, budget);
+    return {
+      state: elseResult.state,
+      rng: elseResult.rng,
+      ...(elseResult.emittedEvents === undefined ? {} : { emittedEvents: elseResult.emittedEvents }),
+      bindings: ctx.bindings,
+    };
   }
 
-  return { state: ctx.state, rng: ctx.rng };
+  return { state: ctx.state, rng: ctx.rng, bindings: ctx.bindings };
 };
 
 export const applyLet = (
@@ -54,7 +66,13 @@ export const applyLet = (
     },
   };
 
-  return applyEffectsWithBudget(effect.let.in, nestedCtx, budget);
+  const nestedResult = applyEffectsWithBudget(effect.let.in, nestedCtx, budget);
+  return {
+    state: nestedResult.state,
+    rng: nestedResult.rng,
+    ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
+    bindings: ctx.bindings,
+  };
 };
 
 export const applyForEach = (
@@ -143,7 +161,7 @@ export const applyForEach = (
     emittedEvents.push(...(countResult.emittedEvents ?? []));
   }
 
-  return { state: currentState, rng: currentRng, emittedEvents };
+  return { state: currentState, rng: currentRng, emittedEvents, bindings: ctx.bindings };
 };
 
 const resolveRemovalBudget = (budgetExpr: unknown, effectType: string): number => {
@@ -239,16 +257,18 @@ export const applyRemoveByPriority = (
     }
   }
 
+  const exportedBindings: Record<string, unknown> = {
+    ...ctx.bindings,
+    ...countBindings,
+    ...(effect.removeByPriority.remainingBind === undefined ? {} : { [effect.removeByPriority.remainingBind]: remainingBudget }),
+  };
+
   if (effect.removeByPriority.in !== undefined) {
     const inCtx: EffectContext = {
       ...ctx,
       state: currentState,
       rng: currentRng,
-      bindings: {
-        ...ctx.bindings,
-        ...countBindings,
-        ...(effect.removeByPriority.remainingBind === undefined ? {} : { [effect.removeByPriority.remainingBind]: remainingBudget }),
-      },
+      bindings: exportedBindings,
     };
 
     const inResult = applyEffectsWithBudget(effect.removeByPriority.in, inCtx, budget);
@@ -257,5 +277,5 @@ export const applyRemoveByPriority = (
     emittedEvents.push(...(inResult.emittedEvents ?? []));
   }
 
-  return { state: currentState, rng: currentRng, emittedEvents };
+  return { state: currentState, rng: currentRng, emittedEvents, bindings: exportedBindings };
 };

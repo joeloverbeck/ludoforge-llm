@@ -208,4 +208,41 @@ describe('compile-effects lowering', () => {
     assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_SELECTOR_INVALID');
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0.shuffle.zone');
   });
+
+  it('allows removeByPriority count/remaining bindings in subsequent sibling effects', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          removeByPriority: {
+            budget: 3,
+            groups: [
+              {
+                bind: '$tok',
+                over: { query: 'tokensInZone', zone: 'board' },
+                to: 'discard:none',
+                countBind: '$removed',
+              },
+            ],
+            remainingBind: '$remaining',
+          },
+        },
+        {
+          addVar: {
+            scope: 'global',
+            var: 'score',
+            delta: {
+              op: '+',
+              left: { ref: 'binding', name: '$removed' },
+              right: { ref: 'binding', name: '$remaining' },
+            },
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.ok(result.value !== null);
+  });
 });

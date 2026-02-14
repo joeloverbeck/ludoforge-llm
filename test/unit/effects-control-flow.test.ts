@@ -499,6 +499,69 @@ describe('effects control-flow handlers', () => {
     assert.deepEqual(result.state, ctx.state);
   });
 
+  it('removeByPriority exports count/remaining bindings to subsequent sibling effects', () => {
+    const def: GameDef = {
+      metadata: { id: 'remove-priority-sequential-bindings', players: { min: 1, max: 2 } },
+      constants: {},
+      globalVars: [
+        { name: 'count', type: 'int', init: 0, min: 0, max: 50 },
+        { name: 'bonus', type: 'int', init: 0, min: 0, max: 50 },
+      ],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('space:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('available-F1:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      tokenTypes: [{ id: 'troops', props: { faction: 'string' } }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    };
+    const state: GameState = {
+      globalVars: { count: 0, bonus: 0 },
+      perPlayerVars: {},
+      playerCount: 2,
+      zones: {
+        'space:none': [makeToken('t1', 'troops', 'F1')],
+        'available-F1:none': [],
+      },
+      nextTokenOrdinal: 2,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnCount: 1,
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
+      stateHash: 0n,
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      markers: {},
+    };
+    const ctx = makeCtx({ def, state });
+    const effects: readonly EffectAST[] = [
+      {
+        removeByPriority: {
+          budget: 3,
+          groups: [
+            {
+              bind: '$tok',
+              over: { query: 'tokensInZone', zone: 'space:none' },
+              to: { zoneExpr: 'available-F1:none' },
+              countBind: '$removed',
+            },
+          ],
+          remainingBind: '$remaining',
+        },
+      },
+      { setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$removed' } } },
+      { setVar: { scope: 'global', var: 'bonus', value: { ref: 'binding', name: '$remaining' } } },
+    ];
+
+    const result = applyEffects(effects, ctx);
+    assert.equal(result.state.globalVars.count, 1);
+    assert.equal(result.state.globalVars.bonus, 2);
+  });
+
   it('rollRandom generates a deterministic integer and binds it within scope', () => {
     const ctx = makeCtx();
     const effect: EffectAST = {

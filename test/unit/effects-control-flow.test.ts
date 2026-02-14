@@ -210,6 +210,23 @@ describe('effects control-flow handlers', () => {
     assert.equal(result.state.globalVars.sum, 3);
   });
 
+  it('forEach propagates emittedEvents from nested effects in deterministic order', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      forEach: {
+        bind: '$n',
+        over: { query: 'intsInRange', min: 1, max: 2 },
+        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$n' } } }],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.deepEqual(result.emittedEvents, [
+      { type: 'varChanged', scope: 'global', var: 'sum', oldValue: 0, newValue: 1 },
+      { type: 'varChanged', scope: 'global', var: 'sum', oldValue: 1, newValue: 3 },
+    ]);
+  });
+
   it('forEach throws runtime error for invalid limit values', () => {
     const ctx = makeCtx();
 

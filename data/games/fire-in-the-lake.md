@@ -729,17 +729,6 @@ effectMacros:
           then:
             - addVar: { scope: global, var: { param: resource }, delta: { param: amount } }
 
-  # ── mom-adsid-on-trail-change ─────────────────────────────────────────────
-  # ADSID (card #7, unshaded): -6 NVA resources whenever Trail changes.
-  - id: mom-adsid-on-trail-change
-    params: []
-    exports: []
-    effects:
-      - if:
-          when: { op: '==', left: { ref: gvar, var: mom_adsid }, right: true }
-          then:
-            - addVar: { scope: global, var: nvaResources, delta: -6 }
-
   # ── mom-body-count-award-aid ──────────────────────────────────────────────
   # Body Count (card #72, unshaded): +3 Aid per guerrilla removed by Assault/Patrol.
   - id: mom-body-count-award-aid
@@ -4354,7 +4343,6 @@ actionPipelines:
                                               then: 1
                                               else: 2
                                           else: 1
-                                  - macro: mom-adsid-on-trail-change
     atomicity: atomic
   - id: rally-vc-profile
     actionId: rally
@@ -5342,7 +5330,6 @@ actionPipelines:
                                                 when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
                                                 then: 2
                                                 else: 1
-                                  - macro: mom-adsid-on-trail-change
                                   - if:
                                       when:
                                         op: and
@@ -5415,7 +5402,6 @@ actionPipelines:
                                     when: { op: '==', left: { ref: globalMarkerState, marker: cap_topGun }, right: unshaded }
                                     then: 2
                                     else: 1
-                      - macro: mom-adsid-on-trail-change
                       - if:
                           when:
                             op: and
@@ -6821,6 +6807,23 @@ actions:
   - { id: ambushVc, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
   - { id: usOp, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
   - { id: arvnOp, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Triggers
+# ══════════════════════════════════════════════════════════════════════════════
+triggers:
+  - id: mom-adsid-on-trail-change
+    event:
+      type: varChanged
+      scope: global
+      var: trail
+    when:
+      op: and
+      args:
+        - { op: '==', left: { ref: gvar, var: mom_adsid }, right: true }
+        - { op: '!=', left: { ref: binding, name: $oldValue }, right: { ref: binding, name: $newValue } }
+    effects:
+      - addVar: { scope: global, var: nvaResources, delta: -6 }
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Terminal (stub — to be replaced by real victory conditions)

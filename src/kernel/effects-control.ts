@@ -4,7 +4,7 @@ import { evalValue } from './eval-value.js';
 import { EffectRuntimeError } from './effect-error.js';
 import { emitTrace, emitWarning } from './execution-collector.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST } from './types.js';
+import type { EffectAST, TriggerEvent } from './types.js';
 
 export interface EffectBudgetState {
   remaining: number;
@@ -102,6 +102,7 @@ export const applyForEach = (
 
   let currentState = ctx.state;
   let currentRng = ctx.rng;
+  const emittedEvents: TriggerEvent[] = [];
   for (const item of boundedItems) {
     const iterationCtx: EffectContext = {
       ...ctx,
@@ -115,6 +116,7 @@ export const applyForEach = (
     const iterationResult = applyEffectsWithBudget(effect.forEach.effects, iterationCtx, budget);
     currentState = iterationResult.state;
     currentRng = iterationResult.rng;
+    emittedEvents.push(...(iterationResult.emittedEvents ?? []));
   }
 
   emitTrace(ctx.collector, {
@@ -138,9 +140,10 @@ export const applyForEach = (
     const countResult = applyEffectsWithBudget(effect.forEach.in, countCtx, budget);
     currentState = countResult.state;
     currentRng = countResult.rng;
+    emittedEvents.push(...(countResult.emittedEvents ?? []));
   }
 
-  return { state: currentState, rng: currentRng };
+  return { state: currentState, rng: currentRng, emittedEvents };
 };
 
 const resolveRemovalBudget = (budgetExpr: unknown, effectType: string): number => {
@@ -166,6 +169,7 @@ export const applyRemoveByPriority = (
   let remainingBudget = resolveRemovalBudget(evalValue(effect.removeByPriority.budget, evalCtx), 'removeByPriority');
   let currentState = ctx.state;
   let currentRng = ctx.rng;
+  const emittedEvents: TriggerEvent[] = [];
   const countBindings: Record<string, number> = {};
 
   for (const group of effect.removeByPriority.groups) {
@@ -217,6 +221,7 @@ export const applyRemoveByPriority = (
 
         currentState = moveResult.state;
         currentRng = moveResult.rng;
+        emittedEvents.push(...(moveResult.emittedEvents ?? []));
         removedInGroup += 1;
         remainingBudget -= 1;
         if (remainingBudget === 0) {
@@ -249,7 +254,8 @@ export const applyRemoveByPriority = (
     const inResult = applyEffectsWithBudget(effect.removeByPriority.in, inCtx, budget);
     currentState = inResult.state;
     currentRng = inResult.rng;
+    emittedEvents.push(...(inResult.emittedEvents ?? []));
   }
 
-  return { state: currentState, rng: currentRng };
+  return { state: currentState, rng: currentRng, emittedEvents };
 };

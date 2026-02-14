@@ -111,6 +111,13 @@ const matchesEvent = (trigger: TriggerDef, event: TriggerEvent): boolean => {
       return triggerEvent.type === 'actionResolved' && (triggerEvent.action === undefined || triggerEvent.action === event.action);
     case 'tokenEntered':
       return triggerEvent.type === 'tokenEntered' && (triggerEvent.zone === undefined || triggerEvent.zone === event.zone);
+    case 'varChanged':
+      return (
+        triggerEvent.type === 'varChanged' &&
+        (triggerEvent.scope === undefined || triggerEvent.scope === event.scope) &&
+        (triggerEvent.var === undefined || triggerEvent.var === event.var) &&
+        (triggerEvent.player === undefined || triggerEvent.player === event.player)
+      );
   }
 };
 
@@ -125,6 +132,17 @@ const createEventBindings = (event: TriggerEvent): Readonly<Record<string, unkno
 
   if (event.type === 'tokenEntered') {
     return { $event: event, $zone: event.zone };
+  }
+
+  if (event.type === 'varChanged') {
+    return {
+      $event: event,
+      $scope: event.scope,
+      $var: event.var,
+      $player: event.player,
+      $oldValue: event.oldValue,
+      $newValue: event.newValue,
+    };
   }
 
   return { $event: event };

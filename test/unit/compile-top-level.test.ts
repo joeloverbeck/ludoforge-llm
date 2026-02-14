@@ -80,6 +80,35 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
   });
 
+  it('compiles varChanged trigger events and enforces variable references', () => {
+    const validDoc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'var-changed-valid', players: { min: 2, max: 2 } },
+      globalVars: [{ name: 'trail', type: 'int', init: 0, min: 0, max: 4 }],
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [{ id: 'onTrailChanged', event: { type: 'varChanged', scope: 'global', var: 'trail' }, effects: [] }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 2 }, result: { type: 'draw' } }] },
+    };
+    const valid = compileGameSpecToGameDef(validDoc);
+    assert.notEqual(valid.gameDef, null);
+    assertNoDiagnostics(valid);
+    assert.equal(valid.gameDef?.triggers[0]?.event.type, 'varChanged');
+
+    const invalidDoc = {
+      ...validDoc,
+      metadata: { id: 'var-changed-invalid', players: { min: 2, max: 2 } },
+      triggers: [{ id: 'onTrailChanged', event: { type: 'varChanged', scope: 'global', var: 'missingTrail' }, effects: [] }],
+    };
+    const invalid = compileGameSpecToGameDef(invalidDoc);
+    assert.equal(invalid.gameDef, null);
+    assert.equal(
+      invalid.diagnostics.some((diagnostic) => diagnostic.code === 'REF_VAR_MISSING' && diagnostic.path === 'triggers[0].event.var'),
+      true,
+    );
+  });
+
   it('preserves turnFlow contracts when declared', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

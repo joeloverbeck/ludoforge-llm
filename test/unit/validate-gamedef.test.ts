@@ -217,6 +217,27 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports invalid var references in varChanged triggers', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      triggers: [
+        {
+          id: 'onMissingVar',
+          event: { type: 'varChanged', scope: 'global', var: 'monee' },
+          effects: [],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_VAR_MISSING' && diag.path === 'triggers[0].event.var',
+      ),
+    );
+  });
+
   it('reports malformed intsInRange param domains', () => {
     const base = createValidGameDef();
     const def = {

@@ -8,6 +8,8 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 const LOC_SPACE = 'loc-hue-da-nang:none';
 const RALLY_SPACE = 'quang-nam:none';
 const ATTACK_SPACE = 'quang-tri-thua-thien:none';
+const CENTRAL_LAOS = 'central-laos:none';
+const SOUTHERN_LAOS = 'southern-laos:none';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -138,6 +140,30 @@ describe('FITL momentum formula modifiers', () => {
 
     assert.equal(unchanged.globalVars.trail, 2);
     assert.equal(unchanged.globalVars.nvaResources, 10, 'ADSID should not trigger when Trail is unchanged');
+
+    const baseNva = withActivePlayer(
+      {
+        ...initialState(def, 9102, 4),
+        globalVars: {
+          ...initialState(def, 9102, 4).globalVars,
+          trail: 2,
+          nvaResources: 10,
+        },
+      },
+      2,
+    );
+
+    const multiChange = applyMoveWithResolvedDecisionIds(def, withMom(baseNva, { mom_adsid: true }), {
+      actionId: asActionId('rally'),
+      params: {
+        targetSpaces: [],
+        $improveTrail: 'yes',
+        $trailImproveSpaces: [CENTRAL_LAOS, SOUTHERN_LAOS],
+      },
+    }).state;
+
+    assert.equal(multiChange.globalVars.trail, 4, 'Two Trail improvements should resolve deterministically in one action');
+    assert.equal(multiChange.globalVars.nvaResources, 0, 'ADSID should apply once per Trail change (2 changes => -12 resources)');
   });
 
   it('Claymores removes 1 guerrilla from each activated marching group', () => {

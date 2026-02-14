@@ -297,6 +297,25 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "act"?');
   });
 
+  it('trigger varChanged event referencing nonexistent var emits CNL_XREF_TRIGGER_VAR_MISSING', () => {
+    const sections = compileRichSections();
+    const trigger = requireValue(sections.triggers?.[0]);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      triggers: [
+        {
+          ...trigger,
+          event: { type: 'varChanged', scope: 'global', var: 'resorces' },
+        },
+      ],
+    });
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_TRIGGER_VAR_MISSING');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.triggers.0.event.var');
+    assert.equal(diagnostic?.suggestion, 'Did you mean "resources"?');
+  });
+
   it('eventDeck effects referencing nonexistent zone emit CNL_XREF_EVENT_DECK_EFFECT_ZONE_MISSING', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);

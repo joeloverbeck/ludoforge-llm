@@ -116,6 +116,69 @@ describe('dispatchTriggers', () => {
     ]);
   });
 
+  it('matches varChanged trigger filters and exposes var-change bindings', () => {
+    const def: GameDef = {
+      metadata: { id: 'trigger-var-changed', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [
+        { name: 'score', type: 'int', init: 0, min: 0, max: 100 },
+        { name: 'capturedOld', type: 'int', init: 0, min: 0, max: 100 },
+        { name: 'capturedNew', type: 'int', init: 0, min: 0, max: 100 },
+      ],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [],
+      triggers: [
+        {
+          id: asTriggerId('onTrailChanged'),
+          event: { type: 'varChanged', scope: 'global', var: 'trail' },
+          when: { op: '>', left: { ref: 'binding', name: '$newValue' }, right: { ref: 'binding', name: '$oldValue' } },
+          effects: [
+            { setVar: { scope: 'global', var: 'capturedOld', value: { ref: 'binding', name: '$oldValue' } } },
+            { setVar: { scope: 'global', var: 'capturedNew', value: { ref: 'binding', name: '$newValue' } } },
+            { addVar: { scope: 'global', var: 'score', delta: 1 } },
+          ],
+        },
+      ],
+      terminal: { conditions: [] },
+    };
+
+    const state = createState({
+      globalVars: {
+        enabled: 1,
+        score: 0,
+        enteredB: 0,
+        enteredC: 0,
+        capturedOld: 0,
+        capturedNew: 0,
+      },
+    });
+    const result = dispatchTriggers(
+      def,
+      state,
+      { state: state.rng },
+      { type: 'varChanged', scope: 'global', var: 'trail', oldValue: 1, newValue: 3 },
+      0,
+      8,
+      [],
+    );
+
+    assert.equal(result.state.globalVars.score, 1);
+    assert.equal(result.state.globalVars.capturedOld, 1);
+    assert.equal(result.state.globalVars.capturedNew, 3);
+    assert.deepEqual(result.triggerLog, [
+      {
+        kind: 'fired',
+        triggerId: asTriggerId('onTrailChanged'),
+        event: { type: 'varChanged', scope: 'global', var: 'trail', oldValue: 1, newValue: 3 },
+        depth: 0,
+      },
+    ]);
+  });
+
   it('cascades emitted events depth-first in deterministic order', () => {
     const def: GameDef = {
       metadata: { id: 'trigger-cascade-order', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
@@ -238,6 +301,7 @@ describe('dispatchTriggers', () => {
     assert.deepEqual(result.triggerLog, [
       { kind: 'fired', triggerId: asTriggerId('onTurnStart'), event: { type: 'turnStart' }, depth: 0 },
       { kind: 'fired', triggerId: asTriggerId('onEnterB'), event: { type: 'tokenEntered', zone: asZoneId('b:none') }, depth: 1 },
+      { kind: 'truncated', event: { type: 'varChanged', scope: 'global', var: 'enteredB', oldValue: 0, newValue: 1 }, depth: 2 },
       { kind: 'truncated', event: { type: 'tokenEntered', zone: asZoneId('c:none') }, depth: 2 },
     ]);
   });

@@ -14,6 +14,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
   const factionTargets = collectIdentifierTargets(cardDrivenTurnFlow?.eligibility.factions);
   const windowTargets = collectIdentifierTargets(cardDrivenTurnFlow?.eligibility.overrideWindows.map((window) => window.id));
   const globalVarTargets = collectIdentifierTargets(sections.globalVars?.map((globalVar) => globalVar.name));
+  const perPlayerVarTargets = collectIdentifierTargets(sections.perPlayerVars?.map((playerVar) => playerVar.name));
 
   if (sections.actions !== null && sections.turnStructure !== null) {
     for (const [actionIndex, action] of sections.actions.entries()) {
@@ -89,6 +90,30 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         actionTargets,
         `Trigger "${trigger.id}" references unknown action "${String(trigger.event.action)}".`,
         'Use one of the declared action ids.',
+      );
+    }
+  }
+
+  if (sections.triggers !== null && (sections.globalVars !== null || sections.perPlayerVars !== null)) {
+    for (const [triggerIndex, trigger] of sections.triggers.entries()) {
+      if (trigger.event.type !== 'varChanged' || trigger.event.var === undefined) {
+        continue;
+      }
+
+      const targets =
+        trigger.event.scope === 'global'
+          ? globalVarTargets
+          : trigger.event.scope === 'perPlayer'
+            ? perPlayerVarTargets
+            : mergeIdentifierTargets(globalVarTargets, perPlayerVarTargets);
+      pushMissingIdentifierDiagnostic(
+        diagnostics,
+        'CNL_XREF_TRIGGER_VAR_MISSING',
+        `doc.triggers.${triggerIndex}.event.var`,
+        trigger.event.var,
+        targets,
+        `Trigger "${trigger.id}" references unknown variable "${trigger.event.var}".`,
+        'Use one of the declared globalVars/perPlayerVars names.',
       );
     }
   }
@@ -276,6 +301,17 @@ function collectIdentifierTargets(values: readonly (string | null | undefined)[]
   return {
     values: normalizedValues,
     normalizedSet: new Set(normalizedValues),
+  };
+}
+
+function mergeIdentifierTargets(
+  left: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  right: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+): { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> } {
+  const merged = Array.from(new Set([...left.values, ...right.values]));
+  return {
+    values: merged,
+    normalizedSet: new Set(merged),
   };
 }
 

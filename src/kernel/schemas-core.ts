@@ -138,6 +138,16 @@ export const TriggerEventSchema = z.union([
   z.object({ type: z.literal('turnEnd') }).strict(),
   z.object({ type: z.literal('actionResolved'), action: StringSchema.optional() }).strict(),
   z.object({ type: z.literal('tokenEntered'), zone: StringSchema.optional() }).strict(),
+  z
+    .object({
+      type: z.literal('varChanged'),
+      scope: z.union([z.literal('global'), z.literal('perPlayer')]).optional(),
+      var: StringSchema.optional(),
+      player: IntegerSchema.optional(),
+      oldValue: z.union([NumberSchema, BooleanSchema]).optional(),
+      newValue: z.union([NumberSchema, BooleanSchema]).optional(),
+    })
+    .strict(),
 ]);
 
 export const TriggerDefSchema = z

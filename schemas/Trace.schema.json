@@ -114,6 +114,32 @@
             "type": { "const": "tokenEntered" },
             "zone": { "type": "string" }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "varChanged" },
+            "scope": {
+              "anyOf": [
+                { "type": "string", "const": "global" },
+                { "type": "string", "const": "perPlayer" }
+              ]
+            },
+            "var": { "type": "string" },
+            "player": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "oldValue": {
+              "anyOf": [{ "type": "number" }, { "type": "boolean" }]
+            },
+            "newValue": {
+              "anyOf": [{ "type": "number" }, { "type": "boolean" }]
+            }
+          }
         }
       ]
     },

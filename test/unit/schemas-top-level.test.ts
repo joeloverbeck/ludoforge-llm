@@ -346,6 +346,21 @@ describe('top-level runtime schemas', () => {
     assert.equal(result.success, true);
   });
 
+  it('parses varChanged trigger event shape in GameDefSchema', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      globalVars: [{ name: 'trail', type: 'int', init: 0, min: 0, max: 4 }],
+      triggers: [
+        {
+          id: 'onTrailChanged',
+          event: { type: 'varChanged', scope: 'global', var: 'trail' },
+          effects: [],
+        },
+      ],
+    });
+    assert.equal(result.success, true);
+  });
+
   it('fails on invalid coupPlan.maxConsecutiveRounds path', () => {
     const result = GameDefSchema.safeParse({
       ...minimalGameDef,

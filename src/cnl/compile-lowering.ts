@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import { asActionId, asPhaseId, asTriggerId } from '../kernel/branded.js';
+import { asActionId, asPhaseId, asPlayerId, asTriggerId } from '../kernel/branded.js';
 import type {
   ActionDef,
   ConditionAST,
@@ -346,9 +346,10 @@ export function lowerTriggers(
     }
 
     const event = lowerTriggerEvent(trigger.event, ownershipByBase, diagnostics, `${path}.event`);
-    const match = lowerOptionalCondition(trigger.match, ownershipByBase, [], diagnostics, `${path}.match`);
-    const when = lowerOptionalCondition(trigger.when, ownershipByBase, [], diagnostics, `${path}.when`);
-    const effects = lowerEffectsWithDiagnostics(trigger.effects, ownershipByBase, diagnostics, `${path}.effects`);
+    const bindingScope = event === null ? [] : triggerBindingScope(event);
+    const match = lowerOptionalCondition(trigger.match, ownershipByBase, bindingScope, diagnostics, `${path}.match`);
+    const when = lowerOptionalCondition(trigger.when, ownershipByBase, bindingScope, diagnostics, `${path}.when`);
+    const effects = lowerEffectsWithDiagnostics(trigger.effects, ownershipByBase, diagnostics, `${path}.effects`, bindingScope);
 
     if (event === null || match === null || when === null) {
       continue;
@@ -406,6 +407,30 @@ function lowerTriggerEvent(
         return null;
       }
       return { type: 'tokenEntered', zone: event.zone as GameDef['zones'][number]['id'] };
+    case 'varChanged': {
+      if (event.scope !== undefined && event.scope !== 'global' && event.scope !== 'perPlayer') {
+        diagnostics.push(missingCapabilityDiagnostic(`${path}.scope`, 'varChanged scope', event.scope, ['global', 'perPlayer']));
+        return null;
+      }
+      if (event.var !== undefined && (typeof event.var !== 'string' || event.var.trim() === '')) {
+        diagnostics.push(missingCapabilityDiagnostic(`${path}.var`, 'varChanged var', event.var, ['variable name']));
+        return null;
+      }
+      if (
+        event.player !== undefined &&
+        (typeof event.player !== 'number' || !Number.isSafeInteger(event.player) || event.player < 0)
+      ) {
+        diagnostics.push(missingCapabilityDiagnostic(`${path}.player`, 'varChanged player', event.player, ['integer player id >= 0']));
+        return null;
+      }
+
+      return {
+        type: 'varChanged',
+        ...(event.scope === undefined ? {} : { scope: event.scope }),
+        ...(event.var === undefined ? {} : { var: event.var }),
+        ...(event.player === undefined ? {} : { player: asPlayerId(event.player) }),
+      };
+    }
     default:
       diagnostics.push(
         missingCapabilityDiagnostic(`${path}.type`, 'trigger event type', event.type, [
@@ -415,9 +440,27 @@ function lowerTriggerEvent(
           'turnEnd',
           'actionResolved',
           'tokenEntered',
+          'varChanged',
         ]),
       );
       return null;
+  }
+}
+
+function triggerBindingScope(event: TriggerEvent): readonly string[] {
+  switch (event.type) {
+    case 'phaseEnter':
+    case 'phaseExit':
+      return ['$event', '$phase'];
+    case 'actionResolved':
+      return ['$event', '$action'];
+    case 'tokenEntered':
+      return ['$event', '$zone'];
+    case 'varChanged':
+      return ['$event', '$scope', '$var', '$player', '$oldValue', '$newValue'];
+    case 'turnStart':
+    case 'turnEnd':
+      return ['$event'];
   }
 }
 

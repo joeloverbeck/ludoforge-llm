@@ -128,7 +128,15 @@ export type TriggerEvent =
   | { readonly type: 'turnStart' }
   | { readonly type: 'turnEnd' }
   | { readonly type: 'actionResolved'; readonly action?: ActionId }
-  | { readonly type: 'tokenEntered'; readonly zone?: ZoneId };
+  | { readonly type: 'tokenEntered'; readonly zone?: ZoneId }
+  | {
+      readonly type: 'varChanged';
+      readonly scope?: 'global' | 'perPlayer';
+      readonly var?: string;
+      readonly player?: PlayerId;
+      readonly oldValue?: VariableValue;
+      readonly newValue?: VariableValue;
+    };
 
 export interface TriggerDef {
   readonly id: TriggerId;

@@ -175,6 +175,7 @@ function validateCrossReferences(
           );
         }
       }
+
     }
 
     pushDuplicateNormalizedIdDiagnostics(diagnostics, triggerIds, 'doc.triggers', 'trigger id');

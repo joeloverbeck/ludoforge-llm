@@ -204,6 +204,32 @@ describe('effects var handlers', () => {
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
+    assert.deepEqual(result.emittedEvents, []);
+  });
+
+  it('emits varChanged event payload on global and per-player setVar changes', () => {
+    const ctx = makeCtx();
+
+    const globalResult = applyEffect({ setVar: { scope: 'global', var: 'score', value: 9 } }, ctx);
+    assert.deepEqual(globalResult.emittedEvents, [
+      { type: 'varChanged', scope: 'global', var: 'score', oldValue: 3, newValue: 9 },
+    ]);
+
+    const playerResult = applyEffect({ setVar: { scope: 'pvar', player: 'actor', var: 'hp', value: 11 } }, ctx);
+    assert.deepEqual(playerResult.emittedEvents, [
+      { type: 'varChanged', scope: 'perPlayer', player: asPlayerId(0), var: 'hp', oldValue: 6, newValue: 11 },
+    ]);
+  });
+
+  it('emits varChanged event payload on addVar changes and not on no-op clamp writes', () => {
+    const ctx = makeCtx();
+    const changed = applyEffect({ addVar: { scope: 'global', var: 'score', delta: -2 } }, ctx);
+    assert.deepEqual(changed.emittedEvents, [
+      { type: 'varChanged', scope: 'global', var: 'score', oldValue: 3, newValue: 1 },
+    ]);
+
+    const noOp = applyEffect({ addVar: { scope: 'global', var: 'score', delta: 0 } }, ctx);
+    assert.deepEqual(noOp.emittedEvents, []);
   });
 
   it('throws EffectRuntimeError when pvar scope omits player selector', () => {

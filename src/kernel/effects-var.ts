@@ -3,6 +3,7 @@ import { evalValue } from './eval-value.js';
 import { emitTrace } from './execution-collector.js';
 import { EffectRuntimeError } from './effect-error.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
+import type { PlayerId } from './branded.js';
 import type { EffectAST } from './types.js';
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
@@ -66,6 +67,28 @@ const resolvePerPlayerVarDef = (ctx: EffectContext, varName: string, effectType:
   return variableDef;
 };
 
+const globalVarChangedEvent = (varName: string, oldValue: number | boolean, newValue: number | boolean) => ({
+  type: 'varChanged' as const,
+  scope: 'global' as const,
+  var: varName,
+  oldValue,
+  newValue,
+});
+
+const perPlayerVarChangedEvent = (
+  playerId: PlayerId,
+  varName: string,
+  oldValue: number | boolean,
+  newValue: number | boolean,
+) => ({
+  type: 'varChanged' as const,
+  scope: 'perPlayer' as const,
+  player: playerId,
+  var: varName,
+  oldValue,
+  newValue,
+});
+
 export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknown }>, ctx: EffectContext): EffectResult => {
   const { scope, var: variableName, player, value } = effect.setVar;
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
@@ -100,6 +123,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
         },
       },
       rng: ctx.rng,
+      emittedEvents: [globalVarChangedEvent(variableName, currentValue, nextValue)],
     };
   }
 
@@ -166,6 +190,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
       },
     },
     rng: ctx.rng,
+    emittedEvents: [perPlayerVarChangedEvent(playerId, variableName, currentValue, nextValue)],
   };
 };
 
@@ -215,6 +240,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
         },
       },
       rng: ctx.rng,
+      emittedEvents: [globalVarChangedEvent(variableName, currentValue, nextValue)],
     };
   }
 
@@ -293,5 +319,6 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
       },
     },
     rng: ctx.rng,
+    emittedEvents: [perPlayerVarChangedEvent(playerId, variableName, currentValue, nextValue)],
   };
 };

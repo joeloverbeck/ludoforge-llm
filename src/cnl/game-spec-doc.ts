@@ -248,9 +248,22 @@ export interface GameSpecTerminal {
   readonly scoring?: GameSpecScoring;
 }
 
+export type EffectMacroParamPrimitiveLiteral = string | number | boolean | null;
+
+export type EffectMacroParamType =
+  | 'string'
+  | 'number'
+  | 'effect'
+  | 'effects'
+  | 'value'
+  | 'condition'
+  | 'query'
+  | { readonly kind: 'enum'; readonly values: readonly string[] }
+  | { readonly kind: 'literals'; readonly values: readonly EffectMacroParamPrimitiveLiteral[] };
+
 export interface EffectMacroParam {
   readonly name: string;
-  readonly type: 'string' | 'number' | 'effect' | 'effects' | 'value' | 'condition' | 'query';
+  readonly type: EffectMacroParamType;
 }
 
 export interface EffectMacroDef {

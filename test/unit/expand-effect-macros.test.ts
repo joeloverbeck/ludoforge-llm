@@ -302,7 +302,7 @@ describe('expandEffectMacros', () => {
     assert.ok(result.diagnostics.some((d) => d.code === 'EFFECT_MACRO_MISSING_ARGS'));
   });
 
-  it('warns on extra args', () => {
+  it('rejects extra args', () => {
     const macro: EffectMacroDef = {
       id: 'simple',
       params: [],
@@ -315,9 +315,53 @@ describe('expandEffectMacros', () => {
 
     const result = expandEffectMacros(doc);
     assert.ok(result.diagnostics.some((d) => d.code === 'EFFECT_MACRO_EXTRA_ARGS'));
+    assert.deepEqual(result.doc.setup, []);
+  });
+
+  it('accepts constrained enum and literals macro params', () => {
+    const macro: EffectMacroDef = {
+      id: 'typed',
+      params: [
+        { name: 'faction', type: { kind: 'enum', values: ['NVA', 'VC'] } },
+        { name: 'tier', type: { kind: 'literals', values: [1, 2, 3] } },
+      ],
+      effects: [
+        { setVar: { scope: 'global', var: 'pickedFaction', value: { param: 'faction' } } },
+        { setVar: { scope: 'global', var: 'pickedTier', value: { param: 'tier' } } },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macro],
+      setup: [{ macro: 'typed', args: { faction: 'VC', tier: 2 } }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
     assert.deepEqual(result.doc.setup, [
-      { setVar: { scope: 'global', var: 'v', value: 1 } },
+      { setVar: { scope: 'global', var: 'pickedFaction', value: 'VC' } },
+      { setVar: { scope: 'global', var: 'pickedTier', value: 2 } },
     ]);
+  });
+
+  it('rejects arg values that violate constrained param contracts', () => {
+    const macro: EffectMacroDef = {
+      id: 'typed',
+      params: [{ name: 'faction', type: { kind: 'enum', values: ['NVA', 'VC'] } }],
+      effects: [{ setVar: { scope: 'global', var: 'pickedFaction', value: { param: 'faction' } } }],
+    };
+    const doc = makeDoc({
+      effectMacros: [macro],
+      setup: [{ macro: 'typed', args: { faction: 'US' } }],
+    });
+
+    const result = expandEffectMacros(doc);
+    const violation = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION');
+    const declaration = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_ARG_CONSTRAINT_DECLARATION');
+    assert.ok(violation !== undefined);
+    assert.equal(violation?.path, 'setup[0].args.faction');
+    assert.ok(declaration !== undefined);
+    assert.equal(declaration?.path, 'effectMacros.typed.params.0');
+    assert.deepEqual(result.doc.setup, []);
   });
 
   it('expands macros nested inside forEach effects', () => {

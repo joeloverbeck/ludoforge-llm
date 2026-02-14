@@ -117,7 +117,7 @@ effectMacros:
     params:
       - { name: space, type: string }
       - { name: damageExpr, type: value }
-      - { name: attackerFaction, type: string }
+      - { name: attackerFaction, type: { kind: enum, values: [NVA, VC] } }
     effects:
       - let:
           bind: $usPiecesBefore
@@ -226,7 +226,7 @@ effectMacros:
   # - either enemy in space OR LoC with adjacent enemy
   - id: insurgent-ambush-select-spaces
     params:
-      - { name: faction, type: string }
+      - { name: faction, type: { kind: enum, values: [NVA, VC] } }
     effects:
       - chooseN:
           bind: targetSpaces
@@ -287,7 +287,7 @@ effectMacros:
       - '$ambushTargetMode@{$space}'
       - '$ambushAdjacentTargets@{$space}'
     params:
-      - { name: faction, type: string }
+      - { name: faction, type: { kind: enum, values: [NVA, VC] } }
     effects:
       - forEach:
           bind: $space
@@ -510,7 +510,7 @@ effectMacros:
   # - LimOp max=1, normal max=99
   - id: insurgent-attack-select-spaces
     params:
-      - { name: faction, type: string }
+      - { name: faction, type: { kind: enum, values: [NVA, VC] } }
     effects:
       - if:
           when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
@@ -554,7 +554,7 @@ effectMacros:
   # - LimOp max=1, normal max=99
   - id: insurgent-terror-select-spaces
     params:
-      - { name: faction, type: string }
+      - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: includeTroops, type: value }
     effects:
       - if:
@@ -633,7 +633,7 @@ effectMacros:
   - id: insurgent-terror-resolve-space
     params:
       - { name: space, type: string }
-      - { name: faction, type: string }
+      - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: resourceVar, type: string }
       - { name: shiftFromSupportOnly, type: value }
     effects:
@@ -716,7 +716,7 @@ effectMacros:
   - id: insurgent-march-resolve-destination
     params:
       - { name: destSpace, type: string }
-      - { name: faction, type: string }
+      - { name: faction, type: { kind: enum, values: [NVA, VC] } }
       - { name: resourceVar, type: string }
       - { name: allowTrailCountryFreeCost, type: value }
     effects:
@@ -835,7 +835,7 @@ effectMacros:
   # - LimOp-aware max selection (1 for limitedOperation, else 99).
   - id: insurgent-march-select-destinations
     params:
-      - { name: faction, type: string }
+      - { name: faction, type: { kind: enum, values: [NVA, VC] } }
     effects:
       - if:
           when: { op: '==', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
@@ -896,8 +896,8 @@ effectMacros:
   # Dynamic piece sourcing (Rule 1.4.1): place from Available, then from map if not US.
   - id: place-from-available-or-map
     params:
-      - { name: pieceType, type: string }
-      - { name: faction, type: string }
+      - { name: pieceType, type: value }
+      - { name: faction, type: { kind: enum, values: [US, ARVN, NVA, VC] } }
       - { name: targetSpace, type: string }
       - { name: maxPieces, type: value }
     effects:
@@ -958,7 +958,7 @@ effectMacros:
   - id: sweep-activation
     params:
       - { name: space, type: string }
-      - { name: cubeFaction, type: string }
+      - { name: cubeFaction, type: { kind: enum, values: [US, ARVN] } }
       - { name: sfType, type: string }
     effects:
       - let:

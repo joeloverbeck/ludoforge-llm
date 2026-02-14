@@ -143,6 +143,79 @@ describe('effect macro → compile pipeline integration', () => {
     ]);
   });
 
+  it('constrained macro params compile with valid enum/literal args', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'set-faction-tier',
+      params: [
+        { name: 'faction', type: { kind: 'enum', values: ['NVA', 'VC'] } },
+        { name: 'tier', type: { kind: 'literals', values: [1, 2] } },
+      ],
+      effects: [
+        { setVar: { scope: 'global', var: 'score', value: { param: 'tier' } } },
+        { setVar: { scope: 'global', var: 'count', value: { if: { when: { op: '==', left: { param: 'faction' }, right: 'VC' }, then: 1, else: 0 } } } },
+      ],
+    };
+
+    const doc = {
+      ...makeMinimalDoc(),
+      effectMacros: [macroDef],
+      setup: [{ macro: 'set-faction-tier', args: { faction: 'VC', tier: 2 } }],
+      actions: [
+        {
+          id: 'pass',
+          actor: 'active',
+          phase: 'main',
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    const errors = result.diagnostics.filter((d) => d.severity === 'error');
+    assert.deepEqual(errors, [], `Unexpected errors: ${JSON.stringify(errors, null, 2)}`);
+    assert.ok(result.gameDef !== null, 'Expected valid GameDef');
+  });
+
+  it('constrained macro params fail compile on invalid enum/literal args', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'set-faction-tier',
+      params: [
+        { name: 'faction', type: { kind: 'enum', values: ['NVA', 'VC'] } },
+        { name: 'tier', type: { kind: 'literals', values: [1, 2] } },
+      ],
+      effects: [{ setVar: { scope: 'global', var: 'score', value: { param: 'tier' } } }],
+    };
+
+    const doc = {
+      ...makeMinimalDoc(),
+      effectMacros: [macroDef],
+      setup: [{ macro: 'set-faction-tier', args: { faction: 'US', tier: 3 } }],
+      actions: [
+        {
+          id: 'pass',
+          actor: 'active',
+          phase: 'main',
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    const violationPaths = result.diagnostics
+      .filter((d) => d.code === 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION')
+      .map((d) => d.path);
+    assert.deepEqual(violationPaths, ['setup[0].args.faction', 'setup[0].args.tier']);
+  });
+
   it('concat ValueExpr compiles through the full pipeline', () => {
     const doc = {
       ...makeMinimalDoc(),

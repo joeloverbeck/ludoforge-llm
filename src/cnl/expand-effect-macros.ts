@@ -1,6 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type {
   EffectMacroDef,
+  EffectMacroParamPrimitiveLiteral,
   GameSpecDoc,
   GameSpecEffect,
 } from './game-spec-doc.js';
@@ -8,10 +9,33 @@ import type {
 const MAX_EXPANSION_DEPTH = 10;
 
 interface MacroIndex {
-  readonly byId: ReadonlyMap<string, EffectMacroDef>;
+  readonly byId: ReadonlyMap<string, IndexedMacroDef>;
+}
+
+type NormalizedMacroParamConstraint =
+  | { readonly kind: 'string' }
+  | { readonly kind: 'number' }
+  | { readonly kind: 'effect' }
+  | { readonly kind: 'effects' }
+  | { readonly kind: 'value' }
+  | { readonly kind: 'condition' }
+  | { readonly kind: 'query' }
+  | { readonly kind: 'enum'; readonly values: readonly string[] }
+  | { readonly kind: 'literals'; readonly values: readonly EffectMacroParamPrimitiveLiteral[] };
+
+interface IndexedMacroParam {
+  readonly name: string;
+  readonly declarationPath: string;
+  readonly constraint: NormalizedMacroParamConstraint;
+}
+
+interface IndexedMacroDef {
+  readonly def: EffectMacroDef;
+  readonly params: readonly IndexedMacroParam[];
 }
 
 const BINDING_TOKEN_RE = /\$[A-Za-z0-9_]+/g;
+const LEGACY_PARAM_TYPES = new Set(['string', 'number', 'effect', 'effects', 'value', 'condition', 'query']);
 
 function isParamNode(node: unknown): node is { readonly param: string } {
   return (
@@ -63,6 +87,220 @@ function substituteParams(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isPrimitiveLiteral(value: unknown): value is EffectMacroParamPrimitiveLiteral {
+  return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+}
+
+function isLegacyMacroParamType(type: string): type is 'string' | 'number' | 'effect' | 'effects' | 'value' | 'condition' | 'query' {
+  return LEGACY_PARAM_TYPES.has(type);
+}
+
+function normalizeMacroParamConstraint(
+  macroId: string,
+  paramIndex: number,
+  type: unknown,
+  diagnostics: Diagnostic[],
+): NormalizedMacroParamConstraint | null {
+  const typePath = `effectMacros.${macroId}.params.${paramIndex}.type`;
+  if (typeof type === 'string') {
+    if (!isLegacyMacroParamType(type)) {
+      diagnostics.push({
+        code: 'EFFECT_MACRO_PARAM_TYPE_INVALID',
+        path: typePath,
+        severity: 'error',
+        message: `Macro "${macroId}" param type "${type}" is unsupported.`,
+        suggestion: 'Use one of: string, number, effect, effects, value, condition, query, or a constrained kind.',
+      });
+      return null;
+    }
+    return { kind: type };
+  }
+
+  if (!isRecord(type) || typeof type.kind !== 'string') {
+    diagnostics.push({
+      code: 'EFFECT_MACRO_PARAM_TYPE_INVALID',
+      path: typePath,
+      severity: 'error',
+      message: `Macro "${macroId}" param type must be a known string type or constrained kind object.`,
+    });
+    return null;
+  }
+
+  if (type.kind === 'enum') {
+    const values = type.values;
+    if (!Array.isArray(values) || values.length === 0 || values.some((value) => typeof value !== 'string' || value.length === 0)) {
+      diagnostics.push({
+        code: 'EFFECT_MACRO_PARAM_ENUM_INVALID',
+        path: `${typePath}.values`,
+        severity: 'error',
+        message: `Macro "${macroId}" enum param must declare a non-empty string values array.`,
+        suggestion: 'Set enum values to one or more non-empty strings.',
+      });
+      return null;
+    }
+    return { kind: 'enum', values: [...values] };
+  }
+
+  if (type.kind === 'literals') {
+    const values = type.values;
+    if (!Array.isArray(values) || values.length === 0 || values.some((value) => !isPrimitiveLiteral(value))) {
+      diagnostics.push({
+        code: 'EFFECT_MACRO_PARAM_LITERALS_INVALID',
+        path: `${typePath}.values`,
+        severity: 'error',
+        message: `Macro "${macroId}" literals param must declare a non-empty array of string/number/boolean/null literals.`,
+      });
+      return null;
+    }
+    return { kind: 'literals', values: [...values] };
+  }
+
+  diagnostics.push({
+    code: 'EFFECT_MACRO_PARAM_TYPE_INVALID',
+    path: `${typePath}.kind`,
+    severity: 'error',
+    message: `Macro "${macroId}" param constraint kind "${type.kind}" is unsupported.`,
+    suggestion: 'Use kind: enum or kind: literals.',
+  });
+  return null;
+}
+
+function formatLiteral(value: EffectMacroParamPrimitiveLiteral): string {
+  if (value === null) {
+    return 'null';
+  }
+  return JSON.stringify(value);
+}
+
+function describeConstraint(constraint: NormalizedMacroParamConstraint): string {
+  switch (constraint.kind) {
+    case 'string':
+    case 'number':
+    case 'effect':
+    case 'effects':
+    case 'value':
+    case 'condition':
+    case 'query':
+      return constraint.kind;
+    case 'enum':
+      return `enum(${constraint.values.map((value) => JSON.stringify(value)).join(', ')})`;
+    case 'literals':
+      return `literals(${constraint.values.map((value) => formatLiteral(value)).join(', ')})`;
+  }
+}
+
+function describeArgumentKind(value: unknown): string {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+}
+
+function argumentSatisfiesConstraint(value: unknown, constraint: NormalizedMacroParamConstraint): boolean {
+  switch (constraint.kind) {
+    case 'string':
+      return typeof value === 'string';
+    case 'number':
+      return typeof value === 'number' && Number.isFinite(value);
+    case 'effect':
+      return isRecord(value);
+    case 'effects':
+      return Array.isArray(value) && value.every((effectNode) => isRecord(effectNode));
+    case 'value':
+      return isPrimitiveLiteral(value) || isRecord(value);
+    case 'condition':
+      return typeof value === 'boolean' || isRecord(value);
+    case 'query':
+      return isRecord(value) && typeof value.query === 'string';
+    case 'enum':
+      return typeof value === 'string' && constraint.values.includes(value);
+    case 'literals':
+      return isPrimitiveLiteral(value) && constraint.values.includes(value);
+  }
+}
+
+function normalizeMacroParams(
+  macroDef: EffectMacroDef,
+  diagnostics: Diagnostic[],
+): readonly IndexedMacroParam[] {
+  const normalized: IndexedMacroParam[] = [];
+  const seenNames = new Set<string>();
+
+  for (const [paramIndex, param] of macroDef.params.entries()) {
+    const name = param.name;
+    const basePath = `effectMacros.${macroDef.id}.params.${paramIndex}`;
+    if (typeof name !== 'string' || name.trim() === '') {
+      diagnostics.push({
+        code: 'EFFECT_MACRO_PARAM_NAME_INVALID',
+        path: `${basePath}.name`,
+        severity: 'error',
+        message: `Macro "${macroDef.id}" param name must be a non-empty string.`,
+      });
+      continue;
+    }
+
+    if (seenNames.has(name)) {
+      diagnostics.push({
+        code: 'EFFECT_MACRO_PARAM_DUPLICATE',
+        path: `${basePath}.name`,
+        severity: 'error',
+        message: `Macro "${macroDef.id}" declares duplicate param "${name}".`,
+      });
+      continue;
+    }
+    seenNames.add(name);
+
+    const constraint = normalizeMacroParamConstraint(macroDef.id, paramIndex, param.type, diagnostics);
+    if (constraint === null) {
+      continue;
+    }
+
+    normalized.push({
+      name,
+      declarationPath: basePath,
+      constraint,
+    });
+  }
+
+  return normalized;
+}
+
+function validateMacroArgConstraints(
+  macroId: string,
+  params: readonly IndexedMacroParam[],
+  args: Readonly<Record<string, unknown>>,
+  invocationPath: string,
+  diagnostics: Diagnostic[],
+): boolean {
+  let hasViolations = false;
+  for (const param of params) {
+    if (!(param.name in args)) {
+      continue;
+    }
+
+    const value = args[param.name];
+    if (argumentSatisfiesConstraint(value, param.constraint)) {
+      continue;
+    }
+
+    hasViolations = true;
+    diagnostics.push({
+      code: 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION',
+      path: `${invocationPath}.args.${param.name}`,
+      severity: 'error',
+      message: `Macro "${macroId}" arg "${param.name}" violates constraint ${describeConstraint(param.constraint)} (received ${describeArgumentKind(value)}).`,
+      suggestion: `Update the arg value to satisfy "${param.name}" as declared at ${param.declarationPath}.`,
+    });
+    diagnostics.push({
+      code: 'EFFECT_MACRO_ARG_CONSTRAINT_DECLARATION',
+      path: param.declarationPath,
+      severity: 'info',
+      message: `Parameter "${param.name}" constraint is declared here.`,
+    });
+  }
+
+  return hasViolations;
 }
 
 function escapeRegExp(value: string): string {
@@ -222,8 +460,8 @@ function expandEffect(
   }
 
   const macroId = effect.macro;
-  const def = index.byId.get(macroId);
-  if (def === undefined) {
+  const indexedMacro = index.byId.get(macroId);
+  if (indexedMacro === undefined) {
     diagnostics.push({
       code: 'EFFECT_MACRO_UNKNOWN',
       path,
@@ -257,7 +495,8 @@ function expandEffect(
     ? effect.args as Record<string, unknown>
     : {};
 
-  const missingParams = def.params.filter((p) => !(p.name in args));
+  const { def, params } = indexedMacro;
+  const missingParams = params.filter((p) => !(p.name in args));
   if (missingParams.length > 0) {
     diagnostics.push({
       code: 'EFFECT_MACRO_MISSING_ARGS',
@@ -268,14 +507,20 @@ function expandEffect(
     return [];
   }
 
-  const extraArgs = Object.keys(args).filter((k) => !def.params.some((p) => p.name === k));
+  const extraArgs = Object.keys(args).filter((k) => !params.some((p) => p.name === k));
   if (extraArgs.length > 0) {
     diagnostics.push({
       code: 'EFFECT_MACRO_EXTRA_ARGS',
       path,
-      severity: 'warning',
+      severity: 'error',
       message: `Macro "${macroId}" received unexpected args: ${extraArgs.join(', ')}.`,
     });
+    return [];
+  }
+
+  const hasConstraintViolations = validateMacroArgConstraints(macroId, params, args, path, diagnostics);
+  if (hasConstraintViolations) {
+    return [];
   }
 
   const declaredBindings = new Set<string>();
@@ -365,7 +610,7 @@ function buildMacroIndex(
   macros: readonly EffectMacroDef[],
   diagnostics: Diagnostic[],
 ): MacroIndex {
-  const byId = new Map<string, EffectMacroDef>();
+  const byId = new Map<string, IndexedMacroDef>();
   for (const macro of macros) {
     if (byId.has(macro.id)) {
       diagnostics.push({
@@ -376,7 +621,10 @@ function buildMacroIndex(
       });
       continue;
     }
-    byId.set(macro.id, macro);
+    byId.set(macro.id, {
+      def: macro,
+      params: normalizeMacroParams(macro, diagnostics),
+    });
   }
   return { byId };
 }

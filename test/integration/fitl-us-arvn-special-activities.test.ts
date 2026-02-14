@@ -59,7 +59,6 @@ describe('FITL US/ARVN special activities integration', () => {
     assert.equal(final.globalVars.governCount, 1);
     assert.equal(final.globalVars.transportCount, 1);
     assert.equal(final.globalVars.raidCount, 1);
-    assert.equal(final.globalVars.fallbackUsed, 0);
   });
 
   it('rejects airStrike when cross-faction cost validation fails under atomicity forbid', () => {

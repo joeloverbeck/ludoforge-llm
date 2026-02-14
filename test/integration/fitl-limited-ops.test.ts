@@ -86,6 +86,6 @@ describe('FITL limited operation integration', () => {
       },
     }).state;
 
-    assert.equal(singleSpace.globalVars.fallbackUsed, 0, 'Limited attack should resolve through attack profile (no fallback)');
+    assert.equal(singleSpace.globalVars.nvaResources, 9, 'Limited attack should resolve and spend one NVA resource for one targeted space');
   });
 });

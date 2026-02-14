@@ -73,7 +73,6 @@ describe('FITL insurgent operations integration', () => {
     };
     const final = applyMove(compiled.gameDef!, withAttackTargets, selected).state;
 
-    assert.equal(final.globalVars.fallbackUsed, 0);
     assert.ok((final.globalVars.nvaResources ?? 10) <= 10, 'Expected Attack to charge NVA resources or keep them unchanged if free');
   });
 

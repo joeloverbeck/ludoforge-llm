@@ -76,7 +76,7 @@ describe('FITL COIN operations integration', () => {
     }
   });
 
-  it('routes assault through operation profile runtime (no fallback, no transitional stub counters)', () => {
+  it('routes assault through operation profile runtime (no transitional stub counters)', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -136,7 +136,6 @@ describe('FITL COIN operations integration', () => {
 
     assert.equal(final.globalVars.coinResources, beforeCoinResources, 'US Assault should not spend coinResources');
     assert.equal(final.globalVars.sweepCount, 0);
-    assert.equal(final.globalVars.fallbackUsed, 0);
     assert.equal(
       countFactionTokensInSpace(final, space, ['NVA', 'VC']),
       0,
@@ -144,7 +143,7 @@ describe('FITL COIN operations integration', () => {
     );
   });
 
-  it('executes sweep-us-profile at runtime via decision sequence (no fallback, no sweep resource spend)', () => {
+  it('executes sweep-us-profile at runtime via decision sequence (no sweep resource spend)', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -195,7 +194,6 @@ describe('FITL COIN operations integration', () => {
     const final = result.state;
 
     assert.equal(final.globalVars.coinResources, beforeCoinResources, 'US Sweep should not spend coinResources');
-    assert.equal(final.globalVars.fallbackUsed, 0, 'Sweep must execute through operation profile, not fallback');
     assert.equal(
       (final.zones[targetSpace] ?? []).some((token) => String(token.id) === troopId),
       true,
@@ -529,7 +527,6 @@ describe('FITL COIN operations integration', () => {
       const activeGuerrillas = guerrillas.filter((token) => token.props.activity === 'active');
 
       assert.equal(final.globalVars.arvnResources, beforeArvnResources, 'Free ARVN Sweep should not spend arvnResources');
-      assert.equal(final.globalVars.fallbackUsed, 0, 'Sweep must execute through operation profile, not fallback');
       assert.equal(activeGuerrillas.length, 0, 'Jungle sweep with 1 sweeper should activate 0 guerrillas (no runtime error)');
     });
 

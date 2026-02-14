@@ -44,6 +44,13 @@ describe('FITL production data integration compilation', () => {
 
     // Compilation must succeed (gameDef non-null)
     assert.notEqual(compiled.gameDef, null, 'Expected gameDef to compile successfully');
+    const profileBackedActionIds = new Set((compiled.gameDef!.actionPipelines ?? []).map((profile) => String(profile.actionId)));
+    for (const action of compiled.gameDef!.actions) {
+      if (!profileBackedActionIds.has(String(action.id))) {
+        continue;
+      }
+      assert.deepEqual(action.effects, [], `Expected profile-backed action ${String(action.id)} to have no fallback action effects`);
+    }
 
     const mapAsset = (parsed.doc.dataAssets ?? []).find((asset) => asset.id === 'fitl-map-production' && asset.kind === 'map');
     assert.ok(mapAsset, 'Expected fitl-map-production map asset');

@@ -64,7 +64,6 @@ describe('FITL NVA/VC special activities integration', () => {
     assert.equal(final.globalVars.taxCount, 1);
     assert.equal(final.globalVars.subvertCount, 1);
     assert.equal(final.globalVars.vcAmbushCount, 1);
-    assert.equal(final.globalVars.fallbackUsed, 0);
   });
 
   it('rejects infiltrate when profile legality fails', () => {

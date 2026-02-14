@@ -3194,8 +3194,6 @@ globalVars:
   # ── Stub vars for joint-operation testing ──
   - { name: usOpCount, type: int, init: 0, min: 0, max: 50 }
   - { name: arvnOpCount, type: int, init: 0, min: 0, max: 50 }
-  # ── Fallback-detection var (shared across all operation test suites) ──
-  - { name: fallbackUsed, type: int, init: 0, min: 0, max: 300 }
 
 perPlayerVars:
   - { name: resources, type: int, init: 20, min: 0, max: 50 }
@@ -3208,32 +3206,32 @@ turnStructure:
     - id: main
   
 # ══════════════════════════════════════════════════════════════════════════════
-# Actions (stubs — each fallback adds +100 to fallbackUsed for override detection)
+# Actions (profile-backed actions keep empty fallback effects)
 # ══════════════════════════════════════════════════════════════════════════════
 actions:
   - { id: pass, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: train, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: patrol, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: sweep, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: assault, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: rally, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: march, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: attack, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: terror, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: advise, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: airLift, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: airStrike, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: govern, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: transport, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: raid, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: infiltrate, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: bombard, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: ambushNva, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: tax, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: subvert, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: ambushVc, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: usOp, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
-  - { id: arvnOp, actor: active, phase: main, params: [], pre: null, cost: [], effects: [{ addVar: { scope: global, var: fallbackUsed, delta: 100 } }], limits: [] }
+  - { id: train, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: patrol, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: sweep, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: assault, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: rally, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: march, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: attack, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: terror, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: advise, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: airLift, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: airStrike, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: govern, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: transport, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: raid, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: infiltrate, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: bombard, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: ambushNva, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: tax, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: subvert, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: ambushVc, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: usOp, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: arvnOp, actor: active, phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Terminal (stub — to be replaced by real victory conditions)

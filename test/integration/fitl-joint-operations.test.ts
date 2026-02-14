@@ -42,7 +42,6 @@ describe('FITL Joint Operation cost constraint integration', () => {
 
     assert.equal(result.state.perPlayerVars['1']!.resources, 15, 'ARVN resources reduced by 5');
     assert.equal(result.state.globalVars.usOpCount, 1, 'stages effect executed');
-    assert.equal(result.state.globalVars.fallbackUsed, 0, 'profile used, not fallback');
   });
 
   it('allows US operation at boundary (ARVN resources - cost == Total Econ: 15 - 5 = 10 >= 10)', () => {

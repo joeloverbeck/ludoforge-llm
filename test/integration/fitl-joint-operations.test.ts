@@ -33,7 +33,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
     }
   });
 
-  it('allows US operation when ARVN resources minus cost exceed Total Econ (20 - 5 = 15 >= 10)', () => {
+  it('allows US operation when ARVN resources minus cost exceed Total Econ (20 - 5 = 15 > 10)', () => {
     const gameDef = compiled.gameDef!;
     const state = initialState(gameDef, 42, 2);
 
@@ -45,16 +45,32 @@ describe('FITL Joint Operation cost constraint integration', () => {
     assert.equal(result.state.globalVars.usOpCount, 1, 'stages effect executed');
   });
 
-  it('allows US operation at boundary (ARVN resources - cost == Total Econ: 15 - 5 = 10 >= 10)', () => {
+  it('blocks US operation at boundary (ARVN resources - cost == Total Econ: 15 - 5 = 10)', () => {
     const gameDef = compiled.gameDef!;
     const state = withArvnResources(initialState(gameDef, 42, 2), 15);
 
     // ARVN resources = 15, totalEcon = 10, cost = 5
-    // 15 - 5 = 10 >= 10 → allowed (exactly at boundary)
-    const result = applyMove(gameDef, state, { actionId: asActionId('usOp'), params: {} });
+    // 15 - 5 = 10 == 10 → blocked (strict exceed required)
+    const snapshot = structuredClone(state);
 
-    assert.equal(result.state.perPlayerVars['1']!.resources, 10, 'ARVN resources reduced to exactly Total Econ');
-    assert.equal(result.state.globalVars.usOpCount, 1, 'stages effect executed');
+    assert.throws(
+      () => applyMove(gameDef, state, { actionId: asActionId('usOp'), params: {} }),
+      (error: unknown) => {
+        const details = error as Error & {
+          reason?: string;
+          metadata?: {
+            readonly code?: string;
+            readonly profileId?: string;
+            readonly partialExecutionMode?: string;
+          };
+        };
+
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED);
+        return true;
+      },
+    );
+
+    assert.deepEqual(state, snapshot, 'state unchanged after blocked operation');
   });
 
   it('blocks US operation when ARVN resources minus cost would go below Total Econ (14 - 5 = 9 < 10)', () => {

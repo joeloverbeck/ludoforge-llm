@@ -26,6 +26,7 @@ describe('game-spec-doc', () => {
       actions: null,
       triggers: null,
       effectMacros: null,
+      conditionMacros: null,
     };
 
     assert.deepEqual(doc, expected);

@@ -65,7 +65,8 @@
       }
     ],
     "triggers": null,
-    "effectMacros": null
+    "effectMacros": null,
+    "conditionMacros": null
   },
   "requiredSourceMapAnchors": [
     "metadata.id",

@@ -299,6 +299,12 @@ export interface EffectMacroDef {
   readonly exports: readonly string[];
 }
 
+export interface ConditionMacroDef {
+  readonly id: string;
+  readonly params: readonly EffectMacroParam[];
+  readonly condition: unknown;
+}
+
 export interface GameSpecDoc {
   readonly imports: readonly GameSpecImport[] | null;
   readonly metadata: GameSpecMetadata | null;
@@ -318,6 +324,7 @@ export interface GameSpecDoc {
   readonly actions: readonly GameSpecActionDef[] | null;
   readonly triggers: readonly GameSpecTriggerDef[] | null;
   readonly effectMacros: readonly EffectMacroDef[] | null;
+  readonly conditionMacros: readonly ConditionMacroDef[] | null;
 }
 
 export function createEmptyGameSpecDoc(): GameSpecDoc {
@@ -340,5 +347,6 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     actions: null,
     triggers: null,
     effectMacros: null,
+    conditionMacros: null,
   };
 }

@@ -17,6 +17,7 @@ export const CANONICAL_SECTION_KEYS = [
   'actions',
   'triggers',
   'effectMacros',
+  'conditionMacros',
 ] as const;
 
 export type CanonicalSectionKey = (typeof CANONICAL_SECTION_KEYS)[number];

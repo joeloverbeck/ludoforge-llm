@@ -228,6 +228,7 @@ function mergeSection(
     case 'actions':
     case 'triggers':
     case 'effectMacros':
+    case 'conditionMacros':
       return mergeListSection(doc, section, value);
   }
 }
@@ -322,7 +323,8 @@ function mergeListSection(
     | 'eventDecks'
     | 'actions'
     | 'triggers'
-    | 'effectMacros',
+    | 'effectMacros'
+    | 'conditionMacros',
   value: unknown,
 ): readonly string[] {
   const existingLength = getListSectionLength(doc, section);
@@ -389,6 +391,10 @@ function mergeListSection(
       (doc as MutableGameSpecDoc).effectMacros =
         (doc.effectMacros === null ? listValue : [...doc.effectMacros, ...listValue]) as MutableGameSpecDoc['effectMacros'];
       return buildAnchoredPaths(section, listValue, existingLength);
+    case 'conditionMacros':
+      (doc as MutableGameSpecDoc).conditionMacros =
+        (doc.conditionMacros === null ? listValue : [...doc.conditionMacros, ...listValue]) as MutableGameSpecDoc['conditionMacros'];
+      return buildAnchoredPaths(section, listValue, existingLength);
   }
 }
 
@@ -425,7 +431,8 @@ function getListSectionLength(
     | 'eventDecks'
     | 'actions'
     | 'triggers'
-    | 'effectMacros',
+    | 'effectMacros'
+    | 'conditionMacros',
 ): number {
   const current = doc[section];
   if (current === null) {

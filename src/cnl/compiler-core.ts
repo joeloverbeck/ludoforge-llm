@@ -8,6 +8,7 @@ import type { GameSpecDoc } from './game-spec-doc.js';
 import type { GameSpecSourceMap } from './source-map.js';
 import { annotateDiagnosticWithSourceSpans, capDiagnostics, dedupeDiagnostics, sortDiagnosticsDeterministic } from './compiler-diagnostics.js';
 import { expandEffectMacros } from './expand-effect-macros.js';
+import { expandConditionMacros } from './expand-condition-macros.js';
 import {
   lowerActions,
   lowerConstants,
@@ -143,9 +144,10 @@ export function compileGameSpecToGameDef(
   options?: CompileOptions,
 ): CompileResult {
   const limits = resolveCompileLimits(options?.limits);
-  const macroExpansion = expandEffectMacros(doc);
+  const conditionExpansion = expandConditionMacros(doc);
+  const macroExpansion = expandEffectMacros(conditionExpansion.doc);
   const expanded = expandMacros(macroExpansion.doc, options);
-  const diagnostics: Diagnostic[] = [...macroExpansion.diagnostics, ...expanded.diagnostics];
+  const diagnostics: Diagnostic[] = [...conditionExpansion.diagnostics, ...macroExpansion.diagnostics, ...expanded.diagnostics];
   const compiled = compileExpandedDoc(expanded.doc, diagnostics);
   let validatedGameDef: ValidatedGameDef | null = null;
 

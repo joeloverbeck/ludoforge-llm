@@ -507,7 +507,17 @@ actionPipelines:
                               args:
                                 space: $space
                       - if:
-                          when: { op: '==', left: { ref: binding, name: $baseTrainChoice }, right: 'arvn-cubes' }
+                          when:
+                            op: and
+                            args:
+                              - { op: '==', left: { ref: binding, name: $baseTrainChoice }, right: 'arvn-cubes' }
+                              - op: or
+                                args:
+                                  - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                                  - conditionMacro: us-joint-op-arvn-spend-eligible
+                                    args:
+                                      resourceExpr: { ref: gvar, var: arvnResources }
+                                      costExpr: 3
                           then:
                             # Cost: 3 ARVN Resources for placing ARVN pieces
                             - if:
@@ -572,39 +582,71 @@ actionPipelines:
                           left: { aggregate: { op: count, query: { query: tokensInZone, zone: $subSpace, filter: [{ prop: faction, eq: 'US' }] } } }
                           right: 0
                     then:
-                      # Remove Terror marker first (if present)
-                      - if:
-                          when: { op: '==', left: { ref: markerState, space: $subSpace, marker: terror }, right: 'terror' }
-                          then:
-                            # Costs 3 ARVN Resources per Terror removed (even if free op!)
-                            - macro: rvn-leader-pacification-cost
-                              args:
-                                stepCountExpr: 1
-                            - setMarker: { space: $subSpace, marker: terror, state: none }
-                      - if:
-                          when: { op: '==', left: { ref: globalMarkerState, marker: cap_cords }, right: shaded }
-                          then:
+                      - let:
+                          bind: $usPacPerStepCost
+                          value:
+                            if:
+                              when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: ky }
+                              then: 4
+                              else: 3
+                          in:
+                            # Remove Terror marker first (if present)
                             - if:
-                                when:
-                                  op: and
-                                  args:
-                                    - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: passiveSupport }
-                                    - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: activeSupport }
+                                when: { op: '==', left: { ref: markerState, space: $subSpace, marker: terror }, right: 'terror' }
                                 then:
-                                  - macro: rvn-leader-pacification-cost
-                                    args:
-                                      stepCountExpr: 1
-                                  - setMarker: { space: $subSpace, marker: supportOpposition, state: passiveSupport }
-                          else:
-                            # Shift up to 2 levels toward Active Support
-                            - chooseOne:
-                                bind: $pacLevels
-                                options: { query: intsInRange, min: 1, max: 2 }
-                            # Costs 3 ARVN Resources per level shifted (even if free op!)
-                            - macro: rvn-leader-pacification-cost
-                              args:
-                                stepCountExpr: { ref: binding, name: $pacLevels }
-                            - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
+                                  - if:
+                                      when:
+                                        conditionMacro: us-joint-op-arvn-spend-eligible
+                                        args:
+                                          resourceExpr: { ref: gvar, var: arvnResources }
+                                          costExpr: { ref: binding, name: $usPacPerStepCost }
+                                      then:
+                                        # Costs 3 ARVN Resources per Terror removed (even if free op!)
+                                        - macro: rvn-leader-pacification-cost
+                                          args:
+                                            stepCountExpr: 1
+                                        - setMarker: { space: $subSpace, marker: terror, state: none }
+                            - if:
+                                when: { op: '==', left: { ref: globalMarkerState, marker: cap_cords }, right: shaded }
+                                then:
+                                  - if:
+                                      when:
+                                        op: and
+                                        args:
+                                          - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: passiveSupport }
+                                          - { op: '!=', left: { ref: markerState, space: $subSpace, marker: supportOpposition }, right: activeSupport }
+                                      then:
+                                        - if:
+                                            when:
+                                              conditionMacro: us-joint-op-arvn-spend-eligible
+                                              args:
+                                                resourceExpr: { ref: gvar, var: arvnResources }
+                                                costExpr: { ref: binding, name: $usPacPerStepCost }
+                                            then:
+                                              - macro: rvn-leader-pacification-cost
+                                                args:
+                                                  stepCountExpr: 1
+                                              - setMarker: { space: $subSpace, marker: supportOpposition, state: passiveSupport }
+                                else:
+                                  # Shift up to 2 levels toward Active Support
+                                  - chooseOne:
+                                      bind: $pacLevels
+                                      options: { query: intsInRange, min: 1, max: 2 }
+                                  - if:
+                                      when:
+                                        conditionMacro: us-joint-op-arvn-spend-eligible
+                                        args:
+                                          resourceExpr: { ref: gvar, var: arvnResources }
+                                          costExpr:
+                                            op: '*'
+                                            left: { ref: binding, name: $pacLevels }
+                                            right: { ref: binding, name: $usPacPerStepCost }
+                                      then:
+                                        # Costs 3 ARVN Resources per level shifted (even if free op!)
+                                        - macro: rvn-leader-pacification-cost
+                                          args:
+                                            stepCountExpr: { ref: binding, name: $pacLevels }
+                                        - shiftMarker: { space: $subSpace, marker: supportOpposition, delta: { ref: binding, name: $pacLevels } }
 
                 # Saigon patronage transfer (US only, space must be Saigon)
                 - if:
@@ -1493,7 +1535,10 @@ actionPipelines:
                 op: or
                 args:
                   - { op: '==', left: { ref: gvar, var: mom_bodyCount }, right: true }
-                  - { op: '>=', left: { ref: gvar, var: arvnResources }, right: 3 }
+                  - conditionMacro: us-joint-op-arvn-spend-eligible
+                    args:
+                      resourceExpr: { ref: gvar, var: arvnResources }
+                      costExpr: 3
               then:
                 - chooseN:
                     bind: $arvnFollowupSpaces
@@ -4112,18 +4157,14 @@ actionPipelines:
     actionId: usOp
     legality: null
     costValidation:
-        op: ">="
-        left:
-          op: "-"
-          left:
+        conditionMacro: us-joint-op-arvn-spend-eligible
+        args:
+          resourceExpr:
             ref: pvar
             player:
               id: 1
             var: resources
-          right: 5
-        right:
-          ref: gvar
-          var: totalEcon
+          costExpr: 5
     costEffects:
         - addVar:
             scope: pvar

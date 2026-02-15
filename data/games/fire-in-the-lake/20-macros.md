@@ -1745,5 +1745,19 @@ effectMacros:
                                   from: { param: loc }
                                   to: { zoneExpr: { concat: ['available-', { ref: tokenProp, token: $m48Cube, prop: faction }, ':none'] } }
 
+conditionMacros:
+  # Shared Rule 1.8.1 predicate:
+  # US may spend ARVN Resources only if pre-spend resource exceeds totalEcon + cost.
+  - id: us-joint-op-arvn-spend-eligible
+    params:
+      - { name: resourceExpr, type: value }
+      - { name: costExpr, type: value }
+    condition:
+      op: '>'
+      left: { param: resourceExpr }
+      right:
+        op: '+'
+        left: { ref: gvar, var: totalEcon }
+        right: { param: costExpr }
 
 ```

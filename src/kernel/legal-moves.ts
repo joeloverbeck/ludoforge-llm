@@ -1,4 +1,5 @@
 import { evalCondition } from './eval-condition.js';
+import { resolveActionExecutorPlayer } from './action-executor.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
@@ -8,6 +9,7 @@ import { resolvePlayerSel } from './resolve-selectors.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { pipelinePredicateEvaluationError } from './runtime-error.js';
+import { isEvalErrorCode } from './eval-error.js';
 import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
@@ -17,14 +19,15 @@ function makeEvalContext(
   def: GameDef,
   adjacencyGraph: AdjacencyGraph,
   state: GameState,
+  executionPlayer: GameState['activePlayer'],
   bindings: Readonly<Record<string, unknown>>,
 ): EvalContext {
   return {
     def,
     adjacencyGraph,
     state,
-    activePlayer: state.activePlayer,
-    actorPlayer: state.activePlayer,
+    activePlayer: executionPlayer,
+    actorPlayer: executionPlayer,
     bindings,
     collector: createCollector(),
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
@@ -59,8 +62,27 @@ function enumerateParams(
   bindings: Readonly<Record<string, unknown>>,
   moves: Move[],
 ): void {
+  const resolveExecutionPlayerForBindings = (): GameState['activePlayer'] => {
+    try {
+      return resolveActionExecutorPlayer({
+        def,
+        state,
+        adjacencyGraph,
+        action,
+        decisionPlayer: state.activePlayer,
+        bindings,
+      });
+    } catch (error) {
+      if (isEvalErrorCode(error, 'MISSING_BINDING')) {
+        return state.activePlayer;
+      }
+      throw error;
+    }
+  };
+
   if (paramIndex >= action.params.length) {
-    const ctx = makeEvalContext(def, adjacencyGraph, state, bindings);
+    const executionPlayer = resolveExecutionPlayerForBindings();
+    const ctx = makeEvalContext(def, adjacencyGraph, state, executionPlayer, bindings);
     if (action.pre !== null && !evalCondition(action.pre, ctx)) {
       return;
     }
@@ -84,7 +106,8 @@ function enumerateParams(
     return;
   }
 
-  const ctx = makeEvalContext(def, adjacencyGraph, state, bindings);
+  const executionPlayer = resolveExecutionPlayerForBindings();
+  const ctx = makeEvalContext(def, adjacencyGraph, state, executionPlayer, bindings);
   const domainValues = evalQuery(param.domain, ctx);
   for (const value of domainValues) {
     enumerateParams(action, def, adjacencyGraph, state, paramIndex + 1, { ...bindings, [param.name]: value }, moves);
@@ -166,7 +189,7 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
 
-    const actorCtx = makeEvalContext(def, adjacencyGraph, state, {});
+    const actorCtx = makeEvalContext(def, adjacencyGraph, state, state.activePlayer, {});
     const resolvedActors = resolvePlayerSel(action.actor, actorCtx);
     if (!resolvedActors.includes(state.activePlayer)) {
       continue;
@@ -182,12 +205,27 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
 
-    const pipelineDispatch = resolveActionPipelineDispatch(def, action, actorCtx);
+    const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
+    if (!hasActionPipeline) {
+      enumerateParams(action, def, adjacencyGraph, state, 0, {}, moves);
+      continue;
+    }
+
+    const executionPlayer = resolveActionExecutorPlayer({
+      def,
+      state,
+      adjacencyGraph,
+      action,
+      decisionPlayer: state.activePlayer,
+      bindings: {},
+    });
+    const executionCtx = makeEvalContext(def, adjacencyGraph, state, executionPlayer, {});
+    const pipelineDispatch = resolveActionPipelineDispatch(def, action, executionCtx);
     if (pipelineDispatch.kind === 'matched') {
       const pipeline = pipelineDispatch.profile;
       if (pipeline.legality !== null) {
         try {
-          if (!evalCondition(pipeline.legality, actorCtx)) {
+          if (!evalCondition(pipeline.legality, executionCtx)) {
             continue;
           }
         } catch (error) {
@@ -200,7 +238,7 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
         pipeline.atomicity === 'atomic'
       ) {
         try {
-          if (!evalCondition(pipeline.costValidation, actorCtx)) {
+          if (!evalCondition(pipeline.costValidation, executionCtx)) {
             continue;
           }
         } catch (error) {
@@ -218,8 +256,6 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
     if (pipelineDispatch.kind === 'configuredNoMatch') {
       continue;
     }
-
-    enumerateParams(action, def, adjacencyGraph, state, 0, {}, moves);
   }
 
   const windowFilteredMoves = applyTurnFlowWindowFilters(def, state, moves);

@@ -60,8 +60,9 @@ describe('move decision sequence helpers', () => {
   it('completes a satisfiable chooseOne decision sequence using default chooser', () => {
     const action: ActionDef = {
       id: asActionId('choose-one-op'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -101,8 +102,9 @@ describe('move decision sequence helpers', () => {
   it('returns incomplete for unsatisfiable chooseN', () => {
     const action: ActionDef = {
       id: asActionId('unsat-op'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -148,8 +150,9 @@ describe('move decision sequence helpers', () => {
   it('respects custom chooser for decision sequence completion', () => {
     const action: ActionDef = {
       id: asActionId('custom-choose-op'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -191,8 +194,9 @@ describe('move decision sequence helpers', () => {
   it('throws typed error when maxSteps is exceeded', () => {
     const action: ActionDef = {
       id: asActionId('stuck-op'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -238,8 +242,9 @@ describe('move decision sequence helpers', () => {
   it('discovers nested templated decision ids in deterministic order', () => {
     const action: ActionDef = {
       id: asActionId('nested-op'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -299,8 +304,9 @@ describe('move decision sequence helpers', () => {
   it('throws for malformed decision-path expressions instead of treating them as unsatisfiable', () => {
     const action: ActionDef = {
       id: asActionId('broken-decision-op'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -340,8 +346,9 @@ describe('move decision sequence helpers', () => {
   it('applies free-operation zone filters at decision checkpoints for template moves', () => {
     const action: ActionDef = {
       id: asActionId('operation'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -464,8 +471,9 @@ describe('move decision sequence helpers', () => {
   it('rejects decision selections outside the free-operation zone filter domain', () => {
     const action: ActionDef = {
       id: asActionId('operation'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],

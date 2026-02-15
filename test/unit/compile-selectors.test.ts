@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { normalizePlayerSelector, normalizeZoneOwnerQualifier } from '../../src/cnl/compile-selectors.js';
+import { normalizeActionExecutorSelector, normalizePlayerSelector, normalizeZoneOwnerQualifier } from '../../src/cnl/compile-selectors.js';
 
 describe('normalizePlayerSelector', () => {
   it('normalizes canonical string selectors and aliases', () => {
@@ -54,5 +54,21 @@ describe('normalizeZoneOwnerQualifier', () => {
     assert.equal(result.value, null);
     assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_SELECTOR_INVALID');
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0.draw.to');
+  });
+});
+
+describe('normalizeActionExecutorSelector', () => {
+  it('accepts single-player executor selectors', () => {
+    assert.equal(normalizeActionExecutorSelector('actor', 'doc.actions.0.executor').value, 'actor');
+    assert.equal(normalizeActionExecutorSelector('active', 'doc.actions.0.executor').value, 'active');
+    assert.deepEqual(normalizeActionExecutorSelector('1', 'doc.actions.0.executor').value, { id: 1 });
+    assert.deepEqual(normalizeActionExecutorSelector('left', 'doc.actions.0.executor').value, { relative: 'left' });
+    assert.deepEqual(normalizeActionExecutorSelector('$owner', 'doc.actions.0.executor').value, { chosen: '$owner' });
+  });
+
+  it('rejects multi-player executor selectors', () => {
+    const allResult = normalizeActionExecutorSelector('all', 'doc.actions.0.executor');
+    assert.equal(allResult.value, null);
+    assert.equal(allResult.diagnostics[0]?.code, 'CNL_COMPILER_PLAYER_SELECTOR_INVALID');
   });
 });

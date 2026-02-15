@@ -16,6 +16,7 @@ turnStructure:
   actions:
   - id: draw
     actor: null
+    executor: actor
     phase: mian
     params: []
     pre: null

@@ -58,8 +58,9 @@ const createBaseGameDef = (): GameDef =>
     actions: [
       {
         id: 'playCard',
-        actor: 'active',
-        phase: 'main',
+actor: 'active',
+executor: 'actor',
+phase: 'main',
         params: [],
         pre: null,
         cost: [],
@@ -68,8 +69,9 @@ const createBaseGameDef = (): GameDef =>
       },
       {
         id: 'passTurn',
-        actor: 'active',
-        phase: 'main',
+actor: 'active',
+executor: 'actor',
+phase: 'main',
         params: [],
         pre: null,
         cost: [],
@@ -127,8 +129,9 @@ const createEquivalentReorderedGameDef = (): GameDef =>
     actions: [
       {
         id: 'passTurn',
-        actor: 'active',
-        phase: 'main',
+actor: 'active',
+executor: 'actor',
+phase: 'main',
         params: [],
         pre: null,
         cost: [],
@@ -137,8 +140,9 @@ const createEquivalentReorderedGameDef = (): GameDef =>
       },
       {
         id: 'playCard',
-        actor: 'active',
-        phase: 'main',
+actor: 'active',
+executor: 'actor',
+phase: 'main',
         params: [],
         pre: null,
         cost: [],

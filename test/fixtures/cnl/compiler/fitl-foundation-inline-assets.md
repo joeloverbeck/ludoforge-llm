@@ -113,6 +113,7 @@ turnFlow:
 actions:
   - id: pass
     actor: active
+    executor: actor
     phase: main
     params: []
     pre: null

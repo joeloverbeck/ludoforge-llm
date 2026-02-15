@@ -21,6 +21,7 @@ turnStructure:
 actions:
   - id: drawEach
     actor: active
+    executor: actor
     phase: main
     params: []
     pre: null

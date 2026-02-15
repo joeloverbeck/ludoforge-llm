@@ -72,8 +72,9 @@ describe('legalChoices()', () => {
   it('1. simple action with no chooseOne/chooseN returns complete result', () => {
     const action: ActionDef = {
       id: asActionId('simpleAction'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -97,8 +98,9 @@ describe('legalChoices()', () => {
   it('2. action with one chooseOne returns options on first call, complete after param filled', () => {
     const action: ActionDef = {
       id: asActionId('pickColor'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -133,8 +135,9 @@ describe('legalChoices()', () => {
   it('3. action with one chooseN (range mode) returns options with min/max, max clamped to domain size', () => {
     const action: ActionDef = {
       id: asActionId('pickTargets'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -167,8 +170,9 @@ describe('legalChoices()', () => {
   it('3b. chooseN evaluates expression-valued min/max at decision time', () => {
     const action: ActionDef = {
       id: asActionId('pickDynamicTargets'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -205,8 +209,9 @@ describe('legalChoices()', () => {
   it('3c. chooseN throws when expression-valued max is non-integer or negative', () => {
     const action: ActionDef = {
       id: asActionId('badDynamicBounds'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -235,8 +240,9 @@ describe('legalChoices()', () => {
   it('4. action with multiple sequential chooseOnes returns them one at a time', () => {
     const action: ActionDef = {
       id: asActionId('multiChoice'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -280,8 +286,9 @@ describe('legalChoices()', () => {
   it('5. invalid selection in params throws descriptive error', () => {
     const action: ActionDef = {
       id: asActionId('pickColor'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -313,8 +320,9 @@ describe('legalChoices()', () => {
   it('6. chooseOne inside if.then only appears when condition is true', () => {
     const action: ActionDef = {
       id: asActionId('conditionalChoice'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -362,8 +370,9 @@ describe('legalChoices()', () => {
   it('7. chooseN with min >= 1 and empty domain returns ChoiceRequest with options: []', () => {
     const action: ActionDef = {
       id: asActionId('emptyDomain'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -396,8 +405,9 @@ describe('legalChoices()', () => {
   it('8. legalChoices evaluates let bindings so subsequent options queries reference them correctly', () => {
     const action: ActionDef = {
       id: asActionId('letThenChoose'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -438,8 +448,9 @@ describe('legalChoices()', () => {
   it('9. legalChoices does NOT walk rollRandom.in effects (returns complete before inner choices)', () => {
     const action: ActionDef = {
       id: asActionId('randomThenChoose'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -475,8 +486,9 @@ describe('legalChoices()', () => {
   it('10. action with chooseN exact-n mode returns options with correct cardinality constraint', () => {
     const action: ActionDef = {
       id: asActionId('exactPick'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -513,8 +525,9 @@ describe('legalChoices()', () => {
     it('walks stages stage effects for profiled actions', () => {
       const action: ActionDef = {
         id: asActionId('trainOp'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -562,8 +575,9 @@ describe('legalChoices()', () => {
     it('returns illegal when legality fails for profiled action', () => {
       const action: ActionDef = {
         id: asActionId('blockedOp'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -611,8 +625,9 @@ describe('legalChoices()', () => {
     it('returns illegal when pipelines exist but none are applicable', () => {
       const action: ActionDef = {
         id: asActionId('strictNoFallbackOp'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -662,8 +677,9 @@ describe('legalChoices()', () => {
     it('evaluates map-aware zones filters in profile chooseN options via def.mapSpaces', () => {
       const action: ActionDef = {
         id: asActionId('mapChoiceOp'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -742,8 +758,9 @@ describe('legalChoices()', () => {
     it('validates sequential dependent choices against progressed state across pipeline stages', () => {
       const action: ActionDef = {
         id: asActionId('chainOp'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -846,8 +863,9 @@ describe('legalChoices()', () => {
     it('throws typed errors for malformed free-operation zone filters instead of silently denying zones', () => {
       const action: ActionDef = {
         id: asActionId('operation'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -946,8 +964,9 @@ describe('legalChoices()', () => {
     it('does not mutate state or partialMove', () => {
       const action: ActionDef = {
         id: asActionId('pureTest'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],

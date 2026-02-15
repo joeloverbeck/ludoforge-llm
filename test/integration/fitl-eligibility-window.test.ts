@@ -45,8 +45,9 @@ const createDef = (): GameDef =>
     actions: [
       {
         id: asActionId('event'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [
           { name: 'eventCardId', domain: { query: 'enums', values: ['card-overrides', 'card-free-op'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
@@ -58,8 +59,9 @@ const createDef = (): GameDef =>
       },
       {
         id: asActionId('operation'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],

@@ -5,6 +5,7 @@ import { composeDecisionId } from './decision-id.js';
 import { applyEffect } from './effect-dispatch.js';
 import type { EffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
+import { resolveActionExecutorPlayer } from './action-executor.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
@@ -370,7 +371,16 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
   const freeOperationZoneFilter = partialMove.freeOperation === true
     ? resolveFreeOperationZoneFilter(def, state, partialMove)
     : undefined;
-  const executionPlayer = resolveFreeOperationExecutionPlayer(def, state, partialMove);
+  const executionPlayer = partialMove.freeOperation === true
+    ? resolveFreeOperationExecutionPlayer(def, state, partialMove)
+    : resolveActionExecutorPlayer({
+      def,
+      state,
+      adjacencyGraph,
+      action,
+      decisionPlayer: state.activePlayer,
+      bindings: baseBindings,
+    });
 
   const evalCtx: EvalContext = {
     def,

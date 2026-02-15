@@ -7,8 +7,9 @@ import { validateGameSpec } from '../../src/cnl/validate-spec.js';
 function createStructurallyValidDoc() {
   const validAction = {
     id: 'draw',
-    actor: { currentPlayer: true },
-    phase: 'main',
+actor: { currentPlayer: true },
+executor: 'actor',
+phase: 'main',
     params: [],
     pre: null,
     cost: [],
@@ -221,11 +222,12 @@ describe('validateGameSpec structural rules', () => {
     const baseAction = validDoc.actions![0]!;
     const diagnostics = validateGameSpec({
       ...validDoc,
-      actions: [{ ...baseAction, id: '', phase: '', actor: null, effects: {} as unknown as unknown[] }],
+      actions: [{ ...baseAction, id: '', phase: '', actor: null, executor: null, effects: {} as unknown as unknown[] }],
     });
     assert.deepEqual(diagnostics.map((diagnostic) => diagnostic.path), [
       'doc.actions.0.actor',
       'doc.actions.0.effects',
+      'doc.actions.0.executor',
       'doc.actions.0.id',
       'doc.actions.0.phase',
     ]);

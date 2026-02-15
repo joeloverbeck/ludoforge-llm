@@ -30,8 +30,9 @@ const createDef = (options?: {
       ? [
           {
             id: asActionId('step1'),
-            actor: 'active' as const,
-            phase: asPhaseId('p1'),
+actor: 'active' as const,
+executor: 'actor',
+phase: asPhaseId('p1'),
             params: [],
             pre: null,
             cost: [],
@@ -40,8 +41,9 @@ const createDef = (options?: {
           },
           {
             id: asActionId('step2'),
-            actor: 'active' as const,
-            phase: asPhaseId('p2'),
+actor: 'active' as const,
+executor: 'actor',
+phase: asPhaseId('p2'),
             params: [],
             pre: null,
             cost: [],
@@ -52,8 +54,9 @@ const createDef = (options?: {
       : [
           {
             id: asActionId('step'),
-            actor: 'active' as const,
-            phase: asPhaseId('main'),
+actor: 'active' as const,
+executor: 'actor',
+phase: asPhaseId('main'),
             params: [],
             pre: null,
             cost: [],

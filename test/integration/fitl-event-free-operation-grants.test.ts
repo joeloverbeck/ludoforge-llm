@@ -42,8 +42,9 @@ const createDef = (): GameDef =>
     actions: [
       {
         id: asActionId('event'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [
           { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4', 'card-5', 'card-6', 'card-7', 'card-9'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
@@ -56,8 +57,9 @@ const createDef = (): GameDef =>
       },
       {
         id: asActionId('operation'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -260,8 +262,9 @@ const createZoneFilteredDef = (): GameDef =>
     actions: [
       {
         id: asActionId('event'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [
           { name: 'eventCardId', domain: { query: 'enums', values: ['card-75-like'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
@@ -274,8 +277,9 @@ const createZoneFilteredDef = (): GameDef =>
       },
       {
         id: asActionId('operation'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -370,8 +374,9 @@ const createExecuteAsFactionDef = (): GameDef =>
     actions: [
       {
         id: asActionId('event'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [
           { name: 'eventCardId', domain: { query: 'enums', values: ['card-8'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
@@ -384,8 +389,9 @@ const createExecuteAsFactionDef = (): GameDef =>
       },
       {
         id: asActionId('operation'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],

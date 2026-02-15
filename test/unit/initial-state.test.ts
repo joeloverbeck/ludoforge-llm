@@ -258,8 +258,9 @@ describe('initialState', () => {
       actions: [
         {
           id: asActionId('pass'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],

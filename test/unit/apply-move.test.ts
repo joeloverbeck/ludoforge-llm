@@ -39,8 +39,9 @@ const createDef = (): GameDef =>
     actions: [
       {
         id: asActionId('play'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [{ name: 'boost', domain: { query: 'intsInRange', min: 1, max: 2 } }],
         pre: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
         cost: [{ addVar: { scope: 'global', var: 'energy', delta: -2 } }],
@@ -49,8 +50,9 @@ const createDef = (): GameDef =>
       },
       {
         id: asActionId('broken'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [{ setVar: { scope: 'global', var: 'energy', value: 1 } }],
@@ -156,8 +158,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('decide'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -221,8 +224,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('advance'),
-          actor: 'active',
-          phase: asPhaseId('p1'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('p1'),
           params: [],
           pre: null,
           cost: [],
@@ -231,8 +235,9 @@ describe('applyMove', () => {
         },
         {
           id: asActionId('decide'),
-          actor: 'active',
-          phase: asPhaseId('p2'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('p2'),
           params: [],
           pre: null,
           cost: [],
@@ -274,8 +279,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('play'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [{ name: 'boost', domain: { query: 'intsInRange', min: 1, max: 2 } }],
           pre: null,
           cost: [],
@@ -333,8 +339,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('play'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [{ name: 'boost', domain: { query: 'intsInRange', min: 1, max: 2 } }],
           pre: null,
           cost: [],
@@ -406,8 +413,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('pass'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -468,8 +476,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('operation'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -478,8 +487,9 @@ describe('applyMove', () => {
         },
         {
           id: asActionId('limitedOperation'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -540,8 +550,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('event'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [
             { name: 'eventCardId', domain: { query: 'enums', values: ['card-overrides'] } },
             { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
@@ -553,8 +564,9 @@ describe('applyMove', () => {
         },
         {
           id: asActionId('operation'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -641,8 +653,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -696,8 +709,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -751,8 +765,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -810,8 +825,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -881,8 +897,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -931,8 +948,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [{ addVar: { scope: 'global', var: 'energy', delta: -3 } }],
@@ -990,8 +1008,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -1057,8 +1076,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -1126,8 +1146,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -1173,8 +1194,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -1228,8 +1250,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [{ addVar: { scope: 'global', var: 'energy', delta: -3 } }],
@@ -1292,8 +1315,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('pass'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -1302,8 +1326,9 @@ describe('applyMove', () => {
         },
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -1339,8 +1364,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('event'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [
             { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
             { name: 'branch', domain: { query: 'enums', values: ['a', 'b'] } },
@@ -1405,8 +1431,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('event'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -1522,8 +1549,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('event'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [{ name: 'side', domain: { query: 'enums', values: ['unshaded'] } }],
           pre: null,
           cost: [],
@@ -1613,8 +1641,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('event'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [{ name: 'side', domain: { query: 'enums', values: ['unshaded'] } }],
           pre: null,
           cost: [],
@@ -1668,8 +1697,8 @@ describe('applyMove', () => {
         },
       ],
       actions: [
-        { id: asActionId('operate'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
-        { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [{ setVar: { scope: 'global', var: 'order', value: 1 } }], limits: [] },
+        { id: asActionId('operate'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('sa'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [{ setVar: { scope: 'global', var: 'order', value: 1 } }], limits: [] },
       ],
       triggers: [],
       terminal: { conditions: [] },
@@ -1711,8 +1740,8 @@ describe('applyMove', () => {
         },
       ],
       actions: [
-        { id: asActionId('operate'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
-        { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [{ addVar: { scope: 'global', var: 'order', delta: 5 } }], limits: [] },
+        { id: asActionId('operate'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('sa'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [{ addVar: { scope: 'global', var: 'order', delta: 5 } }], limits: [] },
       ],
       triggers: [],
       terminal: { conditions: [] },
@@ -1757,8 +1786,8 @@ describe('applyMove', () => {
         },
       ],
       actions: [
-        { id: asActionId('operate'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
-        { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [{ addVar: { scope: 'global', var: 'order', delta: 5 } }], limits: [] },
+        { id: asActionId('operate'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('sa'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [{ addVar: { scope: 'global', var: 'order', delta: 5 } }], limits: [] },
       ],
       triggers: [],
       terminal: { conditions: [] },
@@ -1801,7 +1830,7 @@ describe('applyMove', () => {
         },
       ],
       actions: [
-        { id: asActionId('operate'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('operate'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       triggers: [],
       terminal: { conditions: [] },
@@ -1844,9 +1873,9 @@ describe('applyMove', () => {
         },
       ],
       actions: [
-        { id: asActionId('operate'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
-        { id: asActionId('train'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
-        { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('operate'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('train'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('sa'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       triggers: [],
       terminal: { conditions: [] },
@@ -1900,8 +1929,8 @@ describe('applyMove', () => {
         },
       ],
       actions: [
-        { id: asActionId('train'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
-        { id: asActionId('sa'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('train'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('sa'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       triggers: [],
       terminal: { conditions: [] },
@@ -1951,8 +1980,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('train'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [{ name: 'targetSpaces', domain: { query: 'enums', values: ['a', 'b'] } }],
           pre: null,
           cost: [],
@@ -1961,8 +1991,9 @@ describe('applyMove', () => {
         },
         {
           id: asActionId('sa'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [{ name: 'targetSpaces', domain: { query: 'enums', values: ['a', 'b'] } }],
           pre: null,
           cost: [],
@@ -2025,8 +2056,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('train'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [{ name: 'targetSpaces', domain: { query: 'enums', values: ['a', 'b', 'c'] } }],
           pre: null,
           cost: [],
@@ -2035,8 +2067,9 @@ describe('applyMove', () => {
         },
         {
           id: asActionId('sa'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [{ name: 'targetSpaces', domain: { query: 'enums', values: ['a', 'b', 'c'] } }],
           pre: null,
           cost: [],
@@ -2100,8 +2133,9 @@ describe('applyMove', () => {
       actions: [
         {
           id: asActionId('train'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [{ name: 'targetSpaces', domain: { query: 'enums', values: ['a', 'b', 'c'] } }],
           pre: null,
           cost: [],
@@ -2110,8 +2144,9 @@ describe('applyMove', () => {
         },
         {
           id: asActionId('sa'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [{ name: 'targetSpaces', domain: { query: 'enums', values: ['a', 'b', 'c'] } }],
           pre: null,
           cost: [],

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { DegeneracyFlag } from './diagnostics.js';
 import {
   BooleanSchema,
+  ActionExecutorSelSchema,
   ConditionASTSchema,
   EffectASTSchema,
   IntegerSchema,
@@ -122,6 +123,7 @@ export const ActionDefSchema = z
   .object({
     id: StringSchema,
     actor: PlayerSelSchema,
+    executor: ActionExecutorSelSchema,
     phase: StringSchema,
     params: z.array(ParamDefSchema),
     pre: ConditionASTSchema.nullable(),

@@ -41,7 +41,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'pass',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,
@@ -76,7 +77,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'score-action',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,
@@ -126,7 +128,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'pass',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,
@@ -169,7 +172,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'pass',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,
@@ -204,7 +208,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'pass',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,
@@ -271,7 +276,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'pass',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,
@@ -334,6 +340,7 @@ describe('effect macro → compile pipeline integration', () => {
       'actions:',
       '  - id: pass',
       '    actor: active',
+    '    executor: actor',
       '    phase: main',
       '    params: []',
       '    pre: null',
@@ -403,7 +410,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'pass',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,
@@ -447,7 +455,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'pass',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,
@@ -470,7 +479,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'count-action',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,
@@ -509,7 +519,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'limited-action',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,
@@ -549,7 +560,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'mode-action',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,
@@ -596,7 +608,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'invalid-cross-stage-binder',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,
@@ -655,7 +668,8 @@ describe('effect macro → compile pipeline integration', () => {
       actions: [
         {
           id: 'pass',
-          actor: 'active',
+actor: 'active',
+          executor: 'actor',
           phase: 'main',
           params: [],
           pre: null,

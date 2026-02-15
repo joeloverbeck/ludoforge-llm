@@ -283,8 +283,9 @@ describe('phase advancement', () => {
       actions: [
         {
           id: asActionId('onlyInP2'),
-          actor: 'active',
-          phase: asPhaseId('p2'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('p2'),
           params: [],
           pre: null,
           cost: [],

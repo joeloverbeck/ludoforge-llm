@@ -19,7 +19,7 @@ import type {
 } from '../kernel/types.js';
 import { lowerConditionNode, lowerQueryNode, lowerValueNode } from './compile-conditions.js';
 import { lowerEffectArray } from './compile-effects.js';
-import { normalizePlayerSelector } from './compile-selectors.js';
+import { normalizeActionExecutorSelector, normalizePlayerSelector } from './compile-selectors.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 
 export function lowerConstants(
@@ -237,21 +237,36 @@ export function lowerActions(
 
     const actor = normalizePlayerSelector(action.actor, `${path}.actor`);
     diagnostics.push(...actor.diagnostics);
+    const executor = normalizeActionExecutorSelector(action.executor, `${path}.executor`);
+    diagnostics.push(...executor.diagnostics);
 
     const params = lowerActionParams(action.params, ownershipByBase, diagnostics, `${path}.params`, tokenTraitVocabulary);
     const bindingScope = params.bindingScope;
+    const executorBinding = executor.value !== null && typeof executor.value !== 'string' && 'chosen' in executor.value
+      ? executor.value.chosen
+      : null;
+    if (executorBinding !== null && !bindingScope.includes(executorBinding)) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_ACTION_EXECUTOR_BINDING_MISSING',
+        path: `${path}.executor`,
+        severity: 'error',
+        message: `Action executor binding "${executorBinding}" is not declared in action params.`,
+        suggestion: 'Declare a matching action param (for example name: "owner" for $owner) or use a non-binding executor selector.',
+      });
+    }
     const pre = lowerOptionalCondition(action.pre, ownershipByBase, bindingScope, diagnostics, `${path}.pre`, tokenTraitVocabulary);
     const cost = lowerEffectsWithDiagnostics(action.cost, ownershipByBase, diagnostics, `${path}.cost`, bindingScope, tokenTraitVocabulary);
     const effects = lowerEffectsWithDiagnostics(action.effects, ownershipByBase, diagnostics, `${path}.effects`, bindingScope, tokenTraitVocabulary);
     const limits = lowerActionLimits(action.limits, diagnostics, `${path}.limits`);
 
-    if (actor.value === null || (action.pre !== null && pre === null)) {
+    if (actor.value === null || executor.value === null || (action.pre !== null && pre === null)) {
       continue;
     }
 
     lowered.push({
       id: asActionId(action.id),
       actor: actor.value,
+      executor: executor.value,
       phase: asPhaseId(action.phase),
       params: params.value,
       pre: pre ?? null,

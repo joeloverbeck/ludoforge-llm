@@ -32,8 +32,9 @@ const createProgressionDef = (): GameDef =>
     actions: [
       {
         id: asActionId('claim'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -64,8 +65,9 @@ const createDeterminismDef = (): GameDef =>
     actions: [
       {
         id: asActionId('plusOne'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -74,8 +76,9 @@ const createDeterminismDef = (): GameDef =>
       },
       {
         id: asActionId('plusTwo'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],

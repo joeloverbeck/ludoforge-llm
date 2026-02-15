@@ -70,8 +70,9 @@ const fullGameDef: GameDef = {
   actions: [
     {
       id: asActionId('playCard'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [{ name: '$card', domain: { query: 'tokensInZone', zone: 'deck:none' } }],
       pre: { op: 'zonePropIncludes', zone: 'discard:none', prop: 'terrainTags', value: 'urban' },
       cost: [],

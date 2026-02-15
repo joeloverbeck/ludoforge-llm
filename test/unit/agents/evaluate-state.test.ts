@@ -23,7 +23,7 @@ const createBaseDef = (): GameDef => ({
   tokenTypes: [],
   setup: [],
   turnStructure: { phases: [{ id: asPhaseId('main') }] },
-  actions: [{ id: asActionId('noop'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] }],
+  actions: [{ id: asActionId('noop'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] }],
   triggers: [],
   terminal: {
     conditions: [],

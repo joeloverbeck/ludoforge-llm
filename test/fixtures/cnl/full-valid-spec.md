@@ -18,8 +18,8 @@ turnStructure:
     - id: main
 actions:
   - id: draw
-    actor:
-      currentPlayer: true
+    actor: { currentPlayer: true }
+    executor: actor
     phase: main
     params: []
     pre: null

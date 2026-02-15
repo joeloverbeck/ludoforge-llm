@@ -50,8 +50,9 @@ function createRichCompilableDoc(): GameSpecDoc {
     actions: [
       {
         id: 'act',
-        actor: 'active',
-        phase: 'main',
+actor: 'active',
+executor: 'actor',
+phase: 'main',
         params: [],
         pre: null,
         cost: [],

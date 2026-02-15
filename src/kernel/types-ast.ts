@@ -9,6 +9,13 @@ export type PlayerSel =
   | { readonly chosen: string }
   | { readonly relative: 'left' | 'right' };
 
+export type ActionExecutorSel =
+  | 'actor'
+  | 'active'
+  | { readonly id: PlayerId }
+  | { readonly chosen: string }
+  | { readonly relative: 'left' | 'right' };
+
 export type ZoneSel = string;
 export type ZoneRef = ZoneSel | { readonly zoneExpr: ValueExpr };
 export type TokenSel = string;

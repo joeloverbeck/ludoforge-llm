@@ -83,8 +83,9 @@ const conditionalCostEffect: EffectAST = {
 
 const makeOperationAction = (): ActionDef => ({
   id: asActionId('trainOp'),
-  actor: 'active',
-  phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
   params: [],
   pre: null,
   cost: [],
@@ -320,8 +321,9 @@ describe('applyMove() map-aware pipeline evaluation', () => {
 
     const action: ActionDef = {
       id: asActionId('mapAwareOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -389,8 +391,9 @@ describe('applyMove() free-operation zone-filter diagnostics', () => {
   it('throws typed error for malformed free-operation zone filters during final validation', () => {
     const action: ActionDef = {
       id: asActionId('operation'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],

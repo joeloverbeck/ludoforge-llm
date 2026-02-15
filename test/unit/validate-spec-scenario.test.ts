@@ -14,8 +14,9 @@ function createBaseDoc() {
     actions: [
       {
         id: 'draw',
-        actor: { currentPlayer: true },
-        phase: 'main',
+actor: { currentPlayer: true },
+executor: 'actor',
+phase: 'main',
         params: [],
         pre: null,
         cost: [],

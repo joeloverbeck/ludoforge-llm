@@ -61,8 +61,9 @@ const createMultiProfileDef = (): GameDef =>
     actions: [
       {
         id: asActionId('operate'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],

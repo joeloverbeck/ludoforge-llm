@@ -117,8 +117,9 @@ const createDecisionSequenceDef = (): GameDef =>
     actions: [
       {
         id: ACTION_DEPLOY,
-        actor: 'active',
-        phase: PHASE_MAIN,
+actor: 'active',
+executor: 'actor',
+phase: PHASE_MAIN,
         params: [],
         pre: null,
         cost: [],
@@ -127,8 +128,9 @@ const createDecisionSequenceDef = (): GameDef =>
       },
       {
         id: ACTION_SIMPLE,
-        actor: 'active',
-        phase: PHASE_MAIN,
+actor: 'active',
+executor: 'actor',
+phase: PHASE_MAIN,
         params: [],
         pre: null,
         cost: [],

@@ -604,6 +604,7 @@ function synthesizeCardDrivenEventAction(
     {
       id: asActionId('event'),
       actor: 'active',
+      executor: 'actor',
       phase: turnStructure.phases[0]!.id,
       params: [],
       pre: null,

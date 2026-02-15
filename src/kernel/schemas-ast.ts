@@ -19,6 +19,14 @@ export const PlayerSelSchema = z.union([
   z.object({ relative: z.union([z.literal('left'), z.literal('right')]) }).strict(),
 ]);
 
+export const ActionExecutorSelSchema = z.union([
+  z.literal('actor'),
+  z.literal('active'),
+  z.object({ id: PlayerIdSchema }).strict(),
+  z.object({ chosen: StringSchema }).strict(),
+  z.object({ relative: z.union([z.literal('left'), z.literal('right')]) }).strict(),
+]);
+
 export const ZoneSelSchema = StringSchema;
 export const TokenSelSchema = StringSchema;
 const ZoneRefSchema: z.ZodTypeAny = z.lazy(() => z.union([ZoneSelSchema, z.object({ zoneExpr: ValueExprSchema }).strict()]));

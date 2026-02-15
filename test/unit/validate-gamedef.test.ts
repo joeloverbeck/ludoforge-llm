@@ -44,8 +44,9 @@ const createValidGameDef = (): GameDef =>
     actions: [
       {
         id: 'playCard',
-        actor: 'active',
-        phase: 'main',
+actor: 'active',
+executor: 'actor',
+phase: 'main',
         params: [{ name: '$n', domain: { query: 'intsInRange', min: 0, max: 3 } }],
         pre: null,
         cost: [],

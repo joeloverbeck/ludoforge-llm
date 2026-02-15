@@ -167,8 +167,9 @@ const createResourcesFixtureDef = (options: ResourcesFixtureOptions): GameDef =>
     actions: [
       {
         id: 'pass',
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],

@@ -30,8 +30,9 @@ const createDef = (): GameDef =>
     actions: [
       {
         id: asActionId('wrongPhase'),
-        actor: 'active',
-        phase: asPhaseId('other'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('other'),
         params: [],
         pre: null,
         cost: [],
@@ -40,8 +41,9 @@ const createDef = (): GameDef =>
       },
       {
         id: asActionId('wrongActor'),
-        actor: { id: asPlayerId(1) },
-        phase: asPhaseId('main'),
+actor: { id: asPlayerId(1) },
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -50,8 +52,9 @@ const createDef = (): GameDef =>
       },
       {
         id: asActionId('limitedTurn'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -60,8 +63,9 @@ const createDef = (): GameDef =>
       },
       {
         id: asActionId('comboPre'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [
           { name: 'n', domain: { query: 'intsInRange', min: 1, max: 2 } },
           { name: 'c', domain: { query: 'enums', values: ['x', 'y'] } },
@@ -73,8 +77,9 @@ const createDef = (): GameDef =>
       },
       {
         id: asActionId('dependentDomain'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [
           { name: '$owner', domain: { query: 'players' } },
           { name: 'zone', domain: { query: 'zones', filter: { owner: { chosen: '$owner' } } } },
@@ -194,8 +199,9 @@ describe('legalMoves', () => {
       actions: [
         {
           id: asActionId('pass'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -204,8 +210,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('event'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -214,8 +221,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('operation'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -224,8 +232,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('limitedOperation'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -234,8 +243,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('operationPlusSpecialActivity'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -293,8 +303,9 @@ describe('legalMoves', () => {
       actions: [
         {
           id: asActionId('pass'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -303,8 +314,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('event'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -313,8 +325,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('operation'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -323,8 +336,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('limitedOperation'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -396,8 +410,9 @@ describe('legalMoves', () => {
       actions: [
         {
           id: asActionId('pass'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -406,8 +421,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('sweep'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -416,8 +432,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('airLift'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [{ name: 'spaces', domain: { query: 'intsInRange', min: 1, max: 3 } }],
           pre: null,
           cost: [],
@@ -426,8 +443,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('pivotalEvent'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [
             {
               name: 'override',
@@ -501,8 +519,9 @@ describe('legalMoves', () => {
       actions: [
         {
           id: asActionId('pass'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -511,8 +530,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('pivotalA'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -521,8 +541,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('operate'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -590,8 +611,9 @@ describe('legalMoves', () => {
       actions: [
         {
           id: asActionId('pass'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -600,8 +622,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('pivotalA'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -610,8 +633,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('pivotalB'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -698,8 +722,9 @@ describe('legalMoves', () => {
       actions: [
         {
           id: asActionId('pass'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -708,8 +733,9 @@ describe('legalMoves', () => {
         },
         {
           id: asActionId('pivotalEvent'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [
             { name: 'eventCardId', domain: { query: 'enums', values: ['piv-us', 'piv-vc'] } },
           ],
@@ -795,8 +821,9 @@ describe('legalMoves', () => {
       actions: [
         {
           id: asActionId('operation'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [],
           pre: null,
           cost: [],
@@ -881,8 +908,9 @@ describe('legalMoves', () => {
       actions: [
         {
           id: asActionId('event'),
-          actor: 'active',
-          phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
           params: [
             { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
             { name: 'branch', domain: { query: 'enums', values: ['a', 'b'] } },

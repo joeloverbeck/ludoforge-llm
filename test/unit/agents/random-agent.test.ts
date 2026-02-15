@@ -65,8 +65,9 @@ const createInput = (legalMoves: readonly Move[], rngSeed = 42n) => ({
 
 const createActionWithChooseOne = (id: string): ActionDef => ({
   id: asActionId(id),
-  actor: 'active',
-  phase: phaseId,
+actor: 'active',
+executor: 'actor',
+phase: phaseId,
   params: [],
   pre: null,
   cost: [],
@@ -270,8 +271,9 @@ describe('RandomAgent', () => {
     // Also add a simple non-template action so there's something to pick
     const simpleAction: ActionDef = {
       id: asActionId('simple'),
-      actor: 'active',
-      phase: phaseId,
+actor: 'active',
+executor: 'actor',
+phase: phaseId,
       params: [],
       pre: null,
       cost: [],

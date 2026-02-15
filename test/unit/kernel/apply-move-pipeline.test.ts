@@ -30,8 +30,9 @@ const makeDef = (overrides?: {
   turnStructure: { phases: [{ id: asPhaseId('main') }] },
   actions: overrides?.actions ?? [{
     id: asActionId('attack'),
-    actor: 'active',
-    phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
     params: [],
     pre: null,
     cost: [],

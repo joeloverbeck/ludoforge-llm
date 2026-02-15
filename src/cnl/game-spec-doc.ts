@@ -78,6 +78,7 @@ export interface GameSpecEffect {
 export interface GameSpecActionDef {
   readonly id: string;
   readonly actor: unknown;
+  readonly executor: unknown;
   readonly phase: string;
   readonly params: readonly unknown[];
   readonly pre: unknown | null;

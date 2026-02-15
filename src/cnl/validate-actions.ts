@@ -26,7 +26,7 @@ export function validateActions(doc: GameSpecDoc, diagnostics: Diagnostic[]): re
         path: basePath,
         severity: 'error',
         message: 'Action definition must be an object.',
-        suggestion: 'Provide action fields id, actor, phase, and effects.',
+        suggestion: 'Provide action fields id, actor, executor, phase, and effects.',
       });
       continue;
     }
@@ -45,6 +45,16 @@ export function validateActions(doc: GameSpecDoc, diagnostics: Diagnostic[]): re
         severity: 'error',
         message: 'Action field "actor" is required.',
         suggestion: 'Set action.actor to a valid actor selector.',
+      });
+    }
+
+    if (!('executor' in action) || action.executor === undefined || action.executor === null) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_ACTION_REQUIRED_FIELD_MISSING',
+        path: `${basePath}.executor`,
+        severity: 'error',
+        message: 'Action field "executor" is required.',
+        suggestion: 'Set action.executor to a valid executor selector.',
       });
     }
 

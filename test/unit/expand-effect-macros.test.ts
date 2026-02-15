@@ -55,8 +55,9 @@ describe('expandEffectMacros', () => {
       actions: [
         {
           id: 'test-action',
-          actor: 'active',
-          phase: 'main',
+actor: 'active',
+executor: 'actor',
+phase: 'main',
           params: [],
           pre: null,
           cost: [],

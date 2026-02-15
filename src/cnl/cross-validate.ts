@@ -31,6 +31,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
   }
 
   if (sections.actionPipelines !== null && sections.actions !== null) {
+    const pipelinedActionIds = new Set(sections.actionPipelines.map((profile) => String(profile.actionId)));
     for (const [profileIndex, profile] of sections.actionPipelines.entries()) {
       pushMissingIdentifierDiagnostic(
         diagnostics,
@@ -41,6 +42,22 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         `Operation profile "${profile.id}" references unknown action "${String(profile.actionId)}".`,
         'Use one of the declared action ids.',
       );
+    }
+
+    for (const [actionIndex, action] of sections.actions.entries()) {
+      if (typeof action.executor === 'string' || !('chosen' in action.executor)) {
+        continue;
+      }
+      if (!pipelinedActionIds.has(String(action.id))) {
+        continue;
+      }
+      diagnostics.push({
+        code: 'CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED',
+        path: `doc.actions.${actionIndex}.executor`,
+        severity: 'error',
+        message: `Action "${String(action.id)}" uses binding-derived executor "${action.executor.chosen}" with action pipelines.`,
+        suggestion: 'Use actor/active/id/relative executor selectors for pipelined actions.',
+      });
     }
   }
 

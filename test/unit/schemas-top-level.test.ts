@@ -82,8 +82,9 @@ const fullGameDef = {
   actions: [
     {
       id: 'playCard',
-      actor: 'active',
-      phase: 'main',
+actor: 'active',
+executor: 'actor',
+phase: 'main',
       params: [{ name: '$card', domain: { query: 'tokensInZone', zone: 'deck:none' } }],
       pre: { op: '==', left: 1, right: 1 },
       cost: [],

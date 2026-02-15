@@ -22,8 +22,9 @@ const phaseId = asPhaseId('main');
 
 const createAction = (id: string, effects: ActionDef['effects']): ActionDef => ({
   id: asActionId(id),
-  actor: 'active',
-  phase: phaseId,
+actor: 'active',
+executor: 'actor',
+phase: phaseId,
   params: [],
   pre: null,
   cost: [],
@@ -84,8 +85,9 @@ const stateStub: GameState = {
 
 const createActionWithChooseOne = (id: string): ActionDef => ({
   id: asActionId(id),
-  actor: 'active',
-  phase: phaseId,
+actor: 'active',
+executor: 'actor',
+phase: phaseId,
   params: [],
   pre: null,
   cost: [],

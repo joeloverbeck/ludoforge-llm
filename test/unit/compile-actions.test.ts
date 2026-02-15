@@ -18,8 +18,9 @@ describe('compile actions', () => {
       actions: [
         {
           id: 'play',
-          actor: 'activePlayer',
-          phase: 'main',
+actor: 'activePlayer',
+executor: 'actor',
+phase: 'main',
           params: [{ name: 'count', domain: { query: 'intsInRange', min: 1, max: 2 } }],
           pre: {
             op: '>=',
@@ -48,5 +49,98 @@ describe('compile actions', () => {
     assert.deepEqual(action?.params[0]?.domain, { query: 'intsInRange', min: 1, max: 2 });
     assert.deepEqual(action?.limits, [{ scope: 'turn', max: 1 }]);
     assert.deepEqual(action?.effects, [{ draw: { from: 'deck:none', to: 'hand:0', count: 1 } }]);
+  });
+
+  it('accepts binding-derived executor when binding is declared action param', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-executor-binding-compile', players: { min: 2, max: 2 } },
+      zones: [{ id: 'pool', owner: 'none', visibility: 'public', ordering: 'set' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'assign',
+          actor: 'active',
+          executor: '$owner',
+          phase: 'main',
+          params: [{ name: '$owner', domain: { query: 'players' } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.gameDef?.actions[0]?.executor, { chosen: '$owner' });
+  });
+
+  it('rejects binding-derived executor when binding is not declared in action params', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-executor-binding-missing', players: { min: 2, max: 2 } },
+      zones: [{ id: 'pool', owner: 'none', visibility: 'public', ordering: 'set' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'assign',
+          actor: 'active',
+          executor: '$owner',
+          phase: 'main',
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    assert.equal(result.diagnostics.some((d) => d.code === 'CNL_COMPILER_ACTION_EXECUTOR_BINDING_MISSING'), true);
+  });
+
+  it('rejects binding-derived executor for pipelined actions', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-executor-binding-pipeline', players: { min: 2, max: 2 } },
+      zones: [{ id: 'pool', owner: 'none', visibility: 'public', ordering: 'set' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actionPipelines: [
+        {
+          id: 'p',
+          actionId: 'assign',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [{ effects: [] }],
+          atomicity: 'atomic' as const,
+        },
+      ],
+      actions: [
+        {
+          id: 'assign',
+          actor: 'active',
+          executor: '$owner',
+          phase: 'main',
+          params: [{ name: '$owner', domain: { query: 'players' } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    assert.equal(result.diagnostics.some((d) => d.code === 'CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED'), true);
   });
 });

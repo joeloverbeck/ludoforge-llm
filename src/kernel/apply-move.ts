@@ -6,6 +6,7 @@ import { createCollector } from './execution-collector.js';
 import { legalMoves } from './legal-moves.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
+import { resolveActionExecutorPlayer } from './action-executor.js';
 import { extractResolvedBindFromDecisionId } from './decision-id.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { illegalMoveError, isKernelErrorCode, isKernelRuntimeError } from './runtime-error.js';
@@ -221,7 +222,16 @@ const resolveMatchedPipelineForMove = (
     return undefined;
   }
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const executionPlayer = resolveFreeOperationExecutionPlayer(def, state, move);
+  const executionPlayer = move.freeOperation === true
+    ? resolveFreeOperationExecutionPlayer(def, state, move)
+    : resolveActionExecutorPlayer({
+      def,
+      state,
+      adjacencyGraph,
+      action,
+      decisionPlayer: state.activePlayer,
+      bindings: runtimeBindingsForMove(move, undefined),
+    });
   const dispatch = resolveActionPipelineDispatch(def, action, {
     def,
     adjacencyGraph,
@@ -478,8 +488,17 @@ const applyMoveCore = (
   const rng: Rng = { state: state.rng };
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const collector = createCollector(options);
-  const executionPlayer = resolveFreeOperationExecutionPlayer(def, state, move);
   const baseBindings = runtimeBindingsForMove(move, undefined);
+  const executionPlayer = move.freeOperation === true
+    ? resolveFreeOperationExecutionPlayer(def, state, move)
+    : resolveActionExecutorPlayer({
+      def,
+      state,
+      adjacencyGraph,
+      action,
+      decisionPlayer: state.activePlayer,
+      bindings: baseBindings,
+    });
   const effectCtxBase = {
     def,
     adjacencyGraph,

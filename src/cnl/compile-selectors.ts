@@ -1,9 +1,11 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { asPlayerId } from '../kernel/branded.js';
-import type { PlayerSel } from '../kernel/types.js';
+import type { ActionExecutorSel, PlayerSel } from '../kernel/types.js';
 
 const PLAYER_SELECTOR_SUGGESTION =
   'Use one of: actor, active, activePlayer, all, allOther, left, right, <playerId>, or $binding.';
+const ACTION_EXECUTOR_SELECTOR_SUGGESTION =
+  'Use one of: actor, active, left, right, <playerId>, or $binding.';
 
 export interface SelectorCompileResult<TValue> {
   readonly value: TValue | null;
@@ -46,6 +48,39 @@ export function normalizePlayerSelector(value: unknown, path: string): SelectorC
   }
 
   return invalidPlayerSelector(path, value);
+}
+
+export function normalizeActionExecutorSelector(
+  value: unknown,
+  path: string,
+): SelectorCompileResult<ActionExecutorSel> {
+  const normalized = normalizePlayerSelector(value, path);
+  if (normalized.value === null) {
+    return {
+      value: null,
+      diagnostics: normalized.diagnostics.map((diagnostic) => ({
+        ...diagnostic,
+        suggestion: ACTION_EXECUTOR_SELECTOR_SUGGESTION,
+      })),
+    };
+  }
+
+  if (normalized.value === 'all' || normalized.value === 'allOther') {
+    return {
+      value: null,
+      diagnostics: [
+        {
+          code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+          path,
+          severity: 'error',
+          message: 'Action executor selector must resolve to exactly one player.',
+          suggestion: ACTION_EXECUTOR_SELECTOR_SUGGESTION,
+        },
+      ],
+    };
+  }
+
+  return { value: normalized.value, diagnostics: [] };
 }
 
 export function normalizeZoneOwnerQualifier(value: string, path: string): SelectorCompileResult<ZoneOwnerQualifier> {

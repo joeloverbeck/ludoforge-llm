@@ -21,7 +21,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
       actions: [
-        { id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       triggers: [
         { event: { type: 'turnStart' }, effects: [{ addVar: { scope: 'global', var: 'tick', delta: 1 } }] },
@@ -63,7 +63,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       metadata: { id: 'bad-trigger-action', players: { min: 2, max: 2 } },
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
-      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [{ event: { type: 'actionResolved', action: 'psas' }, effects: [] }],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 2 }, result: { type: 'draw' } }] },
     };
@@ -87,7 +87,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       globalVars: [{ name: 'trail', type: 'int', init: 0, min: 0, max: 4 }],
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
-      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [{ id: 'onTrailChanged', event: { type: 'varChanged', scope: 'global', var: 'trail' }, effects: [] }],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 2 }, result: { type: 'draw' } }] },
     };
@@ -142,7 +142,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
           },
         },
       },
-      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
@@ -169,7 +169,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
       turnOrder: { type: 'simultaneous' as const },
-      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
@@ -197,7 +197,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
       turnOrder: { type: 'fixedOrder' as const, order: [] },
-      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
@@ -231,7 +231,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
           },
         },
       },
-      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
@@ -280,9 +280,9 @@ describe('compile top-level actions/triggers/end conditions', () => {
         },
       },
       actions: [
-        { id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
-        { id: 'pivotalA', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
-        { id: 'pivotalB', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalA', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalB', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       triggers: [],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
@@ -331,7 +331,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       metadata: { id: 'operation-profile-pass-through', players: { min: 2, max: 4 } },
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
-      actions: [{ id: 'patrol', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'patrol', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       actionPipelines: [
         {
           id: 'patrol-profile',
@@ -376,7 +376,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ],
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
-      actions: [{ id: 'patrol', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'patrol', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       actionPipelines: [
         {
           id: 'patrol-profile',
@@ -419,7 +419,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       globalVars: [{ name: 'pickedTargets', type: 'int', init: 0, min: 0, max: 99 }],
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
-      actions: [{ id: 'patrol', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'patrol', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       actionPipelines: [
         {
           id: 'patrol-profile',
@@ -467,8 +467,8 @@ describe('compile top-level actions/triggers/end conditions', () => {
       zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
       actions: [
-        { id: 'patrol', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
-        { id: 'sweep', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'patrol', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'sweep', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       actionPipelines: [
         {
@@ -591,9 +591,9 @@ describe('compile top-level actions/triggers/end conditions', () => {
         },
       },
       actions: [
-        { id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
-        { id: 'pivotalA', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
-        { id: 'pivotalB', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalA', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalB', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       triggers: [],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
@@ -632,7 +632,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
           },
         },
       },
-      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
       terminal: {
         conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
@@ -678,7 +678,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
           },
         },
       },
-      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
       terminal: {
         conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }],
@@ -740,7 +740,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
           },
         },
       },
-      actions: [{ id: 'pass', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };

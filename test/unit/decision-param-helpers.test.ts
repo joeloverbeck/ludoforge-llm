@@ -57,8 +57,9 @@ const makeMove = (params: Move['params'] = {}): Move => ({
 const makeDefWithNestedTemplatedChoices = (): GameDef => {
   const action: ActionDef = {
     id: asActionId('nested-choice-op'),
-    actor: 'active',
-    phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
     params: [],
     pre: null,
     cost: [],

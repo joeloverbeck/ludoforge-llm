@@ -8,6 +8,7 @@ import type {
 } from './branded.js';
 import type { DegeneracyFlag } from './diagnostics.js';
 import type {
+  ActionExecutorSel,
   ConditionAST,
   EffectAST,
   MoveParamValue,
@@ -114,6 +115,7 @@ export interface TurnStructure {
 export interface ActionDef {
   readonly id: ActionId;
   readonly actor: PlayerSel;
+  readonly executor: ActionExecutorSel;
   readonly phase: PhaseId;
   readonly params: readonly ParamDef[];
   readonly pre: ConditionAST | null;

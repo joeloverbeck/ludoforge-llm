@@ -16,6 +16,7 @@
     {
       "id": "playCard",
       "actor": "active",
+      "executor": "actor",
       "phase": "mian",
       "params": [{ "name": "$n", "domain": { "query": "intsInRange", "min": 0, "max": 3 } }],
       "pre": { "op": "==", "left": { "ref": "gvar", "var": "gold" }, "right": 1 },

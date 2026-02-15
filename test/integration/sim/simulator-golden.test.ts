@@ -31,8 +31,9 @@ const createGoldenDef = (): GameDef =>
     actions: [
       {
         id: asActionId('step1'),
-        actor: 'active',
-        phase: asPhaseId('p1'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('p1'),
         params: [],
         pre: null,
         cost: [],
@@ -41,8 +42,9 @@ const createGoldenDef = (): GameDef =>
       },
       {
         id: asActionId('step2'),
-        actor: 'active',
-        phase: asPhaseId('p2'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('p2'),
         params: [],
         pre: null,
         cost: [],

@@ -32,8 +32,9 @@ const createDef = (): GameDef =>
     actions: [
       {
         id: asActionId('smallStep'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -42,8 +43,9 @@ const createDef = (): GameDef =>
       },
       {
         id: asActionId('bigStep'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],

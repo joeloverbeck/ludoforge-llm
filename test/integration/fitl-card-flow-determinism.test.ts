@@ -56,11 +56,12 @@ const createDef = (): GameDef =>
       },
     },
     actions: [
-      { id: asActionId('pass'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+      { id: asActionId('pass'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
       {
         id: asActionId('event'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [
           { name: 'eventCardId', domain: { query: 'enums', values: ['card-overrides'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
@@ -72,8 +73,9 @@ const createDef = (): GameDef =>
       },
       {
         id: asActionId('operation'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -82,8 +84,9 @@ const createDef = (): GameDef =>
       },
       {
         id: asActionId('operationPlusSpecialActivity'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -236,11 +239,12 @@ const createEventTraceDef = (): GameDef =>
       },
     ],
     actions: [
-      { id: asActionId('pass'), actor: 'active', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
+      { id: asActionId('pass'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
       {
         id: asActionId('event'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [
           { name: 'eventCardId', domain: { query: 'enums', values: ['trace-card'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
@@ -255,8 +259,9 @@ const createEventTraceDef = (): GameDef =>
       },
       {
         id: asActionId('operation'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],
@@ -265,8 +270,9 @@ const createEventTraceDef = (): GameDef =>
       },
       {
         id: asActionId('operationPlusSpecialActivity'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],

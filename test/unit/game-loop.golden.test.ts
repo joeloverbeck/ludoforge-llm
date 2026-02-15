@@ -24,8 +24,9 @@ const createGoldenDef = (): GameDef =>
     actions: [
       {
         id: asActionId('boost'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [{ name: 'amount', domain: { query: 'intsInRange', min: 1, max: 2 } }],
         pre: null,
         cost: [],
@@ -34,8 +35,9 @@ const createGoldenDef = (): GameDef =>
       },
       {
         id: asActionId('flat'),
-        actor: 'active',
-        phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
         params: [],
         pre: null,
         cost: [],

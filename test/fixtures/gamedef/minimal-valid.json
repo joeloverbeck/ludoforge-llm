@@ -16,6 +16,7 @@
     {
       "id": "playCard",
       "actor": "active",
+      "executor": "actor",
       "phase": "main",
       "params": [{ "name": "$n", "domain": { "query": "intsInRange", "min": 0, "max": 3 } }],
       "pre": null,

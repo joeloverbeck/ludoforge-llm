@@ -64,8 +64,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('1. operation with profile emits a template move with params: {}', () => {
     const action: ActionDef = {
       id: asActionId('trainOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -110,8 +111,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('2. simple action (no profile) still emits fully-enumerated moves', () => {
     const action: ActionDef = {
       id: asActionId('simpleAction'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [
         { name: 'target', domain: { query: 'enums', values: ['a', 'b', 'c'] } },
       ],
@@ -133,8 +135,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('3. template move respects legality predicate (failing legality produces no template)', () => {
     const action: ActionDef = {
       id: asActionId('blockedOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -171,8 +174,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('4. template move respects cost validation (failing costValidation + forbid produces no template)', () => {
     const action: ActionDef = {
       id: asActionId('costlyOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -214,8 +218,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('5. free operations produce template moves (cost validation failure + allow mode still emits)', () => {
     const action: ActionDef = {
       id: asActionId('freeOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -253,8 +258,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('6. limited operations produce template moves when within limits', () => {
     const action: ActionDef = {
       id: asActionId('limitedOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -288,8 +294,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('7. mixed profiled and simple actions produce correct output', () => {
     const simpleAction: ActionDef = {
       id: asActionId('simpleAction'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [
         { name: 'target', domain: { query: 'enums', values: ['x', 'y'] } },
       ],
@@ -301,8 +308,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
 
     const profiledAction: ActionDef = {
       id: asActionId('profiledOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -343,8 +351,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('8. template move is a valid Move object', () => {
     const action: ActionDef = {
       id: asActionId('validOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -377,8 +386,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('9. unsatisfiable chooseN template move is excluded', () => {
     const action: ActionDef = {
       id: asActionId('unsatChooseNOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -419,8 +429,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('10. unsatisfiable chooseOne template move is excluded', () => {
     const action: ActionDef = {
       id: asActionId('unsatChooseOneOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -459,8 +470,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('11. map-aware profile legality evaluates against def.mapSpaces', () => {
     const action: ActionDef = {
       id: asActionId('mapAwareOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -508,8 +520,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('12. profiled action with no applicable profile emits no move', () => {
     const action: ActionDef = {
       id: asActionId('strictProfileOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -539,8 +552,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('13. malformed profile legality is fatal with profile/action context', () => {
     const action: ActionDef = {
       id: asActionId('badLegalityOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -585,8 +599,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('14. malformed atomic costValidation is fatal with profile/action context', () => {
     const action: ActionDef = {
       id: asActionId('badCostValidationOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -631,8 +646,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('15. malformed decision-path expressions are fatal during template satisfiability checks', () => {
     const action: ActionDef = {
       id: asActionId('brokenDecisionPathOp'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],
@@ -671,8 +687,9 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
   it('16. malformed free-operation zone filters fail with typed diagnostics during template variant generation', () => {
     const action: ActionDef = {
       id: asActionId('operation'),
-      actor: 'active',
-      phase: asPhaseId('main'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
       params: [],
       pre: null,
       cost: [],

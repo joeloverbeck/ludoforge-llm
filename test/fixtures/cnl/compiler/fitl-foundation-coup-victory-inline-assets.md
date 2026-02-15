@@ -134,6 +134,7 @@ terminal:
 actions:
   - id: pass
     actor: active
+    executor: actor
     phase: main
     params: []
     pre: null
@@ -142,6 +143,7 @@ actions:
     limits: []
   - id: boostSupport
     actor: active
+    executor: actor
     phase: main
     params: []
     pre: null
@@ -154,6 +156,7 @@ actions:
     limits: []
   - id: markFinalCoup
     actor: active
+    executor: actor
     phase: main
     params: []
     pre: null

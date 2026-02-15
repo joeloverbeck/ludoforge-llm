@@ -183,11 +183,12 @@ export const ScenarioDeckCompositionSchema = z
 
 export const ScenarioPayloadSchema = z
   .object({
-    mapAssetId: StringSchema.min(1),
-    pieceCatalogAssetId: StringSchema.min(1),
+    mapAssetId: StringSchema.min(1).optional(),
+    pieceCatalogAssetId: StringSchema.min(1).optional(),
     eventDeckAssetId: StringSchema.min(1).optional(),
-    scenarioName: StringSchema.min(1),
-    yearRange: StringSchema.min(1),
+    scenarioName: StringSchema.min(1).optional(),
+    yearRange: StringSchema.min(1).optional(),
+    settings: z.record(StringSchema, z.unknown()).optional(),
     initialPlacements: z.array(ScenarioPiecePlacementSchema).optional(),
     initialTrackValues: z
       .array(

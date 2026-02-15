@@ -132,11 +132,12 @@ export interface ScenarioDeckComposition {
 }
 
 export interface ScenarioPayload {
-  readonly mapAssetId: string;
-  readonly pieceCatalogAssetId: string;
+  readonly mapAssetId?: string;
+  readonly pieceCatalogAssetId?: string;
   readonly eventDeckAssetId?: string;
-  readonly scenarioName: string;
-  readonly yearRange: string;
+  readonly scenarioName?: string;
+  readonly yearRange?: string;
+  readonly settings?: Readonly<Record<string, unknown>>;
   readonly initialPlacements?: readonly ScenarioPiecePlacement[];
   readonly initialTrackValues?: readonly { readonly trackId: string; readonly value: number }[];
   readonly initialMarkers?: readonly { readonly spaceId: string; readonly markerId: string; readonly state: string }[];

@@ -94,6 +94,28 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('does not require scenario mapAssetId or pieceCatalogAssetId', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      dataAssets: [
+        {
+          id: 'fitl-scenario-foundation',
+          kind: 'scenario',
+          payload: {},
+        },
+      ],
+    });
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.0.payload.mapAssetId'),
+      false,
+    );
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.0.payload.pieceCatalogAssetId'),
+      false,
+    );
+  });
+
   it('rejects legacy eventCardSet data assets through the shared data-asset validator path', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

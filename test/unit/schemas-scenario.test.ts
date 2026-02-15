@@ -25,7 +25,7 @@ describe('scenario payload schema', () => {
   });
 
   it('rejects missing required fields', () => {
-    const requiredFields = ['mapAssetId', 'pieceCatalogAssetId', 'scenarioName', 'yearRange'] as const;
+    const requiredFields = [] as const;
     for (const field of requiredFields) {
       const payload: Record<string, unknown> = { ...validScenarioPayload };
       delete payload[field];
@@ -33,6 +33,13 @@ describe('scenario payload schema', () => {
       assert.equal(result.success, false);
       assert.ok(result.error.issues.some((issue) => issue.path[0] === field));
     }
+  });
+
+  it('accepts scenarios without mapAssetId, pieceCatalogAssetId, scenarioName, and yearRange', () => {
+    const result = ScenarioPayloadSchema.safeParse({
+      settings: { mode: 'test' },
+    });
+    assert.equal(result.success, true);
   });
 
   it('rejects invalid usPolicy values', () => {

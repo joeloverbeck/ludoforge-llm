@@ -161,24 +161,32 @@ export function deriveSectionsFromDataAssets(
   const selectedScenario = scenarioSelection.selected;
   const skipAssetInference = scenarioSelection.failed;
 
-  const selectedMapResult = selectAssetById(
-    skipAssetInference ? [] : mapAssets,
-    skipAssetInference ? undefined : selectedScenario?.mapAssetId,
-    diagnostics,
-    'map',
-    selectedScenario?.path ?? 'doc.dataAssets',
-    selectedScenario?.entityId,
-  );
+  const shouldResolveMap =
+    !skipAssetInference && (selectedScenario?.mapAssetId !== undefined || mapAssets.length === 1);
+  const selectedMapResult = shouldResolveMap
+    ? selectAssetById(
+        mapAssets,
+        selectedScenario?.mapAssetId,
+        diagnostics,
+        'map',
+        selectedScenario?.path ?? 'doc.dataAssets',
+        selectedScenario?.entityId,
+      )
+    : { selected: undefined, failed: false };
   mapDerivationFailed = mapDerivationFailed || selectedMapResult.failed;
   const selectedMap = selectedMapResult.selected;
-  const selectedPieceCatalogResult = selectAssetById(
-    skipAssetInference ? [] : pieceCatalogAssets,
-    skipAssetInference ? undefined : selectedScenario?.pieceCatalogAssetId,
-    diagnostics,
-    'pieceCatalog',
-    selectedScenario?.path ?? 'doc.dataAssets',
-    selectedScenario?.entityId,
-  );
+  const shouldResolvePieceCatalog =
+    !skipAssetInference && (selectedScenario?.pieceCatalogAssetId !== undefined || pieceCatalogAssets.length === 1);
+  const selectedPieceCatalogResult = shouldResolvePieceCatalog
+    ? selectAssetById(
+        pieceCatalogAssets,
+        selectedScenario?.pieceCatalogAssetId,
+        diagnostics,
+        'pieceCatalog',
+        selectedScenario?.path ?? 'doc.dataAssets',
+        selectedScenario?.entityId,
+      )
+    : { selected: undefined, failed: false };
   pieceCatalogDerivationFailed = pieceCatalogDerivationFailed || selectedPieceCatalogResult.failed;
   const selectedPieceCatalog = selectedPieceCatalogResult.selected;
 

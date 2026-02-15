@@ -99,7 +99,7 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
           path: basePath,
           severity: 'error',
           message: 'Scenario payload must be an object.',
-          suggestion: 'Set scenario payload to an object that includes mapAssetId and pieceCatalogAssetId.',
+          suggestion: 'Set scenario payload to an object.',
         });
         continue;
       }
@@ -112,25 +112,6 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
         typeof payload.pieceCatalogAssetId === 'string' && payload.pieceCatalogAssetId.trim() !== ''
           ? normalizeIdentifier(payload.pieceCatalogAssetId)
           : undefined;
-
-      if (mapAssetId === undefined) {
-        diagnostics.push({
-          code: 'CNL_VALIDATOR_DATA_ASSET_SCENARIO_REF_INVALID',
-          path: `${basePath}.mapAssetId`,
-          severity: 'error',
-          message: 'Scenario payload must declare a non-empty mapAssetId.',
-          suggestion: 'Set payload.mapAssetId to the id of a declared map data asset.',
-        });
-      }
-      if (pieceCatalogAssetId === undefined) {
-        diagnostics.push({
-          code: 'CNL_VALIDATOR_DATA_ASSET_SCENARIO_REF_INVALID',
-          path: `${basePath}.pieceCatalogAssetId`,
-          severity: 'error',
-          message: 'Scenario payload must declare a non-empty pieceCatalogAssetId.',
-          suggestion: 'Set payload.pieceCatalogAssetId to the id of a declared pieceCatalog data asset.',
-        });
-      }
 
       scenarioRefs.push({
         path: basePath,

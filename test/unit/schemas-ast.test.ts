@@ -199,6 +199,18 @@ describe('AST and selector schemas', () => {
           max: { ref: 'gvar', var: 'maxTargets' },
         },
       },
+      {
+        grantFreeOperation: {
+          id: 'grant-vc-op',
+          faction: '3',
+          executeAsFaction: 'self',
+          operationClass: 'limitedOperation',
+          actionIds: ['operation'],
+          zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: '$zone', prop: 'country' }, right: 'southVietnam' },
+          uses: 2,
+          sequence: { chain: 'vc-ops', step: 1 },
+        },
+      },
       { setMarker: { space: 'saigon:none', marker: 'support', state: 'activeSupport' } },
       { setMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', state: 'activeSupport' } },
       { shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } },

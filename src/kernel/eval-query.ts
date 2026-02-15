@@ -32,8 +32,15 @@ function resolveFilterValue(value: TokenFilterPredicate['value'], ctx: EvalConte
   return evalValue(value as ValueExpr, ctx);
 }
 
+function tokenFilterFieldValue(token: Token, field: string): string | number | boolean | undefined {
+  if (field === 'id') {
+    return token.id;
+  }
+  return token.props[field];
+}
+
 function tokenMatchesPredicate(token: Token, predicate: TokenFilterPredicate, ctx: EvalContext): boolean {
-  const propValue = token.props[predicate.prop];
+  const propValue = tokenFilterFieldValue(token, predicate.prop);
   if (propValue === undefined) {
     return false;
   }

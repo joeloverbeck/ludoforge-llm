@@ -21,6 +21,7 @@ export const SUPPORTED_EFFECT_KINDS = [
   'setGlobalMarker',
   'flipGlobalMarker',
   'shiftGlobalMarker',
+  'grantFreeOperation',
 ] as const;
 
 export type SupportedEffectKind = typeof SUPPORTED_EFFECT_KINDS[number];

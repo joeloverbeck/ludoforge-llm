@@ -731,6 +731,50 @@ export const validateEffectAst = (
     return;
   }
 
+  if ('grantFreeOperation' in effect) {
+    const grant = effect.grantFreeOperation;
+    if (
+      grant.operationClass !== 'pass' &&
+      grant.operationClass !== 'event' &&
+      grant.operationClass !== 'operation' &&
+      grant.operationClass !== 'limitedOperation' &&
+      grant.operationClass !== 'operationPlusSpecialActivity'
+    ) {
+      diagnostics.push({
+        code: 'EFFECT_GRANT_FREE_OPERATION_CLASS_INVALID',
+        path: `${path}.grantFreeOperation.operationClass`,
+        severity: 'error',
+        message: `grantFreeOperation.operationClass is invalid: \"${grant.operationClass}\".`,
+        suggestion: 'Use one of pass|event|operation|limitedOperation|operationPlusSpecialActivity.',
+      });
+    }
+    if (grant.uses !== undefined && (!Number.isSafeInteger(grant.uses) || grant.uses <= 0)) {
+      diagnostics.push({
+        code: 'EFFECT_GRANT_FREE_OPERATION_USES_INVALID',
+        path: `${path}.grantFreeOperation.uses`,
+        severity: 'error',
+        message: 'grantFreeOperation.uses must be a positive integer.',
+        suggestion: 'Set uses to an integer >= 1.',
+      });
+    }
+    if (
+      grant.sequence !== undefined &&
+      (!Number.isSafeInteger(grant.sequence.step) || grant.sequence.step < 0)
+    ) {
+      diagnostics.push({
+        code: 'EFFECT_GRANT_FREE_OPERATION_SEQUENCE_INVALID',
+        path: `${path}.grantFreeOperation.sequence.step`,
+        severity: 'error',
+        message: 'grantFreeOperation.sequence.step must be a non-negative integer.',
+        suggestion: 'Set sequence.step to an integer >= 0.',
+      });
+    }
+    if (grant.zoneFilter !== undefined) {
+      validateConditionAst(diagnostics, grant.zoneFilter, `${path}.grantFreeOperation.zoneFilter`, context);
+    }
+    return;
+  }
+
   const chooseN = effect.chooseN;
   const hasN = 'n' in chooseN && chooseN.n !== undefined;
   const hasMax = 'max' in chooseN && chooseN.max !== undefined;

@@ -45,7 +45,7 @@ const createDef = (): GameDef =>
         actor: 'active',
         phase: asPhaseId('main'),
         params: [
-          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4', 'card-5', 'card-6', 'card-7'] } },
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4', 'card-5', 'card-6', 'card-7', 'card-9'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
           { name: 'branch', domain: { query: 'enums', values: ['branch-grant-nva', 'none'] } },
         ],
@@ -190,6 +190,15 @@ const createDef = (): GameDef =>
                 { faction: '3', sequence: { chain: 'vc-nva-ordered', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
                 { faction: '2', sequence: { chain: 'vc-nva-ordered', step: 1 }, operationClass: 'operation', actionIds: ['operation'] },
               ],
+            },
+          },
+          {
+            id: 'card-9',
+            title: 'Grant From Effect',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Grant VC free operation via effect execution.',
+              effects: [{ grantFreeOperation: { faction: '3', operationClass: 'operation', actionIds: ['operation'] } }],
             },
           },
         ],
@@ -486,6 +495,24 @@ describe('event free-operation grants integration', () => {
     assert.equal(typeof runtime.pendingFreeOperationGrants?.[0]?.grantId, 'string');
     const nvaMoves = legalMoves(def, second).filter((move) => String(move.actionId) === 'operation');
     assert.equal(nvaMoves.some((move) => move.freeOperation === true), true);
+  });
+
+  it('creates pending free-operation grants from event effect execution', () => {
+    const def = createDef();
+    const start = initialState(def, 12, 4);
+
+    const first = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-9', side: 'unshaded', branch: 'none' },
+    }).state;
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} }).state;
+    const third = applyMove(def, second, { actionId: asActionId('operation'), params: {} }).state;
+
+    const runtime = requireCardDrivenRuntime(third);
+    assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.faction, '3');
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.operationClass, 'operation');
+    assert.deepEqual(runtime.pendingFreeOperationGrants?.[0]?.actionIds, ['operation']);
   });
 
   it('supports two consecutive free operations when two grants exist for one faction', () => {

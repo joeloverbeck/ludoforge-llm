@@ -83,6 +83,7 @@ const exhaustEffectAST = (effect: EffectAST): string => {
   if ('setGlobalMarker' in effect) return 'setGlobalMarker';
   if ('flipGlobalMarker' in effect) return 'flipGlobalMarker';
   if ('shiftGlobalMarker' in effect) return 'shiftGlobalMarker';
+  if ('grantFreeOperation' in effect) return 'grantFreeOperation';
 
   return assertNever(effect);
 };
@@ -132,12 +133,12 @@ describe('exhaustive kernel unions', () => {
   it('keeps the exact variant counts for key unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
     const conditionVariants: UnionSize<ConditionAST> = 10;
-    const effectVariants: UnionSize<EffectAST> = 22;
+    const effectVariants: UnionSize<EffectAST> = 23;
     const queryVariants: UnionSize<OptionsQuery> = 11;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 10);
-    assert.equal(effectVariants, 22);
+    assert.equal(effectVariants, 23);
     assert.equal(queryVariants, 11);
   });
 

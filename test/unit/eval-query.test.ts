@@ -391,6 +391,19 @@ describe('evalQuery', () => {
     );
   });
 
+  it('tokensInZone filter supports token identity via prop=id', () => {
+    const ctx = makeCtx();
+
+    const result = evalQuery(
+      { query: 'tokensInZone', zone: 'battlefield:none', filter: [{ prop: 'id', op: 'eq', value: 'nva-guerrilla-1' }] },
+      ctx,
+    );
+    assert.deepEqual(
+      result.map((token) => (token as Token).id),
+      [asTokenId('nva-guerrilla-1')],
+    );
+  });
+
   it('tokensInZone with filter op=neq returns non-matching tokens', () => {
     const ctx = makeCtx();
 

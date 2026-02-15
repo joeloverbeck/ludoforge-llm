@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { EffectAST, PlayerSel, ValueExpr, ZoneRef } from '../kernel/types.js';
+import type { ConditionAST, EffectAST, PlayerSel, ValueExpr, ZoneRef } from '../kernel/types.js';
 import { collectSequentialBindings } from './binder-surface-registry.js';
 import {
   lowerConditionNode,
@@ -126,6 +126,9 @@ function lowerEffectNode(
   }
   if (isRecord(source.shiftGlobalMarker)) {
     return lowerShiftGlobalMarkerEffect(source.shiftGlobalMarker, context, scope, `${path}.shiftGlobalMarker`);
+  }
+  if (isRecord(source.grantFreeOperation)) {
+    return lowerGrantFreeOperationEffect(source.grantFreeOperation, context, scope, `${path}.grantFreeOperation`);
   }
 
   return missingCapability(path, 'effect node', source, SUPPORTED_EFFECT_KINDS);
@@ -893,6 +896,114 @@ function lowerShiftGlobalMarkerEffect(
       shiftGlobalMarker: {
         marker: source.marker,
         delta: delta.value,
+      },
+    },
+    diagnostics,
+  };
+}
+
+function lowerGrantFreeOperationEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (typeof source.faction !== 'string') {
+    return missingCapability(path, 'grantFreeOperation effect', source, [
+      '{ grantFreeOperation: { faction, operationClass, actionIds?, executeAsFaction?, zoneFilter?, uses?, id?, sequence? } }',
+    ]);
+  }
+  if (
+    source.operationClass !== 'pass' &&
+    source.operationClass !== 'event' &&
+    source.operationClass !== 'operation' &&
+    source.operationClass !== 'limitedOperation' &&
+    source.operationClass !== 'operationPlusSpecialActivity'
+  ) {
+    return missingCapability(`${path}.operationClass`, 'grantFreeOperation operationClass', source.operationClass, [
+      'pass',
+      'event',
+      'operation',
+      'limitedOperation',
+      'operationPlusSpecialActivity',
+    ]);
+  }
+
+  const diagnostics: Diagnostic[] = [];
+  let effectId: string | undefined;
+  if (source.id !== undefined && typeof source.id !== 'string') {
+    diagnostics.push(...missingCapability(`${path}.id`, 'grantFreeOperation id', source.id, ['string']).diagnostics);
+  } else if (typeof source.id === 'string') {
+    effectId = source.id;
+  }
+  let executeAsFaction: string | undefined;
+  if (source.executeAsFaction !== undefined && typeof source.executeAsFaction !== 'string') {
+    diagnostics.push(
+      ...missingCapability(`${path}.executeAsFaction`, 'grantFreeOperation executeAsFaction', source.executeAsFaction, ['string'])
+        .diagnostics,
+    );
+  } else if (typeof source.executeAsFaction === 'string') {
+    executeAsFaction = source.executeAsFaction;
+  }
+  let actionIds: string[] | undefined;
+  if (source.actionIds !== undefined && (!Array.isArray(source.actionIds) || source.actionIds.some((entry) => typeof entry !== 'string'))) {
+    diagnostics.push(...missingCapability(`${path}.actionIds`, 'grantFreeOperation actionIds', source.actionIds, ['string[]']).diagnostics);
+  } else if (Array.isArray(source.actionIds)) {
+    actionIds = [...source.actionIds] as string[];
+  }
+  let uses: number | undefined;
+  if (
+    source.uses !== undefined &&
+    (!isInteger(source.uses) || source.uses <= 0)
+  ) {
+    diagnostics.push(
+      ...missingCapability(`${path}.uses`, 'grantFreeOperation uses', source.uses, ['positive integer']).diagnostics,
+    );
+  } else if (isInteger(source.uses) && source.uses > 0) {
+    uses = source.uses;
+  }
+
+  let loweredZoneFilter: ConditionAST | undefined;
+  if (source.zoneFilter !== undefined) {
+    const lowered = lowerConditionNode(source.zoneFilter, makeConditionContext(context, scope), `${path}.zoneFilter`);
+    diagnostics.push(...lowered.diagnostics);
+    if (lowered.value === null) {
+      return { value: null, diagnostics };
+    }
+    loweredZoneFilter = lowered.value;
+  }
+
+  let loweredSequence: { readonly chain: string; readonly step: number } | undefined;
+  if (source.sequence !== undefined) {
+    if (!isRecord(source.sequence) || typeof source.sequence.chain !== 'string' || !isInteger(source.sequence.step) || source.sequence.step < 0) {
+      diagnostics.push(
+        ...missingCapability(`${path}.sequence`, 'grantFreeOperation sequence', source.sequence, [
+          '{ chain: string, step: non-negative integer }',
+        ]).diagnostics,
+      );
+    } else {
+      loweredSequence = {
+        chain: source.sequence.chain,
+        step: source.sequence.step,
+      };
+    }
+  }
+
+  if (diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: {
+      grantFreeOperation: {
+        faction: source.faction,
+        operationClass: source.operationClass,
+        ...(effectId === undefined ? {} : { id: effectId }),
+        ...(executeAsFaction === undefined ? {} : { executeAsFaction }),
+        ...(actionIds === undefined ? {} : { actionIds }),
+        ...(loweredZoneFilter === undefined ? {} : { zoneFilter: loweredZoneFilter }),
+        ...(uses === undefined ? {} : { uses }),
+        ...(loweredSequence === undefined ? {} : { sequence: loweredSequence }),
       },
     },
     diagnostics,

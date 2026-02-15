@@ -3117,6 +3117,177 @@ eventDecks:
           text: "Shift Saigon toward Support and adjust Patronage."
         shaded:
           text: "Shift Saigon toward Opposition and adjust Patronage."
+      - id: card-91
+        title: Bob Hope
+        sideMode: dual
+        order: 91
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["VC", "US", "NVA", "ARVN"]
+          flavorText: "Show-tour logistics and media optics reshape force posture."
+        unshaded:
+          text: "Relocate US Troops among selected spaces and move matching losses to Casualties."
+        shaded:
+          text: "Show backlash strains US posture and increases casualty pressure."
+      - id: card-92
+        title: SEALORDS
+        sideMode: dual
+        order: 92
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["VC", "US", "NVA", "ARVN"]
+          flavorText: "Riverine interdiction drives concentrated operations around the delta."
+        unshaded:
+          text: "US executes free Sweep then free Assault in/adjacent to Can Tho."
+        shaded:
+          text: "Interdiction overreach opens gaps for insurgent movement."
+      - id: card-94
+        title: Tunnel Rats
+        sideMode: single
+        order: 94
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["VC", "US", "NVA", "ARVN"]
+          flavorText: "Close-quarters tunnel fighting shifts subterranean control."
+        unshaded:
+          text: "Place or remove a Tunnel marker in one selected space."
+      - id: card-96
+        title: APC
+        sideMode: dual
+        order: 96
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["VC", "US", "ARVN", "NVA"]
+          flavorText: "Mechanized pacification pressure collides with insurgent shock timing."
+        unshaded:
+          text: "ARVN executes free Pacify in selected spaces."
+        shaded:
+          text: "If Tet Offensive has been played, return it to VC; otherwise VC executes General Uprising."
+          effects:
+            - if:
+                when:
+                  op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: played:none
+                        filter:
+                          - { prop: id, eq: card-124 }
+                  right: 0
+                then:
+                  - moveToken:
+                      token: card-124
+                      from: played:none
+                      to: leader:none
+                else:
+                  - grantFreeOperation:
+                      faction: "3"
+                      operationClass: operation
+                      actionIds: [operation]
+      - id: card-103
+        title: Kent State
+        sideMode: dual
+        order: 103
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          flavorText: "Domestic unrest converts battlefield casualties into political constraints."
+        unshaded:
+          text: "Move selected US Troops from map to Casualties."
+        shaded:
+          text: "US executes free Limited Operation under tightened domestic limits."
+      - id: card-111
+        title: Agent Orange
+        sideMode: dual
+        order: 111
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["VC", "ARVN", "US", "NVA"]
+          flavorText: "Defoliation campaigns reveal insurgent networks while escalating costs."
+        unshaded:
+          text: "Flip selected Guerrillas to Active and execute free Air Strikes."
+        shaded:
+          text: "Chemical warfare backlash suppresses COIN momentum and favors insurgent recovery."
+      - id: card-113
+        title: Ruff Puff
+        sideMode: dual
+        order: 113
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["VC", "ARVN", "US", "NVA"]
+          flavorText: "Regional force restructuring shifts police and militia composition."
+        unshaded:
+          text: "Place ARVN Police in selected spaces."
+        shaded:
+          text: "Replace selected ARVN pieces with Rangers in eligible spaces."
+      - id: card-115
+        title: Typhoon Kate
+        sideMode: single
+        order: 115
+        tags: [momentum]
+        metadata:
+          period: "1968"
+          factionOrder: ["VC", "ARVN", "US", "NVA"]
+          flavorText: "Storm disruption constrains mobility and long-range support tempo."
+        unshaded:
+          text: "No Air Lift, Transport, or Bombard; remaining SAs to 1 space until Coup. MOMENTUM"
+          lastingEffects:
+            - id: mom-typhoon-kate
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_typhoonKate }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_typhoonKate }
+      - id: card-117
+        title: Corps Commander
+        sideMode: dual
+        order: 117
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["VC", "ARVN", "NVA", "US"]
+          flavorText: "Regional command intervention reallocates troops by political roll of the dice."
+        unshaded:
+          text: "Place ARVN Troops, then execute free Sweep in one selected region."
+        shaded:
+          text: "Roll die and remove ARVN Troops based on command fallout."
+      - id: card-119
+        title: My Lai
+        sideMode: dual
+        order: 119
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["VC", "ARVN", "NVA", "US"]
+          flavorText: "Atrocity fallout drives opposition shifts and force repositioning."
+        unshaded:
+          text: "Shift selected spaces toward Opposition and place VC pieces."
+        shaded:
+          text: "Backlash weakens insurgent narrative and repositions COIN forces."
+      - id: card-120
+        title: US Press Corps
+        sideMode: dual
+        order: 120
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["VC", "ARVN", "NVA", "US"]
+          flavorText: "Media access changes where pressure can be concentrated or withdrawn."
+        unshaded:
+          text: "Conditionally move US pieces among selected spaces."
+        shaded:
+          text: "Media framing limits COIN movement and amplifies insurgent leverage."
       - id: card-34
         title: SA-2s
         sideMode: dual

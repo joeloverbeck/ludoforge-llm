@@ -457,4 +457,32 @@ effectAstSchemaInternal = z.union([
         .strict(),
     })
     .strict(),
+  z
+    .object({
+      grantFreeOperation: z
+        .object({
+          id: StringSchema.optional(),
+          faction: StringSchema,
+          executeAsFaction: StringSchema.optional(),
+          operationClass: z.union([
+            z.literal('pass'),
+            z.literal('event'),
+            z.literal('operation'),
+            z.literal('limitedOperation'),
+            z.literal('operationPlusSpecialActivity'),
+          ]),
+          actionIds: z.array(StringSchema).optional(),
+          zoneFilter: ConditionASTSchema.optional(),
+          uses: NumberSchema.optional(),
+          sequence: z
+            .object({
+              chain: StringSchema,
+              step: NumberSchema,
+            })
+            .strict()
+            .optional(),
+        })
+        .strict(),
+    })
+    .strict(),
 ]);

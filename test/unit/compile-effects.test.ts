@@ -174,6 +174,41 @@ describe('compile-effects lowering', () => {
     ]);
   });
 
+  it('lowers grantFreeOperation effect with optional sequencing and zone filter', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            id: 'apc-vc-uprising',
+            faction: '3',
+            operationClass: 'limitedOperation',
+            actionIds: ['operation'],
+            uses: 1,
+            sequence: { chain: 'apc-uprising', step: 0 },
+            zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        grantFreeOperation: {
+          id: 'apc-vc-uprising',
+          faction: '3',
+          operationClass: 'limitedOperation',
+          actionIds: ['operation'],
+          uses: 1,
+          sequence: { chain: 'apc-uprising', step: 0 },
+          zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
+        },
+      },
+    ]);
+  });
+
   it('lowers dynamic zone expression (tokenZone ref) to zoneExpr', () => {
     const result = lowerEffectArray(
       [

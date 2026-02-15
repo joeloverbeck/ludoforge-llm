@@ -267,6 +267,21 @@ export type EffectAST =
         readonly marker: string;
         readonly delta: ValueExpr;
       };
+    }
+  | {
+      readonly grantFreeOperation: {
+        readonly id?: string;
+        readonly faction: string;
+        readonly executeAsFaction?: string;
+        readonly operationClass: 'pass' | 'event' | 'operation' | 'limitedOperation' | 'operationPlusSpecialActivity';
+        readonly actionIds?: readonly string[];
+        readonly zoneFilter?: ConditionAST;
+        readonly uses?: number;
+        readonly sequence?: {
+          readonly chain: string;
+          readonly step: number;
+        };
+      };
     };
 
 export type MoveParamScalar = number | string | boolean | TokenId | ZoneId | PlayerId;

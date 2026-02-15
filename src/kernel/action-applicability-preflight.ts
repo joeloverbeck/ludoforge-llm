@@ -7,15 +7,9 @@ import {
 } from './action-selector-contract-registry.js';
 import { createCollector } from './execution-collector.js';
 import type { EvalContext } from './eval-context.js';
+import type { ActionApplicabilityNotApplicableReason } from './legality-reasons.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type { ActionDef, GameDef, GameState } from './types.js';
-
-export type ActionApplicabilityNotApplicableReason =
-  | 'phaseMismatch'
-  | 'actorNotApplicable'
-  | 'executorNotApplicable'
-  | 'actionLimitExceeded'
-  | 'pipelineNotApplicable';
 
 export type ActionApplicabilityPreflightResult =
   | {

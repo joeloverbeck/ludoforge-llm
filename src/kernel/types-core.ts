@@ -7,6 +7,7 @@ import type {
   ZoneId,
 } from './branded.js';
 import type { DegeneracyFlag } from './diagnostics.js';
+import type { ChoiceIllegalReason } from './legality-reasons.js';
 import type {
   ActionExecutorSel,
   ConditionAST,
@@ -448,7 +449,7 @@ export interface ChoiceCompleteRequest {
   readonly options?: readonly MoveParamValue[];
   readonly min?: number;
   readonly max?: number;
-  readonly reason?: 'pipelineNotApplicable' | 'pipelineLegalityFailed' | 'executorNotApplicable' | 'actorNotApplicable' | 'phaseMismatch' | 'actionLimitExceeded';
+  readonly reason?: ChoiceIllegalReason;
 }
 
 export interface ChoicePendingRequest {
@@ -460,7 +461,7 @@ export interface ChoicePendingRequest {
   readonly options: readonly MoveParamValue[];
   readonly min?: number;
   readonly max?: number;
-  readonly reason?: 'pipelineNotApplicable' | 'pipelineLegalityFailed' | 'executorNotApplicable' | 'actorNotApplicable' | 'phaseMismatch' | 'actionLimitExceeded';
+  readonly reason?: ChoiceIllegalReason;
 }
 
 export interface ChoiceIllegalRequest {
@@ -472,7 +473,7 @@ export interface ChoiceIllegalRequest {
   readonly options?: readonly MoveParamValue[];
   readonly min?: number;
   readonly max?: number;
-  readonly reason: 'pipelineNotApplicable' | 'pipelineLegalityFailed' | 'executorNotApplicable' | 'actorNotApplicable' | 'phaseMismatch' | 'actionLimitExceeded';
+  readonly reason: ChoiceIllegalReason;
 }
 
 export type ChoiceRequest = ChoiceCompleteRequest | ChoicePendingRequest | ChoiceIllegalRequest;

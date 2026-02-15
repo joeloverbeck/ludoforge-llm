@@ -1,7 +1,4 @@
-import type { ActionApplicabilityNotApplicableReason } from './action-applicability-preflight.js';
-import type { ChoiceIllegalRequest } from './types.js';
-
-export type KernelLegalityOutcome = ActionApplicabilityNotApplicableReason | 'pipelineLegalityFailed';
+import type { ChoiceIllegalReason, KernelLegalityOutcome } from './legality-reasons.js';
 
 export type ApplyMoveIllegalMetadataCode =
   | 'ACTION_PHASE_MISMATCH'
@@ -11,28 +8,50 @@ export type ApplyMoveIllegalMetadataCode =
   | 'ACTION_PIPELINE_NOT_APPLICABLE'
   | 'OPERATION_LEGALITY_FAILED';
 
-const CHOICE_REASON_BY_OUTCOME: Readonly<Record<KernelLegalityOutcome, ChoiceIllegalRequest['reason']>> = {
-  phaseMismatch: 'phaseMismatch',
-  actorNotApplicable: 'actorNotApplicable',
-  executorNotApplicable: 'executorNotApplicable',
-  actionLimitExceeded: 'actionLimitExceeded',
-  pipelineNotApplicable: 'pipelineNotApplicable',
-  pipelineLegalityFailed: 'pipelineLegalityFailed',
+export interface LegalityOutcomeProjection {
+  readonly choiceReason: ChoiceIllegalReason;
+  readonly applyMoveCode: ApplyMoveIllegalMetadataCode;
+  readonly enumerateLegalMove: boolean;
+}
+
+export const LEGALITY_OUTCOME_PROJECTIONS: Readonly<Record<KernelLegalityOutcome, LegalityOutcomeProjection>> = {
+  phaseMismatch: {
+    choiceReason: 'phaseMismatch',
+    applyMoveCode: 'ACTION_PHASE_MISMATCH',
+    enumerateLegalMove: false,
+  },
+  actorNotApplicable: {
+    choiceReason: 'actorNotApplicable',
+    applyMoveCode: 'ACTION_ACTOR_NOT_APPLICABLE',
+    enumerateLegalMove: false,
+  },
+  executorNotApplicable: {
+    choiceReason: 'executorNotApplicable',
+    applyMoveCode: 'ACTION_EXECUTOR_NOT_APPLICABLE',
+    enumerateLegalMove: false,
+  },
+  actionLimitExceeded: {
+    choiceReason: 'actionLimitExceeded',
+    applyMoveCode: 'ACTION_LIMIT_EXCEEDED',
+    enumerateLegalMove: false,
+  },
+  pipelineNotApplicable: {
+    choiceReason: 'pipelineNotApplicable',
+    applyMoveCode: 'ACTION_PIPELINE_NOT_APPLICABLE',
+    enumerateLegalMove: false,
+  },
+  pipelineLegalityFailed: {
+    choiceReason: 'pipelineLegalityFailed',
+    applyMoveCode: 'OPERATION_LEGALITY_FAILED',
+    enumerateLegalMove: false,
+  },
 };
 
-const APPLY_MOVE_CODE_BY_OUTCOME: Readonly<Record<KernelLegalityOutcome, ApplyMoveIllegalMetadataCode>> = {
-  phaseMismatch: 'ACTION_PHASE_MISMATCH',
-  actorNotApplicable: 'ACTION_ACTOR_NOT_APPLICABLE',
-  executorNotApplicable: 'ACTION_EXECUTOR_NOT_APPLICABLE',
-  actionLimitExceeded: 'ACTION_LIMIT_EXCEEDED',
-  pipelineNotApplicable: 'ACTION_PIPELINE_NOT_APPLICABLE',
-  pipelineLegalityFailed: 'OPERATION_LEGALITY_FAILED',
-};
-
-export const toChoiceIllegalReason = (outcome: KernelLegalityOutcome): ChoiceIllegalRequest['reason'] =>
-  CHOICE_REASON_BY_OUTCOME[outcome];
+export const toChoiceIllegalReason = (outcome: KernelLegalityOutcome): ChoiceIllegalReason =>
+  LEGALITY_OUTCOME_PROJECTIONS[outcome].choiceReason;
 
 export const toApplyMoveIllegalMetadataCode = (outcome: KernelLegalityOutcome): ApplyMoveIllegalMetadataCode =>
-  APPLY_MOVE_CODE_BY_OUTCOME[outcome];
+  LEGALITY_OUTCOME_PROJECTIONS[outcome].applyMoveCode;
 
-export const shouldEnumerateLegalMoveForOutcome = (_outcome: KernelLegalityOutcome): boolean => false;
+export const shouldEnumerateLegalMoveForOutcome = (outcome: KernelLegalityOutcome): boolean =>
+  LEGALITY_OUTCOME_PROJECTIONS[outcome].enumerateLegalMove;

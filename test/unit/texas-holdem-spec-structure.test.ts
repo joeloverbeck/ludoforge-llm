@@ -28,6 +28,38 @@ describe('texas hold\'em spec structure', () => {
     assert.ok(dataAssets !== null);
     assert.equal(dataAssets.length, 2);
 
+    const macros = parsed.doc.effectMacros;
+    assert.ok(macros !== null);
+    assert.deepEqual(
+      macros.map((macro) => macro.id),
+      [
+        'hand-rank-score',
+        'collect-forced-bets',
+        'deal-community',
+        'betting-round-completion',
+        'side-pot-distribution',
+        'eliminate-busted-players',
+        'escalate-blinds',
+      ],
+    );
+
+    const collectForcedBets = macros.find((macro) => macro.id === 'collect-forced-bets');
+    assert.ok(collectForcedBets);
+    assert.deepEqual(
+      collectForcedBets.params.map((param) => ({ name: param.name, type: param.type })),
+      [
+        { name: 'sbPlayer', type: 'playerSelector' },
+        { name: 'bbPlayer', type: 'playerSelector' },
+      ],
+    );
+
+    const dealCommunity = macros.find((macro) => macro.id === 'deal-community');
+    assert.ok(dealCommunity);
+    assert.deepEqual(
+      dealCommunity.params.map((param) => ({ name: param.name, type: param.type })),
+      [{ name: 'count', type: 'number' }],
+    );
+
     dataAssets.forEach((asset, index) => {
       const validated = validateDataAssetEnvelope(asset, {
         expectedKinds: ['map', 'scenario', 'pieceCatalog'],

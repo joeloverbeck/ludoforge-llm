@@ -173,23 +173,69 @@ describe('resolveRef', () => {
 
   it('resolves assetField from row bindings and reports row/field errors', () => {
     const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: { blindSchedule: { levels: [] } },
+          },
+        ],
+        tableContracts: [
+          {
+            id: 'tournament-standard::blindSchedule.levels',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule.levels',
+            fields: [
+              { field: 'level', type: 'int' },
+              { field: 'smallBlind', type: 'int' },
+              { field: 'phase', type: 'string' },
+            ],
+          },
+        ],
+      },
       bindings: {
         '$blindRow': { level: 3, smallBlind: 40, phase: 'mid' },
       },
     });
 
-    assert.equal(resolveRef({ ref: 'assetField', row: '$blindRow', field: 'smallBlind' }, ctx), 40);
+    assert.equal(resolveRef({ ref: 'assetField', row: '$blindRow', tableId: 'tournament-standard::blindSchedule.levels', field: 'smallBlind' }, ctx), 40);
 
     assert.throws(
-      () => resolveRef({ ref: 'assetField', row: '$missingRow', field: 'smallBlind' }, ctx),
+      () => resolveRef({ ref: 'assetField', row: '$missingRow', tableId: 'tournament-standard::blindSchedule.levels', field: 'smallBlind' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
     );
     assert.throws(
-      () => resolveRef({ ref: 'assetField', row: '$blindRow', field: 'missing' }, ctx),
+      () => resolveRef({ ref: 'assetField', row: '$blindRow', tableId: 'tournament-standard::blindSchedule.levels', field: 'missing' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
     );
     assert.throws(
-      () => resolveRef({ ref: 'assetField', row: '$blindRow', field: 'phase' }, makeCtx({ bindings: { '$blindRow': { phase: ['mid'] } } })),
+      () =>
+        resolveRef(
+          { ref: 'assetField', row: '$blindRow', tableId: 'tournament-standard::blindSchedule.levels', field: 'phase' },
+          makeCtx({
+            def: {
+              ...makeDef(),
+              runtimeDataAssets: [
+                {
+                  id: 'tournament-standard',
+                  kind: 'scenario',
+                  payload: { blindSchedule: { levels: [] } },
+                },
+              ],
+              tableContracts: [
+                {
+                  id: 'tournament-standard::blindSchedule.levels',
+                  assetId: 'tournament-standard',
+                  tablePath: 'blindSchedule.levels',
+                  fields: [{ field: 'phase', type: 'string' }],
+                },
+              ],
+            },
+            bindings: { '$blindRow': { phase: ['mid'] } },
+          }),
+        ),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });

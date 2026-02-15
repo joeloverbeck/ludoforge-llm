@@ -203,6 +203,7 @@ export interface GameDef {
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];
   readonly globalMarkerLattices?: readonly GlobalMarkerLatticeDef[];
   readonly runtimeDataAssets?: readonly RuntimeDataAsset[];
+  readonly tableContracts?: readonly RuntimeTableContract[];
 }
 
 export const KNOWN_DATA_ASSET_KINDS = ['map', 'scenario', 'pieceCatalog'] as const;
@@ -333,6 +334,20 @@ export interface RuntimeDataAsset<TPayload = unknown> {
   readonly id: string;
   readonly kind: DataAssetKind;
   readonly payload: TPayload;
+}
+
+export type RuntimeTableScalarType = 'string' | 'int' | 'boolean';
+
+export interface RuntimeTableFieldContract {
+  readonly field: string;
+  readonly type: RuntimeTableScalarType;
+}
+
+export interface RuntimeTableContract {
+  readonly id: string;
+  readonly assetId: string;
+  readonly tablePath: string;
+  readonly fields: readonly RuntimeTableFieldContract[];
 }
 
 export interface DataAssetRef {

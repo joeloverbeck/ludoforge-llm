@@ -239,13 +239,18 @@ describe('compile-conditions lowering', () => {
       bindingScope: ['$row'],
     };
     const result = lowerValueNode(
-      { ref: 'assetField', row: '$row', field: 'smallBlind' },
+      { ref: 'assetField', row: '$row', tableId: 'tournament-standard::blindSchedule.levels', field: 'smallBlind' },
       withScope,
       'doc.actions.0.effects.0.setVar.value',
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, { ref: 'assetField', row: '$row', field: 'smallBlind' });
+    assert.deepEqual(result.value, {
+      ref: 'assetField',
+      row: '$row',
+      tableId: 'tournament-standard::blindSchedule.levels',
+      field: 'smallBlind',
+    });
   });
 
   it('emits unbound diagnostic for assetField row binding', () => {
@@ -254,7 +259,7 @@ describe('compile-conditions lowering', () => {
       bindingScope: ['$other'],
     };
     const result = lowerValueNode(
-      { ref: 'assetField', row: '$row', field: 'smallBlind' },
+      { ref: 'assetField', row: '$row', tableId: 'tournament-standard::blindSchedule.levels', field: 'smallBlind' },
       withScope,
       'doc.actions.0.effects.0.setVar.value',
     );
@@ -421,8 +426,7 @@ describe('compile-conditions lowering', () => {
     const result = lowerQueryNode(
       {
         query: 'assetRows',
-        assetId: 'tournament-standard',
-        table: 'blindSchedule.levels',
+        tableId: 'tournament-standard::blindSchedule.levels',
         where: [
           { field: 'level', op: 'eq', value: 2 },
           { field: 'phase', op: 'in', value: ['early', 'mid'] },
@@ -435,8 +439,7 @@ describe('compile-conditions lowering', () => {
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       query: 'assetRows',
-      assetId: 'tournament-standard',
-      table: 'blindSchedule.levels',
+      tableId: 'tournament-standard::blindSchedule.levels',
       where: [
         { field: 'level', op: 'eq', value: 2 },
         { field: 'phase', op: 'in', value: ['early', 'mid'] },

@@ -359,8 +359,7 @@ describe('validateGameDef reference checks', () => {
               name: '$row',
               domain: {
                 query: 'assetRows',
-                assetId: 'tournament-standard',
-                table: 'blindSchedule.levels',
+                tableId: 'tournament-standard::blindSchedule.levels',
               },
             },
           ],
@@ -371,24 +370,21 @@ describe('validateGameDef reference checks', () => {
     const diagnostics = validateGameDef(def);
     assert.ok(
       diagnostics.some(
-        (diag) => diag.code === 'REF_RUNTIME_DATA_ASSET_MISSING' && diag.path === 'actions[0].params[0].domain.assetId',
+        (diag) => diag.code === 'REF_RUNTIME_TABLE_MISSING' && diag.path === 'actions[0].params[0].domain.tableId',
       ),
     );
   });
 
-  it('reports invalid runtime asset table paths for assetRows domains', () => {
+  it('reports invalid runtime table field references in assetRows where predicates', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      runtimeDataAssets: [
+      tableContracts: [
         {
-          id: 'tournament-standard',
-          kind: 'scenario',
-          payload: {
-            blindSchedule: {
-              levels: [{ level: 1, smallBlind: 10 }],
-            },
-          },
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [{ field: 'level', type: 'int' }],
         },
       ],
       actions: [
@@ -399,8 +395,8 @@ describe('validateGameDef reference checks', () => {
               name: '$row',
               domain: {
                 query: 'assetRows',
-                assetId: 'tournament-standard',
-                table: 'blindSchedule.missing',
+                tableId: 'tournament-standard::blindSchedule.levels',
+                where: [{ field: 'smallBlind', op: 'eq', value: 10 }],
               },
             },
           ],
@@ -411,7 +407,50 @@ describe('validateGameDef reference checks', () => {
     const diagnostics = validateGameDef(def);
     assert.ok(
       diagnostics.some(
-        (diag) => diag.code === 'REF_RUNTIME_DATA_ASSET_TABLE_PATH_MISSING' && diag.path === 'actions[0].params[0].domain.table',
+        (diag) =>
+          diag.code === 'REF_RUNTIME_TABLE_FIELD_MISSING' &&
+          diag.path === 'actions[0].params[0].domain.where[0].field',
+      ),
+    );
+  });
+
+  it('reports invalid runtime table field references in assetField refs', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [{ field: 'level', type: 'int' as const }],
+        },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              setVar: {
+                scope: 'global',
+                var: 'turn',
+                value: {
+                  ref: 'assetField',
+                  row: '$row',
+                  tableId: 'tournament-standard::blindSchedule.levels',
+                  field: 'smallBlind',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_RUNTIME_TABLE_FIELD_MISSING' && diag.path === 'actions[0].effects[0].setVar.value.field',
       ),
     );
   });

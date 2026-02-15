@@ -2,6 +2,7 @@ import { resolveMapSpaceId, resolveSinglePlayerSel, resolveSingleZoneSel } from 
 import type { EvalContext } from './eval-context.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { missingBindingError, missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
+import { getRuntimeTableIndex } from './runtime-table-index.js';
 import type { Reference, Token } from './types.js';
 
 function isScalarValue(value: unknown): value is number | boolean | string {
@@ -104,6 +105,23 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
   }
 
   if (ref.ref === 'assetField') {
+    const tableIndex = getRuntimeTableIndex(ctx.def);
+    const entry = tableIndex.tablesById.get(ref.tableId);
+    if (entry === undefined) {
+      throw missingVarError(`Runtime table contract not found: ${ref.tableId}`, {
+        reference: ref,
+        tableId: ref.tableId,
+        availableTableIds: tableIndex.tableIds,
+      });
+    }
+    if (entry.issue !== undefined) {
+      throw missingVarError(`Runtime table contract is unavailable: ${ref.tableId}`, {
+        reference: ref,
+        tableId: ref.tableId,
+        issue: entry.issue,
+      });
+    }
+
     const resolvedRowBinding = resolveBindingTemplate(ref.row, ctx.bindings);
     const boundRow = ctx.bindings[resolvedRowBinding];
     if (boundRow === undefined) {
@@ -126,13 +144,45 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     }
 
     const rowValue = (boundRow as Record<string, unknown>)[ref.field];
+    const fieldContract = entry.contract.fields.find((field) => field.field === ref.field);
+    if (fieldContract === undefined) {
+      throw missingVarError(`Runtime table field not declared in contract: ${ref.field}`, {
+        reference: ref,
+        tableId: ref.tableId,
+        field: ref.field,
+        availableFields: entry.contract.fields.map((field) => field.field).sort((left, right) => left.localeCompare(right)),
+      });
+    }
+
     if (rowValue === undefined) {
       throw missingVarError(`Row field not found: ${ref.field}`, {
         reference: ref,
         row: resolvedRowBinding,
         rowTemplate: ref.row,
+        tableId: ref.tableId,
         field: ref.field,
         availableFields: Object.keys(boundRow as Record<string, unknown>).sort(),
+      });
+    }
+
+    const actualContractType =
+      typeof rowValue === 'string'
+        ? 'string'
+        : typeof rowValue === 'boolean'
+          ? 'boolean'
+          : typeof rowValue === 'number' && Number.isSafeInteger(rowValue)
+            ? 'int'
+            : null;
+    if (actualContractType === null || actualContractType !== fieldContract.type) {
+      throw typeMismatchError(`Row field ${ref.field} does not match declared table contract type`, {
+        reference: ref,
+        row: resolvedRowBinding,
+        rowTemplate: ref.row,
+        tableId: ref.tableId,
+        field: ref.field,
+        expectedType: fieldContract.type,
+        actualType: actualContractType ?? (Array.isArray(rowValue) ? 'array' : typeof rowValue),
+        value: rowValue,
       });
     }
 

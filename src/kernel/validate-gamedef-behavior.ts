@@ -170,62 +170,31 @@ const validateReference = (
   }
 
   if (reference.ref === 'assetField') {
+    const contract = context.tableContractsById.get(reference.tableId);
+    if (contract === undefined) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_RUNTIME_TABLE_MISSING',
+        `${path}.tableId`,
+        `Unknown runtime table "${reference.tableId}".`,
+        reference.tableId,
+        context.tableContractCandidates,
+      );
+      return;
+    }
+
+    if (!contract.fields.some((field) => field.field === reference.field)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_RUNTIME_TABLE_FIELD_MISSING',
+        `${path}.field`,
+        `Unknown field "${reference.field}" in runtime table "${reference.tableId}".`,
+        reference.field,
+        contract.fields.map((field) => field.field),
+      );
+    }
     return;
   }
-};
-
-const resolveStaticAssetRows = (
-  payload: unknown,
-  table: string,
-): {
-  readonly rows: readonly Record<string, unknown>[] | null;
-  readonly issue?:
-    | { readonly kind: 'tablePathEmpty' }
-    | { readonly kind: 'tablePathMissing'; readonly segment: string }
-    | { readonly kind: 'tablePathTypeInvalid'; readonly segment: string; readonly actualType: string }
-    | { readonly kind: 'tableRowsTypeInvalid' }
-    | { readonly kind: 'tableRowTypeInvalid'; readonly rowIndex: number };
-} => {
-  const segments = table
-    .split('.')
-    .map((segment) => segment.trim())
-    .filter((segment) => segment.length > 0);
-  if (segments.length === 0) {
-    return { rows: null, issue: { kind: 'tablePathEmpty' } };
-  }
-
-  let current: unknown = payload;
-  for (const segment of segments) {
-    if (typeof current !== 'object' || current === null || Array.isArray(current)) {
-      return {
-        rows: null,
-        issue: {
-          kind: 'tablePathTypeInvalid',
-          segment,
-          actualType: Array.isArray(current) ? 'array' : typeof current,
-        },
-      };
-    }
-
-    const next = (current as Record<string, unknown>)[segment];
-    if (next === undefined) {
-      return { rows: null, issue: { kind: 'tablePathMissing', segment } };
-    }
-    current = next;
-  }
-
-  if (!Array.isArray(current)) {
-    return { rows: null, issue: { kind: 'tableRowsTypeInvalid' } };
-  }
-
-  for (let rowIndex = 0; rowIndex < current.length; rowIndex += 1) {
-    const row = current[rowIndex];
-    if (typeof row !== 'object' || row === null || Array.isArray(row)) {
-      return { rows: null, issue: { kind: 'tableRowTypeInvalid', rowIndex } };
-    }
-  }
-
-  return { rows: current as readonly Record<string, unknown>[] };
 };
 
 const tryStaticStringValue = (valueExpr: ValueExpr): string | null => {
@@ -466,68 +435,31 @@ export const validateOptionsQuery = (
       return;
     }
     case 'assetRows': {
-      const normalizedAssetId = query.assetId.normalize('NFC');
-      const canonicalAssetId = context.runtimeDataAssetIdsByNormalized.get(normalizedAssetId);
-      if (canonicalAssetId === undefined) {
+      const contract = context.tableContractsById.get(query.tableId);
+      if (contract === undefined) {
         pushMissingReferenceDiagnostic(
           diagnostics,
-          'REF_RUNTIME_DATA_ASSET_MISSING',
-          `${path}.assetId`,
-          `Unknown runtime data asset "${query.assetId}".`,
-          query.assetId,
-          context.runtimeDataAssetCandidates,
+          'REF_RUNTIME_TABLE_MISSING',
+          `${path}.tableId`,
+          `Unknown runtime table "${query.tableId}".`,
+          query.tableId,
+          context.tableContractCandidates,
         );
         return;
       }
 
-      const payload = context.runtimeDataAssetPayloadByNormalized.get(normalizedAssetId);
-      const resolved = resolveStaticAssetRows(payload, query.table);
-      if (resolved.rows === null && resolved.issue !== undefined) {
-        if (resolved.issue.kind === 'tablePathEmpty') {
-          diagnostics.push({
-            code: 'REF_RUNTIME_DATA_ASSET_TABLE_PATH_INVALID',
-            path: `${path}.table`,
-            severity: 'error',
-            message: 'assetRows.table must be a non-empty dotted path.',
-            suggestion: 'Use a payload path like "blindSchedule.levels".',
-          });
-        } else if (resolved.issue.kind === 'tablePathMissing') {
-          diagnostics.push({
-            code: 'REF_RUNTIME_DATA_ASSET_TABLE_PATH_MISSING',
-            path: `${path}.table`,
-            severity: 'error',
-            message: `assetRows.table segment "${resolved.issue.segment}" is missing in asset "${canonicalAssetId}".`,
-            suggestion: 'Use an existing payload table path for this asset.',
-          });
-        } else if (resolved.issue.kind === 'tablePathTypeInvalid') {
-          diagnostics.push({
-            code: 'REF_RUNTIME_DATA_ASSET_TABLE_PATH_TYPE_INVALID',
-            path: `${path}.table`,
-            severity: 'error',
-            message: `assetRows.table traversal reached non-object at segment "${resolved.issue.segment}" (${resolved.issue.actualType}).`,
-            suggestion: 'Ensure every path segment except the final table resolves to an object.',
-          });
-        } else if (resolved.issue.kind === 'tableRowsTypeInvalid') {
-          diagnostics.push({
-            code: 'REF_RUNTIME_DATA_ASSET_TABLE_TYPE_INVALID',
-            path: `${path}.table`,
-            severity: 'error',
-            message: `assetRows.table must resolve to an array in asset "${canonicalAssetId}".`,
-            suggestion: 'Point table to an array of row objects.',
-          });
-        } else {
-          diagnostics.push({
-            code: 'REF_RUNTIME_DATA_ASSET_ROW_TYPE_INVALID',
-            path: `${path}.table`,
-            severity: 'error',
-            message: `assetRows.table row ${resolved.issue.rowIndex} must be an object.`,
-            suggestion: 'Ensure every table row is an object with scalar fields.',
-          });
-        }
-      }
-
       if (query.where !== undefined) {
         query.where.forEach((predicate, index) => {
+          if (!contract.fields.some((field) => field.field === predicate.field)) {
+            pushMissingReferenceDiagnostic(
+              diagnostics,
+              'REF_RUNTIME_TABLE_FIELD_MISSING',
+              `${path}.where[${index}].field`,
+              `Unknown field "${predicate.field}" in runtime table "${query.tableId}".`,
+              predicate.field,
+              contract.fields.map((field) => field.field),
+            );
+          }
           if (!Array.isArray(predicate.value)) {
             validateValueExpr(diagnostics, predicate.value as ValueExpr, `${path}.where[${index}].value`, context);
           }

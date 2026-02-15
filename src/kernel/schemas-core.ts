@@ -213,6 +213,21 @@ export const RuntimeDataAssetSchema = z
   })
   .strict();
 
+export const RuntimeTableFieldContractSchema = z
+  .object({
+    field: StringSchema,
+    type: z.union([z.literal('string'), z.literal('int'), z.literal('boolean')]),
+  })
+  .strict();
+
+export const RuntimeTableContractSchema = z
+  .object({
+    id: StringSchema,
+    assetId: StringSchema,
+    tablePath: StringSchema,
+    fields: z.array(RuntimeTableFieldContractSchema),
+  })
+  .strict();
 
 export const GameDefSchema = z
   .object({
@@ -243,6 +258,7 @@ export const GameDefSchema = z
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),
     globalMarkerLattices: z.array(GlobalMarkerLatticeSchema).optional(),
     runtimeDataAssets: z.array(RuntimeDataAssetSchema).optional(),
+    tableContracts: z.array(RuntimeTableContractSchema).optional(),
   })
   .strict();
 

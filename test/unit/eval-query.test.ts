@@ -275,10 +275,22 @@ describe('evalQuery', () => {
             },
           },
         ],
+        tableContracts: [
+          {
+            id: 'tournament-standard::blindSchedule.levels',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule.levels',
+            fields: [
+              { field: 'level', type: 'int' },
+              { field: 'phase', type: 'string' },
+              { field: 'smallBlind', type: 'int' },
+            ],
+          },
+        ],
       },
     });
 
-    const rows = evalQuery({ query: 'assetRows', assetId: 'tournament-standard', table: 'blindSchedule.levels' }, ctx);
+    const rows = evalQuery({ query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' }, ctx);
     assert.deepEqual(
       rows.map((row) => (row as Record<string, unknown>).smallBlind),
       [10, 20, 40],
@@ -287,8 +299,7 @@ describe('evalQuery', () => {
     const filtered = evalQuery(
       {
         query: 'assetRows',
-        assetId: 'tournament-standard',
-        table: 'blindSchedule.levels',
+        tableId: 'tournament-standard::blindSchedule.levels',
         where: [{ field: 'phase', op: 'eq', value: 'early' }],
       },
       ctx,
@@ -314,19 +325,42 @@ describe('evalQuery', () => {
             },
           },
         ],
+        tableContracts: [
+          {
+            id: 'tournament-standard::blindSchedule.levels',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule.levels',
+            fields: [
+              { field: 'level', type: 'int' },
+              { field: 'smallBlind', type: 'int' },
+            ],
+          },
+          {
+            id: 'tournament-standard::blindSchedule',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule',
+            fields: [],
+          },
+          {
+            id: 'missing-asset::blindSchedule.levels',
+            assetId: 'missing',
+            tablePath: 'blindSchedule.levels',
+            fields: [],
+          },
+        ],
       },
     });
 
     assert.throws(
-      () => evalQuery({ query: 'assetRows', assetId: 'missing', table: 'blindSchedule.levels' }, ctx),
+      () => evalQuery({ query: 'assetRows', tableId: 'missing-asset::blindSchedule.levels' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
     );
     assert.throws(
-      () => evalQuery({ query: 'assetRows', assetId: 'tournament-standard', table: 'blindSchedule.missing' }, ctx),
+      () => evalQuery({ query: 'assetRows', tableId: 'missing-contract' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
     );
     assert.throws(
-      () => evalQuery({ query: 'assetRows', assetId: 'tournament-standard', table: 'blindSchedule' }, ctx),
+      () => evalQuery({ query: 'assetRows', tableId: 'tournament-standard::blindSchedule' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });

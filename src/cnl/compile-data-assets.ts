@@ -8,6 +8,7 @@ import type {
   PieceCatalogPayload,
   PieceStatusDimension,
   RuntimeDataAsset,
+  RuntimeTableContract,
   ScenarioPayload,
   SpaceMarkerLatticeDef,
   SpaceMarkerValueDef,
@@ -64,6 +65,7 @@ export function deriveSectionsFromDataAssets(
   readonly stackingConstraints: readonly StackingConstraint[] | null;
   readonly scenarioSetupEffects: readonly EffectAST[];
   readonly runtimeDataAssets: readonly RuntimeDataAsset[];
+  readonly tableContracts: readonly RuntimeTableContract[];
   readonly derivationFailures: {
     readonly map: boolean;
     readonly pieceCatalog: boolean;
@@ -82,6 +84,7 @@ export function deriveSectionsFromDataAssets(
       stackingConstraints: null,
       scenarioSetupEffects: [],
       runtimeDataAssets: [],
+      tableContracts: [],
       derivationFailures: {
         map: false,
         pieceCatalog: false,
@@ -93,6 +96,7 @@ export function deriveSectionsFromDataAssets(
   const mapAssets: Array<{ readonly id: string; readonly payload: MapPayload }> = [];
   const pieceCatalogAssets: Array<{ readonly id: string; readonly payload: PieceCatalogPayload }> = [];
   const runtimeDataAssets: RuntimeDataAsset[] = [];
+  const tableContracts: RuntimeTableContract[] = [];
   const scenarioRefs: Array<{
     readonly payload: ScenarioPayload;
     readonly mapAssetId?: string;
@@ -128,6 +132,7 @@ export function deriveSectionsFromDataAssets(
       kind: validated.asset.kind,
       payload: validated.asset.payload,
     });
+    tableContracts.push(...deriveRuntimeTableContracts(validated.asset.id, validated.asset.payload));
 
     if (validated.asset.kind === 'map') {
       mapAssets.push({
@@ -245,6 +250,7 @@ export function deriveSectionsFromDataAssets(
     stackingConstraints: selectedMap?.payload.stackingConstraints ?? null,
     scenarioSetupEffects,
     runtimeDataAssets,
+    tableContracts,
     derivationFailures: {
       map: mapDerivationFailed,
       pieceCatalog: pieceCatalogDerivationFailed,
@@ -491,6 +497,82 @@ const buildScenarioSetupEffects = ({
 
   return effects;
 };
+
+function deriveRuntimeTableContracts(assetId: string, payload: unknown): readonly RuntimeTableContract[] {
+  const contracts: RuntimeTableContract[] = [];
+  const visited = new Set<unknown>();
+
+  const walk = (node: unknown, pathSegments: readonly string[]): void => {
+    if (typeof node !== 'object' || node === null) {
+      return;
+    }
+    if (visited.has(node)) {
+      return;
+    }
+    visited.add(node);
+
+    if (Array.isArray(node)) {
+      const rowFields = deriveScalarRowFields(node);
+      if (rowFields !== null && pathSegments.length > 0) {
+        const tablePath = pathSegments.join('.');
+        contracts.push({
+          id: `${assetId}::${tablePath}`,
+          assetId,
+          tablePath,
+          fields: rowFields,
+        });
+      }
+      return;
+    }
+
+    for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+      walk(value, [...pathSegments, key]);
+    }
+  };
+
+  walk(payload, []);
+  return contracts.sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function deriveScalarRowFields(rows: readonly unknown[]): RuntimeTableContract['fields'] | null {
+  for (const row of rows) {
+    if (typeof row !== 'object' || row === null || Array.isArray(row)) {
+      return null;
+    }
+  }
+
+  const fieldKinds = new Map<string, RuntimeTableContract['fields'][number]['type']>();
+  for (const row of rows as readonly Record<string, unknown>[]) {
+    for (const [field, value] of Object.entries(row)) {
+      const kind = scalarTypeOf(value);
+      if (kind === null) {
+        return null;
+      }
+      const existing = fieldKinds.get(field);
+      if (existing !== undefined && existing !== kind) {
+        return null;
+      }
+      fieldKinds.set(field, kind);
+    }
+  }
+
+  return [...fieldKinds.entries()]
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .map(([field, type]) => ({ field, type }));
+}
+
+function scalarTypeOf(value: unknown): RuntimeTableContract['fields'][number]['type'] | null {
+  if (typeof value === 'string') {
+    return 'string';
+  }
+  if (typeof value === 'boolean') {
+    return 'boolean';
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Number.isSafeInteger(value) ? 'int' : null;
+  }
+  return null;
+}
 
 const defaultStatusForDimension = (dimension: PieceStatusDimension): string =>
   dimension === 'activity' ? 'underground' : 'untunneled';

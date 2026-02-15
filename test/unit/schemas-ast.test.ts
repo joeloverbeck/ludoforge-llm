@@ -77,7 +77,7 @@ describe('AST and selector schemas', () => {
     const references = [
       { ref: 'tokenZone', token: '$piece' },
       { ref: 'zoneProp', zone: 'quang-tri:none', prop: 'spaceType' },
-      { ref: 'assetField', row: '$blindLevel', field: 'smallBlind' },
+      { ref: 'assetField', row: '$blindLevel', tableId: 'tournament-standard::blindSchedule.levels', field: 'smallBlind' },
     ] as const;
 
     for (const reference of references) {
@@ -330,11 +330,10 @@ describe('AST and selector schemas', () => {
 
   it('parses assetRows query with and without where predicates', () => {
     const queries: OptionsQuery[] = [
-      { query: 'assetRows', assetId: 'tournament-standard', table: 'blindSchedule.levels' },
+      { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
       {
         query: 'assetRows',
-        assetId: 'tournament-standard',
-        table: 'blindSchedule.levels',
+        tableId: 'tournament-standard::blindSchedule.levels',
         where: [
           { field: 'level', op: 'eq', value: 3 },
           { field: 'phase', op: 'in', value: ['early', 'mid'] },
@@ -350,8 +349,7 @@ describe('AST and selector schemas', () => {
   it('rejects malformed assetRows where predicate shapes', () => {
     const missingField = OptionsQuerySchema.safeParse({
       query: 'assetRows',
-      assetId: 'tournament-standard',
-      table: 'blindSchedule.levels',
+      tableId: 'tournament-standard::blindSchedule.levels',
       where: [{ op: 'eq', value: 1 }],
     });
     assert.equal(missingField.success, false);

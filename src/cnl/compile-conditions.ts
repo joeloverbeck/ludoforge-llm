@@ -545,11 +545,8 @@ export function lowerQueryNode(
       };
     }
     case 'assetRows': {
-      if (typeof source.assetId !== 'string' || source.assetId.trim() === '') {
-        return missingCapability(path, 'assetRows query', source, ['{ query: "assetRows", assetId: string, table: string, where?: [...] }']);
-      }
-      if (typeof source.table !== 'string' || source.table.trim() === '') {
-        return missingCapability(`${path}.table`, 'assetRows table path', source.table, ['non-empty string']);
+      if (typeof source.tableId !== 'string' || source.tableId.trim() === '') {
+        return missingCapability(path, 'assetRows query', source, ['{ query: "assetRows", tableId: string, where?: [...] }']);
       }
 
       if (source.where !== undefined) {
@@ -563,8 +560,7 @@ export function lowerQueryNode(
         return {
           value: {
             query: 'assetRows',
-            assetId: source.assetId,
-            table: source.table,
+            tableId: source.tableId,
             where: loweredWhere.value,
           },
           diagnostics: loweredWhere.diagnostics,
@@ -574,8 +570,7 @@ export function lowerQueryNode(
       return {
         value: {
           query: 'assetRows',
-          assetId: source.assetId,
-          table: source.table,
+          tableId: source.tableId,
         },
         diagnostics: [],
       };
@@ -1012,7 +1007,7 @@ function lowerReference(
       }
       return missingCapability(path, 'tokenProp reference', source, ['{ ref: "tokenProp", token: string, prop: string }']);
     case 'assetField':
-      if (typeof source.row === 'string' && typeof source.field === 'string') {
+      if (typeof source.row === 'string' && typeof source.tableId === 'string' && typeof source.field === 'string') {
         if (context.bindingScope !== undefined && !hasBindingIdentifier(source.row, context.bindingScope)) {
           return {
             value: null,
@@ -1029,11 +1024,11 @@ function lowerReference(
           };
         }
         return {
-          value: { ref: 'assetField', row: source.row, field: source.field },
+          value: { ref: 'assetField', row: source.row, tableId: source.tableId, field: source.field },
           diagnostics: [],
         };
       }
-      return missingCapability(path, 'assetField reference', source, ['{ ref: "assetField", row: string, field: string }']);
+      return missingCapability(path, 'assetField reference', source, ['{ ref: "assetField", row: string, tableId: string, field: string }']);
     case 'markerState': {
       if (typeof source.marker !== 'string') {
         return missingCapability(path, 'markerState reference', source, ['{ ref: "markerState", space: <ZoneSel>, marker: string }']);

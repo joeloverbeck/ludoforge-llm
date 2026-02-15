@@ -25,7 +25,7 @@ export type Reference =
   | { readonly ref: 'pvar'; readonly player: PlayerSel; readonly var: string }
   | { readonly ref: 'zoneCount'; readonly zone: ZoneSel }
   | { readonly ref: 'tokenProp'; readonly token: TokenSel; readonly prop: string }
-  | { readonly ref: 'assetField'; readonly row: string; readonly field: string }
+  | { readonly ref: 'assetField'; readonly row: string; readonly tableId: string; readonly field: string }
   | { readonly ref: 'binding'; readonly name: string }
   | { readonly ref: 'markerState'; readonly space: ZoneSel; readonly marker: string }
   | { readonly ref: 'globalMarkerState'; readonly marker: string }
@@ -124,8 +124,7 @@ export type OptionsQuery =
   | { readonly query: 'tokensInZone'; readonly zone: ZoneSel; readonly filter?: readonly TokenFilterPredicate[] }
   | {
       readonly query: 'assetRows';
-      readonly assetId: string;
-      readonly table: string;
+      readonly tableId: string;
       readonly where?: readonly AssetRowPredicate[];
     }
   | {

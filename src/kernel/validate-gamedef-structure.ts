@@ -29,6 +29,8 @@ export type ValidationContext = {
   runtimeDataAssetIdsByNormalized: ReadonlyMap<string, string>;
   runtimeDataAssetPayloadByNormalized: ReadonlyMap<string, unknown>;
   runtimeDataAssetCandidates: readonly string[];
+  tableContractsById: ReadonlyMap<string, NonNullable<GameDef['tableContracts']>[number]>;
+  tableContractCandidates: readonly string[];
   tokenTypeNames: Set<string>;
   tokenTypeCandidates: readonly string[];
   turnPhaseNames: Set<string>;
@@ -422,6 +424,47 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
     'global marker lattice id',
     'globalMarkerLattices',
   );
+  checkDuplicateIds(
+    diagnostics,
+    (def.tableContracts ?? []).map((contract) => contract.id),
+    'DUPLICATE_RUNTIME_TABLE_ID',
+    'runtime table id',
+    'tableContracts',
+  );
+  (def.tableContracts ?? []).forEach((contract, contractIndex) => {
+    checkDuplicateIds(
+      diagnostics,
+      contract.fields.map((field) => field.field),
+      'DUPLICATE_RUNTIME_TABLE_FIELD_ID',
+      'runtime table field',
+      `tableContracts[${contractIndex}].fields`,
+    );
+  });
+  const runtimeDataAssetCandidates = [...new Set((def.runtimeDataAssets ?? []).map((asset) => asset.id))].sort((left, right) =>
+    left.localeCompare(right),
+  );
+  const runtimeAssetIdsByNormalized = new Set(runtimeDataAssetCandidates.map((assetId) => assetId.normalize('NFC')));
+  (def.tableContracts ?? []).forEach((contract, index) => {
+    if (!runtimeAssetIdsByNormalized.has(contract.assetId.normalize('NFC'))) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_RUNTIME_DATA_ASSET_MISSING',
+        `tableContracts[${index}].assetId`,
+        `Unknown runtime data asset "${contract.assetId}" for table contract "${contract.id}".`,
+        contract.assetId,
+        runtimeDataAssetCandidates,
+      );
+    }
+    if (contract.tablePath.trim().length === 0) {
+      diagnostics.push({
+        code: 'RUNTIME_TABLE_PATH_INVALID',
+        path: `tableContracts[${index}].tablePath`,
+        severity: 'error',
+        message: `Runtime table contract "${contract.id}" must declare a non-empty tablePath.`,
+        suggestion: 'Set tablePath to a dotted payload path such as "blindSchedule.levels".',
+      });
+    }
+  });
   def.actions.forEach((action, actionIndex) => {
     const paramNames = action.params.map((param) => param.name);
     checkDuplicateIds(
@@ -568,6 +611,11 @@ export const buildValidationContext = (
   const runtimeDataAssetCandidates = [...new Set(runtimeDataAssets.map((asset) => asset.id))].sort((left, right) =>
     left.localeCompare(right),
   );
+  const tableContracts = def.tableContracts ?? [];
+  const tableContractCandidates = [...new Set(tableContracts.map((contract) => contract.id))].sort((left, right) =>
+    left.localeCompare(right),
+  );
+  const tableContractsById = new Map(tableContracts.map((contract) => [contract.id, contract] as const));
 
   const context: ValidationContext = {
     zoneNames: new Set(zoneCandidates),
@@ -580,6 +628,8 @@ export const buildValidationContext = (
     runtimeDataAssetIdsByNormalized,
     runtimeDataAssetPayloadByNormalized,
     runtimeDataAssetCandidates,
+    tableContractsById,
+    tableContractCandidates,
     globalVarNames: new Set(globalVarCandidates),
     globalVarTypesByName: new Map(def.globalVars.map((variable) => [variable.name, variable.type])),
     globalVarCandidates,

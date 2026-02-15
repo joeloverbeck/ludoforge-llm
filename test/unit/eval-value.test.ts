@@ -293,12 +293,23 @@ describe('evalValue', () => {
           },
         },
       ],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule.levels',
+            fields: [
+              { field: 'level', type: 'int' as const },
+              { field: 'smallBlind', type: 'int' as const },
+            ],
+          },
+        ],
     };
     const ctx = makeCtx({ def });
     const expr: ValueExpr = {
       aggregate: {
         op: 'sum',
-        query: { query: 'assetRows', assetId: 'tournament-standard', table: 'blindSchedule.levels' },
+        query: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
         prop: 'smallBlind',
       },
     };

@@ -270,8 +270,7 @@ actor: 'active',
       '          bind: $row',
       '          over:',
       '            query: assetRows',
-      '            assetId: tournament-standard',
-      '            table: blindSchedule.levels',
+      '            tableId: tournament-standard::blindSchedule.levels',
       '            where:',
       '              - field: level',
       '                op: eq',
@@ -283,6 +282,7 @@ actor: 'active',
       '                value:',
       '                  ref: assetField',
       '                  row: $row',
+      '                  tableId: tournament-standard::blindSchedule.levels',
       '                  field: smallBlind',
       '    limits: []',
       'terminal:',
@@ -301,6 +301,7 @@ actor: 'active',
     assertNoDiagnostics(compiled);
     assert.notEqual(compiled.gameDef, null);
     assert.equal(compiled.gameDef?.runtimeDataAssets?.length, 1);
+    assert.equal(compiled.gameDef?.tableContracts?.length, 1);
 
     const def = compiled.gameDef!;
     const start = initialState(def, 101, 2);

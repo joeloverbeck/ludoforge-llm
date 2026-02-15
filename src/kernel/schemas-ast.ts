@@ -42,7 +42,7 @@ export const ReferenceSchema = z.union([
     .strict(),
   z.object({ ref: z.literal('zoneCount'), zone: ZoneSelSchema }).strict(),
   z.object({ ref: z.literal('tokenProp'), token: TokenSelSchema, prop: StringSchema }).strict(),
-  z.object({ ref: z.literal('assetField'), row: StringSchema, field: StringSchema }).strict(),
+  z.object({ ref: z.literal('assetField'), row: StringSchema, tableId: StringSchema, field: StringSchema }).strict(),
   z.object({ ref: z.literal('binding'), name: StringSchema }).strict(),
   z.object({ ref: z.literal('markerState'), space: ZoneSelSchema, marker: StringSchema }).strict(),
   z.object({ ref: z.literal('globalMarkerState'), marker: StringSchema }).strict(),
@@ -95,8 +95,7 @@ optionsQuerySchemaInternal = z.union([
   z
     .object({
       query: z.literal('assetRows'),
-      assetId: StringSchema,
-      table: StringSchema,
+      tableId: StringSchema,
       where: z.array(AssetRowPredicateSchema).optional(),
     })
     .strict(),

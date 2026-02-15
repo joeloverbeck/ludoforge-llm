@@ -8,6 +8,7 @@ import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
+import { getRuntimeTableIndex } from './runtime-table-index.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
@@ -258,86 +259,96 @@ function dedupeStringsPreserveOrder(values: readonly string[]): readonly string[
   return unique;
 }
 
-function resolveRuntimeAsset(query: Extract<OptionsQuery, { readonly query: 'assetRows' }>, ctx: EvalContext): AssetRow[] {
-  const normalizedAssetId = query.assetId.normalize('NFC');
-  const runtimeAssets = ctx.def.runtimeDataAssets ?? [];
-  const asset = runtimeAssets.find((candidate) => candidate.id.normalize('NFC') === normalizedAssetId);
-  if (asset === undefined) {
-    throw missingVarError(`Runtime data asset not found: ${query.assetId}`, {
+function resolveRuntimeTableRows(query: Extract<OptionsQuery, { readonly query: 'assetRows' }>, ctx: EvalContext): {
+  readonly rows: readonly AssetRow[];
+  readonly fieldNames: ReadonlySet<string>;
+} {
+  const index = getRuntimeTableIndex(ctx.def);
+  const entry = index.tablesById.get(query.tableId);
+  if (entry === undefined) {
+    throw missingVarError(`Runtime table contract not found: ${query.tableId}`, {
       query,
-      assetId: query.assetId,
-      availableAssetIds: runtimeAssets.map((candidate) => candidate.id).sort((left, right) => left.localeCompare(right)),
+      tableId: query.tableId,
+      availableTableIds: index.tableIds,
     });
   }
 
-  const pathSegments = query.table
-    .split('.')
-    .map((segment) => segment.trim())
-    .filter((segment) => segment.length > 0);
-  if (pathSegments.length === 0) {
-    throw missingVarError('assetRows.table must contain at least one path segment', {
+  if (entry.issue?.kind === 'assetMissing') {
+    throw missingVarError(`Runtime data asset not found: ${entry.issue.assetId}`, {
       query,
-      table: query.table,
-      assetId: query.assetId,
+      tableId: query.tableId,
+      assetId: entry.issue.assetId,
+      availableAssetIds: (ctx.def.runtimeDataAssets ?? []).map((candidate) => candidate.id).sort((left, right) => left.localeCompare(right)),
+    });
+  }
+  if (entry.issue?.kind === 'tablePathEmpty') {
+    throw missingVarError('tableContracts.tablePath must contain at least one path segment', {
+      query,
+      tableId: query.tableId,
+      tablePath: entry.contract.tablePath,
+      assetId: entry.contract.assetId,
+    });
+  }
+  if (entry.issue?.kind === 'tablePathMissing') {
+    throw missingVarError(`tableContracts.tablePath segment not found: ${entry.issue.segment}`, {
+      query,
+      tableId: query.tableId,
+      assetId: entry.contract.assetId,
+      tablePath: entry.contract.tablePath,
+      segment: entry.issue.segment,
+      segmentIndex: entry.issue.segmentIndex,
+      availableKeys: entry.issue.availableKeys,
+    });
+  }
+  if (entry.issue?.kind === 'tablePathTypeInvalid') {
+    throw typeMismatchError('tableContracts.tablePath traversal expected object segment', {
+      query,
+      tableId: query.tableId,
+      assetId: entry.contract.assetId,
+      tablePath: entry.contract.tablePath,
+      segment: entry.issue.segment,
+      segmentIndex: entry.issue.segmentIndex,
+      actualType: entry.issue.actualType,
+    });
+  }
+  if (entry.issue?.kind === 'tableTypeInvalid') {
+    throw typeMismatchError('tableContracts.tablePath must resolve to an array of rows', {
+      query,
+      tableId: query.tableId,
+      assetId: entry.contract.assetId,
+      tablePath: entry.contract.tablePath,
+      actualType: entry.issue.actualType,
+    });
+  }
+  if (entry.issue?.kind === 'rowTypeInvalid') {
+    throw typeMismatchError('assetRows table rows must be objects', {
+      query,
+      tableId: query.tableId,
+      assetId: entry.contract.assetId,
+      tablePath: entry.contract.tablePath,
+      rowIndex: entry.issue.rowIndex,
+      actualType: entry.issue.actualType,
+    });
+  }
+  if (entry.rows === null) {
+    throw missingVarError(`Runtime table rows unavailable: ${query.tableId}`, {
+      query,
+      tableId: query.tableId,
     });
   }
 
-  let current: unknown = asset.payload;
-  for (const [segmentIndex, segment] of pathSegments.entries()) {
-    if (typeof current !== 'object' || current === null || Array.isArray(current)) {
-      throw typeMismatchError('assetRows.table traversal expected object segment', {
-        query,
-        assetId: query.assetId,
-        table: query.table,
-        segment,
-        segmentIndex,
-        actualType: Array.isArray(current) ? 'array' : typeof current,
-      });
-    }
-
-    const next = (current as Record<string, unknown>)[segment];
-    if (next === undefined) {
-      throw missingVarError(`assetRows.table path segment not found: ${segment}`, {
-        query,
-        assetId: query.assetId,
-        table: query.table,
-        segment,
-        segmentIndex,
-        availableKeys: Object.keys(current).sort(),
-      });
-    }
-    current = next;
-  }
-
-  if (!Array.isArray(current)) {
-    throw typeMismatchError('assetRows.table must resolve to an array of rows', {
-      query,
-      assetId: query.assetId,
-      table: query.table,
-      actualType: typeof current,
-    });
-  }
-
-  current.forEach((row, rowIndex) => {
-    if (typeof row !== 'object' || row === null || Array.isArray(row)) {
-      throw typeMismatchError('assetRows table rows must be objects', {
-        query,
-        assetId: query.assetId,
-        table: query.table,
-        rowIndex,
-        actualType: Array.isArray(row) ? 'array' : typeof row,
-      });
-    }
-  });
-
-  return [...current] as AssetRow[];
+  return {
+    rows: entry.rows,
+    fieldNames: entry.fieldNames,
+  };
 }
 
 function evalAssetRowsQuery(
   query: Extract<OptionsQuery, { readonly query: 'assetRows' }>,
   ctx: EvalContext,
 ): readonly AssetRow[] {
-  const rows = resolveRuntimeAsset(query, ctx);
+  const resolved = resolveRuntimeTableRows(query, ctx);
+  const rows = resolved.rows;
   const wherePredicates = query.where ?? [];
   if (wherePredicates.length === 0) {
     return rows;
@@ -345,8 +356,16 @@ function evalAssetRowsQuery(
 
   return rows.filter((row) =>
     wherePredicates.every((predicate) => {
-      const resolved = resolveAssetRowFilterValue(predicate.value, ctx);
-      return matchResolvedPredicate(row[predicate.field], predicate.op, resolved);
+      if (!resolved.fieldNames.has(predicate.field)) {
+        throw missingVarError(`Runtime table field not declared in contract: ${predicate.field}`, {
+          query,
+          tableId: query.tableId,
+          field: predicate.field,
+          availableFields: [...resolved.fieldNames].sort((left, right) => left.localeCompare(right)),
+        });
+      }
+      const resolvedValue = resolveAssetRowFilterValue(predicate.value, ctx);
+      return matchResolvedPredicate(row[predicate.field], predicate.op, resolvedValue);
     }),
   );
 }

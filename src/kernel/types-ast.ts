@@ -85,6 +85,11 @@ export interface TokenFilterPredicate {
 
 export type OptionsQuery =
   | { readonly query: 'tokensInZone'; readonly zone: ZoneSel; readonly filter?: readonly TokenFilterPredicate[] }
+  | {
+      readonly query: 'tokensInMapSpaces';
+      readonly spaceFilter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST };
+      readonly filter?: readonly TokenFilterPredicate[];
+    }
   | { readonly query: 'intsInRange'; readonly min: number; readonly max: number }
   | { readonly query: 'enums'; readonly values: readonly string[] }
   | { readonly query: 'globalMarkers'; readonly markers?: readonly string[]; readonly states?: readonly string[] }

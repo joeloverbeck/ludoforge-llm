@@ -643,18 +643,114 @@
                               "items": {
                                 "type": "object",
                                 "properties": {
-                                  "winnerActionId": {
-                                    "type": "string",
-                                    "minLength": 1
+                                  "winner": {
+                                    "type": "object",
+                                    "properties": {
+                                      "actionId": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "actionClass": {
+                                        "type": "string",
+                                        "enum": [
+                                          "pass",
+                                          "event",
+                                          "operation",
+                                          "limitedOperation",
+                                          "operationPlusSpecialActivity"
+                                        ]
+                                      },
+                                      "eventCardId": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "eventCardTagsAll": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        }
+                                      },
+                                      "eventCardTagsAny": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        }
+                                      },
+                                      "paramEquals": {
+                                        "type": "object",
+                                        "propertyNames": {
+                                          "type": "string"
+                                        },
+                                        "additionalProperties": {
+                                          "type": [
+                                            "string",
+                                            "number",
+                                            "boolean"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "required": [],
+                                    "additionalProperties": false
                                   },
-                                  "canceledActionId": {
-                                    "type": "string",
-                                    "minLength": 1
+                                  "canceled": {
+                                    "type": "object",
+                                    "properties": {
+                                      "actionId": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "actionClass": {
+                                        "type": "string",
+                                        "enum": [
+                                          "pass",
+                                          "event",
+                                          "operation",
+                                          "limitedOperation",
+                                          "operationPlusSpecialActivity"
+                                        ]
+                                      },
+                                      "eventCardId": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "eventCardTagsAll": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        }
+                                      },
+                                      "eventCardTagsAny": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        }
+                                      },
+                                      "paramEquals": {
+                                        "type": "object",
+                                        "propertyNames": {
+                                          "type": "string"
+                                        },
+                                        "additionalProperties": {
+                                          "type": [
+                                            "string",
+                                            "number",
+                                            "boolean"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "required": [],
+                                    "additionalProperties": false
                                   }
                                 },
                                 "required": [
-                                  "winnerActionId",
-                                  "canceledActionId"
+                                  "winner",
+                                  "canceled"
                                 ],
                                 "additionalProperties": false
                               }

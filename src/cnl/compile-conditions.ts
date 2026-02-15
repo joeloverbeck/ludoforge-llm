@@ -19,6 +19,7 @@ export interface ConditionLoweringResult<TValue> {
 const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes'];
 const SUPPORTED_QUERY_KINDS = [
   'tokensInZone',
+  'tokensInMapSpaces',
   'intsInRange',
   'enums',
   'globalMarkers',
@@ -417,6 +418,82 @@ export function lowerQueryNode(
       return {
         value: { query: 'tokensInZone', zone: zone.value },
         diagnostics: zone.diagnostics,
+      };
+    }
+    case 'tokensInMapSpaces': {
+      const diagnostics: Diagnostic[] = [];
+      let spaceFilter:
+        | {
+            readonly owner?: PlayerSel;
+            readonly condition?: ConditionAST;
+          }
+        | undefined;
+
+      if (source.spaceFilter !== undefined) {
+        if (!isRecord(source.spaceFilter)) {
+          return missingCapability(`${path}.spaceFilter`, 'tokensInMapSpaces spaceFilter', source.spaceFilter, [
+            '{ owner: <PlayerSel> }',
+            '{ op: "and"|"or"|..., args: [...] }',
+          ]);
+        }
+
+        if (typeof source.spaceFilter.op === 'string') {
+          const loweredCondition = lowerConditionNode(source.spaceFilter, context, `${path}.spaceFilter`);
+          diagnostics.push(...loweredCondition.diagnostics);
+          if (loweredCondition.value === null) {
+            return { value: null, diagnostics };
+          }
+          spaceFilter = { condition: loweredCondition.value };
+        } else if (source.spaceFilter.owner !== undefined) {
+          const owner = normalizePlayerSelector(source.spaceFilter.owner, `${path}.spaceFilter.owner`);
+          diagnostics.push(...owner.diagnostics);
+          if (owner.value === null) {
+            return { value: null, diagnostics };
+          }
+          const filterObj: { readonly owner: PlayerSel; readonly condition?: ConditionAST } = { owner: owner.value };
+          if (source.spaceFilter.condition !== undefined) {
+            const loweredCondition = lowerConditionNode(source.spaceFilter.condition, context, `${path}.spaceFilter.condition`);
+            diagnostics.push(...loweredCondition.diagnostics);
+            if (loweredCondition.value === null) {
+              return { value: null, diagnostics };
+            }
+            spaceFilter = { ...filterObj, condition: loweredCondition.value };
+          } else {
+            spaceFilter = filterObj;
+          }
+        } else {
+          return missingCapability(`${path}.spaceFilter`, 'tokensInMapSpaces spaceFilter', source.spaceFilter, [
+            '{ owner: <PlayerSel> }',
+            '{ op: "and"|"or"|..., args: [...] }',
+          ]);
+        }
+      }
+
+      if (source.filter !== undefined) {
+        if (!Array.isArray(source.filter)) {
+          return missingCapability(`${path}.filter`, 'tokensInMapSpaces filter', source.filter, ['Array<{ prop, op, value }>']);
+        }
+        const loweredFilter = lowerTokenFilterArray(source.filter as readonly unknown[], context, `${path}.filter`);
+        diagnostics.push(...loweredFilter.diagnostics);
+        if (loweredFilter.value === null) {
+          return { value: null, diagnostics };
+        }
+        return {
+          value: {
+            query: 'tokensInMapSpaces',
+            ...(spaceFilter === undefined ? {} : { spaceFilter }),
+            filter: loweredFilter.value,
+          },
+          diagnostics,
+        };
+      }
+
+      return {
+        value: {
+          query: 'tokensInMapSpaces',
+          ...(spaceFilter === undefined ? {} : { spaceFilter }),
+        },
+        diagnostics,
       };
     }
     case 'intsInRange': {

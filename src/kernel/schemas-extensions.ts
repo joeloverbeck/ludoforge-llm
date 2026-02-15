@@ -282,10 +282,36 @@ export const TurnFlowMonsoonSchema = z
   })
   .strict();
 
+const TurnFlowInterruptMoveSelectorSchema = z
+  .object({
+    actionId: StringSchema.min(1).optional(),
+    actionClass: TurnFlowActionClassSchema.optional(),
+    eventCardId: StringSchema.min(1).optional(),
+    eventCardTagsAll: z.array(StringSchema.min(1)).optional(),
+    eventCardTagsAny: z.array(StringSchema.min(1)).optional(),
+    paramEquals: z.record(z.string(), z.union([StringSchema, NumberSchema, BooleanSchema])).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (
+      value.actionId === undefined &&
+      value.actionClass === undefined &&
+      value.eventCardId === undefined &&
+      value.eventCardTagsAll === undefined &&
+      value.eventCardTagsAny === undefined &&
+      value.paramEquals === undefined
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'interrupt move selector must declare at least one matching field.',
+      });
+    }
+  });
+
 export const TurnFlowInterruptCancellationSchema = z
   .object({
-    winnerActionId: StringSchema.min(1),
-    canceledActionId: StringSchema.min(1),
+    winner: TurnFlowInterruptMoveSelectorSchema,
+    canceled: TurnFlowInterruptMoveSelectorSchema,
   })
   .strict();
 

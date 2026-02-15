@@ -166,6 +166,19 @@ function evalMapSpacesQuery(
   return applyZonesFilter(mapSpaceZones, query.filter, ctx);
 }
 
+function evalTokensInMapSpacesQuery(
+  query: Extract<OptionsQuery, { readonly query: 'tokensInMapSpaces' }>,
+  ctx: EvalContext,
+): readonly Token[] {
+  const mapSpaceIds = new Set((ctx.mapSpaces ?? []).map((space) => space.id));
+  const mapSpaceZones = [...ctx.def.zones]
+    .filter((zone) => mapSpaceIds.has(zone.id))
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const selectedZones = applyZonesFilter(mapSpaceZones, query.spaceFilter, ctx);
+  const zoneTokens = selectedZones.flatMap((zoneId) => [...(ctx.state.zones[String(zoneId)] ?? [])]);
+  return query.filter !== undefined ? applyTokenFilters(zoneTokens, query.filter, ctx) : zoneTokens;
+}
+
 function dedupeStringsPreserveOrder(values: readonly string[]): readonly string[] {
   const seen = new Set<string>();
   const unique: string[] = [];
@@ -203,6 +216,12 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
           hint: 'enable trace:true to see filter predicates vs token props',
         });
       }
+      assertWithinBounds(filtered.length, query, maxQueryResults);
+      return filtered;
+    }
+
+    case 'tokensInMapSpaces': {
+      const filtered = evalTokensInMapSpacesQuery(query, ctx);
       assertWithinBounds(filtered.length, query, maxQueryResults);
       return filtered;
     }

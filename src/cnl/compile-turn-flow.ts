@@ -246,6 +246,17 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
     const precedence = Array.isArray(interrupt?.precedence)
       ? interrupt.precedence.filter((entry): entry is string => typeof entry === 'string')
       : [];
+    const cancellationRules = Array.isArray(interrupt?.cancellation) ? interrupt.cancellation : [];
+
+    if (interrupt !== null && interrupt.cancellation !== undefined && !Array.isArray(interrupt.cancellation)) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_INVALID',
+        path: 'doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation',
+        severity: 'error',
+        message: 'Interrupt cancellation must be an array of winner/canceled selector objects.',
+        suggestion: 'Use cancellation: [{ winner: {...}, canceled: {...} }].',
+      });
+    }
 
     if (actionIds.length > 1 && precedence.length === 0) {
       diagnostics.push({
@@ -281,6 +292,51 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
         message: `Duplicate interrupt precedence faction "${faction}" creates unresolved ordering.`,
         suggestion: 'List each faction at most once in pivotal.interrupt.precedence.',
       });
+    }
+
+    for (const [index, rule] of cancellationRules.entries()) {
+      if (!isRecord(rule)) {
+        diagnostics.push({
+          code: 'CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_INVALID',
+          path: `doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.${index}`,
+          severity: 'error',
+          message: 'Interrupt cancellation entries must be objects with winner/canceled selectors.',
+          suggestion: 'Use { winner: {...}, canceled: {...} }.',
+        });
+        continue;
+      }
+
+      for (const selectorKey of ['winner', 'canceled'] as const) {
+        const selector = rule[selectorKey];
+        const selectorPath = `doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.${index}.${selectorKey}`;
+        if (!isRecord(selector)) {
+          diagnostics.push({
+            code: 'CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_SELECTOR_INVALID',
+            path: selectorPath,
+            severity: 'error',
+            message: `Interrupt cancellation ${selectorKey} selector must be an object.`,
+            suggestion: 'Declare at least one selector field (actionId/actionClass/eventCardId/eventCardTags*/paramEquals).',
+          });
+          continue;
+        }
+
+        const hasAnyField =
+          typeof selector.actionId === 'string' ||
+          typeof selector.actionClass === 'string' ||
+          typeof selector.eventCardId === 'string' ||
+          Array.isArray(selector.eventCardTagsAll) ||
+          Array.isArray(selector.eventCardTagsAny) ||
+          isRecord(selector.paramEquals);
+        if (!hasAnyField) {
+          diagnostics.push({
+            code: 'CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_SELECTOR_EMPTY',
+            path: selectorPath,
+            severity: 'error',
+            message: `Interrupt cancellation ${selectorKey} selector must declare at least one matching field.`,
+            suggestion: 'Declare actionId/actionClass/eventCardId/eventCardTags*/paramEquals.',
+          });
+        }
+      }
     }
   }
 

@@ -265,6 +265,51 @@ describe('evalQuery', () => {
     );
   });
 
+  it('tokensInMapSpaces query composes map-space condition filters with token filters', () => {
+    const ctx = makeCtx({
+      mapSpaces: [
+        {
+          id: 'battlefield:none',
+          spaceType: 'province',
+          population: 1,
+          econ: 0,
+          terrainTags: ['lowland'],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+        {
+          id: 'tableau:2',
+          spaceType: 'city',
+          population: 2,
+          econ: 0,
+          terrainTags: ['urban'],
+          country: 'northVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
+    });
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'tokensInMapSpaces',
+          spaceFilter: {
+            condition: {
+              op: '==',
+              left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+              right: 'southVietnam',
+            },
+          },
+          filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        },
+        ctx,
+      ).map((token) => (token as Token).id),
+      [asTokenId('us-troop-1'), asTokenId('us-troop-2')],
+    );
+  });
+
   it('zones query no longer suppresses zoneProp lookup errors from non-map zones', () => {
     const ctx = makeCtx({
       mapSpaces: [

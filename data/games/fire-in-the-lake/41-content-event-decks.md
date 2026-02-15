@@ -4004,6 +4004,141 @@ eventDecks:
                         - { prop: type, eq: guerrilla }
                     to:
                       zoneExpr: $targetSpace
+      - id: card-121
+        title: Linebacker II
+        sideMode: single
+        order: 121
+        tags: [pivotal, US]
+        metadata:
+          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          flavorText: "Unrestricted air war."
+        playCondition:
+          op: and
+          args:
+            - { op: ">=", left: { ref: gvar, var: leaderBoxCardCount }, right: 2 }
+            - op: '>'
+              left:
+                op: '+'
+                left:
+                  op: '+'
+                  left:
+                    aggregate:
+                      op: sum
+                      query:
+                        query: mapSpaces
+                        filter:
+                          op: '=='
+                          left: { ref: markerState, space: $zone, marker: supportOpposition }
+                          right: passiveSupport
+                      prop: population
+                  right:
+                    op: '*'
+                    left: 2
+                    right:
+                      aggregate:
+                        op: sum
+                        query:
+                          query: mapSpaces
+                          filter:
+                            op: '=='
+                            left: { ref: markerState, space: $zone, marker: supportOpposition }
+                            right: activeSupport
+                        prop: population
+                right:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, op: in, value: [troops, base] }
+              right: 40
+        unshaded:
+          text: "Unrestricted air war: NVA removes 2 Bases, reduces Resources to half (round down), Ineligible through next card. 3 US Casualties to Available."
+      - id: card-122
+        title: Easter Offensive
+        sideMode: single
+        order: 122
+        tags: [pivotal, NVA]
+        metadata:
+          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          flavorText: "Invasion."
+        playCondition:
+          op: and
+          args:
+            - { op: ">=", left: { ref: gvar, var: leaderBoxCardCount }, right: 2 }
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInMapSpaces
+                    filter:
+                      - { prop: faction, eq: NVA }
+                      - { prop: type, eq: troops }
+              right:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInMapSpaces
+                    filter:
+                      - { prop: faction, eq: US }
+                      - { prop: type, eq: troops }
+        unshaded:
+          text: "Invasion: NVA free Marches. Then NVA Troops on LoCs with no US/ARVN may move 1 space. Then all NVA Troops free Attack."
+      - id: card-123
+        title: Vietnamization
+        sideMode: single
+        order: 123
+        tags: [pivotal, ARVN]
+        metadata:
+          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          flavorText: "Mechanization."
+        playCondition:
+          op: and
+          args:
+            - { op: ">=", left: { ref: gvar, var: leaderBoxCardCount }, right: 2 }
+            - op: '<'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInMapSpaces
+                    filter:
+                      - { prop: faction, eq: US }
+                      - { prop: type, eq: troops }
+              right: 20
+        unshaded:
+          text: "Mechanization: +12 ARVN Resources. +12 Aid. All out-of-play ARVN Available. Place 4 ARVN cubes anywhere."
+      - id: card-124
+        title: Tet Offensive
+        sideMode: single
+        order: 124
+        tags: [pivotal, VC]
+        metadata:
+          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          flavorText: "General uprising."
+        playCondition:
+          op: and
+          args:
+            - { op: ">=", left: { ref: gvar, var: leaderBoxCardCount }, right: 2 }
+            - op: '>'
+              left:
+                aggregate:
+                  op: count
+                  query:
+                    query: tokensInMapSpaces
+                    spaceFilter:
+                      op: '=='
+                      left: { ref: zoneProp, zone: $zone, prop: country }
+                      right: southVietnam
+                    filter:
+                      - { prop: faction, eq: VC }
+                      - { prop: type, eq: guerrilla }
+              right: 20
+        unshaded:
+          text: "General uprising: Free Terror with 1 Underground VC per space. Place 6 VC pieces in any cities. VC + NVA Guerrillas free Attack where enemies (remove VC first)."
       - id: card-125
         title: Nguyen Khanh
         sideMode: single

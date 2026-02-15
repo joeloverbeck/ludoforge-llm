@@ -280,6 +280,35 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers tokensInMapSpaces query with map-space condition and token filters', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInMapSpaces',
+        spaceFilter: {
+          op: '==',
+          left: { ref: 'zoneProp', zone: 'board', prop: 'country' },
+          right: 'southVietnam',
+        },
+        filter: [{ prop: 'type', eq: 'guerrilla' }],
+      },
+      context,
+      'doc.actions.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInMapSpaces',
+      spaceFilter: {
+        condition: {
+          op: '==',
+          left: { ref: 'zoneProp', zone: 'board:none', prop: 'country' },
+          right: 'southVietnam',
+        },
+      },
+      filter: [{ prop: 'type', op: 'eq', value: 'guerrilla' }],
+    });
+  });
+
   it('lowers tokensInZone query with string literal token filters', () => {
     const result = lowerQueryNode(
       {

@@ -289,6 +289,35 @@ describe('AST and selector schemas', () => {
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
   });
 
+  it('parses tokensInMapSpaces query with optional spaceFilter and token filter', () => {
+    const queries: OptionsQuery[] = [
+      { query: 'tokensInMapSpaces' },
+      {
+        query: 'tokensInMapSpaces',
+        filter: [{ prop: 'faction', op: 'eq', value: 'VC' }],
+      },
+      {
+        query: 'tokensInMapSpaces',
+        spaceFilter: {
+          condition: {
+            op: '==',
+            left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+            right: 'southVietnam',
+          },
+        },
+      },
+      {
+        query: 'tokensInMapSpaces',
+        spaceFilter: { owner: 'actor' },
+        filter: [{ prop: 'type', op: 'eq', value: 'troops' }],
+      },
+    ];
+
+    for (const query of queries) {
+      assert.deepEqual(OptionsQuerySchema.parse(query), query);
+    }
+  });
+
   it('parses binding query', () => {
     const query: OptionsQuery = { query: 'binding', name: 'targetSpaces' };
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
@@ -349,6 +378,12 @@ describe('AST and selector schemas', () => {
       filter: { prop: 'faction', op: 'eq', value: 'US' },
     });
     assert.equal(notArray.success, false);
+
+    const badTokensInMapSpacesFilter = OptionsQuerySchema.safeParse({
+      query: 'tokensInMapSpaces',
+      filter: { prop: 'faction', op: 'eq', value: 'US' },
+    });
+    assert.equal(badTokensInMapSpacesFilter.success, false);
   });
 
   it('rejects invalid effect discriminants with a nested path', () => {

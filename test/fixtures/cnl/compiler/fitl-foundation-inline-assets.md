@@ -107,7 +107,9 @@ turnFlow:
     requirePreActionWindow: true
     interrupt:
       precedence: ["0", "1", "2", "3"]
-      cancellation: firstWins
+      cancellation:
+        - winner: { actionId: pivotalEvent }
+          canceled: { actionId: pivotalEvent, paramEquals: { side: shaded } }
 actions:
   - id: pass
     actor: active

@@ -68,6 +68,19 @@ optionsQuerySchemaInternal = z.union([
       filter: z.array(TokenFilterPredicateSchema).optional(),
     })
     .strict(),
+  z
+    .object({
+      query: z.literal('tokensInMapSpaces'),
+      spaceFilter: z
+        .object({
+          owner: PlayerSelSchema.optional(),
+          condition: ConditionASTSchema.optional(),
+        })
+        .strict()
+        .optional(),
+      filter: z.array(TokenFilterPredicateSchema).optional(),
+    })
+    .strict(),
   z.object({ query: z.literal('intsInRange'), min: NumberSchema, max: NumberSchema }).strict(),
   z.object({ query: z.literal('enums'), values: z.array(StringSchema) }).strict(),
   z

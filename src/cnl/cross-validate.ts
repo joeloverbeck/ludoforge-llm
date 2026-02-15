@@ -72,6 +72,32 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         'Use one of the declared action ids.',
       );
     }
+
+    const cancellationRules = cardDrivenTurnFlow.pivotal?.interrupt?.cancellation ?? [];
+    for (const [ruleIndex, rule] of cancellationRules.entries()) {
+      if (rule.winner.actionId !== undefined) {
+        pushMissingIdentifierDiagnostic(
+          diagnostics,
+          'CNL_XREF_TURN_FLOW_PIVOTAL_CANCELLATION_ACTION_MISSING',
+          `doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.${ruleIndex}.winner.actionId`,
+          rule.winner.actionId,
+          actionTargets,
+          `Pivotal interrupt cancellation winner selector references unknown action "${rule.winner.actionId}".`,
+          'Use one of the declared action ids.',
+        );
+      }
+      if (rule.canceled.actionId !== undefined) {
+        pushMissingIdentifierDiagnostic(
+          diagnostics,
+          'CNL_XREF_TURN_FLOW_PIVOTAL_CANCELLATION_ACTION_MISSING',
+          `doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.${ruleIndex}.canceled.actionId`,
+          rule.canceled.actionId,
+          actionTargets,
+          `Pivotal interrupt cancellation canceled selector references unknown action "${rule.canceled.actionId}".`,
+          'Use one of the declared action ids.',
+        );
+      }
+    }
   }
 
   if (sections.triggers !== null && sections.turnStructure !== null) {

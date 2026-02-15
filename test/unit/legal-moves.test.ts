@@ -576,7 +576,12 @@ describe('legalMoves', () => {
               actionIds: ['pivotalA', 'pivotalB'],
               interrupt: {
                 precedence: ['1', '0'],
-                cancellation: [{ winnerActionId: 'pivotalA', canceledActionId: 'pivotalB' }],
+                cancellation: [
+                  {
+                    winner: { actionId: 'pivotalA' },
+                    canceled: { actionId: 'pivotalB' },
+                  },
+                ],
               },
             },
           },
@@ -641,6 +646,106 @@ describe('legalMoves', () => {
     assert.deepEqual(legalMoves(def, state), [
       { actionId: asActionId('pass'), params: {} },
       { actionId: asActionId('pivotalA'), params: {} },
+    ]);
+  });
+
+  it('supports event-card-tag cancellation selectors for interrupt windows', () => {
+    const def: GameDef = {
+      ...createDef(),
+      metadata: { id: 'turnflow-pivotal-card-tag-cancellation', players: { min: 2, max: 2 } },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { factions: ['0', '1'], overrideWindows: [] },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            pivotal: {
+              actionIds: ['pivotalEvent'],
+              interrupt: {
+                precedence: ['1', '0'],
+                cancellation: [
+                  {
+                    winner: {
+                      actionId: 'pivotalEvent',
+                      eventCardTagsAll: ['pivotal', 'VC'],
+                    },
+                    canceled: {
+                      actionId: 'pivotalEvent',
+                      eventCardTagsAll: ['pivotal', 'US'],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      eventDecks: [
+        {
+          id: 'pivotal-deck',
+          drawZone: 'deck:none',
+          discardZone: 'discard:none',
+          shuffleOnSetup: false,
+          cards: [
+            { id: 'piv-us', title: 'US Pivotal', sideMode: 'single', tags: ['pivotal', 'US'], unshaded: { text: 'x' } },
+            { id: 'piv-vc', title: 'VC Pivotal', sideMode: 'single', tags: ['pivotal', 'VC'], unshaded: { text: 'x' } },
+          ],
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('pass'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('pivotalEvent'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [
+            { name: 'eventCardId', domain: { query: 'enums', values: ['piv-us', 'piv-vc'] } },
+          ],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      activePlayer: asPlayerId(1),
+      actionUsage: {},
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          factionOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '1',
+            secondEligible: '0',
+            actedFactions: [],
+            passedFactions: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+        },
+      },
+    };
+
+    assert.deepEqual(legalMoves(def, state), [
+      { actionId: asActionId('pass'), params: {} },
+      { actionId: asActionId('pivotalEvent'), params: { eventCardId: 'piv-vc' } },
     ]);
   });
 

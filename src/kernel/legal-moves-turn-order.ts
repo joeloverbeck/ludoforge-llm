@@ -5,6 +5,7 @@ import {
   resolveTurnFlowActionClass,
 } from './turn-flow-eligibility.js';
 import type { GameDef, GameState, Move, MoveParamValue } from './types.js';
+import type { TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
 import { asActionId } from './branded.js';
 
 const cardDrivenConfig = (def: GameDef) =>
@@ -105,6 +106,80 @@ function toConstrainedNumericValue(paramValue: MoveParamValue | undefined): numb
   return null;
 }
 
+function resolveEventCardForMove(def: GameDef, move: Move): { readonly id: string; readonly tags: readonly string[] } | null {
+  const explicitCardId = move.params.eventCardId;
+  if (typeof explicitCardId !== 'string' || explicitCardId.length === 0) {
+    return null;
+  }
+
+  const eventDecks = def.eventDecks;
+  if (eventDecks === undefined || eventDecks.length === 0) {
+    return null;
+  }
+
+  const explicitDeckId = move.params.eventDeckId;
+  const decks =
+    typeof explicitDeckId === 'string' && explicitDeckId.length > 0
+      ? eventDecks.filter((deck) => deck.id === explicitDeckId)
+      : eventDecks;
+
+  for (const deck of decks) {
+    const card = deck.cards.find((candidate) => candidate.id === explicitCardId);
+    if (card !== undefined) {
+      return {
+        id: card.id,
+        tags: card.tags ?? [],
+      };
+    }
+  }
+
+  return null;
+}
+
+function moveMatchesSelector(def: GameDef, move: Move, selector: TurnFlowInterruptMoveSelectorDef): boolean {
+  if (selector.actionId !== undefined && selector.actionId !== String(move.actionId)) {
+    return false;
+  }
+
+  if (selector.actionClass !== undefined && selector.actionClass !== resolveTurnFlowActionClass(move)) {
+    return false;
+  }
+
+  const selectorNeedsEventCard =
+    selector.eventCardId !== undefined ||
+    selector.eventCardTagsAll !== undefined ||
+    selector.eventCardTagsAny !== undefined;
+  const resolvedEventCard = selectorNeedsEventCard ? resolveEventCardForMove(def, move) : null;
+
+  if (selector.eventCardId !== undefined && selector.eventCardId !== resolvedEventCard?.id) {
+    return false;
+  }
+
+  if (
+    selector.eventCardTagsAll !== undefined &&
+    !selector.eventCardTagsAll.every((tag) => resolvedEventCard?.tags.includes(tag) === true)
+  ) {
+    return false;
+  }
+
+  if (
+    selector.eventCardTagsAny !== undefined &&
+    !selector.eventCardTagsAny.some((tag) => resolvedEventCard?.tags.includes(tag) === true)
+  ) {
+    return false;
+  }
+
+  if (selector.paramEquals !== undefined) {
+    for (const [name, expected] of Object.entries(selector.paramEquals)) {
+      if (move.params[name] !== expected) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 export function applyTurnFlowWindowFilters(def: GameDef, state: GameState, moves: readonly Move[]): readonly Move[] {
   const turnFlow = cardDrivenConfig(def)?.turnFlow;
   if (turnFlow === undefined) {
@@ -161,19 +236,24 @@ export function applyTurnFlowWindowFilters(def: GameDef, state: GameState, moves
     return filtered;
   }
 
-  const actionIds = new Set(filtered.map((move) => String(move.actionId)));
-  const canceledActionIds = new Set<string>();
+  const canceledMoves = new Set<Move>();
   for (const rule of cancellationRules) {
-    if (!actionIds.has(rule.winnerActionId)) {
+    const hasWinner = filtered.some((move) => moveMatchesSelector(def, move, rule.winner));
+    if (!hasWinner) {
       continue;
     }
-    canceledActionIds.add(rule.canceledActionId);
+
+    for (const move of filtered) {
+      if (moveMatchesSelector(def, move, rule.canceled)) {
+        canceledMoves.add(move);
+      }
+    }
   }
 
-  if (canceledActionIds.size === 0) {
+  if (canceledMoves.size === 0) {
     return filtered;
   }
-  return filtered.filter((move) => !canceledActionIds.has(String(move.actionId)));
+  return filtered.filter((move) => !canceledMoves.has(move));
 }
 
 export function applyPendingFreeOperationVariants(

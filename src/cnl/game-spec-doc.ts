@@ -166,8 +166,17 @@ export interface GameSpecTurnFlowMonsoon {
 }
 
 export interface GameSpecTurnFlowInterruptCancellation {
-  readonly winnerActionId: string;
-  readonly canceledActionId: string;
+  readonly winner: GameSpecTurnFlowInterruptMoveSelector;
+  readonly canceled: GameSpecTurnFlowInterruptMoveSelector;
+}
+
+export interface GameSpecTurnFlowInterruptMoveSelector {
+  readonly actionId?: string;
+  readonly actionClass?: GameSpecTurnFlowActionClass;
+  readonly eventCardId?: string;
+  readonly eventCardTagsAll?: readonly string[];
+  readonly eventCardTagsAny?: readonly string[];
+  readonly paramEquals?: Readonly<Record<string, string | number | boolean>>;
 }
 
 export interface GameSpecTurnFlowInterruptResolution {

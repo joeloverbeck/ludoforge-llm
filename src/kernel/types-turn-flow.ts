@@ -50,8 +50,17 @@ export interface TurnFlowMonsoonDef {
 }
 
 export interface TurnFlowInterruptCancellationDef {
-  readonly winnerActionId: string;
-  readonly canceledActionId: string;
+  readonly winner: TurnFlowInterruptMoveSelectorDef;
+  readonly canceled: TurnFlowInterruptMoveSelectorDef;
+}
+
+export interface TurnFlowInterruptMoveSelectorDef {
+  readonly actionId?: string;
+  readonly actionClass?: TurnFlowActionClass;
+  readonly eventCardId?: string;
+  readonly eventCardTagsAll?: readonly string[];
+  readonly eventCardTagsAny?: readonly string[];
+  readonly paramEquals?: Readonly<Record<string, string | number | boolean>>;
 }
 
 export interface TurnFlowInterruptResolutionDef {

@@ -8,7 +8,9 @@ import {
   type MapSpaceDef,
   type ScenarioPiecePlacement,
   type StackingConstraint,
+  isValidatedGameDef,
   validateGameDef,
+  validateGameDefBoundary,
   validateInitialPlacementsAgainstStackingConstraints,
 } from '../../src/kernel/index.js';
 
@@ -1551,5 +1553,38 @@ describe('validateGameDef arithmetic diagnostics', () => {
       staticDivideByZeroDiagnostics.some((diag) => diag.path === 'actions[0].effects[2].addVar.delta.right'),
       true,
     );
+  });
+});
+
+describe('validated GameDef boundary', () => {
+  it('brands only when validation has no errors and caches the branded identity', () => {
+    const valid = createValidGameDef();
+
+    assert.equal(isValidatedGameDef(valid), false);
+    const first = validateGameDefBoundary(valid);
+    assert.notEqual(first.gameDef, null);
+    assert.equal(first.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.equal(isValidatedGameDef(valid), true);
+
+    const second = validateGameDefBoundary(valid);
+    assert.equal(second.gameDef, first.gameDef);
+    assert.deepEqual(second.diagnostics, []);
+  });
+
+  it('does not brand invalid definitions', () => {
+    const invalid = {
+      ...createValidGameDef(),
+      actions: [
+        {
+          ...createValidGameDef().actions[0],
+          phase: 'missing-phase',
+        },
+      ],
+    } as unknown as GameDef;
+
+    const result = validateGameDefBoundary(invalid);
+    assert.equal(result.gameDef, null);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), true);
+    assert.equal(isValidatedGameDef(invalid), false);
   });
 });

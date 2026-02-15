@@ -7,6 +7,7 @@ import { applyTurnFlowInitialReveal } from './turn-flow-lifecycle.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import { createCollector } from './execution-collector.js';
+import { assertValidatedGameDef } from './validate-gamedef.js';
 import type { GameDef, GameState } from './types.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 
@@ -21,24 +22,25 @@ const parseFixedOrderPlayer = (playerId: string, playerCount: number): number | 
 };
 
 export const initialState = (def: GameDef, seed: number, playerCount?: number): GameState => {
-  const resolvedPlayerCount = resolvePlayerCount(def, playerCount);
-  const initialPhase = resolveInitialPhase(def);
-  const initialTurnOrderState = resolveInitialTurnOrderState(def, resolvedPlayerCount);
+  const validatedDef = assertValidatedGameDef(def);
+  const resolvedPlayerCount = resolvePlayerCount(validatedDef, playerCount);
+  const initialPhase = resolveInitialPhase(validatedDef);
+  const initialTurnOrderState = resolveInitialTurnOrderState(validatedDef, resolvedPlayerCount);
   const rng = createRng(BigInt(seed));
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const initialMarkers = buildInitialMarkers(def.spaceMarkers);
-  const initialGlobalMarkers = buildInitialGlobalMarkers(def.globalMarkerLattices);
+  const adjacencyGraph = buildAdjacencyGraph(validatedDef.zones);
+  const initialMarkers = buildInitialMarkers(validatedDef.spaceMarkers);
+  const initialGlobalMarkers = buildInitialGlobalMarkers(validatedDef.globalMarkerLattices);
 
   const baseState: GameState = {
-    globalVars: Object.fromEntries(def.globalVars.map((variable) => [variable.name, variable.init])),
+    globalVars: Object.fromEntries(validatedDef.globalVars.map((variable) => [variable.name, variable.init])),
     perPlayerVars: Object.fromEntries(
       Array.from({ length: resolvedPlayerCount }, (_, player) => [
         String(player),
-        Object.fromEntries(def.perPlayerVars.map((variable) => [variable.name, variable.init])),
+        Object.fromEntries(validatedDef.perPlayerVars.map((variable) => [variable.name, variable.init])),
       ]),
     ),
     playerCount: resolvedPlayerCount,
-    zones: Object.fromEntries(def.zones.map((zone) => [String(zone.id), []])),
+    zones: Object.fromEntries(validatedDef.zones.map((zone) => [String(zone.id), []])),
     nextTokenOrdinal: 0,
     currentPhase: initialPhase,
     activePlayer: asPlayerId(0),
@@ -50,10 +52,10 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     globalMarkers: initialGlobalMarkers,
     turnOrderState: initialTurnOrderState,
   };
-  const withInitialActivePlayer = resolveInitialActivePlayer(baseState, def.turnOrder);
+  const withInitialActivePlayer = resolveInitialActivePlayer(baseState, validatedDef.turnOrder);
 
-  const setupResult = applyEffects(def.setup, {
-    def,
+  const setupResult = applyEffects(validatedDef.setup, {
+    def: validatedDef,
     adjacencyGraph,
     state: withInitialActivePlayer,
     rng,
@@ -63,10 +65,10 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     moveParams: {},
     collector: createCollector(),
   });
-  const lifecycleResult = applyTurnFlowInitialReveal(def, setupResult.state);
-  const maxDepth = def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
+  const lifecycleResult = applyTurnFlowInitialReveal(validatedDef, setupResult.state);
+  const maxDepth = validatedDef.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
   const turnStartResult = dispatchTriggers(
-    def,
+    validatedDef,
     lifecycleResult.state,
     setupResult.rng,
     { type: 'turnStart' },
@@ -76,7 +78,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     adjacencyGraph,
   );
   const phaseEnterResult = dispatchTriggers(
-    def,
+    validatedDef,
     turnStartResult.state,
     turnStartResult.rng,
     { type: 'phaseEnter', phase: initialPhase },
@@ -89,8 +91,8 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     ...phaseEnterResult.state,
     rng: phaseEnterResult.rng.state,
   };
-  const withTurnFlow = initializeTurnFlowEligibilityState(def, stateWithRng);
-  const table = createZobristTable(def);
+  const withTurnFlow = initializeTurnFlowEligibilityState(validatedDef, stateWithRng);
+  const table = createZobristTable(validatedDef);
 
   return {
     ...withTurnFlow,

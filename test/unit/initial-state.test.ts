@@ -200,9 +200,7 @@ describe('initialState', () => {
       () => initialState(noPhaseDef, 1, 2),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown };
-        assert.equal(details.code, 'INITIAL_STATE_NO_PHASES');
-        assert.match(details.message, /at least one phase/);
+        assert.match(error.message, /Invalid GameDef: validation failed/);
         return true;
       },
     );

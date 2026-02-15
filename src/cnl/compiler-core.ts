@@ -1,7 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameDef, NumericTrackDef } from '../kernel/types.js';
 import { asActionId } from '../kernel/branded.js';
-import { validateGameDef } from '../kernel/validate-gamedef.js';
+import { validateGameDefBoundary, type ValidatedGameDef } from '../kernel/validate-gamedef.js';
 import { materializeZoneDefs } from './compile-zones.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import type { GameSpecSourceMap } from './source-map.js';
@@ -57,7 +57,7 @@ export interface CompileSectionResults {
 }
 
 export interface CompileResult {
-  readonly gameDef: GameDef | null;
+  readonly gameDef: ValidatedGameDef | null;
   readonly sections: CompileSectionResults;
   readonly diagnostics: readonly Diagnostic[];
 }
@@ -146,15 +146,18 @@ export function compileGameSpecToGameDef(
   const expanded = expandMacros(macroExpansion.doc, options);
   const diagnostics: Diagnostic[] = [...macroExpansion.diagnostics, ...expanded.diagnostics];
   const compiled = compileExpandedDoc(expanded.doc, diagnostics);
+  let validatedGameDef: ValidatedGameDef | null = null;
 
   if (compiled.gameDef !== null) {
-    diagnostics.push(...validateGameDef(compiled.gameDef));
+    const validated = validateGameDefBoundary(compiled.gameDef);
+    diagnostics.push(...validated.diagnostics);
+    validatedGameDef = validated.gameDef;
   }
 
   const finalizedDiagnostics = finalizeDiagnostics(diagnostics, options?.sourceMap, limits.maxDiagnosticCount);
 
   return {
-    gameDef: hasErrorDiagnostics(finalizedDiagnostics) ? null : compiled.gameDef,
+    gameDef: hasErrorDiagnostics(finalizedDiagnostics) ? null : validatedGameDef,
     sections: compiled.sections,
     diagnostics: finalizedDiagnostics,
   };

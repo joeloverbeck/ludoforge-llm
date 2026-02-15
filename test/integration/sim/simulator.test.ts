@@ -5,7 +5,15 @@ import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../../src/cnl/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../../helpers/diagnostic-helpers.js';
-import { asActionId, asPhaseId, nextInt, serializeTrace, type Agent, type GameDef } from '../../../src/kernel/index.js';
+import {
+  assertValidatedGameDef,
+  asActionId,
+  asPhaseId,
+  nextInt,
+  serializeTrace,
+  type Agent,
+  type ValidatedGameDef,
+} from '../../../src/kernel/index.js';
 import { runGames } from '../../../src/sim/index.js';
 
 const rngDrivenAgent: Agent = {
@@ -19,8 +27,8 @@ const rngDrivenAgent: Agent = {
   },
 };
 
-const createDef = (): GameDef =>
-  ({
+const createDef = (): ValidatedGameDef =>
+  assertValidatedGameDef({
     metadata: { id: 'sim-rungames-test', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
     globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 99 }],
@@ -33,7 +41,7 @@ const createDef = (): GameDef =>
       {
         id: asActionId('smallStep'),
 actor: 'active',
-executor: 'actor',
+executor: 'actor' as const,
 phase: asPhaseId('main'),
         params: [],
         pre: null,
@@ -44,7 +52,7 @@ phase: asPhaseId('main'),
       {
         id: asActionId('bigStep'),
 actor: 'active',
-executor: 'actor',
+executor: 'actor' as const,
 phase: asPhaseId('main'),
         params: [],
         pre: null,
@@ -55,7 +63,7 @@ phase: asPhaseId('main'),
     ],
     triggers: [],
     terminal: { conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 6 }, result: { type: 'draw' } }] },
-  }) as unknown as GameDef;
+  } as const);
 
 describe('runGames integration', () => {
   it('keeps a non-FITL fixture compile + simulation path green', () => {

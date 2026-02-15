@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPhaseId, type Agent, type GameDef } from '../../../src/kernel/index.js';
+import { assertValidatedGameDef, asActionId, asPhaseId, type Agent, type ValidatedGameDef } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
 
 const firstLegalAgent: Agent = {
@@ -18,7 +18,7 @@ const createDef = (options?: {
   readonly withAction?: boolean;
   readonly terminalAtScore?: number;
   readonly twoPhaseLoop?: boolean;
-}): GameDef => {
+}): ValidatedGameDef => {
   const withAction = options?.withAction ?? true;
   const twoPhaseLoop = options?.twoPhaseLoop ?? false;
   const terminalAtScore = options?.terminalAtScore;
@@ -31,7 +31,7 @@ const createDef = (options?: {
           {
             id: asActionId('step1'),
 actor: 'active' as const,
-executor: 'actor',
+executor: 'actor' as const,
 phase: asPhaseId('p1'),
             params: [],
             pre: null,
@@ -42,7 +42,7 @@ phase: asPhaseId('p1'),
           {
             id: asActionId('step2'),
 actor: 'active' as const,
-executor: 'actor',
+executor: 'actor' as const,
 phase: asPhaseId('p2'),
             params: [],
             pre: null,
@@ -55,7 +55,7 @@ phase: asPhaseId('p2'),
           {
             id: asActionId('step'),
 actor: 'active' as const,
-executor: 'actor',
+executor: 'actor' as const,
 phase: asPhaseId('main'),
             params: [],
             pre: null,
@@ -65,7 +65,7 @@ phase: asPhaseId('main'),
           },
         ];
 
-  return {
+  return assertValidatedGameDef({
     metadata: { id: 'sim-property-test', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
     globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 99 }],
@@ -82,7 +82,7 @@ phase: asPhaseId('main'),
           ? []
           : [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: terminalAtScore }, result: { type: 'draw' } }],
     },
-  } as unknown as GameDef;
+  } as const);
 };
 
 describe('simulator property-style invariants', () => {

@@ -3,7 +3,15 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPhaseId, serializeTrace, type Agent, type GameDef, type SerializedGameTrace } from '../../../src/kernel/index.js';
+import {
+  assertValidatedGameDef,
+  asActionId,
+  asPhaseId,
+  serializeTrace,
+  type Agent,
+  type SerializedGameTrace,
+  type ValidatedGameDef,
+} from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
 
 const firstLegalAgent: Agent = {
@@ -18,8 +26,8 @@ const firstLegalAgent: Agent = {
 
 const readJsonFixture = <T>(filePath: string): T => JSON.parse(readFileSync(join(process.cwd(), filePath), 'utf8')) as T;
 
-const createGoldenDef = (): GameDef =>
-  ({
+const createGoldenDef = (): ValidatedGameDef =>
+  assertValidatedGameDef({
     metadata: { id: 'sim-golden-trace', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
     globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 99 }],
@@ -32,7 +40,7 @@ const createGoldenDef = (): GameDef =>
       {
         id: asActionId('step1'),
 actor: 'active',
-executor: 'actor',
+executor: 'actor' as const,
 phase: asPhaseId('p1'),
         params: [],
         pre: null,
@@ -43,7 +51,7 @@ phase: asPhaseId('p1'),
       {
         id: asActionId('step2'),
 actor: 'active',
-executor: 'actor',
+executor: 'actor' as const,
 phase: asPhaseId('p2'),
         params: [],
         pre: null,
@@ -54,7 +62,7 @@ phase: asPhaseId('p2'),
     ],
     triggers: [],
     terminal: { conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 3 }, result: { type: 'draw' } }] },
-  }) as unknown as GameDef;
+  } as const);
 
 describe('simulator golden trace stability', () => {
   it('fixed setup yields expected hash sequence and exact serialized golden trace', () => {

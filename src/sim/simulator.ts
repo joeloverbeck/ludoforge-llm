@@ -1,5 +1,15 @@
 import { applyMove, createRng, initialState, legalMoves, terminalResult } from '../kernel/index.js';
-import type { Agent, ExecutionOptions, GameDef, GameTrace, MoveLog, Rng, SimulationStopReason, TerminalResult } from '../kernel/index.js';
+import { assertValidatedGameDef } from '../kernel/index.js';
+import type {
+  Agent,
+  ExecutionOptions,
+  GameTrace,
+  MoveLog,
+  Rng,
+  SimulationStopReason,
+  TerminalResult,
+  ValidatedGameDef,
+} from '../kernel/index.js';
 import { computeDeltas } from './delta.js';
 
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
@@ -26,7 +36,7 @@ const createAgentRngByPlayer = (seed: number, playerCount: number): readonly Rng
   );
 
 export const runGame = (
-  def: GameDef,
+  def: ValidatedGameDef,
   seed: number,
   agents: readonly Agent[],
   maxTurns: number,
@@ -35,8 +45,9 @@ export const runGame = (
 ): GameTrace => {
   validateSeed(seed);
   validateMaxTurns(maxTurns);
+  const validatedDef = assertValidatedGameDef(def);
 
-  let state = initialState(def, seed, playerCount);
+  let state = initialState(validatedDef, seed, playerCount);
   if (agents.length !== state.playerCount) {
     throw new RangeError(
       `agents length must equal resolved player count ${state.playerCount}, received ${agents.length}`,
@@ -49,7 +60,7 @@ export const runGame = (
   let stopReason: SimulationStopReason = 'maxTurns';
 
   while (true) {
-    const terminal = terminalResult(def, state);
+    const terminal = terminalResult(validatedDef, state);
     if (terminal !== null) {
       result = terminal;
       stopReason = 'terminal';
@@ -61,7 +72,7 @@ export const runGame = (
       break;
     }
 
-    const legal = legalMoves(def, state);
+    const legal = legalMoves(validatedDef, state);
     if (legal.length === 0) {
       stopReason = 'noLegalMoves';
       break;
@@ -75,7 +86,7 @@ export const runGame = (
     }
 
     const selected = agent.chooseMove({
-      def,
+      def: validatedDef,
       state,
       playerId: player,
       legalMoves: legal,
@@ -84,7 +95,7 @@ export const runGame = (
     agentRngByPlayer[player] = selected.rng;
 
     const preState = state;
-    const applied = applyMove(def, state, selected.move, options);
+    const applied = applyMove(validatedDef, state, selected.move, options);
     state = applied.state;
 
     moveLogs.push({
@@ -100,7 +111,7 @@ export const runGame = (
   }
 
   return {
-    gameDefId: def.metadata.id,
+    gameDefId: validatedDef.metadata.id,
     seed,
     moves: moveLogs,
     finalState: state,
@@ -111,7 +122,7 @@ export const runGame = (
 };
 
 export const runGames = (
-  def: GameDef,
+  def: ValidatedGameDef,
   seeds: readonly number[],
   agents: readonly Agent[],
   maxTurns: number,

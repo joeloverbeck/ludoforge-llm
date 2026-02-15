@@ -215,12 +215,12 @@ const createZoneFilteredDef = (): GameDef =>
     globalVars: [],
     perPlayerVars: [],
     zones: [
-      { id: 'board:cambodia', owner: 'none', visibility: 'public', ordering: 'set' },
-      { id: 'board:vietnam', owner: 'none', visibility: 'public', ordering: 'set' },
+      { id: 'boardCambodia:none', owner: 'none', visibility: 'public', ordering: 'set' },
+      { id: 'boardVietnam:none', owner: 'none', visibility: 'public', ordering: 'set' },
     ],
     mapSpaces: [
       {
-        id: 'board:cambodia',
+        id: 'boardCambodia:none',
         spaceType: 'province',
         population: 1,
         econ: 0,
@@ -230,7 +230,7 @@ const createZoneFilteredDef = (): GameDef =>
         adjacentTo: [],
       },
       {
-        id: 'board:vietnam',
+        id: 'boardVietnam:none',
         spaceType: 'province',
         population: 1,
         econ: 0,
@@ -662,7 +662,7 @@ describe('event free-operation grants integration', () => {
       actionId: asActionId('event'),
       params: { eventCardId: 'card-75-like', side: 'unshaded', branch: 'none' },
     }).state;
-    const second = applyMove(def, first, { actionId: asActionId('operation'), params: { 'decision:$zone': 'board:cambodia' } }).state;
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: { 'decision:$zone': 'boardCambodia:none' } }).state;
     assert.equal(second.activePlayer, asPlayerId(2));
 
     const operationMoves = legalMoves(def, second).filter((move) => String(move.actionId) === 'operation');
@@ -672,7 +672,7 @@ describe('event free-operation grants integration', () => {
       () =>
         applyMove(def, second, {
           actionId: asActionId('operation'),
-          params: { 'decision:$zone': 'board:vietnam' },
+          params: { 'decision:$zone': 'boardVietnam:none' },
           freeOperation: true,
         }),
       (error: unknown) =>
@@ -683,7 +683,7 @@ describe('event free-operation grants integration', () => {
 
     const third = applyMove(def, second, {
       actionId: asActionId('operation'),
-      params: { 'decision:$zone': 'board:cambodia' },
+      params: { 'decision:$zone': 'boardCambodia:none' },
       freeOperation: true,
     }).state;
     assert.deepEqual(requireCardDrivenRuntime(third).pendingFreeOperationGrants ?? [], []);

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   applyMove,
+  assertValidatedGameDef,
   asActionId,
   asPhaseId,
   computeFullHash,
@@ -11,6 +12,7 @@ import {
   type Agent,
   type GameDef,
   type Move,
+  type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
 
@@ -28,7 +30,7 @@ const createDef = (options?: {
   readonly withAction?: boolean;
   readonly terminalAtScore?: number;
   readonly twoPhaseLoop?: boolean;
-}): GameDef => {
+}): ValidatedGameDef => {
   const withAction = options?.withAction ?? true;
   const twoPhaseLoop = options?.twoPhaseLoop ?? false;
   const terminalAtScore = options?.terminalAtScore;
@@ -42,7 +44,7 @@ const createDef = (options?: {
           {
             id: asActionId('step1'),
 actor: 'active' as const,
-executor: 'actor',
+executor: 'actor' as const,
 phase: asPhaseId('p1'),
             params: [],
             pre: null,
@@ -53,7 +55,7 @@ phase: asPhaseId('p1'),
           {
             id: asActionId('step2'),
 actor: 'active' as const,
-executor: 'actor',
+executor: 'actor' as const,
 phase: asPhaseId('p2'),
             params: [],
             pre: null,
@@ -66,7 +68,7 @@ phase: asPhaseId('p2'),
           {
             id: asActionId('step'),
 actor: 'active' as const,
-executor: 'actor',
+executor: 'actor' as const,
 phase: asPhaseId('main'),
             params: [],
             pre: null,
@@ -76,7 +78,7 @@ phase: asPhaseId('main'),
           },
         ];
 
-  return {
+  return assertValidatedGameDef({
     metadata: { id: 'sim-run-game-test', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
     globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 99 }],
@@ -93,7 +95,7 @@ phase: asPhaseId('main'),
           ? []
           : [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: terminalAtScore }, result: { type: 'draw' } }],
     },
-  } as unknown as GameDef;
+  } as const);
 };
 
 describe('runGame', () => {
@@ -141,6 +143,23 @@ describe('runGame', () => {
     assert.throws(() => runGame(def, 3, [firstLegalAgent], 1), /agents length must equal resolved player count/);
   });
 
+  it('rejects invalid unvalidated GameDef payloads at simulator boundary', () => {
+    const invalidDef = {
+      ...createDef(),
+      actions: [
+        {
+          ...createDef().actions[0],
+          phase: asPhaseId('missing-phase'),
+        },
+      ],
+    } as unknown as GameDef;
+
+    assert.throws(
+      () => runGame(invalidDef as unknown as ValidatedGameDef, 3, [firstLegalAgent, firstLegalAgent], 1),
+      /Invalid GameDef: validation failed/,
+    );
+  });
+
   it('sets turnsCount from finalState.turnCount, not move log length', () => {
     const def = createDef({ twoPhaseLoop: true });
     const trace = runGame(def, 5, [firstLegalAgent, firstLegalAgent], 2);
@@ -177,7 +196,7 @@ describe('runGame', () => {
   });
 
   it('keeps selected event side/branch params in move logs for trace visibility', () => {
-    const def: GameDef = {
+    const def = assertValidatedGameDef({
       metadata: { id: 'sim-event-selection-trace', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 99 }],
@@ -190,7 +209,7 @@ describe('runGame', () => {
         {
           id: asActionId('event'),
 actor: 'active',
-executor: 'actor',
+executor: 'actor' as const,
 phase: asPhaseId('main'),
           params: [
             { name: 'side', domain: { query: 'enums', values: ['unshaded', 'shaded'] } },
@@ -204,7 +223,7 @@ phase: asPhaseId('main'),
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    } as const);
 
     const sideBranchAgent: Agent = {
       chooseMove(input) {

@@ -4016,6 +4016,66 @@ eventDecks:
           effects:
             - setGlobalMarker: { marker: activeLeader, state: khanh }
             - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+      - id: card-126
+        title: Young Turks
+        sideMode: single
+        order: 126
+        tags: [coup]
+        metadata:
+          flavorText: "Thi, Ky, & Thieu wag the US dog."
+        unshaded:
+          text: "Each ARVN Govern Special Activity adds +2 Patronage."
+          effects:
+            - setGlobalMarker: { marker: activeLeader, state: youngTurks }
+            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+      - id: card-127
+        title: Nguyen Cao Ky
+        sideMode: single
+        order: 127
+        tags: [coup]
+        metadata:
+          flavorText: "Brash brass Ky."
+        unshaded:
+          text: "Pacification costs 4 Resources per Terror or level."
+          effects:
+            - setGlobalMarker: { marker: activeLeader, state: ky }
+            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+      - id: card-128
+        title: Nguyen Van Thieu
+        sideMode: single
+        order: 128
+        tags: [coup]
+        metadata:
+          flavorText: "Stabilizer."
+        unshaded:
+          text: "No effect."
+          effects:
+            - setGlobalMarker: { marker: activeLeader, state: thieu }
+            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+      - id: card-129
+        title: Failed Attempt
+        sideMode: single
+        order: 129
+        tags: [coup]
+        metadata:
+          flavorText: "Desertion."
+        unshaded:
+          text: "ARVN removes 1 in 3 of its cubes per space (round down). Place below any RVN Leader card."
+          effects:
+            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+            - macro: rvn-leader-failed-attempt-desertion
+      - id: card-130
+        title: Failed Attempt
+        sideMode: single
+        order: 130
+        tags: [coup]
+        metadata:
+          flavorText: "Desertion."
+        unshaded:
+          text: "ARVN removes 1 in 3 of its cubes per space (round down). Place below any RVN Leader card."
+          effects:
+            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+            - macro: rvn-leader-failed-attempt-desertion
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Pool Zones (piece availability pools — supplement map-derived board zones)

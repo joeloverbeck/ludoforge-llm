@@ -299,4 +299,38 @@ describe('FITL RVN leader lingering effects', () => {
     );
     assert.ok(hasThirdsRemoval.length >= 1, 'Expected Desertion helper to remove floor(ARVN cubes/3) per space');
   });
+
+  it('compiles Failed Attempt coup duplicates with identical desertion effects and unique IDs', () => {
+    const def = compileDef();
+    const card129 = def.eventDecks?.[0]?.cards.find((card) => card.id === 'card-129');
+    const card130 = def.eventDecks?.[0]?.cards.find((card) => card.id === 'card-130');
+
+    assert.notEqual(card129, undefined);
+    assert.notEqual(card130, undefined);
+    assert.equal(card129?.order, 129);
+    assert.equal(card130?.order, 130);
+    assert.equal(card129?.title, 'Failed Attempt');
+    assert.equal(card130?.title, 'Failed Attempt');
+
+    assert.equal(
+      card129?.unshaded?.effects?.some((effect) => 'setGlobalMarker' in effect),
+      false,
+      'Failed Attempt cards should not mutate activeLeader directly',
+    );
+    assert.equal(card130?.unshaded?.effects?.some((effect) => 'setGlobalMarker' in effect), false);
+
+    const card129HasDesertion = findDeep(card129?.unshaded?.effects, (node) =>
+      node?.forEach?.limit?.op === '/' &&
+      node?.forEach?.limit?.right === 3 &&
+      findDeep(node.forEach?.over ?? {}, (child) => child?.prop === 'faction' && child?.value === 'ARVN').length > 0,
+    );
+    const card130HasDesertion = findDeep(card130?.unshaded?.effects, (node) =>
+      node?.forEach?.limit?.op === '/' &&
+      node?.forEach?.limit?.right === 3 &&
+      findDeep(node.forEach?.over ?? {}, (child) => child?.prop === 'faction' && child?.value === 'ARVN').length > 0,
+    );
+
+    assert.ok(card129HasDesertion.length >= 1, 'Card 129 should encode ARVN cube-thirds desertion loop');
+    assert.ok(card130HasDesertion.length >= 1, 'Card 130 should encode ARVN cube-thirds desertion loop');
+  });
 });

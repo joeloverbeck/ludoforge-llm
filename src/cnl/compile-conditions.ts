@@ -8,6 +8,7 @@ type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 export interface ConditionLoweringContext {
   readonly ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>;
   readonly bindingScope?: readonly string[];
+  readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface ConditionLoweringResult<TValue> {
@@ -277,6 +278,7 @@ function lowerTokenFilterEntry(
   if (!isRecord(source) || typeof source.prop !== 'string') {
     return missingCapability(path, 'token filter entry', source, ['{ prop: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }']);
   }
+  const prop = source.prop;
 
   // Normalize shorthand: { prop, eq: <value> } → { prop, op: 'eq', value }
   const resolvedOp =
@@ -311,9 +313,13 @@ function lowerTokenFilterEntry(
     if (!Array.isArray(rawValue) || rawValue.some((item: unknown) => typeof item !== 'string')) {
       return missingCapability(`${path}.value`, 'token filter set value', rawValue, ['string[]']);
     }
+    const stringValues = rawValue as readonly string[];
+    const diagnostics = stringValues.flatMap((item, index) =>
+      validateCanonicalTokenTraitLiteral(context, prop, item, `${path}.value.${index}`),
+    );
     return {
-      value: { prop: source.prop, op, value: [...rawValue] as readonly string[] },
-      diagnostics: [],
+      value: { prop, op, value: [...stringValues] },
+      diagnostics,
     };
   }
 
@@ -323,10 +329,40 @@ function lowerTokenFilterEntry(
     return { value: null, diagnostics: loweredValue.diagnostics };
   }
 
+  const canonicalDiagnostics =
+    typeof loweredValue.value === 'string'
+      ? validateCanonicalTokenTraitLiteral(context, prop, loweredValue.value, `${path}.value`)
+      : [];
+
   return {
-    value: { prop: source.prop, op, value: loweredValue.value },
-    diagnostics: loweredValue.diagnostics,
+    value: { prop, op, value: loweredValue.value },
+    diagnostics: [...loweredValue.diagnostics, ...canonicalDiagnostics],
   };
+}
+
+function validateCanonicalTokenTraitLiteral(
+  context: ConditionLoweringContext,
+  prop: string,
+  value: string,
+  path: string,
+): readonly Diagnostic[] {
+  const vocabulary = context.tokenTraitVocabulary?.[prop];
+  if (vocabulary === undefined || vocabulary.length === 0) {
+    return [];
+  }
+  if (vocabulary.includes(value)) {
+    return [];
+  }
+  return [
+    {
+      code: 'CNL_COMPILER_TOKEN_FILTER_VALUE_NON_CANONICAL',
+      path,
+      severity: 'error',
+      message: `Token filter uses non-canonical value "${value}" for prop "${prop}".`,
+      suggestion: 'Use a canonical value declared by piece runtime props.',
+      alternatives: [...vocabulary],
+    },
+  ];
 }
 
 function lowerTokenFilterArray(

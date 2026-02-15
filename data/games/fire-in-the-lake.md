@@ -914,7 +914,7 @@ effectMacros:
                                   zone: { param: destSpace }
                                   filter:
                                     - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                                    - { prop: type, op: in, value: ['troops', 'police', 'irregulars', 'rangers'] }
+                                    - { prop: type, op: in, value: ['troops', 'police', 'irregular', 'ranger'] }
                             in:
                               - if:
                                   when:
@@ -3703,7 +3703,7 @@ actionPipelines:
                     then:
                       - macro: place-from-available-or-map
                         args:
-                          pieceType: irregulars
+                          pieceType: irregular
                           faction: 'US'
                           targetSpace: $space
                           maxPieces: 2
@@ -3728,7 +3728,7 @@ actionPipelines:
                           then:
                             - macro: place-from-available-or-map
                               args:
-                                pieceType: rangers
+                                pieceType: ranger
                                 faction: 'ARVN'
                                 targetSpace: $space
                                 maxPieces: 2
@@ -3953,7 +3953,7 @@ actionPipelines:
                             - addVar: { scope: global, var: arvnResources, delta: -3 }
                       - macro: place-from-available-or-map
                         args:
-                          pieceType: rangers
+                          pieceType: ranger
                           faction: 'ARVN'
                           targetSpace: $space
                           maxPieces: 2
@@ -4486,7 +4486,7 @@ actionPipelines:
                   args:
                     space: $space
                     cubeFaction: 'US'
-                    sfType: irregulars
+                    sfType: irregular
       - stage: cap-cobras-bonus-removal
         effects:
           - macro: cap-sweep-cobras-unshaded-removal
@@ -4592,7 +4592,7 @@ actionPipelines:
                   args:
                     space: $space
                     cubeFaction: 'ARVN'
-                    sfType: rangers
+                    sfType: ranger
       - stage: cap-cobras-bonus-removal
         effects:
           - macro: cap-sweep-cobras-unshaded-removal
@@ -5598,7 +5598,7 @@ actionPipelines:
                         args:
                           space: $space
                           cubeFaction: ARVN
-                          sfType: rangers
+                          sfType: ranger
                 - if:
                     when: { op: '==', left: { ref: binding, name: '$adviseMode@{$space}' }, right: assault }
                     then:

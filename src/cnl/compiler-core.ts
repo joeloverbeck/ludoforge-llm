@@ -259,7 +259,14 @@ function compileExpandedDoc(
   }
 
   const setup = compileSection(diagnostics, () =>
-    lowerEffectsWithDiagnostics(doc.setup ?? [], ownershipByBase, diagnostics, 'doc.setup'),
+    lowerEffectsWithDiagnostics(
+      doc.setup ?? [],
+      ownershipByBase,
+      diagnostics,
+      'doc.setup',
+      [],
+      derivedFromAssets.tokenTraitVocabulary ?? undefined,
+    ),
   );
   const mergedSetup = [...derivedFromAssets.scenarioSetupEffects, ...setup.value];
   sections.setup = setup.failed ? null : mergedSetup;
@@ -270,7 +277,12 @@ function compileExpandedDoc(
     diagnostics.push(requiredSectionDiagnostic('doc.turnStructure', 'turnStructure'));
   } else {
     const turnStructureSection = compileSection(diagnostics, () =>
-      lowerTurnStructure(rawTurnStructure, ownershipByBase, diagnostics),
+      lowerTurnStructure(
+        rawTurnStructure,
+        ownershipByBase,
+        diagnostics,
+        derivedFromAssets.tokenTraitVocabulary ?? undefined,
+      ),
     );
     turnStructure = turnStructureSection.value;
     sections.turnStructure = turnStructureSection.failed ? null : turnStructureSection.value;
@@ -283,7 +295,13 @@ function compileExpandedDoc(
 
   if (doc.actionPipelines !== null) {
     const actionPipelines = compileSection(diagnostics, () =>
-      lowerActionPipelines(doc.actionPipelines, doc.actions, ownershipByBase, diagnostics),
+      lowerActionPipelines(
+        doc.actionPipelines,
+        doc.actions,
+        ownershipByBase,
+        diagnostics,
+        derivedFromAssets.tokenTraitVocabulary ?? undefined,
+      ),
     );
     sections.actionPipelines =
       actionPipelines.failed || actionPipelines.value === undefined ? null : actionPipelines.value;
@@ -294,12 +312,21 @@ function compileExpandedDoc(
   if (rawActions === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.actions', 'actions'));
   } else {
-    const actionsSection = compileSection(diagnostics, () => lowerActions(rawActions, ownershipByBase, diagnostics));
+    const actionsSection = compileSection(diagnostics, () =>
+      lowerActions(rawActions, ownershipByBase, diagnostics, derivedFromAssets.tokenTraitVocabulary ?? undefined),
+    );
     actions = actionsSection.value;
     sections.actions = actionsSection.failed ? null : actionsSection.value;
   }
 
-  const triggers = compileSection(diagnostics, () => lowerTriggers(doc.triggers ?? [], ownershipByBase, diagnostics));
+  const triggers = compileSection(diagnostics, () =>
+    lowerTriggers(
+      doc.triggers ?? [],
+      ownershipByBase,
+      diagnostics,
+      derivedFromAssets.tokenTraitVocabulary ?? undefined,
+    ),
+  );
   sections.triggers = triggers.failed ? null : triggers.value;
 
   let terminal: GameDef['terminal'] | null = null;
@@ -308,7 +335,12 @@ function compileExpandedDoc(
     diagnostics.push(requiredSectionDiagnostic('doc.terminal', 'terminal'));
   } else {
     const endConditionsSection = compileSection(diagnostics, () =>
-      lowerEndConditions(rawTerminal.conditions, ownershipByBase, diagnostics),
+      lowerEndConditions(
+        rawTerminal.conditions,
+        ownershipByBase,
+        diagnostics,
+        derivedFromAssets.tokenTraitVocabulary ?? undefined,
+      ),
     );
     const victorySection = compileSection(diagnostics, () => lowerVictory(rawTerminal, diagnostics));
     const scoringSection = compileSection(diagnostics, () => lowerScoring(rawTerminal.scoring ?? null, diagnostics));
@@ -324,7 +356,13 @@ function compileExpandedDoc(
   const rawEventDecks = doc.eventDecks;
   if (rawEventDecks !== null) {
     const eventDecks = compileSection(diagnostics, () =>
-      lowerEventDecks(rawEventDecks, ownershipByBase, diagnostics, 'doc.eventDecks'),
+      lowerEventDecks(
+        rawEventDecks,
+        ownershipByBase,
+        diagnostics,
+        'doc.eventDecks',
+        derivedFromAssets.tokenTraitVocabulary ?? undefined,
+      ),
     );
     sections.eventDecks = eventDecks.failed ? null : eventDecks.value;
   }

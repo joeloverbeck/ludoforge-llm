@@ -175,6 +175,7 @@ export function lowerTurnStructure(
   turnStructure: NonNullable<GameSpecDoc['turnStructure']>,
   ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>>,
   diagnostics: Diagnostic[],
+  tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
 ): TurnStructure {
   if ('activePlayerOrder' in turnStructure) {
     diagnostics.push({
@@ -197,10 +198,10 @@ export function lowerTurnStructure(
     }
 
     const onEnter = Array.isArray(phase.onEnter)
-      ? lowerEffectsWithDiagnostics(phase.onEnter, ownershipByBase, diagnostics, `${path}.onEnter`)
+      ? lowerEffectsWithDiagnostics(phase.onEnter, ownershipByBase, diagnostics, `${path}.onEnter`, [], tokenTraitVocabulary)
       : undefined;
     const onExit = Array.isArray(phase.onExit)
-      ? lowerEffectsWithDiagnostics(phase.onExit, ownershipByBase, diagnostics, `${path}.onExit`)
+      ? lowerEffectsWithDiagnostics(phase.onExit, ownershipByBase, diagnostics, `${path}.onExit`, [], tokenTraitVocabulary)
       : undefined;
 
     return {
@@ -219,6 +220,7 @@ export function lowerActions(
   actions: readonly unknown[],
   ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>>,
   diagnostics: Diagnostic[],
+  tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
 ): readonly ActionDef[] {
   const lowered: ActionDef[] = [];
   for (const [index, action] of actions.entries()) {
@@ -236,11 +238,11 @@ export function lowerActions(
     const actor = normalizePlayerSelector(action.actor, `${path}.actor`);
     diagnostics.push(...actor.diagnostics);
 
-    const params = lowerActionParams(action.params, ownershipByBase, diagnostics, `${path}.params`);
+    const params = lowerActionParams(action.params, ownershipByBase, diagnostics, `${path}.params`, tokenTraitVocabulary);
     const bindingScope = params.bindingScope;
-    const pre = lowerOptionalCondition(action.pre, ownershipByBase, bindingScope, diagnostics, `${path}.pre`);
-    const cost = lowerEffectsWithDiagnostics(action.cost, ownershipByBase, diagnostics, `${path}.cost`, bindingScope);
-    const effects = lowerEffectsWithDiagnostics(action.effects, ownershipByBase, diagnostics, `${path}.effects`, bindingScope);
+    const pre = lowerOptionalCondition(action.pre, ownershipByBase, bindingScope, diagnostics, `${path}.pre`, tokenTraitVocabulary);
+    const cost = lowerEffectsWithDiagnostics(action.cost, ownershipByBase, diagnostics, `${path}.cost`, bindingScope, tokenTraitVocabulary);
+    const effects = lowerEffectsWithDiagnostics(action.effects, ownershipByBase, diagnostics, `${path}.effects`, bindingScope, tokenTraitVocabulary);
     const limits = lowerActionLimits(action.limits, diagnostics, `${path}.limits`);
 
     if (actor.value === null || (action.pre !== null && pre === null)) {
@@ -267,6 +269,7 @@ function lowerActionParams(
   ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>>,
   diagnostics: Diagnostic[],
   path: string,
+  tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
 ): {
   readonly value: readonly ParamDef[];
   readonly bindingScope: readonly string[];
@@ -285,7 +288,11 @@ function lowerActionParams(
       return;
     }
 
-    const domain = lowerQueryNode(param.domain, { ownershipByBase }, `${paramPath}.domain`);
+    const domain = lowerQueryNode(
+      param.domain,
+      { ownershipByBase, ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }) },
+      `${paramPath}.domain`,
+    );
     diagnostics.push(...domain.diagnostics);
     if (domain.value === null) {
       return;
@@ -336,6 +343,7 @@ export function lowerTriggers(
   triggers: readonly unknown[],
   ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>>,
   diagnostics: Diagnostic[],
+  tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
 ): readonly TriggerDef[] {
   const lowered: TriggerDef[] = [];
   for (const [index, trigger] of triggers.entries()) {
@@ -347,9 +355,30 @@ export function lowerTriggers(
 
     const event = lowerTriggerEvent(trigger.event, ownershipByBase, diagnostics, `${path}.event`);
     const bindingScope = event === null ? [] : triggerBindingScope(event);
-    const match = lowerOptionalCondition(trigger.match, ownershipByBase, bindingScope, diagnostics, `${path}.match`);
-    const when = lowerOptionalCondition(trigger.when, ownershipByBase, bindingScope, diagnostics, `${path}.when`);
-    const effects = lowerEffectsWithDiagnostics(trigger.effects, ownershipByBase, diagnostics, `${path}.effects`, bindingScope);
+    const match = lowerOptionalCondition(
+      trigger.match,
+      ownershipByBase,
+      bindingScope,
+      diagnostics,
+      `${path}.match`,
+      tokenTraitVocabulary,
+    );
+    const when = lowerOptionalCondition(
+      trigger.when,
+      ownershipByBase,
+      bindingScope,
+      diagnostics,
+      `${path}.when`,
+      tokenTraitVocabulary,
+    );
+    const effects = lowerEffectsWithDiagnostics(
+      trigger.effects,
+      ownershipByBase,
+      diagnostics,
+      `${path}.effects`,
+      bindingScope,
+      tokenTraitVocabulary,
+    );
 
     if (event === null || match === null || when === null) {
       continue;
@@ -468,6 +497,7 @@ export function lowerEndConditions(
   endConditions: readonly unknown[],
   ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>>,
   diagnostics: Diagnostic[],
+  tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
 ): readonly EndCondition[] {
   const lowered: EndCondition[] = [];
   for (const [index, endCondition] of endConditions.entries()) {
@@ -477,7 +507,11 @@ export function lowerEndConditions(
       continue;
     }
 
-    const when = lowerConditionNode(endCondition.when, { ownershipByBase }, `${path}.when`);
+    const when = lowerConditionNode(
+      endCondition.when,
+      { ownershipByBase, ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }) },
+      `${path}.when`,
+    );
     diagnostics.push(...when.diagnostics);
     const result = lowerTerminalResult(endCondition.result, diagnostics, `${path}.result`);
 
@@ -565,6 +599,7 @@ export function lowerOptionalCondition(
   bindingScope: readonly string[],
   diagnostics: Diagnostic[],
   path: string,
+  tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
 ): ConditionAST | null | undefined {
   if (source === null) {
     return null;
@@ -572,7 +607,11 @@ export function lowerOptionalCondition(
   if (source === undefined) {
     return undefined;
   }
-  const lowered = lowerConditionNode(source, { ownershipByBase, bindingScope }, path);
+  const lowered = lowerConditionNode(
+    source,
+    { ownershipByBase, bindingScope, ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }) },
+    path,
+  );
   diagnostics.push(...lowered.diagnostics);
   return lowered.value;
 }
@@ -583,13 +622,18 @@ export function lowerEffectsWithDiagnostics(
   diagnostics: Diagnostic[],
   path: string,
   bindingScope: readonly string[] = [],
+  tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
 ): readonly EffectAST[] {
   if (!Array.isArray(source)) {
     diagnostics.push(missingCapabilityDiagnostic(path, 'effects array', source, ['array']));
     return [];
   }
 
-  const lowered = lowerEffectArray(source, { ownershipByBase, bindingScope }, path);
+  const lowered = lowerEffectArray(
+    source,
+    { ownershipByBase, bindingScope, ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }) },
+    path,
+  );
   diagnostics.push(...lowered.diagnostics);
   return lowered.value ?? [];
 }

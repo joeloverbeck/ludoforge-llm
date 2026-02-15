@@ -16,6 +16,7 @@ type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 export interface EffectLoweringContext {
   readonly ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>;
   readonly bindingScope?: readonly string[];
+  readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface EffectLoweringResult<TValue> {
@@ -1120,6 +1121,7 @@ function makeConditionContext(context: EffectLoweringContext, scope: BindingScop
   return {
     ownershipByBase: context.ownershipByBase,
     bindingScope: scope.visibleBindings(),
+    ...(context.tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary: context.tokenTraitVocabulary }),
   };
 }
 

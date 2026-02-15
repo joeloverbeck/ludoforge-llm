@@ -317,9 +317,9 @@ describe('FITL COIN operations integration', () => {
       const sweepMacroCall = findDeep(activate.effects, (node: any) =>
         node?.macro === 'sweep-activation' &&
         node?.args?.cubeFaction === 'US' &&
-        node?.args?.sfType === 'irregulars',
+        node?.args?.sfType === 'irregular',
       );
-      assert.ok(sweepMacroCall.length >= 1, 'Expected sweep-activation macro call with US/irregulars args');
+      assert.ok(sweepMacroCall.length >= 1, 'Expected sweep-activation macro call with US/irregular args');
     });
   });
   /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -431,9 +431,9 @@ describe('FITL COIN operations integration', () => {
       const sweepMacroCall = findDeep(resolvePerSpace.effects, (node: any) =>
         node?.macro === 'sweep-activation' &&
         node?.args?.cubeFaction === 'ARVN' &&
-        node?.args?.sfType === 'rangers',
+        node?.args?.sfType === 'ranger',
       );
-      assert.ok(sweepMacroCall.length >= 1, 'Expected sweep-activation macro call with ARVN/rangers args');
+      assert.ok(sweepMacroCall.length >= 1, 'Expected sweep-activation macro call with ARVN/ranger args');
     });
   });
   /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -514,7 +514,7 @@ describe('FITL COIN operations integration', () => {
           [targetSpace]: [
             ...(start.zones[targetSpace] ?? []),
             { id: asTokenId('arvn-sweep-jungle-police-1'), type: 'police', props: { faction: 'ARVN', type: 'police' } },
-            { id: asTokenId('arvn-sweep-jungle-ranger-1'), type: 'rangers', props: { faction: 'ARVN', type: 'rangers' } },
+            { id: asTokenId('arvn-sweep-jungle-ranger-1'), type: 'ranger', props: { faction: 'ARVN', type: 'ranger' } },
             { id: asTokenId('arvn-sweep-jungle-nva-g1'), type: 'guerrilla', props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' } },
             { id: asTokenId('arvn-sweep-jungle-nva-g2'), type: 'guerrilla', props: { faction: 'NVA', type: 'guerrilla', activity: 'underground' } },
             { id: asTokenId('arvn-sweep-jungle-vc-g1'), type: 'guerrilla', props: { faction: 'VC', type: 'guerrilla', activity: 'underground' } },
@@ -658,17 +658,17 @@ describe('FITL COIN operations integration', () => {
     });
 
     it('AC4: places Rangers up to 2', () => {
-      // Verify macro args at YAML level (rangers, maxPieces: 2) and compiled forEach limit
+      // Verify macro args at YAML level (ranger, maxPieces: 2) and compiled forEach limit
       const parsed = parseArvnProfile();
       const resolvePerSpace = parsed.stages[1];
 
-      // Pre-compilation: macro call specifies pieceType: rangers, maxPieces: 2
+      // Pre-compilation: macro call specifies pieceType: ranger, maxPieces: 2
       const rangerMacro = findDeep(resolvePerSpace!.effects, (node: any) =>
         node?.macro === 'place-from-available-or-map' &&
-        node?.args?.pieceType === 'rangers' &&
+        node?.args?.pieceType === 'ranger' &&
         node?.args?.maxPieces === 2,
       );
-      assert.ok(rangerMacro.length >= 1, 'Expected place-from-available-or-map macro for rangers with maxPieces: 2');
+      assert.ok(rangerMacro.length >= 1, 'Expected place-from-available-or-map macro for ranger with maxPieces: 2');
 
       // Post-compilation: forEach with limit 2 sourcing from available-ARVN with type filter
       const compiled = compileArvnProfile();
@@ -684,9 +684,9 @@ describe('FITL COIN operations integration', () => {
       // Verify compiled token filter preserves piece type
       const rangerFiltered = findDeep(compiledRps.effects, (node: any) =>
         node?.forEach?.over?.query === 'tokensInZone' &&
-        node?.forEach?.over?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'rangers'),
+        node?.forEach?.over?.filter?.some?.((f: any) => f.prop === 'type' && f.op === 'eq' && f.value === 'ranger'),
       );
-      assert.ok(rangerFiltered.length >= 1, 'Expected compiled tokensInZone filter for type=rangers');
+      assert.ok(rangerFiltered.length >= 1, 'Expected compiled tokensInZone filter for type=ranger');
     });
 
     it('AC5: places cubes at Cities or at COIN Bases up to 6', () => {

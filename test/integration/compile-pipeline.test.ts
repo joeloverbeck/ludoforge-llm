@@ -1355,6 +1355,171 @@ describe('compile pipeline integration', () => {
     );
   });
 
+  it('rejects non-canonical token filter trait literals against selected piece-catalog vocabulary', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-non-canonical-token-trait-filter',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: map-foundation',
+      '    kind: map',
+      '    payload:',
+      '      spaces:',
+      '        - id: alpha:none',
+      '          spaceType: province',
+      '          population: 1',
+      '          econ: 1',
+      '          terrainTags: [lowland]',
+      '          country: south-vietnam',
+      '          coastal: false',
+      '          adjacentTo: []',
+      '  - id: pieces-foundation',
+      '    kind: pieceCatalog',
+      '    payload:',
+      '      pieceTypes:',
+      '        - id: us-troops',
+      '          faction: us',
+      '          statusDimensions: []',
+      '          transitions: []',
+      '          runtimeProps: { faction: us, type: troops }',
+      '      inventory:',
+      '        - pieceTypeId: us-troops',
+      '          faction: us',
+      '          total: 2',
+      '  - id: scenario-foundation',
+      '    kind: scenario',
+      '    payload:',
+      '      mapAssetId: map-foundation',
+      '      pieceCatalogAssetId: pieces-foundation',
+      '      scenarioName: Foundation',
+      '      yearRange: 1964-1965',
+      '      factionPools:',
+      '        - faction: us',
+      '          availableZoneId: alpha:none',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects:',
+      '      - forEach:',
+      '          bind: $token',
+      '          over:',
+      '            query: tokensInZone',
+      '            zone: alpha:none',
+      '            filter:',
+      '              - { prop: type, op: eq, value: troop }',
+      '          effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TOKEN_FILTER_VALUE_NON_CANONICAL' &&
+          diagnostic.path === 'doc.actions.0.effects.0.forEach.over.filter[0].value',
+      ),
+      true,
+    );
+  });
+
+  it('accepts canonical token filter trait literals from selected piece-catalog vocabulary', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-canonical-token-trait-filter',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: map-foundation',
+      '    kind: map',
+      '    payload:',
+      '      spaces:',
+      '        - id: alpha:none',
+      '          spaceType: province',
+      '          population: 1',
+      '          econ: 1',
+      '          terrainTags: [lowland]',
+      '          country: south-vietnam',
+      '          coastal: false',
+      '          adjacentTo: []',
+      '  - id: pieces-foundation',
+      '    kind: pieceCatalog',
+      '    payload:',
+      '      pieceTypes:',
+      '        - id: us-troops',
+      '          faction: us',
+      '          statusDimensions: []',
+      '          transitions: []',
+      '          runtimeProps: { faction: us, type: troops }',
+      '      inventory:',
+      '        - pieceTypeId: us-troops',
+      '          faction: us',
+      '          total: 2',
+      '  - id: scenario-foundation',
+      '    kind: scenario',
+      '    payload:',
+      '      mapAssetId: map-foundation',
+      '      pieceCatalogAssetId: pieces-foundation',
+      '      scenarioName: Foundation',
+      '      yearRange: 1964-1965',
+      '      factionPools:',
+      '        - faction: us',
+      '          availableZoneId: alpha:none',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects:',
+      '      - forEach:',
+      '          bind: $token',
+      '          over:',
+      '            query: tokensInZone',
+      '            zone: alpha:none',
+      '            filter:',
+      '              - { prop: type, op: eq, value: troops }',
+      '          effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assertNoDiagnostics(compiled);
+    assert.notEqual(compiled.gameDef, null);
+  });
+
   it('runs parse/validate/expand/compile/validate deterministically for malformed fixture', () => {
     const markdown = readCompilerFixture('compile-malformed.md');
 

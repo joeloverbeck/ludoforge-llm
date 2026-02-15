@@ -24,6 +24,7 @@ export function lowerActionPipelines(
   rawActions: GameSpecDoc['actions'],
   ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>>,
   diagnostics: Diagnostic[],
+  tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
 ): readonly ActionPipelineDef[] | undefined {
   if (rawPipelines === null) {
     return undefined;
@@ -163,6 +164,7 @@ export function lowerActionPipelines(
         runtimeBindings,
         diagnostics,
         `${basePath}.applicability`,
+        tokenTraitVocabulary,
       );
       if (loweredApplicability !== undefined && loweredApplicability !== null) {
         applicability = loweredApplicability;
@@ -177,6 +179,7 @@ export function lowerActionPipelines(
         runtimeBindings,
         diagnostics,
         `${basePath}.legality`,
+        tokenTraitVocabulary,
       );
       if (loweredLegality !== undefined) {
         legality = loweredLegality;
@@ -191,6 +194,7 @@ export function lowerActionPipelines(
         runtimeBindings,
         diagnostics,
         `${basePath}.costValidation`,
+        tokenTraitVocabulary,
       );
       if (loweredValidate !== undefined) {
         costValidation = loweredValidate;
@@ -260,6 +264,7 @@ export function lowerActionPipelines(
       diagnostics,
       `${basePath}.costEffects`,
       runtimeBindings,
+      tokenTraitVocabulary,
     );
 
     const rawTargeting = rawPipeline.targeting;
@@ -271,6 +276,7 @@ export function lowerActionPipelines(
         runtimeBindings,
         diagnostics,
         `${basePath}.targeting.filter`,
+        tokenTraitVocabulary,
       );
       if (loweredFilter !== undefined && loweredFilter !== null) {
         targetingFilter = loweredFilter;
@@ -294,6 +300,7 @@ export function lowerActionPipelines(
         diagnostics,
         `${stagePath}.effects`,
         accumulatedBindings,
+        tokenTraitVocabulary,
       );
       const stageBindings: string[] = [];
       for (const eff of loweredEffects) {

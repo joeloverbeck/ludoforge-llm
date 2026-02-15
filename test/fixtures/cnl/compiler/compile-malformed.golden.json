@@ -3,7 +3,7 @@
     {
       "code": "CNL_COMPILER_PLAYER_SELECTOR_INVALID",
       "path": "doc.actions.0.actor",
-      "suggestion": "Use one of: actor, active, activePlayer, all, allOther, left, right, <playerId>, or $binding."
+      "suggestion": "Use one of: actor, active, all, allOther, left, right, <playerId>, or $binding."
     },
     {
       "code": "CNL_COMPILER_MISSING_CAPABILITY",

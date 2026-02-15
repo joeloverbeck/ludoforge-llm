@@ -61,13 +61,23 @@ describe('canonicalizeZoneSelector', () => {
   });
 
   it('canonicalizes explicit selectors to zoneBase:qualifier form', () => {
-    const activeAlias = canonicalizeZoneSelector('hand:activePlayer', ownershipByBase, 'doc.actions.0.effects.0.draw.to');
-    assert.equal(activeAlias.value, 'hand:active');
-    assertNoDiagnostics(activeAlias);
-
     const numeric = canonicalizeZoneSelector('hand:2', ownershipByBase, 'doc.actions.0.effects.0.draw.to');
     assert.equal(numeric.value, 'hand:2');
     assertNoDiagnostics(numeric);
+  });
+
+  it('rejects non-canonical owner qualifier aliases with deterministic diagnostics', () => {
+    const result = canonicalizeZoneSelector('hand:activePlayer', ownershipByBase, 'doc.actions.0.effects.0.draw.to');
+    assert.equal(result.value, null);
+    assert.deepEqual(result.diagnostics, [
+      {
+        code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+        path: 'doc.actions.0.effects.0.draw.to',
+        severity: 'error',
+        message: 'Non-canonical player selector: "activePlayer".',
+        suggestion: 'Use "active".',
+      },
+    ]);
   });
 
   it('returns stable diagnostic paths for invalid selectors', () => {

@@ -4,12 +4,25 @@ import { describe, it } from 'node:test';
 import { normalizeActionExecutorSelector, normalizePlayerSelector, normalizeZoneOwnerQualifier } from '../../src/cnl/compile-selectors.js';
 
 describe('normalizePlayerSelector', () => {
-  it('normalizes canonical string selectors and aliases', () => {
+  it('normalizes canonical string selectors', () => {
     assert.equal(normalizePlayerSelector('actor', 'doc.actions.0.actor').value, 'actor');
-    assert.equal(normalizePlayerSelector('activePlayer', 'doc.actions.0.actor').value, 'active');
     assert.equal(normalizePlayerSelector('active', 'doc.actions.0.actor').value, 'active');
     assert.equal(normalizePlayerSelector('all', 'doc.actions.0.actor').value, 'all');
     assert.equal(normalizePlayerSelector('allOther', 'doc.actions.0.actor').value, 'allOther');
+  });
+
+  it('rejects non-canonical alias selectors with canonical replacement guidance', () => {
+    const result = normalizePlayerSelector('activePlayer', 'doc.actions.0.actor');
+    assert.equal(result.value, null);
+    assert.deepEqual(result.diagnostics, [
+      {
+        code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+        path: 'doc.actions.0.actor',
+        severity: 'error',
+        message: 'Non-canonical player selector: "activePlayer".',
+        suggestion: 'Use "active".',
+      },
+    ]);
   });
 
   it('normalizes relative, numeric, and binding selectors', () => {
@@ -34,19 +47,33 @@ describe('normalizePlayerSelector', () => {
         path: 'doc.actions.0.actor',
         severity: 'error',
         message: 'Invalid player selector: "nobody".',
-        suggestion: 'Use one of: actor, active, activePlayer, all, allOther, left, right, <playerId>, or $binding.',
+        suggestion: 'Use one of: actor, active, all, allOther, left, right, <playerId>, or $binding.',
       },
     ]);
   });
 });
 
 describe('normalizeZoneOwnerQualifier', () => {
-  it('normalizes none/all and player-qualifier aliases', () => {
+  it('normalizes none/all and canonical player qualifiers', () => {
     assert.equal(normalizeZoneOwnerQualifier('none', 'doc.actions.0.effects.0.draw.to').value, 'none');
     assert.equal(normalizeZoneOwnerQualifier('all', 'doc.actions.0.effects.0.draw.to').value, 'all');
-    assert.equal(normalizeZoneOwnerQualifier('activePlayer', 'doc.actions.0.effects.0.draw.to').value, 'active');
+    assert.equal(normalizeZoneOwnerQualifier('active', 'doc.actions.0.effects.0.draw.to').value, 'active');
     assert.equal(normalizeZoneOwnerQualifier('2', 'doc.actions.0.effects.0.draw.to').value, '2');
     assert.equal(normalizeZoneOwnerQualifier('$owner', 'doc.actions.0.effects.0.draw.to').value, '$owner');
+  });
+
+  it('rejects non-canonical player owner qualifier aliases', () => {
+    const result = normalizeZoneOwnerQualifier('activePlayer', 'doc.actions.0.effects.0.draw.to');
+    assert.equal(result.value, null);
+    assert.deepEqual(result.diagnostics, [
+      {
+        code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+        path: 'doc.actions.0.effects.0.draw.to',
+        severity: 'error',
+        message: 'Non-canonical player selector: "activePlayer".',
+        suggestion: 'Use "active".',
+      },
+    ]);
   });
 
   it('reports invalid owner qualifier with zone-selector error code', () => {

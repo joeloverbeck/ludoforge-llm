@@ -18,9 +18,9 @@ describe('compile actions', () => {
       actions: [
         {
           id: 'play',
-actor: 'activePlayer',
-executor: 'actor',
-phase: 'main',
+          actor: 'active',
+          executor: 'actor',
+          phase: 'main',
           params: [{ name: 'count', domain: { query: 'intsInRange', min: 1, max: 2 } }],
           pre: {
             op: '>=',
@@ -49,6 +49,31 @@ phase: 'main',
     assert.deepEqual(action?.params[0]?.domain, { query: 'intsInRange', min: 1, max: 2 });
     assert.deepEqual(action?.limits, [{ scope: 'turn', max: 1 }]);
     assert.deepEqual(action?.effects, [{ draw: { from: 'deck:none', to: 'hand:0', count: 1 } }]);
+  });
+
+  it('fails compile when actor uses non-canonical alias selector token', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-compile-alias-actor', players: { min: 2, max: 2 } },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'play', actor: 'activePlayer', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 999 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    assert.deepEqual(
+      result.diagnostics.find((diagnostic) => diagnostic.path === 'doc.actions.0.actor'),
+      {
+        code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+        path: 'doc.actions.0.actor',
+        severity: 'error',
+        message: 'Non-canonical player selector: "activePlayer".',
+        suggestion: 'Use "active".',
+      },
+    );
   });
 
   it('accepts binding-derived executor when binding is declared action param', () => {

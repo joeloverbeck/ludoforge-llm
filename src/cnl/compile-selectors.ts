@@ -1,10 +1,9 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { asPlayerId } from '../kernel/branded.js';
 import { getActionSelectorContract } from '../kernel/action-selector-contract-registry.js';
+import { PLAYER_SELECTOR_SUGGESTION, ZONE_OWNER_QUALIFIER_SUGGESTION } from '../kernel/player-selector-vocabulary.js';
 import type { ActionExecutorSel, PlayerSel } from '../kernel/types.js';
 
-const PLAYER_SELECTOR_SUGGESTION =
-  'Use one of: actor, active, activePlayer, all, allOther, left, right, <playerId>, or $binding.';
 const ACTION_EXECUTOR_SELECTOR_SUGGESTION = getActionSelectorContract('executor').invalidSelectorSuggestion;
 
 export interface SelectorCompileResult<TValue> {
@@ -115,7 +114,7 @@ export function normalizeZoneOwnerQualifier(value: string, path: string): Select
           path,
           severity: 'error',
           message: `Zone owner qualifier "${value}" is not supported.`,
-          suggestion: 'Use none, all, actor, active, allOther, left, right, <playerId>, or $binding.',
+          suggestion: ZONE_OWNER_QUALIFIER_SUGGESTION,
         },
       ],
     };
@@ -138,15 +137,18 @@ export function normalizeZoneOwnerQualifier(value: string, path: string): Select
         path,
         severity: 'error',
         message: `Zone owner qualifier "${value}" is not supported.`,
-        suggestion: 'Use none, all, actor, active, allOther, left, right, <playerId>, or $binding.',
+        suggestion: ZONE_OWNER_QUALIFIER_SUGGESTION,
       },
     ],
   };
 }
 
 function normalizePlayerSelectorFromString(value: string, path: string): SelectorCompileResult<PlayerSel> {
-  if (value === 'activePlayer' || value === 'active') {
+  if (value === 'active') {
     return { value: 'active', diagnostics: [] };
+  }
+  if (value === 'activePlayer') {
+    return nonCanonicalPlayerSelector(path, value, 'active');
   }
   if (value === 'actor' || value === 'all' || value === 'allOther') {
     return { value, diagnostics: [] };
@@ -162,6 +164,21 @@ function normalizePlayerSelectorFromString(value: string, path: string): Selecto
   }
 
   return invalidPlayerSelector(path, value);
+}
+
+function nonCanonicalPlayerSelector(path: string, actual: string, canonical: string): SelectorCompileResult<PlayerSel> {
+  return {
+    value: null,
+    diagnostics: [
+      {
+        code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+        path,
+        severity: 'error',
+        message: `Non-canonical player selector: "${actual}".`,
+        suggestion: `Use "${canonical}".`,
+      },
+    ],
+  };
 }
 
 function invalidPlayerSelector(path: string, actual: unknown): SelectorCompileResult<PlayerSel> {

@@ -42,9 +42,9 @@ describe('compile-conditions lowering', () => {
     });
   });
 
-  it('lowers query owner aliases for zones filter', () => {
+  it('lowers canonical query owner selectors for zones filter', () => {
     const result = lowerQueryNode(
-      { query: 'zones', filter: { owner: 'activePlayer' } },
+      { query: 'zones', filter: { owner: 'active' } },
       context,
       'doc.actions.0.params.0.domain',
     );
@@ -54,6 +54,25 @@ describe('compile-conditions lowering', () => {
       query: 'zones',
       filter: { owner: 'active' },
     });
+  });
+
+  it('rejects non-canonical query owner alias selectors for zones filter', () => {
+    const result = lowerQueryNode(
+      { query: 'zones', filter: { owner: 'activePlayer' } },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(result.diagnostics, [
+      {
+        code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+        path: 'doc.actions.0.params.0.domain.filter.owner',
+        severity: 'error',
+        message: 'Non-canonical player selector: "activePlayer".',
+        suggestion: 'Use "active".',
+      },
+    ]);
   });
 
   it('lowers intsInRange query with dynamic ValueExpr bounds', () => {

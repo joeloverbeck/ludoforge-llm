@@ -56,7 +56,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
       ],
       terminal: {
         conditions: [
-          { when: { op: '>=', left: { ref: 'gvar', var: 'tick' }, right: 3 }, result: { type: 'win', player: 'activePlayer' } },
+          { when: { op: '>=', left: { ref: 'gvar', var: 'tick' }, right: 3 }, result: { type: 'win', player: 'active' } },
           { when: { op: '>=', left: { ref: 'gvar', var: 'tick' }, right: 5 }, result: { type: 'draw' } },
         ],
       },
@@ -78,6 +78,31 @@ describe('compile top-level actions/triggers/end conditions', () => {
     if (result.gameDef?.terminal.conditions[0]?.result.type === 'win') {
       assert.equal(result.gameDef.terminal.conditions[0].result.player, 'active');
     }
+  });
+
+  it('fails compile when terminal winner selector uses non-canonical alias token', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'top-level-terminal-alias-player', players: { min: 2, max: 2 } },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'win', player: 'activePlayer' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    assert.deepEqual(
+      result.diagnostics.find((diagnostic) => diagnostic.path === 'doc.terminal.conditions.0.result.player'),
+      {
+        code: 'CNL_COMPILER_PLAYER_SELECTOR_INVALID',
+        path: 'doc.terminal.conditions.0.result.player',
+        severity: 'error',
+        message: 'Non-canonical player selector: "activePlayer".',
+        suggestion: 'Use "active".',
+      },
+    );
   });
 
   it('returns deterministic blocking diagnostics for unknown trigger action references', () => {

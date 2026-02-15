@@ -1,4 +1,5 @@
 import type { PlayerSel } from './types.js';
+import { ACTION_EXECUTOR_SELECTOR_SUGGESTION, PLAYER_SELECTOR_SUGGESTION } from './player-selector-vocabulary.js';
 
 export type ActionSelectorRole = 'actor' | 'executor';
 
@@ -19,11 +20,6 @@ interface ActionSelectorContract {
   readonly missingBindingDiagnosticCode: string;
   readonly bindingWithPipelineUnsupportedDiagnosticCode?: string;
 }
-
-const PLAYER_SELECTOR_SUGGESTION =
-  'Use one of: actor, active, activePlayer, all, allOther, left, right, <playerId>, or $binding.';
-const ACTION_EXECUTOR_SELECTOR_SUGGESTION =
-  'Use one of: actor, active, left, right, <playerId>, or $binding.';
 
 const ACTION_SELECTOR_ROLE_ORDER: readonly ActionSelectorRole[] = ['actor', 'executor'];
 

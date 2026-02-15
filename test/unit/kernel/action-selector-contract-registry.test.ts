@@ -6,6 +6,7 @@ import {
   getActionSelectorContract,
 } from '../../../src/kernel/action-selector-contract-registry.js';
 import { asPlayerId } from '../../../src/kernel/branded.js';
+import { ACTION_EXECUTOR_SELECTOR_SUGGESTION, PLAYER_SELECTOR_SUGGESTION } from '../../../src/kernel/player-selector-vocabulary.js';
 
 describe('action selector contract registry', () => {
   it('covers deterministic selector contract matrix across role bindings and pipeline presence', () => {
@@ -93,5 +94,10 @@ describe('action selector contract registry', () => {
       enforcePipelineBindingCompatibility: false,
     });
     assert.deepEqual(violations, []);
+  });
+
+  it('uses canonical shared selector suggestion vocabulary per role', () => {
+    assert.equal(getActionSelectorContract('actor').invalidSelectorSuggestion, PLAYER_SELECTOR_SUGGESTION);
+    assert.equal(getActionSelectorContract('executor').invalidSelectorSuggestion, ACTION_EXECUTOR_SELECTOR_SUGGESTION);
   });
 });

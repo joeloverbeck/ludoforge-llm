@@ -17,7 +17,7 @@ import type {
   TurnStructure,
   VariableDef,
 } from '../kernel/types.js';
-import { lowerConditionNode, lowerQueryNode, lowerValueNode } from './compile-conditions.js';
+import { lowerConditionNode, lowerNumericValueNode, lowerQueryNode } from './compile-conditions.js';
 import { lowerEffectArray } from './compile-effects.js';
 import { normalizeActionExecutorSelector, normalizePlayerSelector } from './compile-selectors.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
@@ -568,7 +568,7 @@ export function lowerScoring(
     return undefined;
   }
 
-  const loweredValue = lowerValueNode(scoring.value, { ownershipByBase: {} }, 'doc.terminal.scoring.value');
+  const loweredValue = lowerNumericValueNode(scoring.value, { ownershipByBase: {} }, 'doc.terminal.scoring.value');
   diagnostics.push(...loweredValue.diagnostics);
   if (loweredValue.value === null) {
     return undefined;

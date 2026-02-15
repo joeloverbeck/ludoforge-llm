@@ -74,7 +74,7 @@ describe('resolveChooseNCardinality', () => {
       internalDecisionId: 'decision:$picks',
       bind: '$picks',
       options: { query: 'players' as const },
-      max: false,
+      max: false as unknown as number,
     };
 
     assert.throws(

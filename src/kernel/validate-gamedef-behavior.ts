@@ -3,12 +3,14 @@ import type {
   ConditionAST,
   EffectAST,
   GameDef,
+  NumericValueExpr,
   OptionsQuery,
   Reference,
   TokenFilterPredicate,
   ValueExpr,
   ZoneRef,
 } from './types.js';
+import { isNumericValueExpr } from './numeric-value-expr.js';
 import {
   type ValidationContext,
   pushMissingReferenceDiagnostic,
@@ -266,6 +268,24 @@ export const validateValueExpr = (
   validateOptionsQuery(diagnostics, valueExpr.aggregate.query, `${path}.aggregate.query`, context);
 };
 
+export const validateNumericValueExpr = (
+  diagnostics: Diagnostic[],
+  valueExpr: NumericValueExpr,
+  path: string,
+  context: ValidationContext,
+): void => {
+  validateValueExpr(diagnostics, valueExpr, path, context);
+  if (!isNumericValueExpr(valueExpr)) {
+    diagnostics.push({
+      code: 'VALUE_EXPR_NUMERIC_REQUIRED',
+      path,
+      severity: 'error',
+      message: 'Expected a numeric value expression in this context.',
+      suggestion: 'Use number, numeric refs/aggregates, arithmetic, or numeric if-expression branches.',
+    });
+  }
+};
+
 export const validateConditionAst = (
   diagnostics: Diagnostic[],
   condition: ConditionAST,
@@ -406,7 +426,35 @@ export const validateOptionsQuery = (
       return;
     }
     case 'intsInRange': {
-      if (query.min > query.max) {
+      if (typeof query.min === 'number') {
+        if (!Number.isSafeInteger(query.min)) {
+          diagnostics.push({
+            code: 'DOMAIN_INTS_RANGE_BOUND_INVALID',
+            path: `${path}.min`,
+            severity: 'error',
+            message: 'intsInRange.min must be a safe integer literal when provided as a number.',
+            suggestion: 'Use an integer literal or a ValueExpr that evaluates to an integer.',
+          });
+        }
+      } else {
+        validateNumericValueExpr(diagnostics, query.min, `${path}.min`, context);
+      }
+
+      if (typeof query.max === 'number') {
+        if (!Number.isSafeInteger(query.max)) {
+          diagnostics.push({
+            code: 'DOMAIN_INTS_RANGE_BOUND_INVALID',
+            path: `${path}.max`,
+            severity: 'error',
+            message: 'intsInRange.max must be a safe integer literal when provided as a number.',
+            suggestion: 'Use an integer literal or a ValueExpr that evaluates to an integer.',
+          });
+        }
+      } else {
+        validateNumericValueExpr(diagnostics, query.max, `${path}.max`, context);
+      }
+
+      if (typeof query.min === 'number' && typeof query.max === 'number' && query.min > query.max) {
         diagnostics.push({
           code: 'DOMAIN_INTS_RANGE_INVALID',
           path,
@@ -560,7 +608,7 @@ export const validateEffectAst = (
       });
     }
 
-    validateValueExpr(diagnostics, effect.addVar.delta, `${path}.addVar.delta`, context);
+    validateNumericValueExpr(diagnostics, effect.addVar.delta, `${path}.addVar.delta`, context);
     return;
   }
 
@@ -638,7 +686,7 @@ export const validateEffectAst = (
       validateEffectAst(diagnostics, entry, `${path}.forEach.effects[${index}]`, context);
     });
     if (effect.forEach.limit !== undefined) {
-      validateValueExpr(diagnostics, effect.forEach.limit, `${path}.forEach.limit`, context);
+      validateNumericValueExpr(diagnostics, effect.forEach.limit, `${path}.forEach.limit`, context);
     }
     effect.forEach.in?.forEach((entry, index) => {
       validateEffectAst(diagnostics, entry, `${path}.forEach.in[${index}]`, context);
@@ -647,7 +695,7 @@ export const validateEffectAst = (
   }
 
   if ('removeByPriority' in effect) {
-    validateValueExpr(diagnostics, effect.removeByPriority.budget, `${path}.removeByPriority.budget`, context);
+    validateNumericValueExpr(diagnostics, effect.removeByPriority.budget, `${path}.removeByPriority.budget`, context);
 
     effect.removeByPriority.groups.forEach((group, index) => {
       const groupPath = `${path}.removeByPriority.groups[${index}]`;
@@ -683,8 +731,8 @@ export const validateEffectAst = (
   }
 
   if ('rollRandom' in effect) {
-    validateValueExpr(diagnostics, effect.rollRandom.min, `${path}.rollRandom.min`, context);
-    validateValueExpr(diagnostics, effect.rollRandom.max, `${path}.rollRandom.max`, context);
+    validateNumericValueExpr(diagnostics, effect.rollRandom.min, `${path}.rollRandom.min`, context);
+    validateNumericValueExpr(diagnostics, effect.rollRandom.max, `${path}.rollRandom.max`, context);
     effect.rollRandom.in.forEach((entry, index) => {
       validateEffectAst(diagnostics, entry, `${path}.rollRandom.in[${index}]`, context);
     });
@@ -726,7 +774,7 @@ export const validateEffectAst = (
         context.markerLatticeCandidates,
       );
     }
-    validateValueExpr(diagnostics, effect.shiftMarker.delta, `${path}.shiftMarker.delta`, context);
+    validateNumericValueExpr(diagnostics, effect.shiftMarker.delta, `${path}.shiftMarker.delta`, context);
     return;
   }
 
@@ -811,7 +859,7 @@ export const validateEffectAst = (
         context.globalMarkerLatticeCandidates,
       );
     }
-    validateValueExpr(diagnostics, effect.shiftGlobalMarker.delta, `${path}.shiftGlobalMarker.delta`, context);
+    validateNumericValueExpr(diagnostics, effect.shiftGlobalMarker.delta, `${path}.shiftGlobalMarker.delta`, context);
     return;
   }
 
@@ -927,7 +975,7 @@ export const validateEffectAst = (
   }
 
   if (hasMax) {
-    validateValueExpr(diagnostics, chooseN.max, `${path}.chooseN.max`, context);
+    validateNumericValueExpr(diagnostics, chooseN.max, `${path}.chooseN.max`, context);
     if (typeof chooseN.max === 'number' && (!Number.isSafeInteger(chooseN.max) || chooseN.max < 0)) {
       diagnostics.push({
         code: 'EFFECT_CHOOSE_N_CARDINALITY_INVALID',
@@ -940,7 +988,7 @@ export const validateEffectAst = (
   }
 
   if (hasMin) {
-    validateValueExpr(diagnostics, chooseN.min, `${path}.chooseN.min`, context);
+    validateNumericValueExpr(diagnostics, chooseN.min, `${path}.chooseN.min`, context);
     if (typeof chooseN.min === 'number' && (!Number.isSafeInteger(chooseN.min) || chooseN.min < 0)) {
       diagnostics.push({
         code: 'EFFECT_CHOOSE_N_CARDINALITY_INVALID',
@@ -1076,7 +1124,7 @@ export const validatePostAdjacencyBehavior = (
   });
 
   if (terminal.scoring) {
-    validateValueExpr(diagnostics, terminal.scoring.value, 'terminal.scoring.value', context);
+    validateNumericValueExpr(diagnostics, terminal.scoring.value, 'terminal.scoring.value', context);
     const usesScoreResult = terminal.conditions.some((endCondition) => endCondition.result.type === 'score');
     if (!usesScoreResult) {
       diagnostics.push({

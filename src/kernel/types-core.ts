@@ -12,9 +12,9 @@ import type {
   ConditionAST,
   EffectAST,
   MoveParamValue,
+  NumericValueExpr,
   OptionsQuery,
   PlayerSel,
-  ValueExpr,
 } from './types-ast.js';
 import type { ActiveLastingEffect, EventDeckDef } from './types-events.js';
 import type {
@@ -163,7 +163,7 @@ export interface EndCondition {
 
 export interface ScoringDef {
   readonly method: 'highest' | 'lowest';
-  readonly value: ValueExpr;
+  readonly value: NumericValueExpr;
 }
 
 export interface TerminalEvaluationDef {

@@ -150,6 +150,65 @@ describe('evalQuery', () => {
     assert.deepEqual(evalQuery({ query: 'intsInRange', min: 5, max: 3 }, ctx), []);
   });
 
+  it('evaluates intsInRange with dynamic ValueExpr bounds', () => {
+    const ctx = makeCtx({
+      bindings: { $min: 2 },
+    });
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'intsInRange',
+          min: { ref: 'binding', name: '$min' },
+          max: { op: '+', left: { ref: 'binding', name: '$min' }, right: 2 },
+        },
+        ctx,
+      ),
+      [2, 3, 4],
+    );
+  });
+
+  it('returns empty domain when dynamic intsInRange bounds are invalid', () => {
+    const nonInteger = makeCtx({ bindings: { $min: 1.5, $max: 4 } });
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'intsInRange',
+          min: { ref: 'binding', name: '$min' },
+          max: { ref: 'binding', name: '$max' },
+        },
+        nonInteger,
+      ),
+      [],
+    );
+
+    const nonNumeric = makeCtx({ bindings: { $min: 'x', $max: 4 } });
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'intsInRange',
+          min: { ref: 'binding', name: '$min' },
+          max: { ref: 'binding', name: '$max' },
+        },
+        nonNumeric,
+      ),
+      [],
+    );
+
+    const nonFinite = makeCtx({ bindings: { $min: 1 } });
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'intsInRange',
+          min: { ref: 'binding', name: '$min' },
+          max: { op: '/', left: 1, right: 0 },
+        },
+        nonFinite,
+      ),
+      [],
+    );
+  });
+
   it('echoes enums and returns players sorted ascending', () => {
     const ctx = makeCtx();
 

@@ -444,6 +444,57 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('accepts intsInRange dynamic bounds as ValueExpr', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$n',
+              domain: {
+                query: 'intsInRange',
+                min: 1,
+                max: { ref: 'gvar', var: 'money' },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'DOMAIN_INTS_RANGE_INVALID' || diag.code === 'DOMAIN_INTS_RANGE_BOUND_INVALID'),
+      false,
+    );
+  });
+
+  it('reports non-integer literal intsInRange bounds', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [{ name: '$n', domain: { query: 'intsInRange', min: 0.5, max: 3 } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_INTS_RANGE_BOUND_INVALID' &&
+          diag.path === 'actions[0].params[0].domain.min' &&
+          diag.severity === 'error',
+      ),
+    );
+  });
+
   it('reports unknown marker lattice references in setMarker effects', () => {
     const base = createValidGameDef();
     const def = {

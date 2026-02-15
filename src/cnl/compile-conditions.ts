@@ -1,5 +1,14 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { ConditionAST, OptionsQuery, PlayerSel, Reference, TokenFilterPredicate, ValueExpr } from '../kernel/types.js';
+import { isNumericValueExpr } from '../kernel/numeric-value-expr.js';
+import type {
+  ConditionAST,
+  NumericValueExpr,
+  OptionsQuery,
+  PlayerSel,
+  Reference,
+  TokenFilterPredicate,
+  ValueExpr,
+} from '../kernel/types.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
 
@@ -497,12 +506,15 @@ export function lowerQueryNode(
       };
     }
     case 'intsInRange': {
-      if (!isInteger(source.min) || !isInteger(source.max)) {
-        return missingCapability(path, 'intsInRange query', source, ['{ query: "intsInRange", min: <int>, max: <int> }']);
+      const min = lowerIntDomainBound(source.min, context, `${path}.min`);
+      const max = lowerIntDomainBound(source.max, context, `${path}.max`);
+      const diagnostics = [...min.diagnostics, ...max.diagnostics];
+      if (min.value === null || max.value === null) {
+        return { value: null, diagnostics };
       }
       return {
-        value: { query: 'intsInRange', min: source.min, max: source.max },
-        diagnostics: [],
+        value: { query: 'intsInRange', min: min.value, max: max.value },
+        diagnostics,
       };
     }
     case 'enums': {
@@ -687,6 +699,35 @@ export function lowerQueryNode(
     default:
       return missingCapability(path, 'query kind', source.query, SUPPORTED_QUERY_KINDS);
   }
+}
+
+function lowerIntDomainBound(
+  source: unknown,
+  context: ConditionLoweringContext,
+  path: string,
+): ConditionLoweringResult<NumericValueExpr> {
+  return lowerNumericValueNode(source, context, path);
+}
+
+export function lowerNumericValueNode(
+  source: unknown,
+  context: ConditionLoweringContext,
+  path: string,
+): ConditionLoweringResult<NumericValueExpr> {
+  const lowered = lowerValueNode(source, context, path);
+  if (lowered.value === null) {
+    return { value: null, diagnostics: lowered.diagnostics };
+  }
+  if (!isNumericValueExpr(lowered.value)) {
+    return missingCapability(path, 'numeric value expression', source, [
+      'number',
+      '{ ref: ... }',
+      '{ op: "+"|"-"|"*"|"/"|"floorDiv"|"ceilDiv", left: <numeric>, right: <numeric> }',
+      '{ aggregate: { op: "sum"|"count"|"min"|"max", query: <OptionsQuery>, prop?: string } }',
+      '{ if: { when: <ConditionAST>, then: <numeric>, else: <numeric> } }',
+    ]);
+  }
+  return { value: lowered.value, diagnostics: lowered.diagnostics };
 }
 
 function lowerConditionArray(
@@ -892,10 +933,6 @@ function missingCapability<TValue>(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isInteger(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value);
 }
 
 function rankBindingAlternatives(name: string, inScope: readonly string[]): readonly string[] {

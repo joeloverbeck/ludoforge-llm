@@ -58,6 +58,29 @@ export type ValueExpr =
       };
     };
 
+export type NumericValueExpr =
+  | number
+  | Reference
+  | {
+      readonly op: '+' | '-' | '*' | '/' | 'floorDiv' | 'ceilDiv';
+      readonly left: NumericValueExpr;
+      readonly right: NumericValueExpr;
+    }
+  | {
+      readonly aggregate: {
+        readonly op: 'sum' | 'count' | 'min' | 'max';
+        readonly query: OptionsQuery;
+        readonly prop?: string;
+      };
+    }
+  | {
+      readonly if: {
+        readonly when: ConditionAST;
+        readonly then: NumericValueExpr;
+        readonly else: NumericValueExpr;
+      };
+    };
+
 export type ConditionAST =
   | boolean
   | { readonly op: 'and'; readonly args: readonly ConditionAST[] }
@@ -97,7 +120,7 @@ export type OptionsQuery =
       readonly spaceFilter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST };
       readonly filter?: readonly TokenFilterPredicate[];
     }
-  | { readonly query: 'intsInRange'; readonly min: number; readonly max: number }
+  | { readonly query: 'intsInRange'; readonly min: NumericValueExpr; readonly max: NumericValueExpr }
   | { readonly query: 'enums'; readonly values: readonly string[] }
   | { readonly query: 'globalMarkers'; readonly markers?: readonly string[]; readonly states?: readonly string[] }
   | { readonly query: 'players' }
@@ -128,7 +151,7 @@ export type EffectAST =
         readonly scope: 'global' | 'pvar';
         readonly player?: PlayerSel;
         readonly var: string;
-        readonly delta: ValueExpr;
+        readonly delta: NumericValueExpr;
       };
     }
   | {
@@ -188,14 +211,14 @@ export type EffectAST =
         readonly bind: string;
         readonly over: OptionsQuery;
         readonly effects: readonly EffectAST[];
-        readonly limit?: ValueExpr;
+        readonly limit?: NumericValueExpr;
         readonly countBind?: string;
         readonly in?: readonly EffectAST[];
       };
     }
   | {
       readonly removeByPriority: {
-        readonly budget: ValueExpr;
+        readonly budget: NumericValueExpr;
         readonly groups: readonly {
           readonly bind: string;
           readonly over: OptionsQuery;
@@ -233,8 +256,8 @@ export type EffectAST =
             readonly max?: never;
           }
         | {
-            readonly min?: ValueExpr;
-            readonly max: ValueExpr;
+            readonly min?: NumericValueExpr;
+            readonly max: NumericValueExpr;
             readonly n?: never;
           }
       );
@@ -242,8 +265,8 @@ export type EffectAST =
   | {
       readonly rollRandom: {
         readonly bind: string;
-        readonly min: ValueExpr;
-        readonly max: ValueExpr;
+        readonly min: NumericValueExpr;
+        readonly max: NumericValueExpr;
         readonly in: readonly EffectAST[];
       };
     }
@@ -258,7 +281,7 @@ export type EffectAST =
       readonly shiftMarker: {
         readonly space: ZoneRef;
         readonly marker: string;
-        readonly delta: ValueExpr;
+        readonly delta: NumericValueExpr;
       };
     }
   | {
@@ -277,7 +300,7 @@ export type EffectAST =
   | {
       readonly shiftGlobalMarker: {
         readonly marker: string;
-        readonly delta: ValueExpr;
+        readonly delta: NumericValueExpr;
       };
     }
   | {

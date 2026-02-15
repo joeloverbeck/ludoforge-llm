@@ -154,7 +154,7 @@ describe('effects var handlers', () => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('setVar.value');
     });
 
-    assert.throws(() => applyEffect({ addVar: { scope: 'global', var: 'score', delta: 'x' } }, ctx), (error: unknown) => {
+    assert.throws(() => applyEffect({ addVar: { scope: 'global', var: 'score', delta: 'x' as unknown as number } }, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('addVar.delta');
     });
   });

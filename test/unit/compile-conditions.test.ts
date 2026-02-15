@@ -56,6 +56,41 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers intsInRange query with dynamic ValueExpr bounds', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'intsInRange',
+        min: { ref: 'binding', name: '$min' },
+        max: { op: '+', left: { ref: 'binding', name: '$min' }, right: 2 },
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'intsInRange',
+      min: { ref: 'binding', name: '$min' },
+      max: { op: '+', left: { ref: 'binding', name: '$min' }, right: 2 },
+    });
+  });
+
+  it('rejects non-numeric intsInRange bounds during lowering', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'intsInRange',
+        min: { concat: ['1'] },
+        max: 3,
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.min');
+  });
+
   it('lowers zoneCount shorthand value node and canonicalizes zone selector', () => {
     const result = lowerValueNode({ zoneCount: 'deck' }, context, 'doc.actions.0.effects.0.addVar.delta');
 

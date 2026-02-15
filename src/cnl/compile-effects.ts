@@ -1,8 +1,9 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { ConditionAST, EffectAST, PlayerSel, ValueExpr, ZoneRef } from '../kernel/types.js';
+import type { ConditionAST, EffectAST, NumericValueExpr, PlayerSel, ValueExpr, ZoneRef } from '../kernel/types.js';
 import { collectSequentialBindings } from './binder-surface-registry.js';
 import {
   lowerConditionNode,
+  lowerNumericValueNode,
   lowerQueryNode,
   lowerValueNode,
   type ConditionLoweringContext,
@@ -205,7 +206,7 @@ function lowerAddVarEffect(
     return missingCapability(path, 'addVar effect', source);
   }
 
-  const delta = lowerValueNode(source.delta, makeConditionContext(context, scope), `${path}.delta`);
+  const delta = lowerNumericValueNode(source.delta, makeConditionContext(context, scope), `${path}.delta`);
   const diagnostics = [...delta.diagnostics];
   if (delta.value === null) {
     return { value: null, diagnostics };
@@ -543,9 +544,9 @@ function lowerForEachEffect(
   const over = lowerQueryNode(source.over, condCtx, `${path}.over`);
   const diagnostics = [...over.diagnostics];
 
-  let loweredLimit: ValueExpr | undefined;
+  let loweredLimit: NumericValueExpr | undefined;
   if (source.limit !== undefined) {
-    const limitResult = lowerValueNode(source.limit, condCtx, `${path}.limit`);
+    const limitResult = lowerNumericValueNode(source.limit, condCtx, `${path}.limit`);
     diagnostics.push(...limitResult.diagnostics);
     if (limitResult.value === null) {
       return { value: null, diagnostics };
@@ -604,7 +605,7 @@ function lowerRemoveByPriorityEffect(
     ]);
   }
 
-  const budgetResult = lowerValueNode(source.budget, makeConditionContext(context, scope), `${path}.budget`);
+  const budgetResult = lowerNumericValueNode(source.budget, makeConditionContext(context, scope), `${path}.budget`);
   const diagnostics: Diagnostic[] = [...budgetResult.diagnostics];
   const loweredGroups: Array<{
     bind: string;
@@ -747,8 +748,8 @@ function lowerRollRandomEffect(
   }
 
   const condCtx = makeConditionContext(context, scope);
-  const minResult = lowerValueNode(source.min, condCtx, `${path}.min`);
-  const maxResult = lowerValueNode(source.max, condCtx, `${path}.max`);
+  const minResult = lowerNumericValueNode(source.min, condCtx, `${path}.min`);
+  const maxResult = lowerNumericValueNode(source.max, condCtx, `${path}.max`);
   const diagnostics = [...minResult.diagnostics, ...maxResult.diagnostics, ...scope.shadowWarning(source.bind, `${path}.bind`)];
   const inEffects = scope.withBinding(source.bind, () => lowerNestedEffects(source.in as readonly unknown[], context, scope, `${path}.in`));
   diagnostics.push(...inEffects.diagnostics);
@@ -811,7 +812,7 @@ function lowerShiftMarkerEffect(
   }
 
   const space = lowerZoneSelector(source.space, context, scope, `${path}.space`);
-  const delta = lowerValueNode(source.delta, makeConditionContext(context, scope), `${path}.delta`);
+  const delta = lowerNumericValueNode(source.delta, makeConditionContext(context, scope), `${path}.delta`);
   const diagnostics = [...space.diagnostics, ...delta.diagnostics];
 
   if (space.value === null || delta.value === null) {
@@ -894,7 +895,7 @@ function lowerShiftGlobalMarkerEffect(
     return missingCapability(path, 'shiftGlobalMarker effect', source, ['{ shiftGlobalMarker: { marker, delta } }']);
   }
 
-  const delta = lowerValueNode(source.delta, makeConditionContext(context, scope), `${path}.delta`);
+  const delta = lowerNumericValueNode(source.delta, makeConditionContext(context, scope), `${path}.delta`);
   const diagnostics = [...delta.diagnostics];
   if (delta.value === null) {
     return { value: null, diagnostics };
@@ -1134,14 +1135,14 @@ function lowerChooseNEffect(
     diagnostics.push(...missingCapability(path, 'chooseN cardinality', source, ['{ n }', '{ max, min? }']).diagnostics);
   }
 
-  let loweredMin: ValueExpr | undefined;
-  let loweredMax: ValueExpr | undefined;
+  let loweredMin: NumericValueExpr | undefined;
+  let loweredMax: NumericValueExpr | undefined;
 
   if (hasN && (!isInteger(source.n) || source.n < 0)) {
     diagnostics.push(...missingCapability(`${path}.n`, 'chooseN n', source.n, ['non-negative integer']).diagnostics);
   }
   if (hasMax) {
-    const maxResult = lowerValueNode(source.max, condCtx, `${path}.max`);
+    const maxResult = lowerNumericValueNode(source.max, condCtx, `${path}.max`);
     diagnostics.push(...maxResult.diagnostics);
     if (maxResult.value !== null) {
       loweredMax = maxResult.value;
@@ -1151,7 +1152,7 @@ function lowerChooseNEffect(
     }
   }
   if (hasMin) {
-    const minResult = lowerValueNode(source.min, condCtx, `${path}.min`);
+    const minResult = lowerNumericValueNode(source.min, condCtx, `${path}.min`);
     diagnostics.push(...minResult.diagnostics);
     if (minResult.value !== null) {
       loweredMin = minResult.value;
@@ -1185,7 +1186,7 @@ function lowerChooseNEffect(
     hasN && isInteger(source.n)
       ? { n: source.n }
       : {
-          max: loweredMax as ValueExpr,
+          max: loweredMax as NumericValueExpr,
           ...(loweredMin === undefined ? {} : { min: loweredMin }),
         };
   return {

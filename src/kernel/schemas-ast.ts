@@ -53,12 +53,19 @@ export const ReferenceSchema = z.union([
 let conditionAstSchemaInternal: z.ZodTypeAny;
 let optionsQuerySchemaInternal: z.ZodTypeAny;
 let valueExprSchemaInternal: z.ZodTypeAny;
+let numericValueExprSchemaInternal: z.ZodTypeAny;
 let effectAstSchemaInternal: z.ZodTypeAny;
 
 export const ConditionASTSchema = z.lazy(() => conditionAstSchemaInternal);
 export const OptionsQuerySchema = z.lazy(() => optionsQuerySchemaInternal);
 export const ValueExprSchema = z.lazy(() => valueExprSchemaInternal);
+export const NumericValueExprSchema = z.lazy(() => numericValueExprSchemaInternal);
 export const EffectASTSchema = z.lazy(() => effectAstSchemaInternal);
+const IntDomainBoundSchema = z
+  .union([IntegerSchema, NumericValueExprSchema])
+  .refine((value) => typeof value !== 'number' || Number.isSafeInteger(value), {
+    message: 'intsInRange bounds must be safe integers when provided as numeric literals.',
+  });
 
 export const TokenFilterPredicateSchema = z
   .object({
@@ -89,7 +96,7 @@ optionsQuerySchemaInternal = z.union([
       filter: z.array(TokenFilterPredicateSchema).optional(),
     })
     .strict(),
-  z.object({ query: z.literal('intsInRange'), min: NumberSchema, max: NumberSchema }).strict(),
+  z.object({ query: z.literal('intsInRange'), min: IntDomainBoundSchema, max: IntDomainBoundSchema }).strict(),
   z.object({ query: z.literal('enums'), values: z.array(StringSchema) }).strict(),
   z
     .object({
@@ -187,6 +194,47 @@ valueExprSchemaInternal = z.union([
     .strict(),
 ]);
 
+numericValueExprSchemaInternal = z.union([
+  NumberSchema,
+  ReferenceSchema,
+  z
+    .object({
+      op: z.union([
+        z.literal('+'),
+        z.literal('-'),
+        z.literal('*'),
+        z.literal('/'),
+        z.literal('floorDiv'),
+        z.literal('ceilDiv'),
+      ]),
+      left: NumericValueExprSchema,
+      right: NumericValueExprSchema,
+    })
+    .strict(),
+  z
+    .object({
+      aggregate: z
+        .object({
+          op: z.union([z.literal('sum'), z.literal('count'), z.literal('min'), z.literal('max')]),
+          query: OptionsQuerySchema,
+          prop: StringSchema.optional(),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      if: z
+        .object({
+          when: ConditionASTSchema,
+          then: NumericValueExprSchema,
+          else: NumericValueExprSchema,
+        })
+        .strict(),
+    })
+    .strict(),
+]);
+
 conditionAstSchemaInternal = z.union([
   z.boolean(),
   z.object({ op: z.literal('and'), args: z.array(ConditionASTSchema) }).strict(),
@@ -247,7 +295,7 @@ effectAstSchemaInternal = z.union([
           scope: z.union([z.literal('global'), z.literal('pvar')]),
           player: PlayerSelSchema.optional(),
           var: StringSchema,
-          delta: ValueExprSchema,
+          delta: NumericValueExprSchema,
         })
         .strict(),
     })
@@ -339,7 +387,7 @@ effectAstSchemaInternal = z.union([
           bind: StringSchema,
           over: OptionsQuerySchema,
           effects: z.array(EffectASTSchema),
-          limit: ValueExprSchema.optional(),
+          limit: NumericValueExprSchema.optional(),
           countBind: StringSchema.optional(),
           in: z.array(EffectASTSchema).optional(),
         })
@@ -350,7 +398,7 @@ effectAstSchemaInternal = z.union([
     .object({
       removeByPriority: z
         .object({
-          budget: ValueExprSchema,
+          budget: NumericValueExprSchema,
           groups: z.array(
             z
               .object({
@@ -406,8 +454,8 @@ effectAstSchemaInternal = z.union([
             internalDecisionId: StringSchema,
             bind: StringSchema,
             options: OptionsQuerySchema,
-            min: ValueExprSchema.optional(),
-            max: ValueExprSchema,
+            min: NumericValueExprSchema.optional(),
+            max: NumericValueExprSchema,
           })
           .strict(),
       ]),
@@ -418,8 +466,8 @@ effectAstSchemaInternal = z.union([
       rollRandom: z
         .object({
           bind: StringSchema,
-          min: ValueExprSchema,
-          max: ValueExprSchema,
+          min: NumericValueExprSchema,
+          max: NumericValueExprSchema,
           in: z.array(EffectASTSchema),
         })
         .strict(),
@@ -442,7 +490,7 @@ effectAstSchemaInternal = z.union([
         .object({
           space: ZoneRefSchema,
           marker: StringSchema,
-          delta: ValueExprSchema,
+          delta: NumericValueExprSchema,
         })
         .strict(),
     })
@@ -473,7 +521,7 @@ effectAstSchemaInternal = z.union([
       shiftGlobalMarker: z
         .object({
           marker: StringSchema,
-          delta: ValueExprSchema,
+          delta: NumericValueExprSchema,
         })
         .strict(),
     })

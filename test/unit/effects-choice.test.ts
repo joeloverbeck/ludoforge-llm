@@ -285,7 +285,7 @@ describe('effects choice assertions', () => {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
-        max: true,
+        max: true as unknown as number,
       },
     };
 

@@ -1,5 +1,5 @@
 import { getMaxQueryResults, type EvalContext } from './eval-context.js';
-import { missingVarError, queryBoundsExceededError } from './eval-error.js';
+import { isEvalErrorCode, missingVarError, queryBoundsExceededError } from './eval-error.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitWarning } from './execution-collector.js';
@@ -8,9 +8,26 @@ import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
-import type { OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
+import type { NumericValueExpr, OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
 
 type QueryResult = Token | number | string | PlayerId | ZoneId;
+
+function resolveIntDomainBound(bound: NumericValueExpr, ctx: EvalContext): number | null {
+  let value: number | boolean | string;
+  try {
+    value = typeof bound === 'number' ? bound : evalValue(bound, ctx);
+  } catch (error) {
+    if (isEvalErrorCode(error, 'DIVISION_BY_ZERO') || isEvalErrorCode(error, 'MISSING_BINDING') || isEvalErrorCode(error, 'MISSING_VAR')) {
+      return null;
+    }
+    throw error;
+  }
+
+  if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
+    return null;
+  }
+  return value;
+}
 
 function assertWithinBounds(length: number, query: OptionsQuery, maxQueryResults: number): void {
   if (length > maxQueryResults) {
@@ -227,14 +244,20 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
     }
 
     case 'intsInRange': {
-      const rangeLength = query.max < query.min ? 0 : query.max - query.min + 1;
+      const min = resolveIntDomainBound(query.min, ctx);
+      const max = resolveIntDomainBound(query.max, ctx);
+      if (min === null || max === null || min > max) {
+        return [];
+      }
+
+      const rangeLength = max - min + 1;
       assertWithinBounds(rangeLength, query, maxQueryResults);
 
       if (rangeLength === 0) {
         return [];
       }
 
-      return Array.from({ length: rangeLength }, (_, index) => query.min + index);
+      return Array.from({ length: rangeLength }, (_, index) => min + index);
     }
 
     case 'enums': {

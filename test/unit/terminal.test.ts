@@ -143,7 +143,7 @@ describe('terminalResult', () => {
       ...createBaseDef(),
       terminal: {
         conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }],
-        scoring: { method: 'highest', value: true },
+        scoring: { method: 'highest', value: true as unknown as number },
       },
     };
 

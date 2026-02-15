@@ -7,10 +7,10 @@ import {
   EffectASTSchema,
   IntegerSchema,
   NumberSchema,
+  NumericValueExprSchema,
   OptionsQuerySchema,
   PlayerSelSchema,
   StringSchema,
-  ValueExprSchema,
 } from './schemas-ast.js';
 import {
   OperationPartialTraceEntrySchema,
@@ -181,7 +181,7 @@ export const EndConditionSchema = z
 export const ScoringDefSchema = z
   .object({
     method: z.union([z.literal('highest'), z.literal('lowest')]),
-    value: ValueExprSchema,
+    value: NumericValueExprSchema,
   })
   .strict();
 

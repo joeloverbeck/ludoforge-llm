@@ -158,6 +158,46 @@ describe('legalMoves', () => {
     assert.deepEqual(first, second);
   });
 
+  it('enumerates params from dynamic intsInRange bounds', () => {
+    const base = createDef();
+    const def: GameDef = {
+      ...base,
+      actions: [
+        ...base.actions,
+        {
+          id: asActionId('dynamicRange'),
+          actor: 'active',
+          executor: 'actor',
+          phase: asPhaseId('main'),
+          params: [
+            { name: 'base', domain: { query: 'intsInRange', min: 1, max: 1 } },
+            {
+              name: 'amount',
+              domain: {
+                query: 'intsInRange',
+                min: { ref: 'binding', name: 'base' },
+                max: { op: '+', left: { ref: 'binding', name: 'base' }, right: 1 },
+              },
+            },
+          ],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    };
+
+    const moves = legalMoves(def, createState())
+      .filter((move) => move.actionId === asActionId('dynamicRange'))
+      .map((move) => move.params);
+
+    assert.deepEqual(moves, [
+      { base: 1, amount: 1 },
+      { base: 1, amount: 2 },
+    ]);
+  });
+
   it('materializes move params in declaration key order', () => {
     const moves = legalMoves(createDef(), createState());
     const combo = moves.find((move) => move.actionId === asActionId('comboPre'));

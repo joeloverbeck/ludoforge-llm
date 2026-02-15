@@ -337,6 +337,15 @@ describe('AST and selector schemas', () => {
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
   });
 
+  it('parses intsInRange query with dynamic ValueExpr bounds', () => {
+    const query: OptionsQuery = {
+      query: 'intsInRange',
+      min: { ref: 'binding', name: '$min' },
+      max: { op: '+', left: { ref: 'binding', name: '$min' }, right: 2 },
+    };
+    assert.deepEqual(OptionsQuerySchema.parse(query), query);
+  });
+
   it('parses globalMarkers query with optional marker and state filters', () => {
     const queries: OptionsQuery[] = [
       { query: 'globalMarkers' },
@@ -398,6 +407,34 @@ describe('AST and selector schemas', () => {
       filter: { prop: 'faction', op: 'eq', value: 'US' },
     });
     assert.equal(badTokensInMapSpacesFilter.success, false);
+  });
+
+  it('rejects non-integer numeric literals in intsInRange bounds', () => {
+    const badMin = OptionsQuerySchema.safeParse({
+      query: 'intsInRange',
+      min: 0.5,
+      max: 3,
+    });
+    assert.equal(badMin.success, false);
+  });
+
+  it('rejects non-numeric expressions in numeric-only contexts', () => {
+    const badIntRange = OptionsQuerySchema.safeParse({
+      query: 'intsInRange',
+      min: { concat: ['1'] },
+      max: 3,
+    });
+    assert.equal(badIntRange.success, false);
+
+    const badChooseN = EffectASTSchema.safeParse({
+      chooseN: {
+        internalDecisionId: 'decision:$pick',
+        bind: '$pick',
+        options: { query: 'enums', values: ['a', 'b'] },
+        max: { concat: ['2'] },
+      },
+    });
+    assert.equal(badChooseN.success, false);
   });
 
   it('rejects invalid effect discriminants with a nested path', () => {

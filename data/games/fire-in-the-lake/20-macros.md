@@ -1419,7 +1419,10 @@ effectMacros:
                       when:
                         op: and
                         args:
-                          - { op: '!=', left: { param: faction }, right: 'US' }
+                          - op: or
+                            args:
+                              - { op: '!=', left: { param: faction }, right: 'US' }
+                              - { op: '==', left: { param: pieceType }, right: irregular }
                           - { op: '>', left: { ref: binding, name: $remaining }, right: 0 }
                       then:
                         - chooseN:

@@ -782,4 +782,74 @@ phase: asPhaseId('main'),
       },
     );
   });
+
+  it('17. skips actions when actor selector resolves outside playerCount', () => {
+    const action: ActionDef = {
+      id: asActionId('actorOutOfRange'),
+actor: { id: asPlayerId(2) },
+executor: 'actor',
+phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const moves = legalMoves(def, makeBaseState({ playerCount: 2 }));
+    assert.equal(moves.length, 0);
+  });
+
+  it('18. skips actions when executor selector resolves outside playerCount', () => {
+    const action: ActionDef = {
+      id: asActionId('executorOutOfRange'),
+actor: 'active',
+executor: { id: asPlayerId(2) },
+phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const moves = legalMoves(def, makeBaseState({ playerCount: 2 }));
+    assert.equal(moves.length, 0);
+  });
+
+  it('19. throws for invalid actor selector spec', () => {
+    const action: ActionDef = {
+      id: asActionId('invalidActorSelector'),
+actor: '$owner' as unknown as ActionDef['actor'],
+executor: 'actor',
+phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    assert.throws(() => legalMoves(def, makeBaseState()));
+  });
+
+  it('20. throws for invalid executor selector spec', () => {
+    const action: ActionDef = {
+      id: asActionId('invalidExecutorSelector'),
+actor: 'active',
+executor: 'all' as unknown as ActionDef['executor'],
+phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    assert.throws(() => legalMoves(def, makeBaseState()));
+  });
 });

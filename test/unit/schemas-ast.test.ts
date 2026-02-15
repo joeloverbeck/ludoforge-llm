@@ -114,6 +114,14 @@ describe('AST and selector schemas', () => {
       { moveTokenAdjacent: { token: '$unit', from: { zoneExpr: 'board:active' }, direction: 'north' } },
       { draw: { from: 'deck:none', to: 'hand:actor', count: 1 } },
       { draw: { from: { zoneExpr: 'deck:none' }, to: { zoneExpr: 'hand:actor' }, count: 1 } },
+      { reveal: { zone: 'hand:actor', to: 'all' } },
+      {
+        reveal: {
+          zone: { zoneExpr: 'hand:actor' },
+          to: { chosen: '$targetPlayer' },
+          filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        },
+      },
       { shuffle: { zone: 'deck:none' } },
       { shuffle: { zone: { zoneExpr: 'deck:none' } } },
       { createToken: { type: 'card', zone: 'deck:none', props: { cost: 3, rare: false } } },

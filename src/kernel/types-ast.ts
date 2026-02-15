@@ -190,6 +190,13 @@ export type EffectAST =
         readonly count: number;
       };
     }
+  | {
+      readonly reveal: {
+        readonly zone: ZoneRef;
+        readonly to: 'all' | PlayerSel;
+        readonly filter?: readonly TokenFilterPredicate[];
+      };
+    }
   | { readonly shuffle: { readonly zone: ZoneRef } }
   | {
       readonly createToken: {

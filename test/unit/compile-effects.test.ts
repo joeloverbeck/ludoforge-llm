@@ -18,6 +18,7 @@ describe('compile-effects lowering', () => {
   it('lowers supported effect nodes deterministically', () => {
     const source = [
       { draw: { from: 'deck', to: 'hand:$actor', count: 1 } },
+      { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', eq: 'US' }] } },
       {
         if: {
           when: { op: '>', left: { ref: 'zoneCount', zone: 'deck' }, right: 0 },
@@ -41,6 +42,7 @@ describe('compile-effects lowering', () => {
     assertNoDiagnostics(first);
     assert.deepEqual(first.value, [
       { draw: { from: 'deck:none', to: 'hand:$actor', count: 1 } },
+      { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
       {
         if: {
           when: { op: '>', left: { ref: 'zoneCount', zone: 'deck:none' }, right: 0 },

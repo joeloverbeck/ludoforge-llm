@@ -108,6 +108,14 @@ const encodeFeature = (feature: ZobristFeature): string => {
         `phase=${feature.phase}`,
         `resumePhase=${feature.resumePhase}`,
       ].join('|');
+    case 'revealGrant':
+      return [
+        'kind=revealGrant',
+        `zoneId=${feature.zoneId}`,
+        `slot=${feature.slot}`,
+        `observers=${feature.observers === 'all' ? 'all' : feature.observers.join(',')}`,
+        `filter=${feature.filterKey}`,
+      ].join('|');
   }
 };
 
@@ -245,6 +253,20 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
         state: markerState,
       });
     }
+  }
+
+  const sortedRevealZoneIds = Object.keys(state.reveals ?? {}).sort(compareStrings);
+  for (const zoneId of sortedRevealZoneIds) {
+    const zoneGrants = state.reveals?.[zoneId] ?? [];
+    zoneGrants.forEach((grant, slot) => {
+      hash ^= zobristKey(table, {
+        kind: 'revealGrant',
+        zoneId,
+        slot,
+        observers: grant.observers,
+        filterKey: JSON.stringify(grant.filter ?? null),
+      });
+    });
   }
 
   const activeLastingEffects = state.activeLastingEffects ?? [];

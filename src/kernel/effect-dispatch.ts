@@ -17,6 +17,7 @@ import {
 import { applyForEach, applyIf, applyLet, applyRemoveByPriority, type EffectBudgetState } from './effects-control.js';
 import { applyGotoPhase, applyGrantFreeOperation, applyPopInterruptPhase, applyPushInterruptPhase } from './effects-turn-flow.js';
 import { applyAddVar, applySetVar } from './effects-var.js';
+import { applyReveal } from './effects-reveal.js';
 import {
   applyCreateToken,
   applyDestroyToken,
@@ -45,6 +46,7 @@ const effectTypeOf = (effect: EffectAST): string => {
   if ('moveAll' in effect) return 'moveAll';
   if ('moveTokenAdjacent' in effect) return 'moveTokenAdjacent';
   if ('draw' in effect) return 'draw';
+  if ('reveal' in effect) return 'reveal';
   if ('shuffle' in effect) return 'shuffle';
   if ('createToken' in effect) return 'createToken';
   if ('destroyToken' in effect) return 'destroyToken';
@@ -104,6 +106,10 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 
   if ('draw' in effect) {
     return applyDraw(effect, ctx);
+  }
+
+  if ('reveal' in effect) {
+    return applyReveal(effect, ctx);
   }
 
   if ('shuffle' in effect) {

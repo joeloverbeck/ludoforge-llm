@@ -5,6 +5,7 @@ export const SUPPORTED_EFFECT_KINDS = [
   'moveAll',
   'moveTokenAdjacent',
   'draw',
+  'reveal',
   'shuffle',
   'createToken',
   'destroyToken',

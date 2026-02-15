@@ -11,6 +11,7 @@ import {
   OptionsQuerySchema,
   PlayerSelSchema,
   StringSchema,
+  TokenFilterPredicateSchema,
 } from './schemas-ast.js';
 import {
   OperationPartialTraceEntrySchema,
@@ -89,6 +90,13 @@ export const TokenSchema = z
     id: StringSchema,
     type: StringSchema,
     props: z.record(StringSchema, z.union([NumberSchema, StringSchema, BooleanSchema])),
+  })
+  .strict();
+
+export const RevealGrantSchema = z
+  .object({
+    observers: z.union([z.literal('all'), z.array(IntegerSchema)]),
+    filter: z.array(TokenFilterPredicateSchema).optional(),
   })
   .strict();
 
@@ -280,6 +288,7 @@ export const GameStateSchema = z
     actionUsage: z.record(StringSchema, ActionUsageRecordSchema),
     turnOrderState: TurnOrderRuntimeStateSchema,
     markers: z.record(StringSchema, z.record(StringSchema, StringSchema)),
+    reveals: z.record(StringSchema, z.array(RevealGrantSchema)).optional(),
     globalMarkers: z.record(StringSchema, StringSchema).optional(),
     activeLastingEffects: z.array(ActiveLastingEffectSchema).optional(),
     interruptPhaseStack: z.array(InterruptPhaseFrameSchema).optional(),

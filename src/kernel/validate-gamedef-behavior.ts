@@ -712,6 +712,17 @@ export const validateEffectAst = (
     return;
   }
 
+  if ('reveal' in effect) {
+    validateZoneRef(diagnostics, effect.reveal.zone, `${path}.reveal.zone`, context);
+    if (effect.reveal.to !== 'all') {
+      validatePlayerSelector(diagnostics, effect.reveal.to, `${path}.reveal.to`, context);
+    }
+    if (effect.reveal.filter !== undefined) {
+      validateTokenFilterPredicates(diagnostics, effect.reveal.filter, `${path}.reveal.filter`, context);
+    }
+    return;
+  }
+
   if ('shuffle' in effect) {
     validateZoneRef(diagnostics, effect.shuffle.zone, `${path}.shuffle.zone`, context);
     return;

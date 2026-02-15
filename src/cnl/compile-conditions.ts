@@ -377,7 +377,7 @@ function validateCanonicalTokenTraitLiteral(
   ];
 }
 
-function lowerTokenFilterArray(
+export function lowerTokenFilterArray(
   source: readonly unknown[],
   context: ConditionLoweringContext,
   path: string,

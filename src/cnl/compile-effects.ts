@@ -1,10 +1,11 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { ConditionAST, EffectAST, NumericValueExpr, PlayerSel, ValueExpr, ZoneRef } from '../kernel/types.js';
+import type { ConditionAST, EffectAST, NumericValueExpr, PlayerSel, TokenFilterPredicate, ValueExpr, ZoneRef } from '../kernel/types.js';
 import { collectSequentialBindings } from './binder-surface-registry.js';
 import {
   lowerConditionNode,
   lowerNumericValueNode,
   lowerQueryNode,
+  lowerTokenFilterArray,
   lowerValueNode,
   type ConditionLoweringContext,
 } from './compile-conditions.js';
@@ -79,6 +80,9 @@ function lowerEffectNode(
   }
   if (isRecord(source.draw)) {
     return lowerDrawEffect(source.draw, context, scope, `${path}.draw`);
+  }
+  if (isRecord(source.reveal)) {
+    return lowerRevealEffect(source.reveal, context, scope, `${path}.reveal`);
   }
   if (isRecord(source.shuffle)) {
     return lowerShuffleEffect(source.shuffle, context, scope, `${path}.shuffle`);
@@ -378,6 +382,56 @@ function lowerDrawEffect(
         from: from.value,
         to: to.value,
         count: source.count,
+      },
+    },
+    diagnostics,
+  };
+}
+
+function lowerRevealEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  const zone = lowerZoneSelector(source.zone, context, scope, `${path}.zone`);
+  const diagnostics = [...zone.diagnostics];
+  if (zone.value === null) {
+    return { value: null, diagnostics };
+  }
+
+  let to: 'all' | PlayerSel;
+  if (source.to === 'all') {
+    to = 'all';
+  } else {
+    const loweredTo = lowerPlayerSelector(source.to, scope, `${path}.to`);
+    diagnostics.push(...loweredTo.diagnostics);
+    if (loweredTo.value === null) {
+      return { value: null, diagnostics };
+    }
+    to = loweredTo.value;
+  }
+
+  let filter: readonly TokenFilterPredicate[] | undefined;
+  if (source.filter !== undefined) {
+    if (!Array.isArray(source.filter)) {
+      diagnostics.push(...missingCapability(`${path}.filter`, 'reveal filter', source.filter, ['Array<{ prop, op, value }>']).diagnostics);
+      return { value: null, diagnostics };
+    }
+    const loweredFilter = lowerTokenFilterArray(source.filter, makeConditionContext(context, scope), `${path}.filter`);
+    diagnostics.push(...loweredFilter.diagnostics);
+    if (loweredFilter.value === null) {
+      return { value: null, diagnostics };
+    }
+    filter = loweredFilter.value;
+  }
+
+  return {
+    value: {
+      reveal: {
+        zone: zone.value,
+        to,
+        ...(filter === undefined ? {} : { filter }),
       },
     },
     diagnostics,

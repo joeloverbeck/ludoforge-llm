@@ -230,6 +230,41 @@ describe('zobrist full hash and incremental update helpers', () => {
     assert.equal(incremental, recomputed);
   });
 
+  it('reveal grants contribute to full hash and support incremental feature updates', () => {
+    const table = createZobristTable(createGameDef());
+    const before: GameState = {
+      ...createBaseState(),
+      reveals: {
+        'hand:none': [{
+          observers: [asPlayerId(1)],
+        }],
+      },
+    };
+    const beforeHash = computeFullHash(table, before);
+
+    const revealFilterKey = JSON.stringify([{ prop: 'faction', op: 'eq', value: 'US' }]);
+    const incremental = updateHashFeatureChange(
+      beforeHash,
+      table,
+      { kind: 'revealGrant', zoneId: 'hand:none', slot: 0, observers: [asPlayerId(1)], filterKey: 'null' },
+      { kind: 'revealGrant', zoneId: 'hand:none', slot: 0, observers: [asPlayerId(1)], filterKey: revealFilterKey },
+    );
+
+    const after: GameState = {
+      ...before,
+      reveals: {
+        'hand:none': [{
+          observers: [asPlayerId(1)],
+          filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+        }],
+      },
+    };
+
+    const recomputed = computeFullHash(table, after);
+    assert.notEqual(recomputed, beforeHash);
+    assert.equal(incremental, recomputed);
+  });
+
   it('different transition paths to the same final state produce the same hash', () => {
     const table = createZobristTable(createGameDef());
     const before = createBaseState();

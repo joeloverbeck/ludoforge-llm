@@ -15,6 +15,7 @@ import type {
   NumericValueExpr,
   OptionsQuery,
   PlayerSel,
+  TokenFilterPredicate,
 } from './types-ast.js';
 import type { ActiveLastingEffect, EventDeckDef } from './types-events.js';
 import type {
@@ -379,6 +380,13 @@ export type ZobristFeature =
       readonly slot: number;
       readonly phase: string;
       readonly resumePhase: string;
+    }
+  | {
+      readonly kind: 'revealGrant';
+      readonly zoneId: string;
+      readonly slot: number;
+      readonly observers: 'all' | readonly PlayerId[];
+      readonly filterKey: string;
     };
 
 export interface InterruptPhaseFrame {
@@ -390,6 +398,11 @@ export interface ActionUsageRecord {
   readonly turnCount: number;
   readonly phaseCount: number;
   readonly gameCount: number;
+}
+
+export interface RevealGrant {
+  readonly observers: 'all' | readonly PlayerId[];
+  readonly filter?: readonly TokenFilterPredicate[];
 }
 
 export interface GameState {
@@ -406,6 +419,7 @@ export interface GameState {
   readonly actionUsage: Readonly<Record<string, ActionUsageRecord>>;
   readonly turnOrderState: TurnOrderRuntimeState;
   readonly markers: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  readonly reveals?: Readonly<Record<string, readonly RevealGrant[]>>;
   readonly globalMarkers?: Readonly<Record<string, string>>;
   readonly activeLastingEffects?: readonly ActiveLastingEffect[];
   readonly interruptPhaseStack?: readonly InterruptPhaseFrame[];

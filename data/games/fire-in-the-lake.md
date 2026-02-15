@@ -5633,6 +5633,248 @@ eventDecks:
           effects:
             - macro: set-global-marker
               args: { markerId: cap_aaa, markerState: shaded }
+      - id: card-32
+        title: Long Range Guns
+        sideMode: dual
+        order: 32
+        tags: [capability, NVA]
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          flavorText: "Long-range artillery extends pressure across contested routes."
+        unshaded:
+          text: "NVA capability: Bombard can target adjacent spaces from farther range."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_longRangeGuns, markerState: unshaded }
+        shaded:
+          text: "NVA capability (shaded): COIN movement near artillery zones risks attrition."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_longRangeGuns, markerState: shaded }
+      - id: card-33
+        title: MiGs
+        sideMode: dual
+        order: 33
+        tags: [capability, NVA]
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          flavorText: "Interceptors contest US air power over the North."
+        unshaded:
+          text: "NVA capability: Air Strike pressure is reduced unless unshaded Top Gun is active."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_migs, markerState: unshaded }
+        shaded:
+          text: "NVA capability (shaded): US Air Strike can trigger extra troop costs in affected spaces."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_migs, markerState: shaded }
+      - id: card-35
+        title: Thanh Hoa
+        sideMode: dual
+        order: 35
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          flavorText: "Air-defense concentration blunts repeated bridge attacks."
+        unshaded:
+          text: "NVA fortifies logistics corridor resilience around Trail adjustments."
+        shaded:
+          text: "Strike disruption causes COIN losses and protects northern throughput."
+      - id: card-36
+        title: Hamburger Hill
+        sideMode: dual
+        order: 36
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          flavorText: "A brutal highland battle drives force repositioning and tunnel pressure."
+        unshaded:
+          text: "Reposition selected NVA/VC forces and intensify pressure against exposed COIN units."
+        shaded:
+          text: "COIN assault gains ground but incurs attrition and tunnel-side effects."
+      - id: card-37
+        title: Khe Sanh
+        sideMode: dual
+        order: 37
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          flavorText: "Siege operations force major commitment and casualties."
+        unshaded:
+          text: "Mass removal pressure in one contested area; route vulnerable US losses to Casualties."
+        shaded:
+          text: "Relief effort redistributes pieces and partially relieves siege pressure."
+      - id: card-40
+        title: PoWs
+        sideMode: dual
+        order: 40
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          flavorText: "Prisoner exchanges and detention politics alter casualty flows."
+        unshaded:
+          text: "Move selected Casualties and adjust resources based on exchange outcomes."
+        shaded:
+          text: "Captivity leverage deepens COIN attrition and slows force recovery."
+      - id: card-41
+        title: Bombing Pause
+        sideMode: dual
+        order: 41
+        tags: [momentum]
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          flavorText: "Air campaign pauses shift tempo across infiltration and support tracks."
+        unshaded:
+          text: "No Air Strike until Coup. MOMENTUM"
+          lastingEffects:
+            - id: mom-bombing-pause
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_bombingPause }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_bombingPause }
+        shaded:
+          text: "Pause collapses: US resumes heavy air pressure and NVA pays strategic costs."
+      - id: card-42
+        title: Chou En Lai
+        sideMode: dual
+        order: 42
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          flavorText: "Chinese leverage links diplomacy to wartime resource shifts."
+        unshaded:
+          text: "Resource shifts follow diplomatic signaling and die-based political momentum."
+        shaded:
+          text: "Diplomatic friction disrupts aid flows and rebalances insurgent support."
+      - id: card-45
+        title: PT-76
+        sideMode: dual
+        order: 45
+        tags: [capability, NVA]
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          flavorText: "Amphibious armor expands NVA assault options in difficult terrain."
+        unshaded:
+          text: "NVA capability: selected Assaults gain armored removal pressure."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_pt76, markerState: unshaded }
+        shaded:
+          text: "NVA capability (shaded): armored commitments increase NVA troop exposure."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_pt76, markerState: shaded }
+      - id: card-49
+        title: Russian Arms
+        sideMode: dual
+        order: 49
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          flavorText: "External materiel shipments increase insurgent placement flexibility."
+        unshaded:
+          text: "Place NVA/VC pieces into eligible spaces and improve insurgent posture."
+        shaded:
+          text: "Arms pipeline disruption limits placement and redirects strategic effort."
+      - id: card-52
+        title: RAND
+        sideMode: dual
+        order: 52
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          flavorText: "Analyst leaks expose hidden assumptions and reverse perceived advantages."
+        unshaded:
+          text: "Flip one currently active capability to its opposite side."
+          effects:
+            - chooseOne:
+                bind: $randCapabilityMarker
+                options:
+                  query: globalMarkers
+                  states: [unshaded, shaded]
+            - flipGlobalMarker:
+                marker: { ref: binding, name: $randCapabilityMarker }
+                stateA: unshaded
+                stateB: shaded
+        shaded:
+          text: "Flip one currently active capability to its opposite side."
+          effects:
+            - chooseOne:
+                bind: $randCapabilityMarker
+                options:
+                  query: globalMarkers
+                  states: [unshaded, shaded]
+            - flipGlobalMarker:
+                marker: { ref: binding, name: $randCapabilityMarker }
+                stateA: unshaded
+                stateB: shaded
+      - id: card-54
+        title: Son Tay
+        sideMode: dual
+        order: 54
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          flavorText: "Raid planning reshapes near-term eligibility and initiative windows."
+        unshaded:
+          text: "Adjust next-card eligibility to favor COIN follow-on operations."
+        shaded:
+          text: "Raid aftermath shifts eligibility toward insurgent initiative."
+      - id: card-57
+        title: International Unrest
+        sideMode: dual
+        order: 57
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          flavorText: "Global pressure amplifies domestic war costs and casualty politics."
+        unshaded:
+          text: "Casualty-driven die roll reduces COIN political leverage."
+        shaded:
+          text: "External backlash constrains insurgent options and forces resource tradeoffs."
+      - id: card-58
+        title: Pathet Lao
+        sideMode: dual
+        order: 58
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          flavorText: "Laotian coordination alters trail security and redeployment pressure."
+        unshaded:
+          text: "Conditionally improve Trail or trigger selective redeploy effects."
+        shaded:
+          text: "Cross-border disruption degrades Trail tempo and complicates redeploy planning."
+      - id: card-60
+        title: War Photographer
+        sideMode: dual
+        order: 60
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          flavorText: "Images from the front alter force posture and political appetite."
+        unshaded:
+          text: "Place pieces from Out of Play into selected spaces."
+        shaded:
+          text: "Media backlash moves selected forces back out of theater."
       - id: card-34
         title: SA-2s
         sideMode: dual

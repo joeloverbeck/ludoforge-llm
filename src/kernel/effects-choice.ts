@@ -460,3 +460,101 @@ export const applyShiftGlobalMarker = (
     rng: ctx.rng,
   };
 };
+
+export const applyFlipGlobalMarker = (
+  effect: Extract<EffectAST, { readonly flipGlobalMarker: unknown }>,
+  ctx: EffectContext,
+): EffectResult => {
+  const { marker: markerExpr, stateA: stateAExpr, stateB: stateBExpr } = effect.flipGlobalMarker;
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const evaluatedMarker = evalValue(markerExpr, evalCtx);
+  const evaluatedStateA = evalValue(stateAExpr, evalCtx);
+  const evaluatedStateB = evalValue(stateBExpr, evalCtx);
+
+  if (typeof evaluatedMarker !== 'string') {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'flipGlobalMarker.marker must evaluate to a string', {
+      effectType: 'flipGlobalMarker',
+      actualType: typeof evaluatedMarker,
+      value: evaluatedMarker,
+    });
+  }
+  if (typeof evaluatedStateA !== 'string') {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'flipGlobalMarker.stateA must evaluate to a string', {
+      effectType: 'flipGlobalMarker',
+      actualType: typeof evaluatedStateA,
+      value: evaluatedStateA,
+    });
+  }
+  if (typeof evaluatedStateB !== 'string') {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'flipGlobalMarker.stateB must evaluate to a string', {
+      effectType: 'flipGlobalMarker',
+      actualType: typeof evaluatedStateB,
+      value: evaluatedStateB,
+    });
+  }
+  if (evaluatedStateA === evaluatedStateB) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'flipGlobalMarker requires two distinct states', {
+      effectType: 'flipGlobalMarker',
+      marker: evaluatedMarker,
+      stateA: evaluatedStateA,
+      stateB: evaluatedStateB,
+    });
+  }
+
+  const lattice = resolveGlobalMarkerLattice(ctx, evaluatedMarker, 'flipGlobalMarker');
+  if (!lattice.states.includes(evaluatedStateA)) {
+    throw new EffectRuntimeError(
+      'EFFECT_RUNTIME',
+      `Invalid stateA "${evaluatedStateA}" for lattice "${evaluatedMarker}" in flipGlobalMarker`,
+      {
+        effectType: 'flipGlobalMarker',
+        marker: evaluatedMarker,
+        stateA: evaluatedStateA,
+        validStates: lattice.states,
+      },
+    );
+  }
+  if (!lattice.states.includes(evaluatedStateB)) {
+    throw new EffectRuntimeError(
+      'EFFECT_RUNTIME',
+      `Invalid stateB "${evaluatedStateB}" for lattice "${evaluatedMarker}" in flipGlobalMarker`,
+      {
+        effectType: 'flipGlobalMarker',
+        marker: evaluatedMarker,
+        stateB: evaluatedStateB,
+        validStates: lattice.states,
+      },
+    );
+  }
+
+  const currentState = ctx.state.globalMarkers?.[evaluatedMarker] ?? lattice.defaultState;
+  let nextState: string | null = null;
+  if (currentState === evaluatedStateA) {
+    nextState = evaluatedStateB;
+  } else if (currentState === evaluatedStateB) {
+    nextState = evaluatedStateA;
+  } else {
+    throw new EffectRuntimeError(
+      'EFFECT_RUNTIME',
+      `flipGlobalMarker current state "${currentState}" is not flippable between "${evaluatedStateA}" and "${evaluatedStateB}"`,
+      {
+        effectType: 'flipGlobalMarker',
+        marker: evaluatedMarker,
+        currentState,
+        stateA: evaluatedStateA,
+        stateB: evaluatedStateB,
+      },
+    );
+  }
+
+  return {
+    state: {
+      ...ctx.state,
+      globalMarkers: {
+        ...(ctx.state.globalMarkers ?? {}),
+        [evaluatedMarker]: nextState,
+      },
+    },
+    rng: ctx.rng,
+  };
+};

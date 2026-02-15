@@ -7,6 +7,7 @@ import {
 import {
   applyChooseN,
   applyChooseOne,
+  applyFlipGlobalMarker,
   applyRollRandom,
   applySetGlobalMarker,
   applySetMarker,
@@ -57,6 +58,7 @@ const effectTypeOf = (effect: EffectAST): string => {
   if ('setMarker' in effect) return 'setMarker';
   if ('shiftMarker' in effect) return 'shiftMarker';
   if ('setGlobalMarker' in effect) return 'setGlobalMarker';
+  if ('flipGlobalMarker' in effect) return 'flipGlobalMarker';
   if ('shiftGlobalMarker' in effect) return 'shiftGlobalMarker';
 
   const _exhaustive: never = effect;
@@ -153,6 +155,10 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 
   if ('setGlobalMarker' in effect) {
     return applySetGlobalMarker(effect, ctx);
+  }
+
+  if ('flipGlobalMarker' in effect) {
+    return applyFlipGlobalMarker(effect, ctx);
   }
 
   if ('shiftGlobalMarker' in effect) {

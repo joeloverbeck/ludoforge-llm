@@ -609,4 +609,54 @@ describe('effects global marker lifecycle', () => {
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalMarkers?.cap_topGun, 'shaded');
   });
+
+  it('flipGlobalMarker toggles between two states for a selected marker', () => {
+    const ctx = makeMarkerCtx({
+      def: {
+        ...makeMarkerDef(),
+        globalMarkerLattices: [{ id: 'cap_topGun', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' }],
+      },
+      state: {
+        ...makeState(),
+        globalMarkers: { cap_topGun: 'unshaded' },
+      },
+      bindings: { $marker: 'cap_topGun' },
+    });
+    const effect: EffectAST = {
+      flipGlobalMarker: {
+        marker: { ref: 'binding', name: '$marker' },
+        stateA: 'unshaded',
+        stateB: 'shaded',
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalMarkers?.cap_topGun, 'shaded');
+  });
+
+  it('flipGlobalMarker throws when current marker state is outside flip pair', () => {
+    const ctx = makeMarkerCtx({
+      def: {
+        ...makeMarkerDef(),
+        globalMarkerLattices: [{ id: 'cap_topGun', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' }],
+      },
+      state: {
+        ...makeState(),
+        globalMarkers: { cap_topGun: 'inactive' },
+      },
+      bindings: { $marker: 'cap_topGun' },
+    });
+    const effect: EffectAST = {
+      flipGlobalMarker: {
+        marker: { ref: 'binding', name: '$marker' },
+        stateA: 'unshaded',
+        stateB: 'shaded',
+      },
+    };
+
+    assert.throws(
+      () => applyEffect(effect, ctx),
+      (error: unknown) => error instanceof EffectRuntimeError && String(error).includes('not flippable'),
+    );
+  });
 });

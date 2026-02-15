@@ -21,6 +21,7 @@ const SUPPORTED_QUERY_KINDS = [
   'tokensInZone',
   'intsInRange',
   'enums',
+  'globalMarkers',
   'players',
   'zones',
   'mapSpaces',
@@ -433,6 +434,26 @@ export function lowerQueryNode(
       }
       return {
         value: { query: 'enums', values: [...source.values] },
+        diagnostics: [],
+      };
+    }
+    case 'globalMarkers': {
+      if (source.markers !== undefined && (!Array.isArray(source.markers) || source.markers.some((value) => typeof value !== 'string'))) {
+        return missingCapability(path, 'globalMarkers query markers', source, [
+          '{ query: "globalMarkers", markers?: string[], states?: string[] }',
+        ]);
+      }
+      if (source.states !== undefined && (!Array.isArray(source.states) || source.states.some((value) => typeof value !== 'string'))) {
+        return missingCapability(path, 'globalMarkers query states', source, [
+          '{ query: "globalMarkers", markers?: string[], states?: string[] }',
+        ]);
+      }
+      return {
+        value: {
+          query: 'globalMarkers',
+          ...(source.markers === undefined ? {} : { markers: [...source.markers] }),
+          ...(source.states === undefined ? {} : { states: [...source.states] }),
+        },
         diagnostics: [],
       };
     }

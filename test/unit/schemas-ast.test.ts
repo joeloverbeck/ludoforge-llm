@@ -204,6 +204,7 @@ describe('AST and selector schemas', () => {
       { shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } },
       { shiftMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', delta: 1 } },
       { setGlobalMarker: { marker: 'cap_topGun', state: 'unshaded' } },
+      { flipGlobalMarker: { marker: { ref: 'binding', name: '$marker' }, stateA: 'unshaded', stateB: 'shaded' } },
       { shiftGlobalMarker: { marker: 'cap_topGun', delta: 1 } },
     ];
 
@@ -279,6 +280,19 @@ describe('AST and selector schemas', () => {
   it('parses binding query', () => {
     const query: OptionsQuery = { query: 'binding', name: 'targetSpaces' };
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
+  });
+
+  it('parses globalMarkers query with optional marker and state filters', () => {
+    const queries: OptionsQuery[] = [
+      { query: 'globalMarkers' },
+      { query: 'globalMarkers', markers: ['cap_topGun', 'cap_migs'] },
+      { query: 'globalMarkers', states: ['unshaded', 'shaded'] },
+      { query: 'globalMarkers', markers: ['cap_topGun'], states: ['inactive'] },
+    ];
+
+    for (const query of queries) {
+      assert.deepEqual(OptionsQuerySchema.parse(query), query);
+    }
   });
 
   it('parses mapSpaces query with filter condition', () => {

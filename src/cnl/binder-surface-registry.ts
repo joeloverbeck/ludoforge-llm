@@ -135,6 +135,12 @@ export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, Effect
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
+  flipGlobalMarker: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
   shiftGlobalMarker: {
     declaredBinderPaths: NO_BINDER_PATHS,
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,

@@ -121,6 +121,9 @@ function lowerEffectNode(
   if (isRecord(source.setGlobalMarker)) {
     return lowerSetGlobalMarkerEffect(source.setGlobalMarker, context, scope, `${path}.setGlobalMarker`);
   }
+  if (isRecord(source.flipGlobalMarker)) {
+    return lowerFlipGlobalMarkerEffect(source.flipGlobalMarker, context, scope, `${path}.flipGlobalMarker`);
+  }
   if (isRecord(source.shiftGlobalMarker)) {
     return lowerShiftGlobalMarkerEffect(source.shiftGlobalMarker, context, scope, `${path}.shiftGlobalMarker`);
   }
@@ -836,6 +839,33 @@ function lowerSetGlobalMarkerEffect(
       setGlobalMarker: {
         marker: source.marker,
         state: state.value,
+      },
+    },
+    diagnostics,
+  };
+}
+
+function lowerFlipGlobalMarkerEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  const marker = lowerValueNode(source.marker, makeConditionContext(context, scope), `${path}.marker`);
+  const stateA = lowerValueNode(source.stateA, makeConditionContext(context, scope), `${path}.stateA`);
+  const stateB = lowerValueNode(source.stateB, makeConditionContext(context, scope), `${path}.stateB`);
+  const diagnostics = [...marker.diagnostics, ...stateA.diagnostics, ...stateB.diagnostics];
+
+  if (marker.value === null || stateA.value === null || stateB.value === null) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: {
+      flipGlobalMarker: {
+        marker: marker.value,
+        stateA: stateA.value,
+        stateB: stateB.value,
       },
     },
     diagnostics,

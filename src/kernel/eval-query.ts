@@ -159,6 +159,19 @@ function evalMapSpacesQuery(
   return applyZonesFilter(mapSpaceZones, query.filter, ctx);
 }
 
+function dedupeStringsPreserveOrder(values: readonly string[]): readonly string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const value of values) {
+    if (seen.has(value)) {
+      continue;
+    }
+    seen.add(value);
+    unique.push(value);
+  }
+  return unique;
+}
+
 export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly QueryResult[] {
   const maxQueryResults = getMaxQueryResults(ctx);
 
@@ -201,6 +214,25 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
     case 'enums': {
       assertWithinBounds(query.values.length, query, maxQueryResults);
       return [...query.values];
+    }
+
+    case 'globalMarkers': {
+      const allMarkers = (ctx.def.globalMarkerLattices ?? []).map((lattice) => lattice.id);
+      const markerOrder = query.markers === undefined ? [...allMarkers].sort() : dedupeStringsPreserveOrder(query.markers);
+      const allowedStates = query.states === undefined ? null : new Set(query.states);
+      const filtered = markerOrder.filter((markerId) => {
+        const lattice = ctx.def.globalMarkerLattices?.find((entry) => entry.id === markerId);
+        if (lattice === undefined) {
+          return false;
+        }
+        if (allowedStates === null) {
+          return true;
+        }
+        const currentState = ctx.state.globalMarkers?.[markerId] ?? lattice.defaultState;
+        return allowedStates.has(currentState);
+      });
+      assertWithinBounds(filtered.length, query, maxQueryResults);
+      return filtered;
     }
 
     case 'players': {

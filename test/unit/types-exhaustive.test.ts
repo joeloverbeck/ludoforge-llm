@@ -81,6 +81,7 @@ const exhaustEffectAST = (effect: EffectAST): string => {
   if ('setMarker' in effect) return 'setMarker';
   if ('shiftMarker' in effect) return 'shiftMarker';
   if ('setGlobalMarker' in effect) return 'setGlobalMarker';
+  if ('flipGlobalMarker' in effect) return 'flipGlobalMarker';
   if ('shiftGlobalMarker' in effect) return 'shiftGlobalMarker';
 
   return assertNever(effect);
@@ -91,6 +92,7 @@ const exhaustOptionsQuery = (query: OptionsQuery): string => {
     case 'tokensInZone':
     case 'intsInRange':
     case 'enums':
+    case 'globalMarkers':
     case 'players':
     case 'zones':
     case 'mapSpaces':
@@ -130,13 +132,13 @@ describe('exhaustive kernel unions', () => {
   it('keeps the exact variant counts for key unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
     const conditionVariants: UnionSize<ConditionAST> = 10;
-    const effectVariants: UnionSize<EffectAST> = 21;
-    const queryVariants: UnionSize<OptionsQuery> = 10;
+    const effectVariants: UnionSize<EffectAST> = 22;
+    const queryVariants: UnionSize<OptionsQuery> = 11;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 10);
-    assert.equal(effectVariants, 21);
-    assert.equal(queryVariants, 10);
+    assert.equal(effectVariants, 22);
+    assert.equal(queryVariants, 11);
   });
 
   it('ensures MoveLog includes legalMoveCount', () => {

@@ -19,6 +19,7 @@ export const SUPPORTED_EFFECT_KINDS = [
   'setMarker',
   'shiftMarker',
   'setGlobalMarker',
+  'flipGlobalMarker',
   'shiftGlobalMarker',
 ] as const;
 

@@ -70,6 +70,13 @@ optionsQuerySchemaInternal = z.union([
     .strict(),
   z.object({ query: z.literal('intsInRange'), min: NumberSchema, max: NumberSchema }).strict(),
   z.object({ query: z.literal('enums'), values: z.array(StringSchema) }).strict(),
+  z
+    .object({
+      query: z.literal('globalMarkers'),
+      markers: z.array(StringSchema).optional(),
+      states: z.array(StringSchema).optional(),
+    })
+    .strict(),
   z.object({ query: z.literal('players') }).strict(),
   z
     .object({
@@ -425,6 +432,17 @@ effectAstSchemaInternal = z.union([
         .object({
           marker: StringSchema,
           state: ValueExprSchema,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      flipGlobalMarker: z
+        .object({
+          marker: ValueExprSchema,
+          stateA: ValueExprSchema,
+          stateB: ValueExprSchema,
         })
         .strict(),
     })

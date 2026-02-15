@@ -134,6 +134,46 @@ describe('compile-effects lowering', () => {
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.1.chooseN'), true);
   });
 
+  it('lowers globalMarkers query and flipGlobalMarker effect with binding marker refs', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          chooseOne: {
+            bind: '$marker',
+            options: { query: 'globalMarkers', markers: ['cap_topGun', 'cap_migs'], states: ['unshaded', 'shaded'] },
+          },
+        },
+        {
+          flipGlobalMarker: {
+            marker: { ref: 'binding', name: '$marker' },
+            stateA: 'unshaded',
+            stateB: 'shaded',
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        chooseOne: {
+          internalDecisionId: 'decision:doc.actions.0.effects.0.chooseOne',
+          bind: '$marker',
+          options: { query: 'globalMarkers', markers: ['cap_topGun', 'cap_migs'], states: ['unshaded', 'shaded'] },
+        },
+      },
+      {
+        flipGlobalMarker: {
+          marker: { ref: 'binding', name: '$marker' },
+          stateA: 'unshaded',
+          stateB: 'shaded',
+        },
+      },
+    ]);
+  });
+
   it('lowers dynamic zone expression (tokenZone ref) to zoneExpr', () => {
     const result = lowerEffectArray(
       [

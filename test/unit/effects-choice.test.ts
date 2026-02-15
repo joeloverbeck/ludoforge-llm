@@ -133,6 +133,34 @@ describe('effects choice assertions', () => {
     assert.equal(result.rng, ctx.rng);
   });
 
+  it('chooseOne supports globalMarkers query domains filtered by marker state', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        globalMarkerLattices: [
+          { id: 'cap_topGun', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' },
+          { id: 'cap_migs', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' },
+        ],
+      },
+      state: {
+        ...makeState(),
+        globalMarkers: { cap_topGun: 'unshaded', cap_migs: 'inactive' },
+      },
+      moveParams: { 'decision:$marker': 'cap_topGun' },
+    });
+    const effect: EffectAST = {
+      chooseOne: {
+        internalDecisionId: 'decision:$marker',
+        bind: '$marker',
+        options: { query: 'globalMarkers', states: ['unshaded', 'shaded'] },
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state, ctx.state);
+    assert.equal(result.rng, ctx.rng);
+  });
+
   it('chooseN succeeds for exact-length unique in-domain array', () => {
     const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha', 'gamma'] } });
     const effect: EffectAST = {

@@ -346,6 +346,42 @@ export const validateOptionsQuery = (
     case 'players': {
       return;
     }
+    case 'globalMarkers': {
+      query.markers?.forEach((markerId, index) => {
+        if (!context.globalMarkerLatticeNames.has(markerId)) {
+          pushMissingReferenceDiagnostic(
+            diagnostics,
+            'REF_GLOBAL_MARKER_LATTICE_MISSING',
+            `${path}.markers[${index}]`,
+            `Unknown global marker lattice "${markerId}".`,
+            markerId,
+            context.globalMarkerLatticeCandidates,
+          );
+        }
+      });
+
+      if (query.states !== undefined && query.markers !== undefined) {
+        query.markers.forEach((markerId) => {
+          const validStates = context.globalMarkerLatticeStatesById.get(markerId);
+          if (validStates === undefined) {
+            return;
+          }
+          query.states?.forEach((state, index) => {
+            if (!validStates.includes(state)) {
+              pushMissingReferenceDiagnostic(
+                diagnostics,
+                'REF_MARKER_STATE_MISSING',
+                `${path}.states[${index}]`,
+                `Unknown marker state "${state}" for marker lattice "${markerId}".`,
+                state,
+                validStates,
+              );
+            }
+          });
+        });
+      }
+      return;
+    }
   }
 };
 
@@ -629,6 +665,54 @@ export const validateEffectAst = (
       context.globalMarkerLatticeStatesById,
     );
     validateValueExpr(diagnostics, effect.setGlobalMarker.state, `${path}.setGlobalMarker.state`, context);
+    return;
+  }
+
+  if ('flipGlobalMarker' in effect) {
+    const staticMarkerId = tryStaticStringValue(effect.flipGlobalMarker.marker);
+    if (staticMarkerId !== null) {
+      if (!context.globalMarkerLatticeNames.has(staticMarkerId)) {
+        pushMissingReferenceDiagnostic(
+          diagnostics,
+          'REF_GLOBAL_MARKER_LATTICE_MISSING',
+          `${path}.flipGlobalMarker.marker`,
+          `Unknown global marker lattice "${staticMarkerId}".`,
+          staticMarkerId,
+          context.globalMarkerLatticeCandidates,
+        );
+      } else {
+        validateMarkerStateLiteral(
+          diagnostics,
+          staticMarkerId,
+          effect.flipGlobalMarker.stateA,
+          `${path}.flipGlobalMarker.stateA`,
+          context.globalMarkerLatticeStatesById,
+        );
+        validateMarkerStateLiteral(
+          diagnostics,
+          staticMarkerId,
+          effect.flipGlobalMarker.stateB,
+          `${path}.flipGlobalMarker.stateB`,
+          context.globalMarkerLatticeStatesById,
+        );
+      }
+    }
+
+    const staticStateA = tryStaticStringValue(effect.flipGlobalMarker.stateA);
+    const staticStateB = tryStaticStringValue(effect.flipGlobalMarker.stateB);
+    if (staticStateA !== null && staticStateB !== null && staticStateA === staticStateB) {
+      diagnostics.push({
+        code: 'EFFECT_FLIP_GLOBAL_MARKER_STATE_INVALID',
+        path: `${path}.flipGlobalMarker`,
+        severity: 'error',
+        message: 'flipGlobalMarker.stateA and flipGlobalMarker.stateB must be distinct.',
+        suggestion: 'Provide two different marker states to flip between.',
+      });
+    }
+
+    validateValueExpr(diagnostics, effect.flipGlobalMarker.marker, `${path}.flipGlobalMarker.marker`, context);
+    validateValueExpr(diagnostics, effect.flipGlobalMarker.stateA, `${path}.flipGlobalMarker.stateA`, context);
+    validateValueExpr(diagnostics, effect.flipGlobalMarker.stateB, `${path}.flipGlobalMarker.stateB`, context);
     return;
   }
 

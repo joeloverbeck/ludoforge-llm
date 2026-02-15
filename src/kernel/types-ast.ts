@@ -87,6 +87,7 @@ export type OptionsQuery =
   | { readonly query: 'tokensInZone'; readonly zone: ZoneSel; readonly filter?: readonly TokenFilterPredicate[] }
   | { readonly query: 'intsInRange'; readonly min: number; readonly max: number }
   | { readonly query: 'enums'; readonly values: readonly string[] }
+  | { readonly query: 'globalMarkers'; readonly markers?: readonly string[]; readonly states?: readonly string[] }
   | { readonly query: 'players' }
   | { readonly query: 'zones'; readonly filter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST } }
   | { readonly query: 'mapSpaces'; readonly filter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST } }
@@ -252,6 +253,13 @@ export type EffectAST =
       readonly setGlobalMarker: {
         readonly marker: string;
         readonly state: ValueExpr;
+      };
+    }
+  | {
+      readonly flipGlobalMarker: {
+        readonly marker: ValueExpr;
+        readonly stateA: ValueExpr;
+        readonly stateB: ValueExpr;
       };
     }
   | {

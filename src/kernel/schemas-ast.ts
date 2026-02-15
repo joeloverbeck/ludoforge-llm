@@ -311,6 +311,32 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      commitResource: z
+        .object({
+          from: z
+            .object({
+              scope: z.literal('pvar'),
+              player: PlayerSelSchema,
+              var: StringSchema,
+            })
+            .strict(),
+          to: z
+            .object({
+              scope: z.union([z.literal('global'), z.literal('pvar')]),
+              var: StringSchema,
+              player: PlayerSelSchema.optional(),
+            })
+            .strict(),
+          amount: NumericValueExprSchema,
+          min: NumericValueExprSchema.optional(),
+          max: NumericValueExprSchema.optional(),
+          actualBind: StringSchema.optional(),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
       moveToken: z
         .object({
           token: TokenSelSchema,

@@ -27,6 +27,12 @@ export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, Effect
     bindingTemplateReferencerPaths: [['player', 'chosen']],
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
+  commitResource: {
+    declaredBinderPaths: [['actualBind']],
+    sequentiallyVisibleBinderPaths: [['actualBind']],
+    bindingTemplateReferencerPaths: [['from', 'player', 'chosen'], ['to', 'player', 'chosen']],
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
   moveToken: {
     declaredBinderPaths: NO_BINDER_PATHS,
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,

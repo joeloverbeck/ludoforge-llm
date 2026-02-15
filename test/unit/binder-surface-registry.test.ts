@@ -23,7 +23,7 @@ describe('binder-surface-registry', () => {
   it('tracks declared binder-producing effect kinds explicitly', () => {
     assert.deepEqual(
       [...DECLARED_BINDER_EFFECT_KINDS].sort(),
-      ['chooseN', 'chooseOne', 'evaluateSubset', 'forEach', 'let', 'removeByPriority', 'rollRandom'],
+      ['chooseN', 'chooseOne', 'commitResource', 'evaluateSubset', 'forEach', 'let', 'removeByPriority', 'rollRandom'],
     );
   });
 
@@ -95,6 +95,17 @@ describe('binder-surface-registry', () => {
     );
     assert.deepEqual(
       collectSequentialBindings({
+        commitResource: {
+          from: { scope: 'pvar', player: 'actor', var: 'coins' },
+          to: { scope: 'global', var: 'pot' },
+          amount: 3,
+          actualBind: '$actual',
+        },
+      }),
+      ['$actual'],
+    );
+    assert.deepEqual(
+      collectSequentialBindings({
         forEach: {
           bind: '$tok',
           over: { query: 'players' },
@@ -138,7 +149,7 @@ describe('binder-surface-registry', () => {
         }
       }
 
-      if (currentEffectKind !== null && /\breadonly\s+(bind|[A-Za-z0-9_]*Bind)\s*:/.test(line)) {
+      if (currentEffectKind !== null && /\breadonly\s+(bind|[A-Za-z0-9_]*Bind)\??\s*:/.test(line)) {
         discoveredKinds.add(currentEffectKind);
       }
     }

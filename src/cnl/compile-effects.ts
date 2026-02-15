@@ -69,6 +69,9 @@ function lowerEffectNode(
   if (isRecord(source.addVar)) {
     return lowerAddVarEffect(source.addVar, context, scope, `${path}.addVar`);
   }
+  if (isRecord(source.commitResource)) {
+    return lowerCommitResourceEffect(source.commitResource, context, scope, `${path}.commitResource`);
+  }
   if (isRecord(source.moveToken)) {
     return lowerMoveTokenEffect(source.moveToken, context, scope, `${path}.moveToken`);
   }
@@ -245,6 +248,90 @@ function lowerAddVarEffect(
         player: player.value,
         var: varName,
         delta: delta.value,
+      },
+    },
+    diagnostics,
+  };
+}
+
+function lowerCommitResourceEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (!isRecord(source.from) || !isRecord(source.to) || typeof source.from.var !== 'string' || typeof source.to.var !== 'string') {
+    return missingCapability(path, 'commitResource effect', source, [
+      '{ commitResource: { from: { scope: "pvar", player, var }, to: { scope, var, player? }, amount, min?, max?, actualBind? } }',
+    ]);
+  }
+
+  if (source.from.scope !== 'pvar' || (source.to.scope !== 'global' && source.to.scope !== 'pvar')) {
+    return missingCapability(path, 'commitResource effect', source, [
+      '{ commitResource: { from: { scope: "pvar", player, var }, to: { scope: "global" | "pvar", var, player? }, amount } }',
+    ]);
+  }
+
+  const fromPlayer = lowerPlayerSelector(source.from.player, scope, `${path}.from.player`);
+  const amount = lowerNumericValueNode(source.amount, makeConditionContext(context, scope), `${path}.amount`);
+
+  const diagnostics = [...fromPlayer.diagnostics, ...amount.diagnostics];
+  if (fromPlayer.value === null || amount.value === null) {
+    return { value: null, diagnostics };
+  }
+
+  let toPlayer: PlayerSel | undefined;
+  if (source.to.player !== undefined) {
+    const loweredToPlayer = lowerPlayerSelector(source.to.player, scope, `${path}.to.player`);
+    diagnostics.push(...loweredToPlayer.diagnostics);
+    if (loweredToPlayer.value === null) {
+      return { value: null, diagnostics };
+    }
+    toPlayer = loweredToPlayer.value;
+  }
+
+  let min: NumericValueExpr | undefined;
+  if (source.min !== undefined) {
+    const loweredMin = lowerNumericValueNode(source.min, makeConditionContext(context, scope), `${path}.min`);
+    diagnostics.push(...loweredMin.diagnostics);
+    if (loweredMin.value === null) {
+      return { value: null, diagnostics };
+    }
+    min = loweredMin.value;
+  }
+
+  let max: NumericValueExpr | undefined;
+  if (source.max !== undefined) {
+    const loweredMax = lowerNumericValueNode(source.max, makeConditionContext(context, scope), `${path}.max`);
+    diagnostics.push(...loweredMax.diagnostics);
+    if (loweredMax.value === null) {
+      return { value: null, diagnostics };
+    }
+    max = loweredMax.value;
+  }
+
+  if (source.actualBind !== undefined && typeof source.actualBind !== 'string') {
+    diagnostics.push(...missingCapability(`${path}.actualBind`, 'commitResource actualBind', source.actualBind, ['string']).diagnostics);
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: {
+      commitResource: {
+        from: {
+          scope: 'pvar',
+          player: fromPlayer.value,
+          var: source.from.var,
+        },
+        to: {
+          scope: source.to.scope,
+          var: source.to.var,
+          ...(toPlayer === undefined ? {} : { player: toPlayer }),
+        },
+        amount: amount.value,
+        ...(min === undefined ? {} : { min }),
+        ...(max === undefined ? {} : { max }),
+        ...(source.actualBind === undefined ? {} : { actualBind: source.actualBind }),
       },
     },
     diagnostics,

@@ -162,6 +162,16 @@ export type EffectAST =
       };
     }
   | {
+      readonly commitResource: {
+        readonly from: { readonly scope: 'pvar'; readonly player: PlayerSel; readonly var: string };
+        readonly to: { readonly scope: 'global' | 'pvar'; readonly var: string; readonly player?: PlayerSel };
+        readonly amount: NumericValueExpr;
+        readonly min?: NumericValueExpr;
+        readonly max?: NumericValueExpr;
+        readonly actualBind?: string;
+      };
+    }
+  | {
       readonly moveToken: {
         readonly token: TokenSel;
         readonly from: ZoneRef;

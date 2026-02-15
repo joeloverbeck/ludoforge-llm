@@ -18,6 +18,7 @@ describe('compile-effects lowering', () => {
   it('lowers supported effect nodes deterministically', () => {
     const source = [
       { draw: { from: 'deck', to: 'hand:$actor', count: 1 } },
+      { commitResource: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
       { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', eq: 'US' }] } },
       {
         if: {
@@ -42,6 +43,7 @@ describe('compile-effects lowering', () => {
     assertNoDiagnostics(first);
     assert.deepEqual(first.value, [
       { draw: { from: 'deck:none', to: 'hand:$actor', count: 1 } },
+      { commitResource: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
       { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
       {
         if: {
@@ -72,6 +74,39 @@ describe('compile-effects lowering', () => {
     assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0');
     assert.ok((result.diagnostics[0]?.alternatives ?? []).includes('setVar'));
+  });
+
+  it('lowers commitResource optional fields including player selectors and binders', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          commitResource: {
+            from: { scope: 'pvar', player: { chosen: '$actor' }, var: 'coins' },
+            to: { scope: 'pvar', player: 'active', var: 'committed' },
+            amount: { ref: 'gvar', var: 'stake' },
+            min: 1,
+            max: 4,
+            actualBind: '$actual',
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        commitResource: {
+          from: { scope: 'pvar', player: { chosen: '$actor' }, var: 'coins' },
+          to: { scope: 'pvar', player: 'active', var: 'committed' },
+          amount: { ref: 'gvar', var: 'stake' },
+          min: 1,
+          max: 4,
+          actualBind: '$actual',
+        },
+      },
+    ]);
   });
 
   it('lowers chooseN range cardinality forms deterministically', () => {

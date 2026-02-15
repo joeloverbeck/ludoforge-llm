@@ -685,6 +685,97 @@ export const validateEffectAst = (
     return;
   }
 
+  if ('commitResource' in effect) {
+    if (!context.perPlayerVarNames.has(effect.commitResource.from.var)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_PVAR_MISSING',
+        `${path}.commitResource.from.var`,
+        `Unknown per-player variable "${effect.commitResource.from.var}".`,
+        effect.commitResource.from.var,
+        context.perPlayerVarCandidates,
+      );
+    }
+    if (context.perPlayerVarTypesByName.get(effect.commitResource.from.var) === 'boolean') {
+      diagnostics.push({
+        code: 'EFFECT_COMMIT_RESOURCE_BOOLEAN_TARGET_INVALID',
+        path: `${path}.commitResource.from.var`,
+        severity: 'error',
+        message: `commitResource cannot target boolean variable "${effect.commitResource.from.var}".`,
+        suggestion: 'Use integer per-player variables for commitResource source and destination.',
+      });
+    }
+
+    if (effect.commitResource.to.scope === 'global' && !context.globalVarNames.has(effect.commitResource.to.var)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_GVAR_MISSING',
+        `${path}.commitResource.to.var`,
+        `Unknown global variable "${effect.commitResource.to.var}".`,
+        effect.commitResource.to.var,
+        context.globalVarCandidates,
+      );
+    }
+    if (
+      effect.commitResource.to.scope === 'global' &&
+      context.globalVarTypesByName.get(effect.commitResource.to.var) === 'boolean'
+    ) {
+      diagnostics.push({
+        code: 'EFFECT_COMMIT_RESOURCE_BOOLEAN_TARGET_INVALID',
+        path: `${path}.commitResource.to.var`,
+        severity: 'error',
+        message: `commitResource cannot target boolean variable "${effect.commitResource.to.var}".`,
+        suggestion: 'Use integer per-player variables for commitResource source and destination.',
+      });
+    }
+
+    if (effect.commitResource.to.scope === 'pvar' && !context.perPlayerVarNames.has(effect.commitResource.to.var)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_PVAR_MISSING',
+        `${path}.commitResource.to.var`,
+        `Unknown per-player variable "${effect.commitResource.to.var}".`,
+        effect.commitResource.to.var,
+        context.perPlayerVarCandidates,
+      );
+    }
+    if (
+      effect.commitResource.to.scope === 'pvar' &&
+      context.perPlayerVarTypesByName.get(effect.commitResource.to.var) === 'boolean'
+    ) {
+      diagnostics.push({
+        code: 'EFFECT_COMMIT_RESOURCE_BOOLEAN_TARGET_INVALID',
+        path: `${path}.commitResource.to.var`,
+        severity: 'error',
+        message: `commitResource cannot target boolean variable "${effect.commitResource.to.var}".`,
+        suggestion: 'Use integer per-player variables for commitResource source and destination.',
+      });
+    }
+
+    validatePlayerSelector(diagnostics, effect.commitResource.from.player, `${path}.commitResource.from.player`, context);
+    if (effect.commitResource.to.player !== undefined) {
+      validatePlayerSelector(diagnostics, effect.commitResource.to.player, `${path}.commitResource.to.player`, context);
+    }
+    if (effect.commitResource.to.scope === 'pvar' && effect.commitResource.to.player === undefined) {
+      diagnostics.push({
+        code: 'EFFECT_COMMIT_RESOURCE_TO_PLAYER_REQUIRED',
+        path: `${path}.commitResource.to.player`,
+        severity: 'error',
+        message: 'commitResource.to.player is required when commitResource.to.scope is "pvar".',
+        suggestion: 'Provide a player selector for commitResource.to.player when targeting a per-player variable.',
+      });
+    }
+
+    validateNumericValueExpr(diagnostics, effect.commitResource.amount, `${path}.commitResource.amount`, context);
+    if (effect.commitResource.min !== undefined) {
+      validateNumericValueExpr(diagnostics, effect.commitResource.min, `${path}.commitResource.min`, context);
+    }
+    if (effect.commitResource.max !== undefined) {
+      validateNumericValueExpr(diagnostics, effect.commitResource.max, `${path}.commitResource.max`, context);
+    }
+    return;
+  }
+
   if ('moveToken' in effect) {
     validateZoneRef(diagnostics, effect.moveToken.from, `${path}.moveToken.from`, context);
     validateZoneRef(diagnostics, effect.moveToken.to, `${path}.moveToken.to`, context);

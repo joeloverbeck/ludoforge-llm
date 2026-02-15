@@ -1,14 +1,13 @@
 import { evalCondition } from './eval-condition.js';
-import { resolveActionActor } from './action-actor.js';
 import { resolveActionExecutor } from './action-executor.js';
+import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
+import { evalActionPipelinePredicate } from './action-pipeline-predicates.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
-import { resolveActionPipelineDispatch } from './apply-move-pipeline.js';
 import { applyPendingFreeOperationVariants, applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
-import { pipelinePredicateEvaluationError } from './runtime-error.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
@@ -32,25 +31,6 @@ function makeEvalContext(
     collector: createCollector(),
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   };
-}
-
-function withinActionLimits(action: ActionDef, state: GameState): boolean {
-  const usage = state.actionUsage[String(action.id)] ?? { turnCount: 0, phaseCount: 0, gameCount: 0 };
-  for (const limit of action.limits) {
-    if (limit.scope === 'turn' && usage.turnCount >= limit.max) {
-      return false;
-    }
-
-    if (limit.scope === 'phase' && usage.phaseCount >= limit.max) {
-      return false;
-    }
-
-    if (limit.scope === 'game' && usage.gameCount >= limit.max) {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 function enumerateParams(
@@ -192,27 +172,22 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
 
   for (const action of def.actions) {
-    if (action.phase !== state.currentPhase) {
-      continue;
-    }
-
-    const actorResolution = resolveActionActor({
+    const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
+    const preflight = resolveActionApplicabilityPreflight({
       def,
       state,
-      adjacencyGraph,
       action,
+      adjacencyGraph,
       decisionPlayer: state.activePlayer,
       bindings: {},
+      skipExecutorCheck: !hasActionPipeline,
+      skipPipelineDispatch: !hasActionPipeline,
     });
-    if (actorResolution.kind === 'notApplicable') {
+    if (preflight.kind === 'notApplicable') {
       continue;
     }
-    if (actorResolution.kind === 'invalidSpec') {
-      throw selectorInvalidSpecError('legalMoves', 'actor', action, actorResolution.error);
-    }
-
-    if (!withinActionLimits(action, state)) {
-      continue;
+    if (preflight.kind === 'invalidSpec') {
+      throw selectorInvalidSpecError('legalMoves', preflight.selector, action, preflight.error);
     }
 
     const eventMoves = enumerateCurrentEventMoves(action, def, state);
@@ -221,38 +196,17 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
 
-    const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
     if (!hasActionPipeline) {
       enumerateParams(action, def, adjacencyGraph, state, 0, {}, moves);
       continue;
     }
 
-    const executionResolution = resolveActionExecutor({
-      def,
-      state,
-      adjacencyGraph,
-      action,
-      decisionPlayer: state.activePlayer,
-      bindings: {},
-    });
-    if (executionResolution.kind === 'notApplicable') {
-      continue;
-    }
-    if (executionResolution.kind === 'invalidSpec') {
-      throw selectorInvalidSpecError('legalMoves', 'executor', action, executionResolution.error);
-    }
-    const executionPlayer = executionResolution.executionPlayer;
-    const executionCtx = makeEvalContext(def, adjacencyGraph, state, executionPlayer, {});
-    const pipelineDispatch = resolveActionPipelineDispatch(def, action, executionCtx);
-    if (pipelineDispatch.kind === 'matched') {
-      const pipeline = pipelineDispatch.profile;
+    if (preflight.pipelineDispatch.kind === 'matched') {
+      const pipeline = preflight.pipelineDispatch.profile;
+      const executionCtx = preflight.evalCtx;
       if (pipeline.legality !== null) {
-        try {
-          if (!evalCondition(pipeline.legality, executionCtx)) {
-            continue;
-          }
-        } catch (error) {
-          throw pipelinePredicateEvaluationError(action, pipeline.id, 'legality', error);
+        if (!evalActionPipelinePredicate(action, pipeline.id, 'legality', pipeline.legality, executionCtx)) {
+          continue;
         }
       }
 
@@ -260,12 +214,8 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
         pipeline.costValidation !== null &&
         pipeline.atomicity === 'atomic'
       ) {
-        try {
-          if (!evalCondition(pipeline.costValidation, executionCtx)) {
-            continue;
-          }
-        } catch (error) {
-          throw pipelinePredicateEvaluationError(action, pipeline.id, 'costValidation', error);
+        if (!evalActionPipelinePredicate(action, pipeline.id, 'costValidation', pipeline.costValidation, executionCtx)) {
+          continue;
         }
       }
 
@@ -274,9 +224,6 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       }
 
       moves.push({ actionId: action.id, params: {} });
-      continue;
-    }
-    if (pipelineDispatch.kind === 'configuredNoMatch') {
       continue;
     }
   }

@@ -69,6 +69,54 @@ const makeMove = (actionId: string, params: Record<string, unknown> = {}): Move 
 });
 
 describe('legalChoices()', () => {
+  it('returns illegal with phaseMismatch when action phase does not match current phase', () => {
+    const action: ActionDef = {
+      id: asActionId('phaseLockedAction'),
+      actor: 'active',
+      executor: 'actor',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState({ currentPhase: asPhaseId('not-main') as GameState['currentPhase'] });
+
+    const result = legalChoices(def, state, makeMove('phaseLockedAction'));
+    assert.deepStrictEqual(result, { kind: 'illegal', complete: false, reason: 'phaseMismatch' });
+  });
+
+  it('returns illegal with actionLimitExceeded when action limit has been reached', () => {
+    const action: ActionDef = {
+      id: asActionId('limitedAction'),
+      actor: 'active',
+      executor: 'actor',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [{ scope: 'phase', max: 1 }],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState({
+      actionUsage: {
+        limitedAction: {
+          turnCount: 0,
+          phaseCount: 1,
+          gameCount: 0,
+        },
+      },
+    });
+
+    const result = legalChoices(def, state, makeMove('limitedAction'));
+    assert.deepStrictEqual(result, { kind: 'illegal', complete: false, reason: 'actionLimitExceeded' });
+  });
+
   it('1. simple action with no chooseOne/chooseN returns complete result', () => {
     const action: ActionDef = {
       id: asActionId('simpleAction'),
@@ -620,6 +668,47 @@ phase: asPhaseId('main'),
 
       const result = legalChoices(def, state, makeMove('blockedOp'));
       assert.deepStrictEqual(result, { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' });
+    });
+
+    it('throws contextual runtime error when profile legality evaluation fails', () => {
+      const action: ActionDef = {
+        id: asActionId('brokenLegalityOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'brokenLegalityProfile',
+        actionId: asActionId('brokenLegalityOp'),
+        legality: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [],
+        atomicity: 'atomic',
+      };
+
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const state = makeBaseState();
+
+      assert.throws(
+        () => legalChoices(def, state, makeMove('brokenLegalityOp')),
+        (error: unknown) => {
+          assert.ok(error instanceof Error);
+          const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+          assert.equal(details.code, 'ACTION_PIPELINE_PREDICATE_EVALUATION_FAILED');
+          assert.equal(details.context?.actionId, asActionId('brokenLegalityOp'));
+          assert.equal(details.context?.profileId, 'brokenLegalityProfile');
+          assert.equal(details.context?.predicate, 'legality');
+          return true;
+        },
+      );
     });
 
     it('returns illegal when pipelines exist but none are applicable', () => {

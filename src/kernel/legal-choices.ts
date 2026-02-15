@@ -1,16 +1,14 @@
-import { resolveActionPipelineDispatch } from './apply-move-pipeline.js';
-import { resolveActionActor } from './action-actor.js';
+import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
+import { evalActionPipelinePredicate } from './action-pipeline-predicates.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { composeDecisionId } from './decision-id.js';
 import { applyEffect } from './effect-dispatch.js';
 import type { EffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
-import { resolveActionExecutor } from './action-executor.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
-import { createCollector } from './execution-collector.js';
 import { resolveEventEffectList } from './event-execution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
@@ -372,51 +370,16 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
   const freeOperationZoneFilter = partialMove.freeOperation === true
     ? resolveFreeOperationZoneFilter(def, state, partialMove)
     : undefined;
-  const actorResolution = resolveActionActor({
+  const preflight = resolveActionApplicabilityPreflight({
     def,
     state,
-    adjacencyGraph,
     action,
+    adjacencyGraph,
     decisionPlayer: state.activePlayer,
     bindings: baseBindings,
-  });
-  if (actorResolution.kind === 'notApplicable') {
-    return { kind: 'illegal', complete: false, reason: 'actorNotApplicable' };
-  }
-  if (actorResolution.kind === 'invalidSpec') {
-    throw selectorInvalidSpecError('legalChoices', 'actor', action, actorResolution.error);
-  }
-  const executionPlayer = partialMove.freeOperation === true
-    ? resolveFreeOperationExecutionPlayer(def, state, partialMove)
-    : (() => {
-      const resolution = resolveActionExecutor({
-        def,
-        state,
-        adjacencyGraph,
-        action,
-        decisionPlayer: state.activePlayer,
-        bindings: baseBindings,
-      });
-      if (resolution.kind === 'notApplicable') {
-        return null;
-      }
-      if (resolution.kind === 'invalidSpec') {
-        throw selectorInvalidSpecError('legalChoices', 'executor', action, resolution.error);
-      }
-      return resolution.executionPlayer;
-    })();
-  if (executionPlayer === null) {
-    return { kind: 'illegal', complete: false, reason: 'executorNotApplicable' };
-  }
-
-  const evalCtx: EvalContext = {
-    def,
-    adjacencyGraph,
-    state,
-    activePlayer: executionPlayer,
-    actorPlayer: executionPlayer,
-    bindings: baseBindings,
-    collector: createCollector(),
+    ...(partialMove.freeOperation === true
+      ? { executionPlayerOverride: resolveFreeOperationExecutionPlayer(def, state, partialMove) }
+      : {}),
     ...(freeOperationZoneFilter === undefined
       ? {}
       : {
@@ -427,15 +390,32 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
             moveParams: partialMove.params,
           },
         }),
-    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
-  };
-
-  const pipelineDispatch = resolveActionPipelineDispatch(def, action, evalCtx);
+  });
+  if (preflight.kind === 'notApplicable') {
+    if (preflight.reason === 'phaseMismatch') {
+      return { kind: 'illegal', complete: false, reason: 'phaseMismatch' };
+    }
+    if (preflight.reason === 'actionLimitExceeded') {
+      return { kind: 'illegal', complete: false, reason: 'actionLimitExceeded' };
+    }
+    if (preflight.reason === 'pipelineNotApplicable') {
+      return { kind: 'illegal', complete: false, reason: 'pipelineNotApplicable' };
+    }
+    if (preflight.reason === 'actorNotApplicable') {
+      return { kind: 'illegal', complete: false, reason: 'actorNotApplicable' };
+    }
+    return { kind: 'illegal', complete: false, reason: 'executorNotApplicable' };
+  }
+  if (preflight.kind === 'invalidSpec') {
+    throw selectorInvalidSpecError('legalChoices', preflight.selector, action, preflight.error);
+  }
+  const evalCtx: EvalContext = preflight.evalCtx;
+  const pipelineDispatch = preflight.pipelineDispatch;
 
   if (pipelineDispatch.kind === 'matched') {
     const pipeline = pipelineDispatch.profile;
     if (pipeline.legality !== null) {
-      if (!evalCondition(pipeline.legality, evalCtx)) {
+      if (!evalActionPipelinePredicate(action, pipeline.id, 'legality', pipeline.legality, evalCtx)) {
         return { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' };
       }
     }
@@ -452,11 +432,6 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     const result = walkEffects([...resolutionEffects, ...eventEffects], wCtx);
     return result.pending ?? COMPLETE;
   }
-
-  if (pipelineDispatch.kind === 'configuredNoMatch') {
-    return { kind: 'illegal', complete: false, reason: 'pipelineNotApplicable' };
-  }
-
   const eventEffects = String(action.id) === 'event'
     ? resolveEventEffectList(def, state, partialMove)
     : [];

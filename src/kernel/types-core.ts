@@ -448,7 +448,7 @@ export interface ChoiceCompleteRequest {
   readonly options?: readonly MoveParamValue[];
   readonly min?: number;
   readonly max?: number;
-  readonly reason?: 'pipelineNotApplicable' | 'pipelineLegalityFailed' | 'executorNotApplicable' | 'actorNotApplicable';
+  readonly reason?: 'pipelineNotApplicable' | 'pipelineLegalityFailed' | 'executorNotApplicable' | 'actorNotApplicable' | 'phaseMismatch' | 'actionLimitExceeded';
 }
 
 export interface ChoicePendingRequest {
@@ -460,7 +460,7 @@ export interface ChoicePendingRequest {
   readonly options: readonly MoveParamValue[];
   readonly min?: number;
   readonly max?: number;
-  readonly reason?: 'pipelineNotApplicable' | 'pipelineLegalityFailed' | 'executorNotApplicable' | 'actorNotApplicable';
+  readonly reason?: 'pipelineNotApplicable' | 'pipelineLegalityFailed' | 'executorNotApplicable' | 'actorNotApplicable' | 'phaseMismatch' | 'actionLimitExceeded';
 }
 
 export interface ChoiceIllegalRequest {
@@ -472,7 +472,7 @@ export interface ChoiceIllegalRequest {
   readonly options?: readonly MoveParamValue[];
   readonly min?: number;
   readonly max?: number;
-  readonly reason: 'pipelineNotApplicable' | 'pipelineLegalityFailed' | 'executorNotApplicable' | 'actorNotApplicable';
+  readonly reason: 'pipelineNotApplicable' | 'pipelineLegalityFailed' | 'executorNotApplicable' | 'actorNotApplicable' | 'phaseMismatch' | 'actionLimitExceeded';
 }
 
 export type ChoiceRequest = ChoiceCompleteRequest | ChoicePendingRequest | ChoiceIllegalRequest;

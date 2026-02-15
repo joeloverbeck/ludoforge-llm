@@ -1,6 +1,7 @@
 export const SUPPORTED_EFFECT_KINDS = [
   'setVar',
   'addVar',
+  'commitResource',
   'moveToken',
   'moveAll',
   'moveTokenAdjacent',

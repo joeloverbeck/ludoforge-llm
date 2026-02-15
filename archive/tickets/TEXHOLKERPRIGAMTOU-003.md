@@ -1,6 +1,6 @@
-# TEXHOLKERPRIGAMTOU-003: `commitResource` Effect — Types, Schemas, Runtime, Compilation & Unit Tests
+# TEXHOLKERPRIGAMTOU-003: `commitResource` Effect — Types, Schemas, Runtime, Compilation & Tests
 
-**Status**: TODO
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Dependencies**: None (independent of TEXHOLKERPRIGAMTOU-001, -002)
@@ -9,6 +9,27 @@
 ## Summary
 
 Add the `commitResource` effect as a new kernel primitive. This is a generic resource-transfer primitive with built-in validation and all-in clamping. Used for betting, auctions, bidding, wagering — any game with resource commitment mechanics.
+
+## Assumption Reassessment (2026-02-15)
+
+### Confirmed
+
+- `commitResource` does not exist yet in kernel AST, AST schema, compiler lowering, dispatch, or behavior validation.
+- Effect handling is split by concern (`effects-var.ts`, `effects-token.ts`, `effects-control.ts`, etc.), so adding a dedicated `effects-resource.ts` is consistent with current architecture.
+
+### Corrected Assumptions
+
+- Test location in this repo is `test/unit/*.test.ts`, not `test/unit/kernel/*.test.ts` for effect/compiler/schema tests.
+- Effect union exhaustiveness is guarded by `test/unit/types-exhaustive.test.ts` and must be updated when introducing a new effect kind.
+- `SUPPORTED_EFFECT_KINDS` parity is guarded by `test/unit/binder-surface-registry.test.ts`; adding a new effect kind requires keeping registry parity tests green.
+- Validation file to touch remains `src/kernel/validate-gamedef-behavior.ts`, but canonical tests for these diagnostics live in `test/unit/validate-gamedef.test.ts`.
+
+### Scope Refinements
+
+- Keep `commitResource` as an explicit primitive instead of encoding via multiple `setVar`/`addVar` steps; this preserves atomicity and removes repeated hand-rolled transfer logic from game specs.
+- Enforce integer-only source and destination variables at runtime/validation (same strictness level as existing variable effects).
+- For `to.scope === 'pvar'`, require a single-resolving `to.player` selector (runtime error if omitted or non-scalar).
+- Preserve core engine invariants by clamping final writes to declared variable bounds.
 
 ## What to Change
 
@@ -86,6 +107,12 @@ Implement `applyCommitResource`:
 
 **Critical**: The transfer must be atomic — both deduction and addition happen in the same state transition. Never leave state in a half-transferred condition.
 
+Additional runtime checks:
+
+- `from.var` and `to.var` must resolve to declared integer variable defs.
+- `to.player` is required when `to.scope === 'pvar'`.
+- Both selectors must resolve to exactly one player.
+
 ### 5. Add dispatch routing
 
 **File**: `src/kernel/effect-dispatch.ts`
@@ -115,7 +142,7 @@ Add a case for `'commitResource' in effect` that validates:
 
 ### 8. Write unit tests
 
-**File**: `test/unit/kernel/commit-resource.test.ts` (new)
+**File**: `test/unit/commit-resource.test.ts` (new)
 
 Tests:
 1. Exact transfer: `amount <= sourceBalance` → exact amount transferred
@@ -127,6 +154,8 @@ Tests:
 7. **Property test**: `source + destination total preserved` — sum before == sum after for every transfer
 8. Transfer to global var: `to.scope === 'global'` works correctly
 9. Transfer to another player's var: `to.scope === 'pvar'` with different player works correctly
+10. Runtime guard: `to.scope === 'pvar'` without `to.player` throws `EFFECT_RUNTIME`
+11. Runtime guard: non-int source/destination variable defs reject with `EFFECT_RUNTIME`
 
 ## Files to Touch
 
@@ -139,7 +168,11 @@ Tests:
 | `src/kernel/effect-dispatch.ts` | Modify — add commitResource dispatch routing |
 | `src/cnl/compile-effects.ts` | Modify — add commitResource YAML lowering |
 | `src/kernel/validate-gamedef-behavior.ts` | Modify — add commitResource validation |
-| `test/unit/kernel/commit-resource.test.ts` | Create — unit tests |
+| `test/unit/commit-resource.test.ts` | Create — unit tests |
+| `test/unit/types-exhaustive.test.ts` | Modify — include commitResource in exhaustive effect checks/count |
+| `test/unit/schemas-ast.test.ts` | Modify — include commitResource in EffectAST schema coverage |
+| `test/unit/compile-effects.test.ts` | Modify — include commitResource lowering coverage |
+| `test/unit/validate-gamedef.test.ts` | Modify — include commitResource validation coverage |
 
 ## Out of Scope
 
@@ -154,11 +187,17 @@ Tests:
 
 ### Tests That Must Pass
 
-1. **New**: `test/unit/kernel/commit-resource.test.ts` — all 9 tests above pass
-2. **Regression**: `npm test` — all existing tests continue to pass
-3. **Build**: `npm run build` succeeds with no type errors
-4. **Lint**: `npm run lint` passes
-5. **Typecheck**: `npm run typecheck` passes
+1. **New**: `test/unit/commit-resource.test.ts` — all commitResource tests pass
+2. **Targeted regression**:
+   - `test/unit/compile-effects.test.ts`
+   - `test/unit/schemas-ast.test.ts`
+   - `test/unit/validate-gamedef.test.ts`
+   - `test/unit/types-exhaustive.test.ts`
+   - `test/unit/binder-surface-registry.test.ts`
+3. **Full regression**: `npm test` passes
+4. **Build**: `npm run build` succeeds with no type errors
+5. **Lint**: `npm run lint` passes
+6. **Typecheck**: `npm run typecheck` passes
 
 ### Invariants That Must Remain True
 
@@ -171,3 +210,20 @@ Tests:
 7. `actualBind` is always set to the real transferred amount, not the requested amount
 8. Existing FITL tests pass unchanged
 9. Zod schema round-trips for valid `commitResource` EffectAST objects
+
+## Outcome
+
+- Completion date: 2026-02-15
+- What changed:
+  - Implemented `commitResource` in AST/types, Zod schema, compiler lowering, runtime dispatch, and behavior validation.
+  - Added runtime execution in new `src/kernel/effects-resource.ts` with atomic transfer semantics, `min` all-in behavior, `max` capping, integer-only guards, destination headroom capping, var-change events, and `actualBind` propagation.
+  - Added/updated tests across runtime, compiler, schema, validation, binder surfaces, binding-scope checks, and exhaustive union coverage.
+- Deviations vs original plan:
+  - Added binder-surface and binding-scope updates (`src/cnl/binder-surface-registry.ts`, `test/unit/compile-bindings.test.ts`) because `actualBind` introduces a declared binder that must be visible to downstream effects.
+  - Added boolean-target validation diagnostics for `commitResource` to keep variable-contract enforcement aligned with existing strict kernel behavior.
+  - Fixed two pre-existing lint blockers in `src/kernel/legal-choices.ts` and `src/kernel/legal-moves.ts` (unused imports) so required lint gates pass.
+- Verification:
+  - `npm run build` passed.
+  - `npm run typecheck` passed.
+  - `npm run lint` passed.
+  - `npm test` passed.

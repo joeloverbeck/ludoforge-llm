@@ -126,6 +126,30 @@ describe('compile-effects binding scope validation', () => {
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.1.addVar.delta.name');
   });
 
+  it('exposes commitResource.actualBind to subsequent effects in the same sequence', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          commitResource: {
+            from: { scope: 'pvar', player: 'actor', var: 'coins' },
+            to: { scope: 'global', var: 'pot' },
+            amount: 2,
+            actualBind: '$actual',
+          },
+        },
+        { addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$actual' } } },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value !== null, true);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+      [],
+    );
+  });
+
   it('rejects unbound non-prefixed token bindings on binding-only string surfaces', () => {
     const result = lowerEffectArray(
       [{ destroyToken: { token: 'tokenRef' } }],

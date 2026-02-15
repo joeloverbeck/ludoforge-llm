@@ -100,6 +100,16 @@ describe('AST and selector schemas', () => {
     const effects: EffectAST[] = [
       { setVar: { scope: 'global', var: 'gold', value: 1 } },
       { addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } },
+      {
+        commitResource: {
+          from: { scope: 'pvar', player: 'actor', var: 'coins' },
+          to: { scope: 'global', var: 'pot' },
+          amount: 5,
+          min: 1,
+          max: 10,
+          actualBind: '$actual',
+        },
+      },
       { moveToken: { token: '$card', from: 'deck:none', to: 'hand:actor', position: 'top' } },
       {
         moveToken: {

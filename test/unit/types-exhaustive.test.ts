@@ -63,6 +63,7 @@ const exhaustPlayerSel = (sel: PlayerSel): string => {
 const exhaustEffectAST = (effect: EffectAST): string => {
   if ('setVar' in effect) return 'setVar';
   if ('addVar' in effect) return 'addVar';
+  if ('commitResource' in effect) return 'commitResource';
   if ('moveToken' in effect) return 'moveToken';
   if ('moveAll' in effect) return 'moveAll';
   if ('moveTokenAdjacent' in effect) return 'moveTokenAdjacent';
@@ -140,12 +141,12 @@ describe('exhaustive kernel unions', () => {
   it('keeps the exact variant counts for key unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
     const conditionVariants: UnionSize<ConditionAST> = 10;
-    const effectVariants: UnionSize<EffectAST> = 28;
+    const effectVariants: UnionSize<EffectAST> = 29;
     const queryVariants: UnionSize<OptionsQuery> = 13;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 10);
-    assert.equal(effectVariants, 28);
+    assert.equal(effectVariants, 29);
     assert.equal(queryVariants, 13);
   });
 

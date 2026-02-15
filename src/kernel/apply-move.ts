@@ -1,6 +1,6 @@
 import { incrementActionUsage } from './action-usage.js';
-import { resolveActionActor } from './action-actor.js';
-import { evalCondition } from './eval-condition.js';
+import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
+import { evalActionPipelinePredicate } from './action-pipeline-predicates.js';
 import { applyEffects } from './effects.js';
 import { executeEventMove, resolveEventEffectList } from './event-execution.js';
 import { createCollector } from './execution-collector.js';
@@ -367,42 +367,41 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
   }
 
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const actorResolution = resolveActionActor({
+  const preflight = resolveActionApplicabilityPreflight({
     def,
     state,
-    adjacencyGraph,
     action,
+    adjacencyGraph,
     decisionPlayer: state.activePlayer,
     bindings: runtimeBindingsForMove(move, undefined),
+    ...(move.freeOperation === true
+      ? { executionPlayerOverride: resolveFreeOperationExecutionPlayer(def, state, move) }
+      : {}),
   });
-  if (actorResolution.kind === 'notApplicable') {
-    throw illegalMoveError(move, 'action actor is not applicable in current state', {
-      code: 'ACTION_ACTOR_NOT_APPLICABLE',
-      actionId: action.id,
-    });
+  if (preflight.kind === 'invalidSpec') {
+    throw selectorInvalidSpecError('applyMove', preflight.selector, action, preflight.error);
   }
-  if (actorResolution.kind === 'invalidSpec') {
-    throw selectorInvalidSpecError('applyMove', 'actor', action, actorResolution.error);
-  }
-
-  if (move.freeOperation !== true) {
-    const executorResolution = resolveActionExecutor({
-      def,
-      state,
-      adjacencyGraph,
-      action,
-      decisionPlayer: state.activePlayer,
-      bindings: runtimeBindingsForMove(move, undefined),
-    });
-    if (executorResolution.kind === 'notApplicable') {
+  if (preflight.kind === 'notApplicable') {
+    if (preflight.reason === 'actorNotApplicable') {
+      throw illegalMoveError(move, 'action actor is not applicable in current state', {
+        code: 'ACTION_ACTOR_NOT_APPLICABLE',
+        actionId: action.id,
+      });
+    }
+    if (preflight.reason === 'executorNotApplicable') {
       throw illegalMoveError(move, 'action executor is not applicable in current state', {
         code: 'ACTION_EXECUTOR_NOT_APPLICABLE',
         actionId: action.id,
       });
     }
-    if (executorResolution.kind === 'invalidSpec') {
-      throw selectorInvalidSpecError('applyMove', 'executor', action, executorResolution.error);
-    }
+    throw illegalMoveError(move, 'action is not legal in current state', {
+      code: preflight.reason === 'phaseMismatch'
+        ? 'ACTION_PHASE_MISMATCH'
+        : preflight.reason === 'actionLimitExceeded'
+          ? 'ACTION_LIMIT_EXCEEDED'
+          : 'ACTION_PIPELINE_NOT_APPLICABLE',
+      actionId: action.id,
+    });
   }
 
   if (hasPipeline) {
@@ -551,7 +550,13 @@ const applyMoveCore = (
   if (
     executionProfile !== undefined &&
     executionProfile.legality !== null &&
-    !evalCondition(executionProfile.legality, { ...effectCtx, state })
+    !evalActionPipelinePredicate(
+      action,
+      actionPipeline?.id ?? 'unknown',
+      'legality',
+      executionProfile.legality,
+      { ...effectCtx, state },
+    )
   ) {
     throw illegalMoveError(move, 'action pipeline legality predicate failed', {
       code: 'OPERATION_LEGALITY_FAILED',
@@ -563,7 +568,13 @@ const applyMoveCore = (
   const costValidationPassed = isFreeOp ||
     (executionProfile?.costValidation === null || executionProfile === undefined
       ? true
-      : evalCondition(executionProfile.costValidation, { ...effectCtx, state }));
+      : evalActionPipelinePredicate(
+        action,
+        actionPipeline?.id ?? 'unknown',
+        'costValidation',
+        executionProfile.costValidation,
+        { ...effectCtx, state },
+      ));
   if (executionProfile !== undefined && executionProfile.partialMode === 'atomic' && !costValidationPassed) {
     throw illegalMoveError(move, 'action pipeline cost validation failed', {
       code: 'OPERATION_COST_BLOCKED',

@@ -345,6 +345,94 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('validates commitResource variable references by scope', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              commitResource: {
+                from: { scope: 'pvar', player: 'actor', var: 'health' },
+                to: { scope: 'global', var: 'bank' },
+                amount: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'REF_PVAR_MISSING' && diag.path === 'actions[0].effects[0].commitResource.from.var'),
+    );
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'REF_GVAR_MISSING' && diag.path === 'actions[0].effects[0].commitResource.to.var'),
+    );
+  });
+
+  it('requires commitResource.to.player when targeting per-player variables', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              commitResource: {
+                from: { scope: 'pvar', player: 'actor', var: 'vp' },
+                to: { scope: 'pvar', var: 'vp' },
+                amount: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'EFFECT_COMMIT_RESOURCE_TO_PLAYER_REQUIRED' &&
+          diag.path === 'actions[0].effects[0].commitResource.to.player',
+      ),
+    );
+  });
+
+  it('rejects commitResource boolean variable targets', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      perPlayerVars: [...base.perPlayerVars, { name: 'ready', type: 'boolean', init: false }],
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              commitResource: {
+                from: { scope: 'pvar', player: 'actor', var: 'ready' },
+                to: { scope: 'pvar', player: 'active', var: 'vp' },
+                amount: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'EFFECT_COMMIT_RESOURCE_BOOLEAN_TARGET_INVALID' &&
+          diag.path === 'actions[0].effects[0].commitResource.from.var',
+      ),
+    );
+  });
+
   it('reports invalid phase references with alternatives', () => {
     const base = createValidGameDef();
     const def = {

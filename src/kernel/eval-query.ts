@@ -9,6 +9,12 @@ import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
+import {
+  runtimeTableContractMissingEvalError,
+  runtimeTableFieldUndeclaredEvalError,
+  runtimeTableIssueEvalError,
+  runtimeTableRowsUnavailableEvalError,
+} from './runtime-table-eval-errors.js';
 import { filterRowsByPredicates, type PredicateValue, type ResolvedRowPredicate } from './query-predicate.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
 
@@ -249,75 +255,20 @@ function resolveRuntimeTableRows(query: Extract<OptionsQuery, { readonly query: 
   const index = ctx.runtimeTableIndex ?? buildRuntimeTableIndex(ctx.def);
   const entry = index.tablesById.get(query.tableId);
   if (entry === undefined) {
-    throw missingVarError(`Runtime table contract not found: ${query.tableId}`, {
-      query,
-      tableId: query.tableId,
-      availableTableIds: index.tableIds,
-    });
+    throw runtimeTableContractMissingEvalError({ query }, query.tableId, index.tableIds);
   }
 
-  if (entry.issue?.kind === 'assetMissing') {
-    throw missingVarError(`Runtime data asset not found: ${entry.issue.assetId}`, {
-      query,
-      tableId: query.tableId,
-      assetId: entry.issue.assetId,
-      availableAssetIds: (ctx.def.runtimeDataAssets ?? []).map((candidate) => candidate.id).sort((left, right) => left.localeCompare(right)),
-    });
-  }
-  if (entry.issue?.kind === 'tablePathEmpty') {
-    throw missingVarError('tableContracts.tablePath must contain at least one path segment', {
-      query,
-      tableId: query.tableId,
-      tablePath: entry.contract.tablePath,
-      assetId: entry.contract.assetId,
-    });
-  }
-  if (entry.issue?.kind === 'tablePathMissing') {
-    throw missingVarError(`tableContracts.tablePath segment not found: ${entry.issue.segment}`, {
-      query,
-      tableId: query.tableId,
-      assetId: entry.contract.assetId,
-      tablePath: entry.contract.tablePath,
-      segment: entry.issue.segment,
-      segmentIndex: entry.issue.segmentIndex,
-      availableKeys: entry.issue.availableKeys,
-    });
-  }
-  if (entry.issue?.kind === 'tablePathTypeInvalid') {
-    throw typeMismatchError('tableContracts.tablePath traversal expected object segment', {
-      query,
-      tableId: query.tableId,
-      assetId: entry.contract.assetId,
-      tablePath: entry.contract.tablePath,
-      segment: entry.issue.segment,
-      segmentIndex: entry.issue.segmentIndex,
-      actualType: entry.issue.actualType,
-    });
-  }
-  if (entry.issue?.kind === 'tableTypeInvalid') {
-    throw typeMismatchError('tableContracts.tablePath must resolve to an array of rows', {
-      query,
-      tableId: query.tableId,
-      assetId: entry.contract.assetId,
-      tablePath: entry.contract.tablePath,
-      actualType: entry.issue.actualType,
-    });
-  }
-  if (entry.issue?.kind === 'rowTypeInvalid') {
-    throw typeMismatchError('assetRows table rows must be objects', {
-      query,
-      tableId: query.tableId,
-      assetId: entry.contract.assetId,
-      tablePath: entry.contract.tablePath,
-      rowIndex: entry.issue.rowIndex,
-      actualType: entry.issue.actualType,
-    });
+  if (entry.issue !== undefined) {
+    throw runtimeTableIssueEvalError(
+      { query },
+      query.tableId,
+      entry.contract,
+      entry.issue,
+      (ctx.def.runtimeDataAssets ?? []).map((candidate) => candidate.id).sort((left, right) => left.localeCompare(right)),
+    );
   }
   if (entry.rows === null) {
-    throw missingVarError(`Runtime table rows unavailable: ${query.tableId}`, {
-      query,
-      tableId: query.tableId,
-    });
+    throw runtimeTableRowsUnavailableEvalError({ query }, query.tableId);
   }
 
   return {
@@ -339,12 +290,12 @@ function evalAssetRowsQuery(
 
   for (const predicate of wherePredicates) {
     if (!resolved.fieldNames.has(predicate.field)) {
-      throw missingVarError(`Runtime table field not declared in contract: ${predicate.field}`, {
-        query,
-        tableId: query.tableId,
-        field: predicate.field,
-        availableFields: [...resolved.fieldNames].sort((left, right) => left.localeCompare(right)),
-      });
+      throw runtimeTableFieldUndeclaredEvalError(
+        { query },
+        query.tableId,
+        predicate.field,
+        [...resolved.fieldNames].sort((left, right) => left.localeCompare(right)),
+      );
     }
   }
 

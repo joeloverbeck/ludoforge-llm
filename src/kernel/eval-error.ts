@@ -1,3 +1,16 @@
+export type DataAssetEvalErrorCode =
+  | 'DATA_ASSET_TABLE_CONTRACT_MISSING'
+  | 'DATA_ASSET_RUNTIME_ASSET_MISSING'
+  | 'DATA_ASSET_TABLE_PATH_EMPTY'
+  | 'DATA_ASSET_TABLE_PATH_MISSING'
+  | 'DATA_ASSET_TABLE_PATH_TYPE_INVALID'
+  | 'DATA_ASSET_TABLE_TYPE_INVALID'
+  | 'DATA_ASSET_ROW_TYPE_INVALID'
+  | 'DATA_ASSET_ROW_BINDING_TYPE_INVALID'
+  | 'DATA_ASSET_FIELD_UNDECLARED'
+  | 'DATA_ASSET_FIELD_MISSING'
+  | 'DATA_ASSET_FIELD_TYPE_INVALID';
+
 export type EvalErrorCode =
   | 'MISSING_BINDING'
   | 'MISSING_VAR'
@@ -6,7 +19,8 @@ export type EvalErrorCode =
   | 'QUERY_BOUNDS_EXCEEDED'
   | 'SPATIAL_NOT_IMPLEMENTED'
   | 'DIVISION_BY_ZERO'
-  | 'ZONE_PROP_NOT_FOUND';
+  | 'ZONE_PROP_NOT_FOUND'
+  | DataAssetEvalErrorCode;
 
 export type EvalErrorContext = Readonly<Record<string, unknown>>;
 
@@ -70,6 +84,14 @@ export function divisionByZeroError(message: string, context?: EvalErrorContext)
 
 export function zonePropNotFoundError(message: string, context?: EvalErrorContext): EvalError {
   return createEvalError('ZONE_PROP_NOT_FOUND', message, context);
+}
+
+export function dataAssetEvalError(
+  code: DataAssetEvalErrorCode,
+  message: string,
+  context?: EvalErrorContext,
+): EvalError {
+  return createEvalError(code, message, context);
 }
 
 export function isEvalError(error: unknown): error is EvalError {

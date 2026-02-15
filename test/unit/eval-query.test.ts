@@ -310,7 +310,7 @@ describe('evalQuery', () => {
     );
   });
 
-  it('throws typed runtime errors for missing assetRows assets and invalid table paths', () => {
+  it('throws dedicated data-asset runtime errors for missing assetRows assets and invalid table paths', () => {
     const ctx = makeCtx({
       def: {
         ...makeDef(),
@@ -353,15 +353,66 @@ describe('evalQuery', () => {
 
     assert.throws(
       () => evalQuery({ query: 'assetRows', tableId: 'missing-asset::blindSchedule.levels' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_RUNTIME_ASSET_MISSING') &&
+        error.context?.tableId === 'missing-asset::blindSchedule.levels' &&
+        error.context?.assetId === 'missing',
     );
     assert.throws(
       () => evalQuery({ query: 'assetRows', tableId: 'missing-contract' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_TABLE_CONTRACT_MISSING') &&
+        error.context?.tableId === 'missing-contract',
     );
     assert.throws(
       () => evalQuery({ query: 'assetRows', tableId: 'tournament-standard::blindSchedule' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_TABLE_TYPE_INVALID') &&
+        error.context?.tableId === 'tournament-standard::blindSchedule' &&
+        error.context?.assetId === 'tournament-standard',
+    );
+  });
+
+  it('throws dedicated data-asset field errors for assetRows where predicates', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: {
+              blindSchedule: {
+                levels: [{ level: 1, smallBlind: 10 }],
+              },
+            },
+          },
+        ],
+        tableContracts: [
+          {
+            id: 'tournament-standard::blindSchedule.levels',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule.levels',
+            fields: [{ field: 'smallBlind', type: 'int' }],
+          },
+        ],
+      },
+    });
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'assetRows',
+            tableId: 'tournament-standard::blindSchedule.levels',
+            where: [{ field: 'missingField', op: 'eq', value: 10 }],
+          },
+          ctx,
+        ),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_FIELD_UNDECLARED') &&
+        error.context?.tableId === 'tournament-standard::blindSchedule.levels' &&
+        error.context?.field === 'missingField',
     );
   });
 

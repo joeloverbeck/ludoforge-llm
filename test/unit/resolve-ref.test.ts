@@ -171,7 +171,7 @@ describe('resolveRef', () => {
     );
   });
 
-  it('resolves assetField from row bindings and reports row/field errors', () => {
+  it('resolves assetField from row bindings and reports dedicated data-asset row/field errors', () => {
     const ctx = makeCtx({
       def: {
         ...makeDef(),
@@ -208,7 +208,8 @@ describe('resolveRef', () => {
     );
     assert.throws(
       () => resolveRef({ ref: 'assetField', row: '$blindRow', tableId: 'tournament-standard::blindSchedule.levels', field: 'missing' }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_FIELD_UNDECLARED') && error.context?.field === 'missing',
     );
     assert.throws(
       () =>
@@ -236,7 +237,72 @@ describe('resolveRef', () => {
             bindings: { '$blindRow': { phase: ['mid'] } },
           }),
         ),
-      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_FIELD_TYPE_INVALID') &&
+        error.context?.field === 'phase' &&
+        error.context?.expectedType === 'string',
+    );
+  });
+
+  it('throws dedicated data-asset errors for assetField row-binding and table-contract failures', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        tableContracts: [
+          {
+            id: 'missing-asset::blindSchedule.levels',
+            assetId: 'missing-asset',
+            tablePath: 'blindSchedule.levels',
+            fields: [{ field: 'smallBlind', type: 'int' }],
+          },
+        ],
+      },
+      bindings: {
+        '$blindRow': 42,
+      },
+    });
+
+    assert.throws(
+      () => resolveRef({ ref: 'assetField', row: '$blindRow', tableId: 'missing-asset::blindSchedule.levels', field: 'smallBlind' }, ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_RUNTIME_ASSET_MISSING') &&
+        error.context?.tableId === 'missing-asset::blindSchedule.levels',
+    );
+
+    assert.throws(
+      () => resolveRef({ ref: 'assetField', row: '$blindRow', tableId: 'missing-contract', field: 'smallBlind' }, ctx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_TABLE_CONTRACT_MISSING') && error.context?.tableId === 'missing-contract',
+    );
+
+    const rowBindingTypeCtx = makeCtx({
+      def: {
+        ...makeDef(),
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: { blindSchedule: { levels: [] } },
+          },
+        ],
+        tableContracts: [
+          {
+            id: 'tournament-standard::blindSchedule.levels',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule.levels',
+            fields: [{ field: 'smallBlind', type: 'int' }],
+          },
+        ],
+      },
+      bindings: {
+        '$blindRow': 42,
+      },
+    });
+    assert.throws(
+      () => resolveRef({ ref: 'assetField', row: '$blindRow', tableId: 'tournament-standard::blindSchedule.levels', field: 'smallBlind' }, rowBindingTypeCtx),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_ROW_BINDING_TYPE_INVALID') &&
+        error.context?.row === '$blindRow',
     );
   });
 

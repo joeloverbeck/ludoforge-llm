@@ -2,7 +2,7 @@ import type { GameDef, RuntimeTableContract } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
 
-type RuntimeTableIssue =
+export type RuntimeTableIssue =
   | { readonly kind: 'assetMissing'; readonly assetId: string }
   | { readonly kind: 'tablePathEmpty' }
   | { readonly kind: 'tablePathMissing'; readonly segment: string; readonly segmentIndex: number; readonly availableKeys: readonly string[] }

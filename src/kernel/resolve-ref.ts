@@ -3,6 +3,14 @@ import type { EvalContext } from './eval-context.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { missingBindingError, missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
+import {
+  runtimeTableContractMissingEvalError,
+  runtimeTableFieldMissingEvalError,
+  runtimeTableFieldTypeEvalError,
+  runtimeTableFieldUndeclaredEvalError,
+  runtimeTableIssueEvalError,
+  runtimeTableRowBindingTypeEvalError,
+} from './runtime-table-eval-errors.js';
 import type { Reference, Token } from './types.js';
 
 function isScalarValue(value: unknown): value is number | boolean | string {
@@ -108,18 +116,16 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     const tableIndex = ctx.runtimeTableIndex ?? buildRuntimeTableIndex(ctx.def);
     const entry = tableIndex.tablesById.get(ref.tableId);
     if (entry === undefined) {
-      throw missingVarError(`Runtime table contract not found: ${ref.tableId}`, {
-        reference: ref,
-        tableId: ref.tableId,
-        availableTableIds: tableIndex.tableIds,
-      });
+      throw runtimeTableContractMissingEvalError({ reference: ref }, ref.tableId, tableIndex.tableIds);
     }
     if (entry.issue !== undefined) {
-      throw missingVarError(`Runtime table contract is unavailable: ${ref.tableId}`, {
-        reference: ref,
-        tableId: ref.tableId,
-        issue: entry.issue,
-      });
+      throw runtimeTableIssueEvalError(
+        { reference: ref },
+        ref.tableId,
+        entry.contract,
+        entry.issue,
+        (ctx.def.runtimeDataAssets ?? []).map((candidate) => candidate.id).sort((left, right) => left.localeCompare(right)),
+      );
     }
 
     const resolvedRowBinding = resolveBindingTemplate(ref.row, ctx.bindings);
@@ -134,35 +140,29 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     }
 
     if (typeof boundRow !== 'object' || boundRow === null || Array.isArray(boundRow)) {
-      throw typeMismatchError(`Row binding ${resolvedRowBinding} must resolve to a row object`, {
-        reference: ref,
-        row: resolvedRowBinding,
-        rowTemplate: ref.row,
-        actualType: Array.isArray(boundRow) ? 'array' : typeof boundRow,
-        value: boundRow,
-      });
+      throw runtimeTableRowBindingTypeEvalError({ reference: ref }, resolvedRowBinding, ref.row, boundRow);
     }
 
     const rowValue = (boundRow as Record<string, unknown>)[ref.field];
     const fieldContract = entry.fieldContractsByName.get(ref.field);
     if (fieldContract === undefined) {
-      throw missingVarError(`Runtime table field not declared in contract: ${ref.field}`, {
-        reference: ref,
-        tableId: ref.tableId,
-        field: ref.field,
-        availableFields: entry.contract.fields.map((field) => field.field).sort((left, right) => left.localeCompare(right)),
-      });
+      throw runtimeTableFieldUndeclaredEvalError(
+        { reference: ref },
+        ref.tableId,
+        ref.field,
+        entry.contract.fields.map((field) => field.field).sort((left, right) => left.localeCompare(right)),
+      );
     }
 
     if (rowValue === undefined) {
-      throw missingVarError(`Row field not found: ${ref.field}`, {
-        reference: ref,
-        row: resolvedRowBinding,
-        rowTemplate: ref.row,
-        tableId: ref.tableId,
-        field: ref.field,
-        availableFields: Object.keys(boundRow as Record<string, unknown>).sort(),
-      });
+      throw runtimeTableFieldMissingEvalError(
+        { reference: ref },
+        ref.tableId,
+        ref.field,
+        resolvedRowBinding,
+        ref.row,
+        Object.keys(boundRow as Record<string, unknown>).sort(),
+      );
     }
 
     const actualContractType =
@@ -173,28 +173,16 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
           : typeof rowValue === 'number' && Number.isSafeInteger(rowValue)
             ? 'int'
             : null;
-    if (actualContractType === null || actualContractType !== fieldContract.type) {
-      throw typeMismatchError(`Row field ${ref.field} does not match declared table contract type`, {
-        reference: ref,
-        row: resolvedRowBinding,
-        rowTemplate: ref.row,
-        tableId: ref.tableId,
-        field: ref.field,
-        expectedType: fieldContract.type,
-        actualType: actualContractType ?? (Array.isArray(rowValue) ? 'array' : typeof rowValue),
-        value: rowValue,
-      });
-    }
-
-    if (!isScalarValue(rowValue)) {
-      throw typeMismatchError(`Row field ${ref.field} must be a scalar`, {
-        reference: ref,
-        row: resolvedRowBinding,
-        rowTemplate: ref.row,
-        field: ref.field,
-        actualType: Array.isArray(rowValue) ? 'array' : typeof rowValue,
-        value: rowValue,
-      });
+    if (actualContractType === null || actualContractType !== fieldContract.type || !isScalarValue(rowValue)) {
+      throw runtimeTableFieldTypeEvalError(
+        { reference: ref },
+        resolvedRowBinding,
+        ref.row,
+        ref.tableId,
+        ref.field,
+        fieldContract.type,
+        rowValue,
+      );
     }
 
     return rowValue;

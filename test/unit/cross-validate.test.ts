@@ -267,6 +267,53 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostics.some((entry) => entry.code === 'CNL_XREF_REWARD_VAR_MISSING'), true);
   });
 
+  it('pivotal cancellation selectors referencing nonexistent actions emit CNL_XREF_TURN_FLOW_PIVOTAL_CANCELLATION_ACTION_MISSING', () => {
+    const sections = compileRichSections();
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            pivotal: {
+              actionIds: ['act'],
+              interrupt: {
+                precedence: ['us', 'arvn'],
+                cancellation: [
+                  {
+                    winner: { actionId: 'acx' },
+                    canceled: { actionId: 'acy' },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (entry) =>
+          entry.code === 'CNL_XREF_TURN_FLOW_PIVOTAL_CANCELLATION_ACTION_MISSING' &&
+          entry.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.0.winner.actionId',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (entry) =>
+          entry.code === 'CNL_XREF_TURN_FLOW_PIVOTAL_CANCELLATION_ACTION_MISSING' &&
+          entry.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.0.canceled.actionId',
+      ),
+      true,
+    );
+  });
+
   it('setup createToken referencing nonexistent tokenType emits CNL_XREF_SETUP_TOKEN_TYPE_MISSING', () => {
     const sections = compileRichSections();
     const diagnostics = crossValidateSpec({

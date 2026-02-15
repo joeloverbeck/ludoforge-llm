@@ -635,6 +635,102 @@ describe('compile top-level actions/triggers/end conditions', () => {
     );
   });
 
+  it('returns blocking diagnostics when cancellation selectors are not objects', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-flow-cancellation-selector-invalid-shape', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            ...minimalCardDrivenTurnFlow,
+            pivotal: {
+              actionIds: ['pivotalA', 'pivotalB'],
+              interrupt: {
+                precedence: ['us', 'arvn', 'nva', 'vc'],
+                cancellation: [
+                  {
+                    winner: 'not-an-object',
+                    canceled: { actionId: 'pivotalB' },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      actions: [
+        { id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalA', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalB', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_SELECTOR_INVALID' &&
+          diagnostic.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.0.winner',
+      ),
+      true,
+    );
+  });
+
+  it('returns blocking diagnostics when cancellation selectors are empty', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'turn-flow-cancellation-selector-empty', players: { min: 2, max: 4 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      turnOrder: {
+        type: 'cardDriven' as const,
+        config: {
+          turnFlow: {
+            ...minimalCardDrivenTurnFlow,
+            pivotal: {
+              actionIds: ['pivotalA', 'pivotalB'],
+              interrupt: {
+                precedence: ['us', 'arvn', 'nva', 'vc'],
+                cancellation: [
+                  {
+                    winner: {},
+                    canceled: { actionId: 'pivotalB' },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      actions: [
+        { id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalA', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'pivotalB', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc as unknown as Parameters<typeof compileGameSpecToGameDef>[0]);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_SELECTOR_EMPTY' &&
+          diagnostic.path === 'doc.turnOrder.config.turnFlow.pivotal.interrupt.cancellation.0.winner',
+      ),
+      true,
+    );
+  });
+
   it('preserves coupPlan and victory contracts when declared', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

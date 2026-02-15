@@ -1,4 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import { hasTurnFlowInterruptSelectorMatchField } from '../kernel/turn-flow-interrupt-selector-contract.js';
 import type { TurnFlowDef, TurnOrderStrategy } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { lowerCoupPlan } from './compile-victory.js';
@@ -320,13 +321,7 @@ function lowerCardDrivenTurnFlow(rawTurnFlow: unknown, diagnostics: Diagnostic[]
           continue;
         }
 
-        const hasAnyField =
-          typeof selector.actionId === 'string' ||
-          typeof selector.actionClass === 'string' ||
-          typeof selector.eventCardId === 'string' ||
-          Array.isArray(selector.eventCardTagsAll) ||
-          Array.isArray(selector.eventCardTagsAny) ||
-          isRecord(selector.paramEquals);
+        const hasAnyField = hasTurnFlowInterruptSelectorMatchField(selector);
         if (!hasAnyField) {
           diagnostics.push({
             code: 'CNL_COMPILER_TURN_FLOW_ORDERING_CANCELLATION_SELECTOR_EMPTY',

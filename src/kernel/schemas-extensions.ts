@@ -9,6 +9,10 @@ import {
   StringSchema,
   ValueExprSchema,
 } from './schemas-ast.js';
+import {
+  TURN_FLOW_INTERRUPT_SELECTOR_EMPTY_MESSAGE,
+  hasTurnFlowInterruptSelectorMatchField,
+} from './turn-flow-interrupt-selector-contract.js';
 
 export const TurnFlowDurationSchema = z.union([
   z.literal('turn'),
@@ -293,17 +297,10 @@ const TurnFlowInterruptMoveSelectorSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (
-      value.actionId === undefined &&
-      value.actionClass === undefined &&
-      value.eventCardId === undefined &&
-      value.eventCardTagsAll === undefined &&
-      value.eventCardTagsAny === undefined &&
-      value.paramEquals === undefined
-    ) {
+    if (!hasTurnFlowInterruptSelectorMatchField(value)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'interrupt move selector must declare at least one matching field.',
+        message: TURN_FLOW_INTERRUPT_SELECTOR_EMPTY_MESSAGE,
       });
     }
   });

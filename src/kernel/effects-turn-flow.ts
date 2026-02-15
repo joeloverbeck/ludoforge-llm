@@ -1,4 +1,4 @@
-import { EffectRuntimeError } from './effect-error.js';
+import { effectRuntimeError } from './effect-error.js';
 import { resetPhaseUsage } from './action-usage.js';
 import { advancePhase } from './phase-advance.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
@@ -47,7 +47,7 @@ export const applyGrantFreeOperation = (
   ctx: EffectContext,
 ): EffectResult => {
   if (ctx.state.turnOrderState.type !== 'cardDriven') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'grantFreeOperation requires cardDriven turn order state', {
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'grantFreeOperation requires cardDriven turn order state', {
       effectType: 'grantFreeOperation',
       turnOrderType: ctx.state.turnOrderState.type,
     });
@@ -55,7 +55,7 @@ export const applyGrantFreeOperation = (
 
   const grant = effect.grantFreeOperation;
   if (!isTurnFlowActionClass(grant.operationClass)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'grantFreeOperation.operationClass is invalid', {
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'grantFreeOperation.operationClass is invalid', {
       effectType: 'grantFreeOperation',
       operationClass: grant.operationClass,
     });
@@ -65,7 +65,7 @@ export const applyGrantFreeOperation = (
   const activeFaction = String(ctx.activePlayer);
   const faction = resolveGrantFaction(grant.faction, activeFaction, runtime.factionOrder);
   if (faction === null) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `grantFreeOperation.faction is unknown: ${grant.faction}`, {
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `grantFreeOperation.faction is unknown: ${grant.faction}`, {
       effectType: 'grantFreeOperation',
       faction: grant.faction,
       availableFactions: runtime.factionOrder,
@@ -76,7 +76,7 @@ export const applyGrantFreeOperation = (
   if (grant.executeAsFaction !== undefined) {
     const resolvedExecuteAs = resolveGrantFaction(grant.executeAsFaction, activeFaction, runtime.factionOrder);
     if (resolvedExecuteAs === null) {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', `grantFreeOperation.executeAsFaction is unknown: ${grant.executeAsFaction}`, {
+      throw effectRuntimeError('turnFlowRuntimeValidationFailed', `grantFreeOperation.executeAsFaction is unknown: ${grant.executeAsFaction}`, {
         effectType: 'grantFreeOperation',
         executeAsFaction: grant.executeAsFaction,
         availableFactions: runtime.factionOrder,
@@ -87,7 +87,7 @@ export const applyGrantFreeOperation = (
 
   const uses = grant.uses ?? 1;
   if (!Number.isSafeInteger(uses) || uses <= 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'grantFreeOperation.uses must be a positive integer', {
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'grantFreeOperation.uses must be a positive integer', {
       effectType: 'grantFreeOperation',
       uses,
     });
@@ -99,7 +99,7 @@ export const applyGrantFreeOperation = (
   const sequenceBatchId = grant.sequence === undefined ? undefined : `${grantId}:${grant.sequence.chain}`;
   const sequenceIndex = grant.sequence?.step;
   if (sequenceIndex !== undefined && (!Number.isSafeInteger(sequenceIndex) || sequenceIndex < 0)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'grantFreeOperation.sequence.step must be a non-negative integer', {
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'grantFreeOperation.sequence.step must be a non-negative integer', {
       effectType: 'grantFreeOperation',
       sequenceStep: sequenceIndex,
     });
@@ -140,7 +140,7 @@ export const applyGotoPhase = (
   const targetPhase = effect.gotoPhase.phase;
   const phaseIds = ctx.def.turnStructure.phases.map((phase) => phase.id);
   if (!phaseIds.some((phaseId) => phaseId === targetPhase)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `gotoPhase.phase is unknown: ${targetPhase}`, {
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `gotoPhase.phase is unknown: ${targetPhase}`, {
       effectType: 'gotoPhase',
       phase: targetPhase,
       phaseCandidates: phaseIds,
@@ -150,7 +150,7 @@ export const applyGotoPhase = (
   const currentPhaseIndex = phaseIds.findIndex((phaseId) => phaseId === ctx.state.currentPhase);
   const targetPhaseIndex = phaseIds.findIndex((phaseId) => phaseId === targetPhase);
   if (currentPhaseIndex < 0 || targetPhaseIndex < 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `gotoPhase could not resolve current/target phase indices`, {
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `gotoPhase could not resolve current/target phase indices`, {
       effectType: 'gotoPhase',
       currentPhase: ctx.state.currentPhase,
       targetPhase,
@@ -158,8 +158,8 @@ export const applyGotoPhase = (
   }
 
   if (targetPhaseIndex < currentPhaseIndex) {
-    throw new EffectRuntimeError(
-      'EFFECT_RUNTIME',
+    throw effectRuntimeError(
+      'turnFlowRuntimeValidationFailed',
       `gotoPhase cannot cross a turn boundary (current=${String(ctx.state.currentPhase)}, target=${targetPhase})`,
       {
         effectType: 'gotoPhase',
@@ -185,7 +185,7 @@ export const applyGotoPhase = (
     }
   }
 
-  throw new EffectRuntimeError('EFFECT_RUNTIME', `gotoPhase could not reach phase: ${targetPhase}`, {
+  throw effectRuntimeError('turnFlowRuntimeValidationFailed', `gotoPhase could not reach phase: ${targetPhase}`, {
     effectType: 'gotoPhase',
     phase: targetPhase,
     maxAdvances,
@@ -201,7 +201,7 @@ const resolvePhaseId = (
   const phaseDefs = [...ctx.def.turnStructure.phases, ...(ctx.def.turnStructure.interrupts ?? [])];
   const candidate = phaseDefs.find((entry) => entry.id === phase)?.id;
   if (candidate === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `${effectType}.${field} is unknown: ${phase}`, {
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `${effectType}.${field} is unknown: ${phase}`, {
       effectType,
       field,
       phase,
@@ -246,7 +246,7 @@ export const applyPopInterruptPhase = (
 ): EffectResult => {
   const activeStack = ctx.state.interruptPhaseStack ?? [];
   if (activeStack.length === 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'popInterruptPhase requires a non-empty interruptPhaseStack', {
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'popInterruptPhase requires a non-empty interruptPhaseStack', {
       effectType: 'popInterruptPhase',
     });
   }
@@ -258,7 +258,7 @@ export const applyPopInterruptPhase = (
   const stackAfterExit = exitedState.interruptPhaseStack ?? [];
   const resumeFrame = stackAfterExit.at(-1);
   if (resumeFrame === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'popInterruptPhase found no frame to resume after phaseExit', {
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'popInterruptPhase found no frame to resume after phaseExit', {
       effectType: 'popInterruptPhase',
     });
   }

@@ -1,7 +1,7 @@
 import { evalCondition } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
-import { EffectRuntimeError } from './effect-error.js';
+import { effectRuntimeError } from './effect-error.js';
 import { emitTrace, emitWarning } from './execution-collector.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, TriggerEvent } from './types.js';
@@ -89,7 +89,7 @@ export const applyForEach = (
   } else {
     const limitValue = evalValue(effect.forEach.limit, evalCtx);
     if (typeof limitValue !== 'number' || !Number.isSafeInteger(limitValue) || limitValue <= 0) {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', 'forEach.limit must evaluate to a positive integer', {
+      throw effectRuntimeError('controlFlowRuntimeValidationFailed', 'forEach.limit must evaluate to a positive integer', {
         effectType: 'forEach',
         limit: limitValue,
       });
@@ -166,7 +166,7 @@ export const applyForEach = (
 
 const resolveRemovalBudget = (budgetExpr: unknown, effectType: string): number => {
   if (typeof budgetExpr !== 'number' || !Number.isSafeInteger(budgetExpr) || budgetExpr < 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `${effectType}.budget must evaluate to a non-negative integer`, {
+    throw effectRuntimeError('controlFlowRuntimeValidationFailed', `${effectType}.budget must evaluate to a non-negative integer`, {
       effectType,
       budget: budgetExpr,
     });
@@ -205,7 +205,7 @@ export const applyRemoveByPriority = (
 
       for (const item of bounded) {
         if (typeof item !== 'string' && !isTokenLike(item)) {
-          throw new EffectRuntimeError('EFFECT_RUNTIME', 'removeByPriority groups must resolve to token items', {
+          throw effectRuntimeError('controlFlowRuntimeValidationFailed', 'removeByPriority groups must resolve to token items', {
             effectType: 'removeByPriority',
             bind: group.bind,
             actualType: typeof item,

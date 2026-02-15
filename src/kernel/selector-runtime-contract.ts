@@ -1,10 +1,10 @@
-import { runtimeContractInvalidError } from './runtime-error.js';
+import {
+  runtimeContractInvalidError,
+  type SelectorBoundarySurface,
+  type SelectorSurface,
+} from './runtime-error.js';
 import type { ActionSelectorContractViolation } from './action-selector-contract-registry.js';
 import type { ActionDef } from './types.js';
-
-export type SelectorBoundarySurface = 'applyMove' | 'legalChoices' | 'legalMoves';
-
-export type SelectorSurface = 'actor' | 'executor';
 
 export const selectorInvalidSpecError = (
   boundary: SelectorBoundarySurface,

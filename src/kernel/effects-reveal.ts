@@ -1,7 +1,7 @@
 import type { PlayerId } from './branded.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
-import { EffectRuntimeError } from './effect-error.js';
+import { effectRuntimeError } from './effect-error.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, RevealGrant } from './types.js';
 
@@ -40,7 +40,7 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
   const zoneId = String(resolveZoneRef(effect.reveal.zone, evalCtx));
 
   if (ctx.state.zones[zoneId] === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Zone state not found for selector result: ${zoneId}`, {
+    throw effectRuntimeError('revealRuntimeValidationFailed', `Zone state not found for selector result: ${zoneId}`, {
       effectType: 'reveal',
       field: 'zone',
       zoneId,

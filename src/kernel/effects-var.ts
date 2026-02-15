@@ -1,7 +1,7 @@
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { evalValue } from './eval-value.js';
 import { emitTrace } from './execution-collector.js';
-import { EffectRuntimeError } from './effect-error.js';
+import { effectRuntimeError } from './effect-error.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { PlayerId } from './branded.js';
 import type { EffectAST } from './types.js';
@@ -15,7 +15,7 @@ const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unkn
 
 const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: 'value' | 'delta'): number => {
   if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isSafeInteger(value)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `${effectType}.${field} must evaluate to a finite safe integer`, {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `${effectType}.${field} must evaluate to a finite safe integer`, {
       effectType,
       field,
       actualType: typeof value,
@@ -28,7 +28,7 @@ const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: '
 
 const expectBoolean = (value: unknown, effectType: 'setVar', field: 'value'): boolean => {
   if (typeof value !== 'boolean') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `${effectType}.${field} must evaluate to boolean`, {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `${effectType}.${field} must evaluate to boolean`, {
       effectType,
       field,
       actualType: typeof value,
@@ -42,7 +42,7 @@ const expectBoolean = (value: unknown, effectType: 'setVar', field: 'value'): bo
 const resolveGlobalVarDef = (ctx: EffectContext, varName: string, effectType: 'setVar' | 'addVar') => {
   const variableDef = ctx.def.globalVars.find((variable) => variable.name === varName);
   if (variableDef === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Unknown global variable: ${varName}`, {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `Unknown global variable: ${varName}`, {
       effectType,
       scope: 'global',
       var: varName,
@@ -56,7 +56,7 @@ const resolveGlobalVarDef = (ctx: EffectContext, varName: string, effectType: 's
 const resolvePerPlayerVarDef = (ctx: EffectContext, varName: string, effectType: 'setVar' | 'addVar') => {
   const variableDef = ctx.def.perPlayerVars.find((variable) => variable.name === varName);
   if (variableDef === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Unknown per-player variable: ${varName}`, {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `Unknown per-player variable: ${varName}`, {
       effectType,
       scope: 'pvar',
       var: varName,
@@ -98,7 +98,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     const variableDef = resolveGlobalVarDef(ctx, variableName, 'setVar');
     const currentValue = ctx.state.globalVars[variableName];
     if (typeof currentValue !== 'number' && typeof currentValue !== 'boolean') {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', `Global variable state is missing: ${variableName}`, {
+      throw effectRuntimeError('variableRuntimeValidationFailed', `Global variable state is missing: ${variableName}`, {
         effectType: 'setVar',
         scope: 'global',
         var: variableName,
@@ -128,7 +128,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
   }
 
   if (player === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'setVar scope "pvar" requires player selector', {
+    throw effectRuntimeError('variableRuntimeValidationFailed', 'setVar scope "pvar" requires player selector', {
       effectType: 'setVar',
       scope: 'pvar',
       var: variableName,
@@ -137,7 +137,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
 
   const resolvedPlayers = resolvePlayerSel(player, evalCtx);
   if (resolvedPlayers.length !== 1) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'Per-player variable operations require exactly one resolved player', {
+    throw effectRuntimeError('variableRuntimeValidationFailed', 'Per-player variable operations require exactly one resolved player', {
       effectType: 'setVar',
       scope: 'pvar',
       selector: player,
@@ -151,7 +151,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
   const playerKey = String(playerId);
   const playerVars = ctx.state.perPlayerVars[playerKey];
   if (playerVars === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Per-player vars missing for player ${playerId}`, {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `Per-player vars missing for player ${playerId}`, {
       effectType: 'setVar',
       scope: 'pvar',
       playerId,
@@ -161,7 +161,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
 
   const currentValue = playerVars[variableName];
   if (typeof currentValue !== 'number' && typeof currentValue !== 'boolean') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Per-player variable state is missing: ${variableName}`, {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `Per-player variable state is missing: ${variableName}`, {
       effectType: 'setVar',
       scope: 'pvar',
       playerId,
@@ -202,7 +202,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   if (scope === 'global') {
     const variableDef = resolveGlobalVarDef(ctx, variableName, 'addVar');
     if (variableDef.type !== 'int') {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', `addVar cannot target non-int variable: ${variableName}`, {
+      throw effectRuntimeError('variableRuntimeValidationFailed', `addVar cannot target non-int variable: ${variableName}`, {
         effectType: 'addVar',
         scope: 'global',
         var: variableName,
@@ -211,7 +211,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     }
     const currentValue = ctx.state.globalVars[variableName];
     if (typeof currentValue !== 'number') {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', `Global variable state is missing: ${variableName}`, {
+      throw effectRuntimeError('variableRuntimeValidationFailed', `Global variable state is missing: ${variableName}`, {
         effectType: 'addVar',
         scope: 'global',
         var: variableName,
@@ -245,7 +245,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   }
 
   if (player === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'addVar scope "pvar" requires player selector', {
+    throw effectRuntimeError('variableRuntimeValidationFailed', 'addVar scope "pvar" requires player selector', {
       effectType: 'addVar',
       scope: 'pvar',
       var: variableName,
@@ -254,7 +254,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
 
   const resolvedPlayers = resolvePlayerSel(player, evalCtx);
   if (resolvedPlayers.length !== 1) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'Per-player variable operations require exactly one resolved player', {
+    throw effectRuntimeError('variableRuntimeValidationFailed', 'Per-player variable operations require exactly one resolved player', {
       effectType: 'addVar',
       scope: 'pvar',
       selector: player,
@@ -266,7 +266,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   const playerId = resolvedPlayers[0]!;
   const variableDef = resolvePerPlayerVarDef(ctx, variableName, 'addVar');
   if (variableDef.type !== 'int') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `addVar cannot target non-int variable: ${variableName}`, {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `addVar cannot target non-int variable: ${variableName}`, {
       effectType: 'addVar',
       scope: 'pvar',
       var: variableName,
@@ -276,7 +276,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   const playerKey = String(playerId);
   const playerVars = ctx.state.perPlayerVars[playerKey];
   if (playerVars === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Per-player vars missing for player ${playerId}`, {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `Per-player vars missing for player ${playerId}`, {
       effectType: 'addVar',
       scope: 'pvar',
       playerId,
@@ -286,7 +286,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
 
   const currentValue = playerVars[variableName];
   if (typeof currentValue !== 'number') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Per-player variable state is missing: ${variableName}`, {
+    throw effectRuntimeError('variableRuntimeValidationFailed', `Per-player variable state is missing: ${variableName}`, {
       effectType: 'addVar',
       scope: 'pvar',
       playerId,

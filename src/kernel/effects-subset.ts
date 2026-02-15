@@ -1,7 +1,7 @@
 import { countCombinations, combinations } from './combinatorics.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
-import { EffectRuntimeError } from './effect-error.js';
+import { effectRuntimeError } from './effect-error.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, TriggerEvent } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
@@ -17,7 +17,7 @@ const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unkn
 
 const resolveSubsetSize = (value: unknown): number => {
   if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'evaluateSubset.subsetSize must evaluate to a safe integer', {
+    throw effectRuntimeError('subsetRuntimeValidationFailed', 'evaluateSubset.subsetSize must evaluate to a safe integer', {
       effectType: 'evaluateSubset',
       subsetSize: value,
     });
@@ -27,7 +27,7 @@ const resolveSubsetSize = (value: unknown): number => {
 
 const resolveScore = (value: unknown): number => {
   if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'evaluateSubset.scoreExpr must evaluate to a safe integer', {
+    throw effectRuntimeError('subsetRuntimeValidationFailed', 'evaluateSubset.scoreExpr must evaluate to a safe integer', {
       effectType: 'evaluateSubset',
       score: value,
     });
@@ -47,7 +47,7 @@ export const applyEvaluateSubset = (
   const subsetSize = resolveSubsetSize(evalValue(evaluateSubset.subsetSize, evalCtx));
 
   if (subsetSize < 0 || subsetSize > items.length) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'evaluateSubset requires 0 <= subsetSize <= source item count', {
+    throw effectRuntimeError('subsetRuntimeValidationFailed', 'evaluateSubset requires 0 <= subsetSize <= source item count', {
       effectType: 'evaluateSubset',
       subsetSize,
       sourceCount: items.length,
@@ -56,7 +56,7 @@ export const applyEvaluateSubset = (
 
   const combinationCount = countCombinations(items.length, subsetSize);
   if (combinationCount > MAX_SUBSET_COMBINATIONS) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'evaluateSubset combination count exceeds safety cap', {
+    throw effectRuntimeError('subsetRuntimeValidationFailed', 'evaluateSubset combination count exceeds safety cap', {
       effectType: 'evaluateSubset',
       subsetSize,
       sourceCount: items.length,
@@ -98,7 +98,7 @@ export const applyEvaluateSubset = (
   }
 
   if (bestSubset === null) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'evaluateSubset could not evaluate any subset', {
+    throw effectRuntimeError('subsetRuntimeValidationFailed', 'evaluateSubset could not evaluate any subset', {
       effectType: 'evaluateSubset',
       subsetSize,
       sourceCount: items.length,

@@ -1,6 +1,6 @@
 import { evalValue } from './eval-value.js';
 import { emitTrace } from './execution-collector.js';
-import { EffectRuntimeError } from './effect-error.js';
+import { effectRuntimeError } from './effect-error.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import type { PlayerId } from './branded.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
@@ -17,7 +17,7 @@ const expectInteger = (
   field: 'amount' | 'min' | 'max',
 ): number => {
   if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isSafeInteger(value)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `${effectType}.${field} must evaluate to a finite safe integer`, {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', `${effectType}.${field} must evaluate to a finite safe integer`, {
       effectType,
       field,
       actualType: typeof value,
@@ -31,7 +31,7 @@ const expectInteger = (
 const resolveSinglePlayer = (selector: PlayerSel, ctx: EffectContext): PlayerId => {
   const resolvedPlayers = resolvePlayerSel(selector, ctx);
   if (resolvedPlayers.length !== 1) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'Per-player variable operations require exactly one resolved player', {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', 'Per-player variable operations require exactly one resolved player', {
       effectType: 'commitResource',
       selector,
       resolvedCount: resolvedPlayers.length,
@@ -44,7 +44,7 @@ const resolveSinglePlayer = (selector: PlayerSel, ctx: EffectContext): PlayerId 
 const resolvePerPlayerIntVarDef = (ctx: EffectContext, varName: string) => {
   const variableDef = ctx.def.perPlayerVars.find((variable) => variable.name === varName);
   if (variableDef === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Unknown per-player variable: ${varName}`, {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', `Unknown per-player variable: ${varName}`, {
       effectType: 'commitResource',
       scope: 'pvar',
       var: varName,
@@ -52,7 +52,7 @@ const resolvePerPlayerIntVarDef = (ctx: EffectContext, varName: string) => {
     });
   }
   if (variableDef.type !== 'int') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `commitResource cannot target non-int variable: ${varName}`, {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', `commitResource cannot target non-int variable: ${varName}`, {
       effectType: 'commitResource',
       scope: 'pvar',
       var: varName,
@@ -66,7 +66,7 @@ const resolvePerPlayerIntVarDef = (ctx: EffectContext, varName: string) => {
 const resolveGlobalIntVarDef = (ctx: EffectContext, varName: string) => {
   const variableDef = ctx.def.globalVars.find((variable) => variable.name === varName);
   if (variableDef === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Unknown global variable: ${varName}`, {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', `Unknown global variable: ${varName}`, {
       effectType: 'commitResource',
       scope: 'global',
       var: varName,
@@ -74,7 +74,7 @@ const resolveGlobalIntVarDef = (ctx: EffectContext, varName: string) => {
     });
   }
   if (variableDef.type !== 'int') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `commitResource cannot target non-int variable: ${varName}`, {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', `commitResource cannot target non-int variable: ${varName}`, {
       effectType: 'commitResource',
       scope: 'global',
       var: varName,
@@ -89,7 +89,7 @@ const readPerPlayerIntValue = (ctx: EffectContext, playerId: PlayerId, varName: 
   const playerKey = String(playerId);
   const playerVars = ctx.state.perPlayerVars[playerKey];
   if (playerVars === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Per-player vars missing for player ${playerId}`, {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', `Per-player vars missing for player ${playerId}`, {
       effectType: 'commitResource',
       playerId,
       availablePlayers: Object.keys(ctx.state.perPlayerVars).sort(),
@@ -98,7 +98,7 @@ const readPerPlayerIntValue = (ctx: EffectContext, playerId: PlayerId, varName: 
 
   const value = playerVars[varName];
   if (typeof value !== 'number') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Per-player variable state is missing: ${varName}`, {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', `Per-player variable state is missing: ${varName}`, {
       effectType: 'commitResource',
       playerId,
       var: varName,
@@ -112,7 +112,7 @@ const readPerPlayerIntValue = (ctx: EffectContext, playerId: PlayerId, varName: 
 const readGlobalIntValue = (ctx: EffectContext, varName: string): number => {
   const value = ctx.state.globalVars[varName];
   if (typeof value !== 'number') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Global variable state is missing: ${varName}`, {
+    throw effectRuntimeError('resourceRuntimeValidationFailed', `Global variable state is missing: ${varName}`, {
       effectType: 'commitResource',
       var: varName,
       availableGlobalVars: Object.keys(ctx.state.globalVars).sort(),
@@ -154,7 +154,7 @@ export const applyCommitResource = (
     destination.scope === 'pvar'
       ? (() => {
           if (destination.player === undefined) {
-            throw new EffectRuntimeError('EFFECT_RUNTIME', 'commitResource.to.player is required when to.scope is "pvar"', {
+            throw effectRuntimeError('resourceRuntimeValidationFailed', 'commitResource.to.player is required when to.scope is "pvar"', {
               effectType: 'commitResource',
               scope: destination.scope,
               to: destination,

@@ -2,7 +2,7 @@ import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { composeDecisionId } from './decision-id.js';
 import { resolveChooseNCardinality } from './choose-n-cardinality.js';
-import { EffectRuntimeError } from './effect-error.js';
+import { effectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
@@ -52,7 +52,7 @@ const isInDomain = (selected: unknown, domain: readonly unknown[]): boolean =>
 const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string) => {
   const lattice = ctx.def.markerLattices?.find((l) => l.id === markerId);
   if (lattice === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Unknown marker lattice: ${markerId}`, {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `Unknown marker lattice: ${markerId}`, {
       effectType,
       markerId,
       availableLattices: (ctx.def.markerLattices ?? []).map((l) => l.id).sort(),
@@ -65,7 +65,7 @@ const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: 
 const resolveGlobalMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string) => {
   const lattice = ctx.def.globalMarkerLattices?.find((l) => l.id === markerId);
   if (lattice === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Unknown global marker lattice: ${markerId}`, {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `Unknown global marker lattice: ${markerId}`, {
       effectType,
       markerId,
       availableLattices: (ctx.def.globalMarkerLattices ?? []).map((l) => l.id).sort(),
@@ -79,7 +79,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, ctx.bindings);
   const decisionId = composeDecisionId(effect.chooseOne.internalDecisionId, effect.chooseOne.bind, resolvedBind);
   if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseOne missing move param binding: ${resolvedBind} (${decisionId})`, {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseOne missing move param binding: ${resolvedBind} (${decisionId})`, {
       effectType: 'chooseOne',
       bind: resolvedBind,
       decisionId,
@@ -92,7 +92,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const options = evalQuery(effect.chooseOne.options, evalCtx);
   if (!isInDomain(selected, options)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseOne selection is outside options domain: ${resolvedBind}`, {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseOne selection is outside options domain: ${resolvedBind}`, {
       effectType: 'chooseOne',
       bind: resolvedBind,
       bindTemplate: effect.chooseOne.bind,
@@ -119,7 +119,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const { minCardinality, maxCardinality } = resolveChooseNCardinality(chooseN, evalCtx, (issue) => {
     if (issue.code === 'CHOOSE_N_MODE_INVALID') {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN must use either exact n or range max/min cardinality', {
+      throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN must use either exact n or range max/min cardinality', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
@@ -127,7 +127,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       });
     }
     if (issue.code === 'CHOOSE_N_MIN_EVAL_INVALID') {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN minimum cardinality must evaluate to a non-negative integer', {
+      throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN minimum cardinality must evaluate to a non-negative integer', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
@@ -136,7 +136,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       });
     }
     if (issue.code === 'CHOOSE_N_MAX_EVAL_INVALID') {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN maximum cardinality must evaluate to a non-negative integer', {
+      throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN maximum cardinality must evaluate to a non-negative integer', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
@@ -145,7 +145,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       });
     }
     if (issue.code === 'CHOOSE_N_MIN_INVALID') {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN minimum cardinality must be a non-negative integer', {
+      throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN minimum cardinality must be a non-negative integer', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
@@ -153,14 +153,14 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       });
     }
     if (issue.code === 'CHOOSE_N_MAX_INVALID') {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN maximum cardinality must be a non-negative integer', {
+      throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN maximum cardinality must be a non-negative integer', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
         max: issue.value,
       });
     }
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'chooseN min cannot exceed max', {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', 'chooseN min cannot exceed max', {
       effectType: 'chooseN',
       bind,
       bindTemplate,
@@ -170,7 +170,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   });
 
   if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN missing move param binding: ${bind} (${decisionId})`, {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN missing move param binding: ${bind} (${decisionId})`, {
       effectType: 'chooseN',
       bind,
       decisionId,
@@ -180,7 +180,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
 
   const selectedValue = ctx.moveParams[decisionId];
   if (!Array.isArray(selectedValue)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN move param must be an array: ${bind}`, {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN move param must be an array: ${bind}`, {
       effectType: 'chooseN',
       bind,
       actualType: typeof selectedValue,
@@ -189,7 +189,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   }
 
   if (selectedValue.length < minCardinality || selectedValue.length > maxCardinality) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN selection cardinality mismatch for: ${bind}`, {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN selection cardinality mismatch for: ${bind}`, {
       effectType: 'chooseN',
       bind,
       min: minCardinality,
@@ -201,7 +201,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   for (let left = 0; left < selectedValue.length; left += 1) {
     for (let right = left + 1; right < selectedValue.length; right += 1) {
       if (valuesMatch(selectedValue[left], selectedValue[right])) {
-        throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN selections must be unique: ${bind}`, {
+        throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN selections must be unique: ${bind}`, {
           effectType: 'chooseN',
           bind,
           duplicateValue: selectedValue[left],
@@ -213,7 +213,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const options = evalQuery(chooseN.options, evalCtx);
   for (const selected of selectedValue) {
     if (!isInDomain(selected, options)) {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', `chooseN selection is outside options domain: ${bind}`, {
+      throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN selection is outside options domain: ${bind}`, {
         effectType: 'chooseN',
         bind,
         selected,
@@ -243,7 +243,7 @@ export const applyRollRandom = (
   const maxValue = evalValue(effect.rollRandom.max, evalCtx);
 
   if (typeof minValue !== 'number' || !Number.isSafeInteger(minValue)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'rollRandom.min must evaluate to a safe integer', {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', 'rollRandom.min must evaluate to a safe integer', {
       effectType: 'rollRandom',
       actualType: typeof minValue,
       value: minValue,
@@ -251,7 +251,7 @@ export const applyRollRandom = (
   }
 
   if (typeof maxValue !== 'number' || !Number.isSafeInteger(maxValue)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'rollRandom.max must evaluate to a safe integer', {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', 'rollRandom.max must evaluate to a safe integer', {
       effectType: 'rollRandom',
       actualType: typeof maxValue,
       value: maxValue,
@@ -259,7 +259,7 @@ export const applyRollRandom = (
   }
 
   if (minValue > maxValue) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `rollRandom requires min <= max, received min=${minValue}, max=${maxValue}`, {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `rollRandom requires min <= max, received min=${minValue}, max=${maxValue}`, {
       effectType: 'rollRandom',
       min: minValue,
       max: maxValue,
@@ -292,7 +292,7 @@ export const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: 
   const evaluatedState = evalValue(stateExpr, evalCtx);
 
   if (typeof evaluatedState !== 'string') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'setMarker.state must evaluate to a string', {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', 'setMarker.state must evaluate to a string', {
       effectType: 'setMarker',
       actualType: typeof evaluatedState,
       value: evaluatedState,
@@ -301,7 +301,7 @@ export const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: 
 
   const lattice = resolveMarkerLattice(ctx, marker, 'setMarker');
   if (!lattice.states.includes(evaluatedState)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
       effectType: 'setMarker',
       marker,
       state: evaluatedState,
@@ -332,7 +332,7 @@ export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMark
   const evaluatedDelta = evalValue(deltaExpr, evalCtx);
 
   if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'shiftMarker.delta must evaluate to a safe integer', {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', 'shiftMarker.delta must evaluate to a safe integer', {
       effectType: 'shiftMarker',
       actualType: typeof evaluatedDelta,
       value: evaluatedDelta,
@@ -345,7 +345,7 @@ export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMark
   const currentIndex = lattice.states.indexOf(currentState);
 
   if (currentIndex < 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Current marker state "${currentState}" not found in lattice "${marker}"`, {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `Current marker state "${currentState}" not found in lattice "${marker}"`, {
       effectType: 'shiftMarker',
       marker,
       currentState,
@@ -384,7 +384,7 @@ export const applySetGlobalMarker = (
   const evaluatedState = evalValue(stateExpr, evalCtx);
 
   if (typeof evaluatedState !== 'string') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'setGlobalMarker.state must evaluate to a string', {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', 'setGlobalMarker.state must evaluate to a string', {
       effectType: 'setGlobalMarker',
       actualType: typeof evaluatedState,
       value: evaluatedState,
@@ -393,7 +393,7 @@ export const applySetGlobalMarker = (
 
   const lattice = resolveGlobalMarkerLattice(ctx, marker, 'setGlobalMarker');
   if (!lattice.states.includes(evaluatedState)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
       effectType: 'setGlobalMarker',
       marker,
       state: evaluatedState,
@@ -422,7 +422,7 @@ export const applyShiftGlobalMarker = (
   const evaluatedDelta = evalValue(deltaExpr, evalCtx);
 
   if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'shiftGlobalMarker.delta must evaluate to a safe integer', {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', 'shiftGlobalMarker.delta must evaluate to a safe integer', {
       effectType: 'shiftGlobalMarker',
       actualType: typeof evaluatedDelta,
       value: evaluatedDelta,
@@ -434,7 +434,7 @@ export const applyShiftGlobalMarker = (
   const currentIndex = lattice.states.indexOf(currentState);
 
   if (currentIndex < 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Current marker state "${currentState}" not found in lattice "${marker}"`, {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `Current marker state "${currentState}" not found in lattice "${marker}"`, {
       effectType: 'shiftGlobalMarker',
       marker,
       currentState,
@@ -472,28 +472,28 @@ export const applyFlipGlobalMarker = (
   const evaluatedStateB = evalValue(stateBExpr, evalCtx);
 
   if (typeof evaluatedMarker !== 'string') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'flipGlobalMarker.marker must evaluate to a string', {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', 'flipGlobalMarker.marker must evaluate to a string', {
       effectType: 'flipGlobalMarker',
       actualType: typeof evaluatedMarker,
       value: evaluatedMarker,
     });
   }
   if (typeof evaluatedStateA !== 'string') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'flipGlobalMarker.stateA must evaluate to a string', {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', 'flipGlobalMarker.stateA must evaluate to a string', {
       effectType: 'flipGlobalMarker',
       actualType: typeof evaluatedStateA,
       value: evaluatedStateA,
     });
   }
   if (typeof evaluatedStateB !== 'string') {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'flipGlobalMarker.stateB must evaluate to a string', {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', 'flipGlobalMarker.stateB must evaluate to a string', {
       effectType: 'flipGlobalMarker',
       actualType: typeof evaluatedStateB,
       value: evaluatedStateB,
     });
   }
   if (evaluatedStateA === evaluatedStateB) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'flipGlobalMarker requires two distinct states', {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', 'flipGlobalMarker requires two distinct states', {
       effectType: 'flipGlobalMarker',
       marker: evaluatedMarker,
       stateA: evaluatedStateA,
@@ -503,8 +503,8 @@ export const applyFlipGlobalMarker = (
 
   const lattice = resolveGlobalMarkerLattice(ctx, evaluatedMarker, 'flipGlobalMarker');
   if (!lattice.states.includes(evaluatedStateA)) {
-    throw new EffectRuntimeError(
-      'EFFECT_RUNTIME',
+    throw effectRuntimeError(
+      'choiceRuntimeValidationFailed',
       `Invalid stateA "${evaluatedStateA}" for lattice "${evaluatedMarker}" in flipGlobalMarker`,
       {
         effectType: 'flipGlobalMarker',
@@ -515,8 +515,8 @@ export const applyFlipGlobalMarker = (
     );
   }
   if (!lattice.states.includes(evaluatedStateB)) {
-    throw new EffectRuntimeError(
-      'EFFECT_RUNTIME',
+    throw effectRuntimeError(
+      'choiceRuntimeValidationFailed',
       `Invalid stateB "${evaluatedStateB}" for lattice "${evaluatedMarker}" in flipGlobalMarker`,
       {
         effectType: 'flipGlobalMarker',
@@ -534,8 +534,8 @@ export const applyFlipGlobalMarker = (
   } else if (currentState === evaluatedStateB) {
     nextState = evaluatedStateA;
   } else {
-    throw new EffectRuntimeError(
-      'EFFECT_RUNTIME',
+    throw effectRuntimeError(
+      'choiceRuntimeValidationFailed',
       `flipGlobalMarker current state "${currentState}" is not flippable between "${evaluatedStateA}" and "${evaluatedStateB}"`,
       {
         effectType: 'flipGlobalMarker',

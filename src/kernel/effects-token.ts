@@ -5,7 +5,7 @@ import { emitTrace } from './execution-collector.js';
 import { nextInt } from './prng.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
 import { checkStackingConstraints } from './stacking.js';
-import { EffectRuntimeError } from './effect-error.js';
+import { EffectRuntimeError, effectRuntimeError } from './effect-error.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, Token } from './types.js';
 
@@ -49,8 +49,8 @@ const enforceStacking = (ctx: EffectContext, zoneId: string, zoneContentsAfter: 
       .filter((tokenTypeId) => !tokenTypeFactionById.has(tokenTypeId))
       .sort((left, right) => left.localeCompare(right));
     if (missingFactionTokenTypes.length > 0) {
-      throw new EffectRuntimeError(
-        'EFFECT_RUNTIME',
+      throw effectRuntimeError(
+        'tokenRuntimeValidationFailed',
         'Stacking constraint faction filters require canonical tokenType.faction mapping.',
         {
           effectType,
@@ -88,7 +88,7 @@ const resolveZoneTokens = (
 ): readonly Token[] => {
   const zoneTokens = ctx.state.zones[zoneId];
   if (zoneTokens === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Zone state not found for selector result: ${zoneId}`, {
+    throw effectRuntimeError('tokenRuntimeValidationFailed', `Zone state not found for selector result: ${zoneId}`, {
       effectType,
       field,
       zoneId,
@@ -103,7 +103,7 @@ const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string, effectTyp
   const bindings = resolveEffectBindings(ctx);
   const boundValue = bindings[tokenBinding];
   if (boundValue === undefined) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token binding not found: ${tokenBinding}`, {
+    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token binding not found: ${tokenBinding}`, {
       effectType,
       tokenBinding,
       availableBindings: Object.keys(bindings).sort(),
@@ -118,7 +118,7 @@ const resolveBoundTokenId = (ctx: EffectContext, tokenBinding: string, effectTyp
     return boundValue.id;
   }
 
-  throw new EffectRuntimeError('EFFECT_RUNTIME', `Token binding ${tokenBinding} must resolve to Token or TokenId`, {
+  throw effectRuntimeError('tokenRuntimeValidationFailed', `Token binding ${tokenBinding} must resolve to Token or TokenId`, {
     effectType,
     tokenBinding,
     actualType: typeof boundValue,
@@ -173,8 +173,8 @@ const resolveMoveTokenAdjacentDestination = (
   }
 
   if (typeof boundDestination !== 'string') {
-    throw new EffectRuntimeError(
-      'EFFECT_RUNTIME',
+    throw effectRuntimeError(
+      'tokenRuntimeValidationFailed',
       `moveTokenAdjacent destination binding ${direction} must resolve to ZoneId string`,
       {
         effectType: 'moveTokenAdjacent',
@@ -201,7 +201,7 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
   const occurrences = findTokenOccurrences(ctx, tokenId);
 
   if (occurrences.length === 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token not found in any zone: ${tokenId}`, {
+    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token not found in any zone: ${tokenId}`, {
       effectType: 'moveToken',
       tokenId,
       fromZoneId,
@@ -209,7 +209,7 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
   }
 
   if (occurrences.length > 1) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token appears in multiple zones: ${tokenId}`, {
+    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token appears in multiple zones: ${tokenId}`, {
       effectType: 'moveToken',
       tokenId,
       zones: occurrences.map((occurrence) => occurrence.zoneId).sort(),
@@ -218,7 +218,7 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
 
   const occurrence = occurrences[0]!;
   if (occurrence.zoneId !== fromZoneId) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token is not in resolved from zone: ${tokenId}`, {
+    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token is not in resolved from zone: ${tokenId}`, {
       effectType: 'moveToken',
       tokenId,
       expectedFrom: fromZoneId,
@@ -323,7 +323,7 @@ export const applyCreateToken = (effect: Extract<EffectAST, { readonly createTok
 
   const ordinal = ctx.state.nextTokenOrdinal;
   if (!Number.isSafeInteger(ordinal) || ordinal < 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'nextTokenOrdinal must be a non-negative safe integer', {
+    throw effectRuntimeError('tokenRuntimeValidationFailed', 'nextTokenOrdinal must be a non-negative safe integer', {
       effectType: 'createToken',
       nextTokenOrdinal: ordinal,
     });
@@ -363,14 +363,14 @@ export const applyDestroyToken = (effect: Extract<EffectAST, { readonly destroyT
   const occurrences = findTokenOccurrences(ctx, tokenId);
 
   if (occurrences.length === 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token not found in any zone: ${tokenId}`, {
+    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token not found in any zone: ${tokenId}`, {
       effectType: 'destroyToken',
       tokenId,
     });
   }
 
   if (occurrences.length > 1) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token appears in multiple zones: ${tokenId}`, {
+    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token appears in multiple zones: ${tokenId}`, {
       effectType: 'destroyToken',
       tokenId,
       zones: occurrences.map((occurrence) => occurrence.zoneId).sort(),
@@ -399,14 +399,14 @@ export const applySetTokenProp = (effect: Extract<EffectAST, { readonly setToken
   const occurrences = findTokenOccurrences(ctx, tokenId);
 
   if (occurrences.length === 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token not found in any zone: ${tokenId}`, {
+    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token not found in any zone: ${tokenId}`, {
       effectType: 'setTokenProp',
       tokenId,
     });
   }
 
   if (occurrences.length > 1) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `Token appears in multiple zones: ${tokenId}`, {
+    throw effectRuntimeError('tokenRuntimeValidationFailed', `Token appears in multiple zones: ${tokenId}`, {
       effectType: 'setTokenProp',
       tokenId,
       zones: occurrences.map((occurrence) => occurrence.zoneId).sort(),
@@ -419,7 +419,7 @@ export const applySetTokenProp = (effect: Extract<EffectAST, { readonly setToken
   if (tokenTypeDef !== undefined) {
     const propType = tokenTypeDef.props[prop];
     if (propType === undefined) {
-      throw new EffectRuntimeError('EFFECT_RUNTIME', `Property "${prop}" is not defined on token type "${occurrence.token.type}"`, {
+      throw effectRuntimeError('tokenRuntimeValidationFailed', `Property "${prop}" is not defined on token type "${occurrence.token.type}"`, {
         effectType: 'setTokenProp',
         tokenId,
         prop,
@@ -439,7 +439,7 @@ export const applySetTokenProp = (effect: Extract<EffectAST, { readonly setToken
       const newValue = String(evaluatedValue);
       const isValid = transitionsForProp.some((t) => t.from === currentValue && t.to === newValue);
       if (!isValid) {
-        throw new EffectRuntimeError('EFFECT_RUNTIME', `Invalid transition for "${prop}": "${currentValue}" → "${newValue}"`, {
+        throw effectRuntimeError('tokenRuntimeValidationFailed', `Invalid transition for "${prop}": "${currentValue}" → "${newValue}"`, {
           effectType: 'setTokenProp',
           tokenId,
           prop,
@@ -487,7 +487,7 @@ export const applySetTokenProp = (effect: Extract<EffectAST, { readonly setToken
 export const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>, ctx: EffectContext): EffectResult => {
   const count = effect.draw.count;
   if (!Number.isSafeInteger(count) || count < 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'draw.count must be a non-negative integer', {
+    throw effectRuntimeError('tokenRuntimeValidationFailed', 'draw.count must be a non-negative integer', {
       effectType: 'draw',
       count,
     });

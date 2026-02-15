@@ -1,7 +1,7 @@
 import { getMaxEffectOps, type EffectContext, type EffectResult } from './effect-context.js';
 import {
   EffectBudgetExceededError,
-  EffectRuntimeError,
+  effectRuntimeError,
   effectNotImplementedError,
 } from './effect-error.js';
 import {
@@ -35,7 +35,7 @@ import type { EffectAST, TriggerEvent } from './types.js';
 const createBudgetState = (ctx: Pick<EffectContext, 'maxEffectOps'>): EffectBudgetState => {
   const maxEffectOps = getMaxEffectOps(ctx);
   if (!Number.isInteger(maxEffectOps) || maxEffectOps < 0) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', 'maxEffectOps must be a non-negative integer', { maxEffectOps });
+    throw effectRuntimeError('effectBudgetConfigInvalid', 'maxEffectOps must be a non-negative integer', { maxEffectOps });
   }
 
   return { remaining: maxEffectOps, max: maxEffectOps };

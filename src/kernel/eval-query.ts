@@ -8,7 +8,7 @@ import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
-import { getRuntimeTableIndex } from './runtime-table-index.js';
+import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
@@ -263,7 +263,7 @@ function resolveRuntimeTableRows(query: Extract<OptionsQuery, { readonly query: 
   readonly rows: readonly AssetRow[];
   readonly fieldNames: ReadonlySet<string>;
 } {
-  const index = getRuntimeTableIndex(ctx.def);
+  const index = ctx.runtimeTableIndex ?? buildRuntimeTableIndex(ctx.def);
   const entry = index.tablesById.get(query.tableId);
   if (entry === undefined) {
     throw missingVarError(`Runtime table contract not found: ${query.tableId}`, {

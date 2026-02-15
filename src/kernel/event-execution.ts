@@ -3,6 +3,7 @@ import { applyEffects } from './effects.js';
 import { evalCondition } from './eval-condition.js';
 import { createCollector } from './execution-collector.js';
 import { isCardEventMove } from './action-capabilities.js';
+import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type {
   ActiveLastingEffect,
   EffectAST,
@@ -234,9 +235,11 @@ const applyEffectList = (
   activePlayer: GameState['activePlayer'],
   moveParams: Move['params'],
 ): LastingEffectApplyResult => {
+  const runtimeTableIndex = buildRuntimeTableIndex(def);
   const result = applyEffects(effects, {
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
+    runtimeTableIndex,
     state,
     rng,
     activePlayer,
@@ -273,9 +276,11 @@ export const executeEventMove = (
 
   if (context.card.playCondition !== undefined) {
     const adjacencyGraph = buildAdjacencyGraph(def.zones);
+    const runtimeTableIndex = buildRuntimeTableIndex(def);
     const conditionMet = evalCondition(context.card.playCondition, {
       def,
       adjacencyGraph,
+      runtimeTableIndex,
       state,
       activePlayer: state.activePlayer,
       actorPlayer: state.activePlayer,
@@ -362,9 +367,11 @@ export const resolveEventFreeOperationGrants = (
   }
   if (context.card.playCondition !== undefined) {
     const adjacencyGraph = buildAdjacencyGraph(def.zones);
+    const runtimeTableIndex = buildRuntimeTableIndex(def);
     const conditionMet = evalCondition(context.card.playCondition, {
       def,
       adjacencyGraph,
+      runtimeTableIndex,
       state,
       activePlayer: state.activePlayer,
       actorPlayer: state.activePlayer,
@@ -392,9 +399,11 @@ export const resolveEventEligibilityOverrides = (
   }
   if (context.card.playCondition !== undefined) {
     const adjacencyGraph = buildAdjacencyGraph(def.zones);
+    const runtimeTableIndex = buildRuntimeTableIndex(def);
     const conditionMet = evalCondition(context.card.playCondition, {
       def,
       adjacencyGraph,
+      runtimeTableIndex,
       state,
       activePlayer: state.activePlayer,
       actorPlayer: state.activePlayer,

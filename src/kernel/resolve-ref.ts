@@ -2,7 +2,7 @@ import { resolveMapSpaceId, resolveSinglePlayerSel, resolveSingleZoneSel } from 
 import type { EvalContext } from './eval-context.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { missingBindingError, missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
-import { getRuntimeTableIndex } from './runtime-table-index.js';
+import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { Reference, Token } from './types.js';
 
 function isScalarValue(value: unknown): value is number | boolean | string {
@@ -105,7 +105,7 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
   }
 
   if (ref.ref === 'assetField') {
-    const tableIndex = getRuntimeTableIndex(ctx.def);
+    const tableIndex = ctx.runtimeTableIndex ?? buildRuntimeTableIndex(ctx.def);
     const entry = tableIndex.tablesById.get(ref.tableId);
     if (entry === undefined) {
       throw missingVarError(`Runtime table contract not found: ${ref.tableId}`, {
@@ -144,7 +144,7 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     }
 
     const rowValue = (boundRow as Record<string, unknown>)[ref.field];
-    const fieldContract = entry.contract.fields.find((field) => field.field === ref.field);
+    const fieldContract = entry.fieldContractsByName.get(ref.field);
     if (fieldContract === undefined) {
       throw missingVarError(`Runtime table field not declared in contract: ${ref.field}`, {
         reference: ref,

@@ -1,4 +1,5 @@
 import type { PlayerId } from './branded.js';
+import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type { ConditionAST, ExecutionCollector, GameDef, GameState, MapSpaceDef } from './types.js';
 
@@ -17,6 +18,7 @@ export interface EvalContext {
   readonly activePlayer: PlayerId;
   readonly actorPlayer: PlayerId;
   readonly bindings: Readonly<Record<string, unknown>>;
+  readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly mapSpaces?: readonly MapSpaceDef[];
   readonly freeOperationZoneFilter?: ConditionAST;
   readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;

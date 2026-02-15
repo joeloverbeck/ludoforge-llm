@@ -14,6 +14,7 @@ export interface RuntimeTableIndexEntry {
   readonly contract: RuntimeTableContract;
   readonly rows: readonly AssetRow[] | null;
   readonly fieldNames: ReadonlySet<string>;
+  readonly fieldContractsByName: ReadonlyMap<string, RuntimeTableContract['fields'][number]>;
   readonly issue?: RuntimeTableIssue;
 }
 
@@ -21,8 +22,6 @@ export interface RuntimeTableIndex {
   readonly tableIds: readonly string[];
   readonly tablesById: ReadonlyMap<string, RuntimeTableIndexEntry>;
 }
-
-const runtimeTableIndexCache = new WeakMap<GameDef, RuntimeTableIndex>();
 
 function resolveRowsByTablePath(
   payload: unknown,
@@ -112,12 +111,14 @@ export function buildRuntimeTableIndex(def: GameDef): RuntimeTableIndex {
 
   for (const contract of tableContracts) {
     const fieldNames = new Set(contract.fields.map((field) => field.field));
+    const fieldContractsByName = new Map(contract.fields.map((field) => [field.field, field] as const));
     const asset = assetsByNormalizedId.get(contract.assetId.normalize('NFC'));
     if (asset === undefined) {
       tablesById.set(contract.id, {
         contract,
         rows: null,
         fieldNames,
+        fieldContractsByName,
         issue: {
           kind: 'assetMissing',
           assetId: contract.assetId,
@@ -131,6 +132,7 @@ export function buildRuntimeTableIndex(def: GameDef): RuntimeTableIndex {
       contract,
       rows: resolvedRows.rows,
       fieldNames,
+      fieldContractsByName,
       ...(resolvedRows.issue === undefined ? {} : { issue: resolvedRows.issue }),
     });
   }
@@ -139,15 +141,4 @@ export function buildRuntimeTableIndex(def: GameDef): RuntimeTableIndex {
     tableIds: [...tablesById.keys()].sort((left, right) => left.localeCompare(right)),
     tablesById,
   };
-}
-
-export function getRuntimeTableIndex(def: GameDef): RuntimeTableIndex {
-  const cached = runtimeTableIndexCache.get(def);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  const built = buildRuntimeTableIndex(def);
-  runtimeTableIndexCache.set(def, built);
-  return built;
 }

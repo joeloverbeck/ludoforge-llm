@@ -2,6 +2,7 @@ import type { EvalContext } from './eval-context.js';
 import { isEvalErrorCode } from './eval-error.js';
 import { createCollector } from './execution-collector.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
+import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { ActionDef, GameDef, GameState } from './types.js';
 import type { AdjacencyGraph } from './spatial.js';
 
@@ -12,6 +13,7 @@ interface ResolveActionExecutorPlayerInput {
   readonly action: ActionDef;
   readonly decisionPlayer: GameState['activePlayer'];
   readonly bindings: Readonly<Record<string, unknown>>;
+  readonly runtimeTableIndex?: RuntimeTableIndex;
 }
 
 export type ActionExecutorResolution =
@@ -35,7 +37,9 @@ export const resolveActionExecutor = ({
   action,
   decisionPlayer,
   bindings,
+  runtimeTableIndex: providedRuntimeTableIndex,
 }: ResolveActionExecutorPlayerInput): ActionExecutorResolution => {
+  const runtimeTableIndex = providedRuntimeTableIndex ?? buildRuntimeTableIndex(def);
   const selectorContext: EvalContext = {
     def,
     adjacencyGraph,
@@ -43,6 +47,7 @@ export const resolveActionExecutor = ({
     activePlayer: decisionPlayer,
     actorPlayer: decisionPlayer,
     bindings,
+    runtimeTableIndex,
     collector: createCollector(),
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   };

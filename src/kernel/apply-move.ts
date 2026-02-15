@@ -29,6 +29,7 @@ import {
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
+import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type {
   ActionDef,
   ActionPipelineDef,
@@ -93,6 +94,7 @@ const resolveMatchedPipelineForMove = (
     return undefined;
   }
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = buildRuntimeTableIndex(def);
   const executionPlayer = move.freeOperation === true
     ? resolveFreeOperationExecutionPlayer(def, state, move)
     : (() => {
@@ -103,6 +105,7 @@ const resolveMatchedPipelineForMove = (
         action,
         decisionPlayer: state.activePlayer,
         bindings: runtimeBindingsForMove(move, undefined),
+        runtimeTableIndex,
       });
       if (resolution.kind === 'notApplicable') {
         return null;
@@ -118,6 +121,7 @@ const resolveMatchedPipelineForMove = (
   const dispatch = resolveActionPipelineDispatch(def, action, {
     def,
     adjacencyGraph,
+    runtimeTableIndex,
     state,
     activePlayer: executionPlayer,
     actorPlayer: executionPlayer,
@@ -339,6 +343,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
   }
 
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = buildRuntimeTableIndex(def);
   const preflight = resolveActionApplicabilityPreflight({
     def,
     state,
@@ -346,6 +351,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
     adjacencyGraph,
     decisionPlayer: state.activePlayer,
     bindings: runtimeBindingsForMove(move, undefined),
+    runtimeTableIndex,
     ...(move.freeOperation === true
       ? { executionPlayerOverride: resolveFreeOperationExecutionPlayer(def, state, move) }
       : {}),
@@ -416,6 +422,7 @@ const applyMoveCore = (
 
   const rng: Rng = { state: state.rng };
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = buildRuntimeTableIndex(def);
   const collector = createCollector(options);
   const baseBindings = runtimeBindingsForMove(move, undefined);
   const executionPlayer = validated?.executionPlayer ?? (
@@ -429,6 +436,7 @@ const applyMoveCore = (
           action,
           decisionPlayer: state.activePlayer,
           bindings: baseBindings,
+          runtimeTableIndex,
         });
         if (resolution.kind === 'notApplicable') {
           throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE);
@@ -442,6 +450,7 @@ const applyMoveCore = (
   const effectCtxBase = {
     def,
     adjacencyGraph,
+    runtimeTableIndex,
     activePlayer: executionPlayer,
     actorPlayer: executionPlayer,
     bindings: baseBindings,

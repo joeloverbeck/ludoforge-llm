@@ -8,6 +8,7 @@ import {
 import { createCollector } from './execution-collector.js';
 import type { EvalContext } from './eval-context.js';
 import type { ActionApplicabilityNotApplicableReason } from './legality-reasons.js';
+import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type { ActionDef, GameDef, GameState } from './types.js';
 
@@ -36,6 +37,7 @@ interface ActionApplicabilityPreflightInput {
   readonly adjacencyGraph: AdjacencyGraph;
   readonly decisionPlayer: GameState['activePlayer'];
   readonly bindings: Readonly<Record<string, unknown>>;
+  readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly skipPhaseCheck?: boolean;
   readonly skipExecutorCheck?: boolean;
   readonly skipActionLimitCheck?: boolean;
@@ -69,6 +71,7 @@ export const resolveActionApplicabilityPreflight = ({
   adjacencyGraph,
   decisionPlayer,
   bindings,
+  runtimeTableIndex: providedRuntimeTableIndex,
   skipPhaseCheck = false,
   skipExecutorCheck = false,
   skipActionLimitCheck = false,
@@ -78,6 +81,7 @@ export const resolveActionApplicabilityPreflight = ({
   freeOperationZoneFilterDiagnostics,
   maxQueryResults,
 }: ActionApplicabilityPreflightInput): ActionApplicabilityPreflightResult => {
+  const runtimeTableIndex = providedRuntimeTableIndex ?? buildRuntimeTableIndex(def);
   const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
   const selectorContractViolations = evaluateActionSelectorContracts({
     selectors: {
@@ -108,6 +112,7 @@ export const resolveActionApplicabilityPreflight = ({
     action,
     decisionPlayer,
     bindings,
+    runtimeTableIndex,
   });
   if (actorResolution.kind === 'notApplicable') {
     return { kind: 'notApplicable', reason: 'actorNotApplicable' };
@@ -125,6 +130,7 @@ export const resolveActionApplicabilityPreflight = ({
       action,
       decisionPlayer,
       bindings,
+      runtimeTableIndex,
     });
     if (executorResolution.kind === 'notApplicable') {
       return { kind: 'notApplicable', reason: 'executorNotApplicable' };
@@ -150,6 +156,7 @@ export const resolveActionApplicabilityPreflight = ({
     activePlayer: executionPlayer,
     actorPlayer: executionPlayer,
     bindings,
+    runtimeTableIndex,
     ...(freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter }),
     ...(freeOperationZoneFilterDiagnostics === undefined ? {} : { freeOperationZoneFilterDiagnostics }),
     ...(maxQueryResults === undefined ? {} : { maxQueryResults }),

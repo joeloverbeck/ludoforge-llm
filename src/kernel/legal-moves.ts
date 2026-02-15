@@ -16,6 +16,7 @@ import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
 import { isCardEventAction } from './action-capabilities.js';
+import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
 
 export interface LegalMoveEnumerationOptions {
@@ -81,6 +82,7 @@ const consumeParamExpansionBudget = (state: MoveEnumerationState, actionId: Acti
 function makeEvalContext(
   def: GameDef,
   adjacencyGraph: AdjacencyGraph,
+  runtimeTableIndex: RuntimeTableIndex,
   state: GameState,
   executionPlayer: GameState['activePlayer'],
   bindings: Readonly<Record<string, unknown>>,
@@ -92,6 +94,7 @@ function makeEvalContext(
     activePlayer: executionPlayer,
     actorPlayer: executionPlayer,
     bindings,
+    runtimeTableIndex,
     collector: createCollector(),
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   };
@@ -101,6 +104,7 @@ function enumerateParams(
   action: ActionDef,
   def: GameDef,
   adjacencyGraph: AdjacencyGraph,
+  runtimeTableIndex: RuntimeTableIndex,
   state: GameState,
   paramIndex: number,
   bindings: Readonly<Record<string, unknown>>,
@@ -118,6 +122,7 @@ function enumerateParams(
       action,
       decisionPlayer: state.activePlayer,
       bindings,
+      runtimeTableIndex,
     });
     if (resolution.kind === 'notApplicable') {
       return null;
@@ -136,7 +141,7 @@ function enumerateParams(
     if (executionPlayer === null) {
       return;
     }
-    const ctx = makeEvalContext(def, adjacencyGraph, state, executionPlayer, bindings);
+    const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, state, executionPlayer, bindings);
     if (action.pre !== null && !evalCondition(action.pre, ctx)) {
       return;
     }
@@ -164,13 +169,22 @@ function enumerateParams(
   if (executionPlayer === null) {
     return;
   }
-  const ctx = makeEvalContext(def, adjacencyGraph, state, executionPlayer, bindings);
+  const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, state, executionPlayer, bindings);
   const domainValues = evalQuery(param.domain, ctx);
   for (const value of domainValues) {
     if (!consumeParamExpansionBudget(enumeration, action.id)) {
       return;
     }
-    enumerateParams(action, def, adjacencyGraph, state, paramIndex + 1, { ...bindings, [param.name]: value }, enumeration);
+    enumerateParams(
+      action,
+      def,
+      adjacencyGraph,
+      runtimeTableIndex,
+      state,
+      paramIndex + 1,
+      { ...bindings, [param.name]: value },
+      enumeration,
+    );
     if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
       return;
     }
@@ -267,6 +281,7 @@ export const enumerateLegalMoves = (
     paramExpansionBudgetExceeded: false,
   };
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = buildRuntimeTableIndex(def);
 
   for (const action of def.actions) {
     if (enumeration.templateBudgetExceeded) {
@@ -280,6 +295,7 @@ export const enumerateLegalMoves = (
       adjacencyGraph,
       decisionPlayer: state.activePlayer,
       bindings: {},
+      runtimeTableIndex,
       skipExecutorCheck: !hasActionPipeline,
       skipPipelineDispatch: !hasActionPipeline,
     });
@@ -304,7 +320,7 @@ export const enumerateLegalMoves = (
     }
 
     if (!hasActionPipeline) {
-      enumerateParams(action, def, adjacencyGraph, state, 0, {}, enumeration);
+      enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, state, 0, {}, enumeration);
       continue;
     }
 

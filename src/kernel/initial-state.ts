@@ -7,6 +7,7 @@ import { applyTurnFlowInitialReveal } from './turn-flow-lifecycle.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import { createCollector } from './execution-collector.js';
+import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { assertValidatedGameDef } from './validate-gamedef.js';
 import type { GameDef, GameState } from './types.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
@@ -28,6 +29,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
   const initialTurnOrderState = resolveInitialTurnOrderState(validatedDef, resolvedPlayerCount);
   const rng = createRng(BigInt(seed));
   const adjacencyGraph = buildAdjacencyGraph(validatedDef.zones);
+  const runtimeTableIndex = buildRuntimeTableIndex(validatedDef);
   const initialMarkers = buildInitialMarkers(validatedDef.spaceMarkers);
   const initialGlobalMarkers = buildInitialGlobalMarkers(validatedDef.globalMarkerLattices);
 
@@ -62,6 +64,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     activePlayer: withInitialActivePlayer.activePlayer,
     actorPlayer: withInitialActivePlayer.activePlayer,
     bindings: {},
+    runtimeTableIndex,
     moveParams: {},
     collector: createCollector(),
   });
@@ -76,6 +79,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     maxDepth,
     [],
     adjacencyGraph,
+    runtimeTableIndex,
   );
   const phaseEnterResult = dispatchTriggers(
     validatedDef,
@@ -86,6 +90,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     maxDepth,
     turnStartResult.triggerLog,
     adjacencyGraph,
+    runtimeTableIndex,
   );
   const stateWithRng = {
     ...phaseEnterResult.state,

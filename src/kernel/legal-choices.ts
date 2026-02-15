@@ -18,6 +18,7 @@ import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { toChoiceIllegalReason } from './legality-outcome.js';
 import { kernelRuntimeError } from './runtime-error.js';
+import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { resolveFreeOperationExecutionPlayer, resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
 import { isCardEventActionId } from './action-capabilities.js';
 import type {
@@ -108,6 +109,7 @@ const applyResolvedEffect = (effect: EffectAST, wCtx: WalkContext): WalkContext 
     bindings: wCtx.evalCtx.bindings,
     moveParams: wCtx.moveParams,
     collector: wCtx.evalCtx.collector,
+    ...(wCtx.evalCtx.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: wCtx.evalCtx.runtimeTableIndex }),
     ...(wCtx.evalCtx.mapSpaces === undefined ? {} : { mapSpaces: wCtx.evalCtx.mapSpaces }),
   };
   const result = applyEffect(effect, effectCtx);
@@ -378,6 +380,7 @@ export function legalChoices(
   }
 
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = buildRuntimeTableIndex(def);
   const baseBindings: Record<string, unknown> = {
     ...buildMoveRuntimeBindings(partialMove),
   };
@@ -391,6 +394,7 @@ export function legalChoices(
     adjacencyGraph,
     decisionPlayer: state.activePlayer,
     bindings: baseBindings,
+    runtimeTableIndex,
     ...(partialMove.freeOperation === true
       ? { executionPlayerOverride: resolveFreeOperationExecutionPlayer(def, state, partialMove) }
       : {}),

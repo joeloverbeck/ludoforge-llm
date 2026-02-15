@@ -1,4 +1,5 @@
 import type { PlayerId } from './branded.js';
+import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type { ExecutionCollector, GameDef, GameState, MapSpaceDef, MoveParamValue, Rng, TriggerEvent } from './types.js';
 
@@ -12,6 +13,7 @@ export interface EffectContext {
   readonly activePlayer: PlayerId;
   readonly actorPlayer: PlayerId;
   readonly bindings: Readonly<Record<string, unknown>>;
+  readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly moveParams: Readonly<Record<string, MoveParamValue>>;
   readonly maxEffectOps?: number;
   readonly mapSpaces?: readonly MapSpaceDef[];

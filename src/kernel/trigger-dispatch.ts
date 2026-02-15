@@ -3,6 +3,7 @@ import { evalCondition } from './eval-condition.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { createCollector } from './execution-collector.js';
+import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDef, GameState, Rng, TriggerDef, TriggerEvent, TriggerLogEntry } from './types.js';
 
 export interface DispatchTriggersResult {
@@ -20,6 +21,7 @@ export const dispatchTriggers = (
   maxDepth: number,
   triggerLog: readonly TriggerLogEntry[],
   adjacencyGraph: AdjacencyGraph = buildAdjacencyGraph(def.zones),
+  runtimeTableIndex: RuntimeTableIndex = buildRuntimeTableIndex(def),
 ): DispatchTriggersResult => {
   if (depth > maxDepth) {
     return {
@@ -45,6 +47,7 @@ export const dispatchTriggers = (
       activePlayer: nextState.activePlayer,
       actorPlayer: nextState.activePlayer,
       bindings: createEventBindings(event),
+      runtimeTableIndex,
       collector: createCollector(),
     };
 
@@ -80,6 +83,7 @@ export const dispatchTriggers = (
         maxDepth,
         nextTriggerLog,
         adjacencyGraph,
+        runtimeTableIndex,
       );
       nextState = cascadeResult.state;
       nextRng = cascadeResult.rng;

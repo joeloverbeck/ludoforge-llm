@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asZoneId, buildRuntimeTableIndex, getRuntimeTableIndex, type GameDef } from '../../src/kernel/index.js';
+import { asZoneId, buildRuntimeTableIndex, type GameDef } from '../../src/kernel/index.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'runtime-table-index-test', players: { min: 1, max: 2 } },
@@ -55,6 +55,7 @@ describe('runtime table index', () => {
     assert.equal(entry.issue, undefined);
     assert.equal(entry.rows?.length, 2);
     assert.ok(entry.fieldNames.has('smallBlind'));
+    assert.equal(entry.fieldContractsByName.get('smallBlind')?.type, 'int');
     assert.deepEqual(index.tableIds, ['tournament-standard::blindSchedule.levels']);
   });
 
@@ -93,10 +94,45 @@ describe('runtime table index', () => {
     assert.equal(index.tablesById.get('tournament-standard::blindSchedule.missing')?.issue?.kind, 'tablePathMissing');
   });
 
-  it('caches runtime table index per GameDef instance', () => {
+  it('builds deterministic runtime table index for the same GameDef', () => {
     const def = makeDef();
-    const first = getRuntimeTableIndex(def);
-    const second = getRuntimeTableIndex(def);
-    assert.equal(first, second);
+    const first = buildRuntimeTableIndex(def);
+    const second = buildRuntimeTableIndex(def);
+    assert.deepEqual(first.tableIds, second.tableIds);
+    assert.deepEqual([...first.tablesById.keys()], [...second.tablesById.keys()]);
+  });
+
+  it('uses first runtime asset when ids collide after NFC normalization', () => {
+    const decomposedCafe = 'cafe\u0301';
+    const composedCafe = 'caf\u00E9';
+    assert.equal(decomposedCafe.normalize('NFC'), composedCafe.normalize('NFC'));
+
+    const def: GameDef = {
+      ...makeDef(),
+      runtimeDataAssets: [
+        {
+          id: decomposedCafe,
+          kind: 'scenario',
+          payload: { table: [{ level: 1 }] },
+        },
+        {
+          id: composedCafe,
+          kind: 'scenario',
+          payload: { table: [{ level: 99 }] },
+        },
+      ],
+      tableContracts: [
+        {
+          id: 'blind-levels',
+          assetId: composedCafe,
+          tablePath: 'table',
+          fields: [{ field: 'level', type: 'int' }],
+        },
+      ],
+    };
+
+    const index = buildRuntimeTableIndex(def);
+    const rows = index.tablesById.get('blind-levels')?.rows;
+    assert.deepEqual(rows, [{ level: 1 }]);
   });
 });

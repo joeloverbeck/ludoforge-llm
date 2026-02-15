@@ -20,6 +20,10 @@ export type ValidationContext = {
   zoneNames: Set<string>;
   zoneCandidates: readonly string[];
   zoneOwners: ReadonlyMap<string, GameDef['zones'][number]['owner']>;
+  mapSpaceZoneNames: Set<string>;
+  mapSpaceZoneCandidates: readonly string[];
+  mapSpacePropCandidates: readonly string[];
+  mapSpacePropKinds: ReadonlyMap<string, 'scalar' | 'array' | 'mixed'>;
   tokenTypeNames: Set<string>;
   tokenTypeCandidates: readonly string[];
   phaseNames: Set<string>;
@@ -178,6 +182,11 @@ export const validateZoneSelector = (
   path: string,
   context: ValidationContext,
 ): void => {
+  // Dynamic zone bindings (for example "$zone") are resolved at runtime.
+  if (zoneSelector.startsWith('$')) {
+    return;
+  }
+
   if (context.zoneNames.has(zoneSelector)) {
     const owner = context.zoneOwners.get(zoneSelector);
     const qualifier = parseZoneSelector(zoneSelector).qualifier;
@@ -456,11 +465,20 @@ export const buildValidationContext = (
   const actionCandidates = [...new Set(def.actions.map((action) => action.id))].sort((left, right) =>
     left.localeCompare(right),
   );
+  const mapSpaceZoneCandidates = [...new Set((def.mapSpaces ?? []).map((space) => space.id))].sort((left, right) =>
+    left.localeCompare(right),
+  );
+  const mapSpacePropKinds = classifyMapSpacePropertyKinds(def.mapSpaces);
+  const mapSpacePropCandidates = [...mapSpacePropKinds.keys()].sort((left, right) => left.localeCompare(right));
 
   const context: ValidationContext = {
     zoneNames: new Set(zoneCandidates),
     zoneCandidates,
     zoneOwners: new Map(def.zones.map((zone) => [zone.id, zone.owner])),
+    mapSpaceZoneNames: new Set(mapSpaceZoneCandidates),
+    mapSpaceZoneCandidates,
+    mapSpacePropCandidates,
+    mapSpacePropKinds,
     globalVarNames: new Set(globalVarCandidates),
     globalVarTypesByName: new Map(def.globalVars.map((variable) => [variable.name, variable.type])),
     globalVarCandidates,
@@ -483,6 +501,35 @@ export const buildValidationContext = (
 
   return { context, phaseCandidates, actionCandidates };
 };
+
+function classifyMapSpacePropertyKinds(
+  mapSpaces: readonly MapSpaceDef[] | undefined,
+): ReadonlyMap<string, 'scalar' | 'array' | 'mixed'> {
+  const kinds = new Map<string, 'scalar' | 'array' | 'mixed'>();
+  if (mapSpaces === undefined || mapSpaces.length === 0) {
+    return kinds;
+  }
+
+  for (const space of mapSpaces) {
+    for (const [key, value] of Object.entries(space as unknown as Record<string, unknown>)) {
+      if (!Array.isArray(value) && typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
+        continue;
+      }
+
+      const nextKind = Array.isArray(value) ? 'array' : 'scalar';
+      const existingKind = kinds.get(key);
+      if (existingKind === undefined) {
+        kinds.set(key, nextKind);
+        continue;
+      }
+      if (existingKind !== nextKind) {
+        kinds.set(key, 'mixed');
+      }
+    }
+  }
+
+  return kinds;
+}
 
 const spaceMatchesFilter = (space: MapSpaceDef, filter: StackingConstraint['spaceFilter']): boolean => {
   if (filter.spaceIds !== undefined && filter.spaceIds.length > 0 && !filter.spaceIds.includes(space.id)) {

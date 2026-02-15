@@ -97,6 +97,132 @@ describe('validateGameDef reference checks', () => {
     assert.equal(typeof missingZone.suggestion, 'string');
   });
 
+  it('reports unknown map-space properties used by zoneProp references', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      mapSpaces: [
+        {
+          id: 'market:none',
+          spaceType: 'city',
+          population: 2,
+          econ: 1,
+          terrainTags: ['urban'],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          pre: { op: '==', left: { ref: 'zoneProp', zone: 'market:none', prop: 'controlClass' }, right: 'coin' },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_MAP_SPACE_PROP_MISSING' && diag.path === 'actions[0].pre.left.prop',
+      ),
+    );
+  });
+
+  it('reports map-space property kind mismatches for zoneProp', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      mapSpaces: [
+        {
+          id: 'market:none',
+          spaceType: 'city',
+          population: 2,
+          econ: 1,
+          terrainTags: ['urban'],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          pre: { op: '==', left: { ref: 'zoneProp', zone: 'market:none', prop: 'terrainTags' }, right: 'urban' },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_MAP_SPACE_PROP_KIND_INVALID' && diag.path === 'actions[0].pre.left.prop',
+      ),
+    );
+  });
+
+  it('reports map-space property kind mismatches for zonePropIncludes', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      mapSpaces: [
+        {
+          id: 'market:none',
+          spaceType: 'city',
+          population: 2,
+          econ: 1,
+          terrainTags: ['urban'],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          pre: { op: 'zonePropIncludes', zone: 'market:none', prop: 'spaceType', value: 'city' },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some((diag) => diag.code === 'REF_MAP_SPACE_PROP_KIND_INVALID' && diag.path === 'actions[0].pre.prop'),
+    );
+  });
+
+  it('reports explicit zoneProp selectors that are not declared map spaces', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      mapSpaces: [
+        {
+          id: 'market:none',
+          spaceType: 'city',
+          population: 2,
+          econ: 1,
+          terrainTags: ['urban'],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          pre: { op: '==', left: { ref: 'zoneProp', zone: 'deck:none', prop: 'spaceType' }, right: 'city' },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_MAP_SPACE_MISSING' && diag.path === 'actions[0].pre.left.zone',
+      ),
+    );
+  });
+
   it('accepts binding-qualified zone selectors for player-owned zone bases', () => {
     const base = createValidGameDef();
     const def = {
@@ -125,6 +251,62 @@ describe('validateGameDef reference checks', () => {
     const diagnostics = validateGameDef(def);
     assert.equal(
       diagnostics.some((diag) => diag.path === 'actions[0].effects[0].forEach.effects[0].draw.to'),
+      false,
+    );
+  });
+
+  it('accepts dynamic bound zone selectors in query filters', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              forEach: {
+                bind: '$zone',
+                over: { query: 'zones' },
+                effects: [
+                  {
+                    chooseOne: {
+                      internalDecisionId: 'pick',
+                      bind: '$target',
+                      options: {
+                        query: 'zones',
+                        filter: {
+                          condition: {
+                            op: '==',
+                            left: { ref: 'zoneProp', zone: '$zone', prop: 'spaceType' },
+                            right: 'city',
+                          },
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      mapSpaces: [
+        {
+          id: 'market:none',
+          spaceType: 'city',
+          population: 1,
+          econ: 1,
+          terrainTags: ['urban'],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'REF_ZONE_MISSING' && diag.path.includes('.left.zone')),
       false,
     );
   });

@@ -16,6 +16,84 @@ import {
   validateZoneSelector,
 } from './validate-gamedef-structure.js';
 
+function validateStaticMapSpaceSelector(
+  diagnostics: Diagnostic[],
+  zoneSelector: string,
+  path: string,
+  context: ValidationContext,
+): void {
+  if (context.mapSpaceZoneCandidates.length === 0) {
+    return;
+  }
+
+  if (zoneSelector.startsWith('$')) {
+    return;
+  }
+
+  if (!zoneSelector.includes(':')) {
+    return;
+  }
+
+  if (context.mapSpaceZoneNames.has(zoneSelector)) {
+    return;
+  }
+
+  pushMissingReferenceDiagnostic(
+    diagnostics,
+    'REF_MAP_SPACE_MISSING',
+    path,
+    `Zone "${zoneSelector}" is not a declared map space.`,
+    zoneSelector,
+    context.mapSpaceZoneCandidates,
+  );
+}
+
+function validateMapSpacePropertyReference(
+  diagnostics: Diagnostic[],
+  zoneSelector: string,
+  prop: string,
+  path: string,
+  context: ValidationContext,
+  expectedKind: 'scalar' | 'array',
+): void {
+  if (context.mapSpaceZoneCandidates.length === 0) {
+    return;
+  }
+
+  validateStaticMapSpaceSelector(diagnostics, zoneSelector, `${path}.zone`, context);
+
+  const propertyKind = context.mapSpacePropKinds.get(prop);
+  if (propertyKind === undefined) {
+    pushMissingReferenceDiagnostic(
+      diagnostics,
+      'REF_MAP_SPACE_PROP_MISSING',
+      `${path}.prop`,
+      `Unknown map-space property "${prop}".`,
+      prop,
+      context.mapSpacePropCandidates,
+    );
+    return;
+  }
+
+  if (propertyKind === 'mixed' || propertyKind === expectedKind) {
+    return;
+  }
+
+  diagnostics.push({
+    code: 'REF_MAP_SPACE_PROP_KIND_INVALID',
+    path: `${path}.prop`,
+    severity: 'error',
+    message:
+      expectedKind === 'scalar'
+        ? `Property "${prop}" is array-valued in map spaces and cannot be used with zoneProp.`
+        : `Property "${prop}" is scalar-valued in map spaces and cannot be used with zonePropIncludes.`,
+    suggestion:
+      expectedKind === 'scalar'
+        ? 'Use zonePropIncludes for array membership checks.'
+        : 'Use zoneProp with comparison operators for scalar properties.',
+  });
+}
+
 const validateReference = (
   diagnostics: Diagnostic[],
   reference: Reference,
@@ -81,6 +159,12 @@ const validateReference = (
         context.globalMarkerLatticeCandidates,
       );
     }
+    return;
+  }
+
+  if (reference.ref === 'zoneProp') {
+    validateMapSpacePropertyReference(diagnostics, reference.zone, reference.prop, path, context, 'scalar');
+    return;
   }
 };
 
@@ -223,7 +307,7 @@ export const validateConditionAst = (
       return;
     }
     case 'zonePropIncludes': {
-      validateZoneSelector(diagnostics, condition.zone, `${path}.zone`, context);
+      validateMapSpacePropertyReference(diagnostics, condition.zone, condition.prop, path, context, 'array');
       validateValueExpr(diagnostics, condition.value, `${path}.value`, context);
       return;
     }

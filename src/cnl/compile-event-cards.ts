@@ -12,6 +12,7 @@ export function lowerEventCards(
   diagnostics: Diagnostic[],
   pathPrefix: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
+  namedSets?: Readonly<Record<string, readonly string[]>>,
 ): readonly EventCardDef[] {
   const idFirstIndexByNormalized = new Map<string, number>();
   const explicitOrderFirstIndex = new Map<number, number>();
@@ -52,7 +53,11 @@ export function lowerEventCards(
         ? undefined
         : lowerConditionNode(
             card.playCondition,
-            { ownershipByBase, ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }) },
+            {
+              ownershipByBase,
+              ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
+              ...(namedSets === undefined ? {} : { namedSets }),
+            },
             `${cardPath}.playCondition`,
           );
     if (playCondition !== undefined) {
@@ -62,11 +67,11 @@ export function lowerEventCards(
     const unshaded =
       card.unshaded === undefined
         ? undefined
-        : lowerEventCardSide(card.unshaded, ownershipByBase, diagnostics, `${cardPath}.unshaded`, tokenTraitVocabulary);
+        : lowerEventCardSide(card.unshaded, ownershipByBase, diagnostics, `${cardPath}.unshaded`, tokenTraitVocabulary, namedSets);
     const shaded =
       card.shaded === undefined
         ? undefined
-        : lowerEventCardSide(card.shaded, ownershipByBase, diagnostics, `${cardPath}.shaded`, tokenTraitVocabulary);
+        : lowerEventCardSide(card.shaded, ownershipByBase, diagnostics, `${cardPath}.shaded`, tokenTraitVocabulary, namedSets);
 
     return {
       index,
@@ -109,6 +114,7 @@ export function lowerEventDecks(
   diagnostics: Diagnostic[],
   pathPrefix: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
+  namedSets?: Readonly<Record<string, readonly string[]>>,
 ): readonly EventDeckDef[] {
   const idFirstIndexByNormalized = new Map<string, number>();
   const lowered = decks.map((deck, index) => {
@@ -131,7 +137,7 @@ export function lowerEventDecks(
       index,
       deck: {
         ...deck,
-        cards: lowerEventCards(deck.cards, ownershipByBase, diagnostics, `${deckPath}.cards`, tokenTraitVocabulary),
+        cards: lowerEventCards(deck.cards, ownershipByBase, diagnostics, `${deckPath}.cards`, tokenTraitVocabulary, namedSets),
       },
     };
   });
@@ -153,8 +159,17 @@ export function lowerEventCardSide(
   diagnostics: Diagnostic[],
   pathPrefix: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
+  namedSets?: Readonly<Record<string, readonly string[]>>,
 ): NonNullable<EventCardDef['unshaded']> {
-  const loweredTargets = lowerEventTargets(side.targets, ownershipByBase, diagnostics, `${pathPrefix}.targets`, undefined, tokenTraitVocabulary);
+  const loweredTargets = lowerEventTargets(
+    side.targets,
+    ownershipByBase,
+    diagnostics,
+    `${pathPrefix}.targets`,
+    undefined,
+    tokenTraitVocabulary,
+    namedSets,
+  );
   const sideBindingScope = collectBindingScopeFromTargets(loweredTargets);
 
   const loweredEffects = lowerOptionalEffects(
@@ -164,6 +179,7 @@ export function lowerEventCardSide(
     diagnostics,
     `${pathPrefix}.effects`,
     tokenTraitVocabulary,
+    namedSets,
   );
   const loweredFreeOperationGrants = lowerEventFreeOperationGrants(
     side.freeOperationGrants,
@@ -171,6 +187,7 @@ export function lowerEventCardSide(
     diagnostics,
     `${pathPrefix}.freeOperationGrants`,
     tokenTraitVocabulary,
+    namedSets,
   );
   const loweredEligibilityOverrides = lowerEventEligibilityOverrides(side.eligibilityOverrides);
   const loweredLastingEffects = lowerEventLastingEffects(
@@ -180,6 +197,7 @@ export function lowerEventCardSide(
     diagnostics,
     `${pathPrefix}.lastingEffects`,
     tokenTraitVocabulary,
+    namedSets,
   );
 
   if (side.branches === undefined) {
@@ -233,6 +251,7 @@ export function lowerEventCardSide(
       `${branchPath}.targets`,
       sideBindingScope,
       tokenTraitVocabulary,
+      namedSets,
     );
     const branchBindingScope = [...sideBindingScope, ...collectBindingScopeFromTargets(loweredBranchTargets)];
     const loweredBranchEffects = lowerOptionalEffects(
@@ -242,6 +261,7 @@ export function lowerEventCardSide(
       diagnostics,
       `${branchPath}.effects`,
       tokenTraitVocabulary,
+      namedSets,
     );
     const loweredBranchFreeOperationGrants = lowerEventFreeOperationGrants(
       branch.freeOperationGrants,
@@ -249,6 +269,7 @@ export function lowerEventCardSide(
       diagnostics,
       `${branchPath}.freeOperationGrants`,
       tokenTraitVocabulary,
+      namedSets,
     );
     const loweredBranchEligibilityOverrides = lowerEventEligibilityOverrides(branch.eligibilityOverrides);
     const loweredBranchLastingEffects = lowerEventLastingEffects(
@@ -258,6 +279,7 @@ export function lowerEventCardSide(
       diagnostics,
       `${branchPath}.lastingEffects`,
       tokenTraitVocabulary,
+      namedSets,
     );
 
     return {
@@ -328,6 +350,7 @@ function lowerEventFreeOperationGrants(
   diagnostics: Diagnostic[],
   pathPrefix: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
+  namedSets?: Readonly<Record<string, readonly string[]>>,
 ): readonly EventFreeOperationGrantDef[] | undefined {
   if (grants === undefined) {
     return undefined;
@@ -339,7 +362,11 @@ function lowerEventFreeOperationGrants(
     }
     const loweredZoneFilter = lowerConditionNode(
       grant.zoneFilter,
-      { ownershipByBase, ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }) },
+      {
+        ownershipByBase,
+        ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
+        ...(namedSets === undefined ? {} : { namedSets }),
+      },
       `${path}.zoneFilter`,
     );
     diagnostics.push(...loweredZoneFilter.diagnostics);
@@ -357,6 +384,7 @@ function lowerEventTargets(
   pathPrefix: string,
   bindingScope?: readonly string[],
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
+  namedSets?: Readonly<Record<string, readonly string[]>>,
 ): NonNullable<EventCardDef['unshaded']>['targets'] {
   if (targets === undefined) {
     return undefined;
@@ -382,6 +410,7 @@ function lowerEventTargets(
         ownershipByBase,
         ...(bindingScope === undefined ? {} : { bindingScope }),
         ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
+        ...(namedSets === undefined ? {} : { namedSets }),
       },
       `${targetPath}.selector`,
     );
@@ -404,6 +433,7 @@ function lowerOptionalEffects(
   diagnostics: Diagnostic[],
   path: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
+  namedSets?: Readonly<Record<string, readonly string[]>>,
 ): NonNullable<EventCardDef['unshaded']>['effects'] {
   if (effects === undefined) {
     return undefined;
@@ -411,7 +441,12 @@ function lowerOptionalEffects(
 
   const lowered = lowerEffectArray(
     effects as readonly unknown[],
-    { ownershipByBase, bindingScope, ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }) },
+    {
+      ownershipByBase,
+      bindingScope,
+      ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
+      ...(namedSets === undefined ? {} : { namedSets }),
+    },
     path,
   );
   diagnostics.push(...lowered.diagnostics);
@@ -425,6 +460,7 @@ function lowerEventLastingEffects(
   diagnostics: Diagnostic[],
   pathPrefix: string,
   tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>,
+  namedSets?: Readonly<Record<string, readonly string[]>>,
 ): NonNullable<EventCardDef['unshaded']>['lastingEffects'] {
   if (lastingEffects === undefined) {
     return undefined;
@@ -434,7 +470,12 @@ function lowerEventLastingEffects(
     const path = `${pathPrefix}.${index}`;
     const setup = lowerEffectArray(
       lastingEffect.setupEffects as readonly unknown[],
-      { ownershipByBase, bindingScope, ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }) },
+      {
+        ownershipByBase,
+        bindingScope,
+        ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
+        ...(namedSets === undefined ? {} : { namedSets }),
+      },
       `${path}.setupEffects`,
     );
     diagnostics.push(...setup.diagnostics);
@@ -444,7 +485,12 @@ function lowerEventLastingEffects(
         ? undefined
         : lowerEffectArray(
             lastingEffect.teardownEffects as readonly unknown[],
-            { ownershipByBase, bindingScope, ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }) },
+            {
+              ownershipByBase,
+              bindingScope,
+              ...(tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary }),
+              ...(namedSets === undefined ? {} : { namedSets }),
+            },
             `${path}.teardownEffects`,
           );
     if (teardown !== undefined) {

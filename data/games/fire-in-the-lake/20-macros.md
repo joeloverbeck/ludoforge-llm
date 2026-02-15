@@ -402,7 +402,7 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: in, value: [US, ARVN] }
+                              - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                       right: 0
                     - op: and
                       args:
@@ -415,7 +415,7 @@ effectMacros:
                                 query: tokensInAdjacentZones
                                 zone: $zone
                                 filter:
-                                  - { prop: faction, op: in, value: [US, ARVN] }
+                                  - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                           right: 0
           min: 1
           max: { param: maxSpaces }
@@ -459,7 +459,7 @@ effectMacros:
                       query: tokensInZone
                       zone: $space
                       filter:
-                        - { prop: faction, op: in, value: [US, ARVN] }
+                        - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                 in:
                   - let:
                       bind: $enemyInAdjacent
@@ -470,7 +470,7 @@ effectMacros:
                             query: tokensInAdjacentZones
                             zone: $space
                             filter:
-                              - { prop: faction, op: in, value: [US, ARVN] }
+                              - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                       in:
                         - if:
                             when: { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: loc }
@@ -528,7 +528,7 @@ effectMacros:
                                                 query: tokensInZone
                                                 zone: $zone
                                                 filter:
-                                                  - { prop: faction, op: in, value: [US, ARVN] }
+                                                  - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                                           right: 0
                                   n: 1
                               - forEach:
@@ -1103,7 +1103,7 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: in, value: [US, ARVN] }
+                              - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                               - { prop: type, eq: troops }
                       right: 3
                     - op: '>'
@@ -1114,7 +1114,7 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: in, value: [US, ARVN] }
+                              - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                               - { prop: type, eq: base }
                       right: 0
                 - op: or
@@ -1309,7 +1309,7 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: in, value: [US, ARVN] }
+                              - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                       right:
                         aggregate:
                           op: count
@@ -1317,7 +1317,7 @@ effectMacros:
                             query: tokensInZone
                             zone: $zone
                             filter:
-                              - { prop: faction, op: in, value: [NVA, VC] }
+                              - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
           min: 1
           max: { param: maxSpaces }
 

@@ -213,6 +213,7 @@ function compileExpandedDoc(
   } else {
     sections.metadata = runtimeMetadata;
   }
+  const namedSets = metadata?.namedSets;
 
   const constants = compileSection(diagnostics, () => lowerConstants(doc.constants, diagnostics));
   sections.constants = constants.failed ? null : constants.value;
@@ -274,6 +275,7 @@ function compileExpandedDoc(
       'doc.setup',
       [],
       derivedFromAssets.tokenTraitVocabulary ?? undefined,
+      namedSets,
     ),
   );
   const mergedSetup = [...derivedFromAssets.scenarioSetupEffects, ...setup.value];
@@ -290,6 +292,7 @@ function compileExpandedDoc(
         ownershipByBase,
         diagnostics,
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
+        namedSets,
       ),
     );
     turnStructure = turnStructureSection.value;
@@ -309,6 +312,7 @@ function compileExpandedDoc(
         ownershipByBase,
         diagnostics,
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
+        namedSets,
       ),
     );
     sections.actionPipelines =
@@ -321,7 +325,13 @@ function compileExpandedDoc(
     diagnostics.push(requiredSectionDiagnostic('doc.actions', 'actions'));
   } else {
     const actionsSection = compileSection(diagnostics, () =>
-      lowerActions(rawActions, ownershipByBase, diagnostics, derivedFromAssets.tokenTraitVocabulary ?? undefined),
+      lowerActions(
+        rawActions,
+        ownershipByBase,
+        diagnostics,
+        derivedFromAssets.tokenTraitVocabulary ?? undefined,
+        namedSets,
+      ),
     );
     actions = actionsSection.value;
     sections.actions = actionsSection.failed ? null : actionsSection.value;
@@ -333,6 +343,7 @@ function compileExpandedDoc(
       ownershipByBase,
       diagnostics,
       derivedFromAssets.tokenTraitVocabulary ?? undefined,
+      namedSets,
     ),
   );
   sections.triggers = triggers.failed ? null : triggers.value;
@@ -348,6 +359,7 @@ function compileExpandedDoc(
         ownershipByBase,
         diagnostics,
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
+        namedSets,
       ),
     );
     const victorySection = compileSection(diagnostics, () => lowerVictory(rawTerminal, diagnostics));
@@ -370,6 +382,7 @@ function compileExpandedDoc(
         diagnostics,
         'doc.eventDecks',
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
+        namedSets,
       ),
     );
     sections.eventDecks = eventDecks.failed ? null : eventDecks.value;

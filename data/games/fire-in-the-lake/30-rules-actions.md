@@ -187,7 +187,7 @@ actions:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: in, value: [US, ARVN] }
+                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                             right:
                               aggregate:
                                 op: count
@@ -195,7 +195,7 @@ actions:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: in, value: [NVA, VC] }
+                                    - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
             - moveToken:
                 token: $movingTroopFromAvailable
                 from: { zoneExpr: { ref: tokenZone, token: $movingTroopFromAvailable } }
@@ -261,7 +261,7 @@ actions:
                                                   query: tokensInZone
                                                   zone: $zone
                                                   filter:
-                                                    - { prop: faction, op: in, value: [US, ARVN] }
+                                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                                             right:
                                               aggregate:
                                                 op: count
@@ -269,7 +269,7 @@ actions:
                                                   query: tokensInZone
                                                   zone: $zone
                                                   filter:
-                                                    - { prop: faction, op: in, value: [NVA, VC] }
+                                                    - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
                         - moveToken:
                             token: $movingTroopFromMap
                             from: { zoneExpr: { ref: tokenZone, token: $movingTroopFromMap } }
@@ -311,7 +311,7 @@ actions:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: in, value: [US, ARVN] }
+                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                             right:
                               aggregate:
                                 op: count
@@ -319,7 +319,7 @@ actions:
                                   query: tokensInZone
                                   zone: $zone
                                   filter:
-                                    - { prop: faction, op: in, value: [NVA, VC] }
+                                    - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
             - moveToken:
                 token: $movingBaseFromAvailable
                 from: { zoneExpr: { ref: tokenZone, token: $movingBaseFromAvailable } }
@@ -385,7 +385,7 @@ actions:
                                                   query: tokensInZone
                                                   zone: $zone
                                                   filter:
-                                                    - { prop: faction, op: in, value: [US, ARVN] }
+                                                    - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                                             right:
                                               aggregate:
                                                 op: count
@@ -393,7 +393,7 @@ actions:
                                                   query: tokensInZone
                                                   zone: $zone
                                                   filter:
-                                                    - { prop: faction, op: in, value: [NVA, VC] }
+                                                    - { prop: faction, op: in, value: { ref: namedSet, name: Insurgent } }
                         - moveToken:
                             token: $movingBaseFromMap
                             from: { zoneExpr: { ref: tokenZone, token: $movingBaseFromMap } }
@@ -2456,7 +2456,7 @@ actionPipelines:
                             query: tokensInZone
                             zone: $space
                             filter:
-                              - { prop: faction, op: in, value: [US, ARVN] }
+                              - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                               - { prop: type, eq: guerrilla }
                               - { prop: activity, eq: underground }
                           limit: 1

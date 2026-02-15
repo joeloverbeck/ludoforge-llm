@@ -81,6 +81,63 @@ export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
       suggestion: 'Set defaultScenarioAssetId to an existing scenario data-asset id, for example "scenario-foundation".',
     });
   }
+
+  const namedSets = metadata.namedSets;
+  if (namedSets !== undefined) {
+    if (!isRecord(namedSets)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_METADATA_NAMED_SETS_INVALID',
+        path: 'doc.metadata.namedSets',
+        severity: 'error',
+        message: 'metadata.namedSets must be an object that maps set ids to string arrays.',
+        suggestion: 'Set namedSets to an object like { coalitionA: [factionA, factionB] }.',
+      });
+      return;
+    }
+
+    for (const [setName, rawValues] of Object.entries(namedSets)) {
+      const setPath = `doc.metadata.namedSets.${setName}`;
+      if (setName.trim() === '') {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_METADATA_NAMED_SET_ID_INVALID',
+          path: setPath,
+          severity: 'error',
+          message: 'Named set ids must be non-empty strings.',
+          suggestion: 'Use non-empty set ids such as "COIN" or "Insurgent".',
+        });
+      }
+      if (!Array.isArray(rawValues) || rawValues.some((value) => typeof value !== 'string' || value.trim() === '')) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_METADATA_NAMED_SET_VALUES_INVALID',
+          path: setPath,
+          severity: 'error',
+          message: `metadata.namedSets.${setName} must be an array of non-empty strings.`,
+          suggestion: `Set metadata.namedSets.${setName} to [valueA, valueB, ...].`,
+        });
+        continue;
+      }
+
+      const normalized = rawValues.map((value) => value.trim().normalize('NFC'));
+      const duplicates = new Set<string>();
+      const seen = new Set<string>();
+      for (const value of normalized) {
+        if (seen.has(value)) {
+          duplicates.add(value);
+        } else {
+          seen.add(value);
+        }
+      }
+      if (duplicates.size > 0) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_VALUE',
+          path: setPath,
+          severity: 'error',
+          message: `metadata.namedSets.${setName} contains duplicate values after normalization: ${[...duplicates].join(', ')}.`,
+          suggestion: 'Remove duplicate entries from the named set.',
+        });
+      }
+    }
+  }
 }
 
 export function validateVariables(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {

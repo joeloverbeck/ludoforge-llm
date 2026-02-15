@@ -205,6 +205,48 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('accepts metadata.namedSets when ids and values are valid', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        players: { min: 2, max: 4 },
+        namedSets: {
+          COIN: ['US', 'ARVN'],
+          Insurgent: ['NVA', 'VC'],
+        },
+      },
+    });
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path.startsWith('doc.metadata.namedSets')),
+      false,
+    );
+  });
+
+  it('rejects invalid metadata.namedSets values and duplicates', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        players: { min: 2, max: 4 },
+        namedSets: {
+          COIN: ['US', 'US'],
+          Broken: [1, 'ARVN'],
+        },
+      },
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_NAMED_SET_DUPLICATE_VALUE'),
+      true,
+    );
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_NAMED_SET_VALUES_INVALID'),
+      true,
+    );
+  });
+
   it('validates zone enums', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

@@ -20,6 +20,7 @@ export interface EffectLoweringContext {
   readonly ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>;
   readonly bindingScope?: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
+  readonly namedSets?: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface EffectLoweringResult<TValue> {
@@ -1560,6 +1561,7 @@ function makeConditionContext(context: EffectLoweringContext, scope: BindingScop
     ownershipByBase: context.ownershipByBase,
     bindingScope: scope.visibleBindings(),
     ...(context.tokenTraitVocabulary === undefined ? {} : { tokenTraitVocabulary: context.tokenTraitVocabulary }),
+    ...(context.namedSets === undefined ? {} : { namedSets: context.namedSets }),
   };
 }
 

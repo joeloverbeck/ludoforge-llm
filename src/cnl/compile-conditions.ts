@@ -19,6 +19,7 @@ export interface ConditionLoweringContext {
   readonly ownershipByBase: Readonly<Record<string, ZoneOwnershipKind>>;
   readonly bindingScope?: readonly string[];
   readonly tokenTraitVocabulary?: Readonly<Record<string, readonly string[]>>;
+  readonly namedSets?: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface ConditionLoweringResult<TValue> {
@@ -323,6 +324,28 @@ function lowerTokenFilterEntry(
 
   // For 'in'/'notIn', value must be a string array
   if (op === 'in' || op === 'notIn') {
+    const namedSetReference = lowerNamedSetReference(rawValue);
+    if (namedSetReference !== null) {
+      const values = context.namedSets?.[namedSetReference.name];
+      if (values === undefined) {
+        return {
+          value: null,
+          diagnostics: [{
+            code: 'CNL_COMPILER_UNKNOWN_NAMED_SET',
+            path: `${path}.value.name`,
+            severity: 'error',
+            message: `Unknown metadata.namedSets entry "${namedSetReference.name}".`,
+            suggestion: 'Declare the set under metadata.namedSets or use a literal string array.',
+            ...(context.namedSets === undefined ? {} : { alternatives: Object.keys(context.namedSets).sort((left, right) => left.localeCompare(right)) }),
+          }],
+        };
+      }
+      return {
+        value: { prop, op, value: [...values] },
+        diagnostics: [],
+      };
+    }
+
     if (!Array.isArray(rawValue) || rawValue.some((item: unknown) => typeof item !== 'string')) {
       return missingCapability(`${path}.value`, 'token filter set value', rawValue, ['string[]']);
     }
@@ -351,6 +374,13 @@ function lowerTokenFilterEntry(
     value: { prop, op, value: loweredValue.value },
     diagnostics: [...loweredValue.diagnostics, ...canonicalDiagnostics],
   };
+}
+
+function lowerNamedSetReference(source: unknown): { readonly name: string } | null {
+  if (!isRecord(source) || source.ref !== 'namedSet' || typeof source.name !== 'string' || source.name.trim() === '') {
+    return null;
+  }
+  return { name: source.name.trim().normalize('NFC') };
 }
 
 function validateCanonicalTokenTraitLiteral(

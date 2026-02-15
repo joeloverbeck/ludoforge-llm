@@ -457,6 +457,65 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers tokensInZone filter with in operator and metadata namedSet reference', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'deck',
+        filter: [
+          { prop: 'faction', op: 'in', value: { ref: 'namedSet', name: 'COIN' } },
+        ],
+      },
+      {
+        ...context,
+        namedSets: {
+          COIN: ['US', 'ARVN'],
+          Insurgent: ['NVA', 'VC'],
+        },
+      },
+      'doc.actions.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: 'deck:none',
+      filter: [
+        { prop: 'faction', op: 'in', value: ['US', 'ARVN'] },
+      ],
+    });
+  });
+
+  it('emits diagnostic for unknown metadata namedSet reference in token filter', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: 'deck',
+        filter: [
+          { prop: 'faction', op: 'in', value: { ref: 'namedSet', name: 'MissingSet' } },
+        ],
+      },
+      {
+        ...context,
+        namedSets: {
+          COIN: ['US', 'ARVN'],
+        },
+      },
+      'doc.actions.0.effects.0.forEach.over',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.length, 1);
+    assert.deepEqual(result.diagnostics[0], {
+      code: 'CNL_COMPILER_UNKNOWN_NAMED_SET',
+      path: 'doc.actions.0.effects.0.forEach.over.filter[0].value.name',
+      severity: 'error',
+      message: 'Unknown metadata.namedSets entry "MissingSet".',
+      suggestion: 'Declare the set under metadata.namedSets or use a literal string array.',
+      alternatives: ['COIN'],
+    });
+  });
+
   it('lowers tokensInAdjacentZones filter identically to tokensInZone', () => {
     const result = lowerQueryNode(
       {

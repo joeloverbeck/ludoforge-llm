@@ -778,6 +778,19 @@ export const validateEffectAst = (
     return;
   }
 
+  if ('evaluateSubset' in effect) {
+    validateOptionsQuery(diagnostics, effect.evaluateSubset.source, `${path}.evaluateSubset.source`, context);
+    validateNumericValueExpr(diagnostics, effect.evaluateSubset.subsetSize, `${path}.evaluateSubset.subsetSize`, context);
+    effect.evaluateSubset.compute.forEach((entry, index) => {
+      validateEffectAst(diagnostics, entry, `${path}.evaluateSubset.compute[${index}]`, context);
+    });
+    validateNumericValueExpr(diagnostics, effect.evaluateSubset.scoreExpr, `${path}.evaluateSubset.scoreExpr`, context);
+    effect.evaluateSubset.in.forEach((entry, index) => {
+      validateEffectAst(diagnostics, entry, `${path}.evaluateSubset.in[${index}]`, context);
+    });
+    return;
+  }
+
   if ('removeByPriority' in effect) {
     validateNumericValueExpr(diagnostics, effect.removeByPriority.budget, `${path}.removeByPriority.budget`, context);
 

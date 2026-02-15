@@ -105,6 +105,12 @@ export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, Effect
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
+  evaluateSubset: {
+    declaredBinderPaths: [['subsetBind'], ['resultBind'], ['bestSubsetBind']],
+    sequentiallyVisibleBinderPaths: [['resultBind'], ['bestSubsetBind']],
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
   chooseOne: {
     declaredBinderPaths: [['bind']],
     sequentiallyVisibleBinderPaths: [['bind']],

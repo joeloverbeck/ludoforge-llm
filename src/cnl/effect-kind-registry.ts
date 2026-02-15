@@ -14,6 +14,7 @@ export const SUPPORTED_EFFECT_KINDS = [
   'forEach',
   'removeByPriority',
   'let',
+  'evaluateSubset',
   'chooseOne',
   'chooseN',
   'rollRandom',

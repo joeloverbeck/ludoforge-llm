@@ -449,6 +449,22 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      evaluateSubset: z
+        .object({
+          source: OptionsQuerySchema,
+          subsetSize: NumericValueExprSchema,
+          subsetBind: StringSchema,
+          compute: z.array(EffectASTSchema),
+          scoreExpr: NumericValueExprSchema,
+          resultBind: StringSchema,
+          bestSubsetBind: StringSchema.optional(),
+          in: z.array(EffectASTSchema),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
       chooseOne: z
         .object({
           internalDecisionId: StringSchema,

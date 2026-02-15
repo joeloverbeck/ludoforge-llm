@@ -174,6 +174,24 @@ describe('AST and selector schemas', () => {
         },
       },
       {
+        evaluateSubset: {
+          source: { query: 'tokensInZone', zone: 'deck:none' },
+          subsetSize: 2,
+          subsetBind: '$subset',
+          compute: [],
+          scoreExpr: {
+            aggregate: {
+              op: 'sum',
+              query: { query: 'binding', name: '$subset' },
+              prop: 'cost',
+            },
+          },
+          resultBind: '$score',
+          bestSubsetBind: '$best',
+          in: [{ setVar: { scope: 'global', var: 'bestScore', value: { ref: 'binding', name: '$score' } } }],
+        },
+      },
+      {
         chooseOne: {
           internalDecisionId: 'decision:$zone',
           bind: '$zone',

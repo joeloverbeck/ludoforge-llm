@@ -13,6 +13,7 @@ import { evalValue } from './eval-value.js';
 import { createCollector } from './execution-collector.js';
 import { resolveEventEffectList } from './event-execution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
+import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { resolveFreeOperationExecutionPlayer, resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
@@ -383,9 +384,7 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     return { kind: 'illegal', complete: false, reason: 'actorNotApplicable' };
   }
   if (actorResolution.kind === 'invalidSpec') {
-    throw legalChoicesValidationError(
-      `legalChoices: invalid actor selector for action "${String(action.id)}"`,
-    );
+    throw selectorInvalidSpecError('legalChoices', 'actor', action, actorResolution.error);
   }
   const executionPlayer = partialMove.freeOperation === true
     ? resolveFreeOperationExecutionPlayer(def, state, partialMove)
@@ -402,9 +401,7 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
         return null;
       }
       if (resolution.kind === 'invalidSpec') {
-        throw legalChoicesValidationError(
-          `legalChoices: invalid executor selector for action "${String(action.id)}"`,
-        );
+        throw selectorInvalidSpecError('legalChoices', 'executor', action, resolution.error);
       }
       return resolution.executionPlayer;
     })();

@@ -28,6 +28,7 @@ import {
   applySetTokenProp,
   applyShuffle,
 } from './effects-token.js';
+import { applyEvaluateSubset } from './effects-subset.js';
 import type { EffectAST, TriggerEvent } from './types.js';
 
 const createBudgetState = (ctx: Pick<EffectContext, 'maxEffectOps'>): EffectBudgetState => {
@@ -55,6 +56,7 @@ const effectTypeOf = (effect: EffectAST): string => {
   if ('forEach' in effect) return 'forEach';
   if ('removeByPriority' in effect) return 'removeByPriority';
   if ('let' in effect) return 'let';
+  if ('evaluateSubset' in effect) return 'evaluateSubset';
   if ('chooseOne' in effect) return 'chooseOne';
   if ('chooseN' in effect) return 'chooseN';
   if ('rollRandom' in effect) return 'rollRandom';
@@ -142,6 +144,10 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 
   if ('let' in effect) {
     return applyLet(effect, ctx, budget, applyEffectsWithBudget);
+  }
+
+  if ('evaluateSubset' in effect) {
+    return applyEvaluateSubset(effect, ctx, budget, applyEffectsWithBudget);
   }
 
   if ('chooseOne' in effect) {

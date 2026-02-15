@@ -9,6 +9,7 @@ import { applyPendingFreeOperationVariants, applyTurnFlowWindowFilters, isMoveAl
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { pipelinePredicateEvaluationError } from './runtime-error.js';
+import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
@@ -75,7 +76,7 @@ function enumerateParams(
       return null;
     }
     if (resolution.kind === 'invalidSpec') {
-      throw resolution.error;
+      throw selectorInvalidSpecError('legalMoves', 'executor', action, resolution.error);
     }
     return resolution.executionPlayer;
   };
@@ -207,7 +208,7 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
     if (actorResolution.kind === 'invalidSpec') {
-      throw actorResolution.error;
+      throw selectorInvalidSpecError('legalMoves', 'actor', action, actorResolution.error);
     }
 
     if (!withinActionLimits(action, state)) {
@@ -238,7 +239,7 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
     if (executionResolution.kind === 'invalidSpec') {
-      throw executionResolution.error;
+      throw selectorInvalidSpecError('legalMoves', 'executor', action, executionResolution.error);
     }
     const executionPlayer = executionResolution.executionPlayer;
     const executionCtx = makeEvalContext(def, adjacencyGraph, state, executionPlayer, {});

@@ -23,7 +23,7 @@ describe('binder-surface-registry', () => {
   it('tracks declared binder-producing effect kinds explicitly', () => {
     assert.deepEqual(
       [...DECLARED_BINDER_EFFECT_KINDS].sort(),
-      ['chooseN', 'chooseOne', 'forEach', 'let', 'removeByPriority', 'rollRandom'],
+      ['chooseN', 'chooseOne', 'evaluateSubset', 'forEach', 'let', 'removeByPriority', 'rollRandom'],
     );
   });
 
@@ -103,6 +103,21 @@ describe('binder-surface-registry', () => {
       }),
       [],
     );
+    assert.deepEqual(
+      collectSequentialBindings({
+        evaluateSubset: {
+          source: { query: 'players' },
+          subsetSize: 1,
+          subsetBind: '$subset',
+          compute: [],
+          scoreExpr: 1,
+          resultBind: '$score',
+          bestSubsetBind: '$best',
+          in: [],
+        },
+      }),
+      ['$score', '$best'],
+    );
   });
 
   it('fails when EffectAST introduces binder-capable nodes without registry updates', () => {
@@ -123,7 +138,7 @@ describe('binder-surface-registry', () => {
         }
       }
 
-      if (currentEffectKind !== null && /\breadonly\s+(bind|countBind|remainingBind)\s*:/.test(line)) {
+      if (currentEffectKind !== null && /\breadonly\s+(bind|[A-Za-z0-9_]*Bind)\s*:/.test(line)) {
         discoveredKinds.add(currentEffectKind);
       }
     }

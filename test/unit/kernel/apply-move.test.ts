@@ -527,7 +527,7 @@ describe('applyMove() executor applicability contract', () => {
     );
   });
 
-  it('returns illegal move when actor selector is invalid', () => {
+  it('returns dedicated runtime contract error when actor selector is invalid', () => {
     const action: ActionDef = {
       id: asActionId('invalidActor'),
       actor: '$owner' as unknown as ActionDef['actor'],
@@ -547,11 +547,45 @@ describe('applyMove() executor applicability contract', () => {
       () => applyMove(def, state, { actionId: asActionId('invalidActor'), params: {} }),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
-        assert.equal(details.code, 'ILLEGAL_MOVE');
-        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
-        assert.equal(metadata?.code, 'ACTION_ACTOR_INVALID_SPEC');
-        assert.equal(String(metadata?.actionId), 'invalidActor');
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown>; cause?: unknown };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.equal(details.context?.surface, 'applyMove');
+        assert.equal(details.context?.selector, 'actor');
+        assert.equal(String(details.context?.actionId), 'invalidActor');
+        assert.ok(details.cause instanceof Error);
+        assert.match((details.cause as Error).message, /Invalid player selector value/);
+        return true;
+      },
+    );
+  });
+
+  it('returns dedicated runtime contract error when executor selector is invalid', () => {
+    const action: ActionDef = {
+      id: asActionId('invalidExecutor'),
+      actor: 'active',
+      executor: '$owner' as unknown as ActionDef['executor'],
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('invalidExecutor'), params: {} }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown>; cause?: unknown };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.equal(details.context?.surface, 'applyMove');
+        assert.equal(details.context?.selector, 'executor');
+        assert.equal(String(details.context?.actionId), 'invalidExecutor');
+        assert.ok(details.cause instanceof Error);
+        assert.match((details.cause as Error).message, /Invalid player selector value/);
         return true;
       },
     );

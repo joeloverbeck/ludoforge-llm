@@ -833,7 +833,16 @@ phase: asPhaseId('main'),
     };
 
     const def = makeBaseDef({ actions: [action] });
-    assert.throws(() => legalMoves(def, makeBaseState()));
+    assert.throws(() => legalMoves(def, makeBaseState()), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; context?: Record<string, unknown>; cause?: unknown };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.equal(details.context?.surface, 'legalMoves');
+      assert.equal(details.context?.selector, 'actor');
+      assert.equal(String(details.context?.actionId), 'invalidActorSelector');
+      assert.ok(details.cause instanceof Error);
+      return true;
+    });
   });
 
   it('20. throws for invalid executor selector spec', () => {
@@ -850,6 +859,15 @@ phase: asPhaseId('main'),
     };
 
     const def = makeBaseDef({ actions: [action] });
-    assert.throws(() => legalMoves(def, makeBaseState()));
+    assert.throws(() => legalMoves(def, makeBaseState()), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; context?: Record<string, unknown>; cause?: unknown };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.equal(details.context?.surface, 'legalMoves');
+      assert.equal(details.context?.selector, 'executor');
+      assert.equal(String(details.context?.actionId), 'invalidExecutorSelector');
+      assert.ok(details.cause instanceof Error);
+      return true;
+    });
   });
 });

@@ -268,7 +268,7 @@ describe('legalMoves', () => {
 
     assert.throws(
       () => legalMoves(def, createState()),
-      /Expected exactly one player from selector/,
+      /legalMoves: invalid executor selector/,
     );
   });
 
@@ -293,7 +293,7 @@ describe('legalMoves', () => {
 
     assert.throws(
       () => legalMoves(def, createState()),
-      /Invalid player selector value/,
+      /legalMoves: invalid actor selector/,
     );
   });
 

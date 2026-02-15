@@ -114,7 +114,7 @@ describe('legalChoices executor context', () => {
     assert.deepEqual(request, { kind: 'illegal', complete: false, reason: 'executorNotApplicable' });
   });
 
-  it('throws validation error for invalid executor selectors', () => {
+  it('throws runtime contract error for invalid executor selectors', () => {
     const def: GameDef = {
       ...makeDef(),
       actions: [
@@ -132,10 +132,16 @@ describe('legalChoices executor context', () => {
       ],
     } as unknown as GameDef;
 
-    assert.throws(
-      () => legalChoices(def, makeState(), { actionId: asActionId('pickExecutorHand'), params: {} }),
-      /invalid executor selector/,
-    );
+    assert.throws(() => legalChoices(def, makeState(), { actionId: asActionId('pickExecutorHand'), params: {} }), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; context?: Record<string, unknown>; cause?: unknown };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.equal(details.context?.surface, 'legalChoices');
+      assert.equal(details.context?.selector, 'executor');
+      assert.equal(String(details.context?.actionId), 'pickExecutorHand');
+      assert.ok(details.cause instanceof Error);
+      return true;
+    });
   });
 
   it('returns illegal when actor does not include active player', () => {
@@ -164,7 +170,7 @@ describe('legalChoices executor context', () => {
     assert.deepEqual(request, { kind: 'illegal', complete: false, reason: 'actorNotApplicable' });
   });
 
-  it('throws validation error for invalid actor selectors', () => {
+  it('throws runtime contract error for invalid actor selectors', () => {
     const def: GameDef = {
       ...makeDef(),
       actions: [
@@ -182,9 +188,15 @@ describe('legalChoices executor context', () => {
       ],
     } as unknown as GameDef;
 
-    assert.throws(
-      () => legalChoices(def, makeState(), { actionId: asActionId('pickExecutorHand'), params: {} }),
-      /invalid actor selector/,
-    );
+    assert.throws(() => legalChoices(def, makeState(), { actionId: asActionId('pickExecutorHand'), params: {} }), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; context?: Record<string, unknown>; cause?: unknown };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.equal(details.context?.surface, 'legalChoices');
+      assert.equal(details.context?.selector, 'actor');
+      assert.equal(String(details.context?.actionId), 'pickExecutorHand');
+      assert.ok(details.cause instanceof Error);
+      return true;
+    });
   });
 });

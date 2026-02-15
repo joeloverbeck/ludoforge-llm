@@ -76,6 +76,7 @@ const exhaustEffectAST = (effect: EffectAST): string => {
   if ('forEach' in effect) return 'forEach';
   if ('removeByPriority' in effect) return 'removeByPriority';
   if ('let' in effect) return 'let';
+  if ('evaluateSubset' in effect) return 'evaluateSubset';
   if ('chooseOne' in effect) return 'chooseOne';
   if ('chooseN' in effect) return 'chooseN';
   if ('rollRandom' in effect) return 'rollRandom';
@@ -139,12 +140,12 @@ describe('exhaustive kernel unions', () => {
   it('keeps the exact variant counts for key unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
     const conditionVariants: UnionSize<ConditionAST> = 10;
-    const effectVariants: UnionSize<EffectAST> = 27;
+    const effectVariants: UnionSize<EffectAST> = 28;
     const queryVariants: UnionSize<OptionsQuery> = 13;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 10);
-    assert.equal(effectVariants, 27);
+    assert.equal(effectVariants, 28);
     assert.equal(queryVariants, 13);
   });
 

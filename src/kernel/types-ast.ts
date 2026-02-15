@@ -252,6 +252,18 @@ export type EffectAST =
       };
     }
   | {
+      readonly evaluateSubset: {
+        readonly source: OptionsQuery;
+        readonly subsetSize: NumericValueExpr;
+        readonly subsetBind: string;
+        readonly compute: readonly EffectAST[];
+        readonly scoreExpr: NumericValueExpr;
+        readonly resultBind: string;
+        readonly bestSubsetBind?: string;
+        readonly in: readonly EffectAST[];
+      };
+    }
+  | {
       readonly chooseOne: {
         readonly internalDecisionId: string;
         readonly bind: string;

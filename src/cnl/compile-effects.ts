@@ -108,6 +108,9 @@ function lowerEffectNode(
   if (isRecord(source.let)) {
     return lowerLetEffect(source.let, context, scope, `${path}.let`);
   }
+  if (isRecord(source.evaluateSubset)) {
+    return lowerEvaluateSubsetEffect(source.evaluateSubset, context, scope, `${path}.evaluateSubset`);
+  }
   if (isRecord(source.chooseOne)) {
     return lowerChooseOneEffect(source.chooseOne, context, scope, `${path}.chooseOne`);
   }
@@ -785,6 +788,86 @@ function lowerLetEffect(
         bind: source.bind,
         value: value.value,
         in: inEffects.value,
+      },
+    },
+    diagnostics,
+  };
+}
+
+function lowerEvaluateSubsetEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (
+    typeof source.subsetBind !== 'string'
+    || typeof source.resultBind !== 'string'
+    || !Array.isArray(source.compute)
+    || !Array.isArray(source.in)
+  ) {
+    return missingCapability(path, 'evaluateSubset effect', source, [
+      '{ evaluateSubset: { source, subsetSize, subsetBind, compute, scoreExpr, resultBind, bestSubsetBind?, in } }',
+    ]);
+  }
+
+  const condCtx = makeConditionContext(context, scope);
+  const loweredSource = lowerQueryNode(source.source, condCtx, `${path}.source`);
+  const loweredSubsetSize = lowerNumericValueNode(source.subsetSize, condCtx, `${path}.subsetSize`);
+  const diagnostics: Diagnostic[] = [
+    ...loweredSource.diagnostics,
+    ...loweredSubsetSize.diagnostics,
+    ...scope.shadowWarning(source.subsetBind, `${path}.subsetBind`),
+    ...scope.shadowWarning(source.resultBind, `${path}.resultBind`),
+  ];
+
+  const bestSubsetBind = typeof source.bestSubsetBind === 'string' ? source.bestSubsetBind : undefined;
+  if (source.bestSubsetBind !== undefined && typeof source.bestSubsetBind !== 'string') {
+    diagnostics.push(...missingCapability(`${path}.bestSubsetBind`, 'evaluateSubset bestSubsetBind', source.bestSubsetBind, ['string']).diagnostics);
+  }
+  if (bestSubsetBind !== undefined) {
+    diagnostics.push(...scope.shadowWarning(bestSubsetBind, `${path}.bestSubsetBind`));
+  }
+
+  const computeAndScore = scope.withBinding(source.subsetBind, () => {
+    const loweredCompute = lowerNestedEffects(source.compute as readonly unknown[], context, scope, `${path}.compute`);
+    const loweredScoreExpr = lowerNumericValueNode(source.scoreExpr, makeConditionContext(context, scope), `${path}.scoreExpr`);
+    return {
+      loweredCompute,
+      loweredScoreExpr,
+    };
+  });
+  diagnostics.push(...computeAndScore.loweredCompute.diagnostics, ...computeAndScore.loweredScoreExpr.diagnostics);
+
+  const loweredIn = scope.withBinding(source.resultBind, () => (
+    bestSubsetBind === undefined
+      ? lowerNestedEffects(source.in as readonly unknown[], context, scope, `${path}.in`)
+      : scope.withBinding(bestSubsetBind, () =>
+        lowerNestedEffects(source.in as readonly unknown[], context, scope, `${path}.in`))
+  ));
+  diagnostics.push(...loweredIn.diagnostics);
+
+  if (
+    loweredSource.value === null
+    || loweredSubsetSize.value === null
+    || computeAndScore.loweredCompute.value === null
+    || computeAndScore.loweredScoreExpr.value === null
+    || loweredIn.value === null
+  ) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: {
+      evaluateSubset: {
+        source: loweredSource.value,
+        subsetSize: loweredSubsetSize.value,
+        subsetBind: source.subsetBind,
+        compute: computeAndScore.loweredCompute.value,
+        scoreExpr: computeAndScore.loweredScoreExpr.value,
+        resultBind: source.resultBind,
+        ...(bestSubsetBind === undefined ? {} : { bestSubsetBind }),
+        in: loweredIn.value,
       },
     },
     diagnostics,

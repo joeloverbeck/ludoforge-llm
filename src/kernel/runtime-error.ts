@@ -2,6 +2,7 @@ import type { ActionDef, Move } from './types.js';
 
 export type KernelRuntimeErrorCode =
   | 'ILLEGAL_MOVE'
+  | 'RUNTIME_CONTRACT_INVALID'
   | 'ACTION_PIPELINE_APPLICABILITY_EVALUATION_FAILED'
   | 'ACTION_PIPELINE_PREDICATE_EVALUATION_FAILED'
   | 'LEGAL_CHOICES_UNKNOWN_ACTION'
@@ -120,6 +121,12 @@ export const pipelinePredicateEvaluationError = (
     },
     cause,
   );
+
+export const runtimeContractInvalidError = (
+  message: string,
+  context?: KernelRuntimeErrorContext,
+  cause?: unknown,
+): KernelRuntimeError => new KernelRuntimeError('RUNTIME_CONTRACT_INVALID', message, context, cause);
 
 export function isKernelRuntimeError(error: unknown): error is KernelRuntimeError {
   return error instanceof KernelRuntimeError;

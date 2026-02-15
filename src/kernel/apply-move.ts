@@ -24,6 +24,7 @@ import {
 } from './turn-flow-eligibility.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
+import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import type {
   ActionDef,
   ActionPipelineDef,
@@ -194,7 +195,7 @@ const resolveMatchedPipelineForMove = (
         return null;
       }
       if (resolution.kind === 'invalidSpec') {
-        throw resolution.error;
+        throw selectorInvalidSpecError('applyMove', 'executor', action, resolution.error);
       }
       return resolution.executionPlayer;
     })();
@@ -381,10 +382,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
     });
   }
   if (actorResolution.kind === 'invalidSpec') {
-    throw illegalMoveError(move, 'action actor selector is invalid', {
-      code: 'ACTION_ACTOR_INVALID_SPEC',
-      actionId: action.id,
-    });
+    throw selectorInvalidSpecError('applyMove', 'actor', action, actorResolution.error);
   }
 
   if (move.freeOperation !== true) {
@@ -403,10 +401,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
       });
     }
     if (executorResolution.kind === 'invalidSpec') {
-      throw illegalMoveError(move, 'action executor selector is invalid', {
-        code: 'ACTION_EXECUTOR_INVALID_SPEC',
-        actionId: action.id,
-      });
+      throw selectorInvalidSpecError('applyMove', 'executor', action, executorResolution.error);
     }
   }
 
@@ -493,10 +488,7 @@ const applyMoveCore = (
         });
       }
       if (resolution.kind === 'invalidSpec') {
-        throw illegalMoveError(move, 'action executor selector is invalid', {
-          code: 'ACTION_EXECUTOR_INVALID_SPEC',
-          actionId: action.id,
-        });
+        throw selectorInvalidSpecError('applyMove', 'executor', action, resolution.error);
       }
       return resolution.executionPlayer;
     })();

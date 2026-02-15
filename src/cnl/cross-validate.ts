@@ -499,6 +499,12 @@ function walkEffects(
       continue;
     }
 
+    if ('evaluateSubset' in effect) {
+      walkEffects(effect.evaluateSubset.compute, `${effectPath}.evaluateSubset.compute`, onEffect);
+      walkEffects(effect.evaluateSubset.in, `${effectPath}.evaluateSubset.in`, onEffect);
+      continue;
+    }
+
     if ('rollRandom' in effect) {
       walkEffects(effect.rollRandom.in, `${effectPath}.rollRandom.in`, onEffect);
     }

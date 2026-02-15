@@ -1,5 +1,5 @@
 import { legalChoices } from './legal-choices.js';
-import { kernelRuntimeError } from './runtime-error.js';
+import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import type {
   ChoiceIllegalRequest,
   ChoicePendingRequest,
@@ -8,13 +8,13 @@ import type {
   Move,
   MoveParamScalar,
   MoveParamValue,
+  RuntimeWarning,
 } from './types.js';
-
-const DEFAULT_MAX_STEPS = 128;
 
 export interface ResolveMoveDecisionSequenceOptions {
   readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
-  readonly maxSteps?: number;
+  readonly budgets?: Partial<MoveEnumerationBudgets>;
+  readonly onWarning?: (warning: RuntimeWarning) => void;
 }
 
 export interface ResolveMoveDecisionSequenceResult {
@@ -22,6 +22,7 @@ export interface ResolveMoveDecisionSequenceResult {
   readonly move: Move;
   readonly nextDecision?: ChoicePendingRequest;
   readonly illegal?: ChoiceIllegalRequest;
+  readonly warnings: readonly RuntimeWarning[];
 }
 
 const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefined => {
@@ -49,21 +50,45 @@ export const resolveMoveDecisionSequence = (
   options?: ResolveMoveDecisionSequenceOptions,
 ): ResolveMoveDecisionSequenceResult => {
   const choose = options?.choose ?? defaultChoose;
-  const maxSteps = options?.maxSteps ?? DEFAULT_MAX_STEPS;
+  const budgets = resolveMoveEnumerationBudgets(options?.budgets);
+  const warnings: RuntimeWarning[] = [];
+  const emitWarning = (warning: RuntimeWarning): void => {
+    warnings.push(warning);
+    options?.onWarning?.(warning);
+  };
+  const maxSteps = budgets.maxDecisionProbeSteps;
+  const maxDeferredPredicates = budgets.maxDeferredPredicates;
+  let deferredPredicatesEvaluated = 0;
   let move = baseMove;
 
   for (let step = 0; step < maxSteps; step += 1) {
-    const request = legalChoices(def, state, move);
+    const request = legalChoices(def, state, move, {
+      onDeferredPredicatesEvaluated: (count) => {
+        deferredPredicatesEvaluated += count;
+      },
+    });
+    if (deferredPredicatesEvaluated > maxDeferredPredicates) {
+      emitWarning({
+        code: 'MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED',
+        message: 'Move decision probing exceeded maxDeferredPredicates budget; sequence truncated deterministically.',
+        context: {
+          actionId: String(baseMove.actionId),
+          maxDeferredPredicates,
+          deferredPredicatesEvaluated,
+        },
+      });
+      return { complete: false, move, warnings };
+    }
     if (request.kind === 'complete') {
-      return { complete: true, move };
+      return { complete: true, move, warnings };
     }
     if (request.kind === 'illegal') {
-      return { complete: false, move, illegal: request };
+      return { complete: false, move, illegal: request, warnings };
     }
 
     const selected = choose(request);
     if (selected === undefined) {
-      return { complete: false, move, nextDecision: request };
+      return { complete: false, move, nextDecision: request, warnings };
     }
 
     move = {
@@ -75,17 +100,22 @@ export const resolveMoveDecisionSequence = (
     };
   }
 
-  throw kernelRuntimeError(
-    'MOVE_DECISION_SEQUENCE_MAX_STEPS_EXCEEDED',
-    `resolveMoveDecisionSequence: exceeded maxSteps=${String(maxSteps)}`,
-    { maxSteps },
-  );
+  emitWarning({
+    code: 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED',
+    message: 'Move decision probing exceeded maxDecisionProbeSteps budget; sequence truncated deterministically.',
+    context: {
+      actionId: String(baseMove.actionId),
+      maxDecisionProbeSteps: maxSteps,
+    },
+  });
+  return { complete: false, move, warnings };
 };
 
 export const isMoveDecisionSequenceSatisfiable = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
+  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
 ): boolean => {
-  return resolveMoveDecisionSequence(def, state, baseMove).complete;
+  return resolveMoveDecisionSequence(def, state, baseMove, options).complete;
 };

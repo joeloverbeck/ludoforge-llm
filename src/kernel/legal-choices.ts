@@ -34,6 +34,10 @@ import type {
 
 const COMPLETE: ChoiceRequest = { kind: 'complete', complete: true };
 
+export interface LegalChoicesOptions {
+  readonly onDeferredPredicatesEvaluated?: (count: number) => void;
+}
+
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
 
@@ -358,7 +362,12 @@ function walkRemoveByPriority(
   return { pending: null, wCtx };
 }
 
-export function legalChoices(def: GameDef, state: GameState, partialMove: Move): ChoiceRequest {
+export function legalChoices(
+  def: GameDef,
+  state: GameState,
+  partialMove: Move,
+  options?: LegalChoicesOptions,
+): ChoiceRequest {
   const action = findAction(def, partialMove.actionId);
   if (action === undefined) {
     throw kernelRuntimeError(
@@ -416,6 +425,10 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, evalCtx, {
       includeCostValidation: partialMove.freeOperation !== true,
     });
+    const deferredCount = (status.legality === 'deferred' ? 1 : 0) + (status.costValidation === 'deferred' ? 1 : 0);
+    if (deferredCount > 0) {
+      options?.onDeferredPredicatesEvaluated?.(deferredCount);
+    }
     const viabilityDecision = decideDiscoveryLegalChoicesPipelineViability(status);
     if (viabilityDecision.kind === 'illegalChoice') {
       return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason(viabilityDecision.outcome) };

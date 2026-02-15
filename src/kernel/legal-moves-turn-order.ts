@@ -1,10 +1,11 @@
 import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
+import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import {
   isFreeOperationApplicableForMove,
   isFreeOperationGrantedForMove,
   resolveTurnFlowActionClass,
 } from './turn-flow-eligibility.js';
-import type { GameDef, GameState, Move, MoveParamValue } from './types.js';
+import type { GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
 import type { TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
 import { asActionId } from './branded.js';
 
@@ -260,6 +261,10 @@ export function applyPendingFreeOperationVariants(
   def: GameDef,
   state: GameState,
   moves: readonly Move[],
+  options?: {
+    readonly budgets?: Partial<MoveEnumerationBudgets>;
+    readonly onWarning?: (warning: RuntimeWarning) => void;
+  },
 ): readonly Move[] {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
@@ -292,9 +297,17 @@ export function applyPendingFreeOperationVariants(
     }
     const checkpoint = resolveMoveDecisionSequence(def, state, candidate, {
       choose: () => undefined,
+      ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
+      ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
     }).complete;
     const unresolvedDecisionCheckpoint = !checkpoint;
-    if (unresolvedDecisionCheckpoint && !isMoveDecisionSequenceSatisfiable(def, state, candidate)) {
+    if (
+      unresolvedDecisionCheckpoint &&
+      !isMoveDecisionSequenceSatisfiable(def, state, candidate, {
+        ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
+        ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
+      })
+    ) {
       continue;
     }
     if (!unresolvedDecisionCheckpoint && !isFreeOperationGrantedForMove(def, state, candidate)) {

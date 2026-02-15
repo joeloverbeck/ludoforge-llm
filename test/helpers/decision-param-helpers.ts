@@ -20,7 +20,7 @@ export interface DecisionOverrideRule {
 
 export interface ResolveDecisionParamsOptions {
   readonly overrides?: readonly DecisionOverrideRule[];
-  readonly maxSteps?: number;
+  readonly maxDecisionProbeSteps?: number;
 }
 
 const matchesRule = (rule: DecisionOverrideRule, request: ChoicePendingRequest): boolean => {
@@ -80,7 +80,9 @@ export const normalizeDecisionParamsForMove = (
 ): Move => {
   try {
     const result = resolveMoveDecisionSequence(def, state, move, {
-      maxSteps: options?.maxSteps ?? MAX_DECISION_STEPS,
+      budgets: {
+        maxDecisionProbeSteps: options?.maxDecisionProbeSteps ?? MAX_DECISION_STEPS,
+      },
       choose: (request) => resolveDecisionValue(request, move, options),
     });
     return result.complete ? result.move : move;

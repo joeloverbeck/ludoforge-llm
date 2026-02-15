@@ -6,6 +6,7 @@ import { evalQuery } from './eval-query.js';
 import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { applyPendingFreeOperationVariants, applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
+import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { decideLegalMovesPipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -15,7 +16,67 @@ import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
 import { isCardEventAction } from './action-capabilities.js';
-import type { ActionDef, GameDef, GameState, Move, MoveParamValue } from './types.js';
+import type { ActionDef, GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
+
+export interface LegalMoveEnumerationOptions {
+  readonly budgets?: Partial<MoveEnumerationBudgets>;
+}
+
+export interface LegalMoveEnumerationResult {
+  readonly moves: readonly Move[];
+  readonly warnings: readonly RuntimeWarning[];
+}
+
+interface MoveEnumerationState {
+  readonly budgets: MoveEnumerationBudgets;
+  readonly warnings: RuntimeWarning[];
+  readonly moves: Move[];
+  paramExpansions: number;
+  templateBudgetExceeded: boolean;
+  paramExpansionBudgetExceeded: boolean;
+}
+
+const emitEnumerationWarning = (state: MoveEnumerationState, warning: RuntimeWarning): void => {
+  state.warnings.push(warning);
+};
+
+const tryPushTemplateMove = (state: MoveEnumerationState, move: Move, actionId: ActionDef['id']): boolean => {
+  if (state.moves.length >= state.budgets.maxTemplates) {
+    if (!state.templateBudgetExceeded) {
+      state.templateBudgetExceeded = true;
+      emitEnumerationWarning(state, {
+        code: 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED',
+        message: 'Legal move template budget reached; remaining templates were truncated deterministically.',
+        context: {
+          actionId: String(actionId),
+          maxTemplates: state.budgets.maxTemplates,
+        },
+      });
+    }
+    return false;
+  }
+  state.moves.push(move);
+  return true;
+};
+
+const consumeParamExpansionBudget = (state: MoveEnumerationState, actionId: ActionDef['id']): boolean => {
+  state.paramExpansions += 1;
+  if (state.paramExpansions <= state.budgets.maxParamExpansions) {
+    return true;
+  }
+  if (!state.paramExpansionBudgetExceeded) {
+    state.paramExpansionBudgetExceeded = true;
+    emitEnumerationWarning(state, {
+      code: 'MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED',
+      message: 'Legal move parameter expansion budget reached; remaining expansions were truncated deterministically.',
+      context: {
+        actionId: String(actionId),
+        maxParamExpansions: state.budgets.maxParamExpansions,
+      },
+    });
+  }
+  return false;
+};
 
 function makeEvalContext(
   def: GameDef,
@@ -43,8 +104,12 @@ function enumerateParams(
   state: GameState,
   paramIndex: number,
   bindings: Readonly<Record<string, unknown>>,
-  moves: Move[],
+  enumeration: MoveEnumerationState,
 ): void {
+  if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
+    return;
+  }
+
   const resolveExecutionPlayerForBindings = (allowPendingBinding: boolean): GameState['activePlayer'] | null => {
     const resolution = resolveActionExecutor({
       def,
@@ -86,7 +151,7 @@ function enumerateParams(
     if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
       return;
     }
-    moves.push(move);
+    tryPushTemplateMove(enumeration, move, action.id);
     return;
   }
 
@@ -102,7 +167,13 @@ function enumerateParams(
   const ctx = makeEvalContext(def, adjacencyGraph, state, executionPlayer, bindings);
   const domainValues = evalQuery(param.domain, ctx);
   for (const value of domainValues) {
-    enumerateParams(action, def, adjacencyGraph, state, paramIndex + 1, { ...bindings, [param.name]: value }, moves);
+    if (!consumeParamExpansionBudget(enumeration, action.id)) {
+      return;
+    }
+    enumerateParams(action, def, adjacencyGraph, state, paramIndex + 1, { ...bindings, [param.name]: value }, enumeration);
+    if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
+      return;
+    }
   }
 }
 
@@ -110,14 +181,18 @@ function enumerateCurrentEventMoves(
   action: ActionDef,
   def: GameDef,
   state: GameState,
-): readonly Move[] {
+  enumeration: MoveEnumerationState,
+): void {
+  if (enumeration.templateBudgetExceeded) {
+    return;
+  }
   if (!isCardEventAction(action)) {
-    return [];
+    return;
   }
 
   const current = resolveCurrentEventCardState(def, state);
   if (current === null) {
-    return [];
+    return;
   }
 
   const sides: Array<{ readonly side: 'unshaded' | 'shaded'; readonly branches: readonly { readonly id: string }[] | undefined }> = [];
@@ -154,29 +229,49 @@ function enumerateCurrentEventMoves(
     }
   }
 
-  const resolved: Move[] = [];
   for (const move of baseMoves) {
     if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
       continue;
     }
-    const completion = resolveMoveDecisionSequence(def, state, move);
+    const completion = resolveMoveDecisionSequence(def, state, move, {
+      budgets: enumeration.budgets,
+      onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+    });
     if (!completion.complete) {
       continue;
     }
-    resolved.push(completion.move);
+    if (!tryPushTemplateMove(enumeration, completion.move, action.id)) {
+      return;
+    }
   }
-  return resolved;
 }
 
-export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
+export const enumerateLegalMoves = (
+  def: GameDef,
+  state: GameState,
+  options?: LegalMoveEnumerationOptions,
+): LegalMoveEnumerationResult => {
+  const budgets = resolveMoveEnumerationBudgets(options?.budgets);
+  const warnings: RuntimeWarning[] = [];
+
   if (!isActiveFactionEligibleForTurnFlow(state)) {
-    return [];
+    return { moves: [], warnings };
   }
 
-  const moves: Move[] = [];
+  const enumeration: MoveEnumerationState = {
+    budgets,
+    warnings,
+    moves: [],
+    paramExpansions: 0,
+    templateBudgetExceeded: false,
+    paramExpansionBudgetExceeded: false,
+  };
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
 
   for (const action of def.actions) {
+    if (enumeration.templateBudgetExceeded) {
+      break;
+    }
     const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
     const preflight = resolveActionApplicabilityPreflight({
       def,
@@ -202,14 +297,14 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       );
     }
 
-    const eventMoves = enumerateCurrentEventMoves(action, def, state);
-    if (eventMoves.length > 0) {
-      moves.push(...eventMoves);
+    const beforeEventCount = enumeration.moves.length;
+    enumerateCurrentEventMoves(action, def, state, enumeration);
+    if (enumeration.moves.length > beforeEventCount) {
       continue;
     }
 
     if (!hasActionPipeline) {
-      enumerateParams(action, def, adjacencyGraph, state, 0, {}, moves);
+      enumerateParams(action, def, adjacencyGraph, state, 0, {}, enumeration);
       continue;
     }
 
@@ -229,15 +324,35 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
         }
       }
 
-      if (!isMoveDecisionSequenceSatisfiable(def, state, { actionId: action.id, params: {} })) {
+      if (
+        !isMoveDecisionSequenceSatisfiable(
+          def,
+          state,
+          { actionId: action.id, params: {} },
+          {
+            budgets: enumeration.budgets,
+            onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+          },
+        )
+      ) {
         continue;
       }
 
-      moves.push({ actionId: action.id, params: {} });
+      tryPushTemplateMove(enumeration, { actionId: action.id, params: {} }, action.id);
       continue;
     }
   }
 
-  const windowFilteredMoves = applyTurnFlowWindowFilters(def, state, moves);
-  return applyPendingFreeOperationVariants(def, state, windowFilteredMoves);
+  const windowFilteredMoves = applyTurnFlowWindowFilters(def, state, enumeration.moves);
+  const finalMoves = applyPendingFreeOperationVariants(def, state, windowFilteredMoves, {
+    budgets: enumeration.budgets,
+    onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+  });
+  return { moves: finalMoves, warnings };
 };
+
+export const legalMoves = (
+  def: GameDef,
+  state: GameState,
+  options?: LegalMoveEnumerationOptions,
+): readonly Move[] => enumerateLegalMoves(def, state, options).moves;

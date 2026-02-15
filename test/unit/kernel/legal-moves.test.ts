@@ -6,6 +6,7 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
+  enumerateLegalMoves,
   legalMoves,
   type ActionDef,
   type GameDef,
@@ -891,5 +892,104 @@ phase: asPhaseId('main'),
       moves.map((move) => move.params.$owner).sort(),
       [asPlayerId(0), asPlayerId(1)],
     );
+  });
+
+  it('22. truncates templates deterministically when maxTemplates budget is reached', () => {
+    const firstAction: ActionDef = {
+      id: asActionId('first'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const secondAction: ActionDef = {
+      id: asActionId('second'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const result = enumerateLegalMoves(makeBaseDef({ actions: [firstAction, secondAction] }), makeBaseState(), {
+      budgets: { maxTemplates: 1 },
+    });
+
+    assert.deepEqual(result.moves.map((move) => move.actionId), [asActionId('first')]);
+    assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED'), true);
+  });
+
+  it('23. truncates parameter expansion deterministically when maxParamExpansions budget is reached', () => {
+    const action: ActionDef = {
+      id: asActionId('expand'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
+      params: [
+        { name: 'a', domain: { query: 'enums', values: ['x', 'y'] } },
+        { name: 'b', domain: { query: 'enums', values: ['1', '2'] } },
+      ],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const result = enumerateLegalMoves(makeBaseDef({ actions: [action] }), makeBaseState(), {
+      budgets: { maxParamExpansions: 2 },
+    });
+
+    assert.deepEqual(result.moves, [{ actionId: asActionId('expand'), params: { a: 'x', b: '1' } }]);
+    assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'), true);
+  });
+
+  it('24. surfaces decision probe budget warnings through legal move diagnostics', () => {
+    const action: ActionDef = {
+      id: asActionId('needsDecision'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const profile: ActionPipelineDef = {
+      id: 'needsDecisionProfile',
+      actionId: asActionId('needsDecision'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: ['a'] },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const result = enumerateLegalMoves(makeBaseDef({ actions: [action], actionPipelines: [profile] }), makeBaseState(), {
+      budgets: { maxDecisionProbeSteps: 0 },
+    });
+
+    assert.deepEqual(result.moves, []);
+    assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'), true);
   });
 });

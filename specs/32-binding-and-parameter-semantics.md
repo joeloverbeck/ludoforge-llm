@@ -76,6 +76,17 @@ Executor resolution (`resolveActionExecutorPlayer`) is binding-aware:
 4. If a decision param is missing at apply time, the move is rejected as incomplete.
 5. If a decision param is present but outside computed domain, the move is rejected as invalid params.
 
+## Enumeration Budgets and Observability
+
+Move and decision discovery are bounded by engine-generic budgets:
+
+1. `maxTemplates`: max legal move templates emitted during enumeration.
+2. `maxParamExpansions`: max parameter-domain expansions traversed during recursive param enumeration.
+3. `maxDecisionProbeSteps`: max sequential discovery steps while probing unresolved decisions.
+4. `maxDeferredPredicates`: max deferred pipeline predicate evaluations allowed during discovery probing.
+
+Budget hits are deterministic truncation points and emit structured runtime warnings through the legal move diagnostics surface. No game-specific logic is encoded in these controls.
+
 ## Static Validation Boundaries
 
 Static validation intentionally enforces only deterministic, execution-independent invariants.

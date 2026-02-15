@@ -6,6 +6,7 @@ export * from './legality-reasons.js';
 export * from './legality-outcome.js';
 export * from './pipeline-viability-policy.js';
 export * from './legal-moves.js';
+export * from './move-enumeration-budgets.js';
 export * from './move-decision-sequence.js';
 export * from './move-runtime-bindings.js';
 export * from './apply-move.js';

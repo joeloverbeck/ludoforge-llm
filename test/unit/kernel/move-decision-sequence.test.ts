@@ -191,7 +191,7 @@ phase: asPhaseId('main'),
     assert.equal(result.move.params['decision:$target'], 'c');
   });
 
-  it('throws typed error when maxSteps is exceeded', () => {
+  it('returns incomplete with warning when decision probe step budget is exceeded', () => {
     const action: ActionDef = {
       id: asActionId('stuck-op'),
 actor: 'active',
@@ -228,15 +228,49 @@ phase: asPhaseId('main'),
     };
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
-    assert.throws(
-      () => resolveMoveDecisionSequence(def, makeBaseState(), makeMove('stuck-op'), { maxSteps: 0 }),
-      (error: unknown) => {
-        assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown };
-        assert.equal(details.code, 'MOVE_DECISION_SEQUENCE_MAX_STEPS_EXCEEDED');
-        return true;
+    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('stuck-op'), {
+      budgets: { maxDecisionProbeSteps: 0 },
+    });
+    assert.equal(result.complete, false);
+    assert.equal(result.nextDecision, undefined);
+    assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'), true);
+  });
+
+  it('returns incomplete with warning when deferred predicate budget is exceeded', () => {
+    const action: ActionDef = {
+      id: asActionId('deferred-op'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'deferred-profile',
+      actionId: asActionId('deferred-op'),
+      legality: { op: '==', left: { ref: 'binding', name: '$missing' }, right: 1 },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'partial',
+    };
+
+    const result = resolveMoveDecisionSequence(
+      makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+      makeBaseState(),
+      makeMove('deferred-op'),
+      {
+        budgets: { maxDeferredPredicates: 0 },
       },
     );
+
+    assert.equal(result.complete, false);
+    assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED'), true);
   });
 
   it('discovers nested templated decision ids in deterministic order', () => {

@@ -17,7 +17,6 @@ export type KernelRuntimeErrorCode =
   | 'DECISION_POINT_NO_PHASES'
   | 'DECISION_POINT_STALL_LOOP_DETECTED'
   | 'TURN_FLOW_PASS_REWARD_NON_NUMERIC_RESOURCE'
-  | 'MOVE_DECISION_SEQUENCE_MAX_STEPS_EXCEEDED'
   | 'TERMINAL_SCORING_CONFIG_MISSING'
   | 'TERMINAL_SCORING_NON_NUMERIC'
   | 'TERMINAL_MARGIN_NON_NUMERIC'
@@ -74,9 +73,6 @@ export interface KernelRuntimeErrorContextByCode {
   }>;
   readonly TURN_FLOW_PASS_REWARD_NON_NUMERIC_RESOURCE: Readonly<{
     readonly resource: string;
-  }>;
-  readonly MOVE_DECISION_SEQUENCE_MAX_STEPS_EXCEEDED: Readonly<{
-    readonly maxSteps: number;
   }>;
   readonly TERMINAL_SCORING_CONFIG_MISSING: Readonly<Record<string, never>>;
   readonly TERMINAL_SCORING_NON_NUMERIC: Readonly<Record<string, never>>;

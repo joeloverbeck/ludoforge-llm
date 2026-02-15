@@ -287,6 +287,11 @@ export type EffectAST =
           readonly step: number;
         };
       };
+    }
+  | {
+      readonly advanceToPhase: {
+        readonly phase: string;
+      };
     };
 
 export type MoveParamScalar = number | string | boolean | TokenId | ZoneId | PlayerId;

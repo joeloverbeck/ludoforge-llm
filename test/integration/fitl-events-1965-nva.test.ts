@@ -8,6 +8,7 @@ const expectedCards = [
   { id: 'card-34', order: 34, title: 'SA-2s', sideMode: 'dual', factionOrder: ['NVA', 'US', 'ARVN', 'VC'] },
   { id: 'card-38', order: 38, title: 'McNamara Line', sideMode: 'single', factionOrder: ['NVA', 'US', 'VC', 'ARVN'] },
   { id: 'card-39', order: 39, title: 'Oriskany', sideMode: 'dual', factionOrder: ['NVA', 'US', 'VC', 'ARVN'] },
+  { id: 'card-44', order: 44, title: 'Ia Drang', sideMode: 'dual', factionOrder: ['NVA', 'ARVN', 'US', 'VC'] },
   { id: 'card-46', order: 46, title: '559th Transport Grp', sideMode: 'dual', factionOrder: ['NVA', 'ARVN', 'VC', 'US'] },
   { id: 'card-47', order: 47, title: 'Chu Luc', sideMode: 'dual', factionOrder: ['NVA', 'ARVN', 'VC', 'US'] },
   { id: 'card-53', order: 53, title: 'Sappers', sideMode: 'dual', factionOrder: ['NVA', 'VC', 'US', 'ARVN'] },
@@ -16,7 +17,7 @@ const expectedCards = [
 ] as const;
 
 describe('FITL 1965 NVA-first event-card production spec', () => {
-  it('compiles all 8 NVA-first 1965 cards with side-mode and metadata invariants', () => {
+  it('compiles all 9 NVA-first 1965 cards with side-mode and metadata invariants', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
@@ -78,5 +79,69 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       assert.deepEqual(effect?.setupEffects, [{ setVar: { scope: 'global', var: expected.varName, value: true } }]);
       assert.deepEqual(effect?.teardownEffects, [{ setVar: { scope: 'global', var: expected.varName, value: false } }]);
     }
+  });
+
+  it('encodes card 44 (Ia Drang) as chained US operation grants plus shaded die-roll troop losses', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-44');
+    assert.notEqual(card, undefined);
+
+    assert.deepEqual(card?.unshaded?.freeOperationGrants, [
+      {
+        faction: '0',
+        sequence: { chain: 'ia-drang-us', step: 0 },
+        operationClass: 'operation',
+        actionIds: ['airLift'],
+        zoneFilter: {
+          op: '>',
+          left: {
+            aggregate: {
+              op: 'count',
+                      query: { query: 'tokensInZone', zone: '$zone', filter: [{ prop: 'faction', op: 'eq', value: 'NVA' }] },
+            },
+          },
+          right: 0,
+        },
+      },
+      {
+        faction: '0',
+        sequence: { chain: 'ia-drang-us', step: 1 },
+        operationClass: 'operation',
+        actionIds: ['sweep'],
+        zoneFilter: {
+          op: '>',
+          left: {
+            aggregate: {
+              op: 'count',
+                      query: { query: 'tokensInZone', zone: '$zone', filter: [{ prop: 'faction', op: 'eq', value: 'NVA' }] },
+            },
+          },
+          right: 0,
+        },
+      },
+      {
+        faction: '0',
+        sequence: { chain: 'ia-drang-us', step: 2 },
+        operationClass: 'operation',
+        actionIds: ['assault'],
+        zoneFilter: {
+          op: '>',
+          left: {
+            aggregate: {
+              op: 'count',
+                      query: { query: 'tokensInZone', zone: '$zone', filter: [{ prop: 'faction', op: 'eq', value: 'NVA' }] },
+            },
+          },
+          right: 0,
+        },
+      },
+    ]);
+
+    assert.equal((card?.shaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 1);
+    assert.equal(typeof (card?.shaded?.effects?.[0] as { rollRandom?: unknown })?.rollRandom, 'object');
   });
 });

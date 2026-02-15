@@ -169,4 +169,41 @@ describe('effects runtime foundation', () => {
       return true;
     });
   });
+
+  it('advanceToPhase moves to a later phase in the same turn', () => {
+    const def: GameDef = {
+      ...makeDef(),
+      turnStructure: {
+        phases: [{ id: asPhaseId('operations') }, { id: asPhaseId('commitment') }, { id: asPhaseId('reset') }],
+      },
+    };
+    const state: GameState = {
+      ...makeState(),
+      currentPhase: asPhaseId('operations'),
+    };
+    const effect: EffectAST = { advanceToPhase: { phase: 'commitment' } };
+    const result = applyEffect(effect, makeCtx({ def, state }));
+
+    assert.equal(result.state.currentPhase, asPhaseId('commitment'));
+    assert.equal(result.state.turnCount, 1);
+  });
+
+  it('advanceToPhase can wrap across turn boundary to an earlier phase', () => {
+    const def: GameDef = {
+      ...makeDef(),
+      turnStructure: {
+        phases: [{ id: asPhaseId('operations') }, { id: asPhaseId('commitment') }, { id: asPhaseId('reset') }],
+      },
+    };
+    const state: GameState = {
+      ...makeState(),
+      currentPhase: asPhaseId('reset'),
+      turnCount: 4,
+    };
+    const effect: EffectAST = { advanceToPhase: { phase: 'commitment' } };
+    const result = applyEffect(effect, makeCtx({ def, state }));
+
+    assert.equal(result.state.currentPhase, asPhaseId('commitment'));
+    assert.equal(result.state.turnCount, 5);
+  });
 });

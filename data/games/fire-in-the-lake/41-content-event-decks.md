@@ -167,6 +167,34 @@ eventDecks:
                   args: { varName: mom_bodyCount }
         shaded:
           text: "Insurgent adaptation blunts kill-ratio pressure."
+      - id: card-73
+        title: Great Society
+        sideMode: dual
+        order: 73
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "NVA", "US", "VC"]
+          flavorText: "LBJ advances social agenda."
+        unshaded:
+          text: "Conduct a Commitment Phase."
+          effects:
+            - setVar: { scope: global, var: commitmentPhaseRequested, value: true }
+            - advanceToPhase: { phase: commitment }
+        shaded:
+          text: "War wrecks economy: US moves 3 pieces from Available to out of play."
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: usAvailablePiece
+                    over:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                    to:
+                      zoneExpr: out-of-play-US:none
       - id: card-76
         title: Annam
         sideMode: dual
@@ -1370,6 +1398,128 @@ eventDecks:
               effects:
                 - addVar: { scope: global, var: trail, delta: 1 }
                 - addVar: { scope: global, var: nvaResources, delta: 10 }
+      - id: card-44
+        title: Ia Drang
+        sideMode: dual
+        order: 44
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          flavorText: "Silver Bayonet."
+        unshaded:
+          text: "US free Air Lifts into 1 space with any NVA piece, then free Sweeps and Assaults there."
+          freeOperationGrants:
+            - faction: "0"
+              sequence: { chain: ia-drang-us, step: 0 }
+              operationClass: operation
+              actionIds: [airLift]
+              zoneFilter:
+                op: '>'
+                left:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: $zone
+                      filter:
+                        - { prop: faction, eq: NVA }
+                right: 0
+            - faction: "0"
+              sequence: { chain: ia-drang-us, step: 1 }
+              operationClass: operation
+              actionIds: [sweep]
+              zoneFilter:
+                op: '>'
+                left:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: $zone
+                      filter:
+                        - { prop: faction, eq: NVA }
+                right: 0
+            - faction: "0"
+              sequence: { chain: ia-drang-us, step: 2 }
+              operationClass: operation
+              actionIds: [assault]
+              zoneFilter:
+                op: '>'
+                left:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: $zone
+                      filter:
+                        - { prop: faction, eq: NVA }
+                right: 0
+        shaded:
+          text: "Dong Xuan campaign-hot LZs: Select a Province with NVA Troops then remove a die roll of US Troops within 1 space of it to Casualties."
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: NVA }
+                              - { prop: type, eq: troops }
+                      right: 0
+              cardinality: { max: 1 }
+          effects:
+            - rollRandom:
+                bind: $iaDrangLossRoll
+                min: 1
+                max: 6
+                in:
+                  - removeByPriority:
+                      budget: { ref: binding, name: $iaDrangLossRoll }
+                      remainingBind: $remainingLosses
+                      groups:
+                        - bind: usTroopInProvince
+                          over:
+                            query: tokensInZone
+                            zone: $targetProvince
+                            filter:
+                              - { prop: faction, eq: US }
+                              - { prop: type, eq: troops }
+                          to:
+                            zoneExpr: casualties-US:none
+                      in:
+                        - forEach:
+                            bind: $adjacentSpace
+                            over:
+                              query: adjacentZones
+                              zone: $targetProvince
+                            effects:
+                              - if:
+                                  when: { op: '>', left: { ref: binding, name: $remainingLosses }, right: 0 }
+                                  then:
+                                    - removeByPriority:
+                                        budget: { ref: binding, name: $remainingLosses }
+                                        remainingBind: $remainingLosses
+                                        groups:
+                                          - bind: usTroopAdjacent
+                                            over:
+                                              query: tokensInZone
+                                              zone: $adjacentSpace
+                                              filter:
+                                                - { prop: faction, eq: US }
+                                                - { prop: type, eq: troops }
+                                            to:
+                                              zoneExpr: casualties-US:none
+                                  else: []
       - id: card-79
         title: Henry Cabot Lodge
         sideMode: dual

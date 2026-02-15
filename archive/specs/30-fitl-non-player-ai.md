@@ -1,6 +1,6 @@
 # Spec 30: FITL Non-Player AI
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: Spec 26 (operations), Spec 27 (SAs), Spec 28 (capabilities + momentum), Spec 29 (event cards)
@@ -171,3 +171,16 @@ Run full games with 4 `Section8Agent` bots to verify:
 5. All 4 faction victory conditions achievable by bots across many games
 6. Build passes (`npm run build`)
 7. All existing tests pass (`npm test`)
+
+## Outcome
+
+- Completion date: 2026-02-15
+- What was actually changed:
+  - Implemented `Section8Agent` faction-aware non-player behavior for FITL bot decisioning.
+  - Added/extended FITL bot priority logic and selection heuristics for operations, targeting, and move choice.
+  - Added bot-oriented unit/integration coverage for legality, determinism, and game progression.
+- Deviations from original plan:
+  - No engine-kernel specialization for FITL bot logic; behavior was implemented at agent layer to keep `GameDef`/simulator generic.
+- Verification results:
+  - `npm run build` passed.
+  - `npm test` passed.

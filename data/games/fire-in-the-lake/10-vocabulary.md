@@ -128,6 +128,7 @@ globalVars:
   - { name: linebacker11Allowed, type: boolean, init: false }
   - { name: linebacker11SupportAvailable, type: int, init: 0, min: 0, max: 200 }
   - { name: leaderBoxCardCount, type: int, init: 0, min: 0, max: 8 }
+  - { name: commitmentPhaseRequested, type: boolean, init: false }
 
 perPlayerVars:
   - { name: resources, type: int, init: 20, min: 0, max: 50 }

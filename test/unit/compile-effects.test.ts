@@ -209,6 +209,29 @@ describe('compile-effects lowering', () => {
     ]);
   });
 
+  it('lowers advanceToPhase effect', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          advanceToPhase: {
+            phase: 'commitment',
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        advanceToPhase: {
+          phase: 'commitment',
+        },
+      },
+    ]);
+  });
+
   it('lowers dynamic zone expression (tokenZone ref) to zoneExpr', () => {
     const result = lowerEffectArray(
       [

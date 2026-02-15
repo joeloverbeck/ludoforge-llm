@@ -211,6 +211,11 @@ describe('AST and selector schemas', () => {
           sequence: { chain: 'vc-ops', step: 1 },
         },
       },
+      {
+        advanceToPhase: {
+          phase: 'commitment',
+        },
+      },
       { setMarker: { space: 'saigon:none', marker: 'support', state: 'activeSupport' } },
       { setMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', state: 'activeSupport' } },
       { shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } },

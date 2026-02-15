@@ -22,6 +22,8 @@ export type ValidationContext = {
   zoneOwners: ReadonlyMap<string, GameDef['zones'][number]['owner']>;
   tokenTypeNames: Set<string>;
   tokenTypeCandidates: readonly string[];
+  phaseNames: Set<string>;
+  phaseCandidates: readonly string[];
   playerIdMin: number;
   playerIdMaxInclusive: number;
 };
@@ -473,6 +475,8 @@ export const buildValidationContext = (
     globalMarkerLatticeStatesById: new Map((def.globalMarkerLattices ?? []).map((lattice) => [lattice.id, lattice.states])),
     tokenTypeNames: new Set(tokenTypeCandidates),
     tokenTypeCandidates,
+    phaseNames: new Set(phaseCandidates),
+    phaseCandidates,
     playerIdMin: 0,
     playerIdMaxInclusive: def.metadata.players.max - 1,
   };

@@ -75,6 +75,59 @@ const areMoveParamsEqual = (
 const isSameMove = (left: Move, right: Move): boolean =>
   left.actionId === right.actionId && areMoveParamsEqual(left.params, right.params);
 
+const hasChoiceEffects = (effects: readonly EffectAST[]): boolean => {
+  for (const effect of effects) {
+    if ('chooseOne' in effect || 'chooseN' in effect) {
+      return true;
+    }
+    if ('if' in effect) {
+      if (hasChoiceEffects(effect.if.then)) {
+        return true;
+      }
+      if (effect.if.else !== undefined && hasChoiceEffects(effect.if.else)) {
+        return true;
+      }
+      continue;
+    }
+    if ('forEach' in effect) {
+      if (hasChoiceEffects(effect.forEach.effects)) {
+        return true;
+      }
+      if (effect.forEach.in !== undefined && hasChoiceEffects(effect.forEach.in)) {
+        return true;
+      }
+      continue;
+    }
+    if ('removeByPriority' in effect) {
+      if (effect.removeByPriority.in !== undefined && hasChoiceEffects(effect.removeByPriority.in)) {
+        return true;
+      }
+      continue;
+    }
+    if ('let' in effect) {
+      if (hasChoiceEffects(effect.let.in)) {
+        return true;
+      }
+      continue;
+    }
+    if ('rollRandom' in effect && hasChoiceEffects(effect.rollRandom.in)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const pickDeclaredActionParams = (action: ActionDef, params: Move['params']): Readonly<Record<string, MoveParamValue>> => {
+  const paramNames = new Set(action.params.map((param) => param.name));
+  const selected: Record<string, MoveParamValue> = {};
+  for (const [name, value] of Object.entries(params)) {
+    if (paramNames.has(name)) {
+      selected[name] = value as MoveParamValue;
+    }
+  }
+  return selected;
+};
+
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
 
@@ -340,16 +393,65 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
   }
 
   const legal = legalMoves(def, state);
-  if (legal.some((candidate) => isSameMove(candidate, move))) {
-    return;
+  const matchingActionMoves = legal.filter((candidate) => candidate.actionId === action.id);
+  const hasChoices = hasChoiceEffects(action.effects);
+
+  if (!hasChoices) {
+    if (legal.some((candidate) => isSameMove(candidate, move))) {
+      return;
+    }
+    if (matchingActionMoves.length > 0) {
+      throw illegalMoveError(move, 'params are not legal for this action in current state');
+    }
+    throw illegalMoveError(move, 'action is not legal in current state');
   }
 
-  const matchingActionMoves = legal.filter((candidate) => candidate.actionId === action.id);
-  if (matchingActionMoves.length > 0) {
+  if (matchingActionMoves.length === 0 && move.freeOperation !== true) {
+    throw illegalMoveError(move, 'action is not legal in current state');
+  }
+
+  const declaredParams = pickDeclaredActionParams(action, move.params);
+  const hasMatchingDeclaredParams = matchingActionMoves.some(
+    (candidate) => areMoveParamsEqual(pickDeclaredActionParams(action, candidate.params), declaredParams),
+  );
+  if (!hasMatchingDeclaredParams && move.freeOperation !== true) {
     throw illegalMoveError(move, 'params are not legal for this action in current state');
   }
 
-  throw illegalMoveError(move, 'action is not legal in current state');
+  try {
+    const result = resolveMoveDecisionSequence(def, state, move, {
+      choose: () => undefined,
+    });
+    if (result.complete) {
+      return;
+    }
+    if (result.illegal !== undefined) {
+      throw illegalMoveError(move, 'move is not legal in current state', {
+        code: 'OPERATION_NOT_DISPATCHABLE',
+        detail: result.illegal.reason,
+      });
+    }
+    throw illegalMoveError(move, 'move has incomplete params', {
+      code: 'OPERATION_INCOMPLETE_PARAMS',
+      nextDecisionId: result.nextDecision?.decisionId,
+      nextDecisionName: result.nextDecision?.name,
+    });
+  } catch (err) {
+    if (isKernelErrorCode(err, 'LEGAL_CHOICES_VALIDATION_FAILED')) {
+      throw illegalMoveError(move, 'move params are invalid', {
+        code: 'OPERATION_INVALID_PARAMS',
+        detail: err.message,
+      });
+    }
+    if (isKernelRuntimeError(err)) {
+      throw err;
+    }
+    if (isTurnFlowErrorCode(err, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
+      throw err;
+    }
+    throw err;
+  }
+
 };
 
 interface ApplyMoveCoreOptions {

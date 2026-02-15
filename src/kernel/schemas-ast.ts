@@ -498,4 +498,13 @@ effectAstSchemaInternal = z.union([
         .strict(),
     })
     .strict(),
+  z
+    .object({
+      advanceToPhase: z
+        .object({
+          phase: StringSchema,
+        })
+        .strict(),
+    })
+    .strict(),
 ]);

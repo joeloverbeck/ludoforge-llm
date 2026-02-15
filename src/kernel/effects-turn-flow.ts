@@ -1,4 +1,5 @@
 import { EffectRuntimeError } from './effect-error.js';
+import { advancePhase } from './phase-advance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, TurnFlowPendingFreeOperationGrant } from './types.js';
 
@@ -128,4 +129,41 @@ export const applyGrantFreeOperation = (
     },
     rng: ctx.rng,
   };
+};
+
+export const applyAdvanceToPhase = (
+  effect: Extract<EffectAST, { readonly advanceToPhase: unknown }>,
+  ctx: EffectContext,
+): EffectResult => {
+  const targetPhase = effect.advanceToPhase.phase;
+  const phaseIds = ctx.def.turnStructure.phases.map((phase) => phase.id);
+  if (!phaseIds.some((phaseId) => phaseId === targetPhase)) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `advanceToPhase.phase is unknown: ${targetPhase}`, {
+      effectType: 'advanceToPhase',
+      phase: targetPhase,
+      phaseCandidates: phaseIds,
+    });
+  }
+
+  if (ctx.state.currentPhase === targetPhase) {
+    return { state: ctx.state, rng: ctx.rng };
+  }
+
+  const maxAdvances = Math.max(1, phaseIds.length + 1);
+  let currentState = ctx.state;
+  for (let step = 0; step < maxAdvances; step += 1) {
+    currentState = advancePhase(ctx.def, currentState);
+    if (currentState.currentPhase === targetPhase) {
+      return {
+        state: currentState,
+        rng: { state: currentState.rng },
+      };
+    }
+  }
+
+  throw new EffectRuntimeError('EFFECT_RUNTIME', `advanceToPhase could not reach phase: ${targetPhase}`, {
+    effectType: 'advanceToPhase',
+    phase: targetPhase,
+    maxAdvances,
+  });
 };

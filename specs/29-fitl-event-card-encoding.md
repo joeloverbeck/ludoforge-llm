@@ -669,7 +669,7 @@ Faction Order: NVA, ARVN, US, VC
 Card Number: 44
 Title: Ia Drang
 Italized Flavor Text: "Silver Bayonet."
-Event Text: "US free Air Lifts into 1 space with any NVA piece, then fere Sweeps and Assaults there."
+Event Text: "US free Air Lifts into 1 space with any NVA piece, then free Sweeps and Assaults there."
 Lasting Effects Indicator (5.3): None
 Shaded Text (see Dual Use 5.2): "Dong Xuan campaign-hot LZs: Select a Province with NVA Troops then remove a die roll of US Troops within 1 space of it to Casualties."
 

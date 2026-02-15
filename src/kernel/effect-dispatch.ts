@@ -15,7 +15,7 @@ import {
   applyShiftMarker,
 } from './effects-choice.js';
 import { applyForEach, applyIf, applyLet, applyRemoveByPriority, type EffectBudgetState } from './effects-control.js';
-import { applyGrantFreeOperation } from './effects-turn-flow.js';
+import { applyAdvanceToPhase, applyGrantFreeOperation } from './effects-turn-flow.js';
 import { applyAddVar, applySetVar } from './effects-var.js';
 import {
   applyCreateToken,
@@ -62,6 +62,7 @@ const effectTypeOf = (effect: EffectAST): string => {
   if ('flipGlobalMarker' in effect) return 'flipGlobalMarker';
   if ('shiftGlobalMarker' in effect) return 'shiftGlobalMarker';
   if ('grantFreeOperation' in effect) return 'grantFreeOperation';
+  if ('advanceToPhase' in effect) return 'advanceToPhase';
 
   const _exhaustive: never = effect;
   return _exhaustive;
@@ -169,6 +170,9 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 
   if ('grantFreeOperation' in effect) {
     return applyGrantFreeOperation(effect, ctx);
+  }
+  if ('advanceToPhase' in effect) {
+    return applyAdvanceToPhase(effect, ctx);
   }
 
   throw effectNotImplementedError(effectTypeOf(effect), { effect });

@@ -10,6 +10,7 @@ const expectedCards = [
   { id: 'card-69', order: 69, title: 'MACV', sideMode: 'single', factionOrder: ['ARVN', 'US', 'VC', 'NVA'] },
   { id: 'card-70', order: 70, title: 'ROKs', sideMode: 'dual', factionOrder: ['ARVN', 'US', 'VC', 'NVA'] },
   { id: 'card-72', order: 72, title: 'Body Count', sideMode: 'dual', factionOrder: ['ARVN', 'NVA', 'US', 'VC'] },
+  { id: 'card-73', order: 73, title: 'Great Society', sideMode: 'dual', factionOrder: ['ARVN', 'NVA', 'US', 'VC'] },
   { id: 'card-76', order: 76, title: 'Annam', sideMode: 'dual', factionOrder: ['ARVN', 'NVA', 'VC', 'US'] },
   { id: 'card-78', order: 78, title: 'General Landsdale', sideMode: 'dual', factionOrder: ['ARVN', 'NVA', 'VC', 'US'] },
   { id: 'card-81', order: 81, title: 'CIDG', sideMode: 'dual', factionOrder: ['ARVN', 'VC', 'US', 'NVA'] },
@@ -22,7 +23,7 @@ const expectedCards = [
 ] as const;
 
 describe('FITL 1965 ARVN-first event-card production spec', () => {
-  it('compiles all 14 ARVN-first 1965 cards with side-mode and metadata invariants', () => {
+  it('compiles all 15 ARVN-first 1965 cards with side-mode and metadata invariants', () => {
     const { parsed, compiled } = compileProductionSpec();
 
     assertNoErrors(parsed);
@@ -110,5 +111,38 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       assert.deepEqual(effect?.setupEffects, [{ setVar: { scope: 'global', var: expected.varName, value: true } }]);
       assert.deepEqual(effect?.teardownEffects, [{ setVar: { scope: 'global', var: expected.varName, value: false } }]);
     }
+  });
+
+  it('encodes card 73 (Great Society) shaded side as US available-to-out-of-play removal', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-73');
+    assert.notEqual(card, undefined);
+    assert.equal(card?.unshaded?.text, 'Conduct a Commitment Phase.');
+    assert.deepEqual(card?.unshaded?.effects, [
+      { setVar: { scope: 'global', var: 'commitmentPhaseRequested', value: true } },
+      { advanceToPhase: { phase: 'commitment' } },
+    ]);
+    assert.deepEqual(card?.shaded?.effects, [
+      {
+        removeByPriority: {
+          budget: 3,
+          groups: [
+            {
+              bind: 'usAvailablePiece',
+              over: {
+                  query: 'tokensInZone',
+                  zone: 'available-US:none',
+                  filter: [{ prop: 'faction', op: 'eq', value: 'US' }],
+                },
+              to: { zoneExpr: 'out-of-play-US:none' },
+            },
+          ],
+        },
+      },
+    ]);
   });
 });

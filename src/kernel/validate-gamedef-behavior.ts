@@ -775,6 +775,20 @@ export const validateEffectAst = (
     return;
   }
 
+  if ('advanceToPhase' in effect) {
+    if (!context.phaseNames.has(effect.advanceToPhase.phase)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_PHASE_MISSING',
+        `${path}.advanceToPhase.phase`,
+        `Unknown phase "${effect.advanceToPhase.phase}".`,
+        effect.advanceToPhase.phase,
+        context.phaseCandidates,
+      );
+    }
+    return;
+  }
+
   const chooseN = effect.chooseN;
   const hasN = 'n' in chooseN && chooseN.n !== undefined;
   const hasMax = 'max' in chooseN && chooseN.max !== undefined;

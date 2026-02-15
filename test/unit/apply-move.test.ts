@@ -13,6 +13,7 @@ import {
   asZoneId,
   computeFullHash,
   createZobristTable,
+  legalChoices,
   type GameDef,
   type GameState,
   type Move,
@@ -120,23 +121,77 @@ describe('applyMove', () => {
       params: { boost: 99 },
     };
 
-    assert.throws(() => applyMove(def, state, badMove), (error: unknown) => {
-      assert.ok(error instanceof Error);
-      const details = error as Error & {
-        code?: unknown;
-        actionId?: unknown;
-        params?: unknown;
-        reason?: unknown;
-        context?: Record<string, unknown>;
-      };
-      assert.equal(details.code, 'ILLEGAL_MOVE');
-      assert.equal(details.actionId, asActionId('play'));
-      assert.deepEqual(details.params, { boost: 99 });
-      assert.equal(typeof details.reason, 'string');
-      assert.equal(details.context?.reason, details.reason);
-      assert.match(details.message, /Illegal move/);
-      return true;
-    });
+    let thrown: unknown;
+    try {
+      applyMove(def, state, badMove);
+    } catch (error) {
+      thrown = error;
+    }
+    assert.ok(thrown instanceof Error, 'Expected applyMove to throw an Error');
+    const details = thrown as Error & {
+      code?: unknown;
+      actionId?: unknown;
+      params?: unknown;
+      reason?: unknown;
+      context?: Record<string, unknown>;
+    };
+    assert.equal(details.code, 'ILLEGAL_MOVE');
+    assert.equal(details.actionId, asActionId('play'));
+    assert.deepEqual(details.params, { boost: 99 });
+    assert.equal(typeof details.reason, 'string');
+    assert.equal(details.context?.reason, details.reason);
+    assert.match(details.message, /Illegal move/);
+  });
+
+  it('applies non-pipeline effect decisions when provided via emitted decision ids', () => {
+    const def: GameDef = {
+      metadata: { id: 'non-pipeline-decision-validation', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 10 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [
+        {
+          id: asActionId('decide'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$pick',
+                bind: '$pick',
+                options: { query: 'enums', values: [1, 2] },
+              },
+            },
+            { setVar: { scope: 'global', var: 'score', value: { ref: 'binding', name: '$pick' } } },
+          ],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: { score: 0 },
+      actionUsage: {},
+    };
+
+    const pending = legalChoices(def, state, { actionId: asActionId('decide'), params: {} });
+    assert.equal(pending.kind, 'pending');
+    assert.equal(pending.type, 'chooseOne');
+
+    const applied = applyMove(def, state, {
+      actionId: asActionId('decide'),
+      params: { [pending.decisionId]: 2 },
+    }).state;
+    assert.equal(applied.globalVars.score, 2);
   });
 
   it('keeps input state unchanged when applyMove fails during effect execution', () => {

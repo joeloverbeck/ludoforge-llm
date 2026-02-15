@@ -1,0 +1,230 @@
+{
+  "deckId": "fitl-events-initial-card-pack",
+  "tutorialIds": [
+    "card-1",
+    "card-17",
+    "card-43",
+    "card-51",
+    "card-55",
+    "card-75",
+    "card-79",
+    "card-82",
+    "card-97",
+    "card-101",
+    "card-107",
+    "card-112",
+    "card-125"
+  ],
+  "cards": [
+    {
+      "id": "card-1",
+      "title": "Gulf of Tonkin",
+      "order": 1,
+      "sideMode": "dual",
+      "tags": [],
+      "metadata": {
+        "period": "1964",
+        "factionOrder": [
+          "US",
+          "NVA",
+          "ARVN",
+          "VC"
+        ]
+      }
+    },
+    {
+      "id": "card-17",
+      "title": "Claymores",
+      "order": 17,
+      "sideMode": "dual",
+      "tags": [
+        "momentum"
+      ],
+      "metadata": {
+        "period": "1964",
+        "factionOrder": [
+          "US",
+          "ARVN",
+          "VC",
+          "NVA"
+        ]
+      }
+    },
+    {
+      "id": "card-43",
+      "title": "Economic Aid",
+      "order": 43,
+      "sideMode": "dual",
+      "tags": [],
+      "metadata": {
+        "period": "1964",
+        "factionOrder": [
+          "NVA",
+          "ARVN",
+          "US",
+          "VC"
+        ]
+      }
+    },
+    {
+      "id": "card-51",
+      "title": "301st Supply Bn",
+      "order": 51,
+      "sideMode": "dual",
+      "tags": [],
+      "metadata": {
+        "period": "1964",
+        "factionOrder": [
+          "NVA",
+          "VC",
+          "US",
+          "ARVN"
+        ]
+      }
+    },
+    {
+      "id": "card-55",
+      "title": "Trucks",
+      "order": 55,
+      "sideMode": "dual",
+      "tags": [],
+      "metadata": {
+        "period": "1964",
+        "factionOrder": [
+          "NVA",
+          "VC",
+          "US",
+          "ARVN"
+        ]
+      }
+    },
+    {
+      "id": "card-75",
+      "title": "Sihanouk",
+      "order": 75,
+      "sideMode": "dual",
+      "tags": [],
+      "metadata": {
+        "period": "1964",
+        "factionOrder": [
+          "ARVN",
+          "NVA",
+          "US",
+          "VC"
+        ]
+      }
+    },
+    {
+      "id": "card-79",
+      "title": "Henry Cabot Lodge",
+      "order": 79,
+      "sideMode": "dual",
+      "tags": [],
+      "metadata": {
+        "period": "1964",
+        "factionOrder": [
+          "ARVN",
+          "NVA",
+          "VC",
+          "US"
+        ]
+      }
+    },
+    {
+      "id": "card-82",
+      "title": "Domino Theory",
+      "order": 82,
+      "sideMode": "dual",
+      "tags": [],
+      "metadata": {
+        "period": "1965",
+        "factionOrder": [
+          "ARVN",
+          "VC",
+          "US",
+          "NVA"
+        ]
+      }
+    },
+    {
+      "id": "card-97",
+      "title": "Brinks Hotel",
+      "order": 97,
+      "sideMode": "dual",
+      "tags": [],
+      "metadata": {
+        "period": "1964",
+        "factionOrder": [
+          "VC",
+          "US",
+          "ARVN",
+          "NVA"
+        ]
+      }
+    },
+    {
+      "id": "card-101",
+      "title": "Booby Traps",
+      "order": 101,
+      "sideMode": "dual",
+      "tags": [
+        "capability",
+        "VC"
+      ],
+      "metadata": {
+        "period": "1964",
+        "factionOrder": [
+          "VC",
+          "NVA",
+          "US",
+          "ARVN"
+        ]
+      }
+    },
+    {
+      "id": "card-107",
+      "title": "Burning Bonze",
+      "order": 107,
+      "sideMode": "dual",
+      "tags": [],
+      "metadata": {
+        "period": "1964",
+        "factionOrder": [
+          "VC",
+          "NVA",
+          "ARVN",
+          "US"
+        ]
+      }
+    },
+    {
+      "id": "card-112",
+      "title": "Colonel Chau",
+      "order": 112,
+      "sideMode": "dual",
+      "tags": [],
+      "metadata": {
+        "period": "1964",
+        "factionOrder": [
+          "VC",
+          "ARVN",
+          "US",
+          "NVA"
+        ]
+      }
+    },
+    {
+      "id": "card-125",
+      "title": "Nguyen Khanh",
+      "order": 125,
+      "sideMode": "single",
+      "tags": [
+        "coup"
+      ],
+      "metadata": {
+        "period": null,
+        "factionOrder": null
+      }
+    }
+  ]
+}

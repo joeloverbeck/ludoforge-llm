@@ -5,10 +5,12 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const targetCardIds = [
+  'card-44',
   'card-47',
   'card-53',
   'card-64',
   'card-69',
+  'card-73',
   'card-76',
   'card-81',
   'card-83',
@@ -75,6 +77,11 @@ describe('FITL text-only card behavior backfill', () => {
     assert.equal((card47?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 1);
     assert.equal((card47?.unshaded?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
 
+    const card44 = cardById.get('card-44');
+    assert.deepEqual(card44?.unshaded?.freeOperationGrants?.map((grant) => grant.actionIds?.[0]), ['airLift', 'sweep', 'assault']);
+    assert.equal((card44?.shaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 1);
+    assert.equal(typeof (card44?.shaded?.effects?.[0] as { rollRandom?: unknown })?.rollRandom, 'object');
+
     const card53 = cardById.get('card-53');
     assert.equal((card53?.unshaded?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
     assert.equal((card53?.shaded?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
@@ -95,6 +102,14 @@ describe('FITL text-only card behavior backfill', () => {
       { addVar: { scope: 'global', var: 'vcResources', delta: -3 } },
       { addVar: { scope: 'global', var: 'patronage', delta: 3 } },
     ]);
+
+    const card73 = cardById.get('card-73');
+    assert.equal(card73?.unshaded?.text, 'Conduct a Commitment Phase.');
+    assert.deepEqual(card73?.unshaded?.effects, [
+      { setVar: { scope: 'global', var: 'commitmentPhaseRequested', value: true } },
+      { advanceToPhase: { phase: 'commitment' } },
+    ]);
+    assert.equal((card73?.shaded?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);
 
     const card81 = cardById.get('card-81');
     assert.equal((card81?.unshaded?.targets?.[0]?.cardinality as { max?: number } | undefined)?.max, 2);

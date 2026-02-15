@@ -130,6 +130,9 @@ function lowerEffectNode(
   if (isRecord(source.grantFreeOperation)) {
     return lowerGrantFreeOperationEffect(source.grantFreeOperation, context, scope, `${path}.grantFreeOperation`);
   }
+  if (isRecord(source.advanceToPhase)) {
+    return lowerAdvanceToPhaseEffect(source.advanceToPhase, `${path}.advanceToPhase`);
+  }
 
   return missingCapability(path, 'effect node', source, SUPPORTED_EFFECT_KINDS);
 }
@@ -1007,6 +1010,24 @@ function lowerGrantFreeOperationEffect(
       },
     },
     diagnostics,
+  };
+}
+
+function lowerAdvanceToPhaseEffect(
+  source: Record<string, unknown>,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (typeof source.phase !== 'string') {
+    return missingCapability(path, 'advanceToPhase effect', source, ['{ advanceToPhase: { phase: string } }']);
+  }
+
+  return {
+    value: {
+      advanceToPhase: {
+        phase: source.phase,
+      },
+    },
+    diagnostics: [],
   };
 }
 

@@ -2,6 +2,7 @@ import { asPlayerId } from './branded.js';
 import { createCollector } from './execution-collector.js';
 import { resolveEventEligibilityOverrides, resolveEventFreeOperationGrants } from './event-execution.js';
 import { evalCondition } from './eval-condition.js';
+import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
@@ -346,11 +347,7 @@ const evaluateZoneFilterForMove = (
   zoneFilter: ConditionAST,
 ): boolean => {
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const baseBindings: Readonly<Record<string, unknown>> = {
-    ...move.params,
-    __freeOperation: move.freeOperation ?? false,
-    __actionClass: move.actionClass ?? 'operation',
-  };
+  const baseBindings: Readonly<Record<string, unknown>> = buildMoveRuntimeBindings(move);
   const zones = moveZoneCandidates(def, move);
   if (zones.length === 0) {
     try {

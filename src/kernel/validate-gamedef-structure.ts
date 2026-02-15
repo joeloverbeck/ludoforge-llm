@@ -1,8 +1,10 @@
 import type { Diagnostic } from './diagnostics.js';
+import { RUNTIME_RESERVED_MOVE_BINDING_NAMES } from './move-runtime-bindings.js';
 import type { GameDef, MapSpaceDef, PlayerSel, ScenarioPiecePlacement, StackingConstraint } from './types.js';
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
 const PLAYER_ZONE_QUALIFIER_PATTERN = /^[0-9]+$/;
+const RESERVED_RUNTIME_PARAM_NAMES: ReadonlySet<string> = new Set(RUNTIME_RESERVED_MOVE_BINDING_NAMES);
 
 export type ValidationContext = {
   globalVarNames: Set<string>;
@@ -417,6 +419,30 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
     'global marker lattice id',
     'globalMarkerLattices',
   );
+  def.actions.forEach((action, actionIndex) => {
+    const paramNames = action.params.map((param) => param.name);
+    checkDuplicateIds(
+      diagnostics,
+      paramNames,
+      'DUPLICATE_ACTION_PARAM_NAME',
+      'action param name',
+      `actions[${actionIndex}].params`,
+    );
+
+    action.params.forEach((param, paramIndex) => {
+      if (!RESERVED_RUNTIME_PARAM_NAMES.has(param.name)) {
+        return;
+      }
+      diagnostics.push({
+        code: 'ACTION_PARAM_RESERVED_NAME',
+        path: `actions[${actionIndex}].params[${paramIndex}].name`,
+        severity: 'error',
+        message: `Action "${action.id}" param "${param.name}" uses a reserved runtime binding name.`,
+        suggestion: 'Rename the action param; names beginning with runtime-reserved "__" identifiers are not allowed.',
+      });
+    });
+  });
+
   const tokenTypeById = new Map(def.tokenTypes.map((tokenType) => [tokenType.id, tokenType] as const));
   (def.stackingConstraints ?? []).forEach((constraint, index) => {
     if ((constraint.pieceFilter.factions?.length ?? 0) === 0) {

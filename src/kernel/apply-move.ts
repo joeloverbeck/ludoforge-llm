@@ -7,7 +7,11 @@ import { legalMoves } from './legal-moves.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
 import { resolveActionExecutorPlayer } from './action-executor.js';
-import { extractResolvedBindFromDecisionId } from './decision-id.js';
+import {
+  buildMoveRuntimeBindings,
+  collectDecisionBindingsFromEffects,
+  deriveDecisionBindingsFromMoveParams,
+} from './move-runtime-bindings.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { illegalMoveError, isKernelErrorCode, isKernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -132,66 +136,22 @@ const pickDeclaredActionParams = (action: ActionDef, params: Move['params']): Re
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
 
-const collectDecisionBindings = (effects: readonly EffectAST[], bindings: Map<string, string>): void => {
-  for (const effect of effects) {
-    if ('chooseOne' in effect) {
-      bindings.set(effect.chooseOne.internalDecisionId, effect.chooseOne.bind);
-      continue;
-    }
-    if ('chooseN' in effect) {
-      bindings.set(effect.chooseN.internalDecisionId, effect.chooseN.bind);
-      continue;
-    }
-    if ('if' in effect) {
-      collectDecisionBindings(effect.if.then, bindings);
-      if (effect.if.else !== undefined) {
-        collectDecisionBindings(effect.if.else, bindings);
-      }
-      continue;
-    }
-    if ('forEach' in effect) {
-      collectDecisionBindings(effect.forEach.effects, bindings);
-      if (effect.forEach.in !== undefined) {
-        collectDecisionBindings(effect.forEach.in, bindings);
-      }
-      continue;
-    }
-    if ('removeByPriority' in effect) {
-      if (effect.removeByPriority.in !== undefined) {
-        collectDecisionBindings(effect.removeByPriority.in, bindings);
-      }
-      continue;
-    }
-    if ('let' in effect) {
-      collectDecisionBindings(effect.let.in, bindings);
-      continue;
-    }
-    if ('rollRandom' in effect) {
-      collectDecisionBindings(effect.rollRandom.in, bindings);
-    }
-  }
-};
-
 const decisionBindingsForMove = (
   executionProfile: ReturnType<typeof toExecutionPipeline> | undefined,
   moveParams: Move['params'],
 ): Readonly<Record<string, MoveParamValue>> => {
-  const bindings: Record<string, MoveParamValue> = {};
-  for (const [paramName, paramValue] of Object.entries(moveParams)) {
-    const resolvedBind = extractResolvedBindFromDecisionId(paramName);
-    if (resolvedBind !== null) {
-      bindings[resolvedBind] = paramValue as MoveParamValue;
-    }
-  }
+  const bindings: Record<string, MoveParamValue> = {
+    ...deriveDecisionBindingsFromMoveParams(moveParams),
+  };
 
   if (executionProfile === undefined) {
     return bindings;
   }
 
   const decisionBindings = new Map<string, string>();
-  collectDecisionBindings(executionProfile.costSpend, decisionBindings);
+  collectDecisionBindingsFromEffects(executionProfile.costSpend, decisionBindings);
   for (const stage of executionProfile.resolutionStages) {
-    collectDecisionBindings(stage, decisionBindings);
+    collectDecisionBindingsFromEffects(stage, decisionBindings);
   }
 
   for (const [decisionId, bind] of decisionBindings.entries()) {
@@ -205,12 +165,8 @@ const decisionBindingsForMove = (
 const runtimeBindingsForMove = (
   move: Move,
   executionProfile: ReturnType<typeof toExecutionPipeline> | undefined,
-): Readonly<Record<string, MoveParamValue | boolean | string>> => ({
-  ...move.params,
-  ...decisionBindingsForMove(executionProfile, move.params),
-  __freeOperation: move.freeOperation ?? false,
-  __actionClass: move.actionClass ?? 'operation',
-});
+): Readonly<Record<string, MoveParamValue | boolean | string>> =>
+  buildMoveRuntimeBindings(move, decisionBindingsForMove(executionProfile, move.params));
 
 const resolveMatchedPipelineForMove = (
   def: GameDef,
@@ -495,11 +451,7 @@ const applyMoveCore = (
   };
   const effectCtx = {
     ...effectCtxBase,
-    bindings: {
-      ...runtimeMoveParams,
-      __freeOperation: move.freeOperation ?? false,
-      __actionClass: move.actionClass ?? 'operation',
-    },
+    bindings: buildMoveRuntimeBindings(move, resolvedDecisionBindings),
     moveParams: runtimeMoveParams,
   } as const;
   const isFreeOp = move.freeOperation === true && executionProfile !== undefined;

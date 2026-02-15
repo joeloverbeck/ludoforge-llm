@@ -444,6 +444,55 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports duplicate action param names', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            { name: '$n', domain: { query: 'intsInRange', min: 0, max: 3 } },
+            { name: '$n', domain: { query: 'intsInRange', min: 0, max: 3 } },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DUPLICATE_ACTION_PARAM_NAME' &&
+          diag.path === 'actions[0].params[1]' &&
+          diag.severity === 'error',
+      ),
+    );
+  });
+
+  it('reports reserved runtime binding names used as action param names', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [{ name: '__freeOperation', domain: { query: 'intsInRange', min: 0, max: 3 } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'ACTION_PARAM_RESERVED_NAME' &&
+          diag.path === 'actions[0].params[0].name' &&
+          diag.severity === 'error',
+      ),
+    );
+  });
+
   it('accepts intsInRange dynamic bounds as ValueExpr', () => {
     const base = createValidGameDef();
     const def = {

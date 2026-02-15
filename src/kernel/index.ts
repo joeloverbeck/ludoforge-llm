@@ -4,6 +4,7 @@ export * from './initial-state.js';
 export * from './legal-choices.js';
 export * from './legal-moves.js';
 export * from './move-decision-sequence.js';
+export * from './move-runtime-bindings.js';
 export * from './apply-move.js';
 export * from './trigger-dispatch.js';
 export * from './phase-advance.js';

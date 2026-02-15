@@ -2,6 +2,7 @@ export * from './branded.js';
 export * from './choose-n-cardinality.js';
 export * from './initial-state.js';
 export * from './legal-choices.js';
+export * from './legality-outcome.js';
 export * from './legal-moves.js';
 export * from './move-decision-sequence.js';
 export * from './move-runtime-bindings.js';

@@ -13,6 +13,7 @@ import {
   collectDecisionBindingsFromEffects,
   deriveDecisionBindingsFromMoveParams,
 } from './move-runtime-bindings.js';
+import { toApplyMoveIllegalMetadataCode } from './legality-outcome.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { illegalMoveError, isKernelErrorCode, isKernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -293,8 +294,9 @@ const validateDecisionSequenceForMove = (def: GameDef, state: GameState, move: M
       return;
     }
     if (result.illegal !== undefined) {
+      const mappedCode = toApplyMoveIllegalMetadataCode(result.illegal.reason);
       throw illegalMoveError(move, 'move is not legal in current state', {
-        code: 'OPERATION_NOT_DISPATCHABLE',
+        code: mappedCode,
         detail: result.illegal.reason,
       });
     }
@@ -384,22 +386,18 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
   if (preflight.kind === 'notApplicable') {
     if (preflight.reason === 'actorNotApplicable') {
       throw illegalMoveError(move, 'action actor is not applicable in current state', {
-        code: 'ACTION_ACTOR_NOT_APPLICABLE',
+        code: toApplyMoveIllegalMetadataCode(preflight.reason),
         actionId: action.id,
       });
     }
     if (preflight.reason === 'executorNotApplicable') {
       throw illegalMoveError(move, 'action executor is not applicable in current state', {
-        code: 'ACTION_EXECUTOR_NOT_APPLICABLE',
+        code: toApplyMoveIllegalMetadataCode(preflight.reason),
         actionId: action.id,
       });
     }
     throw illegalMoveError(move, 'action is not legal in current state', {
-      code: preflight.reason === 'phaseMismatch'
-        ? 'ACTION_PHASE_MISMATCH'
-        : preflight.reason === 'actionLimitExceeded'
-          ? 'ACTION_LIMIT_EXCEEDED'
-          : 'ACTION_PIPELINE_NOT_APPLICABLE',
+      code: toApplyMoveIllegalMetadataCode(preflight.reason),
       actionId: action.id,
     });
   }
@@ -559,7 +557,7 @@ const applyMoveCore = (
     )
   ) {
     throw illegalMoveError(move, 'action pipeline legality predicate failed', {
-      code: 'OPERATION_LEGALITY_FAILED',
+      code: toApplyMoveIllegalMetadataCode('pipelineLegalityFailed'),
       profileId: actionPipeline?.id,
       actionId: action.id,
     });

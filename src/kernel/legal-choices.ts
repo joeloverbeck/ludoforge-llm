@@ -13,6 +13,7 @@ import { resolveEventEffectList } from './event-execution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { buildAdjacencyGraph } from './spatial.js';
+import { toChoiceIllegalReason } from './legality-outcome.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { resolveFreeOperationExecutionPlayer, resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
 import type {
@@ -392,19 +393,7 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
         }),
   });
   if (preflight.kind === 'notApplicable') {
-    if (preflight.reason === 'phaseMismatch') {
-      return { kind: 'illegal', complete: false, reason: 'phaseMismatch' };
-    }
-    if (preflight.reason === 'actionLimitExceeded') {
-      return { kind: 'illegal', complete: false, reason: 'actionLimitExceeded' };
-    }
-    if (preflight.reason === 'pipelineNotApplicable') {
-      return { kind: 'illegal', complete: false, reason: 'pipelineNotApplicable' };
-    }
-    if (preflight.reason === 'actorNotApplicable') {
-      return { kind: 'illegal', complete: false, reason: 'actorNotApplicable' };
-    }
-    return { kind: 'illegal', complete: false, reason: 'executorNotApplicable' };
+    return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason(preflight.reason) };
   }
   if (preflight.kind === 'invalidSpec') {
     throw selectorInvalidSpecError('legalChoices', preflight.selector, action, preflight.error);
@@ -416,7 +405,7 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     const pipeline = pipelineDispatch.profile;
     if (pipeline.legality !== null) {
       if (!evalActionPipelinePredicate(action, pipeline.id, 'legality', pipeline.legality, evalCtx)) {
-        return { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' };
+        return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason('pipelineLegalityFailed') };
       }
     }
 

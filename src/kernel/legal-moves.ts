@@ -6,6 +6,7 @@ import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { applyPendingFreeOperationVariants, applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
+import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
@@ -184,6 +185,7 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       skipPipelineDispatch: !hasActionPipeline,
     });
     if (preflight.kind === 'notApplicable') {
+      void shouldEnumerateLegalMoveForOutcome(preflight.reason);
       continue;
     }
     if (preflight.kind === 'invalidSpec') {
@@ -206,7 +208,9 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       const executionCtx = preflight.evalCtx;
       if (pipeline.legality !== null) {
         if (!evalActionPipelinePredicate(action, pipeline.id, 'legality', pipeline.legality, executionCtx)) {
-          continue;
+          if (!shouldEnumerateLegalMoveForOutcome('pipelineLegalityFailed')) {
+            continue;
+          }
         }
       }
 

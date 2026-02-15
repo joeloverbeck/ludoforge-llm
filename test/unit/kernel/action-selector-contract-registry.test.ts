@@ -8,6 +8,44 @@ import {
 import { asPlayerId } from '../../../src/kernel/branded.js';
 
 describe('action selector contract registry', () => {
+  it('covers deterministic selector contract matrix across role bindings and pipeline presence', () => {
+    const declaredBindingSets: ReadonlyArray<readonly string[]> = [[], ['$actorOwner'], ['$execOwner'], ['$actorOwner', '$execOwner']];
+
+    for (const actorUsesBinding of [false, true] as const) {
+      for (const executorUsesBinding of [false, true] as const) {
+        for (const declaredBindings of declaredBindingSets) {
+          for (const hasPipeline of [false, true] as const) {
+            const violations = evaluateActionSelectorContracts({
+              selectors: {
+                actor: actorUsesBinding ? { chosen: '$actorOwner' } : 'active',
+                executor: executorUsesBinding ? { chosen: '$execOwner' } : 'actor',
+              },
+              declaredBindings,
+              hasPipeline,
+            });
+
+            const expected: Array<{ role: 'actor' | 'executor'; kind: 'bindingNotDeclared' | 'bindingWithPipelineUnsupported'; binding: string }> = [];
+            if (actorUsesBinding && !declaredBindings.includes('$actorOwner')) {
+              expected.push({ role: 'actor', kind: 'bindingNotDeclared', binding: '$actorOwner' });
+            }
+            if (executorUsesBinding && !declaredBindings.includes('$execOwner')) {
+              expected.push({ role: 'executor', kind: 'bindingNotDeclared', binding: '$execOwner' });
+            }
+            if (executorUsesBinding && hasPipeline) {
+              expected.push({ role: 'executor', kind: 'bindingWithPipelineUnsupported', binding: '$execOwner' });
+            }
+
+            assert.deepEqual(
+              violations,
+              expected,
+              `actorUsesBinding=${actorUsesBinding} executorUsesBinding=${executorUsesBinding} declaredBindings=${declaredBindings.join(',')} hasPipeline=${hasPipeline}`,
+            );
+          }
+        }
+      }
+    }
+  });
+
   it('reports missing declared selector bindings in deterministic role order', () => {
     const violations = evaluateActionSelectorContracts({
       selectors: {

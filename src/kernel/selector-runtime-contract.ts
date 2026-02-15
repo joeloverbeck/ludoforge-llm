@@ -1,4 +1,5 @@
 import { runtimeContractInvalidError } from './runtime-error.js';
+import type { ActionSelectorContractViolation } from './action-selector-contract-registry.js';
 import type { ActionDef } from './types.js';
 
 export type SelectorBoundarySurface = 'applyMove' | 'legalChoices' | 'legalMoves';
@@ -10,6 +11,7 @@ export const selectorInvalidSpecError = (
   selector: SelectorSurface,
   action: ActionDef,
   cause: unknown,
+  selectorContractViolations?: readonly ActionSelectorContractViolation[],
 ) =>
   runtimeContractInvalidError(
     `${boundary}: invalid ${selector} selector for actionId=${String(action.id)}`,
@@ -18,6 +20,7 @@ export const selectorInvalidSpecError = (
       selector,
       actionId: action.id,
       reason: 'invalidSelectorSpec',
+      ...(selectorContractViolations === undefined ? {} : { selectorContractViolations }),
     },
     cause,
   );

@@ -266,6 +266,54 @@ describe('legality surface parity', () => {
     });
   }
 
+  it('projects full ordered selector-contract violations across all runtime surfaces', () => {
+    const action = makeAction({
+      actor: { chosen: '$actorOwner' },
+      executor: { chosen: '$execOwner' },
+      params: [],
+    });
+    const def = makeDef({
+      action,
+      actionPipelines: [
+        {
+          id: 'op-profile',
+          actionId: action.id,
+          applicability: { op: '==', left: 1, right: 1 },
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [],
+          atomicity: 'atomic',
+        },
+      ],
+    });
+    const state = makeState();
+    const move = { actionId: asActionId('op'), params: {} };
+    const expectedViolations = [
+      { role: 'actor', kind: 'bindingNotDeclared', binding: '$actorOwner' },
+      { role: 'executor', kind: 'bindingNotDeclared', binding: '$execOwner' },
+      { role: 'executor', kind: 'bindingWithPipelineUnsupported', binding: '$execOwner' },
+    ];
+
+    for (const call of [
+      { surface: 'legalMoves' as const, run: () => legalMoves(def, state) },
+      { surface: 'legalChoices' as const, run: () => legalChoices(def, state, move) },
+      { surface: 'applyMove' as const, run: () => applyMove(def, state, move) },
+    ]) {
+      assert.throws(call.run, (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        assert.equal(details.context?.reason, 'invalidSelectorSpec');
+        assert.equal(details.context?.surface, call.surface);
+        assert.equal(details.context?.selector, 'actor');
+        assert.deepEqual(details.context?.selectorContractViolations, expectedViolations);
+        return true;
+      });
+    }
+  });
+
   it('malformed legality predicate projects typed predicate-evaluation errors across all surfaces', () => {
     const action = makeAction();
     const def = makeDef({

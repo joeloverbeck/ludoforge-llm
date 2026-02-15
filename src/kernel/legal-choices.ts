@@ -396,7 +396,13 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason(preflight.reason) };
   }
   if (preflight.kind === 'invalidSpec') {
-    throw selectorInvalidSpecError('legalChoices', preflight.selector, action, preflight.error);
+    throw selectorInvalidSpecError(
+      'legalChoices',
+      preflight.selector,
+      action,
+      preflight.error,
+      preflight.selectorContractViolations,
+    );
   }
   const evalCtx: EvalContext = preflight.evalCtx;
   const pipelineDispatch = preflight.pipelineDispatch;

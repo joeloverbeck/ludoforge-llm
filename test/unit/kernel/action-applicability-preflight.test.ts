@@ -263,6 +263,121 @@ describe('resolveActionApplicabilityPreflight()', () => {
         kind: 'bindingNotDeclared',
         binding: '$owner',
       });
+      assert.deepEqual(result.selectorContractViolations, [
+        {
+          role: 'actor',
+          kind: 'bindingNotDeclared',
+          binding: '$owner',
+        },
+      ]);
+    }
+  });
+
+  it('covers runtime preflight selector-contract matrix with deterministic first violation', () => {
+    for (const actorUsesBinding of [false, true] as const) {
+      for (const executorUsesBinding of [false, true] as const) {
+        for (const actorDeclared of [false, true] as const) {
+          for (const executorDeclared of [false, true] as const) {
+            for (const hasPipeline of [false, true] as const) {
+              const action: ActionDef = {
+                id: asActionId('op'),
+                actor: actorUsesBinding ? { chosen: '$actorOwner' } : 'active',
+                executor: executorUsesBinding ? { chosen: '$execOwner' } : 'actor',
+                phase: asPhaseId('main'),
+                params: [
+                  ...(actorUsesBinding && actorDeclared ? [{ name: '$actorOwner', domain: { query: 'players' as const } }] : []),
+                  ...(executorUsesBinding && executorDeclared ? [{ name: '$execOwner', domain: { query: 'players' as const } }] : []),
+                ],
+                pre: null,
+                cost: [],
+                effects: [],
+                limits: [],
+              };
+              const def = makeDef({
+                action,
+                ...(hasPipeline
+                  ? {
+                      actionPipelines: [
+                        {
+                          id: 'op-profile',
+                          actionId: asActionId('op'),
+                          applicability: { op: '==', left: 1, right: 1 },
+                          legality: null,
+                          costValidation: null,
+                          costEffects: [],
+                          targeting: {},
+                          stages: [],
+                          atomicity: 'atomic',
+                        },
+                      ],
+                    }
+                  : {}),
+              });
+              const state = makeState();
+              const result = resolveActionApplicabilityPreflight({
+                def,
+                state,
+                action: def.actions[0]!,
+                adjacencyGraph: buildAdjacencyGraph(def.zones),
+                decisionPlayer: state.activePlayer,
+                bindings: {
+                  $actorOwner: asPlayerId(0),
+                  $execOwner: asPlayerId(1),
+                },
+              });
+
+              const expected = (() => {
+                const selectorContractViolations: Array<{
+                  role: 'actor' | 'executor';
+                  kind: 'bindingNotDeclared' | 'bindingWithPipelineUnsupported';
+                  binding: string;
+                }> = [];
+                if (actorUsesBinding && !actorDeclared) {
+                  selectorContractViolations.push({
+                    role: 'actor',
+                    kind: 'bindingNotDeclared',
+                    binding: '$actorOwner',
+                  });
+                }
+                if (executorUsesBinding && !executorDeclared) {
+                  selectorContractViolations.push({
+                    role: 'executor',
+                    kind: 'bindingNotDeclared',
+                    binding: '$execOwner',
+                  });
+                }
+                if (executorUsesBinding && hasPipeline) {
+                  selectorContractViolations.push({
+                    role: 'executor',
+                    kind: 'bindingWithPipelineUnsupported',
+                    binding: '$execOwner',
+                  });
+                }
+                if (selectorContractViolations.length > 0) {
+                  const primary = selectorContractViolations[0]!;
+                  return {
+                    kind: 'invalidSpec' as const,
+                    selector: primary.role,
+                    error: primary,
+                    selectorContractViolations,
+                  };
+                }
+                return null;
+              })();
+
+              if (expected === null) {
+                assert.equal(result.kind, 'applicable');
+              } else {
+                assert.deepEqual(
+                  result,
+                  expected,
+                  `actorUsesBinding=${actorUsesBinding} executorUsesBinding=${executorUsesBinding} actorDeclared=${actorDeclared} executorDeclared=${executorDeclared} hasPipeline=${hasPipeline}`,
+                );
+              }
+            }
+          }
+        }
+      }
     }
   });
 
@@ -312,6 +427,13 @@ describe('resolveActionApplicabilityPreflight()', () => {
         kind: 'bindingWithPipelineUnsupported',
         binding: '$owner',
       },
+      selectorContractViolations: [
+        {
+          role: 'executor',
+          kind: 'bindingWithPipelineUnsupported',
+          binding: '$owner',
+        },
+      ],
     });
   });
 });

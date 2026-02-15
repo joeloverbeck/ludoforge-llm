@@ -192,7 +192,13 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
     if (preflight.kind === 'invalidSpec') {
-      throw selectorInvalidSpecError('legalMoves', preflight.selector, action, preflight.error);
+      throw selectorInvalidSpecError(
+        'legalMoves',
+        preflight.selector,
+        action,
+        preflight.error,
+        preflight.selectorContractViolations,
+      );
     }
 
     const eventMoves = enumerateCurrentEventMoves(action, def, state);

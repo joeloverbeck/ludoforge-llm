@@ -1,7 +1,10 @@
 import { resolveActionActor } from './action-actor.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionPipelineDispatch, type ActionPipelineDispatch } from './apply-move-pipeline.js';
-import { evaluateActionSelectorContracts } from './action-selector-contract-registry.js';
+import {
+  evaluateActionSelectorContracts,
+  type ActionSelectorContractViolation,
+} from './action-selector-contract-registry.js';
 import { createCollector } from './execution-collector.js';
 import type { EvalContext } from './eval-context.js';
 import type { AdjacencyGraph } from './spatial.js';
@@ -29,6 +32,7 @@ export type ActionApplicabilityPreflightResult =
       readonly kind: 'invalidSpec';
       readonly selector: 'actor' | 'executor';
       readonly error: unknown;
+      readonly selectorContractViolations?: readonly ActionSelectorContractViolation[];
     };
 
 interface ActionApplicabilityPreflightInput {
@@ -91,7 +95,12 @@ export const resolveActionApplicabilityPreflight = ({
   });
   if (selectorContractViolations.length > 0) {
     const violation = selectorContractViolations[0]!;
-    return { kind: 'invalidSpec', selector: violation.role, error: violation };
+    return {
+      kind: 'invalidSpec',
+      selector: violation.role,
+      error: violation,
+      selectorContractViolations: selectorContractViolations,
+    };
   }
 
   if (!skipPhaseCheck && action.phase !== state.currentPhase) {

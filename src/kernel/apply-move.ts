@@ -357,7 +357,13 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
       : {}),
   });
   if (preflight.kind === 'invalidSpec') {
-    throw selectorInvalidSpecError('applyMove', preflight.selector, action, preflight.error);
+    throw selectorInvalidSpecError(
+      'applyMove',
+      preflight.selector,
+      action,
+      preflight.error,
+      preflight.selectorContractViolations,
+    );
   }
   if (preflight.kind === 'notApplicable') {
     if (preflight.reason === 'actorNotApplicable') {

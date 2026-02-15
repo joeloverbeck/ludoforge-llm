@@ -194,6 +194,92 @@ phase: 'main',
     ]);
   });
 
+  it('covers compiler selector-contract matrix with deterministic diagnostic ordering', () => {
+    for (const actorUsesBinding of [false, true] as const) {
+      for (const executorUsesBinding of [false, true] as const) {
+        for (const actorDeclared of [false, true] as const) {
+          for (const executorDeclared of [false, true] as const) {
+            for (const hasPipeline of [false, true] as const) {
+              const params = [
+                ...(actorUsesBinding && actorDeclared ? [{ name: '$actorOwner', domain: { query: 'players' as const } }] : []),
+                ...(executorUsesBinding && executorDeclared ? [{ name: '$execOwner', domain: { query: 'players' as const } }] : []),
+              ];
+              const doc = {
+                ...createEmptyGameSpecDoc(),
+                metadata: { id: 'action-selector-contract-matrix', players: { min: 2, max: 2 } },
+                zones: [{ id: 'pool', owner: 'none', visibility: 'public', ordering: 'set' }],
+                turnStructure: { phases: [{ id: 'main' }] },
+                actions: [
+                  {
+                    id: 'assign',
+                    actor: actorUsesBinding ? '$actorOwner' : 'active',
+                    executor: executorUsesBinding ? '$execOwner' : 'actor',
+                    phase: 'main',
+                    params,
+                    pre: null,
+                    cost: [],
+                    effects: [],
+                    limits: [],
+                  },
+                ],
+                ...(hasPipeline
+                  ? {
+                      actionPipelines: [
+                        {
+                          id: 'p',
+                          actionId: 'assign',
+                          legality: null,
+                          costValidation: null,
+                          costEffects: [],
+                          targeting: {},
+                          stages: [{ effects: [] }],
+                          atomicity: 'atomic' as const,
+                        },
+                      ],
+                    }
+                  : {}),
+                terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+              };
+
+              const result = compileGameSpecToGameDef(doc);
+              const codesByPath = result.diagnostics
+                .filter((d) =>
+                  [
+                    'CNL_COMPILER_ACTION_ACTOR_BINDING_MISSING',
+                    'CNL_COMPILER_ACTION_EXECUTOR_BINDING_MISSING',
+                    'CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED',
+                  ].includes(d.code),
+                )
+                .map((d) => `${d.path}:${d.code}`);
+
+              const expected: string[] = [];
+              if (actorUsesBinding && !actorDeclared) {
+                expected.push('doc.actions.0.actor:CNL_COMPILER_ACTION_ACTOR_BINDING_MISSING');
+              }
+              if (executorUsesBinding && !executorDeclared) {
+                expected.push('doc.actions.0.executor:CNL_COMPILER_ACTION_EXECUTOR_BINDING_MISSING');
+              }
+              if (
+                executorUsesBinding &&
+                hasPipeline &&
+                (!actorUsesBinding || actorDeclared) &&
+                executorDeclared
+              ) {
+                expected.push('doc.actions.0.executor:CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED');
+              }
+
+              assert.deepEqual(
+                codesByPath,
+                expected,
+                `actorUsesBinding=${actorUsesBinding} executorUsesBinding=${executorUsesBinding} actorDeclared=${actorDeclared} executorDeclared=${executorDeclared} hasPipeline=${hasPipeline}`,
+              );
+            }
+          }
+        }
+      }
+    }
+  });
+
   it('rejects binding-derived executor for pipelined actions', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

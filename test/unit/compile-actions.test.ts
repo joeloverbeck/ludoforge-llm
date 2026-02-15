@@ -78,6 +78,33 @@ phase: 'main',
     assert.deepEqual(result.gameDef?.actions[0]?.executor, { chosen: '$owner' });
   });
 
+  it('accepts binding-derived actor when binding is declared action param', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-actor-binding-compile', players: { min: 2, max: 2 } },
+      zones: [{ id: 'pool', owner: 'none', visibility: 'public', ordering: 'set' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'assign',
+          actor: '$owner',
+          executor: 'actor',
+          phase: 'main',
+          params: [{ name: '$owner', domain: { query: 'players' } }],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.gameDef?.actions[0]?.actor, { chosen: '$owner' });
+  });
+
   it('rejects binding-derived executor when binding is not declared in action params', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),
@@ -103,6 +130,68 @@ phase: 'main',
     const result = compileGameSpecToGameDef(doc);
     assert.equal(result.gameDef, null);
     assert.equal(result.diagnostics.some((d) => d.code === 'CNL_COMPILER_ACTION_EXECUTOR_BINDING_MISSING'), true);
+  });
+
+  it('rejects binding-derived actor when binding is not declared in action params', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-actor-binding-missing', players: { min: 2, max: 2 } },
+      zones: [{ id: 'pool', owner: 'none', visibility: 'public', ordering: 'set' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'assign',
+          actor: '$owner',
+          executor: 'actor',
+          phase: 'main',
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    assert.equal(result.diagnostics.some((d) => d.code === 'CNL_COMPILER_ACTION_ACTOR_BINDING_MISSING'), true);
+  });
+
+  it('emits deterministic actor/executor binding diagnostics when both are missing', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-actor-executor-binding-missing', players: { min: 2, max: 2 } },
+      zones: [{ id: 'pool', owner: 'none', visibility: 'public', ordering: 'set' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'assign',
+          actor: '$actorOwner',
+          executor: '$execOwner',
+          phase: 'main',
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    const codesByPath = result.diagnostics
+      .filter(
+        (d) => d.code === 'CNL_COMPILER_ACTION_ACTOR_BINDING_MISSING' || d.code === 'CNL_COMPILER_ACTION_EXECUTOR_BINDING_MISSING',
+      )
+      .map((d) => `${d.path}:${d.code}`);
+    assert.deepEqual(codesByPath, [
+      'doc.actions.0.actor:CNL_COMPILER_ACTION_ACTOR_BINDING_MISSING',
+      'doc.actions.0.executor:CNL_COMPILER_ACTION_EXECUTOR_BINDING_MISSING',
+    ]);
   });
 
   it('rejects binding-derived executor for pipelined actions', () => {

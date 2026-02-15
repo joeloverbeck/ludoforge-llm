@@ -263,11 +263,20 @@ export function lowerActions(
     });
     diagnostics.push(
       ...selectorContractViolations.map((violation) => ({
-        code: getActionSelectorContract(violation.role).missingBindingDiagnosticCode,
+        code:
+          violation.kind === 'bindingMalformed'
+            ? getActionSelectorContract(violation.role).malformedBindingDiagnosticCode
+            : getActionSelectorContract(violation.role).missingBindingDiagnosticCode,
         path: `${path}.${violation.role}`,
         severity: 'error' as const,
-        message: `Action ${violation.role} binding "${violation.binding}" is not declared in action params.`,
-        suggestion: `Declare a matching action param (for example name: "$owner") or use a non-binding ${violation.role} selector.`,
+        message:
+          violation.kind === 'bindingMalformed'
+            ? `Action ${violation.role} binding "${violation.binding}" must be a canonical "$name" token.`
+            : `Action ${violation.role} binding "${violation.binding}" is not declared in action params.`,
+        suggestion:
+          violation.kind === 'bindingMalformed'
+            ? `Use a canonical selector binding token like "$owner".`
+            : `Declare a matching action param (for example name: "$owner") or use a non-binding ${violation.role} selector.`,
       })),
     );
     const pre = lowerOptionalCondition(action.pre, ownershipByBase, bindingScope, diagnostics, `${path}.pre`, tokenTraitVocabulary);

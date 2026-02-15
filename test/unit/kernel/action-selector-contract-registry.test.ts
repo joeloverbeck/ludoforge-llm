@@ -64,6 +64,25 @@ describe('action selector contract registry', () => {
     ]);
   });
 
+  it('reports malformed selector binding identifiers in deterministic role order', () => {
+    const violations = evaluateActionSelectorContracts({
+      selectors: {
+        actor: { chosen: 'actorOwner' },
+        executor: { chosen: 'execOwner' },
+      },
+      declaredBindings: ['actorOwner', 'execOwner'],
+      hasPipeline: false,
+      enforcePipelineBindingCompatibility: false,
+    });
+
+    assert.deepEqual(violations, [
+      { role: 'actor', kind: 'bindingMalformed', binding: 'actorOwner' },
+      { role: 'executor', kind: 'bindingMalformed', binding: 'execOwner' },
+    ]);
+    assert.equal(getActionSelectorContract('actor').malformedBindingDiagnosticCode, 'CNL_COMPILER_ACTION_ACTOR_BINDING_INVALID');
+    assert.equal(getActionSelectorContract('executor').malformedBindingDiagnosticCode, 'CNL_COMPILER_ACTION_EXECUTOR_BINDING_INVALID');
+  });
+
   it('reports binding-derived pipelined executor incompatibility', () => {
     const violations = evaluateActionSelectorContracts({
       selectors: {

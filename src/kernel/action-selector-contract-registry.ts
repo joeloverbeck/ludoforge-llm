@@ -1,9 +1,11 @@
 import type { PlayerSel } from './types.js';
+import { isCanonicalSelectorBindingIdentifier } from './binding-identifier-contract.js';
 import { ACTION_EXECUTOR_SELECTOR_SUGGESTION, PLAYER_SELECTOR_SUGGESTION } from './player-selector-vocabulary.js';
 
 export type ActionSelectorRole = 'actor' | 'executor';
 
 export type ActionSelectorContractViolationKind =
+  | 'bindingMalformed'
   | 'bindingNotDeclared'
   | 'bindingWithPipelineUnsupported';
 
@@ -17,6 +19,7 @@ interface ActionSelectorContract {
   readonly role: ActionSelectorRole;
   readonly cardinality: 'single' | 'multi';
   readonly invalidSelectorSuggestion: string;
+  readonly malformedBindingDiagnosticCode: string;
   readonly missingBindingDiagnosticCode: string;
   readonly bindingWithPipelineUnsupportedDiagnosticCode?: string;
 }
@@ -28,12 +31,14 @@ const ACTION_SELECTOR_CONTRACTS: Readonly<Record<ActionSelectorRole, ActionSelec
     role: 'actor',
     cardinality: 'multi',
     invalidSelectorSuggestion: PLAYER_SELECTOR_SUGGESTION,
+    malformedBindingDiagnosticCode: 'CNL_COMPILER_ACTION_ACTOR_BINDING_INVALID',
     missingBindingDiagnosticCode: 'CNL_COMPILER_ACTION_ACTOR_BINDING_MISSING',
   },
   executor: {
     role: 'executor',
     cardinality: 'single',
     invalidSelectorSuggestion: ACTION_EXECUTOR_SELECTOR_SUGGESTION,
+    malformedBindingDiagnosticCode: 'CNL_COMPILER_ACTION_EXECUTOR_BINDING_INVALID',
     missingBindingDiagnosticCode: 'CNL_COMPILER_ACTION_EXECUTOR_BINDING_MISSING',
     bindingWithPipelineUnsupportedDiagnosticCode: 'CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED',
   },
@@ -73,6 +78,10 @@ export const evaluateActionSelectorContracts = ({
     const selector = selectors[role];
     const binding = resolveSelectorBindingToken(selector);
     if (binding === null) {
+      continue;
+    }
+    if (!isCanonicalSelectorBindingIdentifier(binding)) {
+      violations.push({ role, kind: 'bindingMalformed', binding });
       continue;
     }
 

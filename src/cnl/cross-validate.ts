@@ -65,20 +65,29 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         enforceBindingDeclaration: false,
       });
       for (const violation of selectorContractViolations) {
-        if (violation.kind !== 'bindingWithPipelineUnsupported') {
+        if (violation.kind === 'bindingMalformed') {
+          diagnostics.push({
+            code: getActionSelectorContract(violation.role).malformedBindingDiagnosticCode,
+            path: `doc.actions.${actionIndex}.${violation.role}`,
+            severity: 'error',
+            message: `Action "${String(action.id)}" uses malformed ${violation.role} binding "${violation.binding}".`,
+            suggestion: 'Use a canonical selector binding token like "$owner".',
+          });
           continue;
         }
-        const code = getActionSelectorContract(violation.role).bindingWithPipelineUnsupportedDiagnosticCode;
-        if (code === undefined) {
-          continue;
+        if (violation.kind === 'bindingWithPipelineUnsupported') {
+          const code = getActionSelectorContract(violation.role).bindingWithPipelineUnsupportedDiagnosticCode;
+          if (code === undefined) {
+            continue;
+          }
+          diagnostics.push({
+            code,
+            path: `doc.actions.${actionIndex}.${violation.role}`,
+            severity: 'error',
+            message: `Action "${String(action.id)}" uses binding-derived ${violation.role} "${violation.binding}" with action pipelines.`,
+            suggestion: `Use actor/active/id/relative ${violation.role} selectors for pipelined actions.`,
+          });
         }
-        diagnostics.push({
-          code,
-          path: `doc.actions.${actionIndex}.${violation.role}`,
-          severity: 'error',
-          message: `Action "${String(action.id)}" uses binding-derived ${violation.role} "${violation.binding}" with action pipelines.`,
-          suggestion: `Use actor/active/id/relative ${violation.role} selectors for pipelined actions.`,
-        });
       }
     }
   }

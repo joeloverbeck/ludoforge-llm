@@ -154,6 +154,25 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "act"?');
   });
 
+  it('pipelined action with malformed actor binding emits canonical binding-invalid diagnostic', () => {
+    const sections = compileRichSections();
+    const action = requireValue(sections.actions?.[0]);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      actions: [
+        {
+          ...action,
+          actor: { chosen: 'owner' },
+        },
+      ],
+    });
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_COMPILER_ACTION_ACTOR_BINDING_INVALID');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.actions.0.actor');
+    assert.equal(diagnostic?.message, 'Action "act" uses malformed actor binding "owner".');
+  });
+
   it('victory checkpoint referencing nonexistent faction emits CNL_XREF_VICTORY_FACTION_MISSING', () => {
     const sections = compileRichSections();
     const checkpoint = requireValue(sections.terminal?.checkpoints?.[0]);

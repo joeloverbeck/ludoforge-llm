@@ -51,6 +51,9 @@ describe('FITL production data integration compilation', () => {
 
     // Compilation must succeed (gameDef non-null)
     assert.notEqual(compiled.gameDef, null, 'Expected gameDef to compile successfully');
+    const zoneIds = new Set((compiled.gameDef?.zones ?? []).map((zone) => String(zone.id)));
+    assert.equal(zoneIds.has('out-of-play-US:none'), true, 'Expected explicit US out-of-play pool zone');
+    assert.equal(zoneIds.has('out-of-play-ARVN:none'), true, 'Expected explicit ARVN out-of-play pool zone');
     assert.equal(compiled.gameDef?.turnOrder?.type, 'cardDriven', 'Production FITL should declare cardDriven turnOrder');
     if (compiled.gameDef?.turnOrder?.type === 'cardDriven') {
       assert.deepEqual(compiled.gameDef.turnOrder.config.turnFlow.cardLifecycle, {

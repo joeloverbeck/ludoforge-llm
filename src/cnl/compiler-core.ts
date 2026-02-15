@@ -261,7 +261,8 @@ function compileExpandedDoc(
   const setup = compileSection(diagnostics, () =>
     lowerEffectsWithDiagnostics(doc.setup ?? [], ownershipByBase, diagnostics, 'doc.setup'),
   );
-  sections.setup = setup.failed ? null : setup.value;
+  const mergedSetup = [...derivedFromAssets.scenarioSetupEffects, ...setup.value];
+  sections.setup = setup.failed ? null : mergedSetup;
 
   let turnStructure: GameDef['turnStructure'] | null = null;
   const rawTurnStructure = doc.turnStructure;
@@ -348,7 +349,7 @@ function compileExpandedDoc(
       : { stackingConstraints: derivedFromAssets.stackingConstraints }),
     ...(sections.globalMarkerLattices === null ? {} : { globalMarkerLattices: sections.globalMarkerLattices }),
     tokenTypes: tokenTypes.value,
-    setup: setup.value,
+    setup: mergedSetup,
     turnStructure,
     ...(sections.turnOrder === null ? {} : { turnOrder: sections.turnOrder }),
     ...(sections.actionPipelines === null ? {} : { actionPipelines: sections.actionPipelines }),

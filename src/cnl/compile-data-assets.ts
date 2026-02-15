@@ -1,10 +1,12 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
 import type {
+  EffectAST,
   MapPayload,
   MapSpaceDef,
   NumericTrackDef,
   PieceCatalogPayload,
+  PieceStatusDimension,
   ScenarioPayload,
   SpaceMarkerLatticeDef,
   SpaceMarkerValueDef,
@@ -28,6 +30,7 @@ export function deriveSectionsFromDataAssets(
   readonly markerLattices: readonly SpaceMarkerLatticeDef[] | null;
   readonly spaceMarkers: readonly SpaceMarkerValueDef[] | null;
   readonly stackingConstraints: readonly StackingConstraint[] | null;
+  readonly scenarioSetupEffects: readonly EffectAST[];
   readonly derivationFailures: {
     readonly map: boolean;
     readonly pieceCatalog: boolean;
@@ -43,6 +46,7 @@ export function deriveSectionsFromDataAssets(
       markerLattices: null,
       spaceMarkers: null,
       stackingConstraints: null,
+      scenarioSetupEffects: [],
       derivationFailures: {
         map: false,
         pieceCatalog: false,
@@ -53,6 +57,7 @@ export function deriveSectionsFromDataAssets(
   const mapAssets: Array<{ readonly id: string; readonly payload: MapPayload }> = [];
   const pieceCatalogAssets: Array<{ readonly id: string; readonly payload: PieceCatalogPayload }> = [];
   const scenarioRefs: Array<{
+    readonly payload: ScenarioPayload;
     readonly mapAssetId?: string;
     readonly pieceCatalogAssetId?: string;
     readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number }>;
@@ -107,6 +112,7 @@ export function deriveSectionsFromDataAssets(
           ? payload.pieceCatalogAssetId.trim()
           : undefined;
       scenarioRefs.push({
+        payload,
         ...(mapAssetId === undefined ? {} : { mapAssetId }),
         ...(pieceCatalogAssetId === undefined ? {} : { pieceCatalogAssetId }),
         ...(payload.initialTrackValues === undefined ? {} : { initialTrackValues: payload.initialTrackValues }),
@@ -160,11 +166,22 @@ export function deriveSectionsFromDataAssets(
       : selectedPieceCatalog.payload.pieceTypes.map((pieceType) => ({
           id: pieceType.id,
           props: Object.fromEntries(
-            [...pieceType.statusDimensions]
-              .sort((left, right) => left.localeCompare(right))
-              .map((dimension) => [dimension, 'string']),
+            Object.entries({
+              ...(pieceType.runtimeProps === undefined ? {} : inferRuntimePropSchema(pieceType.runtimeProps)),
+              ...Object.fromEntries(
+                [...pieceType.statusDimensions]
+                  .sort((left, right) => left.localeCompare(right))
+                  .map((dimension) => [dimension, 'string']),
+              ),
+            }),
           ),
         }));
+
+  const scenarioSetupEffects = buildScenarioSetupEffects({
+    selectedScenario,
+    selectedPieceCatalog,
+    diagnostics,
+  });
 
   return {
     zones,
@@ -175,6 +192,7 @@ export function deriveSectionsFromDataAssets(
     markerLattices: selectedMap?.payload.markerLattices ?? null,
     spaceMarkers: selectedMap?.payload.spaceMarkers ?? null,
     stackingConstraints: selectedMap?.payload.stackingConstraints ?? null,
+    scenarioSetupEffects,
     derivationFailures: {
       map: mapDerivationFailed,
       pieceCatalog: pieceCatalogDerivationFailed,
@@ -184,6 +202,7 @@ export function deriveSectionsFromDataAssets(
 
 function selectScenarioRef(
   scenarios: ReadonlyArray<{
+    readonly payload: ScenarioPayload;
     readonly mapAssetId?: string;
     readonly pieceCatalogAssetId?: string;
     readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number }>;
@@ -195,6 +214,7 @@ function selectScenarioRef(
 ): {
   readonly selected:
     | {
+        readonly payload: ScenarioPayload;
         readonly mapAssetId?: string;
         readonly pieceCatalogAssetId?: string;
         readonly initialTrackValues?: ReadonlyArray<{ readonly trackId: string; readonly value: number }>;
@@ -248,6 +268,161 @@ function selectScenarioRef(
     failed: true,
   };
 }
+
+const inferRuntimePropSchema = (
+  runtimeProps: Readonly<Record<string, string | number | boolean>>,
+): Readonly<Record<string, 'string' | 'int' | 'boolean'>> =>
+  Object.fromEntries(
+    Object.entries(runtimeProps).map(([key, value]) => [
+      key,
+      typeof value === 'number' ? 'int' : typeof value === 'boolean' ? 'boolean' : 'string',
+    ]),
+  );
+
+interface ScenarioSetupContext {
+  readonly selectedScenario:
+    | {
+        readonly payload: ScenarioPayload;
+        readonly path: string;
+      }
+    | undefined;
+  readonly selectedPieceCatalog:
+    | {
+        readonly payload: PieceCatalogPayload;
+      }
+    | undefined;
+  readonly diagnostics: Diagnostic[];
+}
+
+const buildScenarioSetupEffects = ({
+  selectedScenario,
+  selectedPieceCatalog,
+  diagnostics,
+}: ScenarioSetupContext): readonly EffectAST[] => {
+  if (selectedScenario === undefined || selectedPieceCatalog === undefined) {
+    return [];
+  }
+
+  const scenario = selectedScenario.payload;
+  if ((scenario.factionPools ?? []).length === 0) {
+    return [];
+  }
+  const pieceTypesById = new Map(selectedPieceCatalog.payload.pieceTypes.map((pieceType) => [pieceType.id, pieceType]));
+  const inventoryByPieceType = new Map<string, number>();
+  for (const entry of selectedPieceCatalog.payload.inventory) {
+    inventoryByPieceType.set(entry.pieceTypeId, (inventoryByPieceType.get(entry.pieceTypeId) ?? 0) + entry.total);
+  }
+
+  const poolByFaction = new Map((scenario.factionPools ?? []).map((pool) => [pool.faction, pool]));
+  const effects: EffectAST[] = [];
+  const usedByPieceType = new Map<string, number>();
+
+  for (const placement of scenario.initialPlacements ?? []) {
+    const pieceType = pieceTypesById.get(placement.pieceTypeId);
+    if (pieceType === undefined) {
+      continue;
+    }
+    const props = resolveScenarioTokenProps(pieceType, placement.status);
+    for (let index = 0; index < placement.count; index += 1) {
+      effects.push({
+        createToken: {
+          type: placement.pieceTypeId,
+          zone: placement.spaceId,
+          ...(Object.keys(props).length === 0 ? {} : { props }),
+        },
+      });
+    }
+    usedByPieceType.set(placement.pieceTypeId, (usedByPieceType.get(placement.pieceTypeId) ?? 0) + placement.count);
+  }
+
+  for (const [index, outOfPlay] of (scenario.outOfPlay ?? []).entries()) {
+    const pieceType = pieceTypesById.get(outOfPlay.pieceTypeId);
+    if (pieceType === undefined) {
+      continue;
+    }
+    const pool = poolByFaction.get(outOfPlay.faction);
+    if (pool?.outOfPlayZoneId === undefined) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_SCENARIO_OUT_OF_PLAY_POOL_MISSING',
+        path: `${selectedScenario.path}.outOfPlay.${index}.faction`,
+        severity: 'error',
+        message: `Scenario outOfPlay entry references faction "${outOfPlay.faction}" without an out-of-play zone mapping.`,
+        suggestion: 'Add payload.factionPools entry with outOfPlayZoneId for this faction.',
+      });
+      continue;
+    }
+
+    const props = resolveScenarioTokenProps(pieceType, undefined);
+    for (let count = 0; count < outOfPlay.count; count += 1) {
+      effects.push({
+        createToken: {
+          type: outOfPlay.pieceTypeId,
+          zone: pool.outOfPlayZoneId,
+          ...(Object.keys(props).length === 0 ? {} : { props }),
+        },
+      });
+    }
+    usedByPieceType.set(outOfPlay.pieceTypeId, (usedByPieceType.get(outOfPlay.pieceTypeId) ?? 0) + outOfPlay.count);
+  }
+
+  for (const [pieceTypeId, total] of inventoryByPieceType.entries()) {
+    const pieceType = pieceTypesById.get(pieceTypeId);
+    if (pieceType === undefined) {
+      continue;
+    }
+    const used = usedByPieceType.get(pieceTypeId) ?? 0;
+    const remaining = Math.max(0, total - used);
+    if (remaining === 0) {
+      continue;
+    }
+    const pool = poolByFaction.get(pieceType.faction);
+    if (pool?.availableZoneId === undefined) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_SCENARIO_AVAILABLE_POOL_MISSING',
+        path: `${selectedScenario.path}.factionPools`,
+        severity: 'error',
+        message: `Scenario is missing available pool mapping for faction "${pieceType.faction}" (pieceType "${pieceTypeId}").`,
+        suggestion: 'Add payload.factionPools entries with availableZoneId for each faction used by piece catalog inventory.',
+      });
+      continue;
+    }
+    const props = resolveScenarioTokenProps(pieceType, undefined);
+    for (let count = 0; count < remaining; count += 1) {
+      effects.push({
+        createToken: {
+          type: pieceTypeId,
+          zone: pool.availableZoneId,
+          ...(Object.keys(props).length === 0 ? {} : { props }),
+        },
+      });
+    }
+  }
+
+  return effects;
+};
+
+const defaultStatusForDimension = (dimension: PieceStatusDimension): string =>
+  dimension === 'activity' ? 'underground' : 'untunneled';
+
+const resolveScenarioTokenProps = (
+  pieceType: PieceCatalogPayload['pieceTypes'][number],
+  status: Readonly<Record<string, string>> | undefined,
+): Readonly<Record<string, string | number | boolean>> => {
+  const props: Record<string, string | number | boolean> = {
+    ...(pieceType.runtimeProps ?? {}),
+  };
+  for (const dimension of pieceType.statusDimensions) {
+    if (!(dimension in props)) {
+      props[dimension] = defaultStatusForDimension(dimension);
+    }
+  }
+  if (status !== undefined) {
+    for (const [key, value] of Object.entries(status)) {
+      props[key] = value;
+    }
+  }
+  return props;
+};
 
 function selectAssetById<TPayload>(
   assets: ReadonlyArray<{ readonly id: string; readonly payload: TPayload }>,

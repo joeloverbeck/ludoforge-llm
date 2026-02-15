@@ -35,6 +35,14 @@ describe('FITL COIN operations integration', () => {
     factions: readonly string[],
   ): number => (state.zones[space] ?? []).filter((token) => factions.includes(String(token.props.faction))).length;
 
+  const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => {
+    const state = initialState(def, seed, playerCount);
+    return {
+      ...state,
+      zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])) as GameState['zones'],
+    };
+  };
+
   it('compiles COIN Train/Patrol/Sweep/Assault operation profiles from production spec', () => {
     const { parsed, compiled } = compileProductionSpec();
 
@@ -63,7 +71,7 @@ describe('FITL COIN operations integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
-    const start = initialState(def, 73, 2);
+    const start = operationInitialState(def, 73, 2);
     const space = 'quang-nam:none';
 
     const modifiedStart: GameState = {
@@ -130,7 +138,7 @@ describe('FITL COIN operations integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
-    const start = initialState(def, 79, 2);
+    const start = operationInitialState(def, 79, 2);
 
     const targetSpace = 'quang-nam:none';
     const sourceSpace = 'da-nang:none';
@@ -442,7 +450,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = initialState(def, 97, 2);
+      const start = operationInitialState(def, 97, 2);
       const sourceSpace = 'saigon:none';
       const targetSpace = 'tay-ninh:none';
       const troopId = 'arvn-sweep-freeop-1';
@@ -466,14 +474,13 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(template, 'Expected template move for sweep');
 
+      const stateWithGrant = withPendingFreeOperationGrant(modifiedStart, { actionIds: ['sweep'] });
       const selected = completeProfileMoveDeterministically(
         { ...template!, freeOperation: true, actionClass: 'limitedOperation' },
         chooseSweepArvnParams(targetSpace, [troopId]),
         def,
-        modifiedStart,
+        stateWithGrant,
       );
-
-      const stateWithGrant = withPendingFreeOperationGrant(modifiedStart, { actionIds: ['sweep'] });
       const beforeArvnResources = Number(stateWithGrant.globalVars.arvnResources);
       const result = applyMove(def, stateWithGrant, selected);
       const final = result.state;
@@ -489,7 +496,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = initialState(def, 101, 2);
+      const start = operationInitialState(def, 101, 2);
       const sourceSpace = 'saigon:none';
       const targetSpace = 'tay-ninh:none';
       const movingTroopIds = ['arvn-sweep-jungle-move-1', 'arvn-sweep-jungle-move-2'];
@@ -969,7 +976,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = initialState(def, 91, 2);
+      const start = operationInitialState(def, 91, 2);
       const space = 'quang-nam:none';
 
       const modifiedStart: GameState = {
@@ -1024,7 +1031,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = initialState(def, 92, 2);
+      const start = operationInitialState(def, 92, 2);
       const space = 'quang-tin-quang-ngai:none';
 
       const modifiedStart: GameState = {
@@ -1078,7 +1085,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = initialState(def, 93, 2);
+      const start = operationInitialState(def, 93, 2);
       const space = 'quang-tin-quang-ngai:none';
 
       const modifiedStart: GameState = {
@@ -1128,7 +1135,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = initialState(def, 94, 2);
+      const start = operationInitialState(def, 94, 2);
       const space = 'quang-nam:none';
 
       const modifiedStart: GameState = {
@@ -1300,7 +1307,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = initialState(def, 96, 2);
+      const start = operationInitialState(def, 96, 2);
       const space = 'quang-tin-quang-ngai:none';
 
       const modifiedStart: GameState = {
@@ -1323,6 +1330,7 @@ describe('FITL COIN operations integration', () => {
 
       const template = legalMoves(def, modifiedStart).find((move) => move.actionId === asActionId('assault'));
       assert.ok(template, 'Expected ARVN assault template move');
+      const stateWithGrant = withPendingFreeOperationGrant(modifiedStart, { actionIds: ['assault'] });
       const selected = completeProfileMoveDeterministically(
         { ...template!, freeOperation: true, actionClass: 'limitedOperation' },
         (request) => {
@@ -1330,10 +1338,8 @@ describe('FITL COIN operations integration', () => {
           return pickDeterministicDecisionValue(request);
         },
         def,
-        modifiedStart,
+        stateWithGrant,
       );
-
-      const stateWithGrant = withPendingFreeOperationGrant(modifiedStart, { actionIds: ['assault'] });
       const beforeArvnResources = stateWithGrant.globalVars.arvnResources;
       const final = applyMove(def, stateWithGrant, selected).state;
       assert.equal(final.globalVars.arvnResources, beforeArvnResources, 'Free ARVN Assault should skip per-space cost');
@@ -1348,7 +1354,7 @@ describe('FITL COIN operations integration', () => {
       const { compiled } = compileProductionSpec();
       assert.notEqual(compiled.gameDef, null);
       const def = compiled.gameDef!;
-      const start = initialState(def, 97, 2);
+      const start = operationInitialState(def, 97, 2);
       const citySpace = 'hue:none';
       const highlandSpace = 'quang-nam:none';
 

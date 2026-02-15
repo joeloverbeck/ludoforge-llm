@@ -31,6 +31,11 @@ describe('FITL Domino Theory event-card production spec', () => {
     const returnBranchTargets = domino?.unshaded?.branches?.[0]?.targets;
     assert.deepEqual(returnBranchTargets?.map((target) => target.id), ['us-out-of-play', 'arvn-out-of-play']);
     assert.deepEqual(returnBranchTargets?.map((target) => target.cardinality), [{ max: 3 }, { max: 6 }]);
+    const returnBranchEffects = domino?.unshaded?.branches?.[0]?.effects ?? [];
+    const usReturn = returnBranchEffects.find((effect) => 'removeByPriority' in effect && effect.removeByPriority.budget === 3);
+    const arvnReturn = returnBranchEffects.find((effect) => 'removeByPriority' in effect && effect.removeByPriority.budget === 6);
+    assert.notEqual(usReturn, undefined);
+    assert.notEqual(arvnReturn, undefined);
 
     const shadedTargets = domino?.shaded?.targets;
     assert.equal(shadedTargets?.[0]?.id, 'us-troops-available');

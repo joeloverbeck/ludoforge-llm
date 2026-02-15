@@ -7,10 +7,14 @@ import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-help
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const ATTACK_SPACE = 'quang-tri-thua-thien:none';
-const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => ({
-  ...initialState(def, seed, playerCount),
-  turnOrderState: { type: 'roundRobin' },
-});
+const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => {
+  const state = initialState(def, seed, playerCount);
+  return {
+    ...state,
+    zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])) as GameState['zones'],
+    turnOrderState: { type: 'roundRobin' },
+  };
+};
 
 const hasRollRandom = (effects: readonly EffectAST[]): boolean =>
   effects.some((effect) => {

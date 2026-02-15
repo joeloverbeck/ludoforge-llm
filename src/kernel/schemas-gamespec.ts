@@ -32,6 +32,7 @@ export const PieceTypeCatalogEntrySchema = z
     faction: StringSchema.min(1),
     statusDimensions: z.array(PieceStatusDimensionSchema),
     transitions: z.array(PieceStatusTransitionSchema),
+    runtimeProps: z.record(StringSchema, z.union([StringSchema, NumberSchema, BooleanSchema])).optional(),
     visual: PieceVisualMetadataSchema.optional(),
   })
   .strict();
@@ -216,6 +217,17 @@ export const ScenarioPayloadSchema = z
             pieceTypeId: StringSchema.min(1),
             faction: StringSchema.min(1),
             count: IntegerSchema.positive(),
+          })
+          .strict(),
+      )
+      .optional(),
+    factionPools: z
+      .array(
+        z
+          .object({
+            faction: StringSchema.min(1),
+            availableZoneId: StringSchema.min(1),
+            outOfPlayZoneId: StringSchema.min(1).optional(),
           })
           .strict(),
       )

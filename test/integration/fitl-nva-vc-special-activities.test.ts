@@ -10,11 +10,15 @@ const operationInitialState = (
   def: Parameters<typeof initialState>[0],
   seed: number,
   playerCount: number,
-): GameState => ({
-  ...initialState(def, seed, playerCount),
-  activePlayer: asPlayerId(2),
-  turnOrderState: { type: 'roundRobin' },
-});
+): GameState => {
+  const state = initialState(def, seed, playerCount);
+  return {
+    ...state,
+    activePlayer: asPlayerId(2),
+    zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])) as GameState['zones'],
+    turnOrderState: { type: 'roundRobin' },
+  };
+};
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),

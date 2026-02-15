@@ -23,10 +23,14 @@ const addTokenToZone = (state: GameState, zoneId: string, token: Token): GameSta
   },
 });
 
-const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => ({
-  ...initialState(def, seed, playerCount),
-  turnOrderState: { type: 'roundRobin' },
-});
+const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => {
+  const state = initialState(def, seed, playerCount);
+  return {
+    ...state,
+    zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])) as GameState['zones'],
+    turnOrderState: { type: 'roundRobin' },
+  };
+};
 
 const withSupportState = (state: GameState, zoneId: string, supportState: string): GameState => ({
   ...state,

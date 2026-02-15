@@ -220,6 +220,7 @@ export interface PieceTypeCatalogEntry {
   readonly faction: string;
   readonly statusDimensions: readonly PieceStatusDimension[];
   readonly transitions: readonly PieceStatusTransition[];
+  readonly runtimeProps?: Readonly<Record<string, string | number | boolean>>;
   readonly visual?: PieceVisualMetadata;
 }
 

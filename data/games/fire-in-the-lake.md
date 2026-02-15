@@ -2190,6 +2190,7 @@ dataAssets:
           faction: us
           statusDimensions: []
           transitions: []
+          runtimeProps: { faction: US, type: troops }
           visual:
             color: olive
             shape: cube
@@ -2197,6 +2198,7 @@ dataAssets:
           faction: us
           statusDimensions: []
           transitions: []
+          runtimeProps: { faction: US, type: base }
           visual:
             color: olive
             shape: round-disk
@@ -2210,6 +2212,7 @@ dataAssets:
             - dimension: activity
               from: active
               to: underground
+          runtimeProps: { faction: US, type: irregular, activity: underground }
           visual:
             color: olive
             shape: cylinder
@@ -2218,6 +2221,7 @@ dataAssets:
           faction: arvn
           statusDimensions: []
           transitions: []
+          runtimeProps: { faction: ARVN, type: troops }
           visual:
             color: yellow
             shape: cube
@@ -2225,6 +2229,7 @@ dataAssets:
           faction: arvn
           statusDimensions: []
           transitions: []
+          runtimeProps: { faction: ARVN, type: police }
           visual:
             color: orange
             shape: cube
@@ -2238,6 +2243,7 @@ dataAssets:
             - dimension: activity
               from: active
               to: underground
+          runtimeProps: { faction: ARVN, type: ranger, activity: underground }
           visual:
             color: yellow
             shape: cylinder
@@ -2246,6 +2252,7 @@ dataAssets:
           faction: arvn
           statusDimensions: []
           transitions: []
+          runtimeProps: { faction: ARVN, type: base }
           visual:
             color: yellow
             shape: round-disk
@@ -2253,6 +2260,7 @@ dataAssets:
           faction: nva
           statusDimensions: []
           transitions: []
+          runtimeProps: { faction: NVA, type: troops }
           visual:
             color: red
             shape: cube
@@ -2266,6 +2274,7 @@ dataAssets:
             - dimension: activity
               from: active
               to: underground
+          runtimeProps: { faction: NVA, type: guerrilla, activity: underground }
           visual:
             color: red
             shape: cylinder
@@ -2280,6 +2289,7 @@ dataAssets:
             - dimension: tunnel
               from: tunneled
               to: untunneled
+          runtimeProps: { faction: NVA, type: base, tunnel: untunneled }
           visual:
             color: red
             shape: round-disk
@@ -2293,6 +2303,7 @@ dataAssets:
             - dimension: activity
               from: active
               to: underground
+          runtimeProps: { faction: VC, type: guerrilla, activity: underground }
           visual:
             color: bright-blue
             shape: cylinder
@@ -2307,6 +2318,7 @@ dataAssets:
             - dimension: tunnel
               from: tunneled
               to: untunneled
+          runtimeProps: { faction: VC, type: base, tunnel: untunneled }
           visual:
             color: bright-blue
             shape: round-disk
@@ -2380,6 +2392,11 @@ dataAssets:
         - { pieceTypeId: "arvn-bases", faction: "arvn", count: 2 }
         - { pieceTypeId: "arvn-troops", faction: "arvn", count: 10 }
         - { pieceTypeId: "arvn-rangers", faction: "arvn", count: 3 }
+      factionPools:
+        - { faction: "us", availableZoneId: "available-US:none", outOfPlayZoneId: "out-of-play-US:none" }
+        - { faction: "arvn", availableZoneId: "available-ARVN:none", outOfPlayZoneId: "out-of-play-ARVN:none" }
+        - { faction: "nva", availableZoneId: "available-NVA:none" }
+        - { faction: "vc", availableZoneId: "available-VC:none" }
       initialMarkers:
         # Passive Support spaces
         - { spaceId: "saigon:none", markerId: "supportOpposition", state: "passiveSupport" }
@@ -2513,6 +2530,11 @@ dataAssets:
         - { pieceTypeId: "us-troops", faction: "us", count: 6 }
         - { pieceTypeId: "arvn-troops", faction: "arvn", count: 10 }
         - { pieceTypeId: "arvn-rangers", faction: "arvn", count: 3 }
+      factionPools:
+        - { faction: "us", availableZoneId: "available-US:none", outOfPlayZoneId: "out-of-play-US:none" }
+        - { faction: "arvn", availableZoneId: "available-ARVN:none", outOfPlayZoneId: "out-of-play-ARVN:none" }
+        - { faction: "nva", availableZoneId: "available-NVA:none" }
+        - { faction: "vc", availableZoneId: "available-VC:none" }
       initialMarkers:
         # Active Support spaces
         - { spaceId: "da-nang:none", markerId: "supportOpposition", state: "activeSupport" }
@@ -2662,6 +2684,11 @@ dataAssets:
         - { pieceTypeId: "us-troops", faction: "us", count: 5 }
         - { pieceTypeId: "arvn-troops", faction: "arvn", count: 10 }
         - { pieceTypeId: "arvn-rangers", faction: "arvn", count: 3 }
+      factionPools:
+        - { faction: "us", availableZoneId: "available-US:none", outOfPlayZoneId: "out-of-play-US:none" }
+        - { faction: "arvn", availableZoneId: "available-ARVN:none", outOfPlayZoneId: "out-of-play-ARVN:none" }
+        - { faction: "nva", availableZoneId: "available-NVA:none" }
+        - { faction: "vc", availableZoneId: "available-VC:none" }
       initialMarkers:
         # Active Support spaces
         - { spaceId: "binh-dinh:none", markerId: "supportOpposition", state: "activeSupport" }
@@ -2852,6 +2879,28 @@ eventDecks:
                     query: players
                   cardinality: { max: 6 }
               effects:
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: usOutOfPlay
+                        over:
+                          query: tokensInZone
+                          zone: out-of-play-US:none
+                          filter:
+                            - { prop: faction, eq: US }
+                        to:
+                          zoneExpr: available-US:none
+                - removeByPriority:
+                    budget: 6
+                    groups:
+                      - bind: arvnOutOfPlay
+                        over:
+                          query: tokensInZone
+                          zone: out-of-play-ARVN:none
+                          filter:
+                            - { prop: faction, eq: ARVN }
+                        to:
+                          zoneExpr: available-ARVN:none
                 - addVar: { scope: global, var: aid, delta: 1 }
         shaded:
           text: "Containment falters: Aid -9."
@@ -2946,6 +2995,53 @@ eventDecks:
                 space: $sourceProvince
                 marker: supportOpposition
                 state: activeOpposition
+      - id: card-1
+        title: Gulf of Tonkin
+        sideMode: dual
+        order: 1
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["US", "NVA", "ARVN", "VC"]
+          flavorText: "Escalation trigger."
+        unshaded:
+          text: "US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities."
+          freeOperationGrants:
+            - faction: "0"
+              actionIds: [airStrike]
+          targets:
+            - id: us-out-of-play
+              selector:
+                query: players
+              cardinality: { max: 6 }
+            - id: $targetCities
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '=='
+                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  right: city
+              cardinality: { max: 6 }
+        shaded:
+          text: "Congressional regrets: Aid -1 per Casualty. All Casualties out of play."
+          effects:
+            - addVar:
+                scope: global
+                var: aid
+                delta:
+                  op: '*'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: casualties-US:none
+                        filter:
+                          - { prop: faction, eq: US }
+                  right: -1
+            - moveAll:
+                from: casualties-US:none
+                to: out-of-play-US:none
       - id: card-27
         title: Phoenix Program
         sideMode: dual
@@ -2994,6 +3090,18 @@ eventDecks:
                     query: players
                   cardinality: { max: 2 }
               effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: usBaseOutOfPlay
+                        over:
+                          query: tokensInZone
+                          zone: out-of-play-US:none
+                          filter:
+                            - { prop: faction, eq: US }
+                            - { prop: type, eq: base }
+                        to:
+                          zoneExpr: available-US:none
                 - addVar: { scope: global, var: aid, delta: 12 }
             - id: return-arvn-bases-and-resources
               order: 2
@@ -3003,6 +3111,18 @@ eventDecks:
                     query: players
                   cardinality: { max: 2 }
               effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: arvnBaseOutOfPlay
+                        over:
+                          query: tokensInZone
+                          zone: out-of-play-ARVN:none
+                          filter:
+                            - { prop: faction, eq: ARVN }
+                            - { prop: type, eq: base }
+                        to:
+                          zoneExpr: available-ARVN:none
                 - addVar: { scope: global, var: arvnResources, delta: 6 }
         shaded:
           text: "Moscow aids Hanoi: Improve the Trail 1 box. Then either Improve it 1 more box or add +10 NVA Resources."
@@ -3504,7 +3624,9 @@ eventDecks:
 zones:
   - { id: deck, owner: none, visibility: hidden, ordering: stack }
   - { id: available-US, owner: none, visibility: public, ordering: set }
+  - { id: out-of-play-US, owner: none, visibility: public, ordering: set }
   - { id: available-ARVN, owner: none, visibility: public, ordering: set }
+  - { id: out-of-play-ARVN, owner: none, visibility: public, ordering: set }
   - { id: available-NVA, owner: none, visibility: public, ordering: set }
   - { id: available-VC, owner: none, visibility: public, ordering: set }
   - { id: casualties-US, owner: none, visibility: public, ordering: set }

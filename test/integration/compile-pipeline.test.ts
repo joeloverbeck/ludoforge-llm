@@ -106,6 +106,7 @@ describe('compile pipeline integration', () => {
       ['hue:none', 'quang-tri:none'],
     );
     assert.equal(compiled.gameDef?.turnOrder?.type, 'cardDriven');
+    assert.deepEqual(compiled.gameDef?.setup ?? [], []);
     assert.equal(
       compiled.gameDef?.turnOrder?.type === 'cardDriven' ? compiled.gameDef.turnOrder.config.coupPlan?.phases[0]?.id : undefined,
       'victory',

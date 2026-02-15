@@ -58,8 +58,12 @@ describe('FITL tutorial simple event-card production spec', () => {
     );
     const unshadedAid = card?.unshaded?.branches?.[0]?.effects?.find((effect) => 'addVar' in effect);
     assert.deepEqual(unshadedAid, { addVar: { scope: 'global', var: 'aid', delta: 12 } });
+    const unshadedUsReturn = card?.unshaded?.branches?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
+    assert.notEqual(unshadedUsReturn, undefined);
     const unshadedResources = card?.unshaded?.branches?.[1]?.effects?.find((effect) => 'addVar' in effect);
     assert.deepEqual(unshadedResources, { addVar: { scope: 'global', var: 'arvnResources', delta: 6 } });
+    const unshadedArvnReturn = card?.unshaded?.branches?.[1]?.effects?.find((effect) => 'removeByPriority' in effect);
+    assert.notEqual(unshadedArvnReturn, undefined);
 
     assert.deepEqual(
       card?.shaded?.branches?.map((branch) => branch.id),

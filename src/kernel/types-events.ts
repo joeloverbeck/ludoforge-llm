@@ -135,6 +135,11 @@ export interface ScenarioPayload {
   readonly initialTrackValues?: readonly { readonly trackId: string; readonly value: number }[];
   readonly initialMarkers?: readonly { readonly spaceId: string; readonly markerId: string; readonly state: string }[];
   readonly outOfPlay?: readonly { readonly pieceTypeId: string; readonly faction: string; readonly count: number }[];
+  readonly factionPools?: readonly {
+    readonly faction: string;
+    readonly availableZoneId: string;
+    readonly outOfPlayZoneId?: string;
+  }[];
   readonly deckComposition?: ScenarioDeckComposition;
   readonly startingLeader?: string;
   readonly leaderStack?: readonly string[];

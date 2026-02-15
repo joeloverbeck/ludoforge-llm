@@ -113,7 +113,7 @@
       "path": "doc.turnStructure.actions",
       "severity": "warning",
       "message": "Unknown key \"actions\" in turnStructure.",
-      "suggestion": "Use one of the supported turnStructure keys: phases."
+      "suggestion": "Use one of the supported turnStructure keys: phases, interrupts."
     },
     {
       "code": "CNL_VALIDATOR_TURN_STRUCTURE_PHASES_INVALID",

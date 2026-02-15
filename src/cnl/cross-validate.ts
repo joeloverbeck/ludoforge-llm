@@ -6,7 +6,10 @@ import { normalizeIdentifier, pushMissingReferenceDiagnostic } from './validate-
 export function crossValidateSpec(sections: CompileSectionResults): readonly Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
 
-  const phaseTargets = collectIdentifierTargets(sections.turnStructure?.phases.map((phase) => phase.id));
+  const phaseTargets = collectIdentifierTargets([
+    ...(sections.turnStructure?.phases.map((phase) => phase.id) ?? []),
+    ...(sections.turnStructure?.interrupts?.map((phase) => phase.id) ?? []),
+  ]);
   const actionTargets = collectIdentifierTargets(sections.actions?.map((action) => action.id));
   const zoneTargets = collectIdentifierTargets(sections.zones?.map((zone) => zone.id));
   const tokenTypeTargets = collectIdentifierTargets(sections.tokenTypes?.map((tokenType) => tokenType.id));
@@ -25,7 +28,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         action.phase,
         phaseTargets,
         `Action "${action.id}" references unknown phase "${action.phase}".`,
-        'Use one of the declared turnStructure.phases ids.',
+        'Use one of the declared turnStructure.phases/interrupts ids.',
       );
     }
   }
@@ -129,7 +132,7 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
         trigger.event.phase,
         phaseTargets,
         `Trigger "${trigger.id}" references unknown phase "${trigger.event.phase}".`,
-        'Use one of the declared turnStructure.phases ids.',
+        'Use one of the declared turnStructure.phases/interrupts ids.',
       );
     }
   }

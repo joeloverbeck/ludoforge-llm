@@ -116,6 +116,7 @@ export const PhaseDefSchema = z
 export const TurnStructureSchema = z
   .object({
     phases: z.array(PhaseDefSchema),
+    interrupts: z.array(PhaseDefSchema).optional(),
   })
   .strict();
 

@@ -13,7 +13,6 @@ import {
 } from '../../src/kernel/index.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const makeToken = (id: string, type: string, faction: string): Token => ({
@@ -39,12 +38,13 @@ describe('FITL commitment phase production wiring', () => {
     assert.notEqual(compiled.gameDef, null);
 
     const phaseIds = compiled.gameDef?.turnStructure.phases.map((phase) => phase.id);
-    assert.deepEqual(phaseIds, ['main', 'commitment']);
+    const interruptIds = compiled.gameDef?.turnStructure.interrupts?.map((phase) => phase.id) ?? [];
+    assert.deepEqual(phaseIds, ['main']);
+    assert.deepEqual(interruptIds, ['commitment']);
 
     const card73 = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-73');
     assert.notEqual(card73, undefined);
     assert.deepEqual(card73?.unshaded?.effects, [
-      { setVar: { scope: 'global', var: 'commitmentPhaseRequested', value: true } },
       { pushInterruptPhase: { phase: 'commitment', resumePhase: 'main' } },
     ]);
   });
@@ -54,7 +54,7 @@ describe('FITL commitment phase production wiring', () => {
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
 
-    const baseState = clearAllZones(initialState(def, 7301, 2));
+    const baseState = initialState(def, 7301, 2);
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
@@ -74,6 +74,11 @@ describe('FITL commitment phase production wiring', () => {
       },
     };
 
+    const outOfPlayTroopsBefore = countTokens(setup, 'out-of-play-US:none', 'US', 'troops');
+    const outOfPlayBasesBefore = countTokens(setup, 'out-of-play-US:none', 'US', 'base');
+    const availableTroopsBefore = countTokens(setup, 'available-US:none', 'US', 'troops');
+    const availableIrregularBefore = countTokens(setup, 'available-US:none', 'US', 'irregular');
+
     const eventMoves = legalMoves(def, setup).filter((move) => String(move.actionId) === 'event');
     const unshadedMove = eventMoves.find((move) => move.params.side === 'unshaded');
     assert.notEqual(unshadedMove, undefined, 'Expected unshaded card-73 event move');
@@ -85,15 +90,33 @@ describe('FITL commitment phase production wiring', () => {
     const commitmentMove = legalMoves(def, result).find((move) => String(move.actionId) === 'resolveCommitment');
     assert.notEqual(commitmentMove, undefined, 'Expected resolveCommitment move in commitment phase');
 
-    const defWithoutTurnOrder = { ...def, turnOrder: undefined } as unknown as GameDef;
-    const commitmentApplied = applyMoveWithResolvedDecisionIds(defWithoutTurnOrder, result, commitmentMove!).state;
+    const commitmentApplied = applyMoveWithResolvedDecisionIds(
+      def,
+      { ...result, turnOrderState: setup.turnOrderState },
+      commitmentMove!,
+    ).state;
 
-    assert.equal(countTokens(commitmentApplied, 'out-of-play-US:none', 'US', 'troops'), 1, 'Expected floor(5/3) US troops out of play');
-    assert.equal(countTokens(commitmentApplied, 'out-of-play-US:none', 'US', 'base'), 2, 'Expected all US base casualties out of play');
-    assert.equal(countTokens(commitmentApplied, 'available-US:none', 'US', 'troops'), 4, 'Expected remaining US troop casualties in Available');
-    assert.equal(countTokens(commitmentApplied, 'available-US:none', 'US', 'irregular'), 1, 'Expected non-base US casualties in Available');
+    assert.equal(
+      countTokens(commitmentApplied, 'out-of-play-US:none', 'US', 'troops') - outOfPlayTroopsBefore,
+      1,
+      'Expected floor(5/3) US troop casualties moved out of play',
+    );
+    assert.equal(
+      countTokens(commitmentApplied, 'out-of-play-US:none', 'US', 'base') - outOfPlayBasesBefore,
+      2,
+      'Expected all US base casualties moved out of play',
+    );
+    assert.equal(
+      countTokens(commitmentApplied, 'available-US:none', 'US', 'troops') - availableTroopsBefore,
+      4,
+      'Expected remaining US troop casualties moved to Available',
+    );
+    assert.equal(
+      countTokens(commitmentApplied, 'available-US:none', 'US', 'irregular') - availableIrregularBefore,
+      1,
+      'Expected non-base US casualties moved to Available',
+    );
     assert.equal(commitmentApplied.zones['casualties-US:none']?.length ?? 0, 0, 'Expected casualties-US to be emptied');
-    assert.equal(commitmentApplied.globalVars.commitmentPhaseRequested, false, 'Expected commitment request flag reset');
     assert.equal(commitmentApplied.currentPhase, 'main', 'Expected to return to main phase after resolveCommitment');
   });
 });

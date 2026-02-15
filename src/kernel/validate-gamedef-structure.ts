@@ -26,6 +26,8 @@ export type ValidationContext = {
   mapSpacePropKinds: ReadonlyMap<string, 'scalar' | 'array' | 'mixed'>;
   tokenTypeNames: Set<string>;
   tokenTypeCandidates: readonly string[];
+  turnPhaseNames: Set<string>;
+  turnPhaseCandidates: readonly string[];
   phaseNames: Set<string>;
   phaseCandidates: readonly string[];
   playerIdMin: number;
@@ -355,6 +357,26 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
   );
   checkDuplicateIds(
     diagnostics,
+    (def.turnStructure.interrupts ?? []).map((phase) => phase.id),
+    'DUPLICATE_PHASE_ID',
+    'interrupt phase id',
+    'turnStructure.interrupts',
+  );
+  const mainPhaseIds = new Set(def.turnStructure.phases.map((phase) => phase.id));
+  (def.turnStructure.interrupts ?? []).forEach((phase, index) => {
+    if (!mainPhaseIds.has(phase.id)) {
+      return;
+    }
+    diagnostics.push({
+      code: 'DUPLICATE_PHASE_ID',
+      path: `turnStructure.interrupts[${index}].id`,
+      severity: 'error',
+      message: `Interrupt phase id "${phase.id}" duplicates a turnStructure.phases id.`,
+      suggestion: 'Use distinct ids between turn phases and interrupt phases.',
+    });
+  });
+  checkDuplicateIds(
+    diagnostics,
     def.actions.map((action) => action.id),
     'DUPLICATE_ACTION_ID',
     'action id',
@@ -459,9 +481,15 @@ export const buildValidationContext = (
   const globalMarkerLatticeCandidates = [...new Set((def.globalMarkerLattices ?? []).map((lattice) => lattice.id))].sort(
     (left, right) => left.localeCompare(right),
   );
-  const phaseCandidates = [...new Set(def.turnStructure.phases.map((phase) => phase.id))].sort((left, right) =>
+  const turnPhaseCandidates = [...new Set(def.turnStructure.phases.map((phase) => phase.id))].sort((left, right) =>
     left.localeCompare(right),
   );
+  const phaseCandidates = [
+    ...new Set([
+      ...turnPhaseCandidates,
+      ...(def.turnStructure.interrupts ?? []).map((phase) => phase.id),
+    ]),
+  ].sort((left, right) => left.localeCompare(right));
   const actionCandidates = [...new Set(def.actions.map((action) => action.id))].sort((left, right) =>
     left.localeCompare(right),
   );
@@ -493,6 +521,8 @@ export const buildValidationContext = (
     globalMarkerLatticeStatesById: new Map((def.globalMarkerLattices ?? []).map((lattice) => [lattice.id, lattice.states])),
     tokenTypeNames: new Set(tokenTypeCandidates),
     tokenTypeCandidates,
+    turnPhaseNames: new Set(turnPhaseCandidates),
+    turnPhaseCandidates,
     phaseNames: new Set(phaseCandidates),
     phaseCandidates,
     playerIdMin: 0,

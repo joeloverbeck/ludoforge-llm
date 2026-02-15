@@ -187,32 +187,38 @@ export function lowerTurnStructure(
     });
   }
 
-  const phasesSource = Array.isArray(turnStructure.phases) ? turnStructure.phases : [];
-  const phases: PhaseDef[] = phasesSource.map((phase, phaseIndex) => {
-    const path = `doc.turnStructure.phases.${phaseIndex}`;
-    if (!isRecord(phase) || typeof phase.id !== 'string' || phase.id.trim() === '') {
-      diagnostics.push(missingCapabilityDiagnostic(path, 'phase definition', phase));
+  const lowerPhaseDefs = (source: readonly unknown[] | undefined, pathPrefix: string): PhaseDef[] => {
+    const entries = Array.isArray(source) ? source : [];
+    return entries.map((phase, phaseIndex) => {
+      const path = `${pathPrefix}.${phaseIndex}`;
+      if (!isRecord(phase) || typeof phase.id !== 'string' || phase.id.trim() === '') {
+        diagnostics.push(missingCapabilityDiagnostic(path, 'phase definition', phase));
+        return {
+          id: asPhaseId(`invalid-phase-${phaseIndex}`),
+        };
+      }
+
+      const onEnter = Array.isArray(phase.onEnter)
+        ? lowerEffectsWithDiagnostics(phase.onEnter, ownershipByBase, diagnostics, `${path}.onEnter`, [], tokenTraitVocabulary)
+        : undefined;
+      const onExit = Array.isArray(phase.onExit)
+        ? lowerEffectsWithDiagnostics(phase.onExit, ownershipByBase, diagnostics, `${path}.onExit`, [], tokenTraitVocabulary)
+        : undefined;
+
       return {
-        id: asPhaseId(`invalid-phase-${phaseIndex}`),
+        id: asPhaseId(phase.id),
+        ...(onEnter === undefined ? {} : { onEnter }),
+        ...(onExit === undefined ? {} : { onExit }),
       };
-    }
+    });
+  };
 
-    const onEnter = Array.isArray(phase.onEnter)
-      ? lowerEffectsWithDiagnostics(phase.onEnter, ownershipByBase, diagnostics, `${path}.onEnter`, [], tokenTraitVocabulary)
-      : undefined;
-    const onExit = Array.isArray(phase.onExit)
-      ? lowerEffectsWithDiagnostics(phase.onExit, ownershipByBase, diagnostics, `${path}.onExit`, [], tokenTraitVocabulary)
-      : undefined;
-
-    return {
-      id: asPhaseId(phase.id),
-      ...(onEnter === undefined ? {} : { onEnter }),
-      ...(onExit === undefined ? {} : { onExit }),
-    };
-  });
+  const phases = lowerPhaseDefs(turnStructure.phases, 'doc.turnStructure.phases');
+  const interrupts = lowerPhaseDefs(turnStructure.interrupts, 'doc.turnStructure.interrupts');
 
   return {
     phases,
+    ...(interrupts.length === 0 ? {} : { interrupts }),
   };
 }
 

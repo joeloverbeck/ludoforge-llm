@@ -110,6 +110,7 @@ export interface PhaseDef {
 
 export interface TurnStructure {
   readonly phases: readonly PhaseDef[];
+  readonly interrupts?: readonly PhaseDef[];
 }
 
 export interface ActionDef {

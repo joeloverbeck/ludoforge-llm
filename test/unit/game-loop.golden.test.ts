@@ -78,6 +78,6 @@ describe('game-loop golden outputs', () => {
       state = applyMove(def, state, move).state;
     }
 
-    assert.equal(state.stateHash, 3606604368106889298n);
+    assert.equal(state.stateHash, 12628418626665617762n);
   });
 });

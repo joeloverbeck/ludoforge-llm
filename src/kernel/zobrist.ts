@@ -51,7 +51,10 @@ const canonicalizeGameDefFingerprint = (def: GameDef): string => {
 
   const globalVars = [...def.globalVars].map(encodeVariableDef).sort();
   const perPlayerVars = [...def.perPlayerVars].map(encodeVariableDef).sort();
-  const phases = [...def.turnStructure.phases].map((phase) => `id=${String(phase.id)}`).sort();
+  const phases = [
+    ...def.turnStructure.phases.map((phase) => `turn:${String(phase.id)}`),
+    ...(def.turnStructure.interrupts ?? []).map((phase) => `interrupt:${String(phase.id)}`),
+  ].sort();
   const actions = [...def.actions].map((action) => `id=${String(action.id)}`).sort();
 
   return [

@@ -26,7 +26,8 @@ const makeDef = (): GameDef => ({
   tokenTypes: [],
   setup: [],
   turnStructure: {
-    phases: [{ id: asPhaseId('main') }, { id: asPhaseId('commitment') }, { id: asPhaseId('aftermath') }],
+    phases: [{ id: asPhaseId('main') }],
+    interrupts: [{ id: asPhaseId('commitment') }, { id: asPhaseId('aftermath') }],
   },
   actions: [],
   triggers: [],

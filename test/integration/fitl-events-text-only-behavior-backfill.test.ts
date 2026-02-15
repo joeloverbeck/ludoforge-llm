@@ -106,7 +106,6 @@ describe('FITL text-only card behavior backfill', () => {
     const card73 = cardById.get('card-73');
     assert.equal(card73?.unshaded?.text, 'Conduct a Commitment Phase.');
     assert.deepEqual(card73?.unshaded?.effects, [
-      { setVar: { scope: 'global', var: 'commitmentPhaseRequested', value: true } },
       { pushInterruptPhase: { phase: 'commitment', resumePhase: 'main' } },
     ]);
     assert.equal((card73?.shaded?.effects?.[0] as { removeByPriority?: { budget?: unknown } })?.removeByPriority?.budget, 3);

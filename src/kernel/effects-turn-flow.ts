@@ -198,13 +198,14 @@ const resolvePhaseId = (
   effectType: string,
   field: 'phase' | 'resumePhase',
 ): GameState['currentPhase'] => {
-  const candidate = ctx.def.turnStructure.phases.find((entry) => entry.id === phase)?.id;
+  const phaseDefs = [...ctx.def.turnStructure.phases, ...(ctx.def.turnStructure.interrupts ?? [])];
+  const candidate = phaseDefs.find((entry) => entry.id === phase)?.id;
   if (candidate === undefined) {
     throw new EffectRuntimeError('EFFECT_RUNTIME', `${effectType}.${field} is unknown: ${phase}`, {
       effectType,
       field,
       phase,
-      phaseCandidates: ctx.def.turnStructure.phases.map((entry) => entry.id),
+      phaseCandidates: phaseDefs.map((entry) => entry.id),
     });
   }
   return candidate;

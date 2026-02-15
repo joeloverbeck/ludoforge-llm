@@ -130,6 +130,38 @@ export function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[
     }
   }
 
+  if (turnStructure.interrupts !== undefined) {
+    if (!Array.isArray(turnStructure.interrupts)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_TURN_STRUCTURE_INTERRUPTS_INVALID',
+        path: 'doc.turnStructure.interrupts',
+        severity: 'error',
+        message: 'turnStructure.interrupts must be an array when provided.',
+        suggestion: 'Define interrupt phases as an array of objects with at least an id field.',
+      });
+    } else {
+      for (const [phaseIndex, phase] of turnStructure.interrupts.entries()) {
+        const phasePath = `doc.turnStructure.interrupts.${phaseIndex}`;
+        if (!isRecord(phase)) {
+          diagnostics.push({
+            code: 'CNL_VALIDATOR_TURN_STRUCTURE_PHASE_SHAPE_INVALID',
+            path: phasePath,
+            severity: 'error',
+            message: 'Each turnStructure.interrupts entry must be an object.',
+            suggestion: 'Set interrupt entries to objects with at least an id field.',
+          });
+          continue;
+        }
+
+        validateUnknownKeys(phase, PHASE_KEYS, phasePath, diagnostics, 'phase');
+        const phaseId = validateIdentifierField(phase, 'id', `${phasePath}.id`, diagnostics, 'interrupt phase id');
+        if (phaseId !== undefined) {
+          collectedPhaseIds.push(phaseId);
+        }
+      }
+    }
+  }
+
   return uniqueSorted(collectedPhaseIds);
 }
 

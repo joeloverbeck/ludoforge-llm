@@ -13,6 +13,29 @@ const minimalCardDrivenTurnFlow = {
 };
 
 describe('compile top-level actions/triggers/end conditions', () => {
+  it('allows actions and phase triggers to reference turnStructure.interrupts ids', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'interrupt-phase-ids', players: { min: 2, max: 2 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }], interrupts: [{ id: 'commitment' }] },
+      actions: [
+        { id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'resolveCommitment', actor: 'active', executor: 'actor', phase: 'commitment', params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [{ id: 'onCommitEnter', event: { type: 'phaseEnter', phase: 'commitment' }, effects: [] }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 2 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.notEqual(result.gameDef, null);
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.gameDef?.turnStructure.phases.map((phase) => phase.id), ['main']);
+    assert.deepEqual(result.gameDef?.turnStructure.interrupts?.map((phase) => phase.id), ['commitment']);
+    assert.equal(result.gameDef?.actions.some((action) => action.phase === 'commitment'), true);
+  });
+
   it('preserves trigger/end-condition order and generates deterministic trigger ids', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

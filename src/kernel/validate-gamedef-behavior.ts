@@ -860,14 +860,14 @@ export const validateEffectAst = (
   }
 
   if ('gotoPhase' in effect) {
-    if (!context.phaseNames.has(effect.gotoPhase.phase)) {
+    if (!context.turnPhaseNames.has(effect.gotoPhase.phase)) {
       pushMissingReferenceDiagnostic(
         diagnostics,
         'REF_PHASE_MISSING',
         `${path}.gotoPhase.phase`,
-        `Unknown phase "${effect.gotoPhase.phase}".`,
+        `Unknown turn phase "${effect.gotoPhase.phase}".`,
         effect.gotoPhase.phase,
-        context.phaseCandidates,
+        context.turnPhaseCandidates,
       );
     }
     return;
@@ -978,6 +978,14 @@ export const validatePostAdjacencyBehavior = (
     });
     phase.onExit?.forEach((effect, effectIndex) => {
       validateEffectAst(diagnostics, effect, `turnStructure.phases[${phaseIndex}].onExit[${effectIndex}]`, context);
+    });
+  });
+  (def.turnStructure.interrupts ?? []).forEach((phase, phaseIndex) => {
+    phase.onEnter?.forEach((effect, effectIndex) => {
+      validateEffectAst(diagnostics, effect, `turnStructure.interrupts[${phaseIndex}].onEnter[${effectIndex}]`, context);
+    });
+    phase.onExit?.forEach((effect, effectIndex) => {
+      validateEffectAst(diagnostics, effect, `turnStructure.interrupts[${phaseIndex}].onExit[${effectIndex}]`, context);
     });
   });
 

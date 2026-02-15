@@ -36,6 +36,7 @@ export interface GameSpecTokenTypeDef {
 
 export interface GameSpecTurnStructure {
   readonly phases: readonly GameSpecPhaseDef[];
+  readonly interrupts?: readonly GameSpecPhaseDef[];
 }
 
 export interface GameSpecFixedOrderTurnOrder {

@@ -4,6 +4,7 @@
 turnStructure:
   phases:
     - id: main
+  interrupts:
     - id: commitment
 
 
@@ -65,10 +66,10 @@ actions:
   - { id: arvnOp, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
   - id: resolveCommitment
     actor: active
-    executor: actor
+    executor: '0'
     phase: commitment
     params: []
-    pre: { op: '==', left: { ref: gvar, var: commitmentPhaseRequested }, right: true }
+    pre: { op: '==', left: { ref: activePlayer }, right: '0' }
     cost: []
     effects:
       - let:
@@ -128,9 +129,33 @@ actions:
                 options:
                   query: mapSpaces
                   filter:
-                    op: '=='
-                    left: { ref: zoneProp, zone: $zone, prop: country }
-                    right: southVietnam
+                    op: or
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                      - op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: [US, ARVN] }
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: [NVA, VC] }
             - moveToken:
                 token: $movingTroopFromAvailable
                 from: { zoneExpr: { ref: tokenZone, token: $movingTroopFromAvailable } }
@@ -178,7 +203,33 @@ actions:
                                 op: and
                                 args:
                                   - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: tokenZone, token: $movingTroopFromMap } }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
+                                  - op: or
+                                    args:
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                                      - op: and
+                                        args:
+                                          - op: or
+                                            args:
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                                          - op: '>'
+                                            left:
+                                              aggregate:
+                                                op: count
+                                                query:
+                                                  query: tokensInZone
+                                                  zone: $zone
+                                                  filter:
+                                                    - { prop: faction, op: in, value: [US, ARVN] }
+                                            right:
+                                              aggregate:
+                                                op: count
+                                                query:
+                                                  query: tokensInZone
+                                                  zone: $zone
+                                                  filter:
+                                                    - { prop: faction, op: in, value: [NVA, VC] }
                         - moveToken:
                             token: $movingTroopFromMap
                             from: { zoneExpr: { ref: tokenZone, token: $movingTroopFromMap } }
@@ -202,9 +253,33 @@ actions:
                 options:
                   query: mapSpaces
                   filter:
-                    op: '=='
-                    left: { ref: zoneProp, zone: $zone, prop: country }
-                    right: southVietnam
+                    op: or
+                    args:
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                      - op: and
+                        args:
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                          - op: '>'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: [US, ARVN] }
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: tokensInZone
+                                  zone: $zone
+                                  filter:
+                                    - { prop: faction, op: in, value: [NVA, VC] }
             - moveToken:
                 token: $movingBaseFromAvailable
                 from: { zoneExpr: { ref: tokenZone, token: $movingBaseFromAvailable } }
@@ -252,15 +327,37 @@ actions:
                                 op: and
                                 args:
                                   - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: tokenZone, token: $movingBaseFromMap } }
-                                  - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
+                                  - op: or
+                                    args:
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                                      - op: and
+                                        args:
+                                          - op: or
+                                            args:
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                                          - op: '>'
+                                            left:
+                                              aggregate:
+                                                op: count
+                                                query:
+                                                  query: tokensInZone
+                                                  zone: $zone
+                                                  filter:
+                                                    - { prop: faction, op: in, value: [US, ARVN] }
+                                            right:
+                                              aggregate:
+                                                op: count
+                                                query:
+                                                  query: tokensInZone
+                                                  zone: $zone
+                                                  filter:
+                                                    - { prop: faction, op: in, value: [NVA, VC] }
                         - moveToken:
                             token: $movingBaseFromMap
                             from: { zoneExpr: { ref: tokenZone, token: $movingBaseFromMap } }
                             to: { zoneExpr: { ref: binding, name: $commitBaseDestFromMap } }
-      - setVar:
-          scope: global
-          var: commitmentPhaseRequested
-          value: false
       - popInterruptPhase: {}
     limits: []
 

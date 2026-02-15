@@ -13,6 +13,7 @@ import {
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type LeaderState = 'minh' | 'khanh' | 'youngTurks' | 'ky' | 'thieu';
@@ -21,11 +22,6 @@ const makeToken = (id: string, type: string, faction: string, extra?: Record<str
   id: asTokenId(id),
   type,
   props: { faction, type, ...extra },
-});
-
-const clearZones = (state: GameState): GameState => ({
-  ...state,
-  zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])),
 });
 
 const withActiveLeader = (state: GameState, leader: LeaderState): GameState => ({
@@ -56,7 +52,7 @@ describe('FITL RVN leader lingering effects', () => {
     const def = compileDef();
     const space = 'qui-nhon:none';
 
-    const baseState = clearZones(initialState(def, 9001, 2));
+    const baseState = clearAllZones(initialState(def, 9001, 2));
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(1),
@@ -94,7 +90,7 @@ describe('FITL RVN leader lingering effects', () => {
     const def = compileDef();
     const space = 'qui-nhon:none';
 
-    const baseState = clearZones(initialState(def, 9002, 2));
+    const baseState = clearAllZones(initialState(def, 9002, 2));
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),
@@ -131,7 +127,7 @@ describe('FITL RVN leader lingering effects', () => {
     const origin = 'da-nang:none';
     const farDestination = 'saigon:none';
 
-    const baseState = clearZones(initialState(def, 9003, 2));
+    const baseState = clearAllZones(initialState(def, 9003, 2));
     const setup: GameState = {
       ...baseState,
       zones: {
@@ -173,7 +169,7 @@ describe('FITL RVN leader lingering effects', () => {
     const def = compileDef();
     const space = 'can-tho:none';
 
-    const baseState = clearZones(initialState(def, 9004, 2));
+    const baseState = clearAllZones(initialState(def, 9004, 2));
     const setup: GameState = {
       ...baseState,
       globalVars: {
@@ -222,7 +218,7 @@ describe('FITL RVN leader lingering effects', () => {
     const space = 'qui-nhon:none';
 
     const runPacify = (leader: LeaderState, withTerror: boolean): GameState => {
-      const baseState = clearZones(initialState(def, withTerror ? 9006 : 9005, 2));
+      const baseState = clearAllZones(initialState(def, withTerror ? 9006 : 9005, 2));
       const setup: GameState = {
         ...baseState,
         activePlayer: asPlayerId(1),

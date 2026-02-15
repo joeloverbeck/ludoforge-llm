@@ -13,6 +13,7 @@ import {
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type LeaderState = 'minh' | 'khanh' | 'youngTurks' | 'ky' | 'thieu';
@@ -53,11 +54,6 @@ const withMomentum = (state: GameState, vars: Record<string, boolean>): GameStat
     ...state.globalVars,
     ...vars,
   },
-});
-
-const clearZones = (state: GameState): GameState => ({
-  ...state,
-  zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])),
 });
 
 const enemyCount = (state: GameState, space: string): number =>
@@ -132,7 +128,7 @@ describe('FITL cross-system modifier smoke', () => {
     const space = 'qui-nhon:none';
     const arvnAvailable = 'available-ARVN:none';
 
-    const base = withActivePlayer(clearZones(initialState(def, 11003, 2)), 1);
+    const base = withActivePlayer(clearAllZones(initialState(def, 11003, 2)), 1);
     const setup: GameState = {
       ...base,
       globalVars: {
@@ -184,7 +180,7 @@ describe('FITL cross-system modifier smoke', () => {
     assert.ok(capCordsUnshadedChecks.length >= 1, 'Expected cap_cords unshaded branch in ARVN Train');
 
     const runPacify = (leader: LeaderState, seed: number): number => {
-      const base = withActivePlayer(clearZones(initialState(def, seed, 2)), 1);
+      const base = withActivePlayer(clearAllZones(initialState(def, seed, 2)), 1);
       const setup: GameState = {
         ...base,
         globalVars: {

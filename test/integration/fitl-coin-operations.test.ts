@@ -6,7 +6,6 @@ import {
   asActionId,
   asPlayerId,
   asTokenId,
-  initialState,
   legalMoves,
   type ChoicePendingRequest,
   type GameDef,
@@ -15,11 +14,14 @@ import {
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
+import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
 import { completeMoveDecisionSequenceOrThrow, pickDeterministicDecisionValue } from '../helpers/move-decision-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import { withPendingFreeOperationGrant } from '../helpers/turn-order-helpers.js';
 
 describe('FITL COIN operations integration', () => {
+  const operationInitialState = makeIsolatedInitialState;
+
   const completeProfileMoveDeterministically = (
     baseMove: Move,
     choose: Parameters<typeof completeMoveDecisionSequenceOrThrow>[3],
@@ -34,14 +36,6 @@ describe('FITL COIN operations integration', () => {
     space: string,
     factions: readonly string[],
   ): number => (state.zones[space] ?? []).filter((token) => factions.includes(String(token.props.faction))).length;
-
-  const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => {
-    const state = initialState(def, seed, playerCount);
-    return {
-      ...state,
-      zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])) as GameState['zones'],
-    };
-  };
 
   it('compiles COIN Train/Patrol/Sweep/Assault operation profiles from production spec', () => {
     const { parsed, compiled } = compileProductionSpec();
@@ -71,7 +65,7 @@ describe('FITL COIN operations integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
-    const start = operationInitialState(def, 73, 2);
+    const start = makeIsolatedInitialState(def, 73, 2);
     const space = 'quang-nam:none';
 
     const modifiedStart: GameState = {
@@ -138,7 +132,7 @@ describe('FITL COIN operations integration', () => {
     const { compiled } = compileProductionSpec();
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
-    const start = operationInitialState(def, 79, 2);
+    const start = makeIsolatedInitialState(def, 79, 2);
 
     const targetSpace = 'quang-nam:none';
     const sourceSpace = 'da-nang:none';

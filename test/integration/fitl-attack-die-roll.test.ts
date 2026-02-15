@@ -1,20 +1,13 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPlayerId, asTokenId, initialState, serializeGameState, type EffectAST, type GameDef, type GameState, type SerializedGameState, type Token } from '../../src/kernel/index.js';
+import { asActionId, asPlayerId, asTokenId, serializeGameState, type EffectAST, type GameDef, type GameState, type SerializedGameState, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const ATTACK_SPACE = 'quang-tri-thua-thien:none';
-const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => {
-  const state = initialState(def, seed, playerCount);
-  return {
-    ...state,
-    zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])) as GameState['zones'],
-    turnOrderState: { type: 'roundRobin' },
-  };
-};
 
 const hasRollRandom = (effects: readonly EffectAST[]): boolean =>
   effects.some((effect) => {
@@ -86,7 +79,7 @@ const addToken = (state: GameState, zoneId: string, token: Token): GameState => 
 });
 
 const makeAttackReadyState = (def: GameDef, seed: number): GameState => {
-  const start = operationInitialState(def, seed, 4);
+  const start = makeIsolatedInitialState(def, seed, 4, { turnOrderMode: 'roundRobin' });
   const withNvaPlayer = {
     ...start,
     activePlayer: asPlayerId(2),
@@ -109,7 +102,7 @@ const makeAttackReadyState = (def: GameDef, seed: number): GameState => {
 };
 
 const makeVcAttackReadyState = (def: GameDef, seed: number): GameState => {
-  const start = operationInitialState(def, seed, 4);
+  const start = makeIsolatedInitialState(def, seed, 4, { turnOrderMode: 'roundRobin' });
   const withVcPlayer = {
     ...start,
     activePlayer: asPlayerId(3),

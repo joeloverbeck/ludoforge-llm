@@ -1,9 +1,10 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPlayerId, asTokenId, initialState, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
+import { asActionId, asPlayerId, asTokenId, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type MarkerState = 'inactive' | 'unshaded' | 'shaded';
@@ -20,15 +21,6 @@ const makeToken = (id: string, type: string, faction: string, extra?: Record<str
   type,
   props: { faction, type, ...extra },
 });
-
-const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => {
-  const state = initialState(def, seed, playerCount);
-  return {
-    ...state,
-    zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])) as GameState['zones'],
-    turnOrderState: { type: 'roundRobin' },
-  };
-};
 
 const withGlobalMarker = (state: GameState, marker: string, value: MarkerState): GameState => ({
   ...state,
@@ -52,13 +44,14 @@ const countTokensInZone = (state: GameState, zone: string, predicate: (token: To
 const runVcMarchWithMainForceBns = (def: GameDef, marker: MarkerState, seed: number): GameState => {
   const mover1 = asTokenId(`march-${marker}-g1`);
   const mover2 = asTokenId(`march-${marker}-g2`);
+  const start = makeIsolatedInitialState(def, seed, 4, { turnOrderMode: 'roundRobin' });
 
-  const start = withGlobalMarker(
+  const setupBase = withGlobalMarker(
     {
-      ...operationInitialState(def, seed, 4),
+      ...start,
       activePlayer: asPlayerId(3),
       globalVars: {
-        ...operationInitialState(def, seed, 4).globalVars,
+        ...start.globalVars,
         vcResources: 6,
       },
     },
@@ -70,7 +63,7 @@ const runVcMarchWithMainForceBns = (def: GameDef, marker: MarkerState, seed: num
     addTokenToZone(
       addTokenToZone(
         addTokenToZone(
-          start,
+          setupBase,
           MARCH_ORIGIN,
           makeToken(`march-${marker}-g1`, 'guerrilla', 'VC', { activity: 'underground' }),
         ),
@@ -95,12 +88,13 @@ const runVcMarchWithMainForceBns = (def: GameDef, marker: MarkerState, seed: num
 };
 
 const runNvaAttackWithPt76 = (def: GameDef, marker: MarkerState, seed: number, freeOperation = false): GameState => {
+  const base = makeIsolatedInitialState(def, seed, 4, { turnOrderMode: 'roundRobin' });
   const start = withGlobalMarker(
     {
-      ...operationInitialState(def, seed, 4),
+      ...base,
       activePlayer: asPlayerId(2),
       globalVars: {
-        ...operationInitialState(def, seed, 4).globalVars,
+        ...base.globalVars,
         nvaResources: 7,
       },
     },
@@ -129,12 +123,13 @@ const runNvaAttackWithPt76 = (def: GameDef, marker: MarkerState, seed: number, f
 };
 
 const runNvaAttackDamageWithPt76 = (def: GameDef, marker: MarkerState, seed: number): GameState => {
+  const base = makeIsolatedInitialState(def, seed, 4, { turnOrderMode: 'roundRobin' });
   const start = withGlobalMarker(
     {
-      ...operationInitialState(def, seed, 4),
+      ...base,
       activePlayer: asPlayerId(2),
       globalVars: {
-        ...operationInitialState(def, seed, 4).globalVars,
+        ...base.globalVars,
         nvaResources: 7,
       },
     },
@@ -174,7 +169,7 @@ const runNvaAttackDamageWithPt76 = (def: GameDef, marker: MarkerState, seed: num
 const bombardSelectionIsLegal = (def: GameDef, marker: MarkerState, targetSpaces: string[], seed: number): boolean => {
   const start = withGlobalMarker(
     {
-      ...operationInitialState(def, seed, 4),
+      ...makeIsolatedInitialState(def, seed, 4, { turnOrderMode: 'roundRobin' }),
       activePlayer: asPlayerId(2),
     },
     'cap_longRangeGuns',

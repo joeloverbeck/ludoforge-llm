@@ -1,10 +1,11 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPlayerId, asTokenId, initialState, legalMoves, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
+import { asActionId, asPlayerId, asTokenId, legalMoves, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
+import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const ATTACK_SPACE = 'quang-tri-thua-thien:none';
@@ -23,14 +24,8 @@ const addTokenToZone = (state: GameState, zoneId: string, token: Token): GameSta
   },
 });
 
-const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState => {
-  const state = initialState(def, seed, playerCount);
-  return {
-    ...state,
-    zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])) as GameState['zones'],
-    turnOrderState: { type: 'roundRobin' },
-  };
-};
+const operationInitialState = (def: GameDef, seed: number, playerCount: number): GameState =>
+  makeIsolatedInitialState(def, seed, playerCount, { turnOrderMode: 'roundRobin' });
 
 const withSupportState = (state: GameState, zoneId: string, supportState: string): GameState => ({
   ...state,

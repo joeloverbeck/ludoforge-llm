@@ -12,17 +12,13 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const makeToken = (id: string, type: string, faction: string): Token => ({
   id: asTokenId(id),
   type,
   props: { faction, type },
-});
-
-const clearZones = (state: GameState): GameState => ({
-  ...state,
-  zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])),
 });
 
 const compileDef = (): GameDef => {
@@ -94,7 +90,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     const cityZoneIds = (def.mapSpaces ?? []).filter((space) => space.spaceType === 'city').map((space) => space.id);
     assert.ok(cityZoneIds.length > 0, 'Expected at least one city zone');
 
-    const baseState = clearZones(initialState(def, 1301, 2));
+    const baseState = clearAllZones(initialState(def, 1301, 2));
     const setup: GameState = {
       ...baseState,
       activePlayer: asPlayerId(0),

@@ -1,22 +1,20 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPlayerId, asTokenId, initialState, type EffectAST, type GameState, type MapPayload, type Token } from '../../src/kernel/index.js';
+import { asActionId, asPlayerId, asTokenId, type EffectAST, type GameState, type MapPayload, type Token } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const operationInitialState = (
-  def: Parameters<typeof initialState>[0],
+  def: Parameters<typeof makeIsolatedInitialState>[0],
   seed: number,
   playerCount: number,
 ): GameState => {
-  const state = initialState(def, seed, playerCount);
   return {
-    ...state,
+    ...makeIsolatedInitialState(def, seed, playerCount, { turnOrderMode: 'roundRobin' }),
     activePlayer: asPlayerId(2),
-    zones: Object.fromEntries(Object.keys(state.zones).map((zoneId) => [zoneId, []])) as GameState['zones'],
-    turnOrderState: { type: 'roundRobin' },
   };
 };
 

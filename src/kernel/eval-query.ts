@@ -20,6 +20,7 @@ import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFil
 
 type AssetRow = Readonly<Record<string, unknown>>;
 type QueryResult = Token | AssetRow | number | string | PlayerId | ZoneId;
+type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'empty' | 'mixed';
 
 function resolveIntDomainBound(bound: NumericValueExpr, ctx: EvalContext): number | null {
   let value: number | boolean | string;
@@ -248,6 +249,51 @@ function dedupeStringsPreserveOrder(values: readonly string[]): readonly string[
   return unique;
 }
 
+function isTokenShape(value: unknown): value is Token {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'type' in value &&
+    'props' in value &&
+    typeof (value as { readonly props: unknown }).props === 'object' &&
+    (value as { readonly props: unknown }).props !== null
+  );
+}
+
+function classifyResultItem(item: QueryResult): Exclude<RuntimeQueryShape, 'empty' | 'mixed'> {
+  if (typeof item === 'number') {
+    return 'number';
+  }
+  if (typeof item === 'string') {
+    return 'string';
+  }
+  if (isTokenShape(item)) {
+    return 'token';
+  }
+  return 'object';
+}
+
+function classifyQueryResults(items: readonly QueryResult[]): RuntimeQueryShape {
+  if (items.length === 0) {
+    return 'empty';
+  }
+
+  let expected: Exclude<RuntimeQueryShape, 'empty' | 'mixed'> | null = null;
+  for (const item of items) {
+    const shape = classifyResultItem(item);
+    if (expected === null) {
+      expected = shape;
+      continue;
+    }
+    if (shape !== expected) {
+      return 'mixed';
+    }
+  }
+
+  return expected ?? 'empty';
+}
+
 function resolveRuntimeTableRows(query: Extract<OptionsQuery, { readonly query: 'assetRows' }>, ctx: EvalContext): {
   readonly rows: readonly AssetRow[];
   readonly fieldNames: ReadonlySet<string>;
@@ -315,6 +361,38 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
   const maxQueryResults = getMaxQueryResults(ctx);
 
   switch (query.query) {
+    case 'concat': {
+      const combined: QueryResult[] = [];
+      let expectedShape: Exclude<RuntimeQueryShape, 'empty' | 'mixed'> | null = null;
+      for (let sourceIndex = 0; sourceIndex < query.sources.length; sourceIndex += 1) {
+        const source = query.sources[sourceIndex]!;
+        const sourceItems = evalQuery(source, ctx);
+        const sourceShape = classifyQueryResults(sourceItems);
+        if (sourceShape === 'mixed') {
+          throw typeMismatchError('concat source produced mixed item shapes', {
+            query,
+            sourceIndex,
+            source,
+          });
+        }
+        if (sourceShape !== 'empty') {
+          if (expectedShape === null) {
+            expectedShape = sourceShape;
+          } else if (sourceShape !== expectedShape) {
+            throw typeMismatchError('concat sources must produce a single runtime item shape', {
+              query,
+              sourceIndex,
+              source,
+              expectedShape,
+              actualShape: sourceShape,
+            });
+          }
+        }
+        combined.push(...sourceItems);
+      }
+      assertWithinBounds(combined.length, query, maxQueryResults);
+      return combined;
+    }
     case 'tokensInZone': {
       const zoneId = resolveSingleZoneSel(query.zone, ctx);
       const zoneTokens = ctx.state.zones[String(zoneId)];

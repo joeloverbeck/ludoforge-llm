@@ -217,6 +217,44 @@ const tryStaticStringValue = (valueExpr: ValueExpr): string | null => {
   return null;
 };
 
+type QueryRuntimeShape = 'token' | 'object' | 'number' | 'string' | 'unknown';
+
+function dedupeShapes(shapes: readonly QueryRuntimeShape[]): readonly QueryRuntimeShape[] {
+  return [...new Set(shapes)];
+}
+
+function inferQueryRuntimeShapes(query: OptionsQuery): readonly QueryRuntimeShape[] {
+  switch (query.query) {
+    case 'concat': {
+      const nested = query.sources.flatMap((source) => inferQueryRuntimeShapes(source));
+      return dedupeShapes(nested);
+    }
+    case 'tokensInZone':
+    case 'tokensInMapSpaces':
+    case 'tokensInAdjacentZones':
+      return ['token'];
+    case 'assetRows':
+      return ['object'];
+    case 'intsInRange':
+    case 'intsInVarRange':
+    case 'players':
+      return ['number'];
+    case 'enums':
+    case 'globalMarkers':
+    case 'zones':
+    case 'mapSpaces':
+    case 'adjacentZones':
+    case 'connectedZones':
+      return ['string'];
+    case 'binding':
+      return ['unknown'];
+    default: {
+      const _exhaustive: never = query;
+      return _exhaustive;
+    }
+  }
+}
+
 const validateMarkerStateLiteral = (
   diagnostics: Diagnostic[],
   markerId: string,
@@ -293,6 +331,27 @@ export const validateValueExpr = (
   }
 
   validateOptionsQuery(diagnostics, valueExpr.aggregate.query, `${path}.aggregate.query`, context);
+  const knownShapes = inferQueryRuntimeShapes(valueExpr.aggregate.query).filter((shape) => shape !== 'unknown');
+
+  if (valueExpr.aggregate.op !== 'count' && valueExpr.aggregate.prop === undefined && knownShapes.some((shape) => shape !== 'number')) {
+    diagnostics.push({
+      code: 'VALUE_EXPR_AGGREGATE_SOURCE_SHAPE_INVALID',
+      path: `${path}.aggregate.query`,
+      severity: 'error',
+      message: 'aggregate without prop requires numeric query items.',
+      suggestion: 'Use a numeric domain query, or provide aggregate.prop for token/row/map-space property extraction.',
+    });
+  }
+
+  if (valueExpr.aggregate.op !== 'count' && valueExpr.aggregate.prop !== undefined && knownShapes.includes('number')) {
+    diagnostics.push({
+      code: 'VALUE_EXPR_AGGREGATE_SOURCE_SHAPE_INVALID',
+      path: `${path}.aggregate.query`,
+      severity: 'error',
+      message: 'aggregate with prop cannot read properties from numeric query items.',
+      suggestion: 'Use token/assetRows/map-space string query items, or remove aggregate.prop.',
+    });
+  }
 };
 
 export const validateNumericValueExpr = (
@@ -427,6 +486,37 @@ export const validateOptionsQuery = (
   context: ValidationContext,
 ): void => {
   switch (query.query) {
+    case 'concat': {
+      if (query.sources.length === 0) {
+        diagnostics.push({
+          code: 'DOMAIN_QUERY_INVALID',
+          path: `${path}.sources`,
+          severity: 'error',
+          message: 'concat query requires at least one source query.',
+          suggestion: 'Provide one or more source queries in concat.sources.',
+        });
+        return;
+      }
+
+      query.sources.forEach((source, index) => {
+        validateOptionsQuery(diagnostics, source, `${path}.sources[${index}]`, context);
+      });
+
+      const knownShapes = query.sources
+        .flatMap((source) => inferQueryRuntimeShapes(source))
+        .filter((shape) => shape !== 'unknown');
+      const uniqueKnownShapes = dedupeShapes(knownShapes);
+      if (uniqueKnownShapes.length > 1) {
+        diagnostics.push({
+          code: 'DOMAIN_QUERY_SHAPE_MISMATCH',
+          path: `${path}.sources`,
+          severity: 'error',
+          message: `concat sources must produce a single runtime item shape; found [${uniqueKnownShapes.join(', ')}].`,
+          suggestion: 'Compose only shape-compatible sources (string, number, token, or object) in a single concat query.',
+        });
+      }
+      return;
+    }
     case 'tokensInZone': {
       validateZoneSelector(diagnostics, query.zone, `${path}.zone`, context);
       if (query.filter) {

@@ -1087,6 +1087,53 @@ phase: asPhaseId('main'),
       assert.deepStrictEqual(result, { kind: 'complete', complete: true });
     });
 
+    it('supports concat query outputs in forEach iteration domains', () => {
+      const action: ActionDef = {
+        id: asActionId('concatForEachOp'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'concatForEachProfile',
+        actionId: asActionId('concatForEachOp'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                forEach: {
+                  bind: '$zone',
+                  over: {
+                    query: 'concat',
+                    sources: [
+                      { query: 'zones', filter: { owner: 'actor' } },
+                      { query: 'enums', values: ['board:none'] },
+                    ],
+                  },
+                  effects: [],
+                },
+              } as EffectAST,
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      };
+
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const result = legalChoices(def, makeBaseState(), makeMove('concatForEachOp'));
+      assert.deepStrictEqual(result, { kind: 'complete', complete: true });
+    });
+
     it('throws typed errors for malformed free-operation zone filters instead of silently denying zones', () => {
       const action: ActionDef = {
         id: asActionId('operation'),

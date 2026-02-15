@@ -411,6 +411,17 @@ describe('AST and selector schemas', () => {
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
   });
 
+  it('parses concat query with non-empty nested sources', () => {
+    const query: OptionsQuery = {
+      query: 'concat',
+      sources: [
+        { query: 'tokensInZone', zone: 'board:a' },
+        { query: 'enums', values: ['wild', 'joker'] },
+      ],
+    };
+    assert.deepEqual(OptionsQuerySchema.parse(query), query);
+  });
+
   it('parses intsInRange query with dynamic ValueExpr bounds', () => {
     const query: OptionsQuery = {
       query: 'intsInRange',
@@ -481,6 +492,12 @@ describe('AST and selector schemas', () => {
       filter: { prop: 'faction', op: 'eq', value: 'US' },
     });
     assert.equal(badTokensInMapSpacesFilter.success, false);
+
+    const emptyConcat = OptionsQuerySchema.safeParse({
+      query: 'concat',
+      sources: [],
+    });
+    assert.equal(emptyConcat.success, false);
   });
 
   it('rejects non-integer numeric literals in intsInRange bounds', () => {

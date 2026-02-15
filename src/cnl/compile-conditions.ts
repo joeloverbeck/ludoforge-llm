@@ -30,6 +30,7 @@ export interface ConditionLoweringResult<TValue> {
 
 const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes'];
 const SUPPORTED_QUERY_KINDS = [
+  'concat',
   'tokensInZone',
   'assetRows',
   'tokensInMapSpaces',
@@ -521,6 +522,34 @@ export function lowerQueryNode(
   }
 
   switch (source.query) {
+    case 'concat': {
+      if (!Array.isArray(source.sources) || source.sources.length === 0) {
+        return missingCapability(path, 'concat query', source, ['{ query: "concat", sources: [<OptionsQuery>, ...] }']);
+      }
+
+      const diagnostics: Diagnostic[] = [];
+      const loweredSources: OptionsQuery[] = [];
+
+      source.sources.forEach((entry, index) => {
+        const lowered = lowerQueryNode(entry, context, `${path}.sources[${index}]`);
+        diagnostics.push(...lowered.diagnostics);
+        if (lowered.value !== null) {
+          loweredSources.push(lowered.value);
+        }
+      });
+
+      if (loweredSources.length !== source.sources.length) {
+        return { value: null, diagnostics };
+      }
+
+      return {
+        value: {
+          query: 'concat',
+          sources: loweredSources as [OptionsQuery, ...OptionsQuery[]],
+        },
+        diagnostics,
+      };
+    }
     case 'tokensInZone': {
       const zone = lowerZoneSelector(source.zone, context, `${path}.zone`);
       if (zone.value === null) {

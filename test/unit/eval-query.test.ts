@@ -473,6 +473,70 @@ describe('evalQuery', () => {
     );
   });
 
+  it('concatenates query sources left-to-right and preserves duplicates', () => {
+    const ctx = makeCtx();
+
+    const result = evalQuery(
+      {
+        query: 'concat',
+        sources: [
+          { query: 'tokensInZone', zone: 'hand:0' },
+          { query: 'tokensInZone', zone: 'hand:1' },
+          { query: 'tokensInZone', zone: 'hand:0' },
+        ],
+      },
+      ctx,
+    );
+
+    assert.deepEqual(
+      result.map((token) => (token as Token).id),
+      [asTokenId('hand-0'), asTokenId('hand-0b'), asTokenId('hand-1'), asTokenId('hand-0'), asTokenId('hand-0b')],
+    );
+  });
+
+  it('rejects concat sources that produce incompatible runtime shapes', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $numbers: [1, 2],
+      },
+    });
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'concat',
+            sources: [
+              { query: 'binding', name: '$numbers' },
+              { query: 'enums', values: ['x'] },
+            ],
+          },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('rejects concat binding sources that contain mixed runtime shapes', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $mixed: [1, 'x'],
+      },
+    });
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'concat',
+            sources: [{ query: 'binding', name: '$mixed' }],
+          },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('mapSpaces query evaluates zoneProp filters only across map spaces', () => {
     const ctx = makeCtx({
       mapSpaces: [
@@ -872,6 +936,20 @@ describe('evalQuery', () => {
     );
     assert.throws(
       () => evalQuery({ query: 'adjacentZones', zone: 'deck:none' }, makeCtx({ maxQueryResults: 1 })),
+      (error: unknown) => isEvalErrorCode(error, 'QUERY_BOUNDS_EXCEEDED'),
+    );
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'concat',
+            sources: [
+              { query: 'tokensInZone', zone: 'hand:0' },
+              { query: 'tokensInZone', zone: 'hand:1' },
+            ],
+          },
+          makeCtx({ maxQueryResults: 2 }),
+        ),
       (error: unknown) => isEvalErrorCode(error, 'QUERY_BOUNDS_EXCEEDED'),
     );
   });

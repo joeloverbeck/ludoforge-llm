@@ -133,6 +133,44 @@ describe('evaluateSubset effect', () => {
     assert.equal(result.state.globalVars.winner, 7);
   });
 
+  it('supports composed source queries via concat inside evaluateSubset', () => {
+    const extraTokens = [makeToken('extra-1', 9)];
+    const ctx = {
+      ...makeCtx([
+        makeToken('t1', 1),
+        makeToken('t2', 4),
+      ]),
+      bindings: { $extra: extraTokens },
+    };
+
+    const effect: EffectAST = {
+      evaluateSubset: {
+        source: {
+          query: 'concat',
+          sources: [
+            { query: 'tokensInZone', zone: sourceZone },
+            { query: 'binding', name: '$extra' },
+          ],
+        },
+        subsetSize: 2,
+        subsetBind: '$subset',
+        compute: [],
+        scoreExpr: {
+          aggregate: {
+            op: 'sum',
+            query: { query: 'binding', name: '$subset' },
+            prop: 'value',
+          },
+        },
+        resultBind: '$bestScore',
+        in: [{ setVar: { scope: 'global', var: 'winner', value: { ref: 'binding', name: '$bestScore' } } }],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.winner, 13);
+  });
+
   it('exports bestSubsetBind and allows continuation effects to use it', () => {
     const ctx = makeCtx([
       makeToken('t1', 1),

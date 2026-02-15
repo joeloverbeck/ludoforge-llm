@@ -455,6 +455,100 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports concat queries with empty sources', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$choice',
+              domain: {
+                query: 'concat',
+                sources: [],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'DOMAIN_QUERY_INVALID' && diag.path === 'actions[0].params[0].domain.sources',
+      ),
+    );
+  });
+
+  it('reports concat queries with mixed runtime item shapes', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$choice',
+              domain: {
+                query: 'concat',
+                sources: [
+                  { query: 'players' },
+                  { query: 'zones' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'DOMAIN_QUERY_SHAPE_MISMATCH' && diag.path === 'actions[0].params[0].domain.sources',
+      ),
+    );
+  });
+
+  it('reports aggregate query shape mismatches statically', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              setVar: {
+                scope: 'global',
+                var: 'turn',
+                value: {
+                  aggregate: {
+                    op: 'sum',
+                    query: { query: 'zones' },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'VALUE_EXPR_AGGREGATE_SOURCE_SHAPE_INVALID' &&
+          diag.path === 'actions[0].effects[0].setVar.value.aggregate.query',
+      ),
+    );
+  });
+
   it('validates commitResource variable references by scope', () => {
     const base = createValidGameDef();
     const def = {

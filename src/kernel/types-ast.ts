@@ -121,6 +121,7 @@ export interface AssetRowPredicate {
 }
 
 export type OptionsQuery =
+  | { readonly query: 'concat'; readonly sources: readonly [OptionsQuery, ...OptionsQuery[]] }
   | { readonly query: 'tokensInZone'; readonly zone: ZoneSel; readonly filter?: readonly TokenFilterPredicate[] }
   | {
       readonly query: 'assetRows';

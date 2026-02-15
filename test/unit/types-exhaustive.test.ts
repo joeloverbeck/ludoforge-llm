@@ -96,6 +96,7 @@ const exhaustEffectAST = (effect: EffectAST): string => {
 
 const exhaustOptionsQuery = (query: OptionsQuery): string => {
   switch (query.query) {
+    case 'concat':
     case 'tokensInZone':
     case 'assetRows':
     case 'tokensInMapSpaces':
@@ -143,12 +144,12 @@ describe('exhaustive kernel unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
     const conditionVariants: UnionSize<ConditionAST> = 10;
     const effectVariants: UnionSize<EffectAST> = 29;
-    const queryVariants: UnionSize<OptionsQuery> = 14;
+    const queryVariants: UnionSize<OptionsQuery> = 15;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 10);
     assert.equal(effectVariants, 29);
-    assert.equal(queryVariants, 14);
+    assert.equal(queryVariants, 15);
   });
 
   it('ensures MoveLog includes legalMoveCount', () => {

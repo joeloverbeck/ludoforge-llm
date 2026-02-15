@@ -88,6 +88,12 @@ export const AssetRowPredicateSchema = z
 optionsQuerySchemaInternal = z.union([
   z
     .object({
+      query: z.literal('concat'),
+      sources: z.array(OptionsQuerySchema).min(1),
+    })
+    .strict(),
+  z
+    .object({
       query: z.literal('tokensInZone'),
       zone: ZoneSelSchema,
       filter: z.array(TokenFilterPredicateSchema).optional(),

@@ -323,6 +323,46 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, { query: 'binding', name: '$targetSpaces' });
   });
 
+  it('lowers concat query sources recursively', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'concat',
+        sources: [
+          { query: 'tokensInZone', zone: 'deck' },
+          { query: 'tokensInZone', zone: 'board' },
+          { query: 'enums', values: ['wild'] },
+        ],
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'concat',
+      sources: [
+        { query: 'tokensInZone', zone: 'deck:none' },
+        { query: 'tokensInZone', zone: 'board:none' },
+        { query: 'enums', values: ['wild'] },
+      ],
+    });
+  });
+
+  it('rejects concat query payloads with empty sources', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'concat',
+        sources: [],
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain');
+  });
+
   it('lowers boolean literal true as ConditionAST passthrough', () => {
     const result = lowerConditionNode(true, context, 'doc.actionPipelines.0.legality');
     assertNoDiagnostics(result);

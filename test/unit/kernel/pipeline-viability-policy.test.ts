@@ -196,7 +196,7 @@ describe('evaluateDiscoveryPipelinePredicateStatus()', () => {
     assert.equal(failed.costValidation, 'failed');
     assert.deepStrictEqual(decideDiscoveryLegalChoicesPipelineViability(failed), {
       kind: 'illegalChoice',
-      outcome: 'pipelineLegalityFailed',
+      outcome: 'pipelineAtomicCostValidationFailed',
     });
   });
 

@@ -180,6 +180,33 @@ describe('legality surface parity', () => {
       expectedChoiceReason: 'pipelineLegalityFailed',
       expectedApplyMoveReason: ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_LEGALITY_PREDICATE_FAILED,
     },
+    {
+      name: 'pipeline atomic cost validation failed',
+      make: () => {
+        const action = makeAction();
+        return {
+          def: makeDef({
+            action,
+            actionPipelines: [
+              {
+                id: 'op-profile',
+                actionId: action.id,
+                legality: null,
+                costValidation: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 5 },
+                costEffects: [],
+                targeting: {},
+                stages: [],
+                atomicity: 'atomic',
+              },
+            ],
+          }),
+          state: makeState({ globalVars: { resources: 0 } }),
+          move: { actionId: asActionId('op'), params: {} },
+        };
+      },
+      expectedChoiceReason: 'pipelineAtomicCostValidationFailed',
+      expectedApplyMoveReason: ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED,
+    },
   ];
 
   for (const scenario of legalScenarioCases) {

@@ -11,6 +11,7 @@ export type ActionApplicabilityNotApplicableReason = (typeof ACTION_APPLICABILIT
 export const KERNEL_LEGALITY_OUTCOMES = [
   ...ACTION_APPLICABILITY_NOT_APPLICABLE_REASONS,
   'pipelineLegalityFailed',
+  'pipelineAtomicCostValidationFailed',
 ] as const;
 
 export type KernelLegalityOutcome = (typeof KERNEL_LEGALITY_OUTCOMES)[number];

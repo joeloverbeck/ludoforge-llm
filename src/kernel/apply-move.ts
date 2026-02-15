@@ -5,6 +5,7 @@ import { executeEventMove } from './event-execution.js';
 import { createCollector } from './execution-collector.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
+import { toApplyMoveIllegalReason } from './legality-outcome.js';
 import { decideApplyMovePipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { evalCondition } from './eval-condition.js';
@@ -359,13 +360,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
     );
   }
   if (preflight.kind === 'notApplicable') {
-    if (preflight.reason === 'actorNotApplicable') {
-      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_ACTOR_NOT_APPLICABLE);
-    }
-    if (preflight.reason === 'executorNotApplicable') {
-      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE);
-    }
-    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
+    throw illegalMoveError(move, toApplyMoveIllegalReason(preflight.reason));
   }
   if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
@@ -379,12 +374,14 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
       const metadata = {
         profileId: pipeline.id,
       };
-      if (viabilityDecision.outcome === 'pipelineLegalityFailed') {
-        throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_LEGALITY_PREDICATE_FAILED, metadata);
+      if (viabilityDecision.outcome === 'pipelineAtomicCostValidationFailed') {
+        throw illegalMoveError(move, toApplyMoveIllegalReason(viabilityDecision.outcome), {
+          ...metadata,
+          partialExecutionMode: pipeline.atomicity,
+        });
       }
-      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED, {
+      throw illegalMoveError(move, toApplyMoveIllegalReason(viabilityDecision.outcome), {
         ...metadata,
-        partialExecutionMode: pipeline.atomicity,
       });
     }
     validateDecisionSequenceForMove(def, state, move);
@@ -501,14 +498,14 @@ const applyMoveCore = (
     const status = evaluatePipelinePredicateStatus(action, actionPipeline, { ...effectCtx, state });
     const viabilityDecision = decideApplyMovePipelineViability(status, { isFreeOperation: isFreeOp });
     if (viabilityDecision.kind === 'illegalMove') {
-      if (viabilityDecision.outcome === 'pipelineLegalityFailed') {
-        throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_LEGALITY_PREDICATE_FAILED, {
+      if (viabilityDecision.outcome === 'pipelineAtomicCostValidationFailed') {
+        throw illegalMoveError(move, toApplyMoveIllegalReason(viabilityDecision.outcome), {
           profileId: actionPipeline.id,
+          partialExecutionMode: actionPipeline.atomicity,
         });
       }
-      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED, {
+      throw illegalMoveError(move, toApplyMoveIllegalReason(viabilityDecision.outcome), {
         profileId: actionPipeline.id,
-        partialExecutionMode: actionPipeline.atomicity,
       });
     }
     costValidationPassed = viabilityDecision.costValidationPassed;

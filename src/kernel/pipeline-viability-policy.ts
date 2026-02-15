@@ -32,12 +32,12 @@ export type ApplyMovePipelineDecision =
       readonly kind: 'illegalMove';
       readonly costValidationPassed: boolean;
       readonly outcome: PipelineViabilityOutcome;
-      readonly metadataCode: ApplyMoveIllegalMetadataCode | 'OPERATION_COST_BLOCKED';
+      readonly metadataCode: ApplyMoveIllegalMetadataCode;
     };
 
 export type LegalChoicesPipelineDecision =
   | { readonly kind: 'allowChoiceResolution' }
-  | { readonly kind: 'illegalChoice'; readonly outcome: 'pipelineLegalityFailed' };
+  | { readonly kind: 'illegalChoice'; readonly outcome: PipelineViabilityOutcome };
 
 export type LegalMovesPipelineDecision =
   | { readonly kind: 'includeTemplate' }
@@ -118,7 +118,7 @@ export const decideDiscoveryLegalChoicesPipelineViability = (
     return { kind: 'illegalChoice', outcome: 'pipelineLegalityFailed' };
   }
   if (status.atomicity === 'atomic' && status.costValidation === 'failed') {
-    return { kind: 'illegalChoice', outcome: 'pipelineLegalityFailed' };
+    return { kind: 'illegalChoice', outcome: 'pipelineAtomicCostValidationFailed' };
   }
   return { kind: 'allowChoiceResolution' };
 };
@@ -140,7 +140,7 @@ export const decideApplyMovePipelineViability = (
       kind: 'illegalMove',
       costValidationPassed: false,
       outcome: 'pipelineAtomicCostValidationFailed',
-      metadataCode: 'OPERATION_COST_BLOCKED',
+      metadataCode: toApplyMoveIllegalMetadataCode('pipelineAtomicCostValidationFailed'),
     };
   }
   return {

@@ -81,6 +81,51 @@ describe('FITL 1968 US-first event-card production spec', () => {
     assert.deepEqual(momentum?.teardownEffects, [{ setVar: { scope: 'global', var: 'mom_blowtorchKomer', value: false } }]);
   });
 
+  it('encodes card 3 (Peace Talks) with Linebacker eligibility state wiring and shaded trail floor', () => {
+    const { parsed, compiled } = compileProductionSpec();
+
+    assertNoErrors(parsed);
+    assert.notEqual(compiled.gameDef, null);
+
+    const linebackerAllowed = compiled.gameDef?.globalVars.find((variable) => variable.name === 'linebacker11Allowed');
+    assert.notEqual(linebackerAllowed, undefined);
+    assert.equal(linebackerAllowed?.type, 'boolean');
+    assert.equal(linebackerAllowed?.init, false);
+
+    const supportAvailable = compiled.gameDef?.globalVars.find((variable) => variable.name === 'linebacker11SupportAvailable');
+    assert.notEqual(supportAvailable, undefined);
+    assert.equal(supportAvailable?.type, 'int');
+    assert.equal(supportAvailable?.init, 0);
+    assert.equal(supportAvailable?.min, 0);
+
+    const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-3');
+    assert.notEqual(card, undefined);
+    assert.deepEqual((card?.unshaded?.effects?.[0] as { addVar?: { var?: string; delta?: number } })?.addVar, {
+      scope: 'global',
+      var: 'nvaResources',
+      delta: -9,
+    });
+    assert.deepEqual((card?.unshaded?.effects?.[1] as { setVar?: { var?: string; value?: number } })?.setVar, {
+      scope: 'global',
+      var: 'linebacker11SupportAvailable',
+      value: 0,
+    });
+
+    const finalEffect = card?.unshaded?.effects?.at(-1) as { if?: { when?: { op?: string; left?: { var?: string } }; then?: unknown[]; else?: unknown[] } };
+    assert.equal(finalEffect?.if?.when?.op, '>');
+    assert.equal(finalEffect?.if?.when?.left?.var, 'linebacker11SupportAvailable');
+    assert.equal(finalEffect?.if?.then?.length, 1);
+    assert.equal(finalEffect?.if?.else?.length, 1);
+
+    assert.deepEqual((card?.shaded?.effects?.[0] as { addVar?: { var?: string; delta?: number } })?.addVar, {
+      scope: 'global',
+      var: 'nvaResources',
+      delta: 9,
+    });
+    assert.equal((card?.shaded?.effects?.[1] as { if?: { when?: { op?: string; right?: number } } })?.if?.when?.op, '<=');
+    assert.equal((card?.shaded?.effects?.[1] as { if?: { when?: { right?: number } } })?.if?.when?.right, 2);
+  });
+
   it('keeps card 27 (Phoenix Program) unchanged as a non-regression anchor', () => {
     const { parsed, compiled } = compileProductionSpec();
 

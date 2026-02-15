@@ -3583,9 +3583,63 @@ eventDecks:
           factionOrder: ["US", "NVA", "ARVN", "VC"]
           flavorText: "Public negotiations mask battlefield pressure."
         unshaded:
-          text: "US seeks ceasefire terms and strategic pause."
+          text: "NVA Resources -9. Linebacker 11 allowed when Support + Available US (Troops + Bases) > 25."
+          effects:
+            - addVar: { scope: global, var: nvaResources, delta: -9 }
+            - setVar: { scope: global, var: linebacker11SupportAvailable, value: 0 }
+            - forEach:
+                bind: $space
+                over: { query: mapSpaces }
+                effects:
+                  - if:
+                      when: { op: '==', left: { ref: markerState, space: $space, marker: supportOpposition }, right: passiveSupport }
+                      then:
+                        - addVar: { scope: global, var: linebacker11SupportAvailable, delta: { ref: zoneProp, zone: $space, prop: population } }
+                  - if:
+                      when: { op: '==', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeSupport }
+                      then:
+                        - addVar:
+                            scope: global
+                            var: linebacker11SupportAvailable
+                            delta: { op: '*', left: { ref: zoneProp, zone: $space, prop: population }, right: 2 }
+            - addVar:
+                scope: global
+                var: linebacker11SupportAvailable
+                delta:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+            - addVar:
+                scope: global
+                var: linebacker11SupportAvailable
+                delta:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: base }
+            - if:
+                when: { op: '>', left: { ref: gvar, var: linebacker11SupportAvailable }, right: 25 }
+                then:
+                  - setVar: { scope: global, var: linebacker11Allowed, value: true }
+                else:
+                  - setVar: { scope: global, var: linebacker11Allowed, value: false }
         shaded:
-          text: "Talks collapse into escalation and renewed pressure."
+          text: "Bombing halt: NVA Resources +9. If Trail is 0-2, set Trail to 3."
+          effects:
+            - addVar: { scope: global, var: nvaResources, delta: 9 }
+            - if:
+                when: { op: '<=', left: { ref: gvar, var: trail }, right: 2 }
+                then:
+                  - setVar: { scope: global, var: trail, value: 3 }
       - id: card-4
         title: Top Gun
         sideMode: dual
@@ -10201,6 +10255,8 @@ globalVars:
   - { name: mom_bodyCount, type: boolean, init: false }
   - { name: mom_generalLansdale, type: boolean, init: false }
   - { name: mom_typhoonKate, type: boolean, init: false }
+  - { name: linebacker11Allowed, type: boolean, init: false }
+  - { name: linebacker11SupportAvailable, type: int, init: 0, min: 0, max: 200 }
   - { name: leaderBoxCardCount, type: int, init: 0, min: 0, max: 8 }
 
 perPlayerVars:

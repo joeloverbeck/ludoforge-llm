@@ -1,6 +1,6 @@
 # FITLEVECARENC-012: 1968 Period — US-First Faction Order Cards
 
-**Status**: TODO
+**Status**: ✅ COMPLETED
 **Priority**: P3
 **Complexity**: L
 **Parent spec**: specs/29-fitl-event-card-encoding.md (Task 29.4, Phase 4)
@@ -78,3 +78,24 @@ Encode the 1968 period cards where US is the first faction in the order:
 - Card 27 definition unchanged. All existing cards unchanged.
 - Card IDs unique. Faction orders valid.
 - Production spec compiles without errors.
+
+## Outcome
+
+- **Completion date**: 2026-02-15
+- **What changed**:
+  - Added 12 missing 1968 US-first cards (`2, 3, 4, 9, 11, 12, 13, 16, 19, 20, 21, 30`) to `data/games/fire-in-the-lake.md` with dual-side payloads, canonical metadata (`period`, `factionOrder`, `flavorText`), and side text.
+  - Implemented all US capability cards in this batch (cards `4, 11, 13, 19, 20`) using canonical `set-global-marker` effects for both unshaded and shaded sides (`cap_topGun`, `cap_abrams`, `cap_cobras`, `cap_cords`, `cap_lgbs`).
+  - Implemented card `16` unshaded momentum using `lastingEffects` with `duration: round` and `mom_blowtorchKomer` setup/teardown toggles.
+  - Added `test/integration/fitl-events-1968-us.test.ts` covering:
+    - compile and metadata invariants for all 12 cards,
+    - capability marker behavior on both sides for all five capability cards,
+    - momentum shape for card `16`,
+    - non-regression check that card `27` remains unchanged.
+- **Deviation from original plan**:
+  - Card `3` ("Peace Talks") did not introduce a new `Linebacker 11` marker in this ticket. This was intentionally deferred to avoid adding an unconsumed global marker/state path.
+  - For high-uncertainty, high-complexity non-capability cards, this ticket encodes declarative metadata/text-first payloads instead of speculative mechanics not yet validated against current runtime primitives.
+- **Verification**:
+  - `npm run build` passed.
+  - `npm run test:integration -- --test-name-pattern=\"1968 US-first|Phoenix Program|capability|momentum\"` passed.
+  - `npm test` passed.
+  - `npm run lint` passed.

@@ -271,7 +271,9 @@ export type EffectMacroParamType =
   | 'playerSelector'
   | 'tokenSelector'
   | { readonly kind: 'enum'; readonly values: readonly string[] }
-  | { readonly kind: 'literals'; readonly values: readonly EffectMacroParamPrimitiveLiteral[] };
+  | { readonly kind: 'literals'; readonly values: readonly EffectMacroParamPrimitiveLiteral[] }
+  | { readonly kind: 'tokenTraitValue'; readonly prop: string }
+  | { readonly kind: 'tokenTraitValues'; readonly prop: string };
 
 export interface EffectMacroParam {
   readonly name: string;

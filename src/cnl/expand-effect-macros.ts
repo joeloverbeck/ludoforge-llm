@@ -12,12 +12,14 @@ import type {
   GameSpecDoc,
   GameSpecEffect,
 } from './game-spec-doc.js';
+import { deriveTokenTraitVocabularyFromGameSpecDoc, type TokenTraitVocabulary } from './token-trait-vocabulary.js';
 
 const MAX_EXPANSION_DEPTH = 10;
 const BINDING_TEMPLATE_PATTERN = /\{([^{}]+)\}/g;
 
 interface MacroIndex {
   readonly byId: ReadonlyMap<string, IndexedMacroDef>;
+  readonly tokenTraitVocabulary: TokenTraitVocabulary | null;
 }
 
 type NormalizedMacroParamConstraint =
@@ -34,7 +36,9 @@ type NormalizedMacroParamConstraint =
   | { readonly kind: 'playerSelector' }
   | { readonly kind: 'tokenSelector' }
   | { readonly kind: 'enum'; readonly values: readonly string[] }
-  | { readonly kind: 'literals'; readonly values: readonly EffectMacroParamPrimitiveLiteral[] };
+  | { readonly kind: 'literals'; readonly values: readonly EffectMacroParamPrimitiveLiteral[] }
+  | { readonly kind: 'tokenTraitValue'; readonly prop: string }
+  | { readonly kind: 'tokenTraitValues'; readonly prop: string };
 
 interface IndexedMacroParam {
   readonly name: string;
@@ -228,12 +232,26 @@ function normalizeMacroParamConstraint(
     return { kind: 'literals', values: [...values] };
   }
 
+  if (type.kind === 'tokenTraitValue' || type.kind === 'tokenTraitValues') {
+    if (typeof type.prop !== 'string' || type.prop.trim() === '') {
+      diagnostics.push({
+        code: 'EFFECT_MACRO_PARAM_TOKEN_TRAIT_INVALID',
+        path: `${typePath}.prop`,
+        severity: 'error',
+        message: `Macro "${macroId}" ${type.kind} param must declare a non-empty prop string.`,
+        suggestion: 'Set prop to a token runtime trait key (for example "type" or "activity").',
+      });
+      return null;
+    }
+    return { kind: type.kind, prop: type.prop };
+  }
+
   diagnostics.push({
     code: 'EFFECT_MACRO_PARAM_TYPE_INVALID',
     path: `${typePath}.kind`,
     severity: 'error',
     message: `Macro "${macroId}" param constraint kind "${type.kind}" is unsupported.`,
-    suggestion: 'Use kind: enum or kind: literals.',
+    suggestion: 'Use kind: enum, kind: literals, kind: tokenTraitValue, or kind: tokenTraitValues.',
   });
   return null;
 }
@@ -264,6 +282,10 @@ function describeConstraint(constraint: NormalizedMacroParamConstraint): string 
       return `enum(${constraint.values.map((value) => JSON.stringify(value)).join(', ')})`;
     case 'literals':
       return `literals(${constraint.values.map((value) => formatLiteral(value)).join(', ')})`;
+    case 'tokenTraitValue':
+      return `tokenTraitValue(prop=${JSON.stringify(constraint.prop)})`;
+    case 'tokenTraitValues':
+      return `tokenTraitValues(prop=${JSON.stringify(constraint.prop)})`;
   }
 }
 
@@ -271,6 +293,10 @@ function describeArgumentKind(value: unknown): string {
   if (value === null) return 'null';
   if (Array.isArray(value)) return 'array';
   return typeof value;
+}
+
+function describeAllowedTokenTraitValues(values: readonly string[]): string {
+  return values.length === 0 ? '(none)' : values.map((value) => JSON.stringify(value)).join(', ');
 }
 
 function argumentSatisfiesConstraint(value: unknown, constraint: NormalizedMacroParamConstraint): boolean {
@@ -299,6 +325,9 @@ function argumentSatisfiesConstraint(value: unknown, constraint: NormalizedMacro
       return typeof value === 'string' && constraint.values.includes(value);
     case 'literals':
       return isPrimitiveLiteral(value) && constraint.values.includes(value);
+    case 'tokenTraitValue':
+    case 'tokenTraitValues':
+      return true;
   }
 }
 
@@ -355,6 +384,7 @@ function validateMacroArgConstraints(
   args: Readonly<Record<string, unknown>>,
   invocationPath: string,
   diagnostics: Diagnostic[],
+  tokenTraitVocabulary: TokenTraitVocabulary | null,
 ): boolean {
   let hasViolations = false;
   for (const param of params) {
@@ -363,6 +393,84 @@ function validateMacroArgConstraints(
     }
 
     const value = args[param.name];
+    if (param.constraint.kind === 'tokenTraitValue' || param.constraint.kind === 'tokenTraitValues') {
+      if (tokenTraitVocabulary === null) {
+        hasViolations = true;
+        diagnostics.push({
+          code: 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION',
+          path: `${invocationPath}.args.${param.name}`,
+          severity: 'error',
+          message:
+            `Macro "${macroId}" arg "${param.name}" uses ${describeConstraint(param.constraint)} but no selected pieceCatalog vocabulary is available for validation.`,
+          suggestion:
+            'Ensure metadata.defaultScenarioAssetId resolves to a scenario with pieceCatalogAssetId (or provide exactly one scenario and one pieceCatalog asset).',
+          ...macroOriginFields(invocationPath, param.declarationPath, `${invocationPath}.args.${param.name}`),
+        });
+        diagnostics.push({
+          code: 'EFFECT_MACRO_ARG_CONSTRAINT_DECLARATION',
+          path: param.declarationPath,
+          severity: 'info',
+          message: `Parameter "${param.name}" constraint is declared here.`,
+          ...macroOriginFields(invocationPath, param.declarationPath),
+        });
+        continue;
+      }
+
+      const allowedValues = tokenTraitVocabulary[param.constraint.prop] ?? [];
+      if (allowedValues.length === 0) {
+        hasViolations = true;
+        diagnostics.push({
+          code: 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION',
+          path: `${invocationPath}.args.${param.name}`,
+          severity: 'error',
+          message:
+            `Macro "${macroId}" arg "${param.name}" uses ${describeConstraint(param.constraint)} but prop "${param.constraint.prop}" has no canonical vocabulary entries in the selected pieceCatalog.`,
+          suggestion: 'Declare canonical runtimeProps values (or transitions for status dimensions) for this trait in the selected pieceCatalog.',
+          ...macroOriginFields(invocationPath, param.declarationPath, `${invocationPath}.args.${param.name}`),
+        });
+        diagnostics.push({
+          code: 'EFFECT_MACRO_ARG_CONSTRAINT_DECLARATION',
+          path: param.declarationPath,
+          severity: 'info',
+          message: `Parameter "${param.name}" constraint is declared here.`,
+          ...macroOriginFields(invocationPath, param.declarationPath),
+        });
+        continue;
+      }
+
+      const valuesToValidate =
+        param.constraint.kind === 'tokenTraitValue'
+          ? typeof value === 'string'
+            ? [value]
+            : isRecord(value)
+              ? []
+              : null
+          : Array.isArray(value) && value.every((entry) => typeof entry === 'string')
+            ? (value as readonly string[])
+            : null;
+
+      if (valuesToValidate === null || valuesToValidate.some((entry) => !allowedValues.includes(entry))) {
+        hasViolations = true;
+        diagnostics.push({
+          code: 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION',
+          path: `${invocationPath}.args.${param.name}`,
+          severity: 'error',
+          message:
+            `Macro "${macroId}" arg "${param.name}" violates ${describeConstraint(param.constraint)}; allowed canonical values for prop "${param.constraint.prop}" are: ${describeAllowedTokenTraitValues(allowedValues)}.`,
+          suggestion: `Update "${param.name}" to one of the canonical values for "${param.constraint.prop}".`,
+          ...macroOriginFields(invocationPath, param.declarationPath, `${invocationPath}.args.${param.name}`),
+        });
+        diagnostics.push({
+          code: 'EFFECT_MACRO_ARG_CONSTRAINT_DECLARATION',
+          path: param.declarationPath,
+          severity: 'info',
+          message: `Parameter "${param.name}" constraint is declared here.`,
+          ...macroOriginFields(invocationPath, param.declarationPath),
+        });
+      }
+      continue;
+    }
+
     if (argumentSatisfiesConstraint(value, param.constraint)) {
       continue;
     }
@@ -1067,7 +1175,14 @@ function expandEffect(
     return [];
   }
 
-  const hasConstraintViolations = validateMacroArgConstraints(macroId, params, args, path, diagnostics);
+  const hasConstraintViolations = validateMacroArgConstraints(
+    macroId,
+    params,
+    args,
+    path,
+    diagnostics,
+    index.tokenTraitVocabulary,
+  );
   if (hasConstraintViolations) {
     return [];
   }
@@ -1167,6 +1282,7 @@ function expandValueRecursive(
 function buildMacroIndex(
   macros: readonly EffectMacroDef[],
   diagnostics: Diagnostic[],
+  tokenTraitVocabulary: TokenTraitVocabulary | null,
 ): MacroIndex {
   const byId = new Map<string, IndexedMacroDef>();
   for (const [macroIndex, macro] of macros.entries()) {
@@ -1194,7 +1310,7 @@ function buildMacroIndex(
       exportedBindings,
     });
   }
-  return { byId };
+  return { byId, tokenTraitVocabulary };
 }
 
 export function expandEffectMacros(
@@ -1208,7 +1324,8 @@ export function expandEffectMacros(
   }
 
   const diagnostics: Diagnostic[] = [];
-  const index = buildMacroIndex(doc.effectMacros, diagnostics);
+  const tokenTraitVocabulary = deriveTokenTraitVocabularyFromGameSpecDoc(doc);
+  const index = buildMacroIndex(doc.effectMacros, diagnostics, tokenTraitVocabulary);
 
   // Walk the entire document tree generically. expandValueRecursive
   // handles arrays (detecting macro invocations), objects, and

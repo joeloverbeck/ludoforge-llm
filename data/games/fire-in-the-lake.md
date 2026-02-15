@@ -1336,7 +1336,7 @@ effectMacros:
   # Dynamic piece sourcing (Rule 1.4.1): place from Available, then from map if not US.
   - id: place-from-available-or-map
     params:
-      - { name: pieceType, type: value }
+      - { name: pieceType, type: { kind: tokenTraitValue, prop: type } }
       - { name: faction, type: { kind: enum, values: [US, ARVN, NVA, VC] } }
       - { name: targetSpace, type: string }
       - { name: maxPieces, type: value }
@@ -1400,7 +1400,7 @@ effectMacros:
     params:
       - { name: space, type: string }
       - { name: cubeFaction, type: { kind: enum, values: [US, ARVN] } }
-      - { name: sfType, type: string }
+      - { name: sfType, type: { kind: tokenTraitValue, prop: type } }
     exports: []
     effects:
       - let:

@@ -14,6 +14,7 @@ import type {
 } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord, normalizeIdentifier } from './compile-lowering.js';
+import { deriveTokenTraitVocabularyFromPieceCatalogPayload } from './token-trait-vocabulary.js';
 import {
   collectScenarioProjectionEntries,
   evaluateScenarioProjectionInvariants,
@@ -230,59 +231,11 @@ export function deriveSectionsFromDataAssets(
       pieceCatalog: pieceCatalogDerivationFailed,
     },
     tokenTraitVocabulary:
-      selectedPieceCatalog === undefined ? null : deriveTokenTraitVocabulary(selectedPieceCatalog.payload),
+      selectedPieceCatalog === undefined
+        ? null
+        : deriveTokenTraitVocabularyFromPieceCatalogPayload(selectedPieceCatalog.payload),
   };
 }
-
-const deriveTokenTraitVocabulary = (
-  payload: PieceCatalogPayload,
-): Readonly<Record<string, readonly string[]>> => {
-  const valuesByProp = new Map<string, Set<string>>();
-
-  for (const pieceType of payload.pieceTypes) {
-    const runtimeProps = pieceType.runtimeProps ?? {};
-    for (const [prop, value] of Object.entries(runtimeProps)) {
-      if (typeof value !== 'string') {
-        continue;
-      }
-      const canonicalValue = value.trim();
-      if (canonicalValue.length === 0) {
-        continue;
-      }
-      let values = valuesByProp.get(prop);
-      if (values === undefined) {
-        values = new Set<string>();
-        valuesByProp.set(prop, values);
-      }
-      values.add(canonicalValue);
-    }
-
-    for (const transition of pieceType.transitions) {
-      const prop = transition.dimension;
-      const transitionValues = [transition.from, transition.to];
-      let values = valuesByProp.get(prop);
-      if (values === undefined) {
-        values = new Set<string>();
-        valuesByProp.set(prop, values);
-      }
-      for (const value of transitionValues) {
-        const canonicalValue = value.trim();
-        if (canonicalValue.length === 0) {
-          continue;
-        }
-        values.add(canonicalValue);
-      }
-    }
-  }
-
-  return Object.freeze(
-    Object.fromEntries(
-      [...valuesByProp.entries()]
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([prop, values]) => [prop, Object.freeze([...values].sort((left, right) => left.localeCompare(right)))]),
-    ),
-  );
-};
 
 function selectScenarioRef(
   scenarios: ReadonlyArray<{

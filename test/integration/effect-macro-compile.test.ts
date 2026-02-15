@@ -223,6 +223,76 @@ describe('effect macro → compile pipeline integration', () => {
     assert.deepEqual(violationPaths, ['setup[0].args.faction', 'setup[0].args.tier']);
   });
 
+  it('tokenTraitValue macro params fail compile on non-canonical selected piece-catalog trait literals', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'set-piece-type',
+      params: [{ name: 'pieceType', type: { kind: 'tokenTraitValue', prop: 'type' } }],
+      exports: [],
+      effects: [{ setVar: { scope: 'global', var: 'score', value: { param: 'pieceType' } } }],
+    };
+
+    const doc = {
+      ...makeMinimalDoc(),
+      dataAssets: [
+        {
+          id: 'map-foundation',
+          kind: 'map',
+          payload: { spaces: [] },
+        },
+        {
+          id: 'pieces-foundation',
+          kind: 'pieceCatalog',
+          payload: {
+            pieceTypes: [
+              {
+                id: 'us-troops',
+                faction: 'US',
+                statusDimensions: [],
+                transitions: [],
+                runtimeProps: { faction: 'US', type: 'troops' },
+              },
+            ],
+            inventory: [{ pieceTypeId: 'us-troops', faction: 'US', total: 2 }],
+          },
+        },
+        {
+          id: 'scenario-foundation',
+          kind: 'scenario',
+          payload: {
+            mapAssetId: 'map-foundation',
+            pieceCatalogAssetId: 'pieces-foundation',
+            scenarioName: 'Foundation',
+            yearRange: '1964-1965',
+          },
+        },
+      ],
+      effectMacros: [macroDef],
+      setup: [{ macro: 'set-piece-type', args: { pieceType: 'troop' } }],
+      actions: [
+        {
+          id: 'pass',
+          actor: 'active',
+          phase: 'main',
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION' && diagnostic.path === 'setup[0].args.pieceType',
+      ),
+      true,
+    );
+  });
+
   it('nested macro constraint failures expose deterministic invocation and declaration provenance with source-map spans', () => {
     const markdown = [
       '```yaml',

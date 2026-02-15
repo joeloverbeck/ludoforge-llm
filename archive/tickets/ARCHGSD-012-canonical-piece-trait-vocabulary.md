@@ -67,11 +67,19 @@ Enforce a single canonical vocabulary for piece trait values used by generic tok
   - Added generic compiler trait-vocabulary derivation from selected `pieceCatalog` runtime props and status transitions.
   - Added canonical token-filter literal validation in query lowering (`tokensInZone` / `tokensInAdjacentZones`) with deterministic diagnostic `CNL_COMPILER_TOKEN_FILTER_VALUE_NON_CANONICAL`.
   - Threaded optional trait-vocabulary context through compiler lowering paths (actions, triggers, action pipelines, event decks, effects, terminal conditions).
+  - Extended effect macro param typing with generic trait contracts:
+    - `{ kind: tokenTraitValue, prop: <trait> }`
+    - `{ kind: tokenTraitValues, prop: <trait> }`
+  - Enforced canonical selected piece-catalog trait vocabulary for macro args at expansion time with deterministic diagnostics (`EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION`) and declaration tracing.
+  - Extracted shared trait-vocabulary derivation utility in `src/cnl/token-trait-vocabulary.ts` and reused it in both compile-time and macro-expansion validation paths.
   - Updated FITL production trait literals that feed filters/macro filter args from plural to canonical singular (`irregular`, `ranger`).
+  - Updated FITL macro declarations to explicit trait contracts where macro args feed trait filters (`pieceType`, `sfType`).
   - Added compile integration tests for rejecting non-canonical trait literals and accepting canonical literals.
+  - Added macro-constraint tests covering canonical acceptance, non-canonical rejection, and dynamic value-expression allowance.
 - Deviations from original plan:
   - Canonical enforcement was implemented in compiler lowering context, not `schemas-gamespec`, because semantic token-filter checks require selected piece-catalog cross-context.
   - Vocabulary derivation includes transition values for status dimensions to cover valid values like `active` and `tunneled`.
+  - Scope was expanded from token-filter literals to macro param contracts because macro invocation args are another high-leverage entry point for vocabulary drift.
 - Verification:
   - `npm run build` passed.
   - `npm test` passed.

@@ -12,7 +12,6 @@ interface ResolveActionExecutorPlayerInput {
   readonly action: ActionDef;
   readonly decisionPlayer: GameState['activePlayer'];
   readonly bindings: Readonly<Record<string, unknown>>;
-  readonly allowMissingBindingFallback?: boolean;
 }
 
 export type ActionExecutorResolution =
@@ -36,7 +35,6 @@ export const resolveActionExecutor = ({
   action,
   decisionPlayer,
   bindings,
-  allowMissingBindingFallback = false,
 }: ResolveActionExecutorPlayerInput): ActionExecutorResolution => {
   const selectorContext: EvalContext = {
     def,
@@ -54,12 +52,6 @@ export const resolveActionExecutor = ({
       executionPlayer: resolveSinglePlayerSel(action.executor, selectorContext),
     };
   } catch (error) {
-    if (allowMissingBindingFallback && isEvalErrorCode(error, 'MISSING_BINDING')) {
-      return {
-        kind: 'applicable',
-        executionPlayer: decisionPlayer,
-      };
-    }
     if (isEvalErrorCode(error, 'MISSING_VAR')) {
       return { kind: 'notApplicable', reason: 'executorOutsidePlayerCount' };
     }

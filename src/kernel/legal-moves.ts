@@ -10,6 +10,7 @@ import { decideLegalMovesPipelineViability, evaluatePipelinePredicateStatus } fr
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
+import { isEvalErrorCode } from './eval-error.js';
 import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
@@ -43,7 +44,7 @@ function enumerateParams(
   bindings: Readonly<Record<string, unknown>>,
   moves: Move[],
 ): void {
-  const resolveExecutionPlayerForBindings = (): GameState['activePlayer'] | null => {
+  const resolveExecutionPlayerForBindings = (allowPendingBinding: boolean): GameState['activePlayer'] | null => {
     const resolution = resolveActionExecutor({
       def,
       state,
@@ -51,19 +52,21 @@ function enumerateParams(
       action,
       decisionPlayer: state.activePlayer,
       bindings,
-      allowMissingBindingFallback: true,
     });
     if (resolution.kind === 'notApplicable') {
       return null;
     }
     if (resolution.kind === 'invalidSpec') {
+      if (allowPendingBinding && isEvalErrorCode(resolution.error, 'MISSING_BINDING')) {
+        return state.activePlayer;
+      }
       throw selectorInvalidSpecError('legalMoves', 'executor', action, resolution.error);
     }
     return resolution.executionPlayer;
   };
 
   if (paramIndex >= action.params.length) {
-    const executionPlayer = resolveExecutionPlayerForBindings();
+    const executionPlayer = resolveExecutionPlayerForBindings(false);
     if (executionPlayer === null) {
       return;
     }
@@ -91,7 +94,7 @@ function enumerateParams(
     return;
   }
 
-  const executionPlayer = resolveExecutionPlayerForBindings();
+  const executionPlayer = resolveExecutionPlayerForBindings(true);
   if (executionPlayer === null) {
     return;
   }

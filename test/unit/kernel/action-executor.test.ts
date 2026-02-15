@@ -109,7 +109,7 @@ describe('resolveActionExecutor()', () => {
     assert.equal(result.kind, 'invalidSpec');
   });
 
-  it('returns fallback execution player when binding is missing and fallback is enabled', () => {
+  it('returns invalidSpec when binding is missing', () => {
     const action = makeAction({ executor: { chosen: '$owner' } as unknown as ActionDef['executor'] });
     const def = makeDef(action);
     const state = makeState();
@@ -121,25 +121,6 @@ describe('resolveActionExecutor()', () => {
       action,
       decisionPlayer: asPlayerId(0),
       bindings: {},
-      allowMissingBindingFallback: true,
-    });
-
-    assert.deepEqual(result, { kind: 'applicable', executionPlayer: asPlayerId(0) });
-  });
-
-  it('returns invalidSpec when binding is missing and fallback is disabled', () => {
-    const action = makeAction({ executor: { chosen: '$owner' } as unknown as ActionDef['executor'] });
-    const def = makeDef(action);
-    const state = makeState();
-
-    const result = resolveActionExecutor({
-      def,
-      state,
-      adjacencyGraph: buildAdjacencyGraph(def.zones),
-      action,
-      decisionPlayer: asPlayerId(0),
-      bindings: {},
-      allowMissingBindingFallback: false,
     });
 
     assert.equal(result.kind, 'invalidSpec');

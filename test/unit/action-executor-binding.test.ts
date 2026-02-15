@@ -56,4 +56,19 @@ describe('action executor binding', () => {
     assert.equal(next.perPlayerVars[0]?.score, 0);
     assert.equal(next.perPlayerVars[1]?.score, 1);
   });
+
+  it('reports applyMove surface for missing required executor binding', () => {
+    const def = buildDef();
+    const state = initialState(def, 7, 2);
+
+    assert.throws(() => applyMove(def, state, { actionId: asActionId('assignScore'), params: {} }), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.equal(details.context?.surface, 'applyMove');
+      assert.equal(details.context?.selector, 'executor');
+      assert.equal(String(details.context?.actionId), 'assignScore');
+      return true;
+    });
+  });
 });

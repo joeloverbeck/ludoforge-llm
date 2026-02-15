@@ -1,13 +1,15 @@
 import { incrementActionUsage } from './action-usage.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyEffects } from './effects.js';
-import { executeEventMove, resolveEventEffectList } from './event-execution.js';
+import { executeEventMove } from './event-execution.js';
 import { createCollector } from './execution-collector.js';
-import { legalMoves } from './legal-moves.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
 import { decideApplyMovePipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
 import { resolveActionExecutor } from './action-executor.js';
+import { evalCondition } from './eval-condition.js';
+import { evalQuery } from './eval-query.js';
+import type { EvalContext } from './eval-context.js';
 import {
   buildMoveRuntimeBindings,
   collectDecisionBindingsFromEffects,
@@ -30,7 +32,6 @@ import type {
   ActionDef,
   ActionPipelineDef,
   ApplyMoveResult,
-  EffectAST,
   ExecutionOptions,
   GameDef,
   GameState,
@@ -45,96 +46,6 @@ import { asPlayerId } from './branded.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
-
-const isScalarParamEqual = (left: MoveParamValue, right: MoveParamValue): boolean => {
-  const leftIsArray = Array.isArray(left);
-  const rightIsArray = Array.isArray(right);
-
-  if (leftIsArray || rightIsArray) {
-    if (!leftIsArray || !rightIsArray || left.length !== right.length) {
-      return false;
-    }
-
-    for (let index = 0; index < left.length; index += 1) {
-      if (!Object.is(left[index], right[index])) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  return Object.is(left, right);
-};
-
-const areMoveParamsEqual = (
-  left: Readonly<Record<string, MoveParamValue>>,
-  right: Readonly<Record<string, MoveParamValue>>,
-): boolean => {
-  const leftKeys = Object.keys(left);
-  const rightKeys = Object.keys(right);
-  if (leftKeys.length !== rightKeys.length) {
-    return false;
-  }
-
-  return leftKeys.every((key) => key in right && isScalarParamEqual(left[key] as MoveParamValue, right[key] as MoveParamValue));
-};
-
-const isSameMove = (left: Move, right: Move): boolean =>
-  left.actionId === right.actionId && areMoveParamsEqual(left.params, right.params);
-
-const hasChoiceEffects = (effects: readonly EffectAST[]): boolean => {
-  for (const effect of effects) {
-    if ('chooseOne' in effect || 'chooseN' in effect) {
-      return true;
-    }
-    if ('if' in effect) {
-      if (hasChoiceEffects(effect.if.then)) {
-        return true;
-      }
-      if (effect.if.else !== undefined && hasChoiceEffects(effect.if.else)) {
-        return true;
-      }
-      continue;
-    }
-    if ('forEach' in effect) {
-      if (hasChoiceEffects(effect.forEach.effects)) {
-        return true;
-      }
-      if (effect.forEach.in !== undefined && hasChoiceEffects(effect.forEach.in)) {
-        return true;
-      }
-      continue;
-    }
-    if ('removeByPriority' in effect) {
-      if (effect.removeByPriority.in !== undefined && hasChoiceEffects(effect.removeByPriority.in)) {
-        return true;
-      }
-      continue;
-    }
-    if ('let' in effect) {
-      if (hasChoiceEffects(effect.let.in)) {
-        return true;
-      }
-      continue;
-    }
-    if ('rollRandom' in effect && hasChoiceEffects(effect.rollRandom.in)) {
-      return true;
-    }
-  }
-  return false;
-};
-
-const pickDeclaredActionParams = (action: ActionDef, params: Move['params']): Readonly<Record<string, MoveParamValue>> => {
-  const paramNames = new Set(action.params.map((param) => param.name));
-  const selected: Record<string, MoveParamValue> = {};
-  for (const [name, value] of Object.entries(params)) {
-    if (paramNames.has(name)) {
-      selected[name] = value as MoveParamValue;
-    }
-  }
-  return selected;
-};
 
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
@@ -322,7 +233,74 @@ const validateDecisionSequenceForMove = (def: GameDef, state: GameState, move: M
   }
 };
 
-const validateMove = (def: GameDef, state: GameState, move: Move): void => {
+const isMoveParamScalar = (value: unknown): value is MoveParamScalar =>
+  typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+
+const normalizeMoveParamValue = (value: unknown): MoveParamValue | null => {
+  if (isMoveParamScalar(value)) {
+    return value;
+  }
+  if (typeof value === 'object' && value !== null && 'id' in value) {
+    const id = (value as { readonly id?: unknown }).id;
+    return isMoveParamScalar(id) ? id : null;
+  }
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  const normalized: MoveParamScalar[] = [];
+  for (const entry of value) {
+    if (isMoveParamScalar(entry)) {
+      normalized.push(entry);
+      continue;
+    }
+    if (typeof entry === 'object' && entry !== null && 'id' in entry) {
+      const id = (entry as { readonly id?: unknown }).id;
+      if (isMoveParamScalar(id)) {
+        normalized.push(id);
+        continue;
+      }
+    }
+    return null;
+  }
+  return normalized;
+};
+
+const isSameMoveParamValue = (left: MoveParamValue, right: MoveParamValue): boolean => {
+  const leftIsArray = Array.isArray(left);
+  const rightIsArray = Array.isArray(right);
+  if (leftIsArray || rightIsArray) {
+    if (!leftIsArray || !rightIsArray || left.length !== right.length) {
+      return false;
+    }
+    return left.every((entry, index) => Object.is(entry, right[index]));
+  }
+  return Object.is(left, right);
+};
+
+const validateDeclaredActionParams = (action: ActionDef, evalCtx: EvalContext, move: Move): void => {
+  for (const param of action.params) {
+    const selected = move.params[param.name];
+    const selectedNormalized = normalizeMoveParamValue(selected);
+    if (selectedNormalized === null) {
+      throw illegalMoveError(move, 'params are not legal for this action in current state');
+    }
+    const domainValues = evalQuery(param.domain, evalCtx);
+    const inDomain = domainValues.some((candidate) => {
+      const normalizedCandidate = normalizeMoveParamValue(candidate);
+      return normalizedCandidate !== null && isSameMoveParamValue(selectedNormalized, normalizedCandidate);
+    });
+    if (!inDomain) {
+      throw illegalMoveError(move, 'params are not legal for this action in current state');
+    }
+  }
+};
+
+interface ValidatedMoveContext {
+  readonly action: ActionDef;
+  readonly executionPlayer: GameState['activePlayer'];
+}
+
+const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMoveContext => {
   const action = findAction(def, move.actionId);
   if (action === undefined) {
     throw illegalMoveError(move, 'unknown action id');
@@ -399,6 +377,9 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
       actionId: action.id,
     });
   }
+  if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {
+    throw illegalMoveError(move, 'action is not legal in current state');
+  }
 
   if (preflight.pipelineDispatch.kind === 'matched') {
     const pipeline = preflight.pipelineDispatch.profile;
@@ -419,37 +400,17 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
       });
     }
     validateDecisionSequenceForMove(def, state, move);
-    return;
+    return {
+      action,
+      executionPlayer: preflight.executionPlayer,
+    };
   }
-
-  const legal = legalMoves(def, state);
-  const matchingActionMoves = legal.filter((candidate) => candidate.actionId === action.id);
-  const dynamicEventEffects = String(action.id) === 'event' ? resolveEventEffectList(def, state, move) : [];
-  const hasChoices = hasChoiceEffects([...action.effects, ...dynamicEventEffects]);
-
-  if (!hasChoices) {
-    if (legal.some((candidate) => isSameMove(candidate, move))) {
-      return;
-    }
-    if (matchingActionMoves.length > 0) {
-      throw illegalMoveError(move, 'params are not legal for this action in current state');
-    }
-    throw illegalMoveError(move, 'action is not legal in current state');
-  }
-
-  if (matchingActionMoves.length === 0 && move.freeOperation !== true) {
-    throw illegalMoveError(move, 'action is not legal in current state');
-  }
-
-  const declaredParams = pickDeclaredActionParams(action, move.params);
-  const hasMatchingDeclaredParams = matchingActionMoves.some(
-    (candidate) => areMoveParamsEqual(pickDeclaredActionParams(action, candidate.params), declaredParams),
-  );
-  if (!hasMatchingDeclaredParams && move.freeOperation !== true) {
-    throw illegalMoveError(move, 'params are not legal for this action in current state');
-  }
+  validateDeclaredActionParams(action, preflight.evalCtx, move);
   validateDecisionSequenceForMove(def, state, move);
-
+  return {
+    action,
+    executionPlayer: preflight.executionPlayer,
+  };
 };
 
 interface ApplyMoveCoreOptions {
@@ -464,41 +425,38 @@ const applyMoveCore = (
   options?: ExecutionOptions,
   coreOptions?: ApplyMoveCoreOptions,
 ): ApplyMoveResult => {
-  if (coreOptions?.skipValidation !== true) {
-    validateMove(def, state, move);
-  }
-
-  const action = findAction(def, move.actionId);
-  if (action === undefined) {
-    throw illegalMoveError(move, 'unknown action id');
-  }
+  const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move);
+  const action = validated?.action ?? findAction(def, move.actionId);
+  if (action === undefined) throw illegalMoveError(move, 'unknown action id');
 
   const rng: Rng = { state: state.rng };
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const collector = createCollector(options);
   const baseBindings = runtimeBindingsForMove(move, undefined);
-  const executionPlayer = move.freeOperation === true
-    ? resolveFreeOperationExecutionPlayer(def, state, move)
-    : (() => {
-      const resolution = resolveActionExecutor({
-        def,
-        state,
-        adjacencyGraph,
-        action,
-        decisionPlayer: state.activePlayer,
-        bindings: baseBindings,
-      });
-      if (resolution.kind === 'notApplicable') {
-        throw illegalMoveError(move, 'action executor is not applicable in current state', {
-          code: 'ACTION_EXECUTOR_NOT_APPLICABLE',
-          actionId: action.id,
+  const executionPlayer = validated?.executionPlayer ?? (
+    move.freeOperation === true
+      ? resolveFreeOperationExecutionPlayer(def, state, move)
+      : (() => {
+        const resolution = resolveActionExecutor({
+          def,
+          state,
+          adjacencyGraph,
+          action,
+          decisionPlayer: state.activePlayer,
+          bindings: baseBindings,
         });
-      }
-      if (resolution.kind === 'invalidSpec') {
-        throw selectorInvalidSpecError('applyMove', 'executor', action, resolution.error);
-      }
-      return resolution.executionPlayer;
-    })();
+        if (resolution.kind === 'notApplicable') {
+          throw illegalMoveError(move, 'action executor is not applicable in current state', {
+            code: 'ACTION_EXECUTOR_NOT_APPLICABLE',
+            actionId: action.id,
+          });
+        }
+        if (resolution.kind === 'invalidSpec') {
+          throw selectorInvalidSpecError('applyMove', 'executor', action, resolution.error);
+        }
+        return resolution.executionPlayer;
+      })()
+  );
   const effectCtxBase = {
     def,
     adjacencyGraph,

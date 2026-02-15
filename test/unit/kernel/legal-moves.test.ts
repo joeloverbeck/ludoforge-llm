@@ -870,4 +870,26 @@ phase: asPhaseId('main'),
       return true;
     });
   });
+
+  it('21. enumerates declared executor binding params and resolves executor after binding', () => {
+    const action: ActionDef = {
+      id: asActionId('missingExecutorBinding'),
+actor: 'active',
+executor: { chosen: '$owner' },
+phase: asPhaseId('main'),
+      params: [{ name: '$owner', domain: { query: 'players' } }],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const moves = legalMoves(def, makeBaseState());
+    assert.equal(moves.length, 2);
+    assert.deepEqual(
+      moves.map((move) => move.params.$owner).sort(),
+      [asPlayerId(0), asPlayerId(1)],
+    );
+  });
 });

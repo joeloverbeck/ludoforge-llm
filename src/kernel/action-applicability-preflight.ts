@@ -42,7 +42,6 @@ interface ActionApplicabilityPreflightInput {
   readonly skipExecutorCheck?: boolean;
   readonly skipActionLimitCheck?: boolean;
   readonly skipPipelineDispatch?: boolean;
-  readonly allowMissingBindingFallback?: boolean;
   readonly executionPlayerOverride?: GameState['activePlayer'];
   readonly freeOperationZoneFilter?: EvalContext['freeOperationZoneFilter'];
   readonly freeOperationZoneFilterDiagnostics?: EvalContext['freeOperationZoneFilterDiagnostics'];
@@ -76,7 +75,6 @@ export const resolveActionApplicabilityPreflight = ({
   skipExecutorCheck = false,
   skipActionLimitCheck = false,
   skipPipelineDispatch = false,
-  allowMissingBindingFallback = false,
   executionPlayerOverride,
   freeOperationZoneFilter,
   freeOperationZoneFilterDiagnostics,
@@ -124,7 +122,6 @@ export const resolveActionApplicabilityPreflight = ({
       action,
       decisionPlayer,
       bindings,
-      allowMissingBindingFallback,
     });
     if (executorResolution.kind === 'notApplicable') {
       return { kind: 'notApplicable', reason: 'executorNotApplicable' };

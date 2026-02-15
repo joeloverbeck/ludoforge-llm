@@ -171,6 +171,29 @@ describe('resolveRef', () => {
     );
   });
 
+  it('resolves assetField from row bindings and reports row/field errors', () => {
+    const ctx = makeCtx({
+      bindings: {
+        '$blindRow': { level: 3, smallBlind: 40, phase: 'mid' },
+      },
+    });
+
+    assert.equal(resolveRef({ ref: 'assetField', row: '$blindRow', field: 'smallBlind' }, ctx), 40);
+
+    assert.throws(
+      () => resolveRef({ ref: 'assetField', row: '$missingRow', field: 'smallBlind' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
+    );
+    assert.throws(
+      () => resolveRef({ ref: 'assetField', row: '$blindRow', field: 'missing' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+    assert.throws(
+      () => resolveRef({ ref: 'assetField', row: '$blindRow', field: 'phase' }, makeCtx({ bindings: { '$blindRow': { phase: ['mid'] } } })),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('resolves tokenZone — returns zone ID containing the bound token', () => {
     const handToken = makeToken('hand-1', { cost: 2 });
     const ctx = makeCtx({ bindings: { '$x': 42, '$card': handToken } });

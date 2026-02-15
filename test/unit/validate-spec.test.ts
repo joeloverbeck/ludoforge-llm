@@ -116,7 +116,7 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
-  it('rejects legacy eventCardSet data assets through the shared data-asset validator path', () => {
+  it('accepts custom data-asset kinds through the shared data-asset validator path', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),
       dataAssets: [
@@ -141,8 +141,8 @@ describe('validateGameSpec structural rules', () => {
     });
 
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.0.kind' && diagnostic.code === 'DATA_ASSET_SCHEMA_INVALID'),
-      true,
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.dataAssets.0.kind'),
+      false,
     );
   });
 

@@ -347,6 +347,75 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports missing runtime data assets for assetRows domains', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$row',
+              domain: {
+                query: 'assetRows',
+                assetId: 'tournament-standard',
+                table: 'blindSchedule.levels',
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_RUNTIME_DATA_ASSET_MISSING' && diag.path === 'actions[0].params[0].domain.assetId',
+      ),
+    );
+  });
+
+  it('reports invalid runtime asset table paths for assetRows domains', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      runtimeDataAssets: [
+        {
+          id: 'tournament-standard',
+          kind: 'scenario',
+          payload: {
+            blindSchedule: {
+              levels: [{ level: 1, smallBlind: 10 }],
+            },
+          },
+        },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$row',
+              domain: {
+                query: 'assetRows',
+                assetId: 'tournament-standard',
+                table: 'blindSchedule.missing',
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_RUNTIME_DATA_ASSET_TABLE_PATH_MISSING' && diag.path === 'actions[0].params[0].domain.table',
+      ),
+    );
+  });
+
   it('validates commitResource variable references by scope', () => {
     const base = createValidGameDef();
     const def = {

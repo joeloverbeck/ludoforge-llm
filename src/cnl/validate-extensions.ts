@@ -69,7 +69,6 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
 
     const validated = validateDataAssetEnvelope(entry, {
       pathPrefix: path,
-      expectedKinds: ['map', 'scenario', 'pieceCatalog'],
     });
     diagnostics.push(...validated.diagnostics);
     if (validated.asset === null) {

@@ -50,7 +50,18 @@ function extractAggregateValue(
   }
 
   if (typeof item !== 'object' || item === null || !('props' in item)) {
-    throw typeMismatchError('Aggregate prop extraction requires token-like items or map-space ids', {
+    if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+      const rowValue = (item as Record<string, unknown>)[prop];
+      return expectSafeInteger(rowValue, 'Aggregate row field value must be a finite safe integer', {
+        expr: aggregateExpr,
+        index,
+        prop,
+        value: rowValue,
+        availableProps: Object.keys(item).sort(),
+      });
+    }
+
+    throw typeMismatchError('Aggregate prop extraction requires token-like items, row objects, or map-space ids', {
       expr: aggregateExpr,
       index,
       prop,

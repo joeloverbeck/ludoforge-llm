@@ -256,6 +256,81 @@ describe('evalQuery', () => {
     assert.deepEqual(evalQuery({ query: 'zones', filter: { owner: 'actor' } }, ctx), ['bench:1', 'hand:1']);
   });
 
+  it('evaluates assetRows using runtimeDataAssets and preserves table order', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: {
+              blindSchedule: {
+                levels: [
+                  { level: 1, smallBlind: 10, phase: 'early' },
+                  { level: 2, smallBlind: 20, phase: 'early' },
+                  { level: 3, smallBlind: 40, phase: 'mid' },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    const rows = evalQuery({ query: 'assetRows', assetId: 'tournament-standard', table: 'blindSchedule.levels' }, ctx);
+    assert.deepEqual(
+      rows.map((row) => (row as Record<string, unknown>).smallBlind),
+      [10, 20, 40],
+    );
+
+    const filtered = evalQuery(
+      {
+        query: 'assetRows',
+        assetId: 'tournament-standard',
+        table: 'blindSchedule.levels',
+        where: [{ field: 'phase', op: 'eq', value: 'early' }],
+      },
+      ctx,
+    );
+    assert.deepEqual(
+      filtered.map((row) => (row as Record<string, unknown>).level),
+      [1, 2],
+    );
+  });
+
+  it('throws typed runtime errors for missing assetRows assets and invalid table paths', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: {
+              blindSchedule: {
+                levels: [{ level: 1, smallBlind: 10 }],
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    assert.throws(
+      () => evalQuery({ query: 'assetRows', assetId: 'missing', table: 'blindSchedule.levels' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+    assert.throws(
+      () => evalQuery({ query: 'assetRows', assetId: 'tournament-standard', table: 'blindSchedule.missing' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+    assert.throws(
+      () => evalQuery({ query: 'assetRows', assetId: 'tournament-standard', table: 'blindSchedule' }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('applies zones filter.condition and composes it with owner filtering', () => {
     const ctx = makeCtx({
       bindings: {

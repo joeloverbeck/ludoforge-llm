@@ -231,7 +231,7 @@ describe('top-level runtime schemas', () => {
     assert.equal(result.success, true);
   });
 
-  it('rejects event-card-set data-asset envelope kind', () => {
+  it('accepts custom data-asset envelope kinds', () => {
     const result = DataAssetEnvelopeSchema.safeParse({
       id: 'fitl-event-cards-initial',
       kind: 'eventCardSet',
@@ -240,7 +240,7 @@ describe('top-level runtime schemas', () => {
       },
     });
 
-    assert.equal(result.success, false);
+    assert.equal(result.success, true);
   });
 
   it('parses valid event-deck payloads with dual-use sides and lasting effects', () => {

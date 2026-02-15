@@ -421,6 +421,7 @@ function compileExpandedDoc(
       ? {}
       : { stackingConstraints: derivedFromAssets.stackingConstraints }),
     ...(sections.globalMarkerLattices === null ? {} : { globalMarkerLattices: sections.globalMarkerLattices }),
+    ...(derivedFromAssets.runtimeDataAssets.length === 0 ? {} : { runtimeDataAssets: derivedFromAssets.runtimeDataAssets }),
     tokenTypes: tokenTypes.value,
     setup: mergedSetup,
     turnStructure,

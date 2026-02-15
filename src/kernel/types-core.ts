@@ -202,9 +202,12 @@ export interface GameDef {
   readonly stackingConstraints?: readonly StackingConstraint[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];
   readonly globalMarkerLattices?: readonly GlobalMarkerLatticeDef[];
+  readonly runtimeDataAssets?: readonly RuntimeDataAsset[];
 }
 
-export type DataAssetKind = 'map' | 'scenario' | 'pieceCatalog';
+export const KNOWN_DATA_ASSET_KINDS = ['map', 'scenario', 'pieceCatalog'] as const;
+export type KnownDataAssetKind = (typeof KNOWN_DATA_ASSET_KINDS)[number];
+export type DataAssetKind = string;
 
 export type PieceStatusDimension = 'activity' | 'tunnel';
 
@@ -326,9 +329,15 @@ export interface DataAssetEnvelope<TPayload = unknown> {
   readonly payload: TPayload;
 }
 
-export interface DataAssetRef {
+export interface RuntimeDataAsset<TPayload = unknown> {
   readonly id: string;
   readonly kind: DataAssetKind;
+  readonly payload: TPayload;
+}
+
+export interface DataAssetRef {
+  readonly id: string;
+  readonly kind: KnownDataAssetKind;
 }
 
 export interface ZobristTable {

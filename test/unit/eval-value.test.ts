@@ -275,6 +275,36 @@ describe('evalValue', () => {
     assert.equal(evalValue(expr, ctx), 3);
   });
 
+  it('supports aggregate prop extraction from assetRows row objects', () => {
+    const def = {
+      ...makeDef(),
+      runtimeDataAssets: [
+        {
+          id: 'tournament-standard',
+          kind: 'scenario',
+          payload: {
+            blindSchedule: {
+              levels: [
+                { level: 1, smallBlind: 10 },
+                { level: 2, smallBlind: 20 },
+                { level: 3, smallBlind: 40 },
+              ],
+            },
+          },
+        },
+      ],
+    };
+    const ctx = makeCtx({ def });
+    const expr: ValueExpr = {
+      aggregate: {
+        op: 'sum',
+        query: { query: 'assetRows', assetId: 'tournament-standard', table: 'blindSchedule.levels' },
+        prop: 'smallBlind',
+      },
+    };
+    assert.equal(evalValue(expr, ctx), 70);
+  });
+
   it('throws TYPE_MISMATCH for non-safe arithmetic operands', () => {
     const ctx = makeCtx();
 

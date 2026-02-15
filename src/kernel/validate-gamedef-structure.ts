@@ -26,6 +26,9 @@ export type ValidationContext = {
   mapSpaceZoneCandidates: readonly string[];
   mapSpacePropCandidates: readonly string[];
   mapSpacePropKinds: ReadonlyMap<string, 'scalar' | 'array' | 'mixed'>;
+  runtimeDataAssetIdsByNormalized: ReadonlyMap<string, string>;
+  runtimeDataAssetPayloadByNormalized: ReadonlyMap<string, unknown>;
+  runtimeDataAssetCandidates: readonly string[];
   tokenTypeNames: Set<string>;
   tokenTypeCandidates: readonly string[];
   turnPhaseNames: Set<string>;
@@ -552,6 +555,19 @@ export const buildValidationContext = (
   );
   const mapSpacePropKinds = classifyMapSpacePropertyKinds(def.mapSpaces);
   const mapSpacePropCandidates = [...mapSpacePropKinds.keys()].sort((left, right) => left.localeCompare(right));
+  const runtimeDataAssets = def.runtimeDataAssets ?? [];
+  const runtimeDataAssetIdsByNormalized = new Map<string, string>();
+  const runtimeDataAssetPayloadByNormalized = new Map<string, unknown>();
+  for (const asset of runtimeDataAssets) {
+    const normalizedId = asset.id.normalize('NFC');
+    if (!runtimeDataAssetIdsByNormalized.has(normalizedId)) {
+      runtimeDataAssetIdsByNormalized.set(normalizedId, asset.id);
+      runtimeDataAssetPayloadByNormalized.set(normalizedId, asset.payload);
+    }
+  }
+  const runtimeDataAssetCandidates = [...new Set(runtimeDataAssets.map((asset) => asset.id))].sort((left, right) =>
+    left.localeCompare(right),
+  );
 
   const context: ValidationContext = {
     zoneNames: new Set(zoneCandidates),
@@ -561,6 +577,9 @@ export const buildValidationContext = (
     mapSpaceZoneCandidates,
     mapSpacePropCandidates,
     mapSpacePropKinds,
+    runtimeDataAssetIdsByNormalized,
+    runtimeDataAssetPayloadByNormalized,
+    runtimeDataAssetCandidates,
     globalVarNames: new Set(globalVarCandidates),
     globalVarTypesByName: new Map(def.globalVars.map((variable) => [variable.name, variable.type])),
     globalVarCandidates,

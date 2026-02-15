@@ -127,7 +127,7 @@ describe('data asset loader scaffold', () => {
     assert.equal(result.diagnostics.length, 0);
   });
 
-  it('rejects legacy eventCardSet data-asset kind', () => {
+  it('rejects legacy eventCardSet data-asset kind when expectedKinds is constrained', () => {
     const result = validateDataAssetEnvelope(
       {
         id: 'fitl-event-cards-initial',
@@ -141,7 +141,7 @@ describe('data asset loader scaffold', () => {
     );
 
     assert.equal(result.asset, null);
-    assert.equal(result.diagnostics.some((diag) => diag.code === 'DATA_ASSET_SCHEMA_INVALID'), true);
+    assert.equal(result.diagnostics.some((diag) => diag.code === 'DATA_ASSET_KIND_UNSUPPORTED'), true);
   });
 
   it('rejects unsupported kinds when expectedKinds is constrained', () => {
@@ -161,7 +161,7 @@ describe('data asset loader scaffold', () => {
     assert.equal(result.diagnostics.some((diag) => diag.code === 'DATA_ASSET_KIND_UNSUPPORTED'), true);
   });
 
-  it('reports schema failures with assetPath and entityId when available', () => {
+  it('accepts custom data-asset kinds when expectedKinds is unconstrained', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
     try {
       const assetPath = join(dir, 'bad-kind.json');
@@ -176,11 +176,9 @@ describe('data asset loader scaffold', () => {
       );
 
       const result = loadDataAssetEnvelopeFromFile(assetPath);
-      assert.equal(result.asset, null);
-      assert.equal(result.diagnostics.length > 0, true);
-      assert.equal(result.diagnostics[0]?.code, 'DATA_ASSET_SCHEMA_INVALID');
-      assert.equal(result.diagnostics[0]?.assetPath, assetPath);
-      assert.equal(result.diagnostics[0]?.entityId, 'fitl-invalid-kind');
+      assert.equal(result.diagnostics.length, 0);
+      assert.equal(result.asset?.id, 'fitl-invalid-kind');
+      assert.equal(result.asset?.kind, 'invalid');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

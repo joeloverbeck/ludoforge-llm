@@ -1,6 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { isNumericValueExpr } from '../kernel/numeric-value-expr.js';
 import type {
+  AssetRowPredicate,
   ConditionAST,
   NumericValueExpr,
   OptionsQuery,
@@ -30,6 +31,7 @@ export interface ConditionLoweringResult<TValue> {
 const SUPPORTED_CONDITION_OPS = ['and', 'or', 'not', '==', '!=', '<', '<=', '>', '>=', 'in', 'adjacent', 'connected', 'zonePropIncludes'];
 const SUPPORTED_QUERY_KINDS = [
   'tokensInZone',
+  'assetRows',
   'tokensInMapSpaces',
   'intsInRange',
   'intsInVarRange',
@@ -48,6 +50,7 @@ const SUPPORTED_REFERENCE_KINDS = [
   'pvar',
   'zoneCount',
   'tokenProp',
+  'assetField',
   'binding',
   'markerState',
   'globalMarkerState',
@@ -283,6 +286,7 @@ export function lowerValueNode(
 }
 
 const SUPPORTED_TOKEN_FILTER_OPS = ['eq', 'neq', 'in', 'notIn'] as const;
+const SUPPORTED_ASSET_ROW_FILTER_OPS = ['eq', 'neq', 'in', 'notIn'] as const;
 
 function lowerTokenFilterEntry(
   source: unknown,
@@ -383,6 +387,85 @@ function lowerNamedSetReference(source: unknown): { readonly name: string } | nu
   return { name: source.name.trim().normalize('NFC') };
 }
 
+function lowerAssetRowFilterEntry(
+  source: unknown,
+  context: ConditionLoweringContext,
+  path: string,
+): ConditionLoweringResult<AssetRowPredicate> {
+  if (!isRecord(source) || typeof source.field !== 'string') {
+    return missingCapability(path, 'assetRows where entry', source, ['{ field: string, op: "eq"|"neq"|"in"|"notIn", value: <value> }']);
+  }
+  const field = source.field;
+
+  const resolvedOp =
+    source.op !== undefined ? source.op :
+    source.eq !== undefined ? 'eq' :
+    source.neq !== undefined ? 'neq' :
+    source.in !== undefined ? 'in' :
+    source.notIn !== undefined ? 'notIn' :
+    undefined;
+
+  if (
+    typeof resolvedOp !== 'string' ||
+    !SUPPORTED_ASSET_ROW_FILTER_OPS.includes(resolvedOp as typeof SUPPORTED_ASSET_ROW_FILTER_OPS[number])
+  ) {
+    return missingCapability(path, 'assetRows where operator', resolvedOp, [...SUPPORTED_ASSET_ROW_FILTER_OPS]);
+  }
+
+  const op = resolvedOp as AssetRowPredicate['op'];
+  const rawValue =
+    source.value !== undefined ? source.value :
+    source.eq !== undefined ? source.eq :
+    source.neq !== undefined ? source.neq :
+    source.in !== undefined ? source.in :
+    source.notIn !== undefined ? source.notIn :
+    undefined;
+
+  if (rawValue === undefined) {
+    return missingCapability(path, 'assetRows where value', source, ['{ field, op, value: <string|string[]|ValueExpr> }']);
+  }
+
+  if (op === 'in' || op === 'notIn') {
+    if (!Array.isArray(rawValue) || rawValue.some((item) => typeof item !== 'string')) {
+      return missingCapability(`${path}.value`, 'assetRows set value', rawValue, ['string[]']);
+    }
+    return {
+      value: { field, op, value: [...rawValue] },
+      diagnostics: [],
+    };
+  }
+
+  const loweredValue = lowerValueNode(rawValue, context, `${path}.value`);
+  if (loweredValue.value === null) {
+    return { value: null, diagnostics: loweredValue.diagnostics };
+  }
+
+  return {
+    value: { field, op, value: loweredValue.value },
+    diagnostics: loweredValue.diagnostics,
+  };
+}
+
+function lowerAssetRowFilterArray(
+  source: readonly unknown[],
+  context: ConditionLoweringContext,
+  path: string,
+): ConditionLoweringResult<readonly AssetRowPredicate[]> {
+  const diagnostics: Diagnostic[] = [];
+  const predicates: AssetRowPredicate[] = [];
+
+  for (let i = 0; i < source.length; i += 1) {
+    const lowered = lowerAssetRowFilterEntry(source[i], context, `${path}[${i}]`);
+    diagnostics.push(...lowered.diagnostics);
+    if (lowered.value === null) {
+      return { value: null, diagnostics };
+    }
+    predicates.push(lowered.value);
+  }
+
+  return { value: predicates, diagnostics };
+}
+
 function validateCanonicalTokenTraitLiteral(
   context: ConditionLoweringContext,
   prop: string,
@@ -459,6 +542,42 @@ export function lowerQueryNode(
       return {
         value: { query: 'tokensInZone', zone: zone.value },
         diagnostics: zone.diagnostics,
+      };
+    }
+    case 'assetRows': {
+      if (typeof source.assetId !== 'string' || source.assetId.trim() === '') {
+        return missingCapability(path, 'assetRows query', source, ['{ query: "assetRows", assetId: string, table: string, where?: [...] }']);
+      }
+      if (typeof source.table !== 'string' || source.table.trim() === '') {
+        return missingCapability(`${path}.table`, 'assetRows table path', source.table, ['non-empty string']);
+      }
+
+      if (source.where !== undefined) {
+        if (!Array.isArray(source.where)) {
+          return missingCapability(`${path}.where`, 'assetRows where', source.where, ['Array<{ field, op, value }>']);
+        }
+        const loweredWhere = lowerAssetRowFilterArray(source.where as readonly unknown[], context, `${path}.where`);
+        if (loweredWhere.value === null) {
+          return { value: null, diagnostics: loweredWhere.diagnostics };
+        }
+        return {
+          value: {
+            query: 'assetRows',
+            assetId: source.assetId,
+            table: source.table,
+            where: loweredWhere.value,
+          },
+          diagnostics: loweredWhere.diagnostics,
+        };
+      }
+
+      return {
+        value: {
+          query: 'assetRows',
+          assetId: source.assetId,
+          table: source.table,
+        },
+        diagnostics: [],
       };
     }
     case 'tokensInMapSpaces': {
@@ -892,6 +1011,29 @@ function lowerReference(
         };
       }
       return missingCapability(path, 'tokenProp reference', source, ['{ ref: "tokenProp", token: string, prop: string }']);
+    case 'assetField':
+      if (typeof source.row === 'string' && typeof source.field === 'string') {
+        if (context.bindingScope !== undefined && !hasBindingIdentifier(source.row, context.bindingScope)) {
+          return {
+            value: null,
+            diagnostics: [
+              {
+                code: 'CNL_COMPILER_BINDING_UNBOUND',
+                path: `${path}.row`,
+                severity: 'error',
+                message: `Unbound binding reference "${source.row}".`,
+                suggestion: 'Use a row binding declared by action params or an in-scope effect binder.',
+                alternatives: rankBindingIdentifierAlternatives(source.row, context.bindingScope),
+              },
+            ],
+          };
+        }
+        return {
+          value: { ref: 'assetField', row: source.row, field: source.field },
+          diagnostics: [],
+        };
+      }
+      return missingCapability(path, 'assetField reference', source, ['{ ref: "assetField", row: string, field: string }']);
     case 'markerState': {
       if (typeof source.marker !== 'string') {
         return missingCapability(path, 'markerState reference', source, ['{ ref: "markerState", space: <ZoneSel>, marker: string }']);

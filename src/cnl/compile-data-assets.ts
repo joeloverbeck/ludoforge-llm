@@ -7,6 +7,7 @@ import type {
   NumericTrackDef,
   PieceCatalogPayload,
   PieceStatusDimension,
+  RuntimeDataAsset,
   ScenarioPayload,
   SpaceMarkerLatticeDef,
   SpaceMarkerValueDef,
@@ -62,6 +63,7 @@ export function deriveSectionsFromDataAssets(
   readonly spaceMarkers: readonly SpaceMarkerValueDef[] | null;
   readonly stackingConstraints: readonly StackingConstraint[] | null;
   readonly scenarioSetupEffects: readonly EffectAST[];
+  readonly runtimeDataAssets: readonly RuntimeDataAsset[];
   readonly derivationFailures: {
     readonly map: boolean;
     readonly pieceCatalog: boolean;
@@ -79,6 +81,7 @@ export function deriveSectionsFromDataAssets(
       spaceMarkers: null,
       stackingConstraints: null,
       scenarioSetupEffects: [],
+      runtimeDataAssets: [],
       derivationFailures: {
         map: false,
         pieceCatalog: false,
@@ -89,6 +92,7 @@ export function deriveSectionsFromDataAssets(
 
   const mapAssets: Array<{ readonly id: string; readonly payload: MapPayload }> = [];
   const pieceCatalogAssets: Array<{ readonly id: string; readonly payload: PieceCatalogPayload }> = [];
+  const runtimeDataAssets: RuntimeDataAsset[] = [];
   const scenarioRefs: Array<{
     readonly payload: ScenarioPayload;
     readonly mapAssetId?: string;
@@ -106,7 +110,6 @@ export function deriveSectionsFromDataAssets(
     }
     const pathPrefix = `doc.dataAssets.${index}`;
     const validated = validateDataAssetEnvelope(rawAsset, {
-      expectedKinds: ['map', 'scenario', 'pieceCatalog'],
       pathPrefix,
     });
     diagnostics.push(...validated.diagnostics);
@@ -119,6 +122,12 @@ export function deriveSectionsFromDataAssets(
       }
       continue;
     }
+
+    runtimeDataAssets.push({
+      id: validated.asset.id,
+      kind: validated.asset.kind,
+      payload: validated.asset.payload,
+    });
 
     if (validated.asset.kind === 'map') {
       mapAssets.push({
@@ -235,6 +244,7 @@ export function deriveSectionsFromDataAssets(
     spaceMarkers: selectedMap?.payload.spaceMarkers ?? null,
     stackingConstraints: selectedMap?.payload.stackingConstraints ?? null,
     scenarioSetupEffects,
+    runtimeDataAssets,
     derivationFailures: {
       map: mapDerivationFailed,
       pieceCatalog: pieceCatalogDerivationFailed,

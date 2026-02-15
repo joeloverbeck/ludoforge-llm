@@ -9,7 +9,7 @@ import {
   validateGameSpec,
 } from '../../src/cnl/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { validateGameDef } from '../../src/kernel/index.js';
+import { applyMove, asActionId, initialState, validateGameDef } from '../../src/kernel/index.js';
 import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
 describe('compile pipeline integration', () => {
@@ -219,6 +219,93 @@ actor: 'active',
       compiled.gameDef?.stackingConstraints?.map((constraint) => constraint.id),
       ['no-duplicate-base'],
     );
+  });
+
+  it('executes runtime assetRows + assetField logic from embedded dataAssets', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-runtime-asset-rows',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'globalVars:',
+      '  - name: currentSmallBlind',
+      '    type: int',
+      '    init: 0',
+      '    min: 0',
+      '    max: 1000000',
+      'zones:',
+      '  - id: table:none',
+      '    owner: none',
+      '    visibility: public',
+      '    ordering: set',
+      'dataAssets:',
+      '  - id: tournament-standard',
+      '    kind: scenario',
+      '    payload:',
+      '      blindSchedule:',
+      '        levels:',
+      '          - level: 1',
+      '            smallBlind: 10',
+      '            phase: early',
+      '          - level: 2',
+      '            smallBlind: 20',
+      '            phase: early',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: syncBlind',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects:',
+      '      - forEach:',
+      '          bind: $row',
+      '          over:',
+      '            query: assetRows',
+      '            assetId: tournament-standard',
+      '            table: blindSchedule.levels',
+      '            where:',
+      '              - field: level',
+      '                op: eq',
+      '                value: 2',
+      '          effects:',
+      '            - setVar:',
+      '                scope: global',
+      '                var: currentSmallBlind',
+      '                value:',
+      '                  ref: assetField',
+      '                  row: $row',
+      '                  field: smallBlind',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 0 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.deepEqual(validatorDiagnostics, []);
+    assertNoDiagnostics(compiled);
+    assert.notEqual(compiled.gameDef, null);
+    assert.equal(compiled.gameDef?.runtimeDataAssets?.length, 1);
+
+    const def = compiled.gameDef!;
+    const start = initialState(def, 101, 2);
+    const next = applyMove(def, start, { actionId: asActionId('syncBlind'), params: {} }).state;
+    assert.equal(next.globalVars.currentSmallBlind, 20);
   });
 
   it('projects map tracks into gameDef globalVars without duplicated globalVars declarations', () => {

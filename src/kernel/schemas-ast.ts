@@ -42,6 +42,7 @@ export const ReferenceSchema = z.union([
     .strict(),
   z.object({ ref: z.literal('zoneCount'), zone: ZoneSelSchema }).strict(),
   z.object({ ref: z.literal('tokenProp'), token: TokenSelSchema, prop: StringSchema }).strict(),
+  z.object({ ref: z.literal('assetField'), row: StringSchema, field: StringSchema }).strict(),
   z.object({ ref: z.literal('binding'), name: StringSchema }).strict(),
   z.object({ ref: z.literal('markerState'), space: ZoneSelSchema, marker: StringSchema }).strict(),
   z.object({ ref: z.literal('globalMarkerState'), marker: StringSchema }).strict(),
@@ -75,12 +76,28 @@ export const TokenFilterPredicateSchema = z
   })
   .strict();
 
+export const AssetRowPredicateSchema = z
+  .object({
+    field: StringSchema,
+    op: z.union([z.literal('eq'), z.literal('neq'), z.literal('in'), z.literal('notIn')]),
+    value: z.union([ValueExprSchema, z.array(StringSchema)]),
+  })
+  .strict();
+
 optionsQuerySchemaInternal = z.union([
   z
     .object({
       query: z.literal('tokensInZone'),
       zone: ZoneSelSchema,
       filter: z.array(TokenFilterPredicateSchema).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      query: z.literal('assetRows'),
+      assetId: StringSchema,
+      table: StringSchema,
+      where: z.array(AssetRowPredicateSchema).optional(),
     })
     .strict(),
   z

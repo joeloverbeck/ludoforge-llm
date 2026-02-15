@@ -260,16 +260,18 @@ export const ScenarioPayloadSchema = z
   })
   .strict();
 
-export const DataAssetKindSchema = z.union([
+export const KnownDataAssetKindSchema = z.union([
   z.literal('map'),
   z.literal('scenario'),
   z.literal('pieceCatalog'),
 ]);
 
+export const DataAssetKindSchema = StringSchema.min(1);
+
 export const DataAssetRefSchema = z
   .object({
     id: StringSchema.min(1),
-    kind: DataAssetKindSchema,
+    kind: KnownDataAssetKindSchema,
   })
   .strict();
 

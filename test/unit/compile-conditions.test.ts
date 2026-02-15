@@ -233,6 +233,37 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, { ref: 'tokenZone', token: '$piece' });
   });
 
+  it('lowers assetField reference and validates binding scope', () => {
+    const withScope: ConditionLoweringContext = {
+      ...context,
+      bindingScope: ['$row'],
+    };
+    const result = lowerValueNode(
+      { ref: 'assetField', row: '$row', field: 'smallBlind' },
+      withScope,
+      'doc.actions.0.effects.0.setVar.value',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, { ref: 'assetField', row: '$row', field: 'smallBlind' });
+  });
+
+  it('emits unbound diagnostic for assetField row binding', () => {
+    const withScope: ConditionLoweringContext = {
+      ...context,
+      bindingScope: ['$other'],
+    };
+    const result = lowerValueNode(
+      { ref: 'assetField', row: '$row', field: 'smallBlind' },
+      withScope,
+      'doc.actions.0.effects.0.setVar.value',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_BINDING_UNBOUND');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0.setVar.value.row');
+  });
+
   it('lowers zoneProp reference with zone canonicalization', () => {
     const result = lowerValueNode(
       { ref: 'zoneProp', zone: 'board', prop: 'population' },
@@ -383,6 +414,33 @@ describe('compile-conditions lowering', () => {
         },
       },
       filter: [{ prop: 'type', op: 'eq', value: 'guerrilla' }],
+    });
+  });
+
+  it('lowers assetRows query with where predicates', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'assetRows',
+        assetId: 'tournament-standard',
+        table: 'blindSchedule.levels',
+        where: [
+          { field: 'level', op: 'eq', value: 2 },
+          { field: 'phase', op: 'in', value: ['early', 'mid'] },
+        ],
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'assetRows',
+      assetId: 'tournament-standard',
+      table: 'blindSchedule.levels',
+      where: [
+        { field: 'level', op: 'eq', value: 2 },
+        { field: 'phase', op: 'in', value: ['early', 'mid'] },
+      ],
     });
   });
 

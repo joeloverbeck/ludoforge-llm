@@ -77,6 +77,7 @@ describe('AST and selector schemas', () => {
     const references = [
       { ref: 'tokenZone', token: '$piece' },
       { ref: 'zoneProp', zone: 'quang-tri:none', prop: 'spaceType' },
+      { ref: 'assetField', row: '$blindLevel', field: 'smallBlind' },
     ] as const;
 
     for (const reference of references) {
@@ -325,6 +326,35 @@ describe('AST and selector schemas', () => {
     for (const query of queries) {
       assert.deepEqual(OptionsQuerySchema.parse(query), query);
     }
+  });
+
+  it('parses assetRows query with and without where predicates', () => {
+    const queries: OptionsQuery[] = [
+      { query: 'assetRows', assetId: 'tournament-standard', table: 'blindSchedule.levels' },
+      {
+        query: 'assetRows',
+        assetId: 'tournament-standard',
+        table: 'blindSchedule.levels',
+        where: [
+          { field: 'level', op: 'eq', value: 3 },
+          { field: 'phase', op: 'in', value: ['early', 'mid'] },
+        ],
+      },
+    ];
+
+    for (const query of queries) {
+      assert.deepEqual(OptionsQuerySchema.parse(query), query);
+    }
+  });
+
+  it('rejects malformed assetRows where predicate shapes', () => {
+    const missingField = OptionsQuerySchema.safeParse({
+      query: 'assetRows',
+      assetId: 'tournament-standard',
+      table: 'blindSchedule.levels',
+      where: [{ op: 'eq', value: 1 }],
+    });
+    assert.equal(missingField.success, false);
   });
 
   it('parses tokensInZone query with compound filter (multiple predicates)', () => {

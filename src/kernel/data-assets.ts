@@ -5,10 +5,10 @@ import type { Diagnostic } from './diagnostics.js';
 import { validateMapPayload } from './map-model.js';
 import { validatePieceCatalogPayload } from './piece-catalog.js';
 import { DataAssetEnvelopeSchema } from './schemas.js';
-import type { DataAssetEnvelope, DataAssetKind } from './types.js';
+import type { DataAssetEnvelope } from './types.js';
 
 export interface LoadDataAssetEnvelopeOptions {
-  readonly expectedKinds?: readonly DataAssetKind[];
+  readonly expectedKinds?: readonly string[];
 }
 
 export interface LoadDataAssetEnvelopeResult {
@@ -17,7 +17,7 @@ export interface LoadDataAssetEnvelopeResult {
 }
 
 export interface ValidateDataAssetEnvelopeOptions {
-  readonly expectedKinds?: readonly DataAssetKind[];
+  readonly expectedKinds?: readonly string[];
   readonly assetPath?: string;
   readonly pathPrefix?: string;
 }

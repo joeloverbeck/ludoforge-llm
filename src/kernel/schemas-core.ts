@@ -205,6 +205,14 @@ export const TerminalEvaluationDefSchema = z
   })
   .strict();
 
+export const RuntimeDataAssetSchema = z
+  .object({
+    id: StringSchema,
+    kind: StringSchema,
+    payload: z.unknown(),
+  })
+  .strict();
+
 
 export const GameDefSchema = z
   .object({
@@ -234,6 +242,7 @@ export const GameDefSchema = z
     stackingConstraints: z.array(StackingConstraintSchema).optional(),
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),
     globalMarkerLattices: z.array(GlobalMarkerLatticeSchema).optional(),
+    runtimeDataAssets: z.array(RuntimeDataAssetSchema).optional(),
   })
   .strict();
 

@@ -1,5 +1,5 @@
 import { getMaxQueryResults, type EvalContext } from './eval-context.js';
-import { isEvalErrorCode, missingVarError, queryBoundsExceededError } from './eval-error.js';
+import { isEvalErrorCode, missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitWarning } from './execution-collector.js';
@@ -8,9 +8,10 @@ import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
-import type { NumericValueExpr, OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
+import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
 
-type QueryResult = Token | number | string | PlayerId | ZoneId;
+type AssetRow = Readonly<Record<string, unknown>>;
+type QueryResult = Token | AssetRow | number | string | PlayerId | ZoneId;
 
 function resolveIntDomainBound(bound: NumericValueExpr, ctx: EvalContext): number | null {
   let value: number | boolean | string;
@@ -68,6 +69,53 @@ function resolveFilterValue(value: TokenFilterPredicate['value'], ctx: EvalConte
   return evalValue(value as ValueExpr, ctx);
 }
 
+function isScalarValue(value: unknown): value is string | number | boolean {
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+}
+
+function resolveAssetRowFilterValue(value: AssetRowPredicate['value'], ctx: EvalContext): string | number | boolean | readonly string[] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (isScalarValue(value)) {
+    return value;
+  }
+  const resolved = evalValue(value as ValueExpr, ctx);
+  if (!isScalarValue(resolved)) {
+    throw typeMismatchError('assetRows predicate value must resolve to a scalar', {
+      value,
+      resolved,
+      actualType: typeof resolved,
+    });
+  }
+  return resolved;
+}
+
+function matchResolvedPredicate(
+  fieldValue: unknown,
+  op: 'eq' | 'neq' | 'in' | 'notIn',
+  resolved: string | number | boolean | readonly string[],
+): boolean {
+  if (fieldValue === undefined) {
+    return false;
+  }
+
+  switch (op) {
+    case 'eq':
+      return fieldValue === resolved;
+    case 'neq':
+      return fieldValue !== resolved;
+    case 'in':
+      return Array.isArray(resolved) && resolved.includes(String(fieldValue));
+    case 'notIn':
+      return Array.isArray(resolved) && !resolved.includes(String(fieldValue));
+    default: {
+      const _exhaustive: never = op;
+      return _exhaustive;
+    }
+  }
+}
+
 function tokenFilterFieldValue(token: Token, field: string): string | number | boolean | undefined {
   if (field === 'id') {
     return token.id;
@@ -77,26 +125,8 @@ function tokenFilterFieldValue(token: Token, field: string): string | number | b
 
 function tokenMatchesPredicate(token: Token, predicate: TokenFilterPredicate, ctx: EvalContext): boolean {
   const propValue = tokenFilterFieldValue(token, predicate.prop);
-  if (propValue === undefined) {
-    return false;
-  }
-
   const resolved = resolveFilterValue(predicate.value, ctx);
-
-  switch (predicate.op) {
-    case 'eq':
-      return propValue === resolved;
-    case 'neq':
-      return propValue !== resolved;
-    case 'in':
-      return Array.isArray(resolved) && resolved.includes(String(propValue));
-    case 'notIn':
-      return Array.isArray(resolved) && !resolved.includes(String(propValue));
-    default: {
-      const _exhaustive: never = predicate.op;
-      return _exhaustive;
-    }
-  }
+  return matchResolvedPredicate(propValue, predicate.op, resolved);
 }
 
 function applyTokenFilters(tokens: readonly Token[], filters: readonly TokenFilterPredicate[], ctx: EvalContext): readonly Token[] {
@@ -228,6 +258,99 @@ function dedupeStringsPreserveOrder(values: readonly string[]): readonly string[
   return unique;
 }
 
+function resolveRuntimeAsset(query: Extract<OptionsQuery, { readonly query: 'assetRows' }>, ctx: EvalContext): AssetRow[] {
+  const normalizedAssetId = query.assetId.normalize('NFC');
+  const runtimeAssets = ctx.def.runtimeDataAssets ?? [];
+  const asset = runtimeAssets.find((candidate) => candidate.id.normalize('NFC') === normalizedAssetId);
+  if (asset === undefined) {
+    throw missingVarError(`Runtime data asset not found: ${query.assetId}`, {
+      query,
+      assetId: query.assetId,
+      availableAssetIds: runtimeAssets.map((candidate) => candidate.id).sort((left, right) => left.localeCompare(right)),
+    });
+  }
+
+  const pathSegments = query.table
+    .split('.')
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+  if (pathSegments.length === 0) {
+    throw missingVarError('assetRows.table must contain at least one path segment', {
+      query,
+      table: query.table,
+      assetId: query.assetId,
+    });
+  }
+
+  let current: unknown = asset.payload;
+  for (const [segmentIndex, segment] of pathSegments.entries()) {
+    if (typeof current !== 'object' || current === null || Array.isArray(current)) {
+      throw typeMismatchError('assetRows.table traversal expected object segment', {
+        query,
+        assetId: query.assetId,
+        table: query.table,
+        segment,
+        segmentIndex,
+        actualType: Array.isArray(current) ? 'array' : typeof current,
+      });
+    }
+
+    const next = (current as Record<string, unknown>)[segment];
+    if (next === undefined) {
+      throw missingVarError(`assetRows.table path segment not found: ${segment}`, {
+        query,
+        assetId: query.assetId,
+        table: query.table,
+        segment,
+        segmentIndex,
+        availableKeys: Object.keys(current).sort(),
+      });
+    }
+    current = next;
+  }
+
+  if (!Array.isArray(current)) {
+    throw typeMismatchError('assetRows.table must resolve to an array of rows', {
+      query,
+      assetId: query.assetId,
+      table: query.table,
+      actualType: typeof current,
+    });
+  }
+
+  current.forEach((row, rowIndex) => {
+    if (typeof row !== 'object' || row === null || Array.isArray(row)) {
+      throw typeMismatchError('assetRows table rows must be objects', {
+        query,
+        assetId: query.assetId,
+        table: query.table,
+        rowIndex,
+        actualType: Array.isArray(row) ? 'array' : typeof row,
+      });
+    }
+  });
+
+  return [...current] as AssetRow[];
+}
+
+function evalAssetRowsQuery(
+  query: Extract<OptionsQuery, { readonly query: 'assetRows' }>,
+  ctx: EvalContext,
+): readonly AssetRow[] {
+  const rows = resolveRuntimeAsset(query, ctx);
+  const wherePredicates = query.where ?? [];
+  if (wherePredicates.length === 0) {
+    return rows;
+  }
+
+  return rows.filter((row) =>
+    wherePredicates.every((predicate) => {
+      const resolved = resolveAssetRowFilterValue(predicate.value, ctx);
+      return matchResolvedPredicate(row[predicate.field], predicate.op, resolved);
+    }),
+  );
+}
+
 export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly QueryResult[] {
   const maxQueryResults = getMaxQueryResults(ctx);
 
@@ -254,6 +377,11 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       }
       assertWithinBounds(filtered.length, query, maxQueryResults);
       return filtered;
+    }
+    case 'assetRows': {
+      const rows = evalAssetRowsQuery(query, ctx);
+      assertWithinBounds(rows.length, query, maxQueryResults);
+      return rows;
     }
 
     case 'tokensInMapSpaces': {

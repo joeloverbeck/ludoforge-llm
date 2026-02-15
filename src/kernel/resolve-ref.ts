@@ -103,6 +103,53 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
     return propValue;
   }
 
+  if (ref.ref === 'assetField') {
+    const resolvedRowBinding = resolveBindingTemplate(ref.row, ctx.bindings);
+    const boundRow = ctx.bindings[resolvedRowBinding];
+    if (boundRow === undefined) {
+      throw missingBindingError(`Row binding not found: ${resolvedRowBinding}`, {
+        reference: ref,
+        row: resolvedRowBinding,
+        rowTemplate: ref.row,
+        availableBindings: Object.keys(ctx.bindings).sort(),
+      });
+    }
+
+    if (typeof boundRow !== 'object' || boundRow === null || Array.isArray(boundRow)) {
+      throw typeMismatchError(`Row binding ${resolvedRowBinding} must resolve to a row object`, {
+        reference: ref,
+        row: resolvedRowBinding,
+        rowTemplate: ref.row,
+        actualType: Array.isArray(boundRow) ? 'array' : typeof boundRow,
+        value: boundRow,
+      });
+    }
+
+    const rowValue = (boundRow as Record<string, unknown>)[ref.field];
+    if (rowValue === undefined) {
+      throw missingVarError(`Row field not found: ${ref.field}`, {
+        reference: ref,
+        row: resolvedRowBinding,
+        rowTemplate: ref.row,
+        field: ref.field,
+        availableFields: Object.keys(boundRow as Record<string, unknown>).sort(),
+      });
+    }
+
+    if (!isScalarValue(rowValue)) {
+      throw typeMismatchError(`Row field ${ref.field} must be a scalar`, {
+        reference: ref,
+        row: resolvedRowBinding,
+        rowTemplate: ref.row,
+        field: ref.field,
+        actualType: Array.isArray(rowValue) ? 'array' : typeof rowValue,
+        value: rowValue,
+      });
+    }
+
+    return rowValue;
+  }
+
   if (ref.ref === 'tokenZone') {
     const boundToken = ctx.bindings[ref.token];
     if (boundToken === undefined) {

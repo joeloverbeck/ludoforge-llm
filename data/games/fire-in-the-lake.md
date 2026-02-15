@@ -67,6 +67,42 @@ effectMacros:
                             from: $space
                             to: { zoneExpr: 'available-ARVN:none' }
 
+  # ── set-global-marker ──────────────────────────────────────────────────────
+  # Shared marker toggle helper for capability/event marker state transitions.
+  - id: set-global-marker
+    params:
+      - { name: markerId, type: string }
+      - { name: markerState, type: { kind: enum, values: [inactive, unshaded, shaded] } }
+    exports: []
+    effects:
+      - setGlobalMarker:
+          marker: { param: markerId }
+          state: { param: markerState }
+
+  # ── set-global-flag-true ───────────────────────────────────────────────────
+  # Shared helper to enable a boolean global flag.
+  - id: set-global-flag-true
+    params:
+      - { name: varName, type: string }
+    exports: []
+    effects:
+      - setVar:
+          scope: global
+          var: { param: varName }
+          value: true
+
+  # ── set-global-flag-false ──────────────────────────────────────────────────
+  # Shared helper to disable a boolean global flag.
+  - id: set-global-flag-false
+    params:
+      - { name: varName, type: string }
+    exports: []
+    effects:
+      - setVar:
+          scope: global
+          var: { param: varName }
+          value: false
+
   # ── piece-removal-ordering ────────────────────────────────────────────────
   # Core removal-ordering macro shared by COIN Assault and Insurgent Attack.
   # Priority: enemy troops → active guerrillas (first-faction chosen, then other) → untunneled bases (tunneled roll ≥4 to flip).
@@ -3070,7 +3106,8 @@ eventDecks:
             - if:
                 when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: shaded }
                 then:
-                  - setGlobalMarker: { marker: cap_sa2s, state: inactive }
+                  - macro: set-global-marker
+                    args: { markerId: cap_sa2s, markerState: inactive }
                 else:
                   - addVar: { scope: global, var: trail, delta: -2 }
                   - addVar: { scope: global, var: nvaResources, delta: -9 }
@@ -3080,9 +3117,11 @@ eventDecks:
             - id: mom-wild-weasels
               duration: round
               setupEffects:
-                - setVar: { scope: global, var: mom_wildWeasels, value: true }
+                - macro: set-global-flag-true
+                  args: { varName: mom_wildWeasels }
               teardownEffects:
-                - setVar: { scope: global, var: mom_wildWeasels, value: false }
+                - macro: set-global-flag-false
+                  args: { varName: mom_wildWeasels }
       - id: card-6
         title: Aces
         sideMode: dual
@@ -3132,9 +3171,11 @@ eventDecks:
             - id: mom-adsid
               duration: round
               setupEffects:
-                - setVar: { scope: global, var: mom_adsid, value: true }
+                - macro: set-global-flag-true
+                  args: { varName: mom_adsid }
               teardownEffects:
-                - setVar: { scope: global, var: mom_adsid, value: false }
+                - macro: set-global-flag-false
+                  args: { varName: mom_adsid }
         shaded:
           text: "Dubious technology: Improve Trail by 1 box and to a minimum of 2. ARVN Resources -9."
           effects:
@@ -3156,11 +3197,13 @@ eventDecks:
         unshaded:
           text: "1 space each Air Strike may be a Province without COIN pieces."
           effects:
-            - setGlobalMarker: { marker: cap_arcLight, state: unshaded }
+            - macro: set-global-marker
+              args: { markerId: cap_arcLight, markerState: unshaded }
         shaded:
           text: "Moonscape: Air Strike spaces removing >1 piece shift 2 levels toward Active Opposition."
           effects:
-            - setGlobalMarker: { marker: cap_arcLight, state: shaded }
+            - macro: set-global-marker
+              args: { markerId: cap_arcLight, markerState: shaded }
       - id: card-10
         title: Rolling Thunder
         sideMode: dual
@@ -3183,9 +3226,11 @@ eventDecks:
             - id: mom-rolling-thunder
               duration: round
               setupEffects:
-                - setVar: { scope: global, var: mom_rollingThunder, value: true }
+                - macro: set-global-flag-true
+                  args: { varName: mom_rollingThunder }
               teardownEffects:
-                - setVar: { scope: global, var: mom_rollingThunder, value: false }
+                - macro: set-global-flag-false
+                  args: { varName: mom_rollingThunder }
       - id: card-14
         title: M-48 Patton
         sideMode: dual
@@ -3198,11 +3243,13 @@ eventDecks:
         unshaded:
           text: "2 non-Lowland US Assault spaces each remove 2 extra enemy pieces."
           effects:
-            - setGlobalMarker: { marker: cap_m48Patton, state: unshaded }
+            - macro: set-global-marker
+              args: { markerId: cap_m48Patton, markerState: unshaded }
         shaded:
           text: "RPGs: After US/ARVN Patrol, NVA removes up to 2 cubes that moved (US to Casualties)."
           effects:
-            - setGlobalMarker: { marker: cap_m48Patton, state: shaded }
+            - macro: set-global-marker
+              args: { markerId: cap_m48Patton, markerState: shaded }
       - id: card-18
         title: Combined Action Platoons
         sideMode: dual
@@ -3215,11 +3262,13 @@ eventDecks:
         unshaded:
           text: "US Training places or relocates an added Police into any 1 space with US Troops."
           effects:
-            - setGlobalMarker: { marker: cap_caps, state: unshaded }
+            - macro: set-global-marker
+              args: { markerId: cap_caps, markerState: unshaded }
         shaded:
           text: "Passive posture: US may select max 2 spaces per Sweep."
           effects:
-            - setGlobalMarker: { marker: cap_caps, state: shaded }
+            - macro: set-global-marker
+              args: { markerId: cap_caps, markerState: shaded }
       - id: card-22
         title: Da Nang
         sideMode: dual
@@ -3262,9 +3311,11 @@ eventDecks:
             - id: mom-da-nang
               duration: round
               setupEffects:
-                - setVar: { scope: global, var: mom_daNang, value: true }
+                - macro: set-global-flag-true
+                  args: { varName: mom_daNang }
               teardownEffects:
-                - setVar: { scope: global, var: mom_daNang, value: false }
+                - macro: set-global-flag-false
+                  args: { varName: mom_daNang }
       - id: card-23
         title: Operation Attleboro
         sideMode: dual
@@ -3417,11 +3468,13 @@ eventDecks:
         unshaded:
           text: "Each US Assault space may remove 1 Underground Guerrilla."
           effects:
-            - setGlobalMarker: { marker: cap_searchAndDestroy, state: unshaded }
+            - macro: set-global-marker
+              args: { markerId: cap_searchAndDestroy, markerState: unshaded }
         shaded:
           text: "Villagers in the crossfire: Each US and ARVN Assault Province shifts by 1 level toward Active Opposition."
           effects:
-            - setGlobalMarker: { marker: cap_searchAndDestroy, state: shaded }
+            - macro: set-global-marker
+              args: { markerId: cap_searchAndDestroy, markerState: shaded }
       - id: card-27
         title: Phoenix Program
         sideMode: dual
@@ -3922,11 +3975,13 @@ eventDecks:
         unshaded:
           text: "VC and NVA Ambush in max 1 space."
           effects:
-            - setGlobalMarker: { marker: cap_boobyTraps, state: unshaded }
+            - macro: set-global-marker
+              args: { markerId: cap_boobyTraps, markerState: unshaded }
         shaded:
           text: "Mines and punji: each Sweep space risks 1 Sweeping Troop loss on roll 1-3."
           effects:
-            - setGlobalMarker: { marker: cap_boobyTraps, state: shaded }
+            - macro: set-global-marker
+              args: { markerId: cap_boobyTraps, markerState: shaded }
       - id: card-17
         title: Claymores
         sideMode: dual
@@ -3944,9 +3999,11 @@ eventDecks:
             - id: mom-claymores
               duration: round
               setupEffects:
-                - setVar: { scope: global, var: mom_claymores, value: true }
+                - macro: set-global-flag-true
+                  args: { varName: mom_claymores }
               teardownEffects:
-                - setVar: { scope: global, var: mom_claymores, value: false }
+                - macro: set-global-flag-false
+                  args: { varName: mom_claymores }
         shaded:
           text: "Infiltrators turn mines around: remove 1 COIN Base and 1 Underground Insurgent from a space with both."
           targets:
@@ -4018,18 +4075,22 @@ eventDecks:
             - id: mom-medevac-unshaded
               duration: round
               setupEffects:
-                - setVar: { scope: global, var: mom_medevacUnshaded, value: true }
+                - macro: set-global-flag-true
+                  args: { varName: mom_medevacUnshaded }
               teardownEffects:
-                - setVar: { scope: global, var: mom_medevacUnshaded, value: false }
+                - macro: set-global-flag-false
+                  args: { varName: mom_medevacUnshaded }
         shaded:
           text: "Through Coup, US Troop casualties remain unavailable."
           lastingEffects:
             - id: mom-medevac-shaded
               duration: round
               setupEffects:
-                - setVar: { scope: global, var: mom_medevacShaded, value: true }
+                - macro: set-global-flag-true
+                  args: { varName: mom_medevacShaded }
               teardownEffects:
-                - setVar: { scope: global, var: mom_medevacShaded, value: false }
+                - macro: set-global-flag-false
+                  args: { varName: mom_medevacShaded }
       - id: card-26
         title: LRRP
         sideMode: dual
@@ -4169,11 +4230,170 @@ eventDecks:
         unshaded:
           text: "NVA capability: Rally Trail improvement restricted."
           effects:
-            - setGlobalMarker: { marker: cap_aaa, state: unshaded }
+            - macro: set-global-marker
+              args: { markerId: cap_aaa, markerState: unshaded }
         shaded:
           text: "NVA capability (shaded): air defense suppresses COIN air power."
           effects:
-            - setGlobalMarker: { marker: cap_aaa, state: shaded }
+            - macro: set-global-marker
+              args: { markerId: cap_aaa, markerState: shaded }
+      - id: card-34
+        title: SA-2s
+        sideMode: dual
+        order: 34
+        tags: [capability, NVA]
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          flavorText: "Surface-to-air missiles tighten the northern shield."
+        unshaded:
+          text: "NVA capability: Air Strike can remove only 2 pieces in one selected space."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_sa2s, markerState: unshaded }
+        shaded:
+          text: "NVA capability (shaded): Air Strike losses can include US Troops when available."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_sa2s, markerState: shaded }
+      - id: card-38
+        title: McNamara Line
+        sideMode: single
+        order: 38
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          flavorText: "Barrier planning constrains infiltration routes."
+        unshaded:
+          text: "No Infiltrate or Trail Improvement until Coup. MOMENTUM"
+          lastingEffects:
+            - id: mom-mcnamara-line
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_mcnamaraLine }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_mcnamaraLine }
+      - id: card-39
+        title: Oriskany
+        sideMode: dual
+        order: 39
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          flavorText: "Carrier deck fire disrupts strike tempo."
+        unshaded:
+          text: "Air Strike degrades Trail by 2 and lowers NVA Resources by 9."
+        shaded:
+          text: "No Trail degrade from Air Strike until Coup. MOMENTUM"
+          lastingEffects:
+            - id: mom-oriskany
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_oriskany }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_oriskany }
+      - id: card-46
+        title: 559th Transport Grp
+        sideMode: dual
+        order: 46
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          flavorText: "Route command tightens corridor discipline."
+        unshaded:
+          text: "NVA Infiltrate to only 1 destination space through Coup. MOMENTUM"
+          lastingEffects:
+            - id: mom-559th-transport-grp
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_559thTransportGrp }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_559thTransportGrp }
+        shaded:
+          text: "US Aid -6 and NVA Resources +6."
+          effects:
+            - addVar: { scope: global, var: aid, delta: -6 }
+            - addVar: { scope: global, var: nvaResources, delta: 6 }
+      - id: card-47
+        title: Chu Luc
+        sideMode: dual
+        order: 47
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          flavorText: "Main-force concentration accelerates in contested provinces."
+        unshaded:
+          text: "Place 3 NVA Troops into any spaces with NVA pieces."
+        shaded:
+          text: "Place 2 VC Guerrillas into any spaces with VC pieces."
+      - id: card-53
+        title: Sappers
+        sideMode: dual
+        order: 53
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          flavorText: "Shock teams probe base perimeters."
+        unshaded:
+          text: "Remove a COIN Base and up to 2 Troops from one selected space."
+        shaded:
+          text: "Remove 3 NVA/VC Guerrillas from one selected space."
+      - id: card-56
+        title: Vo Nguyen Giap
+        sideMode: dual
+        order: 56
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          flavorText: "Operational tempo follows strategic concentration."
+        unshaded:
+          text: "NVA execute free March then free Attack."
+          freeOperationGrants:
+            - faction: "2"
+              sequence: { chain: vo-nguyen-giap-nva, step: 0 }
+              operationClass: operation
+              actionIds: [march]
+            - faction: "2"
+              sequence: { chain: vo-nguyen-giap-nva, step: 1 }
+              operationClass: operation
+              actionIds: [attack]
+        shaded:
+          text: "NVA execute free March in up to 3 spaces, then 1 free Op or Special Activity in each."
+      - id: card-59
+        title: Plei Mei
+        sideMode: dual
+        order: 59
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          flavorText: "Highland clashes force rapid tactical repositioning."
+        unshaded:
+          text: "Remove enemy pieces in one selected Highland and execute free March."
+          freeOperationGrants:
+            - faction: "2"
+              sequence: { chain: plei-mei-nva, step: 0 }
+              operationClass: operation
+              actionIds: [march]
+        shaded:
+          text: "Remove COIN pieces in one selected Highland and execute free Attack."
+          freeOperationGrants:
+            - faction: "2"
+              sequence: { chain: plei-mei-nva, step: 0 }
+              operationClass: operation
+              actionIds: [attack]
       - id: card-48
         title: Nam Dong
         sideMode: dual

@@ -87,6 +87,7 @@ const createDef = (): GameDef =>
       { id: asActionId('pass'), actor: 'active', executor: 'actor', phase: asPhaseId('main'), params: [], pre: null, cost: [], effects: [], limits: [] },
       {
         id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),

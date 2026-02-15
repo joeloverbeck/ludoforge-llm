@@ -53,6 +53,7 @@ phase: asPhaseId('main'),
       },
       {
         id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),

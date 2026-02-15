@@ -68,6 +68,44 @@ export function validateActions(doc: GameSpecDoc, diagnostics: Diagnostic[]): re
       });
     }
 
+    if (action.capabilities !== undefined) {
+      if (!Array.isArray(action.capabilities)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_ACTION_CAPABILITIES_INVALID',
+          path: `${basePath}.capabilities`,
+          severity: 'error',
+          message: 'Action field "capabilities" must be an array of non-empty strings when provided.',
+          suggestion: 'Set action.capabilities to capability id strings (for example ["cardEvent"]).',
+        });
+      } else {
+        const normalizedSeen = new Set<string>();
+        for (const [capabilityIndex, capability] of action.capabilities.entries()) {
+          if (typeof capability !== 'string' || capability.trim() === '') {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_ACTION_CAPABILITIES_INVALID',
+              path: `${basePath}.capabilities.${capabilityIndex}`,
+              severity: 'error',
+              message: 'Action capability ids must be non-empty strings.',
+              suggestion: 'Set each capability id to a non-empty string.',
+            });
+            continue;
+          }
+          const normalized = capability.normalize('NFC');
+          if (normalizedSeen.has(normalized)) {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_ACTION_CAPABILITIES_DUPLICATE',
+              path: `${basePath}.capabilities.${capabilityIndex}`,
+              severity: 'error',
+              message: `Duplicate action capability "${normalized}" after NFC normalization.`,
+              suggestion: 'Keep each capability id unique within action.capabilities.',
+            });
+            continue;
+          }
+          normalizedSeen.add(normalized);
+        }
+      }
+    }
+
     if (!Array.isArray(action.effects)) {
       diagnostics.push({
         code: 'CNL_VALIDATOR_ACTION_EFFECTS_SHAPE_INVALID',

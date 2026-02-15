@@ -121,6 +121,7 @@ export interface ActionDef {
   readonly actor: PlayerSel;
   readonly executor: ActionExecutorSel;
   readonly phase: PhaseId;
+  readonly capabilities?: readonly string[];
   readonly params: readonly ParamDef[];
   readonly pre: ConditionAST | null;
   readonly cost: readonly EffectAST[];

@@ -137,7 +137,7 @@ describe('GameSpec capability conformance fixtures', () => {
     assert.deepEqual(legalChoices(def, costFailedState, move), {
       kind: 'illegal',
       complete: false,
-      reason: 'pipelineLegalityFailed',
+      reason: 'pipelineAtomicCostValidationFailed',
     });
     assert.equal(
       legalMoves(def, costFailedState).some((candidate) => String(candidate.actionId) === String(move.actionId)),

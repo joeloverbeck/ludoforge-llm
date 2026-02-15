@@ -43,6 +43,7 @@ const createDef = (): GameDef =>
     actions: [
       {
         id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),
@@ -263,6 +264,7 @@ const createZoneFilteredDef = (): GameDef =>
     actions: [
       {
         id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),
@@ -375,6 +377,7 @@ const createExecuteAsFactionDef = (): GameDef =>
     actions: [
       {
         id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),

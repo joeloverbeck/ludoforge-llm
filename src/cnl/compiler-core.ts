@@ -1,6 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameDef, NumericTrackDef } from '../kernel/types.js';
 import { asActionId } from '../kernel/branded.js';
+import { ACTION_CAPABILITY_CARD_EVENT, isCardEventAction } from '../kernel/action-capabilities.js';
 import { validateGameDefBoundary, type ValidatedGameDef } from '../kernel/validate-gamedef.js';
 import { materializeZoneDefs } from './compile-zones.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
@@ -373,25 +374,11 @@ function compileExpandedDoc(
   }
 
   if (actions !== null) {
-    if (rawEventDecks !== null && rawActions !== null) {
-      for (const [actionIndex, action] of rawActions.entries()) {
-        if (action.id !== 'event') {
-          continue;
-        }
-        diagnostics.push({
-          code: 'CNL_COMPILER_EVENT_ACTION_RESERVED',
-          path: `doc.actions.${actionIndex}.id`,
-          severity: 'error',
-          message: 'Action id "event" is reserved and compiler-owned when eventDecks are declared.',
-          suggestion: 'Remove this action from doc.actions. Event action is synthesized from eventDecks.',
-        });
-      }
-    }
-
     const withEventAction = synthesizeCardDrivenEventAction(
       actions,
       turnStructure,
       sections.eventDecks,
+      diagnostics,
     );
     actions = withEventAction;
     sections.actions = sections.actions === null ? null : withEventAction;
@@ -626,6 +613,7 @@ function synthesizeCardDrivenEventAction(
   actions: GameDef['actions'],
   turnStructure: GameDef['turnStructure'] | null,
   eventDecks: Exclude<GameDef['eventDecks'], undefined> | null,
+  diagnostics: Diagnostic[],
 ): GameDef['actions'] {
   if (
     eventDecks === null ||
@@ -635,17 +623,33 @@ function synthesizeCardDrivenEventAction(
   ) {
     return actions;
   }
-  if (actions.some((action) => String(action.id) === 'event')) {
+
+  const eventCapableActions = actions.filter((action) => isCardEventAction(action));
+  if (eventCapableActions.length > 1) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_EVENT_ACTION_CAPABILITY_AMBIGUOUS',
+      path: 'doc.actions',
+      severity: 'error',
+      message: `Multiple actions declare "${ACTION_CAPABILITY_CARD_EVENT}" capability.`,
+      suggestion: 'Declare exactly one event-capable action when eventDecks are present.',
+    });
     return actions;
   }
+  if (eventCapableActions.length === 1) {
+    return actions;
+  }
+
+  const existingActionIds = new Set(actions.map((action) => String(action.id)));
+  const eventActionId = chooseSyntheticActionId(existingActionIds, 'event');
 
   return [
     ...actions,
     {
-      id: asActionId('event'),
+      id: asActionId(eventActionId),
       actor: 'active',
       executor: 'actor',
       phase: turnStructure.phases[0]!.id,
+      capabilities: [ACTION_CAPABILITY_CARD_EVENT],
       params: [],
       pre: null,
       cost: [],
@@ -653,4 +657,18 @@ function synthesizeCardDrivenEventAction(
       limits: [],
     },
   ];
+}
+
+function chooseSyntheticActionId(existingActionIds: ReadonlySet<string>, baseId: string): string {
+  if (!existingActionIds.has(baseId)) {
+    return baseId;
+  }
+
+  let suffix = 2;
+  let candidate = `${baseId}_${suffix}`;
+  while (existingActionIds.has(candidate)) {
+    suffix += 1;
+    candidate = `${baseId}_${suffix}`;
+  }
+  return candidate;
 }

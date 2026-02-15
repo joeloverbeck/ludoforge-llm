@@ -14,6 +14,7 @@ import { isEvalErrorCode } from './eval-error.js';
 import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
+import { isCardEventAction } from './action-capabilities.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue } from './types.js';
 
 function makeEvalContext(
@@ -110,7 +111,7 @@ function enumerateCurrentEventMoves(
   def: GameDef,
   state: GameState,
 ): readonly Move[] {
-  if (String(action.id) !== 'event') {
+  if (!isCardEventAction(action)) {
     return [];
   }
 

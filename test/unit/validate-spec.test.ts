@@ -233,6 +233,29 @@ describe('validateGameSpec structural rules', () => {
     ]);
   });
 
+  it('validates action capabilities shape and uniqueness', () => {
+    const validDoc = createStructurallyValidDoc();
+    const baseAction = validDoc.actions![0]!;
+    const diagnostics = validateGameSpec({
+      ...validDoc,
+      actions: [
+        {
+          ...baseAction,
+          capabilities: ['cardEvent', '', 'cardEvent'],
+        },
+      ],
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.capabilities.1' && diagnostic.code === 'CNL_VALIDATOR_ACTION_CAPABILITIES_INVALID'),
+      true,
+    );
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.capabilities.2' && diagnostic.code === 'CNL_VALIDATOR_ACTION_CAPABILITIES_DUPLICATE'),
+      true,
+    );
+  });
+
   it('validates turn structure shape', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

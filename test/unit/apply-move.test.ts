@@ -108,6 +108,7 @@ const createEventDynamicDecisionDef = (withDeclaredParam = false): GameDef =>
     actions: [
       {
         id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),
@@ -617,6 +618,7 @@ phase: asPhaseId('main'),
       actions: [
         {
           id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),
@@ -1431,6 +1433,7 @@ phase: asPhaseId('main'),
       actions: [
         {
           id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),
@@ -1498,6 +1501,7 @@ phase: asPhaseId('main'),
       actions: [
         {
           id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),
@@ -1560,6 +1564,67 @@ phase: asPhaseId('main'),
 
     assert.equal(unshadedA.state.globalVars.resolved, 11);
     assert.equal(shaded.state.globalVars.resolved, 20);
+  });
+
+  it('does not execute event-card effects for misleading action id without cardEvent capability', () => {
+    const def: GameDef = {
+      metadata: { id: 'event-capability-required-for-event-effects', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [
+        {
+          id: asActionId('event'),
+          actor: 'active',
+          executor: 'actor',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+      eventDecks: [
+        {
+          id: 'deck-1',
+          drawZone: asZoneId('deck:none'),
+          discardZone: asZoneId('played:none'),
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Card 1',
+              sideMode: 'single',
+              unshaded: {
+                effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 10 } }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      globalVars: { resolved: 0 },
+      zones: {
+        'deck:none': [],
+        'played:none': [{ id: asTokenId('card-1'), type: 'card', props: {} }],
+      },
+      actionUsage: {},
+    };
+
+    const result = applyMove(def, state, { actionId: asActionId('event'), params: {} });
+    assert.equal(result.state.globalVars.resolved, 0);
   });
 
   it('rejects incomplete dynamic event-side decision params before effect runtime', () => {
@@ -1667,6 +1732,7 @@ phase: asPhaseId('main'),
       actions: [
         {
           id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),
@@ -1759,6 +1825,7 @@ phase: asPhaseId('main'),
       actions: [
         {
           id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),

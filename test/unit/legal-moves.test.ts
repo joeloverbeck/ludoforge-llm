@@ -327,6 +327,7 @@ phase: asPhaseId('main'),
         },
         {
           id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),
@@ -431,6 +432,7 @@ phase: asPhaseId('main'),
         },
         {
           id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),
@@ -1025,6 +1027,7 @@ phase: asPhaseId('main'),
       actions: [
         {
           id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor',
 phase: asPhaseId('main'),
@@ -1052,5 +1055,67 @@ phase: asPhaseId('main'),
 
     assert.deepEqual(activeZero, expected);
     assert.deepEqual(activeOne, expected);
+  });
+
+  it('does not route event-card side/branch discovery by misleading action id without cardEvent capability', () => {
+    const def: GameDef = {
+      ...createDef(),
+      metadata: { id: 'misleading-event-id-without-capability', players: { min: 2, max: 2 } },
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      actions: [
+        {
+          id: asActionId('event'),
+          actor: 'active',
+          executor: 'actor',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: asActionId('resolveCard'),
+          capabilities: ['cardEvent'],
+          actor: 'active',
+          executor: 'actor',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      eventDecks: [
+        {
+          id: 'deck-1',
+          drawZone: asZoneId('deck:none'),
+          discardZone: asZoneId('played:none'),
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Card 1',
+              sideMode: 'dual',
+              unshaded: { effects: [], branches: [{ id: 'a' }] },
+              shaded: { effects: [], branches: [{ id: 'a' }] },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const moves = legalMoves(def, {
+      ...createState(),
+      zones: {
+        'deck:none': [],
+        'played:none': [{ id: asTokenId('card-1'), type: 'card', props: {} }],
+      },
+    });
+    assert.equal(moves.some((move) => String(move.actionId) === 'event' && move.params.side !== undefined), false);
+    assert.equal(moves.some((move) => String(move.actionId) === 'resolveCard' && move.params.side === 'unshaded'), true);
   });
 });

@@ -136,6 +136,7 @@ export const ActionDefSchema = z
     actor: PlayerSelSchema,
     executor: ActionExecutorSelSchema,
     phase: StringSchema,
+    capabilities: z.array(StringSchema.min(1)).optional(),
     params: z.array(ParamDefSchema),
     pre: ConditionASTSchema.nullable(),
     cost: z.array(EffectASTSchema),

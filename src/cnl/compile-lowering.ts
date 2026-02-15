@@ -249,6 +249,7 @@ export function lowerActions(
     diagnostics.push(...actor.diagnostics);
     const executor = normalizeActionExecutorSelector(action.executor, `${path}.executor`);
     diagnostics.push(...executor.diagnostics);
+    const capabilities = lowerActionCapabilities(action.capabilities, diagnostics, `${path}.capabilities`);
 
     const params = lowerActionParams(action.params, ownershipByBase, diagnostics, `${path}.params`, tokenTraitVocabulary);
     const bindingScope = params.bindingScope;
@@ -293,6 +294,7 @@ export function lowerActions(
       actor: actor.value,
       executor: executor.value,
       phase: asPhaseId(action.phase),
+      ...(capabilities.length === 0 ? {} : { capabilities }),
       params: params.value,
       pre: pre ?? null,
       cost,
@@ -302,6 +304,43 @@ export function lowerActions(
   }
 
   return lowered;
+}
+
+function lowerActionCapabilities(
+  source: unknown,
+  diagnostics: Diagnostic[],
+  path: string,
+): readonly string[] {
+  if (source === undefined || source === null) {
+    return [];
+  }
+  if (!Array.isArray(source)) {
+    diagnostics.push(missingCapabilityDiagnostic(path, 'action capabilities', source, ['string[]']));
+    return [];
+  }
+
+  const capabilities: string[] = [];
+  const normalized = new Set<string>();
+  for (const [index, capability] of source.entries()) {
+    if (typeof capability !== 'string' || capability.trim() === '') {
+      diagnostics.push(missingCapabilityDiagnostic(`${path}.${index}`, 'action capability id', capability, ['non-empty string']));
+      continue;
+    }
+    const normalizedCapability = capability.normalize('NFC');
+    if (normalized.has(normalizedCapability)) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_ACTION_CAPABILITY_DUPLICATE',
+        path: `${path}.${index}`,
+        severity: 'error',
+        message: `Duplicate action capability "${normalizedCapability}" after NFC normalization.`,
+        suggestion: 'Keep each capability id unique within the action.',
+      });
+      continue;
+    }
+    normalized.add(normalizedCapability);
+    capabilities.push(normalizedCapability);
+  }
+  return capabilities;
 }
 
 function lowerActionParams(

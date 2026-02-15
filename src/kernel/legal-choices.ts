@@ -19,6 +19,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { toChoiceIllegalReason } from './legality-outcome.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { resolveFreeOperationExecutionPlayer, resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
+import { isCardEventActionId } from './action-capabilities.js';
 import type {
   ActionDef,
   ChoicePendingRequest,
@@ -424,7 +425,7 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
       pipeline.stages.length > 0
         ? pipeline.stages.flatMap((stage) => stage.effects)
         : action.effects;
-    const eventEffects = String(action.id) === 'event'
+    const eventEffects = isCardEventActionId(def, action.id)
       ? resolveEventEffectList(def, state, partialMove)
       : [];
 
@@ -432,7 +433,7 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     const result = walkEffects([...resolutionEffects, ...eventEffects], wCtx);
     return result.pending ?? COMPLETE;
   }
-  const eventEffects = String(action.id) === 'event'
+  const eventEffects = isCardEventActionId(def, action.id)
     ? resolveEventEffectList(def, state, partialMove)
     : [];
   const wCtx: WalkContext = { evalCtx, rng: { state: state.rng }, moveParams: partialMove.params };

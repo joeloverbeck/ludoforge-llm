@@ -2,6 +2,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { applyEffects } from './effects.js';
 import { evalCondition } from './eval-condition.js';
 import { createCollector } from './execution-collector.js';
+import { isCardEventMove } from './action-capabilities.js';
 import type {
   ActiveLastingEffect,
   EffectAST,
@@ -261,8 +262,7 @@ export const executeEventMove = (
   rng: Rng,
   move: Move,
 ): LastingEffectApplyResult => {
-  const eventClass = move.actionClass ?? String(move.actionId);
-  if (eventClass !== 'event') {
+  if (!isCardEventMove(def, move)) {
     return { state, rng, emittedEvents: [] };
   }
 
@@ -353,8 +353,7 @@ export const resolveEventFreeOperationGrants = (
   state: GameState,
   move: Move,
 ): readonly EventFreeOperationGrantDef[] => {
-  const eventClass = move.actionClass ?? String(move.actionId);
-  if (eventClass !== 'event') {
+  if (!isCardEventMove(def, move)) {
     return [];
   }
   const context = resolveEventExecutionContext(def, state, move);
@@ -384,8 +383,7 @@ export const resolveEventEligibilityOverrides = (
   state: GameState,
   move: Move,
 ): readonly EventEligibilityOverrideDef[] => {
-  const eventClass = move.actionClass ?? String(move.actionId);
-  if (eventClass !== 'event') {
+  if (!isCardEventMove(def, move)) {
     return [];
   }
   const context = resolveEventExecutionContext(def, state, move);

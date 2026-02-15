@@ -248,7 +248,7 @@ describe('compiler structured section results', () => {
     assert.equal(result.sections.eventDecks?.[0]?.id, 'foundation');
   });
 
-  it('rejects explicit event action when eventDecks are declared (event action is compiler-owned)', () => {
+  it('allows explicit action id "event" and synthesizes a separate event-capable action when none is declared', () => {
     const base = createMinimalCompilableDoc();
     const doc = {
       ...base,
@@ -278,15 +278,118 @@ describe('compiler structured section results', () => {
 
     const result = compileGameSpecToGameDef(doc);
 
-    assert.equal(result.gameDef, null);
+    assert.notEqual(result.gameDef, null);
     assert.equal(
-      result.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === 'CNL_COMPILER_EVENT_ACTION_RESERVED' &&
-          diagnostic.path === 'doc.actions.1.id',
-      ),
+      result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'),
+      false,
+    );
+    assert.equal(
+      result.gameDef!.actions.some((action) => String(action.id) === 'event_2' && action.capabilities?.includes('cardEvent') === true),
       true,
     );
+  });
+
+  it('keeps a declared event-capable action without synthesizing another one', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      zones: [
+        { id: 'board', owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      actions: [
+        ...base.actions,
+        {
+          id: 'resolve-card',
+          actor: 'active',
+          executor: 'actor',
+          phase: 'main',
+          capabilities: ['cardEvent'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      eventDecks: [
+        {
+          id: 'foundation',
+          drawZone: 'board:none',
+          discardZone: 'board:none',
+          cards: [
+            {
+              id: 'card-a',
+              title: 'Card A',
+              sideMode: 'single' as const,
+              unshaded: { effects: [{ shuffle: { zone: 'board:none' } }] },
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.notEqual(result.gameDef, null);
+    assert.equal(result.gameDef!.actions.filter((action) => action.capabilities?.includes('cardEvent') === true).length, 1);
+    assert.equal(result.gameDef!.actions.some((action) => String(action.id) === 'event_2'), false);
+  });
+
+  it('fails deterministically when multiple event-capable actions are declared with eventDecks', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      zones: [
+        { id: 'board', owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      actions: [
+        ...base.actions,
+        {
+          id: 'resolve-card-a',
+          actor: 'active',
+          executor: 'actor',
+          phase: 'main',
+          capabilities: ['cardEvent'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+        {
+          id: 'resolve-card-b',
+          actor: 'active',
+          executor: 'actor',
+          phase: 'main',
+          capabilities: ['cardEvent'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      eventDecks: [
+        {
+          id: 'foundation',
+          drawZone: 'board:none',
+          discardZone: 'board:none',
+          cards: [
+            {
+              id: 'card-a',
+              title: 'Card A',
+              sideMode: 'single' as const,
+              unshaded: { effects: [{ shuffle: { zone: 'board:none' } }] },
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_EVENT_ACTION_CAPABILITY_AMBIGUOUS'), true);
   });
 
   it('production FITL section values align with gameDef for populated section fields', () => {

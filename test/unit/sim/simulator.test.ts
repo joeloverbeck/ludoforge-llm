@@ -208,6 +208,7 @@ describe('runGame', () => {
       actions: [
         {
           id: asActionId('event'),
+capabilities: ['cardEvent'],
 actor: 'active',
 executor: 'actor' as const,
 phase: asPhaseId('main'),

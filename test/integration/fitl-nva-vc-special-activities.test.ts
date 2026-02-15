@@ -1,7 +1,16 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPlayerId, asTokenId, type EffectAST, type GameState, type MapPayload, type Token } from '../../src/kernel/index.js';
+import {
+  asActionId,
+  asPlayerId,
+  asTokenId,
+  ILLEGAL_MOVE_REASONS,
+  type EffectAST,
+  type GameState,
+  type MapPayload,
+  type Token,
+} from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
@@ -504,8 +513,7 @@ describe('FITL NVA/VC special activities integration', () => {
           };
         };
 
-        assert.equal(details.reason, 'special activity cannot accompany this operation');
-        assert.equal(details.metadata?.code, 'SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED);
         return true;
       },
     );
@@ -588,9 +596,8 @@ describe('FITL NVA/VC special activities integration', () => {
         },
       }),
       (error: unknown) => {
-        const details = error as { readonly reason?: string; readonly metadata?: { readonly code?: string; readonly relation?: string } };
-        assert.equal(details.reason, 'special activity violates compound param constraints');
-        assert.equal(details.metadata?.code, 'SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED');
+        const details = error as { readonly reason?: string; readonly metadata?: { readonly relation?: string } };
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED);
         assert.equal(details.metadata?.relation, 'subset');
         return true;
       },

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   applyMove,
+  ILLEGAL_MOVE_REASONS,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -75,13 +76,7 @@ describe('legality surface parity', () => {
       readonly move: Move;
     };
     readonly expectedChoiceReason: ChoiceIllegalRequest['reason'];
-    readonly expectedApplyMoveCode:
-      | 'ACTION_PHASE_MISMATCH'
-      | 'ACTION_ACTOR_NOT_APPLICABLE'
-      | 'ACTION_EXECUTOR_NOT_APPLICABLE'
-      | 'ACTION_LIMIT_EXCEEDED'
-      | 'ACTION_PIPELINE_NOT_APPLICABLE'
-      | 'OPERATION_LEGALITY_FAILED';
+    readonly expectedApplyMoveReason: string;
   }> = [
     {
       name: 'phase mismatch',
@@ -91,7 +86,7 @@ describe('legality surface parity', () => {
         move: { actionId: asActionId('op'), params: {} },
       }),
       expectedChoiceReason: 'phaseMismatch',
-      expectedApplyMoveCode: 'ACTION_PHASE_MISMATCH',
+      expectedApplyMoveReason: ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE,
     },
     {
       name: 'actor not applicable',
@@ -101,7 +96,7 @@ describe('legality surface parity', () => {
         move: { actionId: asActionId('op'), params: {} },
       }),
       expectedChoiceReason: 'actorNotApplicable',
-      expectedApplyMoveCode: 'ACTION_ACTOR_NOT_APPLICABLE',
+      expectedApplyMoveReason: ILLEGAL_MOVE_REASONS.ACTION_ACTOR_NOT_APPLICABLE,
     },
     {
       name: 'executor not applicable',
@@ -111,7 +106,7 @@ describe('legality surface parity', () => {
         move: { actionId: asActionId('op'), params: {} },
       }),
       expectedChoiceReason: 'executorNotApplicable',
-      expectedApplyMoveCode: 'ACTION_EXECUTOR_NOT_APPLICABLE',
+      expectedApplyMoveReason: ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE,
     },
     {
       name: 'action limit exceeded',
@@ -128,7 +123,7 @@ describe('legality surface parity', () => {
         move: { actionId: asActionId('limitedOp'), params: {} },
       }),
       expectedChoiceReason: 'actionLimitExceeded',
-      expectedApplyMoveCode: 'ACTION_LIMIT_EXCEEDED',
+      expectedApplyMoveReason: ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE,
     },
     {
       name: 'pipeline not applicable',
@@ -156,7 +151,7 @@ describe('legality surface parity', () => {
         };
       },
       expectedChoiceReason: 'pipelineNotApplicable',
-      expectedApplyMoveCode: 'ACTION_PIPELINE_NOT_APPLICABLE',
+      expectedApplyMoveReason: ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE,
     },
     {
       name: 'pipeline legality failed',
@@ -183,7 +178,7 @@ describe('legality surface parity', () => {
         };
       },
       expectedChoiceReason: 'pipelineLegalityFailed',
-      expectedApplyMoveCode: 'OPERATION_LEGALITY_FAILED',
+      expectedApplyMoveReason: ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_LEGALITY_PREDICATE_FAILED,
     },
   ];
 
@@ -199,10 +194,9 @@ describe('legality surface parity', () => {
       assert.equal(legalMoves(def, state).length, 0);
       assert.throws(() => applyMove(def, state, move), (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown };
         assert.equal(details.code, 'ILLEGAL_MOVE');
-        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
-        assert.equal(metadata?.code, scenario.expectedApplyMoveCode);
+        assert.equal(details.reason, scenario.expectedApplyMoveReason);
         return true;
       });
     });

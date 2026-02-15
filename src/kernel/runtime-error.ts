@@ -1,4 +1,6 @@
 import type { ActionSelectorContractViolation } from './action-selector-contract-registry.js';
+import { ILLEGAL_MOVE_REASON_MESSAGES, PIPELINE_RUNTIME_REASONS } from './runtime-reasons.js';
+import type { IllegalMoveReason, PipelineRuntimeReason, RuntimeContractReason } from './runtime-reasons.js';
 import type { ActionDef, GameState, Move } from './types.js';
 
 export type KernelRuntimeErrorCode =
@@ -31,7 +33,7 @@ export interface RuntimeContractInvalidContext {
   readonly surface: SelectorBoundarySurface;
   readonly selector: SelectorSurface;
   readonly actionId: ActionDef['id'];
-  readonly reason: 'invalidSelectorSpec';
+  readonly reason: RuntimeContractReason;
   readonly selectorContractViolations?: readonly ActionSelectorContractViolation[];
 }
 
@@ -39,20 +41,20 @@ export interface KernelRuntimeErrorContextByCode {
   readonly ILLEGAL_MOVE: Readonly<{
     readonly actionId: Move['actionId'];
     readonly params: Move['params'];
-    readonly reason: string;
+    readonly reason: IllegalMoveReason;
     readonly metadata?: Readonly<Record<string, unknown>>;
   }>;
   readonly RUNTIME_CONTRACT_INVALID: RuntimeContractInvalidContext;
   readonly ACTION_PIPELINE_APPLICABILITY_EVALUATION_FAILED: Readonly<{
     readonly actionId: ActionDef['id'];
     readonly profileId: string;
-    readonly reason: 'applicabilityEvaluationFailed';
+    readonly reason: Extract<PipelineRuntimeReason, 'applicabilityEvaluationFailed'>;
   }>;
   readonly ACTION_PIPELINE_PREDICATE_EVALUATION_FAILED: Readonly<{
     readonly actionId: ActionDef['id'];
     readonly profileId: string;
     readonly predicate: 'legality' | 'costValidation';
-    readonly reason: 'pipelinePredicateEvaluationFailed';
+    readonly reason: Extract<PipelineRuntimeReason, 'pipelinePredicateEvaluationFailed'>;
   }>;
   readonly LEGAL_CHOICES_UNKNOWN_ACTION: Readonly<{
     readonly actionId: Move['actionId'];
@@ -131,13 +133,14 @@ export const kernelRuntimeError = <C extends KernelRuntimeErrorCode>(
 export class IllegalMoveError extends KernelRuntimeError<'ILLEGAL_MOVE'> {
   readonly actionId: Move['actionId'];
   readonly params: Move['params'];
-  readonly reason: string;
+  readonly reason: IllegalMoveReason;
   readonly metadata?: Readonly<Record<string, unknown>>;
 
-  constructor(move: Move, reason: string, metadata?: Readonly<Record<string, unknown>>) {
+  constructor(move: Move, reason: IllegalMoveReason, metadata?: Readonly<Record<string, unknown>>) {
+    const reasonMessage = ILLEGAL_MOVE_REASON_MESSAGES[reason];
     super(
       'ILLEGAL_MOVE',
-      `Illegal move: actionId=${String(move.actionId)} reason=${reason} params=${JSON.stringify(move.params)}`,
+      `Illegal move: actionId=${String(move.actionId)} reason=${reason} detail=${reasonMessage} params=${JSON.stringify(move.params)}`,
       {
         actionId: move.actionId,
         params: move.params,
@@ -157,7 +160,7 @@ export class IllegalMoveError extends KernelRuntimeError<'ILLEGAL_MOVE'> {
 
 export const illegalMoveError = (
   move: Move,
-  reason: string,
+  reason: IllegalMoveReason,
   metadata?: Readonly<Record<string, unknown>>,
 ): IllegalMoveError => new IllegalMoveError(move, reason, metadata);
 
@@ -172,7 +175,7 @@ export const pipelineApplicabilityEvaluationError = (
     {
       actionId: action.id,
       profileId,
-      reason: 'applicabilityEvaluationFailed',
+      reason: PIPELINE_RUNTIME_REASONS.APPLICABILITY_EVALUATION_FAILED,
     },
     cause,
   );
@@ -190,7 +193,7 @@ export const pipelinePredicateEvaluationError = (
       actionId: action.id,
       profileId,
       predicate,
-      reason: 'pipelinePredicateEvaluationFailed',
+      reason: PIPELINE_RUNTIME_REASONS.PREDICATE_EVALUATION_FAILED,
     },
     cause,
   );

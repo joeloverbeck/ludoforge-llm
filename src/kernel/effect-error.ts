@@ -1,4 +1,5 @@
 import type { StackingViolation } from './stacking.js';
+import type { EffectRuntimeReason } from './runtime-reasons.js';
 import type { EffectAST } from './types.js';
 
 export type EffectErrorCode =
@@ -9,17 +10,6 @@ export type EffectErrorCode =
   | 'SPATIAL_DESTINATION_REQUIRED'
   | 'SPATIAL_DESTINATION_NOT_ADJACENT'
   | 'STACKING_VIOLATION';
-
-export type EffectRuntimeReason =
-  | 'effectBudgetConfigInvalid'
-  | 'subsetRuntimeValidationFailed'
-  | 'choiceRuntimeValidationFailed'
-  | 'controlFlowRuntimeValidationFailed'
-  | 'resourceRuntimeValidationFailed'
-  | 'revealRuntimeValidationFailed'
-  | 'tokenRuntimeValidationFailed'
-  | 'turnFlowRuntimeValidationFailed'
-  | 'variableRuntimeValidationFailed';
 
 export interface EffectErrorContextByCode {
   readonly EFFECT_RUNTIME: Readonly<{

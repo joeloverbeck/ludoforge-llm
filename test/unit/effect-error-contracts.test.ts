@@ -10,6 +10,7 @@ import {
   buildAdjacencyGraph,
   createCollector,
   createRng,
+  EFFECT_RUNTIME_REASONS,
   EffectBudgetExceededError,
   EffectRuntimeError,
   effectNotImplementedError,
@@ -128,7 +129,7 @@ describe('effect error context contracts', () => {
       () => applyEffect({ setVar: { scope: 'global', var: 'x', value: 'bad' } }, makeContext()),
       (error: unknown) => {
         assert.ok(isEffectErrorCode(error, 'EFFECT_RUNTIME'));
-        assert.equal(error.context?.reason, 'variableRuntimeValidationFailed');
+        assert.equal(error.context?.reason, EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
         return true;
       },
     );
@@ -145,7 +146,7 @@ describe('effect error context contracts', () => {
       ),
       (error: unknown) => {
         assert.ok(isEffectErrorCode(error, 'EFFECT_RUNTIME'));
-        assert.equal(error.context?.reason, 'revealRuntimeValidationFailed');
+        assert.equal(error.context?.reason, EFFECT_RUNTIME_REASONS.REVEAL_RUNTIME_VALIDATION_FAILED);
         return true;
       },
     );

@@ -15,7 +15,7 @@ import {
   collectDecisionBindingsFromEffects,
   deriveDecisionBindingsFromMoveParams,
 } from './move-runtime-bindings.js';
-import { toApplyMoveIllegalMetadataCode } from './legality-outcome.js';
+import { ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { illegalMoveError, isKernelErrorCode, isKernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -205,21 +205,17 @@ const validateDecisionSequenceForMove = (def: GameDef, state: GameState, move: M
       return;
     }
     if (result.illegal !== undefined) {
-      const mappedCode = toApplyMoveIllegalMetadataCode(result.illegal.reason);
-      throw illegalMoveError(move, 'move is not legal in current state', {
-        code: mappedCode,
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
         detail: result.illegal.reason,
       });
     }
-    throw illegalMoveError(move, 'move has incomplete params', {
-      code: 'OPERATION_INCOMPLETE_PARAMS',
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS, {
       nextDecisionId: result.nextDecision?.decisionId,
       nextDecisionName: result.nextDecision?.name,
     });
   } catch (err) {
     if (isKernelErrorCode(err, 'LEGAL_CHOICES_VALIDATION_FAILED')) {
-      throw illegalMoveError(move, 'move params are invalid', {
-        code: 'OPERATION_INVALID_PARAMS',
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID, {
         detail: err.message,
       });
     }
@@ -282,7 +278,7 @@ const validateDeclaredActionParams = (action: ActionDef, evalCtx: EvalContext, m
     const selected = move.params[param.name];
     const selectedNormalized = normalizeMoveParamValue(selected);
     if (selectedNormalized === null) {
-      throw illegalMoveError(move, 'params are not legal for this action in current state');
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION);
     }
     const domainValues = evalQuery(param.domain, evalCtx);
     const inDomain = domainValues.some((candidate) => {
@@ -290,7 +286,7 @@ const validateDeclaredActionParams = (action: ActionDef, evalCtx: EvalContext, m
       return normalizedCandidate !== null && isSameMoveParamValue(selectedNormalized, normalizedCandidate);
     });
     if (!inDomain) {
-      throw illegalMoveError(move, 'params are not legal for this action in current state');
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION);
     }
   }
 };
@@ -303,15 +299,14 @@ interface ValidatedMoveContext {
 const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMoveContext => {
   const action = findAction(def, move.actionId);
   if (action === undefined) {
-    throw illegalMoveError(move, 'unknown action id');
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
   }
 
   if (move.compound !== undefined) {
     const saMove = move.compound.specialActivity;
     const saPipeline = resolveMatchedPipelineForMove(def, state, saMove);
     if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
-      throw illegalMoveError(move, 'special activity cannot accompany this operation', {
-        code: 'SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED',
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
         operationActionId: action.id,
         specialActivityActionId: saMove.actionId,
         profileId: saPipeline.id,
@@ -320,8 +315,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
     if (saPipeline !== undefined) {
       const violated = violatesCompoundParamConstraints(move, saMove, saPipeline);
       if (violated !== null) {
-        throw illegalMoveError(move, 'special activity violates compound param constraints', {
-          code: 'SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED',
+        throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED, {
           operationActionId: action.id,
           specialActivityActionId: saMove.actionId,
           profileId: saPipeline.id,
@@ -338,8 +332,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
     state.turnOrderState.type === 'cardDriven' &&
     !isFreeOperationGrantedForMove(def, state, move)
   ) {
-    throw illegalMoveError(move, 'free operation is not granted in current state', {
-      code: 'FREE_OPERATION_NOT_GRANTED',
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED, {
       actionId: action.id,
     });
   }
@@ -367,24 +360,15 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
   }
   if (preflight.kind === 'notApplicable') {
     if (preflight.reason === 'actorNotApplicable') {
-      throw illegalMoveError(move, 'action actor is not applicable in current state', {
-        code: toApplyMoveIllegalMetadataCode(preflight.reason),
-        actionId: action.id,
-      });
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_ACTOR_NOT_APPLICABLE);
     }
     if (preflight.reason === 'executorNotApplicable') {
-      throw illegalMoveError(move, 'action executor is not applicable in current state', {
-        code: toApplyMoveIllegalMetadataCode(preflight.reason),
-        actionId: action.id,
-      });
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE);
     }
-    throw illegalMoveError(move, 'action is not legal in current state', {
-      code: toApplyMoveIllegalMetadataCode(preflight.reason),
-      actionId: action.id,
-    });
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
   }
   if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {
-    throw illegalMoveError(move, 'action is not legal in current state');
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
   }
 
   if (preflight.pipelineDispatch.kind === 'matched') {
@@ -393,14 +377,12 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
     const viabilityDecision = decideApplyMovePipelineViability(status, { isFreeOperation: move.freeOperation === true });
     if (viabilityDecision.kind === 'illegalMove') {
       const metadata = {
-        code: viabilityDecision.metadataCode,
         profileId: pipeline.id,
-        actionId: action.id,
       };
       if (viabilityDecision.outcome === 'pipelineLegalityFailed') {
-        throw illegalMoveError(move, 'action pipeline legality predicate failed', metadata);
+        throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_LEGALITY_PREDICATE_FAILED, metadata);
       }
-      throw illegalMoveError(move, 'action pipeline cost validation failed', {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED, {
         ...metadata,
         partialExecutionMode: pipeline.atomicity,
       });
@@ -433,7 +415,7 @@ const applyMoveCore = (
 ): ApplyMoveResult => {
   const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move);
   const action = validated?.action ?? findAction(def, move.actionId);
-  if (action === undefined) throw illegalMoveError(move, 'unknown action id');
+  if (action === undefined) throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
 
   const rng: Rng = { state: state.rng };
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
@@ -452,10 +434,7 @@ const applyMoveCore = (
           bindings: baseBindings,
         });
         if (resolution.kind === 'notApplicable') {
-          throw illegalMoveError(move, 'action executor is not applicable in current state', {
-            code: 'ACTION_EXECUTOR_NOT_APPLICABLE',
-            actionId: action.id,
-          });
+          throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE);
         }
         if (resolution.kind === 'invalidSpec') {
           throw selectorInvalidSpecError('applyMove', 'executor', action, resolution.error);
@@ -476,7 +455,7 @@ const applyMoveCore = (
 
   const pipelineDispatch = resolveActionPipelineDispatch(def, action, { ...effectCtxBase, state });
   if (pipelineDispatch.kind === 'configuredNoMatch') {
-    throw illegalMoveError(move, 'action is not legal in current state');
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
   }
   const actionPipeline = pipelineDispatch.kind === 'matched' ? pipelineDispatch.profile : undefined;
   const executionProfile = actionPipeline === undefined ? undefined : toExecutionPipeline(action, actionPipeline);
@@ -496,8 +475,7 @@ const applyMoveCore = (
     const saMove = move.compound.specialActivity;
     const saPipeline = resolveMatchedPipelineForMove(def, state, saMove);
     if (saPipeline !== undefined && !operationAllowsSpecialActivity(move.actionId, saPipeline.accompanyingOps)) {
-      throw illegalMoveError(move, 'special activity cannot accompany this operation', {
-        code: 'SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED',
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED, {
         operationActionId: action.id,
         specialActivityActionId: saMove.actionId,
         profileId: saPipeline.id,
@@ -506,8 +484,7 @@ const applyMoveCore = (
     if (saPipeline !== undefined) {
       const violated = violatesCompoundParamConstraints(move, saMove, saPipeline);
       if (violated !== null) {
-        throw illegalMoveError(move, 'special activity violates compound param constraints', {
-          code: 'SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED',
+        throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED, {
           operationActionId: action.id,
           specialActivityActionId: saMove.actionId,
           profileId: saPipeline.id,
@@ -525,16 +502,12 @@ const applyMoveCore = (
     const viabilityDecision = decideApplyMovePipelineViability(status, { isFreeOperation: isFreeOp });
     if (viabilityDecision.kind === 'illegalMove') {
       if (viabilityDecision.outcome === 'pipelineLegalityFailed') {
-        throw illegalMoveError(move, 'action pipeline legality predicate failed', {
-          code: viabilityDecision.metadataCode,
+        throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_LEGALITY_PREDICATE_FAILED, {
           profileId: actionPipeline.id,
-          actionId: action.id,
         });
       }
-      throw illegalMoveError(move, 'action pipeline cost validation failed', {
-        code: viabilityDecision.metadataCode,
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED, {
         profileId: actionPipeline.id,
-        actionId: action.id,
         partialExecutionMode: actionPipeline.atomicity,
       });
     }
@@ -743,10 +716,10 @@ const applySimultaneousSubmission = (
   options?: ExecutionOptions,
 ): ApplyMoveResult => {
   if (move.compound !== undefined) {
-    throw illegalMoveError(move, 'simultaneous submission does not support compound moves');
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SIMULTANEOUS_SUBMISSION_COMPOUND_UNSUPPORTED);
   }
   if (state.turnOrderState.type !== 'simultaneous') {
-    throw illegalMoveError(move, 'simultaneous strategy requires simultaneous runtime state');
+    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SIMULTANEOUS_RUNTIME_STATE_REQUIRED);
   }
 
   validateMove(def, state, move);

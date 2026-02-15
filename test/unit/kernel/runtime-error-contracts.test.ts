@@ -4,6 +4,9 @@ import { describe, it } from 'node:test';
 import {
   asActionId,
   asPhaseId,
+  ILLEGAL_MOVE_REASONS,
+  PIPELINE_RUNTIME_REASONS,
+  RUNTIME_CONTRACT_REASONS,
   illegalMoveError,
   kernelRuntimeError,
   pipelineApplicabilityEvaluationError,
@@ -33,9 +36,7 @@ describe('runtime error context contracts', () => {
       params: { operation: 'train' },
     };
 
-    const error = illegalMoveError(move, 'move is not legal in current state', {
-      code: 'OPERATION_LEGALITY_FAILED',
-    });
+    const error = illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE);
 
     assert.equal(error.code, 'ILLEGAL_MOVE');
     assert.equal(error.actionId, move.actionId);
@@ -43,8 +44,8 @@ describe('runtime error context contracts', () => {
     const context: KernelRuntimeErrorContext<'ILLEGAL_MOVE'> = error.context!;
     assert.equal(context.actionId, move.actionId);
     assert.deepEqual(context.params, move.params);
-    assert.equal(context.reason, 'move is not legal in current state');
-    assert.deepEqual(context.metadata, { code: 'OPERATION_LEGALITY_FAILED' });
+    assert.equal(context.reason, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE);
+    assert.equal(context.metadata, undefined);
   });
 
   it('pipeline applicability helper emits deterministic context contract', () => {
@@ -54,7 +55,7 @@ describe('runtime error context contracts', () => {
     const context: KernelRuntimeErrorContext<'ACTION_PIPELINE_APPLICABILITY_EVALUATION_FAILED'> = error.context!;
     assert.equal(context.actionId, action.id);
     assert.equal(context.profileId, 'profile-op');
-    assert.equal(context.reason, 'applicabilityEvaluationFailed');
+    assert.equal(context.reason, PIPELINE_RUNTIME_REASONS.APPLICABILITY_EVALUATION_FAILED);
   });
 
   it('pipeline predicate helper emits deterministic context contract', () => {
@@ -65,7 +66,7 @@ describe('runtime error context contracts', () => {
     assert.equal(context.actionId, action.id);
     assert.equal(context.profileId, 'profile-op');
     assert.equal(context.predicate, 'legality');
-    assert.equal(context.reason, 'pipelinePredicateEvaluationFailed');
+    assert.equal(context.reason, PIPELINE_RUNTIME_REASONS.PREDICATE_EVALUATION_FAILED);
   });
 
   it('runtime contract helper emits selector runtime context contract', () => {
@@ -73,7 +74,7 @@ describe('runtime error context contracts', () => {
       surface: 'applyMove',
       selector: 'actor',
       actionId: action.id,
-      reason: 'invalidSelectorSpec',
+      reason: RUNTIME_CONTRACT_REASONS.INVALID_SELECTOR_SPEC,
       selectorContractViolations: [{ role: 'actor', kind: 'bindingMalformed', binding: '$bad' }],
     });
 
@@ -82,7 +83,7 @@ describe('runtime error context contracts', () => {
     assert.equal(context.surface, 'applyMove');
     assert.equal(context.selector, 'actor');
     assert.equal(context.actionId, action.id);
-    assert.equal(context.reason, 'invalidSelectorSpec');
+    assert.equal(context.reason, RUNTIME_CONTRACT_REASONS.INVALID_SELECTOR_SPEC);
     assert.deepEqual(context.selectorContractViolations, [{ role: 'actor', kind: 'bindingMalformed', binding: '$bad' }]);
   });
 

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyMove, asActionId, initialState, type GameState, type Move } from '../../src/kernel/index.js';
+import { applyMove, asActionId, ILLEGAL_MOVE_REASONS, initialState, type GameState, type Move } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import { withPendingFreeOperationGrant } from '../helpers/turn-order-helpers.js';
@@ -77,7 +77,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
           };
         };
 
-        assert.equal(details.reason, 'action pipeline cost validation failed');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED);
         return true;
       },
     );

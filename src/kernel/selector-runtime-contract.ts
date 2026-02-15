@@ -3,6 +3,7 @@ import {
   type SelectorBoundarySurface,
   type SelectorSurface,
 } from './runtime-error.js';
+import { RUNTIME_CONTRACT_REASONS } from './runtime-reasons.js';
 import type { ActionSelectorContractViolation } from './action-selector-contract-registry.js';
 import type { ActionDef } from './types.js';
 
@@ -19,7 +20,7 @@ export const selectorInvalidSpecError = (
       surface: boundary,
       selector,
       actionId: action.id,
-      reason: 'invalidSelectorSpec',
+      reason: RUNTIME_CONTRACT_REASONS.INVALID_SELECTOR_SPEC,
       ...(selectorContractViolations === undefined ? {} : { selectorContractViolations }),
     },
     cause,

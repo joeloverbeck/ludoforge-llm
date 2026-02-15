@@ -7,6 +7,7 @@ import {
   asPhaseId,
   legalMoves,
   initialState,
+  ILLEGAL_MOVE_REASONS,
   asPlayerId,
   asTokenId,
   asTriggerId,
@@ -741,7 +742,7 @@ phase: asPhaseId('main'),
 
     assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), (error: unknown) => {
       const details = error as Error & { reason?: unknown };
-      assert.equal(details.reason, 'action pipeline legality predicate failed');
+      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_LEGALITY_PREDICATE_FAILED);
       return true;
     });
     assert.deepEqual(state, snapshot);
@@ -797,7 +798,7 @@ phase: asPhaseId('main'),
 
     assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), (error: unknown) => {
       const details = error as Error & { reason?: unknown };
-      assert.equal(details.reason, 'action pipeline cost validation failed');
+      assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED);
       return true;
     });
     assert.deepEqual(state, snapshot);
@@ -1568,10 +1569,9 @@ phase: asPhaseId('main'),
     assert.throws(
       () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),
       (error: unknown) => {
-        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly code?: string; readonly nextDecisionId?: string } };
+        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly nextDecisionId?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
-        assert.equal(details.reason, 'move has incomplete params');
-        assert.equal(details.metadata?.code, 'OPERATION_INCOMPLETE_PARAMS');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_HAS_INCOMPLETE_PARAMS);
         assert.equal(details.metadata?.nextDecisionId, 'decision:$delta');
         return true;
       },
@@ -1585,10 +1585,9 @@ phase: asPhaseId('main'),
     assert.throws(
       () => applyMove(def, state, { actionId: asActionId('event'), params: { 'decision:$delta': 99 } }),
       (error: unknown) => {
-        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly code?: string } };
+        const details = error as { readonly code?: string; readonly reason?: string };
         assert.equal(details.code, 'ILLEGAL_MOVE');
-        assert.equal(details.reason, 'move params are invalid');
-        assert.equal(details.metadata?.code, 'OPERATION_INVALID_PARAMS');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID);
         return true;
       },
     );
@@ -1607,7 +1606,7 @@ phase: asPhaseId('main'),
       (error: unknown) => {
         const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly code?: string } };
         assert.equal(details.code, 'ILLEGAL_MOVE');
-        assert.equal(details.reason, 'params are not legal for this action in current state');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION);
         assert.equal(details.metadata, undefined);
         return true;
       },
@@ -2008,9 +2007,8 @@ phase: asPhaseId('main'),
         compound: { specialActivity: { actionId: asActionId('sa'), params: {} }, timing: 'after' },
       }),
       (error: unknown) => {
-        const details = error as { readonly reason?: string; readonly metadata?: { readonly code?: string } };
-        assert.equal(details.reason, 'special activity cannot accompany this operation');
-        assert.equal(details.metadata?.code, 'SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED');
+        const details = error as { readonly reason?: string };
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED);
         return true;
       },
     );
@@ -2132,9 +2130,8 @@ phase: asPhaseId('main'),
         compound: { specialActivity: { actionId: asActionId('sa'), params: { targetSpaces: ['a'] } }, timing: 'after' },
       }),
       (error: unknown) => {
-        const details = error as { readonly reason?: string; readonly metadata?: { readonly code?: string } };
-        assert.equal(details.reason, 'special activity violates compound param constraints');
-        assert.equal(details.metadata?.code, 'SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED');
+        const details = error as { readonly reason?: string };
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED);
         return true;
       },
     );
@@ -2208,9 +2205,8 @@ phase: asPhaseId('main'),
         compound: { specialActivity: { actionId: asActionId('sa'), params: { targetSpaces: ['b'] } }, timing: 'after' },
       }),
       (error: unknown) => {
-        const details = error as { readonly reason?: string; readonly metadata?: { readonly code?: string; readonly relation?: string } };
-        assert.equal(details.reason, 'special activity violates compound param constraints');
-        assert.equal(details.metadata?.code, 'SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED');
+        const details = error as { readonly reason?: string; readonly metadata?: { readonly relation?: string } };
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED);
         assert.equal(details.metadata?.relation, 'subset');
         return true;
       },

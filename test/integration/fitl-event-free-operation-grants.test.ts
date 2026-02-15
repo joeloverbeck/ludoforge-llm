@@ -6,6 +6,7 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  ILLEGAL_MOVE_REASONS,
   initialState,
   legalMoves,
   type EventDeckDef,
@@ -678,7 +679,7 @@ describe('event free-operation grants integration', () => {
       (error: unknown) =>
         error instanceof Error &&
         'reason' in error &&
-        (error as { reason?: string }).reason === 'free operation is not granted in current state',
+        (error as { reason?: string }).reason === ILLEGAL_MOVE_REASONS.FREE_OPERATION_NOT_GRANTED,
     );
 
     const third = applyMove(def, second, {

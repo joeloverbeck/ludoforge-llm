@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   applyMove,
+  ILLEGAL_MOVE_REASONS,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -487,11 +488,9 @@ describe('applyMove() executor applicability contract', () => {
       () => applyMove(def, state, { actionId: asActionId('wrongActor'), params: {} }),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
-        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
-        assert.equal(metadata?.code, 'ACTION_ACTOR_NOT_APPLICABLE');
-        assert.equal(String(metadata?.actionId), 'wrongActor');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_ACTOR_NOT_APPLICABLE);
         return true;
       },
     );
@@ -517,11 +516,9 @@ describe('applyMove() executor applicability contract', () => {
       () => applyMove(def, state, { actionId: asActionId('outOfRangeExecutor'), params: {} }),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown };
         assert.equal(details.code, 'ILLEGAL_MOVE');
-        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
-        assert.equal(metadata?.code, 'ACTION_EXECUTOR_NOT_APPLICABLE');
-        assert.equal(String(metadata?.actionId), 'outOfRangeExecutor');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE);
         return true;
       },
     );
@@ -591,7 +588,7 @@ describe('applyMove() executor applicability contract', () => {
     );
   });
 
-  it('returns OPERATION_COST_BLOCKED metadata when atomic pipeline cost validation fails', () => {
+  it('returns pipeline profile metadata when atomic pipeline cost validation fails', () => {
     const action: ActionDef = {
       id: asActionId('costlyOp'),
       actor: 'active',
@@ -621,10 +618,10 @@ describe('applyMove() executor applicability contract', () => {
       () => applyMove(def, state, { actionId: asActionId('costlyOp'), params: {} }),
       (error: unknown) => {
         assert.ok(error instanceof Error);
-        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        const details = error as Error & { code?: unknown; reason?: unknown; context?: Record<string, unknown> };
         assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.ACTION_PIPELINE_COST_VALIDATION_FAILED);
         const metadata = details.context?.metadata as Record<string, unknown> | undefined;
-        assert.equal(metadata?.code, 'OPERATION_COST_BLOCKED');
         assert.equal(metadata?.profileId, 'costlyProfile');
         assert.equal(metadata?.partialExecutionMode, 'atomic');
         return true;

@@ -62,7 +62,7 @@ function enumerateParams(
   bindings: Readonly<Record<string, unknown>>,
   moves: Move[],
 ): void {
-  const resolveExecutionPlayerForBindings = (): GameState['activePlayer'] => {
+  const resolveExecutionPlayerForBindings = (): GameState['activePlayer'] | null => {
     try {
       return resolveActionExecutorPlayer({
         def,
@@ -76,12 +76,18 @@ function enumerateParams(
       if (isEvalErrorCode(error, 'MISSING_BINDING')) {
         return state.activePlayer;
       }
+      if (isEvalErrorCode(error, 'MISSING_VAR')) {
+        return null;
+      }
       throw error;
     }
   };
 
   if (paramIndex >= action.params.length) {
     const executionPlayer = resolveExecutionPlayerForBindings();
+    if (executionPlayer === null) {
+      return;
+    }
     const ctx = makeEvalContext(def, adjacencyGraph, state, executionPlayer, bindings);
     if (action.pre !== null && !evalCondition(action.pre, ctx)) {
       return;
@@ -107,6 +113,9 @@ function enumerateParams(
   }
 
   const executionPlayer = resolveExecutionPlayerForBindings();
+  if (executionPlayer === null) {
+    return;
+  }
   const ctx = makeEvalContext(def, adjacencyGraph, state, executionPlayer, bindings);
   const domainValues = evalQuery(param.domain, ctx);
   for (const value of domainValues) {
@@ -211,14 +220,22 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
 
-    const executionPlayer = resolveActionExecutorPlayer({
-      def,
-      state,
-      adjacencyGraph,
-      action,
-      decisionPlayer: state.activePlayer,
-      bindings: {},
-    });
+    let executionPlayer: GameState['activePlayer'];
+    try {
+      executionPlayer = resolveActionExecutorPlayer({
+        def,
+        state,
+        adjacencyGraph,
+        action,
+        decisionPlayer: state.activePlayer,
+        bindings: {},
+      });
+    } catch (error) {
+      if (isEvalErrorCode(error, 'MISSING_VAR')) {
+        continue;
+      }
+      throw error;
+    }
     const executionCtx = makeEvalContext(def, adjacencyGraph, state, executionPlayer, {});
     const pipelineDispatch = resolveActionPipelineDispatch(def, action, executionCtx);
     if (pipelineDispatch.kind === 'matched') {

@@ -257,7 +257,7 @@ export function lowerActions(
         path: `${path}.executor`,
         severity: 'error',
         message: `Action executor binding "${executorBinding}" is not declared in action params.`,
-        suggestion: 'Declare a matching action param (for example name: "owner" for $owner) or use a non-binding executor selector.',
+        suggestion: 'Declare a matching action param (for example name: "$owner") or use a non-binding executor selector.',
       });
     }
     const pre = lowerOptionalCondition(action.pre, ownershipByBase, bindingScope, diagnostics, `${path}.pre`, tokenTraitVocabulary);
@@ -323,7 +323,7 @@ function lowerActionParams(
       name: param.name,
       domain: domain.value,
     });
-    bindingScope.push(toBindingToken(param.name));
+    bindingScope.push(param.name);
   });
 
   return {
@@ -684,10 +684,6 @@ function formatValue(value: unknown): string {
   } catch {
     return String(value);
   }
-}
-
-export function toBindingToken(name: string): string {
-  return name.startsWith('$') ? name : `$${name}`;
 }
 
 function isFiniteNumber(value: unknown): value is number {

@@ -76,6 +76,17 @@ phase: asPhaseId('main'),
         limits: [],
       },
       {
+        id: asActionId('invalidExecutorForPlayerCount'),
+actor: 'active',
+executor: { id: asPlayerId(2) },
+phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
         id: asActionId('dependentDomain'),
 actor: 'active',
 executor: 'actor',
@@ -178,6 +189,11 @@ describe('legalMoves', () => {
     };
 
     assert.deepEqual(legalMoves(createDef(), state), []);
+  });
+
+  it('skips actions whose fixed executor is outside current playerCount', () => {
+    assert.doesNotThrow(() => legalMoves(createDef(), createState()));
+    assert.deepEqual(legalMoves(createDef(), createState()), expectedMoves());
   });
 
   it('applies option matrix gating to the second eligible faction after a first event action', () => {

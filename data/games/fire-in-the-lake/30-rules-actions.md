@@ -62,6 +62,46 @@ actions:
   - { id: tax, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
   - { id: subvert, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
   - { id: ambushVc, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - id: nvaTransferResources
+    actor: active
+    executor: '2'
+    phase: main
+    params:
+      - name: amount
+        domain: { query: intsInRange, min: 1, max: 75 }
+    pre:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: '2' }
+        - { op: '>=', left: { ref: gvar, var: nvaResources }, right: { ref: binding, name: amount } }
+    cost: []
+    effects:
+      - addVar:
+          scope: global
+          var: nvaResources
+          delta: { op: '*', left: { ref: binding, name: amount }, right: -1 }
+      - addVar: { scope: global, var: vcResources, delta: { ref: binding, name: amount } }
+    limits: []
+  - id: vcTransferResources
+    actor: active
+    executor: '3'
+    phase: main
+    params:
+      - name: amount
+        domain: { query: intsInRange, min: 1, max: 75 }
+    pre:
+      op: and
+      args:
+        - { op: '==', left: { ref: activePlayer }, right: '3' }
+        - { op: '>=', left: { ref: gvar, var: vcResources }, right: { ref: binding, name: amount } }
+    cost: []
+    effects:
+      - addVar:
+          scope: global
+          var: vcResources
+          delta: { op: '*', left: { ref: binding, name: amount }, right: -1 }
+      - addVar: { scope: global, var: nvaResources, delta: { ref: binding, name: amount } }
+    limits: []
   - { id: usOp, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
   - { id: arvnOp, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
   - id: resolveCommitment

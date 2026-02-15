@@ -143,4 +143,47 @@ phase: 'main',
     assert.equal(result.gameDef, null);
     assert.equal(result.diagnostics.some((d) => d.code === 'CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED'), true);
   });
+
+  it('accepts non-prefixed action param bindings in pre/effects without implicit $ aliasing', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-param-binding-non-prefixed', players: { min: 2, max: 2 } },
+      globalVars: [
+        { name: 'bankA', type: 'int', init: 5, min: 0, max: 75 },
+        { name: 'bankB', type: 'int', init: 0, min: 0, max: 75 },
+      ],
+      zones: [{ id: 'pool', owner: 'none', visibility: 'public', ordering: 'set' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'transfer',
+          actor: 'active',
+          executor: 'actor',
+          phase: 'main',
+          params: [{ name: 'amount', domain: { query: 'intsInRange', min: 1, max: 75 } }],
+          pre: { op: '>=', left: { ref: 'gvar', var: 'bankA' }, right: { ref: 'binding', name: 'amount' } },
+          cost: [],
+          effects: [
+            {
+              addVar: {
+                scope: 'global',
+                var: 'bankA',
+                delta: { op: '*', left: { ref: 'binding', name: 'amount' }, right: -1 },
+              },
+            },
+            { addVar: { scope: 'global', var: 'bankB', delta: { ref: 'binding', name: 'amount' } } },
+          ],
+          limits: [],
+        },
+      ],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assertNoDiagnostics(result);
+    assert.notEqual(result.gameDef, null);
+    const action = result.gameDef!.actions[0];
+    assert.equal(action?.id, 'transfer');
+    assert.equal(action?.params[0]?.name, 'amount');
+  });
 });

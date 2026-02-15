@@ -76,9 +76,20 @@ describe('FITL 1968 VC-first event-card production spec', () => {
     assert.equal(conditional?.when?.op, '>');
     assert.equal(conditional?.when?.right, 0);
     assert.equal(Array.isArray(conditional?.then), true);
-    assert.equal((conditional?.then?.[0] as { moveToken?: { token?: string; from?: string; to?: string } })?.moveToken?.token, 'card-124');
-    assert.equal((conditional?.then?.[0] as { moveToken?: { from?: string } })?.moveToken?.from, 'played:none');
-    assert.equal((conditional?.then?.[0] as { moveToken?: { to?: string } })?.moveToken?.to, 'leader:none');
+    const tetMove = conditional?.then?.[0] as
+      | {
+          forEach?: {
+            bind?: string;
+            limit?: number;
+            effects?: Array<{ moveToken?: { token?: string; from?: string; to?: string } }>;
+          };
+        }
+      | undefined;
+    assert.equal(tetMove?.forEach?.bind, 'tetCard');
+    assert.equal(tetMove?.forEach?.limit, 1);
+    assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.token, 'tetCard');
+    assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.from, 'played:none');
+    assert.equal(tetMove?.forEach?.effects?.[0]?.moveToken?.to, 'leader:none');
     assert.equal(
       (conditional?.else?.[0] as { grantFreeOperation?: { faction?: string; operationClass?: string; actionIds?: string[] } })?.grantFreeOperation
         ?.faction,

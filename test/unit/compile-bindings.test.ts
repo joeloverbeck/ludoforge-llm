@@ -125,4 +125,41 @@ describe('compile-effects binding scope validation', () => {
     assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_BINDING_UNBOUND');
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.1.addVar.delta.name');
   });
+
+  it('rejects unbound non-prefixed token bindings on binding-only string surfaces', () => {
+    const result = lowerEffectArray(
+      [{ destroyToken: { token: 'tokenRef' } }],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.deepEqual(result.diagnostics, [
+      {
+        code: 'CNL_COMPILER_BINDING_UNBOUND',
+        path: 'doc.actions.0.effects.0.destroyToken.token',
+        severity: 'error',
+        message: 'Unbound binding reference "tokenRef".',
+        suggestion: 'Use a binding declared by action params or an in-scope effect binder.',
+        alternatives: ['$token', '$turn', '$actor'],
+      },
+    ]);
+  });
+
+  it('accepts declared non-prefixed token bindings with exact-name identity', () => {
+    const result = lowerEffectArray(
+      [{ destroyToken: { token: 'tokenRef' } }],
+      {
+        ...context,
+        bindingScope: ['$actor', 'tokenRef'],
+      },
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value !== null, true);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+      [],
+    );
+  });
 });

@@ -186,4 +186,32 @@ phase: 'main',
     assert.equal(action?.id, 'transfer');
     assert.equal(action?.params[0]?.name, 'amount');
   });
+
+  it('rejects $-prefixed/non-prefixed binding name mismatches without aliasing', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-param-binding-mismatch', players: { min: 2, max: 2 } },
+      globalVars: [{ name: 'bankA', type: 'int', init: 5, min: 0, max: 75 }],
+      zones: [{ id: 'pool', owner: 'none', visibility: 'public', ordering: 'set' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [
+        {
+          id: 'transfer',
+          actor: 'active',
+          executor: 'actor',
+          phase: 'main',
+          params: [{ name: '$amount', domain: { query: 'intsInRange', min: 1, max: 75 } }],
+          pre: { op: '>=', left: { ref: 'gvar', var: 'bankA' }, right: { ref: 'binding', name: 'amount' } },
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    assert.equal(result.diagnostics.some((d) => d.code === 'CNL_COMPILER_BINDING_UNBOUND'), true);
+  });
 });

@@ -263,7 +263,7 @@ function lowerMoveTokenEffect(
   const diagnostics = [
     ...from.diagnostics,
     ...to.diagnostics,
-    ...validateBindingLikeString(source.token, scope, `${path}.token`),
+    ...validateBindingReference(source.token, scope, `${path}.token`),
   ];
   if (position === null) {
     diagnostics.push({
@@ -332,13 +332,13 @@ function lowerMoveTokenAdjacentEffect(
 
   const from = lowerZoneSelector(source.from, context, scope, `${path}.from`);
   const directionValue = source.direction;
-  const diagnostics = [...from.diagnostics, ...validateBindingLikeString(source.token, scope, `${path}.token`)];
+  const diagnostics = [...from.diagnostics, ...validateBindingReference(source.token, scope, `${path}.token`)];
 
   if (directionValue !== undefined && typeof directionValue !== 'string') {
     diagnostics.push(...missingCapability(`${path}.direction`, 'moveTokenAdjacent direction', directionValue, ['string']).diagnostics);
   }
   if (typeof directionValue === 'string') {
-    diagnostics.push(...validateBindingLikeString(directionValue, scope, `${path}.direction`));
+    diagnostics.push(...validatePrefixedBindingReference(directionValue, scope, `${path}.direction`));
   }
   if (from.value === null || (directionValue !== undefined && typeof directionValue !== 'string')) {
     return { value: null, diagnostics };
@@ -460,7 +460,7 @@ function lowerDestroyTokenEffect(
   if (typeof source.token !== 'string') {
     return missingCapability(path, 'destroyToken effect', source, ['{ destroyToken: { token } }']);
   }
-  const diagnostics = validateBindingLikeString(source.token, scope, `${path}.token`);
+  const diagnostics = validateBindingReference(source.token, scope, `${path}.token`);
   if (diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
     return { value: null, diagnostics };
   }
@@ -480,7 +480,7 @@ function lowerSetTokenPropEffect(
     return missingCapability(path, 'setTokenProp effect', source, ['{ setTokenProp: { token, prop, value } }']);
   }
 
-  const bindingDiagnostics = validateBindingLikeString(source.token, scope, `${path}.token`);
+  const bindingDiagnostics = validateBindingReference(source.token, scope, `${path}.token`);
   const value = lowerValueNode(source.value, makeConditionContext(context, scope), `${path}.value`);
   const diagnostics = [...bindingDiagnostics, ...value.diagnostics];
 
@@ -1285,7 +1285,7 @@ function lowerPlayerSelector(source: unknown, scope: BindingScope, path: string)
     return selector;
   }
   if (typeof selector.value === 'object' && 'chosen' in selector.value) {
-    const diagnostics = validateBindingLikeString(selector.value.chosen, scope, path);
+    const diagnostics = validateBindingReference(selector.value.chosen, scope, path);
     if (diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
       return { value: null, diagnostics };
     }
@@ -1303,11 +1303,11 @@ function validateZoneQualifierBinding(zoneSelector: string, scope: BindingScope,
     return [];
   }
   const qualifier = zoneSelector.slice(splitIndex + 1);
-  return validateBindingLikeString(qualifier, scope, path);
+  return validatePrefixedBindingReference(qualifier, scope, path);
 }
 
-function validateBindingLikeString(value: string, scope: BindingScope, path: string): readonly Diagnostic[] {
-  if (!value.startsWith('$') || scope.has(value)) {
+function validateBindingReference(value: string, scope: BindingScope, path: string): readonly Diagnostic[] {
+  if (scope.has(value)) {
     return [];
   }
   return [
@@ -1320,6 +1320,13 @@ function validateBindingLikeString(value: string, scope: BindingScope, path: str
       alternatives: scope.alternativesFor(value),
     },
   ];
+}
+
+function validatePrefixedBindingReference(value: string, scope: BindingScope, path: string): readonly Diagnostic[] {
+  if (!value.startsWith('$')) {
+    return [];
+  }
+  return validateBindingReference(value, scope, path);
 }
 
 function makeConditionContext(context: EffectLoweringContext, scope: BindingScope): ConditionLoweringContext {

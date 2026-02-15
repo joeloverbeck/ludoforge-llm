@@ -3330,10 +3330,19 @@ eventDecks:
                           - { prop: id, eq: card-124 }
                   right: 0
                 then:
-                  - moveToken:
-                      token: card-124
-                      from: played:none
-                      to: leader:none
+                  - forEach:
+                      bind: tetCard
+                      over:
+                        query: tokensInZone
+                        zone: played:none
+                        filter:
+                          - { prop: id, eq: card-124 }
+                      limit: 1
+                      effects:
+                        - moveToken:
+                            token: tetCard
+                            from: played:none
+                            to: leader:none
                 else:
                   - grantFreeOperation:
                       faction: "3"

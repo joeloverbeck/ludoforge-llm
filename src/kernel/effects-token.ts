@@ -21,7 +21,52 @@ const enforceStacking = (ctx: EffectContext, zoneId: string, zoneContentsAfter: 
     return;
   }
 
-  const violations = checkStackingConstraints(constraints, mapSpaces, zoneId, zoneContentsAfter);
+  const tokenTypeFactionById = new Map<string, string>();
+  for (const tokenType of ctx.def.tokenTypes) {
+    if (typeof tokenType.faction === 'string') {
+      tokenTypeFactionById.set(tokenType.id, tokenType.faction);
+    }
+  }
+  const factionFilteredConstraints = constraints.filter(
+    (constraint) => (constraint.pieceFilter.factions?.length ?? 0) > 0,
+  );
+  if (factionFilteredConstraints.length > 0) {
+    const requiredTokenTypeIds = new Set<string>();
+    const allTokenTypeIds = ctx.def.tokenTypes.map((tokenType) => tokenType.id);
+    for (const constraint of factionFilteredConstraints) {
+      const scopedPieceTypeIds = constraint.pieceFilter.pieceTypeIds;
+      if (scopedPieceTypeIds !== undefined && scopedPieceTypeIds.length > 0) {
+        for (const pieceTypeId of scopedPieceTypeIds) {
+          requiredTokenTypeIds.add(pieceTypeId);
+        }
+      } else {
+        for (const tokenTypeId of allTokenTypeIds) {
+          requiredTokenTypeIds.add(tokenTypeId);
+        }
+      }
+    }
+    const missingFactionTokenTypes = [...requiredTokenTypeIds]
+      .filter((tokenTypeId) => !tokenTypeFactionById.has(tokenTypeId))
+      .sort((left, right) => left.localeCompare(right));
+    if (missingFactionTokenTypes.length > 0) {
+      throw new EffectRuntimeError(
+        'EFFECT_RUNTIME',
+        'Stacking constraint faction filters require canonical tokenType.faction mapping.',
+        {
+          effectType,
+          zoneId,
+          missingTokenTypeFactions: missingFactionTokenTypes,
+        },
+      );
+    }
+  }
+  const violations = checkStackingConstraints(
+    constraints,
+    mapSpaces,
+    zoneId,
+    zoneContentsAfter,
+    tokenTypeFactionById,
+  );
   if (violations.length > 0) {
     const first = violations[0]!;
     throw new EffectRuntimeError('STACKING_VIOLATION', `Stacking violation: constraint "${first.constraintId}" (${first.description})`, {

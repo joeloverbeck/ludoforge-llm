@@ -78,6 +78,7 @@ export const TokenTypeTransitionSchema = z
 export const TokenTypeDefSchema = z
   .object({
     id: StringSchema,
+    faction: StringSchema.optional(),
     props: z.record(StringSchema, z.union([z.literal('int'), z.literal('string'), z.literal('boolean')])),
     transitions: z.array(TokenTypeTransitionSchema).optional(),
   })

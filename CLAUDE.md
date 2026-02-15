@@ -22,11 +22,12 @@ LudoForge-LLM is a system for evolving board games using LLMs. LLMs produce **St
 
 ## Status
 
-Active development. The core engine (kernel, compiler, agents, simulator) is implemented and tested. The primary test-case game is **Fire in the Lake (FITL)** — a 4-faction COIN-series wargame being encoded as a fully playable GameSpecDoc.
+Active development. The core engine (kernel, compiler, agents, simulator) is implemented and tested. The primary test-case game is **Fire in the Lake (FITL)** — a 4-faction COIN-series wargame being encoded as a fully playable GameSpecDoc. FITL event card encoding and game definition generation are complete.
 
-- **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), plus FITL specs 16-24
-- **Active specs**: 25 (FITL mechanics infrastructure, in progress), 26-31 (FITL operations, events, AI, E2E)
+- **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), plus FITL specs 15-28, 30, 32
+- **Active specs**: 29 (FITL event card encoding), 31 (FITL E2E tests and validation)
 - **Not yet started**: 11 (evaluator/degeneracy), 12 (CLI), 13 (mechanic bundle IR), 14 (evolution pipeline)
+- **Codebase size**: ~117 source files, ~204 test files, ~31K LoC
 - Design spec: `brainstorming/executable-board-game-kernel-cnl-rulebook.md`
 
 ## Tech Stack
@@ -36,8 +37,8 @@ Active development. The core engine (kernel, compiler, agents, simulator) is imp
 - **Testing**: Node.js built-in test runner (`node --test`)
 - **Build**: `tsc` (TypeScript compiler)
 - **Linting**: ESLint with typescript-eslint
-- **Runtime deps**: `yaml` (YAML 1.2 parsing), `zod` (schema validation)
-- **Dev deps**: `ajv` (JSON Schema validation in tests), `eslint`, `typescript`
+- **Runtime deps**: `yaml` (YAML 1.2 parsing), `zod` v4 (schema validation)
+- **Dev deps**: `ajv` (JSON Schema validation in tests), `eslint` v9, `typescript` v5.9
 
 ## Architecture
 
@@ -106,15 +107,18 @@ src/
   cli/             # CLI commands (stub)
 schemas/           # JSON Schema artifacts
 data/              # Optional game reference data
+docs/              # Design plans and technical documentation
 specs/             # Numbered implementation specs
 tickets/           # Active implementation tickets
 archive/           # Completed tickets, specs, brainstorming, reports
 brainstorming/     # Design documents
+reports/           # Analysis and evaluation reports
 test/
   unit/            # Individual functions, utilities
   integration/     # Cross-module interactions
   e2e/             # Full pipeline (Game Spec -> compile -> run -> eval)
   fixtures/        # Test fixture files (GameDef JSON, spec Markdown, golden outputs)
+  helpers/         # Shared test utilities (production spec compilation, state setup)
   performance/     # Benchmarks
   memory/          # Memory leak detection
 ```
@@ -135,6 +139,15 @@ test/
 - **Kernel purity**: The `kernel/` module must be pure and side-effect free. All state transitions return new state objects.
 - **Deterministic terminology**: Use `GameDef`, `GameSpecDoc`, `GameTrace` exactly as defined.
 - **Schema synchronization**: Keep schema/type changes synchronized across `src/kernel/`, `schemas/`, and tests.
+
+## Commit Conventions
+
+Commit subjects should be short and imperative. Common patterns in this repo:
+- `docs: add Spec 12 — CLI`
+- `Implemented CORTYPSCHVAL-008`
+- `Added linting.`
+
+When modifying specs or tickets, verify cross-spec references and ensure roadmap and individual specs do not conflict.
 
 ## Skill Invocation (MANDATORY)
 
@@ -171,10 +184,10 @@ Sub-agents spawned via the `Task` tool **cannot prompt for interactive permissio
 When asked to archive a ticket, spec, or brainstorming document:
 
 1. **Edit the document** to mark its final status at the top:
-   - `**Status**: COMPLETED` - Fully implemented
-   - `**Status**: REJECTED` - Decided not to implement
-   - `**Status**: DEFERRED` - Postponed for later
-   - `**Status**: NOT IMPLEMENTED` - Started but abandoned
+   - `**Status**: COMPLETED` (or `✅ COMPLETED`) - Fully implemented
+   - `**Status**: REJECTED` (or `❌ REJECTED`) - Decided not to implement
+   - `**Status**: DEFERRED` (or `⏸️ DEFERRED`) - Postponed for later
+   - `**Status**: NOT IMPLEMENTED` (or `🚫 NOT IMPLEMENTED`) - Started but abandoned
 
 2. **Add an Outcome section** at the bottom (for completed tickets):
    - Completion date

@@ -1042,6 +1042,26 @@ describe('validateGameDef constraints and warnings', () => {
     const diagnostics = validateGameDef(loadFixtureGameDef('fitl-map-foundation-valid.json'));
     assert.deepEqual(diagnostics, []);
   });
+
+  it('reports error when stacking faction filters lack canonical tokenType faction metadata', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      tokenTypes: [{ id: 'troops', props: { faction: 'string' } }],
+      stackingConstraints: [
+        {
+          id: 'nv-restriction',
+          description: 'Only NVA/VC in North Vietnam',
+          spaceFilter: { country: ['northVietnam'] },
+          pieceFilter: { factions: ['US', 'ARVN'] },
+          rule: 'prohibit' as const,
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(diagnostics.some((diag) => diag.code === 'STACKING_CONSTRAINT_TOKEN_TYPE_FACTION_MISSING'));
+  });
 });
 
 describe('validateInitialPlacementsAgainstStackingConstraints', () => {
@@ -1076,6 +1096,12 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
     pieceFilter: { factions: ['US', 'ARVN'] },
     rule: 'prohibit',
   };
+  const pieceTypeFactionById = new Map<string, string>([
+    ['troops', 'US'],
+    ['base', 'US'],
+    ['guerrilla', 'NVA'],
+    ['us-troops', 'us'],
+  ]);
 
   it('reports error when 3 bases placed in province (maxCount 2)', () => {
     const placements: readonly ScenarioPiecePlacement[] = [
@@ -1124,6 +1150,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
       [nvRestrictionConstraint],
       placements,
       spaces,
+      pieceTypeFactionById,
     );
 
     assert.equal(diagnostics.length, 1);
@@ -1146,6 +1173,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
       [maxBasesConstraint, noBasesOnLocConstraint, nvRestrictionConstraint],
       placements,
       spaces,
+      pieceTypeFactionById,
     );
 
     assert.deepEqual(diagnostics, []);
@@ -1176,6 +1204,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
       [maxBasesConstraint, noBasesOnLocConstraint, nvRestrictionConstraint],
       placements,
       spaces,
+      pieceTypeFactionById,
     );
 
     assert.equal(diagnostics.length, 3);
@@ -1206,9 +1235,36 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
       [nvRestrictionConstraint],
       placements,
       spaces,
+      pieceTypeFactionById,
     );
 
     assert.deepEqual(diagnostics, []);
+  });
+
+  it('uses canonical piece-type faction mapping when provided', () => {
+    const canonicalConstraint: StackingConstraint = {
+      id: 'nv-restriction-canonical',
+      description: 'Only nva/vc in North Vietnam (canonical ids)',
+      spaceFilter: { country: ['north-vietnam'] },
+      pieceFilter: { factions: ['us', 'arvn'] },
+      rule: 'prohibit',
+    };
+    const placements: readonly ScenarioPiecePlacement[] = [
+      { spaceId: 'hanoi', pieceTypeId: 'us-troops', faction: 'US', count: 1 },
+    ];
+    const pieceTypeFactionById = new Map<string, string>([['us-troops', 'us']]);
+
+    const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
+      [canonicalConstraint],
+      placements,
+      spaces,
+      pieceTypeFactionById,
+    );
+
+    assert.equal(diagnostics.length, 1);
+    const diag = diagnostics.find((d) => d.code === 'STACKING_CONSTRAINT_VIOLATION');
+    assert.ok(diag);
+    assert.ok(diag.message.includes('hanoi'));
   });
 });
 

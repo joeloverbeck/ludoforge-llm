@@ -496,6 +496,29 @@ dataAssets:
           constraints:
             - spaceTypes: [city, province]
               allowedStates: [none]
+      stackingConstraints:
+        - id: max-2-bases-per-space
+          description: "No more than 2 Bases of any Factions may occupy a single Province or City"
+          spaceFilter:
+            spaceTypes: [province, city]
+          pieceFilter:
+            pieceTypeIds: [us-bases, arvn-bases, nva-bases, vc-bases]
+          rule: maxCount
+          maxCount: 2
+        - id: no-bases-on-locs
+          description: "Bases may not occupy LoCs"
+          spaceFilter:
+            spaceTypes: [loc]
+          pieceFilter:
+            pieceTypeIds: [us-bases, arvn-bases, nva-bases, vc-bases]
+          rule: prohibit
+        - id: north-vietnam-insurgent-only
+          description: "Only NVA and VC forces may occupy North Vietnam"
+          spaceFilter:
+            country: [northVietnam]
+          pieceFilter:
+            pieceTypeIds: [us-troops, us-bases, us-irregulars, arvn-troops, arvn-police, arvn-rangers, arvn-bases]
+          rule: prohibit
   - id: fitl-piece-catalog-production
     kind: pieceCatalog
     payload:

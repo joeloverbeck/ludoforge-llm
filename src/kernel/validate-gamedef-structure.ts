@@ -417,6 +417,34 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
     'global marker lattice id',
     'globalMarkerLattices',
   );
+  const tokenTypeById = new Map(def.tokenTypes.map((tokenType) => [tokenType.id, tokenType] as const));
+  (def.stackingConstraints ?? []).forEach((constraint, index) => {
+    if ((constraint.pieceFilter.factions?.length ?? 0) === 0) {
+      return;
+    }
+
+    const scopedPieceTypeIds = constraint.pieceFilter.pieceTypeIds;
+    const requiredTokenTypeIds =
+      scopedPieceTypeIds !== undefined && scopedPieceTypeIds.length > 0
+        ? [...new Set(scopedPieceTypeIds)]
+        : def.tokenTypes.map((tokenType) => tokenType.id);
+    const missingFactionTokenTypeIds = requiredTokenTypeIds
+      .filter((tokenTypeId) => {
+        const tokenType = tokenTypeById.get(tokenTypeId);
+        return tokenType !== undefined && typeof tokenType.faction !== 'string';
+      })
+      .sort((left, right) => left.localeCompare(right));
+
+    if (missingFactionTokenTypeIds.length > 0) {
+      diagnostics.push({
+        code: 'STACKING_CONSTRAINT_TOKEN_TYPE_FACTION_MISSING',
+        path: `stackingConstraints[${index}].pieceFilter.factions`,
+        severity: 'error',
+        message: `Stacking constraint "${constraint.id}" uses pieceFilter.factions but tokenTypes are missing canonical faction metadata: ${missingFactionTokenTypeIds.join(', ')}.`,
+        suggestion: 'Define tokenTypes[].faction for each constrained token type.',
+      });
+    }
+  });
 
   def.zones.forEach((zone, index) => {
     const qualifier = parseZoneSelector(zone.id).qualifier;
@@ -580,6 +608,7 @@ const spaceMatchesFilter = (space: MapSpaceDef, filter: StackingConstraint['spac
 const placementMatchesPieceFilter = (
   placement: ScenarioPiecePlacement,
   filter: StackingConstraint['pieceFilter'],
+  pieceTypeFactionById: ReadonlyMap<string, string> | undefined,
 ): boolean => {
   if (
     filter.pieceTypeIds !== undefined &&
@@ -588,8 +617,11 @@ const placementMatchesPieceFilter = (
   ) {
     return false;
   }
-  if (filter.factions !== undefined && filter.factions.length > 0 && !filter.factions.includes(placement.faction)) {
-    return false;
+  if (filter.factions !== undefined && filter.factions.length > 0) {
+    const canonicalFaction = pieceTypeFactionById?.get(placement.pieceTypeId);
+    if (typeof canonicalFaction !== 'string' || !filter.factions.includes(canonicalFaction)) {
+      return false;
+    }
   }
   return true;
 };
@@ -598,11 +630,39 @@ export const validateInitialPlacementsAgainstStackingConstraints = (
   constraints: readonly StackingConstraint[],
   placements: readonly ScenarioPiecePlacement[],
   spaces: readonly MapSpaceDef[],
+  pieceTypeFactionById?: ReadonlyMap<string, string>,
 ): Diagnostic[] => {
   const diagnostics: Diagnostic[] = [];
   const spaceMap = new Map(spaces.map((space) => [space.id, space]));
+  const reportedMissingFactionKeys = new Set<string>();
 
   for (const constraint of constraints) {
+    if ((constraint.pieceFilter.factions?.length ?? 0) > 0) {
+      const scopedPieceTypeIds = constraint.pieceFilter.pieceTypeIds;
+      const relevantPlacements =
+        scopedPieceTypeIds === undefined || scopedPieceTypeIds.length === 0
+          ? placements
+          : placements.filter((placement) => scopedPieceTypeIds.includes(placement.pieceTypeId));
+      const requiredPieceTypeIds = [...new Set(relevantPlacements.map((placement) => placement.pieceTypeId))];
+      for (const pieceTypeId of requiredPieceTypeIds) {
+        if (pieceTypeFactionById?.has(pieceTypeId) === true) {
+          continue;
+        }
+        const reportKey = `${constraint.id}::${pieceTypeId}`;
+        if (reportedMissingFactionKeys.has(reportKey)) {
+          continue;
+        }
+        reportedMissingFactionKeys.add(reportKey);
+        diagnostics.push({
+          code: 'STACKING_CONSTRAINT_TOKEN_TYPE_FACTION_MISSING',
+          path: `stackingConstraints[${constraint.id}]`,
+          severity: 'error',
+          message: `Stacking constraint "${constraint.id}" uses pieceFilter.factions but pieceType "${pieceTypeId}" has no canonical faction mapping.`,
+          suggestion: 'Provide a pieceTypeId -> faction mapping for compile-time stacking validation.',
+        });
+      }
+    }
+
     const matchingSpaceIds = spaces
       .filter((space) => spaceMatchesFilter(space, constraint.spaceFilter))
       .map((space) => space.id);
@@ -614,7 +674,7 @@ export const validateInitialPlacementsAgainstStackingConstraints = (
       if (!matchingSpaceSet.has(placement.spaceId)) {
         continue;
       }
-      if (!placementMatchesPieceFilter(placement, constraint.pieceFilter)) {
+      if (!placementMatchesPieceFilter(placement, constraint.pieceFilter, pieceTypeFactionById)) {
         continue;
       }
       const current = countBySpace.get(placement.spaceId) ?? 0;

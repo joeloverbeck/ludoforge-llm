@@ -31,13 +31,14 @@ const spaceMatchesFilter = (
 const tokenMatchesPieceFilter = (
   token: Token,
   filter: StackingConstraint['pieceFilter'],
+  tokenTypeFactionById: ReadonlyMap<string, string> | undefined,
 ): boolean => {
   if (filter.pieceTypeIds !== undefined && filter.pieceTypeIds.length > 0 && !filter.pieceTypeIds.includes(token.type)) {
     return false;
   }
   if (filter.factions !== undefined && filter.factions.length > 0) {
-    const tokenFaction = token.props.faction;
-    if (typeof tokenFaction !== 'string' || !filter.factions.includes(tokenFaction)) {
+    const canonicalFaction = tokenTypeFactionById?.get(token.type);
+    if (typeof canonicalFaction !== 'string' || !filter.factions.includes(canonicalFaction)) {
       return false;
     }
   }
@@ -60,6 +61,7 @@ export function checkStackingConstraints(
   mapSpaces: readonly MapSpaceDef[],
   zoneId: string,
   zoneContentsAfter: readonly Token[],
+  tokenTypeFactionById?: ReadonlyMap<string, string>,
 ): readonly StackingViolation[] {
   if (constraints.length === 0) {
     return [];
@@ -78,7 +80,7 @@ export function checkStackingConstraints(
     }
 
     const matchingCount = zoneContentsAfter.filter((token) =>
-      tokenMatchesPieceFilter(token, constraint.pieceFilter),
+      tokenMatchesPieceFilter(token, constraint.pieceFilter, tokenTypeFactionById),
     ).length;
 
     if (constraint.rule === 'prohibit' && matchingCount > 0) {

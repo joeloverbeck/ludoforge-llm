@@ -48,6 +48,12 @@ const noUsArvnInNv: StackingConstraint = {
   pieceFilter: { factions: ['US', 'ARVN'] },
   rule: 'prohibit',
 };
+const tokenTypeFactionById = new Map<string, string>([
+  ['troops', 'US'],
+  ['base', 'US'],
+  ['guerrilla', 'NVA'],
+  ['us-troops', 'us'],
+]);
 
 describe('checkStackingConstraints', () => {
   it('returns no violations when maxCount is not exceeded', () => {
@@ -145,7 +151,7 @@ describe('checkStackingConstraints', () => {
     const spaces = [makeSpace({ id: 'hanoi', spaceType: 'city', country: 'northVietnam' })];
     const tokens = [makeToken('t1', 'troops', 'US')];
 
-    const violations = checkStackingConstraints([noUsArvnInNv], spaces, 'hanoi', tokens);
+    const violations = checkStackingConstraints([noUsArvnInNv], spaces, 'hanoi', tokens, tokenTypeFactionById);
     assert.equal(violations.length, 1);
     assert.equal(violations[0]!.constraintId, 'nv-restriction');
     assert.equal(violations[0]!.rule, 'prohibit');
@@ -158,8 +164,32 @@ describe('checkStackingConstraints', () => {
       makeToken('g2', 'guerrilla', 'VC'),
     ];
 
-    const violations = checkStackingConstraints([noUsArvnInNv], spaces, 'hanoi', tokens);
+    const violations = checkStackingConstraints([noUsArvnInNv], spaces, 'hanoi', tokens, tokenTypeFactionById);
     assert.equal(violations.length, 0);
+  });
+
+  it('uses canonical token-type faction mapping when provided', () => {
+    const spaces = [makeSpace({ id: 'hanoi', spaceType: 'city', country: 'northVietnam' })];
+    const tokens = [makeToken('t1', 'us-troops', 'US')];
+    const lowerCaseConstraint: StackingConstraint = {
+      id: 'nv-restriction-canonical',
+      description: 'Only nva/vc in North Vietnam (canonical ids)',
+      spaceFilter: { country: ['northVietnam'] },
+      pieceFilter: { factions: ['us', 'arvn'] },
+      rule: 'prohibit',
+    };
+    const violationsWithoutMapping = checkStackingConstraints([lowerCaseConstraint], spaces, 'hanoi', tokens);
+    assert.equal(violationsWithoutMapping.length, 0);
+
+    const violationsWithMapping = checkStackingConstraints(
+      [lowerCaseConstraint],
+      spaces,
+      'hanoi',
+      tokens,
+      tokenTypeFactionById,
+    );
+    assert.equal(violationsWithMapping.length, 1);
+    assert.equal(violationsWithMapping[0]!.constraintId, 'nv-restriction-canonical');
   });
 
   it('checks populationEquals filter', () => {

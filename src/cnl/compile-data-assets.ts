@@ -198,6 +198,7 @@ export function deriveSectionsFromDataAssets(
       ? null
       : selectedPieceCatalog.payload.pieceTypes.map((pieceType) => ({
           id: pieceType.id,
+          faction: pieceType.faction,
           props: Object.fromEntries(
             Object.entries({
               ...(pieceType.runtimeProps === undefined ? {} : inferRuntimePropSchema(pieceType.runtimeProps)),

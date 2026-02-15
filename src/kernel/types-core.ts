@@ -82,6 +82,7 @@ export interface TokenTypeTransition {
 
 export interface TokenTypeDef {
   readonly id: string;
+  readonly faction?: string;
   readonly props: Readonly<Record<string, 'int' | 'string' | 'boolean'>>;
   readonly transitions?: readonly TokenTypeTransition[];
 }

@@ -54,6 +54,11 @@ const mapSpaces: readonly MapSpaceDef[] = [
   { id: 'route1', spaceType: 'loc', population: 0, econ: 1, terrainTags: ['highway'], country: 'southVietnam', coastal: false, adjacentTo: ['quangTri', 'hue'] },
   { id: 'hanoi', spaceType: 'city', population: 3, econ: 0, terrainTags: [], country: 'northVietnam', coastal: false, adjacentTo: [] },
 ];
+const pieceTypeFactionById = new Map<string, string>([
+  ['base', 'US'],
+  ['troops', 'US'],
+  ['guerrilla', 'NVA'],
+]);
 
 const makeToken = (id: string, type: string, faction: string): Token => ({
   id: asTokenId(id),
@@ -71,7 +76,12 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
         { spaceId: 'quangTri', pieceTypeId: 'base', faction: 'ARVN', count: 1 },
       ];
 
-      const diags = validateInitialPlacementsAgainstStackingConstraints(fitlConstraints, placements, [...mapSpaces]);
+      const diags = validateInitialPlacementsAgainstStackingConstraints(
+        fitlConstraints,
+        placements,
+        [...mapSpaces],
+        pieceTypeFactionById,
+      );
       assert.ok(diags.length > 0, 'Expected compile-time stacking violation');
       assert.ok(diags.some((d) => d.code === 'STACKING_CONSTRAINT_VIOLATION'));
     });
@@ -81,7 +91,12 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
         { spaceId: 'route1', pieceTypeId: 'base', faction: 'NVA', count: 1 },
       ];
 
-      const diags = validateInitialPlacementsAgainstStackingConstraints(fitlConstraints, placements, [...mapSpaces]);
+      const diags = validateInitialPlacementsAgainstStackingConstraints(
+        fitlConstraints,
+        placements,
+        [...mapSpaces],
+        pieceTypeFactionById,
+      );
       assert.ok(diags.length > 0);
       assert.ok(diags.some((d) => d.code === 'STACKING_CONSTRAINT_VIOLATION'));
     });
@@ -91,7 +106,12 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
         { spaceId: 'hanoi', pieceTypeId: 'troops', faction: 'US', count: 1 },
       ];
 
-      const diags = validateInitialPlacementsAgainstStackingConstraints(fitlConstraints, placements, [...mapSpaces]);
+      const diags = validateInitialPlacementsAgainstStackingConstraints(
+        fitlConstraints,
+        placements,
+        [...mapSpaces],
+        pieceTypeFactionById,
+      );
       assert.ok(diags.length > 0);
       assert.ok(diags.some((d) => d.code === 'STACKING_CONSTRAINT_VIOLATION'));
     });
@@ -104,7 +124,12 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
         { spaceId: 'hanoi', pieceTypeId: 'guerrilla', faction: 'NVA', count: 2 },
       ];
 
-      const diags = validateInitialPlacementsAgainstStackingConstraints(fitlConstraints, placements, [...mapSpaces]);
+      const diags = validateInitialPlacementsAgainstStackingConstraints(
+        fitlConstraints,
+        placements,
+        [...mapSpaces],
+        pieceTypeFactionById,
+      );
       assert.equal(diags.length, 0, `Unexpected violations: ${diags.map((d) => d.message).join('; ')}`);
     });
   });
@@ -123,9 +148,9 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
         { id: asZoneId('available:none'), owner: 'none', visibility: 'public', ordering: 'set' },
       ],
       tokenTypes: [
-        { id: 'base', props: { faction: 'string' } },
-        { id: 'troops', props: { faction: 'string' } },
-        { id: 'guerrilla', props: { faction: 'string' } },
+        { id: 'base', faction: 'US', props: { faction: 'string' } },
+        { id: 'troops', faction: 'US', props: { faction: 'string' } },
+        { id: 'guerrilla', faction: 'NVA', props: { faction: 'string' } },
       ],
       setup: [],
       turnStructure: { phases: [] },
@@ -221,7 +246,12 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       const placements: ScenarioPiecePlacement[] = [
         { spaceId: 'quangTri', pieceTypeId: 'base', faction: 'US', count: 3 },
       ];
-      const compileTimeDiags = validateInitialPlacementsAgainstStackingConstraints(fitlConstraints, placements, [...mapSpaces]);
+      const compileTimeDiags = validateInitialPlacementsAgainstStackingConstraints(
+        fitlConstraints,
+        placements,
+        [...mapSpaces],
+        pieceTypeFactionById,
+      );
       assert.ok(compileTimeDiags.length > 0, 'Expected compile-time violation');
 
       // Runtime: same scenario via moveToken (uses zone IDs with :none suffix)

@@ -122,6 +122,8 @@ export interface TurnFlowPendingFreeOperationGrant {
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: import('./types-ast.js').ConditionAST;
   readonly remainingUses: number;
+  readonly sequenceBatchId?: string;
+  readonly sequenceIndex?: number;
 }
 
 export interface CompoundActionState {

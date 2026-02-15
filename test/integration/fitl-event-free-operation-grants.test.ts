@@ -45,7 +45,7 @@ const createDef = (): GameDef =>
         actor: 'active',
         phase: asPhaseId('main'),
         params: [
-          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4', 'card-5'] } },
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4', 'card-5', 'card-6', 'card-7'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
           { name: 'branch', domain: { query: 'enums', values: ['branch-grant-nva', 'none'] } },
         ],
@@ -91,7 +91,14 @@ const createDef = (): GameDef =>
             sideMode: 'single',
             unshaded: {
               text: 'Grant free op to VC.',
-              freeOperationGrants: [{ faction: '3', operationClass: 'operation', actionIds: ['operation'] }],
+              freeOperationGrants: [
+                {
+                  faction: '3',
+                  sequence: { chain: 'vc-op', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                },
+              ],
             },
           },
           {
@@ -103,7 +110,14 @@ const createDef = (): GameDef =>
               branches: [
                 {
                   id: 'branch-grant-nva',
-                  freeOperationGrants: [{ faction: '2', operationClass: 'operation', actionIds: ['operation'] }],
+                  freeOperationGrants: [
+                    {
+                      faction: '2',
+                      sequence: { chain: 'nva-op', step: 0 },
+                      operationClass: 'operation',
+                      actionIds: ['operation'],
+                    },
+                  ],
                 },
               ],
             },
@@ -115,8 +129,8 @@ const createDef = (): GameDef =>
             unshaded: {
               text: 'Grant VC two free operations.',
               freeOperationGrants: [
-                { faction: '3', operationClass: 'operation', actionIds: ['operation'] },
-                { faction: '3', operationClass: 'operation', actionIds: ['operation'] },
+                { faction: '3', sequence: { chain: 'vc-op-1', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
+                { faction: '3', sequence: { chain: 'vc-op-2', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
               ],
             },
           },
@@ -126,7 +140,16 @@ const createDef = (): GameDef =>
             sideMode: 'single',
             unshaded: {
               text: 'Grant VC a reusable free operation.',
-              freeOperationGrants: [{ id: 'vc-reusable-op', faction: '3', operationClass: 'operation', actionIds: ['operation'], uses: 2 }],
+              freeOperationGrants: [
+                {
+                  id: 'vc-reusable-op',
+                  faction: '3',
+                  sequence: { chain: 'vc-reusable-op', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  uses: 2,
+                },
+              ],
             },
           },
           {
@@ -135,7 +158,38 @@ const createDef = (): GameDef =>
             sideMode: 'single',
             unshaded: {
               text: 'Grant VC a limited free operation.',
-              freeOperationGrants: [{ faction: '3', operationClass: 'limitedOperation', actionIds: ['operation'] }],
+              freeOperationGrants: [
+                {
+                  faction: '3',
+                  sequence: { chain: 'vc-limited', step: 0 },
+                  operationClass: 'limitedOperation',
+                  actionIds: ['operation'],
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-6',
+            title: 'Ordered VC Grant Chain',
+            sideMode: 'single',
+            unshaded: {
+              text: 'VC gets limited operation first, then regular operation.',
+              freeOperationGrants: [
+                { faction: '3', sequence: { chain: 'vc-ordered', step: 0 }, operationClass: 'limitedOperation', actionIds: ['operation'] },
+                { faction: '3', sequence: { chain: 'vc-ordered', step: 1 }, operationClass: 'operation', actionIds: ['operation'] },
+              ],
+            },
+          },
+          {
+            id: 'card-7',
+            title: 'Ordered Cross-Faction Grant Chain',
+            sideMode: 'single',
+            unshaded: {
+              text: 'VC gets a free operation before NVA gets one.',
+              freeOperationGrants: [
+                { faction: '3', sequence: { chain: 'vc-nva-ordered', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
+                { faction: '2', sequence: { chain: 'vc-nva-ordered', step: 1 }, operationClass: 'operation', actionIds: ['operation'] },
+              ],
             },
           },
         ],
@@ -261,6 +315,7 @@ const createZoneFilteredDef = (): GameDef =>
               freeOperationGrants: [
                 {
                   faction: '2',
+                  sequence: { chain: 'nva-cambodia', step: 0 },
                   operationClass: 'operation',
                   actionIds: ['operation'],
                   zoneFilter: {
@@ -404,6 +459,60 @@ describe('event free-operation grants integration', () => {
       actionClass: 'limitedOperation',
     }).state;
     assert.deepEqual(requireCardDrivenRuntime(fourth).pendingFreeOperationGrants ?? [], []);
+  });
+
+  it('enforces ordered same-faction grant chains within one event resolution', () => {
+    const def = createDef();
+    const start = initialState(def, 25, 4);
+
+    const first = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-6', side: 'unshaded', branch: 'none' },
+    }).state;
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} }).state;
+    const third = applyMove(def, second, { actionId: asActionId('operation'), params: {} }).state;
+    assert.equal(third.activePlayer, asPlayerId(3));
+
+    assert.throws(
+      () => applyMove(def, third, { actionId: asActionId('operation'), params: {}, freeOperation: true }),
+      /free operation is not granted in current state/,
+    );
+
+    const fourth = applyMove(def, third, {
+      actionId: asActionId('operation'),
+      params: {},
+      freeOperation: true,
+      actionClass: 'limitedOperation',
+    }).state;
+    const pendingAfterFirst = requireCardDrivenRuntime(fourth).pendingFreeOperationGrants ?? [];
+    assert.equal(pendingAfterFirst.length, 1);
+    assert.equal(pendingAfterFirst[0]?.operationClass, 'operation');
+
+    const fifth = applyMove(def, fourth, {
+      actionId: asActionId('operation'),
+      params: {},
+      freeOperation: true,
+    }).state;
+    assert.deepEqual(requireCardDrivenRuntime(fifth).pendingFreeOperationGrants ?? [], []);
+  });
+
+  it('enforces ordered cross-faction grant chains within one event resolution', () => {
+    const def = createDef();
+    const start = initialState(def, 26, 4);
+
+    const first = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-7', side: 'unshaded', branch: 'none' },
+    }).state;
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} }).state;
+    assert.equal(second.activePlayer, asPlayerId(2));
+
+    const nvaMoves = legalMoves(def, second).filter((move) => String(move.actionId) === 'operation');
+    assert.equal(
+      nvaMoves.some((move) => move.freeOperation === true),
+      false,
+      'NVA free operation should stay locked until the earlier VC sequence step is consumed',
+    );
   });
 
   it('enforces Cambodia-only free-operation grants across discovery, decision flow, and final apply', () => {

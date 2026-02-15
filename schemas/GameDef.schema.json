@@ -2101,6 +2101,15 @@
                       "items": {
                         "type": "object",
                         "properties": {
+                          "sequence": {
+                            "type": "object",
+                            "properties": {
+                              "chain": { "type": "string", "minLength": 1 },
+                              "step": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+                            },
+                            "required": ["chain", "step"],
+                            "additionalProperties": false
+                          },
                           "id": { "type": "string", "minLength": 1 },
                           "faction": { "type": "string", "minLength": 1 },
                           "operationClass": {
@@ -2124,7 +2133,7 @@
                           },
                           "uses": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
                         },
-                        "required": ["faction", "operationClass"],
+                        "required": ["sequence", "faction", "operationClass"],
                         "additionalProperties": false
                       }
                     },
@@ -2181,8 +2190,17 @@
                             "type": "array",
                             "minItems": 1,
                             "items": {
-                              "type": "object",
-                              "properties": {
+                            "type": "object",
+                            "properties": {
+                                "sequence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "chain": { "type": "string", "minLength": 1 },
+                                    "step": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+                                  },
+                                  "required": ["chain", "step"],
+                                  "additionalProperties": false
+                                },
                                 "id": { "type": "string", "minLength": 1 },
                                 "faction": { "type": "string", "minLength": 1 },
                                 "operationClass": {
@@ -2206,7 +2224,7 @@
                                 },
                                 "uses": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
                               },
-                              "required": ["faction", "operationClass"],
+                              "required": ["sequence", "faction", "operationClass"],
                               "additionalProperties": false
                             }
                           },
@@ -2417,6 +2435,15 @@
                       "items": {
                         "type": "object",
                         "properties": {
+                          "sequence": {
+                            "type": "object",
+                            "properties": {
+                              "chain": { "type": "string", "minLength": 1 },
+                              "step": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+                            },
+                            "required": ["chain", "step"],
+                            "additionalProperties": false
+                          },
                           "id": { "type": "string", "minLength": 1 },
                           "faction": { "type": "string", "minLength": 1 },
                           "operationClass": {
@@ -2440,7 +2467,7 @@
                           },
                           "uses": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
                         },
-                        "required": ["faction", "operationClass"],
+                        "required": ["sequence", "faction", "operationClass"],
                         "additionalProperties": false
                       }
                     },
@@ -2497,8 +2524,17 @@
                             "type": "array",
                             "minItems": 1,
                             "items": {
-                              "type": "object",
-                              "properties": {
+                            "type": "object",
+                            "properties": {
+                                "sequence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "chain": { "type": "string", "minLength": 1 },
+                                    "step": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+                                  },
+                                  "required": ["chain", "step"],
+                                  "additionalProperties": false
+                                },
                                 "id": { "type": "string", "minLength": 1 },
                                 "faction": { "type": "string", "minLength": 1 },
                                 "operationClass": {
@@ -2522,7 +2558,7 @@
                                 },
                                 "uses": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
                               },
-                              "required": ["faction", "operationClass"],
+                              "required": ["sequence", "faction", "operationClass"],
                               "additionalProperties": false
                             }
                           },

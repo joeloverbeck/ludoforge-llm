@@ -20,6 +20,8 @@ export function withPendingFreeOperationGrant(
     readonly actionIds?: readonly string[];
     readonly zoneFilter?: TurnFlowPendingFreeOperationGrant['zoneFilter'];
     readonly remainingUses?: number;
+    readonly sequenceBatchId?: string;
+    readonly sequenceIndex?: number;
   },
 ): GameState {
   const runtime = requireCardDrivenRuntime(state);
@@ -31,6 +33,8 @@ export function withPendingFreeOperationGrant(
     ...(grant?.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
     ...(grant?.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
     remainingUses: grant?.remainingUses ?? 1,
+    sequenceBatchId: grant?.sequenceBatchId ?? `test-free-op-batch-${nextIndex}`,
+    sequenceIndex: grant?.sequenceIndex ?? nextIndex,
   };
   return {
     ...state,

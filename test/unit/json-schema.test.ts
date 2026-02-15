@@ -130,7 +130,15 @@ const gameDefWithModernEventDeck: GameDef = {
           sideMode: 'single',
           unshaded: {
             text: 'Test payload',
-            freeOperationGrants: [{ faction: '0', operationClass: 'operation', actionIds: ['playCard'], uses: 1 }],
+            freeOperationGrants: [
+              {
+                faction: '0',
+                sequence: { chain: 'play-card-grant', step: 0 },
+                operationClass: 'operation',
+                actionIds: ['playCard'],
+                uses: 1,
+              },
+            ],
             eligibilityOverrides: [{ target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' }],
             lastingEffects: [
               {

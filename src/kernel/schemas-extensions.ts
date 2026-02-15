@@ -59,6 +59,12 @@ export const EventCardLastingEffectSchema = z
 
 export const EventCardFreeOperationGrantSchema = z
   .object({
+    sequence: z
+      .object({
+        chain: StringSchema.min(1),
+        step: IntegerSchema.min(0),
+      })
+      .strict(),
     id: StringSchema.min(1).optional(),
     faction: StringSchema.min(1),
     operationClass: z.union([
@@ -457,6 +463,8 @@ export const TurnFlowRuntimeStateSchema = z
             actionIds: z.array(StringSchema.min(1)).min(1).optional(),
             zoneFilter: ConditionASTSchema.optional(),
             remainingUses: IntegerSchema.min(1),
+            sequenceBatchId: StringSchema.min(1).optional(),
+            sequenceIndex: IntegerSchema.min(0).optional(),
           })
           .strict(),
       )

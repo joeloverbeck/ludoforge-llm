@@ -93,7 +93,14 @@ const createDef = (): GameDef =>
             sideMode: 'single',
             unshaded: {
               text: 'Grant a free operation.',
-              freeOperationGrants: [{ faction: '2', operationClass: 'operation', actionIds: ['operation'] }],
+              freeOperationGrants: [
+                {
+                  faction: '2',
+                  sequence: { chain: 'grant-nva-op', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                },
+              ],
             },
           },
         ],

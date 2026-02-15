@@ -387,7 +387,7 @@ describe('crossValidateSpec', () => {
               ...card,
               unshaded: {
                 ...(card.unshaded ?? {}),
-                freeOperationGrants: [{ faction: 'uss', operationClass: 'operation' }],
+                freeOperationGrants: [{ faction: 'uss', sequence: { chain: 'unknown-faction', step: 0 }, operationClass: 'operation' }],
               },
             },
           ],
@@ -418,7 +418,14 @@ describe('crossValidateSpec', () => {
                 branches: [
                   {
                     id: 'branch-a',
-                    freeOperationGrants: [{ faction: 'us', operationClass: 'operation', actionIds: ['acx'] }],
+                    freeOperationGrants: [
+                      {
+                        faction: 'us',
+                        sequence: { chain: 'unknown-action', step: 0 },
+                        operationClass: 'operation',
+                        actionIds: ['acx'],
+                      },
+                    ],
                   },
                 ],
               },
@@ -451,7 +458,14 @@ describe('crossValidateSpec', () => {
               ...card,
               unshaded: {
                 ...(card.unshaded ?? {}),
-                freeOperationGrants: [{ faction: 'us', operationClass: 'operation', actionIds: ['act'] }],
+                freeOperationGrants: [
+                  {
+                    faction: 'us',
+                    sequence: { chain: 'valid-grant', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['act'],
+                  },
+                ],
               },
             },
           ],

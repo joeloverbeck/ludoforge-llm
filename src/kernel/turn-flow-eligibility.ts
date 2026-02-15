@@ -182,6 +182,7 @@ const extractPendingEligibilityOverrides = (
 const toPendingFreeOperationGrant = (
   grant: EventFreeOperationGrantDef,
   grantId: string,
+  sequenceBatchId: string,
 ): TurnFlowPendingFreeOperationGrant => ({
   grantId,
   faction: grant.faction,
@@ -189,6 +190,8 @@ const toPendingFreeOperationGrant = (
   ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
   ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
   remainingUses: grant.uses ?? 1,
+  sequenceBatchId,
+  sequenceIndex: grant.sequence.step,
 });
 
 const pendingFreeOperationGrantBaseId = (
@@ -198,6 +201,12 @@ const pendingFreeOperationGrantBaseId = (
   grantIndex: number,
 ): string =>
   grant.id ?? `freeOp:${state.turnCount}:${String(state.activePlayer)}:${String(move.actionId)}:${grantIndex}`;
+
+const pendingFreeOperationGrantBatchBaseId = (
+  state: GameState,
+  move: Move,
+): string =>
+  `freeOpBatch:${state.turnCount}:${String(state.activePlayer)}:${String(move.actionId)}`;
 
 const makeUniquePendingFreeOperationGrantId = (
   grants: readonly TurnFlowPendingFreeOperationGrant[],
@@ -225,6 +234,7 @@ const extractPendingFreeOperationGrants = (
   existingPendingFreeOperationGrants: readonly TurnFlowPendingFreeOperationGrant[],
 ): readonly TurnFlowPendingFreeOperationGrant[] => {
   const extracted: TurnFlowPendingFreeOperationGrant[] = [];
+  const emittedBatchBaseId = pendingFreeOperationGrantBatchBaseId(state, move);
   for (const [grantIndex, grant] of resolveEventFreeOperationGrants(def, state, move).entries()) {
     const faction = resolveGrantFaction(grant.faction, activeFaction, factionOrder);
     if (faction === null) {
@@ -235,7 +245,11 @@ const extractPendingFreeOperationGrants = (
       [...existingPendingFreeOperationGrants, ...extracted],
       baseId,
     );
-    extracted.push({ ...toPendingFreeOperationGrant(grant, grantId), faction });
+    const sequenceBatchId = `${emittedBatchBaseId}:${grant.sequence.chain}`;
+    extracted.push({
+      ...toPendingFreeOperationGrant(grant, grantId, sequenceBatchId),
+      faction,
+    });
   }
   return extracted;
 };
@@ -260,6 +274,23 @@ const moveOperationClass = (
   return 'operation';
 };
 
+const isPendingFreeOperationGrantSequenceReady = (
+  pending: readonly TurnFlowPendingFreeOperationGrant[],
+  grant: TurnFlowPendingFreeOperationGrant,
+): boolean => {
+  const batchId = grant.sequenceBatchId;
+  const sequenceIndex = grant.sequenceIndex;
+  if (batchId === undefined || sequenceIndex === undefined) {
+    return true;
+  }
+  return !pending.some(
+    (candidate) =>
+      candidate.grantId !== grant.grantId &&
+      candidate.sequenceBatchId === batchId &&
+      (candidate.sequenceIndex ?? Number.POSITIVE_INFINITY) < sequenceIndex,
+  );
+};
+
 const doesGrantApplyToMove = (
   def: GameDef,
   grant: TurnFlowPendingFreeOperationGrant,
@@ -271,9 +302,11 @@ const doesGrantApplyToMove = (
 const doesGrantAuthorizeMove = (
   def: GameDef,
   state: GameState,
+  pending: readonly TurnFlowPendingFreeOperationGrant[],
   grant: TurnFlowPendingFreeOperationGrant,
   move: Move,
 ): boolean =>
+  isPendingFreeOperationGrantSequenceReady(pending, grant) &&
   doesGrantApplyToMove(def, grant, move) &&
   (grant.zoneFilter === undefined || evaluateZoneFilterForMove(def, state, move, grant.zoneFilter));
 
@@ -483,8 +516,14 @@ const applicableActivePendingFreeOperationGrants = (
   def: GameDef,
   state: GameState,
   move: Move,
-): readonly TurnFlowPendingFreeOperationGrant[] =>
-  activePendingFreeOperationGrants(state).filter((grant) => doesGrantApplyToMove(def, grant, move));
+): readonly TurnFlowPendingFreeOperationGrant[] => {
+  const pending = state.turnOrderState.type === 'cardDriven'
+    ? (state.turnOrderState.runtime.pendingFreeOperationGrants ?? [])
+    : [];
+  return activePendingFreeOperationGrants(state).filter(
+    (grant) => isPendingFreeOperationGrantSequenceReady(pending, grant) && doesGrantApplyToMove(def, grant, move),
+  );
+};
 
 export const isFreeOperationApplicableForMove = (
   def: GameDef,
@@ -704,7 +743,7 @@ export const consumeTurnFlowFreeOperationGrant = (
   const activeFaction = String(state.activePlayer);
   const pending = runtime.pendingFreeOperationGrants ?? [];
   const consumedIndex = pending.findIndex(
-    (grant) => grant.faction === activeFaction && doesGrantAuthorizeMove(def, state, grant, move),
+    (grant) => grant.faction === activeFaction && doesGrantAuthorizeMove(def, state, pending, grant, move),
   );
   if (consumedIndex < 0) {
     return state;

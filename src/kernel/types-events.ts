@@ -26,6 +26,10 @@ export interface EventLastingEffectDef {
 }
 
 export interface EventFreeOperationGrantDef {
+  readonly sequence: {
+    readonly chain: string;
+    readonly step: number;
+  };
   readonly id?: string;
   readonly faction: string;
   readonly operationClass: TurnFlowActionClass;

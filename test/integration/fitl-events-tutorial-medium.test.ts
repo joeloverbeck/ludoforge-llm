@@ -79,6 +79,7 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
         faction: '1',
+        sequence: { chain: 'sihanouk-unshaded-arvn', step: 0 },
         operationClass: 'operation',
         actionIds: ['sweep', 'assault'],
         zoneFilter: {
@@ -89,8 +90,8 @@ describe('FITL tutorial medium event-card production spec', () => {
       },
     ]);
     assert.deepEqual(card?.shaded?.freeOperationGrants, [
-      { faction: '3', operationClass: 'operation' },
-      { faction: '2', operationClass: 'operation' },
+      { faction: '3', sequence: { chain: 'sihanouk-shaded-vc-nva', step: 0 }, operationClass: 'operation' },
+      { faction: '2', sequence: { chain: 'sihanouk-shaded-vc-nva', step: 1 }, operationClass: 'operation' },
     ]);
   });
 

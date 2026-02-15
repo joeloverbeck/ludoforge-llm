@@ -1,7 +1,7 @@
 import { incrementActionUsage } from './action-usage.js';
 import { evalCondition } from './eval-condition.js';
 import { applyEffects } from './effects.js';
-import { executeEventMove } from './event-execution.js';
+import { executeEventMove, resolveEventEffectList } from './event-execution.js';
 import { createCollector } from './execution-collector.js';
 import { legalMoves } from './legal-moves.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
@@ -314,6 +314,42 @@ const violatesCompoundParamConstraints = (
   return null;
 };
 
+const validateDecisionSequenceForMove = (def: GameDef, state: GameState, move: Move): void => {
+  try {
+    const result = resolveMoveDecisionSequence(def, state, move, {
+      choose: () => undefined,
+    });
+    if (result.complete) {
+      return;
+    }
+    if (result.illegal !== undefined) {
+      throw illegalMoveError(move, 'move is not legal in current state', {
+        code: 'OPERATION_NOT_DISPATCHABLE',
+        detail: result.illegal.reason,
+      });
+    }
+    throw illegalMoveError(move, 'move has incomplete params', {
+      code: 'OPERATION_INCOMPLETE_PARAMS',
+      nextDecisionId: result.nextDecision?.decisionId,
+      nextDecisionName: result.nextDecision?.name,
+    });
+  } catch (err) {
+    if (isKernelErrorCode(err, 'LEGAL_CHOICES_VALIDATION_FAILED')) {
+      throw illegalMoveError(move, 'move params are invalid', {
+        code: 'OPERATION_INVALID_PARAMS',
+        detail: err.message,
+      });
+    }
+    if (isKernelRuntimeError(err)) {
+      throw err;
+    }
+    if (isTurnFlowErrorCode(err, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
+      throw err;
+    }
+    throw err;
+  }
+};
+
 const validateMove = (def: GameDef, state: GameState, move: Move): void => {
   const action = findAction(def, move.actionId);
   if (action === undefined) {
@@ -366,45 +402,14 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
     if (!hasTemplate && move.freeOperation !== true) {
       throw illegalMoveError(move, 'action is not legal in current state');
     }
-
-    try {
-      const result = resolveMoveDecisionSequence(def, state, move, {
-        choose: () => undefined,
-      });
-      if (!result.complete) {
-        if (result.illegal !== undefined) {
-          throw illegalMoveError(move, 'pipeline move is not legal in current state', {
-            code: 'OPERATION_NOT_DISPATCHABLE',
-            detail: result.illegal.reason,
-          });
-        }
-        throw illegalMoveError(move, 'pipeline move has incomplete params', {
-          code: 'OPERATION_INCOMPLETE_PARAMS',
-          nextDecisionId: result.nextDecision?.decisionId,
-          nextDecisionName: result.nextDecision?.name,
-        });
-      }
-    } catch (err) {
-      if (isKernelErrorCode(err, 'LEGAL_CHOICES_VALIDATION_FAILED')) {
-        throw illegalMoveError(move, 'pipeline move params are invalid', {
-          code: 'OPERATION_INVALID_PARAMS',
-          detail: err.message,
-        });
-      }
-      if (isKernelRuntimeError(err)) {
-        throw err;
-      }
-      if (isTurnFlowErrorCode(err, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
-        throw err;
-      }
-      throw err;
-    }
+    validateDecisionSequenceForMove(def, state, move);
     return;
   }
 
   const legal = legalMoves(def, state);
   const matchingActionMoves = legal.filter((candidate) => candidate.actionId === action.id);
-  const hasChoices = hasChoiceEffects(action.effects);
+  const dynamicEventEffects = String(action.id) === 'event' ? resolveEventEffectList(def, state, move) : [];
+  const hasChoices = hasChoiceEffects([...action.effects, ...dynamicEventEffects]);
 
   if (!hasChoices) {
     if (legal.some((candidate) => isSameMove(candidate, move))) {
@@ -427,40 +432,7 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
   if (!hasMatchingDeclaredParams && move.freeOperation !== true) {
     throw illegalMoveError(move, 'params are not legal for this action in current state');
   }
-
-  try {
-    const result = resolveMoveDecisionSequence(def, state, move, {
-      choose: () => undefined,
-    });
-    if (result.complete) {
-      return;
-    }
-    if (result.illegal !== undefined) {
-      throw illegalMoveError(move, 'move is not legal in current state', {
-        code: 'OPERATION_NOT_DISPATCHABLE',
-        detail: result.illegal.reason,
-      });
-    }
-    throw illegalMoveError(move, 'move has incomplete params', {
-      code: 'OPERATION_INCOMPLETE_PARAMS',
-      nextDecisionId: result.nextDecision?.decisionId,
-      nextDecisionName: result.nextDecision?.name,
-    });
-  } catch (err) {
-    if (isKernelErrorCode(err, 'LEGAL_CHOICES_VALIDATION_FAILED')) {
-      throw illegalMoveError(move, 'move params are invalid', {
-        code: 'OPERATION_INVALID_PARAMS',
-        detail: err.message,
-      });
-    }
-    if (isKernelRuntimeError(err)) {
-      throw err;
-    }
-    if (isTurnFlowErrorCode(err, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
-      throw err;
-    }
-    throw err;
-  }
+  validateDecisionSequenceForMove(def, state, move);
 
 };
 

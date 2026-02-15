@@ -91,6 +91,72 @@ const playMove = (boost: number): Move => ({
   params: { boost },
 });
 
+const createEventDynamicDecisionDef = (withDeclaredParam = false): GameDef =>
+  ({
+    metadata: { id: withDeclaredParam ? 'event-dynamic-decision-with-declared' : 'event-dynamic-decision', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    constants: {},
+    globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
+    perPlayerVars: [],
+    zones: [
+      { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+    ],
+    tokenTypes: [{ id: 'card', props: {} }],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    actions: [
+      {
+        id: asActionId('event'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
+        params: withDeclaredParam ? [{ name: 'ticket', domain: { query: 'enums', values: ['ok'] } }] : [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: asZoneId('deck:none'),
+        discardZone: asZoneId('played:none'),
+        cards: [
+          {
+            id: 'event-card',
+            title: 'Event Card',
+            sideMode: 'single',
+            unshaded: {
+              effects: [
+                {
+                  chooseOne: {
+                    internalDecisionId: 'decision:$delta',
+                    bind: '$delta',
+                    options: { query: 'enums', values: [1, 2] },
+                  },
+                },
+                { addVar: { scope: 'global', var: 'resolved', delta: { ref: 'binding', name: '$delta' } } },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  }) as unknown as GameDef;
+
+const createEventDynamicDecisionState = (): GameState => ({
+  ...createState(),
+  globalVars: { resolved: 0 },
+  zones: {
+    'deck:none': [],
+    'played:none': [{ id: asTokenId('event-card'), type: 'card', props: {} }],
+  },
+  actionUsage: {},
+});
+
 describe('applyMove', () => {
   it('applies cost then effects, increments action usage, dispatches actionResolved trigger, and updates hash', () => {
     const def = createDef();
@@ -1493,6 +1559,59 @@ phase: asPhaseId('main'),
 
     assert.equal(unshadedA.state.globalVars.resolved, 11);
     assert.equal(shaded.state.globalVars.resolved, 20);
+  });
+
+  it('rejects incomplete dynamic event-side decision params before effect runtime', () => {
+    const def = createEventDynamicDecisionDef();
+    const state = createEventDynamicDecisionState();
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('event'), params: {} }),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly code?: string; readonly nextDecisionId?: string } };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, 'move has incomplete params');
+        assert.equal(details.metadata?.code, 'OPERATION_INCOMPLETE_PARAMS');
+        assert.equal(details.metadata?.nextDecisionId, 'decision:$delta');
+        return true;
+      },
+    );
+  });
+
+  it('rejects invalid dynamic event-side decision params with canonical invalid-params code', () => {
+    const def = createEventDynamicDecisionDef();
+    const state = createEventDynamicDecisionState();
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('event'), params: { 'decision:$delta': 99 } }),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly code?: string } };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, 'move params are invalid');
+        assert.equal(details.metadata?.code, 'OPERATION_INVALID_PARAMS');
+        return true;
+      },
+    );
+  });
+
+  it('keeps declared event action param mismatches distinct from dynamic decision validation', () => {
+    const def = createEventDynamicDecisionDef(true);
+    const state = createEventDynamicDecisionState();
+
+    assert.throws(
+      () =>
+        applyMove(def, state, {
+          actionId: asActionId('event'),
+          params: { ticket: 'not-ok', 'decision:$delta': 1 },
+        }),
+      (error: unknown) => {
+        const details = error as { readonly code?: string; readonly reason?: string; readonly metadata?: { readonly code?: string } };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.reason, 'params are not legal for this action in current state');
+        assert.equal(details.metadata, undefined);
+        return true;
+      },
+    );
   });
 
   it('activates selected lasting effects and applies setup effects for event moves', () => {

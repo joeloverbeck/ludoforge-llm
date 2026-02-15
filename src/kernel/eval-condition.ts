@@ -4,32 +4,17 @@ import { resolveBindingTemplate } from './binding-template.js';
 import { evalValue } from './eval-value.js';
 import { resolveMapSpaceId, resolveSingleZoneSel } from './resolve-selectors.js';
 import { queryConnectedZones } from './spatial.js';
+import { matchesMembership } from './query-predicate.js';
 import type { ConditionAST, ValueExpr } from './types.js';
 
-function isMembershipCollection(value: unknown): value is readonly unknown[] {
-  return Array.isArray(value);
-}
-
-function evalMembershipSet(setExpr: ValueExpr, ctx: EvalContext, cond: ConditionAST): readonly unknown[] {
+function evalMembershipSet(setExpr: ValueExpr, ctx: EvalContext): unknown {
   if (typeof setExpr === 'object' && setExpr !== null && 'ref' in setExpr && setExpr.ref === 'binding') {
     const resolvedName = resolveBindingTemplate(setExpr.name, ctx.bindings);
-    const boundValue = ctx.bindings[resolvedName];
-    if (isMembershipCollection(boundValue)) {
-      return boundValue;
+    if (Object.prototype.hasOwnProperty.call(ctx.bindings, resolvedName)) {
+      return ctx.bindings[resolvedName];
     }
   }
-
-  const setValue = evalValue(setExpr, ctx);
-  if (isMembershipCollection(setValue)) {
-    return setValue;
-  }
-
-  throw typeMismatchError('Condition "in" requires an array-like set value', {
-    cond,
-    setExpr,
-    actualType: typeof setValue,
-    value: setValue,
-  });
+  return evalValue(setExpr, ctx);
 }
 
 function expectOrderingNumber(
@@ -103,8 +88,11 @@ export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
 
     case 'in': {
       const item = evalValue(cond.item, ctx);
-      const setValues = evalMembershipSet(cond.set, ctx, cond);
-      return setValues.includes(item);
+      const setValues = evalMembershipSet(cond.set, ctx);
+      return matchesMembership(item, setValues, {
+        cond,
+        setExpr: cond.set,
+      });
     }
 
     case 'adjacent': {

@@ -111,13 +111,13 @@ export type ConditionAST =
 export interface TokenFilterPredicate {
   readonly prop: string;
   readonly op: 'eq' | 'neq' | 'in' | 'notIn';
-  readonly value: ValueExpr | readonly string[];
+  readonly value: ValueExpr | readonly (string | number | boolean)[];
 }
 
 export interface AssetRowPredicate {
   readonly field: string;
   readonly op: 'eq' | 'neq' | 'in' | 'notIn';
-  readonly value: ValueExpr | readonly string[];
+  readonly value: ValueExpr | readonly (string | number | boolean)[];
 }
 
 export type OptionsQuery =

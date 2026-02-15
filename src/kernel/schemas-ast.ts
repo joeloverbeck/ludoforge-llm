@@ -6,6 +6,7 @@ export const NumberSchema = z.number();
 export const IntegerSchema = z.number().int();
 export const BooleanSchema = z.boolean();
 export const StringSchema = z.string();
+const PredicateScalarLiteralSchema = z.union([StringSchema, NumberSchema, BooleanSchema]);
 
 const PlayerIdSchema = IntegerSchema;
 
@@ -72,7 +73,7 @@ export const TokenFilterPredicateSchema = z
   .object({
     prop: StringSchema,
     op: z.union([z.literal('eq'), z.literal('neq'), z.literal('in'), z.literal('notIn')]),
-    value: z.union([ValueExprSchema, z.array(StringSchema)]),
+    value: z.union([ValueExprSchema, z.array(PredicateScalarLiteralSchema)]),
   })
   .strict();
 
@@ -80,7 +81,7 @@ export const AssetRowPredicateSchema = z
   .object({
     field: StringSchema,
     op: z.union([z.literal('eq'), z.literal('neq'), z.literal('in'), z.literal('notIn')]),
-    value: z.union([ValueExprSchema, z.array(StringSchema)]),
+    value: z.union([ValueExprSchema, z.array(PredicateScalarLiteralSchema)]),
   })
   .strict();
 

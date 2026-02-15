@@ -320,7 +320,9 @@ describe('AST and selector schemas', () => {
       { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
       { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'neq', value: 'NVA' }] },
       { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'in', value: ['US', 'ARVN'] }] },
+      { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'cost', op: 'in', value: [1, 2, 3] }] },
       { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'notIn', value: ['NVA', 'VC'] }] },
+      { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'isElite', op: 'notIn', value: [true] }] },
     ];
 
     for (const query of queries) {
@@ -337,6 +339,7 @@ describe('AST and selector schemas', () => {
         where: [
           { field: 'level', op: 'eq', value: 3 },
           { field: 'phase', op: 'in', value: ['early', 'mid'] },
+          { field: 'isBreak', op: 'notIn', value: [true] },
         ],
       },
     ];
@@ -353,6 +356,13 @@ describe('AST and selector schemas', () => {
       where: [{ op: 'eq', value: 1 }],
     });
     assert.equal(missingField.success, false);
+
+    const invalidSetElement = OptionsQuerySchema.safeParse({
+      query: 'assetRows',
+      tableId: 'tournament-standard::blindSchedule.levels',
+      where: [{ field: 'phase', op: 'in', value: ['early', { bad: true }] }],
+    });
+    assert.equal(invalidSetElement.success, false);
   });
 
   it('parses tokensInZone query with compound filter (multiple predicates)', () => {

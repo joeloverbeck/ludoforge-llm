@@ -174,6 +174,22 @@ describe('evalCondition', () => {
     );
   });
 
+  it('throws TYPE_MISMATCH when in set mixes scalar types', () => {
+    const ctx = makeCtx({ bindings: { '$set': [1, '2', 3] } });
+    assert.throws(
+      () => evalCondition({ op: 'in', item: 3, set: { ref: 'binding', name: '$set' } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('throws TYPE_MISMATCH when in item and set scalar types do not match', () => {
+    const ctx = makeCtx({ bindings: { '$set': [1, 2, 3] } });
+    assert.throws(
+      () => evalCondition({ op: 'in', item: '3', set: { ref: 'binding', name: '$set' } }, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('evaluates zonePropIncludes for array properties', () => {
     const mapSpaces: readonly MapSpaceDef[] = [
       {

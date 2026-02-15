@@ -743,6 +743,75 @@ describe('evalQuery', () => {
     assert.equal(result.length, 5);
   });
 
+  it('rejects token membership filters with scalar set values for in/notIn', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        evalQuery(
+          { query: 'tokensInZone', zone: 'battlefield:none', filter: [{ prop: 'faction', op: 'in', value: 'US' }] },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('rejects token membership filters with field/set type mismatches', () => {
+    const ctx = makeCtx();
+
+    assert.throws(
+      () =>
+        evalQuery(
+          { query: 'tokensInZone', zone: 'deck:none', filter: [{ prop: 'cost', op: 'in', value: ['1'] }] },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
+  it('rejects assetRows membership predicates with mixed scalar set types', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: {
+              blindSchedule: {
+                levels: [{ level: 1, phase: 'early' }],
+              },
+            },
+          },
+        ],
+        tableContracts: [
+          {
+            id: 'tournament-standard::blindSchedule.levels',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule.levels',
+            fields: [
+              { field: 'level', type: 'int' },
+              { field: 'phase', type: 'string' },
+            ],
+          },
+        ],
+      },
+    });
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'assetRows',
+            tableId: 'tournament-standard::blindSchedule.levels',
+            where: [{ field: 'phase', op: 'in', value: ['early', 2] }],
+          },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('throws QUERY_BOUNDS_EXCEEDED when a query would exceed maxQueryResults', () => {
     const ctx = makeCtx({ maxQueryResults: 3 });
 

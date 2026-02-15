@@ -9,6 +9,7 @@ import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
+import { filterRowsByPredicates, type PredicateValue, type ResolvedRowPredicate } from './query-predicate.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
@@ -60,21 +61,14 @@ function assertWithinBounds(length: number, query: OptionsQuery, maxQueryResults
   }
 }
 
-function resolveFilterValue(value: TokenFilterPredicate['value'], ctx: EvalContext): string | number | boolean | readonly string[] {
-  if (Array.isArray(value)) {
-    return value;
-  }
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return value;
-  }
-  return evalValue(value as ValueExpr, ctx);
-}
-
 function isScalarValue(value: unknown): value is string | number | boolean {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 }
 
-function resolveAssetRowFilterValue(value: AssetRowPredicate['value'], ctx: EvalContext): string | number | boolean | readonly string[] {
+function resolvePredicateValue(
+  value: TokenFilterPredicate['value'] | AssetRowPredicate['value'],
+  ctx: EvalContext,
+): PredicateValue {
   if (Array.isArray(value)) {
     return value;
   }
@@ -92,31 +86,6 @@ function resolveAssetRowFilterValue(value: AssetRowPredicate['value'], ctx: Eval
   return resolved;
 }
 
-function matchResolvedPredicate(
-  fieldValue: unknown,
-  op: 'eq' | 'neq' | 'in' | 'notIn',
-  resolved: string | number | boolean | readonly string[],
-): boolean {
-  if (fieldValue === undefined) {
-    return false;
-  }
-
-  switch (op) {
-    case 'eq':
-      return fieldValue === resolved;
-    case 'neq':
-      return fieldValue !== resolved;
-    case 'in':
-      return Array.isArray(resolved) && resolved.includes(String(fieldValue));
-    case 'notIn':
-      return Array.isArray(resolved) && !resolved.includes(String(fieldValue));
-    default: {
-      const _exhaustive: never = op;
-      return _exhaustive;
-    }
-  }
-}
-
 function tokenFilterFieldValue(token: Token, field: string): string | number | boolean | undefined {
   if (field === 'id') {
     return token.id;
@@ -124,18 +93,32 @@ function tokenFilterFieldValue(token: Token, field: string): string | number | b
   return token.props[field];
 }
 
-function tokenMatchesPredicate(token: Token, predicate: TokenFilterPredicate, ctx: EvalContext): boolean {
-  const propValue = tokenFilterFieldValue(token, predicate.prop);
-  const resolved = resolveFilterValue(predicate.value, ctx);
-  return matchResolvedPredicate(propValue, predicate.op, resolved);
+function resolveTokenPredicates(filters: readonly TokenFilterPredicate[], ctx: EvalContext): readonly ResolvedRowPredicate[] {
+  return filters.map((predicate) => ({
+    field: predicate.prop,
+    op: predicate.op,
+    value: resolvePredicateValue(predicate.value, ctx),
+  }));
 }
 
 function applyTokenFilters(tokens: readonly Token[], filters: readonly TokenFilterPredicate[], ctx: EvalContext): readonly Token[] {
-  if (filters.length === 0) {
-    return [...tokens];
-  }
+  const resolvedPredicates = resolveTokenPredicates(filters, ctx);
+  return filterRowsByPredicates(tokens, resolvedPredicates, {
+    getFieldValue: (token, field) => tokenFilterFieldValue(token, field),
+    context: (predicate, token) => ({
+      domain: 'token',
+      predicate,
+      tokenId: token.id,
+    }),
+  });
+}
 
-  return tokens.filter((token) => filters.every((predicate) => tokenMatchesPredicate(token, predicate, ctx)));
+function resolveAssetRowPredicates(where: readonly AssetRowPredicate[], ctx: EvalContext): readonly ResolvedRowPredicate[] {
+  return where.map((predicate) => ({
+    field: predicate.field,
+    op: predicate.op,
+    value: resolvePredicateValue(predicate.value, ctx),
+  }));
 }
 
 function extractOwnerQualifier(zoneId: ZoneId): string | null {
@@ -354,20 +337,27 @@ function evalAssetRowsQuery(
     return rows;
   }
 
-  return rows.filter((row) =>
-    wherePredicates.every((predicate) => {
-      if (!resolved.fieldNames.has(predicate.field)) {
-        throw missingVarError(`Runtime table field not declared in contract: ${predicate.field}`, {
-          query,
-          tableId: query.tableId,
-          field: predicate.field,
-          availableFields: [...resolved.fieldNames].sort((left, right) => left.localeCompare(right)),
-        });
-      }
-      const resolvedValue = resolveAssetRowFilterValue(predicate.value, ctx);
-      return matchResolvedPredicate(row[predicate.field], predicate.op, resolvedValue);
+  for (const predicate of wherePredicates) {
+    if (!resolved.fieldNames.has(predicate.field)) {
+      throw missingVarError(`Runtime table field not declared in contract: ${predicate.field}`, {
+        query,
+        tableId: query.tableId,
+        field: predicate.field,
+        availableFields: [...resolved.fieldNames].sort((left, right) => left.localeCompare(right)),
+      });
+    }
+  }
+
+  const resolvedPredicates = resolveAssetRowPredicates(wherePredicates, ctx);
+  return filterRowsByPredicates(rows, resolvedPredicates, {
+    getFieldValue: (row, field) => row[field],
+    context: (predicate, row) => ({
+      domain: 'assetRow',
+      query,
+      predicate,
+      availableFields: Object.keys(row).sort(),
     }),
-  );
+  });
 }
 
 export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly QueryResult[] {

@@ -590,4 +590,45 @@ describe('applyMove() executor applicability contract', () => {
       },
     );
   });
+
+  it('returns OPERATION_COST_BLOCKED metadata when atomic pipeline cost validation fails', () => {
+    const action: ActionDef = {
+      id: asActionId('costlyOp'),
+      actor: 'active',
+      executor: 'actor',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const pipeline: ActionPipelineDef = {
+      id: 'costlyProfile',
+      actionId: action.id,
+      legality: null,
+      costValidation: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 20 },
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'atomic',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [pipeline] });
+    const state = makeBaseState({ globalVars: { resources: 1 } });
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('costlyOp'), params: {} }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
+        assert.equal(metadata?.code, 'OPERATION_COST_BLOCKED');
+        assert.equal(metadata?.profileId, 'costlyProfile');
+        assert.equal(metadata?.partialExecutionMode, 'atomic');
+        return true;
+      },
+    );
+  });
 });

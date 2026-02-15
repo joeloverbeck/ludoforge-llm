@@ -1,12 +1,12 @@
 import { incrementActionUsage } from './action-usage.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
-import { evalActionPipelinePredicate } from './action-pipeline-predicates.js';
 import { applyEffects } from './effects.js';
 import { executeEventMove, resolveEventEffectList } from './event-execution.js';
 import { createCollector } from './execution-collector.js';
 import { legalMoves } from './legal-moves.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
+import { decideApplyMovePipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
 import { resolveActionExecutor } from './action-executor.js';
 import {
   buildMoveRuntimeBindings,
@@ -355,8 +355,6 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
     }
   }
 
-  const hasPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
-
   if (
     move.freeOperation === true &&
     state.turnOrderState.type === 'cardDriven' &&
@@ -402,11 +400,23 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
     });
   }
 
-  if (hasPipeline) {
-    const legal = legalMoves(def, state);
-    const hasTemplate = legal.some((candidate) => candidate.actionId === action.id);
-    if (!hasTemplate && move.freeOperation !== true) {
-      throw illegalMoveError(move, 'action is not legal in current state');
+  if (preflight.pipelineDispatch.kind === 'matched') {
+    const pipeline = preflight.pipelineDispatch.profile;
+    const status = evaluatePipelinePredicateStatus(action, pipeline, preflight.evalCtx);
+    const viabilityDecision = decideApplyMovePipelineViability(status, { isFreeOperation: move.freeOperation === true });
+    if (viabilityDecision.kind === 'illegalMove') {
+      const metadata = {
+        code: viabilityDecision.metadataCode,
+        profileId: pipeline.id,
+        actionId: action.id,
+      };
+      if (viabilityDecision.outcome === 'pipelineLegalityFailed') {
+        throw illegalMoveError(move, 'action pipeline legality predicate failed', metadata);
+      }
+      throw illegalMoveError(move, 'action pipeline cost validation failed', {
+        ...metadata,
+        partialExecutionMode: pipeline.atomicity,
+      });
     }
     validateDecisionSequenceForMove(def, state, move);
     return;
@@ -545,41 +555,26 @@ const applyMoveCore = (
     }
   }
 
-  if (
-    executionProfile !== undefined &&
-    executionProfile.legality !== null &&
-    !evalActionPipelinePredicate(
-      action,
-      actionPipeline?.id ?? 'unknown',
-      'legality',
-      executionProfile.legality,
-      { ...effectCtx, state },
-    )
-  ) {
-    throw illegalMoveError(move, 'action pipeline legality predicate failed', {
-      code: toApplyMoveIllegalMetadataCode('pipelineLegalityFailed'),
-      profileId: actionPipeline?.id,
-      actionId: action.id,
-    });
-  }
-
-  const costValidationPassed = isFreeOp ||
-    (executionProfile?.costValidation === null || executionProfile === undefined
-      ? true
-      : evalActionPipelinePredicate(
-        action,
-        actionPipeline?.id ?? 'unknown',
-        'costValidation',
-        executionProfile.costValidation,
-        { ...effectCtx, state },
-      ));
-  if (executionProfile !== undefined && executionProfile.partialMode === 'atomic' && !costValidationPassed) {
-    throw illegalMoveError(move, 'action pipeline cost validation failed', {
-      code: 'OPERATION_COST_BLOCKED',
-      profileId: actionPipeline?.id,
-      actionId: action.id,
-      partialExecutionMode: executionProfile.partialMode,
-    });
+  let costValidationPassed = true;
+  if (actionPipeline !== undefined) {
+    const status = evaluatePipelinePredicateStatus(action, actionPipeline, { ...effectCtx, state });
+    const viabilityDecision = decideApplyMovePipelineViability(status, { isFreeOperation: isFreeOp });
+    if (viabilityDecision.kind === 'illegalMove') {
+      if (viabilityDecision.outcome === 'pipelineLegalityFailed') {
+        throw illegalMoveError(move, 'action pipeline legality predicate failed', {
+          code: viabilityDecision.metadataCode,
+          profileId: actionPipeline.id,
+          actionId: action.id,
+        });
+      }
+      throw illegalMoveError(move, 'action pipeline cost validation failed', {
+        code: viabilityDecision.metadataCode,
+        profileId: actionPipeline.id,
+        actionId: action.id,
+        partialExecutionMode: actionPipeline.atomicity,
+      });
+    }
+    costValidationPassed = viabilityDecision.costValidationPassed;
   }
 
   const shouldSpendCost = !isFreeOp && (

@@ -741,7 +741,7 @@ phase: asPhaseId('main'),
 
     assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), (error: unknown) => {
       const details = error as Error & { reason?: unknown };
-      assert.equal(details.reason, 'action is not legal in current state');
+      assert.equal(details.reason, 'action pipeline legality predicate failed');
       return true;
     });
     assert.deepEqual(state, snapshot);
@@ -797,7 +797,7 @@ phase: asPhaseId('main'),
 
     assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), (error: unknown) => {
       const details = error as Error & { reason?: unknown };
-      assert.equal(details.reason, 'action is not legal in current state');
+      assert.equal(details.reason, 'action pipeline cost validation failed');
       return true;
     });
     assert.deepEqual(state, snapshot);

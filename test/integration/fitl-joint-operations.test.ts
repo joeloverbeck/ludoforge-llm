@@ -77,7 +77,7 @@ describe('FITL Joint Operation cost constraint integration', () => {
           };
         };
 
-        assert.equal(details.reason, 'action is not legal in current state');
+        assert.equal(details.reason, 'action pipeline cost validation failed');
         return true;
       },
     );

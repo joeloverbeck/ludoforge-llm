@@ -1,5 +1,4 @@
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
-import { evalActionPipelinePredicate } from './action-pipeline-predicates.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { composeDecisionId } from './decision-id.js';
@@ -11,6 +10,7 @@ import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { resolveEventEffectList } from './event-execution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
+import { decideLegalChoicesPipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { toChoiceIllegalReason } from './legality-outcome.js';
@@ -403,10 +403,10 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
 
   if (pipelineDispatch.kind === 'matched') {
     const pipeline = pipelineDispatch.profile;
-    if (pipeline.legality !== null) {
-      if (!evalActionPipelinePredicate(action, pipeline.id, 'legality', pipeline.legality, evalCtx)) {
-        return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason('pipelineLegalityFailed') };
-      }
+    const status = evaluatePipelinePredicateStatus(action, pipeline, evalCtx, { includeCostValidation: false });
+    const viabilityDecision = decideLegalChoicesPipelineViability(status);
+    if (viabilityDecision.kind === 'illegalChoice') {
+      return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason(viabilityDecision.outcome) };
     }
 
     const resolutionEffects: readonly EffectAST[] =

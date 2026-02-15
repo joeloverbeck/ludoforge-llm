@@ -1,12 +1,12 @@
 import { evalCondition } from './eval-condition.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
-import { evalActionPipelinePredicate } from './action-pipeline-predicates.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { applyPendingFreeOperationVariants, applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
+import { decideLegalMovesPipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
@@ -205,20 +205,16 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
 
     if (preflight.pipelineDispatch.kind === 'matched') {
       const pipeline = preflight.pipelineDispatch.profile;
-      const executionCtx = preflight.evalCtx;
-      if (pipeline.legality !== null) {
-        if (!evalActionPipelinePredicate(action, pipeline.id, 'legality', pipeline.legality, executionCtx)) {
-          if (!shouldEnumerateLegalMoveForOutcome('pipelineLegalityFailed')) {
+      const status = evaluatePipelinePredicateStatus(action, pipeline, preflight.evalCtx, {
+        includeCostValidation: pipeline.atomicity === 'atomic',
+      });
+      const viabilityDecision = decideLegalMovesPipelineViability(status);
+      if (viabilityDecision.kind === 'excludeTemplate') {
+        if (viabilityDecision.outcome === 'pipelineLegalityFailed') {
+          if (!shouldEnumerateLegalMoveForOutcome(viabilityDecision.outcome)) {
             continue;
           }
-        }
-      }
-
-      if (
-        pipeline.costValidation !== null &&
-        pipeline.atomicity === 'atomic'
-      ) {
-        if (!evalActionPipelinePredicate(action, pipeline.id, 'costValidation', pipeline.costValidation, executionCtx)) {
+        } else {
           continue;
         }
       }

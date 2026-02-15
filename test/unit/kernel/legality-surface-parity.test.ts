@@ -157,7 +157,7 @@ describe('legality surface parity', () => {
       ],
     });
     const state = makeState({ globalVars: { resources: 0 } });
-    const move = { actionId: asActionId('op'), params: {}, freeOperation: true };
+    const move = { actionId: asActionId('op'), params: {} };
 
     assert.deepEqual(legalChoices(def, state, move), { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' });
     assert.equal(legalMoves(def, state).length, 0);

@@ -118,6 +118,7 @@ export interface TurnFlowPendingEligibilityOverride {
 export interface TurnFlowPendingFreeOperationGrant {
   readonly grantId: string;
   readonly faction: string;
+  readonly operationClass: TurnFlowActionClass;
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: import('./types-ast.js').ConditionAST;
   readonly remainingUses: number;

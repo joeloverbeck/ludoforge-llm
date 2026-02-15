@@ -434,6 +434,7 @@ describe('applyMove() free-operation zone-filter diagnostics', () => {
             {
               grantId: 'grant-0',
               faction: '0',
+              operationClass: 'operation',
               actionIds: ['operation'],
               zoneFilter: {
                 op: '==',

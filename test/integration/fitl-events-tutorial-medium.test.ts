@@ -79,6 +79,7 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.deepEqual(card?.unshaded?.freeOperationGrants, [
       {
         faction: '1',
+        operationClass: 'operation',
         actionIds: ['sweep', 'assault'],
         zoneFilter: {
           op: '==',
@@ -87,7 +88,10 @@ describe('FITL tutorial medium event-card production spec', () => {
         },
       },
     ]);
-    assert.deepEqual(card?.shaded?.freeOperationGrants, [{ faction: '3' }, { faction: '2' }]);
+    assert.deepEqual(card?.shaded?.freeOperationGrants, [
+      { faction: '3', operationClass: 'operation' },
+      { faction: '2', operationClass: 'operation' },
+    ]);
   });
 
   it('compiles card 51 (301st Supply Bn) with removal model and shaded rollRandom resource gain', () => {

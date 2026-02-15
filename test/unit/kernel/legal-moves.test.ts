@@ -739,6 +739,7 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
             {
               grantId: 'grant-0',
               faction: '0',
+              operationClass: 'operation',
               actionIds: ['operation'],
               zoneFilter: {
                 op: '==',

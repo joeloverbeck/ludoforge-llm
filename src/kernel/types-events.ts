@@ -1,5 +1,5 @@
 import type { ConditionAST, EffectAST, OptionsQuery } from './types-ast.js';
-import type { TurnFlowDuration } from './types-turn-flow.js';
+import type { TurnFlowActionClass, TurnFlowDuration } from './types-turn-flow.js';
 
 export interface EventTargetCardinalityExact {
   readonly n: number;
@@ -28,6 +28,7 @@ export interface EventLastingEffectDef {
 export interface EventFreeOperationGrantDef {
   readonly id?: string;
   readonly faction: string;
+  readonly operationClass: TurnFlowActionClass;
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: ConditionAST;
   readonly uses?: number;

@@ -750,6 +750,7 @@ describe('legalMoves', () => {
             {
               grantId: 'grant-0',
               faction: '0',
+              operationClass: 'operation',
               actionIds: ['operation'],
               zoneFilter: {
                 op: '==',

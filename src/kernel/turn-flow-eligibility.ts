@@ -185,6 +185,7 @@ const toPendingFreeOperationGrant = (
 ): TurnFlowPendingFreeOperationGrant => ({
   grantId,
   faction: grant.faction,
+  operationClass: grant.operationClass,
   ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
   ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
   remainingUses: grant.uses ?? 1,
@@ -244,11 +245,28 @@ const grantActionIds = (
   grant: TurnFlowPendingFreeOperationGrant,
 ): readonly string[] => grant.actionIds ?? (cardDrivenConfig(def)?.turnFlow.freeOperationActionIds ?? []);
 
+const moveOperationClass = (
+  move: Move,
+): TurnFlowPendingFreeOperationGrant['operationClass'] => {
+  if (
+    move.actionClass === 'pass' ||
+    move.actionClass === 'event' ||
+    move.actionClass === 'operation' ||
+    move.actionClass === 'limitedOperation' ||
+    move.actionClass === 'operationPlusSpecialActivity'
+  ) {
+    return move.actionClass;
+  }
+  return 'operation';
+};
+
 const doesGrantApplyToMove = (
   def: GameDef,
   grant: TurnFlowPendingFreeOperationGrant,
   move: Move,
-): boolean => grantActionIds(def, grant).includes(String(move.actionId));
+): boolean =>
+  grant.operationClass === moveOperationClass(move) &&
+  grantActionIds(def, grant).includes(String(move.actionId));
 
 const doesGrantAuthorizeMove = (
   def: GameDef,

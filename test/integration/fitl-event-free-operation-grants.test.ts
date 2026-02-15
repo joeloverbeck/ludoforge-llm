@@ -45,7 +45,7 @@ const createDef = (): GameDef =>
         actor: 'active',
         phase: asPhaseId('main'),
         params: [
-          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4'] } },
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2', 'card-3', 'card-4', 'card-5'] } },
           { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
           { name: 'branch', domain: { query: 'enums', values: ['branch-grant-nva', 'none'] } },
         ],
@@ -91,7 +91,7 @@ const createDef = (): GameDef =>
             sideMode: 'single',
             unshaded: {
               text: 'Grant free op to VC.',
-              freeOperationGrants: [{ faction: '3', actionIds: ['operation'] }],
+              freeOperationGrants: [{ faction: '3', operationClass: 'operation', actionIds: ['operation'] }],
             },
           },
           {
@@ -103,7 +103,7 @@ const createDef = (): GameDef =>
               branches: [
                 {
                   id: 'branch-grant-nva',
-                  freeOperationGrants: [{ faction: '2', actionIds: ['operation'] }],
+                  freeOperationGrants: [{ faction: '2', operationClass: 'operation', actionIds: ['operation'] }],
                 },
               ],
             },
@@ -115,8 +115,8 @@ const createDef = (): GameDef =>
             unshaded: {
               text: 'Grant VC two free operations.',
               freeOperationGrants: [
-                { faction: '3', actionIds: ['operation'] },
-                { faction: '3', actionIds: ['operation'] },
+                { faction: '3', operationClass: 'operation', actionIds: ['operation'] },
+                { faction: '3', operationClass: 'operation', actionIds: ['operation'] },
               ],
             },
           },
@@ -126,7 +126,16 @@ const createDef = (): GameDef =>
             sideMode: 'single',
             unshaded: {
               text: 'Grant VC a reusable free operation.',
-              freeOperationGrants: [{ id: 'vc-reusable-op', faction: '3', actionIds: ['operation'], uses: 2 }],
+              freeOperationGrants: [{ id: 'vc-reusable-op', faction: '3', operationClass: 'operation', actionIds: ['operation'], uses: 2 }],
+            },
+          },
+          {
+            id: 'card-5',
+            title: 'Limited VC Grant',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Grant VC a limited free operation.',
+              freeOperationGrants: [{ faction: '3', operationClass: 'limitedOperation', actionIds: ['operation'] }],
             },
           },
         ],
@@ -252,6 +261,7 @@ const createZoneFilteredDef = (): GameDef =>
               freeOperationGrants: [
                 {
                   faction: '2',
+                  operationClass: 'operation',
                   actionIds: ['operation'],
                   zoneFilter: {
                     op: '==',
@@ -281,6 +291,7 @@ describe('event free-operation grants integration', () => {
     const runtime = requireCardDrivenRuntime(second);
     assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
     assert.equal(runtime.pendingFreeOperationGrants?.[0]?.faction, '3');
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.operationClass, 'operation');
     assert.deepEqual(runtime.pendingFreeOperationGrants?.[0]?.actionIds, ['operation']);
     assert.equal(runtime.pendingFreeOperationGrants?.[0]?.remainingUses, 1);
     assert.equal(typeof runtime.pendingFreeOperationGrants?.[0]?.grantId, 'string');
@@ -308,6 +319,7 @@ describe('event free-operation grants integration', () => {
     const runtime = requireCardDrivenRuntime(second);
     assert.equal(runtime.pendingFreeOperationGrants?.length, 1);
     assert.equal(runtime.pendingFreeOperationGrants?.[0]?.faction, '2');
+    assert.equal(runtime.pendingFreeOperationGrants?.[0]?.operationClass, 'operation');
     assert.deepEqual(runtime.pendingFreeOperationGrants?.[0]?.actionIds, ['operation']);
     assert.equal(runtime.pendingFreeOperationGrants?.[0]?.remainingUses, 1);
     assert.equal(typeof runtime.pendingFreeOperationGrants?.[0]?.grantId, 'string');
@@ -365,6 +377,33 @@ describe('event free-operation grants integration', () => {
 
     const fifth = applyMove(def, fourth, { actionId: asActionId('operation'), params: {}, freeOperation: true }).state;
     assert.deepEqual(requireCardDrivenRuntime(fifth).pendingFreeOperationGrants ?? [], []);
+  });
+
+  it('enforces operationClass on free-operation grants', () => {
+    const def = createDef();
+    const start = initialState(def, 21, 4);
+
+    const first = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-5', side: 'unshaded', branch: 'none' },
+    }).state;
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: {} }).state;
+    const third = applyMove(def, second, { actionId: asActionId('operation'), params: {} }).state;
+
+    assert.equal(third.activePlayer, asPlayerId(3));
+
+    assert.throws(
+      () => applyMove(def, third, { actionId: asActionId('operation'), params: {}, freeOperation: true, actionClass: 'operation' }),
+      /free operation is not granted in current state/,
+    );
+
+    const fourth = applyMove(def, third, {
+      actionId: asActionId('operation'),
+      params: {},
+      freeOperation: true,
+      actionClass: 'limitedOperation',
+    }).state;
+    assert.deepEqual(requireCardDrivenRuntime(fourth).pendingFreeOperationGrants ?? [], []);
   });
 
   it('enforces Cambodia-only free-operation grants across discovery, decision flow, and final apply', () => {

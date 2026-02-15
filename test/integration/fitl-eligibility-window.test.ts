@@ -93,7 +93,7 @@ const createDef = (): GameDef =>
             sideMode: 'single',
             unshaded: {
               text: 'Grant a free operation.',
-              freeOperationGrants: [{ faction: '2', actionIds: ['operation'] }],
+              freeOperationGrants: [{ faction: '2', operationClass: 'operation', actionIds: ['operation'] }],
             },
           },
         ],
@@ -134,6 +134,7 @@ describe('FITL eligibility window integration', () => {
     const pendingFreeOperationGrants = requireCardDrivenRuntime(second).pendingFreeOperationGrants ?? [];
     assert.equal(pendingFreeOperationGrants.length, 1);
     assert.equal(pendingFreeOperationGrants[0]?.faction, '2');
+    assert.equal(pendingFreeOperationGrants[0]?.operationClass, 'operation');
     assert.deepEqual(pendingFreeOperationGrants[0]?.actionIds, ['operation']);
     assert.equal(pendingFreeOperationGrants[0]?.remainingUses, 1);
     assert.equal(typeof pendingFreeOperationGrants[0]?.grantId, 'string');

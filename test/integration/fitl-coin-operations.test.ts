@@ -468,7 +468,10 @@ describe('FITL COIN operations integration', () => {
       );
       assert.ok(template, 'Expected template move for sweep');
 
-      const stateWithGrant = withPendingFreeOperationGrant(modifiedStart, { actionIds: ['sweep'] });
+      const stateWithGrant = withPendingFreeOperationGrant(modifiedStart, {
+        actionIds: ['sweep'],
+        operationClass: 'limitedOperation',
+      });
       const selected = completeProfileMoveDeterministically(
         { ...template!, freeOperation: true, actionClass: 'limitedOperation' },
         chooseSweepArvnParams(targetSpace, [troopId]),
@@ -1324,7 +1327,10 @@ describe('FITL COIN operations integration', () => {
 
       const template = legalMoves(def, modifiedStart).find((move) => move.actionId === asActionId('assault'));
       assert.ok(template, 'Expected ARVN assault template move');
-      const stateWithGrant = withPendingFreeOperationGrant(modifiedStart, { actionIds: ['assault'] });
+      const stateWithGrant = withPendingFreeOperationGrant(modifiedStart, {
+        actionIds: ['assault'],
+        operationClass: 'limitedOperation',
+      });
       const selected = completeProfileMoveDeterministically(
         { ...template!, freeOperation: true, actionClass: 'limitedOperation' },
         (request) => {

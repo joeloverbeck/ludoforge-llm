@@ -61,6 +61,13 @@ export const EventCardFreeOperationGrantSchema = z
   .object({
     id: StringSchema.min(1).optional(),
     faction: StringSchema.min(1),
+    operationClass: z.union([
+      z.literal('pass'),
+      z.literal('event'),
+      z.literal('operation'),
+      z.literal('limitedOperation'),
+      z.literal('operationPlusSpecialActivity'),
+    ]),
     actionIds: z.array(StringSchema.min(1)).min(1).optional(),
     zoneFilter: ConditionASTSchema.optional(),
     uses: IntegerSchema.min(1).optional(),
@@ -446,6 +453,7 @@ export const TurnFlowRuntimeStateSchema = z
           .object({
             grantId: StringSchema.min(1),
             faction: StringSchema.min(1),
+            operationClass: TurnFlowActionClassSchema,
             actionIds: z.array(StringSchema.min(1)).min(1).optional(),
             zoneFilter: ConditionASTSchema.optional(),
             remainingUses: IntegerSchema.min(1),

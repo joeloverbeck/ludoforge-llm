@@ -47,7 +47,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
 
     assert.equal(typeof card?.unshaded?.text, 'string');
     assert.equal(typeof card?.shaded?.text, 'string');
-    assert.deepEqual(card?.unshaded?.freeOperationGrants, [{ faction: '0', actionIds: ['airStrike'] }]);
+    assert.deepEqual(card?.unshaded?.freeOperationGrants, [{ faction: '0', operationClass: 'operation', actionIds: ['airStrike'] }]);
     const unshadedForEach = card?.unshaded?.effects?.find((effect) => 'forEach' in effect);
     assert.notEqual(unshadedForEach, undefined);
 

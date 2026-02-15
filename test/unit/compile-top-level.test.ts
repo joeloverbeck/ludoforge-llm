@@ -123,7 +123,71 @@ describe('compile top-level actions/triggers/end conditions', () => {
     assert.equal(second.gameDef, null);
     assert.deepEqual(first.diagnostics, second.diagnostics);
     assert.equal(
-      first.diagnostics.some((diagnostic) => diagnostic.code === 'REF_ACTION_MISSING' && diagnostic.path === 'triggers[0].event.action'),
+      first.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_XREF_TRIGGER_ACTION_MISSING' &&
+          diagnostic.path === 'doc.triggers.0.event.action',
+      ),
+      true,
+    );
+    assert.equal(
+      first.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'REF_ACTION_MISSING' &&
+          diagnostic.path === 'triggers[0].event.action',
+      ),
+      false,
+    );
+  });
+
+  it('keeps mixed lowerer and cross-ref diagnostics deterministic in partial-compile runs', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'mixed-lowerer-cross-ref-deterministic', players: { min: 2, max: 2 } },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [{ id: 'bad-trigger', event: { type: 'actionResolved', action: 'psas' }, effects: [] }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'win', player: 'activePlayer' } }] },
+    };
+
+    const first = compileGameSpecToGameDef(doc);
+    const second = compileGameSpecToGameDef(doc);
+
+    assert.equal(first.gameDef, null);
+    assert.equal(second.gameDef, null);
+    assert.deepEqual(first.diagnostics, second.diagnostics);
+    assert.equal(
+      first.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_XREF_TRIGGER_ACTION_MISSING'),
+      true,
+    );
+    assert.equal(
+      first.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_PLAYER_SELECTOR_INVALID'),
+      true,
+    );
+  });
+
+  it('suppresses dependent trigger-action cross-ref diagnostics when actions fail lowering', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'skip-cross-ref-when-actions-fail', players: { min: 2, max: 2 } },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'bad', actor: 42, executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [{ id: 'bad-trigger', event: { type: 'actionResolved', action: 'missing-action' }, effects: [] }],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(result.sections.actions, null);
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_XREF_TRIGGER_ACTION_MISSING'),
+      false,
+    );
+    assert.equal(
+      result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_PLAYER_SELECTOR_INVALID'),
       true,
     );
   });
@@ -152,8 +216,49 @@ describe('compile top-level actions/triggers/end conditions', () => {
     const invalid = compileGameSpecToGameDef(invalidDoc);
     assert.equal(invalid.gameDef, null);
     assert.equal(
-      invalid.diagnostics.some((diagnostic) => diagnostic.code === 'REF_VAR_MISSING' && diagnostic.path === 'triggers[0].event.var'),
+      invalid.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_XREF_TRIGGER_VAR_MISSING' &&
+          diagnostic.path === 'doc.triggers.0.event.var',
+      ),
       true,
+    );
+    assert.equal(
+      invalid.diagnostics.some(
+        (diagnostic) => diagnostic.code === 'REF_VAR_MISSING' && diagnostic.path === 'triggers[0].event.var',
+      ),
+      false,
+    );
+  });
+
+  it('canonicalizes legacy boundary REF diagnostics to CNL_XREF diagnostics in compile output', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'canonicalize-ref-to-cnl-xref', players: { min: 2, max: 2 } },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      terminal: { conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'missingVar' }, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_XREF_GVAR_MISSING' &&
+          diagnostic.path === 'doc.terminal.conditions.0.when.left.var',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'REF_GVAR_MISSING' &&
+          diagnostic.path === 'terminal.conditions[0].when.left.var',
+      ),
+      false,
     );
   });
 

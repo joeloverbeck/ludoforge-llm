@@ -153,8 +153,9 @@ export function compileGameSpecToGameDef(
     diagnostics.push(...validated.diagnostics);
     validatedGameDef = validated.gameDef;
   }
+  const normalizedDiagnostics = canonicalizeCompilerReferenceDiagnostics(diagnostics);
 
-  const finalizedDiagnostics = finalizeDiagnostics(diagnostics, options?.sourceMap, limits.maxDiagnosticCount);
+  const finalizedDiagnostics = finalizeDiagnostics(normalizedDiagnostics, options?.sourceMap, limits.maxDiagnosticCount);
 
   return {
     gameDef: hasErrorDiagnostics(finalizedDiagnostics) ? null : validatedGameDef,
@@ -395,6 +396,9 @@ function compileExpandedDoc(
     actions = withEventAction;
     sections.actions = sections.actions === null ? null : withEventAction;
   }
+  // Policy contract: partial-compile is dependency-aware best-effort.
+  // Cross-validation always executes, but each rule gates on prerequisite
+  // section availability (null sections suppress dependent xref diagnostics).
   diagnostics.push(...crossValidateSpec(sections));
 
   if (runtimeMetadata === null || zones === null || turnStructure === null || actions === null || terminal === null) {
@@ -455,6 +459,39 @@ function finalizeDiagnostics(
   const sorted = sortDiagnosticsDeterministic(sourceAnnotated, sourceMap);
   const deduped = dedupeDiagnostics(sorted);
   return capDiagnostics(deduped, maxDiagnosticCount);
+}
+
+function canonicalizeCompilerReferenceDiagnostics(diagnostics: readonly Diagnostic[]): readonly Diagnostic[] {
+  const crossRefPaths = new Set(
+    diagnostics
+      .filter((diagnostic) => diagnostic.code.startsWith('CNL_XREF_'))
+      .map((diagnostic) => normalizeDiagnosticPath(diagnostic.path)),
+  );
+
+  const canonicalized: Diagnostic[] = [];
+  for (const diagnostic of diagnostics) {
+    if (!diagnostic.code.startsWith('REF_')) {
+      canonicalized.push(diagnostic);
+      continue;
+    }
+
+    const normalizedPath = normalizeDiagnosticPath(diagnostic.path);
+    if (crossRefPaths.has(normalizedPath)) {
+      continue;
+    }
+
+    canonicalized.push({
+      ...diagnostic,
+      code: `CNL_XREF_${diagnostic.code.slice('REF_'.length)}`,
+      path: normalizedPath,
+    });
+  }
+  return canonicalized;
+}
+
+function normalizeDiagnosticPath(path: string): string {
+  const withDots = path.replace(/\[(\d+)\]/g, '.$1');
+  return withDots.startsWith('doc.') ? withDots : `doc.${withDots}`;
 }
 
 function requiredSectionDiagnostic(path: string, section: string): Diagnostic {

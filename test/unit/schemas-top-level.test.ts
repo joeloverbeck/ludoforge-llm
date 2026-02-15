@@ -138,6 +138,7 @@ const validGameTrace = {
       legalMoveCount: 3,
       deltas: [{ path: 'globalVars.round', before: 1, after: 2 }],
       triggerFirings: [{ kind: 'fired', triggerId: 'onMainEnter', event: { type: 'turnStart' }, depth: 0 }],
+      warnings: [],
     },
   ],
   finalState: validGameState,

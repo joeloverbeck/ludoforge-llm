@@ -40,6 +40,7 @@ export * from './resolve-ref.js';
 export * from './resolve-selectors.js';
 export * from './resolve-zone-ref.js';
 export * from './runtime-table-index.js';
+export * from './schema-artifacts.js';
 export * from './schemas.js';
 export * from './serde.js';
 export * from './spatial.js';

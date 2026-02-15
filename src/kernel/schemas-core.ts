@@ -352,6 +352,89 @@ export const StateDeltaSchema = z
   })
   .strict();
 
+export const RuntimeWarningCodeSchema = z.union([
+  z.literal('EMPTY_QUERY_RESULT'),
+  z.literal('TOKEN_NOT_IN_ZONE'),
+  z.literal('BINDING_UNDEFINED'),
+  z.literal('EMPTY_ZONE_OPERATION'),
+  z.literal('ZERO_EFFECT_ITERATIONS'),
+  z.literal('MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED'),
+  z.literal('MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'),
+  z.literal('MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'),
+  z.literal('MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED'),
+]);
+
+export const RuntimeWarningSchema = z
+  .object({
+    code: RuntimeWarningCodeSchema,
+    message: StringSchema,
+    context: z.record(StringSchema, z.unknown()),
+    hint: StringSchema.optional(),
+  })
+  .strict();
+
+export const EffectTraceEntrySchema = z.union([
+  z
+    .object({
+      kind: z.literal('forEach'),
+      bind: StringSchema,
+      matchCount: NumberSchema,
+      limit: NumberSchema.optional(),
+      iteratedCount: NumberSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('moveToken'),
+      tokenId: StringSchema,
+      from: StringSchema,
+      to: StringSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('setTokenProp'),
+      tokenId: StringSchema,
+      prop: StringSchema,
+      oldValue: z.unknown(),
+      newValue: z.unknown(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('varChange'),
+      scope: z.union([z.literal('global'), z.literal('perPlayer')]),
+      varName: StringSchema,
+      oldValue: NumberSchema,
+      newValue: NumberSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('createToken'),
+      tokenId: StringSchema,
+      type: StringSchema,
+      zone: StringSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('queryResult'),
+      queryType: StringSchema,
+      zone: StringSchema,
+      filterSummary: StringSchema,
+      matchCount: NumberSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('conditional'),
+      branch: z.union([z.literal('then'), z.literal('else')]),
+      conditionSummary: StringSchema,
+    })
+    .strict(),
+]);
+
 export const TriggerFiringSchema = z
   .object({
     kind: z.literal('fired'),
@@ -389,6 +472,8 @@ export const MoveLogSchema = z
     legalMoveCount: NumberSchema,
     deltas: z.array(StateDeltaSchema),
     triggerFirings: z.array(TriggerLogEntrySchema),
+    warnings: z.array(RuntimeWarningSchema),
+    effectTrace: z.array(EffectTraceEntrySchema).optional(),
   })
   .strict();
 
@@ -446,5 +531,72 @@ export const EvalReportSchema = z
     metrics: MetricsSchema,
     degeneracyFlags: z.array(DegeneracyFlagSchema),
     traces: z.array(GameTraceSchema),
+  })
+  .strict();
+
+export const HexBigIntSchema = z.string().regex(/^0x[0-9a-f]+$/);
+
+export const SerializedRngStateSchema = z
+  .object({
+    algorithm: z.literal('pcg-dxsm-128'),
+    version: z.literal(1),
+    state: z.array(HexBigIntSchema).length(2),
+  })
+  .strict();
+
+export const SerializedGameStateSchema = z
+  .object({
+    globalVars: z.record(StringSchema, z.union([NumberSchema, BooleanSchema])),
+    perPlayerVars: z.record(StringSchema, z.record(StringSchema, z.union([NumberSchema, BooleanSchema]))),
+    playerCount: NumberSchema,
+    zones: z.record(StringSchema, z.array(TokenSchema)),
+    nextTokenOrdinal: NumberSchema,
+    currentPhase: StringSchema,
+    activePlayer: IntegerSchema,
+    turnCount: NumberSchema,
+    rng: SerializedRngStateSchema,
+    stateHash: HexBigIntSchema,
+    actionUsage: z.record(StringSchema, ActionUsageRecordSchema),
+    turnOrderState: TurnOrderRuntimeStateSchema,
+    markers: z.record(StringSchema, z.record(StringSchema, StringSchema)),
+    reveals: z.record(StringSchema, z.array(RevealGrantSchema)).optional(),
+    globalMarkers: z.record(StringSchema, StringSchema).optional(),
+    activeLastingEffects: z.array(ActiveLastingEffectSchema).optional(),
+    interruptPhaseStack: z.array(InterruptPhaseFrameSchema).optional(),
+  })
+  .strict();
+
+export const SerializedMoveLogSchema = z
+  .object({
+    stateHash: HexBigIntSchema,
+    player: IntegerSchema,
+    move: MoveSchema,
+    legalMoveCount: NumberSchema,
+    deltas: z.array(StateDeltaSchema),
+    triggerFirings: z.array(TriggerLogEntrySchema),
+    warnings: z.array(RuntimeWarningSchema),
+    effectTrace: z.array(EffectTraceEntrySchema).optional(),
+  })
+  .strict();
+
+export const SerializedGameTraceSchema = z
+  .object({
+    gameDefId: StringSchema,
+    seed: NumberSchema,
+    moves: z.array(SerializedMoveLogSchema),
+    finalState: SerializedGameStateSchema,
+    result: TerminalResultSchema.nullable(),
+    turnsCount: NumberSchema,
+    stopReason: SimulationStopReasonSchema,
+  })
+  .strict();
+
+export const SerializedEvalReportSchema = z
+  .object({
+    gameDefId: StringSchema,
+    runCount: NumberSchema,
+    metrics: MetricsSchema,
+    degeneracyFlags: z.array(DegeneracyFlagSchema),
+    traces: z.array(SerializedGameTraceSchema),
   })
   .strict();

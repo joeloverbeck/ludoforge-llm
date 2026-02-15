@@ -14,6 +14,36 @@ import type {
 } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord, normalizeIdentifier } from './compile-lowering.js';
+import {
+  collectScenarioProjectionEntries,
+  evaluateScenarioProjectionInvariants,
+  mapScenarioProjectionInvariantIssuesToDiagnostics,
+  type ScenarioProjectionInvariantDiagnosticDialect,
+} from './scenario-projection-invariants.js';
+
+const COMPILER_SCENARIO_PROJECTION_DIAGNOSTIC_DIALECT: ScenarioProjectionInvariantDiagnosticDialect = {
+  unknownPieceType: {
+    initialPlacementsCode: 'CNL_COMPILER_SCENARIO_PLACEMENT_PIECE_INVALID',
+    outOfPlayCode: 'CNL_COMPILER_SCENARIO_OUT_OF_PLAY_PIECE_INVALID',
+    initialPlacementsMessage: (pieceTypeId) => `Unknown piece type "${pieceTypeId}" in scenario placement.`,
+    outOfPlayMessage: (pieceTypeId) => `Unknown piece type "${pieceTypeId}" in scenario outOfPlay.`,
+    suggestion: 'Use a pieceTypeId declared in the selected piece catalog.',
+  },
+  factionMismatch: {
+    initialPlacementsCode: 'CNL_COMPILER_SCENARIO_PLACEMENT_FACTION_MISMATCH',
+    outOfPlayCode: 'CNL_COMPILER_SCENARIO_OUT_OF_PLAY_FACTION_MISMATCH',
+    message: (actualFaction, pieceTypeId, expectedFaction) =>
+      `Faction "${actualFaction}" does not match piece type "${pieceTypeId}" (expected "${expectedFaction}").`,
+    suggestion: (expectedFaction) => `Set faction to "${expectedFaction}" or use a different piece type.`,
+  },
+  conservationViolation: {
+    code: 'CNL_COMPILER_SCENARIO_PIECE_CONSERVATION_VIOLATED',
+    message: (pieceTypeId, usedCount, totalInventory) =>
+      `Piece type "${pieceTypeId}" uses ${usedCount} but inventory has only ${totalInventory}.`,
+    suggestion: (pieceTypeId, totalInventory) =>
+      `Reduce placed + out-of-play count for "${pieceTypeId}" to at most ${totalInventory}.`,
+  },
+};
 
 export function deriveSectionsFromDataAssets(
   doc: GameSpecDoc,
@@ -304,7 +334,17 @@ const buildScenarioSetupEffects = ({
   }
 
   const scenario = selectedScenario.payload;
+  const hasProjectionInputs = (scenario.initialPlacements ?? []).length > 0 || (scenario.outOfPlay ?? []).length > 0;
   if ((scenario.factionPools ?? []).length === 0) {
+    if (hasProjectionInputs) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_SCENARIO_FACTION_POOLS_REQUIRED',
+        path: `${selectedScenario.path}.factionPools`,
+        severity: 'error',
+        message: 'Scenario defines initialPlacements/outOfPlay but payload.factionPools is missing or empty.',
+        suggestion: 'Add payload.factionPools entries with availableZoneId/outOfPlayZoneId for participating factions.',
+      });
+    }
     return [];
   }
   const pieceTypesById = new Map(selectedPieceCatalog.payload.pieceTypes.map((pieceType) => [pieceType.id, pieceType]));
@@ -316,10 +356,29 @@ const buildScenarioSetupEffects = ({
   const poolByFaction = new Map((scenario.factionPools ?? []).map((pool) => [pool.faction, pool]));
   const effects: EffectAST[] = [];
   const usedByPieceType = new Map<string, number>();
+  const pieceTypeFactionById = new Map<string, string>();
+  for (const [pieceTypeId, pieceType] of pieceTypesById.entries()) {
+    pieceTypeFactionById.set(pieceTypeId, pieceType.faction);
+  }
+  const scenarioEntries = collectScenarioProjectionEntries(scenario, selectedScenario.path);
+  const projectionIssues = evaluateScenarioProjectionInvariants(
+    scenarioEntries,
+    pieceTypeFactionById,
+    inventoryByPieceType,
+  );
+  diagnostics.push(
+    ...mapScenarioProjectionInvariantIssuesToDiagnostics(projectionIssues, COMPILER_SCENARIO_PROJECTION_DIAGNOSTIC_DIALECT, {
+      conservationPath: `${selectedScenario.path}`,
+    }),
+  );
+  const oversubscribedPieceTypes = new Set(projectionIssues.conservationViolation.map((issue) => issue.pieceTypeId));
 
   for (const placement of scenario.initialPlacements ?? []) {
     const pieceType = pieceTypesById.get(placement.pieceTypeId);
     if (pieceType === undefined) {
+      continue;
+    }
+    if (placement.faction !== pieceType.faction) {
       continue;
     }
     const props = resolveScenarioTokenProps(pieceType, placement.status);
@@ -338,6 +397,9 @@ const buildScenarioSetupEffects = ({
   for (const [index, outOfPlay] of (scenario.outOfPlay ?? []).entries()) {
     const pieceType = pieceTypesById.get(outOfPlay.pieceTypeId);
     if (pieceType === undefined) {
+      continue;
+    }
+    if (outOfPlay.faction !== pieceType.faction) {
       continue;
     }
     const pool = poolByFaction.get(outOfPlay.faction);
@@ -370,8 +432,11 @@ const buildScenarioSetupEffects = ({
     if (pieceType === undefined) {
       continue;
     }
+    if (oversubscribedPieceTypes.has(pieceTypeId)) {
+      continue;
+    }
     const used = usedByPieceType.get(pieceTypeId) ?? 0;
-    const remaining = Math.max(0, total - used);
+    const remaining = total - used;
     if (remaining === 0) {
       continue;
     }

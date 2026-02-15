@@ -256,6 +256,18 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.ok(matches[0]!.message.includes('unknown-piece'));
   });
 
+  it('scenario with outOfPlay faction mismatch emits CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_FACTION_MISMATCH', () => {
+    const diagnostics = validateGameSpec(
+      createDocWithScenario({
+        outOfPlay: [{ pieceTypeId: 'us-troops', faction: 'nva', count: 1 }],
+      }),
+    );
+
+    const matches = diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_FACTION_MISMATCH');
+    assert.equal(matches.length, 1);
+    assert.ok(matches[0]!.message.includes('expected "us"'));
+  });
+
   it('scenario with invalid usPolicy emits CNL_VALIDATOR_SCENARIO_US_POLICY_INVALID', () => {
     const diagnostics = validateGameSpec(
       createDocWithScenario({
@@ -282,6 +294,7 @@ describe('validateGameSpec scenario cross-reference validation', () => {
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_TRACK_VALUE_INVALID').length, 0);
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_MARKER_INVALID').length, 0);
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_INVALID').length, 0);
+    assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_FACTION_MISMATCH').length, 0);
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_PIECE_CONSERVATION_VIOLATED').length, 0);
     assert.equal(diagnosticsWithCode(diagnostics, 'CNL_VALIDATOR_SCENARIO_US_POLICY_INVALID').length, 0);
   });

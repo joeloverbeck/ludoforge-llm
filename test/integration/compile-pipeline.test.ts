@@ -460,6 +460,257 @@ describe('compile pipeline integration', () => {
     assert.equal(compiled.gameDef?.globalVars.find((variable) => variable.name === 'aid')?.init, 17);
   });
 
+  const buildScenarioProjectionValidationMarkdown = (scenarioPayloadLines: readonly string[]): string =>
+    [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-assets-scenario-projection-validation',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'dataAssets:',
+      '  - id: map-foundation',
+      '    kind: map',
+      '    payload:',
+      '      spaces:',
+      '        - id: alpha:none',
+      '          spaceType: province',
+      '          population: 1',
+      '          econ: 1',
+      '          terrainTags: [lowland]',
+      '          country: south-vietnam',
+      '          coastal: false',
+      '          adjacentTo: []',
+      '  - id: pieces-foundation',
+      '    kind: pieceCatalog',
+      '    payload:',
+      '      pieceTypes:',
+      '        - id: us-troops',
+      '          faction: us',
+      '          statusDimensions: []',
+      '          transitions: []',
+      '      inventory:',
+      '        - pieceTypeId: us-troops',
+      '          faction: us',
+      '          total: 2',
+      '  - id: scenario-foundation',
+      '    kind: scenario',
+      '    payload:',
+      ...scenarioPayloadLines.map((line) => `      ${line}`),
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: pass',
+      '    actor: active',
+      '    phase: main',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 1 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+  it('fails compile when scenario initialPlacements references unknown piece type during projection', () => {
+    const markdown = buildScenarioProjectionValidationMarkdown([
+      'mapAssetId: map-foundation',
+      'pieceCatalogAssetId: pieces-foundation',
+      'scenarioName: Foundation',
+      'yearRange: 1964-1965',
+      'factionPools:',
+      '  - faction: us',
+      '    availableZoneId: available-US:none',
+      '    outOfPlayZoneId: out-of-play-US:none',
+      'initialPlacements:',
+      '  - spaceId: alpha:none',
+      '    pieceTypeId: missing-piece',
+      '    faction: us',
+      '    count: 1',
+    ]);
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_SCENARIO_PLACEMENT_PIECE_INVALID' &&
+          diagnostic.path === 'doc.dataAssets.2.payload.initialPlacements.0.pieceTypeId',
+      ),
+      true,
+    );
+  });
+
+  it('fails compile when scenario outOfPlay references unknown piece type during projection', () => {
+    const markdown = buildScenarioProjectionValidationMarkdown([
+      'mapAssetId: map-foundation',
+      'pieceCatalogAssetId: pieces-foundation',
+      'scenarioName: Foundation',
+      'yearRange: 1964-1965',
+      'factionPools:',
+      '  - faction: us',
+      '    availableZoneId: available-US:none',
+      '    outOfPlayZoneId: out-of-play-US:none',
+      'outOfPlay:',
+      '  - pieceTypeId: missing-piece',
+      '    faction: us',
+      '    count: 1',
+    ]);
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_SCENARIO_OUT_OF_PLAY_PIECE_INVALID' &&
+          diagnostic.path === 'doc.dataAssets.2.payload.outOfPlay.0.pieceTypeId',
+      ),
+      true,
+    );
+  });
+
+  it('fails compile when scenario initialPlacements faction mismatches referenced piece type faction', () => {
+    const markdown = buildScenarioProjectionValidationMarkdown([
+      'mapAssetId: map-foundation',
+      'pieceCatalogAssetId: pieces-foundation',
+      'scenarioName: Foundation',
+      'yearRange: 1964-1965',
+      'factionPools:',
+      '  - faction: us',
+      '    availableZoneId: available-US:none',
+      '    outOfPlayZoneId: out-of-play-US:none',
+      'initialPlacements:',
+      '  - spaceId: alpha:none',
+      '    pieceTypeId: us-troops',
+      '    faction: arvn',
+      '    count: 1',
+    ]);
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_SCENARIO_PLACEMENT_FACTION_MISMATCH' &&
+          diagnostic.path === 'doc.dataAssets.2.payload.initialPlacements.0.faction',
+      ),
+      true,
+    );
+  });
+
+  it('fails compile when scenario outOfPlay faction mismatches referenced piece type faction', () => {
+    const markdown = buildScenarioProjectionValidationMarkdown([
+      'mapAssetId: map-foundation',
+      'pieceCatalogAssetId: pieces-foundation',
+      'scenarioName: Foundation',
+      'yearRange: 1964-1965',
+      'factionPools:',
+      '  - faction: us',
+      '    availableZoneId: available-US:none',
+      '    outOfPlayZoneId: out-of-play-US:none',
+      '  - faction: arvn',
+      '    availableZoneId: available-ARVN:none',
+      '    outOfPlayZoneId: out-of-play-ARVN:none',
+      'outOfPlay:',
+      '  - pieceTypeId: us-troops',
+      '    faction: arvn',
+      '    count: 1',
+    ]);
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_SCENARIO_OUT_OF_PLAY_FACTION_MISMATCH' &&
+          diagnostic.path === 'doc.dataAssets.2.payload.outOfPlay.0.faction',
+      ),
+      true,
+    );
+  });
+
+  it('fails compile when scenario oversubscribes piece inventory during projection', () => {
+    const markdown = buildScenarioProjectionValidationMarkdown([
+      'mapAssetId: map-foundation',
+      'pieceCatalogAssetId: pieces-foundation',
+      'scenarioName: Foundation',
+      'yearRange: 1964-1965',
+      'factionPools:',
+      '  - faction: us',
+      '    availableZoneId: available-US:none',
+      '    outOfPlayZoneId: out-of-play-US:none',
+      'initialPlacements:',
+      '  - spaceId: alpha:none',
+      '    pieceTypeId: us-troops',
+      '    faction: us',
+      '    count: 2',
+      'outOfPlay:',
+      '  - pieceTypeId: us-troops',
+      '    faction: us',
+      '    count: 1',
+    ]);
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_SCENARIO_PIECE_CONSERVATION_VIOLATED' &&
+          diagnostic.path === 'doc.dataAssets.2.payload',
+      ),
+      true,
+    );
+  });
+
+  it('fails compile when scenario setup projection fields are present without factionPools', () => {
+    const markdown = buildScenarioProjectionValidationMarkdown([
+      'mapAssetId: map-foundation',
+      'pieceCatalogAssetId: pieces-foundation',
+      'scenarioName: Foundation',
+      'yearRange: 1964-1965',
+      'initialPlacements:',
+      '  - spaceId: alpha:none',
+      '    pieceTypeId: us-troops',
+      '    faction: us',
+      '    count: 1',
+    ]);
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_SCENARIO_FACTION_POOLS_REQUIRED' &&
+          diagnostic.path === 'doc.dataAssets.2.payload.factionPools',
+      ),
+      true,
+    );
+  });
+
   it('fails compile when multiple scenarios exist without metadata.defaultScenarioAssetId', () => {
     const markdown = [
       '```yaml',

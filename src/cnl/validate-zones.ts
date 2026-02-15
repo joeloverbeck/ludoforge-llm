@@ -1,6 +1,12 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import {
+  collectScenarioProjectionEntries,
+  evaluateScenarioProjectionInvariants,
+  mapScenarioProjectionInvariantIssuesToDiagnostics,
+  type ScenarioProjectionInvariantDiagnosticDialect,
+} from './scenario-projection-invariants.js';
+import {
   ZONE_KEYS,
   isFiniteNumber,
   isRecord,
@@ -28,6 +34,29 @@ interface PieceTypeInfo {
 }
 
 const VALID_US_POLICIES: readonly string[] = ['jfk', 'lbj', 'nixon'];
+const VALIDATOR_SCENARIO_PROJECTION_DIAGNOSTIC_DIALECT: ScenarioProjectionInvariantDiagnosticDialect = {
+  unknownPieceType: {
+    initialPlacementsCode: 'CNL_VALIDATOR_SCENARIO_PLACEMENT_PIECE_INVALID',
+    outOfPlayCode: 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_INVALID',
+    initialPlacementsMessage: (pieceTypeId) => `Unknown piece type "${pieceTypeId}" in scenario placement.`,
+    outOfPlayMessage: (pieceTypeId) => `Unknown piece type "${pieceTypeId}" in scenario outOfPlay.`,
+    suggestion: 'Use a piece type id declared in the referenced piece catalog asset.',
+  },
+  factionMismatch: {
+    initialPlacementsCode: 'CNL_VALIDATOR_SCENARIO_PLACEMENT_FACTION_MISMATCH',
+    outOfPlayCode: 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_FACTION_MISMATCH',
+    message: (actualFaction, pieceTypeId, expectedFaction) =>
+      `Faction "${actualFaction}" does not match piece type "${pieceTypeId}" (expected "${expectedFaction}").`,
+    suggestion: (expectedFaction) => `Set faction to "${expectedFaction}" or use a different piece type.`,
+  },
+  conservationViolation: {
+    code: 'CNL_VALIDATOR_SCENARIO_PIECE_CONSERVATION_VIOLATED',
+    message: (pieceTypeId, usedCount, totalInventory) =>
+      `Piece type "${pieceTypeId}" uses ${usedCount} but inventory has only ${totalInventory}.`,
+    suggestion: (pieceTypeId, totalInventory) =>
+      `Reduce placed + out-of-play count for "${pieceTypeId}" to at most ${totalInventory}.`,
+  },
+};
 
 export function validateZones(doc: GameSpecDoc, diagnostics: Diagnostic[]): readonly string[] {
   const collectedZoneIds: string[] = [];
@@ -75,12 +104,11 @@ export function validateScenarioCrossReferences(
   const pieceTypeIndex = extractPieceTypeIndex(pieceCatalogPayload);
   const inventoryIndex = extractInventoryIndex(pieceCatalogPayload);
 
-  validateInitialPlacements(payload, basePath, spaceIds, pieceTypeIndex, diagnostics);
+  validateInitialPlacements(payload, basePath, spaceIds, diagnostics);
   validateInitialTrackValues(payload, basePath, trackDefs, diagnostics);
   validateInitialMarkers(payload, basePath, spaceIds, markerLattices, diagnostics);
-  validateOutOfPlay(payload, basePath, pieceTypeIndex, diagnostics);
+  emitScenarioProjectionInvariantDiagnostics(payload, basePath, pieceTypeIndex, inventoryIndex, diagnostics);
   validateUsPolicy(payload, basePath, diagnostics);
-  validatePieceConservation(payload, basePath, inventoryIndex, diagnostics);
 }
 
 function extractMapSpaceIds(mapPayload: Record<string, unknown> | undefined): ReadonlySet<string> {
@@ -162,7 +190,6 @@ function validateInitialPlacements(
   payload: Record<string, unknown>,
   basePath: string,
   spaceIds: ReadonlySet<string>,
-  pieceTypeIndex: ReadonlyMap<string, PieceTypeInfo>,
   diagnostics: Diagnostic[],
 ): void {
   if (!Array.isArray(payload.initialPlacements)) {
@@ -183,27 +210,6 @@ function validateInitialPlacements(
         message: `Unknown space "${placement.spaceId}" in scenario placement.`,
         suggestion: 'Use a space id declared in the referenced map asset.',
       });
-    }
-
-    if (typeof placement.pieceTypeId === 'string' && pieceTypeIndex.size > 0) {
-      const pieceType = pieceTypeIndex.get(placement.pieceTypeId);
-      if (pieceType === undefined) {
-        diagnostics.push({
-          code: 'CNL_VALIDATOR_SCENARIO_PLACEMENT_PIECE_INVALID',
-          path: `${placementPath}.pieceTypeId`,
-          severity: 'error',
-          message: `Unknown piece type "${placement.pieceTypeId}" in scenario placement.`,
-          suggestion: 'Use a piece type id declared in the referenced piece catalog asset.',
-        });
-      } else if (typeof placement.faction === 'string' && placement.faction !== pieceType.faction) {
-        diagnostics.push({
-          code: 'CNL_VALIDATOR_SCENARIO_PLACEMENT_FACTION_MISMATCH',
-          path: `${placementPath}.faction`,
-          severity: 'error',
-          message: `Faction "${placement.faction}" does not match piece type "${placement.pieceTypeId}" (expected "${pieceType.faction}").`,
-          suggestion: `Set faction to "${pieceType.faction}" or use a different piece type.`,
-        });
-      }
     }
   }
 }
@@ -297,32 +303,24 @@ function validateInitialMarkers(
   }
 }
 
-function validateOutOfPlay(
+function emitScenarioProjectionInvariantDiagnostics(
   payload: Record<string, unknown>,
   basePath: string,
   pieceTypeIndex: ReadonlyMap<string, PieceTypeInfo>,
+  inventoryIndex: ReadonlyMap<string, number>,
   diagnostics: Diagnostic[],
 ): void {
-  if (!Array.isArray(payload.outOfPlay)) {
-    return;
+  const pieceTypeFactionById = new Map<string, string>();
+  for (const [pieceTypeId, pieceType] of pieceTypeIndex.entries()) {
+    pieceTypeFactionById.set(pieceTypeId, pieceType.faction);
   }
-
-  for (const [index, entry] of payload.outOfPlay.entries()) {
-    if (!isRecord(entry)) {
-      continue;
-    }
-    const entryPath = `${basePath}.outOfPlay.${index}`;
-
-    if (typeof entry.pieceTypeId === 'string' && pieceTypeIndex.size > 0 && !pieceTypeIndex.has(entry.pieceTypeId)) {
-      diagnostics.push({
-        code: 'CNL_VALIDATOR_SCENARIO_OUT_OF_PLAY_INVALID',
-        path: `${entryPath}.pieceTypeId`,
-        severity: 'error',
-        message: `Unknown piece type "${entry.pieceTypeId}" in scenario outOfPlay.`,
-        suggestion: 'Use a piece type id declared in the referenced piece catalog asset.',
-      });
-    }
-  }
+  const entries = collectScenarioProjectionEntries(payload, basePath);
+  const issues = evaluateScenarioProjectionInvariants(entries, pieceTypeFactionById, inventoryIndex);
+  diagnostics.push(
+    ...mapScenarioProjectionInvariantIssuesToDiagnostics(issues, VALIDATOR_SCENARIO_PROJECTION_DIAGNOSTIC_DIALECT, {
+      conservationPath: basePath,
+    }),
+  );
 }
 
 function validateUsPolicy(
@@ -342,47 +340,5 @@ function validateUsPolicy(
       message: `Invalid usPolicy "${String(payload.usPolicy)}". Must be one of: ${VALID_US_POLICIES.join(', ')}.`,
       suggestion: `Set usPolicy to one of: ${VALID_US_POLICIES.join(', ')}.`,
     });
-  }
-}
-
-function validatePieceConservation(
-  payload: Record<string, unknown>,
-  basePath: string,
-  inventoryIndex: ReadonlyMap<string, number>,
-  diagnostics: Diagnostic[],
-): void {
-  if (inventoryIndex.size === 0) {
-    return;
-  }
-
-  const usedCounts = new Map<string, number>();
-
-  if (Array.isArray(payload.initialPlacements)) {
-    for (const placement of payload.initialPlacements) {
-      if (isRecord(placement) && typeof placement.pieceTypeId === 'string' && isFiniteNumber(placement.count)) {
-        usedCounts.set(placement.pieceTypeId, (usedCounts.get(placement.pieceTypeId) ?? 0) + placement.count);
-      }
-    }
-  }
-
-  if (Array.isArray(payload.outOfPlay)) {
-    for (const entry of payload.outOfPlay) {
-      if (isRecord(entry) && typeof entry.pieceTypeId === 'string' && isFiniteNumber(entry.count)) {
-        usedCounts.set(entry.pieceTypeId, (usedCounts.get(entry.pieceTypeId) ?? 0) + entry.count);
-      }
-    }
-  }
-
-  for (const [pieceTypeId, usedCount] of usedCounts) {
-    const totalInventory = inventoryIndex.get(pieceTypeId);
-    if (totalInventory !== undefined && usedCount > totalInventory) {
-      diagnostics.push({
-        code: 'CNL_VALIDATOR_SCENARIO_PIECE_CONSERVATION_VIOLATED',
-        path: basePath,
-        severity: 'error',
-        message: `Piece type "${pieceTypeId}" uses ${usedCount} but inventory has only ${totalInventory}.`,
-        suggestion: `Reduce placed + out-of-play count for "${pieceTypeId}" to at most ${totalInventory}.`,
-      });
-    }
   }
 }

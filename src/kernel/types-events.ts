@@ -32,6 +32,7 @@ export interface EventFreeOperationGrantDef {
   };
   readonly id?: string;
   readonly faction: string;
+  readonly executeAsFaction?: string;
   readonly operationClass: TurnFlowActionClass;
   readonly actionIds?: readonly string[];
   readonly zoneFilter?: ConditionAST;

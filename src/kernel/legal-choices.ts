@@ -12,7 +12,7 @@ import { createCollector } from './execution-collector.js';
 import { resolveEventEffectList } from './event-execution.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
+import { resolveFreeOperationExecutionPlayer, resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
 import type {
   ActionDef,
   ChoicePendingRequest,
@@ -370,13 +370,14 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
   const freeOperationZoneFilter = partialMove.freeOperation === true
     ? resolveFreeOperationZoneFilter(def, state, partialMove)
     : undefined;
+  const executionPlayer = resolveFreeOperationExecutionPlayer(def, state, partialMove);
 
   const evalCtx: EvalContext = {
     def,
     adjacencyGraph,
     state,
-    activePlayer: state.activePlayer,
-    actorPlayer: state.activePlayer,
+    activePlayer: executionPlayer,
+    actorPlayer: executionPlayer,
     bindings: baseBindings,
     collector: createCollector(),
     ...(freeOperationZoneFilter === undefined

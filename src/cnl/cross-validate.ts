@@ -632,6 +632,17 @@ function validateEventFreeOperationGrants(
         `Event card "${cardId}" freeOperationGrant references unknown faction "${grant.faction}".`,
         'Use one of the declared turnFlow.eligibility.factions ids.',
       );
+      if (grant.executeAsFaction !== undefined && grant.executeAsFaction !== 'self') {
+        pushMissingIdentifierDiagnostic(
+          diagnostics,
+          'CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_FACTION_MISSING',
+          `${pathPrefix}.${grantIndex}.executeAsFaction`,
+          grant.executeAsFaction,
+          factionTargets,
+          `Event card "${cardId}" freeOperationGrant executeAsFaction references unknown faction "${grant.executeAsFaction}".`,
+          'Use "self" or one of the declared turnFlow.eligibility.factions ids.',
+        );
+      }
     }
 
     for (const [actionIndex, actionId] of (grant.actionIds ?? []).entries()) {

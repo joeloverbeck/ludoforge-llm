@@ -444,6 +444,41 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "act"?');
   });
 
+  it('eventDeck freeOperationGrants with unknown executeAsFaction emits CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_FACTION_MISSING', () => {
+    const sections = compileRichSections();
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                ...(card.unshaded ?? {}),
+                freeOperationGrants: [
+                  {
+                    faction: 'us',
+                    executeAsFaction: 'uuss',
+                    sequence: { chain: 'unknown-execute-as', step: 0 },
+                    operationClass: 'operation',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_FACTION_MISSING');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.freeOperationGrants.0.executeAsFaction');
+    assert.equal(diagnostic?.suggestion, 'Did you mean "us"?');
+  });
+
   it('eventDeck freeOperationGrants with valid faction/action references produce no grant cross-ref diagnostics', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);

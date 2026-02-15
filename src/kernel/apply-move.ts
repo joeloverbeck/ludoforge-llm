@@ -10,7 +10,12 @@ import { extractResolvedBindFromDecisionId } from './decision-id.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { illegalMoveError, isKernelErrorCode, isKernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
-import { applyTurnFlowEligibilityAfterMove, consumeTurnFlowFreeOperationGrant, isFreeOperationGrantedForMove } from './turn-flow-eligibility.js';
+import {
+  applyTurnFlowEligibilityAfterMove,
+  consumeTurnFlowFreeOperationGrant,
+  isFreeOperationGrantedForMove,
+  resolveFreeOperationExecutionPlayer,
+} from './turn-flow-eligibility.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import type {
@@ -163,12 +168,13 @@ const resolveMatchedPipelineForMove = (
     return undefined;
   }
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const executionPlayer = resolveFreeOperationExecutionPlayer(def, state, move);
   const dispatch = resolveActionPipelineDispatch(def, action, {
     def,
     adjacencyGraph,
     state,
-    activePlayer: state.activePlayer,
-    actorPlayer: state.activePlayer,
+    activePlayer: executionPlayer,
+    actorPlayer: executionPlayer,
     bindings: runtimeBindingsForMove(move, undefined),
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
     collector: createCollector(),
@@ -370,12 +376,13 @@ const applyMoveCore = (
   const rng: Rng = { state: state.rng };
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const collector = createCollector(options);
+  const executionPlayer = resolveFreeOperationExecutionPlayer(def, state, move);
   const baseBindings = runtimeBindingsForMove(move, undefined);
   const effectCtxBase = {
     def,
     adjacencyGraph,
-    activePlayer: state.activePlayer,
-    actorPlayer: state.activePlayer,
+    activePlayer: executionPlayer,
+    actorPlayer: executionPlayer,
     bindings: baseBindings,
     moveParams: move.params,
     collector,

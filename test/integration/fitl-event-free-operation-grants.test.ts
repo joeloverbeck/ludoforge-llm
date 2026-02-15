@@ -332,6 +332,112 @@ const createZoneFilteredDef = (): GameDef =>
     ],
   }) as unknown as GameDef;
 
+const createExecuteAsFactionDef = (): GameDef =>
+  ({
+    metadata: { id: 'event-free-op-execute-as-faction-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    constants: {},
+    globalVars: [{ name: 'executeAsMarker', type: 'int', init: 0, min: 0, max: 999 }],
+    perPlayerVars: [],
+    zones: [],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: {
+            factions: ['0', '1'],
+            overrideWindows: [],
+          },
+          optionMatrix: [{ first: 'event', second: ['operation'] }],
+          passRewards: [],
+          freeOperationActionIds: ['operation'],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+        },
+      },
+    },
+    actions: [
+      {
+        id: asActionId('event'),
+        actor: 'active',
+        phase: asPhaseId('main'),
+        params: [
+          { name: 'eventCardId', domain: { query: 'enums', values: ['card-8'] } },
+          { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+          { name: 'branch', domain: { query: 'enums', values: ['none'] } },
+        ],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: asActionId('operation'),
+        actor: 'active',
+        phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    actionPipelines: [
+      {
+        id: 'operation-as-us',
+        actionId: asActionId('operation'),
+        applicability: { op: '==', left: { ref: 'activePlayer' }, right: '0' },
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [{ effects: [{ setVar: { scope: 'global', var: 'executeAsMarker', value: 100 } }] }],
+        atomicity: 'atomic',
+      },
+      {
+        id: 'operation-as-self',
+        actionId: asActionId('operation'),
+        applicability: { op: '==', left: { ref: 'activePlayer' }, right: '1' },
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [{ effects: [{ setVar: { scope: 'global', var: 'executeAsMarker', value: 200 } }] }],
+        atomicity: 'atomic',
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+    eventDecks: [
+      {
+        id: 'event-deck',
+        drawZone: 'deck:none',
+        discardZone: 'played:none',
+        cards: [
+          {
+            id: 'card-8',
+            title: 'Execute As Faction',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Faction 1 executes Operation as if faction 0.',
+              freeOperationGrants: [
+                {
+                  faction: '1',
+                  executeAsFaction: '0',
+                  sequence: { chain: 'execute-as-faction', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                },
+              ],
+            },
+          },
+        ],
+      } as EventDeckDef,
+    ],
+  }) as unknown as GameDef;
+
 describe('event free-operation grants integration', () => {
   it('creates pending free-operation grants from event side declarations', () => {
     const def = createDef();
@@ -548,5 +654,23 @@ describe('event free-operation grants integration', () => {
       freeOperation: true,
     }).state;
     assert.deepEqual(requireCardDrivenRuntime(third).pendingFreeOperationGrants ?? [], []);
+  });
+
+  it('applies free-operation grants with executeAsFaction using the overridden action profile', () => {
+    const def = createExecuteAsFactionDef();
+    const start = initialState(def, 33, 2);
+
+    const first = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-8', side: 'unshaded', branch: 'none' },
+    }).state;
+    assert.equal(first.activePlayer, asPlayerId(1));
+
+    const operationMoves = legalMoves(def, first).filter((move) => String(move.actionId) === 'operation');
+    assert.equal(operationMoves.some((move) => move.freeOperation === true), true);
+
+    const second = applyMove(def, first, { actionId: asActionId('operation'), params: {}, freeOperation: true }).state;
+    assert.equal(second.globalVars.executeAsMarker, 100);
+    assert.deepEqual(requireCardDrivenRuntime(second).pendingFreeOperationGrants ?? [], []);
   });
 });

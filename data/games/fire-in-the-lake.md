@@ -2947,6 +2947,228 @@ eventDecks:
               cardinality: { max: 3 }
           effects:
             - addVar: { scope: global, var: aid, delta: -9 }
+      - id: card-64
+        title: Honolulu Conference
+        sideMode: single
+        order: 64
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          flavorText: "Summit signals renewed support for Saigon."
+        unshaded:
+          text: "Aid and Patronage each +6."
+      - id: card-67
+        title: Amphib Landing
+        sideMode: dual
+        order: 67
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          flavorText: "Coastal insertion opens a fast COIN push."
+        unshaded:
+          text: "Relocate ARVN Troops among coastal spaces; ARVN executes free Sweep then free Assault."
+          freeOperationGrants:
+            - faction: "1"
+              sequence: { chain: amphib-landing-arvn, step: 0 }
+              operationClass: operation
+              actionIds: [sweep]
+            - faction: "1"
+              sequence: { chain: amphib-landing-arvn, step: 1 }
+              operationClass: operation
+              actionIds: [assault]
+        shaded:
+          text: "Insurgent response: Remove 2 ARVN Troops from coastal spaces."
+      - id: card-69
+        title: MACV
+        sideMode: single
+        order: 69
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          flavorText: "Command integration accelerates ARVN tempo."
+        unshaded:
+          text: "ARVN executes free Special Activities."
+      - id: card-70
+        title: ROKs
+        sideMode: dual
+        order: 70
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          flavorText: "Allied contingents strengthen ARVN offensive options."
+        unshaded:
+          text: "ARVN Sweep/Assault in selected spaces as if US."
+          freeOperationGrants:
+            - faction: "1"
+              executeAsFaction: "0"
+              sequence: { chain: roks-arvn-as-us, step: 0 }
+              operationClass: operation
+              actionIds: [sweep]
+            - faction: "1"
+              executeAsFaction: "0"
+              sequence: { chain: roks-arvn-as-us, step: 1 }
+              operationClass: operation
+              actionIds: [assault]
+        shaded:
+          text: "ARVN losses mount: remove 2 ARVN pieces."
+      - id: card-72
+        title: Body Count
+        sideMode: dual
+        order: 72
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "NVA", "US", "VC"]
+          flavorText: "Kill metrics begin to drive battlefield behavior."
+        unshaded:
+          text: "US/ARVN operations prioritize attrition. MOMENTUM"
+          lastingEffects:
+            - id: mom-body-count
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_bodyCount }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_bodyCount }
+        shaded:
+          text: "Insurgent adaptation blunts kill-ratio pressure."
+      - id: card-76
+        title: Annam
+        sideMode: dual
+        order: 76
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          flavorText: "Regional instability strains Saigon's finances."
+        unshaded:
+          text: "NVA and VC Resources each -3; Patronage +3."
+        shaded:
+          text: "Patronage -3 and ARVN Resources -6."
+      - id: card-78
+        title: General Landsdale
+        sideMode: dual
+        order: 78
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          flavorText: "Political warfare effort reshapes pacification tempo."
+        unshaded:
+          text: "Landsdale sidelined; no lasting momentum effect."
+        shaded:
+          text: "Political influence campaign takes hold. MOMENTUM"
+          lastingEffects:
+            - id: mom-general-landsdale
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_generalLansdale }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_generalLansdale }
+      - id: card-81
+        title: CIDG
+        sideMode: dual
+        order: 81
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          flavorText: "Civilian irregular networks are reorganized."
+        unshaded:
+          text: "Replace ARVN pieces with Irregulars/Rangers in selected spaces."
+        shaded:
+          text: "CIDG positions collapse: replace Irregulars with VC Guerrillas."
+      - id: card-83
+        title: Election
+        sideMode: dual
+        order: 83
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          flavorText: "Balloting reshapes control and aid expectations."
+        unshaded:
+          text: "Shift up to 3 spaces one level toward Active Support; Aid +6."
+        shaded:
+          text: "Shift up to 3 spaces one level toward Active Opposition."
+      - id: card-85
+        title: USAID
+        sideMode: dual
+        order: 85
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          flavorText: "Development spending competes with local capture."
+        unshaded:
+          text: "Shift up to 2 spaces one level toward Active Support."
+        shaded:
+          text: "Shift up to 2 spaces one level toward Active Opposition."
+      - id: card-86
+        title: Mandate of Heaven
+        sideMode: dual
+        order: 86
+        tags: [capability, ARVN]
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          flavorText: "Legitimacy campaign rewrites ARVN governance limits."
+        unshaded:
+          text: "Capability: ARVN Govern in one space without support shift."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_mandateOfHeaven, markerState: unshaded }
+        shaded:
+          text: "Capability: ARVN Govern may select only one space."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_mandateOfHeaven, markerState: shaded }
+      - id: card-87
+        title: Nguyen Chanh Thi
+        sideMode: dual
+        order: 87
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          flavorText: "Regional command turnover drives sudden force shifts."
+        unshaded:
+          text: "Place ARVN pieces and shift one selected city toward Support."
+        shaded:
+          text: "Place VC/NVA pieces and shift one selected city toward Opposition."
+      - id: card-89
+        title: Tam Chau
+        sideMode: dual
+        order: 89
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          flavorText: "Buddhist political leverage expands in Saigon."
+        unshaded:
+          text: "Shift Saigon one level toward Active Support; Patronage +3."
+        shaded:
+          text: "Shift Saigon one level toward Active Opposition; Patronage -3."
+      - id: card-90
+        title: Walt Rostow
+        sideMode: dual
+        order: 90
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          flavorText: "Escalation planning accelerates deployment adjustments."
+        unshaded:
+          text: "Place and relocate COIN pieces among selected spaces."
+        shaded:
+          text: "Redeploy selected COIN pieces to Available."
       - id: card-68
         title: Green Berets
         sideMode: dual

@@ -1,6 +1,11 @@
 import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
-import { isFreeOperationApplicableForMove, isFreeOperationGrantedForMove, resolveTurnFlowActionClass } from './turn-flow-eligibility.js';
+import {
+  isFreeOperationApplicableForMove,
+  isFreeOperationGrantedForMove,
+  resolveTurnFlowActionClass,
+} from './turn-flow-eligibility.js';
 import type { GameDef, GameState, Move, MoveParamValue } from './types.js';
+import { asActionId } from './branded.js';
 
 const cardDrivenConfig = (def: GameDef) =>
   def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
@@ -187,7 +192,14 @@ export function applyPendingFreeOperationVariants(
   }
 
   const variants: Move[] = [...moves];
-  for (const move of moves) {
+  const seen = new Set(moves.map((move) => `${String(move.actionId)}|${JSON.stringify(move.params)}|${move.freeOperation === true}`));
+  const turnFlowDefaults = cardDrivenConfig(def)?.turnFlow.freeOperationActionIds ?? [];
+  const pendingActionIds = pendingGrants
+    .filter((grant) => grant.faction === String(state.activePlayer))
+    .flatMap((grant) => grant.actionIds ?? turnFlowDefaults);
+  const extraBaseMoves: Move[] = pendingActionIds.map((actionId) => ({ actionId: asActionId(actionId), params: {} }));
+
+  for (const move of [...moves, ...extraBaseMoves]) {
     if (move.freeOperation === true) {
       continue;
     }
@@ -198,7 +210,6 @@ export function applyPendingFreeOperationVariants(
     if (!isFreeOperationApplicableForMove(def, state, candidate)) {
       continue;
     }
-
     const checkpoint = resolveMoveDecisionSequence(def, state, candidate, {
       choose: () => undefined,
     }).complete;
@@ -210,6 +221,11 @@ export function applyPendingFreeOperationVariants(
       continue;
     }
 
+    const key = `${String(candidate.actionId)}|${JSON.stringify(candidate.params)}|${candidate.freeOperation === true}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
     variants.push(candidate);
   }
   return variants;

@@ -186,6 +186,7 @@ const toPendingFreeOperationGrant = (
 ): TurnFlowPendingFreeOperationGrant => ({
   grantId,
   faction: grant.faction,
+  ...(grant.executeAsFaction === undefined ? {} : { executeAsFaction: grant.executeAsFaction }),
   operationClass: grant.operationClass,
   ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
   ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
@@ -240,6 +241,14 @@ const extractPendingFreeOperationGrants = (
     if (faction === null) {
       continue;
     }
+    let executeAsFaction: string | undefined;
+    if (grant.executeAsFaction !== undefined) {
+      const resolvedExecuteAs = resolveGrantFaction(grant.executeAsFaction, activeFaction, factionOrder);
+      if (resolvedExecuteAs === null) {
+        continue;
+      }
+      executeAsFaction = resolvedExecuteAs;
+    }
     const baseId = pendingFreeOperationGrantBaseId(state, move, grant, grantIndex);
     const grantId = makeUniquePendingFreeOperationGrantId(
       [...existingPendingFreeOperationGrants, ...extracted],
@@ -249,6 +258,7 @@ const extractPendingFreeOperationGrants = (
     extracted.push({
       ...toPendingFreeOperationGrant(grant, grantId, sequenceBatchId),
       faction,
+      ...(executeAsFaction === undefined ? {} : { executeAsFaction }),
     });
   }
   return extracted;
@@ -523,6 +533,31 @@ const applicableActivePendingFreeOperationGrants = (
   return activePendingFreeOperationGrants(state).filter(
     (grant) => isPendingFreeOperationGrantSequenceReady(pending, grant) && doesGrantApplyToMove(def, grant, move),
   );
+};
+
+const parsePlayerId = (
+  faction: string,
+  playerCount: number,
+): ReturnType<typeof asPlayerId> | null => {
+  const parsed = parseFactionPlayer(faction, playerCount);
+  return parsed === null ? null : asPlayerId(parsed);
+};
+
+export const resolveFreeOperationExecutionPlayer = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): ReturnType<typeof asPlayerId> => {
+  if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
+    return state.activePlayer;
+  }
+  const applicable = applicableActivePendingFreeOperationGrants(def, state, move);
+  if (applicable.length === 0) {
+    return state.activePlayer;
+  }
+  const prioritized = applicable.find((grant) => grant.executeAsFaction !== undefined) ?? applicable[0]!;
+  const executionFaction = prioritized.executeAsFaction ?? prioritized.faction;
+  return parsePlayerId(executionFaction, state.playerCount) ?? state.activePlayer;
 };
 
 export const isFreeOperationApplicableForMove = (

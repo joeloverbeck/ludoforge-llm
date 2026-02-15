@@ -170,7 +170,7 @@ describe('effects runtime foundation', () => {
     });
   });
 
-  it('advanceToPhase moves to a later phase in the same turn', () => {
+  it('gotoPhase moves to a later phase in the same turn', () => {
     const def: GameDef = {
       ...makeDef(),
       turnStructure: {
@@ -181,14 +181,14 @@ describe('effects runtime foundation', () => {
       ...makeState(),
       currentPhase: asPhaseId('operations'),
     };
-    const effect: EffectAST = { advanceToPhase: { phase: 'commitment' } };
+    const effect: EffectAST = { gotoPhase: { phase: 'commitment' } };
     const result = applyEffect(effect, makeCtx({ def, state }));
 
     assert.equal(result.state.currentPhase, asPhaseId('commitment'));
     assert.equal(result.state.turnCount, 1);
   });
 
-  it('advanceToPhase can wrap across turn boundary to an earlier phase', () => {
+  it('gotoPhase rejects crossing a turn boundary to an earlier phase', () => {
     const def: GameDef = {
       ...makeDef(),
       turnStructure: {
@@ -200,10 +200,9 @@ describe('effects runtime foundation', () => {
       currentPhase: asPhaseId('reset'),
       turnCount: 4,
     };
-    const effect: EffectAST = { advanceToPhase: { phase: 'commitment' } };
-    const result = applyEffect(effect, makeCtx({ def, state }));
-
-    assert.equal(result.state.currentPhase, asPhaseId('commitment'));
-    assert.equal(result.state.turnCount, 5);
+    const effect: EffectAST = { gotoPhase: { phase: 'commitment' } };
+    assert.throws(() => applyEffect(effect, makeCtx({ def, state })), (error: unknown) => {
+      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('cannot cross a turn boundary');
+    });
   });
 });

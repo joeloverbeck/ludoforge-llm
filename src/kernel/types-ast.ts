@@ -289,9 +289,18 @@ export type EffectAST =
       };
     }
   | {
-      readonly advanceToPhase: {
+      readonly gotoPhase: {
         readonly phase: string;
       };
+    }
+  | {
+      readonly pushInterruptPhase: {
+        readonly phase: string;
+        readonly resumePhase: string;
+      };
+    }
+  | {
+      readonly popInterruptPhase: Record<string, never>;
     };
 
 export type MoveParamScalar = number | string | boolean | TokenId | ZoneId | PlayerId;

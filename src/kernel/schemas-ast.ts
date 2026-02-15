@@ -500,11 +500,26 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
-      advanceToPhase: z
+      gotoPhase: z
         .object({
           phase: StringSchema,
         })
         .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      pushInterruptPhase: z
+        .object({
+          phase: StringSchema,
+          resumePhase: StringSchema,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      popInterruptPhase: z.object({}).strict(),
     })
     .strict(),
 ]);

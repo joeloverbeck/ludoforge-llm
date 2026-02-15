@@ -45,7 +45,7 @@ describe('FITL commitment phase production wiring', () => {
     assert.notEqual(card73, undefined);
     assert.deepEqual(card73?.unshaded?.effects, [
       { setVar: { scope: 'global', var: 'commitmentPhaseRequested', value: true } },
-      { advanceToPhase: { phase: 'commitment' } },
+      { pushInterruptPhase: { phase: 'commitment', resumePhase: 'main' } },
     ]);
   });
 

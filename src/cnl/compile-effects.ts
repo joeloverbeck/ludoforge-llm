@@ -130,8 +130,14 @@ function lowerEffectNode(
   if (isRecord(source.grantFreeOperation)) {
     return lowerGrantFreeOperationEffect(source.grantFreeOperation, context, scope, `${path}.grantFreeOperation`);
   }
-  if (isRecord(source.advanceToPhase)) {
-    return lowerAdvanceToPhaseEffect(source.advanceToPhase, `${path}.advanceToPhase`);
+  if (isRecord(source.gotoPhase)) {
+    return lowerGotoPhaseEffect(source.gotoPhase, `${path}.gotoPhase`);
+  }
+  if (isRecord(source.pushInterruptPhase)) {
+    return lowerPushInterruptPhaseEffect(source.pushInterruptPhase, `${path}.pushInterruptPhase`);
+  }
+  if (isRecord(source.popInterruptPhase)) {
+    return lowerPopInterruptPhaseEffect(source.popInterruptPhase, `${path}.popInterruptPhase`);
   }
 
   return missingCapability(path, 'effect node', source, SUPPORTED_EFFECT_KINDS);
@@ -1013,19 +1019,56 @@ function lowerGrantFreeOperationEffect(
   };
 }
 
-function lowerAdvanceToPhaseEffect(
+function lowerGotoPhaseEffect(
   source: Record<string, unknown>,
   path: string,
 ): EffectLoweringResult<EffectAST> {
   if (typeof source.phase !== 'string') {
-    return missingCapability(path, 'advanceToPhase effect', source, ['{ advanceToPhase: { phase: string } }']);
+    return missingCapability(path, 'gotoPhase effect', source, ['{ gotoPhase: { phase: string } }']);
   }
 
   return {
     value: {
-      advanceToPhase: {
+      gotoPhase: {
         phase: source.phase,
       },
+    },
+    diagnostics: [],
+  };
+}
+
+function lowerPushInterruptPhaseEffect(
+  source: Record<string, unknown>,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (typeof source.phase !== 'string' || typeof source.resumePhase !== 'string') {
+    return missingCapability(path, 'pushInterruptPhase effect', source, [
+      '{ pushInterruptPhase: { phase: string, resumePhase: string } }',
+    ]);
+  }
+
+  return {
+    value: {
+      pushInterruptPhase: {
+        phase: source.phase,
+        resumePhase: source.resumePhase,
+      },
+    },
+    diagnostics: [],
+  };
+}
+
+function lowerPopInterruptPhaseEffect(
+  source: Record<string, unknown>,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (Object.keys(source).length !== 0) {
+    return missingCapability(path, 'popInterruptPhase effect', source, ['{ popInterruptPhase: {} }']);
+  }
+
+  return {
+    value: {
+      popInterruptPhase: {},
     },
     diagnostics: [],
   };

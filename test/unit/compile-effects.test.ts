@@ -209,13 +209,22 @@ describe('compile-effects lowering', () => {
     ]);
   });
 
-  it('lowers advanceToPhase effect', () => {
+  it('lowers gotoPhase/pushInterruptPhase/popInterruptPhase effects', () => {
     const result = lowerEffectArray(
       [
         {
-          advanceToPhase: {
+          gotoPhase: {
             phase: 'commitment',
           },
+        },
+        {
+          pushInterruptPhase: {
+            phase: 'commitment',
+            resumePhase: 'main',
+          },
+        },
+        {
+          popInterruptPhase: {},
         },
       ],
       context,
@@ -225,9 +234,18 @@ describe('compile-effects lowering', () => {
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, [
       {
-        advanceToPhase: {
+        gotoPhase: {
           phase: 'commitment',
         },
+      },
+      {
+        pushInterruptPhase: {
+          phase: 'commitment',
+          resumePhase: 'main',
+        },
+      },
+      {
+        popInterruptPhase: {},
       },
     ]);
   });

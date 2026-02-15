@@ -1,7 +1,9 @@
 import { EffectRuntimeError } from './effect-error.js';
+import { resetPhaseUsage } from './action-usage.js';
 import { advancePhase } from './phase-advance.js';
+import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST, TurnFlowPendingFreeOperationGrant } from './types.js';
+import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
 
 const isTurnFlowActionClass = (
   value: string,
@@ -131,25 +133,47 @@ export const applyGrantFreeOperation = (
   };
 };
 
-export const applyAdvanceToPhase = (
-  effect: Extract<EffectAST, { readonly advanceToPhase: unknown }>,
+export const applyGotoPhase = (
+  effect: Extract<EffectAST, { readonly gotoPhase: unknown }>,
   ctx: EffectContext,
 ): EffectResult => {
-  const targetPhase = effect.advanceToPhase.phase;
+  const targetPhase = effect.gotoPhase.phase;
   const phaseIds = ctx.def.turnStructure.phases.map((phase) => phase.id);
   if (!phaseIds.some((phaseId) => phaseId === targetPhase)) {
-    throw new EffectRuntimeError('EFFECT_RUNTIME', `advanceToPhase.phase is unknown: ${targetPhase}`, {
-      effectType: 'advanceToPhase',
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `gotoPhase.phase is unknown: ${targetPhase}`, {
+      effectType: 'gotoPhase',
       phase: targetPhase,
       phaseCandidates: phaseIds,
     });
+  }
+
+  const currentPhaseIndex = phaseIds.findIndex((phaseId) => phaseId === ctx.state.currentPhase);
+  const targetPhaseIndex = phaseIds.findIndex((phaseId) => phaseId === targetPhase);
+  if (currentPhaseIndex < 0 || targetPhaseIndex < 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `gotoPhase could not resolve current/target phase indices`, {
+      effectType: 'gotoPhase',
+      currentPhase: ctx.state.currentPhase,
+      targetPhase,
+    });
+  }
+
+  if (targetPhaseIndex < currentPhaseIndex) {
+    throw new EffectRuntimeError(
+      'EFFECT_RUNTIME',
+      `gotoPhase cannot cross a turn boundary (current=${String(ctx.state.currentPhase)}, target=${targetPhase})`,
+      {
+        effectType: 'gotoPhase',
+        currentPhase: ctx.state.currentPhase,
+        targetPhase,
+      },
+    );
   }
 
   if (ctx.state.currentPhase === targetPhase) {
     return { state: ctx.state, rng: ctx.rng };
   }
 
-  const maxAdvances = Math.max(1, phaseIds.length + 1);
+  const maxAdvances = Math.max(1, targetPhaseIndex - currentPhaseIndex);
   let currentState = ctx.state;
   for (let step = 0; step < maxAdvances; step += 1) {
     currentState = advancePhase(ctx.def, currentState);
@@ -161,9 +185,104 @@ export const applyAdvanceToPhase = (
     }
   }
 
-  throw new EffectRuntimeError('EFFECT_RUNTIME', `advanceToPhase could not reach phase: ${targetPhase}`, {
-    effectType: 'advanceToPhase',
+  throw new EffectRuntimeError('EFFECT_RUNTIME', `gotoPhase could not reach phase: ${targetPhase}`, {
+    effectType: 'gotoPhase',
     phase: targetPhase,
     maxAdvances,
   });
+};
+
+const resolvePhaseId = (
+  ctx: EffectContext,
+  phase: string,
+  effectType: string,
+  field: 'phase' | 'resumePhase',
+): GameState['currentPhase'] => {
+  const candidate = ctx.def.turnStructure.phases.find((entry) => entry.id === phase)?.id;
+  if (candidate === undefined) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', `${effectType}.${field} is unknown: ${phase}`, {
+      effectType,
+      field,
+      phase,
+      phaseCandidates: ctx.def.turnStructure.phases.map((entry) => entry.id),
+    });
+  }
+  return candidate;
+};
+
+export const applyPushInterruptPhase = (
+  effect: Extract<EffectAST, { readonly pushInterruptPhase: unknown }>,
+  ctx: EffectContext,
+): EffectResult => {
+  const targetPhase = resolvePhaseId(ctx, effect.pushInterruptPhase.phase, 'pushInterruptPhase', 'phase');
+  const resumePhase = resolvePhaseId(ctx, effect.pushInterruptPhase.resumePhase, 'pushInterruptPhase', 'resumePhase');
+  const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
+    type: 'phaseExit',
+    phase: ctx.state.currentPhase,
+  });
+  const nextStack = [
+    ...(exitedState.interruptPhaseStack ?? []),
+    { phase: targetPhase, resumePhase },
+  ] as const;
+  const enteredState = resetPhaseUsage({
+    ...exitedState,
+    currentPhase: targetPhase,
+    interruptPhaseStack: nextStack,
+  });
+  const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
+    type: 'phaseEnter',
+    phase: targetPhase,
+  });
+  return {
+    state: finalState,
+    rng: { state: finalState.rng },
+  };
+};
+
+export const applyPopInterruptPhase = (
+  _effect: Extract<EffectAST, { readonly popInterruptPhase: unknown }>,
+  ctx: EffectContext,
+): EffectResult => {
+  const activeStack = ctx.state.interruptPhaseStack ?? [];
+  if (activeStack.length === 0) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'popInterruptPhase requires a non-empty interruptPhaseStack', {
+      effectType: 'popInterruptPhase',
+    });
+  }
+
+  const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
+    type: 'phaseExit',
+    phase: ctx.state.currentPhase,
+  });
+  const stackAfterExit = exitedState.interruptPhaseStack ?? [];
+  const resumeFrame = stackAfterExit.at(-1);
+  if (resumeFrame === undefined) {
+    throw new EffectRuntimeError('EFFECT_RUNTIME', 'popInterruptPhase found no frame to resume after phaseExit', {
+      effectType: 'popInterruptPhase',
+    });
+  }
+
+  const nextStack = stackAfterExit.slice(0, -1);
+  const resumeBaseState: GameState = {
+    ...exitedState,
+    currentPhase: resumeFrame.resumePhase,
+  };
+  const { interruptPhaseStack, ...resumeStateWithoutStack } = resumeBaseState;
+  void interruptPhaseStack;
+  const resumedState = resetPhaseUsage(
+    nextStack.length === 0
+      ? resumeStateWithoutStack
+      : {
+          ...resumeBaseState,
+          interruptPhaseStack: nextStack,
+        },
+  );
+  const finalState = dispatchLifecycleEvent(ctx.def, resumedState, {
+    type: 'phaseEnter',
+    phase: resumeFrame.resumePhase,
+  });
+  return {
+    state: finalState,
+    rng: { state: finalState.rng },
+  };
 };

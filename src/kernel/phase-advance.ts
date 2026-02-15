@@ -2,39 +2,11 @@ import { asPlayerId } from './branded.js';
 import { resetPhaseUsage, resetTurnUsage } from './action-usage.js';
 import { expireLastingEffectsAtBoundaries, resolveBoundaryDurationsAtTurnEnd } from './event-execution.js';
 import { legalMoves } from './legal-moves.js';
+import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { dispatchTriggers } from './trigger-dispatch.js';
 import { terminalResult } from './terminal.js';
-import type { GameDef, GameState, TriggerEvent, TriggerLogEntry } from './types.js';
-
-const DEFAULT_MAX_TRIGGER_DEPTH = 8;
-
-const dispatchLifecycleEvent = (
-  def: GameDef,
-  state: GameState,
-  event: TriggerEvent,
-  triggerLogCollector?: TriggerLogEntry[],
-): GameState => {
-  const result = dispatchTriggers(
-    def,
-    state,
-    { state: state.rng },
-    event,
-    0,
-    def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH,
-    [],
-  );
-
-  if (triggerLogCollector !== undefined) {
-    triggerLogCollector.push(...result.triggerLog);
-  }
-
-  return {
-    ...result.state,
-    rng: result.rng.state,
-  };
-};
+import type { GameDef, GameState, TriggerLogEntry } from './types.js';
 
 const firstPhaseId = (def: GameDef): GameState['currentPhase'] => {
   const phaseId = def.turnStructure.phases.at(0)?.id;

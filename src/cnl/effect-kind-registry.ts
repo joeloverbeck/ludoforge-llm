@@ -22,7 +22,9 @@ export const SUPPORTED_EFFECT_KINDS = [
   'flipGlobalMarker',
   'shiftGlobalMarker',
   'grantFreeOperation',
-  'advanceToPhase',
+  'gotoPhase',
+  'pushInterruptPhase',
+  'popInterruptPhase',
 ] as const;
 
 export type SupportedEffectKind = typeof SUPPORTED_EFFECT_KINDS[number];

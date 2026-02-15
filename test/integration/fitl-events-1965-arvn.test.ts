@@ -124,7 +124,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     assert.equal(card?.unshaded?.text, 'Conduct a Commitment Phase.');
     assert.deepEqual(card?.unshaded?.effects, [
       { setVar: { scope: 'global', var: 'commitmentPhaseRequested', value: true } },
-      { advanceToPhase: { phase: 'commitment' } },
+      { pushInterruptPhase: { phase: 'commitment', resumePhase: 'main' } },
     ]);
     assert.deepEqual(card?.shaded?.effects, [
       {

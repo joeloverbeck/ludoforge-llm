@@ -212,9 +212,18 @@ describe('AST and selector schemas', () => {
         },
       },
       {
-        advanceToPhase: {
+        gotoPhase: {
           phase: 'commitment',
         },
+      },
+      {
+        pushInterruptPhase: {
+          phase: 'commitment',
+          resumePhase: 'main',
+        },
+      },
+      {
+        popInterruptPhase: {},
       },
       { setMarker: { space: 'saigon:none', marker: 'support', state: 'activeSupport' } },
       { setMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', state: 'activeSupport' } },

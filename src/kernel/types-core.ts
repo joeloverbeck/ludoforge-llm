@@ -369,7 +369,18 @@ export type ZobristFeature =
       readonly remainingTurnBoundaries: number;
       readonly remainingRoundBoundaries: number;
       readonly remainingCycleBoundaries: number;
+    }
+  | {
+      readonly kind: 'interruptPhaseFrame';
+      readonly slot: number;
+      readonly phase: string;
+      readonly resumePhase: string;
     };
+
+export interface InterruptPhaseFrame {
+  readonly phase: PhaseId;
+  readonly resumePhase: PhaseId;
+}
 
 export interface ActionUsageRecord {
   readonly turnCount: number;
@@ -393,6 +404,7 @@ export interface GameState {
   readonly markers: Readonly<Record<string, Readonly<Record<string, string>>>>;
   readonly globalMarkers?: Readonly<Record<string, string>>;
   readonly activeLastingEffects?: readonly ActiveLastingEffect[];
+  readonly interruptPhaseStack?: readonly InterruptPhaseFrame[];
 }
 
 export interface CompoundMovePayload {

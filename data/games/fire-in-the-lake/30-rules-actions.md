@@ -260,7 +260,7 @@ actions:
           scope: global
           var: commitmentPhaseRequested
           value: false
-      - advanceToPhase: { phase: main }
+      - popInterruptPhase: {}
     limits: []
 
 # ══════════════════════════════════════════════════════════════════════════════

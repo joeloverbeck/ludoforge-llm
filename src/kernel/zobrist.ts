@@ -98,6 +98,13 @@ const encodeFeature = (feature: ZobristFeature): string => {
         `remainingRoundBoundaries=${feature.remainingRoundBoundaries}`,
         `remainingCycleBoundaries=${feature.remainingCycleBoundaries}`,
       ].join('|');
+    case 'interruptPhaseFrame':
+      return [
+        'kind=interruptPhaseFrame',
+        `slot=${feature.slot}`,
+        `phase=${feature.phase}`,
+        `resumePhase=${feature.resumePhase}`,
+      ].join('|');
   }
 };
 
@@ -250,6 +257,16 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
       remainingTurnBoundaries: effect.remainingTurnBoundaries ?? -1,
       remainingRoundBoundaries: effect.remainingRoundBoundaries ?? -1,
       remainingCycleBoundaries: effect.remainingCycleBoundaries ?? -1,
+    });
+  });
+
+  const interruptPhaseStack = state.interruptPhaseStack ?? [];
+  interruptPhaseStack.forEach((frame, slot) => {
+    hash ^= zobristKey(table, {
+      kind: 'interruptPhaseFrame',
+      slot,
+      phase: frame.phase,
+      resumePhase: frame.resumePhase,
     });
   });
 

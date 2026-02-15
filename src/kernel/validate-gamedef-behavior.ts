@@ -775,17 +775,45 @@ export const validateEffectAst = (
     return;
   }
 
-  if ('advanceToPhase' in effect) {
-    if (!context.phaseNames.has(effect.advanceToPhase.phase)) {
+  if ('gotoPhase' in effect) {
+    if (!context.phaseNames.has(effect.gotoPhase.phase)) {
       pushMissingReferenceDiagnostic(
         diagnostics,
         'REF_PHASE_MISSING',
-        `${path}.advanceToPhase.phase`,
-        `Unknown phase "${effect.advanceToPhase.phase}".`,
-        effect.advanceToPhase.phase,
+        `${path}.gotoPhase.phase`,
+        `Unknown phase "${effect.gotoPhase.phase}".`,
+        effect.gotoPhase.phase,
         context.phaseCandidates,
       );
     }
+    return;
+  }
+
+  if ('pushInterruptPhase' in effect) {
+    if (!context.phaseNames.has(effect.pushInterruptPhase.phase)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_PHASE_MISSING',
+        `${path}.pushInterruptPhase.phase`,
+        `Unknown phase "${effect.pushInterruptPhase.phase}".`,
+        effect.pushInterruptPhase.phase,
+        context.phaseCandidates,
+      );
+    }
+    if (!context.phaseNames.has(effect.pushInterruptPhase.resumePhase)) {
+      pushMissingReferenceDiagnostic(
+        diagnostics,
+        'REF_PHASE_MISSING',
+        `${path}.pushInterruptPhase.resumePhase`,
+        `Unknown phase "${effect.pushInterruptPhase.resumePhase}".`,
+        effect.pushInterruptPhase.resumePhase,
+        context.phaseCandidates,
+      );
+    }
+    return;
+  }
+
+  if ('popInterruptPhase' in effect) {
     return;
   }
 

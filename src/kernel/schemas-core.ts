@@ -246,6 +246,13 @@ export const ActiveLastingEffectSchema = z
   })
   .strict();
 
+export const InterruptPhaseFrameSchema = z
+  .object({
+    phase: StringSchema,
+    resumePhase: StringSchema,
+  })
+  .strict();
+
 export const RngStateSchema = z
   .object({
     algorithm: z.literal('pcg-dxsm-128'),
@@ -271,6 +278,7 @@ export const GameStateSchema = z
     markers: z.record(StringSchema, z.record(StringSchema, StringSchema)),
     globalMarkers: z.record(StringSchema, StringSchema).optional(),
     activeLastingEffects: z.array(ActiveLastingEffectSchema).optional(),
+    interruptPhaseStack: z.array(InterruptPhaseFrameSchema).optional(),
   })
   .strict();
 

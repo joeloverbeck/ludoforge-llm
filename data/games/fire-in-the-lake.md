@@ -3628,6 +3628,18 @@ eventDecks:
                         - { prop: activity, eq: underground }
                     to:
                       zoneExpr: { concat: ['available-', { ref: tokenProp, token: $targetInsurgent, prop: faction }, ':none'] }
+      - id: card-125
+        title: Nguyen Khanh
+        sideMode: single
+        order: 125
+        tags: [coup]
+        metadata:
+          flavorText: "Corps commanders ascendant."
+        unshaded:
+          text: "Transport uses max 1 LoC space."
+          effects:
+            - setGlobalMarker: { marker: activeLeader, state: khanh }
+            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Pool Zones (piece availability pools — supplement map-derived board zones)

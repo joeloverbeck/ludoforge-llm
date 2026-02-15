@@ -10,7 +10,10 @@ import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { resolveEventEffectList } from './event-execution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
-import { decideLegalChoicesPipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
+import {
+  decideDiscoveryLegalChoicesPipelineViability,
+  evaluateDiscoveryPipelinePredicateStatus,
+} from './pipeline-viability-policy.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { toChoiceIllegalReason } from './legality-outcome.js';
@@ -409,8 +412,10 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
 
   if (pipelineDispatch.kind === 'matched') {
     const pipeline = pipelineDispatch.profile;
-    const status = evaluatePipelinePredicateStatus(action, pipeline, evalCtx, { includeCostValidation: false });
-    const viabilityDecision = decideLegalChoicesPipelineViability(status);
+    const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, evalCtx, {
+      includeCostValidation: partialMove.freeOperation !== true,
+    });
+    const viabilityDecision = decideDiscoveryLegalChoicesPipelineViability(status);
     if (viabilityDecision.kind === 'illegalChoice') {
       return { kind: 'illegal', complete: false, reason: toChoiceIllegalReason(viabilityDecision.outcome) };
     }

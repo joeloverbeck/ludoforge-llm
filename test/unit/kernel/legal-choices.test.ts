@@ -711,6 +711,93 @@ phase: asPhaseId('main'),
       );
     });
 
+    it('treats missing-binding costValidation as deferred during discovery', () => {
+      const action: ActionDef = {
+        id: asActionId('deferredCostValidationOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'deferredCostValidationProfile',
+        actionId: asActionId('deferredCostValidationOp'),
+        legality: null,
+        costValidation: { op: '==', left: { ref: 'binding', name: '$target' }, right: 'a' },
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseOne: {
+                  internalDecisionId: 'decision:$target',
+                  bind: '$target',
+                  options: { query: 'enums', values: ['a', 'b'] },
+                },
+              } as EffectAST,
+            ],
+          },
+        ],
+        atomicity: 'atomic',
+      };
+
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const state = makeBaseState();
+
+      const result = legalChoices(def, state, makeMove('deferredCostValidationOp'));
+      assert.equal(result.complete, false);
+      assert.equal(result.type, 'chooseOne');
+      assert.equal(result.decisionId, 'decision:$target');
+      assert.deepStrictEqual(result.options, ['a', 'b']);
+    });
+
+    it('does not mask nonrecoverable costValidation evaluation failures', () => {
+      const action: ActionDef = {
+        id: asActionId('brokenCostValidationOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'brokenCostValidationProfile',
+        actionId: asActionId('brokenCostValidationOp'),
+        legality: null,
+        costValidation: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+        costEffects: [],
+        targeting: {},
+        stages: [],
+        atomicity: 'atomic',
+      };
+
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const state = makeBaseState();
+
+      assert.throws(
+        () => legalChoices(def, state, makeMove('brokenCostValidationOp')),
+        (error: unknown) => {
+          assert.ok(error instanceof Error);
+          const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+          assert.equal(details.code, 'ACTION_PIPELINE_PREDICATE_EVALUATION_FAILED');
+          assert.equal(details.context?.actionId, asActionId('brokenCostValidationOp'));
+          assert.equal(details.context?.profileId, 'brokenCostValidationProfile');
+          assert.equal(details.context?.predicate, 'costValidation');
+          return true;
+        },
+      );
+    });
+
     it('returns illegal when pipelines exist but none are applicable', () => {
       const action: ActionDef = {
         id: asActionId('strictNoFallbackOp'),

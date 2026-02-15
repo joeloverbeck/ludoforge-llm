@@ -18,6 +18,10 @@ import {
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
+import {
+  decideDiscoveryLegalChoicesPipelineViability,
+  evaluateDiscoveryPipelinePredicateStatus,
+} from '../../../src/kernel/pipeline-viability-policy.js';
 
 const makeState = (resources: number): GameState => ({
   globalVars: { resources },
@@ -63,13 +67,17 @@ const makeDef = (action: ActionDef, pipeline: ActionPipelineDef): GameDef =>
     terminal: { conditions: [] },
   }) as unknown as GameDef;
 
-const makeEvalCtx = (def: GameDef, state: GameState): EvalContext => ({
+const makeEvalCtx = (
+  def: GameDef,
+  state: GameState,
+  bindings: Readonly<Record<string, unknown>> = {},
+): EvalContext => ({
   def,
   adjacencyGraph: buildAdjacencyGraph(def.zones),
   state,
   activePlayer: state.activePlayer,
   actorPlayer: state.activePlayer,
-  bindings: {},
+  bindings,
   collector: createCollector(),
 });
 
@@ -160,5 +168,83 @@ describe('pipeline viability policy', () => {
       kind: 'allowExecution',
       costValidationPassed: false,
     });
+  });
+});
+
+describe('evaluateDiscoveryPipelinePredicateStatus()', () => {
+  it('returns passed/failed states for fully bound predicates', () => {
+    const action = makeAction();
+    const profile: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 1 },
+      costValidation: { op: '>=', left: { ref: 'binding', name: '$cost' }, right: 2 },
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'atomic',
+    };
+    const def = makeDef(action, profile);
+
+    const passed = evaluateDiscoveryPipelinePredicateStatus(action, profile, makeEvalCtx(def, makeState(3), { '$cost': 3 }));
+    assert.equal(passed.legality, 'passed');
+    assert.equal(passed.costValidation, 'passed');
+    assert.deepStrictEqual(decideDiscoveryLegalChoicesPipelineViability(passed), { kind: 'allowChoiceResolution' });
+
+    const failed = evaluateDiscoveryPipelinePredicateStatus(action, profile, makeEvalCtx(def, makeState(3), { '$cost': 1 }));
+    assert.equal(failed.legality, 'passed');
+    assert.equal(failed.costValidation, 'failed');
+    assert.deepStrictEqual(decideDiscoveryLegalChoicesPipelineViability(failed), {
+      kind: 'illegalChoice',
+      outcome: 'pipelineLegalityFailed',
+    });
+  });
+
+  it('returns deferred for recoverable missing-binding discovery contexts', () => {
+    const action = makeAction();
+    const profile: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 1 },
+      costValidation: { op: '>=', left: { ref: 'binding', name: '$cost' }, right: 2 },
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'atomic',
+    };
+    const def = makeDef(action, profile);
+    const status = evaluateDiscoveryPipelinePredicateStatus(action, profile, makeEvalCtx(def, makeState(3)));
+
+    assert.equal(status.legality, 'passed');
+    assert.equal(status.costValidation, 'deferred');
+    assert.deepStrictEqual(decideDiscoveryLegalChoicesPipelineViability(status), { kind: 'allowChoiceResolution' });
+  });
+
+  it('throws typed runtime errors for nonrecoverable discovery contexts', () => {
+    const action = makeAction();
+    const profile: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 1 },
+      costValidation: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'atomic',
+    };
+    const def = makeDef(action, profile);
+
+    assert.throws(
+      () => evaluateDiscoveryPipelinePredicateStatus(action, profile, makeEvalCtx(def, makeState(3))),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'ACTION_PIPELINE_PREDICATE_EVALUATION_FAILED');
+        assert.equal(details.context?.actionId, asActionId('op'));
+        assert.equal(details.context?.profileId, 'profile');
+        assert.equal(details.context?.predicate, 'costValidation');
+        return true;
+      },
+    );
   });
 });

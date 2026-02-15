@@ -1,4 +1,8 @@
-import { evalActionPipelinePredicate } from './action-pipeline-predicates.js';
+import {
+  evalActionPipelinePredicate,
+  evalActionPipelinePredicateForDiscovery,
+  type DiscoveryPredicateState,
+} from './action-pipeline-predicates.js';
 import { toApplyMoveIllegalMetadataCode, type ApplyMoveIllegalMetadataCode } from './legality-outcome.js';
 import type { EvalContext } from './eval-context.js';
 import type { ActionDef, ActionPipelineDef } from './types.js';
@@ -10,6 +14,12 @@ export type PipelineViabilityOutcome =
 export interface PipelinePredicateStatus {
   readonly legalityPassed: boolean;
   readonly costValidationPassed: boolean;
+  readonly atomicity: ActionPipelineDef['atomicity'];
+}
+
+export interface DiscoveryPipelinePredicateStatus {
+  readonly legality: DiscoveryPredicateState;
+  readonly costValidation: DiscoveryPredicateState;
   readonly atomicity: ActionPipelineDef['atomicity'];
 }
 
@@ -53,6 +63,37 @@ export const evaluatePipelinePredicateStatus = (
   };
 };
 
+const evalDiscoveryPredicate = (
+  action: ActionDef,
+  profileId: string,
+  predicate: 'legality' | 'costValidation',
+  condition: ActionPipelineDef['legality'],
+  evalCtx: EvalContext,
+): DiscoveryPredicateState => {
+  if (condition === null) {
+    return 'passed';
+  }
+  return evalActionPipelinePredicateForDiscovery(action, profileId, predicate, condition, evalCtx);
+};
+
+export const evaluateDiscoveryPipelinePredicateStatus = (
+  action: ActionDef,
+  pipeline: ActionPipelineDef,
+  evalCtx: EvalContext,
+  options?: { readonly includeCostValidation?: boolean },
+): DiscoveryPipelinePredicateStatus => {
+  const legality = evalDiscoveryPredicate(action, pipeline.id, 'legality', pipeline.legality, evalCtx);
+  const includeCostValidation = options?.includeCostValidation ?? true;
+  const costValidation = !includeCostValidation
+    ? 'passed'
+    : evalDiscoveryPredicate(action, pipeline.id, 'costValidation', pipeline.costValidation, evalCtx);
+  return {
+    legality,
+    costValidation,
+    atomicity: pipeline.atomicity,
+  };
+};
+
 export const decideLegalMovesPipelineViability = (status: PipelinePredicateStatus): LegalMovesPipelineDecision => {
   if (!status.legalityPassed) {
     return { kind: 'excludeTemplate', outcome: 'pipelineLegalityFailed' };
@@ -65,6 +106,18 @@ export const decideLegalMovesPipelineViability = (status: PipelinePredicateStatu
 
 export const decideLegalChoicesPipelineViability = (status: PipelinePredicateStatus): LegalChoicesPipelineDecision => {
   if (!status.legalityPassed) {
+    return { kind: 'illegalChoice', outcome: 'pipelineLegalityFailed' };
+  }
+  return { kind: 'allowChoiceResolution' };
+};
+
+export const decideDiscoveryLegalChoicesPipelineViability = (
+  status: DiscoveryPipelinePredicateStatus,
+): LegalChoicesPipelineDecision => {
+  if (status.legality === 'failed') {
+    return { kind: 'illegalChoice', outcome: 'pipelineLegalityFailed' };
+  }
+  if (status.atomicity === 'atomic' && status.costValidation === 'failed') {
     return { kind: 'illegalChoice', outcome: 'pipelineLegalityFailed' };
   }
   return { kind: 'allowChoiceResolution' };

@@ -1,7 +1,10 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { evalActionPipelinePredicate } from '../../../src/kernel/action-pipeline-predicates.js';
+import {
+  evalActionPipelinePredicate,
+  evalActionPipelinePredicateForDiscovery,
+} from '../../../src/kernel/action-pipeline-predicates.js';
 import { createCollector } from '../../../src/kernel/execution-collector.js';
 import { buildAdjacencyGraph } from '../../../src/kernel/spatial.js';
 import {
@@ -87,6 +90,50 @@ describe('evalActionPipelinePredicate()', () => {
         assert.equal(details.context?.actionId, asActionId('op'));
         assert.equal(details.context?.profileId, 'broken-profile');
         assert.equal(details.context?.predicate, 'legality');
+        return true;
+      },
+    );
+  });
+});
+
+describe('evalActionPipelinePredicateForDiscovery()', () => {
+  it('returns deferred for missing binding instead of throwing', () => {
+    const def = makeDef();
+    const action = def.actions[0] as ActionDef;
+    const state = makeState();
+    const ctx = makeCtx(def, state);
+
+    const result = evalActionPipelinePredicateForDiscovery(
+      action,
+      'discovery-profile',
+      'costValidation',
+      { op: '==', left: { ref: 'binding', name: '$missing' }, right: 1 },
+      ctx,
+    );
+    assert.equal(result, 'deferred');
+  });
+
+  it('throws typed runtime error for nonrecoverable evaluation failures', () => {
+    const def = makeDef();
+    const action = def.actions[0] as ActionDef;
+    const state = makeState();
+    const ctx = makeCtx(def, state);
+
+    assert.throws(
+      () => evalActionPipelinePredicateForDiscovery(
+        action,
+        'discovery-profile',
+        'costValidation',
+        { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+        ctx,
+      ),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'ACTION_PIPELINE_PREDICATE_EVALUATION_FAILED');
+        assert.equal(details.context?.actionId, asActionId('op'));
+        assert.equal(details.context?.profileId, 'discovery-profile');
+        assert.equal(details.context?.predicate, 'costValidation');
         return true;
       },
     );

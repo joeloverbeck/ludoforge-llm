@@ -495,6 +495,53 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports missing intsInVarRange source variable', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [{ name: '$n', domain: { query: 'intsInVarRange', var: 'monye' } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_INTS_VAR_RANGE_SOURCE_MISSING' &&
+          diag.path === 'actions[0].params[0].domain.var' &&
+          diag.severity === 'error',
+      ),
+    );
+  });
+
+  it('reports non-int intsInVarRange source variable', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      globalVars: [...base.globalVars, { name: 'flag', type: 'boolean', init: false }],
+      actions: [
+        {
+          ...base.actions[0],
+          params: [{ name: '$n', domain: { query: 'intsInVarRange', var: 'flag' } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_INTS_VAR_RANGE_SOURCE_TYPE_INVALID' &&
+          diag.path === 'actions[0].params[0].domain.var' &&
+          diag.severity === 'error',
+      ),
+    );
+  });
+
   it('reports unknown marker lattice references in setMarker effects', () => {
     const base = createValidGameDef();
     const def = {

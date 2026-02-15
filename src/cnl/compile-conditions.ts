@@ -30,6 +30,7 @@ const SUPPORTED_QUERY_KINDS = [
   'tokensInZone',
   'tokensInMapSpaces',
   'intsInRange',
+  'intsInVarRange',
   'enums',
   'globalMarkers',
   'players',
@@ -514,6 +515,43 @@ export function lowerQueryNode(
       }
       return {
         value: { query: 'intsInRange', min: min.value, max: max.value },
+        diagnostics,
+      };
+    }
+    case 'intsInVarRange': {
+      if (typeof source.var !== 'string' || source.var.trim() === '') {
+        return missingCapability(path, 'intsInVarRange query', source, [
+          '{ query: "intsInVarRange", var: string, scope?: "global"|"perPlayer", min?: <NumericValueExpr>, max?: <NumericValueExpr> }',
+        ]);
+      }
+
+      if (source.scope !== undefined && source.scope !== 'global' && source.scope !== 'perPlayer') {
+        return missingCapability(`${path}.scope`, 'intsInVarRange scope', source.scope, ['global', 'perPlayer']);
+      }
+
+      const min =
+        source.min === undefined
+          ? { value: undefined, diagnostics: [] as readonly Diagnostic[] }
+          : lowerIntDomainBound(source.min, context, `${path}.min`);
+      const max =
+        source.max === undefined
+          ? { value: undefined, diagnostics: [] as readonly Diagnostic[] }
+          : lowerIntDomainBound(source.max, context, `${path}.max`);
+      const diagnostics = [...min.diagnostics, ...max.diagnostics];
+      const minValue = source.min === undefined ? undefined : min.value;
+      const maxValue = source.max === undefined ? undefined : max.value;
+      if (minValue === null || maxValue === null) {
+        return { value: null, diagnostics };
+      }
+
+      return {
+        value: {
+          query: 'intsInVarRange',
+          var: source.var,
+          ...(source.scope === undefined ? {} : { scope: source.scope }),
+          ...(minValue === undefined ? {} : { min: minValue }),
+          ...(maxValue === undefined ? {} : { max: maxValue }),
+        },
         diagnostics,
       };
     }

@@ -29,6 +29,25 @@ function resolveIntDomainBound(bound: NumericValueExpr, ctx: EvalContext): numbe
   return value;
 }
 
+function resolveDeclaredIntVarBounds(
+  query: Extract<OptionsQuery, { readonly query: 'intsInVarRange' }>,
+  ctx: EvalContext,
+): { readonly min: number; readonly max: number } | null {
+  const scope = query.scope ?? 'global';
+  const declared =
+    scope === 'global'
+      ? ctx.def.globalVars.find((variable) => variable.name === query.var)
+      : ctx.def.perPlayerVars.find((variable) => variable.name === query.var);
+  if (declared === undefined || declared.type !== 'int') {
+    return null;
+  }
+
+  return {
+    min: declared.min,
+    max: declared.max,
+  };
+}
+
 function assertWithinBounds(length: number, query: OptionsQuery, maxQueryResults: number): void {
   if (length > maxQueryResults) {
     throw queryBoundsExceededError('Query results exceed configured maxQueryResults', {
@@ -258,6 +277,31 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       }
 
       return Array.from({ length: rangeLength }, (_, index) => min + index);
+    }
+
+    case 'intsInVarRange': {
+      const declaredBounds = resolveDeclaredIntVarBounds(query, ctx);
+      if (declaredBounds === null) {
+        return [];
+      }
+
+      const derivedMin =
+        query.min === undefined ? declaredBounds.min : resolveIntDomainBound(query.min, ctx);
+      const derivedMax =
+        query.max === undefined ? declaredBounds.max : resolveIntDomainBound(query.max, ctx);
+      if (derivedMin === null || derivedMax === null) {
+        return [];
+      }
+
+      const min = Math.max(declaredBounds.min, derivedMin);
+      const max = Math.min(declaredBounds.max, derivedMax);
+      if (min > max) {
+        return [];
+      }
+
+      const rangeLength = max - min + 1;
+      assertWithinBounds(rangeLength, query, maxQueryResults);
+      return Array.from({ length: rangeLength }, (_unused, index) => min + index);
     }
 
     case 'enums': {

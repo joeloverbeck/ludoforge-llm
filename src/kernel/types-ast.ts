@@ -121,6 +121,13 @@ export type OptionsQuery =
       readonly filter?: readonly TokenFilterPredicate[];
     }
   | { readonly query: 'intsInRange'; readonly min: NumericValueExpr; readonly max: NumericValueExpr }
+  | {
+      readonly query: 'intsInVarRange';
+      readonly var: string;
+      readonly scope?: 'global' | 'perPlayer';
+      readonly min?: NumericValueExpr;
+      readonly max?: NumericValueExpr;
+    }
   | { readonly query: 'enums'; readonly values: readonly string[] }
   | { readonly query: 'globalMarkers'; readonly markers?: readonly string[]; readonly states?: readonly string[] }
   | { readonly query: 'players' }

@@ -464,6 +464,79 @@ export const validateOptionsQuery = (
       }
       return;
     }
+    case 'intsInVarRange': {
+      const scope = query.scope ?? 'global';
+      const varTypesByName = scope === 'global' ? context.globalVarTypesByName : context.perPlayerVarTypesByName;
+      const varCandidates = scope === 'global' ? context.globalVarCandidates : context.perPlayerVarCandidates;
+      const declaredType = varTypesByName.get(query.var);
+
+      if (declaredType === undefined) {
+        pushMissingReferenceDiagnostic(
+          diagnostics,
+          'DOMAIN_INTS_VAR_RANGE_SOURCE_MISSING',
+          `${path}.var`,
+          `Unknown ${scope === 'global' ? 'global' : 'per-player'} variable "${query.var}" for intsInVarRange source.`,
+          query.var,
+          varCandidates,
+        );
+      } else if (declaredType !== 'int') {
+        diagnostics.push({
+          code: 'DOMAIN_INTS_VAR_RANGE_SOURCE_TYPE_INVALID',
+          path: `${path}.var`,
+          severity: 'error',
+          message: `intsInVarRange source variable "${query.var}" must be an int variable.`,
+          suggestion: 'Use an int variable declaration, or switch to a non-derived domain query.',
+        });
+      }
+
+      if (query.min !== undefined) {
+        if (typeof query.min === 'number') {
+          if (!Number.isSafeInteger(query.min)) {
+            diagnostics.push({
+              code: 'DOMAIN_INTS_RANGE_BOUND_INVALID',
+              path: `${path}.min`,
+              severity: 'error',
+              message: 'intsInVarRange.min must be a safe integer literal when provided as a number.',
+              suggestion: 'Use an integer literal or a ValueExpr that evaluates to an integer.',
+            });
+          }
+        } else {
+          validateNumericValueExpr(diagnostics, query.min, `${path}.min`, context);
+        }
+      }
+
+      if (query.max !== undefined) {
+        if (typeof query.max === 'number') {
+          if (!Number.isSafeInteger(query.max)) {
+            diagnostics.push({
+              code: 'DOMAIN_INTS_RANGE_BOUND_INVALID',
+              path: `${path}.max`,
+              severity: 'error',
+              message: 'intsInVarRange.max must be a safe integer literal when provided as a number.',
+              suggestion: 'Use an integer literal or a ValueExpr that evaluates to an integer.',
+            });
+          }
+        } else {
+          validateNumericValueExpr(diagnostics, query.max, `${path}.max`, context);
+        }
+      }
+
+      if (
+        query.min !== undefined &&
+        query.max !== undefined &&
+        typeof query.min === 'number' &&
+        typeof query.max === 'number' &&
+        query.min > query.max
+      ) {
+        diagnostics.push({
+          code: 'DOMAIN_INTS_RANGE_INVALID',
+          path,
+          severity: 'error',
+          message: `Invalid intsInVarRange domain; min (${query.min}) must be <= max (${query.max}).`,
+        });
+      }
+      return;
+    }
     case 'zones':
     case 'mapSpaces': {
       if (query.filter?.owner) {

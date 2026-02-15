@@ -75,6 +75,29 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers intsInVarRange query with optional scope and bound overrides', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'intsInVarRange',
+        var: 'nvaResources',
+        scope: 'global',
+        min: 1,
+        max: { op: '+', left: { ref: 'binding', name: '$cap' }, right: 0 },
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'intsInVarRange',
+      var: 'nvaResources',
+      scope: 'global',
+      min: 1,
+      max: { op: '+', left: { ref: 'binding', name: '$cap' }, right: 0 },
+    });
+  });
+
   it('rejects non-numeric intsInRange bounds during lowering', () => {
     const result = lowerQueryNode(
       {

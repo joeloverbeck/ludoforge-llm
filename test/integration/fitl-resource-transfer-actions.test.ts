@@ -23,8 +23,8 @@ describe('FITL NVA/VC resource transfer actions', () => {
 
     assert.ok(nvaTransfer, 'Expected nvaTransferResources action in compiled GameDef');
     assert.ok(vcTransfer, 'Expected vcTransferResources action in compiled GameDef');
-    assert.deepEqual(nvaTransfer?.params, [{ name: 'amount', domain: { query: 'intsInRange', min: 1, max: 75 } }]);
-    assert.deepEqual(vcTransfer?.params, [{ name: 'amount', domain: { query: 'intsInRange', min: 1, max: 75 } }]);
+    assert.deepEqual(nvaTransfer?.params, [{ name: 'amount', domain: { query: 'intsInVarRange', var: 'nvaResources', min: 1 } }]);
+    assert.deepEqual(vcTransfer?.params, [{ name: 'amount', domain: { query: 'intsInVarRange', var: 'vcResources', min: 1 } }]);
   });
 
   it('transfers resources from NVA to VC and conserves total', () => {

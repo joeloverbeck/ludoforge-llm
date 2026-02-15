@@ -209,6 +209,39 @@ describe('evalQuery', () => {
     );
   });
 
+  it('evaluates intsInVarRange from declared int-variable bounds and clamps overrides', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        globalVars: [
+          { name: 'resourcePool', type: 'int', init: 3, min: 0, max: 5 },
+          { name: 'flag', type: 'boolean', init: false },
+        ],
+        perPlayerVars: [{ name: 'budget', type: 'int', init: 1, min: 0, max: 2 }],
+      },
+    });
+
+    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'resourcePool' }, ctx), [0, 1, 2, 3, 4, 5]);
+    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'resourcePool', min: 1 }, ctx), [1, 2, 3, 4, 5]);
+    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'resourcePool', min: -3, max: 99 }, ctx), [0, 1, 2, 3, 4, 5]);
+    assert.deepEqual(evalQuery({ query: 'intsInVarRange', scope: 'perPlayer', var: 'budget', max: 1 }, ctx), [0, 1]);
+  });
+
+  it('returns empty domain for intsInVarRange when source var is missing, non-int, or bounds are invalid', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        globalVars: [{ name: 'flag', type: 'boolean', init: true }],
+        perPlayerVars: [],
+      },
+      bindings: { $badMax: 1.5 },
+    });
+
+    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'missing' }, ctx), []);
+    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'flag' }, ctx), []);
+    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'missing', min: 1, max: { ref: 'binding', name: '$badMax' } }, ctx), []);
+  });
+
   it('echoes enums and returns players sorted ascending', () => {
     const ctx = makeCtx();
 

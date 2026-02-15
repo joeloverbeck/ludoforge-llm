@@ -68,7 +68,7 @@ actions:
     phase: main
     params:
       - name: amount
-        domain: { query: intsInRange, min: 1, max: 75 }
+        domain: { query: intsInVarRange, var: nvaResources, min: 1 }
     pre:
       op: and
       args:
@@ -88,7 +88,7 @@ actions:
     phase: main
     params:
       - name: amount
-        domain: { query: intsInRange, min: 1, max: 75 }
+        domain: { query: intsInVarRange, var: vcResources, min: 1 }
     pre:
       op: and
       args:

@@ -20,6 +20,7 @@ function expectSafeInteger(value: unknown, message: string, context: Readonly<Re
 function extractAggregateValue(
   item: unknown,
   prop: string | undefined,
+  ctx: EvalContext,
   aggregateExpr: Extract<ValueExpr, { readonly aggregate: unknown }>,
   index: number,
 ): number {
@@ -32,8 +33,24 @@ function extractAggregateValue(
     });
   }
 
+  if (typeof item === 'string') {
+    const mapSpaces = ctx.mapSpaces ?? [];
+    const mapSpace = mapSpaces.find((space) => space.id === item);
+    if (mapSpace !== undefined) {
+      const propValue = (mapSpace as unknown as Record<string, unknown>)[prop];
+      return expectSafeInteger(propValue, 'Aggregate map-space prop value must be a finite safe integer', {
+        expr: aggregateExpr,
+        index,
+        prop,
+        zone: item,
+        value: propValue,
+        availableProps: Object.keys(mapSpace).sort(),
+      });
+    }
+  }
+
   if (typeof item !== 'object' || item === null || !('props' in item)) {
-    throw typeMismatchError('Aggregate prop extraction requires token-like items with props', {
+    throw typeMismatchError('Aggregate prop extraction requires token-like items or map-space ids', {
       expr: aggregateExpr,
       index,
       prop,
@@ -83,7 +100,7 @@ export function evalValue(expr: ValueExpr, ctx: EvalContext): number | boolean |
       return 0;
     }
 
-    const values = items.map((item, index) => extractAggregateValue(item, aggregate.prop, expr, index));
+    const values = items.map((item, index) => extractAggregateValue(item, aggregate.prop, ctx, expr, index));
 
     if (aggregate.op === 'sum') {
       const total = values.reduce((acc, value) => acc + value, 0);

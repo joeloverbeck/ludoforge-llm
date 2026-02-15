@@ -210,6 +210,71 @@ describe('evalValue', () => {
     );
   });
 
+  it('supports aggregate prop extraction from filtered map spaces', () => {
+    const mapSpaces = [
+      {
+        id: 'alpha:none',
+        spaceType: 'city',
+        population: 3,
+        econ: 1,
+        terrainTags: [],
+        country: 'sv',
+        coastal: false,
+        adjacentTo: ['beta:none'],
+      },
+      {
+        id: 'beta:none',
+        spaceType: 'province',
+        population: 2,
+        econ: 1,
+        terrainTags: [],
+        country: 'sv',
+        coastal: false,
+        adjacentTo: ['alpha:none'],
+      },
+    ] as const;
+    const def: GameDef = {
+      ...makeDef(),
+      zones: [
+        ...makeDef().zones,
+        { id: asZoneId('alpha:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('beta:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      mapSpaces,
+    };
+    const state: GameState = {
+      ...makeState(),
+      zones: {
+        ...makeState().zones,
+        'alpha:none': [],
+        'beta:none': [],
+      },
+      markers: {
+        'alpha:none': { supportOpposition: 'activeSupport' },
+        'beta:none': { supportOpposition: 'neutral' },
+      },
+    };
+    const ctx = makeCtx({ def, state, mapSpaces, adjacencyGraph: buildAdjacencyGraph(def.zones) });
+    const expr: ValueExpr = {
+      aggregate: {
+        op: 'sum',
+        query: {
+          query: 'mapSpaces',
+          filter: {
+            condition: {
+              op: '==',
+              left: { ref: 'markerState', space: '$zone', marker: 'supportOpposition' },
+              right: 'activeSupport',
+            },
+          },
+        },
+        prop: 'population',
+      },
+    };
+
+    assert.equal(evalValue(expr, ctx), 3);
+  });
+
   it('throws TYPE_MISMATCH for non-safe arithmetic operands', () => {
     const ctx = makeCtx();
 

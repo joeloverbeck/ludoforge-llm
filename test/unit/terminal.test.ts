@@ -232,7 +232,7 @@ describe('terminalResult', () => {
     });
   });
 
-  it('emits deterministic final-coup margin ranking metadata', () => {
+  it('emits deterministic final-coup margin ranking metadata with configurable tie-break precedence', () => {
     const def: GameDef = {
       ...createBaseDef(),
       globalVars: [
@@ -268,7 +268,7 @@ describe('terminalResult', () => {
           { faction: 'nva', value: { ref: 'gvar', var: 'mNva' } },
           { faction: 'arvn', value: { ref: 'gvar', var: 'mArvn' } },
         ],
-        ranking: { order: 'desc' },
+        ranking: { order: 'desc', tieBreakOrder: ['us', 'nva', 'arvn'] },
       },
     };
     const state = createBaseState({
@@ -294,14 +294,14 @@ describe('terminalResult', () => {
 
     assert.deepEqual(terminalResult(def, state), {
       type: 'win',
-      player: asPlayerId(1),
+      player: asPlayerId(0),
       victory: {
         timing: 'finalCoup',
         checkpointId: 'final-coup',
-        winnerFaction: 'nva',
+        winnerFaction: 'us',
         ranking: [
-          { faction: 'nva', margin: 8, rank: 1, tieBreakKey: 'nva' },
-          { faction: 'us', margin: 8, rank: 2, tieBreakKey: 'us' },
+          { faction: 'us', margin: 8, rank: 1, tieBreakKey: 'us' },
+          { faction: 'nva', margin: 8, rank: 2, tieBreakKey: 'nva' },
           { faction: 'arvn', margin: 2, rank: 3, tieBreakKey: 'arvn' },
         ],
       },

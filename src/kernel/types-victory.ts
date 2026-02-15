@@ -16,6 +16,7 @@ export interface VictoryMarginDef {
 
 export interface VictoryRankingDef {
   readonly order: 'desc' | 'asc';
+  readonly tieBreakOrder?: readonly string[];
 }
 
 export interface VictoryTerminalRankingEntry {

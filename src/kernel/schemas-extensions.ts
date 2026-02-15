@@ -439,6 +439,7 @@ export const VictoryMarginSchema = z
 export const VictoryRankingSchema = z
   .object({
     order: z.union([z.literal('desc'), z.literal('asc')]),
+    tieBreakOrder: z.array(StringSchema.min(1)).optional(),
   })
   .strict();
 

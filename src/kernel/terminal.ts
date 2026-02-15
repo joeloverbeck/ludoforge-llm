@@ -22,6 +22,7 @@ function buildEvalContext(
     activePlayer: state.activePlayer,
     actorPlayer,
     bindings: {},
+    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
     collector: createCollector(),
   };
 }
@@ -81,6 +82,8 @@ function finalVictoryRanking(
 ): readonly VictoryTerminalRankingEntry[] {
   const margins = def.terminal.margins ?? [];
   const order = def.terminal.ranking?.order ?? 'desc';
+  const tieBreakOrder = def.terminal.ranking?.tieBreakOrder ?? [];
+  const tieBreakIndex = new Map(tieBreakOrder.map((faction, index): readonly [string, number] => [faction, index]));
   const rows = margins.map((marginDef) => {
     const margin = evalValue(marginDef.value, buildEvalContext(def, adjacencyGraph, state));
     if (typeof margin !== 'number') {
@@ -101,6 +104,12 @@ function finalVictoryRanking(
   rows.sort((left, right) => {
     if (left.margin !== right.margin) {
       return order === 'desc' ? right.margin - left.margin : left.margin - right.margin;
+    }
+
+    const leftOrder = tieBreakIndex.get(left.faction) ?? Number.MAX_SAFE_INTEGER;
+    const rightOrder = tieBreakIndex.get(right.faction) ?? Number.MAX_SAFE_INTEGER;
+    if (leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
     }
 
     return left.tieBreakKey.localeCompare(right.tieBreakKey);

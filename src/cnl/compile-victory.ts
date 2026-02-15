@@ -308,7 +308,7 @@ export function lowerVictory(
         path: 'doc.terminal.ranking',
         severity: 'error',
         message: 'victory.ranking must be an object when declared.',
-        suggestion: 'Set ranking.order to "desc" or "asc".',
+        suggestion: 'Set ranking.order to "desc" or "asc", with optional ranking.tieBreakOrder.',
       });
     } else if (rawVictory.ranking.order !== 'desc' && rawVictory.ranking.order !== 'asc') {
       diagnostics.push({
@@ -317,6 +317,18 @@ export function lowerVictory(
         severity: 'error',
         message: 'victory.ranking.order must be "desc" or "asc".',
         suggestion: 'Use "desc" for high-to-low or "asc" for low-to-high ranking.',
+      });
+    } else if (
+      rawVictory.ranking.tieBreakOrder !== undefined &&
+      (!Array.isArray(rawVictory.ranking.tieBreakOrder) ||
+        !rawVictory.ranking.tieBreakOrder.every((value) => typeof value === 'string' && value.trim().length > 0))
+    ) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_VICTORY_RANKING_TIEBREAK_ORDER_INVALID',
+        path: 'doc.terminal.ranking.tieBreakOrder',
+        severity: 'error',
+        message: 'victory.ranking.tieBreakOrder must be an array of non-empty faction ids when declared.',
+        suggestion: 'Set ranking.tieBreakOrder to faction ids ordered from highest to lowest tie-break priority.',
       });
     }
   }

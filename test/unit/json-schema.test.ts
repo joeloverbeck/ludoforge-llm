@@ -203,6 +203,23 @@ const validRuntimeTrace: GameTrace = {
           step: 'costSpendSkipped',
           reason: 'costValidationFailed',
         },
+        {
+          kind: 'operationFree',
+          actionId: asActionId('playCard'),
+          step: 'costSpendSkipped',
+        },
+        {
+          kind: 'simultaneousSubmission',
+          player: '0',
+          move: { actionId: asActionId('playCard'), params: { amount: 1 } },
+          submittedBefore: { '0': false, '1': false },
+          submittedAfter: { '0': true, '1': false },
+        },
+        {
+          kind: 'simultaneousCommit',
+          playersInOrder: ['0', '1'],
+          pendingCount: 2,
+        },
         { kind: 'fired', triggerId: asTriggerId('onMainEnter'), event: { type: 'turnStart' }, depth: 0 },
       ],
       warnings: [],
@@ -390,6 +407,83 @@ describe('json schema artifacts', () => {
           error.instancePath === '/finalState/rng/state/1',
       ),
     );
+  });
+
+  it('trace with unknown trigger entry kind fails schema validation', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      moves: [
+        {
+          ...baseSerializedTrace.moves[0],
+          triggerFirings: [
+            ...baseSerializedTrace.moves[0]!.triggerFirings,
+            { kind: 'unexpectedEntry', value: 1 },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(validate(serializedTrace), false);
+    assert.ok(
+      validate.errors?.some(
+        (error: ErrorObject<string, Record<string, unknown>, unknown>) =>
+          error.instancePath === '/moves/0/triggerFirings/7' || error.instancePath === '/moves/0/triggerFirings/8',
+      ),
+      JSON.stringify(validate.errors, null, 2),
+    );
+  });
+
+  it('simultaneous turnOrderState without pending fails Trace.schema.json validation', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      finalState: {
+        ...baseSerializedTrace.finalState,
+        turnOrderState: {
+          type: 'simultaneous',
+          submitted: { '0': true, '1': false },
+        },
+      },
+    };
+
+    assert.equal(validate(serializedTrace), false);
+    assert.ok(
+      validate.errors?.some(
+        (error: ErrorObject<string, Record<string, unknown>, unknown>) =>
+          error.instancePath === '/finalState/turnOrderState',
+      ),
+      JSON.stringify(validate.errors, null, 2),
+    );
+  });
+
+  it('simultaneous turnOrderState with pending move payload validates against Trace.schema.json', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      finalState: {
+        ...baseSerializedTrace.finalState,
+        turnOrderState: {
+          type: 'simultaneous',
+          submitted: { '0': true, '1': false },
+          pending: {
+            '0': {
+              actionId: 'playCard',
+              params: { amount: 1, legal: true },
+              freeOperation: false,
+            },
+          },
+        },
+      },
+    };
+
+    assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
   });
 
 });

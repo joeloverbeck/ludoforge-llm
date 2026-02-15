@@ -303,12 +303,16 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["type", "submitted"],
+          "required": ["type", "submitted", "pending"],
           "properties": {
             "type": { "const": "simultaneous" },
             "submitted": {
               "type": "object",
               "additionalProperties": { "type": "boolean" }
+            },
+            "pending": {
+              "type": "object",
+              "additionalProperties": { "$ref": "#/definitions/simultaneousMoveSubmission" }
             }
           }
         }
@@ -412,13 +416,87 @@
         "reason": { "const": "costValidationFailed" }
       }
     },
+    "operationFreeTraceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "actionId", "step"],
+      "properties": {
+        "kind": { "const": "operationFree" },
+        "actionId": { "type": "string" },
+        "step": { "const": "costSpendSkipped" }
+      }
+    },
+    "simultaneousMoveSubmission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actionId", "params"],
+      "properties": {
+        "actionId": { "type": "string" },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "number" },
+              { "type": "string" },
+              { "type": "boolean" },
+              {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    { "type": "number" },
+                    { "type": "string" },
+                    { "type": "boolean" }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "freeOperation": { "type": "boolean" },
+        "actionClass": { "type": "string" }
+      }
+    },
+    "simultaneousSubmissionTraceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "player", "move", "submittedBefore", "submittedAfter"],
+      "properties": {
+        "kind": { "const": "simultaneousSubmission" },
+        "player": { "type": "string" },
+        "move": { "$ref": "#/definitions/simultaneousMoveSubmission" },
+        "submittedBefore": {
+          "type": "object",
+          "additionalProperties": { "type": "boolean" }
+        },
+        "submittedAfter": {
+          "type": "object",
+          "additionalProperties": { "type": "boolean" }
+        }
+      }
+    },
+    "simultaneousCommitTraceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "playersInOrder", "pendingCount"],
+      "properties": {
+        "kind": { "const": "simultaneousCommit" },
+        "playersInOrder": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "pendingCount": { "type": "number" }
+      }
+    },
     "triggerLogEntry": {
       "oneOf": [
         { "$ref": "#/definitions/triggerFiring" },
         { "$ref": "#/definitions/triggerTruncated" },
         { "$ref": "#/definitions/turnFlowLifecycleTraceEntry" },
         { "$ref": "#/definitions/turnFlowEligibilityTraceEntry" },
-        { "$ref": "#/definitions/operationPartialTraceEntry" }
+        { "$ref": "#/definitions/simultaneousSubmissionTraceEntry" },
+        { "$ref": "#/definitions/simultaneousCommitTraceEntry" },
+        { "$ref": "#/definitions/operationPartialTraceEntry" },
+        { "$ref": "#/definitions/operationFreeTraceEntry" }
       ]
     },
     "serializedRngState": {

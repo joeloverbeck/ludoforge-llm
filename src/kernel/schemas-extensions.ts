@@ -612,6 +612,14 @@ export const OperationPartialTraceEntrySchema = z
   })
   .strict();
 
+export const OperationFreeTraceEntrySchema = z
+  .object({
+    kind: z.literal('operationFree'),
+    actionId: StringSchema.min(1),
+    step: z.literal('costSpendSkipped'),
+  })
+  .strict();
+
 export const SimultaneousSubmissionTraceEntrySchema = z
   .object({
     kind: z.literal('simultaneousSubmission'),

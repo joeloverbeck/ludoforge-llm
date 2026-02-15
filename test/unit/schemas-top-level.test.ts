@@ -11,6 +11,7 @@ import {
   OBJECT_STRICTNESS_POLICY,
   PieceCatalogPayloadSchema,
   StackingConstraintSchema,
+  TriggerLogEntrySchema,
 } from '../../src/kernel/index.js';
 
 const minimalGameDef = {
@@ -504,6 +505,86 @@ describe('top-level runtime schemas', () => {
       });
 
       assert.equal(result.success, true);
+    }
+  });
+
+  it('requires pending map for simultaneous turnOrder runtime state', () => {
+    const result = GameTraceSchema.safeParse({
+      ...validGameTrace,
+      finalState: {
+        ...validGameState,
+        turnOrderState: {
+          type: 'simultaneous',
+          submitted: { '0': true, '1': false },
+        },
+      },
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'finalState.turnOrderState'));
+  });
+
+  it('accepts all runtime TriggerLogEntry variants in runtime schema', () => {
+    const entries = [
+      { kind: 'fired', triggerId: 'onMainEnter', event: { type: 'turnStart' }, depth: 0 },
+      { kind: 'truncated', event: { type: 'turnEnd' }, depth: 2 },
+      {
+        kind: 'turnFlowLifecycle',
+        step: 'promoteLookaheadToPlayed',
+        slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        before: { playedCardId: null, lookaheadCardId: 'card-1', leaderCardId: null },
+        after: { playedCardId: 'card-1', lookaheadCardId: null, leaderCardId: null },
+      },
+      {
+        kind: 'turnFlowEligibility',
+        step: 'cardEnd',
+        faction: '0',
+        before: {
+          firstEligible: '0',
+          secondEligible: '1',
+          actedFactions: ['0'],
+          passedFactions: [],
+          nonPassCount: 1,
+          firstActionClass: 'event',
+        },
+        after: {
+          firstEligible: '1',
+          secondEligible: '0',
+          actedFactions: ['0', '1'],
+          passedFactions: [],
+          nonPassCount: 2,
+          firstActionClass: 'event',
+        },
+      },
+      {
+        kind: 'simultaneousSubmission',
+        player: '0',
+        move: { actionId: 'commit', params: { value: 1 } },
+        submittedBefore: { '0': false, '1': false },
+        submittedAfter: { '0': true, '1': false },
+      },
+      {
+        kind: 'simultaneousCommit',
+        playersInOrder: ['0', '1'],
+        pendingCount: 2,
+      },
+      {
+        kind: 'operationPartial',
+        actionId: 'train',
+        profileId: 'train-profile',
+        step: 'costSpendSkipped',
+        reason: 'costValidationFailed',
+      },
+      {
+        kind: 'operationFree',
+        actionId: 'train',
+        step: 'costSpendSkipped',
+      },
+    ] as const;
+
+    for (const entry of entries) {
+      const result = TriggerLogEntrySchema.safeParse(entry);
+      assert.equal(result.success, true, `expected success for kind=${entry.kind}`);
     }
   });
 

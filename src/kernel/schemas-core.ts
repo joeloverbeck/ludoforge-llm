@@ -14,6 +14,7 @@ import {
   TokenFilterPredicateSchema,
 } from './schemas-ast.js';
 import {
+  OperationFreeTraceEntrySchema,
   OperationPartialTraceEntrySchema,
   SimultaneousCommitTraceEntrySchema,
   SimultaneousSubmissionTraceEntrySchema,
@@ -351,6 +352,7 @@ export const TriggerLogEntrySchema = z.union([
   SimultaneousSubmissionTraceEntrySchema,
   SimultaneousCommitTraceEntrySchema,
   OperationPartialTraceEntrySchema,
+  OperationFreeTraceEntrySchema,
 ]);
 
 export const MoveLogSchema = z

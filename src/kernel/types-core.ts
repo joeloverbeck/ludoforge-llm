@@ -434,7 +434,7 @@ export interface ChoiceCompleteRequest {
   readonly options?: readonly MoveParamValue[];
   readonly min?: number;
   readonly max?: number;
-  readonly reason?: 'pipelineNotApplicable' | 'pipelineLegalityFailed';
+  readonly reason?: 'pipelineNotApplicable' | 'pipelineLegalityFailed' | 'executorNotApplicable' | 'actorNotApplicable';
 }
 
 export interface ChoicePendingRequest {
@@ -446,7 +446,7 @@ export interface ChoicePendingRequest {
   readonly options: readonly MoveParamValue[];
   readonly min?: number;
   readonly max?: number;
-  readonly reason?: 'pipelineNotApplicable' | 'pipelineLegalityFailed';
+  readonly reason?: 'pipelineNotApplicable' | 'pipelineLegalityFailed' | 'executorNotApplicable' | 'actorNotApplicable';
 }
 
 export interface ChoiceIllegalRequest {
@@ -458,7 +458,7 @@ export interface ChoiceIllegalRequest {
   readonly options?: readonly MoveParamValue[];
   readonly min?: number;
   readonly max?: number;
-  readonly reason: 'pipelineNotApplicable' | 'pipelineLegalityFailed';
+  readonly reason: 'pipelineNotApplicable' | 'pipelineLegalityFailed' | 'executorNotApplicable' | 'actorNotApplicable';
 }
 
 export type ChoiceRequest = ChoiceCompleteRequest | ChoicePendingRequest | ChoiceIllegalRequest;

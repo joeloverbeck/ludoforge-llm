@@ -95,6 +95,10 @@ describe('resolvePlayerSel', () => {
     assert.throws(() => resolvePlayerSel({ chosen: '$picked' }, badChosenCtx), (error: unknown) =>
       isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
+
+    assert.throws(() => resolvePlayerSel('nobody' as unknown as never, ctx), (error: unknown) =>
+      isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
   });
 
   it('resolveSinglePlayerSel throws cardinality errors on 0 or >1 matches', () => {

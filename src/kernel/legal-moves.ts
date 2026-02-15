@@ -1,15 +1,14 @@
 import { evalCondition } from './eval-condition.js';
-import { resolveActionExecutorPlayer } from './action-executor.js';
+import { resolveActionActor } from './action-actor.js';
+import { resolveActionExecutor } from './action-executor.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch } from './apply-move-pipeline.js';
 import { applyPendingFreeOperationVariants, applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
-import { resolvePlayerSel } from './resolve-selectors.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { pipelinePredicateEvaluationError } from './runtime-error.js';
-import { isEvalErrorCode } from './eval-error.js';
 import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
@@ -63,24 +62,22 @@ function enumerateParams(
   moves: Move[],
 ): void {
   const resolveExecutionPlayerForBindings = (): GameState['activePlayer'] | null => {
-    try {
-      return resolveActionExecutorPlayer({
-        def,
-        state,
-        adjacencyGraph,
-        action,
-        decisionPlayer: state.activePlayer,
-        bindings,
-      });
-    } catch (error) {
-      if (isEvalErrorCode(error, 'MISSING_BINDING')) {
-        return state.activePlayer;
-      }
-      if (isEvalErrorCode(error, 'MISSING_VAR')) {
-        return null;
-      }
-      throw error;
+    const resolution = resolveActionExecutor({
+      def,
+      state,
+      adjacencyGraph,
+      action,
+      decisionPlayer: state.activePlayer,
+      bindings,
+      allowMissingBindingFallback: true,
+    });
+    if (resolution.kind === 'notApplicable') {
+      return null;
     }
+    if (resolution.kind === 'invalidSpec') {
+      throw resolution.error;
+    }
+    return resolution.executionPlayer;
   };
 
   if (paramIndex >= action.params.length) {
@@ -198,10 +195,19 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
 
-    const actorCtx = makeEvalContext(def, adjacencyGraph, state, state.activePlayer, {});
-    const resolvedActors = resolvePlayerSel(action.actor, actorCtx);
-    if (!resolvedActors.includes(state.activePlayer)) {
+    const actorResolution = resolveActionActor({
+      def,
+      state,
+      adjacencyGraph,
+      action,
+      decisionPlayer: state.activePlayer,
+      bindings: {},
+    });
+    if (actorResolution.kind === 'notApplicable') {
       continue;
+    }
+    if (actorResolution.kind === 'invalidSpec') {
+      throw actorResolution.error;
     }
 
     if (!withinActionLimits(action, state)) {
@@ -220,22 +226,21 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
       continue;
     }
 
-    let executionPlayer: GameState['activePlayer'];
-    try {
-      executionPlayer = resolveActionExecutorPlayer({
-        def,
-        state,
-        adjacencyGraph,
-        action,
-        decisionPlayer: state.activePlayer,
-        bindings: {},
-      });
-    } catch (error) {
-      if (isEvalErrorCode(error, 'MISSING_VAR')) {
-        continue;
-      }
-      throw error;
+    const executionResolution = resolveActionExecutor({
+      def,
+      state,
+      adjacencyGraph,
+      action,
+      decisionPlayer: state.activePlayer,
+      bindings: {},
+    });
+    if (executionResolution.kind === 'notApplicable') {
+      continue;
     }
+    if (executionResolution.kind === 'invalidSpec') {
+      throw executionResolution.error;
+    }
+    const executionPlayer = executionResolution.executionPlayer;
     const executionCtx = makeEvalContext(def, adjacencyGraph, state, executionPlayer, {});
     const pipelineDispatch = resolveActionPipelineDispatch(def, action, executionCtx);
     if (pipelineDispatch.kind === 'matched') {

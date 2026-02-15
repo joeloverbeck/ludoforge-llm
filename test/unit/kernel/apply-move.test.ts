@@ -465,3 +465,95 @@ phase: asPhaseId('main'),
     );
   });
 });
+
+describe('applyMove() executor applicability contract', () => {
+  it('returns illegal move when actor does not include active player', () => {
+    const action: ActionDef = {
+      id: asActionId('wrongActor'),
+      actor: { id: asPlayerId(1) },
+      executor: 'actor',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState({ activePlayer: asPlayerId(0) });
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('wrongActor'), params: {} }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
+        assert.equal(metadata?.code, 'ACTION_ACTOR_NOT_APPLICABLE');
+        assert.equal(String(metadata?.actionId), 'wrongActor');
+        return true;
+      },
+    );
+  });
+
+  it('returns illegal move when fixed executor is outside playerCount', () => {
+    const action: ActionDef = {
+      id: asActionId('outOfRangeExecutor'),
+      actor: 'active',
+      executor: { id: asPlayerId(2) },
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState({ playerCount: 2 });
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('outOfRangeExecutor'), params: {} }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
+        assert.equal(metadata?.code, 'ACTION_EXECUTOR_NOT_APPLICABLE');
+        assert.equal(String(metadata?.actionId), 'outOfRangeExecutor');
+        return true;
+      },
+    );
+  });
+
+  it('returns illegal move when actor selector is invalid', () => {
+    const action: ActionDef = {
+      id: asActionId('invalidActor'),
+      actor: '$owner' as unknown as ActionDef['actor'],
+      executor: 'actor',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('invalidActor'), params: {} }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        const metadata = details.context?.metadata as Record<string, unknown> | undefined;
+        assert.equal(metadata?.code, 'ACTION_ACTOR_INVALID_SPEC');
+        assert.equal(String(metadata?.actionId), 'invalidActor');
+        return true;
+      },
+    );
+  });
+});

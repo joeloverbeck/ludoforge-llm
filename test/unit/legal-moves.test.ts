@@ -87,6 +87,17 @@ phase: asPhaseId('main'),
         limits: [],
       },
       {
+        id: asActionId('invalidActorForPlayerCount'),
+actor: { id: asPlayerId(2) },
+executor: 'actor',
+phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
         id: asActionId('dependentDomain'),
 actor: 'active',
 executor: 'actor',
@@ -234,6 +245,56 @@ describe('legalMoves', () => {
   it('skips actions whose fixed executor is outside current playerCount', () => {
     assert.doesNotThrow(() => legalMoves(createDef(), createState()));
     assert.deepEqual(legalMoves(createDef(), createState()), expectedMoves());
+  });
+
+  it('surfaces invalid executor specs instead of silently skipping them', () => {
+    const base = createDef();
+    const def: GameDef = {
+      ...base,
+      actions: [
+        {
+          id: asActionId('badExecutorCardinality'),
+          actor: 'active',
+          executor: 'all' as unknown as GameDef['actions'][number]['executor'],
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    };
+
+    assert.throws(
+      () => legalMoves(def, createState()),
+      /Expected exactly one player from selector/,
+    );
+  });
+
+  it('surfaces invalid actor specs instead of silently skipping them', () => {
+    const base = createDef();
+    const def: GameDef = {
+      ...base,
+      actions: [
+        {
+          id: asActionId('badActorBinding'),
+          actor: '$owner' as unknown as GameDef['actions'][number]['actor'],
+          executor: 'actor',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+    };
+
+    assert.throws(
+      () => legalMoves(def, createState()),
+      /Invalid player selector value/,
+    );
   });
 
   it('applies option matrix gating to the second eligible faction after a first event action', () => {

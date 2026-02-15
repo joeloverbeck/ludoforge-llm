@@ -1,11 +1,12 @@
 import { resolveActionPipelineDispatch } from './apply-move-pipeline.js';
+import { resolveActionActor } from './action-actor.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { composeDecisionId } from './decision-id.js';
 import { applyEffect } from './effect-dispatch.js';
 import type { EffectContext } from './effect-context.js';
 import { evalCondition } from './eval-condition.js';
-import { resolveActionExecutorPlayer } from './action-executor.js';
+import { resolveActionExecutor } from './action-executor.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
@@ -370,16 +371,46 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
   const freeOperationZoneFilter = partialMove.freeOperation === true
     ? resolveFreeOperationZoneFilter(def, state, partialMove)
     : undefined;
+  const actorResolution = resolveActionActor({
+    def,
+    state,
+    adjacencyGraph,
+    action,
+    decisionPlayer: state.activePlayer,
+    bindings: baseBindings,
+  });
+  if (actorResolution.kind === 'notApplicable') {
+    return { kind: 'illegal', complete: false, reason: 'actorNotApplicable' };
+  }
+  if (actorResolution.kind === 'invalidSpec') {
+    throw legalChoicesValidationError(
+      `legalChoices: invalid actor selector for action "${String(action.id)}"`,
+    );
+  }
   const executionPlayer = partialMove.freeOperation === true
     ? resolveFreeOperationExecutionPlayer(def, state, partialMove)
-    : resolveActionExecutorPlayer({
-      def,
-      state,
-      adjacencyGraph,
-      action,
-      decisionPlayer: state.activePlayer,
-      bindings: baseBindings,
-    });
+    : (() => {
+      const resolution = resolveActionExecutor({
+        def,
+        state,
+        adjacencyGraph,
+        action,
+        decisionPlayer: state.activePlayer,
+        bindings: baseBindings,
+      });
+      if (resolution.kind === 'notApplicable') {
+        return null;
+      }
+      if (resolution.kind === 'invalidSpec') {
+        throw legalChoicesValidationError(
+          `legalChoices: invalid executor selector for action "${String(action.id)}"`,
+        );
+      }
+      return resolution.executionPlayer;
+    })();
+  if (executionPlayer === null) {
+    return { kind: 'illegal', complete: false, reason: 'executorNotApplicable' };
+  }
 
   const evalCtx: EvalContext = {
     def,

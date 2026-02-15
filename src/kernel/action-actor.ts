@@ -1,43 +1,40 @@
 import type { EvalContext } from './eval-context.js';
 import { isEvalErrorCode } from './eval-error.js';
 import { createCollector } from './execution-collector.js';
-import { resolveSinglePlayerSel } from './resolve-selectors.js';
+import { resolvePlayerSel } from './resolve-selectors.js';
 import type { ActionDef, GameDef, GameState } from './types.js';
 import type { AdjacencyGraph } from './spatial.js';
 
-interface ResolveActionExecutorPlayerInput {
+interface ResolveActionActorInput {
   readonly def: GameDef;
   readonly state: GameState;
   readonly adjacencyGraph: AdjacencyGraph;
   readonly action: ActionDef;
   readonly decisionPlayer: GameState['activePlayer'];
   readonly bindings: Readonly<Record<string, unknown>>;
-  readonly allowMissingBindingFallback?: boolean;
 }
 
-export type ActionExecutorResolution =
+export type ActionActorResolution =
   | {
       readonly kind: 'applicable';
-      readonly executionPlayer: GameState['activePlayer'];
     }
   | {
       readonly kind: 'notApplicable';
-      readonly reason: 'executorOutsidePlayerCount';
+      readonly reason: 'actorOutsidePlayerCount' | 'decisionPlayerNotActor';
     }
   | {
       readonly kind: 'invalidSpec';
       readonly error: unknown;
     };
 
-export const resolveActionExecutor = ({
+export const resolveActionActor = ({
   def,
   state,
   adjacencyGraph,
   action,
   decisionPlayer,
   bindings,
-  allowMissingBindingFallback = false,
-}: ResolveActionExecutorPlayerInput): ActionExecutorResolution => {
+}: ResolveActionActorInput): ActionActorResolution => {
   const selectorContext: EvalContext = {
     def,
     adjacencyGraph,
@@ -49,19 +46,14 @@ export const resolveActionExecutor = ({
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   };
   try {
-    return {
-      kind: 'applicable',
-      executionPlayer: resolveSinglePlayerSel(action.executor, selectorContext),
-    };
-  } catch (error) {
-    if (allowMissingBindingFallback && isEvalErrorCode(error, 'MISSING_BINDING')) {
-      return {
-        kind: 'applicable',
-        executionPlayer: decisionPlayer,
-      };
+    const resolvedActors = resolvePlayerSel(action.actor, selectorContext);
+    if (!resolvedActors.includes(decisionPlayer)) {
+      return { kind: 'notApplicable', reason: 'decisionPlayerNotActor' };
     }
+    return { kind: 'applicable' };
+  } catch (error) {
     if (isEvalErrorCode(error, 'MISSING_VAR')) {
-      return { kind: 'notApplicable', reason: 'executorOutsidePlayerCount' };
+      return { kind: 'notApplicable', reason: 'actorOutsidePlayerCount' };
     }
     return { kind: 'invalidSpec', error };
   }

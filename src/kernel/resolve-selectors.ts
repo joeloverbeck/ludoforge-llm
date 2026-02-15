@@ -90,12 +90,12 @@ export function resolvePlayerSel(sel: PlayerSel, ctx: EvalContext): readonly Pla
     return players.filter((playerId) => playerId !== ctx.actorPlayer);
   }
 
-  if ('id' in sel) {
+  if (typeof sel === 'object' && sel !== null && 'id' in sel) {
     assertKnownPlayer(sel.id, ctx, sel);
     return [sel.id];
   }
 
-  if ('chosen' in sel) {
+  if (typeof sel === 'object' && sel !== null && 'chosen' in sel) {
     const boundValue = ctx.bindings[sel.chosen];
     if (boundValue === undefined) {
       throw missingBindingError(`Chosen player binding not found: ${sel.chosen}`, {
@@ -115,6 +115,13 @@ export function resolvePlayerSel(sel: PlayerSel, ctx: EvalContext): readonly Pla
 
     assertKnownPlayer(boundValue, ctx, sel);
     return [boundValue];
+  }
+
+  if (typeof sel !== 'object' || sel === null || !('relative' in sel)) {
+    throw typeMismatchError('Invalid player selector value', {
+      selector: sel,
+      expected: 'actor|active|all|allOther|{id}|{chosen}|{relative}',
+    });
   }
 
   if (players.length === 0) {

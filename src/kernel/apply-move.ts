@@ -1,4 +1,5 @@
 import { incrementActionUsage } from './action-usage.js';
+import { resolveActionActor } from './action-actor.js';
 import { evalCondition } from './eval-condition.js';
 import { applyEffects } from './effects.js';
 import { executeEventMove, resolveEventEffectList } from './event-execution.js';
@@ -6,7 +7,7 @@ import { createCollector } from './execution-collector.js';
 import { legalMoves } from './legal-moves.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
-import { resolveActionExecutorPlayer } from './action-executor.js';
+import { resolveActionExecutor } from './action-executor.js';
 import {
   buildMoveRuntimeBindings,
   collectDecisionBindingsFromEffects,
@@ -180,14 +181,26 @@ const resolveMatchedPipelineForMove = (
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const executionPlayer = move.freeOperation === true
     ? resolveFreeOperationExecutionPlayer(def, state, move)
-    : resolveActionExecutorPlayer({
-      def,
-      state,
-      adjacencyGraph,
-      action,
-      decisionPlayer: state.activePlayer,
-      bindings: runtimeBindingsForMove(move, undefined),
-    });
+    : (() => {
+      const resolution = resolveActionExecutor({
+        def,
+        state,
+        adjacencyGraph,
+        action,
+        decisionPlayer: state.activePlayer,
+        bindings: runtimeBindingsForMove(move, undefined),
+      });
+      if (resolution.kind === 'notApplicable') {
+        return null;
+      }
+      if (resolution.kind === 'invalidSpec') {
+        throw resolution.error;
+      }
+      return resolution.executionPlayer;
+    })();
+  if (executionPlayer === null) {
+    return undefined;
+  }
   const dispatch = resolveActionPipelineDispatch(def, action, {
     def,
     adjacencyGraph,
@@ -352,6 +365,51 @@ const validateMove = (def: GameDef, state: GameState, move: Move): void => {
     });
   }
 
+  const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const actorResolution = resolveActionActor({
+    def,
+    state,
+    adjacencyGraph,
+    action,
+    decisionPlayer: state.activePlayer,
+    bindings: runtimeBindingsForMove(move, undefined),
+  });
+  if (actorResolution.kind === 'notApplicable') {
+    throw illegalMoveError(move, 'action actor is not applicable in current state', {
+      code: 'ACTION_ACTOR_NOT_APPLICABLE',
+      actionId: action.id,
+    });
+  }
+  if (actorResolution.kind === 'invalidSpec') {
+    throw illegalMoveError(move, 'action actor selector is invalid', {
+      code: 'ACTION_ACTOR_INVALID_SPEC',
+      actionId: action.id,
+    });
+  }
+
+  if (move.freeOperation !== true) {
+    const executorResolution = resolveActionExecutor({
+      def,
+      state,
+      adjacencyGraph,
+      action,
+      decisionPlayer: state.activePlayer,
+      bindings: runtimeBindingsForMove(move, undefined),
+    });
+    if (executorResolution.kind === 'notApplicable') {
+      throw illegalMoveError(move, 'action executor is not applicable in current state', {
+        code: 'ACTION_EXECUTOR_NOT_APPLICABLE',
+        actionId: action.id,
+      });
+    }
+    if (executorResolution.kind === 'invalidSpec') {
+      throw illegalMoveError(move, 'action executor selector is invalid', {
+        code: 'ACTION_EXECUTOR_INVALID_SPEC',
+        actionId: action.id,
+      });
+    }
+  }
+
   if (hasPipeline) {
     const legal = legalMoves(def, state);
     const hasTemplate = legal.some((candidate) => candidate.actionId === action.id);
@@ -419,14 +477,29 @@ const applyMoveCore = (
   const baseBindings = runtimeBindingsForMove(move, undefined);
   const executionPlayer = move.freeOperation === true
     ? resolveFreeOperationExecutionPlayer(def, state, move)
-    : resolveActionExecutorPlayer({
-      def,
-      state,
-      adjacencyGraph,
-      action,
-      decisionPlayer: state.activePlayer,
-      bindings: baseBindings,
-    });
+    : (() => {
+      const resolution = resolveActionExecutor({
+        def,
+        state,
+        adjacencyGraph,
+        action,
+        decisionPlayer: state.activePlayer,
+        bindings: baseBindings,
+      });
+      if (resolution.kind === 'notApplicable') {
+        throw illegalMoveError(move, 'action executor is not applicable in current state', {
+          code: 'ACTION_EXECUTOR_NOT_APPLICABLE',
+          actionId: action.id,
+        });
+      }
+      if (resolution.kind === 'invalidSpec') {
+        throw illegalMoveError(move, 'action executor selector is invalid', {
+          code: 'ACTION_EXECUTOR_INVALID_SPEC',
+          actionId: action.id,
+        });
+      }
+      return resolution.executionPlayer;
+    })();
   const effectCtxBase = {
     def,
     adjacencyGraph,

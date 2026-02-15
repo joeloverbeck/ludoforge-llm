@@ -229,4 +229,89 @@ describe('resolveActionApplicabilityPreflight()', () => {
       assert.equal(result.pipelineDispatch.kind, 'matched');
     }
   });
+
+  it('returns invalidSpec when actor binding selector is not declared in action params', () => {
+    const def = makeDef({
+      action: {
+        id: asActionId('op'),
+        actor: { chosen: '$owner' },
+        executor: 'actor',
+        phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    });
+    const state = makeState();
+    const action = def.actions[0]!;
+    const result = resolveActionApplicabilityPreflight({
+      def,
+      state,
+      action,
+      adjacencyGraph: buildAdjacencyGraph(def.zones),
+      decisionPlayer: state.activePlayer,
+      bindings: {},
+    });
+
+    assert.equal(result.kind, 'invalidSpec');
+    if (result.kind === 'invalidSpec') {
+      assert.equal(result.selector, 'actor');
+      assert.deepEqual(result.error, {
+        role: 'actor',
+        kind: 'bindingNotDeclared',
+        binding: '$owner',
+      });
+    }
+  });
+
+  it('returns invalidSpec when pipelined action uses binding-derived executor', () => {
+    const def = makeDef({
+      action: {
+        id: asActionId('op'),
+        actor: 'active',
+        executor: { chosen: '$owner' },
+        phase: asPhaseId('main'),
+        params: [{ name: '$owner', domain: { query: 'players' } }],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      actionPipelines: [
+        {
+          id: 'op-profile',
+          actionId: asActionId('op'),
+          applicability: { op: '==', left: 1, right: 1 },
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [],
+          atomicity: 'atomic',
+        },
+      ],
+    });
+    const state = makeState();
+    const action = def.actions[0]!;
+    const result = resolveActionApplicabilityPreflight({
+      def,
+      state,
+      action,
+      adjacencyGraph: buildAdjacencyGraph(def.zones),
+      decisionPlayer: state.activePlayer,
+      bindings: {},
+    });
+
+    assert.deepEqual(result, {
+      kind: 'invalidSpec',
+      selector: 'executor',
+      error: {
+        role: 'executor',
+        kind: 'bindingWithPipelineUnsupported',
+        binding: '$owner',
+      },
+    });
+  });
 });

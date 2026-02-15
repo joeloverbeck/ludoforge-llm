@@ -1,6 +1,7 @@
 import { resolveActionActor } from './action-actor.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionPipelineDispatch, type ActionPipelineDispatch } from './apply-move-pipeline.js';
+import { evaluateActionSelectorContracts } from './action-selector-contract-registry.js';
 import { createCollector } from './execution-collector.js';
 import type { EvalContext } from './eval-context.js';
 import type { AdjacencyGraph } from './spatial.js';
@@ -81,6 +82,20 @@ export const resolveActionApplicabilityPreflight = ({
   freeOperationZoneFilterDiagnostics,
   maxQueryResults,
 }: ActionApplicabilityPreflightInput): ActionApplicabilityPreflightResult => {
+  const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
+  const selectorContractViolations = evaluateActionSelectorContracts({
+    selectors: {
+      actor: action.actor,
+      executor: action.executor,
+    },
+    declaredBindings: action.params.map((param) => param.name),
+    hasPipeline: hasActionPipeline,
+  });
+  if (selectorContractViolations.length > 0) {
+    const violation = selectorContractViolations[0]!;
+    return { kind: 'invalidSpec', selector: violation.role, error: violation };
+  }
+
   if (!skipPhaseCheck && action.phase !== state.currentPhase) {
     return { kind: 'notApplicable', reason: 'phaseMismatch' };
   }

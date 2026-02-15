@@ -1021,6 +1021,21 @@ describe('validateGameDef constraints and warnings', () => {
     );
   });
 
+  it('reports action executor id outside configured bounds', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [{ ...base.actions[0], executor: { id: 4 } }],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'PLAYER_SELECTOR_ID_OUT_OF_BOUNDS' && diag.path === 'actions[0].executor',
+      ),
+    );
+  });
+
   it('reports invalid players metadata', () => {
     const base = createValidGameDef();
     const def = {

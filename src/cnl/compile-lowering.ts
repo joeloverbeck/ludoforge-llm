@@ -20,7 +20,10 @@ import type {
 import { lowerConditionNode, lowerNumericValueNode, lowerQueryNode } from './compile-conditions.js';
 import { lowerEffectArray } from './compile-effects.js';
 import { normalizeActionExecutorSelector, normalizePlayerSelector } from './compile-selectors.js';
-import { collectMissingSelectorBindingDiagnostics } from './selector-binding-contracts.js';
+import {
+  evaluateActionSelectorContracts,
+  getActionSelectorContract,
+} from '../kernel/action-selector-contract-registry.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 
 export function lowerConstants(
@@ -249,21 +252,23 @@ export function lowerActions(
 
     const params = lowerActionParams(action.params, ownershipByBase, diagnostics, `${path}.params`, tokenTraitVocabulary);
     const bindingScope = params.bindingScope;
+    const selectorContractViolations = evaluateActionSelectorContracts({
+      selectors: {
+        actor: actor.value,
+        executor: executor.value,
+      },
+      declaredBindings: bindingScope,
+      hasPipeline: false,
+      enforcePipelineBindingCompatibility: false,
+    });
     diagnostics.push(
-      ...collectMissingSelectorBindingDiagnostics(bindingScope, [
-        {
-          selector: actor.value,
-          role: 'actor',
-          path: `${path}.actor`,
-          diagnosticCode: 'CNL_COMPILER_ACTION_ACTOR_BINDING_MISSING',
-        },
-        {
-          selector: executor.value,
-          role: 'executor',
-          path: `${path}.executor`,
-          diagnosticCode: 'CNL_COMPILER_ACTION_EXECUTOR_BINDING_MISSING',
-        },
-      ]),
+      ...selectorContractViolations.map((violation) => ({
+        code: getActionSelectorContract(violation.role).missingBindingDiagnosticCode,
+        path: `${path}.${violation.role}`,
+        severity: 'error' as const,
+        message: `Action ${violation.role} binding "${violation.binding}" is not declared in action params.`,
+        suggestion: `Declare a matching action param (for example name: "$owner") or use a non-binding ${violation.role} selector.`,
+      })),
     );
     const pre = lowerOptionalCondition(action.pre, ownershipByBase, bindingScope, diagnostics, `${path}.pre`, tokenTraitVocabulary);
     const cost = lowerEffectsWithDiagnostics(action.cost, ownershipByBase, diagnostics, `${path}.cost`, bindingScope, tokenTraitVocabulary);

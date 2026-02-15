@@ -27,6 +27,7 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
 
   def.actions.forEach((action, actionIndex) => {
     validatePlayerSelector(diagnostics, action.actor, `actions[${actionIndex}].actor`, context);
+    validatePlayerSelector(diagnostics, action.executor, `actions[${actionIndex}].executor`, context);
 
     if (!phaseCandidates.includes(action.phase)) {
       pushMissingReferenceDiagnostic(

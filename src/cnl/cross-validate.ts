@@ -1,5 +1,9 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { EffectAST, EventSideDef, ZoneRef } from '../kernel/types.js';
+import {
+  evaluateActionSelectorContracts,
+  getActionSelectorContract,
+} from '../kernel/action-selector-contract-registry.js';
 import type { CompileSectionResults } from './compiler-core.js';
 import { normalizeIdentifier, pushMissingReferenceDiagnostic } from './validate-spec-shared.js';
 
@@ -48,19 +52,34 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
     }
 
     for (const [actionIndex, action] of sections.actions.entries()) {
-      if (typeof action.executor === 'string' || !('chosen' in action.executor)) {
-        continue;
-      }
       if (!pipelinedActionIds.has(String(action.id))) {
         continue;
       }
-      diagnostics.push({
-        code: 'CNL_XREF_ACTION_EXECUTOR_PIPELINE_UNSUPPORTED',
-        path: `doc.actions.${actionIndex}.executor`,
-        severity: 'error',
-        message: `Action "${String(action.id)}" uses binding-derived executor "${action.executor.chosen}" with action pipelines.`,
-        suggestion: 'Use actor/active/id/relative executor selectors for pipelined actions.',
+      const selectorContractViolations = evaluateActionSelectorContracts({
+        selectors: {
+          actor: action.actor,
+          executor: action.executor,
+        },
+        declaredBindings: action.params.map((param) => param.name),
+        hasPipeline: true,
+        enforceBindingDeclaration: false,
       });
+      for (const violation of selectorContractViolations) {
+        if (violation.kind !== 'bindingWithPipelineUnsupported') {
+          continue;
+        }
+        const code = getActionSelectorContract(violation.role).bindingWithPipelineUnsupportedDiagnosticCode;
+        if (code === undefined) {
+          continue;
+        }
+        diagnostics.push({
+          code,
+          path: `doc.actions.${actionIndex}.${violation.role}`,
+          severity: 'error',
+          message: `Action "${String(action.id)}" uses binding-derived ${violation.role} "${violation.binding}" with action pipelines.`,
+          suggestion: `Use actor/active/id/relative ${violation.role} selectors for pipelined actions.`,
+        });
+      }
     }
   }
 

@@ -1,11 +1,11 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { asPlayerId } from '../kernel/branded.js';
+import { getActionSelectorContract } from '../kernel/action-selector-contract-registry.js';
 import type { ActionExecutorSel, PlayerSel } from '../kernel/types.js';
 
 const PLAYER_SELECTOR_SUGGESTION =
   'Use one of: actor, active, activePlayer, all, allOther, left, right, <playerId>, or $binding.';
-const ACTION_EXECUTOR_SELECTOR_SUGGESTION =
-  'Use one of: actor, active, left, right, <playerId>, or $binding.';
+const ACTION_EXECUTOR_SELECTOR_SUGGESTION = getActionSelectorContract('executor').invalidSelectorSuggestion;
 
 export interface SelectorCompileResult<TValue> {
   readonly value: TValue | null;
@@ -65,7 +65,10 @@ export function normalizeActionExecutorSelector(
     };
   }
 
-  if (normalized.value === 'all' || normalized.value === 'allOther') {
+  if (
+    getActionSelectorContract('executor').cardinality === 'single' &&
+    (normalized.value === 'all' || normalized.value === 'allOther')
+  ) {
     return {
       value: null,
       diagnostics: [
@@ -80,7 +83,7 @@ export function normalizeActionExecutorSelector(
     };
   }
 
-  return { value: normalized.value, diagnostics: [] };
+  return { value: normalized.value as ActionExecutorSel, diagnostics: [] };
 }
 
 export function normalizeZoneOwnerQualifier(value: string, path: string): SelectorCompileResult<ZoneOwnerQualifier> {

@@ -6,6 +6,7 @@ import { effectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
+import { normalizeChoiceDomain, toChoiceComparableValue } from './value-membership.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
@@ -27,27 +28,6 @@ const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unkn
 
   return merged;
 };
-
-const valuesMatch = (candidate: unknown, selected: unknown): boolean => {
-  if (Object.is(candidate, selected)) {
-    return true;
-  }
-
-  if (
-    typeof selected === 'string' &&
-    typeof candidate === 'object' &&
-    candidate !== null &&
-    'id' in candidate &&
-    typeof candidate.id === 'string'
-  ) {
-    return candidate.id === selected;
-  }
-
-  return false;
-};
-
-const isInDomain = (selected: unknown, domain: readonly unknown[]): boolean =>
-  domain.some((candidate) => valuesMatch(candidate, selected));
 
 const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string) => {
   const lattice = ctx.def.markerLattices?.find((l) => l.id === markerId);
@@ -91,13 +71,26 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   const selected = ctx.moveParams[decisionId];
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const options = evalQuery(effect.chooseOne.options, evalCtx);
-  if (!isInDomain(selected, options)) {
+  const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseOne options domain item is not move-param encodable: ${resolvedBind}`, {
+      effectType: 'chooseOne',
+      bind: resolvedBind,
+      bindTemplate: effect.chooseOne.bind,
+      decisionId,
+      index: issue.index,
+      actualType: issue.actualType,
+      value: issue.value,
+    });
+  });
+
+  const selectedComparable = toChoiceComparableValue(selected);
+  if (selectedComparable === null || !normalizedOptions.includes(selectedComparable)) {
     throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseOne selection is outside options domain: ${resolvedBind}`, {
       effectType: 'chooseOne',
       bind: resolvedBind,
       bindTemplate: effect.chooseOne.bind,
       selected,
-      optionsCount: options.length,
+      optionsCount: normalizedOptions.length,
     });
   }
 
@@ -106,7 +99,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
     rng: ctx.rng,
     bindings: {
       ...ctx.bindings,
-      [resolvedBind]: selected,
+      [resolvedBind]: selectedComparable,
     },
   };
 };
@@ -198,26 +191,51 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     });
   }
 
-  for (let left = 0; left < selectedValue.length; left += 1) {
-    for (let right = left + 1; right < selectedValue.length; right += 1) {
-      if (valuesMatch(selectedValue[left], selectedValue[right])) {
+  const normalizedSelected: Array<string | number | boolean> = [];
+  for (let index = 0; index < selectedValue.length; index += 1) {
+    const comparable = toChoiceComparableValue(selectedValue[index]);
+    if (comparable === null) {
+      throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN selection is not move-param encodable: ${bind}`, {
+        effectType: 'chooseN',
+        bind,
+        decisionId,
+        selected: selectedValue[index],
+        selectedIndex: index,
+      });
+    }
+    normalizedSelected.push(comparable);
+  }
+
+  for (let left = 0; left < normalizedSelected.length; left += 1) {
+    for (let right = left + 1; right < normalizedSelected.length; right += 1) {
+      if (Object.is(normalizedSelected[left], normalizedSelected[right])) {
         throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN selections must be unique: ${bind}`, {
           effectType: 'chooseN',
           bind,
-          duplicateValue: selectedValue[left],
+          duplicateValue: normalizedSelected[left],
         });
       }
     }
   }
 
   const options = evalQuery(chooseN.options, evalCtx);
-  for (const selected of selectedValue) {
-    if (!isInDomain(selected, options)) {
+  const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN options domain item is not move-param encodable: ${bind}`, {
+      effectType: 'chooseN',
+      bind,
+      decisionId,
+      index: issue.index,
+      actualType: issue.actualType,
+      value: issue.value,
+    });
+  });
+  for (const selected of normalizedSelected) {
+    if (!normalizedOptions.includes(selected)) {
       throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN selection is outside options domain: ${bind}`, {
         effectType: 'chooseN',
         bind,
         selected,
-        optionsCount: options.length,
+        optionsCount: normalizedOptions.length,
       });
     }
   }
@@ -227,7 +245,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     rng: ctx.rng,
     bindings: {
       ...ctx.bindings,
-      [bind]: selectedValue,
+      [bind]: normalizedSelected,
     },
   };
 };

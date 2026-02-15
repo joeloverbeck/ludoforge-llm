@@ -34,6 +34,7 @@ export * from './eval-context.js';
 export * from './eval-error.js';
 export * from './eval-query.js';
 export * from './eval-value.js';
+export * from './value-membership.js';
 export * from './prng.js';
 export * from './resolve-ref.js';
 export * from './resolve-selectors.js';

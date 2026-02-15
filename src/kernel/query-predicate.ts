@@ -1,4 +1,5 @@
 import { typeMismatchError } from './eval-error.js';
+import { matchesScalarMembership } from './value-membership.js';
 
 export type PredicateOp = 'eq' | 'neq' | 'in' | 'notIn';
 export type PredicateScalar = string | number | boolean;
@@ -11,81 +12,12 @@ export interface ResolvedRowPredicate<FieldKey extends string = string> {
   readonly value: PredicateValue;
 }
 
-function isPredicateScalar(value: unknown): value is PredicateScalar {
-  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
-}
-
-function normalizePredicateSet(
-  setValue: unknown,
-  context: Readonly<Record<string, unknown>>,
-): { readonly set: PredicateSet; readonly setType: string | null } {
-  if (!Array.isArray(setValue)) {
-    throw typeMismatchError('Predicate membership operators require array values', {
-      ...context,
-      actualType: typeof setValue,
-      value: setValue,
-    });
-  }
-
-  let expectedType: string | null = null;
-  for (let index = 0; index < setValue.length; index += 1) {
-    const entry = setValue[index];
-    if (!isPredicateScalar(entry)) {
-      throw typeMismatchError('Predicate membership set must contain only scalar values', {
-        ...context,
-        setValue,
-        setIndex: index,
-        actualType: Array.isArray(entry) ? 'array' : typeof entry,
-        value: entry,
-      });
-    }
-
-    const entryType = typeof entry;
-    if (expectedType === null) {
-      expectedType = entryType;
-      continue;
-    }
-    if (entryType !== expectedType) {
-      throw typeMismatchError('Predicate membership set cannot mix scalar types', {
-        ...context,
-        setValue,
-        expectedType,
-        actualType: entryType,
-        setIndex: index,
-      });
-    }
-  }
-  return {
-    set: setValue as PredicateSet,
-    setType: expectedType,
-  };
-}
-
 export function matchesMembership(
   item: unknown,
   setValue: unknown,
   context: Readonly<Record<string, unknown>> = {},
 ): boolean {
-  const normalized = normalizePredicateSet(setValue, context);
-  if (!isPredicateScalar(item)) {
-    throw typeMismatchError('Predicate membership item value must be a scalar', {
-      ...context,
-      actualType: Array.isArray(item) ? 'array' : typeof item,
-      value: item,
-    });
-  }
-
-  if (normalized.setType !== null && typeof item !== normalized.setType) {
-    throw typeMismatchError('Predicate membership item/set scalar types must match', {
-      ...context,
-      itemType: typeof item,
-      setType: normalized.setType,
-      itemValue: item,
-      setValue: normalized.set,
-    });
-  }
-
-  return normalized.set.includes(item);
+  return matchesScalarMembership(item, setValue, context);
 }
 
 export function matchesResolvedPredicate(

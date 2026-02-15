@@ -161,6 +161,45 @@ describe('effects choice assertions', () => {
     assert.equal(result.rng, ctx.rng);
   });
 
+  it('chooseOne fails fast when options domain items are not move-param encodable', () => {
+    const def: GameDef = {
+      ...makeDef(),
+      runtimeDataAssets: [
+        {
+          id: 'tournament-standard',
+          kind: 'scenario',
+          payload: { blindSchedule: { levels: [{ level: 1, smallBlind: 10 }] } },
+        },
+      ],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [
+            { field: 'level', type: 'int' },
+            { field: 'smallBlind', type: 'int' },
+          ],
+        },
+      ],
+    };
+    const ctx = makeCtx({
+      def,
+      moveParams: { 'decision:$row': 'irrelevant' },
+    });
+    const effect: EffectAST = {
+      chooseOne: {
+        internalDecisionId: 'decision:$row',
+        bind: '$row',
+        options: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+      },
+    };
+
+    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
+      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('not move-param encodable');
+    });
+  });
+
   it('chooseN succeeds for exact-length unique in-domain array', () => {
     const ctx = makeCtx({ moveParams: { 'decision:$picks': ['alpha', 'gamma'] } });
     const effect: EffectAST = {

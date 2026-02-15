@@ -365,6 +365,57 @@ phase: asPhaseId('main'),
     );
   });
 
+  it('fails fast when chooseOne options domain items are not move-param encodable', () => {
+    const action: ActionDef = {
+      id: asActionId('pickScheduleRow'),
+      actor: 'active',
+      executor: 'actor',
+      phase: asPhaseId('main'),
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$row',
+            bind: '$row',
+            options: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+          },
+        },
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] }) as GameDef & {
+      runtimeDataAssets?: unknown;
+      tableContracts?: unknown;
+    };
+    def.runtimeDataAssets = [
+      {
+        id: 'tournament-standard',
+        kind: 'scenario',
+        payload: { blindSchedule: { levels: [{ level: 1, smallBlind: 10 }] } },
+      },
+    ];
+    def.tableContracts = [
+      {
+        id: 'tournament-standard::blindSchedule.levels',
+        assetId: 'tournament-standard',
+        tablePath: 'blindSchedule.levels',
+        fields: [
+          { field: 'level', type: 'int' },
+          { field: 'smallBlind', type: 'int' },
+        ],
+      },
+    ];
+
+    const state = makeBaseState();
+    assert.throws(
+      () => legalChoices(def, state, makeMove('pickScheduleRow')),
+      (error: unknown) => error instanceof Error && error.message.includes('not move-param encodable'),
+    );
+  });
+
   it('6. chooseOne inside if.then only appears when condition is true', () => {
     const action: ActionDef = {
       id: asActionId('conditionalChoice'),

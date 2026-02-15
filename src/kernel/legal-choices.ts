@@ -21,6 +21,7 @@ import { kernelRuntimeError } from './runtime-error.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { resolveFreeOperationExecutionPlayer, resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
 import { isCardEventActionId } from './action-capabilities.js';
+import { normalizeChoiceDomain, toChoiceComparableValue } from './value-membership.js';
 import type {
   ActionDef,
   ChoicePendingRequest,
@@ -41,25 +42,6 @@ export interface LegalChoicesOptions {
 
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
-
-const valuesMatch = (candidate: unknown, selected: unknown): boolean => {
-  if (Object.is(candidate, selected)) {
-    return true;
-  }
-  if (
-    typeof selected === 'string' &&
-    typeof candidate === 'object' &&
-    candidate !== null &&
-    'id' in candidate &&
-    typeof candidate.id === 'string'
-  ) {
-    return candidate.id === selected;
-  }
-  return false;
-};
-
-const isInDomain = (selected: unknown, domain: readonly unknown[]): boolean =>
-  domain.some((candidate) => valuesMatch(candidate, selected));
 
 interface WalkContext {
   readonly evalCtx: EvalContext;
@@ -161,18 +143,28 @@ function walkChooseOne(
   const bind = resolveBindingTemplate(effect.chooseOne.bind, wCtx.evalCtx.bindings);
   const decisionId = composeDecisionId(effect.chooseOne.internalDecisionId, effect.chooseOne.bind, bind);
   const options = evalQuery(effect.chooseOne.options, wCtx.evalCtx);
-  const asParamValues = options.map((o) =>
-    typeof o === 'object' && o !== null && 'id' in o ? (o.id as MoveParamValue) : (o as MoveParamValue),
-  );
+  const asParamValues = normalizeChoiceDomain(options, (issue) => {
+    throw legalChoicesValidationError(
+      `legalChoices: chooseOne "${bind}" (${decisionId}) options domain item at index ${issue.index} is not move-param encodable`,
+      {
+        bind,
+        decisionId,
+        index: issue.index,
+        actualType: issue.actualType,
+        value: issue.value,
+      },
+    );
+  }) as readonly MoveParamValue[];
 
   if (Object.prototype.hasOwnProperty.call(wCtx.moveParams, decisionId)) {
     const selected = wCtx.moveParams[decisionId];
-    if (!isInDomain(selected, options)) {
+    const selectedComparable = toChoiceComparableValue(selected);
+    if (selectedComparable === null || !asParamValues.includes(selectedComparable)) {
       throw legalChoicesValidationError(
         `legalChoices: invalid selection for chooseOne "${bind}" (${decisionId}): ${JSON.stringify(selected)} is not in options domain (${options.length} options)`,
       );
     }
-    return { pending: null, wCtx: withBinding(wCtx, bind, selected) };
+    return { pending: null, wCtx: withBinding(wCtx, bind, selectedComparable) };
   }
 
   return {
@@ -215,9 +207,18 @@ function walkChooseN(
   });
 
   const options = evalQuery(chooseN.options, wCtx.evalCtx);
-  const asParamValues = options.map((o) =>
-    typeof o === 'object' && o !== null && 'id' in o ? (o.id as MoveParamValue) : (o as MoveParamValue),
-  );
+  const asParamValues = normalizeChoiceDomain(options, (issue) => {
+    throw legalChoicesValidationError(
+      `legalChoices: chooseN "${bind}" (${decisionId}) options domain item at index ${issue.index} is not move-param encodable`,
+      {
+        bind,
+        decisionId,
+        index: issue.index,
+        actualType: issue.actualType,
+        value: issue.value,
+      },
+    );
+  }) as readonly MoveParamValue[];
   const clampedMax = Math.min(maxCardinality, asParamValues.length);
 
   if (Object.prototype.hasOwnProperty.call(wCtx.moveParams, decisionId)) {
@@ -232,14 +233,17 @@ function walkChooseN(
         `legalChoices: invalid cardinality for chooseN "${bind}" (${decisionId}): selected ${selectedValue.length}, expected [${minCardinality}, ${clampedMax}]`,
       );
     }
+    const normalizedSelected: MoveParamValue[] = [];
     for (const item of selectedValue) {
-      if (!isInDomain(item, options)) {
+      const comparable = toChoiceComparableValue(item);
+      if (comparable === null || !asParamValues.includes(comparable)) {
         throw legalChoicesValidationError(
           `legalChoices: invalid selection for chooseN "${bind}" (${decisionId}): ${JSON.stringify(item)} is not in options domain`,
         );
       }
+      normalizedSelected.push(comparable);
     }
-    return { pending: null, wCtx: withBinding(wCtx, bind, selectedValue) };
+    return { pending: null, wCtx: withBinding(wCtx, bind, normalizedSelected) };
   }
 
   return {

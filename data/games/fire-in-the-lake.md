@@ -3009,19 +3009,30 @@ eventDecks:
           freeOperationGrants:
             - faction: "0"
               actionIds: [airStrike]
-          targets:
-            - id: us-out-of-play
-              selector:
-                query: players
-              cardinality: { max: 6 }
-            - id: $targetCities
-              selector:
-                query: mapSpaces
-                filter:
-                  op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
-                  right: city
-              cardinality: { max: 6 }
+          effects:
+            - forEach:
+                bind: $usOutOfPlayPiece
+                over:
+                  query: tokensInZone
+                  zone: out-of-play-US:none
+                  filter:
+                    - { prop: faction, eq: US }
+                limit: 6
+                effects:
+                  - chooseOne:
+                      bind: '$targetCity@{$usOutOfPlayPiece}'
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: '=='
+                          left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                          right: 'city'
+                  - moveToken:
+                      token: $usOutOfPlayPiece
+                      from:
+                        zoneExpr: { ref: tokenZone, token: $usOutOfPlayPiece }
+                      to:
+                        zoneExpr: { ref: binding, name: '$targetCity@{$usOutOfPlayPiece}' }
         shaded:
           text: "Congressional regrets: Aid -1 per Casualty. All Casualties out of play."
           effects:

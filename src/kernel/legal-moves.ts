@@ -1,7 +1,7 @@
 import { evalCondition } from './eval-condition.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
-import { isMoveDecisionSequenceSatisfiable } from './move-decision-sequence.js';
+import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { resolveActionPipelineDispatch } from './apply-move-pipeline.js';
 import { applyPendingFreeOperationVariants, applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
@@ -10,6 +10,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { pipelinePredicateEvaluationError } from './runtime-error.js';
 import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
+import { resolveCurrentEventCardState } from './event-execution.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue } from './types.js';
 
 function makeEvalContext(
@@ -90,6 +91,68 @@ function enumerateParams(
   }
 }
 
+function enumerateCurrentEventMoves(
+  action: ActionDef,
+  def: GameDef,
+  state: GameState,
+): readonly Move[] {
+  if (String(action.id) !== 'event') {
+    return [];
+  }
+
+  const current = resolveCurrentEventCardState(def, state);
+  if (current === null) {
+    return [];
+  }
+
+  const sides: Array<{ readonly side: 'unshaded' | 'shaded'; readonly branches: readonly { readonly id: string }[] | undefined }> = [];
+  if (current.card.unshaded !== undefined) {
+    sides.push({ side: 'unshaded', branches: current.card.unshaded.branches });
+  }
+  if (current.card.shaded !== undefined) {
+    sides.push({ side: 'shaded', branches: current.card.shaded.branches });
+  }
+
+  const baseMoves: Move[] = [];
+  for (const side of sides) {
+    if (side.branches === undefined || side.branches.length === 0) {
+      baseMoves.push({
+        actionId: action.id,
+        params: {
+          eventCardId: current.card.id,
+          eventDeckId: current.deckId,
+          side: side.side,
+        },
+      });
+      continue;
+    }
+    for (const branch of side.branches) {
+      baseMoves.push({
+        actionId: action.id,
+        params: {
+          eventCardId: current.card.id,
+          eventDeckId: current.deckId,
+          side: side.side,
+          branch: branch.id,
+        },
+      });
+    }
+  }
+
+  const resolved: Move[] = [];
+  for (const move of baseMoves) {
+    if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
+      continue;
+    }
+    const completion = resolveMoveDecisionSequence(def, state, move);
+    if (!completion.complete) {
+      continue;
+    }
+    resolved.push(completion.move);
+  }
+  return resolved;
+}
+
 export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
   if (!isActiveFactionEligibleForTurnFlow(state)) {
     return [];
@@ -110,6 +173,12 @@ export const legalMoves = (def: GameDef, state: GameState): readonly Move[] => {
     }
 
     if (!withinActionLimits(action, state)) {
+      continue;
+    }
+
+    const eventMoves = enumerateCurrentEventMoves(action, def, state);
+    if (eventMoves.length > 0) {
+      moves.push(...eventMoves);
       continue;
     }
 

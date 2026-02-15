@@ -248,6 +248,47 @@ describe('compiler structured section results', () => {
     assert.equal(result.sections.eventDecks?.[0]?.id, 'foundation');
   });
 
+  it('rejects explicit event action when eventDecks are declared (event action is compiler-owned)', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      zones: [
+        { id: 'board', owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+      actions: [
+        ...base.actions,
+        { id: 'event', actor: 'active', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      eventDecks: [
+        {
+          id: 'foundation',
+          drawZone: 'board:none',
+          discardZone: 'board:none',
+          cards: [
+            {
+              id: 'card-a',
+              title: 'Card A',
+              sideMode: 'single' as const,
+              unshaded: { effects: [{ shuffle: { zone: 'board:none' } }] },
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_EVENT_ACTION_RESERVED' &&
+          diagnostic.path === 'doc.actions.1.id',
+      ),
+      true,
+    );
+  });
+
   it('production FITL section values align with gameDef for populated section fields', () => {
     const production = compileProductionSpec();
     const { compiled } = production;

@@ -27,6 +27,7 @@ interface LastingEffectApplyResult {
 
 interface EventExecutionContext {
   readonly card: EventCardDef;
+  readonly deckId?: string;
   readonly sideId: 'unshaded' | 'shaded';
   readonly side: NonNullable<EventCardDef['unshaded']>;
   readonly branch: EventBranchDef | null;
@@ -105,7 +106,10 @@ const resolveEventCardTokenId = (token: Token): string => {
   return typeof explicit === 'string' && explicit.length > 0 ? explicit : String(token.id);
 };
 
-const resolveCurrentEventCard = (def: GameDef, state: GameState): EventCardDef | null => {
+export const resolveCurrentEventCardState = (
+  def: GameDef,
+  state: GameState,
+): { readonly deckId: string; readonly card: EventCardDef } | null => {
   const eventDecks = def.eventDecks;
   if (eventDecks === undefined || eventDecks.length === 0) {
     return null;
@@ -118,7 +122,7 @@ const resolveCurrentEventCard = (def: GameDef, state: GameState): EventCardDef |
     const tokenCardId = resolveEventCardTokenId(topToken);
     const card = deck.cards.find((candidate) => candidate.id === tokenCardId);
     if (card !== undefined) {
-      return card;
+      return { deckId: deck.id, card };
     }
   }
   return null;
@@ -186,7 +190,9 @@ const resolveEventExecutionContext = (
   state: GameState,
   move: Move,
 ): EventExecutionContext | null => {
-  const card = resolveEventCardFromMove(def, move) ?? resolveCurrentEventCard(def, state);
+  const explicitCard = resolveEventCardFromMove(def, move);
+  const currentCard = explicitCard === null ? resolveCurrentEventCardState(def, state) : null;
+  const card = explicitCard ?? currentCard?.card ?? null;
   if (card === null) {
     return null;
   }
@@ -197,10 +203,26 @@ const resolveEventExecutionContext = (
   const selectedBranch = resolveSelectedBranch(selectedSide.side, move);
   return {
     card,
+    ...(currentCard === null ? {} : { deckId: currentCard.deckId }),
     sideId: selectedSide.sideId,
     side: selectedSide.side,
     branch: selectedBranch,
   };
+};
+
+export const resolveEventEffectList = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): readonly EffectAST[] => {
+  const context = resolveEventExecutionContext(def, state, move);
+  if (context === null) {
+    return [];
+  }
+  return [
+    ...(context.side.effects ?? []),
+    ...(context.branch?.effects ?? []),
+  ];
 };
 
 const applyEffectList = (
@@ -221,6 +243,7 @@ const applyEffectList = (
     bindings: { ...moveParams },
     moveParams,
     collector: createCollector(),
+    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   });
   return {
     state: result.state,
@@ -264,18 +287,35 @@ export const executeEventMove = (
     }
   }
 
+  const eventEffects = [
+    ...(context.side.effects ?? []),
+    ...(context.branch?.effects ?? []),
+  ];
   const lastingEffects = [
     ...(context.side.lastingEffects ?? []),
     ...(context.branch?.lastingEffects ?? []),
   ];
 
-  if (lastingEffects.length === 0) {
+  if (eventEffects.length === 0 && lastingEffects.length === 0) {
     return { state, rng, emittedEvents: [] };
   }
 
   let nextState = state;
   let nextRng = rng;
   const emittedEvents: TriggerEvent[] = [];
+  if (eventEffects.length > 0) {
+    const sideAndBranchResult = applyEffectList(
+      def,
+      nextState,
+      nextRng,
+      eventEffects,
+      state.activePlayer,
+      move.params,
+    );
+    nextState = sideAndBranchResult.state;
+    nextRng = sideAndBranchResult.rng;
+    emittedEvents.push(...sideAndBranchResult.emittedEvents);
+  }
   const activeEffects = [...(state.activeLastingEffects ?? [])];
   for (const lastingEffect of lastingEffects) {
     const setupResult = applyEffectList(

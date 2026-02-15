@@ -526,6 +526,78 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "window-a"?');
   });
 
+  it('eventDeck side targets without executable payload emit CNL_XREF_EVENT_DECK_TARGETS_EXECUTABILITY_MISSING', () => {
+    const sections = compileRichSections();
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                text: 'Move pieces.',
+                targets: [
+                  {
+                    id: '$targetSpaces',
+                    selector: { query: 'mapSpaces' },
+                    cardinality: { max: 2 },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_EVENT_DECK_TARGETS_EXECUTABILITY_MISSING');
+    assert.notEqual(diagnostic, undefined);
+    assert.equal(diagnostic?.path, 'doc.eventDecks.0.cards.0.unshaded.targets');
+  });
+
+  it('eventDeck branch targets with executable payload produce no executability diagnostics', () => {
+    const sections = compileRichSections();
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidateSpec({
+      ...sections,
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                branches: [
+                  {
+                    id: 'branch-a',
+                    targets: [
+                      {
+                        id: '$targetSpaces',
+                        selector: { query: 'mapSpaces' },
+                        cardinality: { max: 1 },
+                      },
+                    ],
+                    effects: [{ shuffle: { zone: 'deck:none' } }],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.deepEqual(
+      diagnostics.filter((entry) => entry.code === 'CNL_XREF_EVENT_DECK_TARGETS_EXECUTABILITY_MISSING'),
+      [],
+    );
+  });
+
   it('eventDeck eligibilityOverrides with valid references produce no override cross-ref diagnostics', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);

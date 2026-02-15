@@ -78,6 +78,11 @@ describe('FITL production data integration compilation', () => {
       }
       assert.deepEqual(action.effects, [], `Expected profile-backed action ${String(action.id)} to have no fallback action effects`);
     }
+    assert.equal(
+      compiled.gameDef!.actions.some((action) => String(action.id) === 'event'),
+      true,
+      'Expected synthesized card-driven event action in production GameDef',
+    );
     const operationActionIds = new Set(['train', 'patrol', 'sweep', 'assault', 'rally', 'march', 'attack', 'terror']);
     const operationProfiles = (compiled.gameDef!.actionPipelines ?? []).filter((profile) =>
       operationActionIds.has(String(profile.actionId)),

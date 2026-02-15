@@ -474,6 +474,8 @@ function validateEventCardSide(
     return;
   }
 
+  pushEventTargetExecutabilityDiagnostic(diagnostics, side.targets, side, pathPrefix, cardId);
+
   validateEventFreeOperationGrants(
     diagnostics,
     side.freeOperationGrants,
@@ -507,6 +509,14 @@ function validateEventCardSide(
   }
 
   for (const [branchIndex, branch] of (side.branches ?? []).entries()) {
+    pushEventTargetExecutabilityDiagnostic(
+      diagnostics,
+      branch.targets,
+      branch,
+      `${pathPrefix}.branches.${branchIndex}`,
+      cardId,
+    );
+
     validateEventFreeOperationGrants(
       diagnostics,
       branch.freeOperationGrants,
@@ -569,6 +579,33 @@ function validateEventCardSide(
       );
     }
   }
+}
+
+function pushEventTargetExecutabilityDiagnostic(
+  diagnostics: Diagnostic[],
+  targets: EventSideDef['targets'],
+  scope: {
+    readonly effects?: EventSideDef['effects'];
+    readonly branches?: EventSideDef['branches'];
+    readonly lastingEffects?: EventSideDef['lastingEffects'];
+  },
+  pathPrefix: string,
+  cardId: string,
+): void {
+  if (targets === undefined || targets.length === 0) {
+    return;
+  }
+  if (scope.effects !== undefined || scope.branches !== undefined || scope.lastingEffects !== undefined) {
+    return;
+  }
+
+  diagnostics.push({
+    code: 'CNL_XREF_EVENT_DECK_TARGETS_EXECUTABILITY_MISSING',
+    path: `${pathPrefix}.targets`,
+    severity: 'error',
+    message: `Event card "${cardId}" declares targets without executable gameplay payload at this scope.`,
+    suggestion: 'Add effects/branches/lastingEffects for this target declaration, or remove targets.',
+  });
 }
 
 function validateEventFreeOperationGrants(

@@ -5,6 +5,7 @@ import {
   applyMove,
   asActionId,
   asPhaseId,
+  legalMoves,
   initialState,
   asPlayerId,
   asTokenId,
@@ -1333,6 +1334,85 @@ describe('applyMove', () => {
     assert.equal(shadedB.state.globalVars.resolved, 22);
   });
 
+  it('applies event deck side and branch effects for event actions', () => {
+    const def: GameDef = {
+      metadata: { id: 'event-deck-side-branch-effects', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [
+        {
+          id: asActionId('event'),
+          actor: 'active',
+          phase: asPhaseId('main'),
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+      eventDecks: [
+        {
+          id: 'deck-1',
+          drawZone: asZoneId('deck:none'),
+          discardZone: asZoneId('played:none'),
+          cards: [
+            {
+              id: 'card-1',
+              title: 'Card 1',
+              sideMode: 'dual',
+              unshaded: {
+                effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 10 } }],
+                branches: [
+                  { id: 'a', effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }] },
+                  { id: 'b', effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 2 } }] },
+                ],
+              },
+              shaded: {
+                effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 20 } }],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState(),
+      globalVars: { resolved: 0 },
+      zones: {
+        'deck:none': [],
+        'played:none': [{ id: asTokenId('card-1'), type: 'card', props: {} }],
+      },
+      actionUsage: {},
+    };
+
+    const unshadedMove = legalMoves(def, state).find(
+      (move) => String(move.actionId) === 'event' && move.params.side === 'unshaded' && move.params.branch === 'a',
+    );
+    const shadedMove = legalMoves(def, state).find(
+      (move) => String(move.actionId) === 'event' && move.params.side === 'shaded',
+    );
+    assert.notEqual(unshadedMove, undefined);
+    assert.notEqual(shadedMove, undefined);
+
+    const unshadedA = applyMove(def, state, unshadedMove!);
+    const shaded = applyMove(def, state, shadedMove!);
+
+    assert.equal(unshadedA.state.globalVars.resolved, 11);
+    assert.equal(shaded.state.globalVars.resolved, 20);
+  });
+
   it('activates selected lasting effects and applies setup effects for event moves', () => {
     const def: GameDef = {
       metadata: { id: 'event-lasting-effect-activation', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
@@ -1428,11 +1508,9 @@ describe('applyMove', () => {
       },
     };
 
-    const result = applyMove(def, state, {
-      actionId: asActionId('event'),
-      actionClass: 'event',
-      params: { side: 'unshaded' },
-    });
+    const move = legalMoves(def, state).find((candidate) => String(candidate.actionId) === 'event');
+    assert.notEqual(move, undefined);
+    const result = applyMove(def, state, move!);
 
     assert.equal(result.state.globalVars.aid, 3);
     assert.equal(result.state.activeLastingEffects?.length, 1);
@@ -1503,11 +1581,9 @@ describe('applyMove', () => {
       actionUsage: {},
     };
 
-    const result = applyMove(def, state, {
-      actionId: asActionId('event'),
-      actionClass: 'event',
-      params: { side: 'unshaded' },
-    });
+    const move = legalMoves(def, state).find((candidate) => String(candidate.actionId) === 'event');
+    assert.notEqual(move, undefined);
+    const result = applyMove(def, state, move!);
 
     assert.equal(result.state.globalVars.aid, 2);
     assert.equal(result.state.activeLastingEffects?.length, 1);

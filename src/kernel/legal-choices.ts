@@ -9,6 +9,7 @@ import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { createCollector } from './execution-collector.js';
+import { resolveEventEffectList } from './event-execution.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
@@ -405,9 +406,12 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
       pipeline.stages.length > 0
         ? pipeline.stages.flatMap((stage) => stage.effects)
         : action.effects;
+    const eventEffects = String(action.id) === 'event'
+      ? resolveEventEffectList(def, state, partialMove)
+      : [];
 
     const wCtx: WalkContext = { evalCtx, rng: { state: state.rng }, moveParams: partialMove.params };
-    const result = walkEffects(resolutionEffects, wCtx);
+    const result = walkEffects([...resolutionEffects, ...eventEffects], wCtx);
     return result.pending ?? COMPLETE;
   }
 
@@ -415,7 +419,10 @@ export function legalChoices(def: GameDef, state: GameState, partialMove: Move):
     return { kind: 'illegal', complete: false, reason: 'pipelineNotApplicable' };
   }
 
+  const eventEffects = String(action.id) === 'event'
+    ? resolveEventEffectList(def, state, partialMove)
+    : [];
   const wCtx: WalkContext = { evalCtx, rng: { state: state.rng }, moveParams: partialMove.params };
-  const result = walkEffects(action.effects, wCtx);
+  const result = walkEffects([...action.effects, ...eventEffects], wCtx);
   return result.pending ?? COMPLETE;
 }

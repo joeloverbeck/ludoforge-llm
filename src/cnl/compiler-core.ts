@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameDef, NumericTrackDef } from '../kernel/types.js';
+import { asActionId } from '../kernel/branded.js';
 import { validateGameDef } from '../kernel/validate-gamedef.js';
 import { materializeZoneDefs } from './compile-zones.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
@@ -366,6 +367,31 @@ function compileExpandedDoc(
     );
     sections.eventDecks = eventDecks.failed ? null : eventDecks.value;
   }
+
+  if (actions !== null) {
+    if (rawEventDecks !== null && rawActions !== null) {
+      for (const [actionIndex, action] of rawActions.entries()) {
+        if (action.id !== 'event') {
+          continue;
+        }
+        diagnostics.push({
+          code: 'CNL_COMPILER_EVENT_ACTION_RESERVED',
+          path: `doc.actions.${actionIndex}.id`,
+          severity: 'error',
+          message: 'Action id "event" is reserved and compiler-owned when eventDecks are declared.',
+          suggestion: 'Remove this action from doc.actions. Event action is synthesized from eventDecks.',
+        });
+      }
+    }
+
+    const withEventAction = synthesizeCardDrivenEventAction(
+      actions,
+      turnStructure,
+      sections.eventDecks,
+    );
+    actions = withEventAction;
+    sections.actions = sections.actions === null ? null : withEventAction;
+  }
   diagnostics.push(...crossValidateSpec(sections));
 
   if (runtimeMetadata === null || zones === null || turnStructure === null || actions === null || terminal === null) {
@@ -554,4 +580,36 @@ function mergeTrackGlobalVars(
   });
 
   return [...nonTrackGlobalVars, ...projectedTrackGlobalVars];
+}
+
+function synthesizeCardDrivenEventAction(
+  actions: GameDef['actions'],
+  turnStructure: GameDef['turnStructure'] | null,
+  eventDecks: Exclude<GameDef['eventDecks'], undefined> | null,
+): GameDef['actions'] {
+  if (
+    eventDecks === null ||
+    eventDecks.length === 0 ||
+    turnStructure === null ||
+    turnStructure.phases.length === 0
+  ) {
+    return actions;
+  }
+  if (actions.some((action) => String(action.id) === 'event')) {
+    return actions;
+  }
+
+  return [
+    ...actions,
+    {
+      id: asActionId('event'),
+      actor: 'active',
+      phase: turnStructure.phases[0]!.id,
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    },
+  ];
 }

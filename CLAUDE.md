@@ -124,7 +124,7 @@ test/
 - **Determinism tests**: same seed + same move sequence = identical final state hash
 - **Property tests** (quickcheck style): applyMove never produces invalid var bounds, tokens never duplicate across zones, legalMoves pass preconditions, no crash on random play for N turns
 - **Golden tests**: known Game Spec -> expected JSON, known seed trace -> expected output
-- **FITL game-rule tests**: compile `data/games/fire-in-the-lake.md` directly via `compileProductionSpec()` from `test/helpers/production-spec-helpers.ts`. Do NOT create separate fixture files for FITL profiles, events, or special activities. Foundation fixtures (`fitl-foundation-inline-assets.md`, `fitl-foundation-coup-victory-inline-assets.md`) are kept for engine-level testing with minimal setups.
+- **FITL game-rule tests**: compile `data/games/fire-in-the-lake/*.md` via `compileProductionSpec()` from `test/helpers/production-spec-helpers.ts`. Do NOT create separate fixture files for FITL profiles, events, or special activities. Foundation fixtures (`fitl-foundation-inline-assets.md`, `fitl-foundation-coup-victory-inline-assets.md`) are kept for engine-level testing with minimal setups.
 
 ## Coding Conventions
 

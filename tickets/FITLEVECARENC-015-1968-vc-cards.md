@@ -28,7 +28,7 @@ Encode the 1968 period cards where VC is the first faction in the order:
 
 ## Files to Touch
 
-- `data/games/fire-in-the-lake.md` — Add 11 card definitions.
+- `data/games/fire-in-the-lake/*.md` — Add 11 card definitions.
 - `test/integration/fitl-events-1968-vc.test.ts` — **New file**. Integration tests.
 
 ## Out of Scope

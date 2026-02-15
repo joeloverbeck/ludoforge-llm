@@ -1,9 +1,8 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { parseGameSpec } from '../../src/cnl/index.js';
+import { readProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
   asPhaseId,
   asPlayerId,
@@ -33,7 +32,7 @@ interface ParsedFitlData {
 }
 
 function loadFitlData(): ParsedFitlData {
-  const markdown = readFileSync(join(process.cwd(), 'data', 'games', 'fire-in-the-lake.md'), 'utf8');
+  const markdown = readProductionSpec();
   const parsed = parseGameSpec(markdown);
   const parseErrors = parsed.diagnostics.filter((d) => d.severity === 'error');
   assert.equal(parseErrors.length, 0, `Parse errors: ${parseErrors.map((d) => d.message).join('; ')}`);

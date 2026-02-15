@@ -24,7 +24,7 @@ Encode the 4 pivotal event cards. Each has:
 
 ## Files to Touch
 
-- `data/games/fire-in-the-lake.md` — Add 4 card definitions.
+- `data/games/fire-in-the-lake/*.md` — Add 4 card definitions.
 - `test/integration/fitl-events-pivotal.test.ts` — **New file**. Integration tests.
 
 ## Out of Scope

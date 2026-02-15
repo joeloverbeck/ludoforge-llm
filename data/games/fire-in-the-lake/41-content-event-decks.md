@@ -1,0 +1,3853 @@
+# Fire in the Lake - Content Event Decks
+
+```yaml
+eventDecks:
+  - id: fitl-events-initial-card-pack
+    drawZone: deck:none
+    discardZone: played:none
+    shuffleOnSetup: true
+    cards:
+      - id: card-82
+        title: Domino Theory
+        sideMode: dual
+        order: 82
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          flavorText: "U.S. prestige is on the line."
+        unshaded:
+          text: "Aid and ARVN Resources each +9. Return pieces from Out of Play."
+          branches:
+            - id: resources-and-aid
+              order: 2
+              effects:
+                - addVar: { scope: global, var: arvnResources, delta: 9 }
+                - addVar: { scope: global, var: aid, delta: 9 }
+            - id: return-from-out-of-play
+              order: 1
+              targets:
+                - id: us-out-of-play
+                  selector:
+                    query: players
+                  cardinality: { max: 3 }
+                - id: arvn-out-of-play
+                  selector:
+                    query: players
+                  cardinality: { max: 6 }
+              effects:
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: usOutOfPlay
+                        over:
+                          query: tokensInZone
+                          zone: out-of-play-US:none
+                          filter:
+                            - { prop: faction, eq: US }
+                        to:
+                          zoneExpr: available-US:none
+                - removeByPriority:
+                    budget: 6
+                    groups:
+                      - bind: arvnOutOfPlay
+                        over:
+                          query: tokensInZone
+                          zone: out-of-play-ARVN:none
+                          filter:
+                            - { prop: faction, eq: ARVN }
+                        to:
+                          zoneExpr: available-ARVN:none
+                - addVar: { scope: global, var: aid, delta: 1 }
+        shaded:
+          text: "Containment falters: Aid -9."
+          targets:
+            - id: us-troops-available
+              selector:
+                query: players
+              cardinality: { max: 3 }
+          effects:
+            - addVar: { scope: global, var: aid, delta: -9 }
+      - id: card-64
+        title: Honolulu Conference
+        sideMode: single
+        order: 64
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          flavorText: "Summit signals renewed support for Saigon."
+        unshaded:
+          text: "Aid and Patronage each +6."
+          effects:
+            - macro: add-global-var-delta
+              args: { varName: aid, deltaExpr: 6 }
+            - macro: add-global-var-delta
+              args: { varName: patronage, deltaExpr: 6 }
+      - id: card-67
+        title: Amphib Landing
+        sideMode: dual
+        order: 67
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          flavorText: "Coastal insertion opens a fast COIN push."
+        unshaded:
+          text: "Relocate ARVN Troops among coastal spaces; ARVN executes free Sweep then free Assault."
+          freeOperationGrants:
+            - faction: "1"
+              sequence: { chain: amphib-landing-arvn, step: 0 }
+              operationClass: operation
+              actionIds: [sweep]
+            - faction: "1"
+              sequence: { chain: amphib-landing-arvn, step: 1 }
+              operationClass: operation
+              actionIds: [assault]
+        shaded:
+          text: "Insurgent response: Remove 2 ARVN Troops from coastal spaces."
+      - id: card-69
+        title: MACV
+        sideMode: single
+        order: 69
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          flavorText: "Command integration accelerates ARVN tempo."
+        unshaded:
+          text: "ARVN executes free Special Activities."
+          freeOperationGrants:
+            - faction: "1"
+              sequence: { chain: macv-arvn-special-activity, step: 0 }
+              operationClass: limitedOperation
+      - id: card-70
+        title: ROKs
+        sideMode: dual
+        order: 70
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          flavorText: "Allied contingents strengthen ARVN offensive options."
+        unshaded:
+          text: "ARVN Sweep/Assault in selected spaces as if US."
+          freeOperationGrants:
+            - faction: "1"
+              executeAsFaction: "0"
+              sequence: { chain: roks-arvn-as-us, step: 0 }
+              operationClass: operation
+              actionIds: [sweep]
+            - faction: "1"
+              executeAsFaction: "0"
+              sequence: { chain: roks-arvn-as-us, step: 1 }
+              operationClass: operation
+              actionIds: [assault]
+        shaded:
+          text: "ARVN losses mount: remove 2 ARVN pieces."
+      - id: card-72
+        title: Body Count
+        sideMode: dual
+        order: 72
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "NVA", "US", "VC"]
+          flavorText: "Kill metrics begin to drive battlefield behavior."
+        unshaded:
+          text: "US/ARVN operations prioritize attrition. MOMENTUM"
+          lastingEffects:
+            - id: mom-body-count
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_bodyCount }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_bodyCount }
+        shaded:
+          text: "Insurgent adaptation blunts kill-ratio pressure."
+      - id: card-76
+        title: Annam
+        sideMode: dual
+        order: 76
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          flavorText: "Regional instability strains Saigon's finances."
+        unshaded:
+          text: "NVA and VC Resources each -3; Patronage +3."
+          effects:
+            - macro: add-global-var-delta
+              args: { varName: nvaResources, deltaExpr: -3 }
+            - macro: add-global-var-delta
+              args: { varName: vcResources, deltaExpr: -3 }
+            - macro: add-global-var-delta
+              args: { varName: patronage, deltaExpr: 3 }
+        shaded:
+          text: "Patronage -3 and ARVN Resources -6."
+          effects:
+            - macro: add-global-var-delta
+              args: { varName: patronage, deltaExpr: -3 }
+            - macro: add-global-var-delta
+              args: { varName: arvnResources, deltaExpr: -6 }
+      - id: card-78
+        title: General Landsdale
+        sideMode: dual
+        order: 78
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          flavorText: "Political warfare effort reshapes pacification tempo."
+        unshaded:
+          text: "Landsdale sidelined; no lasting momentum effect."
+        shaded:
+          text: "Political influence campaign takes hold. MOMENTUM"
+          lastingEffects:
+            - id: mom-general-landsdale
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_generalLansdale }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_generalLansdale }
+      - id: card-81
+        title: CIDG
+        sideMode: dual
+        order: 81
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          flavorText: "Civilian irregular networks are reorganized."
+        unshaded:
+          text: "Replace ARVN pieces with Irregulars/Rangers in selected spaces."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 2 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: irregular
+                    over:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: irregular }
+                    to:
+                      zoneExpr: $targetSpace
+        shaded:
+          text: "CIDG positions collapse: replace Irregulars with VC Guerrillas."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 2 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: irregular
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: irregular }
+                    to:
+                      zoneExpr: available-US:none
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: vcGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-VC:none
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetSpace
+      - id: card-83
+        title: Election
+        sideMode: dual
+        order: 83
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          flavorText: "Balloting reshapes control and aid expectations."
+        unshaded:
+          text: "Shift up to 3 spaces one level toward Active Support; Aid +6."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: or
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+              cardinality: { max: 3 }
+          effects:
+            - macro: shift-support-opposition
+              args: { space: $targetSpace, deltaExpr: 1 }
+            - macro: add-global-var-delta
+              args: { varName: aid, deltaExpr: 6 }
+        shaded:
+          text: "Shift up to 3 spaces one level toward Active Opposition."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: or
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+              cardinality: { max: 3 }
+          effects:
+            - macro: shift-support-opposition
+              args: { space: $targetSpace, deltaExpr: -1 }
+      - id: card-85
+        title: USAID
+        sideMode: dual
+        order: 85
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          flavorText: "Development spending competes with local capture."
+        unshaded:
+          text: "Shift up to 2 spaces one level toward Active Support."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 2 }
+          effects:
+            - macro: shift-support-opposition
+              args: { space: $targetSpace, deltaExpr: 1 }
+        shaded:
+          text: "Shift up to 2 spaces one level toward Active Opposition."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 2 }
+          effects:
+            - macro: shift-support-opposition
+              args: { space: $targetSpace, deltaExpr: -1 }
+      - id: card-86
+        title: Mandate of Heaven
+        sideMode: dual
+        order: 86
+        tags: [capability, ARVN]
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          flavorText: "Legitimacy campaign rewrites ARVN governance limits."
+        unshaded:
+          text: "Capability: ARVN Govern in one space without support shift."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_mandateOfHeaven, markerState: unshaded }
+        shaded:
+          text: "Capability: ARVN Govern may select only one space."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_mandateOfHeaven, markerState: shaded }
+      - id: card-87
+        title: Nguyen Chanh Thi
+        sideMode: dual
+        order: 87
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          flavorText: "Regional command turnover drives sudden force shifts."
+        unshaded:
+          text: "Place ARVN pieces and shift one selected city toward Support."
+          targets:
+            - id: $targetCity
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '=='
+                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  right: city
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: arvnTroop
+                    over:
+                      query: tokensInZone
+                      zone: available-ARVN:none
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: $targetCity
+            - macro: shift-support-opposition
+              args: { space: $targetCity, deltaExpr: 1 }
+        shaded:
+          text: "Place VC/NVA pieces and shift one selected city toward Opposition."
+          targets:
+            - id: $targetCity
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '=='
+                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  right: city
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 1
+                groups:
+                  - bind: vcGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-VC:none
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetCity
+            - removeByPriority:
+                budget: 1
+                groups:
+                  - bind: nvaGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-NVA:none
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetCity
+            - macro: shift-support-opposition
+              args: { space: $targetCity, deltaExpr: -1 }
+      - id: card-89
+        title: Tam Chau
+        sideMode: dual
+        order: 89
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          flavorText: "Buddhist political leverage expands in Saigon."
+        unshaded:
+          text: "Shift Saigon one level toward Active Support; Patronage +3."
+          effects:
+            - macro: shift-support-opposition
+              args: { space: saigon:none, deltaExpr: 1 }
+            - macro: add-global-var-delta
+              args: { varName: patronage, deltaExpr: 3 }
+        shaded:
+          text: "Shift Saigon one level toward Active Opposition; Patronage -3."
+          effects:
+            - macro: shift-support-opposition
+              args: { space: saigon:none, deltaExpr: -1 }
+            - macro: add-global-var-delta
+              args: { varName: patronage, deltaExpr: -3 }
+      - id: card-90
+        title: Walt Rostow
+        sideMode: dual
+        order: 90
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          flavorText: "Escalation planning accelerates deployment adjustments."
+        unshaded:
+          text: "Place and relocate COIN pieces among selected spaces."
+          targets:
+            - id: $sourceSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+            - id: $destSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: coinPiece
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                    to:
+                      zoneExpr: $destSpace
+        shaded:
+          text: "Redeploy selected COIN pieces to Available."
+          targets:
+            - id: $sourceSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: coinPiece
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinPiece, prop: faction }, ':none'] }
+      - id: card-68
+        title: Green Berets
+        sideMode: dual
+        order: 68
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          flavorText: "Elite trainers."
+        unshaded:
+          text: "Place 3 Irregulars or 3 Rangers in a Province without NVA Control. Set it to Active Support."
+          branches:
+            - id: place-irregulars-and-support
+              order: 1
+              targets:
+                - id: $targetProvince
+                  selector:
+                    query: mapSpaces
+                  cardinality: { max: 1 }
+              effects:
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: irregular
+                        over:
+                          query: tokensInZone
+                          zone: available-US:none
+                          filter:
+                            - { prop: faction, eq: US }
+                            - { prop: type, eq: irregular }
+                        to:
+                          zoneExpr: $targetProvince
+                - setMarker:
+                    space: $targetProvince
+                    marker: supportOpposition
+                    state: activeSupport
+            - id: place-rangers-and-support
+              order: 2
+              targets:
+                - id: $targetProvince
+                  selector:
+                    query: mapSpaces
+                  cardinality: { max: 1 }
+              effects:
+                - removeByPriority:
+                    budget: 3
+                    groups:
+                      - bind: ranger
+                        over:
+                          query: tokensInZone
+                          zone: available-ARVN:none
+                          filter:
+                            - { prop: faction, eq: ARVN }
+                            - { prop: type, eq: ranger }
+                        to:
+                          zoneExpr: $targetProvince
+                - setMarker:
+                    space: $targetProvince
+                    marker: supportOpposition
+                    state: activeSupport
+        shaded:
+          text: "Reluctant trainees: Remove any 3 Irregulars to Available and set 1 of their Provinces to Active Opposition."
+          targets:
+            - id: $sourceProvince
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: irregular
+                    over:
+                      query: tokensInZone
+                      zone: $sourceProvince
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: irregular }
+                    to:
+                      zoneExpr: available-US:none
+            - setMarker:
+                space: $sourceProvince
+                marker: supportOpposition
+                state: activeOpposition
+      - id: card-1
+        title: Gulf of Tonkin
+        sideMode: dual
+        order: 1
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["US", "NVA", "ARVN", "VC"]
+          flavorText: "Escalation trigger."
+        unshaded:
+          text: "US free Air Strikes, then moves 6 US pieces from out-of-play to any Cities."
+          freeOperationGrants:
+            - faction: "0"
+              sequence: { chain: gulf-of-tonkin-us-airstrike, step: 0 }
+              operationClass: operation
+              actionIds: [airStrike]
+          effects:
+            - forEach:
+                bind: $usOutOfPlayPiece
+                over:
+                  query: tokensInZone
+                  zone: out-of-play-US:none
+                  filter:
+                    - { prop: faction, eq: US }
+                limit: 6
+                effects:
+                  - chooseOne:
+                      bind: '$targetCity@{$usOutOfPlayPiece}'
+                      options:
+                        query: mapSpaces
+                        filter:
+                          op: '=='
+                          left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                          right: 'city'
+                  - moveToken:
+                      token: $usOutOfPlayPiece
+                      from:
+                        zoneExpr: { ref: tokenZone, token: $usOutOfPlayPiece }
+                      to:
+                        zoneExpr: { ref: binding, name: '$targetCity@{$usOutOfPlayPiece}' }
+        shaded:
+          text: "Congressional regrets: Aid -1 per Casualty. All Casualties out of play."
+          effects:
+            - addVar:
+                scope: global
+                var: aid
+                delta:
+                  op: '*'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: casualties-US:none
+                        filter:
+                          - { prop: faction, eq: US }
+                  right: -1
+            - moveAll:
+                from: casualties-US:none
+                to: out-of-play-US:none
+      - id: card-2
+        title: Kissinger
+        sideMode: dual
+        order: 2
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "NVA", "ARVN", "VC"]
+          flavorText: "Backchannel diplomacy reshapes leverage."
+        unshaded:
+          text: "Diplomatic leverage: US pressures Hanoi for concessions."
+        shaded:
+          text: "Negotiation stall: Insurgents exploit political maneuvering."
+      - id: card-3
+        title: Peace Talks
+        sideMode: dual
+        order: 3
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "NVA", "ARVN", "VC"]
+          flavorText: "Public negotiations mask battlefield pressure."
+        unshaded:
+          text: "NVA Resources -9. Linebacker 11 allowed when Support + Available US (Troops + Bases) > 25."
+          effects:
+            - addVar: { scope: global, var: nvaResources, delta: -9 }
+            - setVar: { scope: global, var: linebacker11SupportAvailable, value: 0 }
+            - forEach:
+                bind: $space
+                over: { query: mapSpaces }
+                effects:
+                  - if:
+                      when: { op: '==', left: { ref: markerState, space: $space, marker: supportOpposition }, right: passiveSupport }
+                      then:
+                        - addVar: { scope: global, var: linebacker11SupportAvailable, delta: { ref: zoneProp, zone: $space, prop: population } }
+                  - if:
+                      when: { op: '==', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeSupport }
+                      then:
+                        - addVar:
+                            scope: global
+                            var: linebacker11SupportAvailable
+                            delta: { op: '*', left: { ref: zoneProp, zone: $space, prop: population }, right: 2 }
+            - addVar:
+                scope: global
+                var: linebacker11SupportAvailable
+                delta:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+            - addVar:
+                scope: global
+                var: linebacker11SupportAvailable
+                delta:
+                  aggregate:
+                    op: count
+                    query:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: base }
+            - if:
+                when: { op: '>', left: { ref: gvar, var: linebacker11SupportAvailable }, right: 25 }
+                then:
+                  - setVar: { scope: global, var: linebacker11Allowed, value: true }
+                else:
+                  - setVar: { scope: global, var: linebacker11Allowed, value: false }
+        shaded:
+          text: "Bombing halt: NVA Resources +9. If Trail is 0-2, set Trail to 3."
+          effects:
+            - addVar: { scope: global, var: nvaResources, delta: 9 }
+            - if:
+                when: { op: '<=', left: { ref: gvar, var: trail }, right: 2 }
+                then:
+                  - setVar: { scope: global, var: trail, value: 3 }
+      - id: card-4
+        title: Top Gun
+        sideMode: dual
+        order: 4
+        tags: [capability, US]
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "NVA", "ARVN", "VC"]
+          flavorText: "Naval aviators sharpen air-superiority tactics."
+        unshaded:
+          text: "US capability: Air Strike pressures Trail and suppresses MiG losses."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_topGun, markerState: unshaded }
+        shaded:
+          text: "US capability (shaded): Air Strike effectiveness is reduced by attrition."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_topGun, markerState: shaded }
+      - id: card-5
+        title: Wild Weasels
+        sideMode: dual
+        order: 5
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["US", "NVA", "ARVN", "VC"]
+          flavorText: "Air defense suppression."
+        unshaded:
+          text: "Remove shaded SA-2s or, if no shaded SA-2s, Degrade Trail 2 boxes and NVA Resources -9."
+          effects:
+            - if:
+                when: { op: '==', left: { ref: globalMarkerState, marker: cap_sa2s }, right: shaded }
+                then:
+                  - macro: set-global-marker
+                    args: { markerId: cap_sa2s, markerState: inactive }
+                else:
+                  - addVar: { scope: global, var: trail, delta: -2 }
+                  - addVar: { scope: global, var: nvaResources, delta: -9 }
+        shaded:
+          text: "Complex strike packages: Until Coup, Air Strike either Degrades Trail or may remove just 1 piece (not 1-6). MOMENTUM"
+          lastingEffects:
+            - id: mom-wild-weasels
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_wildWeasels }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_wildWeasels }
+      - id: card-6
+        title: Aces
+        sideMode: dual
+        order: 6
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["US", "NVA", "VC", "ARVN"]
+          flavorText: "Robin Olds ambushes MiGs."
+        unshaded:
+          text: "Free Air Strike any 1 space outside the South with 6 hits and Degrade Trail 2 boxes."
+          freeOperationGrants:
+            - faction: "0"
+              sequence: { chain: aces-us-airstrike, step: 0 }
+              operationClass: operation
+              actionIds: [airStrike]
+          effects:
+            - addVar: { scope: global, var: trail, delta: -2 }
+        shaded:
+          text: "MiG ace 'Colonel Tomb': 2 Available US Troops to Casualties. Improve Trail by 2 boxes."
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: usTroop
+                    over:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: casualties-US:none
+            - addVar: { scope: global, var: trail, delta: 2 }
+      - id: card-7
+        title: ADSID
+        sideMode: dual
+        order: 7
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["US", "NVA", "VC", "ARVN"]
+          flavorText: "Air-delivered seismic intrusion detector."
+        unshaded:
+          text: "Through Coup, -6 NVA Resources at any Trail change. MOMENTUM"
+          lastingEffects:
+            - id: mom-adsid
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_adsid }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_adsid }
+        shaded:
+          text: "Dubious technology: Improve Trail by 1 box and to a minimum of 2. ARVN Resources -9."
+          effects:
+            - addVar: { scope: global, var: trail, delta: 1 }
+            - if:
+                when: { op: '<', left: { ref: gvar, var: trail }, right: 2 }
+                then:
+                  - setVar: { scope: global, var: trail, value: 2 }
+            - addVar: { scope: global, var: arvnResources, delta: -9 }
+      - id: card-8
+        title: Arc Light
+        sideMode: dual
+        order: 8
+        tags: [capability, US]
+        metadata:
+          period: "1965"
+          factionOrder: ["US", "NVA", "VC", "ARVN"]
+          flavorText: "Guided B-52 tactical bombing."
+        unshaded:
+          text: "1 space each Air Strike may be a Province without COIN pieces."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_arcLight, markerState: unshaded }
+        shaded:
+          text: "Moonscape: Air Strike spaces removing >1 piece shift 2 levels toward Active Opposition."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_arcLight, markerState: shaded }
+      - id: card-9
+        title: Psychedelic Cookie
+        sideMode: dual
+        order: 9
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "NVA", "VC", "ARVN"]
+          flavorText: "Field improvisation expands helicopter mobility."
+        unshaded:
+          text: "US mobility surge: redeploy Troops to contested spaces."
+        shaded:
+          text: "Operational overreach: movement strains local control."
+      - id: card-10
+        title: Rolling Thunder
+        sideMode: dual
+        order: 10
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["US", "NVA", "VC", "ARVN"]
+          flavorText: "Sustained bombing."
+        unshaded:
+          text: "Degrade Trail 2 boxes. -9 NVA Resources. NVA Ineligible through next card."
+          effects:
+            - addVar: { scope: global, var: trail, delta: -2 }
+            - addVar: { scope: global, var: nvaResources, delta: -9 }
+        shaded:
+          text: "Assets to restricted strategic air campaign: -5 ARVN Resources. No Air Strike until Coup. MOMENTUM"
+          effects:
+            - addVar: { scope: global, var: arvnResources, delta: -5 }
+          lastingEffects:
+            - id: mom-rolling-thunder
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_rollingThunder }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_rollingThunder }
+      - id: card-11
+        title: Abrams
+        sideMode: dual
+        order: 11
+        tags: [capability, US]
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "ARVN", "NVA", "VC"]
+          flavorText: "Command shift prioritizes selective base targeting."
+        unshaded:
+          text: "US capability: one Assault space removes untunneled base first."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_abrams, markerState: unshaded }
+        shaded:
+          text: "US capability (shaded): US/ARVN Assault is limited to max 2 spaces."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_abrams, markerState: shaded }
+      - id: card-12
+        title: Capt Buck Adams
+        sideMode: dual
+        order: 12
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "ARVN", "NVA", "VC"]
+          flavorText: "Aggressive river command disrupts entrenched cells."
+        unshaded:
+          text: "River assault: flip guerrillas and remove exposed insurgents."
+        shaded:
+          text: "Counter-ambushes force US attrition and tactical withdrawal."
+      - id: card-13
+        title: Cobras
+        sideMode: dual
+        order: 13
+        tags: [capability, US]
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "ARVN", "NVA", "VC"]
+          flavorText: "Gunship support amplifies Sweep and complicates Assault."
+        unshaded:
+          text: "US capability: up to 2 Sweep spaces each remove 1 active/untunneled enemy."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_cobras, markerState: unshaded }
+        shaded:
+          text: "US capability (shaded): each Assault space may lose 1 US Troop on low die roll."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_cobras, markerState: shaded }
+      - id: card-14
+        title: M-48 Patton
+        sideMode: dual
+        order: 14
+        tags: [capability, US]
+        metadata:
+          period: "1965"
+          factionOrder: ["US", "ARVN", "NVA", "VC"]
+          flavorText: "Armored punch."
+        unshaded:
+          text: "2 non-Lowland US Assault spaces each remove 2 extra enemy pieces."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_m48Patton, markerState: unshaded }
+        shaded:
+          text: "RPGs: After US/ARVN Patrol, NVA removes up to 2 cubes that moved (US to Casualties)."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_m48Patton, markerState: shaded }
+      - id: card-16
+        title: Blowtorch Komer
+        sideMode: dual
+        order: 16
+        tags: [momentum]
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          flavorText: "Pacification drive intensifies political pressure."
+        unshaded:
+          text: "Through Coup, Pacification shifts 1 additional level toward Support. MOMENTUM"
+          lastingEffects:
+            - id: mom-blowtorch-komer
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_blowtorchKomer }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_blowtorchKomer }
+        shaded:
+          text: "Pacification backlash: rural coercion increases opposition pressure."
+      - id: card-18
+        title: Combined Action Platoons
+        sideMode: dual
+        order: 18
+        tags: [capability, US]
+        metadata:
+          period: "1965"
+          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          flavorText: "Hamlet defense."
+        unshaded:
+          text: "US Training places or relocates an added Police into any 1 space with US Troops."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_caps, markerState: unshaded }
+        shaded:
+          text: "Passive posture: US may select max 2 spaces per Sweep."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_caps, markerState: shaded }
+      - id: card-19
+        title: CORDS
+        sideMode: dual
+        order: 19
+        tags: [capability, US]
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          flavorText: "Civil-military integration accelerates local governance."
+        unshaded:
+          text: "US capability: US/ARVN Train may execute sub-activity in up to 2 spaces."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_cords, markerState: unshaded }
+        shaded:
+          text: "US capability (shaded): Pacification in Train can only set to Passive Support."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_cords, markerState: shaded }
+      - id: card-20
+        title: Laser Guided Bombs
+        sideMode: dual
+        order: 20
+        tags: [capability, US]
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          flavorText: "Precision strike doctrine changes target priorities."
+        unshaded:
+          text: "US capability: Air Strike may spare one selected space from casualties."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_lgbs, markerState: unshaded }
+        shaded:
+          text: "US capability (shaded): Air Strike may remove at most 4 pieces total."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_lgbs, markerState: shaded }
+      - id: card-21
+        title: Americal
+        sideMode: dual
+        order: 21
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "VC", "NVA", "ARVN"]
+          flavorText: "Rapid redeployment reshapes local balance."
+        unshaded:
+          text: "US Troops reposition to pressure insurgent strongholds."
+        shaded:
+          text: "Escalation costs: local backlash shifts spaces toward Opposition."
+      - id: card-22
+        title: Da Nang
+        sideMode: dual
+        order: 22
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["US", "VC", "NVA", "ARVN"]
+          flavorText: "US Marines arrive."
+        unshaded:
+          text: "US places up to 6 Troops in Da Nang, up to 3 from out of play."
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: usTroopOutOfPlay
+                    over:
+                      query: tokensInZone
+                      zone: out-of-play-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: da-nang:none
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: usTroopAvailable
+                    over:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: da-nang:none
+        shaded:
+          text: "VC fire closes air base: Remove all Support within 1 space of Da Nang. No Air Strike until Coup. MOMENTUM"
+          lastingEffects:
+            - id: mom-da-nang
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_daNang }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_daNang }
+      - id: card-23
+        title: Operation Attleboro
+        sideMode: dual
+        order: 23
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["US", "VC", "NVA", "ARVN"]
+          flavorText: "Stab at Iron Triangle."
+        unshaded:
+          text: "US free Air Lifts into, Sweeps in, then Assaults a space with a Tunnel, removing Tunneled Bases as if no Tunnel."
+          freeOperationGrants:
+            - faction: "0"
+              sequence: { chain: operation-attleboro-us, step: 0 }
+              operationClass: operation
+              actionIds: [airLift]
+            - faction: "0"
+              sequence: { chain: operation-attleboro-us, step: 1 }
+              operationClass: operation
+              actionIds: [sweep]
+            - faction: "0"
+              sequence: { chain: operation-attleboro-us, step: 2 }
+              operationClass: operation
+              actionIds: [assault]
+        shaded:
+          text: "Heavy casualties, few results: Select a Tunnel space: remove a die roll of US Troops within 1 space of it to Casualties."
+      - id: card-24
+        title: Operation Starlite
+        sideMode: dual
+        order: 24
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["US", "VC", "NVA", "ARVN"]
+          flavorText: "VC caught off guard."
+        unshaded:
+          text: "Remove all VC from a coastal Province with or adjacent to US Troops."
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 99
+                groups:
+                  - bind: vcPiece
+                    over:
+                      query: tokensInZone
+                      zone: $targetProvince
+                      filter:
+                        - { prop: faction, eq: VC }
+                    to:
+                      zoneExpr: available-VC:none
+        shaded:
+          text: "Slipped away: In up to 3 Provinces, flip all VC Guerrillas Underground. Stay Eligible."
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+              cardinality: { max: 3 }
+          eligibilityOverrides:
+            - { target: { kind: active }, eligible: true, windowId: remain-eligible }
+          effects:
+            - forEach:
+                bind: $vcGuerrilla
+                over:
+                  query: tokensInZone
+                  zone: $targetProvince
+                  filter:
+                    - { prop: faction, eq: VC }
+                    - { prop: type, eq: guerrilla }
+                    - { prop: activity, eq: active }
+                effects:
+                  - setTokenProp: { token: $vcGuerrilla, prop: activity, value: underground }
+      - id: card-25
+        title: TF-116 Riverines
+        sideMode: dual
+        order: 25
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["US", "VC", "NVA", "ARVN"]
+          flavorText: "Delta boats."
+        unshaded:
+          text: "Remove all NVA/VC from Mekong LoCs. US or ARVN free Sweep into/in then free Assault each Lowland touching Mekong."
+          freeOperationGrants:
+            - faction: "0"
+              sequence: { chain: tf116-us, step: 0 }
+              operationClass: operation
+              actionIds: [sweep, assault]
+            - faction: "1"
+              sequence: { chain: tf116-arvn, step: 0 }
+              operationClass: operation
+              actionIds: [sweep, assault]
+          targets:
+            - id: $targetLoc
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '=='
+                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  right: loc
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 99
+                groups:
+                  - bind: insurgentPiece
+                    over:
+                      query: tokensInZone
+                      zone: $targetLoc
+                      filter:
+                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentPiece, prop: faction }, ':none'] }
+        shaded:
+          text: "VC river fortifications: Place 2 VC Guerrillas per Mekong LoC space, then Sabotage each that has more VC than COIN."
+          targets:
+            - id: $targetLoc
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '=='
+                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  right: loc
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: vcGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-VC:none
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetLoc
+      - id: card-28
+        title: Search and Destroy
+        sideMode: dual
+        order: 28
+        tags: [capability, US]
+        metadata:
+          period: "1965"
+          factionOrder: ["US", "VC", "ARVN", "NVA"]
+          flavorText: "Mobile counter-guerrilla ops."
+        unshaded:
+          text: "Each US Assault space may remove 1 Underground Guerrilla."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_searchAndDestroy, markerState: unshaded }
+        shaded:
+          text: "Villagers in the crossfire: Each US and ARVN Assault Province shifts by 1 level toward Active Opposition."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_searchAndDestroy, markerState: shaded }
+      - id: card-27
+        title: Phoenix Program
+        sideMode: dual
+        order: 27
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "VC", "ARVN", "NVA"]
+          flavorText: "Neutralization campaigns expand."
+        unshaded:
+          text: "Intelligence campaign: Aid -1."
+          targets:
+            - id: vc-in-coin-control
+              selector:
+                query: players
+              cardinality: { max: 3 }
+          effects:
+            - addVar: { scope: global, var: aid, delta: -1 }
+        shaded:
+          text: "Repression backlash: Aid -2 and ARVN Resources -1."
+          targets:
+            - id: terror-spaces
+              selector:
+                query: mapSpaces
+              cardinality: { max: 2 }
+          effects:
+            - addVar: { scope: global, var: aid, delta: -2 }
+            - addVar: { scope: global, var: arvnResources, delta: -1 }
+      - id: card-43
+        title: Economic Aid
+        sideMode: dual
+        order: 43
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          flavorText: "Free World aids Saigon."
+        unshaded:
+          text: "2 ARVN or 2 US Bases out-of-play to Available. Then ARVN Resources +6 or Aid +12."
+          branches:
+            - id: return-us-bases-and-aid
+              order: 1
+              targets:
+                - id: us-out-of-play-bases
+                  selector:
+                    query: players
+                  cardinality: { max: 2 }
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: usBaseOutOfPlay
+                        over:
+                          query: tokensInZone
+                          zone: out-of-play-US:none
+                          filter:
+                            - { prop: faction, eq: US }
+                            - { prop: type, eq: base }
+                        to:
+                          zoneExpr: available-US:none
+                - addVar: { scope: global, var: aid, delta: 12 }
+            - id: return-arvn-bases-and-resources
+              order: 2
+              targets:
+                - id: arvn-out-of-play-bases
+                  selector:
+                    query: players
+                  cardinality: { max: 2 }
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: arvnBaseOutOfPlay
+                        over:
+                          query: tokensInZone
+                          zone: out-of-play-ARVN:none
+                          filter:
+                            - { prop: faction, eq: ARVN }
+                            - { prop: type, eq: base }
+                        to:
+                          zoneExpr: available-ARVN:none
+                - addVar: { scope: global, var: arvnResources, delta: 6 }
+        shaded:
+          text: "Moscow aids Hanoi: Improve the Trail 1 box. Then either Improve it 1 more box or add +10 NVA Resources."
+          branches:
+            - id: improve-trail-twice
+              order: 1
+              effects:
+                - addVar: { scope: global, var: trail, delta: 1 }
+                - addVar: { scope: global, var: trail, delta: 1 }
+            - id: improve-trail-and-add-resources
+              order: 2
+              effects:
+                - addVar: { scope: global, var: trail, delta: 1 }
+                - addVar: { scope: global, var: nvaResources, delta: 10 }
+      - id: card-79
+        title: Henry Cabot Lodge
+        sideMode: dual
+        order: 79
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          flavorText: "Ambassador proposes US protectorate."
+        unshaded:
+          text: "Aid +20."
+          effects:
+            - addVar: { scope: global, var: aid, delta: 20 }
+        shaded:
+          text: "Internecine enabler: Remove up to 3 ARVN pieces. Patronage +2 for each."
+          targets:
+            - id: $sourceSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: arvnTroop
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: available-ARVN:none
+                  - bind: arvnPolice
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: police }
+                    to:
+                      zoneExpr: available-ARVN:none
+                  - bind: arvnRanger
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: ranger }
+                    to:
+                      zoneExpr: available-ARVN:none
+                  - bind: arvnBase
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: base }
+                    to:
+                      zoneExpr: available-ARVN:none
+                remainingBind: $remainingRemovalBudget
+            - addVar:
+                scope: global
+                var: patronage
+                delta:
+                  op: "*"
+                  left: 2
+                  right:
+                    op: "-"
+                    left: 3
+                    right: { ref: binding, name: $remainingRemovalBudget }
+      - id: card-107
+        title: Burning Bonze
+        sideMode: dual
+        order: 107
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["VC", "NVA", "ARVN", "US"]
+          flavorText: "Gruesome protests close elite ranks."
+        unshaded:
+          text: "Patronage +3 or, if Saigon at Active Support, +6."
+          effects:
+            - if:
+                when:
+                  op: "=="
+                  left: { ref: markerState, space: saigon:none, marker: supportOpposition }
+                  right: activeSupport
+                then:
+                  - addVar: { scope: global, var: patronage, delta: 6 }
+                else:
+                  - addVar: { scope: global, var: patronage, delta: 3 }
+        shaded:
+          text: "Anti-regime self-immolation: Shift Saigon 1 level toward Active Opposition. Aid -12."
+          effects:
+            - shiftMarker:
+                space: saigon:none
+                marker: supportOpposition
+                delta: -1
+            - addVar: { scope: global, var: aid, delta: -12 }
+      - id: card-112
+        title: Colonel Chau
+        sideMode: dual
+        order: 112
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["VC", "ARVN", "US", "NVA"]
+          flavorText: "Census-grievance teams."
+        unshaded:
+          text: "Place 1 Police into each of 6 Provinces."
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+              cardinality: { max: 6 }
+          effects:
+            - removeByPriority:
+                budget: 6
+                groups:
+                  - bind: police
+                    over:
+                      query: tokensInZone
+                      zone: available-ARVN:none
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                        - { prop: type, eq: police }
+                    to:
+                      zoneExpr: $targetProvince
+        shaded:
+          text: "Local Viet Minh tradition: Shift 3 Provinces with ARVN each 1 level toward Active Opposition. Place a VC Guerrilla in each."
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+              cardinality: { max: 3 }
+          effects:
+            - shiftMarker:
+                space: $targetProvince
+                marker: supportOpposition
+                delta: -1
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: guerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-VC:none
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetProvince
+      - id: card-55
+        title: Trucks
+        sideMode: dual
+        order: 55
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          flavorText: "Logistics under pressure."
+        unshaded:
+          text: "Trail degrades. Remove NVA pieces in Laos/Cambodia."
+          targets:
+            - id: $trailCountrySpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: or
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+              cardinality: { max: 1 }
+          effects:
+            - addVar: { scope: global, var: trail, delta: -1 }
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: nvaTroops
+                    over:
+                      query: tokensInZone
+                      zone: $trailCountrySpace
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: available-NVA:none
+                  - bind: nvaGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $trailCountrySpace
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: available-NVA:none
+        shaded:
+          text: "Resources +6 and reposition an NVA Base from Laos/Cambodia into South Vietnam."
+          targets:
+            - id: $sourceCountrySpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: or
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: laos }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: cambodia }
+              cardinality: { max: 1 }
+            - id: $destSouthSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '=='
+                  left: { ref: zoneProp, zone: $zone, prop: country }
+                  right: southVietnam
+              cardinality: { max: 1 }
+          effects:
+            - addVar: { scope: global, var: nvaResources, delta: 6 }
+            - forEach:
+                bind: $nvaBase
+                over:
+                  query: tokensInZone
+                  zone: $sourceCountrySpace
+                  filter:
+                    - { prop: faction, eq: NVA }
+                    - { prop: type, eq: base }
+                limit: 1
+                effects:
+                  - moveToken:
+                      token: $nvaBase
+                      from: { zoneExpr: $sourceCountrySpace }
+                      to: { zoneExpr: $destSouthSpace }
+      - id: card-97
+        title: Brinks Hotel
+        sideMode: dual
+        order: 97
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["VC", "US", "ARVN", "NVA"]
+          flavorText: "Saigon shaken."
+        unshaded:
+          text: "Aid +10 or transfer Patronage to Aid. Flip RVN leader."
+          branches:
+            - id: aid-plus-ten-and-flip-leader
+              order: 1
+              effects:
+                - addVar: { scope: global, var: aid, delta: 10 }
+                - if:
+                    when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: minh }
+                    then:
+                      - setGlobalMarker: { marker: activeLeader, state: khanh }
+                    else:
+                      - setGlobalMarker: { marker: activeLeader, state: minh }
+            - id: transfer-patronage-to-aid-and-flip-leader
+              order: 2
+              effects:
+                - let:
+                    bind: $transfer
+                    value:
+                      if:
+                        when: { op: '>', left: { ref: gvar, var: patronage }, right: 6 }
+                        then: 6
+                        else: { ref: gvar, var: patronage }
+                    in:
+                      - addVar:
+                          scope: global
+                          var: patronage
+                          delta:
+                            op: '-'
+                            left: 0
+                            right: { ref: binding, name: $transfer }
+                      - addVar:
+                          scope: global
+                          var: aid
+                          delta: { ref: binding, name: $transfer }
+                - if:
+                    when: { op: '==', left: { ref: globalMarkerState, marker: activeLeader }, right: minh }
+                    then:
+                      - setGlobalMarker: { marker: activeLeader, state: khanh }
+                    else:
+                      - setGlobalMarker: { marker: activeLeader, state: minh }
+        shaded:
+          text: "Shift a City 1 level toward Active Opposition and increase terror markers."
+          targets:
+            - id: $targetCity
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '=='
+                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  right: city
+              cardinality: { max: 1 }
+          effects:
+            - shiftMarker:
+                space: $targetCity
+                marker: supportOpposition
+                delta: -1
+            - addVar: { scope: global, var: terrorSabotageMarkersPlaced, delta: 1 }
+      - id: card-95
+        title: Westmoreland
+        sideMode: dual
+        order: 95
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["VC", "US", "NVA", "ARVN"]
+          flavorText: "Root 'em out."
+        unshaded:
+          text: "US free Air Lifts, then Sweeps (no moves) or Assaults (no ARVN) in 2 spaces, then Air Strikes."
+          freeOperationGrants:
+            - faction: "0"
+              sequence: { chain: westmoreland-us, step: 0 }
+              operationClass: operation
+              actionIds: [airLift]
+            - faction: "0"
+              sequence: { chain: westmoreland-us, step: 1 }
+              operationClass: operation
+              actionIds: [sweep, assault]
+            - faction: "0"
+              sequence: { chain: westmoreland-us, step: 2 }
+              operationClass: operation
+              actionIds: [airStrike]
+        shaded:
+          text: "Big-unit war bypasses population: Shift 3 Provinces with no Police each 2 levels toward Active Opposition."
+      - id: card-98
+        title: Long Tan
+        sideMode: dual
+        order: 98
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["VC", "US", "ARVN", "NVA"]
+          flavorText: "Royal Australians."
+        unshaded:
+          text: "Place 2 out-of-play US Troops into a Province or remove all Guerrillas from all Jungle with US Troops."
+          branches:
+            - id: long-tan-place-us-troops
+              order: 1
+              targets:
+                - id: $targetProvince
+                  selector:
+                    query: mapSpaces
+                    filter:
+                      op: '=='
+                      left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                      right: province
+                  cardinality: { max: 1 }
+              effects:
+                - removeByPriority:
+                    budget: 2
+                    groups:
+                      - bind: usTroop
+                        over:
+                          query: tokensInZone
+                          zone: out-of-play-US:none
+                          filter:
+                            - { prop: faction, eq: US }
+                            - { prop: type, eq: troops }
+                        to:
+                          zoneExpr: $targetProvince
+            - id: long-tan-clear-jungle-guerrillas
+              order: 2
+              targets:
+                - id: $targetJungle
+                  selector:
+                    query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: jungle }
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: troops }
+                          right: 0
+                  cardinality: { max: 1 }
+              effects:
+                - removeByPriority:
+                    budget: 99
+                    groups:
+                      - bind: insurgentGuerrilla
+                        over:
+                          query: tokensInZone
+                          zone: $targetJungle
+                          filter:
+                            - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                            - { prop: type, eq: guerrilla }
+                        to:
+                          zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
+        shaded:
+          text: "VC strike newly arrived troops: 1 US Base and 1 US Troop in a Jungle with 2+ VC Guerrillas to Casualties."
+          targets:
+            - id: $targetJungle
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: jungle }
+                    - op: '>='
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: VC }
+                              - { prop: type, eq: guerrilla }
+                      right: 2
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: usBase
+                    over:
+                      query: tokensInZone
+                      zone: $targetJungle
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: base }
+                    to:
+                      zoneExpr: casualties-US:none
+                  - bind: usTroop
+                    over:
+                      query: tokensInZone
+                      zone: $targetJungle
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: casualties-US:none
+      - id: card-99
+        title: Masher/White Wing
+        sideMode: dual
+        order: 99
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["VC", "US", "ARVN", "NVA"]
+          flavorText: "Sweep flushes enemy into kill zone."
+        unshaded:
+          text: "US or ARVN free Sweeps 1 non-Jungle space with US and ARVN Troops. They free Assault as US."
+          freeOperationGrants:
+            - faction: "0"
+              sequence: { chain: masher-white-wing-us, step: 0 }
+              operationClass: operation
+              actionIds: [sweep]
+            - faction: "0"
+              sequence: { chain: masher-white-wing-us, step: 1 }
+              operationClass: operation
+              actionIds: [assault]
+            - faction: "1"
+              executeAsFaction: "0"
+              sequence: { chain: masher-white-wing-arvn-as-us, step: 0 }
+              operationClass: operation
+              actionIds: [sweep]
+            - faction: "1"
+              executeAsFaction: "0"
+              sequence: { chain: masher-white-wing-arvn-as-us, step: 1 }
+              operationClass: operation
+              actionIds: [assault]
+        shaded:
+          text: "Poor OPSEC: VC or NVA free March Guerrillas to any 3 spaces then free Ambush in each (even if Active)."
+      - id: card-100
+        title: Rach Ba Rai
+        sideMode: dual
+        order: 100
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["VC", "US", "ARVN", "NVA"]
+          flavorText: "Riverines hunt Charlie."
+        unshaded:
+          text: "Remove all VC or all non-Troop NVA from a Lowland with US Troops."
+          branches:
+            - id: rach-ba-rai-remove-vc
+              order: 1
+              targets:
+                - id: $targetLowland
+                  selector:
+                    query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: troops }
+                          right: 0
+                  cardinality: { max: 1 }
+              effects:
+                - removeByPriority:
+                    budget: 99
+                    groups:
+                      - bind: vcPiece
+                        over:
+                          query: tokensInZone
+                          zone: $targetLowland
+                          filter:
+                            - { prop: faction, eq: VC }
+                        to:
+                          zoneExpr: available-VC:none
+            - id: rach-ba-rai-remove-nva-non-troops
+              order: 2
+              targets:
+                - id: $targetLowland
+                  selector:
+                    query: mapSpaces
+                    filter:
+                      op: and
+                      args:
+                        - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
+                        - op: '>'
+                          left:
+                            aggregate:
+                              op: count
+                              query:
+                                query: tokensInZone
+                                zone: $zone
+                                filter:
+                                  - { prop: faction, eq: US }
+                                  - { prop: type, eq: troops }
+                          right: 0
+                  cardinality: { max: 1 }
+              effects:
+                - removeByPriority:
+                    budget: 99
+                    groups:
+                      - bind: nvaPiece
+                        over:
+                          query: tokensInZone
+                          zone: $targetLowland
+                          filter:
+                            - { prop: faction, eq: NVA }
+                            - { prop: type, op: in, value: [base, guerrilla] }
+                        to:
+                          zoneExpr: available-NVA:none
+        shaded:
+          text: "VC river ambush: In a Lowland with any VC, remove a die roll of US/ARVN cubes (US to Casualties). Place 1 VC piece."
+          targets:
+            - id: $targetLowland
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: zonePropIncludes, zone: $zone, prop: terrainTags, value: lowland }
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: VC }
+                      right: 0
+              cardinality: { max: 1 }
+          effects:
+            - rollRandom:
+                bind: $dieRoll
+                min: 1
+                max: 6
+                in:
+                  - removeByPriority:
+                      budget: { ref: binding, name: $dieRoll }
+                      groups:
+                        - bind: usCube
+                          over:
+                            query: tokensInZone
+                            zone: $targetLowland
+                            filter:
+                              - { prop: faction, eq: US }
+                              - { prop: type, op: in, value: [troops, police] }
+                          to:
+                            zoneExpr: casualties-US:none
+                        - bind: arvnCube
+                          over:
+                            query: tokensInZone
+                            zone: $targetLowland
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, op: in, value: [troops, police] }
+                          to:
+                            zoneExpr: available-ARVN:none
+            - removeByPriority:
+                budget: 1
+                groups:
+                  - bind: vcPiece
+                    over:
+                      query: tokensInZone
+                      zone: available-VC:none
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, op: in, value: [base, guerrilla] }
+                    to:
+                      zoneExpr: $targetLowland
+      - id: card-102
+        title: Cu Chi
+        sideMode: dual
+        order: 102
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          flavorText: "Clear and secure."
+        unshaded:
+          text: "Remove all Guerrillas from 1 space with a Tunnel and COIN Control."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 99
+                groups:
+                  - bind: insurgentGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
+        shaded:
+          text: "Iron Triangle: Place Tunnel markers on each Insurgent Base in 1 Province. Place 1 NVA and 1 VC Guerrilla there."
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '=='
+                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  right: province
+              cardinality: { max: 1 }
+          effects:
+            - forEach:
+                bind: $insurgentBase
+                over:
+                  query: tokensInZone
+                  zone: $targetProvince
+                  filter:
+                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                    - { prop: type, eq: base }
+                effects:
+                  - setTokenProp: { token: $insurgentBase, prop: tunnel, value: tunneled }
+            - removeByPriority:
+                budget: 1
+                groups:
+                  - bind: nvaGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-NVA:none
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetProvince
+            - removeByPriority:
+                budget: 1
+                groups:
+                  - bind: vcGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-VC:none
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetProvince
+      - id: card-104
+        title: Main Force Bns
+        sideMode: dual
+        order: 104
+        tags: [capability, VC]
+        metadata:
+          period: "1965"
+          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          flavorText: "Larger footprints."
+        unshaded:
+          text: "Capability: March into Support/LoC Activates if moving plus non-Base COIN >1 (vice >3)."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_mainForceBns, markerState: unshaded }
+        shaded:
+          text: "Capability: 1 VC Ambush space may remove 2 enemy pieces."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_mainForceBns, markerState: shaded }
+      - id: card-105
+        title: Rural Pressure
+        sideMode: dual
+        order: 105
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          flavorText: "Onerous VC taxation."
+        unshaded:
+          text: "Shift 4 Provinces with any VC each by 1 level toward Active Support."
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: VC }
+                      right: 0
+              cardinality: { max: 4 }
+          effects:
+            - macro: shift-support-opposition
+              args: { space: $targetProvince, deltaExpr: 1 }
+        shaded:
+          text: "Local government corruption: Shift 3 Provinces with Police each by 1 level toward Active Opposition. Patronage +6 or -6."
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, eq: ARVN }
+                              - { prop: type, eq: police }
+                      right: 0
+              cardinality: { max: 3 }
+          branches:
+            - id: rural-pressure-plus-patronage
+              order: 1
+              effects:
+                - macro: shift-support-opposition
+                  args: { space: $targetProvince, deltaExpr: -1 }
+                - macro: add-global-var-delta
+                  args: { varName: patronage, deltaExpr: 6 }
+            - id: rural-pressure-minus-patronage
+              order: 2
+              effects:
+                - macro: shift-support-opposition
+                  args: { space: $targetProvince, deltaExpr: -1 }
+                - macro: add-global-var-delta
+                  args: { varName: patronage, deltaExpr: -6 }
+      - id: card-106
+        title: Binh Duong
+        sideMode: single
+        order: 106
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["VC", "NVA", "ARVN", "US"]
+          flavorText: "Revolutionary land reform seeks traction in prosperous districts."
+        unshaded:
+          text: "In each of 2 Provinces adjacent to Saigon, shift Support/Opposition 1 level either direction and place a VC Guerrilla or Police."
+          targets:
+            - id: $targetProvince
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                    - { op: adjacent, left: $zone, right: saigon:none }
+              cardinality: { max: 2 }
+          effects:
+            - macro: shift-support-opposition
+              args: { space: $targetProvince, deltaExpr: 1 }
+            - removeByPriority:
+                budget: 1
+                groups:
+                  - bind: vcGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-VC:none
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetProvince
+      - id: card-108
+        title: Draft Dodgers
+        sideMode: dual
+        order: 108
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["VC", "NVA", "ARVN", "US"]
+          flavorText: "Public furor sparks enlistment."
+        unshaded:
+          text: "If fewer than 3 Casualty pieces, 3 US Troops from out of play to Available."
+          effects:
+            - if:
+                when:
+                  op: '<'
+                  left:
+                    op: '+'
+                    left:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInZone
+                          zone: casualties-US:none
+                    right:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInZone
+                          zone: casualties-ARVN:none
+                  right: 3
+                then:
+                  - removeByPriority:
+                      budget: 3
+                      groups:
+                        - bind: usTroop
+                          over:
+                            query: tokensInZone
+                            zone: out-of-play-US:none
+                            filter:
+                              - { prop: faction, eq: US }
+                              - { prop: type, eq: troops }
+                          to:
+                            zoneExpr: available-US:none
+                else: []
+        shaded:
+          text: "Recruiting sags: Move 1 US Troop per Casualty piece, to a maximum of 3, from Available to out-of-play."
+          effects:
+            - let:
+                bind: $casualtyCount
+                value:
+                  op: '+'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: casualties-US:none
+                  right:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: casualties-ARVN:none
+                in:
+                  - let:
+                      bind: $maxTroopsMoved
+                      value:
+                        if:
+                          when: { op: '>', left: { ref: binding, name: $casualtyCount }, right: 3 }
+                          then: 3
+                          else: { ref: binding, name: $casualtyCount }
+                      in:
+                        - removeByPriority:
+                            budget: { ref: binding, name: $maxTroopsMoved }
+                            groups:
+                              - bind: usTroop
+                                over:
+                                  query: tokensInZone
+                                  zone: available-US:none
+                                  filter:
+                                    - { prop: faction, eq: US }
+                                    - { prop: type, eq: troops }
+                                to:
+                                  zoneExpr: out-of-play-US:none
+      - id: card-109
+        title: Nguyen Huu Tho
+        sideMode: dual
+        order: 109
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["VC", "NVA", "ARVN", "US"]
+          flavorText: "Party control of NLF draws anti-communist reaction."
+        unshaded:
+          text: "Shift each City with VC 1 level toward Active Support."
+        shaded:
+          text: "National Liberation Front leader: Place a VC base and a VC Guerrilla in Saigon. Stay Eligible."
+          eligibilityOverrides:
+            - { target: { kind: active }, eligible: true, windowId: remain-eligible }
+      - id: card-114
+        title: Tri Quang
+        sideMode: dual
+        order: 114
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["VC", "ARVN", "US", "NVA"]
+          flavorText: "Buddhists counter Communists."
+        unshaded:
+          text: "Set up to 3 Neutral or Opposition Cities to Passive Support."
+          targets:
+            - id: $targetCity
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '=='
+                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  right: city
+              cardinality: { max: 3 }
+          effects:
+            - setMarker:
+                space: $targetCity
+                marker: supportOpposition
+                state: passiveSupport
+        shaded:
+          text: "People's Revolutionary Committee: Shift Hue, Da Nang, and Saigon 1 level toward Active Opposition. Place a VC piece in Saigon."
+          effects:
+            - macro: shift-support-opposition
+              args: { space: hue:none, deltaExpr: -1 }
+            - macro: shift-support-opposition
+              args: { space: da-nang:none, deltaExpr: -1 }
+            - macro: shift-support-opposition
+              args: { space: saigon:none, deltaExpr: -1 }
+            - removeByPriority:
+                budget: 1
+                groups:
+                  - bind: vcPiece
+                    over:
+                      query: tokensInZone
+                      zone: available-VC:none
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, op: in, value: [base, guerrilla] }
+                    to:
+                      zoneExpr: saigon:none
+      - id: card-116
+        title: Cadres
+        sideMode: dual
+        order: 116
+        tags: [capability, VC]
+        metadata:
+          period: "1964"
+          factionOrder: ["VC", "ARVN", "NVA", "US"]
+          flavorText: "Manpower to political sections."
+        unshaded:
+          text: "Capability: VC to Terror or Agitate must remove 2 VC Guerrillas per space."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_cadres, markerState: unshaded }
+        shaded:
+          text: "Capability: VC Rally in 1 space where VC already had a Base may Agitate as if Support Phase even if COIN Control."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_cadres, markerState: shaded }
+      - id: card-75
+        title: Sihanouk
+        sideMode: dual
+        order: 75
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["ARVN", "NVA", "US", "VC"]
+          flavorText: "Cambodian maneuvering."
+        unshaded:
+          text: "ARVN free Sweep or Assault in Cambodia."
+          freeOperationGrants:
+            - faction: "1"
+              sequence: { chain: sihanouk-unshaded-arvn, step: 0 }
+              operationClass: operation
+              actionIds: [sweep, assault]
+              zoneFilter:
+                op: '=='
+                left: { ref: zoneProp, zone: $zone, prop: country }
+                right: cambodia
+        shaded:
+          text: "VC then NVA each get a free operation."
+          freeOperationGrants:
+            - faction: "3"
+              sequence: { chain: sihanouk-shaded-vc-nva, step: 0 }
+              operationClass: operation
+            - faction: "2"
+              sequence: { chain: sihanouk-shaded-vc-nva, step: 1 }
+              operationClass: operation
+      - id: card-51
+        title: 301st Supply Bn
+        sideMode: dual
+        order: 51
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          flavorText: "Throughput under strain."
+        unshaded:
+          text: "Remove non-base Insurgents outside South Vietnam."
+          targets:
+            - id: $outsideSouthSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '!='
+                  left: { ref: zoneProp, zone: $zone, prop: country }
+                  right: southVietnam
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: nvaTroops
+                    over:
+                      query: tokensInZone
+                      zone: $outsideSouthSpace
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: available-NVA:none
+                  - bind: nvaGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $outsideSouthSpace
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: available-NVA:none
+                  - bind: vcGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $outsideSouthSpace
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: available-VC:none
+        shaded:
+          text: "Improve Trail 1 box and add NVA Resources equal to a die roll."
+          effects:
+            - addVar: { scope: global, var: trail, delta: 1 }
+            - rollRandom:
+                bind: $dieRoll
+                min: 1
+                max: 6
+                in:
+                  - addVar:
+                      scope: global
+                      var: nvaResources
+                      delta: { ref: binding, name: $dieRoll }
+      - id: card-101
+        title: Booby Traps
+        sideMode: dual
+        order: 101
+        tags: [capability, VC]
+        metadata:
+          period: "1964"
+          factionOrder: ["VC", "NVA", "US", "ARVN"]
+          flavorText: "Preparations tip off enemy."
+        unshaded:
+          text: "VC and NVA Ambush in max 1 space."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_boobyTraps, markerState: unshaded }
+        shaded:
+          text: "Mines and punji: each Sweep space risks 1 Sweeping Troop loss on roll 1-3."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_boobyTraps, markerState: shaded }
+      - id: card-17
+        title: Claymores
+        sideMode: dual
+        order: 17
+        tags: [momentum]
+        metadata:
+          period: "1964"
+          factionOrder: ["US", "ARVN", "VC", "NVA"]
+          flavorText: "Perimeter."
+        unshaded:
+          text: "Stay Eligible. Until Coup, no Ambush; remove 1 Guerrilla from each Marching group that Activates."
+          eligibilityOverrides:
+            - { target: { kind: active }, eligible: true, windowId: remain-eligible }
+          lastingEffects:
+            - id: mom-claymores
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_claymores }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_claymores }
+        shaded:
+          text: "Infiltrators turn mines around: remove 1 COIN Base and 1 Underground Insurgent from a space with both."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: and
+                  args:
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                              - { prop: type, eq: base }
+                      right: 0
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: count
+                          query:
+                            query: tokensInZone
+                            zone: $zone
+                            filter:
+                              - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                              - { prop: type, eq: guerrilla }
+                              - { prop: activity, eq: underground }
+                      right: 0
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: targetCoinBase
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        - { prop: type, eq: base }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $targetCoinBase, prop: faction }, ':none'] }
+                  - bind: targetInsurgent
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                        - { prop: type, eq: guerrilla }
+                        - { prop: activity, eq: underground }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $targetInsurgent, prop: faction }, ':none'] }
+      - id: card-15
+        title: Medevac
+        sideMode: dual
+        order: 15
+        tags: [momentum]
+        metadata:
+          period: "1964"
+          factionOrder: ["US", "ARVN", "NVA", "VC"]
+          flavorText: "Helicopter evacuation doctrine expands."
+        unshaded:
+          text: "Through Coup, all Troop casualties return to Available."
+          lastingEffects:
+            - id: mom-medevac-unshaded
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_medevacUnshaded }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_medevacUnshaded }
+        shaded:
+          text: "Through Coup, US Troop casualties remain unavailable."
+          lastingEffects:
+            - id: mom-medevac-shaded
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_medevacShaded }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_medevacShaded }
+      - id: card-26
+        title: LRRP
+        sideMode: dual
+        order: 26
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["US", "VC", "ARVN", "NVA"]
+          flavorText: "Long-range reconnaissance patrols probe deep."
+        unshaded:
+          text: "Place up to 2 Irregulars, then US executes free Air Strike."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: irregular
+                    over:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: irregular }
+                    to:
+                      zoneExpr: $targetSpace
+          freeOperationGrants:
+            - faction: "0"
+              sequence: { chain: lrrp-us-airstrike, step: 0 }
+              operationClass: operation
+              actionIds: [airStrike]
+        shaded:
+          text: "Counterintelligence sweep: remove up to 2 Irregulars to Available."
+          targets:
+            - id: $sourceSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: irregular
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: irregular }
+                    to:
+                      zoneExpr: available-US:none
+      - id: card-29
+        title: Tribesmen
+        sideMode: dual
+        order: 29
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["US", "VC", "ARVN", "NVA"]
+          flavorText: "Highland loyalties shift under pressure."
+        unshaded:
+          text: "Remove Insurgent Guerrillas, then replace with Irregulars."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: insurgentGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: irregular
+                    over:
+                      query: tokensInZone
+                      zone: available-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: irregular }
+                    to:
+                      zoneExpr: $targetSpace
+        shaded:
+          text: "Montagnard backlash: remove Irregulars and infiltrate Guerrillas."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: irregular
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: irregular }
+                    to:
+                      zoneExpr: available-US:none
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: nvaGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-NVA:none
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetSpace
+      - id: card-30
+        title: USS New Jersey
+        sideMode: dual
+        order: 30
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["US", "VC", "ARVN", "NVA"]
+          flavorText: "Battleship fire support pounds coastal positions."
+        unshaded:
+          text: "US executes free Air Strikes in coastal spaces."
+        shaded:
+          text: "Counterfire and dispersion blunt naval bombardment."
+      - id: card-31
+        title: AAA
+        sideMode: dual
+        order: 31
+        tags: [capability, NVA]
+        metadata:
+          period: "1964"
+          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          flavorText: "Air defense guns thicken around infiltration routes."
+        unshaded:
+          text: "NVA capability: Rally Trail improvement restricted."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_aaa, markerState: unshaded }
+        shaded:
+          text: "NVA capability (shaded): air defense suppresses COIN air power."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_aaa, markerState: shaded }
+      - id: card-32
+        title: Long Range Guns
+        sideMode: dual
+        order: 32
+        tags: [capability, NVA]
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          flavorText: "Long-range artillery extends pressure across contested routes."
+        unshaded:
+          text: "NVA capability: Bombard can target adjacent spaces from farther range."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_longRangeGuns, markerState: unshaded }
+        shaded:
+          text: "NVA capability (shaded): COIN movement near artillery zones risks attrition."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_longRangeGuns, markerState: shaded }
+      - id: card-33
+        title: MiGs
+        sideMode: dual
+        order: 33
+        tags: [capability, NVA]
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          flavorText: "Interceptors contest US air power over the North."
+        unshaded:
+          text: "NVA capability: Air Strike pressure is reduced unless unshaded Top Gun is active."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_migs, markerState: unshaded }
+        shaded:
+          text: "NVA capability (shaded): US Air Strike can trigger extra troop costs in affected spaces."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_migs, markerState: shaded }
+      - id: card-35
+        title: Thanh Hoa
+        sideMode: dual
+        order: 35
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          flavorText: "Air-defense concentration blunts repeated bridge attacks."
+        unshaded:
+          text: "NVA fortifies logistics corridor resilience around Trail adjustments."
+        shaded:
+          text: "Strike disruption causes COIN losses and protects northern throughput."
+      - id: card-36
+        title: Hamburger Hill
+        sideMode: dual
+        order: 36
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          flavorText: "A brutal highland battle drives force repositioning and tunnel pressure."
+        unshaded:
+          text: "Reposition selected NVA/VC forces and intensify pressure against exposed COIN units."
+        shaded:
+          text: "COIN assault gains ground but incurs attrition and tunnel-side effects."
+      - id: card-37
+        title: Khe Sanh
+        sideMode: dual
+        order: 37
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          flavorText: "Siege operations force major commitment and casualties."
+        unshaded:
+          text: "Mass removal pressure in one contested area; route vulnerable US losses to Casualties."
+        shaded:
+          text: "Relief effort redistributes pieces and partially relieves siege pressure."
+      - id: card-40
+        title: PoWs
+        sideMode: dual
+        order: 40
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          flavorText: "Prisoner exchanges and detention politics alter casualty flows."
+        unshaded:
+          text: "Move selected Casualties and adjust resources based on exchange outcomes."
+        shaded:
+          text: "Captivity leverage deepens COIN attrition and slows force recovery."
+      - id: card-41
+        title: Bombing Pause
+        sideMode: dual
+        order: 41
+        tags: [momentum]
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          flavorText: "Air campaign pauses shift tempo across infiltration and support tracks."
+        unshaded:
+          text: "No Air Strike until Coup. MOMENTUM"
+          lastingEffects:
+            - id: mom-bombing-pause
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_bombingPause }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_bombingPause }
+        shaded:
+          text: "Pause collapses: US resumes heavy air pressure and NVA pays strategic costs."
+      - id: card-42
+        title: Chou En Lai
+        sideMode: dual
+        order: 42
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          flavorText: "Chinese leverage links diplomacy to wartime resource shifts."
+        unshaded:
+          text: "Resource shifts follow diplomatic signaling and die-based political momentum."
+        shaded:
+          text: "Diplomatic friction disrupts aid flows and rebalances insurgent support."
+      - id: card-45
+        title: PT-76
+        sideMode: dual
+        order: 45
+        tags: [capability, NVA]
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "ARVN", "US", "VC"]
+          flavorText: "Amphibious armor expands NVA assault options in difficult terrain."
+        unshaded:
+          text: "NVA capability: selected Assaults gain armored removal pressure."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_pt76, markerState: unshaded }
+        shaded:
+          text: "NVA capability (shaded): armored commitments increase NVA troop exposure."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_pt76, markerState: shaded }
+      - id: card-49
+        title: Russian Arms
+        sideMode: dual
+        order: 49
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          flavorText: "External materiel shipments increase insurgent placement flexibility."
+        unshaded:
+          text: "Place NVA/VC pieces into eligible spaces and improve insurgent posture."
+        shaded:
+          text: "Arms pipeline disruption limits placement and redirects strategic effort."
+      - id: card-52
+        title: RAND
+        sideMode: dual
+        order: 52
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          flavorText: "Analyst leaks expose hidden assumptions and reverse perceived advantages."
+        unshaded:
+          text: "Flip one currently active capability to its opposite side."
+          effects:
+            - chooseOne:
+                bind: $randCapabilityMarker
+                options:
+                  query: globalMarkers
+                  states: [unshaded, shaded]
+            - flipGlobalMarker:
+                marker: { ref: binding, name: $randCapabilityMarker }
+                stateA: unshaded
+                stateB: shaded
+        shaded:
+          text: "Flip one currently active capability to its opposite side."
+          effects:
+            - chooseOne:
+                bind: $randCapabilityMarker
+                options:
+                  query: globalMarkers
+                  states: [unshaded, shaded]
+            - flipGlobalMarker:
+                marker: { ref: binding, name: $randCapabilityMarker }
+                stateA: unshaded
+                stateB: shaded
+      - id: card-54
+        title: Son Tay
+        sideMode: dual
+        order: 54
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          flavorText: "Raid planning reshapes near-term eligibility and initiative windows."
+        unshaded:
+          text: "Adjust next-card eligibility to favor COIN follow-on operations."
+        shaded:
+          text: "Raid aftermath shifts eligibility toward insurgent initiative."
+      - id: card-57
+        title: International Unrest
+        sideMode: dual
+        order: 57
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          flavorText: "Global pressure amplifies domestic war costs and casualty politics."
+        unshaded:
+          text: "Casualty-driven die roll reduces COIN political leverage."
+        shaded:
+          text: "External backlash constrains insurgent options and forces resource tradeoffs."
+      - id: card-58
+        title: Pathet Lao
+        sideMode: dual
+        order: 58
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          flavorText: "Laotian coordination alters trail security and redeployment pressure."
+        unshaded:
+          text: "Conditionally improve Trail or trigger selective redeploy effects."
+        shaded:
+          text: "Cross-border disruption degrades Trail tempo and complicates redeploy planning."
+      - id: card-60
+        title: War Photographer
+        sideMode: dual
+        order: 60
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          flavorText: "Images from the front alter force posture and political appetite."
+        unshaded:
+          text: "Place pieces from Out of Play into selected spaces."
+        shaded:
+          text: "Media backlash moves selected forces back out of theater."
+      - id: card-61
+        title: Armored Cavalry
+        sideMode: dual
+        order: 61
+        tags: [capability, ARVN]
+        metadata:
+          period: "1968"
+          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          flavorText: "Mechanized formations increase ARVN operational reach."
+        unshaded:
+          text: "ARVN capability: Armored columns improve ARVN mobile operation efficiency."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_armoredCavalry, markerState: unshaded }
+        shaded:
+          text: "ARVN capability (shaded): armored commitments create vulnerabilities around ARVN moves."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_armoredCavalry, markerState: shaded }
+      - id: card-62
+        title: Cambodian Civil War
+        sideMode: dual
+        order: 62
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          flavorText: "Border conflict opens corridors for rapid intervention and disruption."
+        unshaded:
+          text: "COIN executes free Air Lift then free Sweep; remove one insurgent Base from Cambodia."
+        shaded:
+          text: "Regional escalation favors insurgents: remove one COIN Base from Cambodia."
+      - id: card-65
+        title: International Forces
+        sideMode: dual
+        order: 65
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          flavorText: "External contingents alter force availability and aid posture."
+        unshaded:
+          text: "Roll a die and move up to that many COIN pieces from Out of Play to Available."
+        shaded:
+          text: "Roll a die and reduce Aid by result."
+      - id: card-71
+        title: An Loc
+        sideMode: dual
+        order: 71
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["ARVN", "NVA", "US", "VC"]
+          flavorText: "Urban defense at An Loc forces troop losses and emergency repositioning."
+        unshaded:
+          text: "Remove selected NVA Troops and place ARVN Troops in contested spaces."
+        shaded:
+          text: "ARVN losses mount; redeploy NVA pressure around An Loc."
+      - id: card-74
+        title: Lam Son 719
+        sideMode: dual
+        order: 74
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["ARVN", "NVA", "US", "VC"]
+          flavorText: "Cross-border incursion strains ARVN logistics and Trail stability."
+        unshaded:
+          text: "Place ARVN Troops in Laos/Cambodia and degrade Trail by 1."
+        shaded:
+          text: "Operation falters: remove ARVN Troops and improve Trail by 1."
+      - id: card-77
+        title: Detente
+        sideMode: dual
+        order: 77
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          flavorText: "Great-power easing cools conflict intensity and shrinks wartime budgets."
+        unshaded:
+          text: "Cut ARVN, NVA, and VC Resources in half."
+          effects:
+            - setVar:
+                scope: global
+                var: arvnResources
+                value: { op: '/', left: { ref: gvar, var: arvnResources }, right: 2 }
+            - setVar:
+                scope: global
+                var: nvaResources
+                value: { op: '/', left: { ref: gvar, var: nvaResources }, right: 2 }
+            - setVar:
+                scope: global
+                var: vcResources
+                value: { op: '/', left: { ref: gvar, var: vcResources }, right: 2 }
+        shaded:
+          text: "Cut ARVN, NVA, and VC Resources in half."
+          effects:
+            - setVar:
+                scope: global
+                var: arvnResources
+                value: { op: '/', left: { ref: gvar, var: arvnResources }, right: 2 }
+            - setVar:
+                scope: global
+                var: nvaResources
+                value: { op: '/', left: { ref: gvar, var: nvaResources }, right: 2 }
+            - setVar:
+                scope: global
+                var: vcResources
+                value: { op: '/', left: { ref: gvar, var: vcResources }, right: 2 }
+      - id: card-80
+        title: Light at the End of the Tunnel
+        sideMode: single
+        order: 80
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["ARVN", "NVA", "VC", "US"]
+          flavorText: "War-weariness and optimism collide in piecemeal force adjustments."
+        unshaded:
+          text: "Apply piece-by-piece force adjustments across factions as listed on the card."
+      - id: card-84
+        title: To Quoc
+        sideMode: dual
+        order: 84
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["ARVN", "VC", "US", "NVA"]
+          flavorText: "Nationalist appeals drive local recruitment and police concentration."
+        unshaded:
+          text: "Place ARVN pieces by space and shift support where ARVN presence expands."
+        shaded:
+          text: "Insurgent counter-mobilization places guerrillas where ARVN policing is weak."
+      - id: card-88
+        title: Phan Quang Dan
+        sideMode: dual
+        order: 88
+        tags: []
+        metadata:
+          period: "1968"
+          factionOrder: ["ARVN", "VC", "NVA", "US"]
+          flavorText: "Political reforms in Saigon trade patronage for public support."
+        unshaded:
+          text: "Shift Saigon toward Support and adjust Patronage."
+        shaded:
+          text: "Shift Saigon toward Opposition and adjust Patronage."
+      - id: card-34
+        title: SA-2s
+        sideMode: dual
+        order: 34
+        tags: [capability, NVA]
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "US", "ARVN", "VC"]
+          flavorText: "Surface-to-air missiles tighten the northern shield."
+        unshaded:
+          text: "NVA capability: Air Strike can remove only 2 pieces in one selected space."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_sa2s, markerState: unshaded }
+        shaded:
+          text: "NVA capability (shaded): Air Strike losses can include US Troops when available."
+          effects:
+            - macro: set-global-marker
+              args: { markerId: cap_sa2s, markerState: shaded }
+      - id: card-38
+        title: McNamara Line
+        sideMode: single
+        order: 38
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          flavorText: "Barrier planning constrains infiltration routes."
+        unshaded:
+          text: "No Infiltrate or Trail Improvement until Coup. MOMENTUM"
+          lastingEffects:
+            - id: mom-mcnamara-line
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_mcnamaraLine }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_mcnamaraLine }
+      - id: card-39
+        title: Oriskany
+        sideMode: dual
+        order: 39
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "US", "VC", "ARVN"]
+          flavorText: "Carrier deck fire disrupts strike tempo."
+        unshaded:
+          text: "Air Strike degrades Trail by 2 and lowers NVA Resources by 9."
+        shaded:
+          text: "No Trail degrade from Air Strike until Coup. MOMENTUM"
+          lastingEffects:
+            - id: mom-oriskany
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_oriskany }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_oriskany }
+      - id: card-46
+        title: 559th Transport Grp
+        sideMode: dual
+        order: 46
+        tags: [momentum]
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          flavorText: "Route command tightens corridor discipline."
+        unshaded:
+          text: "NVA Infiltrate to only 1 destination space through Coup. MOMENTUM"
+          lastingEffects:
+            - id: mom-559th-transport-grp
+              duration: round
+              setupEffects:
+                - macro: set-global-flag-true
+                  args: { varName: mom_559thTransportGrp }
+              teardownEffects:
+                - macro: set-global-flag-false
+                  args: { varName: mom_559thTransportGrp }
+        shaded:
+          text: "US Aid -6 and NVA Resources +6."
+          effects:
+            - addVar: { scope: global, var: aid, delta: -6 }
+            - addVar: { scope: global, var: nvaResources, delta: 6 }
+      - id: card-47
+        title: Chu Luc
+        sideMode: dual
+        order: 47
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          flavorText: "Main-force concentration accelerates in contested provinces."
+        unshaded:
+          text: "Place 3 NVA Troops into any spaces with NVA pieces."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          - { prop: faction, eq: NVA }
+                  right: 0
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: nvaTroop
+                    over:
+                      query: tokensInZone
+                      zone: available-NVA:none
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: $targetSpace
+        shaded:
+          text: "Place 2 VC Guerrillas into any spaces with VC pieces."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+                filter:
+                  op: '>'
+                  left:
+                    aggregate:
+                      op: count
+                      query:
+                        query: tokensInZone
+                        zone: $zone
+                        filter:
+                          - { prop: faction, eq: VC }
+                  right: 0
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: vcGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-VC:none
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetSpace
+      - id: card-53
+        title: Sappers
+        sideMode: dual
+        order: 53
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "VC", "US", "ARVN"]
+          flavorText: "Shock teams probe base perimeters."
+        unshaded:
+          text: "Remove a COIN Base and up to 2 Troops from one selected space."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: coinBase
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        - { prop: type, eq: base }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinBase, prop: faction }, ':none'] }
+                  - bind: coinTroop
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinTroop, prop: faction }, ':none'] }
+        shaded:
+          text: "Remove 3 NVA/VC Guerrillas from one selected space."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: insurgentGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
+      - id: card-56
+        title: Vo Nguyen Giap
+        sideMode: dual
+        order: 56
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          flavorText: "Operational tempo follows strategic concentration."
+        unshaded:
+          text: "NVA execute free March then free Attack."
+          freeOperationGrants:
+            - faction: "2"
+              sequence: { chain: vo-nguyen-giap-nva, step: 0 }
+              operationClass: operation
+              actionIds: [march]
+            - faction: "2"
+              sequence: { chain: vo-nguyen-giap-nva, step: 1 }
+              operationClass: operation
+              actionIds: [attack]
+        shaded:
+          text: "NVA execute free March in up to 3 spaces, then 1 free Op or Special Activity in each."
+      - id: card-59
+        title: Plei Mei
+        sideMode: dual
+        order: 59
+        tags: []
+        metadata:
+          period: "1965"
+          factionOrder: ["NVA", "VC", "ARVN", "US"]
+          flavorText: "Highland clashes force rapid tactical repositioning."
+        unshaded:
+          text: "Remove enemy pieces in one selected Highland and execute free March."
+          freeOperationGrants:
+            - faction: "2"
+              sequence: { chain: plei-mei-nva, step: 0 }
+              operationClass: operation
+              actionIds: [march]
+        shaded:
+          text: "Remove COIN pieces in one selected Highland and execute free Attack."
+          freeOperationGrants:
+            - faction: "2"
+              sequence: { chain: plei-mei-nva, step: 0 }
+              operationClass: operation
+              actionIds: [attack]
+      - id: card-48
+        title: Nam Dong
+        sideMode: dual
+        order: 48
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          flavorText: "A CIDG camp attack ripples across I Corps."
+        unshaded:
+          text: "Remove Guerrillas and a COIN Base in one space."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: insurgentGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $insurgentGuerrilla, prop: faction }, ':none'] }
+            - removeByPriority:
+                budget: 1
+                groups:
+                  - bind: coinBase
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        - { prop: type, eq: base }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinBase, prop: faction }, ':none'] }
+        shaded:
+          text: "Propaganda aftermath: remove a COIN Base; NVA Resources +3."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 1
+                groups:
+                  - bind: coinBase
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        - { prop: type, eq: base }
+                    to:
+                      zoneExpr: { concat: ['available-', { ref: tokenProp, token: $coinBase, prop: faction }, ':none'] }
+            - addVar: { scope: global, var: nvaResources, delta: 3 }
+      - id: card-50
+        title: Uncle Ho
+        sideMode: dual
+        order: 50
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["NVA", "ARVN", "VC", "US"]
+          flavorText: "Strategic guidance reshapes tempo of operations."
+        unshaded:
+          text: "Either ARVN executes 2 free Limited Operations, or VC then NVA execute 3 total."
+          branches:
+            - id: arvn-two-free-limited-ops
+              order: 1
+              freeOperationGrants:
+                - faction: "1"
+                  sequence: { chain: uncle-ho-unshaded-arvn-two, step: 0 }
+                  operationClass: limitedOperation
+                - faction: "1"
+                  sequence: { chain: uncle-ho-unshaded-arvn-two, step: 1 }
+                  operationClass: limitedOperation
+            - id: vc-then-nva-three-free-limited-ops
+              order: 2
+              freeOperationGrants:
+                - faction: "3"
+                  sequence: { chain: uncle-ho-unshaded-vc-nva-three, step: 0 }
+                  operationClass: limitedOperation
+                - faction: "3"
+                  sequence: { chain: uncle-ho-unshaded-vc-nva-three, step: 1 }
+                  operationClass: limitedOperation
+                - faction: "2"
+                  sequence: { chain: uncle-ho-unshaded-vc-nva-three, step: 2 }
+                  operationClass: limitedOperation
+        shaded:
+          text: "COIN initiative: US/ARVN execute 3 total free Limited Operations."
+          branches:
+            - id: us-then-arvn-three-free-limited-ops
+              order: 1
+              freeOperationGrants:
+                - faction: "0"
+                  sequence: { chain: uncle-ho-shaded-us-arvn-three, step: 0 }
+                  operationClass: limitedOperation
+                - faction: "1"
+                  sequence: { chain: uncle-ho-shaded-us-arvn-three, step: 1 }
+                  operationClass: limitedOperation
+                - faction: "1"
+                  sequence: { chain: uncle-ho-shaded-us-arvn-three, step: 2 }
+                  operationClass: limitedOperation
+            - id: us-two-free-limited-ops
+              order: 2
+              freeOperationGrants:
+                - faction: "0"
+                  sequence: { chain: uncle-ho-shaded-us-two, step: 0 }
+                  operationClass: limitedOperation
+                - faction: "0"
+                  sequence: { chain: uncle-ho-shaded-us-two, step: 1 }
+                  operationClass: limitedOperation
+      - id: card-63
+        title: Fact Finding
+        sideMode: dual
+        order: 63
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["ARVN", "US", "NVA", "VC"]
+          flavorText: "Investigations expose gaps in pacification claims."
+        unshaded:
+          text: "Return pieces from Out of Play; transfer die-roll Patronage to Aid."
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: usOutOfPlay
+                    over:
+                      query: tokensInZone
+                      zone: out-of-play-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                    to:
+                      zoneExpr: available-US:none
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: arvnOutOfPlay
+                    over:
+                      query: tokensInZone
+                      zone: out-of-play-ARVN:none
+                      filter:
+                        - { prop: faction, eq: ARVN }
+                    to:
+                      zoneExpr: available-ARVN:none
+            - rollRandom:
+                bind: $dieRoll
+                min: 1
+                max: 6
+                in:
+                  - addVar:
+                      scope: global
+                      var: patronage
+                      delta:
+                        op: '*'
+                        left: -1
+                        right: { ref: binding, name: $dieRoll }
+                  - addVar:
+                      scope: global
+                      var: aid
+                      delta: { ref: binding, name: $dieRoll }
+        shaded:
+          text: "Scandal fallout: transfer die-roll Aid to Patronage."
+          effects:
+            - rollRandom:
+                bind: $dieRoll
+                min: 1
+                max: 6
+                in:
+                  - addVar:
+                      scope: global
+                      var: aid
+                      delta:
+                        op: '*'
+                        left: -1
+                        right: { ref: binding, name: $dieRoll }
+                  - addVar:
+                      scope: global
+                      var: patronage
+                      delta: { ref: binding, name: $dieRoll }
+      - id: card-66
+        title: Ambassador Taylor
+        sideMode: dual
+        order: 66
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["ARVN", "US", "VC", "NVA"]
+          flavorText: "Military envoy presses for tighter control."
+        unshaded:
+          text: "Aid and ARVN Resources rise; remove a level of Support."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - addVar: { scope: global, var: aid, delta: 6 }
+            - addVar: { scope: global, var: arvnResources, delta: 6 }
+            - shiftMarker:
+                space: $targetSpace
+                marker: supportOpposition
+                delta: -1
+        shaded:
+          text: "Backlash empowers insurgents: shift toward Opposition; NVA Resources +6."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - shiftMarker:
+                space: $targetSpace
+                marker: supportOpposition
+                delta: 1
+            - addVar: { scope: global, var: nvaResources, delta: 6 }
+      - id: card-93
+        title: Senator Fulbright
+        sideMode: dual
+        order: 93
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["VC", "US", "NVA", "ARVN"]
+          flavorText: "Congressional skepticism constrains intervention."
+        unshaded:
+          text: "Move US pieces to Available and reduce Aid."
+          targets:
+            - id: $sourceSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: usTroop
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: available-US:none
+                  - bind: usIrregular
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: irregular }
+                    to:
+                      zoneExpr: available-US:none
+                  - bind: usBase
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: base }
+                    to:
+                      zoneExpr: available-US:none
+            - addVar: { scope: global, var: aid, delta: -6 }
+        shaded:
+          text: "Withdrawal pressure deepens: more US pieces to Available; Aid -12."
+          targets:
+            - id: $sourceSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 6
+                groups:
+                  - bind: usTroop
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: available-US:none
+                  - bind: usIrregular
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: irregular }
+                    to:
+                      zoneExpr: available-US:none
+                  - bind: usBase
+                    over:
+                      query: tokensInZone
+                      zone: $sourceSpace
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: base }
+                    to:
+                      zoneExpr: available-US:none
+            - addVar: { scope: global, var: aid, delta: -12 }
+      - id: card-110
+        title: No Contact
+        sideMode: dual
+        order: 110
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["VC", "NVA", "ARVN", "US"]
+          flavorText: "Fog of war creates sudden reversals."
+        unshaded:
+          text: "Place US Casualties on map; flip up to 2 Insurgent Guerrillas Active."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: usCasualty
+                    over:
+                      query: tokensInZone
+                      zone: casualties-US:none
+                      filter:
+                        - { prop: faction, eq: US }
+                    to:
+                      zoneExpr: $targetSpace
+            - forEach:
+                bind: $insurgentGuerrilla
+                over:
+                  query: tokensInZone
+                  zone: $targetSpace
+                  filter:
+                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                    - { prop: type, eq: guerrilla }
+                    - { prop: activity, eq: underground }
+                limit: 2
+                effects:
+                  - setTokenProp: { token: $insurgentGuerrilla, prop: activity, value: active }
+        shaded:
+          text: "Counterdeception: flip up to 2 Active Insurgents Underground; move 2 US Troops to Casualties."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - forEach:
+                bind: $insurgentGuerrilla
+                over:
+                  query: tokensInZone
+                  zone: $targetSpace
+                  filter:
+                    - { prop: faction, op: in, value: ['NVA', 'VC'] }
+                    - { prop: type, eq: guerrilla }
+                    - { prop: activity, eq: active }
+                limit: 2
+                effects:
+                  - setTokenProp: { token: $insurgentGuerrilla, prop: activity, value: underground }
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: usTroop
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, eq: US }
+                        - { prop: type, eq: troops }
+                    to:
+                      zoneExpr: casualties-US:none
+      - id: card-118
+        title: Korean War Arms
+        sideMode: dual
+        order: 118
+        tags: []
+        metadata:
+          period: "1964"
+          factionOrder: ["VC", "ARVN", "NVA", "US"]
+          flavorText: "Old stockpiles rearm southern insurgency."
+        unshaded:
+          text: "VC remove Guerrillas, then place VC pieces."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 3
+                groups:
+                  - bind: vcGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: $targetSpace
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: available-VC:none
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: vcGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-VC:none
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetSpace
+        shaded:
+          text: "Cross-border infusion: place VC and NVA Guerrillas."
+          targets:
+            - id: $targetSpace
+              selector:
+                query: mapSpaces
+              cardinality: { max: 1 }
+          effects:
+            - removeByPriority:
+                budget: 2
+                groups:
+                  - bind: vcGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-VC:none
+                      filter:
+                        - { prop: faction, eq: VC }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetSpace
+            - removeByPriority:
+                budget: 1
+                groups:
+                  - bind: nvaGuerrilla
+                    over:
+                      query: tokensInZone
+                      zone: available-NVA:none
+                      filter:
+                        - { prop: faction, eq: NVA }
+                        - { prop: type, eq: guerrilla }
+                    to:
+                      zoneExpr: $targetSpace
+      - id: card-125
+        title: Nguyen Khanh
+        sideMode: single
+        order: 125
+        tags: [coup]
+        metadata:
+          flavorText: "Corps commanders ascendant."
+        unshaded:
+          text: "Transport uses max 1 LoC space."
+          effects:
+            - setGlobalMarker: { marker: activeLeader, state: khanh }
+            - addVar: { scope: global, var: leaderBoxCardCount, delta: 1 }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Pool Zones (piece availability pools — supplement map-derived board zones)
+# ══════════════════════════════════════════════════════════════════════════════
+
+```

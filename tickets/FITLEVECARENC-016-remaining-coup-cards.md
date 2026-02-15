@@ -25,7 +25,7 @@ Encode the 5 remaining coup cards (#126-130). Card #125 (Nguyen Khanh) is alread
 
 ## Files to Touch
 
-- `data/games/fire-in-the-lake.md` — Add 5 card definitions.
+- `data/games/fire-in-the-lake/*.md` — Add 5 card definitions.
 - `test/integration/fitl-events-coup-remaining.test.ts` — **New file**. Integration tests.
 
 ## Out of Scope

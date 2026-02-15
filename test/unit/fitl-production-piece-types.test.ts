@@ -1,10 +1,9 @@
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { parseGameSpec } from '../../src/cnl/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { readProductionSpec } from '../helpers/production-spec-helpers.js';
 
 interface PieceTypeLike {
   readonly id: string;
@@ -25,7 +24,7 @@ interface InventoryEntryLike {
 
 describe('fitl production piece type catalog', () => {
   it('encodes complete piece type status dimensions and transitions', () => {
-    const markdown = readFileSync(join(process.cwd(), 'data', 'games', 'fire-in-the-lake.md'), 'utf8');
+    const markdown = readProductionSpec();
     const parsed = parseGameSpec(markdown);
     assertNoErrors(parsed);
 

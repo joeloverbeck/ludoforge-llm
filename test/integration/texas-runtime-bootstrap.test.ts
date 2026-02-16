@@ -36,6 +36,17 @@ const totalChipsInPlay = (state: GameState): number => {
   return stacks.reduce((sum, value) => sum + value, 0) + pot;
 };
 
+const playersInHandFromFlags = (state: GameState): number => {
+  let count = 0;
+  for (let player = 0; player < state.playerCount; player += 1) {
+    const vars = state.perPlayerVars[String(player)];
+    if (vars?.eliminated === false && vars.handActive === true) {
+      count += 1;
+    }
+  }
+  return count;
+};
+
 describe('texas runtime bootstrap and position flow', () => {
   it('initializes into a playable preflop state with card conservation', () => {
     const def = compileTexasDef();
@@ -45,7 +56,8 @@ describe('texas runtime bootstrap and position flow', () => {
 
     assert.equal(state.currentPhase, 'preflop');
     assert.equal(state.globalVars.activePlayers, 4);
-    assert.equal(state.globalVars.playersInHand, 4);
+    assert.equal('playersInHand' in state.globalVars, false);
+    assert.equal(playersInHandFromFlags(state), 4);
     assert.equal(totalCardsAcrossZones(state.zones), 52);
     assert.equal(moves.length > 0, true);
   });
@@ -158,6 +170,15 @@ describe('texas runtime bootstrap and position flow', () => {
                 const stack = Number(state.perPlayerVars[String(player)]?.chipStack ?? 0);
                 assert.equal(stack >= 0, true, `player ${player} chipStack must remain non-negative`);
               }
+            },
+          },
+          {
+            id: 'texas-hand-state-sync',
+            check: ({ state }) => {
+              const activeInHand = playersInHandFromFlags(state);
+              assert.equal('playersInHand' in state.globalVars, false);
+              assert.equal(activeInHand >= 0, true);
+              assert.equal(activeInHand <= Number(state.globalVars.activePlayers ?? 0), true);
             },
           },
         ];

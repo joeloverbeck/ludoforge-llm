@@ -3,7 +3,6 @@
 ```yaml
 setup:
   - setVar: { scope: global, var: activePlayers, value: { aggregate: { op: count, query: { query: players } } } }
-  - setVar: { scope: global, var: playersInHand, value: { aggregate: { op: count, query: { query: players } } } }
   - setVar: { scope: global, var: dealerSeat, value: { op: '-', left: { aggregate: { op: count, query: { query: players } } }, right: 1 } }
   - setVar: { scope: global, var: actingPosition, value: 0 }
   - forEach:
@@ -29,7 +28,6 @@ turnStructure:
         - setVar: { scope: global, var: lastRaiseSize, value: { ref: gvar, var: bigBlind } }
         - setVar: { scope: global, var: bettingClosed, value: false }
         - setVar: { scope: global, var: handPhase, value: 0 }
-        - setVar: { scope: global, var: playersInHand, value: { ref: gvar, var: activePlayers } }
         - setVar: { scope: global, var: preflopBigBlindSeat, value: { ref: gvar, var: dealerSeat } }
         - setVar: { scope: global, var: preflopBigBlindOptionOpen, value: false }
         - forEach:
@@ -72,7 +70,23 @@ turnStructure:
       onEnter:
         - setVar: { scope: global, var: handPhase, value: 0 }
         - if:
-            when: { op: '<=', left: { ref: gvar, var: playersInHand }, right: 1 }
+            when:
+              op: '<='
+              left:
+                aggregate:
+                  op: sum
+                  query: { query: players }
+                  bind: $player
+                  valueExpr:
+                    if:
+                      when:
+                        op: and
+                        args:
+                          - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
+                          - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
+                      then: 1
+                      else: 0
+              right: 1
             then:
               - gotoPhaseExact: { phase: showdown }
         - macro: find-next-to-act
@@ -255,7 +269,6 @@ actions:
       - moveAll:
           from: { zoneExpr: { concat: ['hand:', { ref: activePlayer }] } }
           to: muck:none
-      - addVar: { scope: global, var: playersInHand, delta: -1 }
       - macro: mark-preflop-big-blind-acted
       - macro: betting-round-completion
       - macro: advance-after-betting

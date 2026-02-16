@@ -20,7 +20,6 @@ globalVars:
   - { name: handsPlayed, type: int, init: 0, min: 0, max: 100000 }
   - { name: handPhase, type: int, init: 0, min: 0, max: 4 }
   - { name: activePlayers, type: int, init: 0, min: 0, max: 10 }
-  - { name: playersInHand, type: int, init: 0, min: 0, max: 10 }
   - { name: actingPosition, type: int, init: 0, min: 0, max: 9 }
   - { name: bettingClosed, type: boolean, init: false }
   - { name: preflopBigBlindSeat, type: int, init: 0, min: 0, max: 9 }

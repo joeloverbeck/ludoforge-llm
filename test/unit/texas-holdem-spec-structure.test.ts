@@ -185,7 +185,6 @@ describe('texas hold\'em spec structure', () => {
         'handsPlayed',
         'handPhase',
         'activePlayers',
-        'playersInHand',
         'actingPosition',
         'bettingClosed',
         'preflopBigBlindSeat',

@@ -1124,7 +1124,22 @@ effectMacros:
                   args:
                     - { op: '==', left: { ref: gvar, var: handPhase }, right: 0 }
                     - { op: '==', left: { ref: gvar, var: preflopBigBlindOptionOpen }, right: true }
-                    - { op: '>', left: { ref: gvar, var: playersInHand }, right: 1 }
+                    - op: '>'
+                      left:
+                        aggregate:
+                          op: sum
+                          query: { query: players }
+                          bind: $player
+                          valueExpr:
+                            if:
+                              when:
+                                op: and
+                                args:
+                                  - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
+                                  - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
+                              then: 1
+                              else: 0
+                      right: 1
                     - { op: '==', left: { ref: pvar, player: { chosen: '$bbSeatFromState' }, var: handActive }, right: true }
                     - { op: '==', left: { ref: pvar, player: { chosen: '$bbSeatFromState' }, var: allIn }, right: false }
                 then:
@@ -1144,7 +1159,23 @@ effectMacros:
               args:
                 fromSeat: { ref: gvar, var: actingPosition }
       - if:
-          when: { op: '<=', left: { ref: gvar, var: playersInHand }, right: 1 }
+          when:
+            op: '<='
+            left:
+              aggregate:
+                op: sum
+                query: { query: players }
+                bind: $player
+                valueExpr:
+                  if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
+                        - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
+                    then: 1
+                    else: 0
+            right: 1
           then:
             - gotoPhaseExact: { phase: showdown }
       - if:
@@ -1152,7 +1183,22 @@ effectMacros:
             op: and
             args:
               - { op: '==', left: { ref: gvar, var: bettingClosed }, right: true }
-              - { op: '>', left: { ref: gvar, var: playersInHand }, right: 1 }
+              - op: '>'
+                left:
+                  aggregate:
+                    op: sum
+                    query: { query: players }
+                    bind: $player
+                    valueExpr:
+                      if:
+                        when:
+                          op: and
+                          args:
+                            - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
+                            - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
+                        then: 1
+                        else: 0
+                right: 1
           then:
             - if:
                 when: { op: '==', left: { ref: gvar, var: handPhase }, right: 0 }
@@ -1176,7 +1222,23 @@ effectMacros:
     exports: []
     effects:
       - if:
-          when: { op: '<=', left: { ref: gvar, var: playersInHand }, right: 1 }
+          when:
+            op: '<='
+            left:
+              aggregate:
+                op: sum
+                query: { query: players }
+                bind: $player
+                valueExpr:
+                  if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
+                        - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
+                    then: 1
+                    else: 0
+            right: 1
           then:
             - setVar: { scope: global, var: oddChipRemainder, value: { ref: gvar, var: pot } }
             - forEach:

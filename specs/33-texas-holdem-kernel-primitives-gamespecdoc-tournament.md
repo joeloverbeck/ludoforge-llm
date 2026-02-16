@@ -205,9 +205,13 @@ metadata:
 | `handsPlayed` | int | 0 | 0 | 100000 | Hand count for escalation |
 | `handPhase` | int | 0 | 0 | 4 | 0=preflop,1=flop,2=turn,3=river,4=showdown |
 | `activePlayers` | int | (from scenario) | 0 | 10 | Non-eliminated player count |
-| `playersInHand` | int | 0 | 0 | 10 | Non-folded players this hand |
 | `actingPosition` | int | 0 | 0 | 9 | Current seat to act |
 | `bettingClosed` | boolean | false | - | - | All active players matched |
+
+**Derived occupancy rule**:
+- Do not persist a separate `playersInHand` counter.
+- Hand occupancy is derived on demand as: `count(handActive == true && eliminated == false)`.
+- Any branch that needs "players left in hand" must use this derived expression directly.
 
 ### 2.3 `20-macros.md`
 
@@ -255,7 +259,7 @@ turnStructure:
     - id: preflop
       onEnter:
         - # Set actingPosition = UTG (first after BB)
-        - # If only 1 player not all-in, skip to showdown
+        - # If derived hand occupancy <= 1, skip to showdown
 
     - id: flop
       onEnter:
@@ -306,7 +310,7 @@ actions:
     effects:
       - setVar: { scope: pvar, player: actor, var: handActive, value: false }
       - # Move hand cards to muck
-      - addVar: { scope: global, var: playersInHand, delta: -1 }
+      - # No playersInHand counter mutation; occupancy is derived from per-player flags
 
   - id: check
     actor: active

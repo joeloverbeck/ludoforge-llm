@@ -33,6 +33,21 @@ const assertNoNegativeStacks = (state: GameState): void => {
   }
 };
 
+const activeInHandFromFlags = (state: GameState): number => {
+  let count = 0;
+  for (let player = 0; player < state.playerCount; player += 1) {
+    const vars = state.perPlayerVars[String(player)];
+    if (vars?.eliminated === false && vars.handActive === true) {
+      count += 1;
+    }
+  }
+  return count;
+};
+
+const assertNoPlayersInHandCounter = (state: GameState, context: string): void => {
+  assert.equal('playersInHand' in state.globalVars, false, `${context}: playersInHand should not be a stored global`);
+};
+
 const actionIds = (def: GameDef, state: GameState): ReadonlySet<string> =>
   new Set(legalMoves(def, state).map((move) => String(move.actionId)));
 
@@ -177,6 +192,7 @@ describe('texas hand mechanics integration', () => {
     assert.equal(zoneCount(next, 'deck:none'), 44);
     assert.equal(zoneCount(next, 'burn:none'), 0);
     assert.equal(zoneCount(next, 'community:none'), 0);
+    assertNoPlayersInHandCounter(next, 'early-fold');
   });
 
   it('handles forced 3-way all-in by auto-resolving to hand cleanup and keeping side-pot eligibility bounds', () => {
@@ -205,6 +221,7 @@ describe('texas hand mechanics integration', () => {
       assert.equal(state.currentPhase === 'hand-cleanup' || state.currentPhase === 'preflop', true);
       assert.equal(Number(state.globalVars.pot ?? 0) === 0 || Number(state.globalVars.pot ?? 0) === 30, true);
       assert.equal(totalChipsInPlay(state), expectedTotal);
+      assertNoPlayersInHandCounter(state, `forced-all-in seed=${seed}`);
 
       const stack0 = Number(state.perPlayerVars['0']?.chipStack ?? 0);
       const stack1 = Number(state.perPlayerVars['1']?.chipStack ?? 0);
@@ -241,6 +258,30 @@ describe('texas hand mechanics integration', () => {
     assert.deepEqual(first.hashTrace, second.hashTrace);
   });
 
+  it('uses derived hand-occupancy (no cached counter) on fold/all-in-heavy transitions', () => {
+    const def = compileTexasDef();
+
+    for (const seed of [61, 62, 63, 64, 65]) {
+      let state = advanceToDecisionPoint(def, initialState(def, seed, 3));
+      state = mutateStacks(state, { '0': 35, '1': 45, '2': 55 });
+      const startHandsPlayed = Number(state.globalVars.handsPlayed ?? 0);
+
+      for (let step = 0; step < 16; step += 1) {
+        const activeInHand = activeInHandFromFlags(state);
+        assertNoPlayersInHandCounter(state, `seed=${seed} step=${step} pre`);
+        assert.equal(activeInHand <= Number(state.globalVars.activePlayers ?? 0), true);
+        const next = applyPreferredAction(def, state, ['allIn', 'fold', 'call', 'check', 'raise']);
+        state = next.state;
+        const postActiveInHand = activeInHandFromFlags(state);
+        assertNoPlayersInHandCounter(state, `seed=${seed} step=${step} post action=${next.actionId}`);
+        assert.equal(postActiveInHand <= Number(state.globalVars.activePlayers ?? 0), true);
+        if (Number(state.globalVars.handsPlayed ?? 0) > startHandsPlayed) {
+          break;
+        }
+      }
+    }
+  });
+
   it('holds chip/card/non-negative invariants across deterministic integration transitions', () => {
     const def = compileTexasDef();
 
@@ -253,6 +294,7 @@ describe('texas hand mechanics integration', () => {
         assert.equal(totalCardsAcrossZones(state), expectedCardTotal, `seed=${seed} step=${step} card conservation`);
         assert.equal(totalChipsInPlay(state), expectedChipTotal, `seed=${seed} step=${step} chip conservation`);
         assertNoNegativeStacks(state);
+        assertNoPlayersInHandCounter(state, `seed=${seed} step=${step}`);
 
         const next = applyPreferredAction(def, state, ['call', 'check', 'allIn', 'raise', 'fold']);
         state = next.state;
@@ -261,6 +303,7 @@ describe('texas hand mechanics integration', () => {
       assert.equal(totalCardsAcrossZones(state), expectedCardTotal, `seed=${seed} final card conservation`);
       assert.equal(totalChipsInPlay(state), expectedChipTotal, `seed=${seed} final chip conservation`);
       assertNoNegativeStacks(state);
+      assertNoPlayersInHandCounter(state, `seed=${seed} final`);
     }
   });
 });

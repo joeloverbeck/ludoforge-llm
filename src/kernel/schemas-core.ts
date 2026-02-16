@@ -474,6 +474,32 @@ export const EffectTraceEntrySchema = z.union([
     .strict(),
   z
     .object({
+      kind: z.literal('resourceTransfer'),
+      from: z
+        .object({
+          scope: z.union([z.literal('global'), z.literal('perPlayer')]),
+          varName: StringSchema,
+          player: IntegerSchema.optional(),
+        })
+        .strict(),
+      to: z
+        .object({
+          scope: z.union([z.literal('global'), z.literal('perPlayer')]),
+          varName: StringSchema,
+          player: IntegerSchema.optional(),
+        })
+        .strict(),
+      requestedAmount: IntegerSchema.min(0),
+      actualAmount: IntegerSchema.min(0),
+      sourceAvailable: IntegerSchema.min(0),
+      destinationHeadroom: IntegerSchema.min(0),
+      minAmount: IntegerSchema.min(0).optional(),
+      maxAmount: IntegerSchema.min(0).optional(),
+      provenance: EffectTraceProvenanceSchema,
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal('lifecycleEvent'),
       eventType: z.union([z.literal('phaseEnter'), z.literal('phaseExit'), z.literal('turnStart'), z.literal('turnEnd')]),
       phase: StringSchema.optional(),

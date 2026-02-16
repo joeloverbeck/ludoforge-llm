@@ -1554,6 +1554,160 @@
                         "properties": {
                           "kind": {
                             "type": "string",
+                            "const": "resourceTransfer"
+                          },
+                          "from": {
+                            "type": "object",
+                            "properties": {
+                              "scope": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "global"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "perPlayer"
+                                  }
+                                ]
+                              },
+                              "varName": {
+                                "type": "string"
+                              },
+                              "player": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "scope",
+                              "varName"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "to": {
+                            "type": "object",
+                            "properties": {
+                              "scope": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "global"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "perPlayer"
+                                  }
+                                ]
+                              },
+                              "varName": {
+                                "type": "string"
+                              },
+                              "player": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "scope",
+                              "varName"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "requestedAmount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "actualAmount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "sourceAvailable": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "destinationHeadroom": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "minAmount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "maxAmount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "provenance": {
+                            "type": "object",
+                            "properties": {
+                              "phase": {
+                                "type": "string"
+                              },
+                              "eventContext": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "actionCost"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "actionEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "triggerEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEvent"
+                                  }
+                                ]
+                              },
+                              "actionId": {
+                                "type": "string"
+                              },
+                              "effectPath": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "phase",
+                              "eventContext",
+                              "effectPath"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "from",
+                          "to",
+                          "requestedAmount",
+                          "actualAmount",
+                          "sourceAvailable",
+                          "destinationHeadroom",
+                          "provenance"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
                             "const": "lifecycleEvent"
                           },
                           "eventType": {

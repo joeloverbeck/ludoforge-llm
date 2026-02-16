@@ -629,6 +629,25 @@ export interface EffectTraceVarChange {
   readonly provenance: EffectTraceProvenance;
 }
 
+export interface EffectTraceResourceEndpoint {
+  readonly scope: 'global' | 'perPlayer';
+  readonly varName: string;
+  readonly player?: PlayerId;
+}
+
+export interface EffectTraceResourceTransfer {
+  readonly kind: 'resourceTransfer';
+  readonly from: EffectTraceResourceEndpoint;
+  readonly to: EffectTraceResourceEndpoint;
+  readonly requestedAmount: number;
+  readonly actualAmount: number;
+  readonly sourceAvailable: number;
+  readonly destinationHeadroom: number;
+  readonly minAmount?: number;
+  readonly maxAmount?: number;
+  readonly provenance: EffectTraceProvenance;
+}
+
 export interface EffectTraceLifecycleEvent {
   readonly kind: 'lifecycleEvent';
   readonly eventType: 'phaseEnter' | 'phaseExit' | 'turnStart' | 'turnEnd';
@@ -664,6 +683,7 @@ export type EffectTraceEntry =
   | EffectTraceMoveToken
   | EffectTraceSetTokenProp
   | EffectTraceVarChange
+  | EffectTraceResourceTransfer
   | EffectTraceCreateToken
   | EffectTraceLifecycleEvent;
 

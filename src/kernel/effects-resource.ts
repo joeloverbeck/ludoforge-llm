@@ -178,15 +178,17 @@ export const applyCommitResource = (
   let actual = Math.max(0, requestedAmount);
   actual = Math.min(actual, sourceAvailable, destinationHeadroom);
 
+  let minAmount: number | undefined;
   if (effect.commitResource.min !== undefined) {
-    const minAmount = Math.max(0, expectInteger(evalValue(effect.commitResource.min, evalCtx), 'commitResource', 'min'));
+    minAmount = Math.max(0, expectInteger(evalValue(effect.commitResource.min, evalCtx), 'commitResource', 'min'));
     if (actual < minAmount) {
       actual = Math.min(sourceAvailable, destinationHeadroom);
     }
   }
 
+  let maxAmount: number | undefined;
   if (effect.commitResource.max !== undefined) {
-    const maxAmount = Math.max(0, expectInteger(evalValue(effect.commitResource.max, evalCtx), 'commitResource', 'max'));
+    maxAmount = Math.max(0, expectInteger(evalValue(effect.commitResource.max, evalCtx), 'commitResource', 'max'));
     actual = Math.min(actual, maxAmount);
   }
 
@@ -205,6 +207,7 @@ export const applyCommitResource = (
 
   const sourceAfter = sourceBefore - actual;
   const destinationAfter = destinationBefore + actual;
+  const provenance = resolveTraceProvenance(ctx);
   const sourcePlayerKey = String(sourcePlayer);
   const nextSourceVars = {
     ...ctx.state.perPlayerVars[sourcePlayerKey],
@@ -235,13 +238,39 @@ export const applyCommitResource = (
         };
 
   emitTrace(ctx.collector, {
+    kind: 'resourceTransfer',
+    from: {
+      scope: 'perPlayer',
+      player: sourcePlayer,
+      varName: sourceVar,
+    },
+    to:
+      destination.scope === 'global'
+        ? {
+            scope: 'global',
+            varName: destination.var,
+          }
+        : {
+            scope: 'perPlayer',
+            player: destinationPlayer!,
+            varName: destination.var,
+          },
+    requestedAmount,
+    actualAmount: actual,
+    sourceAvailable,
+    destinationHeadroom,
+    ...(minAmount === undefined ? {} : { minAmount }),
+    ...(maxAmount === undefined ? {} : { maxAmount }),
+    provenance,
+  });
+  emitTrace(ctx.collector, {
     kind: 'varChange',
     scope: 'perPlayer',
     player: sourcePlayer,
     varName: sourceVar,
     oldValue: sourceBefore,
     newValue: sourceAfter,
-    provenance: resolveTraceProvenance(ctx),
+    provenance,
   });
   emitTrace(ctx.collector, {
     kind: 'varChange',
@@ -250,7 +279,7 @@ export const applyCommitResource = (
     varName: destination.var,
     oldValue: destinationBefore,
     newValue: destinationAfter,
-    provenance: resolveTraceProvenance(ctx),
+    provenance,
   });
 
   return {

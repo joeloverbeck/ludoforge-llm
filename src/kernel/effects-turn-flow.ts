@@ -2,6 +2,7 @@ import { effectRuntimeError } from './effect-error.js';
 import { resetPhaseUsage } from './action-usage.js';
 import { advancePhase } from './phase-advance.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
+import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, GameState, TurnFlowPendingFreeOperationGrant } from './types.js';
 
@@ -60,9 +61,7 @@ const consumePhaseTransitionBudget = (ctx: EffectContext, effectType: string): b
   return true;
 };
 
-const lifecycleBudgetOptions = (ctx: EffectContext):
-  | { phaseTransitionBudget: NonNullable<EffectContext['phaseTransitionBudget']> }
-  | undefined =>
+const lifecycleBudgetOptions = (ctx: EffectContext): MoveExecutionPolicy | undefined =>
   ctx.phaseTransitionBudget === undefined ? undefined : { phaseTransitionBudget: ctx.phaseTransitionBudget };
 
 export const applyGrantFreeOperation = (
@@ -225,7 +224,7 @@ export const applyAdvancePhase = (
   if (!consumePhaseTransitionBudget(ctx, 'advancePhase')) {
     return { state: ctx.state, rng: ctx.rng };
   }
-  const nextState = advancePhase(ctx.def, ctx.state);
+  const nextState = advancePhase(ctx.def, ctx.state, undefined, lifecycleBudgetOptions(ctx));
   return {
     state: nextState,
     rng: { state: nextState.rng },

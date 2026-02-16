@@ -4,6 +4,7 @@ import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { createCollector } from './execution-collector.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
+import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { GameDef, GameState, Rng, TriggerDef, TriggerEvent, TriggerLogEntry } from './types.js';
 
 export interface DispatchTriggersResult {
@@ -22,6 +23,7 @@ export const dispatchTriggers = (
   triggerLog: readonly TriggerLogEntry[],
   adjacencyGraph: AdjacencyGraph = buildAdjacencyGraph(def.zones),
   runtimeTableIndex: RuntimeTableIndex = buildRuntimeTableIndex(def),
+  policy?: MoveExecutionPolicy,
 ): DispatchTriggersResult => {
   if (depth > maxDepth) {
     return {
@@ -63,6 +65,7 @@ export const dispatchTriggers = (
       ...evalCtx,
       rng: nextRng,
       moveParams: {},
+      ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
     });
     nextState = effectResult.state;
     nextRng = effectResult.rng;
@@ -84,6 +87,7 @@ export const dispatchTriggers = (
         nextTriggerLog,
         adjacencyGraph,
         runtimeTableIndex,
+        policy,
       );
       nextState = cascadeResult.state;
       nextRng = cascadeResult.rng;

@@ -7,6 +7,7 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asTriggerId,
   asZoneId,
   legalMoves,
   type ActionDef,
@@ -410,6 +411,163 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
       () => applyMove(def, state, { actionId: asActionId('noop'), params: {} }, { maxPhaseTransitionsPerMove: -1 }),
       /maxPhaseTransitionsPerMove must be a non-negative safe integer/,
     );
+  });
+
+  it('caps trigger-dispatched phase transitions under the same move budget', () => {
+    const action: ActionDef = {
+      id: asActionId('noop'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const def = {
+      ...makeBaseDef({ actions: [action] }),
+      turnStructure: {
+        phases: [
+          { id: asPhaseId('main') },
+          { id: asPhaseId('street1') },
+          { id: asPhaseId('street2') },
+        ],
+      },
+      triggers: [
+        {
+          id: asTriggerId('on_noop'),
+          event: { type: 'actionResolved', action: asActionId('noop') },
+          effects: [
+            { gotoPhaseExact: { phase: asPhaseId('street1') } },
+            { gotoPhaseExact: { phase: asPhaseId('street2') } },
+          ],
+        },
+      ],
+    } as GameDef;
+    const state = makeBaseState({ currentPhase: asPhaseId('main') });
+
+    const uncapped = applyMove(
+      def,
+      state,
+      { actionId: asActionId('noop'), params: {} },
+      { advanceToDecisionPoint: false },
+    );
+    assert.equal(uncapped.state.currentPhase, 'street2');
+
+    const capped = applyMove(
+      def,
+      state,
+      { actionId: asActionId('noop'), params: {} },
+      { maxPhaseTransitionsPerMove: 1, advanceToDecisionPoint: false },
+    );
+    assert.equal(capped.state.currentPhase, 'street1');
+  });
+
+  it('caps event-card side effects under the same move budget', () => {
+    const action: ActionDef = {
+      id: asActionId('event'),
+      actor: 'active',
+      executor: 'actor',
+      capabilities: ['cardEvent'],
+      phase: [asPhaseId('main')],
+      params: [
+        { name: 'eventCardId', domain: { query: 'enums', values: ['card-budget'] } },
+        { name: 'side', domain: { query: 'enums', values: ['unshaded'] } },
+      ],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const def = {
+      ...makeBaseDef({ actions: [action] }),
+      turnStructure: {
+        phases: [
+          { id: asPhaseId('main') },
+          { id: asPhaseId('street1') },
+          { id: asPhaseId('street2') },
+        ],
+      },
+      eventDecks: [
+        {
+          id: 'deck',
+          drawZone: 'board:none',
+          discardZone: 'city:none',
+          cards: [
+            {
+              id: 'card-budget',
+              title: 'Budget Card',
+              sideMode: 'single',
+              unshaded: {
+                effects: [
+                  { gotoPhaseExact: { phase: asPhaseId('street1') } },
+                  { gotoPhaseExact: { phase: asPhaseId('street2') } },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    } as GameDef;
+    const state = makeBaseState({ currentPhase: asPhaseId('main') });
+    const move: Move = {
+      actionId: asActionId('event'),
+      params: {
+        eventCardId: 'card-budget',
+        side: 'unshaded',
+      },
+    };
+
+    const uncapped = applyMove(def, state, move, { advanceToDecisionPoint: false });
+    assert.equal(uncapped.state.currentPhase, 'street2');
+
+    const capped = applyMove(def, state, move, { maxPhaseTransitionsPerMove: 1, advanceToDecisionPoint: false });
+    assert.equal(capped.state.currentPhase, 'street1');
+  });
+
+  it('shares budget across advancePhase and lifecycle-enter transitions', () => {
+    const action: ActionDef = {
+      id: asActionId('advance'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [{ advancePhase: {} }],
+      limits: [],
+    };
+    const def = {
+      ...makeBaseDef({ actions: [action] }),
+      turnStructure: {
+        phases: [
+          { id: asPhaseId('main') },
+          {
+            id: asPhaseId('street1'),
+            onEnter: [{ gotoPhaseExact: { phase: asPhaseId('street2') } }],
+          },
+          { id: asPhaseId('street2') },
+        ],
+      },
+    } as GameDef;
+    const state = makeBaseState({ currentPhase: asPhaseId('main') });
+
+    const uncapped = applyMove(
+      def,
+      state,
+      { actionId: asActionId('advance'), params: {} },
+      { advanceToDecisionPoint: false },
+    );
+    assert.equal(uncapped.state.currentPhase, 'street2');
+
+    const capped = applyMove(
+      def,
+      state,
+      { actionId: asActionId('advance'), params: {} },
+      { maxPhaseTransitionsPerMove: 1, advanceToDecisionPoint: false },
+    );
+    assert.equal(capped.state.currentPhase, 'street1');
   });
 });
 

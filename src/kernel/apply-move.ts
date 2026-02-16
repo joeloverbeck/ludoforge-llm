@@ -31,6 +31,7 @@ import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
+import { toMoveExecutionPolicy } from './execution-policy.js';
 import type {
   ActionDef,
   ActionPipelineDef,
@@ -449,6 +450,7 @@ const applyMoveCore = (
   const phaseTransitionBudget = maxPhaseTransitionsPerMove === undefined
     ? undefined
     : { remaining: maxPhaseTransitionsPerMove };
+  const executionPolicy = toMoveExecutionPolicy(phaseTransitionBudget);
   const baseBindings = runtimeBindingsForMove(move, undefined);
   const executionPlayer = validated?.executionPlayer ?? (
     move.freeOperation === true
@@ -630,7 +632,13 @@ const applyMoveCore = (
     applyCompoundSA();
   }
 
-  const lastingActivation = executeEventMove(def, effectState, effectRng, move);
+  const lastingActivation = executeEventMove(
+    def,
+    effectState,
+    effectRng,
+    move,
+    executionPolicy,
+  );
   effectState = lastingActivation.state;
   effectRng = lastingActivation.rng;
   if (lastingActivation.emittedEvents.length > 0) {
@@ -653,6 +661,8 @@ const applyMoveCore = (
       maxDepth,
       triggerLog,
       adjacencyGraph,
+      runtimeTableIndex,
+      executionPolicy,
     );
     triggerState = emittedEventResult.state;
     triggerRng = emittedEventResult.rng;
@@ -668,6 +678,8 @@ const applyMoveCore = (
     maxDepth,
     triggerLog,
     adjacencyGraph,
+    runtimeTableIndex,
+    executionPolicy,
   );
 
   const stateWithRng = {
@@ -682,7 +694,12 @@ const applyMoveCore = (
     coreOptions?.skipAdvanceToDecisionPoint !== true
     && options?.advanceToDecisionPoint !== false;
   const progressedState = shouldAdvanceToDecisionPoint
-    ? advanceToDecisionPoint(def, turnFlowResult.state, lifecycleAndAdvanceLog)
+    ? advanceToDecisionPoint(
+      def,
+      turnFlowResult.state,
+      lifecycleAndAdvanceLog,
+      executionPolicy,
+    )
     : turnFlowResult.state;
 
   const stateWithHash = {

@@ -4,6 +4,7 @@ import { evalCondition } from './eval-condition.js';
 import { createCollector } from './execution-collector.js';
 import { isCardEventMove } from './action-capabilities.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
+import type { MoveExecutionPolicy } from './execution-policy.js';
 import type {
   ActiveLastingEffect,
   EffectAST,
@@ -234,6 +235,7 @@ const applyEffectList = (
   effects: readonly EffectAST[],
   activePlayer: GameState['activePlayer'],
   moveParams: Move['params'],
+  policy?: MoveExecutionPolicy,
 ): LastingEffectApplyResult => {
   const runtimeTableIndex = buildRuntimeTableIndex(def);
   const result = applyEffects(effects, {
@@ -247,6 +249,7 @@ const applyEffectList = (
     bindings: { ...moveParams },
     moveParams,
     collector: createCollector(),
+    ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   });
   return {
@@ -264,6 +267,7 @@ export const executeEventMove = (
   state: GameState,
   rng: Rng,
   move: Move,
+  policy?: MoveExecutionPolicy,
 ): LastingEffectApplyResult => {
   if (!isCardEventMove(def, move)) {
     return { state, rng, emittedEvents: [] };
@@ -316,6 +320,7 @@ export const executeEventMove = (
       eventEffects,
       state.activePlayer,
       move.params,
+      policy,
     );
     nextState = sideAndBranchResult.state;
     nextRng = sideAndBranchResult.rng;
@@ -330,6 +335,7 @@ export const executeEventMove = (
       lastingEffect.setupEffects,
       state.activePlayer,
       move.params,
+      policy,
     );
     nextState = setupResult.state;
     nextRng = setupResult.rng;
@@ -422,6 +428,7 @@ export const expireLastingEffectsAtBoundaries = (
   state: GameState,
   rng: Rng,
   boundaries: readonly TurnFlowDuration[],
+  policy?: MoveExecutionPolicy,
 ): LastingEffectApplyResult => {
   const activeEffects = state.activeLastingEffects;
   if (activeEffects === undefined || activeEffects.length === 0 || boundaries.length === 0) {
@@ -471,6 +478,7 @@ export const expireLastingEffectsAtBoundaries = (
       teardown,
       state.activePlayer,
       {},
+      policy,
     );
     nextState = teardownResult.state;
     nextRng = teardownResult.rng;

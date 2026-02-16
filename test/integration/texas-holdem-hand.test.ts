@@ -110,6 +110,35 @@ const mutateStacks = (
   };
 };
 
+const runForcedThreeWayAllIn = (
+  def: GameDef,
+  seed: number,
+): {
+  readonly state: GameState;
+  readonly expectedTotal: number;
+  readonly startHandsPlayed: number;
+  readonly steps: number;
+} => {
+  let state = advanceToDecisionPoint(def, initialState(def, seed, 3));
+  state = mutateStacks(state, {
+    '0': 30,
+    '1': 80,
+    '2': 200,
+  });
+
+  const expectedTotal = totalChipsInPlay(state);
+  const startHandsPlayed = Number(state.globalVars.handsPlayed ?? 0);
+  let steps = 0;
+
+  while (Number(state.globalVars.handsPlayed ?? 0) === startHandsPlayed && steps < 8) {
+    const next = applyPreferredAction(def, state, ['allIn', 'call', 'check', 'fold', 'raise']);
+    state = next.state;
+    steps += 1;
+  }
+
+  return { state, expectedTotal, startHandsPlayed, steps };
+};
+
 describe('texas hand mechanics integration', () => {
   it('deals two unique hole cards per player and preserves 52-card conservation', () => {
     const def = compileTexasDef();
@@ -253,35 +282,27 @@ describe('texas hand mechanics integration', () => {
     assert.equal(zoneCount(next, 'deck:none'), 44);
     assert.equal(zoneCount(next, 'burn:none'), 0);
     assert.equal(zoneCount(next, 'community:none'), 0);
+    assert.equal(totalChipsInPlay(next), totalChipsInPlay(initial), 'uncontested path should conserve chips');
+    assertNoNegativeStacks(next);
     assertNoPlayersInHandCounter(next, 'early-fold');
   });
 
-  it('handles forced 3-way all-in by auto-resolving to hand cleanup and keeping side-pot eligibility bounds', () => {
+  it('handles forced 3-way all-in by auto-resolving contested settlement with side-pot eligibility bounds', () => {
     const def = compileTexasDef();
 
     for (const seed of [44, 45, 46, 47, 48]) {
-      let state = advanceToDecisionPoint(def, initialState(def, seed, 3));
-      state = mutateStacks(state, {
-        '0': 30,
-        '1': 80,
-        '2': 200,
-      });
-
-      const expectedTotal = totalChipsInPlay(state);
-      const startHandsPlayed = Number(state.globalVars.handsPlayed ?? 0);
-
-      let steps = 0;
-      while (Number(state.globalVars.handsPlayed ?? 0) === startHandsPlayed && steps < 8) {
-        const next = applyPreferredAction(def, state, ['allIn', 'call', 'check', 'fold', 'raise']);
-        state = next.state;
-        steps += 1;
-      }
+      const { state, expectedTotal, startHandsPlayed, steps } = runForcedThreeWayAllIn(def, seed);
 
       assert.equal(Number(state.globalVars.handsPlayed ?? 0) > startHandsPlayed, true, `seed=${seed} should complete hand`);
       assert.equal(steps <= 3, true, `seed=${seed} should auto-resolve once everyone is all-in`);
       assert.equal(state.currentPhase === 'hand-cleanup' || state.currentPhase === 'preflop', true);
-      assert.equal(Number(state.globalVars.pot ?? 0) === 0 || Number(state.globalVars.pot ?? 0) === 30, true);
+      assert.equal(
+        Number(state.globalVars.pot ?? 0) === 0 || (state.currentPhase === 'preflop' && Number(state.globalVars.pot ?? 0) === 30),
+        true,
+      );
       assert.equal(totalChipsInPlay(state), expectedTotal);
+      assert.equal(Number(state.globalVars.oddChipRemainder ?? 0), 0);
+      assertNoNegativeStacks(state);
       assertNoPlayersInHandCounter(state, `forced-all-in seed=${seed}`);
 
       const stack0 = Number(state.perPlayerVars['0']?.chipStack ?? 0);
@@ -291,6 +312,30 @@ describe('texas hand mechanics integration', () => {
       assert.equal(stack0 <= 90, true, 'shortest stack can only win main pot');
       assert.equal(stack1 <= 210, true, 'middle stack cannot win deepest side layer');
       assert.equal(stack2 <= 340, true, 'largest stack cap should not exceed total contributions');
+    }
+  });
+
+  it('keeps contested odd-chip allocation deterministic across identical forced all-in seeds', () => {
+    const def = compileTexasDef();
+
+    for (const seed of [44, 45, 46, 47, 48]) {
+      const first = runForcedThreeWayAllIn(def, seed).state;
+      const second = runForcedThreeWayAllIn(def, seed).state;
+
+      const firstStacks = [
+        Number(first.perPlayerVars['0']?.chipStack ?? 0),
+        Number(first.perPlayerVars['1']?.chipStack ?? 0),
+        Number(first.perPlayerVars['2']?.chipStack ?? 0),
+      ];
+      const secondStacks = [
+        Number(second.perPlayerVars['0']?.chipStack ?? 0),
+        Number(second.perPlayerVars['1']?.chipStack ?? 0),
+        Number(second.perPlayerVars['2']?.chipStack ?? 0),
+      ];
+
+      assert.deepEqual(firstStacks, secondStacks, `seed=${seed} stack allocation should be deterministic`);
+      assert.equal(Number(first.globalVars.oddChipRemainder ?? 0), 0, `seed=${seed} first run odd chip remainder`);
+      assert.equal(Number(second.globalVars.oddChipRemainder ?? 0), 0, `seed=${seed} second run odd chip remainder`);
     }
   });
 

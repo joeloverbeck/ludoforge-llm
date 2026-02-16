@@ -228,9 +228,15 @@ Key macros (game-specific logic in YAML, not kernel code):
 
 **`deal-community`**: Burns 1 card, deals N community cards (3 for flop, 1 for turn/river).
 
+**`live-hands-at-most-one` / `live-hands-more-than-one` (condition macros)**:
+- Canonical hand-occupancy predicates reused across preflop/advance/showdown routing.
+- Removes duplicated aggregate conditions while keeping routing game-authored in GameSpecDoc.
+
 **`betting-round-completion`**: Checks if all non-folded, non-all-in players have matched `currentBet`. Sets `bettingClosed` when true.
 
-**`side-pot-distribution`**: Iterates over contribution tiers using `forEach` over max-player range:
+**`award-uncontested-pot`**: Awards full remaining `pot` to the single remaining active, non-eliminated hand and resets `totalBet`.
+
+**`distribute-contested-pots`**: Iterates over contribution tiers using `forEach` over max-player range:
 1. Find min `totalBet` among eligible players
 2. Create pot layer = `minBet * eligibleCount`
 3. Evaluate hands for eligible players using `evaluateSubset`
@@ -281,7 +287,8 @@ turnStructure:
       onEnter:
         - # Reveal all non-folded hands
         - # For each player: evaluateSubset(hand + community, 5, hand-rank-score)
-        - # Call side-pot-distribution macro
+        - # If only one active hand remains: award-uncontested-pot
+        - # Else: distribute-contested-pots
         - # Goto hand-cleanup
 
     - id: hand-cleanup
@@ -539,7 +546,7 @@ terminal:
 ### Ticket 2: GameSpecDoc Files
 - Create `data/games/texas-holdem/` directory with all 6 files
 - Write `00-metadata.md`, `10-vocabulary.md`, `40-content-data-assets.md`, `90-terminal.md`
-- Write `20-macros.md` (hand-rank-score, collect-forced-bets, deal-community, side-pot-distribution, eliminate-busted, escalate-blinds)
+- Write `20-macros.md` (hand-rank-score, collect-forced-bets, deal-community, award-uncontested-pot, distribute-contested-pots, eliminate-busted, escalate-blinds)
 - Write `30-rules-actions.md` (phases, turn order, all 5 actions)
 - Write Tier 2 compilation tests
 

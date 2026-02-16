@@ -47,7 +47,8 @@ describe('texas hold\'em spec structure', () => {
         'mark-preflop-big-blind-acted',
         'betting-round-completion',
         'advance-after-betting',
-        'side-pot-distribution',
+        'award-uncontested-pot',
+        'distribute-contested-pots',
         'eliminate-busted-players',
         'escalate-blinds',
       ],
@@ -269,15 +270,51 @@ describe('texas hold\'em spec structure', () => {
     assert.equal(first, second);
   });
 
-  it('keeps side-pot loops runtime-derived and avoids hardcoded seat ranges', () => {
+  it('routes showdown settlement through explicit uncontested/contested macro paths', () => {
     const markdown = readTexasProductionSpec();
     const parsed = parseGameSpec(markdown);
     assertNoErrors(parsed);
 
-    const sidePotMacro = parsed.doc.effectMacros?.find((macro) => macro.id === 'side-pot-distribution');
-    assert.ok(sidePotMacro);
+    const showdown = parsed.doc.turnStructure?.phases.find((phase) => phase.id === 'showdown');
+    assert.ok(showdown);
 
-    const serialized = JSON.stringify(sidePotMacro.effects);
+    const serialized = JSON.stringify(showdown.onEnter);
+    assert.equal(serialized.includes('"macro":"award-uncontested-pot"'), true);
+    assert.equal(serialized.includes('"macro":"distribute-contested-pots"'), true);
+    assert.equal(serialized.includes('"macro":"side-pot-distribution"'), false);
+  });
+
+  it('defines reusable live-hand condition macros and uses them for hand-end routing', () => {
+    const markdown = readTexasProductionSpec();
+    const parsed = parseGameSpec(markdown);
+    assertNoErrors(parsed);
+
+    const conditionMacros = parsed.doc.conditionMacros;
+    assert.ok(conditionMacros !== null);
+    assert.deepEqual(
+      conditionMacros.map((macro) => macro.id),
+      ['live-hands-at-most-one', 'live-hands-more-than-one'],
+    );
+
+    const serializedTurnStructure = JSON.stringify(parsed.doc.turnStructure);
+    assert.equal(serializedTurnStructure.includes('"conditionMacro":"live-hands-at-most-one"'), true);
+
+    const advanceMacro = parsed.doc.effectMacros?.find((macro) => macro.id === 'advance-after-betting');
+    assert.ok(advanceMacro);
+    const serializedAdvance = JSON.stringify(advanceMacro.effects);
+    assert.equal(serializedAdvance.includes('"conditionMacro":"live-hands-at-most-one"'), true);
+    assert.equal(serializedAdvance.includes('"conditionMacro":"live-hands-more-than-one"'), true);
+  });
+
+  it('keeps contested-pot loops runtime-derived and avoids hardcoded seat ranges', () => {
+    const markdown = readTexasProductionSpec();
+    const parsed = parseGameSpec(markdown);
+    assertNoErrors(parsed);
+
+    const contestedMacro = parsed.doc.effectMacros?.find((macro) => macro.id === 'distribute-contested-pots');
+    assert.ok(contestedMacro);
+
+    const serialized = JSON.stringify(contestedMacro.effects);
     assert.equal(serialized.includes('"query":"intsInRange","min":1,"max":10'), false);
     assert.equal(serialized.includes('"query":"intsInRange","min":0,"max":9'), false);
     assert.equal(serialized.includes('"var":"activePlayers"'), true);

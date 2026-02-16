@@ -1,6 +1,34 @@
 # Texas Hold'em - Macros
 
 ```yaml
+conditionMacros:
+  - id: live-hands-at-most-one
+    params: []
+    condition:
+      op: '<='
+      left:
+        aggregate:
+          op: sum
+          query: { query: players }
+          bind: $player
+          valueExpr:
+            if:
+              when:
+                op: and
+                args:
+                  - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
+                  - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
+              then: 1
+              else: 0
+      right: 1
+  - id: live-hands-more-than-one
+    params: []
+    condition:
+      op: not
+      arg:
+        conditionMacro: live-hands-at-most-one
+        args: {}
+
 effectMacros:
   - id: hand-rank-score
     params:
@@ -864,22 +892,7 @@ effectMacros:
                     - { op: '==', left: { ref: gvar, var: handPhase }, right: 0 }
                     - { op: '==', left: { ref: gvar, var: preflopBigBlindOptionOpen }, right: true }
                     - { op: '==', left: { ref: gvar, var: currentBet }, right: { ref: gvar, var: bigBlind } }
-                    - op: '>'
-                      left:
-                        aggregate:
-                          op: sum
-                          query: { query: players }
-                          bind: $player
-                          valueExpr:
-                            if:
-                              when:
-                                op: and
-                                args:
-                                  - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
-                                  - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
-                              then: 1
-                              else: 0
-                      right: 1
+                    - { conditionMacro: live-hands-more-than-one, args: {} }
                     - { op: '==', left: { ref: pvar, player: { chosen: '$bbSeatFromState' }, var: handActive }, right: true }
                     - { op: '==', left: { ref: pvar, player: { chosen: '$bbSeatFromState' }, var: allIn }, right: false }
                 then:
@@ -899,23 +912,7 @@ effectMacros:
               args:
                 fromSeat: { ref: gvar, var: actingPosition }
       - if:
-          when:
-            op: '<='
-            left:
-              aggregate:
-                op: sum
-                query: { query: players }
-                bind: $player
-                valueExpr:
-                  if:
-                    when:
-                      op: and
-                      args:
-                        - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
-                        - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
-                    then: 1
-                    else: 0
-            right: 1
+          when: { conditionMacro: live-hands-at-most-one, args: {} }
           then:
             - gotoPhaseExact: { phase: showdown }
       - if:
@@ -923,22 +920,7 @@ effectMacros:
             op: and
             args:
               - { op: '==', left: { ref: gvar, var: bettingClosed }, right: true }
-              - op: '>'
-                left:
-                  aggregate:
-                    op: sum
-                    query: { query: players }
-                    bind: $player
-                    valueExpr:
-                      if:
-                        when:
-                          op: and
-                          args:
-                            - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
-                            - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
-                        then: 1
-                        else: 0
-                right: 1
+              - { conditionMacro: live-hands-more-than-one, args: {} }
           then:
             - if:
                 when: { op: '==', left: { ref: gvar, var: handPhase }, right: 0 }
@@ -957,50 +939,36 @@ effectMacros:
                 then:
                   - gotoPhaseExact: { phase: showdown }
 
-  - id: side-pot-distribution
+  - id: award-uncontested-pot
     params: []
     exports: []
     effects:
-      - if:
-          when:
-            op: '<='
-            left:
-              aggregate:
-                op: sum
-                query: { query: players }
-                bind: $player
-                valueExpr:
-                  if:
-                    when:
-                      op: and
-                      args:
-                        - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
-                        - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
-                    then: 1
-                    else: 0
-            right: 1
-          then:
-            - setVar: { scope: global, var: oddChipRemainder, value: { ref: gvar, var: pot } }
-            - forEach:
-                bind: $player
-                over: { query: players }
-                effects:
-                  - if:
-                      when:
-                        op: and
-                        args:
-                          - { op: '>', left: { ref: gvar, var: oddChipRemainder }, right: 0 }
-                          - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: handActive }, right: true }
-                          - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: eliminated }, right: false }
-                      then:
-                        - addVar:
-                            scope: pvar
-                            player: { chosen: $player }
-                            var: chipStack
-                            delta: { ref: gvar, var: oddChipRemainder }
-                        - setVar: { scope: global, var: oddChipRemainder, value: 0 }
-                  - setVar: { scope: pvar, player: { chosen: $player }, var: totalBet, value: 0 }
-            - setVar: { scope: global, var: pot, value: 0 }
+      - setVar: { scope: global, var: oddChipRemainder, value: { ref: gvar, var: pot } }
+      - forEach:
+          bind: $player
+          over: { query: players }
+          effects:
+            - if:
+                when:
+                  op: and
+                  args:
+                    - { op: '>', left: { ref: gvar, var: oddChipRemainder }, right: 0 }
+                    - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: handActive }, right: true }
+                    - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: eliminated }, right: false }
+                then:
+                  - addVar:
+                      scope: pvar
+                      player: { chosen: $player }
+                      var: chipStack
+                      delta: { ref: gvar, var: oddChipRemainder }
+                  - setVar: { scope: global, var: oddChipRemainder, value: 0 }
+            - setVar: { scope: pvar, player: { chosen: $player }, var: totalBet, value: 0 }
+      - setVar: { scope: global, var: pot, value: 0 }
+
+  - id: distribute-contested-pots
+    params: []
+    exports: []
+    effects:
       - forEach:
           bind: $tier
           over: { query: intsInRange, min: 1, max: { ref: gvar, var: activePlayers } }

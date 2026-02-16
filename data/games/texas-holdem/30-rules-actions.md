@@ -72,23 +72,7 @@ turnStructure:
       onEnter:
         - setVar: { scope: global, var: handPhase, value: 0 }
         - if:
-            when:
-              op: '<='
-              left:
-                aggregate:
-                  op: sum
-                  query: { query: players }
-                  bind: $player
-                  valueExpr:
-                    if:
-                      when:
-                        op: and
-                        args:
-                          - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
-                          - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
-                      then: 1
-                      else: 0
-              right: 1
+            when: { conditionMacro: live-hands-at-most-one, args: {} }
             then:
               - gotoPhaseExact: { phase: showdown }
         - macro: find-next-to-act
@@ -237,7 +221,12 @@ turnStructure:
                               player: { chosen: $player }
                               var: showdownScore
                               value: { ref: binding, name: $bestScore }
-        - macro: side-pot-distribution
+        - if:
+            when: { conditionMacro: live-hands-at-most-one, args: {} }
+            then:
+              - macro: award-uncontested-pot
+            else:
+              - macro: distribute-contested-pots
 
     - id: hand-cleanup
       onEnter:

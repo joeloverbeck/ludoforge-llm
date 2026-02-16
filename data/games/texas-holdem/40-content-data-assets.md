@@ -532,6 +532,8 @@ dataAssets:
     kind: scenario
     payload:
       pieceCatalogAssetId: standard-52-deck
+      factionPools:
+        - { faction: neutral, availableZoneId: deck:none, outOfPlayZoneId: muck:none }
       scenarioName: Standard NLHE Tournament
       yearRange: timeless
       settings:

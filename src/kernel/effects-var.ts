@@ -322,3 +322,32 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     emittedEvents: [perPlayerVarChangedEvent(playerId, variableName, currentValue, nextValue)],
   };
 };
+
+export const applySetActivePlayer = (
+  effect: Extract<EffectAST, { readonly setActivePlayer: unknown }>,
+  ctx: EffectContext,
+): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedPlayers = resolvePlayerSel(effect.setActivePlayer.player, evalCtx);
+  if (resolvedPlayers.length !== 1) {
+    throw effectRuntimeError('variableRuntimeValidationFailed', 'setActivePlayer requires exactly one resolved player', {
+      effectType: 'setActivePlayer',
+      selector: effect.setActivePlayer.player,
+      resolvedCount: resolvedPlayers.length,
+      resolvedPlayers,
+    });
+  }
+
+  const nextActive = resolvedPlayers[0]!;
+  if (nextActive === ctx.state.activePlayer) {
+    return { state: ctx.state, rng: ctx.rng };
+  }
+
+  return {
+    state: {
+      ...ctx.state,
+      activePlayer: nextActive,
+    },
+    rng: ctx.rng,
+  };
+};

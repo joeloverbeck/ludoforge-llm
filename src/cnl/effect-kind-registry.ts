@@ -1,5 +1,6 @@
 export const SUPPORTED_EFFECT_KINDS = [
   'setVar',
+  'setActivePlayer',
   'addVar',
   'commitResource',
   'moveToken',

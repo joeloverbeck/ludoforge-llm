@@ -5,14 +5,12 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { initializeTurnFlowEligibilityState } from './turn-flow-eligibility.js';
 import { applyTurnFlowInitialReveal } from './turn-flow-lifecycle.js';
 import { kernelRuntimeError } from './runtime-error.js';
-import { dispatchTriggers } from './trigger-dispatch.js';
+import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { createCollector } from './execution-collector.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { assertValidatedGameDef } from './validate-gamedef.js';
 import type { GameDef, GameState } from './types.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
-
-const DEFAULT_MAX_TRIGGER_DEPTH = 8;
 
 const parseFixedOrderPlayer = (playerId: string, playerCount: number): number | null => {
   const numeric = Number(playerId);
@@ -69,33 +67,11 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     collector: createCollector(),
   });
   const lifecycleResult = applyTurnFlowInitialReveal(validatedDef, setupResult.state);
-  const maxDepth = validatedDef.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
-  const turnStartResult = dispatchTriggers(
-    validatedDef,
-    lifecycleResult.state,
-    setupResult.rng,
-    { type: 'turnStart' },
-    0,
-    maxDepth,
-    [],
-    adjacencyGraph,
-    runtimeTableIndex,
-  );
-  const phaseEnterResult = dispatchTriggers(
-    validatedDef,
-    turnStartResult.state,
-    turnStartResult.rng,
-    { type: 'phaseEnter', phase: initialPhase },
-    0,
-    maxDepth,
-    turnStartResult.triggerLog,
-    adjacencyGraph,
-    runtimeTableIndex,
-  );
-  const stateWithRng = {
-    ...phaseEnterResult.state,
-    rng: phaseEnterResult.rng.state,
-  };
+  const afterTurnStart = dispatchLifecycleEvent(validatedDef, {
+    ...lifecycleResult.state,
+    rng: setupResult.rng.state,
+  }, { type: 'turnStart' });
+  const stateWithRng = dispatchLifecycleEvent(validatedDef, afterTurnStart, { type: 'phaseEnter', phase: initialPhase });
   const withTurnFlow = initializeTurnFlowEligibilityState(validatedDef, stateWithRng);
   const table = createZobristTable(validatedDef);
 

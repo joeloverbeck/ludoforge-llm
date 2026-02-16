@@ -777,6 +777,11 @@ export const validateEffectAst = (
     return;
   }
 
+  if ('setActivePlayer' in effect) {
+    validatePlayerSelector(diagnostics, effect.setActivePlayer.player, `${path}.setActivePlayer.player`, context);
+    return;
+  }
+
   if ('addVar' in effect) {
     if (effect.addVar.scope === 'global' && !context.globalVarNames.has(effect.addVar.var)) {
       pushMissingReferenceDiagnostic(

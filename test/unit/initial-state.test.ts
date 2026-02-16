@@ -181,6 +181,24 @@ describe('initialState', () => {
     assert.equal(state.globalVars.coins, 12);
   });
 
+  it('applies first-phase onEnter effects during initial state construction', () => {
+    const def: GameDef = {
+      ...createDef(),
+      turnStructure: {
+        phases: [
+          {
+            id: asPhaseId('main'),
+            onEnter: [{ addVar: { scope: 'global', var: 'coins', delta: 3 } }],
+          },
+        ],
+      },
+      triggers: [],
+    };
+
+    const state = initialState(def, 3, 2);
+    assert.equal(state.globalVars.coins, 8);
+  });
+
   it('is deterministic for same seed and GameDef', () => {
     const def = createDef();
     const first = initialState(def, 42, 2);

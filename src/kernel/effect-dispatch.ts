@@ -16,7 +16,7 @@ import {
 } from './effects-choice.js';
 import { applyForEach, applyIf, applyLet, applyReduce, applyRemoveByPriority, type EffectBudgetState } from './effects-control.js';
 import { applyGotoPhase, applyGrantFreeOperation, applyPopInterruptPhase, applyPushInterruptPhase } from './effects-turn-flow.js';
-import { applyAddVar, applySetVar } from './effects-var.js';
+import { applyAddVar, applySetActivePlayer, applySetVar } from './effects-var.js';
 import { applyCommitResource } from './effects-resource.js';
 import { applyReveal } from './effects-reveal.js';
 import {
@@ -44,6 +44,7 @@ const createBudgetState = (ctx: Pick<EffectContext, 'maxEffectOps'>): EffectBudg
 
 const effectTypeOf = (effect: EffectAST): string => {
   if ('setVar' in effect) return 'setVar';
+  if ('setActivePlayer' in effect) return 'setActivePlayer';
   if ('addVar' in effect) return 'addVar';
   if ('commitResource' in effect) return 'commitResource';
   if ('moveToken' in effect) return 'moveToken';
@@ -93,6 +94,10 @@ const consumeBudget = (budget: EffectBudgetState, effectType: string): void => {
 const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
   if ('setVar' in effect) {
     return applySetVar(effect, ctx);
+  }
+
+  if ('setActivePlayer' in effect) {
+    return applySetActivePlayer(effect, ctx);
   }
 
   if ('addVar' in effect) {

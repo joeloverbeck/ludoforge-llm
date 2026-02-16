@@ -342,6 +342,15 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      setActivePlayer: z
+        .object({
+          player: PlayerSelSchema,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
       addVar: z
         .object({
           scope: z.union([z.literal('global'), z.literal('pvar')]),

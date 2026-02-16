@@ -100,6 +100,7 @@ describe('AST and selector schemas', () => {
   it('parses all EffectAST variants', () => {
     const effects: EffectAST[] = [
       { setVar: { scope: 'global', var: 'gold', value: 1 } },
+      { setActivePlayer: { player: { chosen: '$targetPlayer' } } },
       { addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } },
       {
         commitResource: {

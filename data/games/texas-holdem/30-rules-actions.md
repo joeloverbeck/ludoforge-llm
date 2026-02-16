@@ -1,16 +1,28 @@
 # Texas Hold'em - Rules, Actions & Turn Structure
 
 ```yaml
+setup:
+  - setVar: { scope: global, var: activePlayers, value: { aggregate: { op: count, query: { query: players } } } }
+  - setVar: { scope: global, var: playersInHand, value: { aggregate: { op: count, query: { query: players } } } }
+  - setVar: { scope: global, var: dealerSeat, value: { op: '-', left: { aggregate: { op: count, query: { query: players } } }, right: 1 } }
+  - setVar: { scope: global, var: actingPosition, value: 0 }
+  - forEach:
+      bind: $player
+      over: { query: players }
+      effects:
+        - setVar: { scope: pvar, player: { chosen: $player }, var: seatIndex, value: { ref: binding, name: $player } }
+        - setVar: { scope: pvar, player: { chosen: $player }, var: chipStack, value: 1000 }
+        - setVar: { scope: pvar, player: { chosen: $player }, var: eliminated, value: false }
+        - setVar: { scope: pvar, player: { chosen: $player }, var: handActive, value: true }
+        - setVar: { scope: pvar, player: { chosen: $player }, var: allIn, value: false }
+
 turnStructure:
   phases:
     - id: hand-setup
       onEnter:
-        - if:
-            when: { op: '>=', left: { ref: gvar, var: dealerSeat }, right: 9 }
-            then:
-              - setVar: { scope: global, var: dealerSeat, value: 0 }
-            else:
-              - addVar: { scope: global, var: dealerSeat, delta: 1 }
+        - macro: find-next-non-eliminated
+          args:
+            fromSeat: { ref: gvar, var: dealerSeat }
         - setVar: { scope: global, var: oddChipRemainder, value: 0 }
         - setVar: { scope: global, var: pot, value: 0 }
         - setVar: { scope: global, var: currentBet, value: 0 }
@@ -51,10 +63,7 @@ turnStructure:
                         from: deck:none
                         to: { zoneExpr: { concat: ['hand:', { ref: binding, name: $player }] } }
                         count: 2
-        - macro: collect-forced-bets
-          args:
-            sbPlayer: active
-            bbPlayer: { relative: right }
+        - macro: post-forced-bets-and-set-preflop-actor
         - gotoPhase: { phase: preflop }
 
     - id: preflop
@@ -64,6 +73,17 @@ turnStructure:
             when: { op: '<=', left: { ref: gvar, var: playersInHand }, right: 1 }
             then:
               - gotoPhase: { phase: hand-cleanup }
+        - macro: find-next-to-act
+          args:
+            fromSeat:
+              if:
+                when: { op: '==', left: { ref: gvar, var: actingPosition }, right: 0 }
+                then: { op: '-', left: { aggregate: { op: count, query: { query: players } } }, right: 1 }
+                else: { op: '-', left: { ref: gvar, var: actingPosition }, right: 1 }
+        - if:
+            when: { op: '==', left: { ref: gvar, var: bettingClosed }, right: true }
+            then:
+              - macro: advance-after-betting
 
     - id: flop
       onEnter:
@@ -85,6 +105,13 @@ turnStructure:
                     - setVar: { scope: pvar, player: { chosen: $player }, var: streetBet, value: 0 }
         - setVar: { scope: global, var: currentBet, value: 0 }
         - setVar: { scope: global, var: bettingClosed, value: false }
+        - macro: find-next-to-act
+          args:
+            fromSeat: { ref: gvar, var: dealerSeat }
+        - if:
+            when: { op: '==', left: { ref: gvar, var: bettingClosed }, right: true }
+            then:
+              - macro: advance-after-betting
 
     - id: turn
       onEnter:
@@ -106,6 +133,13 @@ turnStructure:
                     - setVar: { scope: pvar, player: { chosen: $player }, var: streetBet, value: 0 }
         - setVar: { scope: global, var: currentBet, value: 0 }
         - setVar: { scope: global, var: bettingClosed, value: false }
+        - macro: find-next-to-act
+          args:
+            fromSeat: { ref: gvar, var: dealerSeat }
+        - if:
+            when: { op: '==', left: { ref: gvar, var: bettingClosed }, right: true }
+            then:
+              - macro: advance-after-betting
 
     - id: river
       onEnter:
@@ -127,6 +161,13 @@ turnStructure:
                     - setVar: { scope: pvar, player: { chosen: $player }, var: streetBet, value: 0 }
         - setVar: { scope: global, var: currentBet, value: 0 }
         - setVar: { scope: global, var: bettingClosed, value: false }
+        - macro: find-next-to-act
+          args:
+            fromSeat: { ref: gvar, var: dealerSeat }
+        - if:
+            when: { op: '==', left: { ref: gvar, var: bettingClosed }, right: true }
+            then:
+              - macro: advance-after-betting
 
     - id: showdown
       onEnter:

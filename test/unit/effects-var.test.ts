@@ -179,6 +179,24 @@ describe('effects var handlers', () => {
     });
   });
 
+  it('setActivePlayer updates state.activePlayer using selector resolution', () => {
+    const ctx = makeCtx({
+      moveParams: { $target: asPlayerId(0) },
+    });
+
+    const result = applyEffect({ setActivePlayer: { player: { chosen: '$target' } } }, ctx);
+    assert.equal(result.state.activePlayer, asPlayerId(0));
+    assert.equal(result.state.globalVars, ctx.state.globalVars);
+  });
+
+  it('setActivePlayer throws when selector does not resolve to exactly one player', () => {
+    const ctx = makeCtx();
+
+    assert.throws(() => applyEffect({ setActivePlayer: { player: 'all' } }, ctx), (error: unknown) => {
+      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('setActivePlayer requires exactly one resolved player');
+    });
+  });
+
   it('uses moveParams for chosen selectors and lets bindings override moveParams', () => {
     const ctx = makeCtx({
       moveParams: { $target: asPlayerId(1), value: 3 },

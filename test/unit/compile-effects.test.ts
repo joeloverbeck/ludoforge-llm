@@ -18,6 +18,7 @@ describe('compile-effects lowering', () => {
   it('lowers supported effect nodes deterministically', () => {
     const source = [
       { draw: { from: 'deck', to: 'hand:$actor', count: 1 } },
+      { setActivePlayer: { player: { chosen: '$actor' } } },
       { commitResource: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
       { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', eq: 'US' }] } },
       {
@@ -60,6 +61,7 @@ describe('compile-effects lowering', () => {
     assertNoDiagnostics(first);
     assert.deepEqual(first.value, [
       { draw: { from: 'deck:none', to: 'hand:$actor', count: 1 } },
+      { setActivePlayer: { player: { chosen: '$actor' } } },
       { commitResource: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
       { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
       {

@@ -35,6 +35,9 @@ describe('texas hold\'em spec structure', () => {
       [
         'hand-rank-score',
         'collect-forced-bets',
+        'find-next-non-eliminated',
+        'find-next-to-act',
+        'post-forced-bets-and-set-preflop-actor',
         'deal-community',
         'betting-round-completion',
         'advance-after-betting',
@@ -76,11 +79,20 @@ describe('texas hold\'em spec structure', () => {
 
     const payload = scenario.payload as {
       readonly pieceCatalogAssetId: string;
+      readonly factionPools?: readonly {
+        readonly faction: string;
+        readonly availableZoneId: string;
+        readonly outOfPlayZoneId?: string;
+      }[];
       readonly settings?: { readonly startingChips?: number };
     };
 
     assert.equal(payload.pieceCatalogAssetId, 'standard-52-deck');
+    assert.deepEqual(payload.factionPools, [{ faction: 'neutral', availableZoneId: 'deck:none', outOfPlayZoneId: 'muck:none' }]);
     assert.equal(payload.settings?.startingChips, 1000);
+
+    assert.ok(Array.isArray(parsed.doc.setup));
+    assert.equal((parsed.doc.setup ?? []).length > 0, true);
 
     assert.deepEqual(
       parsed.doc.turnStructure?.phases.map((phase) => phase.id),

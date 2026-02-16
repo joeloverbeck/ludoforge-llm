@@ -21,6 +21,12 @@ export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, Effect
     bindingTemplateReferencerPaths: [['player', 'chosen']],
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
+  setActivePlayer: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: [['player', 'chosen']],
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
   addVar: {
     declaredBinderPaths: NO_BINDER_PATHS,
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,

@@ -181,6 +181,11 @@ export type EffectAST =
       };
     }
   | {
+      readonly setActivePlayer: {
+        readonly player: PlayerSel;
+      };
+    }
+  | {
       readonly addVar: {
         readonly scope: 'global' | 'pvar';
         readonly player?: PlayerSel;

@@ -68,6 +68,9 @@ function lowerEffectNode(
   if (isRecord(source.setVar)) {
     return lowerSetVarEffect(source.setVar, context, scope, `${path}.setVar`);
   }
+  if (isRecord(source.setActivePlayer)) {
+    return lowerSetActivePlayerEffect(source.setActivePlayer, scope, `${path}.setActivePlayer`);
+  }
   if (isRecord(source.addVar)) {
     return lowerAddVarEffect(source.addVar, context, scope, `${path}.addVar`);
   }
@@ -259,6 +262,26 @@ function lowerAddVarEffect(
       },
     },
     diagnostics,
+  };
+}
+
+function lowerSetActivePlayerEffect(
+  source: Record<string, unknown>,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  const player = lowerPlayerSelector(source.player, scope, `${path}.player`);
+  if (player.value === null) {
+    return { value: null, diagnostics: player.diagnostics };
+  }
+
+  return {
+    value: {
+      setActivePlayer: {
+        player: player.value,
+      },
+    },
+    diagnostics: player.diagnostics,
   };
 }
 

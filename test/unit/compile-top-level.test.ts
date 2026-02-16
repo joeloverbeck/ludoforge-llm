@@ -584,6 +584,106 @@ describe('compile top-level actions/triggers/end conditions', () => {
     assertNoDiagnostics(result);
   });
 
+  it('does not carry then-only if binders across pipeline stages', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'operation-profile-stage-binding-if-no-leak', players: { min: 2, max: 4 } },
+      globalVars: [{ name: 'pickedTargets', type: 'int', init: 0, min: 0, max: 99 }],
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'patrol', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actionPipelines: [
+        {
+          id: 'patrol-profile',
+          actionId: 'patrol',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                {
+                  if: {
+                    when: true,
+                    then: [{ bindValue: { bind: '$branchOnly', value: 1 } }],
+                  },
+                },
+              ],
+            },
+            {
+              effects: [
+                { setVar: { scope: 'global', var: 'pickedTargets', value: { ref: 'binding', name: '$branchOnly' } } },
+              ],
+            },
+          ],
+          atomicity: 'atomic' as const,
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_BINDING_UNBOUND'
+          && diagnostic.path === 'doc.actionPipelines.0.stages[1].effects.0.setVar.value.name',
+      ),
+      true,
+    );
+  });
+
+  it('carries if binders across pipeline stages only when both branches guarantee them', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'operation-profile-stage-binding-if-intersection', players: { min: 2, max: 4 } },
+      globalVars: [{ name: 'pickedTargets', type: 'int', init: 0, min: 0, max: 99 }],
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'patrol', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actionPipelines: [
+        {
+          id: 'patrol-profile',
+          actionId: 'patrol',
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                {
+                  if: {
+                    when: true,
+                    then: [{ bindValue: { bind: '$branchShared', value: 1 } }],
+                    else: [{ bindValue: { bind: '$branchShared', value: 2 } }],
+                  },
+                },
+              ],
+            },
+            {
+              effects: [
+                { setVar: { scope: 'global', var: 'pickedTargets', value: { ref: 'binding', name: '$branchShared' } } },
+              ],
+            },
+          ],
+          atomicity: 'atomic' as const,
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef !== null, true);
+    assertNoDiagnostics(result);
+  });
+
   it('does not carry lexical-only binders (forEach.bind) across pipeline stages', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

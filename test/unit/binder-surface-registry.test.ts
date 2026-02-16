@@ -233,6 +233,28 @@ describe('binder-surface-registry', () => {
       }),
       ['$score', '$best'],
     );
+    assert.deepEqual(
+      collectSequentialBindings({
+        if: {
+          when: true,
+          then: [{ bindValue: { bind: '$thenOnly', value: 1 } }],
+        },
+      }),
+      [],
+    );
+    assert.deepEqual(
+      collectSequentialBindings({
+        if: {
+          when: true,
+          then: [
+            { bindValue: { bind: '$shared', value: 1 } },
+            { bindValue: { bind: '$thenOnly', value: 2 } },
+          ],
+          else: [{ bindValue: { bind: '$shared', value: 3 } }],
+        },
+      }),
+      ['$shared'],
+    );
   });
 
   it('fails when EffectAST introduces binder-capable nodes without registry updates', () => {

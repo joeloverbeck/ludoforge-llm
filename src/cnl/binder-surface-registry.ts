@@ -681,6 +681,19 @@ export function collectSequentialBindings(effect: EffectAST): readonly string[] 
       continue;
     }
 
+    if (kind === 'if') {
+      const thenEffects = Array.isArray(effectBody.then) ? effectBody.then : [];
+      const elseEffects = Array.isArray(effectBody.else) ? effectBody.else : [];
+      const thenBindings = collectSequentialBindingsFromEffectArray(thenEffects);
+      const elseBindingSet = new Set(collectSequentialBindingsFromEffectArray(elseEffects));
+      for (const binding of thenBindings) {
+        if (elseBindingSet.has(binding)) {
+          bindings.push(binding);
+        }
+      }
+      continue;
+    }
+
     const candidates: BinderDeclarationCandidate[] = [];
     for (const path of EFFECT_BINDER_SURFACES[kind].sequentiallyVisibleBinderPaths) {
       collectPathValues(effectBody, path, kind, candidates);
@@ -724,6 +737,24 @@ export function collectSequentialBindings(effect: EffectAST): readonly string[] 
     }
   }
   return bindings;
+}
+
+function collectSequentialBindingsFromEffectArray(effects: readonly unknown[]): readonly string[] {
+  const sequential: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of effects) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+    for (const binding of collectSequentialBindings(entry as EffectAST)) {
+      if (seen.has(binding)) {
+        continue;
+      }
+      seen.add(binding);
+      sequential.push(binding);
+    }
+  }
+  return sequential;
 }
 
 export const DECLARED_BINDER_EFFECT_KINDS: readonly SupportedEffectKind[] = SUPPORTED_EFFECT_KINDS.filter(

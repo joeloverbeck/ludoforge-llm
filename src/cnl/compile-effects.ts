@@ -687,15 +687,46 @@ function lowerIfEffect(
   }
 
   const when = lowerConditionNode(source.when, makeConditionContext(context, scope), `${path}.when`);
-  const thenEffects = lowerNestedEffects(source.then as readonly unknown[], context, scope, `${path}.then`);
+  const conditionKey = when.value === null ? null : conditionFingerprint(when.value);
+  const guardedThenBindings = conditionKey === null ? [] : scope.guardedBindingsFor(conditionKey);
+  const baseBindings = new Set(scope.visibleBindings());
+  const effectiveBaseBindings = new Set([...baseBindings, ...guardedThenBindings]);
+
+  const thenScope = scope.clone();
+  for (const binding of guardedThenBindings) {
+    thenScope.register(binding);
+  }
+  const thenEffects = lowerNestedEffects(source.then as readonly unknown[], context, thenScope, `${path}.then`);
+  const thenBindings = new Set(thenScope.visibleBindings());
+
+  const elseScope = scope.clone();
   const elseEffects =
     source.else === undefined
       ? ({ value: undefined, diagnostics: [] as readonly Diagnostic[] } as const)
-      : lowerNestedEffects(source.else as readonly unknown[], context, scope, `${path}.else`);
+      : lowerNestedEffects(source.else as readonly unknown[], context, elseScope, `${path}.else`);
+  const elseBindings = source.else === undefined ? baseBindings : new Set(elseScope.visibleBindings());
+
   const diagnostics = [...when.diagnostics, ...thenEffects.diagnostics, ...elseEffects.diagnostics];
   if (when.value === null || thenEffects.value === null || elseEffects.value === null) {
     return { value: null, diagnostics };
   }
+
+  const guaranteedPostIfBindings = [...thenBindings]
+    .filter((binding) => elseBindings.has(binding) && !effectiveBaseBindings.has(binding))
+    .sort((left, right) => left.localeCompare(right));
+  for (const binding of guaranteedPostIfBindings) {
+    scope.register(binding);
+  }
+
+  if (conditionKey !== null) {
+    const conditionallyAvailableBindings = [...thenBindings]
+      .filter((binding) => !elseBindings.has(binding) && !effectiveBaseBindings.has(binding))
+      .sort((left, right) => left.localeCompare(right));
+    for (const binding of conditionallyAvailableBindings) {
+      scope.registerGuarded(conditionKey, binding);
+    }
+  }
+
   return {
     value: {
       if: {
@@ -1786,11 +1817,35 @@ function formatValue(value: unknown): string {
   }
 }
 
+function conditionFingerprint(condition: ConditionAST): string | null {
+  try {
+    return JSON.stringify(condition);
+  } catch {
+    return null;
+  }
+}
+
 class BindingScope {
   private readonly frames: string[][] = [];
+  private readonly guardedByCondition = new Map<string, Set<string>>();
 
-  constructor(initial: readonly string[]) {
-    this.frames.push([...initial]);
+  constructor(
+    initial: readonly string[],
+    frames?: readonly (readonly string[])[],
+    guardedByCondition?: ReadonlyMap<string, ReadonlySet<string>>,
+  ) {
+    if (frames !== undefined) {
+      for (const frame of frames) {
+        this.frames.push([...frame]);
+      }
+    } else {
+      this.frames.push([...initial]);
+    }
+    if (guardedByCondition !== undefined) {
+      for (const [condition, bindings] of guardedByCondition.entries()) {
+        this.guardedByCondition.set(condition, new Set(bindings));
+      }
+    }
   }
 
   has(name: string): boolean {
@@ -1813,6 +1868,27 @@ class BindingScope {
       }
     }
     return [...deduped].sort((left, right) => left.localeCompare(right));
+  }
+
+  clone(): BindingScope {
+    return new BindingScope([], this.frames, this.guardedByCondition);
+  }
+
+  registerGuarded(condition: string, name: string): void {
+    const existing = this.guardedByCondition.get(condition);
+    if (existing !== undefined) {
+      existing.add(name);
+      return;
+    }
+    this.guardedByCondition.set(condition, new Set([name]));
+  }
+
+  guardedBindingsFor(condition: string): readonly string[] {
+    const bindings = this.guardedByCondition.get(condition);
+    if (bindings === undefined) {
+      return [];
+    }
+    return [...bindings].sort((left, right) => left.localeCompare(right));
   }
 
   withBinding<TValue>(name: string, callback: () => TValue): TValue {

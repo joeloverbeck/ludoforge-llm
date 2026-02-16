@@ -126,7 +126,7 @@ describe('compile-effects binding scope validation', () => {
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.1.addVar.delta.name');
   });
 
-  it('treats if branch binders as sequentially visible to following effects', () => {
+  it('does not leak then-only if binders to following effects when else is omitted', () => {
     const result = lowerEffectArray(
       [
         {
@@ -141,11 +141,32 @@ describe('compile-effects binding scope validation', () => {
       'doc.actions.0.effects',
     );
 
-    assert.equal(result.value !== null, true);
-    assert.deepEqual(
-      result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
-      [],
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_BINDING_UNBOUND');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.1.addVar.delta.name');
+  });
+
+  it('does not leak then-only if binders to following effects when else exists', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          if: {
+            when: true,
+            then: [{ bindValue: { bind: '$branchValue', value: 1 } }],
+            else: [{ setVar: { scope: 'global', var: 'noop', value: 0 } }],
+          },
+        },
+        { addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$branchValue' } } },
+      ],
+      context,
+      'doc.actions.0.effects',
     );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_BINDING_UNBOUND');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.1.addVar.delta.name');
   });
 
   it('keeps if binders sequentially visible when both branches provide the same binder', () => {
@@ -169,6 +190,59 @@ describe('compile-effects binding scope validation', () => {
       result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
       [],
     );
+  });
+
+  it('allows then-only binders inside later if branches guarded by the same condition', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          if: {
+            when: true,
+            then: [{ bindValue: { bind: '$branchValue', value: 1 } }],
+          },
+        },
+        {
+          if: {
+            when: true,
+            then: [{ addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$branchValue' } } }],
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value !== null, true);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+      [],
+    );
+  });
+
+  it('does not expose guarded binders when a later if uses a different condition', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          if: {
+            when: true,
+            then: [{ bindValue: { bind: '$branchValue', value: 1 } }],
+          },
+        },
+        {
+          if: {
+            when: false,
+            then: [{ addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$branchValue' } } }],
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_BINDING_UNBOUND');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.1.if.then.0.addVar.delta.name');
   });
 
   it('allows let blocks to export nested sequential bindings without $-prefix semantics', () => {

@@ -126,6 +126,51 @@ describe('compile-effects binding scope validation', () => {
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.1.addVar.delta.name');
   });
 
+  it('treats if branch binders as sequentially visible to following effects', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          if: {
+            when: true,
+            then: [{ bindValue: { bind: '$branchValue', value: 1 } }],
+          },
+        },
+        { addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$branchValue' } } },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value !== null, true);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+      [],
+    );
+  });
+
+  it('keeps if binders sequentially visible when both branches provide the same binder', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          if: {
+            when: true,
+            then: [{ bindValue: { bind: '$branchValue', value: 1 } }],
+            else: [{ bindValue: { bind: '$branchValue', value: 2 } }],
+          },
+        },
+        { addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$branchValue' } } },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value !== null, true);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+      [],
+    );
+  });
+
   it('allows let blocks to export nested sequential bindings without $-prefix semantics', () => {
     const result = lowerEffectArray(
       [

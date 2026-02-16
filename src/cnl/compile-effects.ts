@@ -687,11 +687,11 @@ function lowerIfEffect(
   }
 
   const when = lowerConditionNode(source.when, makeConditionContext(context, scope), `${path}.when`);
-  const thenEffects = lowerNestedEffects(source.then, context, scope, `${path}.then`);
+  const thenEffects = lowerNestedEffects(source.then as readonly unknown[], context, scope, `${path}.then`);
   const elseEffects =
     source.else === undefined
       ? ({ value: undefined, diagnostics: [] as readonly Diagnostic[] } as const)
-      : lowerNestedEffects(source.else, context, scope, `${path}.else`);
+      : lowerNestedEffects(source.else as readonly unknown[], context, scope, `${path}.else`);
   const diagnostics = [...when.diagnostics, ...thenEffects.diagnostics, ...elseEffects.diagnostics];
   if (when.value === null || thenEffects.value === null || elseEffects.value === null) {
     return { value: null, diagnostics };

@@ -106,3 +106,11 @@ export function isEvalErrorCode<C extends EvalErrorCode>(
 ): error is EvalError & { readonly code: C } {
   return isEvalError(error) && error.code === code;
 }
+
+export function isRecoverableEvalResolutionError(error: unknown): boolean {
+  return (
+    isEvalErrorCode(error, 'DIVISION_BY_ZERO') ||
+    isEvalErrorCode(error, 'MISSING_BINDING') ||
+    isEvalErrorCode(error, 'MISSING_VAR')
+  );
+}

@@ -5,9 +5,11 @@ import {
   EvalError,
   createEvalError,
   dataAssetEvalError,
+  divisionByZeroError,
   getMaxQueryResults,
   isEvalError,
   isEvalErrorCode,
+  isRecoverableEvalResolutionError,
   missingBindingError,
   missingVarError,
   queryBoundsExceededError,
@@ -49,6 +51,14 @@ describe('eval error surface', () => {
     assert.equal(isEvalErrorCode(err, 'MISSING_VAR'), false);
     assert.equal(isEvalErrorCode(dataAssetEvalError('DATA_ASSET_FIELD_MISSING', 'missing field'), 'DATA_ASSET_FIELD_MISSING'), true);
     assert.equal(isEvalError(new Error('plain')), false);
+  });
+
+  it('classifies recoverable eval resolution errors', () => {
+    assert.equal(isRecoverableEvalResolutionError(missingBindingError('missing binding')), true);
+    assert.equal(isRecoverableEvalResolutionError(missingVarError('missing var')), true);
+    assert.equal(isRecoverableEvalResolutionError(divisionByZeroError('division by zero')), true);
+    assert.equal(isRecoverableEvalResolutionError(typeMismatchError('bad type')), false);
+    assert.equal(isRecoverableEvalResolutionError(new Error('plain')), false);
   });
 });
 

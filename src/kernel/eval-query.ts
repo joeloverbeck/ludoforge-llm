@@ -1,5 +1,5 @@
 import { getMaxQueryResults, type EvalContext } from './eval-context.js';
-import { isEvalErrorCode, missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
+import { isRecoverableEvalResolutionError, missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitWarning } from './execution-collector.js';
@@ -31,7 +31,7 @@ function resolveIntDomainBound(bound: NumericValueExpr, ctx: EvalContext): numbe
   try {
     value = typeof bound === 'number' ? bound : evalValue(bound, ctx);
   } catch (error) {
-    if (isEvalErrorCode(error, 'DIVISION_BY_ZERO') || isEvalErrorCode(error, 'MISSING_BINDING') || isEvalErrorCode(error, 'MISSING_VAR')) {
+    if (isRecoverableEvalResolutionError(error)) {
       return null;
     }
     throw error;
@@ -296,7 +296,15 @@ function evalNextInOrderByConditionQuery(
     return [];
   }
 
-  const anchor = evalValue(query.from, ctx);
+  let anchor: number | boolean | string;
+  try {
+    anchor = evalValue(query.from, ctx);
+  } catch (error) {
+    if (isRecoverableEvalResolutionError(error)) {
+      return [];
+    }
+    throw error;
+  }
   const anchorIndex = sourceOrder.findIndex((candidate) => queryItemsEqual(candidate, anchor));
   if (anchorIndex < 0) {
     return [];

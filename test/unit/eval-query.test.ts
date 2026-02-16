@@ -414,6 +414,69 @@ describe('evalQuery', () => {
     assert.deepEqual(result, []);
   });
 
+  it('returns empty array when nextInOrderByCondition from has missing binding', () => {
+    const ctx = makeCtx();
+    const result = evalQuery(
+      {
+        query: 'nextInOrderByCondition',
+        source: { query: 'players' },
+        from: { ref: 'binding', name: '$missingAnchor' },
+        bind: '$seatCandidate',
+        where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 0 },
+      },
+      ctx,
+    );
+    assert.deepEqual(result, []);
+  });
+
+  it('returns empty array when nextInOrderByCondition from has missing var', () => {
+    const ctx = makeCtx();
+    const result = evalQuery(
+      {
+        query: 'nextInOrderByCondition',
+        source: { query: 'players' },
+        from: { ref: 'gvar', var: 'missingDealerButton' },
+        bind: '$seatCandidate',
+        where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 0 },
+      },
+      ctx,
+    );
+    assert.deepEqual(result, []);
+  });
+
+  it('returns empty array when nextInOrderByCondition from divides by zero', () => {
+    const ctx = makeCtx();
+    const result = evalQuery(
+      {
+        query: 'nextInOrderByCondition',
+        source: { query: 'players' },
+        from: { op: '/', left: 1, right: 0 },
+        bind: '$seatCandidate',
+        where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 0 },
+      },
+      ctx,
+    );
+    assert.deepEqual(result, []);
+  });
+
+  it('surfaces non-recoverable from errors in nextInOrderByCondition', () => {
+    const ctx = makeCtx();
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'nextInOrderByCondition',
+            source: { query: 'players' },
+            from: { op: '+', left: 'invalid-anchor-type', right: 1 },
+            bind: '$seatCandidate',
+            where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 0 },
+          },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('returns zones sorted, and filter.owner=actor resolves correctly', () => {
     const ctx = makeCtx();
 

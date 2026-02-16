@@ -22,12 +22,14 @@ const loadEscalateMacro = (): { readonly def: GameDef; readonly effects: readonl
   assert.notEqual(compiled.gameDef, null);
 
   const def = assertValidatedGameDef(compiled.gameDef!);
-  const escalateBlinds = parsed.doc.effectMacros?.find((macro) => macro.id === 'escalate-blinds');
+  const handCleanup = def.turnStructure.phases.find((phase) => phase.id === 'hand-cleanup');
+  assert.ok(handCleanup);
+  const escalateBlinds = (handCleanup?.onEnter ?? []).find((effect) => JSON.stringify(effect).includes('"var":"blindLevel"'));
   assert.ok(escalateBlinds);
 
   return {
     def,
-    effects: escalateBlinds.effects as unknown as readonly EffectAST[],
+    effects: [escalateBlinds as EffectAST],
   };
 };
 

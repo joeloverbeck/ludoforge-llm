@@ -270,7 +270,7 @@ actor: 'active',
       '          bind: $row',
       '          over:',
       '            query: assetRows',
-      '            tableId: tournament-standard::blindSchedule.levels',
+      '            tableId: blindSchedule.levels',
       '            where:',
       '              - field: level',
       '                op: eq',
@@ -282,7 +282,7 @@ actor: 'active',
       '                value:',
       '                  ref: assetField',
       '                  row: $row',
-      '                  tableId: tournament-standard::blindSchedule.levels',
+      '                  tableId: blindSchedule.levels',
       '                  field: smallBlind',
       '    limits: []',
       'terminal:',
@@ -302,11 +302,78 @@ actor: 'active',
     assert.notEqual(compiled.gameDef, null);
     assert.equal(compiled.gameDef?.runtimeDataAssets?.length, 1);
     assert.equal(compiled.gameDef?.tableContracts?.length, 1);
+    const serializedActions = JSON.stringify(compiled.gameDef?.actions ?? []);
+    assert.equal(serializedActions.includes('tournament-standard::blindSchedule.levels'), true);
+    assert.equal(serializedActions.includes('"tableId":"blindSchedule.levels"'), false);
 
     const def = compiled.gameDef!;
     const start = initialState(def, 101, 2);
     const next = applyMove(def, start, { actionId: asActionId('syncBlind'), params: {} }).state;
     assert.equal(next.globalVars.currentSmallBlind, 20);
+  });
+
+  it('rejects legacy GameSpec runtime table literals that embed scenario asset ids', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-runtime-asset-rows-legacy-literal',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      'zones:',
+      '  - id: table:none',
+      '    owner: none',
+      '    visibility: public',
+      '    ordering: set',
+      'dataAssets:',
+      '  - id: tournament-standard',
+      '    kind: scenario',
+      '    payload:',
+      '      blindSchedule:',
+      '        levels:',
+      '          - level: 1',
+      '            smallBlind: 10',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: syncBlind',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: [main]',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects:',
+      '      - forEach:',
+      '          bind: $row',
+      '          over:',
+      '            query: assetRows',
+      '            tableId: tournament-standard::blindSchedule.levels',
+      '          effects: []',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 0 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assert.equal(compiled.gameDef, null);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_TABLE_REF_LEGACY_LITERAL' &&
+          diagnostic.path === 'doc.actions.0.effects.0.forEach.over.tableId',
+      ),
+      true,
+    );
   });
 
   it('projects map tracks into gameDef globalVars without duplicated globalVars declarations', () => {
@@ -965,6 +1032,96 @@ actor: 'active',
     assert.notEqual(compiled.gameDef, null);
     assert.equal('defaultScenarioAssetId' in (compiled.gameDef?.metadata ?? {}), false);
     assert.equal(compiled.gameDef?.globalVars.find((variable) => variable.name === 'aid')?.init, 33);
+  });
+
+  it('resolves scenario-relative table refs against metadata.defaultScenarioAssetId for runtime behavior', () => {
+    const markdown = [
+      '```yaml',
+      'metadata:',
+      '  id: embedded-scenario-relative-table-refs',
+      '  players:',
+      '    min: 2',
+      '    max: 2',
+      '  defaultScenarioAssetId: scenario-late-war',
+      'globalVars:',
+      '  - name: currentSmallBlind',
+      '    type: int',
+      '    init: 0',
+      '    min: 0',
+      '    max: 1000000',
+      'zones:',
+      '  - id: table:none',
+      '    owner: none',
+      '    visibility: public',
+      '    ordering: set',
+      'dataAssets:',
+      '  - id: scenario-foundation',
+      '    kind: scenario',
+      '    payload:',
+      '      blindSchedule:',
+      '        levels:',
+      '          - level: 1',
+      '            smallBlind: 10',
+      '  - id: scenario-late-war',
+      '    kind: scenario',
+      '    payload:',
+      '      blindSchedule:',
+      '        levels:',
+      '          - level: 1',
+      '            smallBlind: 40',
+      '```',
+      '```yaml',
+      'turnStructure:',
+      '  phases:',
+      '    - id: main',
+      'actions:',
+      '  - id: syncBlind',
+      '    actor: active',
+      '    executor: actor',
+      '    phase: [main]',
+      '    params: []',
+      '    pre: null',
+      '    cost: []',
+      '    effects:',
+      '      - forEach:',
+      '          bind: $row',
+      '          over:',
+      '            query: assetRows',
+      '            tableId: blindSchedule.levels',
+      '            where:',
+      '              - field: level',
+      '                op: eq',
+      '                value: 1',
+      '          effects:',
+      '            - setVar:',
+      '                scope: global',
+      '                var: currentSmallBlind',
+      '                value:',
+      '                  ref: assetField',
+      '                  row: $row',
+      '                  tableId: blindSchedule.levels',
+      '                  field: smallBlind',
+      '    limits: []',
+      'terminal:',
+      '  conditions:',
+      '    - when: { op: "==", left: 1, right: 0 }',
+      '      result: { type: draw }',
+      '```',
+    ].join('\n');
+
+    const parsed = parseGameSpec(markdown);
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assertNoErrors(parsed);
+    assertNoDiagnostics(compiled);
+    assert.notEqual(compiled.gameDef, null);
+    const serializedActions = JSON.stringify(compiled.gameDef?.actions ?? []);
+    assert.equal(serializedActions.includes('scenario-late-war::blindSchedule.levels'), true);
+    assert.equal(serializedActions.includes('scenario-foundation::blindSchedule.levels'), false);
+
+    const start = initialState(compiled.gameDef!, 101, 2);
+    const next = applyMove(compiled.gameDef!, start, { actionId: asActionId('syncBlind'), params: {} }).state;
+    assert.equal(next.globalVars.currentSmallBlind, 40);
   });
 
   it('fails compile when scenario initialTrackValues references unknown track ids', () => {

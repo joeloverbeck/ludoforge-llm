@@ -28,6 +28,7 @@ import { deriveSectionsFromDataAssets } from './compile-data-assets.js';
 import { expandEffectSections, expandZoneMacros } from './compile-macro-expansion.js';
 import { crossValidateSpec } from './cross-validate.js';
 import { lowerEventDecks } from './compile-event-cards.js';
+import { resolveScenarioTableRefsInDoc } from './resolve-scenario-table-refs.js';
 
 export interface CompileLimits {
   readonly maxExpandedEffects: number;
@@ -179,8 +180,15 @@ function compileExpandedDoc(
       ? {}
       : { defaultScenarioAssetId: doc.metadata.defaultScenarioAssetId }),
   });
-  const effectiveZones = mergeZoneSections(doc.zones, derivedFromAssets.zones);
-  const effectiveTokenTypes = doc.tokenTypes ?? derivedFromAssets.tokenTypes;
+  const resolvedTableRefDoc = resolveScenarioTableRefsInDoc(doc, {
+    ...(derivedFromAssets.selectedScenarioAssetId === undefined
+      ? {}
+      : { selectedScenarioAssetId: derivedFromAssets.selectedScenarioAssetId }),
+    tableContracts: derivedFromAssets.tableContracts,
+    diagnostics,
+  });
+  const effectiveZones = mergeZoneSections(resolvedTableRefDoc.zones, derivedFromAssets.zones);
+  const effectiveTokenTypes = resolvedTableRefDoc.tokenTypes ?? derivedFromAssets.tokenTypes;
   const sections: MutableCompileSectionResults = {
     metadata: null,
     constants: null,
@@ -199,7 +207,7 @@ function compileExpandedDoc(
     eventDecks: null,
   };
 
-  const metadata = doc.metadata;
+  const metadata = resolvedTableRefDoc.metadata;
   const runtimeMetadata =
     metadata === null
       ? null
@@ -215,10 +223,10 @@ function compileExpandedDoc(
   }
   const namedSets = metadata?.namedSets;
 
-  const constants = compileSection(diagnostics, () => lowerConstants(doc.constants, diagnostics));
+  const constants = compileSection(diagnostics, () => lowerConstants(resolvedTableRefDoc.constants, diagnostics));
   sections.constants = constants.failed ? null : constants.value;
 
-  const globalVars = compileSection(diagnostics, () => lowerVarDefs(doc.globalVars, diagnostics, 'doc.globalVars'));
+  const globalVars = compileSection(diagnostics, () => lowerVarDefs(resolvedTableRefDoc.globalVars, diagnostics, 'doc.globalVars'));
   const mergedGlobalVars = mergeTrackGlobalVars(
     globalVars.value,
     derivedFromAssets.tracks,
@@ -226,16 +234,20 @@ function compileExpandedDoc(
     diagnostics,
   );
   sections.globalVars = globalVars.failed ? null : mergedGlobalVars;
-  const globalMarkerLattices = compileSection(diagnostics, () => lowerGlobalMarkerLattices(doc.globalMarkerLattices, diagnostics));
+  const globalMarkerLattices = compileSection(diagnostics, () =>
+    lowerGlobalMarkerLattices(resolvedTableRefDoc.globalMarkerLattices, diagnostics),
+  );
   sections.globalMarkerLattices = globalMarkerLattices.failed ? null : globalMarkerLattices.value;
 
-  const perPlayerVars = compileSection(diagnostics, () => lowerVarDefs(doc.perPlayerVars, diagnostics, 'doc.perPlayerVars'));
+  const perPlayerVars = compileSection(diagnostics, () =>
+    lowerVarDefs(resolvedTableRefDoc.perPlayerVars, diagnostics, 'doc.perPlayerVars'),
+  );
   sections.perPlayerVars = perPlayerVars.failed ? null : perPlayerVars.value;
 
   let ownershipByBase: Readonly<Record<string, 'none' | 'player' | 'mixed'>> = {};
   let zones: GameDef['zones'] | null = null;
   if (effectiveZones === null) {
-    if (doc.zones === null && derivedFromAssets.derivationFailures.map) {
+    if (resolvedTableRefDoc.zones === null && derivedFromAssets.derivationFailures.map) {
       diagnostics.push(dataAssetCascadeZonesDiagnostic());
     } else {
       diagnostics.push(requiredSectionDiagnostic('doc.zones', 'zones'));
@@ -255,7 +267,7 @@ function compileExpandedDoc(
     readonly value: GameDef['tokenTypes'];
     readonly failed: boolean;
   };
-  if (effectiveTokenTypes === null && doc.tokenTypes === null && derivedFromAssets.derivationFailures.pieceCatalog) {
+  if (effectiveTokenTypes === null && resolvedTableRefDoc.tokenTypes === null && derivedFromAssets.derivationFailures.pieceCatalog) {
     diagnostics.push(dataAssetCascadeTokenTypesDiagnostic());
     tokenTypes = {
       value: [],
@@ -269,7 +281,7 @@ function compileExpandedDoc(
 
   const setup = compileSection(diagnostics, () =>
     lowerEffectsWithDiagnostics(
-      doc.setup ?? [],
+      resolvedTableRefDoc.setup ?? [],
       ownershipByBase,
       diagnostics,
       'doc.setup',
@@ -282,7 +294,7 @@ function compileExpandedDoc(
   sections.setup = setup.failed ? null : mergedSetup;
 
   let turnStructure: GameDef['turnStructure'] | null = null;
-  const rawTurnStructure = doc.turnStructure;
+  const rawTurnStructure = resolvedTableRefDoc.turnStructure;
   if (rawTurnStructure === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.turnStructure', 'turnStructure'));
   } else {
@@ -299,16 +311,16 @@ function compileExpandedDoc(
     sections.turnStructure = turnStructureSection.failed ? null : turnStructureSection.value;
   }
 
-  if (doc.turnOrder !== null) {
-    const turnOrder = compileSection(diagnostics, () => lowerTurnOrder(doc.turnOrder, diagnostics));
+  if (resolvedTableRefDoc.turnOrder !== null) {
+    const turnOrder = compileSection(diagnostics, () => lowerTurnOrder(resolvedTableRefDoc.turnOrder, diagnostics));
     sections.turnOrder = turnOrder.failed || turnOrder.value === undefined ? null : turnOrder.value;
   }
 
-  if (doc.actionPipelines !== null) {
+  if (resolvedTableRefDoc.actionPipelines !== null) {
     const actionPipelines = compileSection(diagnostics, () =>
       lowerActionPipelines(
-        doc.actionPipelines,
-        doc.actions,
+        resolvedTableRefDoc.actionPipelines,
+        resolvedTableRefDoc.actions,
         ownershipByBase,
         diagnostics,
         derivedFromAssets.tokenTraitVocabulary ?? undefined,
@@ -320,7 +332,7 @@ function compileExpandedDoc(
   }
 
   let actions: GameDef['actions'] | null = null;
-  const rawActions = doc.actions;
+  const rawActions = resolvedTableRefDoc.actions;
   if (rawActions === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.actions', 'actions'));
   } else {
@@ -339,7 +351,7 @@ function compileExpandedDoc(
 
   const triggers = compileSection(diagnostics, () =>
     lowerTriggers(
-      doc.triggers ?? [],
+      resolvedTableRefDoc.triggers ?? [],
       ownershipByBase,
       diagnostics,
       derivedFromAssets.tokenTraitVocabulary ?? undefined,
@@ -349,7 +361,7 @@ function compileExpandedDoc(
   sections.triggers = triggers.failed ? null : triggers.value;
 
   let terminal: GameDef['terminal'] | null = null;
-  const rawTerminal = doc.terminal;
+  const rawTerminal = resolvedTableRefDoc.terminal;
   if (rawTerminal === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.terminal', 'terminal'));
   } else {
@@ -373,7 +385,7 @@ function compileExpandedDoc(
     sections.terminal = endConditionsSection.failed || victorySection.failed || scoringSection.failed ? null : terminal;
   }
 
-  const rawEventDecks = doc.eventDecks;
+  const rawEventDecks = resolvedTableRefDoc.eventDecks;
   if (rawEventDecks !== null) {
     const eventDecks = compileSection(diagnostics, () =>
       lowerEventDecks(

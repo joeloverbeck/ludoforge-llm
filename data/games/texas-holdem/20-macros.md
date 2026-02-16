@@ -1317,15 +1317,15 @@ effectMacros:
                 value:
                   aggregate:
                     op: sum
-                    query: { query: assetRows, tableId: tournament-standard::settings.blindSchedule }
+                    query: { query: assetRows, tableId: settings.blindSchedule }
                     bind: $row
                     valueExpr:
                       if:
                         when:
                           op: '<'
-                          left: { ref: assetField, row: '$row', tableId: tournament-standard::settings.blindSchedule, field: level }
+                          left: { ref: assetField, row: '$row', tableId: settings.blindSchedule, field: level }
                           right: { ref: binding, name: $nextBlindLevel }
-                        then: { ref: assetField, row: '$row', tableId: tournament-standard::settings.blindSchedule, field: handsUntilNext }
+                        then: { ref: assetField, row: '$row', tableId: settings.blindSchedule, field: handsUntilNext }
                         else: 0
                 in:
                   - if:
@@ -1338,7 +1338,7 @@ effectMacros:
                             bind: $blindRow
                             over:
                               query: assetRows
-                              tableId: tournament-standard::settings.blindSchedule
+                              tableId: settings.blindSchedule
                               where:
                                 - field: level
                                   op: eq
@@ -1347,17 +1347,17 @@ effectMacros:
                               - setVar:
                                   scope: global
                                   var: blindLevel
-                                  value: { ref: assetField, row: '$blindRow', tableId: tournament-standard::settings.blindSchedule, field: level }
+                                  value: { ref: assetField, row: '$blindRow', tableId: settings.blindSchedule, field: level }
                               - setVar:
                                   scope: global
                                   var: smallBlind
-                                  value: { ref: assetField, row: '$blindRow', tableId: tournament-standard::settings.blindSchedule, field: sb }
+                                  value: { ref: assetField, row: '$blindRow', tableId: settings.blindSchedule, field: sb }
                               - setVar:
                                   scope: global
                                   var: bigBlind
-                                  value: { ref: assetField, row: '$blindRow', tableId: tournament-standard::settings.blindSchedule, field: bb }
+                                  value: { ref: assetField, row: '$blindRow', tableId: settings.blindSchedule, field: bb }
                               - setVar:
                                   scope: global
                                   var: ante
-                                  value: { ref: assetField, row: '$blindRow', tableId: tournament-standard::settings.blindSchedule, field: ante }
+                                  value: { ref: assetField, row: '$blindRow', tableId: settings.blindSchedule, field: ante }
 ```

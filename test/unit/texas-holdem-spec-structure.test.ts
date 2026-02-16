@@ -142,7 +142,8 @@ describe('texas hold\'em spec structure', () => {
     assert.ok(escalateBlinds);
 
     const serialized = JSON.stringify(escalateBlinds.effects);
-    assert.equal(serialized.includes('tournament-standard::settings.blindSchedule'), true);
+    assert.equal(serialized.includes('settings.blindSchedule'), true);
+    assert.equal(serialized.includes('tournament-standard::settings.blindSchedule'), false);
     assert.equal(serialized.includes('"field":"handsUntilNext"'), true);
     assert.equal(serialized.includes('"field":"sb"'), true);
     assert.equal(serialized.includes('"field":"bb"'), true);

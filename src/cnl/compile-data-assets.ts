@@ -66,6 +66,7 @@ export function deriveSectionsFromDataAssets(
   readonly scenarioSetupEffects: readonly EffectAST[];
   readonly runtimeDataAssets: readonly RuntimeDataAsset[];
   readonly tableContracts: readonly RuntimeTableContract[];
+  readonly selectedScenarioAssetId?: string;
   readonly derivationFailures: {
     readonly map: boolean;
     readonly pieceCatalog: boolean;
@@ -251,6 +252,7 @@ export function deriveSectionsFromDataAssets(
     scenarioSetupEffects,
     runtimeDataAssets,
     tableContracts,
+    ...(selectedScenario?.entityId === undefined ? {} : { selectedScenarioAssetId: selectedScenario.entityId }),
     derivationFailures: {
       map: mapDerivationFailed,
       pieceCatalog: pieceCatalogDerivationFailed,

@@ -20,9 +20,9 @@ interface ReplaySnapshot {
   readonly legal: ReturnType<typeof legalMoves>;
 }
 
-const PROPERTY_SEEDS = [11, 17, 23] as const;
+const PROPERTY_SEEDS = [11, 17, 23, 29, 31] as const;
 const PLAYER_COUNT = 2;
-const MAX_TURNS = 12;
+const MAX_TURNS = 20;
 
 const compileTexasDef = (): ValidatedGameDef => {
   const { parsed, compiled } = compileTexasProductionSpec();
@@ -152,7 +152,7 @@ describe('texas hold\'em property invariants', () => {
       const trace = runShortTournament(def, seed);
       const snapshots = replayTrace(def, trace);
 
-      for (const snapshot of snapshots.slice(0, 4)) {
+      for (const snapshot of snapshots) {
         for (const move of snapshot.legal) {
           assert.doesNotThrow(() => {
             applyMove(def, snapshot.state, move);

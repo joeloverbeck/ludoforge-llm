@@ -37,7 +37,14 @@ interface ReplayStep {
   readonly after: GameState;
 }
 
-const TOURNAMENT_MAX_TURNS = 80;
+const FULL_TOURNAMENT_MAX_TURNS = 10_000;
+const SHORT_TOURNAMENT_MAX_TURNS = 80;
+const PLAYER_COUNT_SEEDS: Readonly<Record<number, number>> = {
+  2: 102,
+  3: 103,
+  6: 106,
+  10: 9,
+};
 const traceCache = new Map<string, GameTrace>();
 
 const compileTexasDef = (): ValidatedGameDef => {
@@ -110,7 +117,7 @@ const loadTrace = (
   seed: number,
   agents: readonly Agent[],
   playerCount: number,
-  maxTurns = TOURNAMENT_MAX_TURNS,
+  maxTurns = SHORT_TOURNAMENT_MAX_TURNS,
 ): GameTrace => {
   const key = `${seed}:${playerCount}:${maxTurns}:${agents.map((agent) => agent.constructor.name).join(',')}`;
   const cached = traceCache.get(key);
@@ -126,30 +133,33 @@ describe('texas hold\'em tournament e2e', () => {
   it('completes a 4-player random-agent tournament with a single winner owning all chips', () => {
     const def = compileTexasDef();
     const playerCount = 4;
-    const trace = loadTrace(def, 42, createAgents(playerCount, 'random'), playerCount);
+    const trace = loadTrace(def, 42, createAgents(playerCount, 'random'), playerCount, FULL_TOURNAMENT_MAX_TURNS);
 
-    assert.equal(trace.stopReason === 'terminal' || trace.stopReason === 'maxTurns', true);
-    if (trace.stopReason === 'terminal') {
-      assert.notEqual(trace.result, null);
-      const alive = nonEliminatedPlayers(trace.finalState);
-      assert.deepEqual(alive.length, 1);
+    assert.equal(trace.stopReason, 'terminal');
+    assert.notEqual(trace.result, null);
+    const alive = nonEliminatedPlayers(trace.finalState);
+    assert.deepEqual(alive.length, 1);
 
-      const totalInitialChips = totalChipsInPlay(initialState(def, 42, playerCount));
-      const winner = alive[0]!;
-      assert.equal(Number(trace.finalState.perPlayerVars[String(winner)]?.chipStack ?? 0), totalInitialChips);
-    }
+    const totalInitialChips = totalChipsInPlay(initialState(def, 42, playerCount));
+    const winner = alive[0]!;
+    assert.equal(Number(trace.finalState.perPlayerVars[String(winner)]?.chipStack ?? 0), totalInitialChips);
   });
 
   for (const playerCount of [2, 3, 6, 10]) {
     it(`completes random-agent tournament at playerCount=${playerCount}`, () => {
       const def = compileTexasDef();
-      const trace = loadTrace(def, 100 + playerCount, createAgents(playerCount, 'random'), playerCount);
+      const seed = PLAYER_COUNT_SEEDS[playerCount]!;
+      const trace = loadTrace(
+        def,
+        seed,
+        createAgents(playerCount, 'random'),
+        playerCount,
+        FULL_TOURNAMENT_MAX_TURNS,
+      );
 
-      assert.equal(trace.stopReason === 'terminal' || trace.stopReason === 'maxTurns', true);
-      if (trace.stopReason === 'terminal') {
-        assert.notEqual(trace.result, null);
-        assert.equal(nonEliminatedPlayers(trace.finalState).length, 1);
-      }
+      assert.equal(trace.stopReason, 'terminal');
+      assert.notEqual(trace.result, null);
+      assert.equal(nonEliminatedPlayers(trace.finalState).length, 1);
     });
   }
 

@@ -1,6 +1,6 @@
 # TEXHOLKERPRIGAMTOU-009: Tier 4+5 — Tournament E2E Tests, Property Tests & Tournament Edge Cases
 
-**Status**: TODO
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Large
 **Dependencies**: TEXHOLKERPRIGAMTOU-008 (hand mechanics work correctly)
@@ -104,7 +104,7 @@ Include these in the E2E test file:
 
 19. **T5 — Last player standing**: Final elimination triggers terminal:
     - `activePlayers` drops to 1
-    - Terminal result is `{ type: 'win', player: <lastPlayerId> }`
+    - Terminal result is a score ranking with `<lastPlayerId>` in first place
     - Simulation stops with `stopReason: 'terminal'`
 
 ## Files to Touch
@@ -146,3 +146,19 @@ Include these in the E2E test file:
 7. **Terminal correctness**: Tournament always ends with exactly 1 non-eliminated player who has all chips
 8. **Agent compatibility**: Both RandomAgent and GreedyAgent complete tournaments without throwing errors
 9. **Blind schedule fidelity**: Blind escalation matches the `tournament-standard` data asset schedule exactly
+
+## Outcome
+
+- **Completion date**: February 16, 2026
+- **What changed**:
+  - Strengthened `test/e2e/texas-holdem-tournament.test.ts` so the full-tournament RandomAgent assertions require terminal completion and use `maxTurns = 10000` for those scenarios.
+  - Added deterministic per-player-count seeds for full tournament runs, including a stable 10-player seed.
+  - Strengthened `test/unit/texas-holdem-properties.test.ts` to run 5 seeds with at least 20 turns and validate I5 across every replay state.
+- **Deviations from original plan**:
+  - T5 terminal result wording was updated from a `win` payload to score-ranking-based terminal output to match the current runtime contract.
+- **Verification results**:
+  - `npm run build` ✅
+  - `node dist/test/e2e/texas-holdem-tournament.test.js` ✅
+  - `node dist/test/unit/texas-holdem-properties.test.js` ✅
+  - `npm test` ✅
+  - `npm run lint` ✅

@@ -12,7 +12,70 @@ import {
   NON_EFFECT_BINDER_REFERENCER_SURFACES,
   rewriteBinderSurfaceStringsInNode,
 } from '../../src/cnl/binder-surface-registry.js';
+import { NON_EFFECT_BINDER_SURFACE_CONTRACT } from '../../src/cnl/binder-surface-contract.js';
 import { SUPPORTED_EFFECT_KINDS } from '../../src/cnl/effect-kind-registry.js';
+
+function discoverDiscriminatorKinds(
+  source: string,
+  typeName: string,
+  key: 'ref' | 'query' | 'op',
+  binderFieldPattern: RegExp,
+): readonly string[] {
+  const discovered = new Set<string>();
+  const lines = source.split('\n');
+  const typeHeader = `export type ${typeName} =`;
+  let inTypeSection = false;
+  let collecting = false;
+  let currentDiscriminator: string | null = null;
+
+  for (const line of lines) {
+    if (!inTypeSection) {
+      if (line.startsWith(typeHeader)) {
+        inTypeSection = true;
+      }
+      continue;
+    }
+    if (/^export /.test(line)) {
+      break;
+    }
+    if (/^\s*\|\s*\{/.test(line)) {
+      collecting = false;
+      currentDiscriminator = null;
+    }
+    const discriminator = line.match(new RegExp(`readonly\\s+${key}:\\s*'([^']+)'`))?.[1];
+    if (discriminator !== undefined) {
+      collecting = true;
+      currentDiscriminator = discriminator;
+      if (binderFieldPattern.test(line)) {
+        discovered.add(discriminator);
+      }
+      continue;
+    }
+    if (collecting && binderFieldPattern.test(line)) {
+      if (currentDiscriminator !== null) {
+        discovered.add(currentDiscriminator);
+      }
+    }
+  }
+  return [...discovered].sort();
+}
+
+function discoverContractDiscriminatorKinds(key: 'ref' | 'query' | 'op'): readonly string[] {
+  const discovered = new Set<string>();
+  for (const surface of NON_EFFECT_BINDER_SURFACE_CONTRACT) {
+    for (const condition of surface.matchAll) {
+      if (condition.kind === 'equals' && condition.key === key) {
+        discovered.add(condition.value);
+      }
+      if (condition.kind === 'oneOf' && condition.key === key) {
+        for (const value of condition.values) {
+          discovered.add(value);
+        }
+      }
+    }
+  }
+  return [...discovered].sort();
+}
 
 describe('binder-surface-registry', () => {
   it('defines binder surfaces for every supported effect kind', () => {
@@ -40,6 +103,10 @@ describe('binder-surface-registry', () => {
 
   it('defines a centralized registry for non-effect binder referencer shapes', () => {
     assert.equal(NON_EFFECT_BINDER_REFERENCER_SURFACES.length > 0, true);
+    assert.deepEqual(
+      NON_EFFECT_BINDER_REFERENCER_SURFACES.map((surface) => surface.id).sort(),
+      NON_EFFECT_BINDER_SURFACE_CONTRACT.map((surface) => surface.id).sort(),
+    );
   });
 
   it('collects declared binder candidates with deterministic nested paths', () => {
@@ -165,6 +232,26 @@ describe('binder-surface-registry', () => {
       row: '$row_renamed',
       tableId: 'tournament-standard::settings.blindSchedule',
       field: 'sb',
+    });
+  });
+
+  it('rewrites tokensInMapSpaces owner chosen binding templates in non-effect nodes', () => {
+    const rewritten = rewriteBinderSurfaceStringsInNode(
+      {
+        query: 'tokensInMapSpaces',
+        spaceFilter: { owner: { chosen: '$owner' } },
+      },
+      {
+        rewriteDeclaredBinder: (value) => value,
+        rewriteBindingName: (value) => value,
+        rewriteBindingTemplate: (value) => (value === '$owner' ? '$owner_renamed' : value),
+        rewriteZoneSelector: (value) => value,
+      },
+    );
+
+    assert.deepEqual(rewritten, {
+      query: 'tokensInMapSpaces',
+      spaceFilter: { owner: { chosen: '$owner_renamed' } },
     });
   });
 
@@ -308,5 +395,31 @@ describe('binder-surface-registry', () => {
       [...discoveredKinds].sort(),
       [...DECLARED_BINDER_EFFECT_KINDS].sort(),
     );
+  });
+
+  it('fails when non-effect binder-capable discriminator nodes drift without contract updates', () => {
+    const astSource = readFileSync(join(process.cwd(), 'src/kernel/types-ast.ts'), 'utf8');
+    const referenceKinds = discoverDiscriminatorKinds(
+      astSource,
+      'Reference',
+      'ref',
+      /\breadonly\s+(name|row|token|zone|space|player)\??\s*:\s*(string|TokenSel|ZoneSel|PlayerSel)\b/,
+    );
+    const queryKinds = discoverDiscriminatorKinds(
+      astSource,
+      'OptionsQuery',
+      'query',
+      /\breadonly\s+(name|zone)\??\s*:\s*(string|ZoneRef)\b|readonly\s+(spaceFilter|filter)\??\s*:\s*\{\s*readonly\s+owner\??\s*:\s*PlayerSel\b/,
+    );
+    const opKinds = discoverDiscriminatorKinds(
+      astSource,
+      'ConditionAST',
+      'op',
+      /\breadonly\s+(left|right|from|to|zone)\??\s*:\s*ZoneSel\b/,
+    );
+
+    assert.deepEqual(referenceKinds, discoverContractDiscriminatorKinds('ref'));
+    assert.deepEqual(queryKinds, discoverContractDiscriminatorKinds('query'));
+    assert.deepEqual(opKinds, discoverContractDiscriminatorKinds('op'));
   });
 });

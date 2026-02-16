@@ -201,6 +201,7 @@ describe('texas hand mechanics integration', () => {
     const actorStack = Number(state.perPlayerVars[actor]?.chipStack ?? 0);
     const currentBet = Number(state.globalVars.currentBet ?? 0);
     const lastRaiseSize = Number(state.globalVars.lastRaiseSize ?? 0);
+    const bigBlind = Number(state.globalVars.bigBlind ?? 0);
 
     const openingActions = actionIds(def, state);
     assert.equal(openingActions.has('check'), false, 'check must be illegal when streetBet < currentBet');
@@ -214,6 +215,16 @@ describe('texas hand mechanics integration', () => {
     assert.equal(raiseAmounts.length > 0, true, 'raise options should be enumerable when min raise is affordable');
     assert.equal(Math.min(...raiseAmounts), currentBet + lastRaiseSize);
     assert.equal(Math.max(...raiseAmounts), actorStreetBet + actorStack);
+    assert.equal(raiseAmounts.length <= 10, true, 'raise domain should be cardinality-capped');
+
+    const scheduleAnchors = [
+      currentBet + (2 * bigBlind),
+      currentBet + (3 * bigBlind),
+      currentBet + (5 * bigBlind),
+    ].filter((amount) => amount >= currentBet + lastRaiseSize && amount <= actorStreetBet + actorStack);
+    for (const anchor of scheduleAnchors) {
+      assert.equal(raiseAmounts.includes(anchor), true, `raise domain should include schedule anchor ${anchor}`);
+    }
 
     state = applyAction(def, state, 'call');
     const bbOptionActions = actionIds(def, state);

@@ -207,6 +207,20 @@ describe('texas hold\'em tournament e2e', () => {
     }
   });
 
+  it('keeps per-turn legal move cardinality bounded under Texas raise rebucketing', () => {
+    const def = compileTexasDef();
+    const playerCount = 6;
+    const trace = loadTrace(def, 58, createAgents(playerCount, 'random'), playerCount);
+    const replay = replayTrace(def, trace, playerCount);
+
+    const peakLegalMoveCount = replay.steps.reduce(
+      (peak, step) => Math.max(peak, step.legal.length),
+      legalMoves(def, replay.initial).length,
+    );
+
+    assert.equal(peakLegalMoveCount <= 13, true, `peak legal move count exceeded cap: ${peakLegalMoveCount}`);
+  });
+
   it('marks eliminated players and removes them from future participation', () => {
     const def = compileTexasDef();
     const base = advanceToDecisionPoint(def, initialState(def, 13, 3));

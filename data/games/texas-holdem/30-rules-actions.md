@@ -328,6 +328,12 @@ actions:
           query: intsInRange
           min: { op: '+', left: { ref: gvar, var: currentBet }, right: { ref: gvar, var: lastRaiseSize } }
           max: { op: '+', left: { ref: pvar, player: actor, var: streetBet }, right: { ref: pvar, player: actor, var: chipStack } }
+          step: { ref: gvar, var: bigBlind }
+          alwaysInclude:
+            - { op: '+', left: { ref: gvar, var: currentBet }, right: { op: '*', left: { ref: gvar, var: bigBlind }, right: 2 } }
+            - { op: '+', left: { ref: gvar, var: currentBet }, right: { op: '*', left: { ref: gvar, var: bigBlind }, right: 3 } }
+            - { op: '+', left: { ref: gvar, var: currentBet }, right: { op: '*', left: { ref: gvar, var: bigBlind }, right: 5 } }
+          maxResults: 10
     pre:
       op: and
       args:

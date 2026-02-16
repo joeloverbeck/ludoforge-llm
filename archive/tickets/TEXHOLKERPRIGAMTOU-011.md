@@ -1,109 +1,122 @@
-# TEXHOLKERPRIGAMTOU-011: Generic Next-Seat-By-Predicate Primitive for Turn Logic
+# TEXHOLKERPRIGAMTOU-011: Texas Raise-Domain Rebucket + Tournament Throughput Validation
 
-**Status**: ✅ COMPLETED
-**Priority**: HIGH
-**Effort**: Large
-**Dependencies**: TEXHOLKERPRIGAMTOU-010
-**Blocks**: TEXHOLKERPRIGAMTOU-012
-
-## Assumption Reassessment (Current Code/Test Reality)
-
-1. Texas seat traversal duplication is real and concentrated in `data/games/texas-holdem/20-macros.md` (`find-next-non-eliminated`, `find-next-to-act`, and repeated preflop seat-selection reductions).
-2. The kernel currently has no first-class circular next-player query/primitive by predicate; traversal is encoded through nested `reduce` + aggregate scans in YAML.
-3. Existing generic query/value surfaces are expressive but not ergonomic for this use case; they force duplicated control flow and repeated modulo-style arithmetic in game specs.
-4. Existing tests already exercise Texas preflop/postflop actor progression and BB-option behavior (`test/integration/texas-runtime-bootstrap.test.ts`, `test/integration/texas-holdem-hand.test.ts`) and structure checks (`test/unit/texas-holdem-spec-structure.test.ts`), but there is no dedicated kernel-level test for reusable next-seat predicate resolution.
-5. Architectural fit: adding a single generic kernel query is cleaner than adding more game-local macros, and aligns with the Agnostic Engine rule.
+**Status**: ✅ COMPLETED  
+**Priority**: HIGH  
+**Effort**: Medium  
+**Dependencies**: archive/tickets/TEXHOLKERPRIGAMTOU-010.md  
+**Blocks**: None
 
 ## Problem
 
-Seat traversal and "find next eligible actor" logic is repeated in long, nested Texas macros. This is brittle and difficult to reuse for other games with circular turn order.
+Texas Hold'em currently enumerates near-continuous integer raise amounts (`40..stack`) which causes pathological move counts and slow tournament tests. This is likely over-specification for move generation and not required for robust tournament simulation.
 
-## 1) Updated Scope and Implementation Direction
+## Assumption Reassessment (2026-02-16)
 
-1. Add one canonical, game-agnostic `OptionsQuery` variant for circular next-player lookup by predicate (no aliases).
-2. Query semantics must be deterministic and return a zero-or-one player result (empty when no match), so no game-specific sentinels are required in kernel contracts.
-3. Extend compiler/query-lowering and schema/type validation to recognize the new canonical query shape.
-4. Refactor Texas macros (`find-next-non-eliminated`, `find-next-to-act`, and preflop seat selection paths) to consume the new query and remove duplicated reduce/modulo traversal blocks.
-5. Preserve engine genericity: no Texas identifiers or game-specific branches in `src/kernel`/`src/cnl`.
+1. The dependency ticket `TEXHOLKERPRIGAMTOU-010` is already completed and archived (`archive/tickets/TEXHOLKERPRIGAMTOU-010.md`); it is not an active ticket in `tickets/`.
+2. Generic `intsInRange` controls from `-010` are already implemented in kernel/CNL (`step`, `alwaysInclude`, `maxResults`) and are available for immediate use in Texas YAML.
+3. Texas `raiseAmount` currently uses plain `intsInRange { min, max }` with no cardinality controls in `data/games/texas-holdem/30-rules-actions.md`, so preflop and deep-stack spots still expand almost every integer amount.
+4. Existing tests already assert raise legality endpoints (`min`/`max`) and broad gameplay invariants, but they do not assert capped raise-domain cardinality or per-turn `legalMoveCount` ceilings.
+5. Architecture check: the clean long-term approach is to keep bucketing policy entirely in GameSpecDoc data (Texas YAML), reusing generic kernel query controls. No simulator/kernel poker specialization is required or desired.
 
-## 2) Invariants that must pass
+## 1) What Should Change / Be Added
 
-1. Next-seat resolution is deterministic for the same state and seed.
-2. Query result is either a single valid player id in range `[0, playerCount-1]` or empty.
-3. Wrap-around semantics are correct for all configured player counts.
-4. Predicate constraints are respected exactly (no eliminated/all-in/inactive leakage).
-5. Texas runtime behavior remains equivalent after macro refactor for existing gameplay tests.
+### A. Rework Texas `raise` parameter domain to use bounded buckets
 
-## 3) Tests that must pass
+In `data/games/texas-holdem/30-rules-actions.md` update `raiseAmount` domain to use existing generic `intsInRange` controls from archived ticket `-010`.
 
-1. New kernel unit tests for next-seat query:
-- wrap-around behavior
-- no-match behavior
-- include-self toggle semantics
-- predicate filtering against per-player state flags
-2. New compile/lowering tests proving GameSpecDoc lowers the new query shape correctly.
-3. Texas regression tests proving actor progression parity after macro refactor.
-4. Existing suites and full gates:
+Target behavior:
+
+- Keep legal lower bound: `currentBet + lastRaiseSize`.
+- Keep legal upper bound: `streetBet + chipStack`.
+- Use stepped progression (big-blind-scaled) instead of every integer.
+- Always include strategic anchors:
+  - min legal raise,
+  - exact all-in max,
+  - selected schedule-aligned values (for example `currentBet + k * bigBlind` where in-bounds).
+- Enforce hard cap on generated raise options per decision (via `maxResults`).
+
+### B. Preserve game-agnostic architecture
+
+All Texas-specific sizing policy must live in GameSpecDoc / scenario data. No poker-specific code paths in simulator or kernel.
+
+### C. Add performance-oriented tests for this slice
+
+Add focused tests proving move-domain cardinality and tournament runtime are bounded and stable.
+
+## 2) Invariants That Must Pass
+
+1. Raise legality correctness:
+   - every enumerated raise is within legal min/max,
+   - no enumerated raise violates preconditions.
+2. Endpoint preservation:
+   - min legal raise and all-in max are always offered when raise is legal.
+3. No regression in core gameplay invariants:
+   - chip conservation,
+   - card conservation,
+   - no negative stacks,
+   - deterministic replay for fixed seed/agents.
+4. Engine agnosticism:
+   - no Texas-specific conditionals added to `src/kernel/*` or `src/sim/*`.
+5. Throughput guardrail:
+   - peak `legalMoves()` cardinality in the Texas tournament suite is materially reduced from current baseline.
+
+## 3) Tests That Should Pass
+
+### Update/add tests
+
+- `test/integration/texas-holdem-hand.test.ts`
+  - assert raise domain still includes legal minimum and all-in maximum.
+  - assert schedule-aligned anchor raises are included when in bounds.
+  - assert enumerated raise count is capped per decision (new expected upper bound).
+- `test/e2e/texas-holdem-tournament.test.ts`
+  - keep existing behavior checks.
+  - add explicit assertion on per-turn `legalMoveCount` ceiling in replay (for Texas tournament runs).
+- `test/unit/texas-holdem-properties.test.ts`
+  - keep invariants green after rebucketing.
+
+### Performance checks (acceptance)
+
+- `npm run test:e2e` stays green.
+- `node dist/test/e2e/texas-holdem-tournament.test.js` runtime improves measurably versus pre-change baseline.
+- Optional benchmark artifact: capture before/after metrics for
+  - avg legal move count,
+  - p95 legal move count,
+  - max legal move count
+  across representative seeds.
+
+### Regression suites
+
 - `npm run build`
-- `npm run lint`
 - `npm test`
+- `npm run test:e2e`
 
-## 4) Implementation Notes
+## Out of Scope
 
-- Preferred canonical query contract:
-  - `query: "nextPlayerByCondition"`
-  - `from: <NumericValueExpr>`
-  - `where: <ConditionAST>` (evaluated with an implicit candidate-player binding)
-  - `includeFrom?: boolean` (default `false`)
-- Keep result shape consistent with existing query model (array), but constrain cardinality to zero-or-one.
-- Update all impacted type/schema surfaces together:
-  - `src/kernel/types-ast.ts`
-  - `src/kernel/schemas-ast.ts`
-  - `src/cnl/compile-conditions.ts`
-  - `src/kernel/eval-query.ts`
-  - `src/kernel/validate-gamedef-behavior.ts`
-  - `schemas/GameDef.schema.json` (regenerated artifact)
-- Keep macro edits minimal and localized to Texas traversal paths.
+- No changes to FITL files.
+- No custom poker AI strategy work.
+- No simulator-side poker special cases.
 
 ## Outcome
 
-- **Completion date**: 2026-02-16
-- **What was changed**:
-  - Added canonical query `nextPlayerByCondition` across kernel/runtime/compiler surfaces:
-    - `src/kernel/types-ast.ts`
-    - `src/kernel/schemas-ast.ts`
-    - `src/cnl/compile-conditions.ts`
-    - `src/kernel/eval-query.ts`
-    - `src/kernel/validate-gamedef-behavior.ts`
-  - Regenerated schema artifacts:
-    - `schemas/GameDef.schema.json`
-    - `schemas/Trace.schema.json`
-    - `schemas/EvalReport.schema.json`
-  - Refactored Texas traversal macros to consume the new primitive and removed duplicated offset/reduce traversal blocks:
-    - `find-next-non-eliminated`
-    - `find-next-to-act`
-    - `post-forced-bets-and-set-preflop-actor`
-  - Added/updated tests for lowering, runtime semantics, validation, and Texas macro structure.
-- **Deviations from original plan**:
-  - No additional alias/compatibility layer was introduced; only one canonical query shape was added.
-  - Query uses a single implicit candidate binding (`$candidate`) for predicate evaluation to keep DSL surface minimal.
-- **Verification results**:
+- Completion date: 2026-02-16
+- What changed:
+  - Rebucketed Texas `raiseAmount` in `data/games/texas-holdem/30-rules-actions.md` using generic `intsInRange` controls:
+    - `step: bigBlind`
+    - `alwaysInclude` schedule anchors (`currentBet + 2/3/5 * bigBlind`)
+    - `maxResults: 10`
+  - Strengthened `test/integration/texas-holdem-hand.test.ts` to assert:
+    - legal min/max raise endpoints are preserved
+    - anchor raises are present when in bounds
+    - raise-domain cardinality is capped (`<= 10`)
+  - Strengthened `test/e2e/texas-holdem-tournament.test.ts` with a replay assertion that peak per-turn legal move count is bounded (`<= 13`) under tournament flow.
+- Deviations from original plan:
+  - No kernel/simulator/compiler code changes were needed; the ticket was resolved fully in GameSpecDoc data plus tests, which is the cleaner architecture.
+  - Runtime-performance validation was captured via legal-move cardinality bounds in replay rather than introducing a wall-clock timing assertion (to avoid flaky CI timing dependencies).
+- Verification:
   - `npm run build` ✅
+  - `node --test dist/test/integration/texas-holdem-hand.test.js` ✅
+  - `node --test dist/test/unit/texas-holdem-properties.test.js` ✅
+  - `node --test dist/test/e2e/texas-holdem-tournament.test.js` ✅
   - `npm run lint` ✅
   - `npm test` ✅
-
-### Follow-up Refinement
-
-- **Date**: 2026-02-16
-- **Architecture upgrade**:
-  - Removed implicit candidate-binding semantics from `nextPlayerByCondition`.
-  - Added explicit binder declaration to the query contract:
-    - `bind: string`
-  - Updated compiler lowering to scope-check `where` against the declared `bind`.
-  - Updated runtime evaluation to bind candidates using the declared binder name (no magic `$candidate`).
-  - Updated binder-surface contract coverage to track `nextPlayerByCondition.bind` as a declared binder surface.
-  - Updated Texas macros and tests to use explicit binders.
-- **Verification results**:
-  - `npm run build` ✅
-  - `npm run lint` ✅
-  - `npm test` ✅
+  - `npm run test:e2e` ✅

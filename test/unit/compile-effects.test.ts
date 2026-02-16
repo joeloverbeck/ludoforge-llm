@@ -34,6 +34,17 @@ describe('compile-effects lowering', () => {
           effects: [{ destroyToken: { token: '$tok' } }],
         },
       },
+      {
+        reduce: {
+          itemBind: '$n',
+          accBind: '$acc',
+          over: { query: 'intsInRange', min: 1, max: 3 },
+          initial: 0,
+          next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+          resultBind: '$sum',
+          in: [{ setVar: { scope: 'global', var: 'total', value: { ref: 'binding', name: '$sum' } } }],
+        },
+      },
     ];
 
     const first = lowerEffectArray(source, context, 'doc.actions.0.effects');
@@ -59,7 +70,41 @@ describe('compile-effects lowering', () => {
           effects: [{ destroyToken: { token: '$tok' } }],
         },
       },
+      {
+        reduce: {
+          itemBind: '$n',
+          accBind: '$acc',
+          over: { query: 'intsInRange', min: 1, max: 3 },
+          initial: 0,
+          next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+          resultBind: '$sum',
+          in: [{ setVar: { scope: 'global', var: 'total', value: { ref: 'binding', name: '$sum' } } }],
+        },
+      },
     ]);
+  });
+
+  it('rejects reduce effects with conflicting binder identifiers', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          reduce: {
+            itemBind: '$same',
+            accBind: '$same',
+            over: { query: 'players' },
+            initial: 0,
+            next: 0,
+            resultBind: '$sum',
+            in: [],
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.reduce'), true);
   });
 
   it('emits missing capability diagnostics for unsupported effect nodes', () => {

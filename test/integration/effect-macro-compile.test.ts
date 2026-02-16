@@ -546,6 +546,45 @@ actor: 'active',
     assert.ok(result.gameDef !== null, 'Expected valid GameDef');
   });
 
+  it('reduce compiles through full pipeline with accumulator and continuation bindings', () => {
+    const doc = {
+      ...makeMinimalDoc(),
+      actions: [
+        {
+          id: 'reduce-action',
+actor: 'active',
+          executor: 'actor',
+          phase: 'main',
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            {
+              reduce: {
+                itemBind: '$n',
+                accBind: '$acc',
+                over: { query: 'intsInRange', min: 1, max: 3 },
+                initial: 0,
+                next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+                resultBind: '$sum',
+                in: [{ setVar: { scope: 'global', var: 'score', value: { ref: 'binding', name: '$sum' } } }],
+              },
+            },
+          ],
+          limits: [],
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    const errors = result.diagnostics.filter((d) => d.severity === 'error');
+    assert.deepEqual(errors, [], `Unexpected errors: ${JSON.stringify(errors, null, 2)}`);
+    assert.ok(result.gameDef !== null, 'Expected valid GameDef');
+    const effects = result.gameDef.actions[0]?.effects ?? [];
+    assert.equal(effects.length, 1);
+    assert.ok('reduce' in effects[0]!);
+  });
+
   it('multiple macro invocations produce deterministic non-colliding decision binds', () => {
     const macroDef: EffectMacroDef = {
       id: 'choose-mode',

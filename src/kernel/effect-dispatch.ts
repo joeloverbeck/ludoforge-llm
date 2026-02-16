@@ -14,7 +14,7 @@ import {
   applyShiftGlobalMarker,
   applyShiftMarker,
 } from './effects-choice.js';
-import { applyForEach, applyIf, applyLet, applyRemoveByPriority, type EffectBudgetState } from './effects-control.js';
+import { applyForEach, applyIf, applyLet, applyReduce, applyRemoveByPriority, type EffectBudgetState } from './effects-control.js';
 import { applyGotoPhase, applyGrantFreeOperation, applyPopInterruptPhase, applyPushInterruptPhase } from './effects-turn-flow.js';
 import { applyAddVar, applySetVar } from './effects-var.js';
 import { applyCommitResource } from './effects-resource.js';
@@ -56,6 +56,7 @@ const effectTypeOf = (effect: EffectAST): string => {
   if ('setTokenProp' in effect) return 'setTokenProp';
   if ('if' in effect) return 'if';
   if ('forEach' in effect) return 'forEach';
+  if ('reduce' in effect) return 'reduce';
   if ('removeByPriority' in effect) return 'removeByPriority';
   if ('let' in effect) return 'let';
   if ('evaluateSubset' in effect) return 'evaluateSubset';
@@ -142,6 +143,10 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 
   if ('forEach' in effect) {
     return applyForEach(effect, ctx, budget, applyEffectsWithBudget);
+  }
+
+  if ('reduce' in effect) {
+    return applyReduce(effect, ctx, budget, applyEffectsWithBudget);
   }
 
   if ('removeByPriority' in effect) {

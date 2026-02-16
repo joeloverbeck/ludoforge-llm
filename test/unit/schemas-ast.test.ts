@@ -163,6 +163,17 @@ describe('AST and selector schemas', () => {
         },
       },
       {
+        reduce: {
+          itemBind: '$n',
+          accBind: '$acc',
+          over: { query: 'intsInRange', min: 1, max: 3 },
+          initial: 0,
+          next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+          resultBind: '$sum',
+          in: [{ setVar: { scope: 'global', var: 'seen', value: { ref: 'binding', name: '$sum' } } }],
+        },
+      },
+      {
         removeByPriority: {
           budget: 3,
           groups: [

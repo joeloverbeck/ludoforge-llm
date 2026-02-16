@@ -44,6 +44,10 @@ export const collectDecisionBindingsFromEffects = (
       }
       continue;
     }
+    if ('reduce' in effect) {
+      collectDecisionBindingsFromEffects(effect.reduce.in, bindings);
+      continue;
+    }
     if ('removeByPriority' in effect) {
       if (effect.removeByPriority.in !== undefined) {
         collectDecisionBindingsFromEffects(effect.removeByPriority.in, bindings);

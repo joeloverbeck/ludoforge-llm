@@ -4507,6 +4507,61 @@
         {
           "type": "object",
           "properties": {
+            "reduce": {
+              "type": "object",
+              "properties": {
+                "itemBind": {
+                  "type": "string"
+                },
+                "accBind": {
+                  "type": "string"
+                },
+                "over": {
+                  "$ref": "#/definitions/__schema2"
+                },
+                "initial": {
+                  "$ref": "#/definitions/__schema1"
+                },
+                "next": {
+                  "$ref": "#/definitions/__schema1"
+                },
+                "limit": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema4"
+                    }
+                  ]
+                },
+                "resultBind": {
+                  "type": "string"
+                },
+                "in": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/__schema0"
+                  }
+                }
+              },
+              "required": [
+                "itemBind",
+                "accBind",
+                "over",
+                "initial",
+                "next",
+                "resultBind",
+                "in"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "reduce"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
             "removeByPriority": {
               "type": "object",
               "properties": {

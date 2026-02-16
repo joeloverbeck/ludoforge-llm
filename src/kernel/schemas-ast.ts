@@ -485,6 +485,22 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      reduce: z
+        .object({
+          itemBind: StringSchema,
+          accBind: StringSchema,
+          over: OptionsQuerySchema,
+          initial: ValueExprSchema,
+          next: ValueExprSchema,
+          limit: NumericValueExprSchema.optional(),
+          resultBind: StringSchema,
+          in: z.array(EffectASTSchema),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
       removeByPriority: z
         .object({
           budget: NumericValueExprSchema,

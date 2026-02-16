@@ -99,6 +99,12 @@ export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, Effect
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
+  reduce: {
+    declaredBinderPaths: [['itemBind'], ['accBind'], ['resultBind']],
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
   removeByPriority: {
     declaredBinderPaths: [['groups', '*', 'bind'], ['groups', '*', 'countBind'], ['remainingBind']],
     sequentiallyVisibleBinderPaths: [['groups', '*', 'countBind'], ['remainingBind']],

@@ -562,6 +562,16 @@ export interface EffectTraceForEach {
   readonly iteratedCount: number;
 }
 
+export interface EffectTraceReduce {
+  readonly kind: 'reduce';
+  readonly itemBind: string;
+  readonly accBind: string;
+  readonly resultBind: string;
+  readonly matchCount: number;
+  readonly limit?: number;
+  readonly iteratedCount: number;
+}
+
 export interface EffectTraceMoveToken {
   readonly kind: 'moveToken';
   readonly tokenId: string;
@@ -608,6 +618,7 @@ export interface EffectTraceConditional {
 
 export type EffectTraceEntry =
   | EffectTraceForEach
+  | EffectTraceReduce
   | EffectTraceMoveToken
   | EffectTraceSetTokenProp
   | EffectTraceVarChange

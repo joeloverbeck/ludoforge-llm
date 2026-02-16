@@ -385,6 +385,17 @@ export const EffectTraceEntrySchema = z.union([
     .strict(),
   z
     .object({
+      kind: z.literal('reduce'),
+      itemBind: StringSchema,
+      accBind: StringSchema,
+      resultBind: StringSchema,
+      matchCount: NumberSchema,
+      limit: NumberSchema.optional(),
+      iteratedCount: NumberSchema,
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal('moveToken'),
       tokenId: StringSchema,
       from: StringSchema,

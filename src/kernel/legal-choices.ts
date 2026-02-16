@@ -1,6 +1,7 @@
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { resolveChooseNCardinality } from './choose-n-cardinality.js';
+import { DEFAULT_CONTROL_FLOW_ITERATION_LIMIT, resolveControlFlowIterationLimit } from './control-flow-limit.js';
 import { composeDecisionId } from './decision-id.js';
 import { applyEffect } from './effect-dispatch.js';
 import type { EffectContext } from './effect-context.js';
@@ -122,6 +123,9 @@ function walkEffect(effect: EffectAST, wCtx: WalkContext): WalkOutcome {
   }
   if ('forEach' in effect) {
     return walkForEach(effect, wCtx);
+  }
+  if ('reduce' in effect) {
+    return walkReduce(effect, wCtx);
   }
   if ('removeByPriority' in effect) {
     return walkRemoveByPriority(effect, wCtx);
@@ -280,13 +284,12 @@ function walkForEach(
   wCtx: WalkContext,
 ): WalkOutcome {
   const items = evalQuery(effect.forEach.over, wCtx.evalCtx);
-  let limit = 100;
-  if (effect.forEach.limit !== undefined) {
-    const limitValue = evalValue(effect.forEach.limit, wCtx.evalCtx);
-    if (typeof limitValue === 'number' && Number.isSafeInteger(limitValue) && limitValue > 0) {
-      limit = limitValue;
-    }
-  }
+  const limit = resolveControlFlowIterationLimit(
+    'forEach',
+    effect.forEach.limit,
+    wCtx.evalCtx,
+    (_evaluatedLimit) => DEFAULT_CONTROL_FLOW_ITERATION_LIMIT,
+  );
   const bounded = items.slice(0, limit);
 
   let currentCtx = wCtx;
@@ -309,6 +312,38 @@ function walkForEach(
   }
 
   return { pending: null, wCtx: currentCtx };
+}
+
+function walkReduce(
+  effect: Extract<EffectAST, { readonly reduce: unknown }>,
+  wCtx: WalkContext,
+): WalkOutcome {
+  const items = evalQuery(effect.reduce.over, wCtx.evalCtx);
+  const limit = resolveControlFlowIterationLimit(
+    'reduce',
+    effect.reduce.limit,
+    wCtx.evalCtx,
+    (_evaluatedLimit) => DEFAULT_CONTROL_FLOW_ITERATION_LIMIT,
+  );
+  const bounded = items.slice(0, limit);
+  let accumulator = evalValue(effect.reduce.initial, wCtx.evalCtx);
+  for (const item of bounded) {
+    accumulator = evalValue(effect.reduce.next, {
+      ...wCtx.evalCtx,
+      bindings: {
+        ...wCtx.evalCtx.bindings,
+        [effect.reduce.itemBind]: item,
+        [effect.reduce.accBind]: accumulator,
+      },
+    });
+  }
+
+  const continuationCtx = withBinding(wCtx, effect.reduce.resultBind, accumulator);
+  const continuationResult = walkEffects(effect.reduce.in, continuationCtx);
+  if (continuationResult.pending !== null) {
+    return continuationResult;
+  }
+  return { pending: null, wCtx: mergeStateAndRng(wCtx, continuationResult.wCtx) };
 }
 
 function walkLet(

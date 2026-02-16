@@ -23,7 +23,7 @@ describe('binder-surface-registry', () => {
   it('tracks declared binder-producing effect kinds explicitly', () => {
     assert.deepEqual(
       [...DECLARED_BINDER_EFFECT_KINDS].sort(),
-      ['chooseN', 'chooseOne', 'commitResource', 'evaluateSubset', 'forEach', 'let', 'removeByPriority', 'rollRandom'],
+      ['chooseN', 'chooseOne', 'commitResource', 'evaluateSubset', 'forEach', 'let', 'reduce', 'removeByPriority', 'rollRandom'],
     );
   });
 

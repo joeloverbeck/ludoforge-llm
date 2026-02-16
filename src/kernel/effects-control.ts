@@ -1,6 +1,8 @@
 import { evalCondition } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
+import { resolveControlFlowIterationLimit } from './control-flow-limit.js';
+import { buildForEachTraceEntry, buildReduceTraceEntry } from './control-flow-trace.js';
 import { effectRuntimeError } from './effect-error.js';
 import { emitTrace, emitWarning } from './execution-collector.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
@@ -82,20 +84,12 @@ export const applyForEach = (
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-
-  let limit: number;
-  if (effect.forEach.limit === undefined) {
-    limit = 100;
-  } else {
-    const limitValue = evalValue(effect.forEach.limit, evalCtx);
-    if (typeof limitValue !== 'number' || !Number.isSafeInteger(limitValue) || limitValue <= 0) {
-      throw effectRuntimeError('controlFlowRuntimeValidationFailed', 'forEach.limit must evaluate to a positive integer', {
-        effectType: 'forEach',
-        limit: limitValue,
-      });
-    }
-    limit = limitValue;
-  }
+  const limit = resolveControlFlowIterationLimit('forEach', effect.forEach.limit, evalCtx, (evaluatedLimit) => {
+    throw effectRuntimeError('controlFlowRuntimeValidationFailed', 'forEach.limit must evaluate to a positive integer', {
+      effectType: 'forEach',
+      limit: evaluatedLimit,
+    });
+  });
 
   const queryResult = evalQuery(effect.forEach.over, evalCtx);
 
@@ -137,13 +131,13 @@ export const applyForEach = (
     emittedEvents.push(...(iterationResult.emittedEvents ?? []));
   }
 
-  emitTrace(ctx.collector, {
-    kind: 'forEach',
+  emitTrace(ctx.collector, buildForEachTraceEntry({
     bind: effect.forEach.bind,
     matchCount: queryResult.length,
     iteratedCount: boundedItems.length,
-    ...(effect.forEach.limit !== undefined ? { limit } : {}),
-  });
+    explicitLimit: effect.forEach.limit !== undefined,
+    resolvedLimit: limit,
+  }));
 
   if (effect.forEach.countBind !== undefined && effect.forEach.in !== undefined) {
     const countCtx: EffectContext = {
@@ -162,6 +156,60 @@ export const applyForEach = (
   }
 
   return { state: currentState, rng: currentRng, emittedEvents, bindings: ctx.bindings };
+};
+
+export const applyReduce = (
+  effect: Extract<EffectAST, { readonly reduce: unknown }>,
+  ctx: EffectContext,
+  budget: EffectBudgetState,
+  applyEffectsWithBudget: ApplyEffectsWithBudget,
+): EffectResult => {
+  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const limit = resolveControlFlowIterationLimit('reduce', effect.reduce.limit, evalCtx, (evaluatedLimit) => {
+    throw effectRuntimeError('controlFlowRuntimeValidationFailed', 'reduce.limit must evaluate to a positive integer', {
+      effectType: 'reduce',
+      limit: evaluatedLimit,
+    });
+  });
+  const queryResult = evalQuery(effect.reduce.over, evalCtx);
+  const boundedItems = queryResult.slice(0, limit);
+
+  let accumulator = evalValue(effect.reduce.initial, evalCtx);
+  for (const item of boundedItems) {
+    accumulator = evalValue(effect.reduce.next, {
+      ...evalCtx,
+      bindings: {
+        ...evalCtx.bindings,
+        [effect.reduce.itemBind]: item,
+        [effect.reduce.accBind]: accumulator,
+      },
+    });
+  }
+
+  emitTrace(ctx.collector, buildReduceTraceEntry({
+    itemBind: effect.reduce.itemBind,
+    accBind: effect.reduce.accBind,
+    resultBind: effect.reduce.resultBind,
+    matchCount: queryResult.length,
+    iteratedCount: boundedItems.length,
+    explicitLimit: effect.reduce.limit !== undefined,
+    resolvedLimit: limit,
+  }));
+
+  const continuationCtx: EffectContext = {
+    ...ctx,
+    bindings: {
+      ...ctx.bindings,
+      [effect.reduce.resultBind]: accumulator,
+    },
+  };
+  const continuationResult = applyEffectsWithBudget(effect.reduce.in, continuationCtx, budget);
+  return {
+    state: continuationResult.state,
+    rng: continuationResult.rng,
+    ...(continuationResult.emittedEvents === undefined ? {} : { emittedEvents: continuationResult.emittedEvents }),
+    bindings: ctx.bindings,
+  };
 };
 
 const resolveRemovalBudget = (budgetExpr: unknown, effectType: string): number => {

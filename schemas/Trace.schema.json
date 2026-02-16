@@ -1125,6 +1125,42 @@
                   "properties": {
                     "kind": {
                       "type": "string",
+                      "const": "reduce"
+                    },
+                    "itemBind": {
+                      "type": "string"
+                    },
+                    "accBind": {
+                      "type": "string"
+                    },
+                    "resultBind": {
+                      "type": "string"
+                    },
+                    "matchCount": {
+                      "type": "number"
+                    },
+                    "limit": {
+                      "type": "number"
+                    },
+                    "iteratedCount": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "itemBind",
+                    "accBind",
+                    "resultBind",
+                    "matchCount",
+                    "iteratedCount"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
                       "const": "moveToken"
                     },
                     "tokenId": {
@@ -5330,6 +5366,61 @@
           },
           "required": [
             "forEach"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "reduce": {
+              "type": "object",
+              "properties": {
+                "itemBind": {
+                  "type": "string"
+                },
+                "accBind": {
+                  "type": "string"
+                },
+                "over": {
+                  "$ref": "#/definitions/__schema3"
+                },
+                "initial": {
+                  "$ref": "#/definitions/__schema2"
+                },
+                "next": {
+                  "$ref": "#/definitions/__schema2"
+                },
+                "limit": {
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema4"
+                    }
+                  ]
+                },
+                "resultBind": {
+                  "type": "string"
+                },
+                "in": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/__schema5"
+                  }
+                }
+              },
+              "required": [
+                "itemBind",
+                "accBind",
+                "over",
+                "initial",
+                "next",
+                "resultBind",
+                "in"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "reduce"
           ],
           "additionalProperties": false
         },

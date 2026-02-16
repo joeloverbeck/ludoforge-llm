@@ -515,6 +515,11 @@ function walkEffects(
       continue;
     }
 
+    if ('reduce' in effect) {
+      walkEffects(effect.reduce.in, `${effectPath}.reduce.in`, onEffect);
+      continue;
+    }
+
     if ('removeByPriority' in effect) {
       if (effect.removeByPriority.in !== undefined) {
         walkEffects(effect.removeByPriority.in, `${effectPath}.removeByPriority.in`, onEffect);

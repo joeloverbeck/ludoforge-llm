@@ -1006,6 +1006,32 @@ export const validateEffectAst = (
     return;
   }
 
+  if ('reduce' in effect) {
+    validateOptionsQuery(diagnostics, effect.reduce.over, `${path}.reduce.over`, context);
+    validateValueExpr(diagnostics, effect.reduce.initial, `${path}.reduce.initial`, context);
+    validateValueExpr(diagnostics, effect.reduce.next, `${path}.reduce.next`, context);
+    if (effect.reduce.limit !== undefined) {
+      validateNumericValueExpr(diagnostics, effect.reduce.limit, `${path}.reduce.limit`, context);
+    }
+    if (
+      effect.reduce.itemBind === effect.reduce.accBind
+      || effect.reduce.itemBind === effect.reduce.resultBind
+      || effect.reduce.accBind === effect.reduce.resultBind
+    ) {
+      diagnostics.push({
+        code: 'REDUCE_BINDING_CONFLICT',
+        path: `${path}.reduce`,
+        severity: 'error',
+        message: 'reduce requires distinct itemBind, accBind, and resultBind identifiers.',
+        suggestion: 'Use unique binding names for item, accumulator, and reduced result.',
+      });
+    }
+    effect.reduce.in.forEach((entry, index) => {
+      validateEffectAst(diagnostics, entry, `${path}.reduce.in[${index}]`, context);
+    });
+    return;
+  }
+
   if ('evaluateSubset' in effect) {
     validateOptionsQuery(diagnostics, effect.evaluateSubset.source, `${path}.evaluateSubset.source`, context);
     validateNumericValueExpr(diagnostics, effect.evaluateSubset.subsetSize, `${path}.evaluateSubset.subsetSize`, context);

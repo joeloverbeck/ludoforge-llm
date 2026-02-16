@@ -107,6 +107,9 @@ function lowerEffectNode(
   if (isRecord(source.forEach)) {
     return lowerForEachEffect(source.forEach, context, scope, `${path}.forEach`);
   }
+  if (isRecord(source.reduce)) {
+    return lowerReduceEffect(source.reduce, context, scope, `${path}.reduce`);
+  }
   if (isRecord(source.removeByPriority)) {
     return lowerRemoveByPriorityEffect(source.removeByPriority, context, scope, `${path}.removeByPriority`);
   }
@@ -733,6 +736,103 @@ function lowerForEachEffect(
         ...(loweredLimit !== undefined ? { limit: loweredLimit } : {}),
         ...(countBind !== undefined ? { countBind } : {}),
         ...(loweredIn !== undefined ? { in: loweredIn } : {}),
+      },
+    },
+    diagnostics,
+  };
+}
+
+function lowerReduceEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (
+    typeof source.itemBind !== 'string'
+    || typeof source.accBind !== 'string'
+    || typeof source.resultBind !== 'string'
+    || !Array.isArray(source.in)
+  ) {
+    return missingCapability(path, 'reduce effect', source, [
+      '{ reduce: { itemBind, accBind, over, initial, next, limit?, resultBind, in } }',
+    ]);
+  }
+  const itemBind = source.itemBind;
+  const accBind = source.accBind;
+  const resultBind = source.resultBind;
+
+  const duplicateBindings = new Set<string>();
+  if (itemBind === accBind) {
+    duplicateBindings.add(itemBind);
+  }
+  if (itemBind === resultBind) {
+    duplicateBindings.add(itemBind);
+  }
+  if (accBind === resultBind) {
+    duplicateBindings.add(accBind);
+  }
+  if (duplicateBindings.size > 0) {
+    return {
+      value: null,
+      diagnostics: [{
+        code: 'CNL_COMPILER_MISSING_CAPABILITY',
+        path,
+        severity: 'error',
+        message: 'reduce binders itemBind, accBind, and resultBind must be distinct.',
+        suggestion: 'Rename reduce binders so each role uses a unique binding identifier.',
+      }],
+    };
+  }
+
+  const condCtx = makeConditionContext(context, scope);
+  const over = lowerQueryNode(source.over, condCtx, `${path}.over`);
+  const initial = lowerValueNode(source.initial, condCtx, `${path}.initial`);
+  const diagnostics = [
+    ...over.diagnostics,
+    ...initial.diagnostics,
+    ...scope.shadowWarning(itemBind, `${path}.itemBind`),
+    ...scope.shadowWarning(accBind, `${path}.accBind`),
+    ...scope.shadowWarning(resultBind, `${path}.resultBind`),
+  ];
+
+  let loweredLimit: NumericValueExpr | undefined;
+  if (source.limit !== undefined) {
+    const limitResult = lowerNumericValueNode(source.limit, condCtx, `${path}.limit`);
+    diagnostics.push(...limitResult.diagnostics);
+    if (limitResult.value === null) {
+      return { value: null, diagnostics };
+    }
+    loweredLimit = limitResult.value;
+  }
+
+  const next = scope.withBinding(itemBind, () =>
+    scope.withBinding(accBind, () =>
+      lowerValueNode(source.next, makeConditionContext(context, scope), `${path}.next`),
+    ),
+  );
+  diagnostics.push(...next.diagnostics);
+
+  const loweredIn = scope.withBinding(resultBind, () =>
+    lowerNestedEffects(source.in as readonly unknown[], context, scope, `${path}.in`),
+  );
+  diagnostics.push(...loweredIn.diagnostics);
+
+  if (over.value === null || initial.value === null || next.value === null || loweredIn.value === null) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: {
+      reduce: {
+        itemBind,
+        accBind,
+        over: over.value,
+        initial: initial.value,
+        next: next.value,
+        ...(loweredLimit === undefined ? {} : { limit: loweredLimit }),
+        resultBind,
+        in: loweredIn.value,
       },
     },
     diagnostics,

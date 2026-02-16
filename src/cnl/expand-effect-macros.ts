@@ -957,6 +957,19 @@ function rewriteBindings(
     return rewritten;
   }
 
+  if (isRecord(rewritten.reduce)) {
+    const reduceNode = rewritten.reduce;
+    rewritten.reduce = {
+      ...reduceNode,
+      ...(reduceNode.over === undefined ? {} : { over: rewriteBindings(reduceNode.over, index, renameMap) }),
+      ...(reduceNode.initial === undefined ? {} : { initial: rewriteBindings(reduceNode.initial, index, renameMap) }),
+      ...(reduceNode.next === undefined ? {} : { next: rewriteBindings(reduceNode.next, index, renameMap) }),
+      ...(reduceNode.limit === undefined ? {} : { limit: rewriteBindings(reduceNode.limit, index, renameMap) }),
+      ...(Array.isArray(reduceNode.in) ? { in: rewriteBindings(reduceNode.in, index, renameMap) } : {}),
+    };
+    return rewritten;
+  }
+
   if (isRecord(rewritten.removeByPriority)) {
     const removeByPriorityNode = rewritten.removeByPriority;
     rewritten.removeByPriority = {

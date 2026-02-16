@@ -1134,6 +1134,141 @@ phase: asPhaseId('main'),
       assert.deepStrictEqual(result, { kind: 'complete', complete: true });
     });
 
+    it('supports reduce continuation execution in legality traversal', () => {
+      const action: ActionDef = {
+        id: asActionId('reduceTraversalOp'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'reduceTraversalProfile',
+        actionId: asActionId('reduceTraversalOp'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                reduce: {
+                  itemBind: '$n',
+                  accBind: '$acc',
+                  over: { query: 'intsInRange', min: 1, max: 3 },
+                  initial: 0,
+                  next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+                  resultBind: '$total',
+                  in: [
+                    {
+                      chooseN: {
+                        internalDecisionId: 'decision:$picked',
+                        bind: '$picked',
+                        options: { query: 'intsInRange', min: 1, max: { ref: 'binding', name: '$total' } },
+                        n: 1,
+                      },
+                    },
+                  ],
+                },
+              } as EffectAST,
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      };
+
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const result = legalChoices(def, makeBaseState(), makeMove('reduceTraversalOp'));
+      assert.equal(result.complete, false);
+      assert.equal(result.name, '$picked');
+      assert.equal(result.type, 'chooseN');
+      assert.deepStrictEqual(result.options, [1, 2, 3, 4, 5, 6]);
+      assert.equal(result.min, 1);
+      assert.equal(result.max, 1);
+    });
+
+    it('falls back to default discovery cap when forEach.limit is invalid during traversal', () => {
+      const action: ActionDef = {
+        id: asActionId('invalidForEachLimit'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+      const profile: ActionPipelineDef = {
+        id: 'invalidForEachLimitProfile',
+        actionId: asActionId('invalidForEachLimit'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [{
+          effects: [{
+            forEach: {
+              bind: '$n',
+              over: { query: 'intsInRange', min: 1, max: 2 },
+              effects: [],
+              limit: 0,
+            },
+          } as EffectAST],
+        }],
+        atomicity: 'partial',
+      };
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const result = legalChoices(def, makeBaseState(), makeMove('invalidForEachLimit'));
+      assert.deepStrictEqual(result, { kind: 'complete', complete: true });
+    });
+
+    it('falls back to default discovery cap when reduce.limit is invalid during traversal', () => {
+      const action: ActionDef = {
+        id: asActionId('invalidReduceLimit'),
+actor: 'active',
+executor: 'actor',
+phase: asPhaseId('main'),
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+      const profile: ActionPipelineDef = {
+        id: 'invalidReduceLimitProfile',
+        actionId: asActionId('invalidReduceLimit'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [{
+          effects: [{
+            reduce: {
+              itemBind: '$n',
+              accBind: '$acc',
+              over: { query: 'intsInRange', min: 1, max: 2 },
+              initial: 0,
+              next: 0,
+              limit: 0,
+              resultBind: '$out',
+              in: [],
+            },
+          } as EffectAST],
+        }],
+        atomicity: 'partial',
+      };
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const result = legalChoices(def, makeBaseState(), makeMove('invalidReduceLimit'));
+      assert.deepStrictEqual(result, { kind: 'complete', complete: true });
+    });
+
     it('throws typed errors for malformed free-operation zone filters instead of silently denying zones', () => {
       const action: ActionDef = {
         id: asActionId('operation'),

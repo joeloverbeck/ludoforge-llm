@@ -87,6 +87,30 @@ describe('Effect execution trace', () => {
     assert.equal(forEachEntry.iteratedCount, 1);
   });
 
+  it('traces reduce iteration count and bind roles', () => {
+    const ctx = makeCtx({ [z1]: [], [z2]: [] }, {}, true);
+    const effects: readonly EffectAST[] = [{
+      reduce: {
+        itemBind: '$n',
+        accBind: '$acc',
+        over: { query: 'intsInRange', min: 1, max: 3 },
+        initial: 0,
+        next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+        resultBind: '$sum',
+        in: [],
+      },
+    }];
+    applyEffects(effects, ctx);
+    const trace = ctx.collector!.trace!;
+    const reduceEntry = trace.find((e) => e.kind === 'reduce');
+    assert.ok(reduceEntry);
+    assert.equal(reduceEntry.matchCount, 3);
+    assert.equal(reduceEntry.iteratedCount, 3);
+    assert.equal(reduceEntry.itemBind, '$n');
+    assert.equal(reduceEntry.accBind, '$acc');
+    assert.equal(reduceEntry.resultBind, '$sum');
+  });
+
   it('traces moveToken with from and to zones', () => {
     const token: Token = { id: asTokenId('t1'), type: 'piece', props: { faction: 'US' } };
     const ctx = makeCtx({ [z1]: [token], [z2]: [] }, { $tok: token }, true);

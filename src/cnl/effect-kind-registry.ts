@@ -13,6 +13,7 @@ export const SUPPORTED_EFFECT_KINDS = [
   'setTokenProp',
   'if',
   'forEach',
+  'reduce',
   'removeByPriority',
   'let',
   'evaluateSubset',

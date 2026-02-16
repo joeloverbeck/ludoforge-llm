@@ -236,6 +236,18 @@ function expandSingleEffect(effect: unknown, path: string, state: ExpansionState
     ];
   }
 
+  if (isRecord(effect.reduce) && Array.isArray(effect.reduce.in)) {
+    return [
+      {
+        ...effect,
+        reduce: {
+          ...effect.reduce,
+          in: expandEffectArray(effect.reduce.in, `${path}.reduce.in`, state),
+        },
+      },
+    ];
+  }
+
   if (isRecord(effect.let) && Array.isArray(effect.let.in)) {
     return [
       {

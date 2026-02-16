@@ -366,6 +366,108 @@ describe('effects control-flow handlers', () => {
     assert.equal(result.state.globalVars.x, 0);
   });
 
+  it('reduce folds values deterministically and binds final result into continuation', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      reduce: {
+        itemBind: '$n',
+        accBind: '$acc',
+        over: { query: 'intsInRange', min: 1, max: 4 },
+        initial: 0,
+        next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+        resultBind: '$sum',
+        in: [{ setVar: { scope: 'global', var: 'sum', value: { ref: 'binding', name: '$sum' } } }],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.sum, 10);
+  });
+
+  it('reduce supports non-numeric (string) accumulators', () => {
+    const ctx = makeCtx();
+    const effect: EffectAST = {
+      reduce: {
+        itemBind: '$n',
+        accBind: '$acc',
+        over: { query: 'intsInRange', min: 1, max: 3 },
+        initial: '',
+        next: { concat: [{ ref: 'binding', name: '$acc' }, { ref: 'binding', name: '$n' }] },
+        resultBind: '$joined',
+        in: [
+          {
+            if: {
+              when: { op: '==', left: { ref: 'binding', name: '$joined' }, right: '123' },
+              then: [{ setVar: { scope: 'global', var: 'bonus', value: 1 } }],
+            },
+          },
+        ],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.bonus, 1);
+  });
+
+  it('reduce enforces default limit of 100 and explicit dynamic limits', () => {
+    const defaultCtx = makeCtx();
+    const defaultEffect: EffectAST = {
+      reduce: {
+        itemBind: '$n',
+        accBind: '$acc',
+        over: { query: 'intsInRange', min: 1, max: 120 },
+        initial: 0,
+        next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: 1 },
+        resultBind: '$count',
+        in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$count' } } }],
+      },
+    };
+    const defaultResult = applyEffect(defaultEffect, defaultCtx);
+    assert.equal(defaultResult.state.globalVars.count, 100);
+
+    const dynamicCtx = makeCtx({ bindings: { '$max': 3 } });
+    const dynamicEffect: EffectAST = {
+      reduce: {
+        itemBind: '$n',
+        accBind: '$acc',
+        over: { query: 'intsInRange', min: 1, max: 10 },
+        initial: 0,
+        next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: 1 },
+        limit: { ref: 'binding', name: '$max' },
+        resultBind: '$count',
+        in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$count' } } }],
+      },
+    };
+    const dynamicResult = applyEffect(dynamicEffect, dynamicCtx);
+    assert.equal(dynamicResult.state.globalVars.count, 3);
+  });
+
+  it('reduce throws runtime error for invalid limit values', () => {
+    const ctx = makeCtx();
+    assert.throws(
+      () =>
+        applyEffect(
+          {
+            reduce: {
+              itemBind: '$n',
+              accBind: '$acc',
+              over: { query: 'intsInRange', min: 1, max: 2 },
+              initial: 0,
+              next: 0,
+              limit: 0,
+              resultBind: '$out',
+              in: [],
+            },
+          },
+          ctx,
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof EffectRuntimeError);
+        return String(error).includes('reduce.limit');
+      },
+    );
+  });
+
   it('removeByPriority removes tokens in group order and binds group counts/remaining budget', () => {
     const def: GameDef = {
       metadata: { id: 'remove-priority-order', players: { min: 1, max: 2 } },

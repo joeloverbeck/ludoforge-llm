@@ -1,5 +1,8 @@
 import * as assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, it } from 'node:test';
+import { Ajv } from 'ajv';
 
 import { validateDataAssetEnvelope } from '../../src/kernel/data-assets.js';
 import { assertNoErrors, assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
@@ -123,6 +126,127 @@ describe('texas hold\'em spec structure', () => {
     assert.equal(validated.length, 0);
     assertNoDiagnostics(compiled, parsed.sourceMap);
     assert.notEqual(compiled.gameDef, null);
+  });
+
+  it('materializes expected compiled zone topology for Texas hold\'em', () => {
+    const { parsed, validatorDiagnostics: validated, compiled } = compileTexasProductionSpec();
+    assertNoErrors(parsed);
+    assert.equal(validated.length, 0);
+    assertNoDiagnostics(compiled, parsed.sourceMap);
+    assert.notEqual(compiled.gameDef, null);
+
+    const zoneBases = new Map<string, { owner: string; visibility: string; ordering: string; count: number }>();
+    for (const zone of compiled.gameDef!.zones) {
+      const base = zone.id.split(':')[0] ?? zone.id;
+      const current = zoneBases.get(base);
+      if (current === undefined) {
+        zoneBases.set(base, { owner: zone.owner, visibility: zone.visibility, ordering: zone.ordering, count: 1 });
+        continue;
+      }
+      assert.equal(zone.owner, current.owner);
+      assert.equal(zone.visibility, current.visibility);
+      assert.equal(zone.ordering, current.ordering);
+      current.count += 1;
+    }
+
+    assert.deepEqual([...zoneBases.keys()], ['deck', 'burn', 'community', 'hand', 'muck']);
+    assert.deepEqual(zoneBases.get('deck'), { owner: 'none', visibility: 'hidden', ordering: 'stack', count: 1 });
+    assert.deepEqual(zoneBases.get('burn'), { owner: 'none', visibility: 'hidden', ordering: 'set', count: 1 });
+    assert.deepEqual(zoneBases.get('community'), { owner: 'none', visibility: 'public', ordering: 'queue', count: 1 });
+    assert.deepEqual(zoneBases.get('hand'), { owner: 'player', visibility: 'owner', ordering: 'set', count: 10 });
+    assert.deepEqual(zoneBases.get('muck'), { owner: 'none', visibility: 'hidden', ordering: 'set', count: 1 });
+  });
+
+  it('compiles expected per-player and global variable contracts', () => {
+    const { parsed, validatorDiagnostics: validated, compiled } = compileTexasProductionSpec();
+    assertNoErrors(parsed);
+    assert.equal(validated.length, 0);
+    assertNoDiagnostics(compiled, parsed.sourceMap);
+    assert.notEqual(compiled.gameDef, null);
+
+    const pvars = compiled.gameDef!.perPlayerVars;
+    const gvars = compiled.gameDef!.globalVars;
+    assert.deepEqual(
+      pvars.map((variable) => variable.name),
+      ['chipStack', 'streetBet', 'totalBet', 'handActive', 'allIn', 'eliminated', 'seatIndex', 'showdownScore'],
+    );
+    assert.deepEqual(
+      gvars.map((variable) => variable.name),
+      [
+        'pot',
+        'currentBet',
+        'lastRaiseSize',
+        'dealerSeat',
+        'smallBlind',
+        'bigBlind',
+        'ante',
+        'blindLevel',
+        'handsPlayed',
+        'handPhase',
+        'activePlayers',
+        'playersInHand',
+        'actingPosition',
+        'bettingClosed',
+        'oddChipRemainder',
+      ],
+    );
+  });
+
+  it('keeps compiled actions, phases, and terminal contract aligned to tournament flow', () => {
+    const { parsed, validatorDiagnostics: validated, compiled } = compileTexasProductionSpec();
+    assertNoErrors(parsed);
+    assert.equal(validated.length, 0);
+    assertNoDiagnostics(compiled, parsed.sourceMap);
+    assert.notEqual(compiled.gameDef, null);
+
+    const gameDef = compiled.gameDef!;
+    assert.deepEqual(gameDef.actions.map((action) => action.id), ['fold', 'check', 'call', 'raise', 'allIn']);
+    assert.deepEqual(gameDef.turnStructure.phases.map((phase) => phase.id), [
+      'hand-setup',
+      'preflop',
+      'flop',
+      'turn',
+      'river',
+      'showdown',
+      'hand-cleanup',
+    ]);
+    assert.equal(gameDef.terminal.conditions.length, 1);
+    assert.equal(JSON.stringify(gameDef.terminal.conditions[0]?.when).includes('"var":"activePlayers"'), true);
+    assert.equal(JSON.stringify(gameDef.terminal.conditions[0]?.when).includes('"right":1'), true);
+  });
+
+  it('lowers macro invocations and emits required Texas effect families', () => {
+    const { parsed, validatorDiagnostics: validated, compiled } = compileTexasProductionSpec();
+    assertNoErrors(parsed);
+    assert.equal(validated.length, 0);
+    assertNoDiagnostics(compiled, parsed.sourceMap);
+    assert.notEqual(compiled.gameDef, null);
+
+    const serialized = JSON.stringify(compiled.gameDef);
+    assert.equal(serialized.includes('"macro":'), false);
+    assert.equal(serialized.includes('"reveal":'), true);
+    assert.equal(serialized.includes('"evaluateSubset":'), true);
+    assert.equal(serialized.includes('"commitResource":'), true);
+  });
+
+  it('validates compiled Texas GameDef against schemas/GameDef.schema.json', () => {
+    const { parsed, validatorDiagnostics: validated, compiled } = compileTexasProductionSpec();
+    assertNoErrors(parsed);
+    assert.equal(validated.length, 0);
+    assertNoDiagnostics(compiled, parsed.sourceMap);
+    assert.notEqual(compiled.gameDef, null);
+
+    const schemaPath = path.join(process.cwd(), 'schemas', 'GameDef.schema.json');
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as Record<string, unknown>;
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(schema);
+    assert.equal(validate(compiled.gameDef), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('reuses the helper compile cache when the production source hash is unchanged', () => {
+    const first = compileTexasProductionSpec();
+    const second = compileTexasProductionSpec();
+    assert.equal(first, second);
   });
 
   it('keeps side-pot loops runtime-derived and avoids hardcoded seat ranges', () => {

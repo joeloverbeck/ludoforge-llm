@@ -1368,6 +1368,39 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports non-canonical nextPlayerByCondition.bind', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$next',
+              domain: {
+                query: 'nextPlayerByCondition',
+                from: 1,
+                bind: 'seatCandidate',
+                where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_NEXT_PLAYER_BIND_INVALID' &&
+          diag.path === 'actions[0].params[0].domain.bind' &&
+          diag.severity === 'error',
+      ),
+    );
+  });
+
   it('reports missing intsInVarRange source variable', () => {
     const base = createValidGameDef();
     const def = {

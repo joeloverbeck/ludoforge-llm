@@ -1,5 +1,5 @@
 import type { PlayerSel } from './types.js';
-import { isCanonicalSelectorBindingIdentifier } from './binding-identifier-contract.js';
+import { isCanonicalBindingIdentifier } from './binding-identifier-contract.js';
 import { ACTION_EXECUTOR_SELECTOR_SUGGESTION, PLAYER_SELECTOR_SUGGESTION } from './player-selector-vocabulary.js';
 
 export type ActionSelectorRole = 'actor' | 'executor';
@@ -80,7 +80,7 @@ export const evaluateActionSelectorContracts = ({
     if (binding === null) {
       continue;
     }
-    if (!isCanonicalSelectorBindingIdentifier(binding)) {
+    if (!isCanonicalBindingIdentifier(binding)) {
       violations.push({ role, kind: 'bindingMalformed', binding });
       continue;
     }

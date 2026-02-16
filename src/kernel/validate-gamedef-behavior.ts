@@ -11,6 +11,7 @@ import type {
   ZoneRef,
 } from './types.js';
 import { isNumericValueExpr } from './numeric-value-expr.js';
+import { isCanonicalBindingIdentifier } from './binding-identifier-contract.js';
 import {
   type ValidationContext,
   pushMissingReferenceDiagnostic,
@@ -675,6 +676,15 @@ export const validateOptionsQuery = (
         }
       } else {
         validateNumericValueExpr(diagnostics, query.from, `${path}.from`, context);
+      }
+      if (!isCanonicalBindingIdentifier(query.bind)) {
+        diagnostics.push({
+          code: 'DOMAIN_NEXT_PLAYER_BIND_INVALID',
+          path: `${path}.bind`,
+          severity: 'error',
+          message: `nextPlayerByCondition.bind "${query.bind}" must be a canonical "$name" token.`,
+          suggestion: 'Use a canonical binding token like "$seatCandidate".',
+        });
       }
       validateConditionAst(diagnostics, query.where, `${path}.where`, context);
       return;

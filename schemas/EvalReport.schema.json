@@ -3524,7 +3524,8 @@
               ]
             },
             "bind": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^\\$.+"
             },
             "where": {
               "$ref": "#/definitions/__schema1"

@@ -195,6 +195,23 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('rejects non-canonical nextPlayerByCondition bind tokens', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'nextPlayerByCondition',
+        from: 0,
+        bind: 'seatCandidate',
+        where: { op: '==', left: 1, right: 1 },
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_NEXT_PLAYER_BIND_INVALID');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.bind');
+  });
+
   it('rejects non-numeric intsInRange bounds during lowering', () => {
     const result = lowerQueryNode(
       {

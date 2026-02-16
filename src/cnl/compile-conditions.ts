@@ -12,7 +12,11 @@ import type {
   ValueExpr,
   ZoneRef,
 } from '../kernel/types.js';
-import { hasBindingIdentifier, rankBindingIdentifierAlternatives } from '../kernel/binding-identifier-contract.js';
+import {
+  hasBindingIdentifier,
+  isCanonicalBindingIdentifier,
+  rankBindingIdentifierAlternatives,
+} from '../kernel/binding-identifier-contract.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
 
@@ -709,6 +713,20 @@ export function lowerQueryNode(
         return missingCapability(path, 'nextPlayerByCondition query', source, [
           '{ query: "nextPlayerByCondition", from: <NumericValueExpr>, bind: string, where: <ConditionAST>, includeFrom?: boolean }',
         ]);
+      }
+      if (!isCanonicalBindingIdentifier(source.bind)) {
+        return {
+          value: null,
+          diagnostics: [
+            {
+              code: 'CNL_COMPILER_NEXT_PLAYER_BIND_INVALID',
+              path: `${path}.bind`,
+              severity: 'error',
+              message: `nextPlayerByCondition.bind "${source.bind}" must be a canonical "$name" token.`,
+              suggestion: 'Use a canonical binding token like "$seatCandidate".',
+            },
+          ],
+        };
       }
       const from = lowerIntDomainBound(source.from, context, `${path}.from`);
       const where = lowerConditionNode(

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CANONICAL_BINDING_IDENTIFIER_MESSAGE, CANONICAL_BINDING_IDENTIFIER_PATTERN } from './binding-identifier-contract.js';
 
 export const OBJECT_STRICTNESS_POLICY = 'strict' as const;
 
@@ -6,6 +7,9 @@ export const NumberSchema = z.number();
 export const IntegerSchema = z.number().int();
 export const BooleanSchema = z.boolean();
 export const StringSchema = z.string();
+const CanonicalBindingIdentifierSchema = StringSchema.regex(CANONICAL_BINDING_IDENTIFIER_PATTERN, {
+  message: CANONICAL_BINDING_IDENTIFIER_MESSAGE,
+});
 const PredicateScalarLiteralSchema = z.union([StringSchema, NumberSchema, BooleanSchema]);
 
 const PlayerIdSchema = IntegerSchema;
@@ -124,7 +128,7 @@ optionsQuerySchemaInternal = z.union([
     .object({
       query: z.literal('nextPlayerByCondition'),
       from: IntDomainBoundSchema,
-      bind: StringSchema,
+      bind: CanonicalBindingIdentifierSchema,
       where: ConditionASTSchema,
       includeFrom: BooleanSchema.optional(),
     })

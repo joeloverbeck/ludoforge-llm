@@ -453,6 +453,32 @@ describe('AST and selector schemas', () => {
     }
   });
 
+  it('enforces canonical bind for nextPlayerByCondition query', () => {
+    const valid: OptionsQuery = {
+      query: 'nextPlayerByCondition',
+      from: 1,
+      bind: '$seatCandidate',
+      where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+    };
+    assert.deepEqual(OptionsQuerySchema.parse(valid), valid);
+
+    const nonCanonical = OptionsQuerySchema.safeParse({
+      query: 'nextPlayerByCondition',
+      from: 1,
+      bind: 'seatCandidate',
+      where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+    });
+    assert.equal(nonCanonical.success, false);
+
+    const whitespaceOnly = OptionsQuerySchema.safeParse({
+      query: 'nextPlayerByCondition',
+      from: 1,
+      bind: '   ',
+      where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+    });
+    assert.equal(whitespaceOnly.success, false);
+  });
+
   it('parses binding query', () => {
     const query: OptionsQuery = { query: 'binding', name: 'targetSpaces' };
     assert.deepEqual(OptionsQuerySchema.parse(query), query);

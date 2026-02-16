@@ -135,4 +135,55 @@ describe('runtime table index', () => {
     const rows = index.tablesById.get('blind-levels')?.rows;
     assert.deepEqual(rows, [{ level: 1 }]);
   });
+
+  it('builds uniqueBy tuple indexes with deterministic composite-key candidates', () => {
+    const def: GameDef = {
+      ...makeDef(),
+      runtimeDataAssets: [
+        {
+          id: 'tournament-standard',
+          kind: 'scenario',
+          payload: {
+            blindSchedule: {
+              levels: [
+                { level: 1, phase: 'early', smallBlind: 10 },
+                { level: 1, phase: 'early', smallBlind: 10 },
+                { level: 2, phase: 'mid', smallBlind: 20 },
+              ],
+            },
+          },
+        },
+      ],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [
+            { field: 'level', type: 'int' },
+            { field: 'phase', type: 'string' },
+            { field: 'smallBlind', type: 'int' },
+          ],
+          uniqueBy: [['level']],
+        },
+      ],
+    };
+
+    const index = buildRuntimeTableIndex(def);
+    const entry = index.tablesById.get('tournament-standard::blindSchedule.levels');
+    assert.ok(entry);
+    const keyIndex = entry.keyIndexesByTuple.get('level');
+    assert.ok(keyIndex);
+
+    const duplicateRows = keyIndex.rowsByCompositeKey.get('n:1');
+    assert.ok(duplicateRows);
+    assert.equal(duplicateRows.length, 2);
+    assert.deepEqual(
+      duplicateRows.map((row) => row.smallBlind),
+      [10, 10],
+    );
+
+    const levelTwoRows = keyIndex.rowsByCompositeKey.get('n:2');
+    assert.equal(levelTwoRows?.length, 1);
+  });
 });

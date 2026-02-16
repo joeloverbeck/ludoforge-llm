@@ -1,6 +1,7 @@
 import type { GameDef, RuntimeTableContract } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
+type PredicateScalar = string | number | boolean;
 
 export type RuntimeTableIssue =
   | { readonly kind: 'assetMissing'; readonly assetId: string }
@@ -15,12 +16,78 @@ export interface RuntimeTableIndexEntry {
   readonly rows: readonly AssetRow[] | null;
   readonly fieldNames: ReadonlySet<string>;
   readonly fieldContractsByName: ReadonlyMap<string, RuntimeTableContract['fields'][number]>;
+  readonly keyIndexesByTuple: ReadonlyMap<string, RuntimeTableKeyIndex>;
   readonly issue?: RuntimeTableIssue;
 }
 
 export interface RuntimeTableIndex {
   readonly tableIds: readonly string[];
   readonly tablesById: ReadonlyMap<string, RuntimeTableIndexEntry>;
+}
+
+export interface RuntimeTableKeyIndex {
+  readonly tuple: readonly [string, ...string[]];
+  readonly rowsByCompositeKey: ReadonlyMap<string, readonly AssetRow[]>;
+}
+
+function tupleId(tuple: readonly [string, ...string[]]): string {
+  return tuple.join('\u0001');
+}
+
+function encodeScalar(value: PredicateScalar): string {
+  if (typeof value === 'string') {
+    return `s:${value}`;
+  }
+  if (typeof value === 'number') {
+    return `n:${value}`;
+  }
+  return `b:${value ? '1' : '0'}`;
+}
+
+function isPredicateScalar(value: unknown): value is PredicateScalar {
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+}
+
+function compositeKeyFromTuple(tuple: readonly [string, ...string[]], row: AssetRow): string | null {
+  const parts: string[] = [];
+  for (const field of tuple) {
+    const value = row[field];
+    if (!isPredicateScalar(value)) {
+      return null;
+    }
+    parts.push(encodeScalar(value));
+  }
+  return parts.join('\u0002');
+}
+
+function buildKeyIndexes(
+  contract: RuntimeTableContract,
+  rows: readonly AssetRow[] | null,
+): ReadonlyMap<string, RuntimeTableKeyIndex> {
+  const keyIndexesByTuple = new Map<string, RuntimeTableKeyIndex>();
+  if (rows === null) {
+    return keyIndexesByTuple;
+  }
+  for (const tuple of contract.uniqueBy ?? []) {
+    const rowsByCompositeKey = new Map<string, AssetRow[]>();
+    for (const row of rows) {
+      const compositeKey = compositeKeyFromTuple(tuple, row);
+      if (compositeKey === null) {
+        continue;
+      }
+      const existing = rowsByCompositeKey.get(compositeKey);
+      if (existing === undefined) {
+        rowsByCompositeKey.set(compositeKey, [row]);
+        continue;
+      }
+      existing.push(row);
+    }
+    keyIndexesByTuple.set(tupleId(tuple), {
+      tuple,
+      rowsByCompositeKey,
+    });
+  }
+  return keyIndexesByTuple;
 }
 
 function resolveRowsByTablePath(
@@ -119,6 +186,7 @@ export function buildRuntimeTableIndex(def: GameDef): RuntimeTableIndex {
         rows: null,
         fieldNames,
         fieldContractsByName,
+        keyIndexesByTuple: buildKeyIndexes(contract, null),
         issue: {
           kind: 'assetMissing',
           assetId: contract.assetId,
@@ -133,6 +201,7 @@ export function buildRuntimeTableIndex(def: GameDef): RuntimeTableIndex {
       rows: resolvedRows.rows,
       fieldNames,
       fieldContractsByName,
+      keyIndexesByTuple: buildKeyIndexes(contract, resolvedRows.rows),
       ...(resolvedRows.issue === undefined ? {} : { issue: resolvedRows.issue }),
     });
   }

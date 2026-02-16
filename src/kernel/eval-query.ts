@@ -10,6 +10,7 @@ import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
+import type { RuntimeTableKeyIndex } from './runtime-table-index.js';
 import {
   runtimeTableCardinalityEvalError,
   runtimeTableContractMissingEvalError,
@@ -18,6 +19,7 @@ import {
   runtimeTableRowsUnavailableEvalError,
 } from './runtime-table-eval-errors.js';
 import { filterRowsByPredicates, type PredicateValue, type ResolvedRowPredicate } from './query-predicate.js';
+import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
@@ -299,6 +301,7 @@ function classifyQueryResults(items: readonly QueryResult[]): RuntimeQueryShape 
 function resolveRuntimeTableRows(query: Extract<OptionsQuery, { readonly query: 'assetRows' }>, ctx: EvalContext): {
   readonly rows: readonly AssetRow[];
   readonly fieldNames: ReadonlySet<string>;
+  readonly keyIndexesByTuple: ReadonlyMap<string, RuntimeTableKeyIndex>;
 } {
   const index = ctx.runtimeTableIndex ?? buildRuntimeTableIndex(ctx.def);
   const entry = index.tablesById.get(query.tableId);
@@ -322,6 +325,7 @@ function resolveRuntimeTableRows(query: Extract<OptionsQuery, { readonly query: 
   return {
     rows: entry.rows,
     fieldNames: entry.fieldNames,
+    keyIndexesByTuple: entry.keyIndexesByTuple,
   };
 }
 
@@ -346,7 +350,9 @@ function evalAssetRowsQuery(
     }
 
     const resolvedPredicates = resolveAssetRowPredicates(wherePredicates, ctx);
-    matchedRows = filterRowsByPredicates(rows, resolvedPredicates, {
+    const lookupPlan = planAssetRowsLookup(resolvedPredicates, resolved.keyIndexesByTuple, rows);
+    const predicateRows = lookupPlan.candidates;
+    matchedRows = filterRowsByPredicates(predicateRows, resolvedPredicates, {
       getFieldValue: (row, field) => row[field],
       context: (predicate, row) => ({
         domain: 'assetRow',

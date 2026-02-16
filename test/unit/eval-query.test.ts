@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   buildAdjacencyGraph,
+  buildRuntimeTableIndex,
   createCollector,
   asPhaseId,
   asPlayerId,
@@ -688,6 +689,128 @@ describe('evalQuery', () => {
       ),
       [],
     );
+  });
+
+  it('returns equivalent rows for indexed eq lookup and non-indexed singleton membership lookup', () => {
+    const def: GameDef = {
+      ...makeDef(),
+      runtimeDataAssets: [
+        {
+          id: 'tournament-standard',
+          kind: 'scenario',
+          payload: {
+            blindSchedule: {
+              levels: [
+                { level: 1, phase: 'early', smallBlind: 10 },
+                { level: 2, phase: 'mid', smallBlind: 20 },
+                { level: 3, phase: 'late', smallBlind: 40 },
+              ],
+            },
+          },
+        },
+      ],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [
+            { field: 'level', type: 'int' },
+            { field: 'phase', type: 'string' },
+            { field: 'smallBlind', type: 'int' },
+          ],
+          uniqueBy: [['level']],
+        },
+      ],
+    };
+    const ctx = makeCtx({
+      def,
+      runtimeTableIndex: buildRuntimeTableIndex(def),
+    });
+
+    const indexed = evalQuery(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        where: [{ field: 'level', op: 'eq', value: 2 }],
+      },
+      ctx,
+    );
+    const fallback = evalQuery(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        where: [{ field: 'level', op: 'in', value: [2] }],
+      },
+      ctx,
+    );
+
+    assert.deepEqual(indexed, fallback);
+    assert.deepEqual(
+      indexed.map((row) => (row as Record<string, unknown>).smallBlind),
+      [20],
+    );
+  });
+
+  it('produces identical cardinality failure for indexed and fallback-equivalent constraints', () => {
+    const def: GameDef = {
+      ...makeDef(),
+      runtimeDataAssets: [
+        {
+          id: 'tournament-standard',
+          kind: 'scenario',
+          payload: {
+            blindSchedule: {
+              levels: [
+                { level: 1, phase: 'early', smallBlind: 10 },
+                { level: 1, phase: 'early', smallBlind: 15 },
+                { level: 2, phase: 'mid', smallBlind: 20 },
+              ],
+            },
+          },
+        },
+      ],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [
+            { field: 'level', type: 'int' },
+            { field: 'phase', type: 'string' },
+            { field: 'smallBlind', type: 'int' },
+          ],
+          uniqueBy: [['level']],
+        },
+      ],
+    };
+    const ctx = makeCtx({
+      def,
+      runtimeTableIndex: buildRuntimeTableIndex(def),
+    });
+
+    const assertMultipleMatches = (query: Extract<Parameters<typeof evalQuery>[0], { query: 'assetRows' }>): void => {
+      assert.throws(
+        () => evalQuery(query, ctx),
+        (error: unknown) =>
+          isEvalErrorCode(error, 'DATA_ASSET_CARDINALITY_MULTIPLE_MATCHES') &&
+          error.context?.tableId === 'tournament-standard::blindSchedule.levels' &&
+          error.context?.actualMatchCount === 2,
+      );
+    };
+
+    assertMultipleMatches({
+      query: 'assetRows',
+      tableId: 'tournament-standard::blindSchedule.levels',
+      cardinality: 'exactlyOne',
+      where: [{ field: 'level', op: 'eq', value: 1 }],
+    });
+    assertMultipleMatches({
+      query: 'assetRows',
+      tableId: 'tournament-standard::blindSchedule.levels',
+      cardinality: 'exactlyOne',
+      where: [{ field: 'level', op: 'in', value: [1] }],
+    });
   });
 
   it('applies zones filter.condition and composes it with owner filtering', () => {

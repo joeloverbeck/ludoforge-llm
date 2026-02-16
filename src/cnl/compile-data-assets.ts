@@ -517,11 +517,13 @@ function deriveRuntimeTableContracts(assetId: string, payload: unknown): readonl
       const rowFields = deriveScalarRowFields(node);
       if (rowFields !== null && pathSegments.length > 0) {
         const tablePath = pathSegments.join('.');
+        const uniqueBy = deriveSingleFieldUniqueKeys(node, rowFields);
         contracts.push({
           id: `${assetId}::${tablePath}`,
           assetId,
           tablePath,
           fields: rowFields,
+          ...(uniqueBy.length === 0 ? {} : { uniqueBy }),
         });
       }
       return;
@@ -561,6 +563,45 @@ function deriveScalarRowFields(rows: readonly unknown[]): RuntimeTableContract['
   return [...fieldKinds.entries()]
     .sort((left, right) => left[0].localeCompare(right[0]))
     .map(([field, type]) => ({ field, type }));
+}
+
+function deriveSingleFieldUniqueKeys(
+  rows: readonly unknown[],
+  rowFields: RuntimeTableContract['fields'],
+): readonly (readonly [string])[] {
+  if (rows.length === 0 || rowFields.length === 0) {
+    return [];
+  }
+
+  const scalarRows = rows as readonly Record<string, unknown>[];
+  const uniqueBy: Array<readonly [string]> = [];
+
+  for (const fieldContract of rowFields) {
+    const seenValues = new Set<string>();
+    let isUnique = true;
+    for (const row of scalarRows) {
+      if (!(fieldContract.field in row)) {
+        isUnique = false;
+        break;
+      }
+      const value = row[fieldContract.field];
+      if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
+        isUnique = false;
+        break;
+      }
+      const valueKey = JSON.stringify([typeof value, value]);
+      if (seenValues.has(valueKey)) {
+        isUnique = false;
+        break;
+      }
+      seenValues.add(valueKey);
+    }
+    if (isUnique) {
+      uniqueBy.push([fieldContract.field]);
+    }
+  }
+
+  return uniqueBy;
 }
 
 function scalarTypeOf(value: unknown): RuntimeTableContract['fields'][number]['type'] | null {

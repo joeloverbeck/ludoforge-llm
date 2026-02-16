@@ -455,6 +455,217 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports malformed runtime table uniqueBy declarations', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [
+            { field: 'level', type: 'int' as const },
+            { field: 'smallBlind', type: 'int' as const },
+          ],
+          uniqueBy: [[], ['missing'], ['level', 'level'], ['level'], ['level']],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(diagnostics.some((diag) => diag.code === 'RUNTIME_TABLE_UNIQUE_KEY_EMPTY' && diag.path === 'tableContracts[0].uniqueBy[0]'));
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'REF_RUNTIME_TABLE_UNIQUE_KEY_FIELD_MISSING' && diag.path === 'tableContracts[0].uniqueBy[1][0]',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'RUNTIME_TABLE_UNIQUE_KEY_FIELD_DUPLICATE' && diag.path === 'tableContracts[0].uniqueBy[2][1]',
+      ),
+    );
+    assert.ok(diagnostics.some((diag) => diag.code === 'RUNTIME_TABLE_UNIQUE_KEY_DUPLICATE' && diag.path === 'tableContracts[0].uniqueBy[4]'));
+  });
+
+  it('reports exactlyOne assetRows queries without key-constraining where predicates', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [
+            { field: 'level', type: 'int' as const },
+            { field: 'smallBlind', type: 'int' as const },
+          ],
+          uniqueBy: [['level']],
+        },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$row',
+              domain: {
+                query: 'assetRows',
+                tableId: 'tournament-standard::blindSchedule.levels',
+                cardinality: 'exactlyOne',
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'DOMAIN_ASSET_ROWS_EXACTLY_ONE_WHERE_REQUIRED' && diag.path === 'actions[0].params[0].domain.where',
+      ),
+    );
+  });
+
+  it('reports exactlyOne assetRows queries when table contracts lack uniqueBy', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [{ field: 'level', type: 'int' as const }],
+        },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$row',
+              domain: {
+                query: 'assetRows',
+                tableId: 'tournament-standard::blindSchedule.levels',
+                where: [{ field: 'level', op: 'eq', value: 1 }],
+                cardinality: 'exactlyOne',
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_ASSET_ROWS_EXACTLY_ONE_UNIQUE_KEY_REQUIRED' &&
+          diag.path === 'actions[0].params[0].domain.where',
+      ),
+    );
+  });
+
+  it('reports exactlyOne assetRows queries when predicates do not constrain a unique key', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [
+            { field: 'level', type: 'int' as const },
+            { field: 'smallBlind', type: 'int' as const },
+          ],
+          uniqueBy: [['level']],
+        },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$row',
+              domain: {
+                query: 'assetRows',
+                tableId: 'tournament-standard::blindSchedule.levels',
+                where: [{ field: 'smallBlind', op: 'eq', value: 10 }],
+                cardinality: 'exactlyOne',
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_ASSET_ROWS_EXACTLY_ONE_NOT_KEY_CONSTRAINED' &&
+          diag.path === 'actions[0].params[0].domain.where',
+      ),
+    );
+  });
+
+  it('accepts exactlyOne assetRows queries when predicates constrain a declared unique key', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [
+            { field: 'level', type: 'int' as const },
+            { field: 'smallBlind', type: 'int' as const },
+          ],
+          uniqueBy: [['level']],
+        },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$row',
+              domain: {
+                query: 'assetRows',
+                tableId: 'tournament-standard::blindSchedule.levels',
+                where: [{ field: 'level', op: 'eq', value: 2 }],
+                cardinality: 'exactlyOne',
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_ASSET_ROWS_EXACTLY_ONE_WHERE_REQUIRED' ||
+          diag.code === 'DOMAIN_ASSET_ROWS_EXACTLY_ONE_UNIQUE_KEY_REQUIRED' ||
+          diag.code === 'DOMAIN_ASSET_ROWS_EXACTLY_ONE_NOT_KEY_CONSTRAINED',
+      ),
+      false,
+    );
+  });
+
   it('reports concat queries with empty sources', () => {
     const base = createValidGameDef();
     const def = {

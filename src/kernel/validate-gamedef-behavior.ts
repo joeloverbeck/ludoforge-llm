@@ -466,6 +466,30 @@ const validateTokenFilterPredicates = (
   }
 };
 
+const uniqueKeyTupleToLabel = (tuple: readonly string[]): string => `[${tuple.join(', ')}]`;
+
+const validatesUniqueKeyConstraint = (
+  wherePredicates: Extract<OptionsQuery, { readonly query: 'assetRows' }>['where'],
+  uniqueBy: readonly (readonly string[])[],
+): boolean => {
+  if (wherePredicates === undefined || wherePredicates.length === 0) {
+    return false;
+  }
+
+  const constrainedFields = new Set<string>();
+  for (const predicate of wherePredicates) {
+    if (predicate.op !== 'eq') {
+      continue;
+    }
+    if (Array.isArray(predicate.value)) {
+      continue;
+    }
+    constrainedFields.add(predicate.field);
+  }
+
+  return uniqueBy.some((tuple) => tuple.every((field) => constrainedFields.has(field)));
+};
+
 export const validateOptionsQuery = (
   diagnostics: Diagnostic[],
   query: OptionsQuery,
@@ -541,6 +565,42 @@ export const validateOptionsQuery = (
             validateValueExpr(diagnostics, predicate.value as ValueExpr, `${path}.where[${index}].value`, context);
           }
         });
+      }
+
+      if (query.cardinality === 'exactlyOne') {
+        const wherePath = `${path}.where`;
+        if (query.where === undefined || query.where.length === 0) {
+          diagnostics.push({
+            code: 'DOMAIN_ASSET_ROWS_EXACTLY_ONE_WHERE_REQUIRED',
+            path: wherePath,
+            severity: 'error',
+            message: `assetRows query with cardinality "exactlyOne" must provide where predicates that constrain a declared unique key for table "${query.tableId}".`,
+            suggestion: 'Add eq predicates for all fields in one declared uniqueBy tuple.',
+          });
+          return;
+        }
+
+        const uniqueBy = contract.uniqueBy ?? [];
+        if (uniqueBy.length === 0) {
+          diagnostics.push({
+            code: 'DOMAIN_ASSET_ROWS_EXACTLY_ONE_UNIQUE_KEY_REQUIRED',
+            path: wherePath,
+            severity: 'error',
+            message: `assetRows query with cardinality "exactlyOne" targets table "${query.tableId}" without declared uniqueBy metadata.`,
+            suggestion: 'Declare tableContracts[].uniqueBy and constrain one unique key tuple with eq predicates.',
+          });
+          return;
+        }
+
+        if (!validatesUniqueKeyConstraint(query.where, uniqueBy)) {
+          diagnostics.push({
+            code: 'DOMAIN_ASSET_ROWS_EXACTLY_ONE_NOT_KEY_CONSTRAINED',
+            path: wherePath,
+            severity: 'error',
+            message: `assetRows query with cardinality "exactlyOne" does not constrain a declared uniqueBy tuple for table "${query.tableId}".`,
+            suggestion: `Constrain all fields in one uniqueBy tuple with eq predicates. Declared tuples: ${uniqueBy.map((tuple) => uniqueKeyTupleToLabel(tuple)).join(', ')}.`,
+          });
+        }
       }
       return;
     }

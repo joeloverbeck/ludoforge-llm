@@ -348,6 +348,7 @@ export interface RuntimeTableContract {
   readonly assetId: string;
   readonly tablePath: string;
   readonly fields: readonly RuntimeTableFieldContract[];
+  readonly uniqueBy?: readonly (readonly [string, ...string[]])[];
 }
 
 export interface DataAssetRef {

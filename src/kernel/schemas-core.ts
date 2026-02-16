@@ -220,12 +220,15 @@ export const RuntimeTableFieldContractSchema = z
   })
   .strict();
 
+export const RuntimeTableUniqueKeySchema = z.array(StringSchema).min(1);
+
 export const RuntimeTableContractSchema = z
   .object({
     id: StringSchema,
     assetId: StringSchema,
     tablePath: StringSchema,
     fields: z.array(RuntimeTableFieldContractSchema),
+    uniqueBy: z.array(RuntimeTableUniqueKeySchema).optional(),
   })
   .strict();
 

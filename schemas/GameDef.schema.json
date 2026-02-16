@@ -3414,6 +3414,16 @@
               ],
               "additionalProperties": false
             }
+          },
+          "uniqueBy": {
+            "type": "array",
+            "items": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         },
         "required": [

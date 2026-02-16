@@ -154,4 +154,18 @@ describe('texas hold\'em spec structure', () => {
     assert.equal(/"var":"bigBlind","value":\d+/.test(serialized), false);
     assert.equal(/"var":"ante","value":\d+/.test(serialized), false);
   });
+
+  it('derives blind schedule runtime table unique keys for strict exactlyOne validation', () => {
+    const { parsed, validatorDiagnostics: validated, compiled } = compileTexasProductionSpec();
+    assertNoErrors(parsed);
+    assert.equal(validated.length, 0);
+    assertNoDiagnostics(compiled, parsed.sourceMap);
+    assert.notEqual(compiled.gameDef, null);
+
+    const blindScheduleContract = compiled.gameDef?.tableContracts?.find(
+      (contract) => contract.id === 'tournament-standard::settings.blindSchedule',
+    );
+    assert.ok(blindScheduleContract);
+    assert.equal(blindScheduleContract.uniqueBy?.some((tuple) => tuple.length === 1 && tuple[0] === 'level'), true);
+  });
 });

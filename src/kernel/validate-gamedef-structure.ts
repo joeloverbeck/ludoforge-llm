@@ -65,6 +65,9 @@ export const checkDuplicateIds = (
   }
 };
 
+const canonicalUniqueKeyTuple = (tuple: readonly string[]): string =>
+  [...tuple].sort((left, right) => left.localeCompare(right)).join('\u0000');
+
 const levenshteinDistance = (left: string, right: string): number => {
   const cols = right.length + 1;
   let previousRow: number[] = Array.from({ length: cols }, (_unused, index) => index);
@@ -439,6 +442,70 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
       'runtime table field',
       `tableContracts[${contractIndex}].fields`,
     );
+
+    const declaredFields = new Set(contract.fields.map((field) => field.field));
+    const uniqueKeyCandidates = contract.fields.map((field) => field.field);
+    const uniqueKeyTuplePaths = new Map<string, number>();
+    (contract.uniqueBy ?? []).forEach((tuple, tupleIndex) => {
+      const tuplePath = `tableContracts[${contractIndex}].uniqueBy[${tupleIndex}]`;
+      if (tuple.length === 0) {
+        diagnostics.push({
+          code: 'RUNTIME_TABLE_UNIQUE_KEY_EMPTY',
+          path: tuplePath,
+          severity: 'error',
+          message: `Runtime table contract "${contract.id}" uniqueBy tuple must include at least one field.`,
+          suggestion: 'Declare one or more field names for each unique key tuple.',
+        });
+        return;
+      }
+
+      const tupleFieldSeen = new Set<string>();
+      let tupleValidForDedup = true;
+      tuple.forEach((field, fieldIndex) => {
+        if (!declaredFields.has(field)) {
+          tupleValidForDedup = false;
+          pushMissingReferenceDiagnostic(
+            diagnostics,
+            'REF_RUNTIME_TABLE_UNIQUE_KEY_FIELD_MISSING',
+            `${tuplePath}[${fieldIndex}]`,
+            `Unknown unique key field "${field}" in runtime table "${contract.id}".`,
+            field,
+            uniqueKeyCandidates,
+          );
+          return;
+        }
+        if (tupleFieldSeen.has(field)) {
+          tupleValidForDedup = false;
+          diagnostics.push({
+            code: 'RUNTIME_TABLE_UNIQUE_KEY_FIELD_DUPLICATE',
+            path: `${tuplePath}[${fieldIndex}]`,
+            severity: 'error',
+            message: `Runtime table contract "${contract.id}" uniqueBy tuple repeats field "${field}".`,
+            suggestion: 'Remove duplicate fields from the unique key tuple.',
+          });
+          return;
+        }
+        tupleFieldSeen.add(field);
+      });
+
+      if (!tupleValidForDedup) {
+        return;
+      }
+
+      const canonical = canonicalUniqueKeyTuple(tuple);
+      const existingTupleIndex = uniqueKeyTuplePaths.get(canonical);
+      if (existingTupleIndex !== undefined) {
+        diagnostics.push({
+          code: 'RUNTIME_TABLE_UNIQUE_KEY_DUPLICATE',
+          path: tuplePath,
+          severity: 'error',
+          message: `Runtime table contract "${contract.id}" uniqueBy tuple duplicates tableContracts[${contractIndex}].uniqueBy[${existingTupleIndex}].`,
+          suggestion: 'Keep each declared unique key tuple distinct.',
+        });
+        return;
+      }
+      uniqueKeyTuplePaths.set(canonical, tupleIndex);
+    });
   });
   const runtimeDataAssetCandidates = [...new Set((def.runtimeDataAssets ?? []).map((asset) => asset.id))].sort((left, right) =>
     left.localeCompare(right),

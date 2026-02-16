@@ -349,6 +349,46 @@ describe('top-level runtime schemas', () => {
     assert.equal(result.success, true);
   });
 
+  it('parses runtime table contracts with uniqueBy tuples', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      runtimeDataAssets: [{ id: 'scenario-1', kind: 'scenario', payload: { levels: [{ level: 1, phase: 'early' }] } }],
+      tableContracts: [
+        {
+          id: 'scenario-1::levels',
+          assetId: 'scenario-1',
+          tablePath: 'levels',
+          fields: [
+            { field: 'level', type: 'int' },
+            { field: 'phase', type: 'string' },
+          ],
+          uniqueBy: [['level'], ['level', 'phase']],
+        },
+      ],
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('rejects runtime table contracts with empty uniqueBy tuples', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      runtimeDataAssets: [{ id: 'scenario-1', kind: 'scenario', payload: { levels: [{ level: 1 }] } }],
+      tableContracts: [
+        {
+          id: 'scenario-1::levels',
+          assetId: 'scenario-1',
+          tablePath: 'levels',
+          fields: [{ field: 'level', type: 'int' }],
+          uniqueBy: [[]],
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'tableContracts.0.uniqueBy.0'));
+  });
+
   it('parses varChanged trigger event shape in GameDefSchema', () => {
     const result = GameDefSchema.safeParse({
       ...minimalGameDef,

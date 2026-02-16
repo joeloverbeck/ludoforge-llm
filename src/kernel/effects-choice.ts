@@ -12,6 +12,7 @@ import type { EffectAST } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
 
 type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
+const resolveInterpreterMode = (ctx: EffectContext): 'execution' | 'discovery' => ctx.mode ?? 'execution';
 
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
   const merged: Record<string, unknown> = {
@@ -58,17 +59,6 @@ const resolveGlobalMarkerLattice = (ctx: EffectContext, markerId: string, effect
 export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: unknown }>, ctx: EffectContext): EffectResult => {
   const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, ctx.bindings);
   const decisionId = composeDecisionId(effect.chooseOne.internalDecisionId, effect.chooseOne.bind, resolvedBind);
-  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseOne missing move param binding: ${resolvedBind} (${decisionId})`, {
-      effectType: 'chooseOne',
-      bind: resolvedBind,
-      decisionId,
-      bindTemplate: effect.chooseOne.bind,
-      availableMoveParams: Object.keys(ctx.moveParams).sort(),
-    });
-  }
-
-  const selected = ctx.moveParams[decisionId];
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const options = evalQuery(effect.chooseOne.options, evalCtx);
   const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
@@ -82,16 +72,46 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
       value: issue.value,
     });
   });
+  if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
+    if (resolveInterpreterMode(ctx) === 'discovery') {
+      return {
+        state: ctx.state,
+        rng: ctx.rng,
+        bindings: ctx.bindings,
+        pendingChoice: {
+          kind: 'pending',
+          complete: false,
+          decisionId,
+          name: resolvedBind,
+          type: 'chooseOne',
+          options: normalizedOptions,
+        },
+      };
+    }
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseOne missing move param binding: ${resolvedBind} (${decisionId})`, {
+      effectType: 'chooseOne',
+      bind: resolvedBind,
+      decisionId,
+      bindTemplate: effect.chooseOne.bind,
+      availableMoveParams: Object.keys(ctx.moveParams).sort(),
+    });
+  }
+
+  const selected = ctx.moveParams[decisionId];
 
   const selectedComparable = toChoiceComparableValue(selected);
   if (selectedComparable === null || !normalizedOptions.includes(selectedComparable)) {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseOne selection is outside options domain: ${resolvedBind}`, {
+    throw effectRuntimeError(
+      'choiceRuntimeValidationFailed',
+      `invalid selection for chooseOne "${resolvedBind}" (${decisionId}): outside options domain`,
+      {
       effectType: 'chooseOne',
       bind: resolvedBind,
       bindTemplate: effect.chooseOne.bind,
       selected,
       optionsCount: normalizedOptions.length,
-    });
+      },
+    );
   }
 
   return {
@@ -162,7 +182,36 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     });
   });
 
+  const options = evalQuery(chooseN.options, evalCtx);
+  const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
+    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN options domain item is not move-param encodable: ${bind}`, {
+      effectType: 'chooseN',
+      bind,
+      decisionId,
+      index: issue.index,
+      actualType: issue.actualType,
+      value: issue.value,
+    });
+  });
+  const clampedMax = Math.min(maxCardinality, normalizedOptions.length);
   if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
+    if (resolveInterpreterMode(ctx) === 'discovery') {
+      return {
+        state: ctx.state,
+        rng: ctx.rng,
+        bindings: ctx.bindings,
+        pendingChoice: {
+          kind: 'pending',
+          complete: false,
+          decisionId,
+          name: bind,
+          type: 'chooseN',
+          options: normalizedOptions,
+          min: minCardinality,
+          max: clampedMax,
+        },
+      };
+    }
     throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN missing move param binding: ${bind} (${decisionId})`, {
       effectType: 'chooseN',
       bind,
@@ -181,12 +230,12 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     });
   }
 
-  if (selectedValue.length < minCardinality || selectedValue.length > maxCardinality) {
+  if (selectedValue.length < minCardinality || selectedValue.length > clampedMax) {
     throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN selection cardinality mismatch for: ${bind}`, {
       effectType: 'chooseN',
       bind,
       min: minCardinality,
-      max: maxCardinality,
+      max: clampedMax,
       actual: selectedValue.length,
     });
   }
@@ -217,26 +266,18 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       }
     }
   }
-
-  const options = evalQuery(chooseN.options, evalCtx);
-  const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
-    throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN options domain item is not move-param encodable: ${bind}`, {
-      effectType: 'chooseN',
-      bind,
-      decisionId,
-      index: issue.index,
-      actualType: issue.actualType,
-      value: issue.value,
-    });
-  });
   for (const selected of normalizedSelected) {
     if (!normalizedOptions.includes(selected)) {
-      throw effectRuntimeError('choiceRuntimeValidationFailed', `chooseN selection is outside options domain: ${bind}`, {
-        effectType: 'chooseN',
-        bind,
-        selected,
-        optionsCount: normalizedOptions.length,
-      });
+      throw effectRuntimeError(
+        'choiceRuntimeValidationFailed',
+        `invalid selection for chooseN "${bind}" (${decisionId}): outside options domain`,
+        {
+          effectType: 'chooseN',
+          bind,
+          selected,
+          optionsCount: normalizedOptions.length,
+        },
+      );
     }
   }
 
@@ -256,6 +297,9 @@ export const applyRollRandom = (
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
+  if (resolveInterpreterMode(ctx) === 'discovery') {
+    return { state: ctx.state, rng: ctx.rng, bindings: ctx.bindings };
+  }
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const minValue = evalValue(effect.rollRandom.min, evalCtx);
   const maxValue = evalValue(effect.rollRandom.max, evalCtx);

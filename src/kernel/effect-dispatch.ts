@@ -239,6 +239,7 @@ const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: Ef
     rng: result.rng,
     emittedEvents: result.emittedEvents ?? [],
     bindings: result.bindings ?? ctx.bindings,
+    ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
   };
 };
 
@@ -254,6 +255,9 @@ const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContex
     currentRng = result.rng;
     currentBindings = result.bindings ?? currentBindings;
     emittedEvents.push(...(result.emittedEvents ?? []));
+    if (result.pendingChoice !== undefined) {
+      return { state: currentState, rng: currentRng, emittedEvents, bindings: currentBindings, pendingChoice: result.pendingChoice };
+    }
   }
 
   return { state: currentState, rng: currentRng, emittedEvents, bindings: currentBindings };
@@ -267,6 +271,7 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult
     rng: result.rng,
     ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
     ...(result.bindings === undefined ? {} : { bindings: result.bindings }),
+    ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
   };
 }
 
@@ -278,5 +283,6 @@ export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext):
     rng: result.rng,
     ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
     ...(result.bindings === undefined ? {} : { bindings: result.bindings }),
+    ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
   };
 }

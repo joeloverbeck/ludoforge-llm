@@ -43,7 +43,8 @@ const deterministicDefault = (request: ChoicePendingRequest): MoveParamValue => 
   }
   const min = request.min ?? 0;
   const options = request.options ?? [];
-  return options.slice(0, min) as MoveParamScalar[];
+  const targetCount = min > 0 ? min : Math.min(1, options.length);
+  return options.slice(0, targetCount) as MoveParamScalar[];
 };
 
 const resolveDecisionValue = (

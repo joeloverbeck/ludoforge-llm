@@ -100,6 +100,23 @@ describe('effects choice assertions', () => {
     });
   });
 
+  it('chooseOne returns pending choice in discovery mode when move param binding is missing', () => {
+    const ctx = makeCtx({ mode: 'discovery' });
+    const effect: EffectAST = {
+      chooseOne: {
+        internalDecisionId: 'decision:$choice',
+        bind: '$choice',
+        options: { query: 'enums', values: ['alpha', 'beta'] },
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.pendingChoice?.kind, 'pending');
+    assert.equal(result.pendingChoice?.type, 'chooseOne');
+    assert.equal(result.pendingChoice?.decisionId, 'decision:$choice');
+    assert.deepEqual(result.pendingChoice?.options, ['alpha', 'beta']);
+  });
+
   it('chooseOne throws when selected value is outside domain', () => {
     const ctx = makeCtx({ moveParams: { 'decision:$choice': 'delta' } });
     const effect: EffectAST = {
@@ -262,6 +279,31 @@ describe('effects choice assertions', () => {
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('outside options domain');
     });
+  });
+
+  it('rollRandom is a deterministic no-op in discovery mode', () => {
+    const ctx = makeCtx({ mode: 'discovery' });
+    const effect: EffectAST = {
+      rollRandom: {
+        bind: '$die',
+        min: 1,
+        max: 6,
+        in: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$inside',
+              bind: '$inside',
+              options: { query: 'enums', values: ['x'] },
+            },
+          },
+        ],
+      },
+    };
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state, ctx.state);
+    assert.equal(result.rng, ctx.rng);
+    assert.equal(result.pendingChoice, undefined);
   });
 
   it('chooseN supports up-to cardinality with max only', () => {

@@ -1,5 +1,6 @@
 import { incrementActionUsage } from './action-usage.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
+import { isEffectErrorCode } from './effect-error.js';
 import { applyEffects } from './effects.js';
 import { executeEventMove } from './event-execution.js';
 import { createCollector } from './execution-collector.js';
@@ -219,6 +220,11 @@ const validateDecisionSequenceForMove = (def: GameDef, state: GameState, move: M
       nextDecisionName: result.nextDecision?.name,
     });
   } catch (err) {
+    if (isEffectErrorCode(err, 'EFFECT_RUNTIME') && err.context?.reason === 'choiceRuntimeValidationFailed') {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID, {
+        detail: err.message,
+      });
+    }
     if (isKernelErrorCode(err, 'LEGAL_CHOICES_VALIDATION_FAILED')) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID, {
         detail: err.message,

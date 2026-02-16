@@ -78,6 +78,15 @@ export const applyEvaluateSubset = (
     };
 
     const computeResult = applyEffectsWithBudget(evaluateSubset.compute, computeCtx, budget);
+    if (computeResult.pendingChoice !== undefined) {
+      return {
+        state: computeResult.state,
+        rng: computeResult.rng,
+        ...(computeResult.emittedEvents === undefined ? {} : { emittedEvents: computeResult.emittedEvents }),
+        bindings: ctx.bindings,
+        pendingChoice: computeResult.pendingChoice,
+      };
+    }
     const scoreCtx = {
       ...ctx,
       state: computeResult.state,
@@ -116,6 +125,15 @@ export const applyEvaluateSubset = (
     bindings: exportedBindings,
   };
   const inResult = applyEffectsWithBudget(evaluateSubset.in, inCtx, budget);
+  if (inResult.pendingChoice !== undefined) {
+    return {
+      state: inResult.state,
+      rng: inResult.rng,
+      ...(inResult.emittedEvents === undefined ? {} : { emittedEvents: inResult.emittedEvents }),
+      bindings: exportedBindings,
+      pendingChoice: inResult.pendingChoice,
+    };
+  }
 
   const emittedEvents: TriggerEvent[] = [];
   emittedEvents.push(...(inResult.emittedEvents ?? []));

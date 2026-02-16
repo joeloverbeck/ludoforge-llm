@@ -21,6 +21,7 @@ const makeBaseDef = (overrides?: {
   actionPipelines?: readonly ActionPipelineDef[];
   globalVars?: GameDef['globalVars'];
   perPlayerVars?: GameDef['perPlayerVars'];
+  tokenTypes?: GameDef['tokenTypes'];
   mapSpaces?: GameDef['mapSpaces'];
 }): GameDef =>
   ({
@@ -32,7 +33,7 @@ const makeBaseDef = (overrides?: {
       { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
       { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' },
     ],
-    tokenTypes: [],
+    tokenTypes: overrides?.tokenTypes ?? [],
     setup: [],
     turnStructure: {
       phases: [{ id: asPhaseId('main') }],
@@ -1241,7 +1242,7 @@ phase: [asPhaseId('main')],
       assert.equal(result.max, 1);
     });
 
-    it('falls back to default discovery cap when forEach.limit is invalid during traversal', () => {
+    it('throws when forEach.limit is invalid during traversal', () => {
       const action: ActionDef = {
         id: asActionId('invalidForEachLimit'),
 actor: 'active',
@@ -1266,18 +1267,20 @@ phase: [asPhaseId('main')],
               bind: '$n',
               over: { query: 'intsInRange', min: 1, max: 2 },
               effects: [],
-              limit: 0,
+              limit: -1,
             },
           } as EffectAST],
         }],
         atomicity: 'partial',
       };
       const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
-      const result = legalChoices(def, makeBaseState(), makeMove('invalidForEachLimit'));
-      assert.deepStrictEqual(result, { kind: 'complete', complete: true });
+      assert.throws(
+        () => legalChoices(def, makeBaseState(), makeMove('invalidForEachLimit')),
+        (error: unknown) => error instanceof Error && error.message.includes('forEach.limit'),
+      );
     });
 
-    it('falls back to default discovery cap when reduce.limit is invalid during traversal', () => {
+    it('throws when reduce.limit is invalid during traversal', () => {
       const action: ActionDef = {
         id: asActionId('invalidReduceLimit'),
 actor: 'active',
@@ -1304,7 +1307,7 @@ phase: [asPhaseId('main')],
               over: { query: 'intsInRange', min: 1, max: 2 },
               initial: 0,
               next: 0,
-              limit: 0,
+              limit: -1,
               resultBind: '$out',
               in: [],
             },
@@ -1313,8 +1316,59 @@ phase: [asPhaseId('main')],
         atomicity: 'partial',
       };
       const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
-      const result = legalChoices(def, makeBaseState(), makeMove('invalidReduceLimit'));
-      assert.deepStrictEqual(result, { kind: 'complete', complete: true });
+      assert.throws(
+        () => legalChoices(def, makeBaseState(), makeMove('invalidReduceLimit')),
+        (error: unknown) => error instanceof Error && error.message.includes('reduce.limit'),
+      );
+    });
+
+    it('applies removeByPriority state changes during discovery before downstream choices', () => {
+      const action: ActionDef = {
+        id: asActionId('removeThenChoose'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            removeByPriority: {
+              budget: 1,
+              groups: [
+                {
+                  bind: '$target',
+                  over: { query: 'tokensInZone', zone: 'board:none' },
+                  from: 'board:none',
+                  to: 'hand:0',
+                },
+              ],
+              in: [
+                {
+                  chooseOne: {
+                    internalDecisionId: 'decision:$picked',
+                    bind: '$picked',
+                    options: { query: 'tokensInZone', zone: 'hand:0' },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+        limits: [],
+      };
+      const def = makeBaseDef({ actions: [action], tokenTypes: [{ id: 'piece', props: {} }] });
+      const state = makeBaseState({
+        zones: {
+          'board:none': [{ id: asTokenId('tok-1'), type: 'piece', props: {} }],
+          'hand:0': [],
+        },
+      });
+
+      const result = legalChoices(def, state, makeMove('removeThenChoose'));
+      assert.equal(result.kind, 'pending');
+      assert.equal(result.type, 'chooseOne');
+      assert.deepStrictEqual(result.options, [asTokenId('tok-1')]);
     });
 
     it('throws typed errors for malformed free-operation zone filters instead of silently denying zones', () => {

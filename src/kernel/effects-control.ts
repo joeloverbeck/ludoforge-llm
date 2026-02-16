@@ -35,7 +35,8 @@ export const applyIf = (
       state: thenResult.state,
       rng: thenResult.rng,
       ...(thenResult.emittedEvents === undefined ? {} : { emittedEvents: thenResult.emittedEvents }),
-      bindings: ctx.bindings,
+      bindings: thenResult.bindings ?? ctx.bindings,
+      ...(thenResult.pendingChoice === undefined ? {} : { pendingChoice: thenResult.pendingChoice }),
     };
   }
 
@@ -45,7 +46,8 @@ export const applyIf = (
       state: elseResult.state,
       rng: elseResult.rng,
       ...(elseResult.emittedEvents === undefined ? {} : { emittedEvents: elseResult.emittedEvents }),
-      bindings: ctx.bindings,
+      bindings: elseResult.bindings ?? ctx.bindings,
+      ...(elseResult.pendingChoice === undefined ? {} : { pendingChoice: elseResult.pendingChoice }),
     };
   }
 
@@ -69,6 +71,15 @@ export const applyLet = (
   };
 
   const nestedResult = applyEffectsWithBudget(effect.let.in, nestedCtx, budget);
+  if (nestedResult.pendingChoice !== undefined) {
+    return {
+      state: nestedResult.state,
+      rng: nestedResult.rng,
+      ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
+      bindings: ctx.bindings,
+      pendingChoice: nestedResult.pendingChoice,
+    };
+  }
   const nestedBindings = nestedResult.bindings ?? nestedCtx.bindings;
   const exportedBindings: Record<string, unknown> = {};
   for (const [name, value] of Object.entries(nestedBindings)) {
@@ -96,7 +107,7 @@ export const applyForEach = (
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const limit = resolveControlFlowIterationLimit('forEach', effect.forEach.limit, evalCtx, (evaluatedLimit) => {
-    throw effectRuntimeError('controlFlowRuntimeValidationFailed', 'forEach.limit must evaluate to a positive integer', {
+    throw effectRuntimeError('controlFlowRuntimeValidationFailed', 'forEach.limit must evaluate to a non-negative integer', {
       effectType: 'forEach',
       limit: evaluatedLimit,
     });
@@ -140,6 +151,15 @@ export const applyForEach = (
     currentState = iterationResult.state;
     currentRng = iterationResult.rng;
     emittedEvents.push(...(iterationResult.emittedEvents ?? []));
+    if (iterationResult.pendingChoice !== undefined) {
+      return {
+        state: currentState,
+        rng: currentRng,
+        emittedEvents,
+        bindings: ctx.bindings,
+        pendingChoice: iterationResult.pendingChoice,
+      };
+    }
   }
 
   emitTrace(ctx.collector, buildForEachTraceEntry({
@@ -164,6 +184,15 @@ export const applyForEach = (
     currentState = countResult.state;
     currentRng = countResult.rng;
     emittedEvents.push(...(countResult.emittedEvents ?? []));
+    if (countResult.pendingChoice !== undefined) {
+      return {
+        state: currentState,
+        rng: currentRng,
+        emittedEvents,
+        bindings: ctx.bindings,
+        pendingChoice: countResult.pendingChoice,
+      };
+    }
   }
 
   return { state: currentState, rng: currentRng, emittedEvents, bindings: ctx.bindings };
@@ -177,7 +206,7 @@ export const applyReduce = (
 ): EffectResult => {
   const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
   const limit = resolveControlFlowIterationLimit('reduce', effect.reduce.limit, evalCtx, (evaluatedLimit) => {
-    throw effectRuntimeError('controlFlowRuntimeValidationFailed', 'reduce.limit must evaluate to a positive integer', {
+    throw effectRuntimeError('controlFlowRuntimeValidationFailed', 'reduce.limit must evaluate to a non-negative integer', {
       effectType: 'reduce',
       limit: evaluatedLimit,
     });
@@ -215,6 +244,15 @@ export const applyReduce = (
     },
   };
   const continuationResult = applyEffectsWithBudget(effect.reduce.in, continuationCtx, budget);
+  if (continuationResult.pendingChoice !== undefined) {
+    return {
+      state: continuationResult.state,
+      rng: continuationResult.rng,
+      ...(continuationResult.emittedEvents === undefined ? {} : { emittedEvents: continuationResult.emittedEvents }),
+      bindings: ctx.bindings,
+      pendingChoice: continuationResult.pendingChoice,
+    };
+  }
   const continuationBindings = continuationResult.bindings ?? continuationCtx.bindings;
   const exportedBindings: Record<string, unknown> = {};
   for (const [name, value] of Object.entries(continuationBindings)) {
@@ -345,6 +383,15 @@ export const applyRemoveByPriority = (
     currentState = inResult.state;
     currentRng = inResult.rng;
     emittedEvents.push(...(inResult.emittedEvents ?? []));
+    if (inResult.pendingChoice !== undefined) {
+      return {
+        state: currentState,
+        rng: currentRng,
+        emittedEvents,
+        bindings: exportedBindings,
+        pendingChoice: inResult.pendingChoice,
+      };
+    }
   }
 
   return { state: currentState, rng: currentRng, emittedEvents, bindings: exportedBindings };

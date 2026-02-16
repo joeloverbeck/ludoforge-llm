@@ -1,9 +1,21 @@
 import type { PlayerId } from './branded.js';
+import type { FreeOperationZoneFilterDiagnostics } from './eval-context.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
-import type { ExecutionCollector, GameDef, GameState, MapSpaceDef, MoveParamValue, Rng, TriggerEvent } from './types.js';
+import type {
+  ChoicePendingRequest,
+  ConditionAST,
+  ExecutionCollector,
+  GameDef,
+  GameState,
+  MapSpaceDef,
+  MoveParamValue,
+  Rng,
+  TriggerEvent,
+} from './types.js';
 
 export const DEFAULT_MAX_EFFECT_OPS = 10_000;
+export type EffectInterpreterMode = 'execution' | 'discovery';
 
 export interface EffectContext {
   readonly def: GameDef;
@@ -18,6 +30,10 @@ export interface EffectContext {
   readonly maxEffectOps?: number;
   readonly mapSpaces?: readonly MapSpaceDef[];
   readonly freeOperation?: boolean;
+  readonly freeOperationZoneFilter?: ConditionAST;
+  readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
+  readonly maxQueryResults?: number;
+  readonly mode?: EffectInterpreterMode;
   readonly collector: ExecutionCollector;
 }
 
@@ -26,6 +42,7 @@ export interface EffectResult {
   readonly rng: Rng;
   readonly emittedEvents?: readonly TriggerEvent[];
   readonly bindings?: Readonly<Record<string, unknown>>;
+  readonly pendingChoice?: ChoicePendingRequest;
 }
 
 export function getMaxEffectOps(ctx: Pick<EffectContext, 'maxEffectOps'>): number {

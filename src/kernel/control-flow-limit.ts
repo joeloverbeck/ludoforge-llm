@@ -17,7 +17,7 @@ export const resolveControlFlowIterationLimit = (
   }
 
   const limitValue = evalValue(limitExpr, evalCtx);
-  if (typeof limitValue !== 'number' || !Number.isSafeInteger(limitValue) || limitValue <= 0) {
+  if (typeof limitValue !== 'number' || !Number.isSafeInteger(limitValue) || limitValue < 0) {
     return onInvalidLimit(limitValue);
   }
   return limitValue;

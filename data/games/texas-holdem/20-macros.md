@@ -4,15 +4,561 @@
 effectMacros:
   - id: hand-rank-score
     params:
-      - { name: cardsZone, type: zoneSelector }
+      - { name: cardsQuery, type: query }
     exports: [$handScore]
     effects:
-      # Contract scaffold: downstream showdown tickets will replace this with
-      # full 5-card rank evaluation once full showdown dataflow is wired.
       - let:
-          bind: $handScore
-          value: 0
-          in: []
+          bind: $maxSuitCount
+          value:
+            aggregate:
+              op: max
+              query: { query: intsInRange, min: 0, max: 3 }
+              bind: $suit
+              valueExpr:
+                aggregate:
+                  op: sum
+                  query: { param: cardsQuery }
+                  bind: $card
+                  valueExpr:
+                    if:
+                      when:
+                        op: ==
+                        left: { ref: tokenProp, token: $card, prop: suit }
+                        right: { ref: binding, name: $suit }
+                      then: 1
+                      else: 0
+          in:
+            - let:
+                bind: $isFlush
+                value: { op: '==', left: { ref: binding, name: $maxSuitCount }, right: 5 }
+                in:
+                  - let:
+                      bind: $maxRankCount
+                      value:
+                        aggregate:
+                          op: max
+                          query: { query: intsInRange, min: 2, max: 14 }
+                          bind: $rank
+                          valueExpr:
+                            aggregate:
+                              op: sum
+                              query: { param: cardsQuery }
+                              bind: $card
+                              valueExpr:
+                                if:
+                                  when:
+                                    op: ==
+                                    left: { ref: tokenProp, token: $card, prop: rank }
+                                    right: { ref: binding, name: $rank }
+                                  then: 1
+                                  else: 0
+                      in:
+                        - let:
+                            bind: $pairCount
+                            value:
+                              aggregate:
+                                op: sum
+                                query: { query: intsInRange, min: 2, max: 14 }
+                                bind: $rank
+                                valueExpr:
+                                  if:
+                                    when:
+                                      op: ==
+                                      left:
+                                        aggregate:
+                                          op: sum
+                                          query: { param: cardsQuery }
+                                          bind: $card
+                                          valueExpr:
+                                            if:
+                                              when:
+                                                op: ==
+                                                left: { ref: tokenProp, token: $card, prop: rank }
+                                                right: { ref: binding, name: $rank }
+                                              then: 1
+                                              else: 0
+                                      right: 2
+                                    then: 1
+                                    else: 0
+                            in:
+                              - let:
+                                  bind: $tripCount
+                                  value:
+                                    aggregate:
+                                      op: sum
+                                      query: { query: intsInRange, min: 2, max: 14 }
+                                      bind: $rank
+                                      valueExpr:
+                                        if:
+                                          when:
+                                            op: ==
+                                            left:
+                                              aggregate:
+                                                op: sum
+                                                query: { param: cardsQuery }
+                                                bind: $card
+                                                valueExpr:
+                                                  if:
+                                                    when:
+                                                      op: ==
+                                                      left: { ref: tokenProp, token: $card, prop: rank }
+                                                      right: { ref: binding, name: $rank }
+                                                    then: 1
+                                                    else: 0
+                                            right: 3
+                                          then: 1
+                                          else: 0
+                                  in:
+                                    - let:
+                                        bind: $quadCount
+                                        value:
+                                          aggregate:
+                                            op: sum
+                                            query: { query: intsInRange, min: 2, max: 14 }
+                                            bind: $rank
+                                            valueExpr:
+                                              if:
+                                                when:
+                                                  op: ==
+                                                  left:
+                                                    aggregate:
+                                                      op: sum
+                                                      query: { param: cardsQuery }
+                                                      bind: $card
+                                                      valueExpr:
+                                                        if:
+                                                          when:
+                                                            op: ==
+                                                            left: { ref: tokenProp, token: $card, prop: rank }
+                                                            right: { ref: binding, name: $rank }
+                                                          then: 1
+                                                          else: 0
+                                                  right: 4
+                                                then: 1
+                                                else: 0
+                                        in:
+                                          - reduce:
+                                              itemBind: $high
+                                              accBind: $bestHigh
+                                              over: { query: intsInRange, min: 5, max: 14 }
+                                              initial: 0
+                                              next:
+                                                if:
+                                                  when:
+                                                    op: and
+                                                    args:
+                                                      - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: { ref: binding, name: $high } }, then: 1, else: 0 } } } }, right: 0 }
+                                                      - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: { op: '-', left: { ref: binding, name: $high }, right: 1 } }, then: 1, else: 0 } } } }, right: 0 }
+                                                      - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: { op: '-', left: { ref: binding, name: $high }, right: 2 } }, then: 1, else: 0 } } } }, right: 0 }
+                                                      - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: { op: '-', left: { ref: binding, name: $high }, right: 3 } }, then: 1, else: 0 } } } }, right: 0 }
+                                                      - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: { op: '-', left: { ref: binding, name: $high }, right: 4 } }, then: 1, else: 0 } } } }, right: 0 }
+                                                  then:
+                                                    if:
+                                                      when: { op: '>', left: { ref: binding, name: $high }, right: { ref: binding, name: $bestHigh } }
+                                                      then: { ref: binding, name: $high }
+                                                      else: { ref: binding, name: $bestHigh }
+                                                  else: { ref: binding, name: $bestHigh }
+                                              resultBind: $straightHigh
+                                              in:
+                                                - let:
+                                                    bind: $wheelStraight
+                                                    value:
+                                                      op: and
+                                                      args:
+                                                        - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 14 }, then: 1, else: 0 } } } }, right: 0 }
+                                                        - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 5 }, then: 1, else: 0 } } } }, right: 0 }
+                                                        - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 4 }, then: 1, else: 0 } } } }, right: 0 }
+                                                        - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 3 }, then: 1, else: 0 } } } }, right: 0 }
+                                                        - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 2 }, then: 1, else: 0 } } } }, right: 0 }
+                                                    in:
+                                                      - let:
+                                                          bind: $straightHighAdj
+                                                          value:
+                                                            if:
+                                                              when:
+                                                                op: and
+                                                                args:
+                                                                  - { op: '==', left: { ref: binding, name: $straightHigh }, right: 0 }
+                                                                  - { ref: binding, name: $wheelStraight }
+                                                              then: 5
+                                                              else: { ref: binding, name: $straightHigh }
+                                                          in:
+                                                            - let:
+                                                                bind: $quadRank
+                                                                value:
+                                                                  aggregate:
+                                                                    op: max
+                                                                    query: { query: intsInRange, min: 2, max: 14 }
+                                                                    bind: $rank
+                                                                    valueExpr:
+                                                                      if:
+                                                                        when:
+                                                                          op: ==
+                                                                          left:
+                                                                            aggregate:
+                                                                              op: sum
+                                                                              query: { param: cardsQuery }
+                                                                              bind: $card
+                                                                              valueExpr:
+                                                                                if:
+                                                                                  when:
+                                                                                    op: ==
+                                                                                    left: { ref: tokenProp, token: $card, prop: rank }
+                                                                                    right: { ref: binding, name: $rank }
+                                                                                  then: 1
+                                                                                  else: 0
+                                                                          right: 4
+                                                                        then: { ref: binding, name: $rank }
+                                                                        else: 0
+                                                                in:
+                                                                  - let:
+                                                                      bind: $tripRank
+                                                                      value:
+                                                                        aggregate:
+                                                                          op: max
+                                                                          query: { query: intsInRange, min: 2, max: 14 }
+                                                                          bind: $rank
+                                                                          valueExpr:
+                                                                            if:
+                                                                              when:
+                                                                                op: ==
+                                                                                left:
+                                                                                  aggregate:
+                                                                                    op: sum
+                                                                                    query: { param: cardsQuery }
+                                                                                    bind: $card
+                                                                                    valueExpr:
+                                                                                      if:
+                                                                                        when:
+                                                                                          op: ==
+                                                                                          left: { ref: tokenProp, token: $card, prop: rank }
+                                                                                          right: { ref: binding, name: $rank }
+                                                                                        then: 1
+                                                                                        else: 0
+                                                                                right: 3
+                                                                              then: { ref: binding, name: $rank }
+                                                                              else: 0
+                                                                      in:
+                                                                        - let:
+                                                                            bind: $pairHigh
+                                                                            value:
+                                                                              aggregate:
+                                                                                op: max
+                                                                                query: { query: intsInRange, min: 2, max: 14 }
+                                                                                bind: $rank
+                                                                                valueExpr:
+                                                                                  if:
+                                                                                    when:
+                                                                                      op: ==
+                                                                                      left:
+                                                                                        aggregate:
+                                                                                          op: sum
+                                                                                          query: { param: cardsQuery }
+                                                                                          bind: $card
+                                                                                          valueExpr:
+                                                                                            if:
+                                                                                              when:
+                                                                                                op: ==
+                                                                                                left: { ref: tokenProp, token: $card, prop: rank }
+                                                                                                right: { ref: binding, name: $rank }
+                                                                                              then: 1
+                                                                                              else: 0
+                                                                                      right: 2
+                                                                                    then: { ref: binding, name: $rank }
+                                                                                    else: 0
+                                                                            in:
+                                                                              - let:
+                                                                                  bind: $pairLow
+                                                                                  value:
+                                                                                    aggregate:
+                                                                                      op: max
+                                                                                      query: { query: intsInRange, min: 2, max: 14 }
+                                                                                      bind: $rank
+                                                                                      valueExpr:
+                                                                                        if:
+                                                                                          when:
+                                                                                            op: and
+                                                                                            args:
+                                                                                              - { op: '==', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: { ref: binding, name: $rank } }, then: 1, else: 0 } } } }, right: 2 }
+                                                                                              - { op: '<', left: { ref: binding, name: $rank }, right: { ref: binding, name: $pairHigh } }
+                                                                                          then: { ref: binding, name: $rank }
+                                                                                          else: 0
+                                                                                  in:
+                                                                                    - let:
+                                                                                        bind: $single1
+                                                                                        value:
+                                                                                          aggregate:
+                                                                                            op: max
+                                                                                            query: { query: intsInRange, min: 2, max: 14 }
+                                                                                            bind: $rank
+                                                                                            valueExpr:
+                                                                                              if:
+                                                                                                when: { op: '==', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: { ref: binding, name: $rank } }, then: 1, else: 0 } } } }, right: 1 }
+                                                                                                then: { ref: binding, name: $rank }
+                                                                                                else: 0
+                                                                                        in:
+                                                                                          - let:
+                                                                                              bind: $single2
+                                                                                              value:
+                                                                                                aggregate:
+                                                                                                  op: max
+                                                                                                  query: { query: intsInRange, min: 2, max: 14 }
+                                                                                                  bind: $rank
+                                                                                                  valueExpr:
+                                                                                                    if:
+                                                                                                      when:
+                                                                                                        op: and
+                                                                                                        args:
+                                                                                                          - { op: '==', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: { ref: binding, name: $rank } }, then: 1, else: 0 } } } }, right: 1 }
+                                                                                                          - { op: '<', left: { ref: binding, name: $rank }, right: { ref: binding, name: $single1 } }
+                                                                                                      then: { ref: binding, name: $rank }
+                                                                                                      else: 0
+                                                                                              in:
+                                                                                                - let:
+                                                                                                    bind: $single3
+                                                                                                    value:
+                                                                                                      aggregate:
+                                                                                                        op: max
+                                                                                                        query: { query: intsInRange, min: 2, max: 14 }
+                                                                                                        bind: $rank
+                                                                                                        valueExpr:
+                                                                                                          if:
+                                                                                                            when:
+                                                                                                              op: and
+                                                                                                              args:
+                                                                                                                - { op: '==', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: { ref: binding, name: $rank } }, then: 1, else: 0 } } } }, right: 1 }
+                                                                                                                - { op: '<', left: { ref: binding, name: $rank }, right: { ref: binding, name: $single2 } }
+                                                                                                            then: { ref: binding, name: $rank }
+                                                                                                            else: 0
+                                                                                                    in:
+                                                                                                      - let:
+                                                                                                          bind: $single4
+                                                                                                          value:
+                                                                                                            aggregate:
+                                                                                                              op: max
+                                                                                                              query: { query: intsInRange, min: 2, max: 14 }
+                                                                                                              bind: $rank
+                                                                                                              valueExpr:
+                                                                                                                if:
+                                                                                                                  when:
+                                                                                                                    op: and
+                                                                                                                    args:
+                                                                                                                      - { op: '==', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: { ref: binding, name: $rank } }, then: 1, else: 0 } } } }, right: 1 }
+                                                                                                                      - { op: '<', left: { ref: binding, name: $rank }, right: { ref: binding, name: $single3 } }
+                                                                                                                  then: { ref: binding, name: $rank }
+                                                                                                                  else: 0
+                                                                                                          in:
+                                                                                                            - let:
+                                                                                                                bind: $single5
+                                                                                                                value:
+                                                                                                                  aggregate:
+                                                                                                                    op: max
+                                                                                                                    query: { query: intsInRange, min: 2, max: 14 }
+                                                                                                                    bind: $rank
+                                                                                                                    valueExpr:
+                                                                                                                      if:
+                                                                                                                        when:
+                                                                                                                          op: and
+                                                                                                                          args:
+                                                                                                                            - { op: '==', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: { ref: binding, name: $rank } }, then: 1, else: 0 } } } }, right: 1 }
+                                                                                                                            - { op: '<', left: { ref: binding, name: $rank }, right: { ref: binding, name: $single4 } }
+                                                                                                                        then: { ref: binding, name: $rank }
+                                                                                                                        else: 0
+                                                                                                                in:
+                                                                                                                  - let:
+                                                                                                                      bind: $handType
+                                                                                                                      value:
+                                                                                                                        if:
+                                                                                                                          when: { op: and, args: [{ ref: binding, name: $isFlush }, { op: '>', left: { ref: binding, name: $straightHighAdj }, right: 0 }] }
+                                                                                                                          then: 9
+                                                                                                                          else:
+                                                                                                                            if:
+                                                                                                                              when: { op: '==', left: { ref: binding, name: $quadCount }, right: 1 }
+                                                                                                                              then: 8
+                                                                                                                              else:
+                                                                                                                                if:
+                                                                                                                                  when: { op: and, args: [{ op: '==', left: { ref: binding, name: $tripCount }, right: 1 }, { op: '==', left: { ref: binding, name: $pairCount }, right: 1 }] }
+                                                                                                                                  then: 7
+                                                                                                                                  else:
+                                                                                                                                    if:
+                                                                                                                                      when: { ref: binding, name: $isFlush }
+                                                                                                                                      then: 6
+                                                                                                                                      else:
+                                                                                                                                        if:
+                                                                                                                                          when: { op: '>', left: { ref: binding, name: $straightHighAdj }, right: 0 }
+                                                                                                                                          then: 5
+                                                                                                                                          else:
+                                                                                                                                            if:
+                                                                                                                                              when: { op: '==', left: { ref: binding, name: $tripCount }, right: 1 }
+                                                                                                                                              then: 4
+                                                                                                                                              else:
+                                                                                                                                                if:
+                                                                                                                                                  when: { op: '==', left: { ref: binding, name: $pairCount }, right: 2 }
+                                                                                                                                                  then: 3
+                                                                                                                                                  else:
+                                                                                                                                                    if:
+                                                                                                                                                      when: { op: '==', left: { ref: binding, name: $pairCount }, right: 1 }
+                                                                                                                                                      then: 2
+                                                                                                                                                      else: 1
+                                                                                                                      in:
+                                                                                                                        - let:
+                                                                                                                            bind: $c1
+                                                                                                                            value:
+                                                                                                                              if:
+                                                                                                                                when: { op: '==', left: { ref: binding, name: $handType }, right: 9 }
+                                                                                                                                then: { ref: binding, name: $straightHighAdj }
+                                                                                                                                else:
+                                                                                                                                  if:
+                                                                                                                                    when: { op: '==', left: { ref: binding, name: $handType }, right: 8 }
+                                                                                                                                    then: { ref: binding, name: $quadRank }
+                                                                                                                                    else:
+                                                                                                                                      if:
+                                                                                                                                        when: { op: '==', left: { ref: binding, name: $handType }, right: 7 }
+                                                                                                                                        then: { ref: binding, name: $tripRank }
+                                                                                                                                        else:
+                                                                                                                                          if:
+                                                                                                                                            when: { op: '==', left: { ref: binding, name: $handType }, right: 6 }
+                                                                                                                                            then: { ref: binding, name: $single1 }
+                                                                                                                                            else:
+                                                                                                                                              if:
+                                                                                                                                                when: { op: '==', left: { ref: binding, name: $handType }, right: 5 }
+                                                                                                                                                then: { ref: binding, name: $straightHighAdj }
+                                                                                                                                                else:
+                                                                                                                                                  if:
+                                                                                                                                                    when: { op: '==', left: { ref: binding, name: $handType }, right: 4 }
+                                                                                                                                                    then: { ref: binding, name: $tripRank }
+                                                                                                                                                    else:
+                                                                                                                                                      if:
+                                                                                                                                                        when: { op: '==', left: { ref: binding, name: $handType }, right: 3 }
+                                                                                                                                                        then: { ref: binding, name: $pairHigh }
+                                                                                                                                                        else:
+                                                                                                                                                          if:
+                                                                                                                                                            when: { op: '==', left: { ref: binding, name: $handType }, right: 2 }
+                                                                                                                                                            then: { ref: binding, name: $pairHigh }
+                                                                                                                                                            else: { ref: binding, name: $single1 }
+                                                                                                                            in:
+                                                                                                                              - let:
+                                                                                                                                  bind: $c2
+                                                                                                                                  value:
+                                                                                                                                    if:
+                                                                                                                                      when: { op: '==', left: { ref: binding, name: $handType }, right: 8 }
+                                                                                                                                      then: { ref: binding, name: $single1 }
+                                                                                                                                      else:
+                                                                                                                                        if:
+                                                                                                                                          when: { op: '==', left: { ref: binding, name: $handType }, right: 7 }
+                                                                                                                                          then: { ref: binding, name: $pairHigh }
+                                                                                                                                          else:
+                                                                                                                                            if:
+                                                                                                                                              when: { op: '==', left: { ref: binding, name: $handType }, right: 6 }
+                                                                                                                                              then: { ref: binding, name: $single2 }
+                                                                                                                                              else:
+                                                                                                                                                if:
+                                                                                                                                                  when: { op: '==', left: { ref: binding, name: $handType }, right: 4 }
+                                                                                                                                                  then: { ref: binding, name: $single1 }
+                                                                                                                                                  else:
+                                                                                                                                                    if:
+                                                                                                                                                      when: { op: '==', left: { ref: binding, name: $handType }, right: 3 }
+                                                                                                                                                      then: { ref: binding, name: $pairLow }
+                                                                                                                                                      else:
+                                                                                                                                                        if:
+                                                                                                                                                          when: { op: '==', left: { ref: binding, name: $handType }, right: 2 }
+                                                                                                                                                          then: { ref: binding, name: $single1 }
+                                                                                                                                                          else:
+                                                                                                                                                            if:
+                                                                                                                                                              when: { op: '==', left: { ref: binding, name: $handType }, right: 1 }
+                                                                                                                                                              then: { ref: binding, name: $single2 }
+                                                                                                                                                              else: 0
+                                                                                                                                  in:
+                                                                                                                                    - let:
+                                                                                                                                        bind: $c3
+                                                                                                                                        value:
+                                                                                                                                          if:
+                                                                                                                                            when: { op: '==', left: { ref: binding, name: $handType }, right: 6 }
+                                                                                                                                            then: { ref: binding, name: $single3 }
+                                                                                                                                            else:
+                                                                                                                                              if:
+                                                                                                                                                when: { op: '==', left: { ref: binding, name: $handType }, right: 4 }
+                                                                                                                                                then: { ref: binding, name: $single2 }
+                                                                                                                                                else:
+                                                                                                                                                  if:
+                                                                                                                                                    when: { op: '==', left: { ref: binding, name: $handType }, right: 3 }
+                                                                                                                                                    then: { ref: binding, name: $single1 }
+                                                                                                                                                    else:
+                                                                                                                                                      if:
+                                                                                                                                                        when: { op: '==', left: { ref: binding, name: $handType }, right: 2 }
+                                                                                                                                                        then: { ref: binding, name: $single2 }
+                                                                                                                                                        else:
+                                                                                                                                                          if:
+                                                                                                                                                            when: { op: '==', left: { ref: binding, name: $handType }, right: 1 }
+                                                                                                                                                            then: { ref: binding, name: $single3 }
+                                                                                                                                                            else: 0
+                                                                                                                                        in:
+                                                                                                                                          - let:
+                                                                                                                                              bind: $c4
+                                                                                                                                              value:
+                                                                                                                                                if:
+                                                                                                                                                  when: { op: '==', left: { ref: binding, name: $handType }, right: 6 }
+                                                                                                                                                  then: { ref: binding, name: $single4 }
+                                                                                                                                                  else:
+                                                                                                                                                    if:
+                                                                                                                                                      when: { op: '==', left: { ref: binding, name: $handType }, right: 2 }
+                                                                                                                                                      then: { ref: binding, name: $single3 }
+                                                                                                                                                      else:
+                                                                                                                                                        if:
+                                                                                                                                                          when: { op: '==', left: { ref: binding, name: $handType }, right: 1 }
+                                                                                                                                                          then: { ref: binding, name: $single4 }
+                                                                                                                                                          else: 0
+                                                                                                                                              in:
+                                                                                                                                                - let:
+                                                                                                                                                    bind: $c5
+                                                                                                                                                    value:
+                                                                                                                                                      if:
+                                                                                                                                                        when: { op: '==', left: { ref: binding, name: $handType }, right: 6 }
+                                                                                                                                                        then: { ref: binding, name: $single5 }
+                                                                                                                                                        else:
+                                                                                                                                                          if:
+                                                                                                                                                            when: { op: '==', left: { ref: binding, name: $handType }, right: 2 }
+                                                                                                                                                            then: { ref: binding, name: $single4 }
+                                                                                                                                                            else:
+                                                                                                                                                              if:
+                                                                                                                                                                when: { op: '==', left: { ref: binding, name: $handType }, right: 1 }
+                                                                                                                                                                then: { ref: binding, name: $single5 }
+                                                                                                                                                                else: 0
+                                                                                                                                                    in:
+                                                                                                                                                      - let:
+                                                                                                                                                          bind: $handScore
+                                                                                                                                                          value:
+                                                                                                                                                            op: '+'
+                                                                                                                                                            left:
+                                                                                                                                                              op: '*'
+                                                                                                                                                              left: { ref: binding, name: $handType }
+                                                                                                                                                              right: 10000000000
+                                                                                                                                                            right:
+                                                                                                                                                              op: '+'
+                                                                                                                                                              left:
+                                                                                                                                                                op: '*'
+                                                                                                                                                                left: { ref: binding, name: $c1 }
+                                                                                                                                                                right: 100000000
+                                                                                                                                                              right:
+                                                                                                                                                                op: '+'
+                                                                                                                                                                left:
+                                                                                                                                                                  op: '*'
+                                                                                                                                                                  left: { ref: binding, name: $c2 }
+                                                                                                                                                                  right: 1000000
+                                                                                                                                                                right:
+                                                                                                                                                                  op: '+'
+                                                                                                                                                                  left:
+                                                                                                                                                                    op: '*'
+                                                                                                                                                                    left: { ref: binding, name: $c3 }
+                                                                                                                                                                    right: 10000
+                                                                                                                                                                  right:
+                                                                                                                                                                    op: '+'
+                                                                                                                                                                    left:
+                                                                                                                                                                      op: '*'
+                                                                                                                                                                      left: { ref: binding, name: $c4 }
+                                                                                                                                                                      right: 100
+                                                                                                                                                                    right: { ref: binding, name: $c5 }
+                                                                                                                                                          in: []
 
   - id: collect-forced-bets
     params:
@@ -137,15 +683,190 @@ effectMacros:
                       var: bettingClosed
                       value: false
 
+  - id: advance-after-betting
+    params: []
+    exports: []
+    effects:
+      - if:
+          when: { op: '<=', left: { ref: gvar, var: playersInHand }, right: 1 }
+          then:
+            - gotoPhase: { phase: hand-cleanup }
+      - if:
+          when: { op: '==', left: { ref: gvar, var: bettingClosed }, right: true }
+          then:
+            - if:
+                when: { op: '==', left: { ref: gvar, var: handPhase }, right: 0 }
+                then:
+                  - gotoPhase: { phase: flop }
+            - if:
+                when: { op: '==', left: { ref: gvar, var: handPhase }, right: 1 }
+                then:
+                  - gotoPhase: { phase: turn }
+            - if:
+                when: { op: '==', left: { ref: gvar, var: handPhase }, right: 2 }
+                then:
+                  - gotoPhase: { phase: river }
+            - if:
+                when: { op: '==', left: { ref: gvar, var: handPhase }, right: 3 }
+                then:
+                  - gotoPhase: { phase: showdown }
+
   - id: side-pot-distribution
     params: []
     exports: []
     effects:
-      # Contract scaffold: full side-pot layering and split-pot ties are deferred
-      # to showdown-focused ticketing to keep this ticket architecture-safe.
-      - if:
-          when: false
-          then: []
+      - forEach:
+          bind: $tier
+          over: { query: intsInRange, min: 1, max: 10 }
+          effects:
+            - let:
+                bind: $minContribution
+                value:
+                  aggregate:
+                    op: min
+                    query: { query: players }
+                    bind: $player
+                    valueExpr:
+                      if:
+                        when: { op: '>', left: { ref: pvar, player: { chosen: $player }, var: totalBet }, right: 0 }
+                        then: { ref: pvar, player: { chosen: $player }, var: totalBet }
+                        else: 1000000000
+                in:
+                  - if:
+                      when: { op: '<', left: { ref: binding, name: $minContribution }, right: 1000000000 }
+                      then:
+                        - let:
+                            bind: $contributors
+                            value:
+                              aggregate:
+                                op: sum
+                                query: { query: players }
+                                bind: $player
+                                valueExpr:
+                                  if:
+                                    when: { op: '>', left: { ref: pvar, player: { chosen: $player }, var: totalBet }, right: 0 }
+                                    then: 1
+                                    else: 0
+                            in:
+                              - let:
+                                  bind: $layerAmount
+                                  value:
+                                    op: '*'
+                                    left: { ref: binding, name: $minContribution }
+                                    right: { ref: binding, name: $contributors }
+                                  in:
+                                    - let:
+                                        bind: $bestScore
+                                        value:
+                                          aggregate:
+                                            op: max
+                                            query: { query: players }
+                                            bind: $player
+                                            valueExpr:
+                                              if:
+                                                when:
+                                                  op: and
+                                                  args:
+                                                    - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: handActive }, right: true }
+                                                    - { op: '>', left: { ref: pvar, player: { chosen: $player }, var: totalBet }, right: 0 }
+                                                then: { ref: pvar, player: { chosen: $player }, var: showdownScore }
+                                                else: -1
+                                        in:
+                                          - let:
+                                              bind: $winnerCount
+                                              value:
+                                                aggregate:
+                                                  op: sum
+                                                  query: { query: players }
+                                                  bind: $player
+                                                  valueExpr:
+                                                    if:
+                                                      when:
+                                                        op: and
+                                                        args:
+                                                          - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: handActive }, right: true }
+                                                          - { op: '>', left: { ref: pvar, player: { chosen: $player }, var: totalBet }, right: 0 }
+                                                          - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: showdownScore }, right: { ref: binding, name: $bestScore } }
+                                                      then: 1
+                                                      else: 0
+                                              in:
+                                                - if:
+                                                    when: { op: '>', left: { ref: binding, name: $winnerCount }, right: 0 }
+                                                    then:
+                                                      - let:
+                                                          bind: $baseShare
+                                                          value:
+                                                            op: floorDiv
+                                                            left: { ref: binding, name: $layerAmount }
+                                                            right: { ref: binding, name: $winnerCount }
+                                                          in:
+                                                            - forEach:
+                                                                bind: $player
+                                                                over: { query: players }
+                                                                effects:
+                                                                  - if:
+                                                                      when:
+                                                                        op: and
+                                                                        args:
+                                                                          - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: handActive }, right: true }
+                                                                          - { op: '>', left: { ref: pvar, player: { chosen: $player }, var: totalBet }, right: 0 }
+                                                                          - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: showdownScore }, right: { ref: binding, name: $bestScore } }
+                                                                      then:
+                                                                        - addVar: { scope: pvar, player: { chosen: $player }, var: chipStack, delta: { ref: binding, name: $baseShare } }
+                                                            - setVar:
+                                                                scope: global
+                                                                var: oddChipRemainder
+                                                                value:
+                                                                  op: '-'
+                                                                  left: { ref: binding, name: $layerAmount }
+                                                                  right:
+                                                                    op: '*'
+                                                                    left: { ref: binding, name: $baseShare }
+                                                                    right: { ref: binding, name: $winnerCount }
+                                                            - forEach:
+                                                                bind: $seat
+                                                                over: { query: intsInRange, min: 0, max: 9 }
+                                                                effects:
+                                                                  - if:
+                                                                      when: { op: '>', left: { ref: gvar, var: oddChipRemainder }, right: 0 }
+                                                                      then:
+                                                                        - forEach:
+                                                                            bind: $player
+                                                                            over: { query: players }
+                                                                            effects:
+                                                                              - if:
+                                                                                  when:
+                                                                                    op: and
+                                                                                    args:
+                                                                                      - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: handActive }, right: true }
+                                                                                      - { op: '>', left: { ref: pvar, player: { chosen: $player }, var: totalBet }, right: 0 }
+                                                                                      - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: showdownScore }, right: { ref: binding, name: $bestScore } }
+                                                                                      - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: seatIndex }, right: { ref: binding, name: $seat } }
+                                                                                  then:
+                                                                                    - addVar: { scope: pvar, player: { chosen: $player }, var: chipStack, delta: 1 }
+                                                                                    - addVar: { scope: global, var: oddChipRemainder, delta: -1 }
+                                    - forEach:
+                                        bind: $player
+                                        over: { query: players }
+                                        effects:
+                                          - if:
+                                              when: { op: '>', left: { ref: pvar, player: { chosen: $player }, var: totalBet }, right: 0 }
+                                              then:
+                                                - addVar:
+                                                    scope: pvar
+                                                    player: { chosen: $player }
+                                                    var: totalBet
+                                                    delta:
+                                                      op: '-'
+                                                      left: 0
+                                                      right: { ref: binding, name: $minContribution }
+                                    - addVar:
+                                        scope: global
+                                        var: pot
+                                        delta:
+                                          op: '-'
+                                          left: 0
+                                          right: { ref: binding, name: $layerAmount }
 
   - id: eliminate-busted-players
     params: []

@@ -13,6 +13,25 @@ const minimalCardDrivenTurnFlow = {
 };
 
 describe('compile top-level actions/triggers/end conditions', () => {
+  it('supports action phase lists for multi-phase action declarations', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-phase-list', players: { min: 2, max: 2 } },
+      zones: [{ id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'p1' }, { id: 'p2' }] },
+      actions: [
+        { id: 'fold', actor: 'active', executor: 'actor', phase: ['p1', 'p2'], params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: true, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.notEqual(result.gameDef, null);
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.gameDef?.actions[0]?.phase, ['p1', 'p2']);
+  });
+
   it('allows actions and phase triggers to reference turnStructure.interrupts ids', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

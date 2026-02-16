@@ -135,7 +135,7 @@ export const ActionDefSchema = z
     id: StringSchema,
     actor: PlayerSelSchema,
     executor: ActionExecutorSelSchema,
-    phase: StringSchema,
+    phase: z.union([StringSchema, z.array(StringSchema).min(1)]),
     capabilities: z.array(StringSchema.min(1)).optional(),
     params: z.array(ParamDefSchema),
     pre: ConditionASTSchema.nullable(),

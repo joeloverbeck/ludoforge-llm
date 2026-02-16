@@ -58,13 +58,18 @@ export function validateActions(doc: GameSpecDoc, diagnostics: Diagnostic[]): re
       });
     }
 
-    if (typeof action.phase !== 'string' || action.phase.trim() === '') {
+    const hasValidSinglePhase = typeof action.phase === 'string' && action.phase.trim() !== '';
+    const hasValidPhaseArray =
+      Array.isArray(action.phase) &&
+      action.phase.length > 0 &&
+      action.phase.every((phase) => typeof phase === 'string' && phase.trim() !== '');
+    if (!hasValidSinglePhase && !hasValidPhaseArray) {
       diagnostics.push({
         code: 'CNL_VALIDATOR_ACTION_REQUIRED_FIELD_MISSING',
         path: `${basePath}.phase`,
         severity: 'error',
-        message: 'Action field "phase" must be a non-empty string.',
-        suggestion: 'Set action.phase to a phase id.',
+        message: 'Action field "phase" must be a non-empty string or a non-empty array of phase ids.',
+        suggestion: 'Set action.phase to a phase id or list of phase ids.',
       });
     }
 

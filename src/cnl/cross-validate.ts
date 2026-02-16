@@ -25,15 +25,18 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
 
   if (sections.actions !== null && sections.turnStructure !== null) {
     for (const [actionIndex, action] of sections.actions.entries()) {
-      pushMissingIdentifierDiagnostic(
-        diagnostics,
-        'CNL_XREF_ACTION_PHASE_MISSING',
-        `doc.actions.${actionIndex}.phase`,
-        action.phase,
-        phaseTargets,
-        `Action "${action.id}" references unknown phase "${action.phase}".`,
-        'Use one of the declared turnStructure.phases/interrupts ids.',
-      );
+      const actionPhases = Array.isArray(action.phase) ? action.phase : [action.phase];
+      for (const [phaseIndex, phase] of actionPhases.entries()) {
+        pushMissingIdentifierDiagnostic(
+          diagnostics,
+          'CNL_XREF_ACTION_PHASE_MISSING',
+          Array.isArray(action.phase) ? `doc.actions.${actionIndex}.phase.${phaseIndex}` : `doc.actions.${actionIndex}.phase`,
+          phase,
+          phaseTargets,
+          `Action "${action.id}" references unknown phase "${phase}".`,
+          'Use one of the declared turnStructure.phases/interrupts ids.',
+        );
+      }
     }
   }
 

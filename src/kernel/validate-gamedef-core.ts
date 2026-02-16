@@ -29,13 +29,17 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
     validatePlayerSelector(diagnostics, action.actor, `actions[${actionIndex}].actor`, context);
     validatePlayerSelector(diagnostics, action.executor, `actions[${actionIndex}].executor`, context);
 
-    if (!phaseCandidates.includes(action.phase)) {
+    const actionPhases = Array.isArray(action.phase) ? action.phase : [action.phase];
+    for (const [phaseIndex, phaseId] of actionPhases.entries()) {
+      if (phaseCandidates.includes(phaseId)) {
+        continue;
+      }
       pushMissingReferenceDiagnostic(
         diagnostics,
         'REF_PHASE_MISSING',
-        `actions[${actionIndex}].phase`,
-        `Unknown phase "${action.phase}".`,
-        action.phase,
+        Array.isArray(action.phase) ? `actions[${actionIndex}].phase[${phaseIndex}]` : `actions[${actionIndex}].phase`,
+        `Unknown phase "${phaseId}".`,
+        phaseId,
         phaseCandidates,
       );
     }

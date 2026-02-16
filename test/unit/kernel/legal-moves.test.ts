@@ -62,6 +62,31 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
 });
 
 describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
+  it('supports actions declared across multiple phases', () => {
+    const action: ActionDef = {
+      id: asActionId('multiPhaseAction'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('setup'), asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({
+      actions: [action],
+    });
+    const state = makeBaseState({
+      currentPhase: asPhaseId('main'),
+    });
+
+    const moves = legalMoves(def, state);
+    assert.equal(moves.length, 1);
+    assert.equal(moves[0]?.actionId, asActionId('multiPhaseAction'));
+  });
+
   it('1. operation with profile emits a template move with params: {}', () => {
     const action: ActionDef = {
       id: asActionId('trainOp'),

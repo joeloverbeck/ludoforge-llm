@@ -1387,7 +1387,18 @@
             ]
           },
           "phase": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
           },
           "capabilities": {
             "type": "array",

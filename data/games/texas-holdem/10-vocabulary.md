@@ -23,6 +23,7 @@ globalVars:
   - { name: playersInHand, type: int, init: 0, min: 0, max: 10 }
   - { name: actingPosition, type: int, init: 0, min: 0, max: 9 }
   - { name: bettingClosed, type: boolean, init: false }
+  - { name: oddChipRemainder, type: int, init: 0, min: 0, max: 1000000 }
 
 perPlayerVars:
   - { name: chipStack, type: int, init: 0, min: 0, max: 1000000 }
@@ -32,4 +33,5 @@ perPlayerVars:
   - { name: allIn, type: boolean, init: false }
   - { name: eliminated, type: boolean, init: false }
   - { name: seatIndex, type: int, init: 0, min: 0, max: 9 }
+  - { name: showdownScore, type: int, init: 0, min: 0, max: 999999999999 }
 ```

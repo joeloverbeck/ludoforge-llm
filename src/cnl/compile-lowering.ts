@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import { asActionId, asPhaseId, asPlayerId, asTriggerId } from '../kernel/branded.js';
+import { asActionId, asPhaseId, asPlayerId, asTriggerId, type PhaseId } from '../kernel/branded.js';
 import type {
   ActionDef,
   ConditionAST,
@@ -242,8 +242,13 @@ export function lowerActions(
       continue;
     }
 
-    if (typeof action.id !== 'string' || action.id.trim() === '' || typeof action.phase !== 'string' || action.phase.trim() === '') {
+    if (typeof action.id !== 'string' || action.id.trim() === '') {
       diagnostics.push(missingCapabilityDiagnostic(path, 'action definition', action));
+      continue;
+    }
+    const phases = lowerActionPhases(action.phase);
+    if (phases === null) {
+      diagnostics.push(missingCapabilityDiagnostic(`${path}.phase`, 'action phase selector(s)', action.phase, ['string', 'string[]']));
       continue;
     }
 
@@ -295,7 +300,7 @@ export function lowerActions(
       id: asActionId(action.id),
       actor: actor.value,
       executor: executor.value,
-      phase: asPhaseId(action.phase),
+      phase: phases,
       ...(capabilities.length === 0 ? {} : { capabilities }),
       params: params.value,
       pre: pre ?? null,
@@ -306,6 +311,31 @@ export function lowerActions(
   }
 
   return lowered;
+}
+
+function lowerActionPhases(source: unknown): ActionDef['phase'] | null {
+  if (typeof source === 'string' && source.trim() !== '') {
+    return asPhaseId(source);
+  }
+  if (!Array.isArray(source) || source.length === 0) {
+    return null;
+  }
+
+  const normalized: PhaseId[] = [];
+  const seen = new Set<string>();
+  for (const phase of source) {
+    if (typeof phase !== 'string' || phase.trim() === '') {
+      return null;
+    }
+    const phaseId = asPhaseId(phase);
+    if (seen.has(phaseId)) {
+      continue;
+    }
+    seen.add(phaseId);
+    normalized.push(phaseId);
+  }
+
+  return normalized.length === 1 ? normalized[0]! : normalized;
 }
 
 function lowerActionCapabilities(

@@ -91,17 +91,28 @@ function validateCrossReferences(
   if (doc.actions !== null) {
     for (const [index, action] of doc.actions.entries()) {
       const basePath = `doc.actions.${index}`;
-      if (!isRecord(action) || typeof action.phase !== 'string' || action.phase.trim() === '') {
+      if (!isRecord(action)) {
         continue;
       }
 
-      const normalizedPhase = normalizeIdentifier(action.phase);
-      if (!phaseIdSet.has(normalizedPhase)) {
+      const phaseValues: string[] =
+        typeof action.phase === 'string'
+          ? (action.phase.trim() === '' ? [] : [action.phase])
+          : Array.isArray(action.phase)
+            ? action.phase.filter((phase): phase is string => typeof phase === 'string' && phase.trim() !== '')
+            : [];
+
+      for (const [phaseIndex, phase] of phaseValues.entries()) {
+        const normalizedPhase = normalizeIdentifier(phase);
+        if (phaseIdSet.has(normalizedPhase)) {
+          continue;
+        }
+        const path = Array.isArray(action.phase) ? `${basePath}.phase.${phaseIndex}` : `${basePath}.phase`;
         pushMissingReferenceDiagnostic(
           diagnostics,
           'CNL_VALIDATOR_REFERENCE_MISSING',
-          `${basePath}.phase`,
-          `Unknown phase "${action.phase}".`,
+          path,
+          `Unknown phase "${phase}".`,
           normalizedPhase,
           phaseIds,
           'Use one of the declared phase ids.',

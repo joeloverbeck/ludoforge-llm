@@ -37,6 +37,7 @@ describe('texas hold\'em spec structure', () => {
         'collect-forced-bets',
         'deal-community',
         'betting-round-completion',
+        'advance-after-betting',
         'side-pot-distribution',
         'eliminate-busted-players',
         'escalate-blinds',
@@ -80,6 +81,16 @@ describe('texas hold\'em spec structure', () => {
 
     assert.equal(payload.pieceCatalogAssetId, 'standard-52-deck');
     assert.equal(payload.settings?.startingChips, 1000);
+
+    assert.deepEqual(
+      parsed.doc.turnStructure?.phases.map((phase) => phase.id),
+      ['hand-setup', 'preflop', 'flop', 'turn', 'river', 'showdown', 'hand-cleanup'],
+    );
+    assert.deepEqual(
+      parsed.doc.actions?.map((action) => action.id),
+      ['fold', 'check', 'call', 'raise', 'allIn'],
+    );
+    assert.deepEqual((parsed.doc.actions?.[0] as { readonly phase?: unknown })?.phase, ['preflop', 'flop', 'turn', 'river']);
 
     assert.equal(parsed.doc.terminal?.conditions.length, 1);
     assert.deepEqual(parsed.doc.terminal?.conditions[0]?.result, { type: 'score' });

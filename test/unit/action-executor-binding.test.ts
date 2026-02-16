@@ -38,6 +38,33 @@ const buildDef = (): GameDef =>
     terminal: { conditions: [] },
   }) as unknown as GameDef;
 
+const buildInvalidBindingDef = (): GameDef =>
+  ({
+    metadata: { id: 'action-executor-binding-invalid', players: { min: 2, max: 2 } },
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    actions: [
+      {
+        id: asActionId('invalidExecutorBinding'),
+        actor: 'active',
+        executor: { chosen: '$owner' },
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+  }) as unknown as GameDef;
+
 describe('action executor binding', () => {
   it('resolves executor from declared action params in legalMoves and applyMove', () => {
     const def = buildDef();
@@ -68,6 +95,21 @@ describe('action executor binding', () => {
       assert.equal(details.context?.surface, 'applyMove');
       assert.equal(details.context?.selector, 'executor');
       assert.equal(String(details.context?.actionId), 'assignScore');
+      return true;
+    });
+  });
+
+  it('projects missing executor binding as runtime contract error on legalMoves surface', () => {
+    const def = buildInvalidBindingDef();
+    const state = initialState(def, 7, 2);
+
+    assert.throws(() => legalMoves(def, state), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+      assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+      assert.equal(details.context?.surface, 'legalMoves');
+      assert.equal(details.context?.selector, 'executor');
+      assert.equal(String(details.context?.actionId), 'invalidExecutorBinding');
       return true;
     });
   });

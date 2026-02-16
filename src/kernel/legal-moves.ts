@@ -8,10 +8,10 @@ import { applyPendingFreeOperationVariants, applyTurnFlowWindowFilters, isMoveAl
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { decideLegalMovesPipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
+import { shouldDeferMissingBinding } from './missing-binding-policy.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
-import { isEvalErrorCode } from './eval-error.js';
 import { isActiveFactionEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
@@ -128,7 +128,7 @@ function enumerateParams(
       return null;
     }
     if (resolution.kind === 'invalidSpec') {
-      if (allowPendingBinding && isEvalErrorCode(resolution.error, 'MISSING_BINDING')) {
+      if (allowPendingBinding && shouldDeferMissingBinding(resolution.error, 'legalMoves.executorDuringParamEnumeration')) {
         return state.activePlayer;
       }
       throw selectorInvalidSpecError('legalMoves', 'executor', action, resolution.error);

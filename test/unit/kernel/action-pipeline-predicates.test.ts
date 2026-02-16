@@ -69,6 +69,35 @@ const makeCtx = (def: GameDef, state: GameState): EvalContext => ({
 });
 
 describe('evalActionPipelinePredicate()', () => {
+  it('throws typed runtime error when missing binding is encountered outside discovery', () => {
+    const def = makeDef();
+    const action = def.actions[0] as ActionDef;
+    const state = makeState();
+    const ctx = makeCtx(def, state);
+
+    assert.throws(
+      () => evalActionPipelinePredicate(
+        action,
+        'strict-profile',
+        'legality',
+        { op: '==', left: { ref: 'binding', name: '$missing' }, right: 1 },
+        ctx,
+      ),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown>; cause?: unknown };
+        assert.equal(details.code, 'ACTION_PIPELINE_PREDICATE_EVALUATION_FAILED');
+        assert.equal(details.context?.actionId, asActionId('op'));
+        assert.equal(details.context?.profileId, 'strict-profile');
+        assert.equal(details.context?.predicate, 'legality');
+        assert.ok(details.cause instanceof Error);
+        const cause = details.cause as Error & { code?: unknown };
+        assert.equal(cause.code, 'MISSING_BINDING');
+        return true;
+      },
+    );
+  });
+
   it('wraps predicate evaluation failures with contextual runtime error', () => {
     const def = makeDef();
     const action = def.actions[0] as ActionDef;
@@ -111,6 +140,22 @@ describe('evalActionPipelinePredicateForDiscovery()', () => {
       ctx,
     );
     assert.equal(result, 'deferred');
+  });
+
+  it('defers only missing-binding failures and preserves failed result semantics', () => {
+    const def = makeDef();
+    const action = def.actions[0] as ActionDef;
+    const state = makeState();
+    const ctx = makeCtx(def, state);
+
+    const result = evalActionPipelinePredicateForDiscovery(
+      action,
+      'discovery-profile',
+      'costValidation',
+      { op: '==', left: 0, right: 1 },
+      ctx,
+    );
+    assert.equal(result, 'failed');
   });
 
   it('throws typed runtime error for nonrecoverable evaluation failures', () => {

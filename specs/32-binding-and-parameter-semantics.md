@@ -97,8 +97,11 @@ Current static coverage includes:
 2. Action param-level invariants:
    - duplicate names in one action are rejected (`DUPLICATE_ACTION_PARAM_NAME`)
    - reserved runtime names are rejected (`ACTION_PARAM_RESERVED_NAME`)
+3. Definite-binding control-flow guarantees:
+   - conditionally introduced binders are rejected at compile time when not guaranteed at use-site (`CNL_COMPILER_BINDING_UNBOUND`)
+   - post-`if` visibility uses branch intersection semantics, including implicit fallthrough when `else` is omitted.
 
-Dynamic binder correctness (for example whether a binding exists on every runtime path) remains runtime-validated.
+Runtime binding errors remain relevant only for dynamic/runtime-selected paths (for example deferred pipeline discovery and malformed runtime payloads), not for statically knowable control-flow liveness misses.
 
 ## Tests
 
@@ -109,4 +112,7 @@ Behavior is pinned by focused suites, including:
 - `test/unit/apply-move.test.ts`
 - `test/unit/action-executor-binding.test.ts`
 - `test/unit/action-executor-semantics.test.ts`
+- `test/unit/compile-bindings.test.ts`
+- `test/unit/binder-surface-registry.test.ts`
 - `test/integration/decision-sequence.test.ts`
+- `test/integration/production-spec-strict-binding-regression.test.ts`

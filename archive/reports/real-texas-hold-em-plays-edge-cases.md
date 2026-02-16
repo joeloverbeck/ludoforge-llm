@@ -1,3 +1,5 @@
+**Status**: COMPLETED
+
 # Real Texas Hold Em Plays - Edge Cases
 
 ## Play #1
@@ -233,3 +235,16 @@ Because Seats 8 and 9 tie:
 - Side pot 49845 is split with an odd chip → 24923 to Seat 8 and 24922 to Seat 9 (Seat 8 receives the extra 1 chip)
 
 (And if you also model bounties: the log notes Seat 8 and Seat 9 split a $5 bounty for eliminating Seat 1.)
+
+## Outcome
+
+- Completion date: February 16, 2026
+- What changed:
+  - Added deterministic play-by-play e2e coverage for both real hands in `test/e2e/texas-holdem-real-plays.test.ts`.
+  - Reconstructed exact preflop action sequences, stack states, blinds/antes, and known hole cards.
+  - Added assertions for board runouts, showdown outcomes, final chip stacks, and split-pot odd-chip distribution for Play #2.
+- Deviations from original plan:
+  - Internal phase auto-advance can batch refund handling, so assertions were written against deterministic final payouts/stacks rather than a single intermediate transition point.
+- Verification results:
+  - `node dist/test/e2e/texas-holdem-real-plays.test.js` passed.
+  - `npm test` passed (241/241 tests).

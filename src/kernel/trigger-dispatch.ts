@@ -25,6 +25,7 @@ export const dispatchTriggers = (
   runtimeTableIndex: RuntimeTableIndex = buildRuntimeTableIndex(def),
   policy?: MoveExecutionPolicy,
   collector?: ExecutionCollector,
+  effectPathRoot = `triggerEvent(${event.type})`,
 ): DispatchTriggersResult => {
   if (depth > maxDepth) {
     return {
@@ -67,6 +68,12 @@ export const dispatchTriggers = (
       ...evalCtx,
       rng: nextRng,
       moveParams: {},
+      traceContext: {
+        eventContext: 'triggerEffect',
+        effectPathRoot: `${effectPathRoot}.trigger:${trigger.id}.effects`,
+        ...(event.type === 'actionResolved' ? { actionId: String(event.action) } : {}),
+      },
+      effectPath: '',
       ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
     });
     nextState = effectResult.state;
@@ -91,6 +98,7 @@ export const dispatchTriggers = (
         runtimeTableIndex,
         policy,
         runtimeCollector,
+        `${effectPathRoot}.cascade(${emittedEvent.type})`,
       );
       nextState = cascadeResult.state;
       nextRng = cascadeResult.rng;

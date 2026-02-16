@@ -249,8 +249,18 @@ const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContex
   let currentBindings = ctx.bindings;
   const emittedEvents: TriggerEvent[] = [];
 
-  for (const effect of effects) {
-    const result = applyEffectWithBudget(effect, { ...ctx, state: currentState, rng: currentRng, bindings: currentBindings }, budget);
+  for (const [effectIndex, effect] of effects.entries()) {
+    const result = applyEffectWithBudget(
+      effect,
+      {
+        ...ctx,
+        state: currentState,
+        rng: currentRng,
+        bindings: currentBindings,
+        effectPath: `${ctx.effectPath ?? ''}[${effectIndex}]`,
+      },
+      budget,
+    );
     currentState = result.state;
     currentRng = result.rng;
     currentBindings = result.bindings ?? currentBindings;

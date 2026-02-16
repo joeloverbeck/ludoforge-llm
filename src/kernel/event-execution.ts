@@ -12,6 +12,7 @@ import type {
   EventCardDef,
   EventEligibilityOverrideDef,
   EventFreeOperationGrantDef,
+  ExecutionCollector,
   GameDef,
   GameState,
   Move,
@@ -235,6 +236,9 @@ const applyEffectList = (
   effects: readonly EffectAST[],
   activePlayer: GameState['activePlayer'],
   moveParams: Move['params'],
+  collector: ExecutionCollector | undefined,
+  actionId: string,
+  effectPathRoot: string,
   policy?: MoveExecutionPolicy,
 ): LastingEffectApplyResult => {
   const runtimeTableIndex = buildRuntimeTableIndex(def);
@@ -248,7 +252,13 @@ const applyEffectList = (
     actorPlayer: activePlayer,
     bindings: { ...moveParams },
     moveParams,
-    collector: createCollector(),
+    collector: collector ?? createCollector(),
+    traceContext: {
+      eventContext: 'actionEffect',
+      actionId,
+      effectPathRoot,
+    },
+    effectPath: '',
     ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   });
@@ -268,6 +278,8 @@ export const executeEventMove = (
   rng: Rng,
   move: Move,
   policy?: MoveExecutionPolicy,
+  collector?: ExecutionCollector,
+  actionId = String(move.actionId),
 ): LastingEffectApplyResult => {
   if (!isCardEventMove(def, move)) {
     return { state, rng, emittedEvents: [] };
@@ -320,6 +332,9 @@ export const executeEventMove = (
       eventEffects,
       state.activePlayer,
       move.params,
+      collector,
+      actionId,
+      `action:${actionId}.eventEffects`,
       policy,
     );
     nextState = sideAndBranchResult.state;
@@ -335,6 +350,9 @@ export const executeEventMove = (
       lastingEffect.setupEffects,
       state.activePlayer,
       move.params,
+      collector,
+      actionId,
+      `action:${actionId}.lasting:${lastingEffect.id}.setup`,
       policy,
     );
     nextState = setupResult.state;
@@ -429,6 +447,7 @@ export const expireLastingEffectsAtBoundaries = (
   rng: Rng,
   boundaries: readonly TurnFlowDuration[],
   policy?: MoveExecutionPolicy,
+  collector?: ExecutionCollector,
 ): LastingEffectApplyResult => {
   const activeEffects = state.activeLastingEffects;
   if (activeEffects === undefined || activeEffects.length === 0 || boundaries.length === 0) {
@@ -478,6 +497,9 @@ export const expireLastingEffectsAtBoundaries = (
       teardown,
       state.activePlayer,
       {},
+      collector,
+      'system:lastingExpiry',
+      `autoAdvance.lasting:${active.id}.teardown`,
       policy,
     );
     nextState = teardownResult.state;

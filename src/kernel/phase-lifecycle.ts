@@ -15,6 +15,7 @@ export const dispatchLifecycleEvent = (
   triggerLogCollector?: TriggerLogEntry[],
   policy?: MoveExecutionPolicy,
   collector?: ExecutionCollector,
+  effectPathRoot = 'lifecycle',
 ): GameState => {
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = buildRuntimeTableIndex(def);
@@ -24,6 +25,11 @@ export const dispatchLifecycleEvent = (
       kind: 'lifecycleEvent',
       eventType: event.type,
       ...(event.type === 'phaseEnter' || event.type === 'phaseExit' ? { phase: event.phase } : {}),
+      provenance: {
+        phase: String(state.currentPhase),
+        eventContext: 'lifecycleEvent',
+        effectPath: `${effectPathRoot}.event`,
+      },
     });
   }
   let currentState = state;
@@ -41,6 +47,8 @@ export const dispatchLifecycleEvent = (
       bindings: {},
       moveParams: {},
       collector: runtimeCollector,
+      traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: `${effectPathRoot}.effects` },
+      effectPath: '',
       ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
     });
     currentState = effectResult.state;
@@ -58,6 +66,7 @@ export const dispatchLifecycleEvent = (
         runtimeTableIndex,
         policy,
         runtimeCollector,
+        `${effectPathRoot}.triggeredEvent(${emittedEvent.type})`,
       );
       currentState = emittedResult.state;
       currentRng = emittedResult.rng;
@@ -79,6 +88,7 @@ export const dispatchLifecycleEvent = (
     runtimeTableIndex,
     policy,
     runtimeCollector,
+    `${effectPathRoot}.eventDispatch`,
   );
 
   if (triggerLogCollector !== undefined) {

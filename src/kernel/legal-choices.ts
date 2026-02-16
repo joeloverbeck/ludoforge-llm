@@ -48,6 +48,8 @@ const executeDiscoveryEffects = (
     bindings: evalCtx.bindings,
     moveParams: move.params,
     collector: evalCtx.collector,
+    traceContext: { eventContext: 'actionEffect', actionId: String(move.actionId), effectPathRoot: 'legalChoices.effects' },
+    effectPath: '',
     mode: 'discovery',
     ...(evalCtx.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: evalCtx.runtimeTableIndex }),
     ...(evalCtx.mapSpaces === undefined ? {} : { mapSpaces: evalCtx.mapSpaces }),

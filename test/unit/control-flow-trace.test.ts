@@ -4,6 +4,13 @@ import { describe, it } from 'node:test';
 import { buildForEachTraceEntry, buildReduceTraceEntry } from '../../src/kernel/control-flow-trace.js';
 
 describe('control-flow trace builders', () => {
+  const provenance = {
+    phase: 'main',
+    eventContext: 'actionEffect',
+    actionId: 'play',
+    effectPath: 'action:play.effects[0]',
+  } as const;
+
   it('buildForEachTraceEntry omits limit when not explicitly configured', () => {
     const entry = buildForEachTraceEntry({
       bind: '$item',
@@ -11,6 +18,7 @@ describe('control-flow trace builders', () => {
       iteratedCount: 3,
       explicitLimit: false,
       resolvedLimit: 100,
+      provenance,
     });
 
     assert.deepEqual(entry, {
@@ -18,6 +26,7 @@ describe('control-flow trace builders', () => {
       bind: '$item',
       matchCount: 3,
       iteratedCount: 3,
+      provenance,
     });
   });
 
@@ -28,6 +37,7 @@ describe('control-flow trace builders', () => {
       iteratedCount: 2,
       explicitLimit: true,
       resolvedLimit: 2,
+      provenance,
     });
 
     assert.deepEqual(entry, {
@@ -36,6 +46,7 @@ describe('control-flow trace builders', () => {
       matchCount: 10,
       iteratedCount: 2,
       limit: 2,
+      provenance,
     });
   });
 
@@ -48,6 +59,7 @@ describe('control-flow trace builders', () => {
       iteratedCount: 4,
       explicitLimit: false,
       resolvedLimit: 100,
+      provenance,
     });
 
     assert.deepEqual(entry, {
@@ -57,6 +69,7 @@ describe('control-flow trace builders', () => {
       resultBind: '$sum',
       matchCount: 4,
       iteratedCount: 4,
+      provenance,
     });
   });
 
@@ -69,6 +82,7 @@ describe('control-flow trace builders', () => {
       iteratedCount: 3,
       explicitLimit: true,
       resolvedLimit: 3,
+      provenance,
     });
 
     assert.deepEqual(entry, {
@@ -79,6 +93,7 @@ describe('control-flow trace builders', () => {
       matchCount: 7,
       iteratedCount: 3,
       limit: 3,
+      provenance,
     });
   });
 });

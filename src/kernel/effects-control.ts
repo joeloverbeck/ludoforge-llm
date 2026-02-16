@@ -5,6 +5,7 @@ import { resolveControlFlowIterationLimit } from './control-flow-limit.js';
 import { buildForEachTraceEntry, buildReduceTraceEntry } from './control-flow-trace.js';
 import { effectRuntimeError } from './effect-error.js';
 import { emitTrace, emitWarning } from './execution-collector.js';
+import { resolveTraceProvenance, withTracePath } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, TriggerEvent } from './types.js';
 
@@ -30,7 +31,7 @@ export const applyIf = (
   const predicate = evalCondition(effect.if.when, evalCtx);
 
   if (predicate) {
-    const thenResult = applyEffectsWithBudget(effect.if.then, ctx, budget);
+    const thenResult = applyEffectsWithBudget(effect.if.then, withTracePath(ctx, '.if.then'), budget);
     return {
       state: thenResult.state,
       rng: thenResult.rng,
@@ -41,7 +42,7 @@ export const applyIf = (
   }
 
   if (effect.if.else !== undefined) {
-    const elseResult = applyEffectsWithBudget(effect.if.else, ctx, budget);
+    const elseResult = applyEffectsWithBudget(effect.if.else, withTracePath(ctx, '.if.else'), budget);
     return {
       state: elseResult.state,
       rng: elseResult.rng,
@@ -70,7 +71,7 @@ export const applyLet = (
     },
   };
 
-  const nestedResult = applyEffectsWithBudget(effect.let.in, nestedCtx, budget);
+  const nestedResult = applyEffectsWithBudget(effect.let.in, withTracePath(nestedCtx, '.let.in'), budget);
   if (nestedResult.pendingChoice !== undefined) {
     return {
       state: nestedResult.state,
@@ -147,7 +148,7 @@ export const applyForEach = (
         [effect.forEach.bind]: item,
       },
     };
-    const iterationResult = applyEffectsWithBudget(effect.forEach.effects, iterationCtx, budget);
+    const iterationResult = applyEffectsWithBudget(effect.forEach.effects, withTracePath(iterationCtx, '.forEach.effects'), budget);
     currentState = iterationResult.state;
     currentRng = iterationResult.rng;
     emittedEvents.push(...(iterationResult.emittedEvents ?? []));
@@ -168,6 +169,7 @@ export const applyForEach = (
     iteratedCount: boundedItems.length,
     explicitLimit: effect.forEach.limit !== undefined,
     resolvedLimit: limit,
+    provenance: resolveTraceProvenance(ctx),
   }));
 
   if (effect.forEach.countBind !== undefined && effect.forEach.in !== undefined) {
@@ -180,7 +182,7 @@ export const applyForEach = (
         [effect.forEach.countBind]: boundedItems.length,
       },
     };
-    const countResult = applyEffectsWithBudget(effect.forEach.in, countCtx, budget);
+    const countResult = applyEffectsWithBudget(effect.forEach.in, withTracePath(countCtx, '.forEach.in'), budget);
     currentState = countResult.state;
     currentRng = countResult.rng;
     emittedEvents.push(...(countResult.emittedEvents ?? []));
@@ -234,6 +236,7 @@ export const applyReduce = (
     iteratedCount: boundedItems.length,
     explicitLimit: effect.reduce.limit !== undefined,
     resolvedLimit: limit,
+    provenance: resolveTraceProvenance(ctx),
   }));
 
   const continuationCtx: EffectContext = {
@@ -243,7 +246,7 @@ export const applyReduce = (
       [effect.reduce.resultBind]: accumulator,
     },
   };
-  const continuationResult = applyEffectsWithBudget(effect.reduce.in, continuationCtx, budget);
+  const continuationResult = applyEffectsWithBudget(effect.reduce.in, withTracePath(continuationCtx, '.reduce.in'), budget);
   if (continuationResult.pendingChoice !== undefined) {
     return {
       state: continuationResult.state,
@@ -298,7 +301,7 @@ export const applyRemoveByPriority = (
   const emittedEvents: TriggerEvent[] = [];
   const countBindings: Record<string, number> = {};
 
-  for (const group of effect.removeByPriority.groups) {
+  for (const [groupIndex, group] of effect.removeByPriority.groups.entries()) {
     let removedInGroup = 0;
 
     if (remainingBudget > 0) {
@@ -341,7 +344,7 @@ export const applyRemoveByPriority = (
               },
             },
           ],
-          iterationCtx,
+          withTracePath(iterationCtx, `.removeByPriority.groups[${groupIndex}].effects`),
           budget,
         );
 
@@ -379,7 +382,7 @@ export const applyRemoveByPriority = (
       bindings: exportedBindings,
     };
 
-    const inResult = applyEffectsWithBudget(effect.removeByPriority.in, inCtx, budget);
+    const inResult = applyEffectsWithBudget(effect.removeByPriority.in, withTracePath(inCtx, '.removeByPriority.in'), budget);
     currentState = inResult.state;
     currentRng = inResult.rng;
     emittedEvents.push(...(inResult.emittedEvents ?? []));

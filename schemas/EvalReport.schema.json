@@ -1171,13 +1171,58 @@
                           },
                           "iteratedCount": {
                             "type": "number"
+                          },
+                          "provenance": {
+                            "type": "object",
+                            "properties": {
+                              "phase": {
+                                "type": "string"
+                              },
+                              "eventContext": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "actionCost"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "actionEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "triggerEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEvent"
+                                  }
+                                ]
+                              },
+                              "actionId": {
+                                "type": "string"
+                              },
+                              "effectPath": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "phase",
+                              "eventContext",
+                              "effectPath"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
                           "kind",
                           "bind",
                           "matchCount",
-                          "iteratedCount"
+                          "iteratedCount",
+                          "provenance"
                         ],
                         "additionalProperties": false
                       },
@@ -1205,6 +1250,50 @@
                           },
                           "iteratedCount": {
                             "type": "number"
+                          },
+                          "provenance": {
+                            "type": "object",
+                            "properties": {
+                              "phase": {
+                                "type": "string"
+                              },
+                              "eventContext": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "actionCost"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "actionEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "triggerEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEvent"
+                                  }
+                                ]
+                              },
+                              "actionId": {
+                                "type": "string"
+                              },
+                              "effectPath": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "phase",
+                              "eventContext",
+                              "effectPath"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
@@ -1213,7 +1302,8 @@
                           "accBind",
                           "resultBind",
                           "matchCount",
-                          "iteratedCount"
+                          "iteratedCount",
+                          "provenance"
                         ],
                         "additionalProperties": false
                       },
@@ -1232,13 +1322,58 @@
                           },
                           "to": {
                             "type": "string"
+                          },
+                          "provenance": {
+                            "type": "object",
+                            "properties": {
+                              "phase": {
+                                "type": "string"
+                              },
+                              "eventContext": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "actionCost"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "actionEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "triggerEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEvent"
+                                  }
+                                ]
+                              },
+                              "actionId": {
+                                "type": "string"
+                              },
+                              "effectPath": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "phase",
+                              "eventContext",
+                              "effectPath"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
                           "kind",
                           "tokenId",
                           "from",
-                          "to"
+                          "to",
+                          "provenance"
                         ],
                         "additionalProperties": false
                       },
@@ -1256,14 +1391,59 @@
                             "type": "string"
                           },
                           "oldValue": {},
-                          "newValue": {}
+                          "newValue": {},
+                          "provenance": {
+                            "type": "object",
+                            "properties": {
+                              "phase": {
+                                "type": "string"
+                              },
+                              "eventContext": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "actionCost"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "actionEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "triggerEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEvent"
+                                  }
+                                ]
+                              },
+                              "actionId": {
+                                "type": "string"
+                              },
+                              "effectPath": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "phase",
+                              "eventContext",
+                              "effectPath"
+                            ],
+                            "additionalProperties": false
+                          }
                         },
                         "required": [
                           "kind",
                           "tokenId",
                           "prop",
                           "oldValue",
-                          "newValue"
+                          "newValue",
+                          "provenance"
                         ],
                         "additionalProperties": false
                       },
@@ -1313,6 +1493,50 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
+                          },
+                          "provenance": {
+                            "type": "object",
+                            "properties": {
+                              "phase": {
+                                "type": "string"
+                              },
+                              "eventContext": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "actionCost"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "actionEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "triggerEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEvent"
+                                  }
+                                ]
+                              },
+                              "actionId": {
+                                "type": "string"
+                              },
+                              "effectPath": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "phase",
+                              "eventContext",
+                              "effectPath"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
@@ -1320,7 +1544,8 @@
                           "scope",
                           "varName",
                           "oldValue",
-                          "newValue"
+                          "newValue",
+                          "provenance"
                         ],
                         "additionalProperties": false
                       },
@@ -1353,11 +1578,56 @@
                           },
                           "phase": {
                             "type": "string"
+                          },
+                          "provenance": {
+                            "type": "object",
+                            "properties": {
+                              "phase": {
+                                "type": "string"
+                              },
+                              "eventContext": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "actionCost"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "actionEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "triggerEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEvent"
+                                  }
+                                ]
+                              },
+                              "actionId": {
+                                "type": "string"
+                              },
+                              "effectPath": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "phase",
+                              "eventContext",
+                              "effectPath"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
                           "kind",
-                          "eventType"
+                          "eventType",
+                          "provenance"
                         ],
                         "additionalProperties": false
                       },
@@ -1376,72 +1646,58 @@
                           },
                           "zone": {
                             "type": "string"
+                          },
+                          "provenance": {
+                            "type": "object",
+                            "properties": {
+                              "phase": {
+                                "type": "string"
+                              },
+                              "eventContext": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "actionCost"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "actionEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "triggerEffect"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "lifecycleEvent"
+                                  }
+                                ]
+                              },
+                              "actionId": {
+                                "type": "string"
+                              },
+                              "effectPath": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "phase",
+                              "eventContext",
+                              "effectPath"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
                           "kind",
                           "tokenId",
                           "type",
-                          "zone"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "queryResult"
-                          },
-                          "queryType": {
-                            "type": "string"
-                          },
-                          "zone": {
-                            "type": "string"
-                          },
-                          "filterSummary": {
-                            "type": "string"
-                          },
-                          "matchCount": {
-                            "type": "number"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "queryType",
                           "zone",
-                          "filterSummary",
-                          "matchCount"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "const": "conditional"
-                          },
-                          "branch": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "then"
-                              },
-                              {
-                                "type": "string",
-                                "const": "else"
-                              }
-                            ]
-                          },
-                          "conditionSummary": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "branch",
-                          "conditionSummary"
+                          "provenance"
                         ],
                         "additionalProperties": false
                       }

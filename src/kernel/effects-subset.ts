@@ -2,6 +2,7 @@ import { countCombinations, combinations } from './combinatorics.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
+import { withTracePath } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, TriggerEvent } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
@@ -77,7 +78,7 @@ export const applyEvaluateSubset = (
       },
     };
 
-    const computeResult = applyEffectsWithBudget(evaluateSubset.compute, computeCtx, budget);
+    const computeResult = applyEffectsWithBudget(evaluateSubset.compute, withTracePath(computeCtx, '.evaluateSubset.compute'), budget);
     if (computeResult.pendingChoice !== undefined) {
       return {
         state: computeResult.state,
@@ -124,7 +125,7 @@ export const applyEvaluateSubset = (
     ...ctx,
     bindings: exportedBindings,
   };
-  const inResult = applyEffectsWithBudget(evaluateSubset.in, inCtx, budget);
+  const inResult = applyEffectsWithBudget(evaluateSubset.in, withTracePath(inCtx, '.evaluateSubset.in'), budget);
   if (inResult.pendingChoice !== undefined) {
     return {
       state: inResult.state,

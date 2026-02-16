@@ -693,6 +693,91 @@ phase: [asPhaseId('main')],
     );
   });
 
+  it('annotates action and trigger trace entries with provenance metadata', () => {
+    const def = createDef();
+    const state = createState();
+    const result = applyMove(def, state, playMove(2), { trace: true });
+    const trace = result.effectTrace ?? [];
+    const varChanges = trace.filter((entry) => entry.kind === 'varChange');
+    assert.equal(varChanges.length >= 3, true);
+
+    const costEntry = varChanges.find((entry) => entry.provenance.eventContext === 'actionCost');
+    assert.ok(costEntry);
+    assert.equal(costEntry.provenance.actionId, 'play');
+    assert.equal(costEntry.provenance.effectPath.startsWith('action:play.cost'), true);
+
+    const actionEntry = varChanges.find((entry) => entry.provenance.eventContext === 'actionEffect');
+    assert.ok(actionEntry);
+    assert.equal(actionEntry.provenance.actionId, 'play');
+    assert.equal(actionEntry.provenance.effectPath.startsWith('action:play.effects'), true);
+
+    const triggerEntry = varChanges.find((entry) => entry.provenance.eventContext === 'triggerEffect');
+    assert.ok(triggerEntry);
+    assert.equal(triggerEntry.provenance.actionId, 'play');
+    assert.equal(triggerEntry.provenance.effectPath.includes('trigger:onPlay.effects'), true);
+  });
+
+  it('annotates lifecycle trace entries with lifecycle event provenance', () => {
+    const def: GameDef = {
+      metadata: { id: 'lifecycle-provenance', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('p1') }, { id: asPhaseId('p2') }] },
+      actions: [
+        {
+          id: asActionId('play'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('p1')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [{ scope: 'turn', max: 1 }],
+        },
+        {
+          id: asActionId('decide'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('p2')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: {},
+      currentPhase: asPhaseId('p1'),
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+    };
+    const result = applyMove(def, state, { actionId: asActionId('play'), params: {} }, { trace: true });
+    const lifecycleEntries = (result.effectTrace ?? []).filter((entry) => entry.kind === 'lifecycleEvent');
+    assert.equal(lifecycleEntries.length >= 2, true);
+    for (const entry of lifecycleEntries) {
+      assert.equal(entry.provenance.eventContext, 'lifecycleEvent');
+      assert.equal(entry.provenance.effectPath.includes('.event'), true);
+    }
+  });
+
+  it('produces deterministic provenance for identical replays', () => {
+    const def = createDef();
+    const state = createState();
+    const first = applyMove(def, state, playMove(2), { trace: true });
+    const second = applyMove(def, state, playMove(2), { trace: true });
+    assert.deepEqual(first.effectTrace, second.effectTrace);
+  });
+
   it('applies pass rewards and resets candidates when rightmost eligible faction passes', () => {
     const def: GameDef = {
       metadata: { id: 'turn-flow-pass-chain', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },

@@ -6,6 +6,7 @@ import { nextInt } from './prng.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
 import { checkStackingConstraints } from './stacking.js';
 import { EffectRuntimeError, effectRuntimeError } from './effect-error.js';
+import { resolveTraceProvenance } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, Token } from './types.js';
 
@@ -255,6 +256,7 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
     tokenId: String(tokenId),
     from: fromZoneId,
     to: toZoneId,
+    provenance: resolveTraceProvenance(ctx),
   });
 
   if (fromZoneId === toZoneId) {
@@ -344,6 +346,13 @@ export const applyCreateToken = (effect: Extract<EffectAST, { readonly createTok
 
   const zoneAfterCreation = [createdToken, ...zoneTokens];
   enforceStacking(ctx, zoneId, zoneAfterCreation, 'createToken');
+  emitTrace(ctx.collector, {
+    kind: 'createToken',
+    tokenId: String(createdToken.id),
+    type: createdToken.type,
+    zone: zoneId,
+    provenance: resolveTraceProvenance(ctx),
+  });
 
   return {
     state: {
@@ -467,6 +476,7 @@ export const applySetTokenProp = (effect: Extract<EffectAST, { readonly setToken
     prop,
     oldValue,
     newValue: evaluatedValue,
+    provenance: resolveTraceProvenance(ctx),
   });
 
   const sourceTokens = ctx.state.zones[occurrence.zoneId]!;

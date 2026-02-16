@@ -1,4 +1,4 @@
-import type { EffectTraceForEach, EffectTraceReduce } from './types.js';
+import type { EffectTraceForEach, EffectTraceProvenance, EffectTraceReduce } from './types.js';
 
 export const buildForEachTraceEntry = (params: {
   readonly bind: string;
@@ -6,11 +6,13 @@ export const buildForEachTraceEntry = (params: {
   readonly iteratedCount: number;
   readonly explicitLimit: boolean;
   readonly resolvedLimit: number;
+  readonly provenance: EffectTraceProvenance;
 }): EffectTraceForEach => ({
   kind: 'forEach',
   bind: params.bind,
   matchCount: params.matchCount,
   iteratedCount: params.iteratedCount,
+  provenance: params.provenance,
   ...(params.explicitLimit ? { limit: params.resolvedLimit } : {}),
 });
 
@@ -22,6 +24,7 @@ export const buildReduceTraceEntry = (params: {
   readonly iteratedCount: number;
   readonly explicitLimit: boolean;
   readonly resolvedLimit: number;
+  readonly provenance: EffectTraceProvenance;
 }): EffectTraceReduce => ({
   kind: 'reduce',
   itemBind: params.itemBind,
@@ -29,5 +32,6 @@ export const buildReduceTraceEntry = (params: {
   resultBind: params.resultBind,
   matchCount: params.matchCount,
   iteratedCount: params.iteratedCount,
+  provenance: params.provenance,
   ...(params.explicitLimit ? { limit: params.resolvedLimit } : {}),
 });

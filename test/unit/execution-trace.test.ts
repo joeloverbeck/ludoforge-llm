@@ -65,6 +65,8 @@ function makeCtx(zones: Record<string, Token[]>, bindings?: Record<string, unkno
     bindings: bindings ?? {},
     moveParams: {},
     collector: createCollector(trace !== undefined ? { trace } : undefined),
+    traceContext: { eventContext: 'actionEffect', actionId: 'test-action', effectPathRoot: 'test.effects' },
+    effectPath: '',
   };
 }
 
@@ -85,6 +87,9 @@ describe('Effect execution trace', () => {
     assert.ok(forEachEntry);
     assert.equal(forEachEntry.matchCount, 1);
     assert.equal(forEachEntry.iteratedCount, 1);
+    assert.equal(forEachEntry.provenance.actionId, 'test-action');
+    assert.equal(forEachEntry.provenance.eventContext, 'actionEffect');
+    assert.equal(forEachEntry.provenance.effectPath, 'test.effects[0]');
   });
 
   it('traces reduce iteration count and bind roles', () => {
@@ -109,6 +114,7 @@ describe('Effect execution trace', () => {
     assert.equal(reduceEntry.itemBind, '$n');
     assert.equal(reduceEntry.accBind, '$acc');
     assert.equal(reduceEntry.resultBind, '$sum');
+    assert.equal(reduceEntry.provenance.effectPath, 'test.effects[0]');
   });
 
   it('traces moveToken with from and to zones', () => {
@@ -124,6 +130,7 @@ describe('Effect execution trace', () => {
     assert.equal(moveEntry.tokenId, 't1');
     assert.equal(moveEntry.from, z1);
     assert.equal(moveEntry.to, z2);
+    assert.equal(moveEntry.provenance.effectPath, 'test.effects[0]');
   });
 
   it('traces setTokenProp with old and new values', () => {
@@ -138,6 +145,7 @@ describe('Effect execution trace', () => {
     assert.ok(propEntry);
     assert.equal(propEntry.oldValue, 'US');
     assert.equal(propEntry.newValue, 'NVA');
+    assert.equal(propEntry.provenance.effectPath, 'test.effects[0]');
   });
 
   it('traces addVar with old and new values', () => {
@@ -153,6 +161,21 @@ describe('Effect execution trace', () => {
     assert.equal(varEntry.varName, 'score');
     assert.equal(varEntry.oldValue, 0);
     assert.equal(varEntry.newValue, 5);
+    assert.equal(varEntry.provenance.effectPath, 'test.effects[0]');
+  });
+
+  it('traces createToken with provenance', () => {
+    const ctx = makeCtx({ [z1]: [], [z2]: [] }, {}, true);
+    const effects: readonly EffectAST[] = [{
+      createToken: { type: 'piece', zone: z1 },
+    }];
+    applyEffects(effects, ctx);
+    const trace = ctx.collector!.trace!;
+    const createEntry = trace.find((e) => e.kind === 'createToken');
+    assert.ok(createEntry);
+    assert.equal(createEntry.zone, z1);
+    assert.equal(createEntry.type, 'piece');
+    assert.equal(createEntry.provenance.effectPath, 'test.effects[0]');
   });
 
   it('produces no trace entries when trace is disabled', () => {

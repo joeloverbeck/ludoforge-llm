@@ -588,6 +588,7 @@ export interface EffectTraceForEach {
   readonly matchCount: number;
   readonly limit?: number;
   readonly iteratedCount: number;
+  readonly provenance: EffectTraceProvenance;
 }
 
 export interface EffectTraceReduce {
@@ -598,6 +599,7 @@ export interface EffectTraceReduce {
   readonly matchCount: number;
   readonly limit?: number;
   readonly iteratedCount: number;
+  readonly provenance: EffectTraceProvenance;
 }
 
 export interface EffectTraceMoveToken {
@@ -605,6 +607,7 @@ export interface EffectTraceMoveToken {
   readonly tokenId: string;
   readonly from: string;
   readonly to: string;
+  readonly provenance: EffectTraceProvenance;
 }
 
 export interface EffectTraceSetTokenProp {
@@ -613,6 +616,7 @@ export interface EffectTraceSetTokenProp {
   readonly prop: string;
   readonly oldValue: unknown;
   readonly newValue: unknown;
+  readonly provenance: EffectTraceProvenance;
 }
 
 export interface EffectTraceVarChange {
@@ -622,12 +626,14 @@ export interface EffectTraceVarChange {
   readonly oldValue: VariableValue;
   readonly newValue: VariableValue;
   readonly player?: PlayerId;
+  readonly provenance: EffectTraceProvenance;
 }
 
 export interface EffectTraceLifecycleEvent {
   readonly kind: 'lifecycleEvent';
   readonly eventType: 'phaseEnter' | 'phaseExit' | 'turnStart' | 'turnEnd';
   readonly phase?: string;
+  readonly provenance: EffectTraceProvenance;
 }
 
 export interface EffectTraceCreateToken {
@@ -635,20 +641,21 @@ export interface EffectTraceCreateToken {
   readonly tokenId: string;
   readonly type: string;
   readonly zone: string;
+  readonly provenance: EffectTraceProvenance;
 }
 
-export interface EffectTraceQueryResult {
-  readonly kind: 'queryResult';
-  readonly queryType: string;
-  readonly zone: string;
-  readonly filterSummary: string;
-  readonly matchCount: number;
-}
+export type EffectTraceEventContext =
+  | 'actionCost'
+  | 'actionEffect'
+  | 'lifecycleEffect'
+  | 'triggerEffect'
+  | 'lifecycleEvent';
 
-export interface EffectTraceConditional {
-  readonly kind: 'conditional';
-  readonly branch: 'then' | 'else';
-  readonly conditionSummary: string;
+export interface EffectTraceProvenance {
+  readonly phase: string;
+  readonly eventContext: EffectTraceEventContext;
+  readonly actionId?: string;
+  readonly effectPath: string;
 }
 
 export type EffectTraceEntry =
@@ -658,8 +665,6 @@ export type EffectTraceEntry =
   | EffectTraceSetTokenProp
   | EffectTraceVarChange
   | EffectTraceCreateToken
-  | EffectTraceQueryResult
-  | EffectTraceConditional
   | EffectTraceLifecycleEvent;
 
 // ── Execution Options & Collector ─────────────────────────

@@ -404,6 +404,21 @@ export const RuntimeWarningSchema = z
   })
   .strict();
 
+export const EffectTraceProvenanceSchema = z
+  .object({
+    phase: StringSchema,
+    eventContext: z.union([
+      z.literal('actionCost'),
+      z.literal('actionEffect'),
+      z.literal('lifecycleEffect'),
+      z.literal('triggerEffect'),
+      z.literal('lifecycleEvent'),
+    ]),
+    actionId: StringSchema.optional(),
+    effectPath: StringSchema,
+  })
+  .strict();
+
 export const EffectTraceEntrySchema = z.union([
   z
     .object({
@@ -412,6 +427,7 @@ export const EffectTraceEntrySchema = z.union([
       matchCount: NumberSchema,
       limit: NumberSchema.optional(),
       iteratedCount: NumberSchema,
+      provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
   z
@@ -423,6 +439,7 @@ export const EffectTraceEntrySchema = z.union([
       matchCount: NumberSchema,
       limit: NumberSchema.optional(),
       iteratedCount: NumberSchema,
+      provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
   z
@@ -431,6 +448,7 @@ export const EffectTraceEntrySchema = z.union([
       tokenId: StringSchema,
       from: StringSchema,
       to: StringSchema,
+      provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
   z
@@ -440,6 +458,7 @@ export const EffectTraceEntrySchema = z.union([
       prop: StringSchema,
       oldValue: z.unknown(),
       newValue: z.unknown(),
+      provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
   z
@@ -450,6 +469,7 @@ export const EffectTraceEntrySchema = z.union([
       oldValue: z.union([NumberSchema, BooleanSchema]),
       newValue: z.union([NumberSchema, BooleanSchema]),
       player: IntegerSchema.optional(),
+      provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
   z
@@ -457,6 +477,7 @@ export const EffectTraceEntrySchema = z.union([
       kind: z.literal('lifecycleEvent'),
       eventType: z.union([z.literal('phaseEnter'), z.literal('phaseExit'), z.literal('turnStart'), z.literal('turnEnd')]),
       phase: StringSchema.optional(),
+      provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
   z
@@ -465,22 +486,7 @@ export const EffectTraceEntrySchema = z.union([
       tokenId: StringSchema,
       type: StringSchema,
       zone: StringSchema,
-    })
-    .strict(),
-  z
-    .object({
-      kind: z.literal('queryResult'),
-      queryType: StringSchema,
-      zone: StringSchema,
-      filterSummary: StringSchema,
-      matchCount: NumberSchema,
-    })
-    .strict(),
-  z
-    .object({
-      kind: z.literal('conditional'),
-      branch: z.union([z.literal('then'), z.literal('else')]),
-      conditionSummary: StringSchema,
+      provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
 ]);

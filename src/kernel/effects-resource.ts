@@ -2,6 +2,7 @@ import { evalValue } from './eval-value.js';
 import { emitTrace } from './execution-collector.js';
 import { effectRuntimeError } from './effect-error.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
+import { resolveTraceProvenance } from './trace-provenance.js';
 import type { PlayerId } from './branded.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, PlayerSel } from './types.js';
@@ -240,6 +241,7 @@ export const applyCommitResource = (
     varName: sourceVar,
     oldValue: sourceBefore,
     newValue: sourceAfter,
+    provenance: resolveTraceProvenance(ctx),
   });
   emitTrace(ctx.collector, {
     kind: 'varChange',
@@ -248,6 +250,7 @@ export const applyCommitResource = (
     varName: destination.var,
     oldValue: destinationBefore,
     newValue: destinationAfter,
+    provenance: resolveTraceProvenance(ctx),
   });
 
   return {

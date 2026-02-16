@@ -65,6 +65,8 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number): 
     runtimeTableIndex,
     moveParams: {},
     collector: createCollector(),
+    traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: 'initialState.setup' },
+    effectPath: '',
   });
   const lifecycleResult = applyTurnFlowInitialReveal(validatedDef, setupResult.state);
   const afterTurnStart = dispatchLifecycleEvent(validatedDef, {

@@ -5,6 +5,13 @@ import { createCollector, emitWarning, emitTrace } from '../../src/kernel/execut
 import type { RuntimeWarning, EffectTraceEntry } from '../../src/kernel/types.js';
 
 describe('ExecutionCollector', () => {
+  const provenance = {
+    phase: 'main',
+    eventContext: 'actionEffect',
+    actionId: 'play',
+    effectPath: 'action:play.effects[0]',
+  } as const;
+
   describe('createCollector', () => {
     it('creates collector with empty warnings and null trace when no options', () => {
       const c = createCollector();
@@ -55,6 +62,7 @@ describe('ExecutionCollector', () => {
         tokenId: 't1',
         from: 'zoneA',
         to: 'zoneB',
+        provenance,
       };
       emitTrace(c, entry);
       assert.equal(c.trace!.length, 1);
@@ -68,6 +76,7 @@ describe('ExecutionCollector', () => {
         tokenId: 't1',
         from: 'zoneA',
         to: 'zoneB',
+        provenance,
       });
       assert.equal(c.trace, null);
     });
@@ -78,6 +87,7 @@ describe('ExecutionCollector', () => {
         tokenId: 't1',
         from: 'zoneA',
         to: 'zoneB',
+        provenance,
       });
     });
   });

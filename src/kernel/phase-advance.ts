@@ -116,6 +116,7 @@ export const advancePhase = (
     { state: nextState.rng },
     boundaryDurations,
     policy,
+    collector,
   );
   nextState = {
     ...expiry.state,

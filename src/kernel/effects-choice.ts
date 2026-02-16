@@ -6,6 +6,7 @@ import { effectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { nextInt } from './prng.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
+import { withTracePath } from './trace-provenance.js';
 import { normalizeChoiceDomain, toChoiceComparableValue } from './value-membership.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST } from './types.js';
@@ -338,7 +339,7 @@ export const applyRollRandom = (
     },
   };
 
-  const nestedResult = applyEffectsWithBudget(effect.rollRandom.in, nestedCtx, budget);
+  const nestedResult = applyEffectsWithBudget(effect.rollRandom.in, withTracePath(nestedCtx, '.rollRandom.in'), budget);
   return {
     state: nestedResult.state,
     rng: nestedResult.rng,

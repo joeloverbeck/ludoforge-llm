@@ -2,6 +2,7 @@ import { resolvePlayerSel } from './resolve-selectors.js';
 import { evalValue } from './eval-value.js';
 import { emitTrace } from './execution-collector.js';
 import { effectRuntimeError } from './effect-error.js';
+import { resolveTraceProvenance } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { PlayerId } from './branded.js';
 import type { EffectAST } from './types.js';
@@ -119,6 +120,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
       varName: variableName,
       oldValue: currentValue,
       newValue: nextValue,
+      provenance: resolveTraceProvenance(ctx),
     });
 
     return {
@@ -191,6 +193,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     varName: variableName,
     oldValue: currentValue,
     newValue: nextValue,
+    provenance: resolveTraceProvenance(ctx),
   });
 
   return {
@@ -241,6 +244,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
       varName: variableName,
       oldValue: currentValue,
       newValue: nextValue,
+      provenance: resolveTraceProvenance(ctx),
     });
     if (nextValue === currentValue) {
       return { state: ctx.state, rng: ctx.rng };
@@ -318,6 +322,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     varName: variableName,
     oldValue: currentValue,
     newValue: nextValue,
+    provenance: resolveTraceProvenance(ctx),
   });
   if (nextValue === currentValue) {
     return { state: ctx.state, rng: ctx.rng };

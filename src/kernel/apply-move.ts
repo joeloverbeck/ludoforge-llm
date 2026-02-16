@@ -530,6 +530,12 @@ const executeMoveAction = (
     bindings: baseBindings,
     moveParams: move.params,
     collector: shared.collector,
+    traceContext: {
+      eventContext: 'actionEffect' as const,
+      actionId: String(action.id),
+      effectPathRoot: `action:${String(action.id)}.effects`,
+    },
+    effectPath: '',
     ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   } as const;
@@ -605,6 +611,12 @@ const executeMoveAction = (
       ...effectCtx,
       state,
       rng,
+      traceContext: {
+        eventContext: 'actionCost',
+        actionId: String(action.id),
+        effectPathRoot: `action:${String(action.id)}.cost`,
+      },
+      effectPath: '',
     })
     : { state, rng };
 
@@ -653,6 +665,12 @@ const executeMoveAction = (
       ...effectCtx,
       state: effectState,
       rng: effectRng,
+      traceContext: {
+        eventContext: 'actionEffect',
+        actionId: String(action.id),
+        effectPathRoot: `action:${String(action.id)}.effects`,
+      },
+      effectPath: '',
     });
     effectState = effectResult.state;
     effectRng = effectResult.rng;
@@ -666,6 +684,12 @@ const executeMoveAction = (
         ...effectCtx,
         state: effectState,
         rng: effectRng,
+        traceContext: {
+          eventContext: 'actionEffect',
+          actionId: String(action.id),
+          effectPathRoot: `action:${String(action.id)}.stages[${stageIdx}]`,
+        },
+        effectPath: '',
       });
       effectState = stageResult.state;
       effectRng = stageResult.rng;
@@ -688,6 +712,8 @@ const executeMoveAction = (
     effectRng,
     move,
     shared.executionPolicy,
+    shared.collector,
+    String(action.id),
   );
   effectState = lastingActivation.state;
   effectRng = lastingActivation.rng;
@@ -714,6 +740,7 @@ const executeMoveAction = (
       shared.runtimeTableIndex,
       shared.executionPolicy,
       shared.collector,
+      `action:${String(action.id)}.emittedEvent(${emittedEvent.type})`,
     );
     triggerState = emittedEventResult.state;
     triggerRng = emittedEventResult.rng;
@@ -732,6 +759,7 @@ const executeMoveAction = (
     shared.runtimeTableIndex,
     shared.executionPolicy,
     shared.collector,
+    `action:${String(action.id)}.actionResolved`,
   );
 
   return {

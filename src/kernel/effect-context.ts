@@ -5,6 +5,7 @@ import type { AdjacencyGraph } from './spatial.js';
 import type {
   ChoicePendingRequest,
   ConditionAST,
+  EffectTraceEventContext,
   ExecutionCollector,
   GameDef,
   GameState,
@@ -21,6 +22,12 @@ export interface PhaseTransitionBudget {
   remaining: number;
 }
 
+export interface EffectTraceContext {
+  readonly eventContext: EffectTraceEventContext;
+  readonly actionId?: string;
+  readonly effectPathRoot: string;
+}
+
 export interface EffectContext {
   readonly def: GameDef;
   readonly adjacencyGraph: AdjacencyGraph;
@@ -31,6 +38,8 @@ export interface EffectContext {
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly runtimeTableIndex?: RuntimeTableIndex;
   readonly moveParams: Readonly<Record<string, MoveParamValue>>;
+  readonly traceContext?: EffectTraceContext;
+  readonly effectPath?: string;
   readonly maxEffectOps?: number;
   readonly mapSpaces?: readonly MapSpaceDef[];
   readonly freeOperation?: boolean;

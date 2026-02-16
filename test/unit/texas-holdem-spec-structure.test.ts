@@ -132,4 +132,24 @@ describe('texas hold\'em spec structure', () => {
     assert.equal(serialized.includes('"var":"oddChipRemainder"'), true);
     assert.equal(serialized.includes('"var":"seatIndex"'), false);
   });
+
+  it('encodes blind escalation via scenario schedule rows instead of hardcoded blind constants', () => {
+    const markdown = readTexasProductionSpec();
+    const parsed = parseGameSpec(markdown);
+    assertNoErrors(parsed);
+
+    const escalateBlinds = parsed.doc.effectMacros?.find((macro) => macro.id === 'escalate-blinds');
+    assert.ok(escalateBlinds);
+
+    const serialized = JSON.stringify(escalateBlinds.effects);
+    assert.equal(serialized.includes('tournament-standard::settings.blindSchedule'), true);
+    assert.equal(serialized.includes('"field":"handsUntilNext"'), true);
+    assert.equal(serialized.includes('"field":"sb"'), true);
+    assert.equal(serialized.includes('"field":"bb"'), true);
+    assert.equal(serialized.includes('"field":"ante"'), true);
+
+    assert.equal(/"var":"smallBlind","value":\d+/.test(serialized), false);
+    assert.equal(/"var":"bigBlind","value":\d+/.test(serialized), false);
+    assert.equal(/"var":"ante","value":\d+/.test(serialized), false);
+  });
 });

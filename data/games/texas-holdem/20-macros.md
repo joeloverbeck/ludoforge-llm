@@ -1308,103 +1308,56 @@ effectMacros:
     params: []
     exports: []
     effects:
-      - if:
-          when:
-            op: and
-            args:
-              - { op: '==', left: { ref: gvar, var: blindLevel }, right: 0 }
-              - { op: '>=', left: { ref: gvar, var: handsPlayed }, right: 10 }
-          then:
-            - setVar: { scope: global, var: blindLevel, value: 1 }
-            - setVar: { scope: global, var: smallBlind, value: 15 }
-            - setVar: { scope: global, var: bigBlind, value: 30 }
-            - setVar: { scope: global, var: ante, value: 0 }
-      - if:
-          when:
-            op: and
-            args:
-              - { op: '==', left: { ref: gvar, var: blindLevel }, right: 1 }
-              - { op: '>=', left: { ref: gvar, var: handsPlayed }, right: 20 }
-          then:
-            - setVar: { scope: global, var: blindLevel, value: 2 }
-            - setVar: { scope: global, var: smallBlind, value: 25 }
-            - setVar: { scope: global, var: bigBlind, value: 50 }
-            - setVar: { scope: global, var: ante, value: 5 }
-      - if:
-          when:
-            op: and
-            args:
-              - { op: '==', left: { ref: gvar, var: blindLevel }, right: 2 }
-              - { op: '>=', left: { ref: gvar, var: handsPlayed }, right: 30 }
-          then:
-            - setVar: { scope: global, var: blindLevel, value: 3 }
-            - setVar: { scope: global, var: smallBlind, value: 50 }
-            - setVar: { scope: global, var: bigBlind, value: 100 }
-            - setVar: { scope: global, var: ante, value: 10 }
-      - if:
-          when:
-            op: and
-            args:
-              - { op: '==', left: { ref: gvar, var: blindLevel }, right: 3 }
-              - { op: '>=', left: { ref: gvar, var: handsPlayed }, right: 38 }
-          then:
-            - setVar: { scope: global, var: blindLevel, value: 4 }
-            - setVar: { scope: global, var: smallBlind, value: 75 }
-            - setVar: { scope: global, var: bigBlind, value: 150 }
-            - setVar: { scope: global, var: ante, value: 15 }
-      - if:
-          when:
-            op: and
-            args:
-              - { op: '==', left: { ref: gvar, var: blindLevel }, right: 4 }
-              - { op: '>=', left: { ref: gvar, var: handsPlayed }, right: 46 }
-          then:
-            - setVar: { scope: global, var: blindLevel, value: 5 }
-            - setVar: { scope: global, var: smallBlind, value: 100 }
-            - setVar: { scope: global, var: bigBlind, value: 200 }
-            - setVar: { scope: global, var: ante, value: 25 }
-      - if:
-          when:
-            op: and
-            args:
-              - { op: '==', left: { ref: gvar, var: blindLevel }, right: 5 }
-              - { op: '>=', left: { ref: gvar, var: handsPlayed }, right: 52 }
-          then:
-            - setVar: { scope: global, var: blindLevel, value: 6 }
-            - setVar: { scope: global, var: smallBlind, value: 150 }
-            - setVar: { scope: global, var: bigBlind, value: 300 }
-            - setVar: { scope: global, var: ante, value: 50 }
-      - if:
-          when:
-            op: and
-            args:
-              - { op: '==', left: { ref: gvar, var: blindLevel }, right: 6 }
-              - { op: '>=', left: { ref: gvar, var: handsPlayed }, right: 58 }
-          then:
-            - setVar: { scope: global, var: blindLevel, value: 7 }
-            - setVar: { scope: global, var: smallBlind, value: 200 }
-            - setVar: { scope: global, var: bigBlind, value: 400 }
-            - setVar: { scope: global, var: ante, value: 50 }
-      - if:
-          when:
-            op: and
-            args:
-              - { op: '==', left: { ref: gvar, var: blindLevel }, right: 7 }
-              - { op: '>=', left: { ref: gvar, var: handsPlayed }, right: 63 }
-          then:
-            - setVar: { scope: global, var: blindLevel, value: 8 }
-            - setVar: { scope: global, var: smallBlind, value: 300 }
-            - setVar: { scope: global, var: bigBlind, value: 600 }
-            - setVar: { scope: global, var: ante, value: 75 }
-      - if:
-          when:
-            op: and
-            args:
-              - { op: '==', left: { ref: gvar, var: blindLevel }, right: 8 }
-              - { op: '>=', left: { ref: gvar, var: handsPlayed }, right: 68 }
-          then:
-            - setVar: { scope: global, var: blindLevel, value: 9 }
-            - setVar: { scope: global, var: smallBlind, value: 500 }
-            - setVar: { scope: global, var: bigBlind, value: 1000 }
-            - setVar: { scope: global, var: ante, value: 100 }
+      - let:
+          bind: $nextBlindLevel
+          value: { op: '+', left: { ref: gvar, var: blindLevel }, right: 1 }
+          in:
+            - let:
+                bind: $handsRequiredForNextLevel
+                value:
+                  aggregate:
+                    op: sum
+                    query: { query: assetRows, tableId: tournament-standard::settings.blindSchedule }
+                    bind: $row
+                    valueExpr:
+                      if:
+                        when:
+                          op: '<'
+                          left: { ref: assetField, row: '$row', tableId: tournament-standard::settings.blindSchedule, field: level }
+                          right: { ref: binding, name: $nextBlindLevel }
+                        then: { ref: assetField, row: '$row', tableId: tournament-standard::settings.blindSchedule, field: handsUntilNext }
+                        else: 0
+                in:
+                  - if:
+                      when:
+                        op: '>='
+                        left: { ref: gvar, var: handsPlayed }
+                        right: { ref: binding, name: $handsRequiredForNextLevel }
+                      then:
+                        - forEach:
+                            bind: $blindRow
+                            over:
+                              query: assetRows
+                              tableId: tournament-standard::settings.blindSchedule
+                              where:
+                                - field: level
+                                  op: eq
+                                  value: { ref: binding, name: $nextBlindLevel }
+                            effects:
+                              - setVar:
+                                  scope: global
+                                  var: blindLevel
+                                  value: { ref: assetField, row: '$blindRow', tableId: tournament-standard::settings.blindSchedule, field: level }
+                              - setVar:
+                                  scope: global
+                                  var: smallBlind
+                                  value: { ref: assetField, row: '$blindRow', tableId: tournament-standard::settings.blindSchedule, field: sb }
+                              - setVar:
+                                  scope: global
+                                  var: bigBlind
+                                  value: { ref: assetField, row: '$blindRow', tableId: tournament-standard::settings.blindSchedule, field: bb }
+                              - setVar:
+                                  scope: global
+                                  var: ante
+                                  value: { ref: assetField, row: '$blindRow', tableId: tournament-standard::settings.blindSchedule, field: ante }
 ```

@@ -330,6 +330,13 @@ export const NON_EFFECT_BINDER_REFERENCER_SURFACES: readonly ConditionalReferenc
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
   {
+    when: (node) => isDiscriminator(node, 'ref', 'assetField'),
+    declaredBinderPaths: NO_BINDER_PATHS,
+    bindingNameReferencerPaths: NO_REFERENCER_PATHS,
+    bindingTemplateReferencerPaths: [['row']],
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
+  {
     when: (node) => isDiscriminator(node, 'ref', 'pvar') && isRecord(node.player),
     declaredBinderPaths: NO_BINDER_PATHS,
     bindingNameReferencerPaths: NO_REFERENCER_PATHS,

@@ -1,0 +1,131 @@
+import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import {
+  applyEffects,
+  asPlayerId,
+  assertValidatedGameDef,
+  buildAdjacencyGraph,
+  createCollector,
+  createRng,
+  initialState,
+  type EffectAST,
+  type GameDef,
+} from '../../src/kernel/index.js';
+import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+
+const loadEscalateMacro = (): { readonly def: GameDef; readonly effects: readonly EffectAST[] } => {
+  const { parsed, compiled } = compileTexasProductionSpec();
+  assertNoErrors(parsed);
+  assertNoDiagnostics(compiled, parsed.sourceMap);
+  assert.notEqual(compiled.gameDef, null);
+
+  const def = assertValidatedGameDef(compiled.gameDef!);
+  const escalateBlinds = parsed.doc.effectMacros?.find((macro) => macro.id === 'escalate-blinds');
+  assert.ok(escalateBlinds);
+
+  return {
+    def,
+    effects: escalateBlinds.effects as unknown as readonly EffectAST[],
+  };
+};
+
+const runEscalate = (
+  def: GameDef,
+  effects: readonly EffectAST[],
+  globalVars: {
+    readonly handsPlayed: number;
+    readonly blindLevel: number;
+    readonly smallBlind: number;
+    readonly bigBlind: number;
+    readonly ante: number;
+  },
+) => {
+  const seedState = initialState(def, 71, 4);
+  const state = {
+    ...seedState,
+    globalVars: {
+      ...seedState.globalVars,
+      handsPlayed: globalVars.handsPlayed,
+      blindLevel: globalVars.blindLevel,
+      smallBlind: globalVars.smallBlind,
+      bigBlind: globalVars.bigBlind,
+      ante: globalVars.ante,
+    },
+  };
+
+  return applyEffects(effects, {
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    state,
+    rng: createRng(19n),
+    activePlayer: asPlayerId(0),
+    actorPlayer: asPlayerId(0),
+    bindings: {},
+    moveParams: {},
+    collector: createCollector(),
+  }).state.globalVars;
+};
+
+describe('texas blind escalation macro', () => {
+  it('does not escalate before the next schedule threshold', () => {
+    const { def, effects } = loadEscalateMacro();
+    const vars = runEscalate(def, effects, {
+      handsPlayed: 9,
+      blindLevel: 0,
+      smallBlind: 10,
+      bigBlind: 20,
+      ante: 0,
+    });
+
+    assert.equal(vars.blindLevel, 0);
+    assert.equal(vars.smallBlind, 10);
+    assert.equal(vars.bigBlind, 20);
+    assert.equal(vars.ante, 0);
+  });
+
+  it('escalates to the next blind schedule row at the threshold boundary', () => {
+    const { def, effects } = loadEscalateMacro();
+    const vars = runEscalate(def, effects, {
+      handsPlayed: 10,
+      blindLevel: 0,
+      smallBlind: 10,
+      bigBlind: 20,
+      ante: 0,
+    });
+
+    assert.equal(vars.blindLevel, 1);
+    assert.equal(vars.smallBlind, 15);
+    assert.equal(vars.bigBlind, 30);
+    assert.equal(vars.ante, 0);
+  });
+
+  it('derives later-level transition boundaries from handsUntilNext schedule data', () => {
+    const { def, effects } = loadEscalateMacro();
+
+    const beforeBoundary = runEscalate(def, effects, {
+      handsPlayed: 37,
+      blindLevel: 3,
+      smallBlind: 50,
+      bigBlind: 100,
+      ante: 10,
+    });
+    assert.equal(beforeBoundary.blindLevel, 3);
+    assert.equal(beforeBoundary.smallBlind, 50);
+    assert.equal(beforeBoundary.bigBlind, 100);
+    assert.equal(beforeBoundary.ante, 10);
+
+    const atBoundary = runEscalate(def, effects, {
+      handsPlayed: 38,
+      blindLevel: 3,
+      smallBlind: 50,
+      bigBlind: 100,
+      ante: 10,
+    });
+    assert.equal(atBoundary.blindLevel, 4);
+    assert.equal(atBoundary.smallBlind, 75);
+    assert.equal(atBoundary.bigBlind, 150);
+    assert.equal(atBoundary.ante, 15);
+  });
+});

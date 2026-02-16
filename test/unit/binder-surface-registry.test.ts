@@ -144,6 +144,30 @@ describe('binder-surface-registry', () => {
     );
   });
 
+  it('rewrites assetField row binding templates in non-effect nodes', () => {
+    const rewritten = rewriteBinderSurfaceStringsInNode(
+      {
+        ref: 'assetField',
+        row: '$row',
+        tableId: 'tournament-standard::settings.blindSchedule',
+        field: 'sb',
+      },
+      {
+        rewriteDeclaredBinder: (value) => value,
+        rewriteBindingName: (value) => value,
+        rewriteBindingTemplate: (value) => (value === '$row' ? '$row_renamed' : value),
+        rewriteZoneSelector: (value) => value,
+      },
+    );
+
+    assert.deepEqual(rewritten, {
+      ref: 'assetField',
+      row: '$row_renamed',
+      tableId: 'tournament-standard::settings.blindSchedule',
+      field: 'sb',
+    });
+  });
+
   it('returns only sequentially-visible bindings for stage carry-over', () => {
     assert.deepEqual(
       collectSequentialBindings({

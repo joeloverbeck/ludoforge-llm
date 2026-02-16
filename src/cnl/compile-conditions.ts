@@ -17,6 +17,7 @@ import {
   isCanonicalBindingIdentifier,
   rankBindingIdentifierAlternatives,
 } from '../kernel/binding-identifier-contract.js';
+import { bindingShadowWarningsForScope } from './binding-diagnostics.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
 
@@ -734,7 +735,7 @@ export function lowerQueryNode(
         { ...context, bindingScope: [...(context.bindingScope ?? []), source.bind] },
         `${path}.where`,
       );
-      const diagnostics = [...from.diagnostics, ...where.diagnostics];
+      const diagnostics = [...bindingShadowWarningsForScope(source.bind, `${path}.bind`, context.bindingScope), ...from.diagnostics, ...where.diagnostics];
       if (from.value === null || where.value === null) {
         return { value: null, diagnostics };
       }
@@ -1126,7 +1127,7 @@ function lowerAggregate(
     },
     `${path}.valueExpr`,
   );
-  const diagnostics = [...query.diagnostics, ...valueExpr.diagnostics];
+  const diagnostics = [...query.diagnostics, ...bindingShadowWarningsForScope(source.bind, `${path}.bind`, context.bindingScope), ...valueExpr.diagnostics];
   if (valueExpr.value === null) {
     return { value: null, diagnostics };
   }

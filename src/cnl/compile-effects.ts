@@ -10,6 +10,7 @@ import {
   lowerValueNode,
   type ConditionLoweringContext,
 } from './compile-conditions.js';
+import { createBindingShadowWarning } from './binding-diagnostics.js';
 import { SUPPORTED_EFFECT_KINDS } from './effect-kind-registry.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
@@ -1913,15 +1914,7 @@ class BindingScope {
     if (!this.has(name)) {
       return [];
     }
-    return [
-      {
-        code: 'CNL_COMPILER_BINDING_SHADOWED',
-        path,
-        severity: 'warning',
-        message: `Binding "${name}" shadows an outer binding.`,
-        suggestion: 'Rename the inner binding to avoid accidental capture.',
-      },
-    ];
+    return [createBindingShadowWarning(name, path)];
   }
 
   alternativesFor(name: string): readonly string[] {

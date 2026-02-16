@@ -67,6 +67,56 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('emits warning when aggregate bind shadows an outer scope binding', () => {
+    const result = lowerValueNode(
+      {
+        aggregate: {
+          op: 'sum',
+          query: { query: 'intsInRange', min: 1, max: 3 },
+          bind: '$n',
+          valueExpr: { ref: 'binding', name: '$n' },
+        },
+      },
+      { ...context, bindingScope: ['$n'] },
+      'doc.actions.0.effects.0.setVar.value',
+    );
+
+    assert.equal(result.value !== null, true);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.code === 'CNL_COMPILER_BINDING_SHADOWED'),
+      [
+        {
+          code: 'CNL_COMPILER_BINDING_SHADOWED',
+          path: 'doc.actions.0.effects.0.setVar.value.aggregate.bind',
+          severity: 'warning',
+          message: 'Binding "$n" shadows an outer binding.',
+          suggestion: 'Rename the inner binding to avoid accidental capture.',
+        },
+      ],
+    );
+  });
+
+  it('does not emit shadow warnings for non-shadowing aggregate binders', () => {
+    const result = lowerValueNode(
+      {
+        aggregate: {
+          op: 'sum',
+          query: { query: 'intsInRange', min: 1, max: 3 },
+          bind: '$n',
+          valueExpr: { ref: 'binding', name: '$n' },
+        },
+      },
+      { ...context, bindingScope: ['$other'] },
+      'doc.actions.0.effects.0.setVar.value',
+    );
+
+    assert.equal(result.value !== null, true);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.code === 'CNL_COMPILER_BINDING_SHADOWED'),
+      [],
+    );
+  });
+
   it('rejects legacy aggregate prop syntax', () => {
     const result = lowerValueNode(
       {
@@ -210,6 +260,37 @@ describe('compile-conditions lowering', () => {
     assert.equal(result.value, null);
     assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_NEXT_PLAYER_BIND_INVALID');
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.bind');
+  });
+
+  it('emits warning when nextPlayerByCondition bind shadows an outer scope binding', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'nextPlayerByCondition',
+        from: 0,
+        bind: '$seat',
+        where: {
+          op: '==',
+          left: { ref: 'binding', name: '$seat' },
+          right: 1,
+        },
+      },
+      { ...context, bindingScope: ['$seat'] },
+      'doc.actions.0.params.0.domain',
+    );
+
+    assert.equal(result.value !== null, true);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.code === 'CNL_COMPILER_BINDING_SHADOWED'),
+      [
+        {
+          code: 'CNL_COMPILER_BINDING_SHADOWED',
+          path: 'doc.actions.0.params.0.domain.bind',
+          severity: 'warning',
+          message: 'Binding "$seat" shadows an outer binding.',
+          suggestion: 'Rename the inner binding to avoid accidental capture.',
+        },
+      ],
+    );
   });
 
   it('rejects non-numeric intsInRange bounds during lowering', () => {

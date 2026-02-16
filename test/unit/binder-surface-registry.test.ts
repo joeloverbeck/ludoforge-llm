@@ -255,6 +255,30 @@ describe('binder-surface-registry', () => {
     });
   });
 
+  it('rewrites nextPlayerByCondition declared bind in non-effect nodes', () => {
+    const rewritten = rewriteBinderSurfaceStringsInNode(
+      {
+        query: 'nextPlayerByCondition',
+        from: 0,
+        bind: '$seat',
+        where: { op: '==', left: { ref: 'binding', name: '$seat' }, right: 1 },
+      },
+      {
+        rewriteDeclaredBinder: (value) => (value === '$seat' ? '$seat_renamed' : value),
+        rewriteBindingName: (value) => (value === '$seat' ? '$seat_renamed' : value),
+        rewriteBindingTemplate: (value) => value,
+        rewriteZoneSelector: (value) => value,
+      },
+    );
+
+    assert.deepEqual(rewritten, {
+      query: 'nextPlayerByCondition',
+      from: 0,
+      bind: '$seat_renamed',
+      where: { op: '==', left: { ref: 'binding', name: '$seat_renamed' }, right: 1 },
+    });
+  });
+
   it('returns only sequentially-visible bindings for stage carry-over', () => {
     assert.deepEqual(
       collectSequentialBindings({
@@ -409,7 +433,7 @@ describe('binder-surface-registry', () => {
       astSource,
       'OptionsQuery',
       'query',
-      /\breadonly\s+(name|zone)\??\s*:\s*(string|ZoneRef)\b|readonly\s+(spaceFilter|filter)\??\s*:\s*\{\s*readonly\s+owner\??\s*:\s*PlayerSel\b/,
+      /\breadonly\s+(name|zone|bind)\??\s*:\s*(string|ZoneRef)\b|readonly\s+(spaceFilter|filter)\??\s*:\s*\{\s*readonly\s+owner\??\s*:\s*PlayerSel\b/,
     );
     const opKinds = discoverDiscriminatorKinds(
       astSource,

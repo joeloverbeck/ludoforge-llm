@@ -240,6 +240,44 @@ function evalTokensInMapSpacesQuery(
   return query.filter !== undefined ? applyTokenFilters(zoneTokens, query.filter, ctx) : zoneTokens;
 }
 
+function normalizeSeatIndex(index: number, playerCount: number): number {
+  const remainder = index % playerCount;
+  return remainder >= 0 ? remainder : remainder + playerCount;
+}
+
+function evalNextPlayerByConditionQuery(
+  query: Extract<OptionsQuery, { readonly query: 'nextPlayerByCondition' }>,
+  ctx: EvalContext,
+): readonly PlayerId[] {
+  const from = resolveIntDomainBound(query.from, ctx);
+  if (from === null) {
+    return [];
+  }
+
+  const players = resolvePlayerSel('all', ctx);
+  const playerCount = players.length;
+  if (playerCount === 0) {
+    return [];
+  }
+
+  const startOffset = query.includeFrom === true ? 0 : 1;
+  for (let offset = 0; offset < playerCount; offset += 1) {
+    const candidate = asPlayerId(normalizeSeatIndex(from + startOffset + offset, playerCount));
+    const matches = evalCondition(query.where, {
+      ...ctx,
+      bindings: {
+        ...ctx.bindings,
+        [query.bind]: candidate,
+      },
+    });
+    if (matches) {
+      return [candidate];
+    }
+  }
+
+  return [];
+}
+
 function dedupeStringsPreserveOrder(values: readonly string[]): readonly string[] {
   const seen = new Set<string>();
   const unique: string[] = [];
@@ -443,6 +481,12 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       const filtered = evalTokensInMapSpacesQuery(query, ctx);
       assertWithinBounds(filtered.length, query, maxQueryResults);
       return filtered;
+    }
+
+    case 'nextPlayerByCondition': {
+      const nextPlayer = evalNextPlayerByConditionQuery(query, ctx);
+      assertWithinBounds(nextPlayer.length, query, maxQueryResults);
+      return nextPlayer;
     }
 
     case 'intsInRange': {

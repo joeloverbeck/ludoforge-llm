@@ -160,6 +160,41 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers nextPlayerByCondition query with dynamic start seat and predicate', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'nextPlayerByCondition',
+        from: { ref: 'gvar', var: 'dealerSeat' },
+        bind: '$seatCandidate',
+        where: {
+          op: 'and',
+          args: [
+            { op: '==', left: { ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'eliminated' }, right: false },
+            { op: '==', left: { ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'handActive' }, right: true },
+          ],
+        },
+        includeFrom: false,
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'nextPlayerByCondition',
+      from: { ref: 'gvar', var: 'dealerSeat' },
+      bind: '$seatCandidate',
+      where: {
+        op: 'and',
+        args: [
+          { op: '==', left: { ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'eliminated' }, right: false },
+          { op: '==', left: { ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'handActive' }, right: true },
+        ],
+      },
+      includeFrom: false,
+    });
+  });
+
   it('rejects non-numeric intsInRange bounds during lowering', () => {
     const result = lowerQueryNode(
       {

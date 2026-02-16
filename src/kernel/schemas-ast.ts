@@ -120,6 +120,15 @@ optionsQuerySchemaInternal = z.union([
       filter: z.array(TokenFilterPredicateSchema).optional(),
     })
     .strict(),
+  z
+    .object({
+      query: z.literal('nextPlayerByCondition'),
+      from: IntDomainBoundSchema,
+      bind: StringSchema,
+      where: ConditionASTSchema,
+      includeFrom: BooleanSchema.optional(),
+    })
+    .strict(),
   z.object({ query: z.literal('intsInRange'), min: IntDomainBoundSchema, max: IntDomainBoundSchema }).strict(),
   z
     .object({

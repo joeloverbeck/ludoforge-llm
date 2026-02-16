@@ -36,6 +36,7 @@ const SUPPORTED_QUERY_KINDS = [
   'tokensInZone',
   'assetRows',
   'tokensInMapSpaces',
+  'nextPlayerByCondition',
   'intsInRange',
   'intsInVarRange',
   'enums',
@@ -699,6 +700,36 @@ export function lowerQueryNode(
         value: {
           query: 'tokensInMapSpaces',
           ...(spaceFilter === undefined ? {} : { spaceFilter }),
+        },
+        diagnostics,
+      };
+    }
+    case 'nextPlayerByCondition': {
+      if (typeof source.bind !== 'string' || source.bind.trim() === '') {
+        return missingCapability(path, 'nextPlayerByCondition query', source, [
+          '{ query: "nextPlayerByCondition", from: <NumericValueExpr>, bind: string, where: <ConditionAST>, includeFrom?: boolean }',
+        ]);
+      }
+      const from = lowerIntDomainBound(source.from, context, `${path}.from`);
+      const where = lowerConditionNode(
+        source.where,
+        { ...context, bindingScope: [...(context.bindingScope ?? []), source.bind] },
+        `${path}.where`,
+      );
+      const diagnostics = [...from.diagnostics, ...where.diagnostics];
+      if (from.value === null || where.value === null) {
+        return { value: null, diagnostics };
+      }
+      if (source.includeFrom !== undefined && typeof source.includeFrom !== 'boolean') {
+        return missingCapability(`${path}.includeFrom`, 'nextPlayerByCondition includeFrom', source.includeFrom, ['true', 'false']);
+      }
+      return {
+        value: {
+          query: 'nextPlayerByCondition',
+          from: from.value,
+          bind: source.bind,
+          where: where.value,
+          ...(source.includeFrom === undefined ? {} : { includeFrom: source.includeFrom }),
         },
         diagnostics,
       };

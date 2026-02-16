@@ -3509,6 +3509,43 @@
           "properties": {
             "query": {
               "type": "string",
+              "const": "nextPlayerByCondition"
+            },
+            "from": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "$ref": "#/definitions/__schema4"
+                }
+              ]
+            },
+            "bind": {
+              "type": "string"
+            },
+            "where": {
+              "$ref": "#/definitions/__schema1"
+            },
+            "includeFrom": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "query",
+            "from",
+            "bind",
+            "where"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
               "const": "intsInRange"
             },
             "min": {

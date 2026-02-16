@@ -150,6 +150,13 @@ export type OptionsQuery =
       readonly spaceFilter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST };
       readonly filter?: readonly TokenFilterPredicate[];
     }
+  | {
+      readonly query: 'nextPlayerByCondition';
+      readonly from: NumericValueExpr;
+      readonly bind: string;
+      readonly where: ConditionAST;
+      readonly includeFrom?: boolean;
+    }
   | { readonly query: 'intsInRange'; readonly min: NumericValueExpr; readonly max: NumericValueExpr }
   | {
       readonly query: 'intsInVarRange';

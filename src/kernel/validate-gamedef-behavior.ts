@@ -238,6 +238,7 @@ function inferQueryRuntimeShapes(query: OptionsQuery): readonly QueryRuntimeShap
     case 'intsInRange':
     case 'intsInVarRange':
     case 'players':
+    case 'nextPlayerByCondition':
       return ['number'];
     case 'enums':
     case 'globalMarkers':
@@ -659,6 +660,23 @@ export const validateOptionsQuery = (
           message: `Invalid intsInRange domain; min (${query.min}) must be <= max (${query.max}).`,
         });
       }
+      return;
+    }
+    case 'nextPlayerByCondition': {
+      if (typeof query.from === 'number') {
+        if (!Number.isSafeInteger(query.from)) {
+          diagnostics.push({
+            code: 'DOMAIN_INTS_RANGE_BOUND_INVALID',
+            path: `${path}.from`,
+            severity: 'error',
+            message: 'nextPlayerByCondition.from must be a safe integer literal when provided as a number.',
+            suggestion: 'Use an integer literal or a ValueExpr that evaluates to an integer.',
+          });
+        }
+      } else {
+        validateNumericValueExpr(diagnostics, query.from, `${path}.from`, context);
+      }
+      validateConditionAst(diagnostics, query.where, `${path}.where`, context);
       return;
     }
     case 'intsInVarRange': {

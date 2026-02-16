@@ -266,6 +266,115 @@ describe('evalQuery', () => {
     assert.deepEqual(evalQuery({ query: 'players' }, ctx), [asPlayerId(0), asPlayerId(1), asPlayerId(2)]);
   });
 
+  it('evaluates nextPlayerByCondition with wrap-around and per-player predicates', () => {
+    const def = {
+      ...makeDef(),
+      perPlayerVars: [
+        { name: 'eliminated', type: 'boolean' as const, init: false },
+        { name: 'handActive', type: 'boolean' as const, init: true },
+        { name: 'allIn', type: 'boolean' as const, init: false },
+      ],
+    };
+    const state: GameState = {
+      ...makeState(),
+      playerCount: 4,
+      perPlayerVars: {
+        '0': { eliminated: false, handActive: true, allIn: false },
+        '1': { eliminated: false, handActive: false, allIn: false },
+        '2': { eliminated: false, handActive: true, allIn: false },
+        '3': { eliminated: true, handActive: true, allIn: false },
+      },
+      zones: {
+        ...makeState().zones,
+        'hand:2': [],
+        'hand:3': [],
+      },
+    };
+    const zones = [
+      ...def.zones,
+      { id: asZoneId('hand:2'), owner: 'player' as const, visibility: 'owner' as const, ordering: 'stack' as const },
+      { id: asZoneId('hand:3'), owner: 'player' as const, visibility: 'owner' as const, ordering: 'stack' as const },
+    ];
+    const ctx = makeCtx({
+      def: { ...def, zones },
+      adjacencyGraph: buildAdjacencyGraph(zones),
+      state,
+    });
+
+    const result = evalQuery(
+      {
+        query: 'nextPlayerByCondition',
+        from: 2,
+        bind: '$seatCandidate',
+        where: {
+          op: 'and',
+          args: [
+            { op: '==', left: { ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'eliminated' }, right: false },
+            { op: '==', left: { ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'handActive' }, right: true },
+            { op: '==', left: { ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'allIn' }, right: false },
+          ],
+        },
+      },
+      ctx,
+    );
+
+    assert.deepEqual(result, [asPlayerId(0)]);
+  });
+
+  it('returns empty array when nextPlayerByCondition finds no match', () => {
+    const ctx = makeCtx();
+    const result = evalQuery(
+      {
+        query: 'nextPlayerByCondition',
+        from: 0,
+        bind: '$seatCandidate',
+        where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 99 },
+      },
+      ctx,
+    );
+    assert.deepEqual(result, []);
+  });
+
+  it('respects includeFrom for nextPlayerByCondition', () => {
+    const ctx = makeCtx();
+
+    const includeFrom = evalQuery(
+      {
+        query: 'nextPlayerByCondition',
+        from: 1,
+        bind: '$seatCandidate',
+        includeFrom: true,
+        where: {
+          op: 'or',
+          args: [
+            { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+            { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 2 },
+          ],
+        },
+      },
+      ctx,
+    );
+    const excludeFrom = evalQuery(
+      {
+        query: 'nextPlayerByCondition',
+        from: 1,
+        bind: '$seatCandidate',
+        includeFrom: false,
+        where: {
+          op: 'or',
+          args: [
+            { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+            { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 2 },
+          ],
+        },
+      },
+      ctx,
+    );
+
+    assert.deepEqual(includeFrom, [asPlayerId(1)]);
+    assert.deepEqual(excludeFrom, [asPlayerId(2)]);
+  });
+
   it('returns zones sorted, and filter.owner=actor resolves correctly', () => {
     const ctx = makeCtx();
 

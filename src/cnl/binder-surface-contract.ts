@@ -372,6 +372,14 @@ export const NON_EFFECT_BINDER_SURFACE_CONTRACT: readonly NonEffectBinderSurface
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
   {
+    id: 'query.nextPlayerByCondition.bind',
+    matchAll: [{ kind: 'equals', key: 'query', value: 'nextPlayerByCondition' }],
+    declaredBinderPaths: [['bind']],
+    bindingNameReferencerPaths: NO_REFERENCER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
+  {
     id: 'op.adjacent',
     matchAll: [{ kind: 'equals', key: 'op', value: 'adjacent' }],
     declaredBinderPaths: NO_BINDER_PATHS,

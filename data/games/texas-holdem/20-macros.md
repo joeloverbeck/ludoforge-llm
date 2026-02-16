@@ -652,147 +652,41 @@ effectMacros:
       - { name: fromSeat, type: value }
     exports: []
     effects:
-      - reduce:
-          itemBind: $offset
-          accBind: $nextFound
+      - forEach:
+          bind: $nextSeat
           over:
-            query: intsInRange
-            min: 1
-            max: { aggregate: { op: count, query: { query: players } } }
-          initial: -1
-          next:
-            if:
-              when: { op: '!=', left: { ref: binding, name: $nextFound }, right: -1 }
-              then: { ref: binding, name: $nextFound }
-              else:
-                if:
-                  when:
-                    op: '>'
-                    left:
-                      aggregate:
-                        op: sum
-                        query: { query: players }
-                        bind: $player
-                        valueExpr:
-                          if:
-                            when:
-                              op: and
-                              args:
-                                - op: '=='
-                                  left: { ref: binding, name: $player }
-                                  right:
-                                    if:
-                                      when:
-                                        op: '>='
-                                        left: { op: '+', left: { param: fromSeat }, right: { ref: binding, name: $offset } }
-                                        right: { aggregate: { op: count, query: { query: players } } }
-                                      then:
-                                        op: '-'
-                                        left: { op: '+', left: { param: fromSeat }, right: { ref: binding, name: $offset } }
-                                        right: { aggregate: { op: count, query: { query: players } } }
-                                      else: { op: '+', left: { param: fromSeat }, right: { ref: binding, name: $offset } }
-                                - op: '=='
-                                  left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }
-                                  right: false
-                            then: 1
-                            else: 0
-                    right: 0
-                  then:
-                    if:
-                      when:
-                        op: '>='
-                        left: { op: '+', left: { param: fromSeat }, right: { ref: binding, name: $offset } }
-                        right: { aggregate: { op: count, query: { query: players } } }
-                      then:
-                        op: '-'
-                        left: { op: '+', left: { param: fromSeat }, right: { ref: binding, name: $offset } }
-                        right: { aggregate: { op: count, query: { query: players } } }
-                      else: { op: '+', left: { param: fromSeat }, right: { ref: binding, name: $offset } }
-                  else: -1
-          resultBind: $nextSeat
-          in:
-            - if:
-                when: { op: '!=', left: { ref: binding, name: $nextSeat }, right: -1 }
-                then:
-                  - setVar: { scope: global, var: dealerSeat, value: { ref: binding, name: $nextSeat } }
+            query: nextPlayerByCondition
+            from: { param: fromSeat }
+            bind: $seatCandidate
+            where:
+              op: '=='
+              left: { ref: pvar, player: { chosen: '$seatCandidate' }, var: eliminated }
+              right: false
+          effects:
+            - setVar: { scope: global, var: dealerSeat, value: { ref: binding, name: $nextSeat } }
 
   - id: find-next-to-act
     params:
       - { name: fromSeat, type: value }
     exports: []
     effects:
-      - reduce:
-          itemBind: $offset
-          accBind: $nextFound
+      - setVar: { scope: global, var: bettingClosed, value: true }
+      - forEach:
+          bind: $nextSeat
           over:
-            query: intsInRange
-            min: 1
-            max: { aggregate: { op: count, query: { query: players } } }
-          initial: -1
-          next:
-            if:
-              when: { op: '!=', left: { ref: binding, name: $nextFound }, right: -1 }
-              then: { ref: binding, name: $nextFound }
-              else:
-                if:
-                  when:
-                    op: '>'
-                    left:
-                      aggregate:
-                        op: sum
-                        query: { query: players }
-                        bind: $player
-                        valueExpr:
-                          if:
-                            when:
-                              op: and
-                              args:
-                                - op: '=='
-                                  left: { ref: binding, name: $player }
-                                  right:
-                                    if:
-                                      when:
-                                        op: '>='
-                                        left: { op: '+', left: { param: fromSeat }, right: { ref: binding, name: $offset } }
-                                        right: { aggregate: { op: count, query: { query: players } } }
-                                      then:
-                                        op: '-'
-                                        left: { op: '+', left: { param: fromSeat }, right: { ref: binding, name: $offset } }
-                                        right: { aggregate: { op: count, query: { query: players } } }
-                                      else: { op: '+', left: { param: fromSeat }, right: { ref: binding, name: $offset } }
-                                - op: '=='
-                                  left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }
-                                  right: false
-                                - op: '=='
-                                  left: { ref: pvar, player: { chosen: '$player' }, var: handActive }
-                                  right: true
-                                - op: '=='
-                                  left: { ref: pvar, player: { chosen: '$player' }, var: allIn }
-                                  right: false
-                            then: 1
-                            else: 0
-                    right: 0
-                  then:
-                    if:
-                      when:
-                        op: '>='
-                        left: { op: '+', left: { param: fromSeat }, right: { ref: binding, name: $offset } }
-                        right: { aggregate: { op: count, query: { query: players } } }
-                      then:
-                        op: '-'
-                        left: { op: '+', left: { param: fromSeat }, right: { ref: binding, name: $offset } }
-                        right: { aggregate: { op: count, query: { query: players } } }
-                      else: { op: '+', left: { param: fromSeat }, right: { ref: binding, name: $offset } }
-                  else: -1
-          resultBind: $nextSeat
-          in:
-            - if:
-                when: { op: '==', left: { ref: binding, name: $nextSeat }, right: -1 }
-                then:
-                  - setVar: { scope: global, var: bettingClosed, value: true }
-                else:
-                  - setVar: { scope: global, var: actingPosition, value: { ref: binding, name: $nextSeat } }
-                  - setActivePlayer: { player: { chosen: '$nextSeat' } }
+            query: nextPlayerByCondition
+            from: { param: fromSeat }
+            bind: $seatCandidate
+            where:
+              op: and
+              args:
+                - { op: '==', left: { ref: pvar, player: { chosen: '$seatCandidate' }, var: eliminated }, right: false }
+                - { op: '==', left: { ref: pvar, player: { chosen: '$seatCandidate' }, var: handActive }, right: true }
+                - { op: '==', left: { ref: pvar, player: { chosen: '$seatCandidate' }, var: allIn }, right: false }
+          effects:
+            - setVar: { scope: global, var: bettingClosed, value: false }
+            - setVar: { scope: global, var: actingPosition, value: { ref: binding, name: $nextSeat } }
+            - setActivePlayer: { player: { chosen: '$nextSeat' } }
 
   - id: post-forced-bets-and-set-preflop-actor
     params: []
@@ -801,65 +695,17 @@ effectMacros:
       - if:
           when: { op: '==', left: { ref: gvar, var: activePlayers }, right: 2 }
           then:
-            - reduce:
-                itemBind: $offset
-                accBind: $nextFound
+            - forEach:
+                bind: $bbSeat
                 over:
-                  query: intsInRange
-                  min: 1
-                  max: { aggregate: { op: count, query: { query: players } } }
-                initial: -1
-                next:
-                  if:
-                    when: { op: '!=', left: { ref: binding, name: $nextFound }, right: -1 }
-                    then: { ref: binding, name: $nextFound }
-                    else:
-                      if:
-                        when:
-                          op: '>'
-                          left:
-                            aggregate:
-                              op: sum
-                              query: { query: players }
-                              bind: $player
-                              valueExpr:
-                                if:
-                                  when:
-                                    op: and
-                                    args:
-                                      - op: '=='
-                                        left: { ref: binding, name: $player }
-                                        right:
-                                          if:
-                                            when:
-                                              op: '>='
-                                              left: { op: '+', left: { ref: gvar, var: dealerSeat }, right: { ref: binding, name: $offset } }
-                                              right: { aggregate: { op: count, query: { query: players } } }
-                                            then:
-                                              op: '-'
-                                              left: { op: '+', left: { ref: gvar, var: dealerSeat }, right: { ref: binding, name: $offset } }
-                                              right: { aggregate: { op: count, query: { query: players } } }
-                                            else: { op: '+', left: { ref: gvar, var: dealerSeat }, right: { ref: binding, name: $offset } }
-                                      - op: '=='
-                                        left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }
-                                        right: false
-                                  then: 1
-                                  else: 0
-                          right: 0
-                        then:
-                          if:
-                            when:
-                              op: '>='
-                              left: { op: '+', left: { ref: gvar, var: dealerSeat }, right: { ref: binding, name: $offset } }
-                              right: { aggregate: { op: count, query: { query: players } } }
-                            then:
-                              op: '-'
-                              left: { op: '+', left: { ref: gvar, var: dealerSeat }, right: { ref: binding, name: $offset } }
-                              right: { aggregate: { op: count, query: { query: players } } }
-                            else: { op: '+', left: { ref: gvar, var: dealerSeat }, right: { ref: binding, name: $offset } }
-                        else: -1
-                resultBind: $bbSeat
-                in:
+                  query: nextPlayerByCondition
+                  from: { ref: gvar, var: dealerSeat }
+                  bind: $seatCandidate
+                  where:
+                    op: '=='
+                    left: { ref: pvar, player: { chosen: '$seatCandidate' }, var: eliminated }
+                    right: false
+                effects:
                   - let:
                       bind: $dealerSeatBinding
                       value: { ref: gvar, var: dealerSeat }
@@ -873,183 +719,39 @@ effectMacros:
                         - setVar: { scope: global, var: actingPosition, value: { ref: binding, name: $dealerSeatBinding } }
                         - setActivePlayer: { player: { chosen: '$dealerSeatBinding' } }
           else:
-            - reduce:
-                itemBind: $offset
-                accBind: $nextFound
+            - forEach:
+                bind: $sbSeat
                 over:
-                  query: intsInRange
-                  min: 1
-                  max: { aggregate: { op: count, query: { query: players } } }
-                initial: -1
-                next:
-                  if:
-                    when: { op: '!=', left: { ref: binding, name: $nextFound }, right: -1 }
-                    then: { ref: binding, name: $nextFound }
-                    else:
-                      if:
-                        when:
-                          op: '>'
-                          left:
-                            aggregate:
-                              op: sum
-                              query: { query: players }
-                              bind: $player
-                              valueExpr:
-                                if:
-                                  when:
-                                    op: and
-                                    args:
-                                      - op: '=='
-                                        left: { ref: binding, name: $player }
-                                        right:
-                                          if:
-                                            when:
-                                              op: '>='
-                                              left: { op: '+', left: { ref: gvar, var: dealerSeat }, right: { ref: binding, name: $offset } }
-                                              right: { aggregate: { op: count, query: { query: players } } }
-                                            then:
-                                              op: '-'
-                                              left: { op: '+', left: { ref: gvar, var: dealerSeat }, right: { ref: binding, name: $offset } }
-                                              right: { aggregate: { op: count, query: { query: players } } }
-                                            else: { op: '+', left: { ref: gvar, var: dealerSeat }, right: { ref: binding, name: $offset } }
-                                      - op: '=='
-                                        left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }
-                                        right: false
-                                  then: 1
-                                  else: 0
-                          right: 0
-                        then:
-                          if:
-                            when:
-                              op: '>='
-                              left: { op: '+', left: { ref: gvar, var: dealerSeat }, right: { ref: binding, name: $offset } }
-                              right: { aggregate: { op: count, query: { query: players } } }
-                            then:
-                              op: '-'
-                              left: { op: '+', left: { ref: gvar, var: dealerSeat }, right: { ref: binding, name: $offset } }
-                              right: { aggregate: { op: count, query: { query: players } } }
-                            else: { op: '+', left: { ref: gvar, var: dealerSeat }, right: { ref: binding, name: $offset } }
-                        else: -1
-                resultBind: $sbSeat
-                in:
-                  - reduce:
-                      itemBind: $offset
-                      accBind: $nextFound
+                  query: nextPlayerByCondition
+                  from: { ref: gvar, var: dealerSeat }
+                  bind: $seatCandidate
+                  where:
+                    op: '=='
+                    left: { ref: pvar, player: { chosen: '$seatCandidate' }, var: eliminated }
+                    right: false
+                effects:
+                  - forEach:
+                      bind: $bbSeat
                       over:
-                        query: intsInRange
-                        min: 1
-                        max: { aggregate: { op: count, query: { query: players } } }
-                      initial: -1
-                      next:
-                        if:
-                          when: { op: '!=', left: { ref: binding, name: $nextFound }, right: -1 }
-                          then: { ref: binding, name: $nextFound }
-                          else:
-                            if:
-                              when:
-                                op: '>'
-                                left:
-                                  aggregate:
-                                    op: sum
-                                    query: { query: players }
-                                    bind: $player
-                                    valueExpr:
-                                      if:
-                                        when:
-                                          op: and
-                                          args:
-                                            - op: '=='
-                                              left: { ref: binding, name: $player }
-                                              right:
-                                                if:
-                                                  when:
-                                                    op: '>='
-                                                    left: { op: '+', left: { ref: binding, name: $sbSeat }, right: { ref: binding, name: $offset } }
-                                                    right: { aggregate: { op: count, query: { query: players } } }
-                                                  then:
-                                                    op: '-'
-                                                    left: { op: '+', left: { ref: binding, name: $sbSeat }, right: { ref: binding, name: $offset } }
-                                                    right: { aggregate: { op: count, query: { query: players } } }
-                                                  else: { op: '+', left: { ref: binding, name: $sbSeat }, right: { ref: binding, name: $offset } }
-                                            - op: '=='
-                                              left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }
-                                              right: false
-                                        then: 1
-                                        else: 0
-                                right: 0
-                              then:
-                                if:
-                                  when:
-                                    op: '>='
-                                    left: { op: '+', left: { ref: binding, name: $sbSeat }, right: { ref: binding, name: $offset } }
-                                    right: { aggregate: { op: count, query: { query: players } } }
-                                  then:
-                                    op: '-'
-                                    left: { op: '+', left: { ref: binding, name: $sbSeat }, right: { ref: binding, name: $offset } }
-                                    right: { aggregate: { op: count, query: { query: players } } }
-                                  else: { op: '+', left: { ref: binding, name: $sbSeat }, right: { ref: binding, name: $offset } }
-                              else: -1
-                      resultBind: $bbSeat
-                      in:
-                        - reduce:
-                            itemBind: $offset
-                            accBind: $nextFound
+                        query: nextPlayerByCondition
+                        from: { ref: binding, name: $sbSeat }
+                        bind: $seatCandidate
+                        where:
+                          op: '=='
+                          left: { ref: pvar, player: { chosen: '$seatCandidate' }, var: eliminated }
+                          right: false
+                      effects:
+                        - forEach:
+                            bind: $utgSeat
                             over:
-                              query: intsInRange
-                              min: 1
-                              max: { aggregate: { op: count, query: { query: players } } }
-                            initial: -1
-                            next:
-                              if:
-                                when: { op: '!=', left: { ref: binding, name: $nextFound }, right: -1 }
-                                then: { ref: binding, name: $nextFound }
-                                else:
-                                  if:
-                                    when:
-                                      op: '>'
-                                      left:
-                                        aggregate:
-                                          op: sum
-                                          query: { query: players }
-                                          bind: $player
-                                          valueExpr:
-                                            if:
-                                              when:
-                                                op: and
-                                                args:
-                                                  - op: '=='
-                                                    left: { ref: binding, name: $player }
-                                                    right:
-                                                      if:
-                                                        when:
-                                                          op: '>='
-                                                          left: { op: '+', left: { ref: binding, name: $bbSeat }, right: { ref: binding, name: $offset } }
-                                                          right: { aggregate: { op: count, query: { query: players } } }
-                                                        then:
-                                                          op: '-'
-                                                          left: { op: '+', left: { ref: binding, name: $bbSeat }, right: { ref: binding, name: $offset } }
-                                                          right: { aggregate: { op: count, query: { query: players } } }
-                                                        else: { op: '+', left: { ref: binding, name: $bbSeat }, right: { ref: binding, name: $offset } }
-                                                  - op: '=='
-                                                    left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }
-                                                    right: false
-                                              then: 1
-                                              else: 0
-                                      right: 0
-                                    then:
-                                      if:
-                                        when:
-                                          op: '>='
-                                          left: { op: '+', left: { ref: binding, name: $bbSeat }, right: { ref: binding, name: $offset } }
-                                          right: { aggregate: { op: count, query: { query: players } } }
-                                        then:
-                                          op: '-'
-                                          left: { op: '+', left: { ref: binding, name: $bbSeat }, right: { ref: binding, name: $offset } }
-                                          right: { aggregate: { op: count, query: { query: players } } }
-                                        else: { op: '+', left: { ref: binding, name: $bbSeat }, right: { ref: binding, name: $offset } }
-                                    else: -1
-                            resultBind: $utgSeat
-                            in:
+                              query: nextPlayerByCondition
+                              from: { ref: binding, name: $bbSeat }
+                              bind: $seatCandidate
+                              where:
+                                op: '=='
+                                left: { ref: pvar, player: { chosen: '$seatCandidate' }, var: eliminated }
+                                right: false
+                            effects:
                               - macro: collect-forced-bets
                                 args:
                                   sbPlayer: { chosen: '$sbSeat' }

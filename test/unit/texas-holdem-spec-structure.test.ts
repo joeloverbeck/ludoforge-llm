@@ -231,6 +231,21 @@ describe('texas hold\'em spec structure', () => {
     assert.equal(serialized.includes('"commitResource":'), true);
   });
 
+  it('encodes seat traversal via nextPlayerByCondition instead of inline reduce scans', () => {
+    const markdown = readTexasProductionSpec();
+    const parsed = parseGameSpec(markdown);
+    assertNoErrors(parsed);
+
+    const traversalMacroIds = ['find-next-non-eliminated', 'find-next-to-act', 'post-forced-bets-and-set-preflop-actor'];
+    for (const macroId of traversalMacroIds) {
+      const macro = parsed.doc.effectMacros?.find((candidate) => candidate.id === macroId);
+      assert.ok(macro, `missing macro ${macroId}`);
+      const serialized = JSON.stringify(macro.effects);
+      assert.equal(serialized.includes('"query":"nextPlayerByCondition"'), true, `${macroId} should use nextPlayerByCondition`);
+      assert.equal(serialized.includes('"itemBind":"$offset"'), false, `${macroId} should not use offset-based reduce traversal`);
+    }
+  });
+
   it('validates compiled Texas GameDef against schemas/GameDef.schema.json', () => {
     const { parsed, validatorDiagnostics: validated, compiled } = compileTexasProductionSpec();
     assertNoErrors(parsed);

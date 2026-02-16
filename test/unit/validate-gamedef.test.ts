@@ -1301,6 +1301,73 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('accepts nextPlayerByCondition domain with numeric from and condition predicate', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$next',
+              domain: {
+                query: 'nextPlayerByCondition',
+                from: { ref: 'gvar', var: 'money' },
+                bind: '$seatCandidate',
+                where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_INTS_RANGE_BOUND_INVALID' ||
+          diag.code === 'VALUE_EXPR_NUMERIC_REQUIRED' ||
+          diag.code === 'CNL_COMPILER_MISSING_CAPABILITY',
+      ),
+      false,
+    );
+  });
+
+  it('reports non-integer literal nextPlayerByCondition.from', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$next',
+              domain: {
+                query: 'nextPlayerByCondition',
+                from: 1.5,
+                bind: '$seatCandidate',
+                where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_INTS_RANGE_BOUND_INVALID' &&
+          diag.path === 'actions[0].params[0].domain.from' &&
+          diag.severity === 'error',
+      ),
+    );
+  });
+
   it('reports missing intsInVarRange source variable', () => {
     const base = createValidGameDef();
     const def = {

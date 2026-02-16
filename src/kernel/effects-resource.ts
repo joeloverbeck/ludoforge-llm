@@ -236,6 +236,7 @@ export const applyCommitResource = (
   emitTrace(ctx.collector, {
     kind: 'varChange',
     scope: 'perPlayer',
+    player: sourcePlayer,
     varName: sourceVar,
     oldValue: sourceBefore,
     newValue: sourceAfter,
@@ -243,6 +244,7 @@ export const applyCommitResource = (
   emitTrace(ctx.collector, {
     kind: 'varChange',
     scope: destination.scope === 'global' ? 'global' : 'perPlayer',
+    ...(destination.scope === 'pvar' ? { player: destinationPlayer! } : {}),
     varName: destination.var,
     oldValue: destinationBefore,
     newValue: destinationAfter,

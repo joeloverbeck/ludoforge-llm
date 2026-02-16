@@ -92,6 +92,15 @@ const playMove = (boost: number): Move => ({
   params: { boost },
 });
 
+const lifecycleTraceCategories = (
+  trace: readonly NonNullable<ReturnType<typeof applyMove>['effectTrace']>[number][] | undefined,
+): string[] =>
+  Array.from(new Set(
+    (trace ?? [])
+      .filter((entry) => entry.kind === 'lifecycleEvent')
+      .map((entry) => `${entry.eventType}:${entry.phase ?? ''}`),
+  ));
+
 const createEventDynamicDecisionDef = (withDeclaredParam = false): GameDef =>
   ({
     metadata: { id: withDeclaredParam ? 'event-dynamic-decision-with-declared' : 'event-dynamic-decision', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
@@ -393,6 +402,112 @@ phase: [asPhaseId('main')],
     ]);
   });
 
+  it('rejects invalid maxPhaseTransitionsPerMove in simultaneous mode before commit', () => {
+    const def: GameDef = {
+      metadata: { id: 'simultaneous-invalid-transition-budget', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: { type: 'simultaneous' },
+      actions: [
+        {
+          id: asActionId('play'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: {},
+      actionUsage: {},
+      turnOrderState: {
+        type: 'simultaneous',
+        submitted: { '0': false, '1': false },
+        pending: {},
+      },
+    };
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('play'), params: {} }, { maxPhaseTransitionsPerMove: -1 }),
+      /maxPhaseTransitionsPerMove must be a non-negative safe integer/,
+    );
+  });
+
+  it('shares maxPhaseTransitionsPerMove budget across simultaneous commit fan-in', () => {
+    const def: GameDef = {
+      metadata: { id: 'simultaneous-shared-transition-budget', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('p1') }, { id: asPhaseId('p2') }, { id: asPhaseId('p3') }] },
+      turnOrder: { type: 'simultaneous' },
+      actions: [
+        {
+          id: asActionId('to2'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('p1')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [{ gotoPhaseExact: { phase: asPhaseId('p2') } }],
+          limits: [],
+        },
+        {
+          id: asActionId('to3'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('p1')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [{ gotoPhaseExact: { phase: asPhaseId('p3') } }],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: {},
+      currentPhase: asPhaseId('p1'),
+      actionUsage: {},
+      turnOrderState: {
+        type: 'simultaneous',
+        submitted: { '0': false, '1': false },
+        pending: {},
+      },
+    };
+
+    const first = applyMove(def, state, { actionId: asActionId('to2'), params: {} }, {
+      maxPhaseTransitionsPerMove: 1,
+      advanceToDecisionPoint: false,
+    });
+    const second = applyMove(def, first.state, { actionId: asActionId('to3'), params: {} }, {
+      maxPhaseTransitionsPerMove: 1,
+      advanceToDecisionPoint: false,
+    });
+
+    assert.equal(second.state.currentPhase, asPhaseId('p2'));
+  });
+
   it('commits simultaneous submissions in deterministic player order once all players submit', () => {
     const def: GameDef = {
       metadata: { id: 'simultaneous-commit', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
@@ -448,6 +563,134 @@ phase: [asPhaseId('main')],
       playersInOrder: ['0', '1'],
       pendingCount: 2,
     });
+  });
+
+  it('includes lifecycle entries in effectTrace after simultaneous commit auto-advance', () => {
+    const def: GameDef = {
+      metadata: { id: 'simultaneous-trace-auto-advance', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('p1') }, { id: asPhaseId('p2') }] },
+      turnOrder: { type: 'simultaneous' },
+      actions: [
+        {
+          id: asActionId('play'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('p1')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [{ scope: 'turn', max: 1 }],
+        },
+        {
+          id: asActionId('decide'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('p2')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+    const state: GameState = {
+      ...createState(),
+      globalVars: {},
+      currentPhase: asPhaseId('p1'),
+      actionUsage: {},
+      turnOrderState: {
+        type: 'simultaneous',
+        submitted: { '0': false, '1': false },
+        pending: {},
+      },
+    };
+
+    const first = applyMove(def, state, { actionId: asActionId('play'), params: {} }, { trace: true });
+    const second = applyMove(def, first.state, { actionId: asActionId('play'), params: {} }, { trace: true });
+
+    assert.equal(second.state.currentPhase, asPhaseId('p2'));
+    const categories = lifecycleTraceCategories(second.effectTrace);
+    assert.ok(categories.includes('phaseExit:p1'));
+    assert.ok(categories.includes('phaseEnter:p2'));
+  });
+
+  it('captures equivalent lifecycle trace categories for roundRobin and simultaneous auto-advance flow', () => {
+    const baseDef = {
+      metadata: { id: 'turn-order-trace-parity', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('p1') }, { id: asPhaseId('p2') }] },
+      actions: [
+        {
+          id: asActionId('play'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('p1')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [{ scope: 'turn', max: 1 }],
+        },
+        {
+          id: asActionId('decide'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('p2')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as const;
+
+    const roundRobinDef = { ...baseDef, turnOrder: undefined } as unknown as GameDef;
+    const roundRobinState: GameState = {
+      ...createState(),
+      globalVars: {},
+      currentPhase: asPhaseId('p1'),
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+    };
+    const roundRobin = applyMove(roundRobinDef, roundRobinState, { actionId: asActionId('play'), params: {} }, { trace: true });
+
+    const simultaneousDef = { ...baseDef, turnOrder: { type: 'simultaneous' as const } } as unknown as GameDef;
+    const simultaneousStart: GameState = {
+      ...createState(),
+      globalVars: {},
+      currentPhase: asPhaseId('p1'),
+      actionUsage: {},
+      turnOrderState: {
+        type: 'simultaneous',
+        submitted: { '0': false, '1': false },
+        pending: {},
+      },
+    };
+    const simFirst = applyMove(simultaneousDef, simultaneousStart, { actionId: asActionId('play'), params: {} }, { trace: true });
+    const simultaneous = applyMove(simultaneousDef, simFirst.state, { actionId: asActionId('play'), params: {} }, { trace: true });
+
+    assert.deepEqual(
+      lifecycleTraceCategories(simultaneous.effectTrace).sort(),
+      lifecycleTraceCategories(roundRobin.effectTrace).sort(),
+    );
   });
 
   it('applies pass rewards and resets candidates when rightmost eligible faction passes', () => {

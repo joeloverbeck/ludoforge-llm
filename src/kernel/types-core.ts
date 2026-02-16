@@ -619,8 +619,15 @@ export interface EffectTraceVarChange {
   readonly kind: 'varChange';
   readonly scope: 'global' | 'perPlayer';
   readonly varName: string;
-  readonly oldValue: number;
-  readonly newValue: number;
+  readonly oldValue: VariableValue;
+  readonly newValue: VariableValue;
+  readonly player?: PlayerId;
+}
+
+export interface EffectTraceLifecycleEvent {
+  readonly kind: 'lifecycleEvent';
+  readonly eventType: 'phaseEnter' | 'phaseExit' | 'turnStart' | 'turnEnd';
+  readonly phase?: string;
 }
 
 export interface EffectTraceCreateToken {
@@ -652,7 +659,8 @@ export type EffectTraceEntry =
   | EffectTraceVarChange
   | EffectTraceCreateToken
   | EffectTraceQueryResult
-  | EffectTraceConditional;
+  | EffectTraceConditional
+  | EffectTraceLifecycleEvent;
 
 // ── Execution Options & Collector ─────────────────────────
 

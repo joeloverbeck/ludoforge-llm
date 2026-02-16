@@ -1,9 +1,9 @@
 import { applyEffects } from './effects.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
-import { createCollector } from './execution-collector.js';
+import { createCollector, emitTrace } from './execution-collector.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
-import type { EffectAST, GameDef, GameState, TriggerEvent, TriggerLogEntry } from './types.js';
+import type { EffectAST, ExecutionCollector, GameDef, GameState, TriggerEvent, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
@@ -14,9 +14,18 @@ export const dispatchLifecycleEvent = (
   event: TriggerEvent,
   triggerLogCollector?: TriggerLogEntry[],
   policy?: MoveExecutionPolicy,
+  collector?: ExecutionCollector,
 ): GameState => {
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = buildRuntimeTableIndex(def);
+  const runtimeCollector = collector ?? createCollector();
+  if (event.type === 'phaseEnter' || event.type === 'phaseExit' || event.type === 'turnStart' || event.type === 'turnEnd') {
+    emitTrace(runtimeCollector, {
+      kind: 'lifecycleEvent',
+      eventType: event.type,
+      ...(event.type === 'phaseEnter' || event.type === 'phaseExit' ? { phase: event.phase } : {}),
+    });
+  }
   let currentState = state;
   let currentRng = { state: state.rng };
   const lifecycleEffects = resolveLifecycleEffects(def, event);
@@ -31,7 +40,7 @@ export const dispatchLifecycleEvent = (
       actorPlayer: currentState.activePlayer,
       bindings: {},
       moveParams: {},
-      collector: createCollector(),
+      collector: runtimeCollector,
       ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
     });
     currentState = effectResult.state;
@@ -48,6 +57,7 @@ export const dispatchLifecycleEvent = (
         adjacencyGraph,
         runtimeTableIndex,
         policy,
+        runtimeCollector,
       );
       currentState = emittedResult.state;
       currentRng = emittedResult.rng;
@@ -68,6 +78,7 @@ export const dispatchLifecycleEvent = (
     adjacencyGraph,
     runtimeTableIndex,
     policy,
+    runtimeCollector,
   );
 
   if (triggerLogCollector !== undefined) {

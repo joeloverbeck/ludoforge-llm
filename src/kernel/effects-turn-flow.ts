@@ -202,7 +202,7 @@ export const applyGotoPhaseExact = (
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx));
+  }, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
   const enteredState = resetPhaseUsage({
     ...exitedState,
     currentPhase: targetPhaseId,
@@ -210,7 +210,7 @@ export const applyGotoPhaseExact = (
   const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhaseId,
-  }, undefined, lifecycleBudgetOptions(ctx));
+  }, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -224,7 +224,7 @@ export const applyAdvancePhase = (
   if (!consumePhaseTransitionBudget(ctx, 'advancePhase')) {
     return { state: ctx.state, rng: ctx.rng };
   }
-  const nextState = advancePhase(ctx.def, ctx.state, undefined, lifecycleBudgetOptions(ctx));
+  const nextState = advancePhase(ctx.def, ctx.state, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
   return {
     state: nextState,
     rng: { state: nextState.rng },
@@ -262,7 +262,7 @@ export const applyPushInterruptPhase = (
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx));
+  }, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
   const nextStack = [
     ...(exitedState.interruptPhaseStack ?? []),
     { phase: targetPhase, resumePhase },
@@ -275,7 +275,7 @@ export const applyPushInterruptPhase = (
   const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhase,
-  }, undefined, lifecycleBudgetOptions(ctx));
+  }, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -299,7 +299,7 @@ export const applyPopInterruptPhase = (
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx));
+  }, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
   const stackAfterExit = exitedState.interruptPhaseStack ?? [];
   const resumeFrame = stackAfterExit.at(-1);
   if (resumeFrame === undefined) {
@@ -326,7 +326,7 @@ export const applyPopInterruptPhase = (
   const finalState = dispatchLifecycleEvent(ctx.def, resumedState, {
     type: 'phaseEnter',
     phase: resumeFrame.resumePhase,
-  }, undefined, lifecycleBudgetOptions(ctx));
+  }, undefined, lifecycleBudgetOptions(ctx), ctx.collector);
   return {
     state: finalState,
     rng: { state: finalState.rng },

@@ -425,6 +425,7 @@ interface ApplyMoveCoreOptions {
   readonly skipValidation?: boolean;
   readonly skipAdvanceToDecisionPoint?: boolean;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
+  readonly executionRuntime?: MoveExecutionRuntime;
 }
 
 interface SharedMoveExecutionContext {
@@ -439,6 +440,50 @@ interface MoveActionExecutionResult {
   readonly stateWithRng: GameState;
   readonly triggerFirings: readonly TriggerLogEntry[];
 }
+
+interface MoveExecutionRuntime {
+  readonly collector: ReturnType<typeof createCollector>;
+  readonly phaseTransitionBudget?: PhaseTransitionBudget;
+  readonly executionPolicy?: ReturnType<typeof toMoveExecutionPolicy>;
+}
+
+const validatedMaxPhaseTransitionsPerMove = (options?: ExecutionOptions): number | undefined => {
+  const maxPhaseTransitionsPerMove = options?.maxPhaseTransitionsPerMove;
+  if (
+    maxPhaseTransitionsPerMove !== undefined
+    && (!Number.isSafeInteger(maxPhaseTransitionsPerMove) || maxPhaseTransitionsPerMove < 0)
+  ) {
+    throw new RangeError(`maxPhaseTransitionsPerMove must be a non-negative safe integer, received ${String(maxPhaseTransitionsPerMove)}`);
+  }
+  return maxPhaseTransitionsPerMove;
+};
+
+const resolvePhaseTransitionBudget = (
+  options: ExecutionOptions | undefined,
+  existing?: PhaseTransitionBudget,
+): PhaseTransitionBudget | undefined => {
+  if (existing !== undefined) {
+    validatedMaxPhaseTransitionsPerMove(options);
+    return existing;
+  }
+  const maxPhaseTransitionsPerMove = validatedMaxPhaseTransitionsPerMove(options);
+  return maxPhaseTransitionsPerMove === undefined
+    ? undefined
+    : { remaining: maxPhaseTransitionsPerMove };
+};
+
+const createMoveExecutionRuntime = (
+  options: ExecutionOptions | undefined,
+  existingBudget?: PhaseTransitionBudget,
+): MoveExecutionRuntime => {
+  const phaseTransitionBudget = resolvePhaseTransitionBudget(options, existingBudget);
+  const executionPolicy = toMoveExecutionPolicy(phaseTransitionBudget);
+  return {
+    collector: createCollector(options),
+    ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
+    ...(executionPolicy === undefined ? {} : { executionPolicy }),
+  };
+};
 
 const executeMoveAction = (
   def: GameDef,
@@ -668,6 +713,7 @@ const executeMoveAction = (
       shared.adjacencyGraph,
       shared.runtimeTableIndex,
       shared.executionPolicy,
+      shared.collector,
     );
     triggerState = emittedEventResult.state;
     triggerRng = emittedEventResult.rng;
@@ -685,6 +731,7 @@ const executeMoveAction = (
     shared.adjacencyGraph,
     shared.runtimeTableIndex,
     shared.executionPolicy,
+    shared.collector,
   );
 
   return {
@@ -705,28 +752,16 @@ const applyMoveCore = (
 ): ApplyMoveResult => {
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = buildRuntimeTableIndex(def);
-  const collector = createCollector(options);
-  const maxPhaseTransitionsPerMove = options?.maxPhaseTransitionsPerMove;
-  if (
-    maxPhaseTransitionsPerMove !== undefined
-    && (!Number.isSafeInteger(maxPhaseTransitionsPerMove) || maxPhaseTransitionsPerMove < 0)
-  ) {
-    throw new RangeError(`maxPhaseTransitionsPerMove must be a non-negative safe integer, received ${String(maxPhaseTransitionsPerMove)}`);
+  const runtime = coreOptions?.executionRuntime ?? createMoveExecutionRuntime(options, coreOptions?.phaseTransitionBudget);
+  if (coreOptions?.executionRuntime !== undefined) {
+    validatedMaxPhaseTransitionsPerMove(options);
   }
-  // A compound move is one logical execution; nested applyMoveCore calls must reuse
-  // this exact budget object rather than allocating a fresh counter per recursion.
-  const phaseTransitionBudget = coreOptions?.phaseTransitionBudget ?? (
-    maxPhaseTransitionsPerMove === undefined
-      ? undefined
-      : { remaining: maxPhaseTransitionsPerMove }
-  );
-  const executionPolicy = toMoveExecutionPolicy(phaseTransitionBudget);
   const shared: SharedMoveExecutionContext = {
     adjacencyGraph,
     runtimeTableIndex,
-    collector,
-    ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
-    ...(executionPolicy === undefined ? {} : { executionPolicy }),
+    collector: runtime.collector,
+    ...(runtime.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: runtime.phaseTransitionBudget }),
+    ...(runtime.executionPolicy === undefined ? {} : { executionPolicy: runtime.executionPolicy }),
   };
 
   const executed = executeMoveAction(def, state, move, options, coreOptions, shared);
@@ -742,7 +777,8 @@ const applyMoveCore = (
       def,
       turnFlowResult.state,
       lifecycleAndAdvanceLog,
-      executionPolicy,
+      runtime.executionPolicy,
+      runtime.collector,
     )
     : turnFlowResult.state;
 
@@ -754,8 +790,8 @@ const applyMoveCore = (
   return {
     state: stateWithHash,
     triggerFirings: [...executed.triggerFirings, ...turnFlowResult.traceEntries, ...lifecycleAndAdvanceLog],
-    warnings: collector.warnings,
-    ...(collector.trace !== null ? { effectTrace: collector.trace } : {}),
+    warnings: runtime.collector.warnings,
+    ...(runtime.collector.trace !== null ? { effectTrace: runtime.collector.trace } : {}),
   };
 };
 
@@ -811,6 +847,7 @@ const applySimultaneousSubmission = (
   move: Move,
   options?: ExecutionOptions,
 ): ApplyMoveResult => {
+  validatedMaxPhaseTransitionsPerMove(options);
   if (move.compound !== undefined) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.SIMULTANEOUS_SUBMISSION_COMPOUND_UNSUPPORTED);
   }
@@ -874,9 +911,7 @@ const applySimultaneousSubmission = (
       pendingCount: Object.keys(pending).length,
     },
   ];
-  const warnings: Array<ApplyMoveResult['warnings'][number]> = [];
-  const effectTraceEntries: Array<NonNullable<ApplyMoveResult['effectTrace']>[number]> | undefined =
-    options?.trace === true ? [] : undefined;
+  const commitRuntime = createMoveExecutionRuntime(options);
 
   for (const player of orderedPlayers) {
     const submission = pending[String(player)];
@@ -894,14 +929,11 @@ const applySimultaneousSubmission = (
       {
         skipValidation: true,
         skipAdvanceToDecisionPoint: true,
+        executionRuntime: commitRuntime,
       },
     );
     committedState = applied.state;
     triggerFirings.push(...applied.triggerFirings);
-    warnings.push(...applied.warnings);
-    if (effectTraceEntries !== undefined && applied.effectTrace !== undefined) {
-      effectTraceEntries.push(...applied.effectTrace);
-    }
   }
 
   const resetState: GameState = {
@@ -916,7 +948,7 @@ const applySimultaneousSubmission = (
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
   const progressedState = options?.advanceToDecisionPoint === false
     ? resetState
-    : advanceToDecisionPoint(def, resetState, lifecycleAndAdvanceLog);
+    : advanceToDecisionPoint(def, resetState, lifecycleAndAdvanceLog, commitRuntime.executionPolicy, commitRuntime.collector);
   const finalState = {
     ...progressedState,
     stateHash: computeFullHash(table, progressedState),
@@ -925,8 +957,8 @@ const applySimultaneousSubmission = (
   return {
     state: finalState,
     triggerFirings: [...triggerFirings, ...lifecycleAndAdvanceLog],
-    warnings,
-    ...(effectTraceEntries === undefined ? {} : { effectTrace: effectTraceEntries }),
+    warnings: commitRuntime.collector.warnings,
+    ...(commitRuntime.collector.trace === null ? {} : { effectTrace: commitRuntime.collector.trace }),
   };
 };
 

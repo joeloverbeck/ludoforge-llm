@@ -113,6 +113,13 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     if (nextValue === currentValue) {
       return { state: ctx.state, rng: ctx.rng };
     }
+    emitTrace(ctx.collector, {
+      kind: 'varChange',
+      scope: 'global',
+      varName: variableName,
+      oldValue: currentValue,
+      newValue: nextValue,
+    });
 
     return {
       state: {
@@ -177,6 +184,14 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
   if (nextValue === currentValue) {
     return { state: ctx.state, rng: ctx.rng };
   }
+  emitTrace(ctx.collector, {
+    kind: 'varChange',
+    scope: 'perPlayer',
+    player: playerId,
+    varName: variableName,
+    oldValue: currentValue,
+    newValue: nextValue,
+  });
 
   return {
     state: {
@@ -299,6 +314,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   emitTrace(ctx.collector, {
     kind: 'varChange',
     scope: 'perPlayer',
+    player: playerId,
     varName: variableName,
     oldValue: currentValue,
     newValue: nextValue,

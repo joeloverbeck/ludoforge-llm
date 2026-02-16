@@ -22,13 +22,17 @@ LudoForge-LLM is a system for evolving board games using LLMs. LLMs produce **St
 
 ## Status
 
-Active development. The core engine (kernel, compiler, agents, simulator) is implemented and tested. The primary test-case game is **Fire in the Lake (FITL)** — a 4-faction COIN-series wargame being encoded as a fully playable GameSpecDoc. FITL event card encoding and game definition generation are complete.
+Active development. The core engine (kernel, compiler, agents, simulator) is implemented and tested. Two test-case games validate the engine:
+
+1. **Fire in the Lake (FITL)** — a 4-faction COIN-series wargame. Event card encoding and game definition generation are complete. Remaining work: rules refinement (option matrix, monsoon effects, etc.) and E2E validation.
+2. **Texas Hold'em** — a no-limit poker tournament (2-10 players). Added as a second game to stress-test engine-agnosticism with hidden information, betting, and player elimination. Spec 33 is active.
 
 - **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), plus FITL specs 15-28, 30, 32
-- **Active specs**: 29 (FITL event card encoding), 31 (FITL E2E tests and validation)
+- **Active specs**: 29 (FITL event card encoding), 31 (FITL E2E tests and validation), 33 (Texas Hold'em kernel primitives, GameSpecDoc & tournament)
+- **Active tickets**: FITLRULES2-001 through 006 (FITL rules refinement — data-only YAML changes)
 - **Not yet started**: 11 (evaluator/degeneracy), 12 (CLI), 13 (mechanic bundle IR), 14 (evolution pipeline)
-- **Codebase size**: ~117 source files, ~204 test files, ~31K LoC
-- Design spec: `brainstorming/executable-board-game-kernel-cnl-rulebook.md`
+- **Codebase size**: ~155 source files, ~255 test files, ~39K LoC
+- **Design specs**: `brainstorming/executable-board-game-kernel-cnl-rulebook.md`, `brainstorming/texas-hold-em-rules.md`
 
 ## Tech Stack
 
@@ -52,7 +56,7 @@ Five source modules under `src/`, plus supporting directories:
 | `src/sim/` | Simulation runner, trace logging, state delta engine |
 | `src/cli/` | Developer commands (stub — not yet implemented) |
 | `schemas/` | JSON Schemas for GameDef, Trace, EvalReport (top-level, not under `src/`) |
-| `data/` | Optional game reference artifacts and fixtures (not required at runtime) |
+| `data/` | Optional game reference artifacts and fixtures — `data/games/fire-in-the-lake/` and `data/games/texas-holdem/` (not required at runtime) |
 
 ### Core Design Constraints
 
@@ -80,21 +84,28 @@ The kernel operates on ASTs for conditions, effects, and references. Core types:
 npm run build                        # TypeScript compilation (tsc)
 npm run clean                        # Remove dist/ for fresh build
 
+# Schema artifacts
+npm run schema:artifacts:generate    # Regenerate JSON Schema artifacts from types
+npm run schema:artifacts:check       # Verify schema artifacts are up to date (runs in pretest)
+
 # Test (runs against compiled JS in dist/)
 npm test                             # Auto-builds via pretest, then unit + integration
 npm run test:unit                    # Unit tests only
 npm run test:integration             # Integration tests only
 npm run test:e2e                     # E2E tests only
 npm run test:all                     # Unit + integration + e2e
+npm run test:single -- dist/test/unit/kernel.test.js  # Build + run single test
 
-# Single test file (run against dist/)
-node --test dist/test/unit/kernel.test.js
+# Single test file (manual — must build first)
+npm run build && node --test dist/test/unit/kernel.test.js
 
 # Lint & Typecheck
 npm run lint                         # ESLint
 npm run lint:fix                     # ESLint with autofix
 npm run typecheck                    # tsc --noEmit
 ```
+
+**Important**: Tests run against compiled JS in `dist/`. If running `node --test` directly (without `npm test`), run `npm run build` first so `dist/` is up to date.
 
 ## Project Structure
 
@@ -129,6 +140,7 @@ test/
 - **Property tests** (quickcheck style): applyMove never produces invalid var bounds, tokens never duplicate across zones, legalMoves pass preconditions, no crash on random play for N turns
 - **Golden tests**: known Game Spec -> expected JSON, known seed trace -> expected output
 - **FITL game-rule tests**: compile `data/games/fire-in-the-lake/*.md` via `compileProductionSpec()` from `test/helpers/production-spec-helpers.ts`. Do NOT create separate fixture files for FITL profiles, events, or special activities. Foundation fixtures (`fitl-foundation-inline-assets.md`, `fitl-foundation-coup-victory-inline-assets.md`) are kept for engine-level testing with minimal setups.
+- **Texas Hold'em tests**: compile `data/games/texas-holdem/*.md` similarly. Texas Hold'em serves as the engine-agnosticism validation game — tests should confirm that no FITL-specific logic leaks into the kernel.
 
 ## Coding Conventions
 
@@ -145,9 +157,17 @@ test/
 Commit subjects should be short and imperative. Common patterns in this repo:
 - `docs: add Spec 12 — CLI`
 - `Implemented CORTYPSCHVAL-008`
-- `Added linting.`
+- `Implemented ENGINEAGNO-007.`
 
 When modifying specs or tickets, verify cross-spec references and ensure roadmap and individual specs do not conflict.
+
+## Pull Request Guidelines
+
+PRs should include:
+- A clear summary of changed files and why
+- Linked issue/spec section when applicable
+- Confirmation that references, numbering, and terminology are consistent across affected specs
+- Test plan with verification steps
 
 ## Skill Invocation (MANDATORY)
 

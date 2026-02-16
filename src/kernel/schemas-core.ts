@@ -447,8 +447,16 @@ export const EffectTraceEntrySchema = z.union([
       kind: z.literal('varChange'),
       scope: z.union([z.literal('global'), z.literal('perPlayer')]),
       varName: StringSchema,
-      oldValue: NumberSchema,
-      newValue: NumberSchema,
+      oldValue: z.union([NumberSchema, BooleanSchema]),
+      newValue: z.union([NumberSchema, BooleanSchema]),
+      player: IntegerSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('lifecycleEvent'),
+      eventType: z.union([z.literal('phaseEnter'), z.literal('phaseExit'), z.literal('turnStart'), z.literal('turnEnd')]),
+      phase: StringSchema.optional(),
     })
     .strict(),
   z

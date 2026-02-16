@@ -6,7 +6,7 @@ import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { terminalResult } from './terminal.js';
-import type { GameDef, GameState, TriggerLogEntry } from './types.js';
+import type { ExecutionCollector, GameDef, GameState, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 
 const firstPhaseId = (def: GameDef): GameState['currentPhase'] => {
@@ -74,6 +74,7 @@ export const advancePhase = (
   state: GameState,
   triggerLogCollector?: TriggerLogEntry[],
   policy?: MoveExecutionPolicy,
+  collector?: ExecutionCollector,
 ): GameState => {
   const phases = def.turnStructure.phases;
   const currentPhaseIndex = phases.findIndex((phase) => phase.id === state.currentPhase);
@@ -85,7 +86,7 @@ export const advancePhase = (
     );
   }
 
-  let nextState = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector, policy);
+  let nextState = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector, policy, collector);
   const isLastPhase = currentPhaseIndex === phases.length - 1;
 
   if (!isLastPhase) {
@@ -102,10 +103,10 @@ export const advancePhase = (
       ...nextState,
       currentPhase: nextPhase.id,
     });
-    return dispatchLifecycleEvent(def, nextState, { type: 'phaseEnter', phase: nextPhase.id }, triggerLogCollector, policy);
+    return dispatchLifecycleEvent(def, nextState, { type: 'phaseEnter', phase: nextPhase.id }, triggerLogCollector, policy, collector);
   }
 
-  nextState = dispatchLifecycleEvent(def, nextState, { type: 'turnEnd' }, triggerLogCollector, policy);
+  nextState = dispatchLifecycleEvent(def, nextState, { type: 'turnEnd' }, triggerLogCollector, policy, collector);
   const turnFlowLifecycle = applyTurnFlowCardBoundary(def, nextState);
   nextState = turnFlowLifecycle.state;
   const boundaryDurations = resolveBoundaryDurationsAtTurnEnd(turnFlowLifecycle.traceEntries);
@@ -121,7 +122,7 @@ export const advancePhase = (
     rng: expiry.rng.state,
   };
   for (const emittedEvent of expiry.emittedEvents) {
-    nextState = dispatchLifecycleEvent(def, nextState, emittedEvent, triggerLogCollector, policy);
+    nextState = dispatchLifecycleEvent(def, nextState, emittedEvent, triggerLogCollector, policy, collector);
   }
   if (triggerLogCollector !== undefined) {
     triggerLogCollector.push(...turnFlowLifecycle.traceEntries);
@@ -137,8 +138,8 @@ export const advancePhase = (
       currentPhase: initialPhase,
     }),
   );
-  const afterTurnStart = dispatchLifecycleEvent(def, rolledState, { type: 'turnStart' }, triggerLogCollector, policy);
-  return dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, triggerLogCollector, policy);
+  const afterTurnStart = dispatchLifecycleEvent(def, rolledState, { type: 'turnStart' }, triggerLogCollector, policy, collector);
+  return dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, triggerLogCollector, policy, collector);
 };
 
 export const advanceToDecisionPoint = (
@@ -146,6 +147,7 @@ export const advanceToDecisionPoint = (
   state: GameState,
   triggerLogCollector?: TriggerLogEntry[],
   policy?: MoveExecutionPolicy,
+  collector?: ExecutionCollector,
 ): GameState => {
   const phaseCount = def.turnStructure.phases.length;
   if (phaseCount <= 0) {
@@ -168,7 +170,7 @@ export const advanceToDecisionPoint = (
       );
     }
 
-    nextState = advancePhase(def, nextState, triggerLogCollector, policy);
+    nextState = advancePhase(def, nextState, triggerLogCollector, policy, collector);
     advances += 1;
   }
 

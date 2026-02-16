@@ -1373,6 +1373,134 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports nextInOrderByCondition source/anchor mismatch for string source and numeric anchor', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$next',
+              domain: {
+                query: 'nextInOrderByCondition',
+                source: { query: 'enums', values: ['preflop', 'flop', 'turn', 'river'] },
+                from: 1,
+                bind: '$street',
+                where: { op: '==', left: { ref: 'binding', name: '$street' }, right: 'river' },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_NEXT_IN_ORDER_SOURCE_ANCHOR_SHAPE_MISMATCH' &&
+          diag.path === 'actions[0].params[0].domain.from' &&
+          diag.severity === 'error',
+      ),
+    );
+  });
+
+  it('reports nextInOrderByCondition source/anchor mismatch for numeric source and string anchor', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$next',
+              domain: {
+                query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 'dealer-button',
+                bind: '$seatCandidate',
+                where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_NEXT_IN_ORDER_SOURCE_ANCHOR_SHAPE_MISMATCH' &&
+          diag.path === 'actions[0].params[0].domain.from' &&
+          diag.severity === 'error',
+      ),
+    );
+  });
+
+  it('accepts shape-compatible nextInOrderByCondition source/anchor pairs', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$next',
+              domain: {
+                query: 'nextInOrderByCondition',
+                source: { query: 'enums', values: ['preflop', 'flop', 'turn', 'river'] },
+                from: 'turn',
+                bind: '$street',
+                where: { op: '==', left: { ref: 'binding', name: '$street' }, right: 'river' },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'DOMAIN_NEXT_IN_ORDER_SOURCE_ANCHOR_SHAPE_MISMATCH'),
+      false,
+    );
+  });
+
+  it('does not report source/anchor mismatch when nextInOrderByCondition source shape is unknown', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$next',
+              domain: {
+                query: 'nextInOrderByCondition',
+                source: { query: 'binding', name: '$runtimeOrder' },
+                from: 1,
+                bind: '$candidate',
+                where: { op: '==', left: { ref: 'binding', name: '$candidate' }, right: 2 },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'DOMAIN_NEXT_IN_ORDER_SOURCE_ANCHOR_SHAPE_MISMATCH'),
+      false,
+    );
+  });
+
   it('reports non-canonical nextInOrderByCondition.bind', () => {
     const base = createValidGameDef();
     const def = {

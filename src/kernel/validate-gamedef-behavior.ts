@@ -18,6 +18,13 @@ import {
   validatePlayerSelector,
   validateZoneSelector,
 } from './validate-gamedef-structure.js';
+import {
+  areSourceAndAnchorShapesCompatible,
+  dedupeQueryRuntimeShapes,
+  dedupeValueRuntimeShapes,
+  inferQueryRuntimeShapes,
+  inferValueRuntimeShapes,
+} from './query-shape-inference.js';
 
 function validateStaticMapSpaceSelector(
   diagnostics: Diagnostic[],
@@ -217,46 +224,6 @@ const tryStaticStringValue = (valueExpr: ValueExpr): string | null => {
 
   return null;
 };
-
-type QueryRuntimeShape = 'token' | 'object' | 'number' | 'string' | 'unknown';
-
-function dedupeShapes(shapes: readonly QueryRuntimeShape[]): readonly QueryRuntimeShape[] {
-  return [...new Set(shapes)];
-}
-
-function inferQueryRuntimeShapes(query: OptionsQuery): readonly QueryRuntimeShape[] {
-  switch (query.query) {
-    case 'concat': {
-      const nested = query.sources.flatMap((source) => inferQueryRuntimeShapes(source));
-      return dedupeShapes(nested);
-    }
-    case 'tokensInZone':
-    case 'tokensInMapSpaces':
-    case 'tokensInAdjacentZones':
-      return ['token'];
-    case 'assetRows':
-      return ['object'];
-    case 'intsInRange':
-    case 'intsInVarRange':
-    case 'players':
-      return ['number'];
-    case 'nextInOrderByCondition':
-      return inferQueryRuntimeShapes(query.source);
-    case 'enums':
-    case 'globalMarkers':
-    case 'zones':
-    case 'mapSpaces':
-    case 'adjacentZones':
-    case 'connectedZones':
-      return ['string'];
-    case 'binding':
-      return ['unknown'];
-    default: {
-      const _exhaustive: never = query;
-      return _exhaustive;
-    }
-  }
-}
 
 const validateMarkerStateLiteral = (
   diagnostics: Diagnostic[],
@@ -519,7 +486,7 @@ export const validateOptionsQuery = (
       const knownShapes = query.sources
         .flatMap((source) => inferQueryRuntimeShapes(source))
         .filter((shape) => shape !== 'unknown');
-      const uniqueKnownShapes = dedupeShapes(knownShapes);
+      const uniqueKnownShapes = dedupeQueryRuntimeShapes(knownShapes);
       if (uniqueKnownShapes.length > 1) {
         diagnostics.push({
           code: 'DOMAIN_QUERY_SHAPE_MISMATCH',
@@ -667,6 +634,30 @@ export const validateOptionsQuery = (
     case 'nextInOrderByCondition': {
       validateOptionsQuery(diagnostics, query.source, `${path}.source`, context);
       validateValueExpr(diagnostics, query.from, `${path}.from`, context);
+      const sourceShapes = inferQueryRuntimeShapes(query.source);
+      if (!sourceShapes.includes('unknown')) {
+        const uniqueSourceShapes = dedupeQueryRuntimeShapes(sourceShapes);
+        if (uniqueSourceShapes.length === 1) {
+          const sourceShape = uniqueSourceShapes[0]!;
+          const anchorShapes = inferValueRuntimeShapes(query.from, context);
+          if (!anchorShapes.includes('unknown')) {
+            const uniqueAnchorShapes = dedupeValueRuntimeShapes(anchorShapes);
+            if (
+              uniqueAnchorShapes.length > 0 &&
+              !uniqueAnchorShapes.some((anchorShape) => areSourceAndAnchorShapesCompatible(sourceShape, anchorShape))
+            ) {
+              diagnostics.push({
+                code: 'DOMAIN_NEXT_IN_ORDER_SOURCE_ANCHOR_SHAPE_MISMATCH',
+                path: `${path}.from`,
+                severity: 'error',
+                message: `nextInOrderByCondition source item shape "${sourceShape}" is incompatible with anchor "from" shape [${uniqueAnchorShapes.join(', ')}].`,
+                suggestion:
+                  'Use an anchor value expression whose runtime shape matches the source item shape, or change the source query.',
+              });
+            }
+          }
+        }
+      }
       if (!isCanonicalBindingIdentifier(query.bind)) {
         diagnostics.push({
           code: 'DOMAIN_NEXT_IN_ORDER_BIND_INVALID',

@@ -14,13 +14,13 @@ import {
   type Agent,
   type GameState,
   type GameTrace,
-  type Move,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { advancePhase, advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { runGame } from '../../src/sim/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { replayScript, type ReplayExecutedStep } from '../helpers/replay-harness.js';
 
 interface BlindScheduleRow {
   readonly level: number;
@@ -28,13 +28,6 @@ interface BlindScheduleRow {
   readonly bb: number;
   readonly ante: number;
   readonly handsUntilNext: number;
-}
-
-interface ReplayStep {
-  readonly before: GameState;
-  readonly legal: readonly Move[];
-  readonly move: Move;
-  readonly after: GameState;
 }
 
 const FULL_TOURNAMENT_MAX_TURNS = 10_000;
@@ -96,21 +89,16 @@ const replayTrace = (
   def: ValidatedGameDef,
   trace: GameTrace,
   playerCount: number,
-): { readonly initial: GameState; readonly final: GameState; readonly steps: readonly ReplayStep[] } => {
-  let state = initialState(def, trace.seed, playerCount);
-  const initial = state;
-  const steps: ReplayStep[] = [];
-
-  for (const log of trace.moves) {
-    const legal = legalMoves(def, state);
-    const applied = applyMove(def, state, log.move);
-    steps.push({ before: state, legal, move: log.move, after: applied.state });
-    assert.equal(applied.state.stateHash, log.stateHash, 'replayed state hash mismatch');
-    state = applied.state;
-  }
-
-  return { initial, final: state, steps };
-};
+): { readonly initial: GameState; readonly final: GameState; readonly steps: readonly ReplayExecutedStep[] } =>
+  replayScript({
+    def,
+    initialState: initialState(def, trace.seed, playerCount),
+    script: trace.moves.map((entry) => ({
+      move: entry.move,
+      expectedStateHash: entry.stateHash,
+    })),
+    keyVars: ['pot', 'blindLevel', 'handsPlayed', 'activePlayers'],
+  });
 
 const loadTrace = (
   def: ValidatedGameDef,

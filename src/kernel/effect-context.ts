@@ -17,6 +17,10 @@ import type {
 export const DEFAULT_MAX_EFFECT_OPS = 10_000;
 export type EffectInterpreterMode = 'execution' | 'discovery';
 
+export interface PhaseTransitionBudget {
+  remaining: number;
+}
+
 export interface EffectContext {
   readonly def: GameDef;
   readonly adjacencyGraph: AdjacencyGraph;
@@ -35,6 +39,7 @@ export interface EffectContext {
   readonly maxQueryResults?: number;
   readonly mode?: EffectInterpreterMode;
   readonly collector: ExecutionCollector;
+  readonly phaseTransitionBudget?: PhaseTransitionBudget;
 }
 
 export interface EffectResult {

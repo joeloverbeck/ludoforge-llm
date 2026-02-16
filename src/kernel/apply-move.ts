@@ -10,7 +10,7 @@ import { toApplyMoveIllegalReason } from './legality-outcome.js';
 import { decideApplyMovePipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { evalCondition } from './eval-condition.js';
-import { evalQuery } from './eval-query.js';
+import { evalQuery, isInIntRangeDomain } from './eval-query.js';
 import type { EvalContext } from './eval-context.js';
 import {
   buildMoveRuntimeBindings,
@@ -291,6 +291,15 @@ const validateDeclaredActionParams = (action: ActionDef, evalCtx: EvalContext, m
     if (selectedNormalized === null) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION);
     }
+    if (
+      param.domain.query === 'intsInRange'
+      || param.domain.query === 'intsInVarRange'
+    ) {
+      if (!isInIntRangeDomain(param.domain, selectedNormalized, evalCtx)) {
+        throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION);
+      }
+      continue;
+    }
     const domainValues = evalQuery(param.domain, evalCtx);
     const inDomain = domainValues.some((candidate) => {
       const normalizedCandidate = normalizeMoveParamValue(candidate);
@@ -430,6 +439,16 @@ const applyMoveCore = (
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = buildRuntimeTableIndex(def);
   const collector = createCollector(options);
+  const maxPhaseTransitionsPerMove = options?.maxPhaseTransitionsPerMove;
+  if (
+    maxPhaseTransitionsPerMove !== undefined
+    && (!Number.isSafeInteger(maxPhaseTransitionsPerMove) || maxPhaseTransitionsPerMove < 0)
+  ) {
+    throw new RangeError(`maxPhaseTransitionsPerMove must be a non-negative safe integer, received ${String(maxPhaseTransitionsPerMove)}`);
+  }
+  const phaseTransitionBudget = maxPhaseTransitionsPerMove === undefined
+    ? undefined
+    : { remaining: maxPhaseTransitionsPerMove };
   const baseBindings = runtimeBindingsForMove(move, undefined);
   const executionPlayer = validated?.executionPlayer ?? (
     move.freeOperation === true
@@ -462,6 +481,7 @@ const applyMoveCore = (
     bindings: baseBindings,
     moveParams: move.params,
     collector,
+    ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   } as const;
 
@@ -658,9 +678,12 @@ const applyMoveCore = (
     ? { state: consumeTurnFlowFreeOperationGrant(def, stateWithRng, move), traceEntries: [] as readonly TriggerLogEntry[] }
     : applyTurnFlowEligibilityAfterMove(def, stateWithRng, move);
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
-  const progressedState = coreOptions?.skipAdvanceToDecisionPoint === true
-    ? turnFlowResult.state
-    : advanceToDecisionPoint(def, turnFlowResult.state, lifecycleAndAdvanceLog);
+  const shouldAdvanceToDecisionPoint =
+    coreOptions?.skipAdvanceToDecisionPoint !== true
+    && options?.advanceToDecisionPoint !== false;
+  const progressedState = shouldAdvanceToDecisionPoint
+    ? advanceToDecisionPoint(def, turnFlowResult.state, lifecycleAndAdvanceLog)
+    : turnFlowResult.state;
 
   const stateWithHash = {
     ...progressedState,
@@ -830,7 +853,9 @@ const applySimultaneousSubmission = (
     },
   };
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
-  const progressedState = advanceToDecisionPoint(def, resetState, lifecycleAndAdvanceLog);
+  const progressedState = options?.advanceToDecisionPoint === false
+    ? resetState
+    : advanceToDecisionPoint(def, resetState, lifecycleAndAdvanceLog);
   const finalState = {
     ...progressedState,
     stateHash: computeFullHash(table, progressedState),

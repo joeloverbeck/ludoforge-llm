@@ -8,6 +8,7 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
+  legalMoves,
   type ActionDef,
   type EffectAST,
   type GameDef,
@@ -204,6 +205,157 @@ describe('applyMove() __freeOperation binding (KERDECSEQMOD-004)', () => {
     const moveFree: Move = { actionId: asActionId('trainOp'), params: {}, freeOperation: true };
     const resultFree = applyMove(def, state, moveFree);
     assert.equal(resultFree.state.globalVars['resources'], 10);
+  });
+});
+
+describe('applyMove() declared int-range params respect full domain membership', () => {
+  it('accepts intsInRange values excluded from legalMoves by maxResults downsampling', () => {
+    const action: ActionDef = {
+      id: asActionId('preciseIntRange'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [
+        {
+          name: 'amount',
+          domain: {
+            query: 'intsInRange',
+            min: 1,
+            max: 10,
+            step: 2,
+            maxResults: 3,
+          },
+        },
+      ],
+      pre: null,
+      cost: [],
+      effects: [{ setVar: { scope: 'global', var: 'resources', value: { ref: 'binding', name: 'amount' } } }],
+      limits: [],
+    };
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState({ globalVars: { resources: 10 } });
+
+    const enumerated = legalMoves(def, state)
+      .filter((move) => move.actionId === asActionId('preciseIntRange'))
+      .map((move) => Number(move.params.amount));
+    assert.deepEqual(enumerated, [1, 3, 10]);
+    assert.equal(enumerated.includes(9), false);
+
+    const applied = applyMove(def, state, { actionId: asActionId('preciseIntRange'), params: { amount: 9 } });
+    assert.equal(Number(applied.state.globalVars.resources), 9);
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('preciseIntRange'), params: { amount: 11 } }),
+      (error: unknown) =>
+        error instanceof Error
+        && 'reason' in error
+        && (error as { reason?: unknown }).reason === ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION,
+    );
+  });
+
+  it('accepts intsInVarRange values excluded from legalMoves by maxResults downsampling', () => {
+    const action: ActionDef = {
+      id: asActionId('preciseVarRange'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [
+        {
+          name: 'amount',
+          domain: {
+            query: 'intsInVarRange',
+            var: 'resources',
+            min: 1,
+            max: 10,
+            step: 2,
+            maxResults: 3,
+          },
+        },
+      ],
+      pre: null,
+      cost: [],
+      effects: [{ setVar: { scope: 'global', var: 'resources', value: { ref: 'binding', name: 'amount' } } }],
+      limits: [],
+    };
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState({ globalVars: { resources: 50 } });
+
+    const enumerated = legalMoves(def, state)
+      .filter((move) => move.actionId === asActionId('preciseVarRange'))
+      .map((move) => Number(move.params.amount));
+    assert.deepEqual(enumerated, [1, 3, 10]);
+    assert.equal(enumerated.includes(9), false);
+
+    const applied = applyMove(def, state, { actionId: asActionId('preciseVarRange'), params: { amount: 9 } });
+    assert.equal(Number(applied.state.globalVars.resources), 9);
+  });
+});
+
+describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
+  it('caps phase transition effects within a single move when configured', () => {
+    const action: ActionDef = {
+      id: asActionId('jump'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        { gotoPhaseExact: { phase: asPhaseId('street1') } },
+        { gotoPhaseExact: { phase: asPhaseId('street2') } },
+      ],
+      limits: [],
+    };
+    const def = makeBaseDef({ actions: [action] }) as GameDef;
+    const cappedDef: GameDef = {
+      ...def,
+      turnStructure: {
+        phases: [
+          { id: asPhaseId('main') },
+          { id: asPhaseId('street1') },
+          { id: asPhaseId('street2') },
+        ],
+      },
+    };
+    const state = makeBaseState({ currentPhase: asPhaseId('main') });
+
+    const uncapped = applyMove(
+      cappedDef,
+      state,
+      { actionId: asActionId('jump'), params: {} },
+      { advanceToDecisionPoint: false },
+    );
+    assert.equal(uncapped.state.currentPhase, 'street2');
+
+    const capped = applyMove(
+      cappedDef,
+      state,
+      { actionId: asActionId('jump'), params: {} },
+      { maxPhaseTransitionsPerMove: 1, advanceToDecisionPoint: false },
+    );
+    assert.equal(capped.state.currentPhase, 'street1');
+  });
+
+  it('rejects invalid maxPhaseTransitionsPerMove values', () => {
+    const action: ActionDef = {
+      id: asActionId('noop'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('noop'), params: {} }, { maxPhaseTransitionsPerMove: -1 }),
+      /maxPhaseTransitionsPerMove must be a non-negative safe integer/,
+    );
   });
 });
 

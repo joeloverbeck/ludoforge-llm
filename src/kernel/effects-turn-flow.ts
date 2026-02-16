@@ -42,6 +42,29 @@ const makeUniqueGrantId = (
   return candidate;
 };
 
+const consumePhaseTransitionBudget = (ctx: EffectContext, effectType: string): boolean => {
+  const budget = ctx.phaseTransitionBudget;
+  if (budget === undefined) {
+    return true;
+  }
+  if (!Number.isSafeInteger(budget.remaining) || budget.remaining < 0) {
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'phaseTransitionBudget.remaining must be a non-negative integer', {
+      effectType,
+      remaining: budget.remaining,
+    });
+  }
+  if (budget.remaining <= 0) {
+    return false;
+  }
+  budget.remaining -= 1;
+  return true;
+};
+
+const lifecycleBudgetOptions = (ctx: EffectContext):
+  | { phaseTransitionBudget: NonNullable<EffectContext['phaseTransitionBudget']> }
+  | undefined =>
+  ctx.phaseTransitionBudget === undefined ? undefined : { phaseTransitionBudget: ctx.phaseTransitionBudget };
+
 export const applyGrantFreeOperation = (
   effect: Extract<EffectAST, { readonly grantFreeOperation: unknown }>,
   ctx: EffectContext,
@@ -172,12 +195,15 @@ export const applyGotoPhaseExact = (
   if (ctx.state.currentPhase === targetPhase) {
     return { state: ctx.state, rng: ctx.rng };
   }
+  if (!consumePhaseTransitionBudget(ctx, 'gotoPhaseExact')) {
+    return { state: ctx.state, rng: ctx.rng };
+  }
   const targetPhaseId = phaseIds[targetPhaseIndex]!;
 
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  });
+  }, undefined, lifecycleBudgetOptions(ctx));
   const enteredState = resetPhaseUsage({
     ...exitedState,
     currentPhase: targetPhaseId,
@@ -185,7 +211,7 @@ export const applyGotoPhaseExact = (
   const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhaseId,
-  });
+  }, undefined, lifecycleBudgetOptions(ctx));
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -196,6 +222,9 @@ export const applyAdvancePhase = (
   _effect: Extract<EffectAST, { readonly advancePhase: unknown }>,
   ctx: EffectContext,
 ): EffectResult => {
+  if (!consumePhaseTransitionBudget(ctx, 'advancePhase')) {
+    return { state: ctx.state, rng: ctx.rng };
+  }
   const nextState = advancePhase(ctx.def, ctx.state);
   return {
     state: nextState,
@@ -226,12 +255,15 @@ export const applyPushInterruptPhase = (
   effect: Extract<EffectAST, { readonly pushInterruptPhase: unknown }>,
   ctx: EffectContext,
 ): EffectResult => {
+  if (!consumePhaseTransitionBudget(ctx, 'pushInterruptPhase')) {
+    return { state: ctx.state, rng: ctx.rng };
+  }
   const targetPhase = resolvePhaseId(ctx, effect.pushInterruptPhase.phase, 'pushInterruptPhase', 'phase');
   const resumePhase = resolvePhaseId(ctx, effect.pushInterruptPhase.resumePhase, 'pushInterruptPhase', 'resumePhase');
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  });
+  }, undefined, lifecycleBudgetOptions(ctx));
   const nextStack = [
     ...(exitedState.interruptPhaseStack ?? []),
     { phase: targetPhase, resumePhase },
@@ -244,7 +276,7 @@ export const applyPushInterruptPhase = (
   const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhase,
-  });
+  }, undefined, lifecycleBudgetOptions(ctx));
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -255,6 +287,9 @@ export const applyPopInterruptPhase = (
   _effect: Extract<EffectAST, { readonly popInterruptPhase: unknown }>,
   ctx: EffectContext,
 ): EffectResult => {
+  if (!consumePhaseTransitionBudget(ctx, 'popInterruptPhase')) {
+    return { state: ctx.state, rng: ctx.rng };
+  }
   const activeStack = ctx.state.interruptPhaseStack ?? [];
   if (activeStack.length === 0) {
     throw effectRuntimeError('turnFlowRuntimeValidationFailed', 'popInterruptPhase requires a non-empty interruptPhaseStack', {
@@ -265,7 +300,7 @@ export const applyPopInterruptPhase = (
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  });
+  }, undefined, lifecycleBudgetOptions(ctx));
   const stackAfterExit = exitedState.interruptPhaseStack ?? [];
   const resumeFrame = stackAfterExit.at(-1);
   if (resumeFrame === undefined) {
@@ -292,7 +327,7 @@ export const applyPopInterruptPhase = (
   const finalState = dispatchLifecycleEvent(ctx.def, resumedState, {
     type: 'phaseEnter',
     phase: resumeFrame.resumePhase,
-  });
+  }, undefined, lifecycleBudgetOptions(ctx));
   return {
     state: finalState,
     rng: { state: finalState.rng },

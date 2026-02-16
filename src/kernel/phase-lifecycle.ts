@@ -4,14 +4,20 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { createCollector } from './execution-collector.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
 import type { EffectAST, GameDef, GameState, TriggerEvent, TriggerLogEntry } from './types.js';
+import type { PhaseTransitionBudget } from './effect-context.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
+
+interface LifecycleDispatchOptions {
+  readonly phaseTransitionBudget?: PhaseTransitionBudget;
+}
 
 export const dispatchLifecycleEvent = (
   def: GameDef,
   state: GameState,
   event: TriggerEvent,
   triggerLogCollector?: TriggerLogEntry[],
+  options?: LifecycleDispatchOptions,
 ): GameState => {
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = buildRuntimeTableIndex(def);
@@ -30,6 +36,7 @@ export const dispatchLifecycleEvent = (
       bindings: {},
       moveParams: {},
       collector: createCollector(),
+      ...(options?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: options.phaseTransitionBudget }),
     });
     currentState = effectResult.state;
     currentRng = effectResult.rng;

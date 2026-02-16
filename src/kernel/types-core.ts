@@ -658,6 +658,8 @@ export type EffectTraceEntry =
 
 export interface ExecutionOptions {
   readonly trace?: boolean;
+  readonly advanceToDecisionPoint?: boolean;
+  readonly maxPhaseTransitionsPerMove?: number;
 }
 
 export interface ExecutionCollector {

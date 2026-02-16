@@ -154,6 +154,17 @@ function evaluateIntRangeDomain(
   return deterministicDownsample(candidates, new Set([min, max, ...alwaysInclude]), maxResults);
 }
 
+function isWithinResolvedIntRangeDomain(
+  selected: number,
+  min: number,
+  max: number,
+): boolean {
+  if (!Number.isSafeInteger(selected) || selected < min || selected > max) {
+    return false;
+  }
+  return true;
+}
+
 function resolveDeclaredIntVarBounds(
   query: Extract<OptionsQuery, { readonly query: 'intsInVarRange' }>,
   ctx: EvalContext,
@@ -788,4 +799,39 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       return _exhaustive;
     }
   }
+}
+
+export function isInIntRangeDomain(
+  query: Extract<OptionsQuery, { readonly query: 'intsInRange' | 'intsInVarRange' }>,
+  selected: unknown,
+  ctx: EvalContext,
+): boolean {
+  if (typeof selected !== 'number' || !Number.isSafeInteger(selected)) {
+    return false;
+  }
+
+  if (query.query === 'intsInRange') {
+    const min = resolveIntDomainBound(query.min, ctx);
+    const max = resolveIntDomainBound(query.max, ctx);
+    if (min === null || max === null || min > max) {
+      return false;
+    }
+    return isWithinResolvedIntRangeDomain(selected, min, max);
+  }
+
+  const declaredBounds = resolveDeclaredIntVarBounds(query, ctx);
+  if (declaredBounds === null) {
+    return false;
+  }
+  const derivedMin = query.min === undefined ? declaredBounds.min : resolveIntDomainBound(query.min, ctx);
+  const derivedMax = query.max === undefined ? declaredBounds.max : resolveIntDomainBound(query.max, ctx);
+  if (derivedMin === null || derivedMax === null) {
+    return false;
+  }
+  const min = Math.max(declaredBounds.min, derivedMin);
+  const max = Math.min(declaredBounds.max, derivedMax);
+  if (min > max) {
+    return false;
+  }
+  return isWithinResolvedIntRangeDomain(selected, min, max);
 }

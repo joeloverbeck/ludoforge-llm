@@ -233,6 +233,21 @@ describe('texas hand mechanics integration', () => {
     assert.equal(bbOptionActions.has('call'), false, 'call must be illegal when streetBet == currentBet');
   });
 
+  it('accepts exact no-limit raise amounts outside enumerated raise buckets for action-by-action log replay', () => {
+    const def = compileTexasDef();
+    const state = advanceToDecisionPoint(def, initialState(def, 53, 2));
+
+    const listedRaiseAmounts = legalMoves(def, state)
+      .filter((move) => String(move.actionId) === 'raise')
+      .map((move) => Number(move.params.raiseAmount));
+    assert.equal(listedRaiseAmounts.includes(250), false, '250 should be outside the enumerated raise list');
+
+    const raised = applyMove(def, state, { actionId: 'raise' as Move['actionId'], params: { raiseAmount: 250 } }).state;
+    assert.equal(Number(raised.globalVars.currentBet), 250);
+    assert.equal(Number(raised.perPlayerVars[String(state.activePlayer)]?.streetBet ?? -1), 250);
+    assert.equal(Number(raised.globalVars.pot), 270);
+  });
+
   it('does not keep preflop BB option open after a raised pot is fully called', () => {
     const def = compileTexasDef();
     let state = advanceToDecisionPoint(def, initialState(def, 77, 3));

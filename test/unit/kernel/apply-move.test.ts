@@ -245,6 +245,14 @@ describe('applyMove() declared int-range params respect full domain membership',
     assert.equal(Number(applied.state.globalVars.resources), 9);
 
     assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('preciseIntRange'), params: { amount: 8 } }),
+      (error: unknown) =>
+        error instanceof Error
+        && 'reason' in error
+        && (error as { reason?: unknown }).reason === ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION,
+    );
+
+    assert.throws(
       () => applyMove(def, state, { actionId: asActionId('preciseIntRange'), params: { amount: 11 } }),
       (error: unknown) =>
         error instanceof Error
@@ -288,6 +296,52 @@ describe('applyMove() declared int-range params respect full domain membership',
 
     const applied = applyMove(def, state, { actionId: asActionId('preciseVarRange'), params: { amount: 9 } });
     assert.equal(Number(applied.state.globalVars.resources), 9);
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('preciseVarRange'), params: { amount: 8 } }),
+      (error: unknown) =>
+        error instanceof Error
+        && 'reason' in error
+        && (error as { reason?: unknown }).reason === ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION,
+    );
+  });
+
+  it('accepts intsInRange endpoints and alwaysInclude values that are outside step sequence', () => {
+    const action: ActionDef = {
+      id: asActionId('contractShape'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [
+        {
+          name: 'amount',
+          domain: {
+            query: 'intsInRange',
+            min: 1,
+            max: 10,
+            step: 3,
+            alwaysInclude: [8],
+          },
+        },
+      ],
+      pre: null,
+      cost: [],
+      effects: [{ setVar: { scope: 'global', var: 'resources', value: { ref: 'binding', name: 'amount' } } }],
+      limits: [],
+    };
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState({ globalVars: { resources: 10 } });
+
+    assert.equal(Number(applyMove(def, state, { actionId: asActionId('contractShape'), params: { amount: 10 } }).state.globalVars.resources), 10);
+    assert.equal(Number(applyMove(def, state, { actionId: asActionId('contractShape'), params: { amount: 8 } }).state.globalVars.resources), 8);
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('contractShape'), params: { amount: 5 } }),
+      (error: unknown) =>
+        error instanceof Error
+        && 'reason' in error
+        && (error as { reason?: unknown }).reason === ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION,
+    );
   });
 });
 

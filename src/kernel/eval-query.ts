@@ -63,6 +63,50 @@ function buildIntRangeCandidates(
   return [...values].sort((left, right) => left - right);
 }
 
+interface ResolvedIntRangeContract {
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  readonly alwaysInclude: ReadonlySet<number>;
+}
+
+function resolveIntRangeContract(
+  min: number,
+  max: number,
+  controls: {
+    readonly step?: NumericValueExpr;
+    readonly alwaysInclude?: readonly NumericValueExpr[];
+  },
+  ctx: EvalContext,
+): ResolvedIntRangeContract | null {
+  if (min > max) {
+    return null;
+  }
+
+  const step = controls.step === undefined ? 1 : resolveIntDomainBound(controls.step, ctx);
+  if (step === null || step <= 0) {
+    return null;
+  }
+
+  const alwaysInclude = new Set<number>();
+  for (const entry of controls.alwaysInclude ?? []) {
+    const value = resolveIntDomainBound(entry, ctx);
+    if (value === null) {
+      return null;
+    }
+    if (value >= min && value <= max) {
+      alwaysInclude.add(value);
+    }
+  }
+
+  return {
+    min,
+    max,
+    step,
+    alwaysInclude,
+  };
+}
+
 function deterministicDownsample(
   candidates: readonly number[],
   required: ReadonlySet<number>,
@@ -115,24 +159,9 @@ function evaluateIntRangeDomain(
   },
   ctx: EvalContext,
 ): readonly number[] {
-  if (min > max) {
+  const contract = resolveIntRangeContract(min, max, controls, ctx);
+  if (contract === null) {
     return [];
-  }
-
-  const step = controls.step === undefined ? 1 : resolveIntDomainBound(controls.step, ctx);
-  if (step === null || step <= 0) {
-    return [];
-  }
-
-  const alwaysInclude: number[] = [];
-  for (const entry of controls.alwaysInclude ?? []) {
-    const value = resolveIntDomainBound(entry, ctx);
-    if (value === null) {
-      return [];
-    }
-    if (value >= min && value <= max) {
-      alwaysInclude.push(value);
-    }
   }
 
   let maxResults: number | undefined;
@@ -147,22 +176,25 @@ function evaluateIntRangeDomain(
     maxResults = resolvedMaxResults;
   }
 
-  const candidates = buildIntRangeCandidates(min, max, step, alwaysInclude);
+  const alwaysInclude = [...contract.alwaysInclude];
+  const candidates = buildIntRangeCandidates(contract.min, contract.max, contract.step, alwaysInclude);
   if (maxResults === undefined) {
     return candidates;
   }
-  return deterministicDownsample(candidates, new Set([min, max, ...alwaysInclude]), maxResults);
+  return deterministicDownsample(candidates, new Set([contract.min, contract.max, ...alwaysInclude]), maxResults);
 }
 
 function isWithinResolvedIntRangeDomain(
   selected: number,
-  min: number,
-  max: number,
+  contract: ResolvedIntRangeContract,
 ): boolean {
-  if (!Number.isSafeInteger(selected) || selected < min || selected > max) {
+  if (!Number.isSafeInteger(selected) || selected < contract.min || selected > contract.max) {
     return false;
   }
-  return true;
+  if (selected === contract.min || selected === contract.max || contract.alwaysInclude.has(selected)) {
+    return true;
+  }
+  return (selected - contract.min) % contract.step === 0;
 }
 
 function resolveDeclaredIntVarBounds(
@@ -813,10 +845,14 @@ export function isInIntRangeDomain(
   if (query.query === 'intsInRange') {
     const min = resolveIntDomainBound(query.min, ctx);
     const max = resolveIntDomainBound(query.max, ctx);
-    if (min === null || max === null || min > max) {
+    if (min === null || max === null) {
       return false;
     }
-    return isWithinResolvedIntRangeDomain(selected, min, max);
+    const contract = resolveIntRangeContract(min, max, query, ctx);
+    if (contract === null) {
+      return false;
+    }
+    return isWithinResolvedIntRangeDomain(selected, contract);
   }
 
   const declaredBounds = resolveDeclaredIntVarBounds(query, ctx);
@@ -830,8 +866,9 @@ export function isInIntRangeDomain(
   }
   const min = Math.max(declaredBounds.min, derivedMin);
   const max = Math.min(declaredBounds.max, derivedMax);
-  if (min > max) {
+  const contract = resolveIntRangeContract(min, max, query, ctx);
+  if (contract === null) {
     return false;
   }
-  return isWithinResolvedIntRangeDomain(selected, min, max);
+  return isWithinResolvedIntRangeDomain(selected, contract);
 }

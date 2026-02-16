@@ -9,6 +9,7 @@ import {
   createCollector,
   createRng,
   initialState,
+  isEvalErrorCode,
   type EffectAST,
   type GameDef,
 } from '../../src/kernel/index.js';
@@ -28,7 +29,7 @@ const loadEscalateMacro = (): { readonly def: GameDef; readonly effects: readonl
   assert.ok(escalateBlinds);
 
   return {
-    def,
+    def: structuredClone(def),
     effects: [escalateBlinds as EffectAST],
   };
 };
@@ -129,5 +130,49 @@ describe('texas blind escalation macro', () => {
     assert.equal(atBoundary.smallBlind, 75);
     assert.equal(atBoundary.bigBlind, 150);
     assert.equal(atBoundary.ante, 15);
+  });
+
+  it('fails explicitly when next blind level row is missing from schedule data', () => {
+    const { def, effects } = loadEscalateMacro();
+    const malformedDef: GameDef = {
+      ...def,
+      runtimeDataAssets: (def.runtimeDataAssets ?? []).map((asset) => {
+        if (asset.id !== 'tournament-standard') {
+          return asset;
+        }
+
+        const payload = asset.payload as { readonly settings?: { readonly blindSchedule?: readonly Record<string, unknown>[] } };
+        const schedule = payload.settings?.blindSchedule;
+        if (schedule === undefined) {
+          return asset;
+        }
+
+        return {
+          ...asset,
+          payload: {
+            ...payload,
+            settings: {
+              ...(payload.settings ?? {}),
+              blindSchedule: schedule.filter((row) => row['level'] !== 1),
+            },
+          },
+        };
+      }),
+    };
+
+    assert.throws(
+      () =>
+        runEscalate(malformedDef, effects, {
+          handsPlayed: 10,
+          blindLevel: 0,
+          smallBlind: 10,
+          bigBlind: 20,
+          ante: 0,
+        }),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_CARDINALITY_NO_MATCH') &&
+        error.context?.tableId === 'tournament-standard::settings.blindSchedule' &&
+        error.context?.actualMatchCount === 0,
+    );
   });
 });

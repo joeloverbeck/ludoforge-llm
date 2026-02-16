@@ -3255,6 +3255,22 @@
                 ],
                 "additionalProperties": false
               }
+            },
+            "cardinality": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "many"
+                },
+                {
+                  "type": "string",
+                  "const": "exactlyOne"
+                },
+                {
+                  "type": "string",
+                  "const": "zeroOrOne"
+                }
+              ]
             }
           },
           "required": [

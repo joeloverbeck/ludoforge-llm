@@ -11,6 +11,7 @@ import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } f
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import {
+  runtimeTableCardinalityEvalError,
   runtimeTableContractMissingEvalError,
   runtimeTableFieldUndeclaredEvalError,
   runtimeTableIssueEvalError,
@@ -347,7 +348,7 @@ function evalAssetRowsQuery(
   }
 
   const resolvedPredicates = resolveAssetRowPredicates(wherePredicates, ctx);
-  return filterRowsByPredicates(rows, resolvedPredicates, {
+  const matchedRows = filterRowsByPredicates(rows, resolvedPredicates, {
     getFieldValue: (row, field) => row[field],
     context: (predicate, row) => ({
       domain: 'assetRow',
@@ -356,6 +357,16 @@ function evalAssetRowsQuery(
       availableFields: Object.keys(row).sort(),
     }),
   });
+
+  const cardinality = query.cardinality ?? 'many';
+  if (cardinality === 'exactlyOne' && matchedRows.length !== 1) {
+    throw runtimeTableCardinalityEvalError({ query }, query.tableId, cardinality, matchedRows.length, query.where ?? []);
+  }
+  if (cardinality === 'zeroOrOne' && matchedRows.length > 1) {
+    throw runtimeTableCardinalityEvalError({ query }, query.tableId, cardinality, matchedRows.length, query.where ?? []);
+  }
+
+  return matchedRows;
 }
 
 export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly QueryResult[] {

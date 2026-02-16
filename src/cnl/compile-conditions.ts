@@ -1,6 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { isNumericValueExpr } from '../kernel/numeric-value-expr.js';
 import type {
+  AssetRowsCardinality,
   AssetRowPredicate,
   ConditionAST,
   NumericValueExpr,
@@ -577,7 +578,25 @@ export function lowerQueryNode(
     }
     case 'assetRows': {
       if (typeof source.tableId !== 'string' || source.tableId.trim() === '') {
-        return missingCapability(path, 'assetRows query', source, ['{ query: "assetRows", tableId: string, where?: [...] }']);
+        return missingCapability(path, 'assetRows query', source, [
+          '{ query: "assetRows", tableId: string, where?: [...], cardinality?: "many"|"exactlyOne"|"zeroOrOne" }',
+        ]);
+      }
+
+      let cardinality: AssetRowsCardinality | undefined;
+      if (source.cardinality !== undefined) {
+        if (
+          source.cardinality !== 'many' &&
+          source.cardinality !== 'exactlyOne' &&
+          source.cardinality !== 'zeroOrOne'
+        ) {
+          return missingCapability(`${path}.cardinality`, 'assetRows cardinality', source.cardinality, [
+            'many',
+            'exactlyOne',
+            'zeroOrOne',
+          ]);
+        }
+        cardinality = source.cardinality;
       }
 
       if (source.where !== undefined) {
@@ -593,6 +612,7 @@ export function lowerQueryNode(
             query: 'assetRows',
             tableId: source.tableId,
             where: loweredWhere.value,
+            ...(cardinality === undefined ? {} : { cardinality }),
           },
           diagnostics: loweredWhere.diagnostics,
         };
@@ -602,6 +622,7 @@ export function lowerQueryNode(
         value: {
           query: 'assetRows',
           tableId: source.tableId,
+          ...(cardinality === undefined ? {} : { cardinality }),
         },
         diagnostics: [],
       };

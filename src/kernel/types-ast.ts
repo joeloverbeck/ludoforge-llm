@@ -134,6 +134,8 @@ export interface AssetRowPredicate {
   readonly value: ValueExpr | readonly (string | number | boolean)[];
 }
 
+export type AssetRowsCardinality = 'many' | 'exactlyOne' | 'zeroOrOne';
+
 export type OptionsQuery =
   | { readonly query: 'concat'; readonly sources: readonly [OptionsQuery, ...OptionsQuery[]] }
   | { readonly query: 'tokensInZone'; readonly zone: ZoneRef; readonly filter?: readonly TokenFilterPredicate[] }
@@ -141,6 +143,7 @@ export type OptionsQuery =
       readonly query: 'assetRows';
       readonly tableId: string;
       readonly where?: readonly AssetRowPredicate[];
+      readonly cardinality?: AssetRowsCardinality;
     }
   | {
       readonly query: 'tokensInMapSpaces';

@@ -432,6 +432,115 @@ describe('evalQuery', () => {
     );
   });
 
+  it('enforces assetRows cardinality modes for strict single-row invariants', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: {
+              blindSchedule: {
+                levels: [
+                  { level: 1, phase: 'early', smallBlind: 10 },
+                  { level: 2, phase: 'early', smallBlind: 20 },
+                  { level: 3, phase: 'mid', smallBlind: 40 },
+                ],
+              },
+            },
+          },
+        ],
+        tableContracts: [
+          {
+            id: 'tournament-standard::blindSchedule.levels',
+            assetId: 'tournament-standard',
+            tablePath: 'blindSchedule.levels',
+            fields: [
+              { field: 'level', type: 'int' },
+              { field: 'phase', type: 'string' },
+              { field: 'smallBlind', type: 'int' },
+            ],
+          },
+        ],
+      },
+    });
+
+    const exactlyOne = evalQuery(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        cardinality: 'exactlyOne',
+        where: [{ field: 'level', op: 'eq', value: 3 }],
+      },
+      ctx,
+    );
+    assert.equal(exactlyOne.length, 1);
+    assert.equal((exactlyOne[0] as Record<string, unknown>).smallBlind, 40);
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'assetRows',
+            tableId: 'tournament-standard::blindSchedule.levels',
+            cardinality: 'exactlyOne',
+            where: [{ field: 'level', op: 'eq', value: 99 }],
+          },
+          ctx,
+        ),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_CARDINALITY_NO_MATCH') &&
+        error.context?.tableId === 'tournament-standard::blindSchedule.levels' &&
+        error.context?.actualMatchCount === 0,
+    );
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'assetRows',
+            tableId: 'tournament-standard::blindSchedule.levels',
+            cardinality: 'exactlyOne',
+            where: [{ field: 'phase', op: 'eq', value: 'early' }],
+          },
+          ctx,
+        ),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_CARDINALITY_MULTIPLE_MATCHES') &&
+        error.context?.tableId === 'tournament-standard::blindSchedule.levels' &&
+        error.context?.actualMatchCount === 2,
+    );
+
+    const zeroOrOne = evalQuery(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        cardinality: 'zeroOrOne',
+        where: [{ field: 'level', op: 'eq', value: 99 }],
+      },
+      ctx,
+    );
+    assert.deepEqual(zeroOrOne, []);
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'assetRows',
+            tableId: 'tournament-standard::blindSchedule.levels',
+            cardinality: 'zeroOrOne',
+            where: [{ field: 'phase', op: 'eq', value: 'early' }],
+          },
+          ctx,
+        ),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_CARDINALITY_MULTIPLE_MATCHES') &&
+        error.context?.tableId === 'tournament-standard::blindSchedule.levels' &&
+        error.context?.actualMatchCount === 2,
+    );
+  });
+
   it('applies zones filter.condition and composes it with owner filtering', () => {
     const ctx = makeCtx({
       bindings: {

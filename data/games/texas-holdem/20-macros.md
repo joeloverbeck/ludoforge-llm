@@ -1339,6 +1339,7 @@ effectMacros:
                             over:
                               query: assetRows
                               tableId: settings.blindSchedule
+                              cardinality: exactlyOne
                               where:
                                 - field: level
                                   op: eq

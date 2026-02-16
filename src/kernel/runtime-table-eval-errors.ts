@@ -177,3 +177,33 @@ export function runtimeTableFieldTypeEvalError(
     value,
   });
 }
+
+export function runtimeTableCardinalityEvalError(
+  surface: SurfaceContext,
+  tableId: string,
+  cardinality: 'exactlyOne' | 'zeroOrOne',
+  matchCount: number,
+  where: unknown,
+): EvalError {
+  if (cardinality === 'exactlyOne' && matchCount === 0) {
+    return dataAssetEvalError('DATA_ASSET_CARDINALITY_NO_MATCH', 'Runtime table query required exactly one row but matched zero rows', {
+      ...surface,
+      tableId,
+      cardinality,
+      where,
+      actualMatchCount: matchCount,
+    });
+  }
+
+  return dataAssetEvalError(
+    'DATA_ASSET_CARDINALITY_MULTIPLE_MATCHES',
+    `Runtime table query cardinality "${cardinality}" does not allow ${matchCount} matched rows`,
+    {
+      ...surface,
+      tableId,
+      cardinality,
+      where,
+      actualMatchCount: matchCount,
+    },
+  );
+}

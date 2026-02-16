@@ -372,6 +372,7 @@ describe('AST and selector schemas', () => {
   it('parses assetRows query with and without where predicates', () => {
     const queries: OptionsQuery[] = [
       { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+      { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels', cardinality: 'exactlyOne' },
       {
         query: 'assetRows',
         tableId: 'tournament-standard::blindSchedule.levels',
@@ -402,6 +403,13 @@ describe('AST and selector schemas', () => {
       where: [{ field: 'phase', op: 'in', value: ['early', { bad: true }] }],
     });
     assert.equal(invalidSetElement.success, false);
+
+    const invalidCardinality = OptionsQuerySchema.safeParse({
+      query: 'assetRows',
+      tableId: 'tournament-standard::blindSchedule.levels',
+      cardinality: 'single',
+    });
+    assert.equal(invalidCardinality.success, false);
   });
 
   it('parses tokensInZone query with compound filter (multiple predicates)', () => {

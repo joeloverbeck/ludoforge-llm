@@ -148,6 +148,7 @@ describe('texas hold\'em spec structure', () => {
     assert.equal(serialized.includes('"field":"sb"'), true);
     assert.equal(serialized.includes('"field":"bb"'), true);
     assert.equal(serialized.includes('"field":"ante"'), true);
+    assert.equal(serialized.includes('"cardinality":"exactlyOne"'), true);
 
     assert.equal(/"var":"smallBlind","value":\d+/.test(serialized), false);
     assert.equal(/"var":"bigBlind","value":\d+/.test(serialized), false);

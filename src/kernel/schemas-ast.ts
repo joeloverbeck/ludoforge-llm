@@ -104,6 +104,7 @@ optionsQuerySchemaInternal = z.union([
       query: z.literal('assetRows'),
       tableId: StringSchema,
       where: z.array(AssetRowPredicateSchema).optional(),
+      cardinality: z.union([z.literal('many'), z.literal('exactlyOne'), z.literal('zeroOrOne')]).optional(),
     })
     .strict(),
   z

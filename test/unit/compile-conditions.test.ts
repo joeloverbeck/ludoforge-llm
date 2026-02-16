@@ -530,6 +530,27 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers assetRows query cardinality when provided', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        cardinality: 'exactlyOne',
+        where: [{ field: 'level', op: 'eq', value: 2 }],
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'assetRows',
+      tableId: 'tournament-standard::blindSchedule.levels',
+      cardinality: 'exactlyOne',
+      where: [{ field: 'level', op: 'eq', value: 2 }],
+    });
+  });
+
   it('lowers tokensInZone query with string literal token filters', () => {
     const result = lowerQueryNode(
       {

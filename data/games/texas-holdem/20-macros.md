@@ -781,6 +781,37 @@ effectMacros:
           to: community:none
           count: { param: count }
 
+  - id: reset-reopen-state-for-live-seats
+    params: []
+    exports: []
+    effects:
+      - forEach:
+          bind: $player
+          over: { query: players }
+          effects:
+            - if:
+                when: { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
+                then:
+                  - setVar: { scope: pvar, player: { chosen: '$player' }, var: actedSinceLastFullRaise, value: false }
+
+  - id: reset-reopen-state-for-eligible-actors
+    params: []
+    exports: []
+    effects:
+      - forEach:
+          bind: $player
+          over: { query: players }
+          effects:
+            - if:
+                when:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }, right: false }
+                    - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: handActive }, right: true }
+                    - { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: allIn }, right: false }
+                then:
+                  - setVar: { scope: pvar, player: { chosen: '$player' }, var: actedSinceLastFullRaise, value: false }
+
   - id: mark-preflop-big-blind-acted
     params: []
     exports: []
@@ -832,6 +863,7 @@ effectMacros:
                   args:
                     - { op: '==', left: { ref: gvar, var: handPhase }, right: 0 }
                     - { op: '==', left: { ref: gvar, var: preflopBigBlindOptionOpen }, right: true }
+                    - { op: '==', left: { ref: gvar, var: currentBet }, right: { ref: gvar, var: bigBlind } }
                     - op: '>'
                       left:
                         aggregate:

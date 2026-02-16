@@ -32,6 +32,7 @@ perPlayerVars:
   - { name: totalBet, type: int, init: 0, min: 0, max: 1000000 }
   - { name: handActive, type: boolean, init: true }
   - { name: allIn, type: boolean, init: false }
+  - { name: actedSinceLastFullRaise, type: boolean, init: false }
   - { name: eliminated, type: boolean, init: false }
   - { name: seatIndex, type: int, init: 0, min: 0, max: 9 }
   - { name: showdownScore, type: int, init: 0, min: 0, max: 999999999999 }

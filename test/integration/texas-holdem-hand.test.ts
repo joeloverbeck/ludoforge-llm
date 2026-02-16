@@ -57,6 +57,17 @@ const applyAction = (def: GameDef, state: GameState, actionId: string): GameStat
   return applyMove(def, state, move).state;
 };
 
+const applyActionMatching = (
+  def: GameDef,
+  state: GameState,
+  actionId: string,
+  predicate: (move: Move) => boolean,
+): GameState => {
+  const move = legalMoves(def, state).find((candidate) => String(candidate.actionId) === actionId && predicate(candidate));
+  assert.ok(move, `expected ${actionId} with matching params to be legal in phase=${state.currentPhase}`);
+  return applyMove(def, state, move).state;
+};
+
 const applyPreferredAction = (def: GameDef, state: GameState, priorities: readonly string[]): { readonly state: GameState; readonly actionId: string } => {
   const moves = legalMoves(def, state);
   assert.equal(moves.length > 0, true, `expected legal move in phase=${state.currentPhase}`);
@@ -180,6 +191,56 @@ describe('texas hand mechanics integration', () => {
     assert.equal(state.currentPhase, 'preflop');
     assert.equal(bbOptionActions.has('check'), true, 'BB should have check option when no raise occurs preflop');
     assert.equal(bbOptionActions.has('call'), false, 'call must be illegal when streetBet == currentBet');
+  });
+
+  it('does not keep preflop BB option open after a raised pot is fully called', () => {
+    const def = compileTexasDef();
+    let state = advanceToDecisionPoint(def, initialState(def, 77, 3));
+    const bbSeat = Number(state.globalVars.preflopBigBlindSeat);
+
+    state = applyActionMatching(def, state, 'raise', (move) => Number(move.params.raiseAmount) === 40);
+    state = applyAction(def, state, 'call');
+    state = applyAction(def, state, 'call');
+
+    const actions = actionIds(def, state);
+    const illegalBbOptionLoop =
+      state.currentPhase === 'preflop'
+      && Number(state.globalVars.handsPlayed ?? 0) === 0
+      && Number(state.activePlayer) === bbSeat
+      && actions.has('check');
+    assert.equal(illegalBbOptionLoop, false, 'raised pots must not loop into a same-hand BB check-option decision');
+  });
+
+  it('reopens betting after a full raise and restores raise rights to prior actors', () => {
+    const def = compileTexasDef();
+    let state = advanceToDecisionPoint(def, initialState(def, 77, 3));
+
+    state = applyActionMatching(def, state, 'raise', (move) => Number(move.params.raiseAmount) === 40);
+    state = applyAction(def, state, 'call');
+    state = applyActionMatching(def, state, 'raise', (move) => Number(move.params.raiseAmount) === 60);
+
+    const reopenActions = actionIds(def, state);
+    assert.equal(Number(state.activePlayer), 0, 'action should return to the prior actor after a full raise');
+    assert.equal(reopenActions.has('raise'), true, 'full raises should reopen raise rights');
+    assert.equal(reopenActions.has('call'), true);
+    assert.equal(reopenActions.has('fold'), true);
+  });
+
+  it('does not reopen raise rights after a short all-in raise from a remaining actor', () => {
+    const def = compileTexasDef();
+    let state = advanceToDecisionPoint(def, initialState(def, 77, 3));
+
+    state = applyActionMatching(def, state, 'raise', (move) => Number(move.params.raiseAmount) === 40);
+    state = applyAction(def, state, 'call');
+    state = mutateStacks(state, { '2': 30 });
+    state = applyAction(def, state, 'allIn');
+
+    const nonReopenActions = actionIds(def, state);
+    assert.equal(Number(state.activePlayer), 0, 'action should return to the prior actor after short all-in');
+    assert.equal(Number(state.globalVars.currentBet), 50, 'short all-in still increases the table current bet');
+    assert.equal(nonReopenActions.has('raise'), false, 'short all-in should not reopen raise rights');
+    assert.equal(nonReopenActions.has('call'), true);
+    assert.equal(nonReopenActions.has('fold'), true);
   });
 
   it('resolves early fold hands without traversing flop/turn/river dealing', () => {

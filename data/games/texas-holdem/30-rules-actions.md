@@ -14,6 +14,7 @@ setup:
         - setVar: { scope: pvar, player: { chosen: $player }, var: eliminated, value: false }
         - setVar: { scope: pvar, player: { chosen: $player }, var: handActive, value: true }
         - setVar: { scope: pvar, player: { chosen: $player }, var: allIn, value: false }
+        - setVar: { scope: pvar, player: { chosen: $player }, var: actedSinceLastFullRaise, value: false }
 
 turnStructure:
   phases:
@@ -42,6 +43,7 @@ turnStructure:
                   then:
                     - setVar: { scope: pvar, player: { chosen: $player }, var: handActive, value: true }
                     - setVar: { scope: pvar, player: { chosen: $player }, var: allIn, value: false }
+                    - setVar: { scope: pvar, player: { chosen: $player }, var: actedSinceLastFullRaise, value: false }
         - moveAll: { from: community:none, to: muck:none }
         - moveAll: { from: burn:none, to: muck:none }
         - forEach:
@@ -107,6 +109,7 @@ turnStructure:
         - macro: deal-community
           args:
             count: 3
+        - macro: reset-reopen-state-for-live-seats
         - forEach:
             bind: $player
             over: { query: players }
@@ -135,6 +138,7 @@ turnStructure:
         - macro: deal-community
           args:
             count: 1
+        - macro: reset-reopen-state-for-live-seats
         - forEach:
             bind: $player
             over: { query: players }
@@ -163,6 +167,7 @@ turnStructure:
         - macro: deal-community
           args:
             count: 1
+        - macro: reset-reopen-state-for-live-seats
         - forEach:
             bind: $player
             over: { query: players }
@@ -269,6 +274,7 @@ actions:
       - moveAll:
           from: { zoneExpr: { concat: ['hand:', { ref: activePlayer }] } }
           to: muck:none
+      - setVar: { scope: pvar, player: actor, var: actedSinceLastFullRaise, value: true }
       - macro: mark-preflop-big-blind-acted
       - macro: betting-round-completion
       - macro: advance-after-betting
@@ -287,6 +293,7 @@ actions:
         - { op: '==', left: { ref: pvar, player: actor, var: streetBet }, right: { ref: gvar, var: currentBet } }
     cost: []
     effects:
+      - setVar: { scope: pvar, player: actor, var: actedSinceLastFullRaise, value: true }
       - macro: mark-preflop-big-blind-acted
       - macro: betting-round-completion
       - macro: advance-after-betting
@@ -316,6 +323,7 @@ actions:
           when: { op: '==', left: { ref: pvar, player: actor, var: chipStack }, right: 0 }
           then:
             - setVar: { scope: pvar, player: actor, var: allIn, value: true }
+      - setVar: { scope: pvar, player: actor, var: actedSinceLastFullRaise, value: true }
       - macro: mark-preflop-big-blind-acted
       - macro: betting-round-completion
       - macro: advance-after-betting
@@ -337,6 +345,7 @@ actions:
         - { op: '==', left: { ref: pvar, player: actor, var: handActive }, right: true }
         - { op: '==', left: { ref: pvar, player: actor, var: allIn }, right: false }
         - { op: '>', left: { ref: pvar, player: actor, var: chipStack }, right: 0 }
+        - { op: '==', left: { ref: pvar, player: actor, var: actedSinceLastFullRaise }, right: false }
     cost: []
     effects:
       - let:
@@ -355,11 +364,12 @@ actions:
                 scope: global
                 var: lastRaiseSize
                 value: { op: '-', left: { ref: pvar, player: actor, var: streetBet }, right: { ref: binding, name: $prevCurrentBet } }
+      - macro: reset-reopen-state-for-eligible-actors
       - if:
           when: { op: '==', left: { ref: pvar, player: actor, var: chipStack }, right: 0 }
           then:
             - setVar: { scope: pvar, player: actor, var: allIn, value: true }
-      - setVar: { scope: global, var: bettingClosed, value: false }
+      - setVar: { scope: pvar, player: actor, var: actedSinceLastFullRaise, value: true }
       - macro: mark-preflop-big-blind-acted
       - macro: betting-round-completion
       - macro: advance-after-betting
@@ -376,28 +386,41 @@ actions:
         - { op: '==', left: { ref: pvar, player: actor, var: handActive }, right: true }
         - { op: '==', left: { ref: pvar, player: actor, var: allIn }, right: false }
         - { op: '>', left: { ref: pvar, player: actor, var: chipStack }, right: 0 }
+        - { op: '==', left: { ref: pvar, player: actor, var: actedSinceLastFullRaise }, right: false }
     cost: []
     effects:
       - let:
           bind: $prevCurrentBet
           value: { ref: gvar, var: currentBet }
           in:
-            - commitResource:
-                from: { scope: pvar, player: actor, var: chipStack }
-                to: { scope: global, var: pot }
-                amount: { ref: pvar, player: actor, var: chipStack }
-                actualBind: $allInPaid
-            - addVar: { scope: pvar, player: actor, var: streetBet, delta: { ref: binding, name: $allInPaid } }
-            - addVar: { scope: pvar, player: actor, var: totalBet, delta: { ref: binding, name: $allInPaid } }
-            - setVar: { scope: pvar, player: actor, var: allIn, value: true }
-            - if:
-                when: { op: '>', left: { ref: pvar, player: actor, var: streetBet }, right: { ref: binding, name: $prevCurrentBet } }
-                then:
-                  - setVar:
-                      scope: global
-                      var: lastRaiseSize
-                      value: { op: '-', left: { ref: pvar, player: actor, var: streetBet }, right: { ref: binding, name: $prevCurrentBet } }
-                  - setVar: { scope: global, var: currentBet, value: { ref: pvar, player: actor, var: streetBet } }
+            - let:
+                bind: $prevLastRaiseSize
+                value: { ref: gvar, var: lastRaiseSize }
+                in:
+                  - commitResource:
+                      from: { scope: pvar, player: actor, var: chipStack }
+                      to: { scope: global, var: pot }
+                      amount: { ref: pvar, player: actor, var: chipStack }
+                      actualBind: $allInPaid
+                  - addVar: { scope: pvar, player: actor, var: streetBet, delta: { ref: binding, name: $allInPaid } }
+                  - addVar: { scope: pvar, player: actor, var: totalBet, delta: { ref: binding, name: $allInPaid } }
+                  - setVar: { scope: pvar, player: actor, var: allIn, value: true }
+                  - if:
+                      when: { op: '>', left: { ref: pvar, player: actor, var: streetBet }, right: { ref: binding, name: $prevCurrentBet } }
+                      then:
+                        - setVar: { scope: global, var: currentBet, value: { ref: pvar, player: actor, var: streetBet } }
+                        - if:
+                            when:
+                              op: '>='
+                              left: { op: '-', left: { ref: pvar, player: actor, var: streetBet }, right: { ref: binding, name: $prevCurrentBet } }
+                              right: { ref: binding, name: $prevLastRaiseSize }
+                            then:
+                              - setVar:
+                                  scope: global
+                                  var: lastRaiseSize
+                                  value: { op: '-', left: { ref: pvar, player: actor, var: streetBet }, right: { ref: binding, name: $prevCurrentBet } }
+                              - macro: reset-reopen-state-for-eligible-actors
+      - setVar: { scope: pvar, player: actor, var: actedSinceLastFullRaise, value: true }
       - macro: mark-preflop-big-blind-acted
       - macro: betting-round-completion
       - macro: advance-after-betting

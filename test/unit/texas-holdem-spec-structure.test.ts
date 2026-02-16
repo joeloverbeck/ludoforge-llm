@@ -42,6 +42,8 @@ describe('texas hold\'em spec structure', () => {
         'find-next-to-act',
         'post-forced-bets-and-set-preflop-actor',
         'deal-community',
+        'reset-reopen-state-for-live-seats',
+        'reset-reopen-state-for-eligible-actors',
         'mark-preflop-big-blind-acted',
         'betting-round-completion',
         'advance-after-betting',
@@ -169,7 +171,7 @@ describe('texas hold\'em spec structure', () => {
     const gvars = compiled.gameDef!.globalVars;
     assert.deepEqual(
       pvars.map((variable) => variable.name),
-      ['chipStack', 'streetBet', 'totalBet', 'handActive', 'allIn', 'eliminated', 'seatIndex', 'showdownScore'],
+      ['chipStack', 'streetBet', 'totalBet', 'handActive', 'allIn', 'actedSinceLastFullRaise', 'eliminated', 'seatIndex', 'showdownScore'],
     );
     assert.deepEqual(
       gvars.map((variable) => variable.name),

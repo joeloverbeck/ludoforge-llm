@@ -62,7 +62,7 @@ This ticket should therefore focus on codifying the existing runtime contract an
 
 - Completion date: 2026-02-15
 - Actually changed:
-  - Added normative semantics document: `specs/32-binding-and-parameter-semantics.md`.
+  - Added normative semantics document: `docs/reference/binding-and-parameter-semantics.md`.
   - Centralized runtime move-binding materialization into `src/kernel/move-runtime-bindings.ts` and reused it in:
     - `src/kernel/apply-move.ts`
     - `src/kernel/legal-choices.ts`

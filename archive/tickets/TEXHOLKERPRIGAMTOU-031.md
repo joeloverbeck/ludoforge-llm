@@ -10,13 +10,13 @@
 
 1. `TEXHOLKERPRIGAMTOU-029` and `TEXHOLKERPRIGAMTOU-030` are already completed and archived; this ticket should not re-implement compiler dataflow or production-spec migration work.
 2. Definite-binding branch-merge guarantees are already enforced in compiler/runtime-adjacent tests (`test/unit/compile-bindings.test.ts`, `test/unit/binder-surface-registry.test.ts`, `test/integration/production-spec-strict-binding-regression.test.ts`).
-3. The main doc discrepancy is in `specs/32-binding-and-parameter-semantics.md`, which still states dynamic binder correctness is generally runtime-validated; this is now stale for statically knowable control-flow binding liveness.
+3. The main doc discrepancy is in `docs/reference/binding-and-parameter-semantics.md`, which still states dynamic binder correctness is generally runtime-validated; this is now stale for statically knowable control-flow binding liveness.
 4. `MISSING_BINDING` still exists as a low-level eval/runtime signal, but public runtime surfaces should project typed contract/illegal-move errors except for explicitly deferred discovery contexts.
 5. Scope should focus on contract alignment and regression gates, preserving the current game-agnostic architecture and avoiding compatibility aliases.
 
 ## 1) What needs to change / be added
 
-1. Update `specs/32-binding-and-parameter-semantics.md` (and only any truly related docs if needed) to make compile-time definite-binding guarantees normative for statically knowable control-flow cases.
+1. Update `docs/reference/binding-and-parameter-semantics.md` (and only any truly related docs if needed) to make compile-time definite-binding guarantees normative for statically knowable control-flow cases.
 2. Clarify runtime `MISSING_BINDING` classification boundaries: allowed for dynamic/deferred internal discovery and low-level eval helpers, but not as raw top-level public surface contract for statically knowable misses.
 3. Add/strengthen tests to guard both:
 - conditional-binding non-leakage across control-flow merges (as a quality gate)
@@ -44,7 +44,7 @@
 - Completion date: 2026-02-16.
 - What actually changed:
   - Reassessed and corrected ticket assumptions/scope before implementation, including archived dependency references and existing coverage from `TEXHOLKERPRIGAMTOU-029` and `TEXHOLKERPRIGAMTOU-030`.
-  - Updated `specs/32-binding-and-parameter-semantics.md` to make compile-time definite-binding/control-flow merge guarantees normative and to clarify `MISSING_BINDING` as dynamic/deferred/runtime-internal rather than statically knowable liveness validation.
+  - Updated `docs/reference/binding-and-parameter-semantics.md` to make compile-time definite-binding/control-flow merge guarantees normative and to clarify `MISSING_BINDING` as dynamic/deferred/runtime-internal rather than statically knowable liveness validation.
   - Added runtime contract guardrail tests in:
     - `test/unit/kernel/action-pipeline-predicates.test.ts`
     - `test/unit/action-executor-binding.test.ts`

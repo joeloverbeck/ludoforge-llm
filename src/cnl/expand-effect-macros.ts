@@ -1,11 +1,10 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import {
-  EFFECT_BINDER_SURFACES,
+  collectBinderSurfaceStringSites,
   collectDeclaredBinderCandidates,
-  rewriteDeclaredBindersInEffectNode,
-  rewriteKnownReferencersInEffectNode,
+  rewriteBinderSurfaceStringsInNode,
+  type StringSite,
 } from './binder-surface-registry.js';
-import { SUPPORTED_EFFECT_KINDS } from './effect-kind-registry.js';
 import type {
   EffectMacroDef,
   EffectMacroParamPrimitiveLiteral,
@@ -596,42 +595,6 @@ function rewriteBindingName(name: string, renameMap: ReadonlyMap<string, string>
   return rewriteBindingTemplate(name, renameMap);
 }
 
-interface StringSite {
-  readonly path: string;
-  readonly value: string;
-}
-
-function collectStringSitesAtPath(
-  node: unknown,
-  segments: readonly string[],
-  path: string,
-  into: StringSite[],
-): void {
-  if (segments.length === 0) {
-    if (typeof node === 'string') {
-      into.push({ path, value: node });
-    }
-    return;
-  }
-
-  const [segmentRaw, ...rest] = segments;
-  const segment = segmentRaw!;
-  if (segment === '*') {
-    if (!Array.isArray(node)) {
-      return;
-    }
-    for (let index = 0; index < node.length; index += 1) {
-      collectStringSitesAtPath(node[index], rest, `${path}.${index}`, into);
-    }
-    return;
-  }
-
-  if (!isRecord(node) || !(segment in node)) {
-    return;
-  }
-  collectStringSitesAtPath(node[segment], rest, `${path}.${segment}`, into);
-}
-
 function collectBindingBearingStringSites(node: unknown, path: string, into: StringSite[]): void {
   if (Array.isArray(node)) {
     for (let index = 0; index < node.length; index += 1) {
@@ -642,87 +605,7 @@ function collectBindingBearingStringSites(node: unknown, path: string, into: Str
   if (!isRecord(node)) {
     return;
   }
-
-  for (const effectKind of SUPPORTED_EFFECT_KINDS) {
-    const effectBody = node[effectKind];
-    if (!isRecord(effectBody)) {
-      continue;
-    }
-
-    const surface = EFFECT_BINDER_SURFACES[effectKind];
-    for (const declaredPath of surface.declaredBinderPaths) {
-      collectStringSitesAtPath(effectBody, declaredPath, `${path}.${effectKind}`, into);
-    }
-    for (const referencerPath of surface.bindingTemplateReferencerPaths) {
-      collectStringSitesAtPath(effectBody, referencerPath, `${path}.${effectKind}`, into);
-    }
-    for (const zoneSelectorPath of surface.zoneSelectorReferencerPaths) {
-      collectStringSitesAtPath(effectBody, zoneSelectorPath, `${path}.${effectKind}`, into);
-    }
-  }
-
-  if (node.ref === 'binding' && typeof node.name === 'string') {
-    into.push({ path: `${path}.name`, value: node.name });
-  }
-  if (node.ref === 'tokenProp' && typeof node.token === 'string') {
-    into.push({ path: `${path}.token`, value: node.token });
-  }
-  if (node.ref === 'tokenZone' && typeof node.token === 'string') {
-    into.push({ path: `${path}.token`, value: node.token });
-  }
-  if (node.ref === 'pvar' && isRecord(node.player) && typeof node.player.chosen === 'string') {
-    into.push({ path: `${path}.player.chosen`, value: node.player.chosen });
-  }
-  if (node.ref === 'zoneCount' && typeof node.zone === 'string') {
-    into.push({ path: `${path}.zone`, value: node.zone });
-  }
-  if (node.ref === 'zoneProp' && typeof node.zone === 'string') {
-    into.push({ path: `${path}.zone`, value: node.zone });
-  }
-  if (node.ref === 'markerState' && typeof node.space === 'string') {
-    into.push({ path: `${path}.space`, value: node.space });
-  }
-  if (node.query === 'binding' && typeof node.name === 'string') {
-    into.push({ path: `${path}.name`, value: node.name });
-  }
-  if (isRecord(node.aggregate) && typeof node.aggregate.bind === 'string') {
-    into.push({ path: `${path}.aggregate.bind`, value: node.aggregate.bind });
-  }
-  if (
-    (node.query === 'tokensInZone' ||
-      node.query === 'tokensInAdjacentZones' ||
-      node.query === 'adjacentZones' ||
-      node.query === 'connectedZones') &&
-    typeof node.zone === 'string'
-  ) {
-    into.push({ path: `${path}.zone`, value: node.zone });
-  }
-  if ((node.query === 'zones' || node.query === 'mapSpaces') && isRecord(node.filter) && isRecord(node.filter.owner) && typeof node.filter.owner.chosen === 'string') {
-    into.push({ path: `${path}.filter.owner.chosen`, value: node.filter.owner.chosen });
-  }
-  if (node.op === 'adjacent') {
-    if (typeof node.left === 'string') {
-      into.push({ path: `${path}.left`, value: node.left });
-    }
-    if (typeof node.right === 'string') {
-      into.push({ path: `${path}.right`, value: node.right });
-    }
-  }
-  if (node.op === 'connected') {
-    if (typeof node.from === 'string') {
-      into.push({ path: `${path}.from`, value: node.from });
-    }
-    if (typeof node.to === 'string') {
-      into.push({ path: `${path}.to`, value: node.to });
-    }
-  }
-  if (node.op === 'zonePropIncludes' && typeof node.zone === 'string') {
-    into.push({ path: `${path}.zone`, value: node.zone });
-  }
-
-  for (const [key, value] of Object.entries(node)) {
-    collectBindingBearingStringSites(value, `${path}.${key}`, into);
-  }
+  collectBinderSurfaceStringSites(node, path, into);
 }
 
 function validateInvocationIntegrity(
@@ -897,226 +780,26 @@ function rewriteBindings(
     return node;
   }
 
-  let rewrittenMacroArgsNode = rewriteTypedMacroInvocationArgs(node, index, renameMap);
-  rewrittenMacroArgsNode = rewriteKnownReferencersInEffectNode(
-    rewrittenMacroArgsNode,
-    (binding) => rewriteBindingTemplate(binding, renameMap),
-    (selector) => rewriteZoneSelectorBinding(selector, renameMap),
+  let rewrittenNode = rewriteTypedMacroInvocationArgs(node, index, renameMap);
+  rewrittenNode = rewriteBinderSurfaceStringsInNode(
+    rewrittenNode,
+    {
+      rewriteDeclaredBinder: (binding) => rewriteBindingTemplate(binding, renameMap),
+      rewriteBindingName: (binding) => rewriteBindingName(binding, renameMap),
+      rewriteBindingTemplate: (binding) => rewriteBindingTemplate(binding, renameMap),
+      rewriteZoneSelector: (selector) => rewriteZoneSelectorBinding(selector, renameMap),
+    },
   );
-
-  if (rewrittenMacroArgsNode.ref === 'binding' && typeof rewrittenMacroArgsNode.name === 'string') {
-    return { ...rewrittenMacroArgsNode, name: rewriteBindingName(rewrittenMacroArgsNode.name, renameMap) };
-  }
-  if (isRecord(rewrittenMacroArgsNode.aggregate)) {
-    const aggregate = rewrittenMacroArgsNode.aggregate;
-    const rewrittenBind =
-      typeof aggregate.bind === 'string' ? rewriteBindingTemplate(aggregate.bind, renameMap) : aggregate.bind;
-    const rewrittenQuery = aggregate.query === undefined ? aggregate.query : rewriteBindings(aggregate.query, index, renameMap);
-    const rewrittenValueExpr = aggregate.valueExpr === undefined
-      ? aggregate.valueExpr
-      : rewriteBindings(aggregate.valueExpr, index, renameMap);
-    if (
-      rewrittenBind !== aggregate.bind
-      || rewrittenQuery !== aggregate.query
-      || rewrittenValueExpr !== aggregate.valueExpr
-    ) {
-      return {
-        ...rewrittenMacroArgsNode,
-        aggregate: {
-          ...aggregate,
-          ...(rewrittenBind === aggregate.bind ? {} : { bind: rewrittenBind }),
-          ...(rewrittenQuery === aggregate.query ? {} : { query: rewrittenQuery }),
-          ...(rewrittenValueExpr === aggregate.valueExpr ? {} : { valueExpr: rewrittenValueExpr }),
-        },
-      };
-    }
-  }
-  if (rewrittenMacroArgsNode.ref === 'tokenProp' && typeof rewrittenMacroArgsNode.token === 'string') {
-    return { ...rewrittenMacroArgsNode, token: rewriteBindingTemplate(rewrittenMacroArgsNode.token, renameMap) };
-  }
-  if (rewrittenMacroArgsNode.ref === 'tokenZone' && typeof rewrittenMacroArgsNode.token === 'string') {
-    return { ...rewrittenMacroArgsNode, token: rewriteBindingTemplate(rewrittenMacroArgsNode.token, renameMap) };
-  }
-  if (rewrittenMacroArgsNode.ref === 'pvar' && isRecord(rewrittenMacroArgsNode.player) && typeof rewrittenMacroArgsNode.player.chosen === 'string') {
-    return { ...rewrittenMacroArgsNode, player: { ...rewrittenMacroArgsNode.player, chosen: rewriteBindingTemplate(rewrittenMacroArgsNode.player.chosen, renameMap) } };
-  }
-  if (rewrittenMacroArgsNode.ref === 'zoneCount' && typeof rewrittenMacroArgsNode.zone === 'string') {
-    return { ...rewrittenMacroArgsNode, zone: rewriteZoneSelectorBinding(rewrittenMacroArgsNode.zone, renameMap) };
-  }
-  if (rewrittenMacroArgsNode.ref === 'zoneProp' && typeof rewrittenMacroArgsNode.zone === 'string') {
-    return { ...rewrittenMacroArgsNode, zone: rewriteZoneSelectorBinding(rewrittenMacroArgsNode.zone, renameMap) };
-  }
-  if (rewrittenMacroArgsNode.ref === 'markerState' && typeof rewrittenMacroArgsNode.space === 'string') {
-    return { ...rewrittenMacroArgsNode, space: rewriteZoneSelectorBinding(rewrittenMacroArgsNode.space, renameMap) };
-  }
-  if (rewrittenMacroArgsNode.query === 'binding' && typeof rewrittenMacroArgsNode.name === 'string') {
-    return { ...rewrittenMacroArgsNode, name: rewriteBindingName(rewrittenMacroArgsNode.name, renameMap) };
-  }
-  if (
-    (rewrittenMacroArgsNode.query === 'tokensInZone' ||
-      rewrittenMacroArgsNode.query === 'tokensInAdjacentZones' ||
-      rewrittenMacroArgsNode.query === 'adjacentZones' ||
-      rewrittenMacroArgsNode.query === 'connectedZones') &&
-    typeof rewrittenMacroArgsNode.zone === 'string'
-  ) {
-    const rewrittenZone = rewriteZoneSelectorBinding(rewrittenMacroArgsNode.zone, renameMap);
-    if (rewrittenZone !== rewrittenMacroArgsNode.zone) {
-      rewrittenMacroArgsNode = { ...rewrittenMacroArgsNode, zone: rewrittenZone };
-    }
-  }
-  if (rewrittenMacroArgsNode.query === 'zones' || rewrittenMacroArgsNode.query === 'mapSpaces') {
-    const filter = isRecord(rewrittenMacroArgsNode.filter) ? rewrittenMacroArgsNode.filter : null;
-    const owner = filter !== null && isRecord(filter.owner) ? filter.owner : null;
-    if (owner !== null && typeof owner.chosen === 'string') {
-      const rewrittenChosen = rewriteBindingTemplate(owner.chosen, renameMap);
-      if (rewrittenChosen !== owner.chosen) {
-        rewrittenMacroArgsNode = {
-          ...rewrittenMacroArgsNode,
-          filter: {
-            ...filter,
-            owner: {
-              ...owner,
-              chosen: rewrittenChosen,
-            },
-          },
-        };
-      }
-    }
-  }
-  if (rewrittenMacroArgsNode.op === 'adjacent') {
-    const left =
-      typeof rewrittenMacroArgsNode.left === 'string'
-        ? rewriteZoneSelectorBinding(rewrittenMacroArgsNode.left, renameMap)
-        : rewrittenMacroArgsNode.left;
-    const right =
-      typeof rewrittenMacroArgsNode.right === 'string'
-        ? rewriteZoneSelectorBinding(rewrittenMacroArgsNode.right, renameMap)
-        : rewrittenMacroArgsNode.right;
-    if (left !== rewrittenMacroArgsNode.left || right !== rewrittenMacroArgsNode.right) {
-      return { ...rewrittenMacroArgsNode, left, right };
-    }
-  }
-  if (rewrittenMacroArgsNode.op === 'connected') {
-    const from =
-      typeof rewrittenMacroArgsNode.from === 'string'
-        ? rewriteZoneSelectorBinding(rewrittenMacroArgsNode.from, renameMap)
-        : rewrittenMacroArgsNode.from;
-    const to =
-      typeof rewrittenMacroArgsNode.to === 'string'
-        ? rewriteZoneSelectorBinding(rewrittenMacroArgsNode.to, renameMap)
-        : rewrittenMacroArgsNode.to;
-    if (from !== rewrittenMacroArgsNode.from || to !== rewrittenMacroArgsNode.to) {
-      return { ...rewrittenMacroArgsNode, from, to };
-    }
-  }
-  if (rewrittenMacroArgsNode.op === 'zonePropIncludes' && typeof rewrittenMacroArgsNode.zone === 'string') {
-    return { ...rewrittenMacroArgsNode, zone: rewriteZoneSelectorBinding(rewrittenMacroArgsNode.zone, renameMap) };
-  }
-
-  const rewrittenFromRegistry = rewriteDeclaredBindersInEffectNode(
-    rewrittenMacroArgsNode,
-    (binding) => rewriteBindingTemplate(binding, renameMap),
-  );
-  const rewritten: Record<string, unknown> =
-    rewrittenFromRegistry === rewrittenMacroArgsNode ? { ...rewrittenMacroArgsNode } : rewrittenFromRegistry;
-
-  if (isRecord(rewritten.forEach)) {
-    const forEachNode = rewritten.forEach;
-    rewritten.forEach = {
-      ...forEachNode,
-      ...(forEachNode.over === undefined ? {} : { over: rewriteBindings(forEachNode.over, index, renameMap) }),
-      ...(Array.isArray(forEachNode.effects) ? { effects: rewriteBindings(forEachNode.effects, index, renameMap) } : {}),
-      ...(Array.isArray(forEachNode.in) ? { in: rewriteBindings(forEachNode.in, index, renameMap) } : {}),
-      ...(forEachNode.limit === undefined ? {} : { limit: rewriteBindings(forEachNode.limit, index, renameMap) }),
-    };
-    return rewritten;
-  }
-
-  if (isRecord(rewritten.reduce)) {
-    const reduceNode = rewritten.reduce;
-    rewritten.reduce = {
-      ...reduceNode,
-      ...(reduceNode.over === undefined ? {} : { over: rewriteBindings(reduceNode.over, index, renameMap) }),
-      ...(reduceNode.initial === undefined ? {} : { initial: rewriteBindings(reduceNode.initial, index, renameMap) }),
-      ...(reduceNode.next === undefined ? {} : { next: rewriteBindings(reduceNode.next, index, renameMap) }),
-      ...(reduceNode.limit === undefined ? {} : { limit: rewriteBindings(reduceNode.limit, index, renameMap) }),
-      ...(Array.isArray(reduceNode.in) ? { in: rewriteBindings(reduceNode.in, index, renameMap) } : {}),
-    };
-    return rewritten;
-  }
-
-  if (isRecord(rewritten.removeByPriority)) {
-    const removeByPriorityNode = rewritten.removeByPriority;
-    rewritten.removeByPriority = {
-      ...removeByPriorityNode,
-      ...(Array.isArray(removeByPriorityNode.groups)
-        ? {
-            groups: removeByPriorityNode.groups.map((group) =>
-              !isRecord(group)
-                ? group
-                : {
-                    ...group,
-                    ...(group.over === undefined ? {} : { over: rewriteBindings(group.over, index, renameMap) }),
-                    ...(group.to === undefined ? {} : { to: rewriteBindings(group.to, index, renameMap) }),
-                    ...(group.from === undefined ? {} : { from: rewriteBindings(group.from, index, renameMap) }),
-                  },
-            ),
-          }
-        : {}),
-      ...(Array.isArray(removeByPriorityNode.in) ? { in: rewriteBindings(removeByPriorityNode.in, index, renameMap) } : {}),
-      ...(removeByPriorityNode.budget === undefined
-        ? {}
-        : { budget: rewriteBindings(removeByPriorityNode.budget, index, renameMap) }),
-    };
-    return rewritten;
-  }
-
-  if (isRecord(rewritten.let)) {
-    const letNode = rewritten.let;
-    rewritten.let = {
-      ...letNode,
-      ...(letNode.value === undefined ? {} : { value: rewriteBindings(letNode.value, index, renameMap) }),
-      ...(Array.isArray(letNode.in) ? { in: rewriteBindings(letNode.in, index, renameMap) } : {}),
-    };
-    return rewritten;
-  }
-
-  if (isRecord(rewritten.chooseOne)) {
-    const chooseOneNode = rewritten.chooseOne;
-    rewritten.chooseOne = {
-      ...chooseOneNode,
-      ...(chooseOneNode.options === undefined ? {} : { options: rewriteBindings(chooseOneNode.options, index, renameMap) }),
-    };
-    return rewritten;
-  }
-
-  if (isRecord(rewritten.chooseN)) {
-    const chooseNNode = rewritten.chooseN;
-    rewritten.chooseN = {
-      ...chooseNNode,
-      ...(chooseNNode.options === undefined ? {} : { options: rewriteBindings(chooseNNode.options, index, renameMap) }),
-      ...(chooseNNode.n === undefined ? {} : { n: rewriteBindings(chooseNNode.n, index, renameMap) }),
-      ...(chooseNNode.min === undefined ? {} : { min: rewriteBindings(chooseNNode.min, index, renameMap) }),
-      ...(chooseNNode.max === undefined ? {} : { max: rewriteBindings(chooseNNode.max, index, renameMap) }),
-    };
-    return rewritten;
-  }
-
-  if (isRecord(rewritten.rollRandom)) {
-    const rollRandomNode = rewritten.rollRandom;
-    rewritten.rollRandom = {
-      ...rollRandomNode,
-      ...(rollRandomNode.min === undefined ? {} : { min: rewriteBindings(rollRandomNode.min, index, renameMap) }),
-      ...(rollRandomNode.max === undefined ? {} : { max: rewriteBindings(rollRandomNode.max, index, renameMap) }),
-      ...(Array.isArray(rollRandomNode.in) ? { in: rewriteBindings(rollRandomNode.in, index, renameMap) } : {}),
-    };
-    return rewritten;
-  }
-
+  let changed = rewrittenNode !== node;
+  const rewritten: Record<string, unknown> = { ...rewrittenNode };
   for (const [key, value] of Object.entries(rewritten)) {
-    rewritten[key] = rewriteBindings(value, index, renameMap);
+    const nextValue = rewriteBindings(value, index, renameMap);
+    if (nextValue !== value) {
+      changed = true;
+      rewritten[key] = nextValue;
+    }
   }
-  return rewritten;
+  return changed ? rewritten : node;
 }
 
 function normalizeExportedBindings(

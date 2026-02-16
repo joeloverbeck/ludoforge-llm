@@ -4,11 +4,13 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import {
+  collectBinderSurfaceStringSites,
   collectDeclaredBinderCandidates,
   collectSequentialBindings,
   DECLARED_BINDER_EFFECT_KINDS,
   EFFECT_BINDER_SURFACES,
-  rewriteDeclaredBindersInEffectNode,
+  NON_EFFECT_BINDER_REFERENCER_SURFACES,
+  rewriteBinderSurfaceStringsInNode,
 } from '../../src/cnl/binder-surface-registry.js';
 import { SUPPORTED_EFFECT_KINDS } from '../../src/cnl/effect-kind-registry.js';
 
@@ -25,6 +27,10 @@ describe('binder-surface-registry', () => {
       [...DECLARED_BINDER_EFFECT_KINDS].sort(),
       ['bindValue', 'chooseN', 'chooseOne', 'commitResource', 'evaluateSubset', 'forEach', 'let', 'reduce', 'removeByPriority', 'rollRandom'],
     );
+  });
+
+  it('defines a centralized registry for non-effect binder referencer shapes', () => {
+    assert.equal(NON_EFFECT_BINDER_REFERENCER_SURFACES.length > 0, true);
   });
 
   it('collects declared binder candidates with deterministic nested paths', () => {
@@ -56,12 +62,77 @@ describe('binder-surface-registry', () => {
       chooseOne: { bind: '$choice', options: { query: 'binding', name: '$choice' } },
       setVar: { scope: 'global', var: 'picked', value: { ref: 'binding', name: '$choice' } },
     };
-    const rewritten = rewriteDeclaredBindersInEffectNode(input, (binding) => `${binding}_renamed`);
+    const rewritten = rewriteBinderSurfaceStringsInNode(input, {
+      rewriteDeclaredBinder: (binding) => `${binding}_renamed`,
+      rewriteBindingName: (binding) => binding,
+      rewriteBindingTemplate: (binding) => binding,
+      rewriteZoneSelector: (selector) => selector,
+    });
 
     assert.deepEqual(rewritten, {
       chooseOne: { bind: '$choice_renamed', options: { query: 'binding', name: '$choice' } },
       setVar: { scope: 'global', var: 'picked', value: { ref: 'binding', name: '$choice' } },
     });
+  });
+
+  it('rewrites and collects non-effect binder referencers via canonical registry helpers', () => {
+    const node = {
+      ref: 'binding',
+      name: '$choice',
+      aggregate: {
+        bind: '$row',
+        query: {
+          op: 'adjacent',
+          left: '$row',
+          right: '$fixed',
+        },
+      },
+      queryNode: {
+        query: 'zones',
+        filter: { owner: { chosen: '$choice' } },
+      },
+    };
+    const renamed = new Map<string, string>([
+      ['$choice', '$choice_renamed'],
+      ['$row', '$row_renamed'],
+    ]);
+    const rewritten = rewriteBinderSurfaceStringsInNode(
+      node,
+      {
+        rewriteDeclaredBinder: (value) => renamed.get(value) ?? value,
+        rewriteBindingName: (value) => renamed.get(value) ?? value,
+        rewriteBindingTemplate: (value) => renamed.get(value) ?? value,
+        rewriteZoneSelector: (value) => renamed.get(value) ?? value,
+      },
+    );
+    const sites: Array<{ path: string; value: string }> = [];
+    collectBinderSurfaceStringSites(rewritten, 'root', sites);
+
+    assert.equal((rewritten as { name: string }).name, '$choice_renamed');
+    assert.equal(
+      (rewritten as { aggregate: { bind: string } }).aggregate.bind,
+      '$row_renamed',
+    );
+    assert.equal(
+      (
+        rewritten as {
+          aggregate: { query: { left: string; right: string } };
+        }
+      ).aggregate.query.left,
+      '$row_renamed',
+    );
+    assert.equal(
+      (
+        rewritten as {
+          queryNode: { filter: { owner: { chosen: string } } };
+        }
+      ).queryNode.filter.owner.chosen,
+      '$choice_renamed',
+    );
+    assert.equal(
+      sites.some((site) => site.path === 'root.name' && site.value === '$choice_renamed'),
+      true,
+    );
   });
 
   it('returns only sequentially-visible bindings for stage carry-over', () => {

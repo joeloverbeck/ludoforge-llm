@@ -3,10 +3,17 @@ import { describe, it } from 'node:test';
 import { join } from 'node:path';
 
 import { compileGameSpecToGameDef, loadGameSpecSource, parseGameSpec } from '../../src/cnl/index.js';
-import { applyMove, assertValidatedGameDef, initialState, legalMoves, terminalResult } from '../../src/kernel/index.js';
+import { applyMove, assertValidatedGameDef, initialState, legalMoves } from '../../src/kernel/index.js';
 import type { GameState } from '../../src/kernel/index.js';
 import { advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import {
+  firstLegalPolicy,
+  runRuntimeSmokeGate,
+  seededRandomLegalPolicy,
+  selectorPolicy,
+  type RuntimeSmokeInvariant,
+} from '../helpers/runtime-smoke-harness.js';
 
 const compileTexasDef = () => {
   const markdown = loadGameSpecSource(join(process.cwd(), 'data', 'games', 'texas-holdem')).markdown;
@@ -102,33 +109,73 @@ describe('texas runtime bootstrap and position flow', () => {
     { seed: 41, playerCount: 4 },
   ] as const;
 
-  for (const config of smokeConfigs) {
-    it(`runs deterministic smoke window with runtime invariants (seed=${config.seed}, players=${config.playerCount})`, () => {
-      const def = compileTexasDef();
-      const seeded = initialState(def, config.seed, config.playerCount);
-      let state = advanceToDecisionPoint(def, seeded);
-      const expectedCardCount = totalCardsAcrossZones(state.zones);
-      const expectedChipTotal = totalChipsInPlay(state);
-
-      let appliedMoves = 0;
-      const maxSmokeSteps = 24;
-      const minAppliedMoves = 12;
-
-      while (appliedMoves < maxSmokeSteps && terminalResult(def, state) === null) {
-        assert.equal(totalCardsAcrossZones(state.zones), expectedCardCount);
-        assert.equal(totalChipsInPlay(state), expectedChipTotal);
-        for (let player = 0; player < config.playerCount; player += 1) {
-          const stack = Number(state.perPlayerVars[String(player)]?.chipStack ?? 0);
-          assert.equal(stack >= 0, true, `player ${player} chipStack must remain non-negative`);
+  const smokePolicies = [
+    { policy: firstLegalPolicy(), minAppliedMoves: 12 },
+    { policy: seededRandomLegalPolicy(), minAppliedMoves: 4 },
+    {
+      policy: selectorPolicy('max-action-id', ({ moves }) => {
+        let selectedIndex = 0;
+        for (let index = 1; index < moves.length; index += 1) {
+          if (String(moves[index]!.actionId) > String(moves[selectedIndex]!.actionId)) {
+            selectedIndex = index;
+          }
         }
+        return selectedIndex;
+      }),
+      minAppliedMoves: 8,
+    },
+  ] as const;
 
-        const moves = legalMoves(def, state);
-        assert.equal(moves.length > 0, true, `expected legal moves before terminal at step ${appliedMoves}`);
-        state = applyMove(def, state, moves[0]!).state;
-        appliedMoves += 1;
-      }
+  for (const config of smokeConfigs) {
+    for (const policyConfig of smokePolicies) {
+      const { policy, minAppliedMoves } = policyConfig;
+      it(`runs deterministic smoke window with runtime invariants (seed=${config.seed}, players=${config.playerCount}, policy=${policy.id})`, () => {
+        const def = compileTexasDef();
+        let expectedCardCount: number | null = null;
+        let expectedChipTotal: number | null = null;
+        const texasInvariants: RuntimeSmokeInvariant[] = [
+          {
+            id: 'texas-card-conservation',
+            check: ({ state }) => {
+              const cardCount = totalCardsAcrossZones(state.zones);
+              if (expectedCardCount === null) {
+                expectedCardCount = cardCount;
+              }
+              assert.equal(cardCount, expectedCardCount);
+            },
+          },
+          {
+            id: 'texas-chip-conservation',
+            check: ({ state }) => {
+              const chipTotal = totalChipsInPlay(state);
+              if (expectedChipTotal === null) {
+                expectedChipTotal = chipTotal;
+              }
+              assert.equal(chipTotal, expectedChipTotal);
+            },
+          },
+          {
+            id: 'texas-nonnegative-stacks',
+            check: ({ state, playerCount }) => {
+              for (let player = 0; player < playerCount; player += 1) {
+                const stack = Number(state.perPlayerVars[String(player)]?.chipStack ?? 0);
+                assert.equal(stack >= 0, true, `player ${player} chipStack must remain non-negative`);
+              }
+            },
+          },
+        ];
 
-      assert.equal(appliedMoves >= minAppliedMoves, true);
-    });
+        runRuntimeSmokeGate({
+          def,
+          seed: config.seed,
+          playerCount: config.playerCount,
+          maxSteps: 24,
+          minAppliedMoves,
+          policy,
+          bootstrapState: (targetDef, seed, playerCount) => advanceToDecisionPoint(targetDef, initialState(targetDef, seed, playerCount)),
+          invariants: texasInvariants,
+        });
+      });
+    }
   }
 });

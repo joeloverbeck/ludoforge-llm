@@ -78,6 +78,21 @@ const withStateAndRng = (wCtx: WalkContext, state: GameState, rng: Rng): WalkCon
   moveParams: wCtx.moveParams,
 });
 
+const withStateRngAndBindings = (
+  wCtx: WalkContext,
+  state: GameState,
+  rng: Rng,
+  bindings: Readonly<Record<string, unknown>>,
+): WalkContext => ({
+  evalCtx: {
+    ...wCtx.evalCtx,
+    state,
+    bindings,
+  },
+  rng,
+  moveParams: wCtx.moveParams,
+});
+
 const mergeStateAndRng = (outer: WalkContext, inner: WalkContext): WalkContext =>
   withStateAndRng(outer, inner.evalCtx.state, inner.rng);
 
@@ -96,7 +111,7 @@ const applyResolvedEffect = (effect: EffectAST, wCtx: WalkContext): WalkContext 
     ...(wCtx.evalCtx.mapSpaces === undefined ? {} : { mapSpaces: wCtx.evalCtx.mapSpaces }),
   };
   const result = applyEffect(effect, effectCtx);
-  return withStateAndRng(wCtx, result.state, result.rng);
+  return withStateRngAndBindings(wCtx, result.state, result.rng, result.bindings ?? wCtx.evalCtx.bindings);
 };
 
 function walkEffects(effects: readonly EffectAST[], initialCtx: WalkContext): WalkOutcome {
@@ -356,7 +371,26 @@ function walkLet(
   if (nestedResult.pending !== null) {
     return nestedResult;
   }
-  return { pending: null, wCtx: mergeStateAndRng(wCtx, nestedResult.wCtx) };
+  const exportedBindings: Record<string, unknown> = {};
+  for (const [name, value] of Object.entries(nestedResult.wCtx.evalCtx.bindings)) {
+    if (name === effect.let.bind || !name.startsWith('$')) {
+      continue;
+    }
+    exportedBindings[name] = value;
+  }
+
+  return {
+    pending: null,
+    wCtx: withStateRngAndBindings(
+      wCtx,
+      nestedResult.wCtx.evalCtx.state,
+      nestedResult.wCtx.rng,
+      {
+        ...wCtx.evalCtx.bindings,
+        ...exportedBindings,
+      },
+    ),
+  };
 }
 
 function walkRemoveByPriority(

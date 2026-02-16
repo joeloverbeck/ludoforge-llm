@@ -266,6 +266,7 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult
     state: result.state,
     rng: result.rng,
     ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
+    ...(result.bindings === undefined ? {} : { bindings: result.bindings }),
   };
 }
 
@@ -276,5 +277,6 @@ export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext):
     state: result.state,
     rng: result.rng,
     ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
+    ...(result.bindings === undefined ? {} : { bindings: result.bindings }),
   };
 }

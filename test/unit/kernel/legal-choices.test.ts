@@ -20,13 +20,14 @@ const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
   actionPipelines?: readonly ActionPipelineDef[];
   globalVars?: GameDef['globalVars'];
+  perPlayerVars?: GameDef['perPlayerVars'];
   mapSpaces?: GameDef['mapSpaces'];
 }): GameDef =>
   ({
     metadata: { id: 'legal-choices-test', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: overrides?.globalVars ?? [],
-    perPlayerVars: [],
+    perPlayerVars: overrides?.perPlayerVars ?? [],
     zones: [
       { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
       { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' },
@@ -542,6 +543,53 @@ phase: [asPhaseId('main')],
     assert.equal(result.name, '$pick');
     assert.equal(result.type, 'chooseOne');
     assert.deepStrictEqual(result.options, [1, 2, 3]);
+  });
+
+  it('8b. legalChoices preserves commitResource actualBind exported from let-scoped effects', () => {
+    const action: ActionDef = {
+      id: asActionId('letCommitResourceBinding'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          let: {
+            bind: '$inner',
+            value: 1,
+            in: [
+              {
+                commitResource: {
+                  from: { scope: 'pvar', player: 'actor', var: 'chips' },
+                  to: { scope: 'global', var: 'pot' },
+                  amount: 3,
+                  actualBind: '$paid',
+                },
+              },
+              {
+                addVar: { scope: 'global', var: 'tracked', delta: { ref: 'binding', name: '$paid' } },
+              },
+            ],
+          },
+        },
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({
+      actions: [action],
+      globalVars: [
+        { name: 'pot', type: 'int', init: 0, min: 0, max: 20 },
+        { name: 'tracked', type: 'int', init: 0, min: 0, max: 20 },
+      ],
+      perPlayerVars: [{ name: 'chips', type: 'int', init: 10, min: 0, max: 20 }],
+    });
+    const state = makeBaseState({ globalVars: { pot: 0, tracked: 0 }, perPlayerVars: { 0: { chips: 10 }, 1: { chips: 10 } } });
+
+    const result = legalChoices(def, state, makeMove('letCommitResourceBinding'));
+    assert.deepStrictEqual(result, { kind: 'complete', complete: true });
   });
 
   it('9. legalChoices does NOT walk rollRandom.in effects (returns complete before inner choices)', () => {

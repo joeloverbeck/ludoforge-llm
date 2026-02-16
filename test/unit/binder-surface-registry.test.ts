@@ -23,7 +23,7 @@ describe('binder-surface-registry', () => {
   it('tracks declared binder-producing effect kinds explicitly', () => {
     assert.deepEqual(
       [...DECLARED_BINDER_EFFECT_KINDS].sort(),
-      ['chooseN', 'chooseOne', 'commitResource', 'evaluateSubset', 'forEach', 'let', 'reduce', 'removeByPriority', 'rollRandom'],
+      ['bindValue', 'chooseN', 'chooseOne', 'commitResource', 'evaluateSubset', 'forEach', 'let', 'reduce', 'removeByPriority', 'rollRandom'],
     );
   });
 
@@ -113,6 +113,30 @@ describe('binder-surface-registry', () => {
         },
       }),
       [],
+    );
+    assert.deepEqual(
+      collectSequentialBindings({
+        let: {
+          bind: '$local',
+          value: 0,
+          in: [{ bindValue: { bind: '$exported', value: 1 } }],
+        },
+      }),
+      ['$exported'],
+    );
+    assert.deepEqual(
+      collectSequentialBindings({
+        reduce: {
+          itemBind: '$item',
+          accBind: '$acc',
+          over: { query: 'players' },
+          initial: 0,
+          next: 0,
+          resultBind: '$result',
+          in: [{ bindValue: { bind: '$exported', value: { ref: 'binding', name: '$result' } } }],
+        },
+      }),
+      ['$exported'],
     );
     assert.deepEqual(
       collectSequentialBindings({

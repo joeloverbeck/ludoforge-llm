@@ -45,6 +45,12 @@ describe('compile-effects lowering', () => {
           in: [{ setVar: { scope: 'global', var: 'total', value: { ref: 'binding', name: '$sum' } } }],
         },
       },
+      {
+        bindValue: {
+          bind: '$computed',
+          value: { op: '+', left: 1, right: 2 },
+        },
+      },
     ];
 
     const first = lowerEffectArray(source, context, 'doc.actions.0.effects');
@@ -79,6 +85,12 @@ describe('compile-effects lowering', () => {
           next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
           resultBind: '$sum',
           in: [{ setVar: { scope: 'global', var: 'total', value: { ref: 'binding', name: '$sum' } } }],
+        },
+      },
+      {
+        bindValue: {
+          bind: '$computed',
+          value: { op: '+', left: 1, right: 2 },
         },
       },
     ]);

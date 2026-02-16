@@ -30,6 +30,7 @@ import {
   applyShuffle,
 } from './effects-token.js';
 import { applyEvaluateSubset } from './effects-subset.js';
+import { applyBindValue } from './effects-binding.js';
 import type { EffectAST, TriggerEvent } from './types.js';
 
 const createBudgetState = (ctx: Pick<EffectContext, 'maxEffectOps'>): EffectBudgetState => {
@@ -59,6 +60,7 @@ const effectTypeOf = (effect: EffectAST): string => {
   if ('reduce' in effect) return 'reduce';
   if ('removeByPriority' in effect) return 'removeByPriority';
   if ('let' in effect) return 'let';
+  if ('bindValue' in effect) return 'bindValue';
   if ('evaluateSubset' in effect) return 'evaluateSubset';
   if ('chooseOne' in effect) return 'chooseOne';
   if ('chooseN' in effect) return 'chooseN';
@@ -155,6 +157,10 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
 
   if ('let' in effect) {
     return applyLet(effect, ctx, budget, applyEffectsWithBudget);
+  }
+
+  if ('bindValue' in effect) {
+    return applyBindValue(effect, ctx);
   }
 
   if ('evaluateSubset' in effect) {

@@ -16,6 +16,7 @@ export const SUPPORTED_EFFECT_KINDS = [
   'reduce',
   'removeByPriority',
   'let',
+  'bindValue',
   'evaluateSubset',
   'chooseOne',
   'chooseN',

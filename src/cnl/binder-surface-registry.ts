@@ -117,6 +117,12 @@ export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, Effect
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
+  bindValue: {
+    declaredBinderPaths: [['bind']],
+    sequentiallyVisibleBinderPaths: [['bind']],
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
   evaluateSubset: {
     declaredBinderPaths: [['subsetBind'], ['resultBind'], ['bestSubsetBind']],
     sequentiallyVisibleBinderPaths: [['resultBind'], ['bestSubsetBind']],
@@ -364,6 +370,15 @@ export function rewriteKnownReferencersInEffectNode(
 }
 
 export function collectSequentialBindings(effect: EffectAST): readonly string[] {
+  if ('let' in effect) {
+    const nested = effect.let.in.flatMap((entry) => collectSequentialBindings(entry));
+    return nested.filter((name) => name !== effect.let.bind && name.startsWith('$'));
+  }
+  if ('reduce' in effect) {
+    const nested = effect.reduce.in.flatMap((entry) => collectSequentialBindings(entry));
+    return nested.filter((name) => name !== effect.reduce.resultBind && name.startsWith('$'));
+  }
+
   const bindings: string[] = [];
   for (const kind of SUPPORTED_EFFECT_KINDS) {
     if (!(kind in effect)) {

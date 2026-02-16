@@ -2,9 +2,9 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { join } from 'node:path';
 
-import { loadGameSpecSource, parseGameSpec } from '../../src/cnl/index.js';
+import { compileGameSpecToGameDef, loadGameSpecSource, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { validateDataAssetEnvelope } from '../../src/kernel/data-assets.js';
-import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { assertNoErrors, assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 describe('texas hold\'em spec structure', () => {
   it('parses the structural fragments and validates data-asset envelopes', () => {
@@ -95,5 +95,34 @@ describe('texas hold\'em spec structure', () => {
     assert.equal(parsed.doc.terminal?.conditions.length, 1);
     assert.deepEqual(parsed.doc.terminal?.conditions[0]?.result, { type: 'score' });
     assert.equal(parsed.doc.terminal?.scoring?.method, 'highest');
+  });
+
+  it('compiles with zero diagnostics', () => {
+    const markdown = loadGameSpecSource(join(process.cwd(), 'data', 'games', 'texas-holdem')).markdown;
+    const parsed = parseGameSpec(markdown);
+    assertNoErrors(parsed);
+
+    const validated = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
+    assert.equal(validated.length, 0);
+
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+    assertNoDiagnostics(compiled, parsed.sourceMap);
+    assert.notEqual(compiled.gameDef, null);
+  });
+
+  it('keeps side-pot loops runtime-derived and avoids hardcoded seat ranges', () => {
+    const markdown = loadGameSpecSource(join(process.cwd(), 'data', 'games', 'texas-holdem')).markdown;
+    const parsed = parseGameSpec(markdown);
+    assertNoErrors(parsed);
+
+    const sidePotMacro = parsed.doc.effectMacros?.find((macro) => macro.id === 'side-pot-distribution');
+    assert.ok(sidePotMacro);
+
+    const serialized = JSON.stringify(sidePotMacro.effects);
+    assert.equal(serialized.includes('"query":"intsInRange","min":1,"max":10'), false);
+    assert.equal(serialized.includes('"query":"intsInRange","min":0,"max":9'), false);
+    assert.equal(serialized.includes('"var":"activePlayers"'), true);
+    assert.equal(serialized.includes('"var":"oddChipRemainder"'), true);
+    assert.equal(serialized.includes('"var":"seatIndex"'), false);
   });
 });

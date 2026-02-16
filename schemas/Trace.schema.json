@@ -5615,6 +5615,31 @@
         {
           "type": "object",
           "properties": {
+            "bindValue": {
+              "type": "object",
+              "properties": {
+                "bind": {
+                  "type": "string"
+                },
+                "value": {
+                  "$ref": "#/definitions/__schema2"
+                }
+              },
+              "required": [
+                "bind",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "bindValue"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
             "evaluateSubset": {
               "type": "object",
               "properties": {

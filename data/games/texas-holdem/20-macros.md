@@ -30,7 +30,11 @@ effectMacros:
           in:
             - let:
                 bind: $isFlush
-                value: { op: '==', left: { ref: binding, name: $maxSuitCount }, right: 5 }
+                value:
+                  if:
+                    when: { op: '==', left: { ref: binding, name: $maxSuitCount }, right: 5 }
+                    then: true
+                    else: false
                 in:
                   - let:
                       bind: $maxRankCount
@@ -163,13 +167,17 @@ effectMacros:
                                                 - let:
                                                     bind: $wheelStraight
                                                     value:
-                                                      op: and
-                                                      args:
-                                                        - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 14 }, then: 1, else: 0 } } } }, right: 0 }
-                                                        - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 5 }, then: 1, else: 0 } } } }, right: 0 }
-                                                        - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 4 }, then: 1, else: 0 } } } }, right: 0 }
-                                                        - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 3 }, then: 1, else: 0 } } } }, right: 0 }
-                                                        - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 2 }, then: 1, else: 0 } } } }, right: 0 }
+                                                      if:
+                                                        when:
+                                                          op: and
+                                                          args:
+                                                            - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 14 }, then: 1, else: 0 } } } }, right: 0 }
+                                                            - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 5 }, then: 1, else: 0 } } } }, right: 0 }
+                                                            - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 4 }, then: 1, else: 0 } } } }, right: 0 }
+                                                            - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 3 }, then: 1, else: 0 } } } }, right: 0 }
+                                                            - { op: '>', left: { aggregate: { op: sum, query: { param: cardsQuery }, bind: $card, valueExpr: { if: { when: { op: '==', left: { ref: tokenProp, token: $card, prop: rank }, right: 2 }, then: 1, else: 0 } } } }, right: 0 }
+                                                        then: true
+                                                        else: false
                                                     in:
                                                       - let:
                                                           bind: $straightHighAdj
@@ -179,7 +187,7 @@ effectMacros:
                                                                 op: and
                                                                 args:
                                                                   - { op: '==', left: { ref: binding, name: $straightHigh }, right: 0 }
-                                                                  - { ref: binding, name: $wheelStraight }
+                                                                  - { op: '==', left: { ref: binding, name: $wheelStraight }, right: true }
                                                               then: 5
                                                               else: { ref: binding, name: $straightHigh }
                                                           in:
@@ -369,7 +377,7 @@ effectMacros:
                                                                                                                       bind: $handType
                                                                                                                       value:
                                                                                                                         if:
-                                                                                                                          when: { op: and, args: [{ ref: binding, name: $isFlush }, { op: '>', left: { ref: binding, name: $straightHighAdj }, right: 0 }] }
+                                                                                                                          when: { op: and, args: [{ op: '==', left: { ref: binding, name: $isFlush }, right: true }, { op: '>', left: { ref: binding, name: $straightHighAdj }, right: 0 }] }
                                                                                                                           then: 9
                                                                                                                           else:
                                                                                                                             if:
@@ -381,7 +389,7 @@ effectMacros:
                                                                                                                                   then: 7
                                                                                                                                   else:
                                                                                                                                     if:
-                                                                                                                                      when: { ref: binding, name: $isFlush }
+                                                                                                                                      when: { op: '==', left: { ref: binding, name: $isFlush }, right: true }
                                                                                                                                       then: 6
                                                                                                                                       else:
                                                                                                                                         if:
@@ -525,7 +533,7 @@ effectMacros:
                                                                                                                                                                 then: { ref: binding, name: $single5 }
                                                                                                                                                                 else: 0
                                                                                                                                                     in:
-                                                                                                                                                      - let:
+                                                                                                                                                      - bindValue:
                                                                                                                                                           bind: $handScore
                                                                                                                                                           value:
                                                                                                                                                             op: '+'
@@ -558,7 +566,6 @@ effectMacros:
                                                                                                                                                                       left: { ref: binding, name: $c4 }
                                                                                                                                                                       right: 100
                                                                                                                                                                     right: { ref: binding, name: $c5 }
-                                                                                                                                                          in: []
 
   - id: collect-forced-bets
     params:
@@ -717,7 +724,7 @@ effectMacros:
     effects:
       - forEach:
           bind: $tier
-          over: { query: intsInRange, min: 1, max: 10 }
+          over: { query: intsInRange, min: 1, max: { ref: gvar, var: activePlayers } }
           effects:
             - let:
                 bind: $minContribution
@@ -824,27 +831,20 @@ effectMacros:
                                                                     left: { ref: binding, name: $baseShare }
                                                                     right: { ref: binding, name: $winnerCount }
                                                             - forEach:
-                                                                bind: $seat
-                                                                over: { query: intsInRange, min: 0, max: 9 }
+                                                                bind: $player
+                                                                over: { query: players }
                                                                 effects:
                                                                   - if:
-                                                                      when: { op: '>', left: { ref: gvar, var: oddChipRemainder }, right: 0 }
+                                                                      when:
+                                                                        op: and
+                                                                        args:
+                                                                          - { op: '>', left: { ref: gvar, var: oddChipRemainder }, right: 0 }
+                                                                          - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: handActive }, right: true }
+                                                                          - { op: '>', left: { ref: pvar, player: { chosen: $player }, var: totalBet }, right: 0 }
+                                                                          - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: showdownScore }, right: { ref: binding, name: $bestScore } }
                                                                       then:
-                                                                        - forEach:
-                                                                            bind: $player
-                                                                            over: { query: players }
-                                                                            effects:
-                                                                              - if:
-                                                                                  when:
-                                                                                    op: and
-                                                                                    args:
-                                                                                      - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: handActive }, right: true }
-                                                                                      - { op: '>', left: { ref: pvar, player: { chosen: $player }, var: totalBet }, right: 0 }
-                                                                                      - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: showdownScore }, right: { ref: binding, name: $bestScore } }
-                                                                                      - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: seatIndex }, right: { ref: binding, name: $seat } }
-                                                                                  then:
-                                                                                    - addVar: { scope: pvar, player: { chosen: $player }, var: chipStack, delta: 1 }
-                                                                                    - addVar: { scope: global, var: oddChipRemainder, delta: -1 }
+                                                                        - addVar: { scope: pvar, player: { chosen: $player }, var: chipStack, delta: 1 }
+                                                                        - addVar: { scope: global, var: oddChipRemainder, delta: -1 }
                                     - forEach:
                                         bind: $player
                                         over: { query: players }

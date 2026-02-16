@@ -116,6 +116,9 @@ function lowerEffectNode(
   if (isRecord(source.let)) {
     return lowerLetEffect(source.let, context, scope, `${path}.let`);
   }
+  if (isRecord(source.bindValue)) {
+    return lowerBindValueEffect(source.bindValue, context, scope, `${path}.bindValue`);
+  }
   if (isRecord(source.evaluateSubset)) {
     return lowerEvaluateSubsetEffect(source.evaluateSubset, context, scope, `${path}.evaluateSubset`);
   }
@@ -983,6 +986,33 @@ function lowerLetEffect(
   };
 }
 
+function lowerBindValueEffect(
+  source: Record<string, unknown>,
+  context: EffectLoweringContext,
+  scope: BindingScope,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (typeof source.bind !== 'string') {
+    return missingCapability(path, 'bindValue effect', source, ['{ bindValue: { bind, value } }']);
+  }
+
+  const value = lowerValueNode(source.value, makeConditionContext(context, scope), `${path}.value`);
+  const diagnostics = [...value.diagnostics, ...scope.shadowWarning(source.bind, `${path}.bind`)];
+  if (value.value === null) {
+    return { value: null, diagnostics };
+  }
+
+  return {
+    value: {
+      bindValue: {
+        bind: source.bind,
+        value: value.value,
+      },
+    },
+    diagnostics,
+  };
+}
+
 function lowerEvaluateSubsetEffect(
   source: Record<string, unknown>,
   context: EffectLoweringContext,
@@ -1020,7 +1050,16 @@ function lowerEvaluateSubsetEffect(
 
   const computeAndScore = scope.withBinding(source.subsetBind, () => {
     const loweredCompute = lowerNestedEffects(source.compute as readonly unknown[], context, scope, `${path}.compute`);
-    const loweredScoreExpr = lowerNumericValueNode(source.scoreExpr, makeConditionContext(context, scope), `${path}.scoreExpr`);
+    const scoreLowering = (): EffectLoweringResult<NumericValueExpr> =>
+      lowerNumericValueNode(source.scoreExpr, makeConditionContext(context, scope), `${path}.scoreExpr`);
+    const loweredScoreExpr =
+      loweredCompute.value === null
+        ? scoreLowering()
+        : scope.withBindings(
+            loweredCompute.value.flatMap((effect) => collectSequentialBindings(effect)),
+            scoreLowering,
+          );
+
     return {
       loweredCompute,
       loweredScoreExpr,
@@ -1736,6 +1775,15 @@ class BindingScope {
 
   withBinding<TValue>(name: string, callback: () => TValue): TValue {
     this.frames.push([name]);
+    try {
+      return callback();
+    } finally {
+      this.frames.pop();
+    }
+  }
+
+  withBindings<TValue>(names: readonly string[], callback: () => TValue): TValue {
+    this.frames.push([...names]);
     try {
       return callback();
     } finally {

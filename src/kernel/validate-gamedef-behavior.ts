@@ -1071,6 +1071,11 @@ export const validateEffectAst = (
     return;
   }
 
+  if ('bindValue' in effect) {
+    validateValueExpr(diagnostics, effect.bindValue.value, `${path}.bindValue.value`, context);
+    return;
+  }
+
   if ('chooseOne' in effect) {
     validateOptionsQuery(diagnostics, effect.chooseOne.options, `${path}.chooseOne.options`, context);
     return;

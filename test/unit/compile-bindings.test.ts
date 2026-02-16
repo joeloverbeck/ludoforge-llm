@@ -126,6 +126,70 @@ describe('compile-effects binding scope validation', () => {
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.1.addVar.delta.name');
   });
 
+  it('allows let blocks to export nested sequential bindings while keeping let.bind scoped', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          let: {
+            bind: '$local',
+            value: 3,
+            in: [
+              {
+                bindValue: {
+                  bind: '$exported',
+                  value: { op: '+', left: { ref: 'binding', name: '$local' }, right: 2 },
+                },
+              },
+            ],
+          },
+        },
+        { addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$exported' } } },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value !== null, true);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+      [],
+    );
+  });
+
+  it('allows reduce blocks to export nested sequential bindings while keeping resultBind scoped', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          reduce: {
+            itemBind: '$n',
+            accBind: '$acc',
+            over: { query: 'intsInRange', min: 1, max: 3 },
+            initial: 0,
+            next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+            resultBind: '$sum',
+            in: [
+              {
+                bindValue: {
+                  bind: '$exported',
+                  value: { ref: 'binding', name: '$sum' },
+                },
+              },
+            ],
+          },
+        },
+        { addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$exported' } } },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value !== null, true);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+      [],
+    );
+  });
+
   it('exposes commitResource.actualBind to subsequent effects in the same sequence', () => {
     const result = lowerEffectArray(
       [
@@ -138,6 +202,46 @@ describe('compile-effects binding scope validation', () => {
           },
         },
         { addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$actual' } } },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value !== null, true);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+      [],
+    );
+  });
+
+  it('exposes evaluateSubset.compute sequential bindings to scoreExpr', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          evaluateSubset: {
+            source: { query: 'players' },
+            subsetSize: 1,
+            subsetBind: '$subset',
+            compute: [
+              {
+                bindValue: {
+                  bind: '$scoreCandidate',
+                  value: {
+                    aggregate: {
+                      op: 'sum',
+                      query: { query: 'binding', name: '$subset' },
+                      bind: '$p',
+                      valueExpr: { ref: 'binding', name: '$p' },
+                    },
+                  },
+                },
+              },
+            ],
+            scoreExpr: { ref: 'binding', name: '$scoreCandidate' },
+            resultBind: '$best',
+            in: [],
+          },
+        },
       ],
       context,
       'doc.actions.0.effects',

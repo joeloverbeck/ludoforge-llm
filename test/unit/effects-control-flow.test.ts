@@ -409,6 +409,36 @@ describe('effects control-flow handlers', () => {
     assert.equal(result.state.globalVars.bonus, 1);
   });
 
+  it('reduce exports nested sequential bindings while keeping resultBind local', () => {
+    const ctx = makeCtx();
+    const result = applyEffects(
+      [
+        {
+          reduce: {
+            itemBind: '$n',
+            accBind: '$acc',
+            over: { query: 'intsInRange', min: 1, max: 3 },
+            initial: 0,
+            next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+            resultBind: '$sum',
+            in: [
+              {
+                bindValue: {
+                  bind: '$exported',
+                  value: { op: '*', left: { ref: 'binding', name: '$sum' }, right: 2 },
+                },
+              },
+            ],
+          },
+        },
+        { setVar: { scope: 'global', var: 'sum', value: { ref: 'binding', name: '$exported' } } },
+      ],
+      ctx,
+    );
+
+    assert.equal(result.state.globalVars.sum, 12);
+  });
+
   it('reduce enforces default limit of 100 and explicit dynamic limits', () => {
     const defaultCtx = makeCtx();
     const defaultEffect: EffectAST = {

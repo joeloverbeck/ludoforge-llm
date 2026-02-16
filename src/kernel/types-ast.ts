@@ -301,6 +301,12 @@ export type EffectAST =
       };
     }
   | {
+      readonly bindValue: {
+        readonly bind: string;
+        readonly value: ValueExpr;
+      };
+    }
+  | {
       readonly evaluateSubset: {
         readonly source: OptionsQuery;
         readonly subsetSize: NumericValueExpr;

@@ -534,6 +534,16 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      bindValue: z
+        .object({
+          bind: StringSchema,
+          value: ValueExprSchema,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
       evaluateSubset: z
         .object({
           source: OptionsQuerySchema,

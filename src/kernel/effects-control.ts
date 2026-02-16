@@ -69,11 +69,22 @@ export const applyLet = (
   };
 
   const nestedResult = applyEffectsWithBudget(effect.let.in, nestedCtx, budget);
+  const nestedBindings = nestedResult.bindings ?? nestedCtx.bindings;
+  const exportedBindings: Record<string, unknown> = {};
+  for (const [name, value] of Object.entries(nestedBindings)) {
+    if (name === effect.let.bind || !name.startsWith('$')) {
+      continue;
+    }
+    exportedBindings[name] = value;
+  }
   return {
     state: nestedResult.state,
     rng: nestedResult.rng,
     ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
-    bindings: ctx.bindings,
+    bindings: {
+      ...ctx.bindings,
+      ...exportedBindings,
+    },
   };
 };
 
@@ -204,11 +215,22 @@ export const applyReduce = (
     },
   };
   const continuationResult = applyEffectsWithBudget(effect.reduce.in, continuationCtx, budget);
+  const continuationBindings = continuationResult.bindings ?? continuationCtx.bindings;
+  const exportedBindings: Record<string, unknown> = {};
+  for (const [name, value] of Object.entries(continuationBindings)) {
+    if (name === effect.reduce.resultBind || !name.startsWith('$')) {
+      continue;
+    }
+    exportedBindings[name] = value;
+  }
   return {
     state: continuationResult.state,
     rng: continuationResult.rng,
     ...(continuationResult.emittedEvents === undefined ? {} : { emittedEvents: continuationResult.emittedEvents }),
-    bindings: ctx.bindings,
+    bindings: {
+      ...ctx.bindings,
+      ...exportedBindings,
+    },
   };
 };
 

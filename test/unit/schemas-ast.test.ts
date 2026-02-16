@@ -196,6 +196,12 @@ describe('AST and selector schemas', () => {
         },
       },
       {
+        bindValue: {
+          bind: '$score',
+          value: { op: '+', left: 1, right: 2 },
+        },
+      },
+      {
         evaluateSubset: {
           source: { query: 'tokensInZone', zone: 'deck:none' },
           subsetSize: 2,

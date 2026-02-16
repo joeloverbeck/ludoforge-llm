@@ -65,10 +65,17 @@ describe('texas hold\'em spec structure', () => {
     );
 
     dataAssets.forEach((asset, index) => {
-      const validated = validateDataAssetEnvelope(asset, {
+      const validated = validateDataAssetEnvelope(
+        {
+          id: asset.id,
+          kind: asset.kind,
+          payload: asset.payload,
+        },
+        {
         expectedKinds: ['map', 'scenario', 'pieceCatalog'],
         pathPrefix: `doc.dataAssets.${index}`,
-      });
+        },
+      );
       assert.equal(validated.diagnostics.length, 0);
       assert.ok(validated.asset !== null);
     });
@@ -90,6 +97,7 @@ describe('texas hold\'em spec structure', () => {
     assert.equal(payload.pieceCatalogAssetId, 'standard-52-deck');
     assert.deepEqual(payload.factionPools, [{ faction: 'neutral', availableZoneId: 'deck:none', outOfPlayZoneId: 'muck:none' }]);
     assert.equal(payload.settings?.startingChips, 1000);
+    assert.equal(Array.isArray((scenario as { readonly tableContracts?: unknown }).tableContracts), true);
 
     assert.ok(Array.isArray(parsed.doc.setup));
     assert.equal((parsed.doc.setup ?? []).length > 0, true);
@@ -167,5 +175,17 @@ describe('texas hold\'em spec structure', () => {
     );
     assert.ok(blindScheduleContract);
     assert.equal(blindScheduleContract.uniqueBy?.some((tuple) => tuple.length === 1 && tuple[0] === 'level'), true);
+    assert.equal(
+      blindScheduleContract.constraints?.some(
+        (constraint) => constraint.kind === 'contiguousInt' && constraint.field === 'level' && constraint.start === 0 && constraint.step === 1,
+      ),
+      true,
+    );
+    assert.equal(
+      blindScheduleContract.constraints?.some(
+        (constraint) => constraint.kind === 'numericRange' && constraint.field === 'handsUntilNext' && constraint.min === 1,
+      ),
+      true,
+    );
   });
 });

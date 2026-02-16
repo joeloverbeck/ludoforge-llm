@@ -6,7 +6,7 @@ const MAX_ALTERNATIVE_DISTANCE = 3;
 
 export const METADATA_KEYS = ['id', 'players', 'maxTriggerDepth', 'defaultScenarioAssetId', 'namedSets'] as const;
 export const PLAYERS_KEYS = ['min', 'max'] as const;
-export const DATA_ASSET_KEYS = ['id', 'kind', 'payload'] as const;
+export const DATA_ASSET_KEYS = ['id', 'kind', 'payload', 'tableContracts'] as const;
 export const VARIABLE_KEYS = ['name', 'type', 'init', 'min', 'max'] as const;
 export const ZONE_KEYS = ['id', 'owner', 'visibility', 'ordering', 'adjacentTo'] as const;
 export const ACTION_KEYS = ['id', 'actor', 'executor', 'phase', 'capabilities', 'params', 'pre', 'cost', 'effects', 'limits'] as const;

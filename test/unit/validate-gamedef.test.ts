@@ -491,6 +491,136 @@ describe('validateGameDef reference checks', () => {
     assert.ok(diagnostics.some((diag) => diag.code === 'RUNTIME_TABLE_UNIQUE_KEY_DUPLICATE' && diag.path === 'tableContracts[0].uniqueBy[4]'));
   });
 
+  it('enforces uniqueBy tuples against runtime table rows', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      runtimeDataAssets: [
+        {
+          id: 'tournament-standard',
+          kind: 'scenario',
+          payload: {
+            blindSchedule: {
+              levels: [
+                { level: 1, smallBlind: 10 },
+                { level: 1, smallBlind: 15 },
+              ],
+            },
+          },
+        },
+      ],
+      tableContracts: [
+        {
+          id: 'tournament-standard::blindSchedule.levels',
+          assetId: 'tournament-standard',
+          tablePath: 'blindSchedule.levels',
+          fields: [
+            { field: 'level', type: 'int' as const },
+            { field: 'smallBlind', type: 'int' as const },
+          ],
+          uniqueBy: [['level']],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(diagnostics.some((diag) => diag.code === 'RUNTIME_TABLE_UNIQUE_KEY_VIOLATION' && diag.path === 'tableContracts[0].uniqueBy[0]'));
+  });
+
+  it('enforces monotonic/contiguous/numericRange runtime table constraints', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      runtimeDataAssets: [
+        {
+          id: 'tournament-standard',
+          kind: 'scenario',
+          payload: {
+            settings: {
+              blindSchedule: [
+                { level: 0, handsUntilNext: 10 },
+                { level: 2, handsUntilNext: 0 },
+                { level: 4, handsUntilNext: 5 },
+              ],
+            },
+          },
+        },
+      ],
+      tableContracts: [
+        {
+          id: 'tournament-standard::settings.blindSchedule',
+          assetId: 'tournament-standard',
+          tablePath: 'settings.blindSchedule',
+          fields: [
+            { field: 'level', type: 'int' as const },
+            { field: 'handsUntilNext', type: 'int' as const },
+          ],
+          constraints: [
+            { kind: 'monotonic', field: 'handsUntilNext', direction: 'desc' as const },
+            { kind: 'contiguousInt', field: 'level', start: 0, step: 1 },
+            { kind: 'numericRange', field: 'handsUntilNext', min: 1 },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(diagnostics.some((diag) => diag.code === 'RUNTIME_TABLE_CONSTRAINT_MONOTONIC_VIOLATION'));
+    assert.ok(diagnostics.some((diag) => diag.code === 'RUNTIME_TABLE_CONSTRAINT_CONTIGUOUS_VIOLATION'));
+    assert.ok(diagnostics.some((diag) => diag.code === 'RUNTIME_TABLE_CONSTRAINT_RANGE_VIOLATION'));
+  });
+
+  it('accepts valid runtime table constraints', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      runtimeDataAssets: [
+        {
+          id: 'tournament-standard',
+          kind: 'scenario',
+          payload: {
+            settings: {
+              blindSchedule: [
+                { level: 0, handsUntilNext: 10 },
+                { level: 1, handsUntilNext: 8 },
+                { level: 2, handsUntilNext: 6 },
+              ],
+            },
+          },
+        },
+      ],
+      tableContracts: [
+        {
+          id: 'tournament-standard::settings.blindSchedule',
+          assetId: 'tournament-standard',
+          tablePath: 'settings.blindSchedule',
+          fields: [
+            { field: 'level', type: 'int' as const },
+            { field: 'handsUntilNext', type: 'int' as const },
+          ],
+          uniqueBy: [['level']],
+          constraints: [
+            { kind: 'monotonic', field: 'level', direction: 'asc' as const },
+            { kind: 'contiguousInt', field: 'level', start: 0, step: 1 },
+            { kind: 'numericRange', field: 'handsUntilNext', min: 1 },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'RUNTIME_TABLE_UNIQUE_KEY_VIOLATION' ||
+          diag.code === 'RUNTIME_TABLE_CONSTRAINT_MONOTONIC_VIOLATION' ||
+          diag.code === 'RUNTIME_TABLE_CONSTRAINT_CONTIGUOUS_VIOLATION' ||
+          diag.code === 'RUNTIME_TABLE_CONSTRAINT_RANGE_VIOLATION',
+      ),
+      false,
+    );
+  });
+
   it('reports exactlyOne assetRows queries without key-constraining where predicates', () => {
     const base = createValidGameDef();
     const def = {

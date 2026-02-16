@@ -1,5 +1,6 @@
 import type { Diagnostic } from './diagnostics.js';
 import { RUNTIME_RESERVED_MOVE_BINDING_NAMES } from './move-runtime-bindings.js';
+import { resolveRuntimeTableRowsByPath } from './runtime-table-path.js';
 import type { GameDef, MapSpaceDef, PlayerSel, ScenarioPiecePlacement, StackingConstraint } from './types.js';
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
@@ -67,6 +68,17 @@ export const checkDuplicateIds = (
 
 const canonicalUniqueKeyTuple = (tuple: readonly string[]): string =>
   [...tuple].sort((left, right) => left.localeCompare(right)).join('\u0000');
+
+function encodeRuntimeTableScalar(value: string | number | boolean): string {
+  if (typeof value === 'string') {
+    return `s:${value}`;
+  }
+  if (typeof value === 'number') {
+    return `n:${value}`;
+  }
+  return `b:${value ? '1' : '0'}`;
+}
+
 
 const levenshteinDistance = (left: string, right: string): number => {
   const cols = right.length + 1;
@@ -506,12 +518,72 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
       }
       uniqueKeyTuplePaths.set(canonical, tupleIndex);
     });
+
+    const fieldTypeByName = new Map(contract.fields.map((field) => [field.field, field.type] as const));
+    (contract.constraints ?? []).forEach((constraint, constraintIndex) => {
+      const constraintPath = `tableContracts[${contractIndex}].constraints[${constraintIndex}]`;
+      if (!declaredFields.has(constraint.field)) {
+        pushMissingReferenceDiagnostic(
+          diagnostics,
+          'REF_RUNTIME_TABLE_CONSTRAINT_FIELD_MISSING',
+          `${constraintPath}.field`,
+          `Unknown constraint field "${constraint.field}" in runtime table "${contract.id}".`,
+          constraint.field,
+          uniqueKeyCandidates,
+        );
+        return;
+      }
+
+      const fieldType = fieldTypeByName.get(constraint.field);
+      if (
+        (constraint.kind === 'monotonic' || constraint.kind === 'contiguousInt' || constraint.kind === 'numericRange') &&
+        fieldType !== 'int'
+      ) {
+        diagnostics.push({
+          code: 'RUNTIME_TABLE_CONSTRAINT_FIELD_TYPE_INVALID',
+          path: `${constraintPath}.field`,
+          severity: 'error',
+          message: `Runtime table constraint "${constraint.kind}" requires int field "${constraint.field}" in table "${contract.id}".`,
+          suggestion: 'Use an int field or switch to a compatible constraint kind.',
+        });
+      }
+      if (constraint.kind === 'contiguousInt' && constraint.step !== undefined && constraint.step <= 0) {
+        diagnostics.push({
+          code: 'RUNTIME_TABLE_CONSTRAINT_STEP_INVALID',
+          path: `${constraintPath}.step`,
+          severity: 'error',
+          message: `Runtime table contiguousInt constraint step must be > 0 for table "${contract.id}".`,
+          suggestion: 'Set step to a positive integer.',
+        });
+      }
+      if (
+        constraint.kind === 'numericRange' &&
+        constraint.min !== undefined &&
+        constraint.max !== undefined &&
+        constraint.min > constraint.max
+      ) {
+        diagnostics.push({
+          code: 'RUNTIME_TABLE_CONSTRAINT_RANGE_INVALID',
+          path: constraintPath,
+          severity: 'error',
+          message: `Runtime table numericRange constraint min cannot exceed max for field "${constraint.field}" in table "${contract.id}".`,
+          suggestion: 'Set min <= max.',
+        });
+      }
+    });
   });
-  const runtimeDataAssetCandidates = [...new Set((def.runtimeDataAssets ?? []).map((asset) => asset.id))].sort((left, right) =>
-    left.localeCompare(right),
-  );
+  const runtimeAssets = def.runtimeDataAssets ?? [];
+  const runtimeDataAssetCandidates = [...new Set(runtimeAssets.map((asset) => asset.id))].sort((left, right) => left.localeCompare(right));
   const runtimeAssetIdsByNormalized = new Set(runtimeDataAssetCandidates.map((assetId) => assetId.normalize('NFC')));
+  const runtimeAssetPayloadByNormalized = new Map<string, unknown>();
+  for (const asset of runtimeAssets) {
+    const normalized = asset.id.normalize('NFC');
+    if (!runtimeAssetPayloadByNormalized.has(normalized)) {
+      runtimeAssetPayloadByNormalized.set(normalized, asset.payload);
+    }
+  }
   (def.tableContracts ?? []).forEach((contract, index) => {
+    const normalizedAssetId = contract.assetId.normalize('NFC');
     if (!runtimeAssetIdsByNormalized.has(contract.assetId.normalize('NFC'))) {
       pushMissingReferenceDiagnostic(
         diagnostics,
@@ -530,7 +602,188 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
         message: `Runtime table contract "${contract.id}" must declare a non-empty tablePath.`,
         suggestion: 'Set tablePath to a dotted payload path such as "blindSchedule.levels".',
       });
+      return;
     }
+
+    const payload = runtimeAssetPayloadByNormalized.get(normalizedAssetId);
+    const resolvedRows = payload === undefined ? { rows: null } : resolveRuntimeTableRowsByPath(payload, contract.tablePath);
+    if (resolvedRows.rows === null) {
+      return;
+    }
+    const rows = resolvedRows.rows;
+
+    (contract.uniqueBy ?? []).forEach((tuple, tupleIndex) => {
+      const rowIndexByKey = new Map<string, number>();
+      for (const [rowIndex, row] of rows.entries()) {
+        const encodedParts: string[] = [];
+        let scalarFailure = false;
+        for (const field of tuple) {
+          const value = row[field];
+          if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
+            diagnostics.push({
+              code: 'RUNTIME_TABLE_UNIQUE_KEY_VALUE_INVALID',
+              path: `tableContracts[${index}].uniqueBy[${tupleIndex}]`,
+              severity: 'error',
+              message: `Runtime table "${contract.id}" row ${rowIndex} has non-scalar unique key value for field "${field}".`,
+              suggestion: 'Ensure unique key fields resolve to string/number/boolean on every row.',
+            });
+            scalarFailure = true;
+            break;
+          }
+          encodedParts.push(encodeRuntimeTableScalar(value));
+        }
+        if (scalarFailure) {
+          continue;
+        }
+        const key = encodedParts.join('\u0002');
+        const firstRowIndex = rowIndexByKey.get(key);
+        if (firstRowIndex !== undefined) {
+          diagnostics.push({
+            code: 'RUNTIME_TABLE_UNIQUE_KEY_VIOLATION',
+            path: `tableContracts[${index}].uniqueBy[${tupleIndex}]`,
+            severity: 'error',
+            message: `Runtime table "${contract.id}" violates uniqueBy [${tuple.join(', ')}]: duplicate rows at indices ${firstRowIndex} and ${rowIndex}.`,
+            suggestion: 'Ensure each uniqueBy tuple identifies at most one row.',
+          });
+          continue;
+        }
+        rowIndexByKey.set(key, rowIndex);
+      }
+    });
+
+    (contract.constraints ?? []).forEach((constraint, constraintIndex) => {
+      const constraintPath = `tableContracts[${index}].constraints[${constraintIndex}]`;
+      if (constraint.kind === 'monotonic') {
+        let previous: number | undefined;
+        let previousRowIndex: number | undefined;
+        for (const [rowIndex, row] of rows.entries()) {
+          const value = row[constraint.field];
+          if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
+            diagnostics.push({
+              code: 'RUNTIME_TABLE_CONSTRAINT_VALUE_INVALID',
+              path: constraintPath,
+              severity: 'error',
+              message: `Runtime table "${contract.id}" row ${rowIndex} has non-int value for monotonic field "${constraint.field}".`,
+              suggestion: 'Ensure constrained fields are safe integers on every row.',
+            });
+            return;
+          }
+          if (previous !== undefined) {
+            const isOrdered =
+              constraint.direction === 'asc'
+                ? constraint.strict === false
+                  ? previous <= value
+                  : previous < value
+                : constraint.strict === false
+                  ? previous >= value
+                  : previous > value;
+            if (!isOrdered) {
+              diagnostics.push({
+                code: 'RUNTIME_TABLE_CONSTRAINT_MONOTONIC_VIOLATION',
+                path: constraintPath,
+                severity: 'error',
+                message: `Runtime table "${contract.id}" violates monotonic ${constraint.direction} on field "${constraint.field}" at rows ${previousRowIndex} -> ${rowIndex}.`,
+                suggestion: 'Fix row order/values to satisfy declared monotonic constraint.',
+              });
+              return;
+            }
+          }
+          previous = value;
+          previousRowIndex = rowIndex;
+        }
+        return;
+      }
+
+      if (constraint.kind === 'numericRange') {
+        for (const [rowIndex, row] of rows.entries()) {
+          const value = row[constraint.field];
+          if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
+            diagnostics.push({
+              code: 'RUNTIME_TABLE_CONSTRAINT_VALUE_INVALID',
+              path: constraintPath,
+              severity: 'error',
+              message: `Runtime table "${contract.id}" row ${rowIndex} has non-int value for numericRange field "${constraint.field}".`,
+              suggestion: 'Ensure constrained fields are safe integers on every row.',
+            });
+            return;
+          }
+          if (constraint.min !== undefined && value < constraint.min) {
+            diagnostics.push({
+              code: 'RUNTIME_TABLE_CONSTRAINT_RANGE_VIOLATION',
+              path: constraintPath,
+              severity: 'error',
+              message: `Runtime table "${contract.id}" row ${rowIndex} value ${value} is below min ${constraint.min} for field "${constraint.field}".`,
+              suggestion: 'Adjust row values or relax numericRange bounds.',
+            });
+            return;
+          }
+          if (constraint.max !== undefined && value > constraint.max) {
+            diagnostics.push({
+              code: 'RUNTIME_TABLE_CONSTRAINT_RANGE_VIOLATION',
+              path: constraintPath,
+              severity: 'error',
+              message: `Runtime table "${contract.id}" row ${rowIndex} value ${value} exceeds max ${constraint.max} for field "${constraint.field}".`,
+              suggestion: 'Adjust row values or relax numericRange bounds.',
+            });
+            return;
+          }
+        }
+        return;
+      }
+
+      const step = constraint.step ?? 1;
+      const expectedStart = constraint.start;
+      const valuesWithRows: Array<{ readonly rowIndex: number; readonly value: number }> = [];
+      for (const [rowIndex, row] of rows.entries()) {
+        const value = row[constraint.field];
+        if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
+          diagnostics.push({
+            code: 'RUNTIME_TABLE_CONSTRAINT_VALUE_INVALID',
+            path: constraintPath,
+            severity: 'error',
+            message: `Runtime table "${contract.id}" row ${rowIndex} has non-int value for contiguousInt field "${constraint.field}".`,
+            suggestion: 'Ensure constrained fields are safe integers on every row.',
+          });
+          return;
+        }
+        valuesWithRows.push({ rowIndex, value });
+      }
+
+      valuesWithRows.sort((left, right) => left.value - right.value || left.rowIndex - right.rowIndex);
+      for (let valueIndex = 1; valueIndex < valuesWithRows.length; valueIndex += 1) {
+        const prev = valuesWithRows[valueIndex - 1]!;
+        const current = valuesWithRows[valueIndex]!;
+        if (current.value === prev.value) {
+          diagnostics.push({
+            code: 'RUNTIME_TABLE_CONSTRAINT_CONTIGUOUS_VIOLATION',
+            path: constraintPath,
+            severity: 'error',
+            message: `Runtime table "${contract.id}" contiguousInt field "${constraint.field}" repeats value ${current.value} at rows ${prev.rowIndex} and ${current.rowIndex}.`,
+            suggestion: 'Use unique integers for contiguousInt constraints.',
+          });
+          return;
+        }
+        if (current.value - prev.value !== step) {
+          diagnostics.push({
+            code: 'RUNTIME_TABLE_CONSTRAINT_CONTIGUOUS_VIOLATION',
+            path: constraintPath,
+            severity: 'error',
+            message: `Runtime table "${contract.id}" contiguousInt field "${constraint.field}" has gap between values ${prev.value} and ${current.value} (expected step ${step}).`,
+            suggestion: 'Fix sequence values to form a contiguous progression.',
+          });
+          return;
+        }
+      }
+      if (expectedStart !== undefined && valuesWithRows[0] !== undefined && valuesWithRows[0]!.value !== expectedStart) {
+        diagnostics.push({
+          code: 'RUNTIME_TABLE_CONSTRAINT_CONTIGUOUS_VIOLATION',
+          path: constraintPath,
+          severity: 'error',
+          message: `Runtime table "${contract.id}" contiguousInt field "${constraint.field}" starts at ${valuesWithRows[0]!.value}, expected ${expectedStart}.`,
+          suggestion: 'Fix sequence start value or update constraint.start.',
+        });
+      }
+    });
   });
   def.actions.forEach((action, actionIndex) => {
     const paramNames = action.params.map((param) => param.name);

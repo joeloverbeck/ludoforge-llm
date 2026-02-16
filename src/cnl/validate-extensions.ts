@@ -67,9 +67,16 @@ export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]):
       normalizedIds.push(normalizeIdentifier(entry.id));
     }
 
-    const validated = validateDataAssetEnvelope(entry, {
+    const validated = validateDataAssetEnvelope(
+      {
+        id: entry.id,
+        kind: entry.kind,
+        payload: entry.payload,
+      },
+      {
       pathPrefix: path,
-    });
+      },
+    );
     diagnostics.push(...validated.diagnostics);
     if (validated.asset === null) {
       continue;

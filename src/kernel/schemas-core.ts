@@ -222,6 +222,33 @@ export const RuntimeTableFieldContractSchema = z
 
 export const RuntimeTableUniqueKeySchema = z.array(StringSchema).min(1);
 
+export const RuntimeTableConstraintSchema = z.discriminatedUnion('kind', [
+  z
+    .object({
+      kind: z.literal('monotonic'),
+      field: StringSchema,
+      direction: z.union([z.literal('asc'), z.literal('desc')]),
+      strict: BooleanSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('contiguousInt'),
+      field: StringSchema,
+      start: IntegerSchema.optional(),
+      step: IntegerSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('numericRange'),
+      field: StringSchema,
+      min: NumberSchema.optional(),
+      max: NumberSchema.optional(),
+    })
+    .strict(),
+]);
+
 export const RuntimeTableContractSchema = z
   .object({
     id: StringSchema,
@@ -229,6 +256,7 @@ export const RuntimeTableContractSchema = z
     tablePath: StringSchema,
     fields: z.array(RuntimeTableFieldContractSchema),
     uniqueBy: z.array(RuntimeTableUniqueKeySchema).optional(),
+    constraints: z.array(RuntimeTableConstraintSchema).optional(),
   })
   .strict();
 

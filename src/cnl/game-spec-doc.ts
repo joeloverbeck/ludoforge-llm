@@ -112,6 +112,33 @@ export interface GameSpecDataAsset {
   readonly id: string;
   readonly kind: string;
   readonly payload: unknown;
+  readonly tableContracts?: readonly GameSpecRuntimeTableContract[];
+}
+
+export type GameSpecRuntimeTableConstraint =
+  | {
+      readonly kind: 'monotonic';
+      readonly field: string;
+      readonly direction: 'asc' | 'desc';
+      readonly strict?: boolean;
+    }
+  | {
+      readonly kind: 'contiguousInt';
+      readonly field: string;
+      readonly start?: number;
+      readonly step?: number;
+    }
+  | {
+      readonly kind: 'numericRange';
+      readonly field: string;
+      readonly min?: number;
+      readonly max?: number;
+    };
+
+export interface GameSpecRuntimeTableContract {
+  readonly tablePath: string;
+  readonly uniqueBy?: readonly (readonly string[])[];
+  readonly constraints?: readonly GameSpecRuntimeTableConstraint[];
 }
 
 export interface GameSpecImport {

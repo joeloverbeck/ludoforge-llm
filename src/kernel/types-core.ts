@@ -343,12 +343,39 @@ export interface RuntimeTableFieldContract {
   readonly type: RuntimeTableScalarType;
 }
 
+export interface RuntimeTableMonotonicConstraint {
+  readonly kind: 'monotonic';
+  readonly field: string;
+  readonly direction: 'asc' | 'desc';
+  readonly strict?: boolean;
+}
+
+export interface RuntimeTableContiguousIntConstraint {
+  readonly kind: 'contiguousInt';
+  readonly field: string;
+  readonly start?: number;
+  readonly step?: number;
+}
+
+export interface RuntimeTableNumericRangeConstraint {
+  readonly kind: 'numericRange';
+  readonly field: string;
+  readonly min?: number;
+  readonly max?: number;
+}
+
+export type RuntimeTableConstraint =
+  | RuntimeTableMonotonicConstraint
+  | RuntimeTableContiguousIntConstraint
+  | RuntimeTableNumericRangeConstraint;
+
 export interface RuntimeTableContract {
   readonly id: string;
   readonly assetId: string;
   readonly tablePath: string;
   readonly fields: readonly RuntimeTableFieldContract[];
   readonly uniqueBy?: readonly (readonly [string, ...string[]])[];
+  readonly constraints?: readonly RuntimeTableConstraint[];
 }
 
 export interface DataAssetRef {

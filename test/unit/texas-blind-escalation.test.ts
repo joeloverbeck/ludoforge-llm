@@ -9,7 +9,6 @@ import {
   createCollector,
   createRng,
   initialState,
-  isEvalErrorCode,
   type EffectAST,
   type GameDef,
 } from '../../src/kernel/index.js';
@@ -132,7 +131,7 @@ describe('texas blind escalation macro', () => {
     assert.equal(atBoundary.ante, 15);
   });
 
-  it('fails explicitly when next blind level row is missing from schedule data', () => {
+  it('fails validation explicitly when next blind level row is missing from schedule data', () => {
     const { def, effects } = loadEscalateMacro();
     const malformedDef: GameDef = {
       ...def,
@@ -169,10 +168,7 @@ describe('texas blind escalation macro', () => {
           bigBlind: 20,
           ante: 0,
         }),
-      (error: unknown) =>
-        isEvalErrorCode(error, 'DATA_ASSET_CARDINALITY_NO_MATCH') &&
-        error.context?.tableId === 'tournament-standard::settings.blindSchedule' &&
-        error.context?.actualMatchCount === 0,
+      (error: unknown) => error instanceof Error && error.message.includes('RUNTIME_TABLE_CONSTRAINT_CONTIGUOUS_VIOLATION'),
     );
   });
 });

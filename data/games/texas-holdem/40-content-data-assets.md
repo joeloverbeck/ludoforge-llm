@@ -530,6 +530,14 @@ dataAssets:
 
   - id: tournament-standard
     kind: scenario
+    tableContracts:
+      - tablePath: settings.blindSchedule
+        uniqueBy:
+          - [level]
+        constraints:
+          - { kind: monotonic, field: level, direction: asc }
+          - { kind: contiguousInt, field: level, start: 0, step: 1 }
+          - { kind: numericRange, field: handsUntilNext, min: 1 }
     payload:
       pieceCatalogAssetId: standard-52-deck
       factionPools:

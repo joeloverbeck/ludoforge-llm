@@ -1,8 +1,9 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { compileGameSpecToGameDef, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { compileProductionSpec, compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { compileProductionSpec, compileTexasProductionSpec, readTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 
 function assertNoUnboundBindingDiagnostics(
   diagnostics: readonly { code: string; path: string; severity: string; message: string }[],
@@ -28,5 +29,27 @@ describe('production spec strict-binding regression', () => {
     assert.deepEqual(validatorDiagnostics.filter((diagnostic) => diagnostic.severity === 'error'), []);
     assert.deepEqual(compiled.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'), []);
     assertNoUnboundBindingDiagnostics(compiled.diagnostics);
+  });
+
+  it('fails compile-time validation when Texas blind schedule violates declared table contracts', () => {
+    const malformedMarkdown = readTexasProductionSpec().replace(
+      '- { level: 1, sb: 15, bb: 30, ante: 0, handsUntilNext: 10 }',
+      '- { level: 2, sb: 15, bb: 30, ante: 0, handsUntilNext: 0 }',
+    );
+    const parsed = parseGameSpec(malformedMarkdown);
+    assertNoErrors(parsed);
+
+    const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
+    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+    assert.deepEqual(validatorDiagnostics.filter((diagnostic) => diagnostic.severity === 'error'), []);
+    assert.equal(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'RUNTIME_TABLE_CONSTRAINT_CONTIGUOUS_VIOLATION' ||
+          diagnostic.code === 'RUNTIME_TABLE_CONSTRAINT_RANGE_VIOLATION',
+      ),
+      true,
+    );
   });
 });

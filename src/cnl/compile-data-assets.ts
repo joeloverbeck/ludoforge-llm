@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
+import { RuntimeTableConstraintSchema } from '../kernel/schemas-core.js';
 import type {
   EffectAST,
   MapPayload,
@@ -114,9 +115,17 @@ export function deriveSectionsFromDataAssets(
       continue;
     }
     const pathPrefix = `doc.dataAssets.${index}`;
-    const validated = validateDataAssetEnvelope(rawAsset, {
+    const declaredTableContracts = readDeclaredRuntimeTableContracts(rawAsset, `${pathPrefix}.tableContracts`, diagnostics);
+    const validated = validateDataAssetEnvelope(
+      {
+        id: rawAsset.id,
+        kind: rawAsset.kind,
+        payload: rawAsset.payload,
+      },
+      {
       pathPrefix,
-    });
+      },
+    );
     diagnostics.push(...validated.diagnostics);
     if (validated.asset === null) {
       if (rawAsset.kind === 'map') {
@@ -133,7 +142,15 @@ export function deriveSectionsFromDataAssets(
       kind: validated.asset.kind,
       payload: validated.asset.payload,
     });
-    tableContracts.push(...deriveRuntimeTableContracts(validated.asset.id, validated.asset.payload));
+    tableContracts.push(
+      ...deriveRuntimeTableContracts(
+        validated.asset.id,
+        validated.asset.payload,
+        declaredTableContracts,
+        diagnostics,
+        `${pathPrefix}.tableContracts`,
+      ),
+    );
 
     if (validated.asset.kind === 'map') {
       mapAssets.push({
@@ -500,7 +517,179 @@ const buildScenarioSetupEffects = ({
   return effects;
 };
 
-function deriveRuntimeTableContracts(assetId: string, payload: unknown): readonly RuntimeTableContract[] {
+type DeclaredRuntimeTableContract = {
+  readonly tablePath: string;
+  readonly uniqueBy?: readonly (readonly [string, ...string[]])[];
+  readonly constraints?: RuntimeTableContract['constraints'];
+};
+
+function readDeclaredRuntimeTableContracts(
+  rawAsset: Record<string, unknown>,
+  path: string,
+  diagnostics: Diagnostic[],
+): readonly DeclaredRuntimeTableContract[] {
+  const rawContracts = rawAsset.tableContracts;
+  if (rawContracts === undefined || rawContracts === null) {
+    return [];
+  }
+  if (!Array.isArray(rawContracts)) {
+    diagnostics.push({
+      code: 'CNL_COMPILER_RUNTIME_TABLE_CONTRACTS_INVALID',
+      path,
+      severity: 'error',
+      message: 'tableContracts must be an array when provided.',
+      suggestion: 'Set tableContracts to an array of tablePath/uniqueBy/constraints objects.',
+    });
+    return [];
+  }
+
+  const results: DeclaredRuntimeTableContract[] = [];
+  const seenTablePaths = new Set<string>();
+  for (const [index, contract] of rawContracts.entries()) {
+    const contractPath = `${path}.${index}`;
+    if (!isRecord(contract)) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_RUNTIME_TABLE_CONTRACT_INVALID',
+        path: contractPath,
+        severity: 'error',
+        message: 'tableContracts entries must be objects.',
+        suggestion: 'Use { tablePath, uniqueBy?, constraints? }.',
+      });
+      continue;
+    }
+
+    const tablePath = typeof contract.tablePath === 'string' ? contract.tablePath.trim() : '';
+    if (tablePath.length === 0) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_RUNTIME_TABLE_CONTRACT_PATH_INVALID',
+        path: `${contractPath}.tablePath`,
+        severity: 'error',
+        message: 'tableContracts[].tablePath must be a non-empty string.',
+        suggestion: 'Set tablePath to a dotted payload path such as "settings.blindSchedule".',
+      });
+      continue;
+    }
+    if (seenTablePaths.has(tablePath)) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_RUNTIME_TABLE_CONTRACT_PATH_DUPLICATE',
+        path: `${contractPath}.tablePath`,
+        severity: 'error',
+        message: `Duplicate tableContracts entry for tablePath "${tablePath}".`,
+        suggestion: 'Keep one declaration per tablePath.',
+      });
+      continue;
+    }
+    seenTablePaths.add(tablePath);
+
+    let uniqueBy: DeclaredRuntimeTableContract['uniqueBy'] | undefined;
+    if (contract.uniqueBy !== undefined) {
+      if (!Array.isArray(contract.uniqueBy)) {
+        diagnostics.push({
+          code: 'CNL_COMPILER_RUNTIME_TABLE_UNIQUE_BY_INVALID',
+          path: `${contractPath}.uniqueBy`,
+          severity: 'error',
+          message: 'tableContracts[].uniqueBy must be an array of non-empty string tuples.',
+          suggestion: 'Set uniqueBy like [["level"], ["phase", "level"]].',
+        });
+        continue;
+      }
+      const parsedTuples: Array<readonly [string, ...string[]]> = [];
+      let tupleValidationFailed = false;
+      for (const [tupleIndex, tuple] of contract.uniqueBy.entries()) {
+        const tuplePath = `${contractPath}.uniqueBy.${tupleIndex}`;
+        if (!Array.isArray(tuple) || tuple.length === 0 || tuple.some((field) => typeof field !== 'string' || field.trim().length === 0)) {
+          diagnostics.push({
+            code: 'CNL_COMPILER_RUNTIME_TABLE_UNIQUE_BY_INVALID',
+            path: tuplePath,
+            severity: 'error',
+            message: 'Each uniqueBy tuple must be a non-empty array of non-empty field names.',
+            suggestion: 'Use tuples like ["level"] or ["season", "round"].',
+          });
+          tupleValidationFailed = true;
+          continue;
+        }
+        parsedTuples.push(tuple.map((field) => field.trim()) as [string, ...string[]]);
+      }
+      if (tupleValidationFailed) {
+        continue;
+      }
+      uniqueBy = parsedTuples;
+    }
+
+    let constraints: DeclaredRuntimeTableContract['constraints'] | undefined;
+    if (contract.constraints !== undefined) {
+      if (!Array.isArray(contract.constraints)) {
+        diagnostics.push({
+          code: 'CNL_COMPILER_RUNTIME_TABLE_CONSTRAINTS_INVALID',
+          path: `${contractPath}.constraints`,
+          severity: 'error',
+          message: 'tableContracts[].constraints must be an array when provided.',
+          suggestion: 'Use an array of generic constraints (monotonic/contiguousInt/numericRange).',
+        });
+        continue;
+      }
+
+      const parsedConstraints: NonNullable<DeclaredRuntimeTableContract['constraints']>[number][] = [];
+      let constraintValidationFailed = false;
+      for (const [constraintIndex, rawConstraint] of contract.constraints.entries()) {
+        const parsed = RuntimeTableConstraintSchema.safeParse(rawConstraint);
+        if (!parsed.success) {
+          diagnostics.push({
+            code: 'CNL_COMPILER_RUNTIME_TABLE_CONSTRAINT_INVALID',
+            path: `${contractPath}.constraints.${constraintIndex}`,
+            severity: 'error',
+            message: parsed.error.issues[0]?.message ?? 'Invalid runtime table constraint.',
+            suggestion: 'Use a valid generic runtime table constraint shape.',
+          });
+          constraintValidationFailed = true;
+          continue;
+        }
+        const normalizedConstraint =
+          parsed.data.kind === 'monotonic'
+            ? {
+                kind: 'monotonic' as const,
+                field: parsed.data.field,
+                direction: parsed.data.direction,
+                ...(parsed.data.strict === undefined ? {} : { strict: parsed.data.strict }),
+              }
+            : parsed.data.kind === 'contiguousInt'
+              ? {
+                  kind: 'contiguousInt' as const,
+                  field: parsed.data.field,
+                  ...(parsed.data.start === undefined ? {} : { start: parsed.data.start }),
+                  ...(parsed.data.step === undefined ? {} : { step: parsed.data.step }),
+                }
+              : {
+                  kind: 'numericRange' as const,
+                  field: parsed.data.field,
+                  ...(parsed.data.min === undefined ? {} : { min: parsed.data.min }),
+                  ...(parsed.data.max === undefined ? {} : { max: parsed.data.max }),
+                };
+        parsedConstraints.push(normalizedConstraint);
+      }
+      if (constraintValidationFailed) {
+        continue;
+      }
+      constraints = parsedConstraints;
+    }
+
+    results.push({
+      tablePath,
+      ...(uniqueBy === undefined ? {} : { uniqueBy }),
+      ...(constraints === undefined ? {} : { constraints }),
+    });
+  }
+
+  return results;
+}
+
+function deriveRuntimeTableContracts(
+  assetId: string,
+  payload: unknown,
+  declaredContracts: readonly DeclaredRuntimeTableContract[],
+  diagnostics: Diagnostic[],
+  declarationPath: string,
+): readonly RuntimeTableContract[] {
   const contracts: RuntimeTableContract[] = [];
   const visited = new Set<unknown>();
 
@@ -535,7 +724,28 @@ function deriveRuntimeTableContracts(assetId: string, payload: unknown): readonl
   };
 
   walk(payload, []);
-  return contracts.sort((left, right) => left.id.localeCompare(right.id));
+  const contractsByTablePath = new Map(contracts.map((contract) => [contract.tablePath, contract] as const));
+
+  for (const [index, declared] of declaredContracts.entries()) {
+    const target = contractsByTablePath.get(declared.tablePath);
+    if (target === undefined) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_RUNTIME_TABLE_CONTRACT_PATH_UNKNOWN',
+        path: `${declarationPath}.${index}.tablePath`,
+        severity: 'error',
+        message: `tableContracts entry references unknown tablePath "${declared.tablePath}" for asset "${assetId}".`,
+        suggestion: 'Use a tablePath that resolves to an array of scalar-object rows in payload.',
+      });
+      continue;
+    }
+    contractsByTablePath.set(declared.tablePath, {
+      ...target,
+      ...(declared.uniqueBy === undefined ? {} : { uniqueBy: declared.uniqueBy }),
+      ...(declared.constraints === undefined ? {} : { constraints: declared.constraints }),
+    });
+  }
+
+  return [...contractsByTablePath.values()].sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function deriveScalarRowFields(rows: readonly unknown[]): RuntimeTableContract['fields'] | null {

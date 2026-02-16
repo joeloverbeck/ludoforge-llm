@@ -10,17 +10,27 @@ export interface CompiledProductionSpec {
   readonly compiled: ReturnType<typeof compileGameSpecToGameDef>;
 }
 
-const PRODUCTION_SPEC_PATH = join(process.cwd(), 'data', 'games', 'fire-in-the-lake');
+const FITL_PRODUCTION_SPEC_PATH = join(process.cwd(), 'data', 'games', 'fire-in-the-lake');
+const TEXAS_PRODUCTION_SPEC_PATH = join(process.cwd(), 'data', 'games', 'texas-holdem');
 const FIXTURE_BASE_PATH = join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler');
 
-let cachedResult: CompiledProductionSpec | null = null;
-let cachedHash: string | null = null;
+let cachedFitlResult: CompiledProductionSpec | null = null;
+let cachedFitlHash: string | null = null;
+let cachedTexasResult: CompiledProductionSpec | null = null;
+let cachedTexasHash: string | null = null;
 
 /**
- * Reads the raw production spec markdown.
+ * Reads the raw FITL production spec markdown.
  */
 export function readProductionSpec(): string {
-  return loadGameSpecSource(PRODUCTION_SPEC_PATH).markdown;
+  return loadGameSpecSource(FITL_PRODUCTION_SPEC_PATH).markdown;
+}
+
+/**
+ * Reads the raw Texas production spec markdown.
+ */
+export function readTexasProductionSpec(): string {
+  return loadGameSpecSource(TEXAS_PRODUCTION_SPEC_PATH).markdown;
 }
 
 /**
@@ -32,18 +42,40 @@ export function compileProductionSpec(): CompiledProductionSpec {
   const markdown = readProductionSpec();
   const hash = createHash('sha256').update(markdown).digest('hex');
 
-  if (cachedResult !== null && cachedHash === hash) {
-    return cachedResult;
+  if (cachedFitlResult !== null && cachedFitlHash === hash) {
+    return cachedFitlResult;
   }
 
   const parsed = parseGameSpec(markdown);
   const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
   const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
 
-  cachedResult = { markdown, parsed, validatorDiagnostics, compiled };
-  cachedHash = hash;
+  cachedFitlResult = { markdown, parsed, validatorDiagnostics, compiled };
+  cachedFitlHash = hash;
 
-  return cachedResult;
+  return cachedFitlResult;
+}
+
+/**
+ * Lazy-cached parse + validate + compile of the Texas production spec.
+ * Cache invalidates when the file content hash changes.
+ */
+export function compileTexasProductionSpec(): CompiledProductionSpec {
+  const markdown = readTexasProductionSpec();
+  const hash = createHash('sha256').update(markdown).digest('hex');
+
+  if (cachedTexasResult !== null && cachedTexasHash === hash) {
+    return cachedTexasResult;
+  }
+
+  const parsed = parseGameSpec(markdown);
+  const validatorDiagnostics = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
+  const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+
+  cachedTexasResult = { markdown, parsed, validatorDiagnostics, compiled };
+  cachedTexasHash = hash;
+
+  return cachedTexasResult;
 }
 
 /**

@@ -1,14 +1,14 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { join } from 'node:path';
 
-import { compileGameSpecToGameDef, loadGameSpecSource, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 import { validateDataAssetEnvelope } from '../../src/kernel/data-assets.js';
 import { assertNoErrors, assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
+import { compileTexasProductionSpec, readTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { parseGameSpec } from '../../src/cnl/index.js';
 
 describe('texas hold\'em spec structure', () => {
   it('parses the structural fragments and validates data-asset envelopes', () => {
-    const markdown = loadGameSpecSource(join(process.cwd(), 'data', 'games', 'texas-holdem')).markdown;
+    const markdown = readTexasProductionSpec();
     const parsed = parseGameSpec(markdown);
 
     assertNoErrors(parsed);
@@ -110,20 +110,15 @@ describe('texas hold\'em spec structure', () => {
   });
 
   it('compiles with zero diagnostics', () => {
-    const markdown = loadGameSpecSource(join(process.cwd(), 'data', 'games', 'texas-holdem')).markdown;
-    const parsed = parseGameSpec(markdown);
+    const { parsed, validatorDiagnostics: validated, compiled } = compileTexasProductionSpec();
     assertNoErrors(parsed);
-
-    const validated = validateGameSpec(parsed.doc, { sourceMap: parsed.sourceMap });
     assert.equal(validated.length, 0);
-
-    const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
     assertNoDiagnostics(compiled, parsed.sourceMap);
     assert.notEqual(compiled.gameDef, null);
   });
 
   it('keeps side-pot loops runtime-derived and avoids hardcoded seat ranges', () => {
-    const markdown = loadGameSpecSource(join(process.cwd(), 'data', 'games', 'texas-holdem')).markdown;
+    const markdown = readTexasProductionSpec();
     const parsed = parseGameSpec(markdown);
     assertNoErrors(parsed);
 

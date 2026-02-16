@@ -1,12 +1,11 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { join } from 'node:path';
 
-import { compileGameSpecToGameDef, loadGameSpecSource, parseGameSpec } from '../../src/cnl/index.js';
 import { applyMove, assertValidatedGameDef, initialState, legalMoves } from '../../src/kernel/index.js';
 import type { GameState } from '../../src/kernel/index.js';
 import { advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
   firstLegalPolicy,
   runRuntimeSmokeGate,
@@ -16,10 +15,8 @@ import {
 } from '../helpers/runtime-smoke-harness.js';
 
 const compileTexasDef = () => {
-  const markdown = loadGameSpecSource(join(process.cwd(), 'data', 'games', 'texas-holdem')).markdown;
-  const parsed = parseGameSpec(markdown);
+  const { parsed, compiled } = compileTexasProductionSpec();
   assertNoErrors(parsed);
-  const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
   assertNoDiagnostics(compiled, parsed.sourceMap);
   if (compiled.gameDef === null) {
     throw new Error('Expected compiled Texas gameDef to be present');

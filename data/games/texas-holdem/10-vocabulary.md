@@ -23,6 +23,8 @@ globalVars:
   - { name: playersInHand, type: int, init: 0, min: 0, max: 10 }
   - { name: actingPosition, type: int, init: 0, min: 0, max: 9 }
   - { name: bettingClosed, type: boolean, init: false }
+  - { name: preflopBigBlindSeat, type: int, init: 0, min: 0, max: 9 }
+  - { name: preflopBigBlindOptionOpen, type: boolean, init: false }
   - { name: oddChipRemainder, type: int, init: 0, min: 0, max: 1000000 }
 
 perPlayerVars:

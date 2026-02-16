@@ -42,6 +42,7 @@ describe('texas hold\'em spec structure', () => {
         'find-next-to-act',
         'post-forced-bets-and-set-preflop-actor',
         'deal-community',
+        'mark-preflop-big-blind-acted',
         'betting-round-completion',
         'advance-after-betting',
         'side-pot-distribution',
@@ -187,6 +188,8 @@ describe('texas hold\'em spec structure', () => {
         'playersInHand',
         'actingPosition',
         'bettingClosed',
+        'preflopBigBlindSeat',
+        'preflopBigBlindOptionOpen',
         'oddChipRemainder',
       ],
     );

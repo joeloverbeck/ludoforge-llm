@@ -30,6 +30,8 @@ turnStructure:
         - setVar: { scope: global, var: bettingClosed, value: false }
         - setVar: { scope: global, var: handPhase, value: 0 }
         - setVar: { scope: global, var: playersInHand, value: { ref: gvar, var: activePlayers } }
+        - setVar: { scope: global, var: preflopBigBlindSeat, value: { ref: gvar, var: dealerSeat } }
+        - setVar: { scope: global, var: preflopBigBlindOptionOpen, value: false }
         - forEach:
             bind: $player
             over: { query: players }
@@ -254,6 +256,7 @@ actions:
           from: { zoneExpr: { concat: ['hand:', { ref: activePlayer }] } }
           to: muck:none
       - addVar: { scope: global, var: playersInHand, delta: -1 }
+      - macro: mark-preflop-big-blind-acted
       - macro: betting-round-completion
       - macro: advance-after-betting
     limits: []
@@ -271,6 +274,7 @@ actions:
         - { op: '==', left: { ref: pvar, player: actor, var: streetBet }, right: { ref: gvar, var: currentBet } }
     cost: []
     effects:
+      - macro: mark-preflop-big-blind-acted
       - macro: betting-round-completion
       - macro: advance-after-betting
     limits: []
@@ -299,6 +303,7 @@ actions:
           when: { op: '==', left: { ref: pvar, player: actor, var: chipStack }, right: 0 }
           then:
             - setVar: { scope: pvar, player: actor, var: allIn, value: true }
+      - macro: mark-preflop-big-blind-acted
       - macro: betting-round-completion
       - macro: advance-after-betting
     limits: []
@@ -342,6 +347,7 @@ actions:
           then:
             - setVar: { scope: pvar, player: actor, var: allIn, value: true }
       - setVar: { scope: global, var: bettingClosed, value: false }
+      - macro: mark-preflop-big-blind-acted
       - macro: betting-round-completion
       - macro: advance-after-betting
     limits: []
@@ -379,6 +385,7 @@ actions:
                       var: lastRaiseSize
                       value: { op: '-', left: { ref: pvar, player: actor, var: streetBet }, right: { ref: binding, name: $prevCurrentBet } }
                   - setVar: { scope: global, var: currentBet, value: { ref: pvar, player: actor, var: streetBet } }
+      - macro: mark-preflop-big-blind-acted
       - macro: betting-round-completion
       - macro: advance-after-betting
     limits: []

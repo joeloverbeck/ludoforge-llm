@@ -868,6 +868,8 @@ effectMacros:
                           args:
                             sbPlayer: { chosen: '$dealerSeatBinding' }
                             bbPlayer: { chosen: '$bbSeat' }
+                        - setVar: { scope: global, var: preflopBigBlindSeat, value: { ref: binding, name: $bbSeat } }
+                        - setVar: { scope: global, var: preflopBigBlindOptionOpen, value: true }
                         - setVar: { scope: global, var: actingPosition, value: { ref: binding, name: $dealerSeatBinding } }
                         - setActivePlayer: { player: { chosen: '$dealerSeatBinding' } }
           else:
@@ -1052,6 +1054,8 @@ effectMacros:
                                 args:
                                   sbPlayer: { chosen: '$sbSeat' }
                                   bbPlayer: { chosen: '$bbSeat' }
+                              - setVar: { scope: global, var: preflopBigBlindSeat, value: { ref: binding, name: $bbSeat } }
+                              - setVar: { scope: global, var: preflopBigBlindOptionOpen, value: true }
                               - setVar: { scope: global, var: actingPosition, value: { ref: binding, name: $utgSeat } }
                               - setActivePlayer: { player: { chosen: '$utgSeat' } }
 
@@ -1068,6 +1072,19 @@ effectMacros:
           from: deck:none
           to: community:none
           count: { param: count }
+
+  - id: mark-preflop-big-blind-acted
+    params: []
+    exports: []
+    effects:
+      - if:
+          when:
+            op: and
+            args:
+              - { op: '==', left: { ref: gvar, var: handPhase }, right: 0 }
+              - { op: '==', left: { ref: activePlayer }, right: { ref: gvar, var: preflopBigBlindSeat } }
+          then:
+            - setVar: { scope: global, var: preflopBigBlindOptionOpen, value: false }
 
   - id: betting-round-completion
     params: []
@@ -1092,6 +1109,24 @@ effectMacros:
                       op: '!='
                       left: { ref: pvar, player: { chosen: '$player' }, var: streetBet }
                       right: { ref: gvar, var: currentBet }
+                then:
+                  - setVar:
+                      scope: global
+                      var: bettingClosed
+                      value: false
+      - let:
+          bind: $bbSeatFromState
+          value: { ref: gvar, var: preflopBigBlindSeat }
+          in:
+            - if:
+                when:
+                  op: and
+                  args:
+                    - { op: '==', left: { ref: gvar, var: handPhase }, right: 0 }
+                    - { op: '==', left: { ref: gvar, var: preflopBigBlindOptionOpen }, right: true }
+                    - { op: '>', left: { ref: gvar, var: playersInHand }, right: 1 }
+                    - { op: '==', left: { ref: pvar, player: { chosen: '$bbSeatFromState' }, var: handActive }, right: true }
+                    - { op: '==', left: { ref: pvar, player: { chosen: '$bbSeatFromState' }, var: allIn }, right: false }
                 then:
                   - setVar:
                       scope: global
@@ -1140,6 +1175,30 @@ effectMacros:
     params: []
     exports: []
     effects:
+      - if:
+          when: { op: '<=', left: { ref: gvar, var: playersInHand }, right: 1 }
+          then:
+            - setVar: { scope: global, var: oddChipRemainder, value: { ref: gvar, var: pot } }
+            - forEach:
+                bind: $player
+                over: { query: players }
+                effects:
+                  - if:
+                      when:
+                        op: and
+                        args:
+                          - { op: '>', left: { ref: gvar, var: oddChipRemainder }, right: 0 }
+                          - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: handActive }, right: true }
+                          - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: eliminated }, right: false }
+                      then:
+                        - addVar:
+                            scope: pvar
+                            player: { chosen: $player }
+                            var: chipStack
+                            delta: { ref: gvar, var: oddChipRemainder }
+                        - setVar: { scope: global, var: oddChipRemainder, value: 0 }
+                  - setVar: { scope: pvar, player: { chosen: $player }, var: totalBet, value: 0 }
+            - setVar: { scope: global, var: pot, value: 0 }
       - forEach:
           bind: $tier
           over: { query: intsInRange, min: 1, max: { ref: gvar, var: activePlayers } }

@@ -14,6 +14,7 @@ import {
 import { runGame } from '../../src/sim/index.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { replayScript } from '../helpers/replay-harness.js';
 
 interface ReplaySnapshot {
   readonly state: GameState;
@@ -68,16 +69,19 @@ const replayTrace = (
   def: ValidatedGameDef,
   trace: GameTrace,
 ): readonly ReplaySnapshot[] => {
-  let state = initialState(def, trace.seed, PLAYER_COUNT);
-  const snapshots: ReplaySnapshot[] = [{ state, legal: legalMoves(def, state) }];
-
-  for (const log of trace.moves) {
-    const applied = applyMove(def, state, log.move);
-    state = applied.state;
-    snapshots.push({ state, legal: legalMoves(def, state) });
-  }
-
-  return snapshots;
+  const replayed = replayScript({
+    def,
+    initialState: initialState(def, trace.seed, PLAYER_COUNT),
+    script: trace.moves.map((entry) => ({
+      move: entry.move,
+      expectedStateHash: entry.stateHash,
+    })),
+    keyVars: ['pot', 'blindLevel', 'handsPlayed', 'currentBet'],
+  });
+  return [
+    { state: replayed.initial, legal: legalMoves(def, replayed.initial) },
+    ...replayed.steps.map((step) => ({ state: step.after, legal: legalMoves(def, step.after) })),
+  ];
 };
 
 const runShortTournament = (def: ValidatedGameDef, seed: number): GameTrace =>

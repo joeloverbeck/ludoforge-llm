@@ -2,12 +2,10 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  applyMove,
   asPhaseId,
   asPlayerId,
   assertValidatedGameDef,
   initialState,
-  legalMoves,
   type GameState,
   type Move,
   type Token,
@@ -16,6 +14,7 @@ import {
 import { advancePhase, advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { advancePhaseBounded, replayScript } from '../helpers/replay-harness.js';
 
 const compileTexasDef = (): ValidatedGameDef => {
   const { parsed, compiled } = compileTexasProductionSpec();
@@ -67,11 +66,8 @@ const buildDeck = (
   return [...top, ...rest];
 };
 
-const hasAction = (def: ValidatedGameDef, state: GameState, actionId: string): boolean =>
-  legalMoves(def, state).some((move) => String(move.actionId) === actionId);
-
-const hasExactMove = (def: ValidatedGameDef, state: GameState, target: Move): boolean =>
-  legalMoves(def, state).some(
+const hasExactMove = (moves: readonly Move[], target: Move): boolean =>
+  moves.some(
     (move) => String(move.actionId) === String(target.actionId) && JSON.stringify(move.params) === JSON.stringify(target.params),
   );
 
@@ -81,15 +77,23 @@ const applyLoggedMove = (
   move: Move,
   options?: { readonly exactMoveListed?: boolean },
 ): GameState => {
-  assert.equal(hasAction(def, state, String(move.actionId)), true, `expected action ${String(move.actionId)} to be legal`);
+  const replayed = replayScript({
+    def,
+    initialState: state,
+    script: [{ move }],
+    executionOptions: { advanceToDecisionPoint: false, maxPhaseTransitionsPerMove: 1 },
+    legalityMode: 'actionId',
+    keyVars: ['pot', 'currentBet', 'handPhase', 'bettingClosed'],
+  });
+  const executed = replayed.steps[0]!;
   if (options?.exactMoveListed !== undefined) {
     assert.equal(
-      hasExactMove(def, state, move),
+      hasExactMove(executed.legal, move),
       options.exactMoveListed,
       `unexpected exact-listing status for ${String(move.actionId)} ${JSON.stringify(move.params)}`,
     );
   }
-  return applyMove(def, state, move, { advanceToDecisionPoint: false, maxPhaseTransitionsPerMove: 1 }).state;
+  return replayed.final;
 };
 
 describe('texas hold\'em real-play action-by-action replay e2e', () => {
@@ -196,9 +200,13 @@ describe('texas hold\'em real-play action-by-action replay e2e', () => {
     assert.equal(state.perPlayerVars['0']?.allIn, true);
 
     state = applyLoggedMove(def, state, { actionId: 'call' as Move['actionId'], params: {} });
-    while (state.currentPhase !== 'showdown') {
-      state = advancePhase(def, state);
-    }
+    state = advancePhaseBounded({
+      def,
+      initialState: state,
+      until: (current) => current.currentPhase === 'showdown',
+      maxSteps: 16,
+      keyVars: ['pot', 'handPhase', 'handsPlayed'],
+    }).state;
 
     assert.equal(state.currentPhase, 'showdown');
     assert.deepEqual([...zoneCodes(state, 'burn:none')].sort(), ['3C', 'JC', 'AD'].sort());

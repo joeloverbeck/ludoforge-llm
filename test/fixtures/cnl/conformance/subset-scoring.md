@@ -62,7 +62,11 @@ actions:
               query:
                 query: binding
                 name: $subset
-              prop: value
+              bind: $token
+              valueExpr:
+                ref: tokenProp
+                token: $token
+                prop: value
           resultBind: $bestScore
           in:
             - setVar:

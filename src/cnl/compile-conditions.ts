@@ -280,7 +280,8 @@ export function lowerValueNode(
     'string',
     '{ ref: ... }',
     '{ op: "+|-|*|/|floorDiv|ceilDiv", left, right }',
-    '{ aggregate: { op, query, prop? } }',
+    '{ aggregate: { op: "count", query } }',
+    '{ aggregate: { op: "sum"|"min"|"max", query, bind, valueExpr } }',
     '{ concat: ValueExpr[] }',
     '{ if: { when, then, else } }',
   ]);
@@ -935,7 +936,8 @@ export function lowerNumericValueNode(
       'number',
       '{ ref: ... }',
       '{ op: "+"|"-"|"*"|"/"|"floorDiv"|"ceilDiv", left: <numeric>, right: <numeric> }',
-      '{ aggregate: { op: "sum"|"count"|"min"|"max", query: <OptionsQuery>, prop?: string } }',
+      '{ aggregate: { op: "count", query: <OptionsQuery> } }',
+      '{ aggregate: { op: "sum"|"min"|"max", query: <OptionsQuery>, bind: string, valueExpr: <NumericValueExpr> } }',
       '{ if: { when: <ConditionAST>, then: <numeric>, else: <numeric> } }',
     ]);
   }
@@ -978,18 +980,58 @@ function lowerAggregate(
   if (query.value === null) {
     return { value: null, diagnostics: query.diagnostics };
   }
-  if (source.prop !== undefined && typeof source.prop !== 'string') {
-    return missingCapability(`${path}.prop`, 'aggregate prop', source.prop, ['string']);
+
+  if (op === 'count') {
+    if (source.bind !== undefined) {
+      return missingCapability(`${path}.bind`, 'aggregate bind for count', source.bind, ['omit bind when op is "count"']);
+    }
+    if (source.valueExpr !== undefined) {
+      return missingCapability(`${path}.valueExpr`, 'aggregate valueExpr for count', source.valueExpr, ['omit valueExpr when op is "count"']);
+    }
+    if (source.prop !== undefined) {
+      return missingCapability(`${path}.prop`, 'aggregate prop', source.prop, ['prop is not supported; use bind + valueExpr for non-count aggregates']);
+    }
+    return {
+      value: {
+        aggregate: {
+          op,
+          query: query.value,
+        },
+      },
+      diagnostics: query.diagnostics,
+    };
   }
+
+  if (typeof source.bind !== 'string' || source.bind.length === 0) {
+    return missingCapability(`${path}.bind`, 'aggregate bind', source.bind, ['non-empty string']);
+  }
+  if (source.prop !== undefined) {
+    return missingCapability(`${path}.prop`, 'aggregate prop', source.prop, ['use aggregate.bind + aggregate.valueExpr']);
+  }
+
+  const valueExpr = lowerNumericValueNode(
+    source.valueExpr,
+    {
+      ...context,
+      bindingScope: [...(context.bindingScope ?? []), source.bind],
+    },
+    `${path}.valueExpr`,
+  );
+  const diagnostics = [...query.diagnostics, ...valueExpr.diagnostics];
+  if (valueExpr.value === null) {
+    return { value: null, diagnostics };
+  }
+
   return {
     value: {
       aggregate: {
         op,
         query: query.value,
-        ...(source.prop === undefined ? {} : { prop: source.prop }),
+        bind: source.bind,
+        valueExpr: valueExpr.value,
       },
     },
-    diagnostics: query.diagnostics,
+    diagnostics,
   };
 }
 

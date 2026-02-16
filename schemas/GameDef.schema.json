@@ -5465,40 +5465,62 @@
           "type": "object",
           "properties": {
             "aggregate": {
-              "type": "object",
-              "properties": {
-                "op": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "const": "sum"
-                    },
-                    {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
                       "type": "string",
                       "const": "count"
                     },
-                    {
-                      "type": "string",
-                      "const": "min"
-                    },
-                    {
-                      "type": "string",
-                      "const": "max"
+                    "query": {
+                      "$ref": "#/definitions/__schema2"
                     }
-                  ]
+                  },
+                  "required": [
+                    "op",
+                    "query"
+                  ],
+                  "additionalProperties": false
                 },
-                "query": {
-                  "$ref": "#/definitions/__schema2"
-                },
-                "prop": {
-                  "type": "string"
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "sum"
+                        },
+                        {
+                          "type": "string",
+                          "const": "min"
+                        },
+                        {
+                          "type": "string",
+                          "const": "max"
+                        }
+                      ]
+                    },
+                    "query": {
+                      "$ref": "#/definitions/__schema2"
+                    },
+                    "bind": {
+                      "type": "string"
+                    },
+                    "valueExpr": {
+                      "$ref": "#/definitions/__schema4"
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "query",
+                    "bind",
+                    "valueExpr"
+                  ],
+                  "additionalProperties": false
                 }
-              },
-              "required": [
-                "op",
-                "query"
-              ],
-              "additionalProperties": false
+              ]
             }
           },
           "required": [
@@ -6897,40 +6919,62 @@
           "type": "object",
           "properties": {
             "aggregate": {
-              "type": "object",
-              "properties": {
-                "op": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "const": "sum"
-                    },
-                    {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
                       "type": "string",
                       "const": "count"
                     },
-                    {
-                      "type": "string",
-                      "const": "min"
-                    },
-                    {
-                      "type": "string",
-                      "const": "max"
+                    "query": {
+                      "$ref": "#/definitions/__schema2"
                     }
-                  ]
+                  },
+                  "required": [
+                    "op",
+                    "query"
+                  ],
+                  "additionalProperties": false
                 },
-                "query": {
-                  "$ref": "#/definitions/__schema2"
-                },
-                "prop": {
-                  "type": "string"
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "sum"
+                        },
+                        {
+                          "type": "string",
+                          "const": "min"
+                        },
+                        {
+                          "type": "string",
+                          "const": "max"
+                        }
+                      ]
+                    },
+                    "query": {
+                      "$ref": "#/definitions/__schema2"
+                    },
+                    "bind": {
+                      "type": "string"
+                    },
+                    "valueExpr": {
+                      "$ref": "#/definitions/__schema4"
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "query",
+                    "bind",
+                    "valueExpr"
+                  ],
+                  "additionalProperties": false
                 }
-              },
-              "required": [
-                "op",
-                "query"
-              ],
-              "additionalProperties": false
+              ]
             }
           },
           "required": [

@@ -194,7 +194,8 @@ describe('AST and selector schemas', () => {
             aggregate: {
               op: 'sum',
               query: { query: 'binding', name: '$subset' },
-              prop: 'cost',
+              bind: '$token',
+              valueExpr: { ref: 'tokenProp', token: '$token', prop: 'cost' },
             },
           },
           resultBind: '$score',

@@ -45,9 +45,16 @@ export type ValueExpr =
     }
   | {
       readonly aggregate: {
-        readonly op: 'sum' | 'count' | 'min' | 'max';
+        readonly op: 'count';
         readonly query: OptionsQuery;
-        readonly prop?: string;
+      };
+    }
+  | {
+      readonly aggregate: {
+        readonly op: 'sum' | 'min' | 'max';
+        readonly query: OptionsQuery;
+        readonly bind: string;
+        readonly valueExpr: NumericValueExpr;
       };
     }
   | { readonly concat: readonly ValueExpr[] }
@@ -69,9 +76,16 @@ export type NumericValueExpr =
     }
   | {
       readonly aggregate: {
-        readonly op: 'sum' | 'count' | 'min' | 'max';
+        readonly op: 'count';
         readonly query: OptionsQuery;
-        readonly prop?: string;
+      };
+    }
+  | {
+      readonly aggregate: {
+        readonly op: 'sum' | 'min' | 'max';
+        readonly query: OptionsQuery;
+        readonly bind: string;
+        readonly valueExpr: NumericValueExpr;
       };
     }
   | {

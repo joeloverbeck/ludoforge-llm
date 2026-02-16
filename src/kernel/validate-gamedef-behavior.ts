@@ -331,26 +331,13 @@ export const validateValueExpr = (
   }
 
   validateOptionsQuery(diagnostics, valueExpr.aggregate.query, `${path}.aggregate.query`, context);
-  const knownShapes = inferQueryRuntimeShapes(valueExpr.aggregate.query).filter((shape) => shape !== 'unknown');
-
-  if (valueExpr.aggregate.op !== 'count' && valueExpr.aggregate.prop === undefined && knownShapes.some((shape) => shape !== 'number')) {
-    diagnostics.push({
-      code: 'VALUE_EXPR_AGGREGATE_SOURCE_SHAPE_INVALID',
-      path: `${path}.aggregate.query`,
-      severity: 'error',
-      message: 'aggregate without prop requires numeric query items.',
-      suggestion: 'Use a numeric domain query, or provide aggregate.prop for token/row/map-space property extraction.',
-    });
-  }
-
-  if (valueExpr.aggregate.op !== 'count' && valueExpr.aggregate.prop !== undefined && knownShapes.includes('number')) {
-    diagnostics.push({
-      code: 'VALUE_EXPR_AGGREGATE_SOURCE_SHAPE_INVALID',
-      path: `${path}.aggregate.query`,
-      severity: 'error',
-      message: 'aggregate with prop cannot read properties from numeric query items.',
-      suggestion: 'Use token/assetRows/map-space string query items, or remove aggregate.prop.',
-    });
+  if (valueExpr.aggregate.op !== 'count') {
+    validateNumericValueExpr(
+      diagnostics,
+      valueExpr.aggregate.valueExpr,
+      `${path}.aggregate.valueExpr`,
+      context,
+    );
   }
 };
 

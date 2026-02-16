@@ -4188,7 +4188,8 @@ eventDecks:
                           op: '=='
                           left: { ref: markerState, space: $zone, marker: supportOpposition }
                           right: passiveSupport
-                      prop: population
+                      bind: $zone
+                      valueExpr: { ref: zoneProp, zone: $zone, prop: population }
                   right:
                     op: '*'
                     left: 2
@@ -4201,7 +4202,8 @@ eventDecks:
                             op: '=='
                             left: { ref: markerState, space: $zone, marker: supportOpposition }
                             right: activeSupport
-                        prop: population
+                        bind: $zone
+                        valueExpr: { ref: zoneProp, zone: $zone, prop: population }
                 right:
                   aggregate:
                     op: count

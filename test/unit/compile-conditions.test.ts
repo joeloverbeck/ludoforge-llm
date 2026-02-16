@@ -42,6 +42,49 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers non-count aggregate with bind + valueExpr', () => {
+    const result = lowerValueNode(
+      {
+        aggregate: {
+          op: 'sum',
+          query: { query: 'intsInRange', min: 1, max: 3 },
+          bind: '$n',
+          valueExpr: { ref: 'binding', name: '$n' },
+        },
+      },
+      context,
+      'doc.actions.0.effects.0.setVar.value',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      aggregate: {
+        op: 'sum',
+        query: { query: 'intsInRange', min: 1, max: 3 },
+        bind: '$n',
+        valueExpr: { ref: 'binding', name: '$n' },
+      },
+    });
+  });
+
+  it('rejects legacy aggregate prop syntax', () => {
+    const result = lowerValueNode(
+      {
+        aggregate: {
+          op: 'sum',
+          query: { query: 'tokensInZone', zone: 'deck' },
+          prop: 'cost',
+        },
+      },
+      context,
+      'doc.actions.0.effects.0.setVar.value',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0.setVar.value.aggregate.bind');
+  });
+
   it('lowers canonical query owner selectors for zones filter', () => {
     const result = lowerQueryNode(
       { query: 'zones', filter: { owner: 'active' } },

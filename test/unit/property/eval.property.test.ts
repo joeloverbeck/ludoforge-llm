@@ -78,10 +78,10 @@ describe('evaluation property-style checks', () => {
       { op: '+', left: 3, right: 4 },
       { op: '-', left: 10, right: 7 },
       { op: '*', left: 6, right: 5 },
-      { aggregate: { op: 'sum', query: { query: 'intsInRange', min: 1, max: 4 } } },
+      { aggregate: { op: 'sum', query: { query: 'intsInRange', min: 1, max: 4 }, bind: '$n', valueExpr: { ref: 'binding', name: '$n' } } },
       { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } },
-      { aggregate: { op: 'min', query: { query: 'intsInRange', min: 2, max: 5 } } },
-      { aggregate: { op: 'max', query: { query: 'intsInRange', min: 2, max: 5 } } },
+      { aggregate: { op: 'min', query: { query: 'intsInRange', min: 2, max: 5 }, bind: '$n', valueExpr: { ref: 'binding', name: '$n' } } },
+      { aggregate: { op: 'max', query: { query: 'intsInRange', min: 2, max: 5 }, bind: '$n', valueExpr: { ref: 'binding', name: '$n' } } },
     ];
 
     expressions.forEach((expr) => {

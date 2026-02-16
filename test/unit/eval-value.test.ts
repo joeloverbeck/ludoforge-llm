@@ -124,7 +124,14 @@ describe('evalValue', () => {
     const ctx = makeCtx();
     const expr: ValueExpr = {
       op: '/',
-      left: { aggregate: { op: 'sum', query: { query: 'tokensInZone', zone: 'tableau:0' }, prop: 'vp' } },
+      left: {
+        aggregate: {
+          op: 'sum',
+          query: { query: 'tokensInZone', zone: 'tableau:0' },
+          bind: '$token',
+          valueExpr: { ref: 'tokenProp', token: '$token', prop: 'vp' },
+        },
+      },
       right: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'tableau:0' } } },
     };
     assert.equal(evalValue(expr, ctx), 3);
@@ -151,58 +158,144 @@ describe('evalValue', () => {
 
     assert.equal(
       evalValue(
-        { aggregate: { op: 'sum', query: { query: 'tokensInZone', zone: 'tableau:0' }, prop: 'vp' } },
+        {
+          aggregate: {
+            op: 'sum',
+            query: { query: 'tokensInZone', zone: 'tableau:0' },
+            bind: '$token',
+            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'vp' },
+          },
+        },
         ctx,
       ),
       7,
     );
     assert.equal(
       evalValue(
-        { aggregate: { op: 'min', query: { query: 'tokensInZone', zone: 'tableau:0' }, prop: 'cost' } },
+        {
+          aggregate: {
+            op: 'min',
+            query: { query: 'tokensInZone', zone: 'tableau:0' },
+            bind: '$token',
+            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'cost' },
+          },
+        },
         ctx,
       ),
       2,
     );
     assert.equal(
       evalValue(
-        { aggregate: { op: 'max', query: { query: 'tokensInZone', zone: 'tableau:0' }, prop: 'cost' } },
+        {
+          aggregate: {
+            op: 'max',
+            query: { query: 'tokensInZone', zone: 'tableau:0' },
+            bind: '$token',
+            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'cost' },
+          },
+        },
         ctx,
       ),
       8,
     );
 
     assert.equal(
-      evalValue({ aggregate: { op: 'sum', query: { query: 'tokensInZone', zone: 'hand:0' }, prop: 'vp' } }, ctx),
+      evalValue(
+        {
+          aggregate: {
+            op: 'sum',
+            query: { query: 'tokensInZone', zone: 'hand:0' },
+            bind: '$token',
+            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'vp' },
+          },
+        },
+        ctx,
+      ),
       0,
     );
     assert.equal(
-      evalValue({ aggregate: { op: 'min', query: { query: 'tokensInZone', zone: 'hand:0' }, prop: 'vp' } }, ctx),
+      evalValue(
+        {
+          aggregate: {
+            op: 'min',
+            query: { query: 'tokensInZone', zone: 'hand:0' },
+            bind: '$token',
+            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'vp' },
+          },
+        },
+        ctx,
+      ),
       0,
     );
     assert.equal(
-      evalValue({ aggregate: { op: 'max', query: { query: 'tokensInZone', zone: 'hand:0' }, prop: 'vp' } }, ctx),
+      evalValue(
+        {
+          aggregate: {
+            op: 'max',
+            query: { query: 'tokensInZone', zone: 'hand:0' },
+            bind: '$token',
+            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'vp' },
+          },
+        },
+        ctx,
+      ),
       0,
     );
   });
 
-  it('throws TYPE_MISMATCH when aggregate prop is missing or non-numeric', () => {
+  it('throws TYPE_MISMATCH when aggregate valueExpr is missing or non-numeric', () => {
     const ctx = makeCtx();
 
     assert.throws(
-      () => evalValue({ aggregate: { op: 'sum', query: { query: 'tokensInZone', zone: 'deck:none' }, prop: 'missing' } }, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+      () =>
+        evalValue(
+          {
+            aggregate: {
+              op: 'sum',
+              query: { query: 'tokensInZone', zone: 'deck:none' },
+              bind: '$token',
+              valueExpr: { ref: 'tokenProp', token: '$token', prop: 'missing' },
+            },
+          },
+          ctx,
+        ),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
     );
 
     assert.throws(
-      () => evalValue({ aggregate: { op: 'sum', query: { query: 'tokensInZone', zone: 'hand:1' }, prop: 'label' } }, ctx),
+      () =>
+        evalValue(
+          {
+            aggregate: {
+              op: 'sum',
+              query: { query: 'tokensInZone', zone: 'hand:1' },
+              bind: '$token',
+              valueExpr: { ref: 'tokenProp', token: '$token', prop: 'label' },
+            },
+          },
+          ctx,
+        ),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
 
-  it('supports numeric aggregates without prop and enforces safe integer outputs', () => {
+  it('supports numeric aggregates via item binding and enforces safe integer outputs', () => {
     const ctx = makeCtx();
 
-    assert.equal(evalValue({ aggregate: { op: 'sum', query: { query: 'intsInRange', min: 1, max: 3 } } }, ctx), 6);
+    assert.equal(
+      evalValue(
+        {
+          aggregate: {
+            op: 'sum',
+            query: { query: 'intsInRange', min: 1, max: 3 },
+            bind: '$n',
+            valueExpr: { ref: 'binding', name: '$n' },
+          },
+        },
+        ctx,
+      ),
+      6,
+    );
 
     assert.throws(
       () => evalValue({ op: '+', left: Number.MAX_SAFE_INTEGER, right: 1 }, ctx),
@@ -210,7 +303,41 @@ describe('evalValue', () => {
     );
   });
 
-  it('supports aggregate prop extraction from filtered map spaces', () => {
+  it('supports aggregate valueExpr evaluation over players', () => {
+    const ctx = makeCtx();
+    const expr: ValueExpr = {
+      aggregate: {
+        op: 'sum',
+        query: { query: 'players' },
+        bind: '$player',
+        valueExpr: { ref: 'binding', name: '$player' },
+      },
+    };
+
+    assert.equal(evalValue(expr, ctx), 1);
+  });
+
+  it('supports aggregate valueExpr evaluation over composed numeric queries', () => {
+    const ctx = makeCtx();
+    const expr: ValueExpr = {
+      aggregate: {
+        op: 'sum',
+        query: {
+          query: 'concat',
+          sources: [
+            { query: 'intsInRange', min: 1, max: 2 },
+            { query: 'intsInRange', min: 4, max: 4 },
+          ],
+        },
+        bind: '$n',
+        valueExpr: { ref: 'binding', name: '$n' },
+      },
+    };
+
+    assert.equal(evalValue(expr, ctx), 7);
+  });
+
+  it('supports aggregate valueExpr evaluation from filtered map spaces', () => {
     const mapSpaces = [
       {
         id: 'alpha:none',
@@ -268,14 +395,15 @@ describe('evalValue', () => {
             },
           },
         },
-        prop: 'population',
+        bind: '$zone',
+        valueExpr: { ref: 'zoneProp', zone: '$zone', prop: 'population' },
       },
     };
 
     assert.equal(evalValue(expr, ctx), 3);
   });
 
-  it('supports aggregate prop extraction from assetRows row objects', () => {
+  it('supports aggregate valueExpr evaluation from assetRows row objects', () => {
     const def = {
       ...makeDef(),
       runtimeDataAssets: [
@@ -310,7 +438,13 @@ describe('evalValue', () => {
       aggregate: {
         op: 'sum',
         query: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
-        prop: 'smallBlind',
+        bind: '$row',
+        valueExpr: {
+          ref: 'assetField',
+          row: '$row',
+          tableId: 'tournament-standard::blindSchedule.levels',
+          field: 'smallBlind',
+        },
       },
     };
     assert.equal(evalValue(expr, ctx), 70);

@@ -204,12 +204,22 @@ valueExprSchemaInternal = z.union([
   z
     .object({
       aggregate: z
-        .object({
-          op: z.union([z.literal('sum'), z.literal('count'), z.literal('min'), z.literal('max')]),
-          query: OptionsQuerySchema,
-          prop: StringSchema.optional(),
-        })
-        .strict(),
+        .union([
+          z
+            .object({
+              op: z.literal('count'),
+              query: OptionsQuerySchema,
+            })
+            .strict(),
+          z
+            .object({
+              op: z.union([z.literal('sum'), z.literal('min'), z.literal('max')]),
+              query: OptionsQuerySchema,
+              bind: StringSchema,
+              valueExpr: NumericValueExprSchema,
+            })
+            .strict(),
+        ]),
     })
     .strict(),
   z.object({ concat: z.array(ValueExprSchema) }).strict(),
@@ -246,12 +256,22 @@ numericValueExprSchemaInternal = z.union([
   z
     .object({
       aggregate: z
-        .object({
-          op: z.union([z.literal('sum'), z.literal('count'), z.literal('min'), z.literal('max')]),
-          query: OptionsQuerySchema,
-          prop: StringSchema.optional(),
-        })
-        .strict(),
+        .union([
+          z
+            .object({
+              op: z.literal('count'),
+              query: OptionsQuerySchema,
+            })
+            .strict(),
+          z
+            .object({
+              op: z.union([z.literal('sum'), z.literal('min'), z.literal('max')]),
+              query: OptionsQuerySchema,
+              bind: StringSchema,
+              valueExpr: NumericValueExprSchema,
+            })
+            .strict(),
+        ]),
     })
     .strict(),
   z

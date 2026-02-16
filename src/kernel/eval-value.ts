@@ -3,7 +3,7 @@ import { evalCondition } from './eval-condition.js';
 import { divisionByZeroError, typeMismatchError } from './eval-error.js';
 import { evalQuery } from './eval-query.js';
 import { resolveRef } from './resolve-ref.js';
-import type { Token, ValueExpr } from './types.js';
+import type { ValueExpr } from './types.js';
 
 function isSafeIntegerNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && Number.isSafeInteger(value);
@@ -15,70 +15,6 @@ function expectSafeInteger(value: unknown, message: string, context: Readonly<Re
   }
 
   return value;
-}
-
-function extractAggregateValue(
-  item: unknown,
-  prop: string | undefined,
-  ctx: EvalContext,
-  aggregateExpr: Extract<ValueExpr, { readonly aggregate: unknown }>,
-  index: number,
-): number {
-  if (prop === undefined) {
-    return expectSafeInteger(item, 'Aggregate value must be a finite safe integer when prop is omitted', {
-      expr: aggregateExpr,
-      index,
-      actualType: typeof item,
-      value: item,
-    });
-  }
-
-  if (typeof item === 'string') {
-    const mapSpaces = ctx.mapSpaces ?? [];
-    const mapSpace = mapSpaces.find((space) => space.id === item);
-    if (mapSpace !== undefined) {
-      const propValue = (mapSpace as unknown as Record<string, unknown>)[prop];
-      return expectSafeInteger(propValue, 'Aggregate map-space prop value must be a finite safe integer', {
-        expr: aggregateExpr,
-        index,
-        prop,
-        zone: item,
-        value: propValue,
-        availableProps: Object.keys(mapSpace).sort(),
-      });
-    }
-  }
-
-  if (typeof item !== 'object' || item === null || !('props' in item)) {
-    if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
-      const rowValue = (item as Record<string, unknown>)[prop];
-      return expectSafeInteger(rowValue, 'Aggregate row field value must be a finite safe integer', {
-        expr: aggregateExpr,
-        index,
-        prop,
-        value: rowValue,
-        availableProps: Object.keys(item).sort(),
-      });
-    }
-
-    throw typeMismatchError('Aggregate prop extraction requires token-like items, row objects, or map-space ids', {
-      expr: aggregateExpr,
-      index,
-      prop,
-      actualType: typeof item,
-      value: item,
-    });
-  }
-
-  const token = item as Pick<Token, 'props'>;
-  const propValue = token.props[prop];
-  return expectSafeInteger(propValue, 'Aggregate prop value must be a finite safe integer', {
-    expr: aggregateExpr,
-    index,
-    prop,
-    value: propValue,
-    availableProps: Object.keys(token.props).sort(),
-  });
 }
 
 export function evalValue(expr: ValueExpr, ctx: EvalContext): number | boolean | string {
@@ -111,7 +47,21 @@ export function evalValue(expr: ValueExpr, ctx: EvalContext): number | boolean |
       return 0;
     }
 
-    const values = items.map((item, index) => extractAggregateValue(item, aggregate.prop, ctx, expr, index));
+    const values = items.map((item, index) => {
+      const value = evalValue(aggregate.valueExpr, {
+        ...ctx,
+        bindings: {
+          ...ctx.bindings,
+          [aggregate.bind]: item,
+        },
+      });
+      return expectSafeInteger(value, 'Aggregate valueExpr must evaluate to a finite safe integer', {
+        expr,
+        index,
+        bind: aggregate.bind,
+        value,
+      });
+    });
 
     if (aggregate.op === 'sum') {
       const total = values.reduce((acc, value) => acc + value, 0);

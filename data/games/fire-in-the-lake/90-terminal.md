@@ -33,7 +33,8 @@ terminal:
                         args:
                           - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
                           - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
-                  prop: population
+                  bind: $zone
+                  valueExpr: { ref: zoneProp, zone: $zone, prop: population }
               right:
                 aggregate:
                   op: count
@@ -106,7 +107,8 @@ terminal:
                                 zone: $zone
                                 filter:
                                   - { prop: faction, op: eq, value: VC }
-                  prop: population
+                  bind: $zone
+                  valueExpr: { ref: zoneProp, zone: $zone, prop: population }
               right:
                 ref: gvar
                 var: patronage
@@ -174,7 +176,8 @@ terminal:
                                   zone: $zone
                                   filter:
                                     - { prop: faction, op: eq, value: VC }
-                  prop: population
+                  bind: $zone
+                  valueExpr: { ref: zoneProp, zone: $zone, prop: population }
               right:
                 aggregate:
                   op: count
@@ -214,7 +217,8 @@ terminal:
                         args:
                           - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveOpposition }
                           - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeOpposition }
-                  prop: population
+                  bind: $zone
+                  valueExpr: { ref: zoneProp, zone: $zone, prop: population }
               right:
                 aggregate:
                   op: count
@@ -257,7 +261,8 @@ terminal:
                   args:
                     - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
                     - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeSupport }
-            prop: population
+            bind: $zone
+            valueExpr: { ref: zoneProp, zone: $zone, prop: population }
         right:
           aggregate:
             op: count
@@ -313,7 +318,8 @@ terminal:
                           zone: $zone
                           filter:
                             - { prop: faction, op: eq, value: VC }
-            prop: population
+            bind: $zone
+            valueExpr: { ref: zoneProp, zone: $zone, prop: population }
         right:
           ref: gvar
           var: patronage
@@ -364,7 +370,8 @@ terminal:
                             zone: $zone
                             filter:
                               - { prop: faction, op: eq, value: VC }
-            prop: population
+            bind: $zone
+            valueExpr: { ref: zoneProp, zone: $zone, prop: population }
         right:
           aggregate:
             op: count
@@ -387,7 +394,8 @@ terminal:
                   args:
                     - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveOpposition }
                     - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: activeOpposition }
-            prop: population
+            bind: $zone
+            valueExpr: { ref: zoneProp, zone: $zone, prop: population }
         right:
           aggregate:
             op: count

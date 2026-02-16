@@ -61,7 +61,12 @@ describe('evaluation golden outputs', () => {
     const ctx = makeCtx();
 
     const aggregateExpr: ValueExpr = {
-      aggregate: { op: 'sum', query: { query: 'tokensInZone', zone: 'deck:none' }, prop: 'cost' },
+      aggregate: {
+        op: 'sum',
+        query: { query: 'tokensInZone', zone: 'deck:none' },
+        bind: '$token',
+        valueExpr: { ref: 'tokenProp', token: '$token', prop: 'cost' },
+      },
     };
 
     assert.equal(evalValue(aggregateExpr, ctx), 8);

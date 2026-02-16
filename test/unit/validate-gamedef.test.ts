@@ -514,10 +514,22 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('reports aggregate query shape mismatches statically', () => {
+  it('accepts aggregate valueExpr over non-numeric query items', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
+      mapSpaces: [
+        {
+          id: 'market:none',
+          spaceType: 'city',
+          population: 2,
+          econ: 1,
+          terrainTags: ['urban'],
+          country: 'southVietnam',
+          coastal: false,
+          adjacentTo: [],
+        },
+      ],
       actions: [
         {
           ...base.actions[0],
@@ -525,11 +537,13 @@ describe('validateGameDef reference checks', () => {
             {
               setVar: {
                 scope: 'global',
-                var: 'turn',
+                var: 'money',
                 value: {
                   aggregate: {
                     op: 'sum',
-                    query: { query: 'zones' },
+                    query: { query: 'mapSpaces' },
+                    bind: '$zone',
+                    valueExpr: { ref: 'zoneProp', zone: '$zone', prop: 'population' },
                   },
                 },
               },
@@ -540,12 +554,9 @@ describe('validateGameDef reference checks', () => {
     } as unknown as GameDef;
 
     const diagnostics = validateGameDef(def);
-    assert.ok(
-      diagnostics.some(
-        (diag) =>
-          diag.code === 'VALUE_EXPR_AGGREGATE_SOURCE_SHAPE_INVALID' &&
-          diag.path === 'actions[0].effects[0].setVar.value.aggregate.query',
-      ),
+    assert.equal(
+      diagnostics.some((diag) => diag.path.startsWith('actions[0].effects[0].setVar.value.aggregate')),
+      false,
     );
   });
 

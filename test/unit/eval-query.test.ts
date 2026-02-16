@@ -541,6 +541,155 @@ describe('evalQuery', () => {
     );
   });
 
+  it('enforces assetRows cardinality modes when where is omitted', () => {
+    const baseDef = makeDef();
+    const tableContract = {
+      id: 'tournament-standard::blindSchedule.levels',
+      assetId: 'tournament-standard',
+      tablePath: 'blindSchedule.levels',
+      fields: [
+        { field: 'level', type: 'int' },
+        { field: 'phase', type: 'string' },
+        { field: 'smallBlind', type: 'int' },
+      ],
+    } as const;
+
+    const multiRowCtx = makeCtx({
+      def: {
+        ...baseDef,
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: {
+              blindSchedule: {
+                levels: [
+                  { level: 1, phase: 'early', smallBlind: 10 },
+                  { level: 2, phase: 'early', smallBlind: 20 },
+                ],
+              },
+            },
+          },
+        ],
+        tableContracts: [tableContract],
+      },
+    });
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'assetRows',
+            tableId: 'tournament-standard::blindSchedule.levels',
+            cardinality: 'exactlyOne',
+          },
+          multiRowCtx,
+        ),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_CARDINALITY_MULTIPLE_MATCHES') &&
+        error.context?.actualMatchCount === 2,
+    );
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'assetRows',
+            tableId: 'tournament-standard::blindSchedule.levels',
+            cardinality: 'zeroOrOne',
+          },
+          multiRowCtx,
+        ),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_CARDINALITY_MULTIPLE_MATCHES') &&
+        error.context?.actualMatchCount === 2,
+    );
+
+    const singleRowCtx = makeCtx({
+      def: {
+        ...baseDef,
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: {
+              blindSchedule: {
+                levels: [{ level: 3, phase: 'mid', smallBlind: 40 }],
+              },
+            },
+          },
+        ],
+        tableContracts: [tableContract],
+      },
+    });
+
+    const exactlyOne = evalQuery(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        cardinality: 'exactlyOne',
+      },
+      singleRowCtx,
+    );
+    assert.equal(exactlyOne.length, 1);
+    assert.equal((exactlyOne[0] as Record<string, unknown>).smallBlind, 40);
+
+    const zeroOrOne = evalQuery(
+      {
+        query: 'assetRows',
+        tableId: 'tournament-standard::blindSchedule.levels',
+        cardinality: 'zeroOrOne',
+      },
+      singleRowCtx,
+    );
+    assert.equal(zeroOrOne.length, 1);
+
+    const emptyRowCtx = makeCtx({
+      def: {
+        ...baseDef,
+        runtimeDataAssets: [
+          {
+            id: 'tournament-standard',
+            kind: 'scenario',
+            payload: {
+              blindSchedule: {
+                levels: [],
+              },
+            },
+          },
+        ],
+        tableContracts: [tableContract],
+      },
+    });
+
+    assert.throws(
+      () =>
+        evalQuery(
+          {
+            query: 'assetRows',
+            tableId: 'tournament-standard::blindSchedule.levels',
+            cardinality: 'exactlyOne',
+          },
+          emptyRowCtx,
+        ),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'DATA_ASSET_CARDINALITY_NO_MATCH') &&
+        error.context?.actualMatchCount === 0,
+    );
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'assetRows',
+          tableId: 'tournament-standard::blindSchedule.levels',
+          cardinality: 'zeroOrOne',
+        },
+        emptyRowCtx,
+      ),
+      [],
+    );
+  });
+
   it('applies zones filter.condition and composes it with owner filtering', () => {
     const ctx = makeCtx({
       bindings: {

@@ -332,31 +332,30 @@ function evalAssetRowsQuery(
   const resolved = resolveRuntimeTableRows(query, ctx);
   const rows = resolved.rows;
   const wherePredicates = query.where ?? [];
-  if (wherePredicates.length === 0) {
-    return rows;
-  }
-
-  for (const predicate of wherePredicates) {
-    if (!resolved.fieldNames.has(predicate.field)) {
-      throw runtimeTableFieldUndeclaredEvalError(
-        { query },
-        query.tableId,
-        predicate.field,
-        [...resolved.fieldNames].sort((left, right) => left.localeCompare(right)),
-      );
+  let matchedRows = rows;
+  if (wherePredicates.length > 0) {
+    for (const predicate of wherePredicates) {
+      if (!resolved.fieldNames.has(predicate.field)) {
+        throw runtimeTableFieldUndeclaredEvalError(
+          { query },
+          query.tableId,
+          predicate.field,
+          [...resolved.fieldNames].sort((left, right) => left.localeCompare(right)),
+        );
+      }
     }
-  }
 
-  const resolvedPredicates = resolveAssetRowPredicates(wherePredicates, ctx);
-  const matchedRows = filterRowsByPredicates(rows, resolvedPredicates, {
-    getFieldValue: (row, field) => row[field],
-    context: (predicate, row) => ({
-      domain: 'assetRow',
-      query,
-      predicate,
-      availableFields: Object.keys(row).sort(),
-    }),
-  });
+    const resolvedPredicates = resolveAssetRowPredicates(wherePredicates, ctx);
+    matchedRows = filterRowsByPredicates(rows, resolvedPredicates, {
+      getFieldValue: (row, field) => row[field],
+      context: (predicate, row) => ({
+        domain: 'assetRow',
+        query,
+        predicate,
+        availableFields: Object.keys(row).sort(),
+      }),
+    });
+  }
 
   const cardinality = query.cardinality ?? 'many';
   if (cardinality === 'exactlyOne' && matchedRows.length !== 1) {

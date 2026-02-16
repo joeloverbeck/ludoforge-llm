@@ -32,6 +32,7 @@ import { dispatchTriggers } from './trigger-dispatch.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
+import type { PhaseTransitionBudget } from './effect-context.js';
 import type {
   ActionDef,
   ActionPipelineDef,
@@ -423,34 +424,35 @@ const validateMove = (def: GameDef, state: GameState, move: Move): ValidatedMove
 interface ApplyMoveCoreOptions {
   readonly skipValidation?: boolean;
   readonly skipAdvanceToDecisionPoint?: boolean;
+  readonly phaseTransitionBudget?: PhaseTransitionBudget;
 }
 
-const applyMoveCore = (
+interface SharedMoveExecutionContext {
+  readonly adjacencyGraph: ReturnType<typeof buildAdjacencyGraph>;
+  readonly runtimeTableIndex: ReturnType<typeof buildRuntimeTableIndex>;
+  readonly collector: ReturnType<typeof createCollector>;
+  readonly phaseTransitionBudget?: PhaseTransitionBudget;
+  readonly executionPolicy?: ReturnType<typeof toMoveExecutionPolicy>;
+}
+
+interface MoveActionExecutionResult {
+  readonly stateWithRng: GameState;
+  readonly triggerFirings: readonly TriggerLogEntry[];
+}
+
+const executeMoveAction = (
   def: GameDef,
   state: GameState,
   move: Move,
-  options?: ExecutionOptions,
-  coreOptions?: ApplyMoveCoreOptions,
-): ApplyMoveResult => {
+  options: ExecutionOptions | undefined,
+  coreOptions: ApplyMoveCoreOptions | undefined,
+  shared: SharedMoveExecutionContext,
+): MoveActionExecutionResult => {
   const validated = coreOptions?.skipValidation === true ? null : validateMove(def, state, move);
   const action = validated?.action ?? findAction(def, move.actionId);
   if (action === undefined) throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.UNKNOWN_ACTION_ID);
 
   const rng: Rng = { state: state.rng };
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
-  const collector = createCollector(options);
-  const maxPhaseTransitionsPerMove = options?.maxPhaseTransitionsPerMove;
-  if (
-    maxPhaseTransitionsPerMove !== undefined
-    && (!Number.isSafeInteger(maxPhaseTransitionsPerMove) || maxPhaseTransitionsPerMove < 0)
-  ) {
-    throw new RangeError(`maxPhaseTransitionsPerMove must be a non-negative safe integer, received ${String(maxPhaseTransitionsPerMove)}`);
-  }
-  const phaseTransitionBudget = maxPhaseTransitionsPerMove === undefined
-    ? undefined
-    : { remaining: maxPhaseTransitionsPerMove };
-  const executionPolicy = toMoveExecutionPolicy(phaseTransitionBudget);
   const baseBindings = runtimeBindingsForMove(move, undefined);
   const executionPlayer = validated?.executionPlayer ?? (
     move.freeOperation === true
@@ -459,11 +461,11 @@ const applyMoveCore = (
         const resolution = resolveActionExecutor({
           def,
           state,
-          adjacencyGraph,
+          adjacencyGraph: shared.adjacencyGraph,
           action,
           decisionPlayer: state.activePlayer,
           bindings: baseBindings,
-          runtimeTableIndex,
+          runtimeTableIndex: shared.runtimeTableIndex,
         });
         if (resolution.kind === 'notApplicable') {
           throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_EXECUTOR_NOT_APPLICABLE);
@@ -476,14 +478,14 @@ const applyMoveCore = (
   );
   const effectCtxBase = {
     def,
-    adjacencyGraph,
-    runtimeTableIndex,
+    adjacencyGraph: shared.adjacencyGraph,
+    runtimeTableIndex: shared.runtimeTableIndex,
     activePlayer: executionPlayer,
     actorPlayer: executionPlayer,
     bindings: baseBindings,
     moveParams: move.params,
-    collector,
-    ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
+    collector: shared.collector,
+    ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
     ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   } as const;
 
@@ -584,14 +586,17 @@ const applyMoveCore = (
 
   const applyCompoundSA = (): void => {
     if (move.compound === undefined) return;
-    const saResult = applyMoveCore(def, effectState, move.compound.specialActivity, options);
-    effectState = saResult.state;
+    const saResult = executeMoveAction(
+      def,
+      effectState,
+      move.compound.specialActivity,
+      options,
+      shared.phaseTransitionBudget === undefined ? undefined : { phaseTransitionBudget: shared.phaseTransitionBudget },
+      shared,
+    );
+    effectState = saResult.stateWithRng;
     effectRng = { state: effectState.rng };
     executionTraceEntries.push(...saResult.triggerFirings);
-    collector.warnings.push(...saResult.warnings);
-    if (collector.trace !== null && saResult.effectTrace !== undefined) {
-      collector.trace.push(...saResult.effectTrace);
-    }
   };
 
   if (move.compound?.timing === 'before') {
@@ -637,7 +642,7 @@ const applyMoveCore = (
     effectState,
     effectRng,
     move,
-    executionPolicy,
+    shared.executionPolicy,
   );
   effectState = lastingActivation.state;
   effectRng = lastingActivation.rng;
@@ -660,9 +665,9 @@ const applyMoveCore = (
       0,
       maxDepth,
       triggerLog,
-      adjacencyGraph,
-      runtimeTableIndex,
-      executionPolicy,
+      shared.adjacencyGraph,
+      shared.runtimeTableIndex,
+      shared.executionPolicy,
     );
     triggerState = emittedEventResult.state;
     triggerRng = emittedEventResult.rng;
@@ -677,18 +682,57 @@ const applyMoveCore = (
     0,
     maxDepth,
     triggerLog,
-    adjacencyGraph,
-    runtimeTableIndex,
-    executionPolicy,
+    shared.adjacencyGraph,
+    shared.runtimeTableIndex,
+    shared.executionPolicy,
   );
 
-  const stateWithRng = {
-    ...triggerResult.state,
-    rng: triggerResult.rng.state,
+  return {
+    stateWithRng: {
+      ...triggerResult.state,
+      rng: triggerResult.rng.state,
+    },
+    triggerFirings: [...executionTraceEntries, ...triggerResult.triggerLog],
   };
+};
+
+const applyMoveCore = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  options?: ExecutionOptions,
+  coreOptions?: ApplyMoveCoreOptions,
+): ApplyMoveResult => {
+  const adjacencyGraph = buildAdjacencyGraph(def.zones);
+  const runtimeTableIndex = buildRuntimeTableIndex(def);
+  const collector = createCollector(options);
+  const maxPhaseTransitionsPerMove = options?.maxPhaseTransitionsPerMove;
+  if (
+    maxPhaseTransitionsPerMove !== undefined
+    && (!Number.isSafeInteger(maxPhaseTransitionsPerMove) || maxPhaseTransitionsPerMove < 0)
+  ) {
+    throw new RangeError(`maxPhaseTransitionsPerMove must be a non-negative safe integer, received ${String(maxPhaseTransitionsPerMove)}`);
+  }
+  // A compound move is one logical execution; nested applyMoveCore calls must reuse
+  // this exact budget object rather than allocating a fresh counter per recursion.
+  const phaseTransitionBudget = coreOptions?.phaseTransitionBudget ?? (
+    maxPhaseTransitionsPerMove === undefined
+      ? undefined
+      : { remaining: maxPhaseTransitionsPerMove }
+  );
+  const executionPolicy = toMoveExecutionPolicy(phaseTransitionBudget);
+  const shared: SharedMoveExecutionContext = {
+    adjacencyGraph,
+    runtimeTableIndex,
+    collector,
+    ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
+    ...(executionPolicy === undefined ? {} : { executionPolicy }),
+  };
+
+  const executed = executeMoveAction(def, state, move, options, coreOptions, shared);
   const turnFlowResult = move.freeOperation === true
-    ? { state: consumeTurnFlowFreeOperationGrant(def, stateWithRng, move), traceEntries: [] as readonly TriggerLogEntry[] }
-    : applyTurnFlowEligibilityAfterMove(def, stateWithRng, move);
+    ? { state: consumeTurnFlowFreeOperationGrant(def, executed.stateWithRng, move), traceEntries: [] as readonly TriggerLogEntry[] }
+    : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move);
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
   const shouldAdvanceToDecisionPoint =
     coreOptions?.skipAdvanceToDecisionPoint !== true
@@ -709,7 +753,7 @@ const applyMoveCore = (
 
   return {
     state: stateWithHash,
-    triggerFirings: [...executionTraceEntries, ...triggerResult.triggerLog, ...turnFlowResult.traceEntries, ...lifecycleAndAdvanceLog],
+    triggerFirings: [...executed.triggerFirings, ...turnFlowResult.traceEntries, ...lifecycleAndAdvanceLog],
     warnings: collector.warnings,
     ...(collector.trace !== null ? { effectTrace: collector.trace } : {}),
   };

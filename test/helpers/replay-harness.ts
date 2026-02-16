@@ -3,6 +3,7 @@ import {
   applyMove,
   legalMoves,
   canonicalMoveParamsKey,
+  type MoveExecutionPolicy,
   type ExecutionOptions,
   type GameDef,
   type GameState,
@@ -51,6 +52,7 @@ export interface BoundedAdvanceConfig {
   readonly until: (state: GameState) => boolean;
   readonly maxSteps: number;
   readonly triggerLogCollector?: TriggerLogEntry[];
+  readonly executionPolicy?: MoveExecutionPolicy;
   readonly keyVars?: readonly string[];
 }
 
@@ -78,6 +80,22 @@ const formatReplayContext = (
 ): string =>
   `step=${stepIndex} move=${moveKey(move)} phase=${String(state.currentPhase)} activePlayer=${String(state.activePlayer)} keyVars=${formatKeyVars(state, keys)}`;
 
+const wrapReplayApplyMoveFailure = (
+  state: GameState,
+  stepIndex: number,
+  move: Move,
+  keys: readonly string[] | undefined,
+  original: unknown,
+): Error => {
+  const context = formatReplayContext(state, stepIndex, move, keys);
+  const originalMessage = original instanceof Error ? original.message : String(original);
+  const message = `Replay applyMove failed at ${context}: ${originalMessage}`;
+  if (original instanceof Error) {
+    return new Error(message, { cause: original });
+  }
+  return new Error(message);
+};
+
 export const replayScript = (config: ReplayScriptConfig): ReplayScriptResult => {
   const legalityMode = config.legalityMode ?? 'exactMove';
   let state = config.initialState;
@@ -98,7 +116,12 @@ export const replayScript = (config: ReplayScriptConfig): ReplayScriptResult => 
       );
     }
 
-    const applied = applyMove(config.def, state, step.move, config.executionOptions);
+    let applied: ReturnType<typeof applyMove>;
+    try {
+      applied = applyMove(config.def, state, step.move, config.executionOptions);
+    } catch (error) {
+      throw wrapReplayApplyMoveFailure(before, stepIndex, step.move, config.keyVars, error);
+    }
     const executed: ReplayExecutedStep = {
       before,
       legal,
@@ -152,7 +175,7 @@ export const advancePhaseBounded = (config: BoundedAdvanceConfig): BoundedAdvanc
         `Bounded phase advance exhausted maxSteps=${config.maxSteps} phase=${String(state.currentPhase)} activePlayer=${String(state.activePlayer)} keyVars=${formatKeyVars(state, config.keyVars)}`,
       );
     }
-    state = advancePhase(config.def, state, config.triggerLogCollector);
+    state = advancePhase(config.def, state, config.triggerLogCollector, config.executionPolicy);
     steps += 1;
   }
 

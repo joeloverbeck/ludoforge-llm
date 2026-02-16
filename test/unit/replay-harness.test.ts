@@ -4,10 +4,12 @@ import { describe, it } from 'node:test';
 import {
   asActionId,
   asPhaseId,
+  asTriggerId,
   initialState,
   type ActionDef,
   type GameDef,
   type Move,
+  type MoveExecutionPolicy,
 } from '../../src/kernel/index.js';
 import { advancePhaseBounded, replayScript } from '../helpers/replay-harness.js';
 
@@ -43,6 +45,21 @@ const createReplayDef = (): GameDef => {
     terminal: { conditions: [] },
   } as unknown as GameDef;
 };
+
+const createPolicyAdvanceDef = (): GameDef => ({
+  ...createReplayDef(),
+  turnStructure: {
+    phases: [{ id: asPhaseId('p1') }, { id: asPhaseId('p2') }, { id: asPhaseId('p3') }],
+  },
+  actions: [],
+  triggers: [
+    {
+      id: asTriggerId('autoAdvanceOnP2Enter'),
+      event: { type: 'phaseEnter', phase: asPhaseId('p2') },
+      effects: [{ advancePhase: {} }],
+    },
+  ],
+}) as unknown as GameDef;
 
 describe('replay harness helpers', () => {
   it('replays scripted moves and provides strict per-step assertions', () => {
@@ -80,6 +97,35 @@ describe('replay harness helpers', () => {
           keyVars: ['ticks'],
         }),
       /Replay illegal move at step=0 .*phase=p1 .*activePlayer=0 .*keyVars=\{"ticks":0\}/,
+    );
+  });
+
+  it('wraps thrown applyMove failures with replay context and preserves root reason', () => {
+    const def = createReplayDef();
+    const seeded = initialState(def, 7, 2);
+    const move: Move = { actionId: asActionId('tick'), params: {} };
+
+    assert.throws(
+      () =>
+        replayScript({
+          def,
+          initialState: seeded,
+          script: [{ move }],
+          executionOptions: { maxPhaseTransitionsPerMove: -1 },
+          keyVars: ['ticks'],
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(
+          error.message,
+          /Replay applyMove failed at step=0 .*phase=p1 .*activePlayer=0 .*keyVars=\{"ticks":0\}/,
+        );
+        assert.match(error.message, /maxPhaseTransitionsPerMove must be a non-negative safe integer/);
+        const cause = (error as Error & { cause?: unknown }).cause;
+        assert.ok(cause instanceof RangeError);
+        assert.match(cause.message, /maxPhaseTransitionsPerMove must be a non-negative safe integer/);
+        return true;
+      },
     );
   });
 
@@ -128,6 +174,25 @@ describe('replay harness helpers', () => {
           initialState: seeded,
           until: (state) => state.currentPhase === 'p3',
           maxSteps: 1,
+          keyVars: ['ticks'],
+        }),
+      /Bounded phase advance exhausted maxSteps=1 phase=p2 activePlayer=0 keyVars=\{"ticks":0\}/,
+    );
+  });
+
+  it('forwards execution policy through bounded phase advancement', () => {
+    const def = createPolicyAdvanceDef();
+    const seeded = initialState(def, 11, 2);
+    const zeroBudgetPolicy: MoveExecutionPolicy = { phaseTransitionBudget: { remaining: 0 } };
+
+    assert.throws(
+      () =>
+        advancePhaseBounded({
+          def,
+          initialState: seeded,
+          until: (state) => state.currentPhase === 'p3',
+          maxSteps: 1,
+          executionPolicy: zeroBudgetPolicy,
           keyVars: ['ticks'],
         }),
       /Bounded phase advance exhausted maxSteps=1 phase=p2 activePlayer=0 keyVars=\{"ticks":0\}/,

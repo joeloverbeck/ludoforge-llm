@@ -1142,52 +1142,67 @@ effectMacros:
           value: { op: '+', left: { ref: gvar, var: blindLevel }, right: 1 }
           in:
             - let:
-                bind: $handsRequiredForNextLevel
+                bind: $maxBlindLevel
                 value:
                   aggregate:
-                    op: sum
+                    op: max
                     query: { query: assetRows, tableId: settings.blindSchedule }
                     bind: $row
-                    valueExpr:
-                      if:
-                        when:
-                          op: '<'
-                          left: { ref: assetField, row: '$row', tableId: settings.blindSchedule, field: level }
-                          right: { ref: binding, name: $nextBlindLevel }
-                        then: { ref: assetField, row: '$row', tableId: settings.blindSchedule, field: handsUntilNext }
-                        else: 0
+                    valueExpr: { ref: assetField, row: '$row', tableId: settings.blindSchedule, field: level }
                 in:
                   - if:
                       when:
-                        op: '>='
-                        left: { ref: gvar, var: handsPlayed }
-                        right: { ref: binding, name: $handsRequiredForNextLevel }
+                        op: <=
+                        left: { ref: binding, name: $nextBlindLevel }
+                        right: { ref: binding, name: $maxBlindLevel }
                       then:
-                        - forEach:
-                            bind: $blindRow
-                            over:
-                              query: assetRows
-                              tableId: settings.blindSchedule
-                              cardinality: exactlyOne
-                              where:
-                                - field: level
-                                  op: eq
-                                  value: { ref: binding, name: $nextBlindLevel }
-                            effects:
-                              - setVar:
-                                  scope: global
-                                  var: blindLevel
-                                  value: { ref: assetField, row: '$blindRow', tableId: settings.blindSchedule, field: level }
-                              - setVar:
-                                  scope: global
-                                  var: smallBlind
-                                  value: { ref: assetField, row: '$blindRow', tableId: settings.blindSchedule, field: sb }
-                              - setVar:
-                                  scope: global
-                                  var: bigBlind
-                                  value: { ref: assetField, row: '$blindRow', tableId: settings.blindSchedule, field: bb }
-                              - setVar:
-                                  scope: global
-                                  var: ante
-                                  value: { ref: assetField, row: '$blindRow', tableId: settings.blindSchedule, field: ante }
+                        - let:
+                            bind: $handsRequiredForNextLevel
+                            value:
+                              aggregate:
+                                op: sum
+                                query: { query: assetRows, tableId: settings.blindSchedule }
+                                bind: $row
+                                valueExpr:
+                                  if:
+                                    when:
+                                      op: '<'
+                                      left: { ref: assetField, row: '$row', tableId: settings.blindSchedule, field: level }
+                                      right: { ref: binding, name: $nextBlindLevel }
+                                    then: { ref: assetField, row: '$row', tableId: settings.blindSchedule, field: handsUntilNext }
+                                    else: 0
+                            in:
+                              - if:
+                                  when:
+                                    op: '>='
+                                    left: { ref: gvar, var: handsPlayed }
+                                    right: { ref: binding, name: $handsRequiredForNextLevel }
+                                  then:
+                                    - forEach:
+                                        bind: $blindRow
+                                        over:
+                                          query: assetRows
+                                          tableId: settings.blindSchedule
+                                          cardinality: exactlyOne
+                                          where:
+                                            - field: level
+                                              op: eq
+                                              value: { ref: binding, name: $nextBlindLevel }
+                                        effects:
+                                          - setVar:
+                                              scope: global
+                                              var: blindLevel
+                                              value: { ref: assetField, row: '$blindRow', tableId: settings.blindSchedule, field: level }
+                                          - setVar:
+                                              scope: global
+                                              var: smallBlind
+                                              value: { ref: assetField, row: '$blindRow', tableId: settings.blindSchedule, field: sb }
+                                          - setVar:
+                                              scope: global
+                                              var: bigBlind
+                                              value: { ref: assetField, row: '$blindRow', tableId: settings.blindSchedule, field: bb }
+                                          - setVar:
+                                              scope: global
+                                              var: ante
+                                              value: { ref: assetField, row: '$blindRow', tableId: settings.blindSchedule, field: ante }
 ```

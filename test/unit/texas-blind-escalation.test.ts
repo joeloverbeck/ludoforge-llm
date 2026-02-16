@@ -171,4 +171,21 @@ describe('texas blind escalation macro', () => {
       (error: unknown) => error instanceof Error && error.message.includes('RUNTIME_TABLE_CONSTRAINT_CONTIGUOUS_VIOLATION'),
     );
   });
+
+  it('stays at the final blind level without querying a non-existent next row', () => {
+    const { def, effects } = loadEscalateMacro();
+
+    const vars = runEscalate(def, effects, {
+      handsPlayed: 10_000,
+      blindLevel: 9,
+      smallBlind: 500,
+      bigBlind: 1000,
+      ante: 100,
+    });
+
+    assert.equal(vars.blindLevel, 9);
+    assert.equal(vars.smallBlind, 500);
+    assert.equal(vars.bigBlind, 1000);
+    assert.equal(vars.ante, 100);
+  });
 });

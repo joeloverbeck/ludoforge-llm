@@ -2,6 +2,7 @@ import {
   advancePhase,
   applyMove,
   legalMoves,
+  canonicalMoveParamsKey,
   type ExecutionOptions,
   type GameDef,
   type GameState,
@@ -58,7 +59,7 @@ export interface BoundedAdvanceResult {
   readonly steps: number;
 }
 
-const moveKey = (move: Move): string => `${String(move.actionId)} ${JSON.stringify(move.params)}`;
+const moveKey = (move: Move): string => `${String(move.actionId)} ${canonicalMoveParamsKey(move.params)}`;
 
 const formatKeyVars = (state: GameState, keys: readonly string[] | undefined): string => {
   if (keys === undefined || keys.length === 0) {

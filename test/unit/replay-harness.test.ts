@@ -83,7 +83,7 @@ describe('replay harness helpers', () => {
     );
   });
 
-  it('supports actionId legality mode when exact move serialization differs', () => {
+  it('accepts semantically equivalent object param key orders in exactMove legality mode', () => {
     const action: ActionDef = {
       id: asActionId('pair'),
       actor: 'active',
@@ -109,19 +109,11 @@ describe('replay harness helpers', () => {
       params: { second: 'B', first: 'A' },
     };
 
-    assert.throws(() =>
-      replayScript({
-        def,
-        initialState: seeded,
-        script: [{ move: scripted }],
-      }));
-
     assert.doesNotThrow(() =>
       replayScript({
         def,
         initialState: seeded,
         script: [{ move: scripted }],
-        legalityMode: 'actionId',
       }));
   });
 

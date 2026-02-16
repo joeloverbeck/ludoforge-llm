@@ -5,6 +5,7 @@ import {
   asPhaseId,
   asPlayerId,
   assertValidatedGameDef,
+  areMovesEquivalent,
   initialState,
   type GameState,
   type Move,
@@ -67,9 +68,7 @@ const buildDeck = (
 };
 
 const hasExactMove = (moves: readonly Move[], target: Move): boolean =>
-  moves.some(
-    (move) => String(move.actionId) === String(target.actionId) && JSON.stringify(move.params) === JSON.stringify(target.params),
-  );
+  moves.some((move) => areMovesEquivalent(move, target));
 
 const applyLoggedMove = (
   def: ValidatedGameDef,

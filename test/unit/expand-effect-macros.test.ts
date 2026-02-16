@@ -1011,6 +1011,63 @@ phase: ['main'],
     assert.equal(setVar.setVar.value.aggregate.query.filter[0].eq.name, choose.chooseOne.bind);
   });
 
+  it('rewrites aggregate bind declarations and their references consistently', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'aggregate-bind-hygiene',
+      params: [],
+      exports: [],
+      effects: [
+        {
+          setVar: {
+            scope: 'global',
+            var: 'count',
+            value: {
+              aggregate: {
+                op: 'sum',
+                query: { query: 'players' },
+                bind: '$player',
+                valueExpr: {
+                  if: {
+                    when: {
+                      op: '==',
+                      left: { ref: 'binding', name: '$player' },
+                      right: 0,
+                    },
+                    then: 1,
+                    else: 0,
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'aggregate-bind-hygiene', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.deepEqual(result.diagnostics, []);
+
+    const setVar = result.doc.setup?.[0] as {
+      setVar: {
+        value: {
+          aggregate: {
+            bind: string;
+            valueExpr: { if: { when: { left: { ref: 'binding'; name: string } } } };
+          };
+        };
+      };
+    };
+    assert.notEqual(setVar.setVar.value.aggregate.bind, '$player');
+    assert.equal(
+      setVar.setVar.value.aggregate.valueExpr.if.when.left.name,
+      setVar.setVar.value.aggregate.bind,
+    );
+  });
+
   it('rewrites binding references in adjacent left/right zone selector fields', () => {
     const macroDef: EffectMacroDef = {
       id: 'adjacent-left-right',

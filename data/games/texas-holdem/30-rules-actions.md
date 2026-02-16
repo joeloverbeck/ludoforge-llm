@@ -177,7 +177,21 @@ turnStructure:
             over: { query: players }
             effects:
               - if:
-                  when: { op: '==', left: { ref: pvar, player: { chosen: $player }, var: handActive }, right: true }
+                  when:
+                    op: and
+                    args:
+                      - { op: '==', left: { ref: pvar, player: { chosen: $player }, var: handActive }, right: true }
+                      -
+                        op: '>='
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: concat
+                              sources:
+                                - { query: tokensInZone, zone: { zoneExpr: { concat: ['hand:', { ref: binding, name: $player }] } } }
+                                - { query: tokensInZone, zone: community:none }
+                        right: 5
                   then:
                     - reveal:
                         zone: { zoneExpr: { concat: ['hand:', { ref: binding, name: $player }] } }
@@ -203,7 +217,6 @@ turnStructure:
                               var: showdownScore
                               value: { ref: binding, name: $bestScore }
         - macro: side-pot-distribution
-        - gotoPhase: { phase: hand-cleanup }
 
     - id: hand-cleanup
       onEnter:
@@ -219,10 +232,6 @@ turnStructure:
         - macro: eliminate-busted-players
         - addVar: { scope: global, var: handsPlayed, delta: 1 }
         - macro: escalate-blinds
-        - if:
-            when: { op: '>', left: { ref: gvar, var: activePlayers }, right: 1 }
-            then:
-              - gotoPhase: { phase: hand-setup }
 
 turnOrder:
   type: roundRobin

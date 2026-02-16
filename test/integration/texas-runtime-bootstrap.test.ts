@@ -3,7 +3,8 @@ import { describe, it } from 'node:test';
 import { join } from 'node:path';
 
 import { compileGameSpecToGameDef, loadGameSpecSource, parseGameSpec } from '../../src/cnl/index.js';
-import { applyMove, assertValidatedGameDef, initialState, legalMoves } from '../../src/kernel/index.js';
+import { applyMove, assertValidatedGameDef, initialState, legalMoves, terminalResult } from '../../src/kernel/index.js';
+import type { GameState } from '../../src/kernel/index.js';
 import { advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 
@@ -21,6 +22,15 @@ const compileTexasDef = () => {
 
 const totalCardsAcrossZones = (zones: Readonly<Record<string, readonly unknown[]>>): number =>
   Object.values(zones).reduce((sum, entries) => sum + entries.length, 0);
+
+const totalChipsInPlay = (state: GameState): number => {
+  const pot = Number(state.globalVars.pot ?? 0);
+  const stacks = Array.from({ length: state.playerCount }, (_unused, index) => {
+    const raw = state.perPlayerVars[String(index)]?.chipStack;
+    return Number(raw ?? 0);
+  });
+  return stacks.reduce((sum, value) => sum + value, 0) + pot;
+};
 
 describe('texas runtime bootstrap and position flow', () => {
   it('initializes into a playable preflop state with card conservation', () => {
@@ -66,4 +76,39 @@ describe('texas runtime bootstrap and position flow', () => {
     assert.equal(state.perPlayerVars[String(dealerSeat)]?.streetBet, state.globalVars.smallBlind);
     assert.equal(state.perPlayerVars[String(bbSeat)]?.streetBet, state.globalVars.bigBlind);
   });
+
+  const smokeConfigs = [
+    { seed: 37, playerCount: 2 },
+    { seed: 41, playerCount: 4 },
+  ] as const;
+
+  for (const config of smokeConfigs) {
+    it(`runs deterministic smoke window with runtime invariants (seed=${config.seed}, players=${config.playerCount})`, () => {
+      const def = compileTexasDef();
+      const seeded = initialState(def, config.seed, config.playerCount);
+      let state = advanceToDecisionPoint(def, seeded);
+      const expectedCardCount = totalCardsAcrossZones(state.zones);
+      const expectedChipTotal = totalChipsInPlay(state);
+
+      let appliedMoves = 0;
+      const maxSmokeSteps = 24;
+      const minAppliedMoves = 12;
+
+      while (appliedMoves < maxSmokeSteps && terminalResult(def, state) === null) {
+        assert.equal(totalCardsAcrossZones(state.zones), expectedCardCount);
+        assert.equal(totalChipsInPlay(state), expectedChipTotal);
+        for (let player = 0; player < config.playerCount; player += 1) {
+          const stack = Number(state.perPlayerVars[String(player)]?.chipStack ?? 0);
+          assert.equal(stack >= 0, true, `player ${player} chipStack must remain non-negative`);
+        }
+
+        const moves = legalMoves(def, state);
+        assert.equal(moves.length > 0, true, `expected legal moves before terminal at step ${appliedMoves}`);
+        state = applyMove(def, state, moves[0]!).state;
+        appliedMoves += 1;
+      }
+
+      assert.equal(appliedMoves >= minAppliedMoves, true);
+    });
+  }
 });

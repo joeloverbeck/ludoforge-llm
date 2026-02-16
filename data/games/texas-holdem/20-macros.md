@@ -1103,10 +1103,6 @@ effectMacros:
     exports: []
     effects:
       - if:
-          when: { op: '<=', left: { ref: gvar, var: playersInHand }, right: 1 }
-          then:
-            - gotoPhase: { phase: hand-cleanup }
-      - if:
           when: { op: '==', left: { ref: gvar, var: bettingClosed }, right: false }
           then:
             - macro: find-next-to-act

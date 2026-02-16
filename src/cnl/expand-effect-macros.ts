@@ -565,6 +565,9 @@ function collectDeclaredBinders(node: unknown, path: string, into: Set<string>, 
   for (const candidate of collectDeclaredBinderCandidates(node)) {
     declareBinding(candidate.value, `${path}.${candidate.path}`);
   }
+  if (isRecord(node.aggregate) && 'bind' in node.aggregate) {
+    declareBinding(node.aggregate.bind, `${path}.aggregate.bind`);
+  }
 
   for (const [key, value] of Object.entries(node)) {
     collectDeclaredBinders(value, `${path}.${key}`, into, diagnostics);
@@ -681,6 +684,9 @@ function collectBindingBearingStringSites(node: unknown, path: string, into: Str
   }
   if (node.query === 'binding' && typeof node.name === 'string') {
     into.push({ path: `${path}.name`, value: node.name });
+  }
+  if (isRecord(node.aggregate) && typeof node.aggregate.bind === 'string') {
+    into.push({ path: `${path}.aggregate.bind`, value: node.aggregate.bind });
   }
   if (
     (node.query === 'tokensInZone' ||
@@ -900,6 +906,30 @@ function rewriteBindings(
 
   if (rewrittenMacroArgsNode.ref === 'binding' && typeof rewrittenMacroArgsNode.name === 'string') {
     return { ...rewrittenMacroArgsNode, name: rewriteBindingName(rewrittenMacroArgsNode.name, renameMap) };
+  }
+  if (isRecord(rewrittenMacroArgsNode.aggregate)) {
+    const aggregate = rewrittenMacroArgsNode.aggregate;
+    const rewrittenBind =
+      typeof aggregate.bind === 'string' ? rewriteBindingTemplate(aggregate.bind, renameMap) : aggregate.bind;
+    const rewrittenQuery = aggregate.query === undefined ? aggregate.query : rewriteBindings(aggregate.query, index, renameMap);
+    const rewrittenValueExpr = aggregate.valueExpr === undefined
+      ? aggregate.valueExpr
+      : rewriteBindings(aggregate.valueExpr, index, renameMap);
+    if (
+      rewrittenBind !== aggregate.bind
+      || rewrittenQuery !== aggregate.query
+      || rewrittenValueExpr !== aggregate.valueExpr
+    ) {
+      return {
+        ...rewrittenMacroArgsNode,
+        aggregate: {
+          ...aggregate,
+          ...(rewrittenBind === aggregate.bind ? {} : { bind: rewrittenBind }),
+          ...(rewrittenQuery === aggregate.query ? {} : { query: rewrittenQuery }),
+          ...(rewrittenValueExpr === aggregate.valueExpr ? {} : { valueExpr: rewrittenValueExpr }),
+        },
+      };
+    }
   }
   if (rewrittenMacroArgsNode.ref === 'tokenProp' && typeof rewrittenMacroArgsNode.token === 'string') {
     return { ...rewrittenMacroArgsNode, token: rewriteBindingTemplate(rewrittenMacroArgsNode.token, renameMap) };

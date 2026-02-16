@@ -29,6 +29,15 @@ describe('binder-surface-registry', () => {
     );
   });
 
+  it('defines nested sequential scope metadata for scoped exporters', () => {
+    assert.deepEqual(EFFECT_BINDER_SURFACES.let.nestedSequentialBindingScopes, [
+      { nestedEffectsPath: ['in'], excludedBinderPaths: [['bind']] },
+    ]);
+    assert.deepEqual(EFFECT_BINDER_SURFACES.reduce.nestedSequentialBindingScopes, [
+      { nestedEffectsPath: ['in'], excludedBinderPaths: [['resultBind']] },
+    ]);
+  });
+
   it('defines a centralized registry for non-effect binder referencer shapes', () => {
     assert.equal(NON_EFFECT_BINDER_REFERENCER_SURFACES.length > 0, true);
   });
@@ -188,26 +197,26 @@ describe('binder-surface-registry', () => {
     assert.deepEqual(
       collectSequentialBindings({
         let: {
-          bind: '$local',
+          bind: 'local',
           value: 0,
-          in: [{ bindValue: { bind: '$exported', value: 1 } }],
+          in: [{ bindValue: { bind: 'exported', value: 1 } }],
         },
       }),
-      ['$exported'],
+      ['exported'],
     );
     assert.deepEqual(
       collectSequentialBindings({
         reduce: {
-          itemBind: '$item',
-          accBind: '$acc',
+          itemBind: 'item',
+          accBind: 'acc',
           over: { query: 'players' },
           initial: 0,
           next: 0,
-          resultBind: '$result',
-          in: [{ bindValue: { bind: '$exported', value: { ref: 'binding', name: '$result' } } }],
+          resultBind: 'result',
+          in: [{ bindValue: { bind: 'exported', value: { ref: 'binding', name: 'result' } } }],
         },
       }),
-      ['$exported'],
+      ['exported'],
     );
     assert.deepEqual(
       collectSequentialBindings({

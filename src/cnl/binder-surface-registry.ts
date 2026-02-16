@@ -4,9 +4,15 @@ import { SUPPORTED_EFFECT_KINDS, type SupportedEffectKind } from './effect-kind-
 type BinderPathSegment = string | '*';
 type BinderPath = readonly BinderPathSegment[];
 
+interface SequentialBindingScopeDefinition {
+  readonly nestedEffectsPath: BinderPath;
+  readonly excludedBinderPaths: readonly BinderPath[];
+}
+
 interface EffectBinderSurfaceDefinition {
   readonly declaredBinderPaths: readonly BinderPath[];
   readonly sequentiallyVisibleBinderPaths: readonly BinderPath[];
+  readonly nestedSequentialBindingScopes?: readonly SequentialBindingScopeDefinition[];
   readonly bindingNameReferencerPaths: readonly BinderPath[];
   readonly bindingTemplateReferencerPaths: readonly BinderPath[];
   readonly zoneSelectorReferencerPaths: readonly BinderPath[];
@@ -133,6 +139,7 @@ export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, Effect
   reduce: {
     declaredBinderPaths: [['itemBind'], ['accBind'], ['resultBind']],
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    nestedSequentialBindingScopes: [{ nestedEffectsPath: ['in'], excludedBinderPaths: [['resultBind']] }],
     bindingNameReferencerPaths: NO_REFERENCER_PATHS,
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
@@ -147,6 +154,7 @@ export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, Effect
   let: {
     declaredBinderPaths: [['bind']],
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    nestedSequentialBindingScopes: [{ nestedEffectsPath: ['in'], excludedBinderPaths: [['bind']] }],
     bindingNameReferencerPaths: NO_REFERENCER_PATHS,
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
@@ -662,15 +670,6 @@ export function collectBinderSurfaceStringSites(
 }
 
 export function collectSequentialBindings(effect: EffectAST): readonly string[] {
-  if ('let' in effect) {
-    const nested = effect.let.in.flatMap((entry) => collectSequentialBindings(entry));
-    return nested.filter((name) => name !== effect.let.bind && name.startsWith('$'));
-  }
-  if ('reduce' in effect) {
-    const nested = effect.reduce.in.flatMap((entry) => collectSequentialBindings(entry));
-    return nested.filter((name) => name !== effect.reduce.resultBind && name.startsWith('$'));
-  }
-
   const bindings: string[] = [];
   for (const kind of SUPPORTED_EFFECT_KINDS) {
     if (!(kind in effect)) {
@@ -689,6 +688,38 @@ export function collectSequentialBindings(effect: EffectAST): readonly string[] 
     for (const candidate of candidates) {
       if (typeof candidate.value === 'string') {
         bindings.push(candidate.value);
+      }
+    }
+
+    for (const scopeDefinition of EFFECT_BINDER_SURFACES[kind].nestedSequentialBindingScopes ?? []) {
+      const nestedScopeCandidates: BinderDeclarationCandidate[] = [];
+      collectPathValues(effectBody, scopeDefinition.nestedEffectsPath, kind, nestedScopeCandidates);
+
+      const excluded = new Set<string>();
+      for (const excludedPath of scopeDefinition.excludedBinderPaths) {
+        const excludedCandidates: BinderDeclarationCandidate[] = [];
+        collectPathValues(effectBody, excludedPath, kind, excludedCandidates);
+        for (const candidate of excludedCandidates) {
+          if (typeof candidate.value === 'string') {
+            excluded.add(candidate.value);
+          }
+        }
+      }
+
+      for (const candidate of nestedScopeCandidates) {
+        if (!Array.isArray(candidate.value)) {
+          continue;
+        }
+        for (const entry of candidate.value) {
+          if (!isRecord(entry)) {
+            continue;
+          }
+          for (const nestedBinding of collectSequentialBindings(entry as EffectAST)) {
+            if (!excluded.has(nestedBinding)) {
+              bindings.push(nestedBinding);
+            }
+          }
+        }
       }
     }
   }

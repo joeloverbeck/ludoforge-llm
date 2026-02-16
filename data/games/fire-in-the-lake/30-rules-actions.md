@@ -41,31 +41,31 @@ turnOrder:
 # ══════════════════════════════════════════════════════════════════════════════
 
 actions:
-  - { id: pass, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: train, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: patrol, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: sweep, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: assault, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: rally, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: march, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: attack, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: terror, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: advise, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: airLift, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: airStrike, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: govern, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: transport, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: raid, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: infiltrate, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: bombard, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: ambushNva, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: tax, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: subvert, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: ambushVc, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: pass, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: train, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: patrol, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: sweep, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: assault, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: rally, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: march, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: attack, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: terror, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: advise, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: airLift, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: airStrike, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: govern, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: transport, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: raid, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: infiltrate, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: bombard, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: ambushNva, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: tax, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: subvert, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: ambushVc, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
   - id: nvaTransferResources
     actor: active
     executor: '2'
-    phase: main
+    phase: [main]
     params:
       - name: amount
         domain: { query: intsInVarRange, var: nvaResources, min: 1 }
@@ -85,7 +85,7 @@ actions:
   - id: vcTransferResources
     actor: active
     executor: '3'
-    phase: main
+    phase: [main]
     params:
       - name: amount
         domain: { query: intsInVarRange, var: vcResources, min: 1 }
@@ -102,12 +102,12 @@ actions:
           delta: { op: '*', left: { ref: binding, name: amount }, right: -1 }
       - addVar: { scope: global, var: nvaResources, delta: { ref: binding, name: amount } }
     limits: []
-  - { id: usOp, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: arvnOp, actor: active, executor: 'actor', phase: main, params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: usOp, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: arvnOp, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
   - id: resolveCommitment
     actor: active
     executor: '0'
-    phase: commitment
+    phase: [commitment]
     params: []
     pre: { op: '==', left: { ref: activePlayer }, right: '0' }
     cost: []

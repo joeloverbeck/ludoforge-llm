@@ -26,7 +26,7 @@ const buildDef = (): GameDef =>
         id: asActionId('assignScore'),
         actor: 'active',
         executor: { chosen: '$owner' },
-        phase: asPhaseId('main'),
+        phase: [asPhaseId('main')],
         params: [{ name: '$owner', domain: { query: 'players' } }],
         pre: null,
         cost: [],

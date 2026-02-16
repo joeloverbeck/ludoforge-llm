@@ -24,7 +24,7 @@ actions:
   - id: operate
     actor: active
     executor: actor
-    phase: main
+    phase: [main]
     params: []
     pre: null
     cost: []

@@ -665,7 +665,7 @@ function synthesizeCardDrivenEventAction(
       id: asActionId(eventActionId),
       actor: 'active',
       executor: 'actor',
-      phase: turnStructure.phases[0]!.id,
+      phase: [turnStructure.phases[0]!.id],
       capabilities: [ACTION_CAPABILITY_CARD_EVENT],
       params: [],
       pre: null,

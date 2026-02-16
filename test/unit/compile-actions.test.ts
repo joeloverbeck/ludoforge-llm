@@ -20,7 +20,7 @@ describe('compile actions', () => {
           id: 'play',
           actor: 'active',
           executor: 'actor',
-          phase: 'main',
+          phase: ['main'],
           params: [{ name: 'count', domain: { query: 'intsInRange', min: 1, max: 2 } }],
           pre: {
             op: '>=',
@@ -44,11 +44,27 @@ describe('compile actions', () => {
     const action = result.gameDef?.actions[0];
     assert.equal(action?.id, 'play');
     assert.equal(action?.actor, 'active');
-    assert.equal(action?.phase, 'main');
     assert.equal(action?.params[0]?.name, 'count');
     assert.deepEqual(action?.params[0]?.domain, { query: 'intsInRange', min: 1, max: 2 });
     assert.deepEqual(action?.limits, [{ scope: 'turn', max: 1 }]);
     assert.deepEqual(action?.effects, [{ draw: { from: 'deck:none', to: 'hand:0', count: 1 } }]);
+    assert.deepEqual(action?.phase, ['main']);
+  });
+
+  it('rejects duplicate action phase ids during lowering', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'action-phase-duplicates', players: { min: 2, max: 2 } },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'play', actor: 'active', executor: 'actor', phase: ['main', 'main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 999 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_ACTION_PHASE_DUPLICATE'), true);
   });
 
   it('fails compile when actor uses non-canonical alias selector token', () => {
@@ -57,7 +73,7 @@ describe('compile actions', () => {
       metadata: { id: 'action-compile-alias-actor', players: { min: 2, max: 2 } },
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
-      actions: [{ id: 'play', actor: 'activePlayer', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'play', actor: 'activePlayer', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
       triggers: [],
       terminal: { conditions: [{ when: { op: '>=', left: 1, right: 999 }, result: { type: 'draw' } }] },
     };
@@ -87,7 +103,7 @@ describe('compile actions', () => {
           id: 'assign',
           actor: 'active',
           executor: '$owner',
-          phase: 'main',
+          phase: ['main'],
           params: [{ name: '$owner', domain: { query: 'players' } }],
           pre: null,
           cost: [],
@@ -114,7 +130,7 @@ describe('compile actions', () => {
           id: 'assign',
           actor: '$owner',
           executor: 'actor',
-          phase: 'main',
+          phase: ['main'],
           params: [{ name: '$owner', domain: { query: 'players' } }],
           pre: null,
           cost: [],
@@ -141,7 +157,7 @@ describe('compile actions', () => {
           id: 'assign',
           actor: 'active',
           executor: '$owner',
-          phase: 'main',
+          phase: ['main'],
           params: [],
           pre: null,
           cost: [],
@@ -168,7 +184,7 @@ describe('compile actions', () => {
           id: 'assign',
           actor: '$owner',
           executor: 'actor',
-          phase: 'main',
+          phase: ['main'],
           params: [],
           pre: null,
           cost: [],
@@ -195,7 +211,7 @@ describe('compile actions', () => {
           id: 'assign',
           actor: '$actorOwner',
           executor: '$execOwner',
-          phase: 'main',
+          phase: ['main'],
           params: [],
           pre: null,
           cost: [],
@@ -239,7 +255,7 @@ describe('compile actions', () => {
                     id: 'assign',
                     actor: actorUsesBinding ? '$actorOwner' : 'active',
                     executor: executorUsesBinding ? '$execOwner' : 'actor',
-                    phase: 'main',
+                    phase: ['main'],
                     params,
                     pre: null,
                     cost: [],
@@ -328,7 +344,7 @@ describe('compile actions', () => {
           id: 'assign',
           actor: 'active',
           executor: '$owner',
-          phase: 'main',
+          phase: ['main'],
           params: [{ name: '$owner', domain: { query: 'players' } }],
           pre: null,
           cost: [],
@@ -359,7 +375,7 @@ describe('compile actions', () => {
           id: 'transfer',
           actor: 'active',
           executor: 'actor',
-          phase: 'main',
+          phase: ['main'],
           params: [{ name: 'amount', domain: { query: 'intsInRange', min: 1, max: 75 } }],
           pre: { op: '>=', left: { ref: 'gvar', var: 'bankA' }, right: { ref: 'binding', name: 'amount' } },
           cost: [],
@@ -399,7 +415,7 @@ describe('compile actions', () => {
           id: 'transfer',
           actor: 'active',
           executor: 'actor',
-          phase: 'main',
+          phase: ['main'],
           params: [{ name: '$amount', domain: { query: 'intsInRange', min: 1, max: 75 } }],
           pre: { op: '>=', left: { ref: 'gvar', var: 'bankA' }, right: { ref: 'binding', name: 'amount' } },
           cost: [],

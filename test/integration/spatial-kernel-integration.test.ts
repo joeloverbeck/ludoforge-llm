@@ -39,7 +39,7 @@ const makeRuntimeDef = (): GameDef => ({
       id: asActionId('step'),
 actor: 'active',
 executor: 'actor',
-phase: asPhaseId('main'),
+phase: [asPhaseId('main')],
       params: [{ name: '$token', domain: { query: 'tokensInZone', zone: 'a:none' } }],
       pre: null,
       cost: [],

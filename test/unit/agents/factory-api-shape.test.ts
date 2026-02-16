@@ -77,7 +77,7 @@ describe('agents factory API shape', () => {
           id: asActionId('only'),
 actor: 'active',
 executor: 'actor',
-phase: asPhaseId('main'),
+phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],

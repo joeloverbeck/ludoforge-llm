@@ -48,7 +48,7 @@ const createValidGameDef = (): GameDef =>
         id: 'playCard',
 actor: 'active',
 executor: 'actor',
-phase: 'main',
+phase: ['main'],
         params: [{ name: '$n', domain: { query: 'intsInRange', min: 0, max: 3 } }],
         pre: null,
         cost: [],
@@ -652,14 +652,14 @@ describe('validateGameDef reference checks', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      actions: [{ ...base.actions[0], phase: 'mian' }],
+      actions: [{ ...base.actions[0], phase: ['mian'] }],
     } as unknown as GameDef;
 
     const diagnostics = validateGameDef(def);
     const missingPhase = diagnostics.find((diag) => diag.code === 'REF_PHASE_MISSING');
 
     assert.ok(missingPhase);
-    assert.equal(missingPhase.path, 'actions[0].phase');
+    assert.equal(missingPhase.path, 'actions[0].phase[0]');
     assert.deepEqual(missingPhase.alternatives, ['main']);
   });
 
@@ -1164,7 +1164,7 @@ describe('validateGameDef reference checks', () => {
       turnStructure: {
         phases: [{ id: 'operations' }],
       },
-      actions: [{ ...base.actions[0], phase: 'operations' }],
+      actions: [{ ...base.actions[0], phase: ['operations'] }],
       turnOrder: {
         type: 'cardDriven',
         config: {
@@ -1790,7 +1790,7 @@ describe('validated GameDef boundary', () => {
       actions: [
         {
           ...createValidGameDef().actions[0],
-          phase: 'missing-phase',
+          phase: ['missing-phase'],
         },
       ],
     } as unknown as GameDef;

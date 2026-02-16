@@ -81,7 +81,7 @@ export interface GameSpecActionDef {
   readonly id: string;
   readonly actor: unknown;
   readonly executor: unknown;
-  readonly phase: string | readonly string[];
+  readonly phase: readonly string[];
   readonly capabilities?: readonly string[];
   readonly params: readonly unknown[];
   readonly pre: unknown | null;

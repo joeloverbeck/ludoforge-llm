@@ -1,78 +1,94 @@
-# TEXHOLKERPRIGAMTOU-016: Typed Runtime Table Contracts (Replace String Paths)
+# TEXHOLKERPRIGAMTOU-016: Canonical Action Phase Contract (No Alias Forms)
 
 **Status**: ✅ COMPLETED
 **Priority**: HIGH
-**Effort**: Large
-**Dependencies**: TEXHOLKERPRIGAMTOU-010
-**Blocks**: TEXHOLKERPRIGAMTOU-017, TEXHOLKERPRIGAMTOU-018, TEXHOLKERPRIGAMTOU-019
+**Effort**: Medium
+**Dependencies**: None
+**Blocks**: TEXHOLKERPRIGAMTOU-017, TEXHOLKERPRIGAMTOU-018, TEXHOLKERPRIGAMTOU-020
 
-## 0) Reassessed Current State (Assumptions Correction)
+## Reassessed assumptions (2026-02-16)
 
-What already exists (from TEXHOLKERPRIGAMTOU-010):
-- `runtimeDataAssets` is already compiled into `GameDef`.
-- Runtime table access already exists via `assetRows` using `{ assetId, table }` where `table` is a dotted payload path.
-- Row field access already exists via `assetField` using `{ row, field }`.
-- Structural/runtime diagnostics already exist for missing assets and invalid table paths.
+Current code does **not** use a single canonical action-phase shape yet:
 
-What is still missing (this ticket's actual scope):
-- There is no first-class typed table contract section in `GameDef`.
-- `assetRows.table` is still string path traversal, not canonical table identity.
-- `assetField.field` is still free-form and not tied to declared table schema.
+1. `GameSpecDoc` action phase is currently `string | string[]` (`src/cnl/game-spec-doc.ts`).
+2. Core runtime type is currently `PhaseId | readonly PhaseId[]` (`src/kernel/types-core.ts`).
+3. Runtime schema accepts both forms (`src/kernel/schemas-core.ts`, `schemas/GameDef.schema.json`).
+4. Compiler lowering currently normalizes by deduplicating array entries and collapsing one-item arrays back to a scalar (`src/cnl/compile-lowering.ts`).
+5. Validation/cross-validation/runtime all contain union-shape branching for scalar-vs-array action phases (`src/cnl/validate-actions.ts`, `src/cnl/validate-spec-core.ts`, `src/cnl/cross-validate.ts`, `src/kernel/action-applicability-preflight.ts`, `src/kernel/validate-gamedef-core.ts`).
+6. Existing tests and fixtures include many scalar `phase: 'main'` action definitions and some assertions that rely on scalar output shape.
 
-This ticket is therefore a **strict contract migration** from path-based table access to canonical table-id addressing with validated field contracts.
+Ticket assumptions were directionally correct but incomplete on migration scope: test/fixture updates are required for this contract change.
 
-## 1) What needs to be fixed/added
+## 1) What must change / be implemented
 
-Replace stringly-typed runtime table addressing with first-class typed table contracts in `GameDef`.
+Move action phase representation to one canonical form across GameSpecDoc -> GameDef -> runtime:
 
-Scope:
-- Add canonical table contract definitions in `GameDef` (table id, source asset id, source table path, and declared scalar fields).
-- Update compiler to derive table contracts from embedded `GameSpecDoc` data assets.
-- Replace `assetRows` `{ assetId, table }` addressing with canonical `{ tableId }` addressing.
-- Replace free-form `assetField` usage with contract-bound access (`tableId` + field validated against that table contract).
-- Enforce deterministic diagnostics for unknown table ids and unknown table fields.
-- Remove alias/legacy path forms; keep one canonical representation only.
+1. Replace all action `phase` contracts from `string | string[]` to `string[]` (non-empty).
+2. Enforce duplicate phase ids as hard errors (deterministic diagnostics); do not silently deduplicate.
+3. Keep game engine/compiler generic and game-agnostic.
+4. No backward compatibility path and no aliasing.
 
-Non-goals for this ticket:
-- Runtime indexing/accessor performance optimization (handled by TEXHOLKERPRIGAMTOU-017).
+Required code scope:
 
-Constraints:
-- No game-specific table handling in kernel/runtime.
-- No backwards compatibility path syntax.
-- Table contracts must be generic and reusable across all games.
+- `src/cnl/game-spec-doc.ts`
+- `src/cnl/validate-actions.ts`
+- `src/cnl/validate-spec-core.ts`
+- `src/cnl/compile-lowering.ts`
+- `src/cnl/cross-validate.ts`
+- `src/kernel/types-core.ts`
+- `src/kernel/schemas-core.ts`
+- `src/kernel/action-applicability-preflight.ts`
+- `src/kernel/validate-gamedef-core.ts`
+- `schemas/GameDef.schema.json` (via artifact generation)
+
+Migration scope (required):
+
+- Update affected unit/integration tests and any fixture assumptions that currently depend on scalar action phase representation.
 
 ## 2) Invariants that should pass
 
-1. Runtime table queries are validated against declared table contracts before execution.
-2. Invalid table ids and invalid fields are rejected deterministically with stable diagnostics.
-3. `GameDef` remains game-agnostic; table contracts contain no game-specific branching logic.
-4. Existing map/scenario/pieceCatalog projection behavior remains unchanged.
-5. Canonical table references are sufficient to express current Texas Hold'em schedule use-cases.
+1. Exactly one canonical action phase shape exists everywhere: non-empty phase-id array.
+2. Duplicate phase ids in one action are rejected with deterministic diagnostics.
+3. Phase applicability semantics remain deterministic (`currentPhase` membership check in declared phase array).
+4. Existing game behavior is unchanged except for the intentional contract shape change.
+5. Runtime/schema/type artifacts remain synchronized.
 
 ## 3) Tests that should pass
 
-1. Unit: schema/type tests for new `GameDef.tableContracts` and canonical query/reference shapes.
-2. Unit: compiler tests deriving deterministic table contracts from embedded data assets.
-3. Unit: compile/validation diagnostics for unknown table id and unknown field.
-4. Unit: runtime query/reference tests using table-id + field-id only.
-5. Integration: compiled fixture using table contracts executes successfully through simulator/applyMove.
-6. Regression: `npm run build`, `npm test`, `npm run lint`.
+1. Unit: validator rejects scalar `action.phase`; accepts non-empty string arrays.
+2. Unit: validator/compiler rejects duplicate phase ids in one action.
+3. Unit: compiler preserves canonical phase arrays (including single-item arrays) without scalar collapse.
+4. Unit: legality/applicability checks work with canonical phase arrays.
+5. Unit: schema/top-level validation accepts only array action phases.
+6. Regression: `npm run build`, `npm run lint`, `npm test`.
+
+## 4) Architectural rationale
+
+Canonical `string[]` action phases are preferable to the current union because they:
+
+1. Remove repeated scalar/array branching across compiler and runtime paths.
+2. Eliminate silent data mutation (dedupe + scalar collapse) during lowering.
+3. Make validation and diagnostics explicit and deterministic.
+4. Reduce long-term maintenance complexity for future compiler/runtime features.
+
+This is an intentional contract break to improve robustness and extensibility.
 
 ## Outcome
 
-- Completion date: 2026-02-15
-- What was actually changed:
-  - Added typed runtime table contracts to `GameDef` (`tableContracts`) with canonical table ids, source asset ids, source table paths, and scalar field contracts.
-  - Migrated canonical query/reference shapes:
-    - `assetRows` now uses `{ tableId }` (removed `{ assetId, table }`).
-    - `assetField` now uses `{ row, tableId, field }` (contract-bound field resolution).
-  - Compiler now derives table contracts generically from embedded runtime data assets.
-  - Runtime query/reference logic now resolves via table contracts and enforces deterministic errors for unknown table ids/fields.
-  - GameDef validation now checks runtime table ids/fields in `assetRows.where` and `assetField`, plus structural checks for duplicate table ids/fields and missing contract asset ids.
-  - Updated integration/unit suites to canonical table-id addressing and added coverage for `assetField` field-contract diagnostics.
-- Deviations from originally planned scope:
-  - Kept JSON schema artifacts unchanged in this ticket; runtime/compiler/type-level contracts are implemented and covered by build/test/lint gates.
-- Verification results:
-  - `npm run build` ✅
-  - `npm test` ✅
-  - `npm run lint` ✅
+**Completion date**: 2026-02-16
+
+**What changed**
+1. Canonical contract implemented end-to-end: action `phase` is now a non-empty array in GameSpecDoc, lowering output, runtime core types, and runtime schemas.
+2. Duplicate action-phase ids now fail deterministically in both CNL validation and lowering; runtime GameDef validation also rejects malformed/duplicate phase arrays defensively.
+3. Scalar-vs-array branching was removed from cross-validation, applicability preflight, and core GameDef validation paths.
+4. JSON schema artifacts were regenerated and synchronized with source contracts (`schemas/GameDef.schema.json` updated).
+5. Test and fixture migration completed across unit/integration/golden/property fixtures and the FITL production GameSpec data to use canonical phase arrays.
+
+**Deviations from original plan**
+1. Scope expanded to include broad fixture and production GameSpec migration; this was required to keep the full test corpus and production compile path valid after the intentional contract break.
+2. Runtime boundary hardening was added (`ACTION_PHASE_INVALID`) to prevent TypeError crashes when malformed external GameDefs provide scalar/non-array `action.phase`.
+
+**Verification**
+1. `npm run build` passed.
+2. `npm run lint` passed.
+3. `npm test` passed (unit + integration + schema artifact check).

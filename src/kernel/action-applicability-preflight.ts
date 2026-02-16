@@ -101,8 +101,7 @@ export const resolveActionApplicabilityPreflight = ({
     };
   }
 
-  const actionPhases = Array.isArray(action.phase) ? action.phase : [action.phase];
-  if (!skipPhaseCheck && !actionPhases.includes(state.currentPhase)) {
+  if (!skipPhaseCheck && !action.phase.includes(state.currentPhase)) {
     return { kind: 'notApplicable', reason: 'phaseMismatch' };
   }
 

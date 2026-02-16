@@ -32,7 +32,7 @@ actions:
   - id: showCard
     actor: active
     executor: actor
-    phase: main
+    phase: [main]
     params: []
     pre: null
     cost: []

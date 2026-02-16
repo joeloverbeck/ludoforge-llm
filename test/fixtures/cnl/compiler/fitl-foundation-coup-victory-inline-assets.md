@@ -135,7 +135,7 @@ actions:
   - id: pass
     actor: active
     executor: actor
-    phase: main
+    phase: [main]
     params: []
     pre: null
     cost: []
@@ -144,7 +144,7 @@ actions:
   - id: boostSupport
     actor: active
     executor: actor
-    phase: main
+    phase: [main]
     params: []
     pre: null
     cost: []
@@ -157,7 +157,7 @@ actions:
   - id: markFinalCoup
     actor: active
     executor: actor
-    phase: main
+    phase: [main]
     params: []
     pre: null
     cost: []

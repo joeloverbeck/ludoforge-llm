@@ -40,7 +40,7 @@ const makeDef = (effects: readonly EffectAST[]): GameDef =>
         id: asActionId('decide'),
         actor: 'active',
         executor: 'actor',
-        phase: asPhaseId('main'),
+        phase: [asPhaseId('main')],
         params: [],
         pre: null,
         cost: [],

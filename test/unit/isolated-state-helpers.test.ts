@@ -45,7 +45,7 @@ const createCardDrivenDef = (): GameDef =>
         id: asActionId('pass'),
 actor: 'active',
 executor: 'actor',
-phase: asPhaseId('main'),
+phase: [asPhaseId('main')],
         params: [],
         pre: null,
         cost: [],

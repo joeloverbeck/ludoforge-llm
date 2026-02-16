@@ -23,7 +23,7 @@ describe('validateGameDef golden diagnostics', () => {
     const golden = [
       {
         code: 'REF_PHASE_MISSING',
-        path: 'actions[0].phase',
+        path: 'actions[0].phase[0]',
         severity: 'error',
         messageSubstring: 'Unknown phase "mian".',
       },

@@ -39,7 +39,7 @@ const makeAction = (overrides?: Partial<ActionDef>): ActionDef => ({
   id: asActionId('op'),
   actor: 'active',
   executor: 'actor',
-  phase: asPhaseId('main'),
+  phase: [asPhaseId('main')],
   params: [],
   pre: null,
   cost: [],
@@ -81,7 +81,7 @@ describe('legality surface parity', () => {
     {
       name: 'phase mismatch',
       make: () => ({
-        def: makeDef({ action: makeAction({ phase: asPhaseId('other') }) }),
+        def: makeDef({ action: makeAction({ phase: [asPhaseId('other')] }) }),
         state: makeState({ currentPhase: asPhaseId('main') }),
         move: { actionId: asActionId('op'), params: {} },
       }),

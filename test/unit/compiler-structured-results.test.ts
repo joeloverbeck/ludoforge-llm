@@ -13,7 +13,7 @@ describe('compiler structured section results', () => {
       metadata: { id: 'asset-cascade', players: { min: 2, max: 2 } },
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }] as const,
       turnStructure: { phases: [{ id: 'main' }] } as const,
-      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }] as const,
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }] as const,
       terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] } as const,
     };
   }
@@ -48,7 +48,7 @@ describe('compiler structured section results', () => {
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
       actions: [
-        { id: 'bad', actor: 42, executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'bad', actor: 42, executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
@@ -68,7 +68,7 @@ describe('compiler structured section results', () => {
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
       actions: [
-        { id: 'bad', actor: 42, executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'bad', actor: 42, executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       triggers: [{ id: 'after-turn', event: { type: 'turnEnd' }, effects: [] }],
       terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
@@ -87,7 +87,7 @@ describe('compiler structured section results', () => {
       ...createEmptyGameSpecDoc(),
       zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
       turnStructure: { phases: [{ id: 'main' }] },
-      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] }],
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
       terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
     };
 
@@ -257,7 +257,7 @@ describe('compiler structured section results', () => {
       ],
       actions: [
         ...base.actions,
-        { id: 'event', actor: 'active', executor: 'actor', phase: 'main', params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: 'event', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
       ],
       eventDecks: [
         {
@@ -302,7 +302,7 @@ describe('compiler structured section results', () => {
           id: 'resolve-card',
           actor: 'active',
           executor: 'actor',
-          phase: 'main',
+          phase: ['main'],
           capabilities: ['cardEvent'],
           params: [],
           pre: null,
@@ -348,7 +348,7 @@ describe('compiler structured section results', () => {
           id: 'resolve-card-a',
           actor: 'active',
           executor: 'actor',
-          phase: 'main',
+          phase: ['main'],
           capabilities: ['cardEvent'],
           params: [],
           pre: null,
@@ -360,7 +360,7 @@ describe('compiler structured section results', () => {
           id: 'resolve-card-b',
           actor: 'active',
           executor: 'actor',
-          phase: 'main',
+          phase: ['main'],
           capabilities: ['cardEvent'],
           params: [],
           pre: null,

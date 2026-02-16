@@ -9,7 +9,7 @@ function createStructurallyValidDoc() {
     id: 'draw',
 actor: { currentPlayer: true },
 executor: 'actor',
-phase: 'main',
+phase: ['main'],
     params: [],
     pre: null,
     cost: [],
@@ -286,7 +286,7 @@ describe('validateGameSpec structural rules', () => {
     const baseAction = validDoc.actions![0]!;
     const diagnostics = validateGameSpec({
       ...validDoc,
-      actions: [{ ...baseAction, id: '', phase: '', actor: null, executor: null, effects: {} as unknown as unknown[] }],
+      actions: [{ ...baseAction, id: '', phase: [] as const, actor: null, executor: null, effects: {} as unknown as unknown[] }],
     });
     assert.deepEqual(diagnostics.map((diagnostic) => diagnostic.path), [
       'doc.actions.0.actor',
@@ -320,13 +320,49 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('rejects scalar action.phase and requires non-empty phase arrays', () => {
+    const validDoc = createStructurallyValidDoc();
+    const baseAction = validDoc.actions![0]!;
+    const diagnostics = validateGameSpec({
+      ...validDoc,
+      actions: [{ ...baseAction, phase: 'main' } as unknown as (typeof baseAction)],
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.path === 'doc.actions.0.phase' &&
+          diagnostic.code === 'CNL_VALIDATOR_ACTION_REQUIRED_FIELD_MISSING',
+      ),
+      true,
+    );
+  });
+
+  it('rejects duplicate action.phase ids', () => {
+    const validDoc = createStructurallyValidDoc();
+    const baseAction = validDoc.actions![0]!;
+    const diagnostics = validateGameSpec({
+      ...validDoc,
+      actions: [{ ...baseAction, phase: ['main', 'main'] }],
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.path === 'doc.actions.0.phase.1' &&
+          diagnostic.code === 'CNL_VALIDATOR_ACTION_PHASE_DUPLICATE',
+      ),
+      true,
+    );
+  });
+
   it('validates turn structure shape', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),
       turnStructure: { phases: [] },
     });
     assert.deepEqual(diagnostics.map((diagnostic) => diagnostic.path), [
-      'doc.actions.0.phase',
+      'doc.actions.0.phase.0',
       'doc.turnStructure.phases',
     ]);
   });
@@ -528,11 +564,11 @@ describe('validateGameSpec structural rules', () => {
       actions: [
         {
           ...createStructurallyValidDoc().actions![0]!,
-          phase: 'mian',
+          phase: ['mian'],
         },
       ],
     });
-    const missingPhase = diagnostics.find((diagnostic) => diagnostic.path === 'doc.actions.0.phase');
+    const missingPhase = diagnostics.find((diagnostic) => diagnostic.path === 'doc.actions.0.phase.0');
     assert.ok(missingPhase);
     assert.equal(missingPhase.code, 'CNL_VALIDATOR_REFERENCE_MISSING');
     assert.deepEqual(missingPhase.alternatives, ['main']);

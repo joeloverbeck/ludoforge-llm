@@ -18,7 +18,7 @@ actions:
   - id: draw
     actor: { currentPlayer: true }
     executor: actor
-    phase: main
+    phase: [main]
     params: []
     pre: null
     cost: []

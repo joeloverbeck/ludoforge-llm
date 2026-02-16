@@ -246,9 +246,9 @@ export function lowerActions(
       diagnostics.push(missingCapabilityDiagnostic(path, 'action definition', action));
       continue;
     }
-    const phases = lowerActionPhases(action.phase);
-    if (phases === null) {
-      diagnostics.push(missingCapabilityDiagnostic(`${path}.phase`, 'action phase selector(s)', action.phase, ['string', 'string[]']));
+    const phases = lowerActionPhases(action.phase, `${path}.phase`);
+    diagnostics.push(...phases.diagnostics);
+    if (phases.value === null) {
       continue;
     }
 
@@ -300,7 +300,7 @@ export function lowerActions(
       id: asActionId(action.id),
       actor: actor.value,
       executor: executor.value,
-      phase: phases,
+      phase: phases.value,
       ...(capabilities.length === 0 ? {} : { capabilities }),
       params: params.value,
       pre: pre ?? null,
@@ -313,29 +313,49 @@ export function lowerActions(
   return lowered;
 }
 
-function lowerActionPhases(source: unknown): ActionDef['phase'] | null {
-  if (typeof source === 'string' && source.trim() !== '') {
-    return asPhaseId(source);
-  }
+function lowerActionPhases(
+  source: unknown,
+  path: string,
+): {
+  readonly value: ActionDef['phase'] | null;
+  readonly diagnostics: readonly Diagnostic[];
+} {
   if (!Array.isArray(source) || source.length === 0) {
-    return null;
+    return {
+      value: null,
+      diagnostics: [missingCapabilityDiagnostic(path, 'action phase selector(s)', source, ['string[]'])],
+    };
   }
 
+  const diagnostics: Diagnostic[] = [];
   const normalized: PhaseId[] = [];
   const seen = new Set<string>();
-  for (const phase of source) {
+  for (const [phaseIndex, phase] of source.entries()) {
     if (typeof phase !== 'string' || phase.trim() === '') {
-      return null;
+      return {
+        value: null,
+        diagnostics: [missingCapabilityDiagnostic(path, 'action phase selector(s)', source, ['string[]'])],
+      };
     }
     const phaseId = asPhaseId(phase);
     if (seen.has(phaseId)) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_ACTION_PHASE_DUPLICATE',
+        path: `${path}.${phaseIndex}`,
+        severity: 'error',
+        message: `Duplicate action phase "${phaseId}" after normalization.`,
+        suggestion: 'Keep each phase id unique within action.phase.',
+      });
       continue;
     }
     seen.add(phaseId);
     normalized.push(phaseId);
   }
 
-  return normalized.length === 1 ? normalized[0]! : normalized;
+  if (diagnostics.length > 0) {
+    return { value: null, diagnostics };
+  }
+  return { value: normalized, diagnostics: [] };
 }
 
 function lowerActionCapabilities(

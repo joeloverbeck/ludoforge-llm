@@ -95,19 +95,16 @@ function validateCrossReferences(
         continue;
       }
 
-      const phaseValues: string[] =
-        typeof action.phase === 'string'
-          ? (action.phase.trim() === '' ? [] : [action.phase])
-          : Array.isArray(action.phase)
-            ? action.phase.filter((phase): phase is string => typeof phase === 'string' && phase.trim() !== '')
-            : [];
+      const phaseValues: string[] = Array.isArray(action.phase)
+        ? action.phase.filter((phase): phase is string => typeof phase === 'string' && phase.trim() !== '')
+        : [];
 
       for (const [phaseIndex, phase] of phaseValues.entries()) {
         const normalizedPhase = normalizeIdentifier(phase);
         if (phaseIdSet.has(normalizedPhase)) {
           continue;
         }
-        const path = Array.isArray(action.phase) ? `${basePath}.phase.${phaseIndex}` : `${basePath}.phase`;
+        const path = `${basePath}.phase.${phaseIndex}`;
         pushMissingReferenceDiagnostic(
           diagnostics,
           'CNL_VALIDATOR_REFERENCE_MISSING',

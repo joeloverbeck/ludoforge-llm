@@ -29,15 +29,47 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
     validatePlayerSelector(diagnostics, action.actor, `actions[${actionIndex}].actor`, context);
     validatePlayerSelector(diagnostics, action.executor, `actions[${actionIndex}].executor`, context);
 
-    const actionPhases = Array.isArray(action.phase) ? action.phase : [action.phase];
-    for (const [phaseIndex, phaseId] of actionPhases.entries()) {
+    if (!Array.isArray(action.phase) || action.phase.length === 0) {
+      diagnostics.push({
+        code: 'ACTION_PHASE_INVALID',
+        path: `actions[${actionIndex}].phase`,
+        severity: 'error',
+        message: 'Action phase must be a non-empty array of phase ids.',
+        suggestion: 'Set action.phase to a non-empty list of phase ids.',
+      });
+      return;
+    }
+
+    const phaseSeen = new Set<string>();
+    for (const [phaseIndex, phaseId] of action.phase.entries()) {
+      if (typeof phaseId !== 'string' || phaseId.trim() === '') {
+        diagnostics.push({
+          code: 'ACTION_PHASE_INVALID',
+          path: `actions[${actionIndex}].phase[${phaseIndex}]`,
+          severity: 'error',
+          message: 'Action phase ids must be non-empty strings.',
+          suggestion: 'Set each action.phase entry to a non-empty phase id string.',
+        });
+        continue;
+      }
+      if (phaseSeen.has(phaseId)) {
+        diagnostics.push({
+          code: 'ACTION_PHASE_DUPLICATE',
+          path: `actions[${actionIndex}].phase[${phaseIndex}]`,
+          severity: 'error',
+          message: `Duplicate action phase "${phaseId}".`,
+          suggestion: 'Keep each phase id unique within action.phase.',
+        });
+        continue;
+      }
+      phaseSeen.add(phaseId);
       if (phaseCandidates.includes(phaseId)) {
         continue;
       }
       pushMissingReferenceDiagnostic(
         diagnostics,
         'REF_PHASE_MISSING',
-        Array.isArray(action.phase) ? `actions[${actionIndex}].phase[${phaseIndex}]` : `actions[${actionIndex}].phase`,
+        `actions[${actionIndex}].phase[${phaseIndex}]`,
         `Unknown phase "${phaseId}".`,
         phaseId,
         phaseCandidates,

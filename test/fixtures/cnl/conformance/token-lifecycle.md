@@ -37,7 +37,7 @@ actions:
   - id: deploy
     actor: active
     executor: actor
-    phase: main
+    phase: [main]
     params: []
     pre: null
     cost: []

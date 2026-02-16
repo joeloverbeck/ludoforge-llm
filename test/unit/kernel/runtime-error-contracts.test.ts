@@ -22,7 +22,7 @@ describe('runtime error context contracts', () => {
     id: asActionId('operate'),
     actor: 'active',
     executor: 'actor',
-    phase: asPhaseId('main'),
+    phase: [asPhaseId('main')],
     params: [],
     pre: null,
     cost: [],

@@ -25,12 +25,11 @@ export function crossValidateSpec(sections: CompileSectionResults): readonly Dia
 
   if (sections.actions !== null && sections.turnStructure !== null) {
     for (const [actionIndex, action] of sections.actions.entries()) {
-      const actionPhases = Array.isArray(action.phase) ? action.phase : [action.phase];
-      for (const [phaseIndex, phase] of actionPhases.entries()) {
+      for (const [phaseIndex, phase] of action.phase.entries()) {
         pushMissingIdentifierDiagnostic(
           diagnostics,
           'CNL_XREF_ACTION_PHASE_MISSING',
-          Array.isArray(action.phase) ? `doc.actions.${actionIndex}.phase.${phaseIndex}` : `doc.actions.${actionIndex}.phase`,
+          `doc.actions.${actionIndex}.phase.${phaseIndex}`,
           phase,
           phaseTargets,
           `Action "${action.id}" references unknown phase "${phase}".`,

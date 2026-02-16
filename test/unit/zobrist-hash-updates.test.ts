@@ -46,7 +46,7 @@ const createGameDef = (): GameDef =>
         id: 'playCard',
 actor: 'active',
 executor: 'actor',
-phase: 'main',
+phase: ['main'],
         params: [],
         pre: null,
         cost: [],

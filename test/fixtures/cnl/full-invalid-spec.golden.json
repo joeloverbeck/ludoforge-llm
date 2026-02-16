@@ -44,6 +44,13 @@
     },
     {
       "code": "CNL_YAML_009",
+      "path": "yaml.block.0.line.17",
+      "severity": "warning",
+      "message": "Unescaped special characters in unquoted scalar value.",
+      "suggestion": "Wrap the value in quotes or escape special characters."
+    },
+    {
+      "code": "CNL_YAML_009",
       "path": "yaml.block.0.line.18",
       "severity": "warning",
       "message": "Unescaped special characters in unquoted scalar value.",

@@ -56,7 +56,9 @@
           "currentPlayer": true
         },
         "executor": "actor",
-        "phase": "main",
+        "phase": [
+          "main"
+        ],
         "params": [],
         "pre": null,
         "cost": [],
@@ -82,6 +84,7 @@
     "CNL_YAML_010",
     "CNL_YAML_018",
     "CNL_YAML_001",
+    "CNL_YAML_009",
     "CNL_YAML_009",
     "CNL_YAML_009",
     "CNL_YAML_009",

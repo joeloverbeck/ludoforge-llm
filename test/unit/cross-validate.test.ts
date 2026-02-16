@@ -52,7 +52,7 @@ function createRichCompilableDoc(): GameSpecDoc {
         id: 'act',
 actor: 'active',
 executor: 'actor',
-phase: 'main',
+phase: ['main'],
         params: [],
         pre: null,
         cost: [],
@@ -124,14 +124,14 @@ describe('crossValidateSpec', () => {
       actions: [
         {
           ...action,
-          phase: asPhaseId('maim'),
+          phase: [asPhaseId('maim')],
         },
       ],
     });
 
     const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_ACTION_PHASE_MISSING');
     assert.notEqual(diagnostic, undefined);
-    assert.equal(diagnostic?.path, 'doc.actions.0.phase');
+    assert.equal(diagnostic?.path, 'doc.actions.0.phase.0');
     assert.equal(diagnostic?.suggestion, 'Did you mean "main"?');
   });
 
@@ -223,7 +223,7 @@ describe('crossValidateSpec', () => {
       actions: [
         {
           ...action,
-          phase: asPhaseId('unknown-phase'),
+          phase: [asPhaseId('unknown-phase')],
         },
       ],
     });
@@ -243,7 +243,7 @@ describe('crossValidateSpec', () => {
     const profile = requireValue(sections.actionPipelines?.[0]);
     const withMultipleErrors: CompileSectionResults = {
       ...sections,
-      actions: [{ ...action, phase: asPhaseId('maim') }],
+      actions: [{ ...action, phase: [asPhaseId('maim')] }],
       actionPipelines: [{ ...profile, actionId: asActionId('acx') }],
     };
 

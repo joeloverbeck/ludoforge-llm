@@ -26,7 +26,7 @@ const buildDef = (): GameDef =>
         id: asActionId('pressure'),
         actor: 'active',
         executor: { id: asPlayerId(1) },
-        phase: asPhaseId('main'),
+        phase: [asPhaseId('main')],
         params: [],
         pre: null,
         cost: [],

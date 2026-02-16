@@ -7,6 +7,7 @@ import {
   TERMINAL_KEYS,
   TURN_STRUCTURE_KEYS,
   isRecord,
+  normalizeIdentifier,
   uniqueSorted,
   validateIdentifierField,
   validateUnknownKeys,
@@ -58,19 +59,34 @@ export function validateActions(doc: GameSpecDoc, diagnostics: Diagnostic[]): re
       });
     }
 
-    const hasValidSinglePhase = typeof action.phase === 'string' && action.phase.trim() !== '';
     const hasValidPhaseArray =
       Array.isArray(action.phase) &&
       action.phase.length > 0 &&
       action.phase.every((phase) => typeof phase === 'string' && phase.trim() !== '');
-    if (!hasValidSinglePhase && !hasValidPhaseArray) {
+    if (!hasValidPhaseArray) {
       diagnostics.push({
         code: 'CNL_VALIDATOR_ACTION_REQUIRED_FIELD_MISSING',
         path: `${basePath}.phase`,
         severity: 'error',
-        message: 'Action field "phase" must be a non-empty string or a non-empty array of phase ids.',
-        suggestion: 'Set action.phase to a phase id or list of phase ids.',
+        message: 'Action field "phase" must be a non-empty array of phase ids.',
+        suggestion: 'Set action.phase to a non-empty list of phase ids.',
       });
+    } else {
+      const normalizedSeen = new Set<string>();
+      for (const [phaseIndex, phase] of action.phase.entries()) {
+        const normalized = normalizeIdentifier(phase);
+        if (normalizedSeen.has(normalized)) {
+          diagnostics.push({
+            code: 'CNL_VALIDATOR_ACTION_PHASE_DUPLICATE',
+            path: `${basePath}.phase.${phaseIndex}`,
+            severity: 'error',
+            message: `Duplicate action phase "${normalized}" after normalization.`,
+            suggestion: 'Keep each phase id unique within action.phase.',
+          });
+          continue;
+        }
+        normalizedSeen.add(normalized);
+      }
     }
 
     if (action.capabilities !== undefined) {

@@ -90,7 +90,8 @@ const exhaustEffectAST = (effect: EffectAST): string => {
   if ('flipGlobalMarker' in effect) return 'flipGlobalMarker';
   if ('shiftGlobalMarker' in effect) return 'shiftGlobalMarker';
   if ('grantFreeOperation' in effect) return 'grantFreeOperation';
-  if ('gotoPhase' in effect) return 'gotoPhase';
+  if ('gotoPhaseExact' in effect) return 'gotoPhaseExact';
+  if ('advancePhase' in effect) return 'advancePhase';
   if ('pushInterruptPhase' in effect) return 'pushInterruptPhase';
   if ('popInterruptPhase' in effect) return 'popInterruptPhase';
 
@@ -146,12 +147,12 @@ describe('exhaustive kernel unions', () => {
   it('keeps the exact variant counts for key unions', () => {
     const playerSelVariants: UnionSize<PlayerSel> = 7;
     const conditionVariants: UnionSize<ConditionAST> = 10;
-    const effectVariants: UnionSize<EffectAST> = 32;
+    const effectVariants: UnionSize<EffectAST> = 33;
     const queryVariants: UnionSize<OptionsQuery> = 15;
 
     assert.equal(playerSelVariants, 7);
     assert.equal(conditionVariants, 10);
-    assert.equal(effectVariants, 32);
+    assert.equal(effectVariants, 33);
     assert.equal(queryVariants, 15);
   });
 

@@ -6237,7 +6237,7 @@
         {
           "type": "object",
           "properties": {
-            "gotoPhase": {
+            "gotoPhaseExact": {
               "type": "object",
               "properties": {
                 "phase": {
@@ -6251,7 +6251,21 @@
             }
           },
           "required": [
-            "gotoPhase"
+            "gotoPhaseExact"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "advancePhase": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "advancePhase"
           ],
           "additionalProperties": false
         },

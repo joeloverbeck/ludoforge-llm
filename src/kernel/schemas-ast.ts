@@ -696,11 +696,16 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
-      gotoPhase: z
+      gotoPhaseExact: z
         .object({
           phase: StringSchema,
         })
         .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      advancePhase: z.object({}).strict(),
     })
     .strict(),
   z

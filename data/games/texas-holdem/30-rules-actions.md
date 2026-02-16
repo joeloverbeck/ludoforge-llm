@@ -64,7 +64,7 @@ turnStructure:
                         to: { zoneExpr: { concat: ['hand:', { ref: binding, name: $player }] } }
                         count: 2
         - macro: post-forced-bets-and-set-preflop-actor
-        - gotoPhase: { phase: preflop }
+        - gotoPhaseExact: { phase: preflop }
 
     - id: preflop
       onEnter:
@@ -72,7 +72,7 @@ turnStructure:
         - if:
             when: { op: '<=', left: { ref: gvar, var: playersInHand }, right: 1 }
             then:
-              - gotoPhase: { phase: hand-cleanup }
+              - gotoPhaseExact: { phase: showdown }
         - macro: find-next-to-act
           args:
             fromSeat:

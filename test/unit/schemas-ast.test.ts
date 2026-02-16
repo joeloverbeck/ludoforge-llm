@@ -268,9 +268,12 @@ describe('AST and selector schemas', () => {
         },
       },
       {
-        gotoPhase: {
+        gotoPhaseExact: {
           phase: 'commitment',
         },
+      },
+      {
+        advancePhase: {},
       },
       {
         pushInterruptPhase: {

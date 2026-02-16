@@ -1268,17 +1268,21 @@ export const validateEffectAst = (
     return;
   }
 
-  if ('gotoPhase' in effect) {
-    if (!context.turnPhaseNames.has(effect.gotoPhase.phase)) {
+  if ('gotoPhaseExact' in effect) {
+    if (!context.turnPhaseNames.has(effect.gotoPhaseExact.phase)) {
       pushMissingReferenceDiagnostic(
         diagnostics,
         'REF_PHASE_MISSING',
-        `${path}.gotoPhase.phase`,
-        `Unknown turn phase "${effect.gotoPhase.phase}".`,
-        effect.gotoPhase.phase,
+        `${path}.gotoPhaseExact.phase`,
+        `Unknown turn phase "${effect.gotoPhaseExact.phase}".`,
+        effect.gotoPhaseExact.phase,
         context.turnPhaseCandidates,
       );
     }
+    return;
+  }
+
+  if ('advancePhase' in effect) {
     return;
   }
 

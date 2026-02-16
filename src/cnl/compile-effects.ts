@@ -152,8 +152,11 @@ function lowerEffectNode(
   if (isRecord(source.grantFreeOperation)) {
     return lowerGrantFreeOperationEffect(source.grantFreeOperation, context, scope, `${path}.grantFreeOperation`);
   }
-  if (isRecord(source.gotoPhase)) {
-    return lowerGotoPhaseEffect(source.gotoPhase, `${path}.gotoPhase`);
+  if (isRecord(source.gotoPhaseExact)) {
+    return lowerGotoPhaseExactEffect(source.gotoPhaseExact, `${path}.gotoPhaseExact`);
+  }
+  if (isRecord(source.advancePhase)) {
+    return lowerAdvancePhaseEffect(source.advancePhase, `${path}.advancePhase`);
   }
   if (isRecord(source.pushInterruptPhase)) {
     return lowerPushInterruptPhaseEffect(source.pushInterruptPhase, `${path}.pushInterruptPhase`);
@@ -1408,19 +1411,35 @@ function lowerGrantFreeOperationEffect(
   };
 }
 
-function lowerGotoPhaseEffect(
+function lowerGotoPhaseExactEffect(
   source: Record<string, unknown>,
   path: string,
 ): EffectLoweringResult<EffectAST> {
   if (typeof source.phase !== 'string') {
-    return missingCapability(path, 'gotoPhase effect', source, ['{ gotoPhase: { phase: string } }']);
+    return missingCapability(path, 'gotoPhaseExact effect', source, ['{ gotoPhaseExact: { phase: string } }']);
   }
 
   return {
     value: {
-      gotoPhase: {
+      gotoPhaseExact: {
         phase: source.phase,
       },
+    },
+    diagnostics: [],
+  };
+}
+
+function lowerAdvancePhaseEffect(
+  source: Record<string, unknown>,
+  path: string,
+): EffectLoweringResult<EffectAST> {
+  if (Object.keys(source).length !== 0) {
+    return missingCapability(path, 'advancePhase effect', source, ['{ advancePhase: {} }']);
+  }
+
+  return {
+    value: {
+      advancePhase: {},
     },
     diagnostics: [],
   };

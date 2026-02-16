@@ -77,6 +77,26 @@ describe('texas runtime bootstrap and position flow', () => {
     assert.equal(state.perPlayerVars[String(bbSeat)]?.streetBet, state.globalVars.bigBlind);
   });
 
+  it('ends a heads-up hand on fold without traversing flop/turn/river side effects', () => {
+    const def = compileTexasDef();
+    const seeded = initialState(def, 43, 2);
+    const state = advanceToDecisionPoint(def, seeded);
+    const foldMove = legalMoves(def, state).find((move) => move.actionId === 'fold');
+    assert.ok(foldMove, 'expected fold to be legal in opening preflop state');
+
+    const next = applyMove(def, state, foldMove!);
+    const nextState = next.state;
+
+    const deckCount = nextState.zones['deck:none']?.length ?? 0;
+    const burnCount = nextState.zones['burn:none']?.length ?? 0;
+    const communityCount = nextState.zones['community:none']?.length ?? 0;
+
+    assert.equal(nextState.currentPhase, 'preflop');
+    assert.equal(deckCount, 44);
+    assert.equal(burnCount, 0);
+    assert.equal(communityCount, 0);
+  });
+
   const smokeConfigs = [
     { seed: 37, playerCount: 2 },
     { seed: 41, playerCount: 4 },

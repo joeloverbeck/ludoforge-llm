@@ -133,15 +133,15 @@ export const applyGrantFreeOperation = (
   };
 };
 
-export const applyGotoPhase = (
-  effect: Extract<EffectAST, { readonly gotoPhase: unknown }>,
+export const applyGotoPhaseExact = (
+  effect: Extract<EffectAST, { readonly gotoPhaseExact: unknown }>,
   ctx: EffectContext,
 ): EffectResult => {
-  const targetPhase = effect.gotoPhase.phase;
+  const targetPhase = effect.gotoPhaseExact.phase;
   const phaseIds = ctx.def.turnStructure.phases.map((phase) => phase.id);
   if (!phaseIds.some((phaseId) => phaseId === targetPhase)) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `gotoPhase.phase is unknown: ${targetPhase}`, {
-      effectType: 'gotoPhase',
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `gotoPhaseExact.phase is unknown: ${targetPhase}`, {
+      effectType: 'gotoPhaseExact',
       phase: targetPhase,
       phaseCandidates: phaseIds,
     });
@@ -150,8 +150,8 @@ export const applyGotoPhase = (
   const currentPhaseIndex = phaseIds.findIndex((phaseId) => phaseId === ctx.state.currentPhase);
   const targetPhaseIndex = phaseIds.findIndex((phaseId) => phaseId === targetPhase);
   if (currentPhaseIndex < 0 || targetPhaseIndex < 0) {
-    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `gotoPhase could not resolve current/target phase indices`, {
-      effectType: 'gotoPhase',
+    throw effectRuntimeError('turnFlowRuntimeValidationFailed', `gotoPhaseExact could not resolve current/target phase indices`, {
+      effectType: 'gotoPhaseExact',
       currentPhase: ctx.state.currentPhase,
       targetPhase,
     });
@@ -160,9 +160,9 @@ export const applyGotoPhase = (
   if (targetPhaseIndex < currentPhaseIndex) {
     throw effectRuntimeError(
       'turnFlowRuntimeValidationFailed',
-      `gotoPhase cannot cross a turn boundary (current=${String(ctx.state.currentPhase)}, target=${targetPhase})`,
+      `gotoPhaseExact cannot cross a turn boundary (current=${String(ctx.state.currentPhase)}, target=${targetPhase})`,
       {
-        effectType: 'gotoPhase',
+        effectType: 'gotoPhaseExact',
         currentPhase: ctx.state.currentPhase,
         targetPhase,
       },
@@ -172,24 +172,35 @@ export const applyGotoPhase = (
   if (ctx.state.currentPhase === targetPhase) {
     return { state: ctx.state, rng: ctx.rng };
   }
+  const targetPhaseId = phaseIds[targetPhaseIndex]!;
 
-  const maxAdvances = Math.max(1, targetPhaseIndex - currentPhaseIndex);
-  let currentState = ctx.state;
-  for (let step = 0; step < maxAdvances; step += 1) {
-    currentState = advancePhase(ctx.def, currentState);
-    if (currentState.currentPhase === targetPhase) {
-      return {
-        state: currentState,
-        rng: { state: currentState.rng },
-      };
-    }
-  }
-
-  throw effectRuntimeError('turnFlowRuntimeValidationFailed', `gotoPhase could not reach phase: ${targetPhase}`, {
-    effectType: 'gotoPhase',
-    phase: targetPhase,
-    maxAdvances,
+  const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
+    type: 'phaseExit',
+    phase: ctx.state.currentPhase,
   });
+  const enteredState = resetPhaseUsage({
+    ...exitedState,
+    currentPhase: targetPhaseId,
+  });
+  const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
+    type: 'phaseEnter',
+    phase: targetPhaseId,
+  });
+  return {
+    state: finalState,
+    rng: { state: finalState.rng },
+  };
+};
+
+export const applyAdvancePhase = (
+  _effect: Extract<EffectAST, { readonly advancePhase: unknown }>,
+  ctx: EffectContext,
+): EffectResult => {
+  const nextState = advancePhase(ctx.def, ctx.state);
+  return {
+    state: nextState,
+    rng: { state: nextState.rng },
+  };
 };
 
 const resolvePhaseId = (

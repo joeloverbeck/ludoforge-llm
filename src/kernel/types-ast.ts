@@ -405,9 +405,12 @@ export type EffectAST =
       };
     }
   | {
-      readonly gotoPhase: {
+      readonly gotoPhaseExact: {
         readonly phase: string;
       };
+    }
+  | {
+      readonly advancePhase: Record<string, never>;
     }
   | {
       readonly pushInterruptPhase: {

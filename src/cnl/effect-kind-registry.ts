@@ -28,7 +28,8 @@ export const SUPPORTED_EFFECT_KINDS = [
   'flipGlobalMarker',
   'shiftGlobalMarker',
   'grantFreeOperation',
-  'gotoPhase',
+  'gotoPhaseExact',
+  'advancePhase',
   'pushInterruptPhase',
   'popInterruptPhase',
 ] as const;

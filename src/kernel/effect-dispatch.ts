@@ -15,7 +15,13 @@ import {
   applyShiftMarker,
 } from './effects-choice.js';
 import { applyForEach, applyIf, applyLet, applyReduce, applyRemoveByPriority, type EffectBudgetState } from './effects-control.js';
-import { applyGotoPhase, applyGrantFreeOperation, applyPopInterruptPhase, applyPushInterruptPhase } from './effects-turn-flow.js';
+import {
+  applyAdvancePhase,
+  applyGotoPhaseExact,
+  applyGrantFreeOperation,
+  applyPopInterruptPhase,
+  applyPushInterruptPhase,
+} from './effects-turn-flow.js';
 import { applyAddVar, applySetActivePlayer, applySetVar } from './effects-var.js';
 import { applyCommitResource } from './effects-resource.js';
 import { applyReveal } from './effects-reveal.js';
@@ -72,7 +78,8 @@ const effectTypeOf = (effect: EffectAST): string => {
   if ('flipGlobalMarker' in effect) return 'flipGlobalMarker';
   if ('shiftGlobalMarker' in effect) return 'shiftGlobalMarker';
   if ('grantFreeOperation' in effect) return 'grantFreeOperation';
-  if ('gotoPhase' in effect) return 'gotoPhase';
+  if ('gotoPhaseExact' in effect) return 'gotoPhaseExact';
+  if ('advancePhase' in effect) return 'advancePhase';
   if ('pushInterruptPhase' in effect) return 'pushInterruptPhase';
   if ('popInterruptPhase' in effect) return 'popInterruptPhase';
 
@@ -207,8 +214,11 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
   if ('grantFreeOperation' in effect) {
     return applyGrantFreeOperation(effect, ctx);
   }
-  if ('gotoPhase' in effect) {
-    return applyGotoPhase(effect, ctx);
+  if ('gotoPhaseExact' in effect) {
+    return applyGotoPhaseExact(effect, ctx);
+  }
+  if ('advancePhase' in effect) {
+    return applyAdvancePhase(effect, ctx);
   }
   if ('pushInterruptPhase' in effect) {
     return applyPushInterruptPhase(effect, ctx);

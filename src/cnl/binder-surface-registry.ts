@@ -189,7 +189,13 @@ export const EFFECT_BINDER_SURFACES: Readonly<Record<SupportedEffectKind, Effect
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
-  gotoPhase: {
+  gotoPhaseExact: {
+    declaredBinderPaths: NO_BINDER_PATHS,
+    sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
+    bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,
+    zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
+  },
+  advancePhase: {
     declaredBinderPaths: NO_BINDER_PATHS,
     sequentiallyVisibleBinderPaths: NO_BINDER_PATHS,
     bindingTemplateReferencerPaths: NO_REFERENCER_PATHS,

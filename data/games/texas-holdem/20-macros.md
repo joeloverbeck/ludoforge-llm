@@ -1109,24 +1109,32 @@ effectMacros:
               args:
                 fromSeat: { ref: gvar, var: actingPosition }
       - if:
-          when: { op: '==', left: { ref: gvar, var: bettingClosed }, right: true }
+          when: { op: '<=', left: { ref: gvar, var: playersInHand }, right: 1 }
+          then:
+            - gotoPhaseExact: { phase: showdown }
+      - if:
+          when:
+            op: and
+            args:
+              - { op: '==', left: { ref: gvar, var: bettingClosed }, right: true }
+              - { op: '>', left: { ref: gvar, var: playersInHand }, right: 1 }
           then:
             - if:
                 when: { op: '==', left: { ref: gvar, var: handPhase }, right: 0 }
                 then:
-                  - gotoPhase: { phase: flop }
+                  - gotoPhaseExact: { phase: flop }
             - if:
                 when: { op: '==', left: { ref: gvar, var: handPhase }, right: 1 }
                 then:
-                  - gotoPhase: { phase: turn }
+                  - gotoPhaseExact: { phase: turn }
             - if:
                 when: { op: '==', left: { ref: gvar, var: handPhase }, right: 2 }
                 then:
-                  - gotoPhase: { phase: river }
+                  - gotoPhaseExact: { phase: river }
             - if:
                 when: { op: '==', left: { ref: gvar, var: handPhase }, right: 3 }
                 then:
-                  - gotoPhase: { phase: showdown }
+                  - gotoPhaseExact: { phase: showdown }
 
   - id: side-pot-distribution
     params: []

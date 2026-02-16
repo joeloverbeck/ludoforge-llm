@@ -756,6 +756,26 @@ describe('validateGameDef reference checks', () => {
     assert.deepEqual(missingPhase.alternatives, ['main']);
   });
 
+  it('reports invalid gotoPhaseExact target references with alternatives', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [{ gotoPhaseExact: { phase: 'mian' } }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    const missingPhase = diagnostics.find((diag) => diag.code === 'REF_PHASE_MISSING');
+
+    assert.ok(missingPhase);
+    assert.equal(missingPhase.path, 'actions[0].effects[0].gotoPhaseExact.phase');
+    assert.deepEqual(missingPhase.alternatives, ['main']);
+  });
+
   it('reports invalid action references in actionResolved triggers', () => {
     const base = createValidGameDef();
     const def = {

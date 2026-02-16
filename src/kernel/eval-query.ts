@@ -43,6 +43,117 @@ function resolveIntDomainBound(bound: NumericValueExpr, ctx: EvalContext): numbe
   return value;
 }
 
+function buildIntRangeCandidates(
+  min: number,
+  max: number,
+  step: number,
+  alwaysInclude: readonly number[],
+): readonly number[] {
+  const values = new Set<number>();
+  for (let cursor = min; cursor <= max; cursor += step) {
+    values.add(cursor);
+  }
+  values.add(min);
+  values.add(max);
+  for (const value of alwaysInclude) {
+    if (value >= min && value <= max) {
+      values.add(value);
+    }
+  }
+  return [...values].sort((left, right) => left - right);
+}
+
+function deterministicDownsample(
+  candidates: readonly number[],
+  required: ReadonlySet<number>,
+  maxResults: number,
+): readonly number[] {
+  if (candidates.length <= maxResults) {
+    return candidates;
+  }
+
+  const requiredValues = candidates.filter((value) => required.has(value));
+  if (requiredValues.length > maxResults) {
+    return [];
+  }
+
+  const optionalValues = candidates.filter((value) => !required.has(value));
+  const optionalSlots = maxResults - requiredValues.length;
+  if (optionalSlots <= 0) {
+    return requiredValues;
+  }
+  if (optionalValues.length <= optionalSlots) {
+    return [...requiredValues, ...optionalValues].sort((left, right) => left - right);
+  }
+
+  const stride = optionalValues.length / optionalSlots;
+  const selected = new Set<number>();
+  for (let index = 0; index < optionalSlots; index += 1) {
+    const candidateIndex = Math.floor(index * stride);
+    selected.add(optionalValues[Math.min(candidateIndex, optionalValues.length - 1)]!);
+  }
+
+  if (selected.size < optionalSlots) {
+    for (const value of optionalValues) {
+      if (selected.size >= optionalSlots) {
+        break;
+      }
+      selected.add(value);
+    }
+  }
+
+  return [...requiredValues, ...selected].sort((left, right) => left - right);
+}
+
+function evaluateIntRangeDomain(
+  min: number,
+  max: number,
+  controls: {
+    readonly step?: NumericValueExpr;
+    readonly alwaysInclude?: readonly NumericValueExpr[];
+    readonly maxResults?: NumericValueExpr;
+  },
+  ctx: EvalContext,
+): readonly number[] {
+  if (min > max) {
+    return [];
+  }
+
+  const step = controls.step === undefined ? 1 : resolveIntDomainBound(controls.step, ctx);
+  if (step === null || step <= 0) {
+    return [];
+  }
+
+  const alwaysInclude: number[] = [];
+  for (const entry of controls.alwaysInclude ?? []) {
+    const value = resolveIntDomainBound(entry, ctx);
+    if (value === null) {
+      return [];
+    }
+    if (value >= min && value <= max) {
+      alwaysInclude.push(value);
+    }
+  }
+
+  let maxResults: number | undefined;
+  if (controls.maxResults !== undefined) {
+    const resolvedMaxResults = resolveIntDomainBound(controls.maxResults, ctx);
+    if (resolvedMaxResults === null) {
+      return [];
+    }
+    if (resolvedMaxResults < 1 || (min < max && resolvedMaxResults < 2)) {
+      return [];
+    }
+    maxResults = resolvedMaxResults;
+  }
+
+  const candidates = buildIntRangeCandidates(min, max, step, alwaysInclude);
+  if (maxResults === undefined) {
+    return candidates;
+  }
+  return deterministicDownsample(candidates, new Set([min, max, ...alwaysInclude]), maxResults);
+}
+
 function resolveDeclaredIntVarBounds(
   query: Extract<OptionsQuery, { readonly query: 'intsInVarRange' }>,
   ctx: EvalContext,
@@ -546,15 +657,10 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       if (min === null || max === null || min > max) {
         return [];
       }
+      const bounded = evaluateIntRangeDomain(min, max, query, ctx);
 
-      const rangeLength = max - min + 1;
-      assertWithinBounds(rangeLength, query, maxQueryResults);
-
-      if (rangeLength === 0) {
-        return [];
-      }
-
-      return Array.from({ length: rangeLength }, (_, index) => min + index);
+      assertWithinBounds(bounded.length, query, maxQueryResults);
+      return bounded;
     }
 
     case 'intsInVarRange': {
@@ -573,13 +679,9 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
 
       const min = Math.max(declaredBounds.min, derivedMin);
       const max = Math.min(declaredBounds.max, derivedMax);
-      if (min > max) {
-        return [];
-      }
-
-      const rangeLength = max - min + 1;
-      assertWithinBounds(rangeLength, query, maxQueryResults);
-      return Array.from({ length: rangeLength }, (_unused, index) => min + index);
+      const bounded = evaluateIntRangeDomain(min, max, query, ctx);
+      assertWithinBounds(bounded.length, query, maxQueryResults);
+      return bounded;
     }
 
     case 'enums': {

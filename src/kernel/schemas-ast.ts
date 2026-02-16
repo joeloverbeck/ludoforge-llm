@@ -134,7 +134,16 @@ optionsQuerySchemaInternal = z.union([
       includeFrom: BooleanSchema.optional(),
     })
     .strict(),
-  z.object({ query: z.literal('intsInRange'), min: IntDomainBoundSchema, max: IntDomainBoundSchema }).strict(),
+  z
+    .object({
+      query: z.literal('intsInRange'),
+      min: IntDomainBoundSchema,
+      max: IntDomainBoundSchema,
+      step: IntDomainBoundSchema.optional(),
+      alwaysInclude: z.array(IntDomainBoundSchema).optional(),
+      maxResults: IntDomainBoundSchema.optional(),
+    })
+    .strict(),
   z
     .object({
       query: z.literal('intsInVarRange'),
@@ -142,6 +151,9 @@ optionsQuerySchemaInternal = z.union([
       scope: z.union([z.literal('global'), z.literal('perPlayer')]).optional(),
       min: IntDomainBoundSchema.optional(),
       max: IntDomainBoundSchema.optional(),
+      step: IntDomainBoundSchema.optional(),
+      alwaysInclude: z.array(IntDomainBoundSchema).optional(),
+      maxResults: IntDomainBoundSchema.optional(),
     })
     .strict(),
   z.object({ query: z.literal('enums'), values: z.array(StringSchema) }).strict(),

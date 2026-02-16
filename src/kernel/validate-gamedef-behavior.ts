@@ -629,6 +629,89 @@ export const validateOptionsQuery = (
           message: `Invalid intsInRange domain; min (${query.min}) must be <= max (${query.max}).`,
         });
       }
+
+      if (query.step !== undefined) {
+        if (typeof query.step === 'number') {
+          if (!Number.isSafeInteger(query.step)) {
+            diagnostics.push({
+              code: 'DOMAIN_INTS_RANGE_STEP_INVALID',
+              path: `${path}.step`,
+              severity: 'error',
+              message: 'intsInRange.step must be a safe integer literal when provided as a number.',
+              suggestion: 'Use an integer literal > 0, or a ValueExpr that evaluates to an integer.',
+            });
+          } else if (query.step <= 0) {
+            diagnostics.push({
+              code: 'DOMAIN_INTS_RANGE_STEP_INVALID',
+              path: `${path}.step`,
+              severity: 'error',
+              message: 'intsInRange.step must be > 0.',
+              suggestion: 'Set step to an integer greater than 0.',
+            });
+          }
+        } else {
+          validateNumericValueExpr(diagnostics, query.step, `${path}.step`, context);
+        }
+      }
+
+      if (query.alwaysInclude !== undefined) {
+        for (let index = 0; index < query.alwaysInclude.length; index += 1) {
+          const candidate = query.alwaysInclude[index];
+          if (candidate === undefined) {
+            continue;
+          }
+          if (typeof candidate === 'number') {
+            if (!Number.isSafeInteger(candidate)) {
+              diagnostics.push({
+                code: 'DOMAIN_INTS_RANGE_ALWAYS_INCLUDE_INVALID',
+                path: `${path}.alwaysInclude[${index}]`,
+                severity: 'error',
+                message: 'intsInRange.alwaysInclude values must be safe integer literals when provided as numbers.',
+                suggestion: 'Use integer literals, or ValueExpr entries that evaluate to integers.',
+              });
+            }
+          } else {
+            validateNumericValueExpr(diagnostics, candidate, `${path}.alwaysInclude[${index}]`, context);
+          }
+        }
+      }
+
+      if (query.maxResults !== undefined) {
+        if (typeof query.maxResults === 'number') {
+          if (!Number.isSafeInteger(query.maxResults)) {
+            diagnostics.push({
+              code: 'DOMAIN_INTS_RANGE_MAX_RESULTS_INVALID',
+              path: `${path}.maxResults`,
+              severity: 'error',
+              message: 'intsInRange.maxResults must be a safe integer literal when provided as a number.',
+              suggestion: 'Use an integer literal >= 1, or a ValueExpr that evaluates to an integer.',
+            });
+          } else if (
+            typeof query.min === 'number'
+            && typeof query.max === 'number'
+            && query.min < query.max
+            && query.maxResults < 2
+          ) {
+            diagnostics.push({
+              code: 'DOMAIN_INTS_RANGE_MAX_RESULTS_INVALID',
+              path: `${path}.maxResults`,
+              severity: 'error',
+              message: 'intsInRange.maxResults must be >= 2 when min < max.',
+              suggestion: 'Use maxResults >= 2 when the range spans multiple values.',
+            });
+          } else if (query.maxResults < 1) {
+            diagnostics.push({
+              code: 'DOMAIN_INTS_RANGE_MAX_RESULTS_INVALID',
+              path: `${path}.maxResults`,
+              severity: 'error',
+              message: 'intsInRange.maxResults must be >= 1.',
+              suggestion: 'Set maxResults to a positive integer.',
+            });
+          }
+        } else {
+          validateNumericValueExpr(diagnostics, query.maxResults, `${path}.maxResults`, context);
+        }
+      }
       return;
     }
     case 'nextInOrderByCondition': {
@@ -740,6 +823,91 @@ export const validateOptionsQuery = (
           severity: 'error',
           message: `Invalid intsInVarRange domain; min (${query.min}) must be <= max (${query.max}).`,
         });
+      }
+
+      if (query.step !== undefined) {
+        if (typeof query.step === 'number') {
+          if (!Number.isSafeInteger(query.step)) {
+            diagnostics.push({
+              code: 'DOMAIN_INTS_VAR_RANGE_STEP_INVALID',
+              path: `${path}.step`,
+              severity: 'error',
+              message: 'intsInVarRange.step must be a safe integer literal when provided as a number.',
+              suggestion: 'Use an integer literal > 0, or a ValueExpr that evaluates to an integer.',
+            });
+          } else if (query.step <= 0) {
+            diagnostics.push({
+              code: 'DOMAIN_INTS_VAR_RANGE_STEP_INVALID',
+              path: `${path}.step`,
+              severity: 'error',
+              message: 'intsInVarRange.step must be > 0.',
+              suggestion: 'Set step to an integer greater than 0.',
+            });
+          }
+        } else {
+          validateNumericValueExpr(diagnostics, query.step, `${path}.step`, context);
+        }
+      }
+
+      if (query.alwaysInclude !== undefined) {
+        for (let index = 0; index < query.alwaysInclude.length; index += 1) {
+          const candidate = query.alwaysInclude[index];
+          if (candidate === undefined) {
+            continue;
+          }
+          if (typeof candidate === 'number') {
+            if (!Number.isSafeInteger(candidate)) {
+              diagnostics.push({
+                code: 'DOMAIN_INTS_VAR_RANGE_ALWAYS_INCLUDE_INVALID',
+                path: `${path}.alwaysInclude[${index}]`,
+                severity: 'error',
+                message: 'intsInVarRange.alwaysInclude values must be safe integer literals when provided as numbers.',
+                suggestion: 'Use integer literals, or ValueExpr entries that evaluate to integers.',
+              });
+            }
+          } else {
+            validateNumericValueExpr(diagnostics, candidate, `${path}.alwaysInclude[${index}]`, context);
+          }
+        }
+      }
+
+      if (query.maxResults !== undefined) {
+        if (typeof query.maxResults === 'number') {
+          if (!Number.isSafeInteger(query.maxResults)) {
+            diagnostics.push({
+              code: 'DOMAIN_INTS_VAR_RANGE_MAX_RESULTS_INVALID',
+              path: `${path}.maxResults`,
+              severity: 'error',
+              message: 'intsInVarRange.maxResults must be a safe integer literal when provided as a number.',
+              suggestion: 'Use an integer literal >= 1, or a ValueExpr that evaluates to an integer.',
+            });
+          } else if (
+            query.min !== undefined &&
+            query.max !== undefined &&
+            typeof query.min === 'number' &&
+            typeof query.max === 'number' &&
+            query.min < query.max &&
+            query.maxResults < 2
+          ) {
+            diagnostics.push({
+              code: 'DOMAIN_INTS_VAR_RANGE_MAX_RESULTS_INVALID',
+              path: `${path}.maxResults`,
+              severity: 'error',
+              message: 'intsInVarRange.maxResults must be >= 2 when min < max.',
+              suggestion: 'Use maxResults >= 2 when the range spans multiple values.',
+            });
+          } else if (query.maxResults < 1) {
+            diagnostics.push({
+              code: 'DOMAIN_INTS_VAR_RANGE_MAX_RESULTS_INVALID',
+              path: `${path}.maxResults`,
+              severity: 'error',
+              message: 'intsInVarRange.maxResults must be >= 1.',
+              suggestion: 'Set maxResults to a positive integer.',
+            });
+          }
+        } else {
+          validateNumericValueExpr(diagnostics, query.maxResults, `${path}.maxResults`, context);
+        }
       }
       return;
     }

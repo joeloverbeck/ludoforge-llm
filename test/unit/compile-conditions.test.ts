@@ -187,6 +187,31 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers intsInRange query with optional cardinality controls', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'intsInRange',
+        min: 10,
+        max: 100,
+        step: 10,
+        alwaysInclude: [15, { ref: 'binding', name: '$anchor' }],
+        maxResults: 8,
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'intsInRange',
+      min: 10,
+      max: 100,
+      step: 10,
+      alwaysInclude: [15, { ref: 'binding', name: '$anchor' }],
+      maxResults: 8,
+    });
+  });
+
   it('lowers intsInVarRange query with optional scope and bound overrides', () => {
     const result = lowerQueryNode(
       {
@@ -195,6 +220,9 @@ describe('compile-conditions lowering', () => {
         scope: 'global',
         min: 1,
         max: { op: '+', left: { ref: 'binding', name: '$cap' }, right: 0 },
+        step: 2,
+        alwaysInclude: [5, { ref: 'binding', name: '$anchor' }],
+        maxResults: 6,
       },
       context,
       'doc.actions.0.params.0.domain',
@@ -207,6 +235,9 @@ describe('compile-conditions lowering', () => {
       scope: 'global',
       min: 1,
       max: { op: '+', left: { ref: 'binding', name: '$cap' }, right: 0 },
+      step: 2,
+      alwaysInclude: [5, { ref: 'binding', name: '$anchor' }],
+      maxResults: 6,
     });
   });
 

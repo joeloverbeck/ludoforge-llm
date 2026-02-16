@@ -1301,6 +1301,57 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports malformed intsInRange cardinality controls', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$n',
+              domain: {
+                query: 'intsInRange',
+                min: 1,
+                max: 5,
+                step: 0,
+                alwaysInclude: [2.5],
+                maxResults: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_INTS_RANGE_STEP_INVALID'
+          && diag.path === 'actions[0].params[0].domain.step'
+          && diag.severity === 'error',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_INTS_RANGE_ALWAYS_INCLUDE_INVALID'
+          && diag.path === 'actions[0].params[0].domain.alwaysInclude[0]'
+          && diag.severity === 'error',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_INTS_RANGE_MAX_RESULTS_INVALID'
+          && diag.path === 'actions[0].params[0].domain.maxResults'
+          && diag.severity === 'error',
+      ),
+    );
+  });
+
   it('accepts nextInOrderByCondition domain with numeric from and condition predicate', () => {
     const base = createValidGameDef();
     const def = {
@@ -1578,6 +1629,58 @@ describe('validateGameDef reference checks', () => {
           diag.code === 'DOMAIN_INTS_VAR_RANGE_SOURCE_TYPE_INVALID' &&
           diag.path === 'actions[0].params[0].domain.var' &&
           diag.severity === 'error',
+      ),
+    );
+  });
+
+  it('reports malformed intsInVarRange cardinality controls', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$n',
+              domain: {
+                query: 'intsInVarRange',
+                var: 'money',
+                min: 1,
+                max: 5,
+                step: 0,
+                alwaysInclude: [2.5],
+                maxResults: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_INTS_VAR_RANGE_STEP_INVALID'
+          && diag.path === 'actions[0].params[0].domain.step'
+          && diag.severity === 'error',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_INTS_VAR_RANGE_ALWAYS_INCLUDE_INVALID'
+          && diag.path === 'actions[0].params[0].domain.alwaysInclude[0]'
+          && diag.severity === 'error',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'DOMAIN_INTS_VAR_RANGE_MAX_RESULTS_INVALID'
+          && diag.path === 'actions[0].params[0].domain.maxResults'
+          && diag.severity === 'error',
       ),
     );
   });

@@ -599,6 +599,81 @@ describe('AST and selector schemas', () => {
     assert.equal(badMin.success, false);
   });
 
+  it('accepts intsInRange optional cardinality controls', () => {
+    const parsed = OptionsQuerySchema.safeParse({
+      query: 'intsInRange',
+      min: 1,
+      max: 20,
+      step: 3,
+      alwaysInclude: [2, { ref: 'binding', name: '$n' }],
+      maxResults: 7,
+    });
+    assert.equal(parsed.success, true);
+  });
+
+  it('rejects non-integer numeric literals in intsInRange step/maxResults/alwaysInclude', () => {
+    const badStep = OptionsQuerySchema.safeParse({
+      query: 'intsInRange',
+      min: 1,
+      max: 20,
+      step: 1.5,
+    });
+    assert.equal(badStep.success, false);
+
+    const badMaxResults = OptionsQuerySchema.safeParse({
+      query: 'intsInRange',
+      min: 1,
+      max: 20,
+      maxResults: 3.25,
+    });
+    assert.equal(badMaxResults.success, false);
+
+    const badAlwaysInclude = OptionsQuerySchema.safeParse({
+      query: 'intsInRange',
+      min: 1,
+      max: 20,
+      alwaysInclude: [2, 4.2],
+    });
+    assert.equal(badAlwaysInclude.success, false);
+  });
+
+  it('accepts intsInVarRange optional cardinality controls', () => {
+    const parsed = OptionsQuerySchema.safeParse({
+      query: 'intsInVarRange',
+      var: 'resources',
+      scope: 'global',
+      min: 0,
+      max: 20,
+      step: 2,
+      alwaysInclude: [1, { ref: 'binding', name: '$n' }],
+      maxResults: 8,
+    });
+    assert.equal(parsed.success, true);
+  });
+
+  it('rejects non-integer numeric literals in intsInVarRange step/maxResults/alwaysInclude', () => {
+    const badStep = OptionsQuerySchema.safeParse({
+      query: 'intsInVarRange',
+      var: 'resources',
+      step: 1.5,
+    });
+    assert.equal(badStep.success, false);
+
+    const badMaxResults = OptionsQuerySchema.safeParse({
+      query: 'intsInVarRange',
+      var: 'resources',
+      maxResults: 3.25,
+    });
+    assert.equal(badMaxResults.success, false);
+
+    const badAlwaysInclude = OptionsQuerySchema.safeParse({
+      query: 'intsInVarRange',
+      var: 'resources',
+      alwaysInclude: [2, 4.2],
+    });
+    assert.equal(badAlwaysInclude.success, false);
+  });
+
   it('rejects non-numeric expressions in numeric-only contexts', () => {
     const badIntRange = OptionsQuerySchema.safeParse({
       query: 'intsInRange',

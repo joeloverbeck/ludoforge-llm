@@ -158,13 +158,23 @@ export type OptionsQuery =
       readonly where: ConditionAST;
       readonly includeFrom?: boolean;
     }
-  | { readonly query: 'intsInRange'; readonly min: NumericValueExpr; readonly max: NumericValueExpr }
+  | {
+      readonly query: 'intsInRange';
+      readonly min: NumericValueExpr;
+      readonly max: NumericValueExpr;
+      readonly step?: NumericValueExpr;
+      readonly alwaysInclude?: readonly NumericValueExpr[];
+      readonly maxResults?: NumericValueExpr;
+    }
   | {
       readonly query: 'intsInVarRange';
       readonly var: string;
       readonly scope?: 'global' | 'perPlayer';
       readonly min?: NumericValueExpr;
       readonly max?: NumericValueExpr;
+      readonly step?: NumericValueExpr;
+      readonly alwaysInclude?: readonly NumericValueExpr[];
+      readonly maxResults?: NumericValueExpr;
     }
   | { readonly query: 'enums'; readonly values: readonly string[] }
   | { readonly query: 'globalMarkers'; readonly markers?: readonly string[]; readonly states?: readonly string[] }

@@ -1,87 +1,122 @@
-# TEXHOLKERPRIGAMTOU-010: Runtime Data-Asset Table Access in GameSpec DSL
+# TEXHOLKERPRIGAMTOU-010: Generic Move-Domain Cardinality Controls for `intsInRange`
 
-**Status**: ✅ COMPLETED
-**Priority**: HIGH
-**Effort**: Large
-**Dependencies**: TEXHOLKERPRIGAMTOU-004
-**Blocks**: TEXHOLKERPRIGAMTOU-011, TEXHOLKERPRIGAMTOU-014, TEXHOLKERPRIGAMTOU-015
+**Status**: ✅ COMPLETED  
+**Priority**: HIGH  
+**Effort**: Medium  
+**Dependencies**: None  
+**Blocks**: TEXHOLKERPRIGAMTOU-011
 
-## 1) What needs to be fixed/added
+## Problem
 
-Add first-class, game-agnostic runtime access to structured `dataAssets` payload data from GameSpec expressions/effects.
+Current `intsInRange` expands every integer between `min..max`. In no-limit poker this creates thousands of `raise` moves per decision, which amplifies both `legalMoves()` runtime and `GreedyAgent` evaluation cost. This is a generic query-layer scaling issue, not a Texas-only issue.
 
-Current discrepancy (must be addressed by this ticket):
-- Current compiler/runtime architecture does not expose `doc.dataAssets` in `GameDef` runtime surfaces.
-- Current `OptionsQuery`/`Reference` variants do not include any data-asset table query or row field primitive.
-- Current data-asset validation flow treats only `map|scenario|pieceCatalog` as valid envelope kinds.
-- Current tests only cover map/scenario/pieceCatalog projection and no runtime table lookup path.
+## Assumption Reassessment (2026-02-16)
 
-Updated architectural direction:
-- Introduce a generic runtime asset registry in `GameDef` so runtime evaluation can access data assets without game-specific code.
-- Keep existing map/scenario/pieceCatalog derivation logic for zones/tokenTypes/tracks, but decouple that from runtime access.
-- Add one canonical row-query primitive and one canonical row-field reference primitive (no aliases, no alternate syntaxes).
-- Prefer explicit, typed diagnostics over implicit `undefined` behavior when asset/table/field resolution fails.
+1. `intsInRange` currently supports only `{ min, max }` in runtime eval (`src/kernel/eval-query.ts`), AST schema/types (`src/kernel/schemas-ast.ts`, `src/kernel/types-ast.ts`), and CNL lowering (`src/cnl/compile-conditions.ts`).
+2. Existing generic query-budget protection (`maxQueryResults`, default 10_000) only enforces a hard ceiling; it does not provide deterministic domain rebucketing for large-but-valid ranges.
+3. Texas tournament and property suites already exist (`test/e2e/texas-holdem-tournament.test.ts`, `test/unit/texas-holdem-properties.test.ts`). This ticket should not introduce Texas-specific behavior/tests; it should deliver reusable query mechanics consumed later by ticket `-011`.
+4. Validation coverage for `intsInRange` currently checks safe-integer bounds and `min <= max` (`src/kernel/validate-gamedef-behavior.ts`, `test/unit/validate-gamedef.test.ts`), but does not validate `step`/`alwaysInclude`/`maxResults` because those fields do not yet exist.
 
-Scope:
-- Extend core AST/types/schema/compiler/runtime to support table-style access without game-specific branching.
-- Add canonical primitives:
-  - `OptionsQuery.query = "assetRows"` for selecting rows from a data-asset payload table.
-  - `Reference.ref = "assetField"` for extracting scalar fields from a bound row.
-- Ensure scenario payload structures (for example blind schedules) can be queried at runtime from YAML logic.
-- Keep engine generic: no Texas Hold'em hardcoding in kernel/compiler.
-- Remove kind restrictions that block generic runtime assets; known-kind validation remains only where required for map/scenario/pieceCatalog projection.
+## 1) What Should Change / Be Added
 
-Constraints:
-- No backwards compatibility layer or alias syntax.
-- Single canonical representation for data-table access.
-- Deterministic ordering guarantees for row query results.
+### A. Extend `intsInRange` with optional cardinality controls
 
-## 2) Invariants that should pass
+Add optional fields to the `OptionsQuery` shape for `intsInRange`:
 
-1. Runtime table access works for any `doc.dataAssets` entry and any game, not only Texas Hold'em.
-2. Missing/invalid asset references produce compile/runtime diagnostics with stable reason codes and contextual metadata.
-3. Table row ordering is deterministic across runs and platforms (preserve payload array order; do not use hash/object iteration order).
-4. No game-specific identifiers appear in `src/` kernel/compiler logic.
-5. Existing non-table gamespecs continue to compile and run without behavior drift.
-6. Existing map/scenario/pieceCatalog compile-time projection behavior remains intact.
+- `step?: NumericValueExpr`
+- `alwaysInclude?: readonly NumericValueExpr[]`
+- `maxResults?: NumericValueExpr`
 
-## 3) Tests that should pass
+Behavior:
 
-1. Unit: AST/schema accept canonical `assetRows`/`assetField` nodes and reject malformed shapes.
-2. Unit: compiler lowering emits correct AST for `assetRows` queries and `assetField` references.
-3. Unit: runtime evaluates `assetRows` deterministically and preserves source row order after filtering.
-4. Unit: runtime surfaces structured errors for missing asset, invalid table path, non-row values, and missing/non-scalar fields.
-5. Unit: GameDef behavioral validation catches static invalid asset/table references where possible.
-6. Integration: gamespec fixture reads scenario schedule table through runtime data-asset primitives and drives variable updates.
-7. Regression: `npm run build`, `npm test`, `npm run lint`.
+1. Generate arithmetic progression from `min` to `max` using `step` (default `1`).
+2. Add `alwaysInclude` values if they are within bounds.
+3. De-duplicate and return sorted ascending integers.
+4. If `maxResults` is set and candidate count exceeds it, downsample deterministically while preserving:
+   - minimum value,
+   - maximum value,
+   - all in-bounds `alwaysInclude` values.
 
-## 4) Implementation Notes
+### B. Validate malformed query specs early
 
-- Prefer minimal, additive edits in:
-  - `src/kernel/types-ast.ts`, `src/kernel/schemas-ast.ts`
-  - `src/kernel/types-core.ts`, `src/kernel/schemas-core.ts`
-  - `src/cnl/compile-conditions.ts`
-  - `src/cnl/compiler-core.ts` and/or data-asset compilation helpers
-  - `src/kernel/eval-query.ts`, `src/kernel/resolve-ref.ts`
-  - `src/kernel/validate-gamedef-behavior.ts`
-- Update `schemas/GameDef.schema.json` if schema contracts change.
-- Add tests in existing focused suites (compile-conditions, schemas-ast, eval-query, resolve-ref, validate-gamedef, integration compile pipeline).
+Validation/schema checks should reject:
+
+- `step <= 0`
+- non-integer `step`
+- non-integer `maxResults`
+- `maxResults < 2` when `min < max`
+- non-integer entries in `alwaysInclude`
+
+### C. Keep this engine-generic
+
+No poker-specific logic in kernel/eval-query.
+
+### D. Propagate through the full compile/runtime pipeline
+
+Update all relevant representations so fields are preserved end-to-end:
+
+- GameSpecDoc query shape (`src/cnl/game-spec-doc.ts`)
+- CNL lowering (`src/cnl/compile-conditions.ts`)
+- Kernel AST type/schema (`src/kernel/types-ast.ts`, `src/kernel/schemas-ast.ts`)
+- Runtime behavior validation (`src/kernel/validate-gamedef-behavior.ts`)
+- Runtime query evaluation (`src/kernel/eval-query.ts`)
+
+## 2) Invariants That Must Pass
+
+1. Determinism: identical state/query yields identical output ordering.
+2. Backward compatibility for existing specs that omit new fields: behavior matches old `intsInRange` semantics.
+3. Bounds safety: every emitted integer is `min <= value <= max`.
+4. Endpoint integrity: `min` and `max` are present whenever `min <= max`.
+5. Inclusion integrity: any in-bounds `alwaysInclude` values are present.
+6. No duplicates.
+7. Query-budget safety: output count is finite and respects `maxResults` when configured.
+
+## 3) Tests That Should Pass
+
+### New / updated unit tests
+
+- `test/unit/eval-query.test.ts`
+  - `intsInRange` default behavior unchanged.
+  - `step` behavior returns arithmetic progression.
+  - `alwaysInclude` injects values correctly.
+  - `maxResults` deterministic downsampling preserves required endpoints/inclusions.
+- `test/unit/schemas-ast.test.ts`
+  - schema accepts new fields.
+  - invalid `step`/`maxResults` rejected.
+- `test/unit/compile-conditions.test.ts`
+  - compile/lower paths preserve new fields without mutation.
+- `test/unit/validate-gamedef.test.ts`
+  - malformed `intsInRange` cardinality controls are rejected with explicit diagnostics.
+
+### Regression suites
+
+- `npm run build`
+- `npm run lint`
+- `npm test`
+
+## Out of Scope
+
+- Do not add game-specific branching in kernel.
+- Do not change Texas GameSpecDoc in this ticket.
 
 ## Outcome
 
-- **Completion date**: 2026-02-15
-- **What was changed**:
-  - Added runtime asset registry support in `GameDef` via `runtimeDataAssets`.
-  - Added canonical table primitives:
-    - `OptionsQuery.query = "assetRows"` with `assetId`, `table`, `where`.
-    - `Reference.ref = "assetField"` with `row`, `field`.
-  - Updated compiler lowering, runtime query/ref evaluation, and GameDef validation to support these primitives.
-  - Kept map/scenario/pieceCatalog projection intact while allowing custom data-asset kinds when unconstrained.
-  - Added integration coverage for end-to-end compile + runtime execution using embedded asset rows.
-- **Deviations from original plan**:
-  - Extended data-asset kind handling to accept custom kinds by default; legacy kind rejections now occur only where `expectedKinds` is explicitly constrained.
-  - Added `runtimeDataAssets` to compiled `GameDef` as the generic long-term extension point.
-- **Verification results**:
+- Completion date: 2026-02-16
+- Implemented:
+  - Added `intsInRange` optional controls (`step`, `alwaysInclude`, `maxResults`) in AST/types, schema, CNL lowering, runtime validation, and runtime evaluation.
+  - Added deterministic downsampling that preserves `min`, `max`, and in-bounds `alwaysInclude`.
+  - Added/updated tests in:
+    - `test/unit/eval-query.test.ts`
+    - `test/unit/schemas-ast.test.ts`
+    - `test/unit/compile-conditions.test.ts`
+    - `test/unit/validate-gamedef.test.ts`
+  - Regenerated schema artifacts:
+    - `schemas/GameDef.schema.json`
+    - `schemas/Trace.schema.json`
+    - `schemas/EvalReport.schema.json`
+- Deviations from original plan:
+  - No changes were required in `src/cnl/game-spec-doc.ts` because query nodes in GameSpecDoc parsing are represented as `unknown` and lowered through `compile-conditions`.
+- Verification:
   - `npm run build` ✅
-  - `npm test` ✅
   - `npm run lint` ✅
+  - `npm test` ✅

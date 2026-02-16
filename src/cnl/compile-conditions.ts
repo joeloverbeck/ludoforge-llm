@@ -763,19 +763,52 @@ export function lowerQueryNode(
     case 'intsInRange': {
       const min = lowerIntDomainBound(source.min, context, `${path}.min`);
       const max = lowerIntDomainBound(source.max, context, `${path}.max`);
-      const diagnostics = [...min.diagnostics, ...max.diagnostics];
-      if (min.value === null || max.value === null) {
+      const step =
+        source.step === undefined
+          ? { value: undefined, diagnostics: [] as readonly Diagnostic[] }
+          : lowerIntDomainBound(source.step, context, `${path}.step`);
+      const maxResults =
+        source.maxResults === undefined
+          ? { value: undefined, diagnostics: [] as readonly Diagnostic[] }
+          : lowerIntDomainBound(source.maxResults, context, `${path}.maxResults`);
+      if (source.alwaysInclude !== undefined && !Array.isArray(source.alwaysInclude)) {
+        return missingCapability(`${path}.alwaysInclude`, 'intsInRange alwaysInclude', source.alwaysInclude, ['number[]']);
+      }
+      const alwaysIncludeResults =
+        source.alwaysInclude?.map((entry, index) => lowerIntDomainBound(entry, context, `${path}.alwaysInclude[${index}]`)) ?? [];
+      const diagnostics = [
+        ...min.diagnostics,
+        ...max.diagnostics,
+        ...step.diagnostics,
+        ...maxResults.diagnostics,
+        ...alwaysIncludeResults.flatMap((entry) => entry.diagnostics),
+      ];
+      if (
+        min.value === null
+        || max.value === null
+        || step.value === null
+        || maxResults.value === null
+        || alwaysIncludeResults.some((entry) => entry.value === null)
+      ) {
         return { value: null, diagnostics };
       }
+      const alwaysInclude: NumericValueExpr[] = alwaysIncludeResults.map((entry) => entry.value as NumericValueExpr);
       return {
-        value: { query: 'intsInRange', min: min.value, max: max.value },
+        value: {
+          query: 'intsInRange',
+          min: min.value,
+          max: max.value,
+          ...(step.value === undefined ? {} : { step: step.value }),
+          ...(alwaysInclude.length === 0 ? {} : { alwaysInclude }),
+          ...(maxResults.value === undefined ? {} : { maxResults: maxResults.value }),
+        },
         diagnostics,
       };
     }
     case 'intsInVarRange': {
       if (typeof source.var !== 'string' || source.var.trim() === '') {
         return missingCapability(path, 'intsInVarRange query', source, [
-          '{ query: "intsInVarRange", var: string, scope?: "global"|"perPlayer", min?: <NumericValueExpr>, max?: <NumericValueExpr> }',
+          '{ query: "intsInVarRange", var: string, scope?: "global"|"perPlayer", min?: <NumericValueExpr>, max?: <NumericValueExpr>, step?: <NumericValueExpr>, alwaysInclude?: <NumericValueExpr[]>, maxResults?: <NumericValueExpr> }',
         ]);
       }
 
@@ -791,12 +824,38 @@ export function lowerQueryNode(
         source.max === undefined
           ? { value: undefined, diagnostics: [] as readonly Diagnostic[] }
           : lowerIntDomainBound(source.max, context, `${path}.max`);
-      const diagnostics = [...min.diagnostics, ...max.diagnostics];
+      const step =
+        source.step === undefined
+          ? { value: undefined, diagnostics: [] as readonly Diagnostic[] }
+          : lowerIntDomainBound(source.step, context, `${path}.step`);
+      const maxResults =
+        source.maxResults === undefined
+          ? { value: undefined, diagnostics: [] as readonly Diagnostic[] }
+          : lowerIntDomainBound(source.maxResults, context, `${path}.maxResults`);
+      if (source.alwaysInclude !== undefined && !Array.isArray(source.alwaysInclude)) {
+        return missingCapability(`${path}.alwaysInclude`, 'intsInVarRange alwaysInclude', source.alwaysInclude, ['number[]']);
+      }
+      const alwaysIncludeResults =
+        source.alwaysInclude?.map((entry, index) => lowerIntDomainBound(entry, context, `${path}.alwaysInclude[${index}]`)) ?? [];
+      const diagnostics = [
+        ...min.diagnostics,
+        ...max.diagnostics,
+        ...step.diagnostics,
+        ...maxResults.diagnostics,
+        ...alwaysIncludeResults.flatMap((entry) => entry.diagnostics),
+      ];
       const minValue = source.min === undefined ? undefined : min.value;
       const maxValue = source.max === undefined ? undefined : max.value;
-      if (minValue === null || maxValue === null) {
+      if (
+        minValue === null
+        || maxValue === null
+        || step.value === null
+        || maxResults.value === null
+        || alwaysIncludeResults.some((entry) => entry.value === null)
+      ) {
         return { value: null, diagnostics };
       }
+      const alwaysInclude: NumericValueExpr[] = alwaysIncludeResults.map((entry) => entry.value as NumericValueExpr);
 
       return {
         value: {
@@ -805,6 +864,9 @@ export function lowerQueryNode(
           ...(source.scope === undefined ? {} : { scope: source.scope }),
           ...(minValue === undefined ? {} : { min: minValue }),
           ...(maxValue === undefined ? {} : { max: maxValue }),
+          ...(step.value === undefined ? {} : { step: step.value }),
+          ...(alwaysInclude.length === 0 ? {} : { alwaysInclude }),
+          ...(maxResults.value === undefined ? {} : { maxResults: maxResults.value }),
         },
         diagnostics,
       };

@@ -226,6 +226,116 @@ describe('evalQuery', () => {
     );
   });
 
+  it('evaluates intsInRange with step and alwaysInclude controls', () => {
+    const ctx = makeCtx();
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'intsInRange',
+          min: 1,
+          max: 9,
+          step: 3,
+        },
+        ctx,
+      ),
+      [1, 4, 7, 9],
+    );
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'intsInRange',
+          min: 1,
+          max: 9,
+          step: 4,
+          alwaysInclude: [8, 5, 12],
+        },
+        ctx,
+      ),
+      [1, 5, 8, 9],
+    );
+  });
+
+  it('downsamples intsInRange deterministically while preserving required endpoints and inclusions', () => {
+    const ctx = makeCtx();
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'intsInRange',
+          min: 1,
+          max: 20,
+          step: 1,
+          alwaysInclude: [7, 13],
+          maxResults: 6,
+        },
+        ctx,
+      ),
+      [1, 2, 7, 11, 13, 20],
+    );
+  });
+
+  it('applies intsInRange maxResults before global query bound checks', () => {
+    const ctx = makeCtx({ maxQueryResults: 3 });
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'intsInRange',
+          min: 1,
+          max: 100,
+          maxResults: 3,
+        },
+        ctx,
+      ),
+      [1, 2, 100],
+    );
+  });
+
+  it('returns empty domain when intsInRange cardinality controls resolve invalidly at runtime', () => {
+    const ctx = makeCtx({ bindings: { $badStep: 0, $badMaxResults: 1, $nonInt: 2.5 } });
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'intsInRange',
+          min: 1,
+          max: 5,
+          step: { ref: 'binding', name: '$badStep' },
+        },
+        ctx,
+      ),
+      [],
+    );
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'intsInRange',
+          min: 1,
+          max: 5,
+          maxResults: { ref: 'binding', name: '$badMaxResults' },
+        },
+        ctx,
+      ),
+      [],
+    );
+
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'intsInRange',
+          min: 1,
+          max: 5,
+          alwaysInclude: [{ ref: 'binding', name: '$nonInt' }],
+        },
+        ctx,
+      ),
+      [],
+    );
+  });
+
   it('evaluates intsInVarRange from declared int-variable bounds and clamps overrides', () => {
     const ctx = makeCtx({
       def: {
@@ -242,6 +352,11 @@ describe('evalQuery', () => {
     assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'resourcePool', min: 1 }, ctx), [1, 2, 3, 4, 5]);
     assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'resourcePool', min: -3, max: 99 }, ctx), [0, 1, 2, 3, 4, 5]);
     assert.deepEqual(evalQuery({ query: 'intsInVarRange', scope: 'perPlayer', var: 'budget', max: 1 }, ctx), [0, 1]);
+    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'resourcePool', min: 0, max: 5, step: 2 }, ctx), [0, 2, 4, 5]);
+    assert.deepEqual(
+      evalQuery({ query: 'intsInVarRange', var: 'resourcePool', min: 0, max: 5, step: 2, alwaysInclude: [1], maxResults: 4 }, ctx),
+      [0, 1, 2, 5],
+    );
   });
 
   it('returns empty domain for intsInVarRange when source var is missing, non-int, or bounds are invalid', () => {
@@ -257,6 +372,7 @@ describe('evalQuery', () => {
     assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'missing' }, ctx), []);
     assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'flag' }, ctx), []);
     assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'missing', min: 1, max: { ref: 'binding', name: '$badMax' } }, ctx), []);
+    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'missing', step: 0 }, ctx), []);
   });
 
   it('echoes enums and returns players sorted ascending', () => {

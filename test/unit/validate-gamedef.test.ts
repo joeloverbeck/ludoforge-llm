@@ -46,9 +46,9 @@ const createValidGameDef = (): GameDef =>
     actions: [
       {
         id: 'playCard',
-actor: 'active',
-executor: 'actor',
-phase: ['main'],
+        actor: 'active',
+        executor: 'actor',
+        phase: ['main'],
         params: [{ name: '$n', domain: { query: 'intsInRange', min: 0, max: 3 } }],
         pre: null,
         cost: [],
@@ -1301,7 +1301,7 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('accepts nextPlayerByCondition domain with numeric from and condition predicate', () => {
+  it('accepts nextInOrderByCondition domain with numeric from and condition predicate', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
@@ -1312,7 +1312,8 @@ describe('validateGameDef reference checks', () => {
             {
               name: '$next',
               domain: {
-                query: 'nextPlayerByCondition',
+                query: 'nextInOrderByCondition',
+                source: { query: 'players' },
                 from: { ref: 'gvar', var: 'money' },
                 bind: '$seatCandidate',
                 where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
@@ -1335,7 +1336,7 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('reports non-integer literal nextPlayerByCondition.from', () => {
+  it('reports shape-mismatched nextInOrderByCondition.source domains', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
@@ -1346,8 +1347,12 @@ describe('validateGameDef reference checks', () => {
             {
               name: '$next',
               domain: {
-                query: 'nextPlayerByCondition',
-                from: 1.5,
+                query: 'nextInOrderByCondition',
+                source: {
+                  query: 'concat',
+                  sources: [{ query: 'players' }, { query: 'zones' }],
+                },
+                from: 1,
                 bind: '$seatCandidate',
                 where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
               },
@@ -1361,14 +1366,14 @@ describe('validateGameDef reference checks', () => {
     assert.ok(
       diagnostics.some(
         (diag) =>
-          diag.code === 'DOMAIN_INTS_RANGE_BOUND_INVALID' &&
-          diag.path === 'actions[0].params[0].domain.from' &&
+          diag.code === 'DOMAIN_QUERY_SHAPE_MISMATCH' &&
+          diag.path === 'actions[0].params[0].domain.source.sources' &&
           diag.severity === 'error',
       ),
     );
   });
 
-  it('reports non-canonical nextPlayerByCondition.bind', () => {
+  it('reports non-canonical nextInOrderByCondition.bind', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
@@ -1379,7 +1384,8 @@ describe('validateGameDef reference checks', () => {
             {
               name: '$next',
               domain: {
-                query: 'nextPlayerByCondition',
+                query: 'nextInOrderByCondition',
+                source: { query: 'players' },
                 from: 1,
                 bind: 'seatCandidate',
                 where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
@@ -1394,7 +1400,7 @@ describe('validateGameDef reference checks', () => {
     assert.ok(
       diagnostics.some(
         (diag) =>
-          diag.code === 'DOMAIN_NEXT_PLAYER_BIND_INVALID' &&
+          diag.code === 'DOMAIN_NEXT_IN_ORDER_BIND_INVALID' &&
           diag.path === 'actions[0].params[0].domain.bind' &&
           diag.severity === 'error',
       ),

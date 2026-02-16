@@ -3437,19 +3437,13 @@
           "properties": {
             "query": {
               "type": "string",
-              "const": "nextPlayerByCondition"
+              "const": "nextInOrderByCondition"
+            },
+            "source": {
+              "$ref": "#/definitions/__schema3"
             },
             "from": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                {
-                  "$ref": "#/definitions/__schema4"
-                }
-              ]
+              "$ref": "#/definitions/__schema2"
             },
             "bind": {
               "type": "string",
@@ -3464,6 +3458,7 @@
           },
           "required": [
             "query",
+            "source",
             "from",
             "bind",
             "where"

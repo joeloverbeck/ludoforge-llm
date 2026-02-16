@@ -303,7 +303,7 @@ describe('AST and selector schemas', () => {
       { op: 'adjacent', left: 'board:a', right: 'board:b' },
       {
         op: 'connected',
-        from: 'board:a',
+                from: 'board:a',
         to: 'board:c',
         via: { op: 'not', arg: { op: '==', left: 1, right: 2 } },
         maxDepth: 3,
@@ -453,30 +453,41 @@ describe('AST and selector schemas', () => {
     }
   });
 
-  it('enforces canonical bind for nextPlayerByCondition query', () => {
+  it('enforces canonical bind for nextInOrderByCondition query', () => {
     const valid: OptionsQuery = {
-      query: 'nextPlayerByCondition',
-      from: 1,
+      query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 1,
       bind: '$seatCandidate',
       where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
     };
     assert.deepEqual(OptionsQuerySchema.parse(valid), valid);
 
     const nonCanonical = OptionsQuerySchema.safeParse({
-      query: 'nextPlayerByCondition',
-      from: 1,
+      query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 1,
       bind: 'seatCandidate',
       where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
     });
     assert.equal(nonCanonical.success, false);
 
     const whitespaceOnly = OptionsQuerySchema.safeParse({
-      query: 'nextPlayerByCondition',
-      from: 1,
+      query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 1,
       bind: '   ',
       where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
     });
     assert.equal(whitespaceOnly.success, false);
+
+    const missingSource = OptionsQuerySchema.safeParse({
+      query: 'nextInOrderByCondition',
+                from: 1,
+      bind: '$seatCandidate',
+      where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+    });
+    assert.equal(missingSource.success, false);
   });
 
   it('parses binding query', () => {

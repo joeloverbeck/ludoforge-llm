@@ -210,11 +210,12 @@ describe('compile-conditions lowering', () => {
     });
   });
 
-  it('lowers nextPlayerByCondition query with dynamic start seat and predicate', () => {
+  it('lowers nextInOrderByCondition query with dynamic anchor and predicate', () => {
     const result = lowerQueryNode(
       {
-        query: 'nextPlayerByCondition',
-        from: { ref: 'gvar', var: 'dealerSeat' },
+        query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: { ref: 'gvar', var: 'dealerSeat' },
         bind: '$seatCandidate',
         where: {
           op: 'and',
@@ -231,8 +232,9 @@ describe('compile-conditions lowering', () => {
 
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
-      query: 'nextPlayerByCondition',
-      from: { ref: 'gvar', var: 'dealerSeat' },
+      query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: { ref: 'gvar', var: 'dealerSeat' },
       bind: '$seatCandidate',
       where: {
         op: 'and',
@@ -245,11 +247,12 @@ describe('compile-conditions lowering', () => {
     });
   });
 
-  it('rejects non-canonical nextPlayerByCondition bind tokens', () => {
+  it('rejects non-canonical nextInOrderByCondition bind tokens', () => {
     const result = lowerQueryNode(
       {
-        query: 'nextPlayerByCondition',
-        from: 0,
+        query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 0,
         bind: 'seatCandidate',
         where: { op: '==', left: 1, right: 1 },
       },
@@ -258,15 +261,33 @@ describe('compile-conditions lowering', () => {
     );
 
     assert.equal(result.value, null);
-    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_NEXT_PLAYER_BIND_INVALID');
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_NEXT_IN_ORDER_BIND_INVALID');
     assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.bind');
   });
 
-  it('emits warning when nextPlayerByCondition bind shadows an outer scope binding', () => {
+  it('rejects nextInOrderByCondition queries without source order', () => {
     const result = lowerQueryNode(
       {
-        query: 'nextPlayerByCondition',
-        from: 0,
+        query: 'nextInOrderByCondition',
+                from: 0,
+        bind: '$seat',
+        where: { op: '==', left: { ref: 'binding', name: '$seat' }, right: 1 },
+      },
+      context,
+      'doc.actions.0.params.0.domain',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.params.0.domain.source');
+  });
+
+  it('emits warning when nextInOrderByCondition bind shadows an outer scope binding', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 0,
         bind: '$seat',
         where: {
           op: '==',

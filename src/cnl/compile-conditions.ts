@@ -41,7 +41,7 @@ const SUPPORTED_QUERY_KINDS = [
   'tokensInZone',
   'assetRows',
   'tokensInMapSpaces',
-  'nextPlayerByCondition',
+  'nextInOrderByCondition',
   'intsInRange',
   'intsInVarRange',
   'enums',
@@ -709,10 +709,10 @@ export function lowerQueryNode(
         diagnostics,
       };
     }
-    case 'nextPlayerByCondition': {
+    case 'nextInOrderByCondition': {
       if (typeof source.bind !== 'string' || source.bind.trim() === '') {
-        return missingCapability(path, 'nextPlayerByCondition query', source, [
-          '{ query: "nextPlayerByCondition", from: <NumericValueExpr>, bind: string, where: <ConditionAST>, includeFrom?: boolean }',
+        return missingCapability(path, 'nextInOrderByCondition query', source, [
+          '{ query: "nextInOrderByCondition", source: <OptionsQuery>, from: <ValueExpr>, bind: string, where: <ConditionAST>, includeFrom?: boolean }',
         ]);
       }
       if (!isCanonicalBindingIdentifier(source.bind)) {
@@ -720,31 +720,38 @@ export function lowerQueryNode(
           value: null,
           diagnostics: [
             {
-              code: 'CNL_COMPILER_NEXT_PLAYER_BIND_INVALID',
+              code: 'CNL_COMPILER_NEXT_IN_ORDER_BIND_INVALID',
               path: `${path}.bind`,
               severity: 'error',
-              message: `nextPlayerByCondition.bind "${source.bind}" must be a canonical "$name" token.`,
+              message: `nextInOrderByCondition.bind "${source.bind}" must be a canonical "$name" token.`,
               suggestion: 'Use a canonical binding token like "$seatCandidate".',
             },
           ],
         };
       }
-      const from = lowerIntDomainBound(source.from, context, `${path}.from`);
+      const sourceOrder = lowerQueryNode(source.source, context, `${path}.source`);
+      const from = lowerValueNode(source.from, context, `${path}.from`);
       const where = lowerConditionNode(
         source.where,
         { ...context, bindingScope: [...(context.bindingScope ?? []), source.bind] },
         `${path}.where`,
       );
-      const diagnostics = [...bindingShadowWarningsForScope(source.bind, `${path}.bind`, context.bindingScope), ...from.diagnostics, ...where.diagnostics];
-      if (from.value === null || where.value === null) {
+      const diagnostics = [
+        ...bindingShadowWarningsForScope(source.bind, `${path}.bind`, context.bindingScope),
+        ...sourceOrder.diagnostics,
+        ...from.diagnostics,
+        ...where.diagnostics,
+      ];
+      if (sourceOrder.value === null || from.value === null || where.value === null) {
         return { value: null, diagnostics };
       }
       if (source.includeFrom !== undefined && typeof source.includeFrom !== 'boolean') {
-        return missingCapability(`${path}.includeFrom`, 'nextPlayerByCondition includeFrom', source.includeFrom, ['true', 'false']);
+        return missingCapability(`${path}.includeFrom`, 'nextInOrderByCondition includeFrom', source.includeFrom, ['true', 'false']);
       }
       return {
         value: {
-          query: 'nextPlayerByCondition',
+          query: 'nextInOrderByCondition',
+          source: sourceOrder.value,
           from: from.value,
           bind: source.bind,
           where: where.value,

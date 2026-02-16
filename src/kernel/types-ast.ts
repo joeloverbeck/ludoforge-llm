@@ -151,8 +151,9 @@ export type OptionsQuery =
       readonly filter?: readonly TokenFilterPredicate[];
     }
   | {
-      readonly query: 'nextPlayerByCondition';
-      readonly from: NumericValueExpr;
+      readonly query: 'nextInOrderByCondition';
+      readonly source: OptionsQuery;
+      readonly from: ValueExpr;
       readonly bind: string;
       readonly where: ConditionAST;
       readonly includeFrom?: boolean;

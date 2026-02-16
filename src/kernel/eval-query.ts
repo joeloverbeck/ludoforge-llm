@@ -240,29 +240,71 @@ function evalTokensInMapSpacesQuery(
   return query.filter !== undefined ? applyTokenFilters(zoneTokens, query.filter, ctx) : zoneTokens;
 }
 
-function normalizeSeatIndex(index: number, playerCount: number): number {
-  const remainder = index % playerCount;
-  return remainder >= 0 ? remainder : remainder + playerCount;
+function deepEqualUnknown(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) {
+    return true;
+  }
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+    for (let index = 0; index < left.length; index += 1) {
+      if (!deepEqualUnknown(left[index], right[index])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  if (typeof left !== 'object' || left === null || typeof right !== 'object' || right === null) {
+    return false;
+  }
+
+  const leftKeys = Object.keys(left).sort();
+  const rightKeys = Object.keys(right).sort();
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+  for (let index = 0; index < leftKeys.length; index += 1) {
+    if (leftKeys[index] !== rightKeys[index]) {
+      return false;
+    }
+  }
+
+  for (const key of leftKeys) {
+    if (!deepEqualUnknown((left as Record<string, unknown>)[key], (right as Record<string, unknown>)[key])) {
+      return false;
+    }
+  }
+  return true;
 }
 
-function evalNextPlayerByConditionQuery(
-  query: Extract<OptionsQuery, { readonly query: 'nextPlayerByCondition' }>,
+function queryItemsEqual(left: QueryResult, right: unknown): boolean {
+  return deepEqualUnknown(left, right);
+}
+
+function normalizeOrderIndex(index: number, length: number): number {
+  const remainder = index % length;
+  return remainder >= 0 ? remainder : remainder + length;
+}
+
+function evalNextInOrderByConditionQuery(
+  query: Extract<OptionsQuery, { readonly query: 'nextInOrderByCondition' }>,
   ctx: EvalContext,
-): readonly PlayerId[] {
-  const from = resolveIntDomainBound(query.from, ctx);
-  if (from === null) {
+): readonly QueryResult[] {
+  const sourceOrder = evalQuery(query.source, ctx);
+  if (sourceOrder.length === 0) {
     return [];
   }
 
-  const players = resolvePlayerSel('all', ctx);
-  const playerCount = players.length;
-  if (playerCount === 0) {
+  const anchor = evalValue(query.from, ctx);
+  const anchorIndex = sourceOrder.findIndex((candidate) => queryItemsEqual(candidate, anchor));
+  if (anchorIndex < 0) {
     return [];
   }
 
   const startOffset = query.includeFrom === true ? 0 : 1;
-  for (let offset = 0; offset < playerCount; offset += 1) {
-    const candidate = asPlayerId(normalizeSeatIndex(from + startOffset + offset, playerCount));
+  for (let offset = 0; offset < sourceOrder.length; offset += 1) {
+    const candidate = sourceOrder[normalizeOrderIndex(anchorIndex + startOffset + offset, sourceOrder.length)]!;
     const matches = evalCondition(query.where, {
       ...ctx,
       bindings: {
@@ -483,10 +525,10 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       return filtered;
     }
 
-    case 'nextPlayerByCondition': {
-      const nextPlayer = evalNextPlayerByConditionQuery(query, ctx);
-      assertWithinBounds(nextPlayer.length, query, maxQueryResults);
-      return nextPlayer;
+    case 'nextInOrderByCondition': {
+      const nextResult = evalNextInOrderByConditionQuery(query, ctx);
+      assertWithinBounds(nextResult.length, query, maxQueryResults);
+      return nextResult;
     }
 
     case 'intsInRange': {

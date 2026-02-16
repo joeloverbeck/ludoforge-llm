@@ -255,11 +255,12 @@ describe('binder-surface-registry', () => {
     });
   });
 
-  it('rewrites nextPlayerByCondition declared bind in non-effect nodes', () => {
+  it('rewrites nextInOrderByCondition declared bind in non-effect nodes', () => {
     const rewritten = rewriteBinderSurfaceStringsInNode(
       {
-        query: 'nextPlayerByCondition',
-        from: 0,
+        query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 0,
         bind: '$seat',
         where: { op: '==', left: { ref: 'binding', name: '$seat' }, right: 1 },
       },
@@ -272,8 +273,9 @@ describe('binder-surface-registry', () => {
     );
 
     assert.deepEqual(rewritten, {
-      query: 'nextPlayerByCondition',
-      from: 0,
+      query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 0,
       bind: '$seat_renamed',
       where: { op: '==', left: { ref: 'binding', name: '$seat_renamed' }, right: 1 },
     });

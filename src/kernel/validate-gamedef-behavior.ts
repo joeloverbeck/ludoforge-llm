@@ -239,8 +239,9 @@ function inferQueryRuntimeShapes(query: OptionsQuery): readonly QueryRuntimeShap
     case 'intsInRange':
     case 'intsInVarRange':
     case 'players':
-    case 'nextPlayerByCondition':
       return ['number'];
+    case 'nextInOrderByCondition':
+      return inferQueryRuntimeShapes(query.source);
     case 'enums':
     case 'globalMarkers':
     case 'zones':
@@ -663,26 +664,15 @@ export const validateOptionsQuery = (
       }
       return;
     }
-    case 'nextPlayerByCondition': {
-      if (typeof query.from === 'number') {
-        if (!Number.isSafeInteger(query.from)) {
-          diagnostics.push({
-            code: 'DOMAIN_INTS_RANGE_BOUND_INVALID',
-            path: `${path}.from`,
-            severity: 'error',
-            message: 'nextPlayerByCondition.from must be a safe integer literal when provided as a number.',
-            suggestion: 'Use an integer literal or a ValueExpr that evaluates to an integer.',
-          });
-        }
-      } else {
-        validateNumericValueExpr(diagnostics, query.from, `${path}.from`, context);
-      }
+    case 'nextInOrderByCondition': {
+      validateOptionsQuery(diagnostics, query.source, `${path}.source`, context);
+      validateValueExpr(diagnostics, query.from, `${path}.from`, context);
       if (!isCanonicalBindingIdentifier(query.bind)) {
         diagnostics.push({
-          code: 'DOMAIN_NEXT_PLAYER_BIND_INVALID',
+          code: 'DOMAIN_NEXT_IN_ORDER_BIND_INVALID',
           path: `${path}.bind`,
           severity: 'error',
-          message: `nextPlayerByCondition.bind "${query.bind}" must be a canonical "$name" token.`,
+          message: `nextInOrderByCondition.bind "${query.bind}" must be a canonical "$name" token.`,
           suggestion: 'Use a canonical binding token like "$seatCandidate".',
         });
       }

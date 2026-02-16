@@ -126,8 +126,9 @@ optionsQuerySchemaInternal = z.union([
     .strict(),
   z
     .object({
-      query: z.literal('nextPlayerByCondition'),
-      from: IntDomainBoundSchema,
+      query: z.literal('nextInOrderByCondition'),
+      source: OptionsQuerySchema,
+      from: ValueExprSchema,
       bind: CanonicalBindingIdentifierSchema,
       where: ConditionASTSchema,
       includeFrom: BooleanSchema.optional(),

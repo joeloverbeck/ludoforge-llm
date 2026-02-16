@@ -104,7 +104,7 @@ const exhaustOptionsQuery = (query: OptionsQuery): string => {
     case 'tokensInZone':
     case 'assetRows':
     case 'tokensInMapSpaces':
-    case 'nextPlayerByCondition':
+    case 'nextInOrderByCondition':
     case 'intsInRange':
     case 'intsInVarRange':
     case 'enums':

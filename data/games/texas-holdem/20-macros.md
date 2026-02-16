@@ -655,7 +655,8 @@ effectMacros:
       - forEach:
           bind: $nextSeat
           over:
-            query: nextPlayerByCondition
+            query: nextInOrderByCondition
+            source: { query: players }
             from: { param: fromSeat }
             bind: $seatCandidate
             where:
@@ -674,7 +675,8 @@ effectMacros:
       - forEach:
           bind: $nextSeat
           over:
-            query: nextPlayerByCondition
+            query: nextInOrderByCondition
+            source: { query: players }
             from: { param: fromSeat }
             bind: $seatCandidate
             where:
@@ -698,7 +700,8 @@ effectMacros:
             - forEach:
                 bind: $bbSeat
                 over:
-                  query: nextPlayerByCondition
+                  query: nextInOrderByCondition
+                  source: { query: players }
                   from: { ref: gvar, var: dealerSeat }
                   bind: $seatCandidate
                   where:
@@ -722,7 +725,8 @@ effectMacros:
             - forEach:
                 bind: $sbSeat
                 over:
-                  query: nextPlayerByCondition
+                  query: nextInOrderByCondition
+                  source: { query: players }
                   from: { ref: gvar, var: dealerSeat }
                   bind: $seatCandidate
                   where:
@@ -733,7 +737,8 @@ effectMacros:
                   - forEach:
                       bind: $bbSeat
                       over:
-                        query: nextPlayerByCondition
+                        query: nextInOrderByCondition
+                        source: { query: players }
                         from: { ref: binding, name: $sbSeat }
                         bind: $seatCandidate
                         where:
@@ -744,7 +749,8 @@ effectMacros:
                         - forEach:
                             bind: $utgSeat
                             over:
-                              query: nextPlayerByCondition
+                              query: nextInOrderByCondition
+                              source: { query: players }
                               from: { ref: binding, name: $bbSeat }
                               bind: $seatCandidate
                               where:

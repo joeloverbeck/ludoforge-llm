@@ -266,7 +266,7 @@ describe('evalQuery', () => {
     assert.deepEqual(evalQuery({ query: 'players' }, ctx), [asPlayerId(0), asPlayerId(1), asPlayerId(2)]);
   });
 
-  it('evaluates nextPlayerByCondition with wrap-around and per-player predicates', () => {
+  it('evaluates nextInOrderByCondition with wrap-around and per-player predicates', () => {
     const def = {
       ...makeDef(),
       perPlayerVars: [
@@ -303,8 +303,9 @@ describe('evalQuery', () => {
 
     const result = evalQuery(
       {
-        query: 'nextPlayerByCondition',
-        from: 2,
+        query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 2,
         bind: '$seatCandidate',
         where: {
           op: 'and',
@@ -321,12 +322,13 @@ describe('evalQuery', () => {
     assert.deepEqual(result, [asPlayerId(0)]);
   });
 
-  it('returns empty array when nextPlayerByCondition finds no match', () => {
+  it('returns empty array when nextInOrderByCondition finds no match', () => {
     const ctx = makeCtx();
     const result = evalQuery(
       {
-        query: 'nextPlayerByCondition',
-        from: 0,
+        query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 0,
         bind: '$seatCandidate',
         where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 99 },
       },
@@ -335,13 +337,14 @@ describe('evalQuery', () => {
     assert.deepEqual(result, []);
   });
 
-  it('respects includeFrom for nextPlayerByCondition', () => {
+  it('respects includeFrom for nextInOrderByCondition', () => {
     const ctx = makeCtx();
 
     const includeFrom = evalQuery(
       {
-        query: 'nextPlayerByCondition',
-        from: 1,
+        query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 1,
         bind: '$seatCandidate',
         includeFrom: true,
         where: {
@@ -356,8 +359,9 @@ describe('evalQuery', () => {
     );
     const excludeFrom = evalQuery(
       {
-        query: 'nextPlayerByCondition',
-        from: 1,
+        query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 1,
         bind: '$seatCandidate',
         includeFrom: false,
         where: {
@@ -373,6 +377,41 @@ describe('evalQuery', () => {
 
     assert.deepEqual(includeFrom, [asPlayerId(1)]);
     assert.deepEqual(excludeFrom, [asPlayerId(2)]);
+  });
+
+  it('supports non-player explicit order domains for nextInOrderByCondition', () => {
+    const ctx = makeCtx();
+    const result = evalQuery(
+      {
+        query: 'nextInOrderByCondition',
+                source: { query: 'enums', values: ['preflop', 'flop', 'turn', 'river'] },
+                from: 'turn',
+        bind: '$street',
+        where: {
+          op: '==',
+          left: { ref: 'binding', name: '$street' },
+          right: 'river',
+        },
+      },
+      ctx,
+    );
+
+    assert.deepEqual(result, ['river']);
+  });
+
+  it('returns empty array when nextInOrderByCondition anchor is absent from source order', () => {
+    const ctx = makeCtx();
+    const result = evalQuery(
+      {
+        query: 'nextInOrderByCondition',
+                source: { query: 'players' },
+                from: 99,
+        bind: '$seatCandidate',
+        where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 0 },
+      },
+      ctx,
+    );
+    assert.deepEqual(result, []);
   });
 
   it('returns zones sorted, and filter.owner=actor resolves correctly', () => {

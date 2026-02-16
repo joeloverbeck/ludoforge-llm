@@ -305,6 +305,7 @@ function evalNextInOrderByConditionQuery(
     }
     throw error;
   }
+  // Contract: duplicate anchors resolve to the first matching source index.
   const anchorIndex = sourceOrder.findIndex((candidate) => queryItemsEqual(candidate, anchor));
   if (anchorIndex < 0) {
     return [];

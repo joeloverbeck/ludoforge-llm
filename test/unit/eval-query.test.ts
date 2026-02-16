@@ -379,6 +379,52 @@ describe('evalQuery', () => {
     assert.deepEqual(excludeFrom, [asPlayerId(2)]);
   });
 
+  it('uses first matching anchor when source order contains duplicate values', () => {
+    const ctx = makeCtx();
+    const result = evalQuery(
+      {
+        query: 'nextInOrderByCondition',
+        source: { query: 'enums', values: ['anchor', 'x', 'anchor', 'y'] },
+        from: 'anchor',
+        bind: '$candidate',
+        includeFrom: false,
+        where: {
+          op: 'or',
+          args: [
+            { op: '==', left: { ref: 'binding', name: '$candidate' }, right: 'x' },
+            { op: '==', left: { ref: 'binding', name: '$candidate' }, right: 'y' },
+          ],
+        },
+      },
+      ctx,
+    );
+
+    assert.deepEqual(result, ['x']);
+  });
+
+  it('applies includeFrom traversal from first matching anchor when source has duplicates', () => {
+    const ctx = makeCtx();
+    const result = evalQuery(
+      {
+        query: 'nextInOrderByCondition',
+        source: { query: 'enums', values: ['anchor', 'x', 'anchor', 'y'] },
+        from: 'anchor',
+        bind: '$candidate',
+        includeFrom: true,
+        where: {
+          op: 'or',
+          args: [
+            { op: '==', left: { ref: 'binding', name: '$candidate' }, right: 'x' },
+            { op: '==', left: { ref: 'binding', name: '$candidate' }, right: 'y' },
+          ],
+        },
+      },
+      ctx,
+    );
+
+    assert.deepEqual(result, ['x']);
+  });
+
   it('supports non-player explicit order domains for nextInOrderByCondition', () => {
     const ctx = makeCtx();
     const result = evalQuery(

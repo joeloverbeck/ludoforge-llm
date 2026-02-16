@@ -7,6 +7,7 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   asZoneId,
   legalChoices,
   legalMoves,
@@ -17,6 +18,7 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import { assertLegalitySurfaceParityForMove } from '../../helpers/legality-surface-parity-helpers.js';
 
 const makeState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: { resources: 0 },
@@ -418,5 +420,145 @@ describe('legality surface parity', () => {
         return true;
       });
     }
+  });
+
+  it('keeps decision progression parity for binding export/import through nested control flow', () => {
+    const def = makeDef({
+      action: makeAction({
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$mode',
+              bind: '$mode',
+              options: { query: 'enums', values: ['tokens', 'noop'] },
+            },
+          },
+          {
+            let: {
+              bind: '$modeCopy',
+              value: { ref: 'binding', name: '$mode' },
+              in: [
+                {
+                  if: {
+                    when: { op: '==', left: { ref: 'binding', name: '$modeCopy' }, right: 'tokens' },
+                    then: [
+                      {
+                        chooseOne: {
+                          internalDecisionId: 'decision:$token',
+                          bind: '$token',
+                          options: { query: 'tokensInZone', zone: 'board:none' },
+                        },
+                      },
+                    ],
+                    else: [],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    });
+    const state = makeState({
+      zones: {
+        'board:none': [{ id: asTokenId('tok-1'), type: 'piece', props: {} }],
+      },
+    });
+
+    const trace = assertLegalitySurfaceParityForMove(def, state, {
+      actionId: asActionId('op'),
+      params: {},
+    });
+    assert.deepEqual(trace.map((step) => step.requestKind), ['pending', 'pending', 'complete']);
+    assert.deepEqual(
+      trace.filter((step) => step.requestKind === 'pending').map((step) => step.decisionId),
+      ['decision:$mode', 'decision:$token'],
+    );
+  });
+
+  it('keeps decision progression parity for nested branch-specific choices', () => {
+    const def = makeDef({
+      action: makeAction({
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$branch',
+              bind: '$branch',
+              options: { query: 'enums', values: ['then', 'else'] },
+            },
+          },
+          {
+            if: {
+              when: { op: '==', left: { ref: 'binding', name: '$branch' }, right: 'then' },
+              then: [
+                {
+                  if: {
+                    when: true,
+                    then: [
+                      {
+                        chooseN: {
+                          internalDecisionId: 'decision:$targets',
+                          bind: '$targets',
+                          options: { query: 'enums', values: ['a', 'b'] },
+                          min: 1,
+                          max: 1,
+                        },
+                      },
+                    ],
+                    else: [],
+                  },
+                },
+              ],
+              else: [
+                {
+                  chooseOne: {
+                    internalDecisionId: 'decision:$fallback',
+                    bind: '$fallback',
+                    options: { query: 'enums', values: ['x'] },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    });
+    const state = makeState();
+
+    const trace = assertLegalitySurfaceParityForMove(def, state, {
+      actionId: asActionId('op'),
+      params: {},
+    });
+    assert.deepEqual(trace.map((step) => step.requestKind), ['pending', 'pending', 'complete']);
+    assert.deepEqual(
+      trace.filter((step) => step.requestKind === 'pending').map((step) => step.decisionId),
+      ['decision:$branch', 'decision:$targets'],
+    );
+  });
+
+  it('parity helper emits divergence diagnostics with surface + step + action context', () => {
+    const def = makeDef({
+      action: makeAction({
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$mode',
+              bind: '$mode',
+              options: { query: 'enums', values: ['x'] },
+            },
+          },
+        ],
+      }),
+    });
+    const state = makeState();
+    const move = { actionId: asActionId('op'), params: {} };
+
+    assert.throws(
+      () =>
+        assertLegalitySurfaceParityForMove(def, state, move, {
+          probeActionPresence: () => false,
+        }),
+      /surface=legalMoves step=0 actionId=op/,
+    );
   });
 });

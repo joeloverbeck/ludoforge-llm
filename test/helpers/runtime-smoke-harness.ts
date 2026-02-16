@@ -14,7 +14,6 @@ import {
   type Move,
   type MoveParamScalar,
   type MoveParamValue,
-  type Rng,
 } from '../../src/kernel/index.js';
 
 export interface RuntimeSmokeInvariantContext {
@@ -39,18 +38,31 @@ export interface RuntimeSmokeSelectMoveContext {
   readonly step: number;
   readonly seed: number;
   readonly playerCount: number;
-  readonly rng: Rng;
+  readonly drawInt: (min: number, max: number) => number;
+  readonly policyState: unknown;
 }
 
-export interface RuntimeSmokeMoveSelection {
-  readonly moveIndex: number;
-  readonly rng: Rng;
+export interface RuntimeSmokePolicyInitContext {
+  readonly def: GameDef;
+  readonly seed: number;
+  readonly playerCount: number;
+}
+
+export interface RuntimeSmokePolicyAdvanceContext {
+  readonly previousState: unknown;
+  readonly move: Move;
+  readonly postMoveState: GameState;
+  readonly step: number;
+  readonly seed: number;
+  readonly playerCount: number;
 }
 
 export interface RuntimeSmokePolicy {
   readonly id: string;
-  readonly selectMove: (context: RuntimeSmokeSelectMoveContext) => RuntimeSmokeMoveSelection;
+  readonly selectMove: (context: RuntimeSmokeSelectMoveContext) => number;
   readonly chooseDecision?: (request: ChoicePendingRequest, context: RuntimeSmokeSelectMoveContext) => MoveParamValue | undefined;
+  readonly initPolicyState?: (context: RuntimeSmokePolicyInitContext) => unknown;
+  readonly advancePolicyState?: (context: RuntimeSmokePolicyAdvanceContext) => unknown;
 }
 
 export interface RuntimeSmokeGateConfig {
@@ -160,6 +172,11 @@ const executePath = (config: RuntimeSmokeGateConfig): RuntimeSmokeGateResult => 
 
   let state = bootstrapState(config.def, config.seed, config.playerCount);
   let rng = createRng(BigInt(config.seed));
+  let policyState = config.policy.initPolicyState?.({
+    def: config.def,
+    seed: config.seed,
+    playerCount: config.playerCount,
+  });
   let appliedMoves = 0;
 
   const stateHashes: bigint[] = [state.stateHash];
@@ -185,24 +202,39 @@ const executePath = (config: RuntimeSmokeGateConfig): RuntimeSmokeGateResult => 
       `Runtime smoke stalled before terminal policy=${config.policy.id} seed=${config.seed} players=${config.playerCount} step=${appliedMoves}`,
     );
 
+    const drawInt = (min: number, max: number): number => {
+      const [value, nextRng] = nextInt(rng, min, max);
+      rng = nextRng;
+      return value;
+    };
     const selectionContext: RuntimeSmokeSelectMoveContext = {
       moves,
       state,
       step: appliedMoves,
       seed: config.seed,
       playerCount: config.playerCount,
-      rng,
+      drawInt,
+      policyState,
     };
-    const selection = config.policy.selectMove(selectionContext);
-    assert.equal(Number.isInteger(selection.moveIndex), true, `Policy ${config.policy.id} returned a non-integer move index`);
-    assert.equal(selection.moveIndex >= 0 && selection.moveIndex < moves.length, true, `Policy ${config.policy.id} selected out-of-range move index`);
+    const moveIndex = config.policy.selectMove(selectionContext);
+    assert.equal(Number.isInteger(moveIndex), true, `Policy ${config.policy.id} returned a non-integer move index`);
+    assert.equal(moveIndex >= 0 && moveIndex < moves.length, true, `Policy ${config.policy.id} selected out-of-range move index`);
 
-    const selectedMove = moves[selection.moveIndex]!;
+    const selectedMove = moves[moveIndex]!;
     const completedMove = resolveMoveDecisionsForPolicy(config.def, state, selectedMove, selectionContext, config.policy);
     const next = applyMove(config.def, state, completedMove);
 
     state = next.state;
-    rng = selection.rng;
+    if (config.policy.advancePolicyState !== undefined) {
+      policyState = config.policy.advancePolicyState({
+        previousState: policyState,
+        move: completedMove,
+        postMoveState: state,
+        step: appliedMoves,
+        seed: config.seed,
+        playerCount: config.playerCount,
+      });
+    }
     appliedMoves += 1;
 
     stateHashes.push(state.stateHash);
@@ -258,15 +290,12 @@ export const runRuntimeSmokeGate = (config: RuntimeSmokeGateConfig): RuntimeSmok
 
 export const firstLegalPolicy = (): RuntimeSmokePolicy => ({
   id: 'first-legal',
-  selectMove: ({ rng }) => ({ moveIndex: 0, rng }),
+  selectMove: () => 0,
 });
 
 export const seededRandomLegalPolicy = (): RuntimeSmokePolicy => ({
   id: 'seeded-random-legal',
-  selectMove: ({ moves, rng }) => {
-    const [index, nextRng] = nextInt(rng, 0, moves.length - 1);
-    return { moveIndex: index, rng: nextRng };
-  },
+  selectMove: ({ moves, drawInt }) => drawInt(0, moves.length - 1),
 });
 
 export const selectorPolicy = (
@@ -274,8 +303,5 @@ export const selectorPolicy = (
   chooseMoveIndex: (context: RuntimeSmokeSelectMoveContext) => number,
 ): RuntimeSmokePolicy => ({
   id,
-  selectMove: (context) => ({
-    moveIndex: chooseMoveIndex(context),
-    rng: context.rng,
-  }),
+  selectMove: (context) => chooseMoveIndex(context),
 });

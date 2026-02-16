@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPhaseId, initialState, type GameDef } from '../../src/kernel/index.js';
+import { asActionId, asPhaseId, createRng, initialState, nextInt, type GameDef } from '../../src/kernel/index.js';
 import {
   firstLegalPolicy,
   runRuntimeSmokeGate,
@@ -132,5 +132,59 @@ describe('runtime smoke harness integration', () => {
         }),
       /Runtime smoke invariant failed \[forced-failure\] policy=first-legal seed=5 players=2 step=2: forced invariant failure/,
     );
+  });
+
+  it('advances harness-managed RNG via drawInt without policy-side RNG threading', () => {
+    const def = createHarnessFixtureDef();
+    const seed = 19;
+    const result = runRuntimeSmokeGate({
+      def,
+      seed,
+      playerCount: 2,
+      maxSteps: 12,
+      minAppliedMoves: 6,
+      policy: selectorPolicy('draw-int-random', ({ moves, drawInt }) => drawInt(0, moves.length - 1)),
+    });
+
+    let rng = createRng(BigInt(seed));
+    const expectedActionIds: string[] = [];
+    for (let step = 0; step < result.appliedMoves; step += 1) {
+      const [moveIndex, nextRng] = nextInt(rng, 0, 1);
+      rng = nextRng;
+      expectedActionIds.push(moveIndex === 0 ? 'plusOne' : 'plusTwo');
+    }
+
+    assert.deepEqual(result.actionIds, expectedActionIds);
+  });
+
+  it('supports deterministic policy-local state hooks', () => {
+    const def = createHarnessFixtureDef();
+    const transitionLog: number[] = [];
+    const result = runRuntimeSmokeGate({
+      def,
+      seed: 23,
+      playerCount: 2,
+      maxSteps: 8,
+      minAppliedMoves: 6,
+      policy: {
+        id: 'stateful-alternating',
+        initPolicyState: () => ({ nextMoveIndex: 0 }),
+        selectMove: ({ policyState, moves }) => {
+          const state = policyState as { readonly nextMoveIndex: number };
+          return state.nextMoveIndex % moves.length;
+        },
+        advancePolicyState: ({ previousState }) => {
+          const state = (previousState ?? { nextMoveIndex: 0 }) as { readonly nextMoveIndex: number };
+          const nextMoveIndex = state.nextMoveIndex + 1;
+          transitionLog.push(nextMoveIndex);
+          return { nextMoveIndex };
+        },
+      },
+    });
+
+    assert.equal(transitionLog.length >= result.appliedMoves, true);
+    for (let index = 1; index < result.actionIds.length; index += 1) {
+      assert.notEqual(result.actionIds[index], result.actionIds[index - 1]);
+    }
   });
 });

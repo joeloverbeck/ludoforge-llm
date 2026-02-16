@@ -142,6 +142,22 @@ describe('evalQuery', () => {
     assert.equal(ctx.state.zones['deck:none']?.length, 2);
   });
 
+  it('resolves tokensInZone zoneExpr dynamically at runtime', () => {
+    const ctx = makeCtx({
+      bindings: { $targetZone: 'hand:1' },
+    });
+
+    const result = evalQuery(
+      { query: 'tokensInZone', zone: { zoneExpr: { ref: 'binding', name: '$targetZone' } } },
+      ctx,
+    );
+
+    assert.deepEqual(
+      result.map((token) => (token as Token).id),
+      [asTokenId('hand-1')],
+    );
+  });
+
   it('evaluates intsInRange edge cases', () => {
     const ctx = makeCtx();
 
@@ -727,6 +743,39 @@ describe('evalQuery', () => {
             $allowed: [asZoneId('hand:0'), asZoneId('bench:1')],
           },
         },
+      ),
+      [asZoneId('hand:0'), asZoneId('bench:1')],
+    );
+  });
+
+  it('evaluates spatial query variants when zone is resolved from zoneExpr', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $origin: 'deck:none',
+        $allowed: [asZoneId('hand:0'), asZoneId('bench:1')],
+      },
+    });
+
+    assert.deepEqual(
+      evalQuery({ query: 'adjacentZones', zone: { zoneExpr: { ref: 'binding', name: '$origin' } } }, ctx),
+      [asZoneId('hand:0'), asZoneId('hand:1')],
+    );
+    assert.deepEqual(
+      evalQuery({ query: 'tokensInAdjacentZones', zone: { zoneExpr: { ref: 'binding', name: '$origin' } } }, ctx).map((token) => (token as Token).id),
+      [asTokenId('hand-0'), asTokenId('hand-0b'), asTokenId('hand-1')],
+    );
+    assert.deepEqual(
+      evalQuery(
+        {
+          query: 'connectedZones',
+          zone: { zoneExpr: { ref: 'binding', name: '$origin' } },
+          via: {
+            op: 'in',
+            item: { ref: 'binding', name: '$zone' },
+            set: { ref: 'binding', name: '$allowed' },
+          },
+        },
+        ctx,
       ),
       [asZoneId('hand:0'), asZoneId('bench:1')],
     );

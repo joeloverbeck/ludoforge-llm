@@ -95,7 +95,7 @@ optionsQuerySchemaInternal = z.union([
   z
     .object({
       query: z.literal('tokensInZone'),
-      zone: ZoneSelSchema,
+      zone: ZoneRefSchema,
       filter: z.array(TokenFilterPredicateSchema).optional(),
     })
     .strict(),
@@ -162,18 +162,18 @@ optionsQuerySchemaInternal = z.union([
         .optional(),
     })
     .strict(),
-  z.object({ query: z.literal('adjacentZones'), zone: ZoneSelSchema }).strict(),
+  z.object({ query: z.literal('adjacentZones'), zone: ZoneRefSchema }).strict(),
   z
     .object({
       query: z.literal('tokensInAdjacentZones'),
-      zone: ZoneSelSchema,
+      zone: ZoneRefSchema,
       filter: z.array(TokenFilterPredicateSchema).optional(),
     })
     .strict(),
   z
     .object({
       query: z.literal('connectedZones'),
-      zone: ZoneSelSchema,
+      zone: ZoneRefSchema,
       via: ConditionASTSchema.optional(),
       includeStart: BooleanSchema.optional(),
       maxDepth: NumberSchema.optional(),

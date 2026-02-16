@@ -555,6 +555,23 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers tokensInZone query with dynamic zoneExpr', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+      },
+      context,
+      'doc.actions.0.effects.0.forEach.over',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, {
+      query: 'tokensInZone',
+      zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+    });
+  });
+
   it('lowers tokensInZone filter with explicit op and reference value', () => {
     const result = lowerQueryNode(
       {
@@ -679,6 +696,41 @@ describe('compile-conditions lowering', () => {
     });
   });
 
+  it('lowers spatial zone queries with dynamic zoneExpr selectors', () => {
+    const adjacent = lowerQueryNode(
+      { query: 'adjacentZones', zone: { zoneExpr: { ref: 'binding', name: '$zone' } } },
+      context,
+      'doc.effects.0.forEach.over',
+    );
+    const nearbyTokens = lowerQueryNode(
+      { query: 'tokensInAdjacentZones', zone: { zoneExpr: { ref: 'binding', name: '$zone' } } },
+      context,
+      'doc.effects.1.forEach.over',
+    );
+    const connected = lowerQueryNode(
+      { query: 'connectedZones', zone: { zoneExpr: { ref: 'binding', name: '$zone' } }, includeStart: true },
+      context,
+      'doc.effects.2.forEach.over',
+    );
+
+    assertNoDiagnostics(adjacent);
+    assertNoDiagnostics(nearbyTokens);
+    assertNoDiagnostics(connected);
+    assert.deepEqual(adjacent.value, {
+      query: 'adjacentZones',
+      zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+    });
+    assert.deepEqual(nearbyTokens.value, {
+      query: 'tokensInAdjacentZones',
+      zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+    });
+    assert.deepEqual(connected.value, {
+      query: 'connectedZones',
+      zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+      includeStart: true,
+    });
+  });
+
   it('emits diagnostic for zones filter that is neither ConditionAST nor owner', () => {
     const result = lowerQueryNode(
       { query: 'zones', filter: { bogus: true } },
@@ -705,6 +757,22 @@ describe('compile-conditions lowering', () => {
     assert.equal(result.value, null);
     assert.equal(result.diagnostics.length, 1);
     assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_MISSING_CAPABILITY');
+  });
+
+  it('emits diagnostic for tokensInZone zone object missing zoneExpr', () => {
+    const result = lowerQueryNode(
+      {
+        query: 'tokensInZone',
+        zone: { concat: ['board:', 'none'] },
+      },
+      context,
+      'doc.actions.0.effects.0.forEach.over',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_SELECTOR_INVALID');
+    assert.equal(result.diagnostics[0]?.path, 'doc.actions.0.effects.0.forEach.over.zone');
   });
 
   it('preserves tokensInZone without filter when no filter specified', () => {

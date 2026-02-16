@@ -1401,7 +1401,7 @@ effectMacros:
           bind: $piece
           over:
             query: tokensInZone
-            zone: { concat: ['available-', { param: faction }, ':none'] }
+            zone: { zoneExpr: { concat: ['available-', { param: faction }, ':none'] } }
             filter: [{ prop: type, eq: { param: pieceType } }]
           limit: { param: maxPieces }
           effects:

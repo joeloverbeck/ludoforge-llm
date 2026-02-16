@@ -505,7 +505,7 @@ export const validateOptionsQuery = (
       return;
     }
     case 'tokensInZone': {
-      validateZoneSelector(diagnostics, query.zone, `${path}.zone`, context);
+      validateZoneRef(diagnostics, query.zone, `${path}.zone`, context);
       if (query.filter) {
         validateTokenFilterPredicates(diagnostics, query.filter, `${path}.filter`, context);
       }
@@ -545,18 +545,18 @@ export const validateOptionsQuery = (
       return;
     }
     case 'adjacentZones': {
-      validateZoneSelector(diagnostics, query.zone, `${path}.zone`, context);
+      validateZoneRef(diagnostics, query.zone, `${path}.zone`, context);
       return;
     }
     case 'tokensInAdjacentZones': {
-      validateZoneSelector(diagnostics, query.zone, `${path}.zone`, context);
+      validateZoneRef(diagnostics, query.zone, `${path}.zone`, context);
       if (query.filter) {
         validateTokenFilterPredicates(diagnostics, query.filter, `${path}.filter`, context);
       }
       return;
     }
     case 'connectedZones': {
-      validateZoneSelector(diagnostics, query.zone, `${path}.zone`, context);
+      validateZoneRef(diagnostics, query.zone, `${path}.zone`, context);
       if (query.via) {
         validateConditionAst(diagnostics, query.via, `${path}.via`, context);
       }

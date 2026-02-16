@@ -514,6 +514,99 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('accepts tokensInZone domains with dynamic zoneExpr selectors', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$choice',
+              domain: {
+                query: 'tokensInZone',
+                zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.path.startsWith('actions[0].params[0].domain.zone')),
+      false,
+    );
+  });
+
+  it('validates nested zoneExpr ValueExpr in dynamic tokensInZone domains', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$choice',
+              domain: {
+                query: 'tokensInZone',
+                zone: { zoneExpr: { ref: 'gvar', var: 'missingGlobal' } },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'REF_GVAR_MISSING' && diag.path === 'actions[0].params[0].domain.zone.zoneExpr.var',
+      ),
+    );
+  });
+
+  it('accepts adjacent/connected zone queries with dynamic zoneExpr selectors', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          params: [
+            {
+              name: '$adj',
+              domain: {
+                query: 'adjacentZones',
+                zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+              },
+            },
+            {
+              name: '$conn',
+              domain: {
+                query: 'connectedZones',
+                zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(
+      diagnostics.some((diag) => diag.path.startsWith('actions[0].params[0].domain.zone')),
+      false,
+    );
+    assert.equal(
+      diagnostics.some((diag) => diag.path.startsWith('actions[0].params[1].domain.zone')),
+      false,
+    );
+  });
+
   it('accepts aggregate valueExpr over non-numeric query items', () => {
     const base = createValidGameDef();
     const def = {

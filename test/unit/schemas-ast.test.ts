@@ -310,6 +310,7 @@ describe('AST and selector schemas', () => {
   it('parses connectedZones query with traversal options', () => {
     const queries: OptionsQuery[] = [
       { query: 'connectedZones', zone: 'board:a' },
+      { query: 'connectedZones', zone: { zoneExpr: { ref: 'binding', name: '$zone' } } },
       { query: 'connectedZones', zone: 'board:a', includeStart: true },
       { query: 'connectedZones', zone: 'board:a', maxDepth: 2 },
       {
@@ -326,9 +327,25 @@ describe('AST and selector schemas', () => {
     }
   });
 
+  it('parses adjacent spatial queries with ZoneRef selectors', () => {
+    const adjacent: OptionsQuery = {
+      query: 'adjacentZones',
+      zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+    };
+    const tokensInAdjacent: OptionsQuery = {
+      query: 'tokensInAdjacentZones',
+      zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+      filter: [{ prop: 'faction', op: 'eq', value: 'NVA' }],
+    };
+
+    assert.deepEqual(OptionsQuerySchema.parse(adjacent), adjacent);
+    assert.deepEqual(OptionsQuerySchema.parse(tokensInAdjacent), tokensInAdjacent);
+  });
+
   it('parses tokensInZone query with and without filter', () => {
     const queries: OptionsQuery[] = [
       { query: 'tokensInZone', zone: 'board:a' },
+      { query: 'tokensInZone', zone: { zoneExpr: { ref: 'binding', name: '$zone' } } },
       { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'eq', value: 'US' }] },
       { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'neq', value: 'NVA' }] },
       { query: 'tokensInZone', zone: 'board:a', filter: [{ prop: 'faction', op: 'in', value: ['US', 'ARVN'] }] },
@@ -498,6 +515,12 @@ describe('AST and selector schemas', () => {
       filter: { prop: 'faction', op: 'eq', value: 'US' },
     });
     assert.equal(notArray.success, false);
+
+    const malformedZoneRef = OptionsQuerySchema.safeParse({
+      query: 'tokensInZone',
+      zone: { zoneExpr: 'board:a', extra: true },
+    });
+    assert.equal(malformedZoneRef.success, false);
 
     const badTokensInMapSpacesFilter = OptionsQuerySchema.safeParse({
       query: 'tokensInMapSpaces',

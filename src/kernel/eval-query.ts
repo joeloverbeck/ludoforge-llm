@@ -4,7 +4,8 @@ import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitWarning } from './execution-collector.js';
 import { resolveBindingTemplate } from './binding-template.js';
-import { resolvePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
+import { resolvePlayerSel } from './resolve-selectors.js';
+import { resolveZoneRef } from './resolve-zone-ref.js';
 import { asPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import { queryAdjacentZones, queryConnectedZones, queryTokensInAdjacentZones } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
@@ -394,7 +395,7 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
       return combined;
     }
     case 'tokensInZone': {
-      const zoneId = resolveSingleZoneSel(query.zone, ctx);
+      const zoneId = resolveZoneRef(query.zone, ctx);
       const zoneTokens = ctx.state.zones[String(zoneId)];
       if (zoneTokens === undefined) {
         throw missingVarError(`Zone state not found for selector result: ${zoneId}`, {
@@ -513,14 +514,14 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
     }
 
     case 'adjacentZones': {
-      const zoneId = resolveSingleZoneSel(query.zone, ctx);
+      const zoneId = resolveZoneRef(query.zone, ctx);
       const zones = queryAdjacentZones(ctx.adjacencyGraph, zoneId);
       assertWithinBounds(zones.length, query, maxQueryResults);
       return zones;
     }
 
     case 'tokensInAdjacentZones': {
-      const zoneId = resolveSingleZoneSel(query.zone, ctx);
+      const zoneId = resolveZoneRef(query.zone, ctx);
       const tokens = queryTokensInAdjacentZones(ctx.adjacencyGraph, ctx.state, zoneId);
       const filtered = query.filter !== undefined ? applyTokenFilters(tokens, query.filter, ctx) : tokens;
       assertWithinBounds(filtered.length, query, maxQueryResults);
@@ -528,7 +529,7 @@ export function evalQuery(query: OptionsQuery, ctx: EvalContext): readonly Query
     }
 
     case 'connectedZones': {
-      const zoneId = resolveSingleZoneSel(query.zone, ctx);
+      const zoneId = resolveZoneRef(query.zone, ctx);
       const options =
         query.includeStart === undefined && query.maxDepth === undefined
           ? undefined

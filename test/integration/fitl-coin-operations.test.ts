@@ -674,7 +674,7 @@ describe('FITL COIN operations integration', () => {
         node?.forEach !== undefined &&
         node.forEach.limit === 2 &&
         node.forEach.over?.query === 'tokensInZone' &&
-        node.forEach.over?.zone === 'available-ARVN:none',
+        node.forEach.over?.zone?.zoneExpr?.concat?.join?.('') === 'available-ARVN:none',
       );
       assert.ok(rangerForEach.length >= 1, 'Expected compiled forEach with limit 2 from available-ARVN');
 
@@ -705,7 +705,7 @@ describe('FITL COIN operations integration', () => {
         node?.forEach !== undefined &&
         node.forEach.limit === 6 &&
         node.forEach.over?.query === 'tokensInZone' &&
-        node.forEach.over?.zone === 'available-ARVN:none',
+        node.forEach.over?.zone?.zoneExpr?.concat?.join?.('') === 'available-ARVN:none',
       );
       assert.ok(cubeForEach.length >= 1, 'Expected compiled forEach with limit 6 from available-ARVN');
 

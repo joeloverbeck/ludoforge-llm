@@ -589,6 +589,117 @@ phase: ['main'],
     assert.deepEqual(result.doc.setup, []);
   });
 
+  it('accepts canonical object forms for playerSelector and zoneSelector macro params', () => {
+    const macro: EffectMacroDef = {
+      id: 'typed-selectors',
+      params: [
+        { name: 'player', type: 'playerSelector' },
+        { name: 'zone', type: 'zoneSelector' },
+      ],
+      exports: [],
+      effects: [
+        { setVar: { scope: 'global', var: 'playerSelectorOut', value: { param: 'player' } } },
+        { setVar: { scope: 'global', var: 'zoneSelectorOut', value: { param: 'zone' } } },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macro],
+      setup: [
+        {
+          macro: 'typed-selectors',
+          args: {
+            player: { chosen: '$player' },
+            zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+          },
+        },
+      ],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.equal(result.diagnostics.length, 0);
+    assert.deepEqual(result.doc.setup, [
+      { setVar: { scope: 'global', var: 'playerSelectorOut', value: { chosen: '$player' } } },
+      { setVar: { scope: 'global', var: 'zoneSelectorOut', value: { zoneExpr: { ref: 'binding', name: '$zone' } } } },
+    ]);
+  });
+
+  it('rejects malformed playerSelector object args for selector-typed macro params', () => {
+    const macro: EffectMacroDef = {
+      id: 'typed-player',
+      params: [{ name: 'player', type: 'playerSelector' }],
+      exports: [],
+      effects: [{ setVar: { scope: 'global', var: 'playerSelectorOut', value: { param: 'player' } } }],
+    };
+    const doc = makeDoc({
+      effectMacros: [macro],
+      setup: [{ macro: 'typed-player', args: { player: { name: 'actor' } } }],
+    });
+
+    const result = expandEffectMacros(doc);
+    const violation = result.diagnostics.find((d) => d.code === 'EFFECT_MACRO_ARG_CONSTRAINT_VIOLATION');
+    assert.ok(violation !== undefined);
+    assert.equal(violation?.path, 'setup[0].args.player');
+    assert.deepEqual(result.doc.setup, []);
+  });
+
+  it('rewrites chosen bindings in playerSelector object args for nested macro invocations', () => {
+    const inner: EffectMacroDef = {
+      id: 'inner-player',
+      params: [{ name: 'player', type: 'playerSelector' }],
+      exports: [],
+      effects: [{ setVar: { scope: 'global', var: 'playerSelectorOut', value: { param: 'player' } } }],
+    };
+    const outer: EffectMacroDef = {
+      id: 'outer-player',
+      params: [],
+      exports: [],
+      effects: [
+        { chooseOne: { bind: '$choice', options: { query: 'players' } } },
+        { macro: 'inner-player', args: { player: { chosen: '$choice' } } },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [inner, outer],
+      setup: [{ macro: 'outer-player', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.equal(result.diagnostics.length, 0);
+
+    const choose = result.doc.setup?.[0] as { chooseOne: { bind: string } };
+    const playerOut = result.doc.setup?.[1] as { setVar: { value: { chosen: string } } };
+    assert.equal(playerOut.setVar.value.chosen, choose.chooseOne.bind);
+  });
+
+  it('rewrites zoneExpr string bindings in zoneSelector object args for nested macro invocations', () => {
+    const inner: EffectMacroDef = {
+      id: 'inner-zone',
+      params: [{ name: 'zone', type: 'zoneSelector' }],
+      exports: [],
+      effects: [{ setVar: { scope: 'global', var: 'zoneSelectorOut', value: { param: 'zone' } } }],
+    };
+    const outer: EffectMacroDef = {
+      id: 'outer-zone',
+      params: [],
+      exports: [],
+      effects: [
+        { chooseOne: { bind: '$choice', options: { query: 'players' } } },
+        { macro: 'inner-zone', args: { zone: { zoneExpr: 'discard:{$choice}' } } },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [inner, outer],
+      setup: [{ macro: 'outer-zone', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.equal(result.diagnostics.length, 0);
+
+    const choose = result.doc.setup?.[0] as { chooseOne: { bind: string } };
+    const zoneOut = result.doc.setup?.[1] as { setVar: { value: { zoneExpr: string } } };
+    assert.equal(zoneOut.setVar.value.zoneExpr, `discard:{${choose.chooseOne.bind}}`);
+  });
+
   it('expands macros nested inside forEach effects', () => {
     const macro: EffectMacroDef = {
       id: 'inc-var',

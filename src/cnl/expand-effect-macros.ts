@@ -299,6 +299,33 @@ function describeAllowedTokenTraitValues(values: readonly string[]): string {
   return values.length === 0 ? '(none)' : values.map((value) => JSON.stringify(value)).join(', ');
 }
 
+function isCanonicalPlayerSelectorObject(value: unknown): value is { readonly id: number } | { readonly chosen: string } | { readonly relative: 'left' | 'right' } {
+  if (!isRecord(value) || Array.isArray(value)) {
+    return false;
+  }
+
+  const keys = Object.keys(value);
+  if (keys.length !== 1) {
+    return false;
+  }
+
+  if ('id' in value) {
+    return typeof value.id === 'number' && Number.isInteger(value.id);
+  }
+  if ('chosen' in value) {
+    return typeof value.chosen === 'string';
+  }
+  if ('relative' in value) {
+    return value.relative === 'left' || value.relative === 'right';
+  }
+
+  return false;
+}
+
+function isCanonicalZoneRefObject(value: unknown): value is { readonly zoneExpr: unknown } {
+  return isRecord(value) && !Array.isArray(value) && Object.keys(value).length === 1 && 'zoneExpr' in value;
+}
+
 function argumentSatisfiesConstraint(value: unknown, constraint: NormalizedMacroParamConstraint): boolean {
   switch (constraint.kind) {
     case 'string':
@@ -317,10 +344,12 @@ function argumentSatisfiesConstraint(value: unknown, constraint: NormalizedMacro
       return isRecord(value) && typeof value.query === 'string';
     case 'bindingName':
     case 'bindingTemplate':
-    case 'zoneSelector':
-    case 'playerSelector':
     case 'tokenSelector':
       return typeof value === 'string';
+    case 'playerSelector':
+      return typeof value === 'string' || isCanonicalPlayerSelectorObject(value);
+    case 'zoneSelector':
+      return typeof value === 'string' || isCanonicalZoneRefObject(value);
     case 'enum':
       return typeof value === 'string' && constraint.values.includes(value);
     case 'literals':
@@ -780,18 +809,34 @@ function rewriteBindingAwareMacroArgValue(
   constraint: NormalizedMacroParamConstraint,
   renameMap: ReadonlyMap<string, string>,
 ): unknown {
-  if (typeof value !== 'string') {
-    return value;
-  }
-
   switch (constraint.kind) {
     case 'bindingName':
     case 'bindingTemplate':
+      return typeof value === 'string' ? rewriteBindingTemplate(value, renameMap) : value;
     case 'playerSelector':
-    case 'tokenSelector':
-      return rewriteBindingTemplate(value, renameMap);
+      if (typeof value === 'string') {
+        return rewriteBindingTemplate(value, renameMap);
+      }
+      if (isCanonicalPlayerSelectorObject(value) && 'chosen' in value) {
+        const rewritten = rewriteBindingTemplate(value.chosen, renameMap);
+        if (rewritten !== value.chosen) {
+          return { ...value, chosen: rewritten };
+        }
+      }
+      return value;
     case 'zoneSelector':
-      return rewriteZoneSelectorBinding(value, renameMap);
+      if (typeof value === 'string') {
+        return rewriteZoneSelectorBinding(value, renameMap);
+      }
+      if (isCanonicalZoneRefObject(value) && typeof value.zoneExpr === 'string') {
+        const rewrittenZoneExpr = rewriteZoneSelectorBinding(value.zoneExpr, renameMap);
+        if (rewrittenZoneExpr !== value.zoneExpr) {
+          return { ...value, zoneExpr: rewrittenZoneExpr };
+        }
+      }
+      return value;
+    case 'tokenSelector':
+      return typeof value === 'string' ? rewriteBindingTemplate(value, renameMap) : value;
     default:
       return value;
   }

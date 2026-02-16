@@ -1,70 +1,78 @@
-# TEXHOLKERPRIGAMTOU-017: Runtime Asset Indexing and Precompiled Table Accessors
+# TEXHOLKERPRIGAMTOU-017: Selector Parity for Macros and Dynamic Zone Queries
 
 **Status**: ✅ COMPLETED
 **Priority**: HIGH
-**Effort**: Medium
+**Effort**: Large
 **Dependencies**: TEXHOLKERPRIGAMTOU-016
-**Blocks**: TEXHOLKERPRIGAMTOU-018
+**Blocks**: TEXHOLKERPRIGAMTOU-018, TEXHOLKERPRIGAMTOU-020
 
-## 1) Reassessed assumptions (code/tests reality)
+## 1) What must change / be implemented
 
-This ticket's original assumptions were partially outdated.
+Close remaining selector expressiveness gaps so GameSpecDoc can model dynamic card/board logic without engine special cases.
 
-What is already implemented in code:
-- `src/kernel/runtime-table-index.ts` builds runtime table indexes from `runtimeDataAssets` + `tableContracts`.
-- `src/kernel/eval-query.ts` (`assetRows`) already uses indexed table entries; row-path traversal is not repeated per query call.
-- `src/kernel/resolve-ref.ts` (`assetField`) already uses table index lookup.
-- Existing tests already cover baseline runtime table indexing behavior and typed errors (`test/unit/runtime-table-index.test.ts`, `test/unit/eval-query.test.ts`, `test/unit/resolve-ref.test.ts`).
+### Reassessed assumptions (current code reality)
 
-Remaining discrepancy / gap:
-- `assetField` still performs repeated linear field lookup (`entry.contract.fields.find(...)`) instead of a precompiled field accessor map.
-- Determinism/collision behavior and contract-level edge cases are only partially covered by tests.
+1. `ZoneRef` (`string | { zoneExpr: ValueExpr }`) already exists and is already used by effect surfaces.
+2. Query surfaces are not yet parity-complete: `tokensInZone.zone` is still string-only in AST types, schema, lowering, runtime, and behavior validation.
+3. Macro arg constraint checking is not parity-complete with canonical selector contracts:
+- `playerSelector` currently accepts only string args in macro constraints (canonical player selector contract also allows object forms).
+- `zoneSelector` currently accepts only string args in macro constraints (canonical runtime-capable zone selector contract is `ZoneRef`).
+4. `compile-effects.ts` already supports `ZoneRef`; this ticket should not change effect-zone lowering unless a failing test requires it.
 
-## 2) Updated scope
+1. Extend macro param constraint checking so `playerSelector` and `zoneSelector` accept canonical selector object forms.
+2. Add canonical dynamic-zone query support for token queries by allowing `tokensInZone.zone` to accept `ZoneRef` (string or `{ zoneExpr }`).
+3. Keep a single canonical representation; do not add alias syntax or parallel query variants.
+4. Ensure lowering/validation/runtime all agree on the same selector/query contract.
+5. Update:
+- `src/cnl/expand-effect-macros.ts`
+- `src/cnl/compile-conditions.ts` (query lowering)
+- `src/kernel/types-ast.ts`
+- `src/kernel/schemas-ast.ts`
+- `src/kernel/eval-query.ts`
+- `src/kernel/validate-gamedef-behavior.ts`
+- relevant tests under `test/unit/`
+- related schema artifacts only if generated outputs change
+6. Keep this generic for any game; no poker-specific branches.
+7. No alias syntaxes; exactly one canonical representation.
 
-Refine runtime table indexing to complete the precompiled-accessor architecture:
-- Extend runtime index entries with precompiled field contract lookup (`fieldContractsByName`) built once.
-- Update `resolve-ref`/`eval-query` paths to consume precompiled field metadata and avoid repeated per-call contract scans.
-- Keep runtime semantics and error codes stable.
-- Strengthen unit tests around deterministic indexing and normalization collision behavior.
+### Scope guardrails
 
-Out of scope:
-- Introducing game-specific paths/optimizations.
-- Timing-based performance assertions in CI (flaky and environment-dependent).
+1. Do not introduce a second dynamic token query kind; extend the existing canonical `tokensInZone` contract.
+2. Do not broaden this ticket into non-token query redesign (`adjacentZones`, `connectedZones`, etc.) unless a required parity break is discovered.
+3. Prefer surgical edits over broad refactors; avoid rewriting entire files.
 
-## 3) Invariants that must hold
+## 2) Invariants that should pass
 
-1. Query/ref results are identical before/after accessor precompilation.
-2. Table row ordering remains identical to payload array order.
-3. Runtime table/field lookup is indexed (no repeated per-call contract field scans).
-4. No mutable global cache/state is introduced for runtime table indexing.
-5. Deterministic behavior under NFC-normalized asset-id collisions (first declaration wins).
+1. Macro selector constraints and effect/query selector capabilities are contract-compatible.
+2. Dynamic zone token queries evaluate deterministically.
+3. Invalid selector/query shapes produce structured diagnostics with stable paths.
+4. Existing static-zone queries keep identical behavior.
+5. Engine remains game-agnostic.
 
-## 4) Tests required
+## 3) Tests that should pass
 
-1. Unit: runtime table index exposes deterministic field contract lookup for each contract.
-2. Unit: NFC-normalized runtime asset-id collisions resolve deterministically (first asset wins).
-3. Unit: `assetRows` behavior remains unchanged for valid queries and typed errors.
-4. Unit: `assetField` behavior remains unchanged while using indexed field contracts.
-5. Regression: `npm run build`, relevant unit tests, `npm test`, `npm run lint`.
+1. Unit: macro arg constraint accepts canonical `playerSelector` object forms and `ZoneRef` object forms for `zoneSelector`; rejects malformed shapes.
+2. Unit: compiler lowers `tokensInZone.zone` as canonical `ZoneRef` (string or `{ zoneExpr }`) with stable diagnostics for invalid forms.
+3. Unit: runtime evaluates `tokensInZone` with dynamic `{ zoneExpr }` deterministically.
+4. Unit: behavior validation validates `tokensInZone.zone` via `ZoneRef` contract (including nested `zoneExpr` ValueExpr validation).
+5. Unit: AST schema accepts canonical `tokensInZone.zone` `ZoneRef` object form and rejects malformed forms.
+6. Regression: `npm run build`, `npm test`, `npm run lint`.
 
 ## Outcome
 
-- Completion date: 2026-02-15
-- What was actually changed:
-  - Added precompiled field contract accessor map (`fieldContractsByName`) to runtime table index entries in `src/kernel/runtime-table-index.ts`.
-  - Updated `assetField` resolution to use indexed field contracts instead of per-call linear scans in `src/kernel/resolve-ref.ts`.
-  - Removed global lazy cache path (`getRuntimeTableIndex` + `WeakMap`) and standardized on explicit `buildRuntimeTableIndex`.
-  - Threaded prebuilt runtime table indexes through core runtime/evaluation paths (`apply-move`, `legal-moves`, `legal-choices`, `terminal`, `initial-state`, `trigger-dispatch`) so hot-path evaluation can consume precompiled index state.
-  - Strengthened runtime index tests in `test/unit/runtime-table-index.test.ts`:
-    - asserted indexed field contract lookup is present and typed.
-    - added deterministic NFC-collision test proving first-declared runtime asset wins.
-    - replaced cache-identity assertion with deterministic rebuild assertion.
+- Completion date: 2026-02-16
+- What was changed:
+- Implemented canonical `ZoneRef` support for `tokensInZone.zone` across AST types, schema, compiler lowering, runtime query evaluation, and behavior validation.
+- Extended effect-macro arg constraint parity so `playerSelector` accepts canonical object forms and `zoneSelector` accepts canonical `ZoneRef` object form.
+- Added/updated unit coverage for compiler lowering, runtime behavior, schema contract, macro constraint behavior, and GameDef validation for dynamic token-zone queries.
+- Updated production Fire in the Lake macro data to emit canonical `tokensInZone.zone: { zoneExpr: ... }` instead of non-canonical raw value-expr object.
+- Updated integration assertions that were pinned to pre-canonicalized static string zones.
+- Regenerated schema artifacts after schema contract changes.
 - Deviations from original plan:
-  - Original ticket assumed runtime table indexing itself was missing; reassessment showed it was already implemented and cached. Work was narrowed to the remaining accessor/index gap and test hardening.
-  - Kept out timing-based performance assertions in favor of deterministic structural/behavioral tests.
+- `src/cnl/compile-effects.ts` did not require changes after reassessment because effect-side `ZoneRef` support already existed.
+- In addition to the originally listed files, a targeted data/macro fixture update was required to align production specs with the new canonical query zone contract.
 - Verification results:
-  - `npm run build` passed.
-  - Targeted tests passed: `dist/test/unit/runtime-table-index.test.js`, `dist/test/unit/resolve-ref.test.js`, `dist/test/unit/eval-query.test.js`.
-  - `npm test` passed.
-  - `npm run lint` passed.
+- `npm run build`: pass
+- Targeted unit tests for touched areas: pass
+- `npm test`: pass
+- `npm run lint`: pass

@@ -136,7 +136,7 @@ export interface AssetRowPredicate {
 
 export type OptionsQuery =
   | { readonly query: 'concat'; readonly sources: readonly [OptionsQuery, ...OptionsQuery[]] }
-  | { readonly query: 'tokensInZone'; readonly zone: ZoneSel; readonly filter?: readonly TokenFilterPredicate[] }
+  | { readonly query: 'tokensInZone'; readonly zone: ZoneRef; readonly filter?: readonly TokenFilterPredicate[] }
   | {
       readonly query: 'assetRows';
       readonly tableId: string;
@@ -160,11 +160,11 @@ export type OptionsQuery =
   | { readonly query: 'players' }
   | { readonly query: 'zones'; readonly filter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST } }
   | { readonly query: 'mapSpaces'; readonly filter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST } }
-  | { readonly query: 'adjacentZones'; readonly zone: ZoneSel }
-  | { readonly query: 'tokensInAdjacentZones'; readonly zone: ZoneSel; readonly filter?: readonly TokenFilterPredicate[] }
+  | { readonly query: 'adjacentZones'; readonly zone: ZoneRef }
+  | { readonly query: 'tokensInAdjacentZones'; readonly zone: ZoneRef; readonly filter?: readonly TokenFilterPredicate[] }
   | {
       readonly query: 'connectedZones';
-      readonly zone: ZoneSel;
+      readonly zone: ZoneRef;
       readonly via?: ConditionAST;
       readonly includeStart?: boolean;
       readonly maxDepth?: number;

@@ -9,6 +9,7 @@ import type {
   Reference,
   TokenFilterPredicate,
   ValueExpr,
+  ZoneRef,
 } from '../kernel/types.js';
 import { hasBindingIdentifier, rankBindingIdentifierAlternatives } from '../kernel/binding-identifier-contract.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
@@ -552,7 +553,7 @@ export function lowerQueryNode(
       };
     }
     case 'tokensInZone': {
-      const zone = lowerZoneSelector(source.zone, context, `${path}.zone`);
+      const zone = lowerZoneRef(source.zone, context, `${path}.zone`);
       if (zone.value === null) {
         return { value: null, diagnostics: zone.diagnostics };
       }
@@ -819,7 +820,7 @@ export function lowerQueryNode(
       ]);
     }
     case 'adjacentZones': {
-      const zone = lowerZoneSelector(source.zone, context, `${path}.zone`);
+      const zone = lowerZoneRef(source.zone, context, `${path}.zone`);
       if (zone.value === null) {
         return { value: null, diagnostics: zone.diagnostics };
       }
@@ -829,7 +830,7 @@ export function lowerQueryNode(
       };
     }
     case 'tokensInAdjacentZones': {
-      const zone = lowerZoneSelector(source.zone, context, `${path}.zone`);
+      const zone = lowerZoneRef(source.zone, context, `${path}.zone`);
       if (zone.value === null) {
         return { value: null, diagnostics: zone.diagnostics };
       }
@@ -852,7 +853,7 @@ export function lowerQueryNode(
       };
     }
     case 'connectedZones': {
-      const zone = lowerZoneSelector(source.zone, context, `${path}.zone`);
+      const zone = lowerZoneRef(source.zone, context, `${path}.zone`);
       const via =
         source.via === undefined
           ? { value: undefined, diagnostics: [] as readonly Diagnostic[] }
@@ -912,6 +913,44 @@ export function lowerQueryNode(
     default:
       return missingCapability(path, 'query kind', source.query, SUPPORTED_QUERY_KINDS);
   }
+}
+
+function lowerZoneRef(
+  source: unknown,
+  context: ConditionLoweringContext,
+  path: string,
+): ConditionLoweringResult<ZoneRef> {
+  if (typeof source === 'string') {
+    const zone = lowerZoneSelector(source, context, path);
+    if (zone.value === null) {
+      return { value: null, diagnostics: zone.diagnostics };
+    }
+    return {
+      value: zone.value,
+      diagnostics: zone.diagnostics,
+    };
+  }
+
+  if (!isRecord(source) || !('zoneExpr' in source)) {
+    return {
+      value: null,
+      diagnostics: [
+        {
+          code: 'CNL_COMPILER_ZONE_SELECTOR_INVALID',
+          path,
+          severity: 'error',
+          message: 'Zone selector must be a string or { zoneExpr: <ValueExpr> }.',
+          suggestion: 'Use "zoneBase:qualifier" for static selectors, or wrap dynamic selectors in { zoneExpr: ... }.',
+        },
+      ],
+    };
+  }
+
+  const valueResult = lowerValueNode(source.zoneExpr, context, `${path}.zoneExpr`);
+  if (valueResult.value === null) {
+    return { value: null, diagnostics: valueResult.diagnostics };
+  }
+  return { value: { zoneExpr: valueResult.value }, diagnostics: valueResult.diagnostics };
 }
 
 function lowerIntDomainBound(

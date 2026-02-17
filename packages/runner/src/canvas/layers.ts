@@ -1,0 +1,58 @@
+import { Container } from 'pixi.js';
+
+export interface LayerHierarchy {
+  readonly boardGroup: Container;
+  readonly adjacencyLayer: Container;
+  readonly zoneLayer: Container;
+  readonly tokenGroup: Container;
+  readonly effectsGroup: Container;
+  readonly interfaceGroup: Container;
+  readonly hudGroup: Container;
+}
+
+function configureLayer(
+  layer: Container,
+  eventMode: 'static' | 'none',
+  interactiveChildren: boolean,
+): void {
+  layer.eventMode = eventMode;
+  layer.interactiveChildren = interactiveChildren;
+  layer.sortableChildren = true;
+}
+
+export function createLayerHierarchy(stage: Container): LayerHierarchy {
+  const boardGroup = new Container();
+  const adjacencyLayer = new Container();
+  const zoneLayer = new Container();
+  const tokenGroup = new Container();
+  const effectsGroup = new Container();
+  const interfaceGroup = new Container();
+  const hudGroup = new Container();
+
+  configureLayer(boardGroup, 'static', true);
+  configureLayer(tokenGroup, 'static', true);
+  configureLayer(effectsGroup, 'none', false);
+  configureLayer(interfaceGroup, 'none', false);
+  configureLayer(hudGroup, 'none', false);
+
+  adjacencyLayer.eventMode = 'none';
+  adjacencyLayer.interactiveChildren = false;
+  adjacencyLayer.sortableChildren = true;
+
+  zoneLayer.eventMode = 'none';
+  zoneLayer.interactiveChildren = true;
+  zoneLayer.sortableChildren = true;
+
+  boardGroup.addChild(adjacencyLayer, zoneLayer);
+  stage.addChild(boardGroup, tokenGroup, effectsGroup, interfaceGroup, hudGroup);
+
+  return {
+    boardGroup,
+    adjacencyLayer,
+    zoneLayer,
+    tokenGroup,
+    effectsGroup,
+    interfaceGroup,
+    hudGroup,
+  };
+}

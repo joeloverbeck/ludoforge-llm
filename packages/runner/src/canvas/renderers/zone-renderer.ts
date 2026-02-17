@@ -1,7 +1,8 @@
 import { Container, Graphics, Text } from 'pixi.js';
 
 import type { RenderMapSpace, RenderZone } from '../../model/render-model';
-import type { Position, ZoneRenderer } from './renderer-types';
+import type { Position } from '../geometry';
+import type { ZoneRenderer } from './renderer-types';
 import { ContainerPool } from './container-pool';
 
 const ZONE_WIDTH = 180;

@@ -1,17 +1,13 @@
 import type { PlayerId } from '@ludoforge/engine';
 import type { Container } from 'pixi.js';
 
+import type { Position } from '../geometry';
 import type {
   RenderAdjacency,
   RenderMapSpace,
   RenderToken,
   RenderZone,
 } from '../../model/render-model';
-
-export interface Position {
-  readonly x: number;
-  readonly y: number;
-}
 
 export interface ZoneRenderer {
   update(

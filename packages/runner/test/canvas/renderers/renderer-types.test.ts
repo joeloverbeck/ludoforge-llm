@@ -6,10 +6,10 @@ import type { Container } from 'pixi.js';
 import type {
   AdjacencyRenderer,
   FactionColorProvider,
-  Position,
   TokenRenderer,
   ZoneRenderer,
 } from '../../../src/canvas/renderers/renderer-types';
+import type { Position } from '../../../src/canvas/geometry';
 import type {
   RenderAdjacency,
   RenderMapSpace,

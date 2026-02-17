@@ -136,7 +136,7 @@ vi.mock('pixi.js', () => ({
 
 import { createZoneRenderer } from '../../../src/canvas/renderers/zone-renderer';
 import { ContainerPool } from '../../../src/canvas/renderers/container-pool';
-import type { Position } from '../../../src/canvas/renderers/renderer-types';
+import type { Position } from '../../../src/canvas/geometry';
 import type { RenderMapSpace, RenderZone } from '../../../src/model/render-model';
 
 function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {

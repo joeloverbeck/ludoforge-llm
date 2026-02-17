@@ -85,7 +85,7 @@ vi.mock('pixi.js', () => ({
 }));
 
 import { createAdjacencyRenderer } from '../../../src/canvas/renderers/adjacency-renderer';
-import type { Position } from '../../../src/canvas/renderers/renderer-types';
+import type { Position } from '../../../src/canvas/geometry';
 import type { RenderAdjacency } from '../../../src/model/render-model';
 
 function makeAdjacency(overrides: Partial<RenderAdjacency> = {}): RenderAdjacency {

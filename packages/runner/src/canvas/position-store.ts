@@ -1,4 +1,4 @@
-import type { Position } from './renderers/renderer-types';
+import type { Position } from './geometry';
 
 export interface ZonePositionMap {
   readonly positions: ReadonlyMap<string, Position>;

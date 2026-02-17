@@ -1,7 +1,8 @@
 import { Graphics, type Container } from 'pixi.js';
 
 import type { RenderAdjacency } from '../../model/render-model';
-import type { AdjacencyRenderer, Position } from './renderer-types';
+import type { Position } from '../geometry';
+import type { AdjacencyRenderer } from './renderer-types';
 
 const DEFAULT_LINE_STYLE = {
   color: 0x6b7280,

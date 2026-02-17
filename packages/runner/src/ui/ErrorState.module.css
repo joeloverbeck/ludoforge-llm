@@ -1,0 +1,32 @@
+.container {
+  composes: panel from './shared.module.css';
+  composes: textPrimary from './shared.module.css';
+  composes: fontUi from './shared.module.css';
+  display: grid;
+  gap: var(--space-sm);
+  align-content: center;
+  justify-items: start;
+  min-height: 220px;
+  pointer-events: auto;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+}
+
+.message {
+  margin: 0;
+  color: var(--danger);
+}
+
+.retryButton {
+  composes: interactive from './shared.module.css';
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+  padding: var(--space-xs) var(--space-md);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-md);
+}

@@ -14,7 +14,10 @@
   },
   "dependencies": {
     "@ludoforge/engine": "workspace:*",
+    "@pixi/react": "^8.0.0",
     "comlink": "^4.4.2",
+    "pixi-viewport": "^6.0.1",
+    "pixi.js": "^8.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zustand": "^5.0.11"

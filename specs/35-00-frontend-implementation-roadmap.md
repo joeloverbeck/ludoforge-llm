@@ -76,6 +76,10 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [x] Monorepo builds with `pnpm turbo build`
 - [x] Existing engine tests pass via `pnpm -F @ludoforge/engine test`
 - [ ] Kernel runs in Web Worker, Comlink RPC is typed and functional
+- [ ] Effect trace enabled by default — `applyMove()` returns `effectTrace` for animation pipeline
+- [ ] `playSequence()` batch execution verified with 10+ move sequences
+- [ ] `enumerateLegalMoves()` exposes move enumeration warnings to UI layer
+- [ ] `WorkerError` error taxonomy implemented with structured error codes
 - [ ] Zustand store receives state updates from worker
 - [ ] `deriveRenderModel()` is unit-tested with both FITL and Texas Hold'em GameDefs
 - [ ] Hidden information filtering verified (owner-only zones, reveal grants)
@@ -130,8 +134,8 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 | `GameDef` JSON | `compileGameSpecToGameDef()` in `packages/engine/src/cnl/` | Worker bridge (Spec 36) loads GameDef to initialize kernel |
 | `GameState` | `initialState()` in `packages/engine/src/kernel/` | Zustand store (Spec 37) holds current state |
 | `Move` / `LegalMovesResult` | `legalMoves()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) renders action toolbar |
-| `ChoicePendingRequest` | `legalChoices()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) renders progressive choice UI |
-| `EffectTraceEntry[]` | `applyMove()` in `packages/engine/src/kernel/` | Animation system (Spec 40) drives GSAP timelines |
+| `ChoiceRequest` (pending / complete / illegal) | `legalChoices()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) renders progressive choice UI |
+| `EffectTraceEntry[]` | `applyMove()` with `{ trace: true }` in `packages/engine/src/kernel/` | Animation system (Spec 40) drives GSAP timelines |
 | `TerminalResult` | `terminalResult()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) displays game end state |
 | `GameSpecDoc` metadata | Parsed from Markdown+YAML | Game selection screen (Spec 42) displays game info |
 

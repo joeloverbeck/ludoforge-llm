@@ -19,12 +19,23 @@ interface ZoneVisualElements {
   readonly markersLabel: Text;
 }
 
+interface ZoneRendererOptions {
+  readonly bindSelection?: (
+    zoneContainer: Container,
+    zoneId: string,
+    isSelectable: () => boolean,
+  ) => () => void;
+}
+
 export function createZoneRenderer(
   parentContainer: Container,
   pool: ContainerPool,
+  options: ZoneRendererOptions = {},
 ): ZoneRenderer {
   const zoneContainers = new Map<string, Container>();
   const visualsByContainer = new WeakMap<Container, ZoneVisualElements>();
+  const selectionCleanupByZoneId = new Map<string, () => void>();
+  const selectableByZoneId = new Map<string, boolean>();
 
   return {
     update(
@@ -40,6 +51,11 @@ export function createZoneRenderer(
           continue;
         }
 
+        selectableByZoneId.delete(zoneId);
+        const cleanup = selectionCleanupByZoneId.get(zoneId);
+        cleanup?.();
+        selectionCleanupByZoneId.delete(zoneId);
+
         zoneContainer.removeFromParent();
         pool.release(zoneContainer);
         zoneContainers.delete(zoneId);
@@ -50,7 +66,7 @@ export function createZoneRenderer(
         let zoneContainer = zoneContainers.get(zone.id);
         if (zoneContainer === undefined) {
           zoneContainer = pool.acquire();
-          zoneContainer.eventMode = 'none';
+          zoneContainer.eventMode = options.bindSelection === undefined ? 'none' : 'static';
           zoneContainer.interactiveChildren = false;
 
           const visuals = createZoneVisualElements();
@@ -68,7 +84,20 @@ export function createZoneRenderer(
           visualsByContainer.set(zoneContainer, visuals);
           zoneContainers.set(zone.id, zoneContainer);
           parentContainer.addChild(zoneContainer);
+
+          if (options.bindSelection !== undefined) {
+            selectionCleanupByZoneId.set(
+              zone.id,
+              options.bindSelection(
+                zoneContainer,
+                zone.id,
+                () => selectableByZoneId.get(zone.id) === true,
+              ),
+            );
+          }
         }
+
+        selectableByZoneId.set(zone.id, zone.isSelectable);
 
         const visuals = visualsByContainer.get(zoneContainer);
         if (visuals === undefined) {
@@ -89,6 +118,12 @@ export function createZoneRenderer(
     },
 
     destroy(): void {
+      for (const cleanup of selectionCleanupByZoneId.values()) {
+        cleanup();
+      }
+      selectionCleanupByZoneId.clear();
+      selectableByZoneId.clear();
+
       for (const zoneContainer of zoneContainers.values()) {
         zoneContainer.removeFromParent();
         pool.release(zoneContainer);

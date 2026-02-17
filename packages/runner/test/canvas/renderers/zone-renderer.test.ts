@@ -380,4 +380,28 @@ describe('createZoneRenderer', () => {
     expect(parent.children).toHaveLength(0);
     expect(releaseSpy).toHaveBeenCalledTimes(2);
   });
+
+  it('invokes bound selection cleanup when zones are removed or renderer is destroyed', () => {
+    const parent = new MockContainer();
+    const pool = new ContainerPool();
+    const cleanupByZoneId = new Map<string, ReturnType<typeof vi.fn>>();
+    const bindSelection = vi.fn((_: Container, zoneId: string) => {
+      const cleanup = vi.fn();
+      cleanupByZoneId.set(zoneId, cleanup);
+      return cleanup;
+    });
+    const renderer = createZoneRenderer(parent as unknown as Container, pool, {
+      bindSelection: (zoneContainer, zoneId, _isSelectable) => bindSelection(zoneContainer, zoneId),
+    });
+
+    renderer.update([makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' })], [], new Map());
+    renderer.update([makeZone({ id: 'zone:a' })], [], new Map());
+
+    expect(cleanupByZoneId.get('zone:b')).toHaveBeenCalledTimes(1);
+    expect(cleanupByZoneId.get('zone:a')).toHaveBeenCalledTimes(0);
+
+    renderer.destroy();
+
+    expect(cleanupByZoneId.get('zone:a')).toHaveBeenCalledTimes(1);
+  });
 });

@@ -31,12 +31,23 @@ interface TokenVisualElements {
   readonly label: Text;
 }
 
+interface TokenRendererOptions {
+  readonly bindSelection?: (
+    tokenContainer: Container,
+    tokenId: string,
+    isSelectable: () => boolean,
+  ) => () => void;
+}
+
 export function createTokenRenderer(
   parentContainer: Container,
   colorProvider: FactionColorProvider,
+  options: TokenRendererOptions = {},
 ): TokenRenderer {
   const tokenContainers = new Map<string, Container>();
   const visualsByContainer = new WeakMap<Container, TokenVisualElements>();
+  const selectionCleanupByTokenId = new Map<string, () => void>();
+  const selectableByTokenId = new Map<string, boolean>();
 
   return {
     update(tokens: readonly RenderToken[], zoneContainers: ReadonlyMap<string, Container>): void {
@@ -46,6 +57,11 @@ export function createTokenRenderer(
         if (nextTokenIds.has(tokenId)) {
           continue;
         }
+
+        selectableByTokenId.delete(tokenId);
+        const cleanup = selectionCleanupByTokenId.get(tokenId);
+        cleanup?.();
+        selectionCleanupByTokenId.delete(tokenId);
 
         tokenContainer.removeFromParent();
         tokenContainer.destroy();
@@ -58,7 +74,7 @@ export function createTokenRenderer(
         let tokenContainer = tokenContainers.get(token.id);
         if (tokenContainer === undefined) {
           tokenContainer = new Container();
-          tokenContainer.eventMode = 'none';
+          tokenContainer.eventMode = options.bindSelection === undefined ? 'none' : 'static';
           tokenContainer.interactiveChildren = false;
 
           const visuals = createTokenVisualElements();
@@ -67,7 +83,20 @@ export function createTokenRenderer(
 
           tokenContainers.set(token.id, tokenContainer);
           parentContainer.addChild(tokenContainer);
+
+          if (options.bindSelection !== undefined) {
+            selectionCleanupByTokenId.set(
+              token.id,
+              options.bindSelection(
+                tokenContainer,
+                token.id,
+                () => selectableByTokenId.get(token.id) === true,
+              ),
+            );
+          }
         }
+
+        selectableByTokenId.set(token.id, token.isSelectable);
 
         const visuals = visualsByContainer.get(tokenContainer);
         if (visuals === undefined) {
@@ -101,6 +130,12 @@ export function createTokenRenderer(
     },
 
     destroy(): void {
+      for (const cleanup of selectionCleanupByTokenId.values()) {
+        cleanup();
+      }
+      selectionCleanupByTokenId.clear();
+      selectableByTokenId.clear();
+
       for (const tokenContainer of tokenContainers.values()) {
         tokenContainer.removeFromParent();
         tokenContainer.destroy();

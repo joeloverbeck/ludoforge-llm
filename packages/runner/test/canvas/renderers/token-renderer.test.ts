@@ -412,4 +412,38 @@ describe('createTokenRenderer', () => {
     expect(mapView.size).toBe(0);
     expect(parent.children).toHaveLength(0);
   });
+
+  it('invokes bound selection cleanup when tokens are removed or renderer is destroyed', () => {
+    const parent = new MockContainer();
+    const colorProvider = { getColor: vi.fn(() => '#112233') };
+    const cleanupByTokenId = new Map<string, ReturnType<typeof vi.fn>>();
+    const bindSelection = vi.fn((_: Container, tokenId: string) => {
+      const cleanup = vi.fn();
+      cleanupByTokenId.set(tokenId, cleanup);
+      return cleanup;
+    });
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider, {
+      bindSelection: (tokenContainer, tokenId, _isSelectable) => bindSelection(tokenContainer, tokenId),
+    });
+
+    renderer.update(
+      [makeToken({ id: 'token:1' }), makeToken({ id: 'token:2' })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+    renderer.update(
+      [makeToken({ id: 'token:1' })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    expect(cleanupByTokenId.get('token:2')).toHaveBeenCalledTimes(1);
+    expect(cleanupByTokenId.get('token:1')).toHaveBeenCalledTimes(0);
+
+    renderer.destroy();
+
+    expect(cleanupByTokenId.get('token:1')).toHaveBeenCalledTimes(1);
+  });
 });

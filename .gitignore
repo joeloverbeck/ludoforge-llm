@@ -3,6 +3,7 @@ dist/
 
 # Dependencies
 node_modules/
+.turbo/
 
 # TypeScript
 *.tsbuildinfo

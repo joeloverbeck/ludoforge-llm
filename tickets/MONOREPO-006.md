@@ -128,6 +128,14 @@ Transform from a single-package to a workspace root:
 
 The root ESLint config needs no changes to rule definitions but the `ignores` pattern should confirm it covers the new structure. Verify the existing ignores (`archive/**`, `dist/**`, `node_modules/**`) still work. Since `packages/engine/dist/` matches `dist/**` via relative resolution in flat config — confirm this or add `packages/**/dist/**` if needed.
 
+### 4.5 Turbo outputs scope clarification (no change required)
+
+Do **not** rewrite `turbo.json` output globs in this ticket. The existing task outputs:
+- `"build": { "outputs": ["dist/**"] }`
+- `"schema:artifacts": { "outputs": ["schemas/**"] }`
+
+are evaluated relative to each workspace package task root in Turborepo, which is already the intended package-scoped behavior after the move (`packages/engine/dist/**`, `packages/engine/schemas/**`, etc.).
+
 ### 5. Fix `data/` path in `packages/engine/test/helpers/production-spec-helpers.ts`
 
 Change lines 13-14 from:
@@ -175,6 +183,7 @@ This is the ONLY source code change in the entire restructure — a test infrast
 - Changing engine test logic or assertions.
 - Adding React/JSX ESLint rules (that's MONOREPO-007).
 - CI pipeline setup.
+- Rewriting `turbo.json` output globs for package scoping (already package-relative by design).
 
 ---
 

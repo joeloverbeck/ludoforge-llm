@@ -809,6 +809,32 @@ describe('createGameStore', () => {
     expect(store.getState().error).toBeNull();
   });
 
+  it('non-init bridge errors preserve current lifecycle while setting structured error', () => {
+    const def = compileStoreFixture(5);
+    const workerError: WorkerError = {
+      code: 'INTERNAL_ERROR',
+      message: 'legalChoices exploded',
+    };
+    const bridge = createBridgeStub({
+      init: () => initialState(def, 23, 2),
+      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      terminalResult: () => null,
+      legalChoices: () => {
+        throw workerError;
+      },
+    });
+    const store = createGameStore(bridge);
+
+    store.getState().initGame(def, 23, asPlayerId(0));
+    expect(store.getState().gameLifecycle).toBe('playing');
+
+    store.getState().selectAction(asActionId('tick'));
+
+    expect(store.getState().gameLifecycle).toBe('playing');
+    expect(store.getState().error).toEqual(workerError);
+    expect(store.getState().loading).toBe(false);
+  });
+
   it('setAnimationPlaying toggles animation flag', () => {
     const store = createGameStore(createGameWorker());
     expect(store.getState().animationPlaying).toBe(false);

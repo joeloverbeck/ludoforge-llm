@@ -18,10 +18,9 @@ import { asPlayerId } from '@ludoforge/engine';
 
 import { deriveRenderModel } from '../model/derive-render-model.js';
 import type { RenderModel } from '../model/render-model.js';
+import { assertLifecycleTransition, lifecycleFromTerminal, type GameLifecycle } from './lifecycle-transition.js';
 import type { PartialChoice, PlayerSeat, RenderContext } from './store-types.js';
 import type { GameWorkerAPI, WorkerError } from '../worker/game-worker-api.js';
-
-type GameLifecycle = 'idle' | 'initializing' | 'playing' | 'terminal';
 
 interface GameStoreState {
   readonly gameDef: GameDef | null;
@@ -148,6 +147,7 @@ function buildInitSuccessState(
   playerID: PlayerId,
   legalMoveResult: LegalMoveEnumerationResult,
   terminal: TerminalResult | null,
+  lifecycle: GameLifecycle,
 ): Partial<MutableGameStoreState> {
   return {
     gameDef: def,
@@ -155,7 +155,7 @@ function buildInitSuccessState(
     playerID,
     legalMoveResult,
     terminal,
-    gameLifecycle: toLifecycle(terminal),
+    gameLifecycle: lifecycle,
     error: null,
     effectTrace: [],
     triggerFirings: [],
@@ -164,11 +164,11 @@ function buildInitSuccessState(
   };
 }
 
-function buildInitFailureState(error: unknown): Partial<MutableGameStoreState> {
+function buildInitFailureState(error: unknown, lifecycle: GameLifecycle): Partial<MutableGameStoreState> {
   return {
     ...resetSessionState(),
     error: toWorkerError(error),
-    gameLifecycle: 'idle',
+    gameLifecycle: lifecycle,
   };
 }
 
@@ -185,6 +185,7 @@ function buildStateMutationState(
   gameState: GameState,
   legalMoveResult: LegalMoveEnumerationResult,
   terminal: TerminalResult | null,
+  lifecycle: GameLifecycle,
   effectTrace: readonly EffectTraceEntry[],
   triggerFirings: readonly TriggerLogEntry[],
 ): Partial<MutableGameStoreState> {
@@ -192,7 +193,7 @@ function buildStateMutationState(
     gameState,
     legalMoveResult,
     terminal,
-    gameLifecycle: toLifecycle(terminal),
+    gameLifecycle: lifecycle,
     effectTrace,
     triggerFirings,
     error: null,
@@ -287,10 +288,6 @@ function validateChoiceSubmission(
   }
 
   return null;
-}
-
-function toLifecycle(terminal: TerminalResult | null): GameLifecycle {
-  return terminal === null ? 'playing' : 'terminal';
 }
 
 function buildPlayerSeats(playerCount: number, humanPlayer: PlayerId): ReadonlyMap<PlayerId, PlayerSeat> {
@@ -396,7 +393,11 @@ export function createGameStore(bridge: GameWorkerAPI) {
         try {
           operation();
         } catch (error) {
-          set({ error: toWorkerError(error) });
+          const lifecycle = get().gameLifecycle;
+          set({
+            error: toWorkerError(error),
+            gameLifecycle: assertLifecycleTransition(lifecycle, lifecycle, 'runBridge:error'),
+          });
         } finally {
           set({ loading: false });
         }
@@ -452,8 +453,10 @@ export function createGameStore(bridge: GameWorkerAPI) {
         playerSeats: new Map<PlayerId, PlayerSeat>(),
 
         initGame(def, seed, playerID) {
+          const currentLifecycle = get().gameLifecycle;
+          const initializingLifecycle = assertLifecycleTransition(currentLifecycle, 'initializing', 'initGame:start');
           set({
-            gameLifecycle: 'initializing',
+            gameLifecycle: initializingLifecycle,
             loading: true,
             error: null,
           });
@@ -462,9 +465,15 @@ export function createGameStore(bridge: GameWorkerAPI) {
             const gameState = bridge.init(def, seed);
             const legalMoveResult = bridge.enumerateLegalMoves();
             const terminal = bridge.terminalResult();
-            setAndDerive(buildInitSuccessState(def, gameState, playerID, legalMoveResult, terminal));
+            const lifecycle = assertLifecycleTransition(
+              get().gameLifecycle,
+              lifecycleFromTerminal(terminal),
+              'initGame:success',
+            );
+            setAndDerive(buildInitSuccessState(def, gameState, playerID, legalMoveResult, terminal, lifecycle));
           } catch (error) {
-            setAndDerive(buildInitFailureState(error));
+            const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'initGame:failure');
+            setAndDerive(buildInitFailureState(error, lifecycle));
           } finally {
             set({ loading: false });
           }
@@ -509,11 +518,17 @@ export function createGameStore(bridge: GameWorkerAPI) {
 
             const result = bridge.applyMove(state.partialMove);
             const mutationInputs = deriveMutationInputs(result.state);
+            const lifecycle = assertLifecycleTransition(
+              state.gameLifecycle,
+              lifecycleFromTerminal(mutationInputs.terminal),
+              'confirmMove',
+            );
             setAndDerive({
               ...buildStateMutationState(
                 mutationInputs.gameState,
                 mutationInputs.legalMoveResult,
                 mutationInputs.terminal,
+                lifecycle,
                 result.effectTrace ?? [],
                 result.triggerFirings,
               ),
@@ -551,17 +566,24 @@ export function createGameStore(bridge: GameWorkerAPI) {
 
         undo() {
           runBridge(() => {
+            const state = get();
             const restored = bridge.undo();
             if (restored === null) {
               return;
             }
 
             const mutationInputs = deriveMutationInputs(restored);
+            const lifecycle = assertLifecycleTransition(
+              state.gameLifecycle,
+              lifecycleFromTerminal(mutationInputs.terminal),
+              'undo',
+            );
             setAndDerive({
               ...buildStateMutationState(
                 mutationInputs.gameState,
                 mutationInputs.legalMoveResult,
                 mutationInputs.terminal,
+                lifecycle,
                 [],
                 [],
               ),

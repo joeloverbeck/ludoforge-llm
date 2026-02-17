@@ -42,6 +42,7 @@ interface GameStoreState {
   readonly playerSeats: ReadonlyMap<PlayerId, PlayerSeat>;
   readonly renderModel: RenderModel | null;
 }
+type MutableGameStoreState = Omit<GameStoreState, 'renderModel'>;
 
 interface GameStoreActions {
   initGame(def: GameDef, seed: number, playerID: PlayerId): void;
@@ -138,7 +139,7 @@ function buildInitSuccessState(
   playerID: PlayerId,
   legalMoveResult: LegalMoveEnumerationResult,
   terminal: TerminalResult | null,
-): Partial<GameStoreState> {
+): Partial<MutableGameStoreState> {
   return {
     gameDef: def,
     gameState,
@@ -154,7 +155,7 @@ function buildInitSuccessState(
   };
 }
 
-function buildInitFailureState(error: unknown): Partial<GameStoreState> {
+function buildInitFailureState(error: unknown): Partial<MutableGameStoreState> {
   return {
     ...resetSessionState(),
     error: toWorkerError(error),
@@ -177,7 +178,7 @@ function buildStateMutationState(
   terminal: TerminalResult | null,
   effectTrace: readonly EffectTraceEntry[],
   triggerFirings: readonly TriggerLogEntry[],
-): Partial<GameStoreState> {
+): Partial<MutableGameStoreState> {
   return {
     gameState,
     legalMoveResult,
@@ -286,32 +287,58 @@ function deriveStoreRenderModel(inputs: RenderDerivationInputs): RenderModel | n
   return deriveRenderModel(inputs.gameState, inputs.gameDef, context);
 }
 
-function toRenderDerivationInputs(store: GameStore, patch: Partial<GameStoreState>): RenderDerivationInputs {
-  const fromPatch = <K extends keyof RenderDerivationInputs>(key: K, current: RenderDerivationInputs[K]): RenderDerivationInputs[K] =>
-    key in patch ? (patch[key as keyof GameStoreState] as RenderDerivationInputs[K]) : current;
-
+function toRenderDerivationInputs(state: MutableGameStoreState): RenderDerivationInputs {
   return {
-    gameDef: fromPatch('gameDef', store.gameDef),
-    gameState: fromPatch('gameState', store.gameState),
-    playerID: fromPatch('playerID', store.playerID),
-    legalMoveResult: fromPatch('legalMoveResult', store.legalMoveResult),
-    choicePending: fromPatch('choicePending', store.choicePending),
-    selectedAction: fromPatch('selectedAction', store.selectedAction),
-    choiceStack: fromPatch('choiceStack', store.choiceStack),
-    playerSeats: fromPatch('playerSeats', store.playerSeats),
-    terminal: fromPatch('terminal', store.terminal),
+    gameDef: state.gameDef,
+    gameState: state.gameState,
+    playerID: state.playerID,
+    legalMoveResult: state.legalMoveResult,
+    choicePending: state.choicePending,
+    selectedAction: state.selectedAction,
+    choiceStack: state.choiceStack,
+    playerSeats: state.playerSeats,
+    terminal: state.terminal,
+  };
+}
+
+function snapshotMutableState(state: GameStore): MutableGameStoreState {
+  return {
+    gameDef: state.gameDef,
+    gameState: state.gameState,
+    playerID: state.playerID,
+    gameLifecycle: state.gameLifecycle,
+    loading: state.loading,
+    error: state.error,
+    legalMoveResult: state.legalMoveResult,
+    choicePending: state.choicePending,
+    effectTrace: state.effectTrace,
+    triggerFirings: state.triggerFirings,
+    terminal: state.terminal,
+    selectedAction: state.selectedAction,
+    partialMove: state.partialMove,
+    choiceStack: state.choiceStack,
+    animationPlaying: state.animationPlaying,
+    playerSeats: state.playerSeats,
+  };
+}
+
+function materializeNextState(current: GameStore, patch: Partial<MutableGameStoreState>): MutableGameStoreState {
+  return {
+    ...snapshotMutableState(current),
+    ...patch,
   };
 }
 
 export function createGameStore(bridge: GameWorkerAPI) {
   return create<GameStore>()(
     subscribeWithSelector((set, get) => {
-      const setAndDerive = (patch: Partial<GameStoreState>): void => {
-        const current = get();
-        const inputs = toRenderDerivationInputs(current, patch);
-        set({
-          ...patch,
-          renderModel: deriveStoreRenderModel(inputs),
+      const setAndDerive = (patch: Partial<MutableGameStoreState>): void => {
+        set((current) => {
+          const nextState = materializeNextState(current, patch);
+          return {
+            ...patch,
+            renderModel: deriveStoreRenderModel(toRenderDerivationInputs(nextState)),
+          };
         });
       };
 

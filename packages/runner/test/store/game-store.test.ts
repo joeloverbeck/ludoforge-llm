@@ -304,6 +304,27 @@ describe('createGameStore', () => {
     });
   });
 
+  it('clearing choicePending clears render-model choice fields', () => {
+    const def = compileStoreFixture(5);
+    const bridge = createChoiceBridgeStub(def);
+    const store = createGameStore(bridge);
+    store.getState().initGame(def, 15, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-two'));
+
+    expect(store.getState().renderModel?.choiceType).toBe('chooseOne');
+    expect(store.getState().renderModel?.currentChoiceOptions).not.toBeNull();
+
+    store.getState().makeChoice(pickOneOption(store));
+    store.getState().makeChoice(pickOneOption(store));
+
+    const state = store.getState();
+    expect(state.choicePending).toBeNull();
+    expect(state.renderModel?.choiceType).toBeNull();
+    expect(state.renderModel?.choiceMin).toBeNull();
+    expect(state.renderModel?.choiceMax).toBeNull();
+    expect(state.renderModel?.currentChoiceOptions).toBeNull();
+  });
+
   it('makeChoice illegal sets error and preserves previous move construction', () => {
     const def = compileStoreFixture(5);
     const bridge = createChoiceBridgeStub(def);
@@ -505,7 +526,31 @@ describe('createGameStore', () => {
 
     expect(enumerateSpy.mock.calls.length).toBe(enumerateCallsBeforeUndo + 1);
     expect(terminalSpy.mock.calls.length).toBe(terminalCallsBeforeUndo + 1);
+    expect(store.getState().terminal).toBeNull();
     expect(store.getState().renderModel?.terminal).toBeNull();
+  });
+
+  it('omitted derivation fields remain stable on unrelated updates', () => {
+    const def = compileStoreFixture(5);
+    const bridge = createChoiceBridgeStub(def);
+    const store = createGameStore(bridge);
+    store.getState().initGame(def, 20, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-two'));
+
+    const before = store.getState();
+    store.getState().setAnimationPlaying(true);
+    const after = store.getState();
+
+    expect(after.gameDef).toEqual(before.gameDef);
+    expect(after.gameState).toEqual(before.gameState);
+    expect(after.playerID).toEqual(before.playerID);
+    expect(after.legalMoveResult).toEqual(before.legalMoveResult);
+    expect(after.choicePending).toEqual(before.choicePending);
+    expect(after.selectedAction).toEqual(before.selectedAction);
+    expect(after.choiceStack).toEqual(before.choiceStack);
+    expect(after.playerSeats).toBe(before.playerSeats);
+    expect(after.terminal).toEqual(before.terminal);
+    expect(after.renderModel).toBe(before.renderModel);
   });
 
   it('undo with no history is a no-op', () => {

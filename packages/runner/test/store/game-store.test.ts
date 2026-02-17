@@ -15,6 +15,19 @@ import { createGameStore } from '../../src/store/game-store.js';
 import { createGameWorker, type GameWorkerAPI, type WorkerError } from '../../src/worker/game-worker-api.js';
 import { CHOOSE_MIXED_TEST_DEF, CHOOSE_N_TEST_DEF, CHOOSE_ONE_TEST_DEF } from '../worker/test-fixtures.js';
 
+type ChoiceScalar = Exclude<Move['params'][string], readonly unknown[]>;
+
+function isChoiceScalar(value: Move['params'][string]): value is ChoiceScalar {
+  return !Array.isArray(value);
+}
+
+function asChoiceScalar(value: Move['params'][string], label: string): ChoiceScalar {
+  if (!isChoiceScalar(value)) {
+    throw new Error(`Expected scalar ${label} choice value.`);
+  }
+  return value;
+}
+
 function compileStoreFixture(terminalThreshold: number): GameDef {
   const compiled = compileGameSpecToGameDef({
     ...createEmptyGameSpecDoc(),
@@ -100,12 +113,12 @@ function compileStoreFixture(terminalThreshold: number): GameDef {
   return compiled.gameDef;
 }
 
-function pickOneOption(store: ReturnType<typeof createGameStore>): Move['params'][string] {
+function pickOneOption(store: ReturnType<typeof createGameStore>): ChoiceScalar {
   const pending = store.getState().choicePending;
   if (pending === null) {
     throw new Error('Expected pending choice options.');
   }
-  return pending.options[0]!;
+  return asChoiceScalar(pending.options[0]!, 'pending');
 }
 
 function createBridgeStub(overrides: Partial<GameWorkerAPI>): GameWorkerAPI {
@@ -189,11 +202,8 @@ describe('createGameStore', () => {
       throw new Error('Expected first pending request.');
     }
 
-    const firstChoice = firstPending.options[0];
-    if (firstChoice === undefined) {
-      throw new Error('Expected first choice option.');
-    }
-    store.getState().makeChoice(firstChoice);
+    const firstChoice = asChoiceScalar(firstPending.options[0]!, 'first');
+    store.getState().chooseOne(firstChoice);
     expect(store.getState().choiceStack).toHaveLength(1);
     const secondPending = store.getState().choicePending;
     expect(secondPending?.type).toBe('chooseN');
@@ -202,7 +212,7 @@ describe('createGameStore', () => {
     }
     const secondChoice = secondPending.options.slice(0, 2);
     const secondChoiceValues = secondChoice.filter((value): value is string => typeof value === 'string');
-    store.getState().makeChoice(secondChoiceValues);
+    store.getState().chooseN(secondChoiceValues);
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
@@ -222,7 +232,7 @@ describe('createGameStore', () => {
     expect(store.getState().renderModel?.choiceType).toBe('chooseOne');
     expect(store.getState().renderModel?.currentChoiceOptions).not.toBeNull();
 
-    store.getState().makeChoice(pickOneOption(store));
+    store.getState().chooseOne(pickOneOption(store));
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
@@ -232,7 +242,7 @@ describe('createGameStore', () => {
     expect(state.renderModel?.currentChoiceOptions).toBeNull();
   });
 
-  it('makeChoice illegal sets error and preserves previous move construction', () => {
+  it('chooseOne illegal sets error and preserves previous move construction', () => {
     const def = compileStoreFixture(5);
     const bridge = createBridgeStub({
       init: () => initialState(def, 15, 2),
@@ -266,7 +276,7 @@ describe('createGameStore', () => {
     store.getState().selectAction(asActionId('pick-two'));
 
     const before = store.getState();
-    store.getState().makeChoice('unknown-zone');
+    store.getState().chooseOne('unknown-zone');
     const after = store.getState();
 
     expect(after.error).toMatchObject({ code: 'ILLEGAL_MOVE' });
@@ -275,7 +285,88 @@ describe('createGameStore', () => {
     expect(after.choicePending).toEqual(before.choicePending);
   });
 
-  it('makeChoice supports chooseN options with min/max metadata through createGameWorker', () => {
+  it('pending chooseOne rejects chooseN action before bridge call without mutating move construction state', () => {
+    const bridge = createGameWorker();
+    const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
+    const store = createGameStore(bridge);
+    store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-one'));
+
+    const callsBefore = legalChoicesSpy.mock.calls.length;
+    const before = store.getState();
+    store.getState().chooseN(['a']);
+    const after = store.getState();
+
+    expect(legalChoicesSpy).toHaveBeenCalledTimes(callsBefore);
+    expect(after.error).toEqual({
+      code: 'VALIDATION_FAILED',
+      message: 'Choice input is incompatible with the current pending choice.',
+      details: {
+        reason: 'CHOICE_TYPE_MISMATCH',
+        expected: 'chooseOne',
+        received: 'chooseN',
+      },
+    });
+    expect(after.choiceStack).toEqual(before.choiceStack);
+    expect(after.partialMove).toEqual(before.partialMove);
+    expect(after.choicePending).toEqual(before.choicePending);
+  });
+
+  it('pending chooseN rejects chooseOne action before bridge call without mutating move construction state', () => {
+    const bridge = createGameWorker();
+    const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
+    const store = createGameStore(bridge);
+    store.getState().initGame(CHOOSE_N_TEST_DEF, 15, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-many'));
+
+    const callsBefore = legalChoicesSpy.mock.calls.length;
+    const before = store.getState();
+    store.getState().chooseOne('a');
+    const after = store.getState();
+
+    expect(legalChoicesSpy).toHaveBeenCalledTimes(callsBefore);
+    expect(after.error).toEqual({
+      code: 'VALIDATION_FAILED',
+      message: 'Choice input is incompatible with the current pending choice.',
+      details: {
+        reason: 'CHOICE_TYPE_MISMATCH',
+        expected: 'chooseN',
+        received: 'chooseOne',
+      },
+    });
+    expect(after.choiceStack).toEqual(before.choiceStack);
+    expect(after.partialMove).toEqual(before.partialMove);
+    expect(after.choicePending).toEqual(before.choicePending);
+  });
+
+  it('chooseOne rejects array payload shape with deterministic validation error', () => {
+    const bridge = createGameWorker();
+    const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
+    const store = createGameStore(bridge);
+    store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-one'));
+
+    const callsBefore = legalChoicesSpy.mock.calls.length;
+    const before = store.getState();
+    store.getState().chooseOne(['a'] as unknown as ChoiceScalar);
+    const after = store.getState();
+
+    expect(legalChoicesSpy).toHaveBeenCalledTimes(callsBefore);
+    expect(after.error).toEqual({
+      code: 'VALIDATION_FAILED',
+      message: 'Choice input is incompatible with the current pending choice.',
+      details: {
+        reason: 'CHOICE_VALUE_SHAPE_INVALID',
+        expected: 'scalar',
+        received: 'array',
+      },
+    });
+    expect(after.choiceStack).toEqual(before.choiceStack);
+    expect(after.partialMove).toEqual(before.partialMove);
+    expect(after.choicePending).toEqual(before.choicePending);
+  });
+
+  it('chooseN supports options with min/max metadata through createGameWorker', () => {
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
     store.getState().initGame(CHOOSE_N_TEST_DEF, 15, asPlayerId(0));
@@ -293,7 +384,7 @@ describe('createGameStore', () => {
     expect(selected).toEqual(['a', 'b']);
     const selectedValues = selected.filter((value): value is string => typeof value === 'string');
     expect(selectedValues).toEqual(['a', 'b']);
-    store.getState().makeChoice(selectedValues);
+    store.getState().chooseN(selectedValues);
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
@@ -315,11 +406,8 @@ describe('createGameStore', () => {
     if (pending === null) {
       throw new Error('Expected chooseOne request.');
     }
-    const choice = pending.options[0];
-    if (choice === undefined) {
-      throw new Error('Expected chooseOne option.');
-    }
-    store.getState().makeChoice(choice);
+    const choice = asChoiceScalar(pending.options[0]!, 'chooseOne');
+    store.getState().chooseOne(choice);
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
@@ -419,13 +507,13 @@ describe('createGameStore', () => {
     store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, asPlayerId(0));
     store.getState().selectAction(asActionId('pick-mixed'));
     const firstChoice = pickOneOption(store);
-    store.getState().makeChoice(firstChoice);
+    store.getState().chooseOne(firstChoice);
     const secondPending = store.getState().choicePending;
     if (secondPending === null) {
       throw new Error('Expected second pending request.');
     }
     const selected = secondPending.options.slice(0, 2).filter((value): value is string => typeof value === 'string');
-    store.getState().makeChoice(selected);
+    store.getState().chooseN(selected);
     expect(store.getState().choicePending).toBeNull();
 
     store.getState().cancelChoice();
@@ -441,7 +529,7 @@ describe('createGameStore', () => {
     const store = createGameStore(bridge);
     store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, asPlayerId(0));
     store.getState().selectAction(asActionId('pick-mixed'));
-    store.getState().makeChoice(pickOneOption(store));
+    store.getState().chooseOne(pickOneOption(store));
 
     store.getState().cancelMove();
 

@@ -47,7 +47,8 @@ type MutableGameStoreState = Omit<GameStoreState, 'renderModel'>;
 interface GameStoreActions {
   initGame(def: GameDef, seed: number, playerID: PlayerId): void;
   selectAction(actionId: ActionId): void;
-  makeChoice(choice: MoveParamValue): void;
+  chooseOne(choice: Exclude<MoveParamValue, readonly unknown[]>): void;
+  chooseN(choice: readonly Exclude<MoveParamValue, readonly unknown[]>[]): void;
   confirmMove(): void;
   cancelChoice(): void;
   cancelMove(): void;
@@ -74,6 +75,14 @@ interface MutationTransitionInputs {
   readonly gameState: GameState;
   readonly legalMoveResult: LegalMoveEnumerationResult;
   readonly terminal: TerminalResult | null;
+}
+
+type ChoiceActionType = ChoicePendingRequest['type'];
+
+interface ChoiceValidationIssue {
+  readonly reason: 'CHOICE_TYPE_MISMATCH' | 'CHOICE_VALUE_SHAPE_INVALID';
+  readonly expected: ChoiceActionType | 'scalar' | 'array';
+  readonly received: ChoiceActionType | 'scalar' | 'array';
 }
 
 const WORKER_ERROR_CODES: readonly WorkerError['code'][] = [
@@ -240,6 +249,46 @@ function toIllegalChoiceError(request: ChoiceIllegalRequest): WorkerError {
   };
 }
 
+function toChoiceValidationError(issue: ChoiceValidationIssue): WorkerError {
+  return {
+    code: 'VALIDATION_FAILED',
+    message: 'Choice input is incompatible with the current pending choice.',
+    details: issue,
+  };
+}
+
+function validateChoiceSubmission(
+  pendingType: ChoicePendingRequest['type'],
+  actionType: ChoiceActionType,
+  choice: MoveParamValue,
+): WorkerError | null {
+  if (pendingType !== actionType) {
+    return toChoiceValidationError({
+      reason: 'CHOICE_TYPE_MISMATCH',
+      expected: pendingType,
+      received: actionType,
+    });
+  }
+
+  if (actionType === 'chooseOne' && Array.isArray(choice)) {
+    return toChoiceValidationError({
+      reason: 'CHOICE_VALUE_SHAPE_INVALID',
+      expected: 'scalar',
+      received: 'array',
+    });
+  }
+
+  if (actionType === 'chooseN' && !Array.isArray(choice)) {
+    return toChoiceValidationError({
+      reason: 'CHOICE_VALUE_SHAPE_INVALID',
+      expected: 'array',
+      received: 'scalar',
+    });
+  }
+
+  return null;
+}
+
 function toLifecycle(terminal: TerminalResult | null): GameLifecycle {
   return terminal === null ? 'playing' : 'terminal';
 }
@@ -363,6 +412,41 @@ export function createGameStore(bridge: GameWorkerAPI) {
         };
       };
 
+      const submitChoice = (choice: MoveParamValue, actionType: ChoiceActionType): void => {
+        runBridge(() => {
+          const state = get();
+          if (state.selectedAction === null || state.choicePending === null) {
+            return;
+          }
+
+          const validationError = validateChoiceSubmission(state.choicePending.type, actionType, choice);
+          if (validationError !== null) {
+            set({ error: validationError });
+            return;
+          }
+
+          const nextChoice: PartialChoice = {
+            decisionId: state.choicePending.decisionId,
+            name: state.choicePending.name,
+            value: choice,
+          };
+          const nextChoiceStack = [...state.choiceStack, nextChoice];
+          const nextMove = buildMove(state.selectedAction, nextChoiceStack);
+          const choiceRequest = bridge.legalChoices(nextMove);
+          if (choiceRequest.kind === 'illegal') {
+            set({ error: toIllegalChoiceError(choiceRequest) });
+            return;
+          }
+
+          setAndDerive({
+            partialMove: nextMove,
+            choiceStack: nextChoiceStack,
+            choicePending: choiceRequest.kind === 'pending' ? choiceRequest : null,
+            error: null,
+          });
+        });
+      };
+
       return {
         ...INITIAL_STATE,
         playerSeats: new Map<PlayerId, PlayerSeat>(),
@@ -408,33 +492,12 @@ export function createGameStore(bridge: GameWorkerAPI) {
           });
         },
 
-        makeChoice(choice) {
-          runBridge(() => {
-            const state = get();
-            if (state.selectedAction === null || state.choicePending === null) {
-              return;
-            }
+        chooseOne(choice) {
+          submitChoice(choice, 'chooseOne');
+        },
 
-            const nextChoice: PartialChoice = {
-              decisionId: state.choicePending.decisionId,
-              name: state.choicePending.name,
-              value: choice,
-            };
-            const nextChoiceStack = [...state.choiceStack, nextChoice];
-            const nextMove = buildMove(state.selectedAction, nextChoiceStack);
-            const choiceRequest = bridge.legalChoices(nextMove);
-            if (choiceRequest.kind === 'illegal') {
-              set({ error: toIllegalChoiceError(choiceRequest) });
-              return;
-            }
-
-            setAndDerive({
-              partialMove: nextMove,
-              choiceStack: nextChoiceStack,
-              choicePending: choiceRequest.kind === 'pending' ? choiceRequest : null,
-              error: null,
-            });
-          });
+        chooseN(choice) {
+          submitChoice(choice, 'chooseN');
         },
 
         confirmMove() {

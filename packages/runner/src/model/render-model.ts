@@ -68,6 +68,7 @@ export interface RenderToken {
   readonly type: string;
   readonly zoneID: string;
   readonly ownerID: PlayerId | null;
+  readonly factionId: string | null;
   readonly faceUp: boolean;
   readonly properties: Readonly<Record<string, number | string | boolean>>;
   readonly isSelectable: boolean;

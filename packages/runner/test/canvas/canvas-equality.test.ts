@@ -42,6 +42,7 @@ function makeToken(overrides: Partial<RenderToken> = {}): RenderToken {
     type: 'unit',
     zoneID: 'zone:a',
     ownerID: asPlayerId(0),
+    factionId: 'faction:a',
     faceUp: true,
     properties: { stamina: 2 },
     isSelectable: false,
@@ -155,6 +156,10 @@ describe('tokensVisuallyEqual', () => {
 
   it('returns false when ownerID changes', () => {
     expect(tokensVisuallyEqual([makeToken()], [makeToken({ ownerID: asPlayerId(1) })])).toBe(false);
+  });
+
+  it('returns false when factionId changes', () => {
+    expect(tokensVisuallyEqual([makeToken()], [makeToken({ factionId: 'faction:b' })])).toBe(false);
   });
 
   it('returns false when faceUp changes', () => {

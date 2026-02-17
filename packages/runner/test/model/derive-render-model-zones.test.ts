@@ -195,7 +195,92 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
 
     expect(model.tokens.find((renderToken) => renderToken.id === 't-table')?.ownerID).toBeNull();
     expect(model.tokens.find((renderToken) => renderToken.id === 't-hand-0')?.ownerID).toEqual(asPlayerId(0));
+    expect(model.tokens.find((renderToken) => renderToken.id === 't-table')?.factionId).toBeNull();
+    expect(model.tokens.find((renderToken) => renderToken.id === 't-hand-0')?.factionId).toBeNull();
     expect(handOneZone?.hiddenTokenCount).toBe(1);
+  });
+
+  it('derives token factionId from card-driven faction order for player-owned zones', () => {
+    const baseDef = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'table',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+        },
+        {
+          id: 'hand',
+          owner: 'player',
+          visibility: 'owner',
+          ordering: 'stack',
+        },
+        {
+          id: 'draw',
+          owner: 'none',
+          visibility: 'hidden',
+          ordering: 'stack',
+        },
+        {
+          id: 'discard',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'stack',
+        },
+        {
+          id: 'played',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'stack',
+        },
+      ],
+    });
+
+    const def: GameDef = {
+      ...baseDef,
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: {
+              played: 'played:none',
+              lookahead: 'draw:none',
+              leader: 'discard:none',
+            },
+            eligibility: {
+              factions: ['us', 'nva'],
+              overrideWindows: [],
+            },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn'],
+          },
+        },
+      },
+    };
+
+    const baseState = initialState(def, 111, 2);
+    const state: GameState = {
+      ...baseState,
+      zones: {
+        ...baseState.zones,
+        'table:none': [token('public-1')],
+        'hand:0': [token('h0-a')],
+      },
+    };
+
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
+
+    expect(model.tokens.map((renderToken) => ({
+      id: renderToken.id,
+      ownerID: renderToken.ownerID,
+      factionId: renderToken.factionId,
+    }))).toEqual([
+      { id: 'public-1', ownerID: null, factionId: null },
+      { id: 'h0-a', ownerID: asPlayerId(0), factionId: 'us' },
+    ]);
   });
 
   it('normalizes adjacencies bidirectionally and deduplicates pairs', () => {

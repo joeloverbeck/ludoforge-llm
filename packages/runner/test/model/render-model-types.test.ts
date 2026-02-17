@@ -51,6 +51,7 @@ describe('render-model types', () => {
           type: 'unit',
           zoneID: 'table',
           ownerID: playerZero,
+          factionId: 'faction:a',
           faceUp: true,
           properties: { value: 1, label: 'A', active: true },
           isSelectable: false,
@@ -190,6 +191,7 @@ describe('render-model types', () => {
       type: 'unit',
       zoneID: 'hand:0',
       ownerID: asPlayerId(0),
+      factionId: 'faction:a',
       faceUp: true,
       properties: {},
       isSelectable: false,
@@ -200,6 +202,7 @@ describe('render-model types', () => {
       ...ownedToken,
       id: 'token:2',
       ownerID: null,
+      factionId: null,
     };
 
     expect(ownedToken.ownerID).toEqual(asPlayerId(0));

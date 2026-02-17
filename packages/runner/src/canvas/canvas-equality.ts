@@ -84,6 +84,7 @@ function tokensVisuallyEqualItem(previous: RenderToken, current: RenderToken): b
     && previous.type === current.type
     && previous.zoneID === current.zoneID
     && previous.ownerID === current.ownerID
+    && previous.factionId === current.factionId
     && previous.faceUp === current.faceUp
     && previous.isSelectable === current.isSelectable
     && previous.isSelected === current.isSelected

@@ -64,11 +64,13 @@ export function deriveRenderModel(
     selectionTargets.selectableZoneIDs,
     selectedZoneIDs,
   );
+  const factionByPlayer = deriveFactionByPlayer(state);
   const tokens = deriveTokens(
     state,
     zones,
     zoneDerivation.visibleTokenIDsByZone,
     selectionTargets.selectableTokenIDs,
+    factionByPlayer,
   );
   const adjacencies = deriveAdjacencies(def, zones, highlightedAdjacencyKeys);
   const globalVars = deriveGlobalVars(state);
@@ -78,7 +80,6 @@ export function deriveRenderModel(
   const activeEffects = deriveActiveEffects(state, staticDerivation.cardTitleById);
   const interruptStack = state.interruptPhaseStack ?? [];
   const eventDecks = deriveEventDecks(state, staticDerivation.eventDecks, staticDerivation.playedCardZoneId);
-  const factionByPlayer = deriveFactionByPlayer(state);
   const players = derivePlayers(state, context, factionByPlayer);
   const turnOrder = deriveTurnOrder(state, factionByPlayer);
 
@@ -359,6 +360,7 @@ function deriveTokens(
   zones: readonly RenderZone[],
   visibleTokenIDsByZone: ReadonlyMap<string, readonly string[]>,
   selectableTokenIDs: ReadonlySet<string>,
+  factionByPlayer: ReadonlyMap<PlayerId, string>,
 ): readonly RenderToken[] {
   const tokens: RenderToken[] = [];
 
@@ -379,6 +381,7 @@ function deriveTokens(
         type: token.type,
         zoneID: zone.id,
         ownerID: zone.ownerID,
+        factionId: zone.ownerID === null ? null : factionByPlayer.get(zone.ownerID) ?? null,
         faceUp: true,
         properties: token.props,
         isSelectable: selectableTokenIDs.has(String(token.id)),

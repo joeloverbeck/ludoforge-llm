@@ -17,11 +17,11 @@ This repository contains both implementation code and design artifacts.
 - `packages/engine/src/`: TypeScript engine modules (`kernel`, `cnl`, `agents`, `sim`, `cli`).
 - `packages/engine/schemas/`: JSON schema artifacts (`GameDef`, `Trace`, `EvalReport`).
 - `packages/engine/test/`: `unit`, `integration`, `e2e`, plus `fixtures`, `helpers`, `memory`, and `performance`.
-- `packages/runner/`: Vite + React runner scaffold.
+- `packages/runner/`: Vite + React runner app, including UI, bridge, and worker modules.
 - `specs/`: canonical numbered implementation specs.
 - `tickets/`: active implementation tickets.
 - `archive/`: completed or retired `tickets`, `specs`, `brainstorming`, and reports.
-- `docs/`, `brainstorming/`, `README.md`, `CLAUDE.md`: design context and constraints.
+- `docs/`, `brainstorming/`, `reports/`, `README.md`, `CLAUDE.md`: design context and constraints.
 
 ## Build, Test, and Development Commands
 Primary workflow commands:
@@ -61,9 +61,11 @@ For docs/spec/ticket changes:
 
 For code changes:
 - place tests in the relevant `packages/engine/test/` domain (`unit`, `integration`, `e2e`, `memory`, or `performance`).
+- place runner tests in `packages/runner/test/` (currently worker-focused under `packages/runner/test/worker`).
 - run targeted tests when possible (example: `node --test packages/engine/dist/test/unit/<file>.test.js`).
 - if running `node --test` directly, run `pnpm turbo build` first so `packages/engine/dist/` is up to date.
 - run at least `pnpm turbo test` before finalizing; include `pnpm -F @ludoforge/engine test:e2e` when behavior spans CLI/pipeline flows.
+- for runner changes, run at least `pnpm -F @ludoforge/runner test`.
 - when you need a guaranteed fresh engine test execution, prefer `pnpm -F @ludoforge/engine test` (or `test:all`) or run `pnpm turbo test --force` to bypass Turbo cache.
 
 ## Commit & Pull Request Guidelines

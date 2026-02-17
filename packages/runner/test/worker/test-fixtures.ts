@@ -1,14 +1,22 @@
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
 import { asActionId, type GameDef, type Move } from '@ludoforge/engine';
 
-const makeTestDef = (): GameDef => {
+interface TestDefOptions {
+  readonly gameId: string;
+  readonly actionId: string;
+  readonly zoneId: string;
+  readonly minPlayers: number;
+  readonly maxPlayers: number;
+}
+
+const makeTestDef = (options: TestDefOptions): GameDef => {
   const doc = {
     ...createEmptyGameSpecDoc(),
     metadata: {
-      id: 'runner-worker-test',
+      id: options.gameId,
       players: {
-        min: 2,
-        max: 2,
+        min: options.minPlayers,
+        max: options.maxPlayers,
       },
     },
     globalVars: [
@@ -22,7 +30,7 @@ const makeTestDef = (): GameDef => {
     ],
     zones: [
       {
-        id: 'table:none',
+        id: options.zoneId,
         owner: 'none',
         visibility: 'public',
         ordering: 'set',
@@ -33,7 +41,7 @@ const makeTestDef = (): GameDef => {
     },
     actions: [
       {
-        id: 'tick',
+        id: options.actionId,
         actor: 'active',
         executor: 'actor',
         phase: ['main'],
@@ -61,7 +69,29 @@ const makeTestDef = (): GameDef => {
   return compiled.gameDef;
 };
 
-export const TEST_DEF = makeTestDef();
+export const TEST_DEF = makeTestDef({
+  gameId: 'runner-worker-test',
+  actionId: 'tick',
+  zoneId: 'table:none',
+  minPlayers: 2,
+  maxPlayers: 2,
+});
+
+export const ALT_TEST_DEF = makeTestDef({
+  gameId: 'runner-worker-test-alt',
+  actionId: 'tick-alt',
+  zoneId: 'table:alt',
+  minPlayers: 3,
+  maxPlayers: 3,
+});
+
+export const RANGE_TEST_DEF = makeTestDef({
+  gameId: 'runner-worker-test-range',
+  actionId: 'tick-range',
+  zoneId: 'table:range',
+  minPlayers: 2,
+  maxPlayers: 4,
+});
 
 export const LEGAL_TICK_MOVE: Move = {
   actionId: asActionId('tick'),

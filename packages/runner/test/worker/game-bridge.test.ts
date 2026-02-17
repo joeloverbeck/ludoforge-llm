@@ -29,7 +29,7 @@ class MockWorker {
     workerRecords.push({
       instance: this,
       scriptURL,
-      options,
+      ...(options === undefined ? {} : { options }),
     });
   }
 }

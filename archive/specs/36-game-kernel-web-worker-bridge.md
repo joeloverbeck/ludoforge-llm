@@ -1,11 +1,11 @@
 # Spec 36: Game Kernel Web Worker Bridge
 
-**Status**: ACTIVE
+**Status**: ✅ COMPLETED
 **Priority**: P0 (critical path)
 **Complexity**: M
 **Dependencies**: Spec 35 (Monorepo Restructure)
-**Roadmap**: [35-00-frontend-implementation-roadmap.md](./35-00-frontend-implementation-roadmap.md)
-**Design doc**: [brainstorming/browser-based-game-runner.md](../brainstorming/browser-based-game-runner.md), Section 10 (Simulation on worker thread)
+**Roadmap**: [35-00-frontend-implementation-roadmap.md](../../specs/35-00-frontend-implementation-roadmap.md)
+**Design doc**: [brainstorming/browser-based-game-runner.md](../../brainstorming/browser-based-game-runner.md), Section 10 (Simulation on worker thread)
 
 ---
 
@@ -459,3 +459,22 @@ The main thread must call `terminate()` when navigating away from a game or when
 - State persistence (handled by Spec 42 via Dexie.js)
 - GameDef compilation (the runner consumes pre-compiled GameDef JSON)
 - Transferable optimization (using `transfer()` for large state objects — potential future perf improvement, not needed at MVP scale)
+
+## Outcome
+
+- **Completion date**: 2026-02-17
+- **What was implemented**:
+  - Worker entrypoint and typed API exposure via Comlink (`packages/runner/src/worker/game-worker.ts` + `packages/runner/src/worker/game-worker-api.ts`).
+  - Main-thread bridge factory (`packages/runner/src/bridge/game-bridge.ts`) with explicit worker lifecycle termination.
+  - Structured clone compatibility tests for boundary types (`packages/runner/test/worker/clone-compat.test.ts`).
+  - URL GameDef loading + validation path with `VALIDATION_FAILED` taxonomy in worker API.
+  - D6 worker behavior tests expanded in `packages/runner/test/worker/game-worker.test.ts` for init/move/choice/batch/terminal/history/undo/reset/error contracts.
+- **Deviations from original plan**:
+  - Runtime logic was factored into `game-worker-api.ts`; `game-worker.ts` remained a thin expose layer.
+  - D6 validation is implemented primarily through direct worker-API tests in Node rather than full browser-mode Worker+Comlink e2e.
+  - `reset(seed)` invariant was validated by deterministic RNG-state change rather than guaranteed `stateHash` change for every fixture.
+- **Verification results**:
+  - `pnpm -F @ludoforge/runner test` ✅
+  - `pnpm -F @ludoforge/runner lint` ✅
+  - `pnpm -F @ludoforge/runner typecheck` ✅
+  - `pnpm turbo test` ✅

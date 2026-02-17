@@ -14,6 +14,7 @@ Design document: `brainstorming/browser-based-game-runner.md`
 Technology decisions: Appendix A of the same document.
 
 Spec 35 is completed and archived at `archive/specs/35-monorepo-restructure-build-system.md`.
+Spec 36 is completed and archived at `archive/specs/36-game-kernel-web-worker-bridge.md`.
 
 ---
 
@@ -22,7 +23,7 @@ Spec 35 is completed and archived at `archive/specs/35-monorepo-restructure-buil
 | Spec | Title | Priority | Complexity | Dependencies |
 |------|-------|----------|------------|--------------|
 | 35 | Monorepo Restructure & Build System | P0 | M | None |
-| 36 | Game Kernel Web Worker Bridge | P0 | M | 35 |
+| 36 | Game Kernel Web Worker Bridge (completed) | P0 | M | 35 |
 | 37 | State Management & Render Model | P0 | L | 36 |
 | 38 | PixiJS Canvas Foundation | P0 | L | 37 |
 | 39 | React DOM UI Layer | P1 | L | 37, 38 |
@@ -75,11 +76,11 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 **Gate criteria**:
 - [x] Monorepo builds with `pnpm turbo build`
 - [x] Existing engine tests pass via `pnpm -F @ludoforge/engine test`
-- [ ] Kernel runs in Web Worker, Comlink RPC is typed and functional
-- [ ] Effect trace enabled by default — `applyMove()` returns `effectTrace` for animation pipeline
+- [x] Kernel runs in Web Worker, Comlink RPC is typed and functional
+- [x] Effect trace enabled by default — `applyMove()` returns `effectTrace` for animation pipeline
 - [ ] `playSequence()` batch execution verified with 10+ move sequences
-- [ ] `enumerateLegalMoves()` exposes move enumeration warnings to UI layer
-- [ ] `WorkerError` error taxonomy implemented with structured error codes
+- [x] `enumerateLegalMoves()` exposes move enumeration warnings to UI layer
+- [x] `WorkerError` error taxonomy implemented with structured error codes
 - [ ] Zustand store receives state updates from worker
 - [ ] `deriveRenderModel()` is unit-tested with both FITL and Texas Hold'em GameDefs
 - [ ] Hidden information filtering verified (owner-only zones, reveal grants)

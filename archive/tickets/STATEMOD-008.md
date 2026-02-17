@@ -1,6 +1,6 @@
 # STATEMOD-008: Implement `createGameStore()` Zustand Factory
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: L
 **Spec**: 37 — State Management & Render Model (D1, D5, D6)
@@ -9,6 +9,20 @@
 ## Objective
 
 Implement the Zustand store factory `createGameStore(bridge)` that bridges the Web Worker kernel to the rendering layer. The store manages game lifecycle, delegates calls to the bridge, tracks error/loading states, maintains move construction state, and re-derives the `RenderModel` after every state change.
+
+## Assumption Reassessment (2026-02-17)
+
+- `packages/runner/src/store/store-types.ts` already exists and is the canonical home for `PartialChoice`, `PlayerSeat`, and `RenderContext`. `game-store.ts` must reuse these shared types instead of redefining equivalents.
+- `deriveRenderModel()` and its state/visibility behavior are already implemented and covered by dedicated model tests in `packages/runner/test/model/`. This ticket should focus on store orchestration, not re-testing render-model internals.
+- `GameWorkerAPI` (`createGameWorker()`) is synchronous for `init`, `enumerateLegalMoves`, `legalChoices`, `applyMove`, `terminalResult`, and `undo`; store actions remain synchronous and must not introduce async wrappers.
+- The engine materializes per-player zones in runtime state (e.g., `hand:0`, `hand:1`). Store logic should treat zone identity as opaque and never perform zone expansion itself.
+- Choice decision IDs can be internal/composed; when building move params, use the active `ChoicePendingRequest.name` as the binding key.
+
+## Scope Update
+
+- Keep `STATEMOD-008` as the store factory + store action unit coverage ticket.
+- Keep deep `deriveRenderModel()` behavioral coverage in existing model tests and `STATEMOD-009` integration tests.
+- Prefer a single internal refresh/re-derive pathway (query legal moves + terminal + derive model) reused by `initGame`, `confirmMove`, and `undo` to avoid divergence across lifecycle transitions.
 
 ## Files to Touch
 
@@ -145,7 +159,7 @@ export function createGameStore(bridge: GameWorkerAPI) {
 
 ### 4. Render model re-derivation
 
-After every state-changing action, call `deriveRenderModel(state, def, context)` and set `renderModel`. The `RenderContext` is assembled from current store state.
+After every state-changing **or move-context-changing** action, call `deriveRenderModel(state, def, context)` and set `renderModel`. The `RenderContext` is assembled from current store state.
 
 ### 5. Error handling (D6)
 
@@ -157,35 +171,55 @@ After every state-changing action, call `deriveRenderModel(state, def, context)`
 
 ### Tests that must pass
 
-Note: Tests should use a mock/stub bridge (the actual `createGameWorker()` in-memory, NOT a real Web Worker) to test store actions synchronously.
+Note: Tests should use in-memory bridge semantics (`createGameWorker()` API shape, no real Web Worker thread). A test double around that API is acceptable for deterministic edge-case coverage.
 
-- [ ] `initGame()` populates `gameState`, `gameDef`, `playerID`, `legalMoveResult`, `renderModel`, and sets `gameLifecycle = 'playing'`
-- [ ] `initGame()` with terminal game sets `gameLifecycle = 'terminal'`
-- [ ] `selectAction()` sets `selectedAction` and resets choice state
-- [ ] `makeChoice()` pushes to `choiceStack` and queries `legalChoices`
-- [ ] `makeChoice()` with complete choice sets `choicePending = null`
-- [ ] `confirmMove()` applies move, updates state, refreshes legal moves and terminal, re-derives render model
-- [ ] `confirmMove()` resets move construction state
-- [ ] `cancelChoice()` pops from `choiceStack`
-- [ ] `cancelMove()` resets all move construction state
-- [ ] `undo()` with history restores previous state, re-enumerates legal moves, re-checks terminal
-- [ ] `undo()` with no history does nothing
-- [ ] `undo()` from terminal state transitions lifecycle back to `'playing'`
-- [ ] Error handling: bridge error sets `error` field with correct `WorkerError` shape
-- [ ] `clearError()` resets error to `null`
-- [ ] `loading` is `true` during bridge calls, `false` after
-- [ ] Lifecycle transitions: `idle → initializing → playing → terminal`
-- [ ] `setAnimationPlaying()` toggles flag
-- [ ] `pnpm -F @ludoforge/runner typecheck` passes
-- [ ] `pnpm -F @ludoforge/runner test` passes
+- [x] `initGame()` populates `gameState`, `gameDef`, `playerID`, `legalMoveResult`, `renderModel`, and sets `gameLifecycle = 'playing'`
+- [x] `initGame()` with terminal game sets `gameLifecycle = 'terminal'`
+- [x] `selectAction()` sets `selectedAction` and resets choice state
+- [x] `makeChoice()` pushes to `choiceStack` and queries `legalChoices`
+- [x] `makeChoice()` with complete choice sets `choicePending = null`
+- [x] `makeChoice()` with illegal choice sets `error` and does not corrupt existing move construction state
+- [x] `confirmMove()` applies move, updates state, refreshes legal moves and terminal, re-derives render model
+- [x] `confirmMove()` resets move construction state
+- [x] `confirmMove()` is a no-op when `partialMove` is `null`
+- [x] `cancelChoice()` pops from `choiceStack`
+- [x] `cancelChoice()` on empty stack is a no-op
+- [x] `cancelMove()` resets all move construction state
+- [x] `undo()` with history restores previous state, re-enumerates legal moves, re-checks terminal
+- [x] `undo()` with no history does nothing
+- [x] `undo()` from terminal state transitions lifecycle back to `'playing'`
+- [x] Error handling: bridge error sets `error` field with correct `WorkerError` shape
+- [x] `clearError()` resets error to `null`
+- [x] `loading` is `true` during bridge calls, `false` after
+- [x] Lifecycle transitions: `idle → initializing → playing → terminal`
+- [x] `setAnimationPlaying()` toggles flag
+- [x] `pnpm -F @ludoforge/runner typecheck` passes
+- [x] `pnpm -F @ludoforge/runner test` passes
 
 ### Invariants
 
-- Store is created via factory — no global singleton
-- `subscribeWithSelector` middleware is applied for fine-grained PixiJS subscriptions
-- `renderModel` is always re-derived after state changes (never stale)
-- All bridge calls are wrapped in error handling
-- `PlayerId` is branded number throughout
-- `loading` correctly brackets all bridge calls (set before, cleared after, even on error)
-- No game-specific logic in the store
-- No engine source files modified
+- [x] Store is created via factory — no global singleton
+- [x] `subscribeWithSelector` middleware is applied for fine-grained PixiJS subscriptions
+- [x] `renderModel` is always re-derived after state changes (never stale)
+- [x] All bridge calls are wrapped in error handling
+- [x] `PlayerId` is branded number throughout
+- [x] `loading` correctly brackets all bridge calls (set before, cleared after, even on error)
+- [x] No game-specific logic in the store
+- [x] No engine source files modified
+
+## Outcome
+
+- Completion date: 2026-02-17
+- Implemented `packages/runner/src/store/game-store.ts` with `createGameStore(bridge)`, full lifecycle/move-construction actions, shared refresh + render-model re-derivation flow, and normalized WorkerError handling.
+- Added `packages/runner/test/store/game-store.test.ts` covering lifecycle, choice progression, illegal choice/error handling, confirm/cancel/undo behavior, loading bracketing, and animation/error utility actions.
+- Deviations from original plan:
+  - Reused existing `packages/runner/src/store/store-types.ts` instead of redefining `PartialChoice`/`RenderContext`.
+  - Used deterministic in-memory bridge stubs for choice-flow edge cases while keeping real `createGameWorker()` coverage for lifecycle/apply/undo behavior.
+  - `selectAction()` now performs an immediate `legalChoices()` query to initialize progressive-choice state, preventing stale/empty choice UI state.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test` ✅
+  - `pnpm -F @ludoforge/runner typecheck` ✅
+  - `pnpm -F @ludoforge/runner lint` ✅
+  - `pnpm turbo test` ✅
+  - `pnpm turbo lint` ✅
+  - `pnpm turbo typecheck` ✅

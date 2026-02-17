@@ -1,11 +1,11 @@
 # Spec 38: PixiJS Canvas Foundation
 
-**Status**: ACTIVE
+**Status**: ✅ COMPLETED
 **Priority**: P0 (critical path)
 **Complexity**: L
 **Dependencies**: Spec 37 (State Management & Render Model)
-**Roadmap**: [35-00-frontend-implementation-roadmap.md](./35-00-frontend-implementation-roadmap.md)
-**Design doc**: [brainstorming/browser-based-game-runner.md](../brainstorming/browser-based-game-runner.md), Sections 2-4
+**Roadmap**: [35-00-frontend-implementation-roadmap.md](../../specs/35-00-frontend-implementation-roadmap.md)
+**Design doc**: [brainstorming/browser-based-game-runner.md](../../brainstorming/browser-based-game-runner.md), Sections 2-4
 
 ---
 
@@ -488,3 +488,23 @@ Until Spec 41 (Board Layout Engine) is implemented, use the placeholder grid lay
 - Card face rendering (Spec 42 visual config)
 - Per-game visual styling and custom renderers (Spec 42)
 - Touch input support beyond basic pointer events
+
+---
+
+## Outcome
+
+- **Completion date**: 2026-02-17
+- **What was implemented**:
+  - PixiJS app initialization with explicit WebGL, layered container hierarchy, viewport pan/zoom, and clamped bounds.
+  - Imperative canvas updater wired to Zustand + position store with animation gating and visual equality guards.
+  - Incremental zone/adjacency/token renderers with pooling and stable container references.
+  - Canvas interactions: zone/token click selection, keyboard zone navigation, and accessibility announcements via polite live region.
+  - React mount/runtime composition with deterministic teardown and coordinate bridge exposure.
+  - Comprehensive runner canvas/unit/integration tests for all deliverables in this spec.
+- **Notable plan/implementation alignment notes**:
+  - Architecture preserved strict canvas/DOM split and renderer-owned interaction cleanup boundaries.
+  - Accessibility requirements were implemented as composable runtime utilities (`keyboard-select`, `aria-announcer`) rather than renderer-specialized logic, improving extensibility for follow-up specs.
+- **Verification**:
+  - `pnpm -F @ludoforge/runner test`
+  - `pnpm -F @ludoforge/runner typecheck`
+  - `pnpm -F @ludoforge/runner lint`

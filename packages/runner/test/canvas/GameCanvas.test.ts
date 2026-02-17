@@ -117,6 +117,21 @@ function createRuntimeFixture() {
     worldBoundsToScreenRect: vi.fn(),
   } as CoordinateBridge;
 
+  const ariaAnnouncer = {
+    announce: vi.fn((message: string) => {
+      lifecycle.push(`announce:${message}`);
+    }),
+    destroy: vi.fn(() => {
+      lifecycle.push('aria-destroy');
+    }),
+  };
+
+  const keyboardCleanup = vi.fn(() => {
+    lifecycle.push('keyboard-cleanup');
+  });
+
+  const attachKeyboardSelect = vi.fn(() => keyboardCleanup);
+
   const deps = {
     createGameCanvas: vi.fn(async () => gameCanvas),
     setupViewport: vi.fn(() => viewportResult),
@@ -126,6 +141,8 @@ function createRuntimeFixture() {
     createTokenRenderer: vi.fn(() => tokenRenderer),
     createCanvasUpdater: vi.fn(() => canvasUpdater),
     createCoordinateBridge: vi.fn(() => bridge),
+    createAriaAnnouncer: vi.fn(() => ariaAnnouncer),
+    attachKeyboardSelect,
   };
 
   return {
@@ -139,6 +156,9 @@ function createRuntimeFixture() {
     viewportResult,
     gameCanvas,
     positionStore,
+    ariaAnnouncer,
+    attachKeyboardSelect,
+    keyboardCleanup,
   };
 }
 
@@ -152,6 +172,9 @@ describe('GameCanvas', () => {
 
     expect(html).toContain('role="application"');
     expect(html).toContain('aria-label="Game board"');
+    expect(html).toContain('data-ludoforge-live-region="true"');
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain('role="status"');
   });
 });
 
@@ -180,6 +203,8 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.deps.createAdjacencyRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createTokenRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createCanvasUpdater).toHaveBeenCalledTimes(1);
+    expect(fixture.deps.createAriaAnnouncer).toHaveBeenCalledTimes(1);
+    expect(fixture.attachKeyboardSelect).toHaveBeenCalledTimes(1);
     expect(fixture.canvasUpdater.start).toHaveBeenCalledTimes(1);
     expect(onCoordinateBridgeReady).toHaveBeenCalledWith(fixture.bridge);
   });
@@ -203,6 +228,8 @@ describe('createGameCanvasRuntime', () => {
 
     expect(fixture.lifecycle).toEqual([
       'updater-start',
+      'keyboard-cleanup',
+      'aria-destroy',
       'updater-destroy',
       'zone-renderer-destroy',
       'adjacency-renderer-destroy',
@@ -210,6 +237,8 @@ describe('createGameCanvasRuntime', () => {
       'viewport-destroy',
       'game-canvas-destroy',
     ]);
+    expect(fixture.keyboardCleanup).toHaveBeenCalledTimes(1);
+    expect(fixture.ariaAnnouncer.destroy).toHaveBeenCalledTimes(1);
     expect(onCoordinateBridgeReady).toHaveBeenLastCalledWith(null);
   });
 

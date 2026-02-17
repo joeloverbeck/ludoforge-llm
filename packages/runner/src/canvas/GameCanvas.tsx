@@ -7,7 +7,9 @@ import { createCoordinateBridge } from './coordinate-bridge';
 import { createGameCanvas, type GameCanvas as PixiGameCanvas } from './create-app';
 import { attachTokenSelectHandlers } from './interactions/token-select';
 import { attachZoneSelectHandlers } from './interactions/zone-select';
-import { dispatchCanvasSelection } from './interactions/selection-dispatcher';
+import { createAriaAnnouncer } from './interactions/aria-announcer';
+import { attachKeyboardSelect } from './interactions/keyboard-select';
+import { createCanvasInteractionController } from './interactions/canvas-interaction-controller';
 import { createPositionStore, type PositionStore } from './position-store';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
 import { ContainerPool } from './renderers/container-pool';
@@ -63,6 +65,8 @@ interface GameCanvasRuntimeDeps {
   readonly createTokenRenderer: typeof createTokenRenderer;
   readonly createCanvasUpdater: typeof createCanvasUpdater;
   readonly createCoordinateBridge: typeof createCoordinateBridge;
+  readonly createAriaAnnouncer: typeof createAriaAnnouncer;
+  readonly attachKeyboardSelect: typeof attachKeyboardSelect;
 }
 
 const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
@@ -74,7 +78,22 @@ const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   createTokenRenderer,
   createCanvasUpdater,
   createCoordinateBridge,
+  createAriaAnnouncer,
+  attachKeyboardSelect,
 };
+
+const LIVE_REGION_STYLE = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  margin: '-1px',
+  padding: '0',
+  border: '0',
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  clipPath: 'inset(50%)',
+  whiteSpace: 'nowrap',
+} as const;
 
 export async function createGameCanvasRuntime(
   options: GameCanvasRuntimeOptions,
@@ -87,6 +106,9 @@ export async function createGameCanvasRuntime(
   const gameCanvas = await deps.createGameCanvas(options.container, {
     backgroundColor: options.backgroundColor,
   });
+  const accessibilityContainer = options.container.parentElement ?? options.container;
+  const ariaAnnouncer = deps.createAriaAnnouncer(accessibilityContainer);
+  const interactionController = createCanvasInteractionController(() => selectorStore.getState(), ariaAnnouncer);
 
   const viewportResult = createViewportResult(deps, gameCanvas, positionStore);
   const zonePool = new ContainerPool();
@@ -94,7 +116,7 @@ export async function createGameCanvasRuntime(
   const zoneRenderer = deps.createZoneRenderer(gameCanvas.layers.zoneLayer, zonePool, {
     bindSelection: (zoneContainer, zoneId, isSelectable) =>
       attachZoneSelectHandlers(zoneContainer, zoneId, isSelectable, (target) => {
-        dispatchCanvasSelection(selectorStore.getState(), target);
+        interactionController.onSelectTarget(target);
       }),
   });
 
@@ -103,7 +125,7 @@ export async function createGameCanvasRuntime(
   const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, new DefaultFactionColorProvider(), {
     bindSelection: (tokenContainer, tokenId, isSelectable) =>
       attachTokenSelectHandlers(tokenContainer, tokenId, isSelectable, (target) => {
-        dispatchCanvasSelection(selectorStore.getState(), target);
+        interactionController.onSelectTarget(target);
       }),
   });
 
@@ -119,6 +141,19 @@ export async function createGameCanvasRuntime(
   const unsubscribeZoneIDs = selectorStore.subscribe(selectZoneIDs, (zoneIDs) => {
     positionStore.setZoneIDs(zoneIDs);
   }, { equalityFn: stringArraysEqual });
+  const cleanupKeyboardSelect = deps.attachKeyboardSelect({
+    getSelectableZoneIDs: () => interactionController.getSelectableZoneIDs(),
+    getCurrentFocusedZoneID: () => interactionController.getFocusedZoneID(),
+    onSelect: (zoneId) => {
+      interactionController.onSelectTarget({ type: 'zone', id: zoneId });
+    },
+    onFocusChange: (zoneId) => {
+      interactionController.onFocusChange(zoneId);
+    },
+    onFocusAnnounce: (zoneId) => {
+      interactionController.onFocusAnnounce(zoneId);
+    },
+  });
 
   canvasUpdater.start();
 
@@ -137,6 +172,8 @@ export async function createGameCanvasRuntime(
 
       options.onCoordinateBridgeReady?.(null);
       unsubscribeZoneIDs();
+      cleanupKeyboardSelect();
+      ariaAnnouncer.destroy();
       destroyCanvasPipeline(canvasUpdater, zoneRenderer, adjacencyRenderer, tokenRenderer, zonePool, viewportResult, gameCanvas);
     },
   };
@@ -148,6 +185,7 @@ export function GameCanvas({
   onCoordinateBridgeReady,
   onError,
 }: GameCanvasProps): ReactElement {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -185,7 +223,18 @@ export function GameCanvas({
     };
   }, [store, backgroundColor, onCoordinateBridgeReady, onError]);
 
-  return <div ref={containerRef} role="application" aria-label="Game board" />;
+  return (
+    <div ref={rootRef}>
+      <div ref={containerRef} role="application" aria-label="Game board" />
+      <div
+        data-ludoforge-live-region="true"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        style={LIVE_REGION_STYLE}
+      />
+    </div>
+  );
 }
 
 function destroyCanvasPipeline(

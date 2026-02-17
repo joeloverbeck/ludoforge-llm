@@ -16,6 +16,7 @@ Technology decisions: Appendix A of the same document.
 Spec 35 is completed and archived at `archive/specs/35-monorepo-restructure-build-system.md`.
 Spec 36 is completed and archived at `archive/specs/36-game-kernel-web-worker-bridge.md`.
 Spec 37 is completed and archived at `archive/specs/37-state-management-render-model.md`.
+Spec 38 is completed and archived at `archive/specs/38-pixijs-canvas-foundation.md`.
 
 ---
 
@@ -26,7 +27,7 @@ Spec 37 is completed and archived at `archive/specs/37-state-management-render-m
 | 35 | Monorepo Restructure & Build System | P0 | M | None |
 | 36 | Game Kernel Web Worker Bridge (completed) | P0 | M | 35 |
 | 37 | State Management & Render Model (completed) | P0 | L | 36 |
-| 38 | PixiJS Canvas Foundation | P0 | L | 37 |
+| 38 | PixiJS Canvas Foundation (completed) | P0 | L | 37 |
 | 39 | React DOM UI Layer | P1 | L | 37, 38 |
 | 40 | Animation System | P1 | L | 38 |
 | 41 | Board Layout Engine | P1 | M | 38 |
@@ -91,9 +92,9 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 ### Milestone F2: Playable Board (Specs 38–39)
 
 **Gate criteria**:
-- [ ] PixiJS renders zones and tokens from RenderModel for any compiled game
-- [ ] pixi-viewport provides pan/zoom with board clamping
-- [ ] Zone click-to-select interaction works
+- [x] PixiJS renders zones and tokens from RenderModel for any compiled game
+- [x] pixi-viewport provides pan/zoom with board clamping
+- [x] Zone click-to-select interaction works
 - [ ] Action toolbar displays grouped legal moves
 - [ ] Multi-step choice UI with breadcrumb/progress and back/cancel
 - [ ] Numeric input for parameterized choices (slider with min/max)

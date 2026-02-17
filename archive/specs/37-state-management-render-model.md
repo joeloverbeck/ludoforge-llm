@@ -1,6 +1,6 @@
 # Spec 37: State Management & Render Model
 
-**Status**: ACTIVE
+**Status**: ✅ COMPLETED
 **Priority**: P0 (critical path)
 **Complexity**: L
 **Dependencies**: Spec 36 (Game Kernel Web Worker Bridge)
@@ -645,3 +645,18 @@ export function formatIdAsDisplayName(id: string): string;
 - Animation processing (Spec 40)
 - Visual config / display name overrides (Spec 42)
 - AI agent move selection (AI integration is a concern of the game loop coordinator, not the store)
+
+## Outcome
+
+- **Completion date**: 2026-02-17
+- **What was implemented**:
+  - Zustand runner store (`createGameStore`) with lifecycle/error/loading handling, progressive choice flow, confirm/cancel/undo paths, and render-model re-derivation.
+  - Pure `deriveRenderModel()` pipeline and `RenderModel` contracts for zones/tokens/visibility, players/turn order, choices/actions, warnings, terminal projection, markers/tracks/effects/interrupt/event-deck metadata.
+  - Runner test coverage across store flow and render-model derivation, including hidden information and state metadata projections.
+- **Notable deviations from original plan**:
+  - D11 integration coverage was implemented in the existing split test architecture (`test/store` + `test/model`) rather than creating a new dedicated integration file.
+  - A derivation-input null-clearing bug discovered during D11 completion was fixed in runner store logic.
+- **Verification results**:
+  - `pnpm -F @ludoforge/runner test`
+  - `pnpm -F @ludoforge/runner lint`
+  - `pnpm -F @ludoforge/runner typecheck`

@@ -69,6 +69,12 @@ interface RenderDerivationInputs {
   readonly terminal: TerminalResult | null;
 }
 
+interface MutationTransitionInputs {
+  readonly gameState: GameState;
+  readonly legalMoveResult: LegalMoveEnumerationResult;
+  readonly terminal: TerminalResult | null;
+}
+
 const WORKER_ERROR_CODES: readonly WorkerError['code'][] = [
   'ILLEGAL_MOVE',
   'VALIDATION_FAILED',
@@ -94,6 +100,95 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   animationPlaying: false,
   renderModel: null,
 };
+
+function resetSessionState(): Pick<
+  GameStoreState,
+  | 'gameDef'
+  | 'gameState'
+  | 'playerID'
+  | 'legalMoveResult'
+  | 'choicePending'
+  | 'effectTrace'
+  | 'triggerFirings'
+  | 'terminal'
+  | 'selectedAction'
+  | 'partialMove'
+  | 'choiceStack'
+  | 'playerSeats'
+> {
+  return {
+    gameDef: null,
+    gameState: null,
+    playerID: null,
+    legalMoveResult: null,
+    choicePending: null,
+    effectTrace: [],
+    triggerFirings: [],
+    terminal: null,
+    selectedAction: null,
+    partialMove: null,
+    choiceStack: [],
+    playerSeats: new Map<PlayerId, PlayerSeat>(),
+  };
+}
+
+function buildInitSuccessState(
+  def: GameDef,
+  gameState: GameState,
+  playerID: PlayerId,
+  legalMoveResult: LegalMoveEnumerationResult,
+  terminal: TerminalResult | null,
+): Partial<GameStoreState> {
+  return {
+    gameDef: def,
+    gameState,
+    playerID,
+    legalMoveResult,
+    terminal,
+    gameLifecycle: toLifecycle(terminal),
+    error: null,
+    effectTrace: [],
+    triggerFirings: [],
+    playerSeats: buildPlayerSeats(gameState.playerCount, playerID),
+    ...resetMoveConstructionState(),
+  };
+}
+
+function buildInitFailureState(error: unknown): Partial<GameStoreState> {
+  return {
+    ...resetSessionState(),
+    error: toWorkerError(error),
+    gameLifecycle: 'idle',
+  };
+}
+
+function resetMoveConstructionState(): Pick<GameStoreState, 'selectedAction' | 'partialMove' | 'choiceStack' | 'choicePending'> {
+  return {
+    selectedAction: null,
+    partialMove: null,
+    choiceStack: [],
+    choicePending: null,
+  };
+}
+
+function buildStateMutationState(
+  gameState: GameState,
+  legalMoveResult: LegalMoveEnumerationResult,
+  terminal: TerminalResult | null,
+  effectTrace: readonly EffectTraceEntry[],
+  triggerFirings: readonly TriggerLogEntry[],
+): Partial<GameStoreState> {
+  return {
+    gameState,
+    legalMoveResult,
+    terminal,
+    gameLifecycle: toLifecycle(terminal),
+    effectTrace,
+    triggerFirings,
+    error: null,
+    ...resetMoveConstructionState(),
+  };
+}
 
 function isWorkerError(error: unknown): error is WorkerError {
   if (typeof error !== 'object' || error === null) {
@@ -192,16 +287,19 @@ function deriveStoreRenderModel(inputs: RenderDerivationInputs): RenderModel | n
 }
 
 function toRenderDerivationInputs(store: GameStore, patch: Partial<GameStoreState>): RenderDerivationInputs {
+  const fromPatch = <K extends keyof RenderDerivationInputs>(key: K, current: RenderDerivationInputs[K]): RenderDerivationInputs[K] =>
+    key in patch ? (patch[key as keyof GameStoreState] as RenderDerivationInputs[K]) : current;
+
   return {
-    gameDef: patch.gameDef ?? store.gameDef,
-    gameState: patch.gameState ?? store.gameState,
-    playerID: patch.playerID ?? store.playerID,
-    legalMoveResult: patch.legalMoveResult ?? store.legalMoveResult,
-    choicePending: patch.choicePending ?? store.choicePending,
-    selectedAction: patch.selectedAction ?? store.selectedAction,
-    choiceStack: patch.choiceStack ?? store.choiceStack,
-    playerSeats: patch.playerSeats ?? store.playerSeats,
-    terminal: patch.terminal ?? store.terminal,
+    gameDef: fromPatch('gameDef', store.gameDef),
+    gameState: fromPatch('gameState', store.gameState),
+    playerID: fromPatch('playerID', store.playerID),
+    legalMoveResult: fromPatch('legalMoveResult', store.legalMoveResult),
+    choicePending: fromPatch('choicePending', store.choicePending),
+    selectedAction: fromPatch('selectedAction', store.selectedAction),
+    choiceStack: fromPatch('choiceStack', store.choiceStack),
+    playerSeats: fromPatch('playerSeats', store.playerSeats),
+    terminal: fromPatch('terminal', store.terminal),
   };
 }
 
@@ -228,21 +326,13 @@ export function createGameStore(bridge: GameWorkerAPI) {
         }
       };
 
-      const resetMoveConstruction = (): Pick<GameStoreState, 'selectedAction' | 'partialMove' | 'choiceStack' | 'choicePending'> => ({
-        selectedAction: null,
-        partialMove: null,
-        choiceStack: [],
-        choicePending: null,
-      });
-
-      const refreshAfterStateMutation = (gameState: GameState): Pick<GameStoreState, 'gameState' | 'legalMoveResult' | 'terminal' | 'gameLifecycle'> => {
+      const deriveMutationInputs = (gameState: GameState): MutationTransitionInputs => {
         const legalMoveResult = bridge.enumerateLegalMoves();
         const terminal = bridge.terminalResult();
         return {
           gameState,
           legalMoveResult,
           terminal,
-          gameLifecycle: toLifecycle(terminal),
         };
       };
 
@@ -261,25 +351,9 @@ export function createGameStore(bridge: GameWorkerAPI) {
             const gameState = bridge.init(def, seed);
             const legalMoveResult = bridge.enumerateLegalMoves();
             const terminal = bridge.terminalResult();
-            const playerSeats = buildPlayerSeats(gameState.playerCount, playerID);
-            setAndDerive({
-              gameDef: def,
-              gameState,
-              playerID,
-              legalMoveResult,
-              terminal,
-              gameLifecycle: toLifecycle(terminal),
-              error: null,
-              effectTrace: [],
-              triggerFirings: [],
-              playerSeats,
-              ...resetMoveConstruction(),
-            });
+            setAndDerive(buildInitSuccessState(def, gameState, playerID, legalMoveResult, terminal));
           } catch (error) {
-            setAndDerive({
-              error: toWorkerError(error),
-              gameLifecycle: 'idle',
-            });
+            setAndDerive(buildInitFailureState(error));
           } finally {
             set({ loading: false });
           }
@@ -292,7 +366,7 @@ export function createGameStore(bridge: GameWorkerAPI) {
             if (choiceRequest.kind === 'illegal') {
               setAndDerive({
                 error: toIllegalChoiceError(choiceRequest),
-                ...resetMoveConstruction(),
+                ...resetMoveConstructionState(),
               });
               return;
             }
@@ -344,12 +418,15 @@ export function createGameStore(bridge: GameWorkerAPI) {
             }
 
             const result = bridge.applyMove(state.partialMove);
+            const mutationInputs = deriveMutationInputs(result.state);
             setAndDerive({
-              ...refreshAfterStateMutation(result.state),
-              effectTrace: result.effectTrace ?? [],
-              triggerFirings: result.triggerFirings,
-              error: null,
-              ...resetMoveConstruction(),
+              ...buildStateMutationState(
+                mutationInputs.gameState,
+                mutationInputs.legalMoveResult,
+                mutationInputs.terminal,
+                result.effectTrace ?? [],
+                result.triggerFirings,
+              ),
             });
           });
         },
@@ -379,7 +456,7 @@ export function createGameStore(bridge: GameWorkerAPI) {
         },
 
         cancelMove() {
-          setAndDerive(resetMoveConstruction());
+          setAndDerive(resetMoveConstructionState());
         },
 
         undo() {
@@ -389,12 +466,15 @@ export function createGameStore(bridge: GameWorkerAPI) {
               return;
             }
 
+            const mutationInputs = deriveMutationInputs(restored);
             setAndDerive({
-              ...refreshAfterStateMutation(restored),
-              effectTrace: [],
-              triggerFirings: [],
-              error: null,
-              ...resetMoveConstruction(),
+              ...buildStateMutationState(
+                mutationInputs.gameState,
+                mutationInputs.legalMoveResult,
+                mutationInputs.terminal,
+                [],
+                [],
+              ),
             });
           });
         },

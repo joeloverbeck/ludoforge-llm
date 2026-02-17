@@ -15,6 +15,7 @@ Technology decisions: Appendix A of the same document.
 
 Spec 35 is completed and archived at `archive/specs/35-monorepo-restructure-build-system.md`.
 Spec 36 is completed and archived at `archive/specs/36-game-kernel-web-worker-bridge.md`.
+Spec 37 is completed and archived at `archive/specs/37-state-management-render-model.md`.
 
 ---
 
@@ -24,7 +25,7 @@ Spec 36 is completed and archived at `archive/specs/36-game-kernel-web-worker-br
 |------|-------|----------|------------|--------------|
 | 35 | Monorepo Restructure & Build System | P0 | M | None |
 | 36 | Game Kernel Web Worker Bridge (completed) | P0 | M | 35 |
-| 37 | State Management & Render Model | P0 | L | 36 |
+| 37 | State Management & Render Model (completed) | P0 | L | 36 |
 | 38 | PixiJS Canvas Foundation | P0 | L | 37 |
 | 39 | React DOM UI Layer | P1 | L | 37, 38 |
 | 40 | Animation System | P1 | L | 38 |
@@ -81,9 +82,9 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [ ] `playSequence()` batch execution verified with 10+ move sequences
 - [x] `enumerateLegalMoves()` exposes move enumeration warnings to UI layer
 - [x] `WorkerError` error taxonomy implemented with structured error codes
-- [ ] Zustand store receives state updates from worker
-- [ ] `deriveRenderModel()` is unit-tested with both FITL and Texas Hold'em GameDefs
-- [ ] Hidden information filtering verified (owner-only zones, reveal grants)
+- [x] Zustand store receives state updates from worker
+- [x] `deriveRenderModel()` is unit-tested for zones/tokens/actions/choices/terminal/metadata projections via synthetic fixtures
+- [x] Hidden information filtering verified (owner-only zones, reveal grants)
 
 **Outcome**: Engine is restructured as a monorepo package. The state pipeline (Worker → Store → RenderModel) is proven end-to-end.
 

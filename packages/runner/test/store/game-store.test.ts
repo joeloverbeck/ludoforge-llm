@@ -1,6 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
-import { asActionId, asPlayerId, initialState, type GameDef, type Move } from '@ludoforge/engine';
+import {
+  asActionId,
+  asPlayerId,
+  asTriggerId,
+  initialState,
+  type EffectTraceEntry,
+  type GameDef,
+  type Move,
+  type TriggerLogEntry,
+} from '@ludoforge/engine';
 
 import { createGameStore } from '../../src/store/game-store.js';
 import { createGameWorker, type GameWorkerAPI, type WorkerError } from '../../src/worker/game-worker-api.js';
@@ -181,6 +190,49 @@ function createChoiceBridgeStub(def: GameDef): GameWorkerAPI {
   });
 }
 
+function createChooseNBridgeStub(def: GameDef): GameWorkerAPI {
+  const state = initialState(def, 100, 2);
+  const legalMove = { actionId: asActionId('pick-two'), params: {} };
+  const validChoices = new Set(['table:none', 'reserve:none']);
+
+  return createBridgeStub({
+    init: () => state,
+    enumerateLegalMoves: () => ({
+      moves: [legalMove],
+      warnings: [],
+    }),
+    terminalResult: () => null,
+    legalChoices: (partialMove) => {
+      const firstZone = partialMove.params.firstZone;
+      if (firstZone === undefined) {
+        return {
+          kind: 'pending',
+          complete: false,
+          decisionId: 'decision:first-many',
+          name: 'firstZone',
+          type: 'chooseN',
+          min: 1,
+          max: 2,
+          options: ['table:none', 'reserve:none'],
+        };
+      }
+
+      if (!Array.isArray(firstZone) || firstZone.some((choice) => typeof choice !== 'string' || !validChoices.has(choice))) {
+        return {
+          kind: 'illegal',
+          complete: false,
+          reason: 'pipelineLegalityFailed',
+        };
+      }
+
+      return {
+        kind: 'complete',
+        complete: true,
+      };
+    },
+  });
+}
+
 describe('createGameStore', () => {
   it('initGame populates state and enters playing lifecycle', () => {
     const def = compileStoreFixture(5);
@@ -269,6 +321,23 @@ describe('createGameStore', () => {
     expect(after.choicePending).toEqual(before.choicePending);
   });
 
+  it('makeChoice supports chooseN options with min/max metadata', () => {
+    const def = compileStoreFixture(5);
+    const bridge = createChooseNBridgeStub(def);
+    const store = createGameStore(bridge);
+    store.getState().initGame(def, 15, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-two'));
+
+    expect(store.getState().choicePending?.type).toBe('chooseN');
+    expect(store.getState().choicePending?.min).toBe(1);
+    expect(store.getState().choicePending?.max).toBe(2);
+
+    store.getState().makeChoice(['table:none', 'reserve:none']);
+
+    expect(store.getState().choicePending).toBeNull();
+    expect(store.getState().partialMove?.params.firstZone).toEqual(['table:none', 'reserve:none']);
+  });
+
   it('confirmMove applies move, refreshes state, and resets move construction', () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
@@ -286,6 +355,61 @@ describe('createGameStore', () => {
     expect(state.partialMove).toBeNull();
     expect(state.choiceStack).toEqual([]);
     expect(state.choicePending).toBeNull();
+  });
+
+  it('confirmMove stores effect trace and trigger firings from applyMove', () => {
+    const def = compileStoreFixture(5);
+    const baseState = initialState(def, 16, 2);
+    const move = { actionId: asActionId('tick'), params: {} };
+    const effectTrace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'varChange',
+        scope: 'global',
+        varName: 'round',
+        oldValue: 0,
+        newValue: 1,
+        provenance: {
+          phase: 'main',
+          eventContext: 'actionEffect',
+          actionId: 'tick',
+          effectPath: 'effects[0]',
+        },
+      },
+    ];
+    const triggerFirings: readonly TriggerLogEntry[] = [
+      {
+        kind: 'fired',
+        triggerId: asTriggerId('on-round'),
+        event: { type: 'turnStart' },
+        depth: 0,
+      },
+    ];
+    const bridge = createBridgeStub({
+      init: () => baseState,
+      enumerateLegalMoves: () => ({ moves: [move], warnings: [] }),
+      legalChoices: () => ({ kind: 'complete', complete: true }),
+      applyMove: () => ({
+        state: {
+          ...baseState,
+          globalVars: {
+            ...baseState.globalVars,
+            round: 1,
+          },
+        },
+        effectTrace,
+        triggerFirings,
+        warnings: [],
+      }),
+      terminalResult: () => null,
+    });
+    const store = createGameStore(bridge);
+    store.getState().initGame(def, 16, asPlayerId(0));
+    store.getState().selectAction(asActionId('tick'));
+
+    store.getState().confirmMove();
+
+    expect(store.getState().effectTrace).toEqual(effectTrace);
+    expect(store.getState().triggerFirings).toEqual(triggerFirings);
   });
 
   it('confirmMove is a no-op when no partialMove is selected', () => {
@@ -317,6 +441,22 @@ describe('createGameStore', () => {
     expect(store.getState().choicePending?.kind).toBe('pending');
   });
 
+  it('cancelMove clears selected action and progressive choice state', () => {
+    const def = compileStoreFixture(5);
+    const bridge = createChoiceBridgeStub(def);
+    const store = createGameStore(bridge);
+    store.getState().initGame(def, 18, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-two'));
+    store.getState().makeChoice(pickOneOption(store));
+
+    store.getState().cancelMove();
+
+    expect(store.getState().selectedAction).toBeNull();
+    expect(store.getState().partialMove).toBeNull();
+    expect(store.getState().choiceStack).toEqual([]);
+    expect(store.getState().choicePending).toBeNull();
+  });
+
   it('cancelChoice with empty stack is a no-op', () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
@@ -346,6 +486,26 @@ describe('createGameStore', () => {
     expect(store.getState().gameLifecycle).toBe('playing');
     expect(store.getState().gameState?.globalVars.round).toBe(0);
     expect(store.getState().legalMoveResult).not.toBeNull();
+  });
+
+  it('undo re-enumerates legal moves, re-checks terminal result, and re-derives render model', () => {
+    const def = compileStoreFixture(1);
+    const bridge = createGameWorker();
+    const enumerateSpy = vi.spyOn(bridge, 'enumerateLegalMoves');
+    const terminalSpy = vi.spyOn(bridge, 'terminalResult');
+    const store = createGameStore(bridge);
+    store.getState().initGame(def, 20, asPlayerId(0));
+    store.getState().selectAction(asActionId('tick'));
+    store.getState().confirmMove();
+    expect(store.getState().renderModel?.terminal).not.toBeNull();
+
+    const enumerateCallsBeforeUndo = enumerateSpy.mock.calls.length;
+    const terminalCallsBeforeUndo = terminalSpy.mock.calls.length;
+    store.getState().undo();
+
+    expect(enumerateSpy.mock.calls.length).toBe(enumerateCallsBeforeUndo + 1);
+    expect(terminalSpy.mock.calls.length).toBe(terminalCallsBeforeUndo + 1);
+    expect(store.getState().renderModel?.terminal).toBeNull();
   });
 
   it('undo with no history is a no-op', () => {
@@ -380,6 +540,145 @@ describe('createGameStore', () => {
     expect(initSpy).toHaveBeenCalledTimes(1);
     expect(enumerateSpy).toHaveBeenCalledTimes(1);
     expect(store.getState().loading).toBe(false);
+  });
+
+  it('lifecycle transitions through initializing before reaching terminal', () => {
+    const def = compileStoreFixture(0);
+    const baseState = initialState(def, 22, 2);
+    let sawInitializing = false;
+    let store!: ReturnType<typeof createGameStore>;
+    const bridge = createBridgeStub({
+      init: () => {
+        sawInitializing = store.getState().gameLifecycle === 'initializing';
+        return baseState;
+      },
+      enumerateLegalMoves: () => ({ moves: [], warnings: [] }),
+      terminalResult: () => ({ type: 'draw' }),
+    });
+
+    store = createGameStore(bridge);
+    expect(store.getState().gameLifecycle).toBe('idle');
+    store.getState().initGame(def, 22, asPlayerId(0));
+
+    expect(sawInitializing).toBe(true);
+    expect(store.getState().gameLifecycle).toBe('terminal');
+  });
+
+  it('failed initGame after prior successful game clears stale session snapshot', () => {
+    const def = compileStoreFixture(5);
+    const workerError: WorkerError = {
+      code: 'VALIDATION_FAILED',
+      message: 'bad game definition',
+    };
+    const gameState = initialState(def, 24, 2);
+    const initMock = vi
+      .fn<GameWorkerAPI['init']>()
+      .mockReturnValueOnce(gameState)
+      .mockImplementationOnce(() => {
+        throw workerError;
+      });
+    const bridge = createBridgeStub({
+      init: initMock,
+      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      terminalResult: () => null,
+      legalChoices: () => ({ kind: 'complete', complete: true }),
+    });
+    const store = createGameStore(bridge);
+
+    store.getState().initGame(def, 24, asPlayerId(0));
+    store.getState().selectAction(asActionId('tick'));
+    expect(store.getState().renderModel).not.toBeNull();
+    expect(store.getState().selectedAction).toEqual(asActionId('tick'));
+
+    store.getState().initGame(def, 24, asPlayerId(0));
+
+    const state = store.getState();
+    expect(state.gameLifecycle).toBe('idle');
+    expect(state.loading).toBe(false);
+    expect(state.gameDef).toBeNull();
+    expect(state.gameState).toBeNull();
+    expect(state.playerID).toBeNull();
+    expect(state.legalMoveResult).toBeNull();
+    expect(state.choicePending).toBeNull();
+    expect(state.selectedAction).toBeNull();
+    expect(state.partialMove).toBeNull();
+    expect(state.choiceStack).toEqual([]);
+    expect(state.effectTrace).toEqual([]);
+    expect(state.triggerFirings).toEqual([]);
+    expect(state.terminal).toBeNull();
+    expect(state.playerSeats.size).toBe(0);
+    expect(state.renderModel).toBeNull();
+  });
+
+  it('failed initGame keeps structured WorkerError while clearing render/session fields', () => {
+    const def = compileStoreFixture(5);
+    const workerError: WorkerError = {
+      code: 'VALIDATION_FAILED',
+      message: 'bad game definition',
+      details: { source: 'test' },
+    };
+    const gameState = initialState(def, 25, 2);
+    const initMock = vi
+      .fn<GameWorkerAPI['init']>()
+      .mockReturnValueOnce(gameState)
+      .mockImplementationOnce(() => {
+        throw workerError;
+      });
+    const bridge = createBridgeStub({
+      init: initMock,
+      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      terminalResult: () => null,
+    });
+    const store = createGameStore(bridge);
+
+    store.getState().initGame(def, 25, asPlayerId(0));
+    expect(store.getState().renderModel).not.toBeNull();
+
+    store.getState().initGame(def, 25, asPlayerId(0));
+
+    const state = store.getState();
+    expect(state.error).toEqual(workerError);
+    expect(state.renderModel).toBeNull();
+    expect(state.gameDef).toBeNull();
+    expect(state.gameState).toBeNull();
+    expect(state.playerID).toBeNull();
+    expect(state.legalMoveResult).toBeNull();
+    expect(state.terminal).toBeNull();
+    expect(state.playerSeats.size).toBe(0);
+  });
+
+  it('retry initGame after failure succeeds and rebuilds render model', () => {
+    const def = compileStoreFixture(5);
+    const gameState = initialState(def, 26, 2);
+    const initMock = vi
+      .fn<GameWorkerAPI['init']>()
+      .mockImplementationOnce(() => {
+        throw new Error('boom');
+      })
+      .mockReturnValueOnce(gameState);
+    const bridge = createBridgeStub({
+      init: initMock,
+      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      terminalResult: () => null,
+    });
+    const store = createGameStore(bridge);
+
+    store.getState().initGame(def, 26, asPlayerId(0));
+    expect(store.getState().gameLifecycle).toBe('idle');
+    expect(store.getState().renderModel).toBeNull();
+    expect(store.getState().error).toMatchObject({ code: 'INTERNAL_ERROR' });
+
+    store.getState().initGame(def, 26, asPlayerId(0));
+
+    const state = store.getState();
+    expect(state.gameLifecycle).toBe('playing');
+    expect(state.loading).toBe(false);
+    expect(state.error).toBeNull();
+    expect(state.gameDef).toEqual(def);
+    expect(state.gameState).not.toBeNull();
+    expect(state.playerID).toEqual(asPlayerId(0));
+    expect(state.legalMoveResult).not.toBeNull();
+    expect(state.renderModel).not.toBeNull();
   });
 
   it('bridge errors are captured as WorkerError and clearError resets them', () => {

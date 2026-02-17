@@ -61,7 +61,7 @@ For docs/spec/ticket changes:
 
 For code changes:
 - place tests in the relevant `packages/engine/test/` domain (`unit`, `integration`, `e2e`, `memory`, or `performance`).
-- place runner tests in `packages/runner/test/` (currently worker-focused under `packages/runner/test/worker`).
+- place runner tests in `packages/runner/test/` (covers `canvas/`, `model/`, `store/`, `utils/`, and `worker/` domains).
 - run targeted tests when possible (example: `node --test packages/engine/dist/test/unit/<file>.test.js`).
 - if running `node --test` directly, run `pnpm turbo build` first so `packages/engine/dist/` is up to date.
 - run at least `pnpm turbo test` before finalizing; include `pnpm -F @ludoforge/engine test:e2e` when behavior spans CLI/pipeline flows.

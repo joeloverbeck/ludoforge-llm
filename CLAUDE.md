@@ -27,12 +27,12 @@ Active development. The core engine (kernel, compiler, agents, simulator) is imp
 1. **Fire in the Lake (FITL)** — a 4-faction COIN-series wargame. Event card encoding and game definition generation are complete. Remaining work: rules refinement (option matrix, monsoon effects, etc.) and E2E validation.
 2. **Texas Hold'em** — a no-limit poker tournament (2-10 players). Added as a second game to stress-test engine-agnosticism with hidden information, betting, and player elimination. Spec 33 is active.
 
-- **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), FITL specs 15-28, 30, 32, plus frontend specs 35 (monorepo restructure), 36 (web worker bridge), 37 (state management & render model)
-- **Completed ticket series** (archived): ENGINEAGNO, TEXHOLKERPRIGAMTOU, ARCHTRACE, MONOREPO, WRKBRIDGE, STATEMOD
-- **Active specs**: 29 (FITL event card encoding), 31 (FITL E2E tests), 33 (Texas Hold'em), 35-00 (frontend roadmap), 38 (PixiJS canvas), 39 (React DOM UI), 40 (animation), 41 (board layout), 42 (visual config & session management)
+- **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), FITL specs 15-28, 30, 32, plus frontend specs 35 (monorepo restructure), 36 (web worker bridge), 37 (state management & render model), 38 (PixiJS canvas foundation)
+- **Completed ticket series** (archived): ENGINEAGNO, TEXHOLKERPRIGAMTOU, ARCHTRACE, MONOREPO, WRKBRIDGE, STATEMOD, PIXIFOUND
+- **Active specs**: 29 (FITL event card encoding), 31 (FITL E2E tests), 33 (Texas Hold'em), 35-00 (frontend roadmap), 39 (React DOM UI), 40 (animation), 41 (board layout), 42 (visual config & session management)
 - **Active tickets**: FITLRULES2-001 through 006 (FITL rules refinement — data-only YAML changes)
 - **Not yet started**: 11 (evaluator/degeneracy), 12 (CLI), 13 (mechanic bundle IR), 14 (evolution pipeline)
-- **Codebase size**: ~170 source files, ~530 test files
+- **Codebase size**: ~190 source files, ~290 test files
 - **Design specs**: `brainstorming/executable-board-game-kernel-cnl-rulebook.md`, `brainstorming/texas-hold-em-rules.md`, `brainstorming/browser-based-game-runner.md`
 
 ## Tech Stack
@@ -44,7 +44,7 @@ Active development. The core engine (kernel, compiler, agents, simulator) is imp
 - **Testing**: Node.js built-in test runner (`node --test`) for engine, Vitest for runner
 - **Build**: TypeScript (`tsc`) for engine, Vite for runner
 - **Linting**: ESLint with typescript-eslint
-- **Runner**: React 19 + Vite 7 + Zustand (state) + Comlink (worker RPC)
+- **Runner**: React 19 + Vite 7 + PixiJS 8 (canvas) + pixi-viewport (pan/zoom) + Zustand (state) + Comlink (worker RPC)
 - **Runtime deps (engine)**: `yaml` (YAML 1.2 parsing), `zod` v4 (schema validation)
 - **Dev deps**: `ajv` (JSON Schema validation in tests), `eslint` v9, `typescript` v5.9
 
@@ -65,6 +65,7 @@ Engine source modules are under `packages/engine/src/`, with a separate runner p
 | `packages/runner/src/store/` | Zustand game store with lifecycle state machine |
 | `packages/runner/src/model/` | Render model derivation — transforms GameState into UI-friendly structures |
 | `packages/runner/src/utils/` | Runner utilities (display name formatting, etc.) |
+| `packages/runner/src/canvas/` | PixiJS canvas layer — renderers (zone, token, adjacency), interactions (keyboard, pointer, ARIA), viewport (pan/zoom/clamp), position store, canvas updater |
 | `packages/runner/src/` | React entry point (`App.tsx`, `main.tsx`) |
 | `data/` | Optional game reference artifacts and fixtures — `data/games/fire-in-the-lake/` and `data/games/texas-holdem/` (not required at runtime) |
 
@@ -140,11 +141,17 @@ packages/
       store/       # Zustand game store with lifecycle state machine
       model/       # Render model derivation (GameState → UI)
       utils/       # Display name formatting, helpers
+      canvas/      # PixiJS canvas layer (renderers, interactions, viewport)
+        renderers/ # Zone, token, adjacency rendering with container pooling
+        interactions/ # Keyboard nav, pointer selection, ARIA announcements
     test/
       worker/      # Worker and bridge tests
       store/       # Store and lifecycle tests
       model/       # Render model derivation tests
       utils/       # Utility tests
+      canvas/      # Canvas layer tests (renderers, interactions, viewport)
+        renderers/ # Renderer unit tests
+        interactions/ # Interaction handler tests
     index.html     # Vite entrypoint
     vite.config.ts # Vite + React config
 data/              # Optional game reference data

@@ -1,0 +1,22 @@
+.container {
+  display: flex;
+  align-items: center;
+  padding: var(--space-sm);
+  pointer-events: auto;
+}
+
+.undoButton {
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-md);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.undoButton:hover {
+  background: var(--bg-panel-hover);
+}

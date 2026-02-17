@@ -17,6 +17,18 @@ describe('UIOverlay', () => {
     expect(html).toContain('data-testid="ui-overlay-floating"');
   });
 
+  it('renders provided bottomBarContent in bottom region', () => {
+    const html = renderToStaticMarkup(
+      createElement(UIOverlay, {
+        bottomBarContent: createElement('div', { 'data-testid': 'bottom-slot-content' }, 'bottom controls'),
+      }),
+    );
+
+    expect(html).toContain('data-testid="ui-overlay-bottom"');
+    expect(html).toContain('data-testid="bottom-slot-content"');
+    expect(html).toContain('bottom controls');
+  });
+
   it('exports expected CSS module classes', () => {
     expect(styles).toMatchObject({
       overlay: expect.any(String),

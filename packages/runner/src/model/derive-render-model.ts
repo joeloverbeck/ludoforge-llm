@@ -1,42 +1,91 @@
-import { asPlayerId, matchesAllTokenFilterPredicates, type GameDef, type GameState, type PlayerId, type RevealGrant, type Token } from '@ludoforge/engine';
+import {
+  asPlayerId,
+  matchesAllTokenFilterPredicates,
+  type GameDef,
+  type GameState,
+  type NumericTrackDef,
+  type PlayerId,
+  type RevealGrant,
+  type Token,
+} from '@ludoforge/engine';
 
-import type { RenderAdjacency, RenderMapSpace, RenderModel, RenderToken, RenderZone } from './render-model.js';
+import type {
+  RenderAdjacency,
+  RenderEventDeck,
+  RenderGlobalMarker,
+  RenderLastingEffect,
+  RenderMapSpace,
+  RenderMarker,
+  RenderModel,
+  RenderToken,
+  RenderTrack,
+  RenderVariable,
+  RenderZone,
+} from './render-model.js';
 import type { RenderContext } from '../store/store-types.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 
 const OWNER_ZONE_ID_PATTERN = /^.+:(\d+)$/;
+
+interface StaticRenderDerivation {
+  readonly mapSpaces: readonly RenderMapSpace[];
+  readonly markerStatesById: ReadonlyMap<string, readonly string[]>;
+  readonly globalMarkerStatesById: ReadonlyMap<string, readonly string[]>;
+  readonly cardTitleById: ReadonlyMap<string, string>;
+  readonly trackDefs: readonly NumericTrackDef[];
+  readonly eventDecks: readonly GameDefEventDeckProjection[];
+  readonly playedCardZoneId: string | null;
+}
+
+interface GameDefEventDeckProjection {
+  readonly id: string;
+  readonly displayName: string;
+  readonly drawZoneId: string;
+  readonly discardZoneId: string;
+  readonly cardsById: ReadonlyMap<string, string>;
+}
 
 export function deriveRenderModel(
   state: GameState,
   def: GameDef,
   context: RenderContext,
 ): RenderModel {
+  const staticDerivation = deriveStaticRenderDerivation(def);
   const zoneDerivation = deriveZones(state, def, context);
   const zones = zoneDerivation.zones;
   const tokens = deriveTokens(state, zones, zoneDerivation.visibleTokenIDsByZone);
   const adjacencies = deriveAdjacencies(def, zones);
-  const mapSpaces = deriveMapSpaces(def);
+  const globalVars = deriveGlobalVars(state);
+  const playerVars = derivePlayerVars(state);
+  const globalMarkers = deriveGlobalMarkers(state, staticDerivation.globalMarkerStatesById);
+  const tracks = deriveTracks(state, staticDerivation.trackDefs);
+  const activeEffects = deriveActiveEffects(state, staticDerivation.cardTitleById);
+  const interruptStack = state.interruptPhaseStack ?? [];
+  const eventDecks = deriveEventDecks(state, staticDerivation.eventDecks, staticDerivation.playedCardZoneId);
 
   return {
-    zones,
+    zones: zones.map((zone) => ({
+      ...zone,
+      markers: deriveZoneMarkers(zone.id, state, staticDerivation.markerStatesById),
+    })),
     adjacencies,
-    mapSpaces,
+    mapSpaces: staticDerivation.mapSpaces,
     tokens,
-    globalVars: [],
-    playerVars: new Map(),
-    globalMarkers: [],
-    tracks: [],
-    activeEffects: [],
+    globalVars,
+    playerVars,
+    globalMarkers,
+    tracks,
+    activeEffects,
     players: [],
     activePlayerID: state.activePlayer,
     turnOrder: [],
     turnOrderType: state.turnOrderState.type,
     simultaneousSubmitted: deriveSimultaneousSubmitted(state),
-    interruptStack: [],
-    isInInterrupt: false,
+    interruptStack,
+    isInInterrupt: interruptStack.length > 0,
     phaseName: String(state.currentPhase),
     phaseDisplayName: formatIdAsDisplayName(String(state.currentPhase)),
-    eventDecks: [],
+    eventDecks,
     actionGroups: [],
     choiceBreadcrumb: [],
     currentChoiceOptions: null,
@@ -47,6 +96,188 @@ export function deriveRenderModel(
     moveEnumerationWarnings: [],
     terminal: null,
   };
+}
+
+function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
+  const cardTitleById = new Map<string, string>();
+  const eventDecks: GameDefEventDeckProjection[] = [];
+  for (const deck of def.eventDecks ?? []) {
+    const cardsById = new Map<string, string>();
+    for (const card of deck.cards) {
+      cardsById.set(card.id, card.title);
+      cardTitleById.set(card.id, card.title);
+    }
+
+    eventDecks.push({
+      id: deck.id,
+      displayName: formatIdAsDisplayName(deck.id),
+      drawZoneId: deck.drawZone,
+      discardZoneId: deck.discardZone,
+      cardsById,
+    });
+  }
+
+  const playedCardZoneId = def.turnOrder?.type === 'cardDriven'
+    ? def.turnOrder.config.turnFlow.cardLifecycle.played
+    : null;
+
+  return {
+    mapSpaces: deriveMapSpaces(def),
+    markerStatesById: buildMarkerStatesById(def.markerLattices),
+    globalMarkerStatesById: buildMarkerStatesById(def.globalMarkerLattices),
+    cardTitleById,
+    trackDefs: def.tracks ?? [],
+    eventDecks,
+    playedCardZoneId,
+  };
+}
+
+function deriveGlobalVars(state: GameState): readonly RenderVariable[] {
+  return Object.entries(state.globalVars)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, value]) => ({
+      name,
+      value,
+      displayName: formatIdAsDisplayName(name),
+    }));
+}
+
+function derivePlayerVars(state: GameState): ReadonlyMap<PlayerId, readonly RenderVariable[]> {
+  const numericPlayerIds = Object.keys(state.perPlayerVars)
+    .map((playerId) => Number(playerId))
+    .filter((playerId) => Number.isInteger(playerId) && playerId >= 0 && playerId < state.playerCount)
+    .sort((left, right) => left - right);
+  const playerVars = new Map<PlayerId, readonly RenderVariable[]>();
+
+  for (const playerId of numericPlayerIds) {
+    const playerEntry = state.perPlayerVars[String(playerId)] ?? {};
+    const vars: readonly RenderVariable[] = Object.entries(playerEntry)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, value]) => ({
+        name,
+        value,
+        displayName: formatIdAsDisplayName(name),
+      }));
+
+    playerVars.set(asPlayerId(playerId), vars);
+  }
+
+  return playerVars;
+}
+
+function buildMarkerStatesById(
+  markerLattices: readonly { readonly id: string; readonly states: readonly string[] }[] | undefined,
+): ReadonlyMap<string, readonly string[]> {
+  const statesById = new Map<string, readonly string[]>();
+  for (const lattice of markerLattices ?? []) {
+    statesById.set(lattice.id, lattice.states);
+  }
+  return statesById;
+}
+
+function deriveZoneMarkers(
+  zoneId: string,
+  state: GameState,
+  markerStatesById: ReadonlyMap<string, readonly string[]>,
+): readonly RenderMarker[] {
+  return Object.entries(state.markers[zoneId] ?? {})
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([id, markerState]) => ({
+      id,
+      state: markerState,
+      possibleStates: markerStatesById.get(id) ?? [],
+    }));
+}
+
+function deriveGlobalMarkers(
+  state: GameState,
+  statesById: ReadonlyMap<string, readonly string[]>,
+): readonly RenderGlobalMarker[] {
+  return Object.entries(state.globalMarkers ?? {})
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([id, markerState]) => ({
+      id,
+      state: markerState,
+      possibleStates: statesById.get(id) ?? [],
+    }));
+}
+
+function deriveTracks(state: GameState, trackDefs: readonly NumericTrackDef[]): readonly RenderTrack[] {
+  return trackDefs.map((track) => ({
+    id: track.id,
+    displayName: formatIdAsDisplayName(track.id),
+    scope: track.scope,
+    faction: track.faction ?? null,
+    min: track.min,
+    max: track.max,
+    currentValue: resolveTrackValue(state, track),
+  }));
+}
+
+function resolveTrackValue(state: GameState, track: NumericTrackDef): number {
+  if (track.scope === 'global') {
+    const value = state.globalVars[track.id];
+    return typeof value === 'number' ? value : track.min;
+  }
+
+  const faction = track.faction;
+  if (faction === undefined || state.turnOrderState.type !== 'cardDriven') {
+    return track.min;
+  }
+
+  const playerIndex = state.turnOrderState.runtime.factionOrder.indexOf(faction);
+  if (!Number.isInteger(playerIndex) || playerIndex < 0 || playerIndex >= state.playerCount) {
+    return track.min;
+  }
+
+  const value = state.perPlayerVars[String(playerIndex)]?.[track.id];
+  return typeof value === 'number' ? value : track.min;
+}
+
+function deriveActiveEffects(
+  state: GameState,
+  cardTitleById: ReadonlyMap<string, string>,
+): readonly RenderLastingEffect[] {
+  return (state.activeLastingEffects ?? []).map((effect) => ({
+    id: effect.id,
+    sourceCardId: effect.sourceCardId,
+    side: effect.side,
+    duration: effect.duration,
+    displayName: cardTitleById.get(effect.sourceCardId) ?? formatIdAsDisplayName(effect.sourceCardId),
+  }));
+}
+
+function deriveEventDecks(
+  state: GameState,
+  eventDecks: readonly GameDefEventDeckProjection[],
+  playedCardZoneId: string | null,
+): readonly RenderEventDeck[] {
+  const playedCardId = resolvePlayedCardId(state, playedCardZoneId);
+  return eventDecks.map((deck) => {
+    const currentCardTitle = playedCardId === null ? null : deck.cardsById.get(playedCardId) ?? null;
+    return {
+      id: deck.id,
+      displayName: deck.displayName,
+      drawZoneId: deck.drawZoneId,
+      discardZoneId: deck.discardZoneId,
+      currentCardId: currentCardTitle === null ? null : playedCardId,
+      currentCardTitle,
+      deckSize: state.zones[deck.drawZoneId]?.length ?? 0,
+      discardSize: state.zones[deck.discardZoneId]?.length ?? 0,
+    };
+  });
+}
+
+function resolvePlayedCardId(state: GameState, playedCardZoneId: string | null): string | null {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return null;
+  }
+
+  if (playedCardZoneId === null) {
+    return null;
+  }
+
+  return state.zones[playedCardZoneId]?.[0]?.id ?? null;
 }
 
 interface ZoneDerivationResult {

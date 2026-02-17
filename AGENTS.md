@@ -24,16 +24,16 @@ This repository contains both implementation code and design artifacts.
 
 ## Build, Test, and Development Commands
 Primary workflow commands:
-- `npm run build`: compile TypeScript with `tsc`.
-- `npm run clean`: remove `dist/`.
-- `npm run lint`: run ESLint.
-- `npm run lint:fix`: run ESLint with autofix.
-- `npm run typecheck`: run `tsc --noEmit`.
-- `npm test`: run unit + integration tests (via compiled output in `dist/`).
-- `npm run test:all`: run unit + integration + e2e tests.
-- `npm run test:unit`: run only unit tests.
-- `npm run test:integration`: run only integration tests.
-- `npm run test:e2e`: run only e2e tests.
+- `pnpm run build`: compile TypeScript with `tsc`.
+- `pnpm run clean`: remove `dist/`.
+- `pnpm run lint`: run ESLint.
+- `pnpm run lint:fix`: run ESLint with autofix.
+- `pnpm run typecheck`: run `tsc --noEmit`.
+- `pnpm test`: run unit + integration tests (via compiled output in `dist/`).
+- `pnpm run test:all`: run unit + integration + e2e tests.
+- `pnpm run test:unit`: run only unit tests.
+- `pnpm run test:integration`: run only integration tests.
+- `pnpm run test:e2e`: run only e2e tests.
 
 Useful repo-navigation commands:
 - `rg --files`: list tracked files quickly.
@@ -59,8 +59,8 @@ For docs/spec/ticket changes:
 For code changes:
 - place tests in the relevant `test/` domain (`unit`, `integration`, `e2e`, `memory`, or `performance`).
 - run targeted tests when possible (example: `node --test dist/test/unit/<file>.test.js`).
-- if running `node --test` directly, run `npm run build` first so `dist/` is up to date.
-- run at least `npm test` before finalizing; use `npm run test:all` when behavior spans CLI/pipeline flows.
+- if running `node --test` directly, run `pnpm run build` first so `dist/` is up to date.
+- run at least `pnpm test` before finalizing; use `pnpm run test:all` when behavior spans CLI/pipeline flows.
 
 ## Commit & Pull Request Guidelines
 Keep commit subjects short and imperative. Common patterns in this repo include:

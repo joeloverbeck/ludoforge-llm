@@ -215,8 +215,8 @@ export type EffectAST =
       };
     }
   | {
-      readonly commitResource: {
-        readonly from: { readonly scope: 'pvar'; readonly player: PlayerSel; readonly var: string };
+      readonly transferVar: {
+        readonly from: { readonly scope: 'global' | 'pvar'; readonly var: string; readonly player?: PlayerSel };
         readonly to: { readonly scope: 'global' | 'pvar'; readonly var: string; readonly player?: PlayerSel };
         readonly amount: NumericValueExpr;
         readonly min?: NumericValueExpr;

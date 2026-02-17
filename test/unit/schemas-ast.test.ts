@@ -103,7 +103,7 @@ describe('AST and selector schemas', () => {
       { setActivePlayer: { player: { chosen: '$targetPlayer' } } },
       { addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } },
       {
-        commitResource: {
+        transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'global', var: 'pot' },
           amount: 5,

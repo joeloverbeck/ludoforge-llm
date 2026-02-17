@@ -78,7 +78,7 @@ describe('resourceTransfer effect trace entries', () => {
   it('emits resourceTransfer with endpoints, amounts, provenance, and coherent varChange deltas', () => {
     const ctx = makeCtx({ player0Coins: 7, pool: 2 });
     const effects: readonly EffectAST[] = [{
-      commitResource: {
+      transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'global', var: 'pool' },
         amount: 5,
@@ -116,7 +116,7 @@ describe('resourceTransfer effect trace entries', () => {
   it('records clamped transfer context fields', () => {
     const ctx = makeCtx({ player0Coins: 7, pool: 18 });
     const effects: readonly EffectAST[] = [{
-      commitResource: {
+      transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'global', var: 'pool' },
         amount: 10,
@@ -137,10 +137,10 @@ describe('resourceTransfer effect trace entries', () => {
     assert.equal(transfer.maxAmount, 4);
   });
 
-  it('does not emit resourceTransfer for no-op commitResource', () => {
+  it('does not emit resourceTransfer for no-op transferVar', () => {
     const ctx = makeCtx({ player0Coins: 0, pool: 10 });
     const effects: readonly EffectAST[] = [{
-      commitResource: {
+      transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'global', var: 'pool' },
         amount: 3,
@@ -156,7 +156,7 @@ describe('resourceTransfer effect trace entries', () => {
   it('emits per-player destination endpoint with player id', () => {
     const ctx = makeCtx({ player0Coins: 8, player1Committed: 3, pool: 0 });
     const effects: readonly EffectAST[] = [{
-      commitResource: {
+      transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'pvar', player: 'active', var: 'committed' },
         amount: 4,
@@ -174,7 +174,7 @@ describe('resourceTransfer effect trace entries', () => {
   it('emits no transfer trace when source and destination resolve to the same cell', () => {
     const ctx = makeCtx({ player0Coins: 8, pool: 0 });
     const effects: readonly EffectAST[] = [{
-      commitResource: {
+      transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'pvar', player: 'actor', var: 'coins' },
         amount: 4,

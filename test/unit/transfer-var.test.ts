@@ -17,7 +17,7 @@ import {
 } from '../../src/kernel/index.js';
 
 const makeDef = (): GameDef => ({
-  metadata: { id: 'commit-resource-test', players: { min: 2, max: 2 } },
+  metadata: { id: 'transfer-var-test', players: { min: 2, max: 2 } },
   constants: {},
   globalVars: [
     { name: 'pot', type: 'int', init: 0, min: 0, max: 50 },
@@ -69,11 +69,11 @@ const makeCtx = (overrides?: Partial<EffectContext>): EffectContext => ({
   ...overrides,
 });
 
-describe('commitResource effect', () => {
+describe('transferVar effect', () => {
   it('transfers exact amount when source and destination both have capacity', () => {
     const ctx = makeCtx();
     const effect: EffectAST = {
-      commitResource: {
+      transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'global', var: 'pot' },
         amount: 3,
@@ -95,7 +95,7 @@ describe('commitResource effect', () => {
 
     const result = applyEffect(
       {
-        commitResource: {
+        transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'global', var: 'pot' },
           amount: 999,
@@ -121,7 +121,7 @@ describe('commitResource effect', () => {
 
     const result = applyEffect(
       {
-        commitResource: {
+        transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'global', var: 'pot' },
           amount: 2,
@@ -140,7 +140,7 @@ describe('commitResource effect', () => {
 
     const result = applyEffect(
       {
-        commitResource: {
+        transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'global', var: 'pot' },
           amount: 9,
@@ -159,7 +159,7 @@ describe('commitResource effect', () => {
     const result = applyEffects(
       [
         {
-          commitResource: {
+          transferVar: {
             from: { scope: 'pvar', player: 'actor', var: 'coins' },
             to: { scope: 'global', var: 'pot' },
             amount: 999,
@@ -179,7 +179,7 @@ describe('commitResource effect', () => {
     const result = applyEffects(
       [
         {
-          commitResource: {
+          transferVar: {
             from: { scope: 'pvar', player: 'actor', var: 'coins' },
             to: { scope: 'global', var: 'pot' },
             amount: 0,
@@ -202,7 +202,7 @@ describe('commitResource effect', () => {
           const ctx = makeCtx();
           const beforeTotal = Number(ctx.state.perPlayerVars['0']?.coins ?? 0) + Number(ctx.state.globalVars.pot ?? 0);
           const effect: EffectAST = {
-            commitResource: {
+            transferVar: {
               from: { scope: 'pvar', player: 'actor', var: 'coins' },
               to: { scope: 'global', var: 'pot' },
               amount,
@@ -222,7 +222,7 @@ describe('commitResource effect', () => {
     const ctx = makeCtx();
     const result = applyEffect(
       {
-        commitResource: {
+        transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'pvar', player: 'active', var: 'committed' },
           amount: 5,
@@ -233,6 +233,54 @@ describe('commitResource effect', () => {
 
     assert.equal(result.state.perPlayerVars['0']?.coins, 5);
     assert.equal(result.state.perPlayerVars['1']?.committed, 7);
+  });
+
+  it('supports global->pvar transfers', () => {
+    const ctx = makeCtx();
+    const result = applyEffect(
+      {
+        transferVar: {
+          from: { scope: 'global', var: 'pot' },
+          to: { scope: 'pvar', player: 'actor', var: 'coins' },
+          amount: 3,
+        },
+      },
+      ctx,
+    );
+
+    assert.equal(result.state.globalVars.pot, 1);
+    assert.equal(result.state.perPlayerVars['0']?.coins, 13);
+  });
+
+  it('supports global->global transfers', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        globalVars: [
+          { name: 'pot', type: 'int', init: 0, min: 0, max: 50 },
+          { name: 'bank', type: 'int', init: 0, min: 0, max: 50 },
+          { name: 'globalFlag', type: 'boolean', init: false },
+        ],
+      },
+      state: {
+        ...makeState(),
+        globalVars: { pot: 4, bank: 0, globalFlag: false },
+      },
+    });
+
+    const result = applyEffect(
+      {
+        transferVar: {
+          from: { scope: 'global', var: 'pot' },
+          to: { scope: 'global', var: 'bank' },
+          amount: 2,
+        },
+      },
+      ctx,
+    );
+
+    assert.equal(result.state.globalVars.pot, 2);
+    assert.equal(result.state.globalVars.bank, 2);
   });
 
   it('caps transfer by destination max headroom while preserving conservation', () => {
@@ -248,7 +296,7 @@ describe('commitResource effect', () => {
 
     const result = applyEffect(
       {
-        commitResource: {
+        transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'pvar', player: 'active', var: 'committed' },
           amount: 6,
@@ -272,7 +320,7 @@ describe('commitResource effect', () => {
       () =>
         applyEffect(
           {
-            commitResource: {
+            transferVar: {
               from: { scope: 'pvar', player: 'actor', var: 'coins' },
               to: { scope: 'pvar', var: 'committed' },
               amount: 1,
@@ -290,7 +338,7 @@ describe('commitResource effect', () => {
       () =>
         applyEffect(
           {
-            commitResource: {
+            transferVar: {
               from: { scope: 'pvar', player: 'actor', var: 'locked' },
               to: { scope: 'global', var: 'pot' },
               amount: 1,
@@ -305,7 +353,7 @@ describe('commitResource effect', () => {
       () =>
         applyEffect(
           {
-            commitResource: {
+            transferVar: {
               from: { scope: 'pvar', player: 'actor', var: 'coins' },
               to: { scope: 'global', var: 'globalFlag' },
               amount: 1,

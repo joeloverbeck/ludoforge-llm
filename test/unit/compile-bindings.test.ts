@@ -309,11 +309,11 @@ describe('compile-effects binding scope validation', () => {
     );
   });
 
-  it('exposes commitResource.actualBind to subsequent effects in the same sequence', () => {
+  it('exposes transferVar.actualBind to subsequent effects in the same sequence', () => {
     const result = lowerEffectArray(
       [
         {
-          commitResource: {
+          transferVar: {
             from: { scope: 'pvar', player: 'actor', var: 'coins' },
             to: { scope: 'global', var: 'pot' },
             amount: 2,

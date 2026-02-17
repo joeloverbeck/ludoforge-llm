@@ -23,7 +23,7 @@ import {
   applyPushInterruptPhase,
 } from './effects-turn-flow.js';
 import { applyAddVar, applySetActivePlayer, applySetVar } from './effects-var.js';
-import { applyCommitResource } from './effects-resource.js';
+import { applyTransferVar } from './effects-resource.js';
 import { applyReveal } from './effects-reveal.js';
 import {
   applyCreateToken,
@@ -52,7 +52,7 @@ const effectTypeOf = (effect: EffectAST): string => {
   if ('setVar' in effect) return 'setVar';
   if ('setActivePlayer' in effect) return 'setActivePlayer';
   if ('addVar' in effect) return 'addVar';
-  if ('commitResource' in effect) return 'commitResource';
+  if ('transferVar' in effect) return 'transferVar';
   if ('moveToken' in effect) return 'moveToken';
   if ('moveAll' in effect) return 'moveAll';
   if ('moveTokenAdjacent' in effect) return 'moveTokenAdjacent';
@@ -111,8 +111,8 @@ const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBud
     return applyAddVar(effect, ctx);
   }
 
-  if ('commitResource' in effect) {
-    return applyCommitResource(effect, ctx);
+  if ('transferVar' in effect) {
+    return applyTransferVar(effect, ctx);
   }
 
   if ('moveToken' in effect) {

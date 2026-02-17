@@ -64,7 +64,7 @@ const exhaustEffectAST = (effect: EffectAST): string => {
   if ('setVar' in effect) return 'setVar';
   if ('setActivePlayer' in effect) return 'setActivePlayer';
   if ('addVar' in effect) return 'addVar';
-  if ('commitResource' in effect) return 'commitResource';
+  if ('transferVar' in effect) return 'transferVar';
   if ('moveToken' in effect) return 'moveToken';
   if ('moveAll' in effect) return 'moveAll';
   if ('moveTokenAdjacent' in effect) return 'moveTokenAdjacent';

@@ -231,7 +231,7 @@ describe('texas hold\'em spec structure', () => {
     assert.equal(serialized.includes('"macro":'), false);
     assert.equal(serialized.includes('"reveal":'), true);
     assert.equal(serialized.includes('"evaluateSubset":'), true);
-    assert.equal(serialized.includes('"commitResource":'), true);
+    assert.equal(serialized.includes('"transferVar":'), true);
   });
 
   it('encodes seat traversal via nextInOrderByCondition instead of inline reduce scans', () => {

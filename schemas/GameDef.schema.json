@@ -3841,15 +3841,26 @@
         {
           "type": "object",
           "properties": {
-            "commitResource": {
+            "transferVar": {
               "type": "object",
               "properties": {
                 "from": {
                   "type": "object",
                   "properties": {
                     "scope": {
-                      "type": "string",
-                      "const": "pvar"
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "global"
+                        },
+                        {
+                          "type": "string",
+                          "const": "pvar"
+                        }
+                      ]
+                    },
+                    "var": {
+                      "type": "string"
                     },
                     "player": {
                       "anyOf": [
@@ -3917,14 +3928,10 @@
                           "additionalProperties": false
                         }
                       ]
-                    },
-                    "var": {
-                      "type": "string"
                     }
                   },
                   "required": [
                     "scope",
-                    "player",
                     "var"
                   ],
                   "additionalProperties": false
@@ -4051,7 +4058,7 @@
             }
           },
           "required": [
-            "commitResource"
+            "transferVar"
           ],
           "additionalProperties": false
         },

@@ -1064,93 +1064,143 @@ export const validateEffectAst = (
     return;
   }
 
-  if ('commitResource' in effect) {
-    if (!context.perPlayerVarNames.has(effect.commitResource.from.var)) {
-      pushMissingReferenceDiagnostic(
-        diagnostics,
-        'REF_PVAR_MISSING',
-        `${path}.commitResource.from.var`,
-        `Unknown per-player variable "${effect.commitResource.from.var}".`,
-        effect.commitResource.from.var,
-        context.perPlayerVarCandidates,
-      );
-    }
-    if (context.perPlayerVarTypesByName.get(effect.commitResource.from.var) === 'boolean') {
-      diagnostics.push({
-        code: 'EFFECT_COMMIT_RESOURCE_BOOLEAN_TARGET_INVALID',
-        path: `${path}.commitResource.from.var`,
-        severity: 'error',
-        message: `commitResource cannot target boolean variable "${effect.commitResource.from.var}".`,
-        suggestion: 'Use integer per-player variables for commitResource source and destination.',
-      });
+  if ('transferVar' in effect) {
+    if (effect.transferVar.from.scope === 'global') {
+      if (!context.globalVarNames.has(effect.transferVar.from.var)) {
+        pushMissingReferenceDiagnostic(
+          diagnostics,
+          'REF_GVAR_MISSING',
+          `${path}.transferVar.from.var`,
+          `Unknown global variable "${effect.transferVar.from.var}".`,
+          effect.transferVar.from.var,
+          context.globalVarCandidates,
+        );
+      }
+      if (context.globalVarTypesByName.get(effect.transferVar.from.var) === 'boolean') {
+        diagnostics.push({
+          code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
+          path: `${path}.transferVar.from.var`,
+          severity: 'error',
+          message: `transferVar cannot target boolean variable "${effect.transferVar.from.var}".`,
+          suggestion: 'Use integer variables for transferVar source and destination.',
+        });
+      }
+      if (effect.transferVar.from.player !== undefined) {
+        diagnostics.push({
+          code: 'EFFECT_TRANSFER_VAR_GLOBAL_SCOPE_PLAYER_FORBIDDEN',
+          path: `${path}.transferVar.from.player`,
+          severity: 'error',
+          message: 'transferVar.from.player must be omitted when transferVar.from.scope is "global".',
+          suggestion: 'Remove transferVar.from.player or use transferVar.from.scope "pvar".',
+        });
+      }
+    } else {
+      if (!context.perPlayerVarNames.has(effect.transferVar.from.var)) {
+        pushMissingReferenceDiagnostic(
+          diagnostics,
+          'REF_PVAR_MISSING',
+          `${path}.transferVar.from.var`,
+          `Unknown per-player variable "${effect.transferVar.from.var}".`,
+          effect.transferVar.from.var,
+          context.perPlayerVarCandidates,
+        );
+      }
+      if (context.perPlayerVarTypesByName.get(effect.transferVar.from.var) === 'boolean') {
+        diagnostics.push({
+          code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
+          path: `${path}.transferVar.from.var`,
+          severity: 'error',
+          message: `transferVar cannot target boolean variable "${effect.transferVar.from.var}".`,
+          suggestion: 'Use integer variables for transferVar source and destination.',
+        });
+      }
+      if (effect.transferVar.from.player === undefined) {
+        diagnostics.push({
+          code: 'EFFECT_TRANSFER_VAR_FROM_PLAYER_REQUIRED',
+          path: `${path}.transferVar.from.player`,
+          severity: 'error',
+          message: 'transferVar.from.player is required when transferVar.from.scope is "pvar".',
+          suggestion: 'Provide a player selector for transferVar.from.player when targeting a per-player variable.',
+        });
+      } else {
+        validatePlayerSelector(diagnostics, effect.transferVar.from.player, `${path}.transferVar.from.player`, context);
+      }
     }
 
-    if (effect.commitResource.to.scope === 'global' && !context.globalVarNames.has(effect.commitResource.to.var)) {
+    if (effect.transferVar.to.scope === 'global' && !context.globalVarNames.has(effect.transferVar.to.var)) {
       pushMissingReferenceDiagnostic(
         diagnostics,
         'REF_GVAR_MISSING',
-        `${path}.commitResource.to.var`,
-        `Unknown global variable "${effect.commitResource.to.var}".`,
-        effect.commitResource.to.var,
+        `${path}.transferVar.to.var`,
+        `Unknown global variable "${effect.transferVar.to.var}".`,
+        effect.transferVar.to.var,
         context.globalVarCandidates,
       );
     }
     if (
-      effect.commitResource.to.scope === 'global' &&
-      context.globalVarTypesByName.get(effect.commitResource.to.var) === 'boolean'
+      effect.transferVar.to.scope === 'global' &&
+      context.globalVarTypesByName.get(effect.transferVar.to.var) === 'boolean'
     ) {
       diagnostics.push({
-        code: 'EFFECT_COMMIT_RESOURCE_BOOLEAN_TARGET_INVALID',
-        path: `${path}.commitResource.to.var`,
+        code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
+        path: `${path}.transferVar.to.var`,
         severity: 'error',
-        message: `commitResource cannot target boolean variable "${effect.commitResource.to.var}".`,
-        suggestion: 'Use integer per-player variables for commitResource source and destination.',
+        message: `transferVar cannot target boolean variable "${effect.transferVar.to.var}".`,
+        suggestion: 'Use integer variables for transferVar source and destination.',
       });
     }
 
-    if (effect.commitResource.to.scope === 'pvar' && !context.perPlayerVarNames.has(effect.commitResource.to.var)) {
+    if (effect.transferVar.to.scope === 'pvar' && !context.perPlayerVarNames.has(effect.transferVar.to.var)) {
       pushMissingReferenceDiagnostic(
         diagnostics,
         'REF_PVAR_MISSING',
-        `${path}.commitResource.to.var`,
-        `Unknown per-player variable "${effect.commitResource.to.var}".`,
-        effect.commitResource.to.var,
+        `${path}.transferVar.to.var`,
+        `Unknown per-player variable "${effect.transferVar.to.var}".`,
+        effect.transferVar.to.var,
         context.perPlayerVarCandidates,
       );
     }
     if (
-      effect.commitResource.to.scope === 'pvar' &&
-      context.perPlayerVarTypesByName.get(effect.commitResource.to.var) === 'boolean'
+      effect.transferVar.to.scope === 'pvar' &&
+      context.perPlayerVarTypesByName.get(effect.transferVar.to.var) === 'boolean'
     ) {
       diagnostics.push({
-        code: 'EFFECT_COMMIT_RESOURCE_BOOLEAN_TARGET_INVALID',
-        path: `${path}.commitResource.to.var`,
+        code: 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID',
+        path: `${path}.transferVar.to.var`,
         severity: 'error',
-        message: `commitResource cannot target boolean variable "${effect.commitResource.to.var}".`,
-        suggestion: 'Use integer per-player variables for commitResource source and destination.',
+        message: `transferVar cannot target boolean variable "${effect.transferVar.to.var}".`,
+        suggestion: 'Use integer variables for transferVar source and destination.',
       });
     }
 
-    validatePlayerSelector(diagnostics, effect.commitResource.from.player, `${path}.commitResource.from.player`, context);
-    if (effect.commitResource.to.player !== undefined) {
-      validatePlayerSelector(diagnostics, effect.commitResource.to.player, `${path}.commitResource.to.player`, context);
-    }
-    if (effect.commitResource.to.scope === 'pvar' && effect.commitResource.to.player === undefined) {
+    if (effect.transferVar.to.scope === 'pvar') {
+      if (effect.transferVar.to.player === undefined) {
+        diagnostics.push({
+          code: 'EFFECT_TRANSFER_VAR_TO_PLAYER_REQUIRED',
+          path: `${path}.transferVar.to.player`,
+          severity: 'error',
+          message: 'transferVar.to.player is required when transferVar.to.scope is "pvar".',
+          suggestion: 'Provide a player selector for transferVar.to.player when targeting a per-player variable.',
+        });
+      } else {
+        validatePlayerSelector(diagnostics, effect.transferVar.to.player, `${path}.transferVar.to.player`, context);
+      }
+    } else if (effect.transferVar.to.player !== undefined) {
       diagnostics.push({
-        code: 'EFFECT_COMMIT_RESOURCE_TO_PLAYER_REQUIRED',
-        path: `${path}.commitResource.to.player`,
+        code: 'EFFECT_TRANSFER_VAR_GLOBAL_SCOPE_PLAYER_FORBIDDEN',
+        path: `${path}.transferVar.to.player`,
         severity: 'error',
-        message: 'commitResource.to.player is required when commitResource.to.scope is "pvar".',
-        suggestion: 'Provide a player selector for commitResource.to.player when targeting a per-player variable.',
+        message: 'transferVar.to.player must be omitted when transferVar.to.scope is "global".',
+        suggestion: 'Remove transferVar.to.player or use transferVar.to.scope "pvar".',
       });
     }
 
-    validateNumericValueExpr(diagnostics, effect.commitResource.amount, `${path}.commitResource.amount`, context);
-    if (effect.commitResource.min !== undefined) {
-      validateNumericValueExpr(diagnostics, effect.commitResource.min, `${path}.commitResource.min`, context);
+    validateNumericValueExpr(diagnostics, effect.transferVar.amount, `${path}.transferVar.amount`, context);
+    if (effect.transferVar.min !== undefined) {
+      validateNumericValueExpr(diagnostics, effect.transferVar.min, `${path}.transferVar.min`, context);
     }
-    if (effect.commitResource.max !== undefined) {
-      validateNumericValueExpr(diagnostics, effect.commitResource.max, `${path}.commitResource.max`, context);
+    if (effect.transferVar.max !== undefined) {
+      validateNumericValueExpr(diagnostics, effect.transferVar.max, `${path}.transferVar.max`, context);
     }
     return;
   }

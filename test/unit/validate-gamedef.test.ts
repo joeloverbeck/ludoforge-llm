@@ -994,7 +994,7 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
-  it('validates commitResource variable references by scope', () => {
+  it('validates transferVar variable references by scope', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
@@ -1003,7 +1003,7 @@ describe('validateGameDef reference checks', () => {
           ...base.actions[0],
           effects: [
             {
-              commitResource: {
+              transferVar: {
                 from: { scope: 'pvar', player: 'actor', var: 'health' },
                 to: { scope: 'global', var: 'bank' },
                 amount: 1,
@@ -1016,14 +1016,14 @@ describe('validateGameDef reference checks', () => {
 
     const diagnostics = validateGameDef(def);
     assert.ok(
-      diagnostics.some((diag) => diag.code === 'REF_PVAR_MISSING' && diag.path === 'actions[0].effects[0].commitResource.from.var'),
+      diagnostics.some((diag) => diag.code === 'REF_PVAR_MISSING' && diag.path === 'actions[0].effects[0].transferVar.from.var'),
     );
     assert.ok(
-      diagnostics.some((diag) => diag.code === 'REF_GVAR_MISSING' && diag.path === 'actions[0].effects[0].commitResource.to.var'),
+      diagnostics.some((diag) => diag.code === 'REF_GVAR_MISSING' && diag.path === 'actions[0].effects[0].transferVar.to.var'),
     );
   });
 
-  it('requires commitResource.to.player when targeting per-player variables', () => {
+  it('requires transferVar.to.player when targeting per-player variables', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
@@ -1032,7 +1032,7 @@ describe('validateGameDef reference checks', () => {
           ...base.actions[0],
           effects: [
             {
-              commitResource: {
+              transferVar: {
                 from: { scope: 'pvar', player: 'actor', var: 'vp' },
                 to: { scope: 'pvar', var: 'vp' },
                 amount: 1,
@@ -1046,13 +1046,71 @@ describe('validateGameDef reference checks', () => {
     const diagnostics = validateGameDef(def);
     assert.ok(
       diagnostics.some(
-        (diag) => diag.code === 'EFFECT_COMMIT_RESOURCE_TO_PLAYER_REQUIRED' &&
-          diag.path === 'actions[0].effects[0].commitResource.to.player',
+        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_TO_PLAYER_REQUIRED' &&
+          diag.path === 'actions[0].effects[0].transferVar.to.player',
       ),
     );
   });
 
-  it('rejects commitResource boolean variable targets', () => {
+  it('requires transferVar.from.player when source is per-player', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              transferVar: {
+                from: { scope: 'pvar', var: 'vp' },
+                to: { scope: 'global', var: 'bank' },
+                amount: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_FROM_PLAYER_REQUIRED' &&
+          diag.path === 'actions[0].effects[0].transferVar.from.player',
+      ),
+    );
+  });
+
+  it('rejects transferVar endpoint player when endpoint scope is global', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      actions: [
+        {
+          ...base.actions[0],
+          effects: [
+            {
+              transferVar: {
+                from: { scope: 'global', player: 'actor', var: 'money' },
+                to: { scope: 'global', var: 'money' },
+                amount: 1,
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_GLOBAL_SCOPE_PLAYER_FORBIDDEN' &&
+          diag.path === 'actions[0].effects[0].transferVar.from.player',
+      ),
+    );
+  });
+
+  it('rejects transferVar boolean variable targets', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
@@ -1062,7 +1120,7 @@ describe('validateGameDef reference checks', () => {
           ...base.actions[0],
           effects: [
             {
-              commitResource: {
+              transferVar: {
                 from: { scope: 'pvar', player: 'actor', var: 'ready' },
                 to: { scope: 'pvar', player: 'active', var: 'vp' },
                 amount: 1,
@@ -1076,8 +1134,8 @@ describe('validateGameDef reference checks', () => {
     const diagnostics = validateGameDef(def);
     assert.ok(
       diagnostics.some(
-        (diag) => diag.code === 'EFFECT_COMMIT_RESOURCE_BOOLEAN_TARGET_INVALID' &&
-          diag.path === 'actions[0].effects[0].commitResource.from.var',
+        (diag) => diag.code === 'EFFECT_TRANSFER_VAR_BOOLEAN_TARGET_INVALID' &&
+          diag.path === 'actions[0].effects[0].transferVar.from.var',
       ),
     );
   });

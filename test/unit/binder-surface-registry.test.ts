@@ -88,7 +88,7 @@ describe('binder-surface-registry', () => {
   it('tracks declared binder-producing effect kinds explicitly', () => {
     assert.deepEqual(
       [...DECLARED_BINDER_EFFECT_KINDS].sort(),
-      ['bindValue', 'chooseN', 'chooseOne', 'commitResource', 'evaluateSubset', 'forEach', 'let', 'reduce', 'removeByPriority', 'rollRandom'],
+      ['bindValue', 'chooseN', 'chooseOne', 'evaluateSubset', 'forEach', 'let', 'reduce', 'removeByPriority', 'rollRandom', 'transferVar'],
     );
   });
 
@@ -312,7 +312,7 @@ describe('binder-surface-registry', () => {
     );
     assert.deepEqual(
       collectSequentialBindings({
-        commitResource: {
+        transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'global', var: 'pot' },
           amount: 3,

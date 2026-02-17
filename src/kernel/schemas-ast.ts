@@ -390,13 +390,13 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
-      commitResource: z
+      transferVar: z
         .object({
           from: z
             .object({
-              scope: z.literal('pvar'),
-              player: PlayerSelSchema,
+              scope: z.union([z.literal('global'), z.literal('pvar')]),
               var: StringSchema,
+              player: PlayerSelSchema.optional(),
             })
             .strict(),
           to: z

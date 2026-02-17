@@ -614,7 +614,7 @@ effectMacros:
                         left: { ref: pvar, player: { chosen: '$player' }, var: eliminated }
                         right: false
                       then:
-                        - commitResource:
+                        - transferVar:
                             from: { scope: pvar, player: { chosen: '$player' }, var: chipStack }
                             to: { scope: global, var: pot }
                             amount: { ref: gvar, var: ante }
@@ -628,7 +628,7 @@ effectMacros:
                             when: { op: '==', left: { ref: pvar, player: { chosen: '$player' }, var: chipStack }, right: 0 }
                             then:
                               - setVar: { scope: pvar, player: { chosen: '$player' }, var: allIn, value: true }
-      - commitResource:
+      - transferVar:
           from: { scope: pvar, player: { param: sbPlayer }, var: chipStack }
           to: { scope: global, var: pot }
           amount: { ref: gvar, var: smallBlind }
@@ -647,7 +647,7 @@ effectMacros:
           when: { op: '==', left: { ref: pvar, player: { param: sbPlayer }, var: chipStack }, right: 0 }
           then:
             - setVar: { scope: pvar, player: { param: sbPlayer }, var: allIn, value: true }
-      - commitResource:
+      - transferVar:
           from: { scope: pvar, player: { param: bbPlayer }, var: chipStack }
           to: { scope: global, var: pot }
           amount: { ref: gvar, var: bigBlind }

@@ -301,7 +301,7 @@ actions:
         - { op: '>', left: { ref: gvar, var: currentBet }, right: { ref: pvar, player: actor, var: streetBet } }
     cost: []
     effects:
-      - commitResource:
+      - transferVar:
           from: { scope: pvar, player: actor, var: chipStack }
           to: { scope: global, var: pot }
           amount: { op: '-', left: { ref: gvar, var: currentBet }, right: { ref: pvar, player: actor, var: streetBet } }
@@ -347,7 +347,7 @@ actions:
           bind: $prevCurrentBet
           value: { ref: gvar, var: currentBet }
           in:
-            - commitResource:
+            - transferVar:
                 from: { scope: pvar, player: actor, var: chipStack }
                 to: { scope: global, var: pot }
                 amount: { op: '-', left: { ref: binding, name: raiseAmount }, right: { ref: pvar, player: actor, var: streetBet } }
@@ -392,7 +392,7 @@ actions:
                 bind: $prevLastRaiseSize
                 value: { ref: gvar, var: lastRaiseSize }
                 in:
-                  - commitResource:
+                  - transferVar:
                       from: { scope: pvar, player: actor, var: chipStack }
                       to: { scope: global, var: pot }
                       amount: { ref: pvar, player: actor, var: chipStack }

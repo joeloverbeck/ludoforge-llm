@@ -546,7 +546,7 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(result.options, [1, 2, 3]);
   });
 
-  it('8b. legalChoices preserves commitResource actualBind exported from let-scoped effects', () => {
+  it('8b. legalChoices preserves transferVar actualBind exported from let-scoped effects', () => {
     const action: ActionDef = {
       id: asActionId('letCommitResourceBinding'),
 actor: 'active',
@@ -562,7 +562,7 @@ phase: [asPhaseId('main')],
             value: 1,
             in: [
               {
-                commitResource: {
+                transferVar: {
                   from: { scope: 'pvar', player: 'actor', var: 'chips' },
                   to: { scope: 'global', var: 'pot' },
                   amount: 3,

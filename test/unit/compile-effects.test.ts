@@ -19,7 +19,7 @@ describe('compile-effects lowering', () => {
     const source = [
       { draw: { from: 'deck', to: 'hand:$actor', count: 1 } },
       { setActivePlayer: { player: { chosen: '$actor' } } },
-      { commitResource: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
+      { transferVar: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
       { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', eq: 'US' }] } },
       {
         if: {
@@ -62,7 +62,7 @@ describe('compile-effects lowering', () => {
     assert.deepEqual(first.value, [
       { draw: { from: 'deck:none', to: 'hand:$actor', count: 1 } },
       { setActivePlayer: { player: { chosen: '$actor' } } },
-      { commitResource: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
+      { transferVar: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
       { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
       {
         if: {
@@ -135,11 +135,11 @@ describe('compile-effects lowering', () => {
     assert.ok((result.diagnostics[0]?.alternatives ?? []).includes('setVar'));
   });
 
-  it('lowers commitResource optional fields including player selectors and binders', () => {
+  it('lowers transferVar optional fields including player selectors and binders', () => {
     const result = lowerEffectArray(
       [
         {
-          commitResource: {
+          transferVar: {
             from: { scope: 'pvar', player: { chosen: '$actor' }, var: 'coins' },
             to: { scope: 'pvar', player: 'active', var: 'committed' },
             amount: { ref: 'gvar', var: 'stake' },
@@ -156,13 +156,40 @@ describe('compile-effects lowering', () => {
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, [
       {
-        commitResource: {
+        transferVar: {
           from: { scope: 'pvar', player: { chosen: '$actor' }, var: 'coins' },
           to: { scope: 'pvar', player: 'active', var: 'committed' },
           amount: { ref: 'gvar', var: 'stake' },
           min: 1,
           max: 4,
           actualBind: '$actual',
+        },
+      },
+    ]);
+  });
+
+  it('lowers transferVar with a global source endpoint', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          transferVar: {
+            from: { scope: 'global', var: 'bank' },
+            to: { scope: 'pvar', player: { chosen: '$actor' }, var: 'coins' },
+            amount: 3,
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        transferVar: {
+          from: { scope: 'global', var: 'bank' },
+          to: { scope: 'pvar', player: { chosen: '$actor' }, var: 'coins' },
+          amount: 3,
         },
       },
     ]);

@@ -65,7 +65,7 @@ export const EFFECT_BINDER_SURFACE_CONTRACT: Readonly<Record<SupportedEffectKind
     bindingTemplateReferencerPaths: [['player', 'chosen']],
     zoneSelectorReferencerPaths: NO_REFERENCER_PATHS,
   },
-  commitResource: {
+  transferVar: {
     declaredBinderPaths: [['actualBind']],
     sequentiallyVisibleBinderPaths: [['actualBind']],
     bindingNameReferencerPaths: NO_REFERENCER_PATHS,

@@ -75,8 +75,8 @@ function lowerEffectNode(
   if (isRecord(source.addVar)) {
     return lowerAddVarEffect(source.addVar, context, scope, `${path}.addVar`);
   }
-  if (isRecord(source.commitResource)) {
-    return lowerCommitResourceEffect(source.commitResource, context, scope, `${path}.commitResource`);
+  if (isRecord(source.transferVar)) {
+    return lowerTransferVarEffect(source.transferVar, context, scope, `${path}.transferVar`);
   }
   if (isRecord(source.moveToken)) {
     return lowerMoveTokenEffect(source.moveToken, context, scope, `${path}.moveToken`);
@@ -289,40 +289,57 @@ function lowerSetActivePlayerEffect(
   };
 }
 
-function lowerCommitResourceEffect(
+function lowerTransferVarEffect(
   source: Record<string, unknown>,
   context: EffectLoweringContext,
   scope: BindingScope,
   path: string,
 ): EffectLoweringResult<EffectAST> {
   if (!isRecord(source.from) || !isRecord(source.to) || typeof source.from.var !== 'string' || typeof source.to.var !== 'string') {
-    return missingCapability(path, 'commitResource effect', source, [
-      '{ commitResource: { from: { scope: "pvar", player, var }, to: { scope, var, player? }, amount, min?, max?, actualBind? } }',
+    return missingCapability(path, 'transferVar effect', source, [
+      '{ transferVar: { from: { scope: "global" | "pvar", var, player? }, to: { scope: "global" | "pvar", var, player? }, amount, min?, max?, actualBind? } }',
     ]);
   }
 
-  if (source.from.scope !== 'pvar' || (source.to.scope !== 'global' && source.to.scope !== 'pvar')) {
-    return missingCapability(path, 'commitResource effect', source, [
-      '{ commitResource: { from: { scope: "pvar", player, var }, to: { scope: "global" | "pvar", var, player? }, amount } }',
+  if (
+    (source.from.scope !== 'global' && source.from.scope !== 'pvar') ||
+    (source.to.scope !== 'global' && source.to.scope !== 'pvar')
+  ) {
+    return missingCapability(path, 'transferVar effect', source, [
+      '{ transferVar: { from: { scope: "global" | "pvar", var, player? }, to: { scope: "global" | "pvar", var, player? }, amount } }',
     ]);
   }
 
-  const fromPlayer = lowerPlayerSelector(source.from.player, scope, `${path}.from.player`);
   const amount = lowerNumericValueNode(source.amount, makeConditionContext(context, scope), `${path}.amount`);
+  const diagnostics = [...amount.diagnostics];
+  if (amount.value === null) {
+    return { value: null, diagnostics };
+  }
 
-  const diagnostics = [...fromPlayer.diagnostics, ...amount.diagnostics];
-  if (fromPlayer.value === null || amount.value === null) {
+  let fromPlayer: PlayerSel | undefined;
+  if (source.from.scope === 'pvar') {
+    const loweredFromPlayer = lowerPlayerSelector(source.from.player, scope, `${path}.from.player`);
+    diagnostics.push(...loweredFromPlayer.diagnostics);
+    if (loweredFromPlayer.value === null) {
+      return { value: null, diagnostics };
+    }
+    fromPlayer = loweredFromPlayer.value;
+  } else if (source.from.player !== undefined) {
+    diagnostics.push(...missingCapability(`${path}.from.player`, 'transferVar.from.player for global scope', source.from.player, []).diagnostics);
     return { value: null, diagnostics };
   }
 
   let toPlayer: PlayerSel | undefined;
-  if (source.to.player !== undefined) {
+  if (source.to.scope === 'pvar') {
     const loweredToPlayer = lowerPlayerSelector(source.to.player, scope, `${path}.to.player`);
     diagnostics.push(...loweredToPlayer.diagnostics);
     if (loweredToPlayer.value === null) {
       return { value: null, diagnostics };
     }
     toPlayer = loweredToPlayer.value;
+  } else if (source.to.player !== undefined) {
+    diagnostics.push(...missingCapability(`${path}.to.player`, 'transferVar.to.player for global scope', source.to.player, []).diagnostics);
+    return { value: null, diagnostics };
   }
 
   let min: NumericValueExpr | undefined;
@@ -346,17 +363,17 @@ function lowerCommitResourceEffect(
   }
 
   if (source.actualBind !== undefined && typeof source.actualBind !== 'string') {
-    diagnostics.push(...missingCapability(`${path}.actualBind`, 'commitResource actualBind', source.actualBind, ['string']).diagnostics);
+    diagnostics.push(...missingCapability(`${path}.actualBind`, 'transferVar actualBind', source.actualBind, ['string']).diagnostics);
     return { value: null, diagnostics };
   }
 
   return {
     value: {
-      commitResource: {
+      transferVar: {
         from: {
-          scope: 'pvar',
-          player: fromPlayer.value,
+          scope: source.from.scope,
           var: source.from.var,
+          ...(fromPlayer === undefined ? {} : { player: fromPlayer }),
         },
         to: {
           scope: source.to.scope,

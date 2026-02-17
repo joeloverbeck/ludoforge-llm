@@ -9,7 +9,7 @@ import {
   asZoneId,
   initialState,
   legalMoves,
-  legalChoices,
+  legalChoicesDiscover,
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
@@ -100,7 +100,7 @@ describe('applicability-based action pipeline dispatch', () => {
   it('legalChoices returns complete for an applicable profile with no choices', () => {
     const def = createMultiProfileDef();
     const state = createState(0);
-    const result = legalChoices(def, state, { actionId: asActionId('operate'), params: {} });
+    const result = legalChoicesDiscover(def, state, { actionId: asActionId('operate'), params: {} });
     assert.equal(result.complete, true);
   });
 
@@ -178,7 +178,7 @@ describe('applicability-based action pipeline dispatch', () => {
     const legal = legalMoves(def, state);
     assert.ok(!legal.some((move) => move.actionId === asActionId('operate')));
 
-    const choices = legalChoices(def, state, { actionId: asActionId('operate'), params: {} });
+    const choices = legalChoicesDiscover(def, state, { actionId: asActionId('operate'), params: {} });
     assert.deepStrictEqual(choices, { kind: 'illegal', complete: false, reason: 'pipelineNotApplicable' });
 
     assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), /Illegal move/);
@@ -207,7 +207,7 @@ describe('applicability-based action pipeline dispatch', () => {
     assert.throws(() => applyMove(def, state, { actionId: asActionId('operate'), params: {} }), /Illegal move/);
   });
 
-  it('surfaces malformed applicability errors in legalMoves, legalChoices, and applyMove', () => {
+  it('surfaces malformed applicability errors in legalMoves, legalChoicesDiscover, and applyMove', () => {
     const def: GameDef = {
       ...createMultiProfileDef(),
       actionPipelines: [
@@ -227,7 +227,7 @@ describe('applicability-based action pipeline dispatch', () => {
 
     for (const run of [
       () => legalMoves(def, state),
-      () => legalChoices(def, state, { actionId: asActionId('operate'), params: {} }),
+      () => legalChoicesDiscover(def, state, { actionId: asActionId('operate'), params: {} }),
       () => applyMove(def, state, { actionId: asActionId('operate'), params: {} }),
     ]) {
       assert.throws(run, (error: unknown) => {

@@ -12,7 +12,7 @@ import {
   createCollector,
   createRng,
   isEffectErrorCode,
-  legalChoices,
+  legalChoicesDiscover,
   type ActionDef,
   type EffectAST,
   type EffectContext,
@@ -105,11 +105,11 @@ describe('choice membership parity', () => {
     const def = makeDef([chooseOneEffect]);
     const state = makeState();
 
-    const pending = legalChoices(def, state, makeMove({}));
+    const pending = legalChoicesDiscover(def, state, makeMove({}));
     assert.equal(pending.kind, 'pending');
     assert.deepEqual(pending.options.map((option) => option.value), [asTokenId('tok-1')]);
 
-    assert.deepEqual(legalChoices(def, state, makeMove({ 'decision:$token': asTokenId('tok-1') })), {
+    assert.deepEqual(legalChoicesDiscover(def, state, makeMove({ 'decision:$token': asTokenId('tok-1') })), {
       kind: 'complete',
       complete: true,
     });
@@ -123,7 +123,7 @@ describe('choice membership parity', () => {
     const state = makeState();
 
     assert.throws(
-      () => legalChoices(def, state, makeMove({ 'decision:$token': asTokenId('tok-missing') })),
+      () => legalChoicesDiscover(def, state, makeMove({ 'decision:$token': asTokenId('tok-missing') })),
       (error: unknown) => error instanceof Error && error.message.includes('invalid selection for chooseOne'),
     );
 

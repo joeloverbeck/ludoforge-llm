@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 
 import {
   applyMove,
-  legalChoices,
+  legalChoicesDiscover,
   legalMoves,
   type ChoicePendingRequest,
   type GameDef,
@@ -85,7 +85,7 @@ export const assertLegalitySurfaceParityForMove = (
   const trace: LegalityParityStep[] = [];
 
   for (let step = 0; step < maxSteps; step += 1) {
-    const request = legalChoices(def, state, move);
+    const request = legalChoicesDiscover(def, state, move);
     const actionPresent = probeActionPresence({ def, state, move, step });
 
     if (request.kind === 'illegal') {

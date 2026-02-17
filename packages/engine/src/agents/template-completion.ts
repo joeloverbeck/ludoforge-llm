@@ -1,4 +1,4 @@
-import { legalChoices } from '../kernel/legal-choices.js';
+import { legalChoicesEvaluate } from '../kernel/legal-choices.js';
 import { nextInt } from '../kernel/prng.js';
 import type {
   ChoicePendingRequest,
@@ -60,7 +60,7 @@ const selectFromChooseN = (
 };
 
 /**
- * Attempt to complete a template move using the legalChoices() loop with random selections.
+ * Attempt to complete a template move using the legalChoicesEvaluate() loop with random selections.
  * Returns null if the template is unplayable (empty options domain).
  */
 export const completeTemplateMove = (
@@ -70,7 +70,7 @@ export const completeTemplateMove = (
   rng: Rng,
 ): { readonly move: Move; readonly rng: Rng } | null => {
   let current = templateMove;
-  let choices = legalChoices(def, state, current);
+  let choices = legalChoicesEvaluate(def, state, current);
   let cursor = rng;
   let iterations = 0;
 
@@ -95,7 +95,7 @@ export const completeTemplateMove = (
 
     cursor = nextRng;
     current = { ...current, params: { ...current.params, [choices.decisionId]: selected } };
-    choices = legalChoices(def, state, current);
+    choices = legalChoicesEvaluate(def, state, current);
   }
 
   if (choices.kind === 'illegal') {

@@ -14,7 +14,7 @@ import {
   asZoneId,
   computeFullHash,
   createZobristTable,
-  legalChoices,
+  legalChoicesDiscover,
   type GameDef,
   type GameState,
   type Move,
@@ -263,7 +263,7 @@ phase: [asPhaseId('main')],
       actionUsage: {},
     };
 
-    const pending = legalChoices(def, state, { actionId: asActionId('decide'), params: {} });
+    const pending = legalChoicesDiscover(def, state, { actionId: asActionId('decide'), params: {} });
     assert.equal(pending.kind, 'pending');
     assert.equal(pending.type, 'chooseOne');
 

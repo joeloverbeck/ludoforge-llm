@@ -127,9 +127,9 @@ describe('createGameStore async serialization', () => {
 
     const baseLegalChoices = bridge.legalChoices.bind(bridge);
     const gate = createDeferred<void>();
-    vi.spyOn(bridge, 'legalChoices').mockImplementationOnce(async (move, options) => {
+    vi.spyOn(bridge, 'legalChoices').mockImplementationOnce(async (move) => {
       await gate.promise;
-      return await baseLegalChoices(move, options);
+      return await baseLegalChoices(move);
     });
 
     const selectPromise = store.getState().selectAction(asActionId('tick'));
@@ -191,8 +191,8 @@ describe('createGameStore async serialization', () => {
         await gate.promise;
         throw staleError;
       })
-      .mockImplementationOnce(async (move, options) => {
-        return await baseLegalChoices(move, options);
+      .mockImplementationOnce(async (move) => {
+        return await baseLegalChoices(move);
       });
 
     const staleSelect = store.getState().selectAction(asActionId('tick'));

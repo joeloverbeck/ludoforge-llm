@@ -369,7 +369,7 @@ describe('FITL card-flow determinism integration', () => {
       const initialLegalMoves = legalMoves(def, start);
 
       // Event action has an operation profile → legalMoves emits a template move.
-      // Construct the fully-parameterized move directly; validateMove uses legalChoices() for profiled actions.
+      // Construct the fully-parameterized move directly; validateMove uses legalChoicesDiscover() for profiled actions.
       const eventMove: Move = {
         actionId: asActionId('event'),
         params: {

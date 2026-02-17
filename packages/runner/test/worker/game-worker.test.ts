@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createGameWorker, type WorkerError } from '../../src/worker/game-worker-api';
-import { ALT_TEST_DEF, ILLEGAL_MOVE, LEGAL_TICK_MOVE, RANGE_TEST_DEF, TEST_DEF } from './test-fixtures';
+import { ALT_TEST_DEF, CHOOSE_ONE_TEST_DEF, ILLEGAL_MOVE, LEGAL_TICK_MOVE, RANGE_TEST_DEF, TEST_DEF } from './test-fixtures';
+import { asActionId, type Move } from '@ludoforge/engine/runtime';
 
 const expectWorkerError = (error: unknown, code: WorkerError['code']): WorkerError => {
   expect(error).toMatchObject({ code });
@@ -114,6 +115,22 @@ describe('createGameWorker', () => {
     const request = await worker.legalChoices(LEGAL_TICK_MOVE);
     expect(request.kind).toBe('complete');
     expect(request.complete).toBe(true);
+  });
+
+  it('always evaluates choice option legality in worker legalChoices path', async () => {
+    const worker = createGameWorker();
+    await worker.init(CHOOSE_ONE_TEST_DEF, 121);
+    const pendingMove: Move = {
+      actionId: asActionId('pick-one'),
+      params: {},
+    };
+
+    const request = await worker.legalChoices(pendingMove);
+    expect(request.kind).toBe('pending');
+    if (request.kind !== 'pending') {
+      throw new Error('Expected pending choice request.');
+    }
+    expect(request.options.map((entry) => entry.legality)).toEqual(['legal', 'legal', 'legal']);
   });
 
   it('rolls back history when applyMove fails', async () => {

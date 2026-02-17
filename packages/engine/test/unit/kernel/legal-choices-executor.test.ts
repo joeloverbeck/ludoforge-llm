@@ -6,7 +6,7 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
-  legalChoices,
+  legalChoicesDiscover,
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
@@ -70,7 +70,7 @@ const makeState = (): GameState => ({
 
 describe('legalChoices executor context', () => {
   it('generates decision options using action executor identity', () => {
-    const request = legalChoices(makeDef(), makeState(), {
+    const request = legalChoicesDiscover(makeDef(), makeState(), {
       actionId: asActionId('pickExecutorHand'),
       params: {},
     });
@@ -106,7 +106,7 @@ describe('legalChoices executor context', () => {
       ],
     } as unknown as GameDef;
 
-    const request = legalChoices(def, makeState(), {
+    const request = legalChoicesDiscover(def, makeState(), {
       actionId: asActionId('pickExecutorHand'),
       params: {},
     });
@@ -132,7 +132,7 @@ describe('legalChoices executor context', () => {
       ],
     } as unknown as GameDef;
 
-    assert.throws(() => legalChoices(def, makeState(), { actionId: asActionId('pickExecutorHand'), params: {} }), (error: unknown) => {
+    assert.throws(() => legalChoicesDiscover(def, makeState(), { actionId: asActionId('pickExecutorHand'), params: {} }), (error: unknown) => {
       assert.ok(error instanceof Error);
       const details = error as Error & { code?: unknown; context?: Record<string, unknown>; cause?: unknown };
       assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
@@ -162,7 +162,7 @@ describe('legalChoices executor context', () => {
       ],
     } as unknown as GameDef;
 
-    const request = legalChoices(def, makeState(), {
+    const request = legalChoicesDiscover(def, makeState(), {
       actionId: asActionId('pickExecutorHand'),
       params: {},
     });
@@ -188,7 +188,7 @@ describe('legalChoices executor context', () => {
       ],
     } as unknown as GameDef;
 
-    assert.throws(() => legalChoices(def, makeState(), { actionId: asActionId('pickExecutorHand'), params: {} }), (error: unknown) => {
+    assert.throws(() => legalChoicesDiscover(def, makeState(), { actionId: asActionId('pickExecutorHand'), params: {} }), (error: unknown) => {
       assert.ok(error instanceof Error);
       const details = error as Error & { code?: unknown; context?: Record<string, unknown>; cause?: unknown };
       assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');

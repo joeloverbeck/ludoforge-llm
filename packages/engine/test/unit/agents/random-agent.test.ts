@@ -209,7 +209,7 @@ describe('RandomAgent', () => {
 
   // --- Template move tests ---
 
-  it('can play operations via template moves (fills params via legalChoices() loop)', () => {
+  it('can play operations via template moves (fills params via legalChoicesDiscover() loop)', () => {
     const action = createActionWithChooseOne('op1');
     const profile = createProfileForAction('op1');
     const def = createDefWithProfile([action], [profile]);

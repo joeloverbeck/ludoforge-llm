@@ -29,9 +29,8 @@ import type {
 const COMPLETE: ChoiceRequest = { kind: 'complete', complete: true };
 const MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS = 1024;
 
-export interface LegalChoicesOptions {
+export interface LegalChoicesRuntimeOptions {
   readonly onDeferredPredicatesEvaluated?: (count: number) => void;
-  readonly probeOptionLegality?: boolean;
   readonly onProbeContextPrepared?: () => void;
 }
 
@@ -254,7 +253,8 @@ const mapOptionsForPendingChoice = (
 const legalChoicesWithPreparedContext = (
   context: LegalChoicesPreparedContext,
   partialMove: Move,
-  options?: LegalChoicesOptions,
+  shouldEvaluateOptionLegality: boolean,
+  options?: LegalChoicesRuntimeOptions,
 ): ChoiceRequest => {
   const { def, state, action, adjacencyGraph, runtimeTableIndex } = context;
   const baseBindings: Record<string, unknown> = {
@@ -302,8 +302,6 @@ const legalChoicesWithPreparedContext = (
   const eventEffects = isCardEventActionId(def, action.id)
     ? resolveEventEffectList(def, state, partialMove)
     : [];
-  const probeOptionLegality = options?.probeOptionLegality ?? false;
-
   if (pipelineDispatch.kind === 'matched') {
     const pipeline = pipelineDispatch.profile;
     const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, evalCtx, {
@@ -322,14 +320,14 @@ const legalChoicesWithPreparedContext = (
         ? pipeline.stages.flatMap((stage) => stage.effects)
         : action.effects;
     const request = executeDiscoveryEffects([...resolutionEffects, ...eventEffects], evalCtx, partialMove);
-    if (!probeOptionLegality || request.kind !== 'pending') {
+    if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
       return request;
     }
 
     return {
       ...request,
       options: mapOptionsForPendingChoice(
-        (probeMove) => legalChoicesWithPreparedContext(context, probeMove),
+        (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false),
         partialMove,
         request,
       ),
@@ -337,31 +335,31 @@ const legalChoicesWithPreparedContext = (
   }
 
   const request = executeDiscoveryEffects([...action.effects, ...eventEffects], evalCtx, partialMove);
-  if (!probeOptionLegality || request.kind !== 'pending') {
+  if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
     return request;
   }
 
   return {
     ...request,
     options: mapOptionsForPendingChoice(
-      (probeMove) => legalChoicesWithPreparedContext(context, probeMove),
+      (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false),
       partialMove,
       request,
     ),
   };
 };
 
-export function legalChoices(
+export function legalChoicesDiscover(
   def: GameDef,
   state: GameState,
   partialMove: Move,
-  options?: LegalChoicesOptions,
+  options?: LegalChoicesRuntimeOptions,
 ): ChoiceRequest {
   const action = findAction(def, partialMove.actionId);
   if (action === undefined) {
     throw kernelRuntimeError(
       'LEGAL_CHOICES_UNKNOWN_ACTION',
-      `legalChoices: unknown action id: ${String(partialMove.actionId)}`,
+      `legalChoicesDiscover: unknown action id: ${String(partialMove.actionId)}`,
       { actionId: partialMove.actionId },
     );
   }
@@ -374,5 +372,31 @@ export function legalChoices(
     runtimeTableIndex: buildRuntimeTableIndex(def),
   };
   options?.onProbeContextPrepared?.();
-  return legalChoicesWithPreparedContext(context, partialMove, options);
+  return legalChoicesWithPreparedContext(context, partialMove, false, options);
+}
+
+export function legalChoicesEvaluate(
+  def: GameDef,
+  state: GameState,
+  partialMove: Move,
+  options?: LegalChoicesRuntimeOptions,
+): ChoiceRequest {
+  const action = findAction(def, partialMove.actionId);
+  if (action === undefined) {
+    throw kernelRuntimeError(
+      'LEGAL_CHOICES_UNKNOWN_ACTION',
+      `legalChoicesEvaluate: unknown action id: ${String(partialMove.actionId)}`,
+      { actionId: partialMove.actionId },
+    );
+  }
+
+  const context: LegalChoicesPreparedContext = {
+    def,
+    state,
+    action,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    runtimeTableIndex: buildRuntimeTableIndex(def),
+  };
+  options?.onProbeContextPrepared?.();
+  return legalChoicesWithPreparedContext(context, partialMove, true, options);
 }

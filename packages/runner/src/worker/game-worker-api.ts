@@ -3,7 +3,7 @@ import {
   assertValidatedGameDefInput,
   enumerateLegalMoves,
   initialState,
-  legalChoices,
+  legalChoicesEvaluate,
   legalMoves,
   terminalResult,
 } from '@ludoforge/engine/runtime';
@@ -14,7 +14,6 @@ import type {
   ExecutionOptions,
   GameDef,
   GameState,
-  LegalChoicesOptions,
   LegalMoveEnumerationOptions,
   LegalMoveEnumerationResult,
   Move,
@@ -44,7 +43,7 @@ export interface GameWorkerAPI {
   init(nextDef: GameDef, seed: number, options?: BridgeInitOptions): Promise<GameState>;
   legalMoves(options?: LegalMoveEnumerationOptions): Promise<readonly Move[]>;
   enumerateLegalMoves(options?: LegalMoveEnumerationOptions): Promise<LegalMoveEnumerationResult>;
-  legalChoices(partialMove: Move, options?: LegalChoicesOptions): Promise<ChoiceRequest>;
+  legalChoices(partialMove: Move): Promise<ChoiceRequest>;
   applyMove(move: Move, options?: { readonly trace?: boolean }): Promise<ApplyMoveResult>;
   playSequence(
     moves: readonly Move[],
@@ -183,13 +182,10 @@ export function createGameWorker(): GameWorkerAPI {
       });
     },
 
-    async legalChoices(partialMove: Move, options?: LegalChoicesOptions): Promise<ChoiceRequest> {
+    async legalChoices(partialMove: Move): Promise<ChoiceRequest> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
-        return legalChoices(current.def, current.state, partialMove, {
-          probeOptionLegality: true,
-          ...options,
-        });
+        return legalChoicesEvaluate(current.def, current.state, partialMove);
       });
     },
 

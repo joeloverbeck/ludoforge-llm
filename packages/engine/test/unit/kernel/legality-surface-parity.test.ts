@@ -9,7 +9,7 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
-  legalChoices,
+  legalChoicesDiscover,
   legalMoves,
   type ActionDef,
   type ActionPipelineDef,
@@ -212,10 +212,10 @@ describe('legality surface parity', () => {
   ];
 
   for (const scenario of legalScenarioCases) {
-    it(`${scenario.name} maps consistently across legalChoices, applyMove, and legalMoves`, () => {
+    it(`${scenario.name} maps consistently across legalChoicesDiscover, applyMove, and legalMoves`, () => {
       const { def, state, move } = scenario.make();
 
-      assert.deepEqual(legalChoices(def, state, move), {
+      assert.deepEqual(legalChoicesDiscover(def, state, move), {
         kind: 'illegal',
         complete: false,
         reason: scenario.expectedChoiceReason,
@@ -270,7 +270,7 @@ describe('legality surface parity', () => {
 
       const calls: ReadonlyArray<{ readonly surface: 'legalMoves' | 'legalChoices' | 'applyMove'; readonly run: () => unknown }> = [
         { surface: 'legalMoves', run: () => legalMoves(def, state) },
-        { surface: 'legalChoices', run: () => legalChoices(def, state, move) },
+        { surface: 'legalChoices', run: () => legalChoicesDiscover(def, state, move) },
         { surface: 'applyMove', run: () => applyMove(def, state, move) },
       ];
 
@@ -321,7 +321,7 @@ describe('legality surface parity', () => {
 
     for (const call of [
       { surface: 'legalMoves' as const, run: () => legalMoves(def, state) },
-      { surface: 'legalChoices' as const, run: () => legalChoices(def, state, move) },
+      { surface: 'legalChoices' as const, run: () => legalChoicesDiscover(def, state, move) },
       { surface: 'applyMove' as const, run: () => applyMove(def, state, move) },
     ]) {
       assert.throws(call.run, (error: unknown) => {
@@ -368,7 +368,7 @@ describe('legality surface parity', () => {
 
     for (const call of [
       { surface: 'legalMoves' as const, run: () => legalMoves(def, state) },
-      { surface: 'legalChoices' as const, run: () => legalChoices(def, state, move) },
+      { surface: 'legalChoices' as const, run: () => legalChoicesDiscover(def, state, move) },
       { surface: 'applyMove' as const, run: () => applyMove(def, state, move) },
     ]) {
       assert.throws(call.run, (error: unknown) => {
@@ -406,7 +406,7 @@ describe('legality surface parity', () => {
 
     for (const run of [
       () => legalMoves(def, state),
-      () => legalChoices(def, state, move),
+      () => legalChoicesDiscover(def, state, move),
       () => applyMove(def, state, move),
     ]) {
       assert.throws(run, (error: unknown) => {

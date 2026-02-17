@@ -6,7 +6,7 @@ import {
   asPlayerId,
   asTokenId,
   initialState,
-  legalChoices,
+  legalChoicesDiscover,
   legalMoves,
   type GameDef,
   type GameState,
@@ -66,7 +66,7 @@ describe('FITL commitment targeting rules', () => {
     const commitmentMove = legalMoves(def, inCommitment).find((move) => String(move.actionId) === 'resolveCommitment');
     assert.notEqual(commitmentMove, undefined, 'Expected resolveCommitment move');
 
-    const firstChoice = legalChoices(def, inCommitment, commitmentMove!);
+    const firstChoice = legalChoicesDiscover(def, inCommitment, commitmentMove!);
     assert.equal(firstChoice.kind, 'pending');
     assert.equal(firstChoice.type, 'chooseN');
 
@@ -78,7 +78,7 @@ describe('FITL commitment targeting rules', () => {
       },
     };
 
-    const destinationChoice = legalChoices(def, inCommitment, withSelectedTroop);
+    const destinationChoice = legalChoicesDiscover(def, inCommitment, withSelectedTroop);
     assert.equal(destinationChoice.kind, 'pending');
     assert.equal(destinationChoice.type, 'chooseOne');
 

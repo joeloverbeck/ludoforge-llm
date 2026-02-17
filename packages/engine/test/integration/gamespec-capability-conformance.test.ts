@@ -10,7 +10,7 @@ import {
   asPhaseId,
   asPlayerId,
   initialState,
-  legalChoices,
+  legalChoicesDiscover,
   legalMoves,
   validateGameDef,
   type GameDef,
@@ -82,7 +82,7 @@ describe('GameSpec capability conformance fixtures', () => {
     assert.equal(first.globalVars.energy, 0);
     assert.equal(first.globalVars.score, 1);
 
-    assert.deepEqual(legalChoices(def, offActorState, move), {
+    assert.deepEqual(legalChoicesDiscover(def, offActorState, move), {
       kind: 'illegal',
       complete: false,
       reason: 'pipelineNotApplicable',
@@ -114,7 +114,7 @@ describe('GameSpec capability conformance fixtures', () => {
       },
     };
 
-    assert.deepEqual(legalChoices(legalityDef, legalityFailedState, move), {
+    assert.deepEqual(legalChoicesDiscover(legalityDef, legalityFailedState, move), {
       kind: 'illegal',
       complete: false,
       reason: 'pipelineLegalityFailed',
@@ -134,7 +134,7 @@ describe('GameSpec capability conformance fixtures', () => {
       },
     };
 
-    assert.deepEqual(legalChoices(def, costFailedState, move), {
+    assert.deepEqual(legalChoicesDiscover(def, costFailedState, move), {
       kind: 'illegal',
       complete: false,
       reason: 'pipelineAtomicCostValidationFailed',

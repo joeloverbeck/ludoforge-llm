@@ -1,4 +1,4 @@
-import { legalChoices } from './legal-choices.js';
+import { legalChoicesDiscover } from './legal-choices.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import type {
   ChoiceIllegalRequest,
@@ -67,7 +67,7 @@ export const resolveMoveDecisionSequence = (
   let move = baseMove;
 
   for (let step = 0; step < maxSteps; step += 1) {
-    const request = legalChoices(def, state, move, {
+    const request = legalChoicesDiscover(def, state, move, {
       onDeferredPredicatesEvaluated: (count) => {
         deferredPredicatesEvaluated += count;
       },

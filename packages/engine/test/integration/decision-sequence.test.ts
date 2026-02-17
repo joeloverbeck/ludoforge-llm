@@ -8,7 +8,7 @@ import {
   asZoneId,
   createRng,
   initialState,
-  legalChoices,
+  legalChoicesDiscover,
   legalMoves,
   type GameDef,
   type GameState,
@@ -335,7 +335,7 @@ describe('decision sequence integration', () => {
     assert.ok(!isTemplateMoveForProfile(def, simple), 'simpleScore should NOT be a template move');
 
     // Verify legalChoices reports complete immediately for simple action
-    const choices = legalChoices(def, state, simple);
+    const choices = legalChoicesDiscover(def, state, simple);
     assert.equal(choices.complete, true, 'simple action should have no choices');
 
     // Apply the simple move
@@ -352,16 +352,16 @@ describe('decision sequence integration', () => {
     const template = findTemplateMove(moves, ACTION_DEPLOY);
     assert.ok(template !== undefined, 'deploy template should exist');
 
-    // With actionClass set, legalChoices should still work (binding doesn't affect choice enumeration)
+    // With actionClass set, legalChoicesDiscover should still work (binding doesn't affect choice enumeration)
     const withActionClass: Move = { ...template, actionClass: 'limitedOperation' };
-    const choices = legalChoices(def, state, withActionClass);
+    const choices = legalChoicesDiscover(def, state, withActionClass);
     assert.equal(choices.complete, false, 'should still have pending decisions');
     assert.equal(choices.decisionId, 'decision:$mode', 'first decision should be decision:$mode');
     assert.equal(choices.name, '$mode', 'first decision should be $mode');
 
     // Without actionClass (default 'operation'), same behavior
     const withoutActionClass: Move = { ...template };
-    const choicesDefault = legalChoices(def, state, withoutActionClass);
+    const choicesDefault = legalChoicesDiscover(def, state, withoutActionClass);
     assert.equal(choicesDefault.complete, false, 'should still have pending decisions');
     assert.equal(choicesDefault.decisionId, 'decision:$mode', 'first decision should be decision:$mode');
     assert.equal(choicesDefault.name, '$mode', 'first decision should be $mode');
@@ -376,7 +376,7 @@ describe('decision sequence integration', () => {
     assert.ok(template !== undefined);
 
     // First call: should ask for $mode (chooseOne)
-    const first = legalChoices(def, state, template);
+    const first = legalChoicesDiscover(def, state, template);
     assert.equal(first.complete, false);
     assert.equal(first.kind, 'pending');
     if (first.kind !== 'pending') {
@@ -389,7 +389,7 @@ describe('decision sequence integration', () => {
 
     // Fill $mode, second call: should ask for $selectedTokens (chooseN)
     const withMode: Move = { ...template, params: { ...template.params, 'decision:$mode': 'normal' } };
-    const second = legalChoices(def, state, withMode);
+    const second = legalChoicesDiscover(def, state, withMode);
     assert.equal(second.complete, false);
     assert.equal(second.kind, 'pending');
     if (second.kind !== 'pending') {
@@ -408,7 +408,7 @@ describe('decision sequence integration', () => {
       .slice(0, 2)
       .map((option) => option.value) as unknown as readonly import('../../src/kernel/types.js').MoveParamScalar[];
     const withTokens: Move = { ...withMode, params: { ...withMode.params, 'decision:$selectedTokens': tokenIds } };
-    const third = legalChoices(def, state, withTokens);
+    const third = legalChoicesDiscover(def, state, withTokens);
     assert.equal(third.complete, true, 'all decisions filled → complete');
   });
 });

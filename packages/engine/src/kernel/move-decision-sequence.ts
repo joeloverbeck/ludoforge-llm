@@ -66,6 +66,7 @@ export const resolveMoveDecisionSequence = (
       onDeferredPredicatesEvaluated: (count) => {
         deferredPredicatesEvaluated += count;
       },
+      includeOptionLegality: false,
     });
     if (deferredPredicatesEvaluated > maxDeferredPredicates) {
       emitWarning({

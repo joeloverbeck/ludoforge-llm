@@ -470,6 +470,10 @@ describe('deriveRenderModel state metadata', () => {
       min: 1,
       max: 2,
       options: ['table:none', 'token-a'],
+      optionLegality: [
+        { value: 'table:none', legality: 'legal', illegalReason: null },
+        { value: 'token-a', legality: 'legal', illegalReason: null },
+      ],
       targetKinds: [],
     };
 
@@ -506,11 +510,85 @@ describe('deriveRenderModel state metadata', () => {
       },
     ]);
     expect(model.currentChoiceOptions).toEqual([
-      { value: 'table:none', displayName: 'Table None', isLegal: true, illegalReason: null },
-      { value: 'token-a', displayName: 'Token A', isLegal: true, illegalReason: null },
+      { value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null },
+      { value: 'token-a', displayName: 'Token A', legality: 'legal', illegalReason: null },
     ]);
     expect(model.moveEnumerationWarnings).toEqual([
       { code: 'EMPTY_QUERY_RESULT', message: 'query produced no rows' },
+    ]);
+  });
+
+  it('projects choice option legality and illegal reason from choicePending metadata', () => {
+    const def = compileFixture();
+    const state = initialState(def, 230, 2);
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'target',
+      name: 'target',
+      type: 'chooseOne',
+      options: ['table:none', 'blocked-zone'],
+      optionLegality: [
+        { value: 'table:none', legality: 'legal', illegalReason: null },
+        { value: 'blocked-zone', legality: 'illegal', illegalReason: 'pipelineLegalityFailed' },
+      ],
+      targetKinds: ['zone'],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+      }),
+    );
+
+    expect(model.currentChoiceOptions).toEqual([
+      { value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null },
+      {
+        value: 'blocked-zone',
+        displayName: 'Blocked Zone',
+        legality: 'illegal',
+        illegalReason: 'pipelineLegalityFailed',
+      },
+    ]);
+  });
+
+  it('surfaces unknown legality in rendered choice options', () => {
+    const def = compileFixture();
+    const state = initialState(def, 231, 2);
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'target',
+      name: 'target',
+      type: 'chooseOne',
+      options: ['table:none', 'undetermined-zone'],
+      optionLegality: [
+        { value: 'table:none', legality: 'legal', illegalReason: null },
+        { value: 'undetermined-zone', legality: 'unknown', illegalReason: null },
+      ],
+      targetKinds: ['zone'],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+      }),
+    );
+
+    expect(model.currentChoiceOptions).toEqual([
+      { value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null },
+      {
+        value: 'undetermined-zone',
+        displayName: 'Undetermined Zone',
+        legality: 'unknown',
+        illegalReason: null,
+      },
     ]);
   });
 

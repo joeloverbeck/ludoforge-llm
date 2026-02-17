@@ -280,6 +280,10 @@ describe('createGameStore', () => {
             name: 'firstZone',
             type: 'chooseOne',
             options: ['table:none', 'reserve:none'],
+            optionLegality: [
+              { value: 'table:none', legality: 'legal', illegalReason: null },
+              { value: 'reserve:none', legality: 'legal', illegalReason: null },
+            ],
             targetKinds: ['zone'],
           };
         }

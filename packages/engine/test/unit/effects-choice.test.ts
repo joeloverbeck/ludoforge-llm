@@ -115,6 +115,10 @@ describe('effects choice assertions', () => {
     assert.equal(result.pendingChoice?.type, 'chooseOne');
     assert.equal(result.pendingChoice?.decisionId, 'decision:$choice');
     assert.deepEqual(result.pendingChoice?.options, ['alpha', 'beta']);
+    assert.deepEqual(result.pendingChoice?.optionLegality, [
+      { value: 'alpha', legality: 'legal', illegalReason: null },
+      { value: 'beta', legality: 'legal', illegalReason: null },
+    ]);
   });
 
   it('chooseOne throws when selected value is outside domain', () => {

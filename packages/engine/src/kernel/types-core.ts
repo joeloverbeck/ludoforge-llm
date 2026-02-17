@@ -507,6 +507,12 @@ export interface ChoiceCompleteRequest {
 
 export type ChoiceTargetKind = 'zone' | 'token';
 
+export interface ChoiceOptionLegality {
+  readonly value: MoveParamValue;
+  readonly legality: 'legal' | 'illegal' | 'unknown';
+  readonly illegalReason: ChoiceIllegalReason | null;
+}
+
 export interface ChoicePendingRequest {
   readonly kind: 'pending';
   readonly complete: false;
@@ -514,6 +520,7 @@ export interface ChoicePendingRequest {
   readonly name: string;
   readonly type: 'chooseOne' | 'chooseN';
   readonly options: readonly MoveParamValue[];
+  readonly optionLegality?: readonly ChoiceOptionLegality[];
   readonly targetKinds: readonly ChoiceTargetKind[];
   readonly min?: number;
   readonly max?: number;

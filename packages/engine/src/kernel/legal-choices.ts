@@ -17,6 +17,8 @@ import { resolveFreeOperationExecutionPlayer, resolveFreeOperationZoneFilter } f
 import { isCardEventActionId } from './action-capabilities.js';
 import type {
   ActionDef,
+  ChoiceOptionLegality,
+  ChoicePendingRequest,
   ChoiceRequest,
   EffectAST,
   GameDef,
@@ -25,9 +27,11 @@ import type {
 } from './types.js';
 
 const COMPLETE: ChoiceRequest = { kind: 'complete', complete: true };
+const MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS = 1024;
 
 export interface LegalChoicesOptions {
   readonly onDeferredPredicatesEvaluated?: (count: number) => void;
+  readonly includeOptionLegality?: boolean;
 }
 
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
@@ -61,6 +65,199 @@ const executeDiscoveryEffects = (
   };
   const result = applyEffects(effects, effectCtx);
   return result.pendingChoice ?? COMPLETE;
+};
+
+const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
+
+const countCombinationsCapped = (n: number, k: number, cap: number): number => {
+  if (k < 0 || k > n) {
+    return 0;
+  }
+
+  const normalizedK = Math.min(k, n - k);
+  let result = 1;
+  for (let i = 1; i <= normalizedK; i += 1) {
+    result = (result * (n - normalizedK + i)) / i;
+    if (result > cap) {
+      return cap;
+    }
+  }
+
+  return Math.floor(result);
+};
+
+const enumerateCombinations = (
+  n: number,
+  k: number,
+  visit: (indices: readonly number[]) => void,
+): void => {
+  const current: number[] = [];
+
+  const walk = (start: number, remaining: number): void => {
+    if (remaining === 0) {
+      visit(current);
+      return;
+    }
+
+    const upper = n - remaining;
+    for (let index = start; index <= upper; index += 1) {
+      current.push(index);
+      walk(index + 1, remaining - 1);
+      current.pop();
+    }
+  };
+
+  walk(0, k);
+};
+
+const mapChooseNOptionLegality = (
+  def: GameDef,
+  state: GameState,
+  partialMove: Move,
+  request: ChoicePendingRequest,
+): readonly ChoiceOptionLegality[] => {
+  const uniqueOptions: Move['params'][string][] = [];
+  const uniqueByKey = new Map<string, Move['params'][string]>();
+  for (const option of request.options) {
+    const key = optionKey(option);
+    if (uniqueByKey.has(key)) {
+      continue;
+    }
+    uniqueByKey.set(key, option);
+    uniqueOptions.push(option);
+  }
+
+  const min = request.min ?? 0;
+  const max = Math.min(request.max ?? uniqueOptions.length, uniqueOptions.length);
+  if (min > max) {
+    return request.options.map((value) => ({
+      value,
+      legality: 'illegal',
+      illegalReason: null,
+    }));
+  }
+
+  let totalCombinations = 0;
+  for (let size = min; size <= max; size += 1) {
+    totalCombinations += countCombinationsCapped(
+      uniqueOptions.length,
+      size,
+      MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS - totalCombinations + 1,
+    );
+    if (totalCombinations > MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS) {
+      return request.options.map((value) => ({
+        value,
+        legality: 'unknown',
+        illegalReason: null,
+      }));
+    }
+  }
+
+  const optionLegalityByKey = new Map<string, { legality: ChoiceOptionLegality['legality']; illegalReason: ChoiceOptionLegality['illegalReason'] }>();
+  for (const option of uniqueOptions) {
+    optionLegalityByKey.set(optionKey(option), { legality: 'illegal', illegalReason: null });
+  }
+
+  for (let size = min; size <= max; size += 1) {
+    if (size === 0) {
+      continue;
+    }
+
+    enumerateCombinations(uniqueOptions.length, size, (indices) => {
+      const selected = indices.map((index) => uniqueOptions[index]!);
+      const selectedChoice = selected as Move['params'][string];
+      const probed = legalChoices(
+        def,
+        state,
+        {
+          ...partialMove,
+          params: {
+            ...partialMove.params,
+            [request.decisionId]: selectedChoice,
+          },
+        },
+        { includeOptionLegality: false },
+      );
+
+      for (const option of selected) {
+        const key = optionKey(option);
+        const status = optionLegalityByKey.get(key);
+        if (status === undefined || status.legality === 'legal') {
+          continue;
+        }
+
+        if (probed.kind === 'illegal') {
+          if (status.illegalReason === null) {
+            status.illegalReason = probed.reason;
+          }
+          continue;
+        }
+
+        status.legality = 'legal';
+        status.illegalReason = null;
+      }
+    });
+  }
+
+  return request.options.map((value) => {
+    const status = optionLegalityByKey.get(optionKey(value));
+    if (status === undefined) {
+      return {
+        value,
+        legality: 'unknown',
+        illegalReason: null,
+      };
+    }
+
+    return {
+      value,
+      legality: status.legality,
+      illegalReason: status.legality === 'legal' ? null : status.illegalReason,
+    };
+  });
+};
+
+const mapOptionLegalityForPendingChoice = (
+  def: GameDef,
+  state: GameState,
+  partialMove: Move,
+  request: ChoicePendingRequest,
+): readonly ChoiceOptionLegality[] => {
+  if (request.type === 'chooseN') {
+    return mapChooseNOptionLegality(def, state, partialMove, request);
+  }
+
+  return request.options.map((value) => {
+    const probed = legalChoices(
+      def,
+      state,
+      {
+        ...partialMove,
+        params: {
+          ...partialMove.params,
+          [request.decisionId]: value,
+        },
+      },
+      { includeOptionLegality: false },
+    );
+
+    const illegalReason = probed.kind === 'illegal' ? probed.reason : null;
+    return {
+      value,
+      legality: illegalReason === null ? 'legal' : 'illegal',
+      illegalReason,
+    };
+  });
+};
+
+const stripOptionLegality = (request: ChoiceRequest): ChoiceRequest => {
+  if (request.kind !== 'pending') {
+    return request;
+  }
+
+  const { optionLegality, ...withoutOptionLegality } = request;
+  void optionLegality;
+  return withoutOptionLegality;
 };
 
 export function legalChoices(
@@ -126,6 +323,8 @@ export function legalChoices(
     ? resolveEventEffectList(def, state, partialMove)
     : [];
 
+  const includeOptionLegality = options?.includeOptionLegality ?? false;
+
   if (pipelineDispatch.kind === 'matched') {
     const pipeline = pipelineDispatch.profile;
     const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, evalCtx, {
@@ -143,8 +342,24 @@ export function legalChoices(
       pipeline.stages.length > 0
         ? pipeline.stages.flatMap((stage) => stage.effects)
         : action.effects;
-    return executeDiscoveryEffects([...resolutionEffects, ...eventEffects], evalCtx, partialMove);
+    const request = executeDiscoveryEffects([...resolutionEffects, ...eventEffects], evalCtx, partialMove);
+    if (!includeOptionLegality || request.kind !== 'pending') {
+      return includeOptionLegality ? request : stripOptionLegality(request);
+    }
+
+    return {
+      ...request,
+      optionLegality: mapOptionLegalityForPendingChoice(def, state, partialMove, request),
+    };
   }
 
-  return executeDiscoveryEffects([...action.effects, ...eventEffects], evalCtx, partialMove);
+  const request = executeDiscoveryEffects([...action.effects, ...eventEffects], evalCtx, partialMove);
+  if (!includeOptionLegality || request.kind !== 'pending') {
+    return includeOptionLegality ? request : stripOptionLegality(request);
+  }
+
+  return {
+    ...request,
+    optionLegality: mapOptionLegalityForPendingChoice(def, state, partialMove, request),
+  };
 }

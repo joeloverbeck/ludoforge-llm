@@ -216,6 +216,11 @@ describe('worker boundary structured clone compatibility', () => {
         name: 'pick',
         type: 'chooseOne',
         options: [1, 'x', true],
+        optionLegality: [
+          { value: 1, legality: 'legal', illegalReason: null },
+          { value: 'x', legality: 'legal', illegalReason: null },
+          { value: true, legality: 'legal', illegalReason: null },
+        ],
         targetKinds: [],
       },
       {

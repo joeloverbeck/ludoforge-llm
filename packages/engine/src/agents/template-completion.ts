@@ -60,7 +60,7 @@ export const completeTemplateMove = (
   rng: Rng,
 ): { readonly move: Move; readonly rng: Rng } | null => {
   let current = templateMove;
-  let choices = legalChoices(def, state, current);
+  let choices = legalChoices(def, state, current, { includeOptionLegality: false });
   let cursor = rng;
   let iterations = 0;
 
@@ -82,7 +82,7 @@ export const completeTemplateMove = (
 
     cursor = nextRng;
     current = { ...current, params: { ...current.params, [choices.decisionId]: selected } };
-    choices = legalChoices(def, state, current);
+    choices = legalChoices(def, state, current, { includeOptionLegality: false });
   }
 
   if (choices.kind === 'illegal') {

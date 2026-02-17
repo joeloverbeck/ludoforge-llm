@@ -186,7 +186,10 @@ export function createGameWorker(): GameWorkerAPI {
     async legalChoices(partialMove: Move, options?: LegalChoicesOptions): Promise<ChoiceRequest> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
-        return legalChoices(current.def, current.state, partialMove, options);
+        return legalChoices(current.def, current.state, partialMove, {
+          includeOptionLegality: true,
+          ...options,
+        });
       });
     },
 

@@ -1,6 +1,6 @@
 # Spec 33: Texas Hold 'Em — Kernel Primitives, GameSpecDoc & Tournament
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: XL
 **Dependencies**: Core engine (specs 01-10 complete), FITL patterns as reference
@@ -608,3 +608,15 @@ terminal:
 6. **Simulation**: `simulate(gameDef, { seed: 42, agents: [RandomAgent x 4], maxTurns: 10000 })` completes without crash
 7. **Determinism**: Two runs with same seed produce identical trace hashes
 8. **Chip conservation**: Assert `sum(chipStacks) + pot == totalStartingChips * playerCount` at every state transition
+
+## Outcome
+
+- **Completion date**: 2026-02-17
+- **What changed**:
+  - Kernel primitives were implemented for hidden information reveal, subset evaluation, and resource commitment.
+  - Texas Hold 'Em GameSpecDoc content and runtime wiring were added in the engine data/spec pipeline.
+  - Texas Hold 'Em integration and end-to-end tournament tests were added to validate gameplay flow and tournament behavior.
+- **Deviations from original plan**:
+  - Implementation details were split into engine modules/files based on the current kernel architecture (for example, effect-dispatch and effect-specific modules) rather than a single monolithic effect file path listed in this spec.
+- **Verification results**:
+  - Texas Hold 'Em validation coverage is present in engine test suites, including integration/runtime bootstrap and e2e tournament scenarios (for example `packages/engine/test/integration/texas-runtime-bootstrap.test.ts` and `packages/engine/test/e2e/texas-holdem-tournament.test.ts`).

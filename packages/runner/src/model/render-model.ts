@@ -158,7 +158,7 @@ export interface RenderChoiceStep {
 export interface RenderChoiceOption {
   readonly value: MoveParamValue;
   readonly displayName: string;
-  readonly isLegal: boolean;
+  readonly legality: 'legal' | 'illegal' | 'unknown';
   readonly illegalReason: string | null;
 }
 

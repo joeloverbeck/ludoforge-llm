@@ -140,7 +140,7 @@ describe('render-model types', () => {
         {
           value: ['table', asPlayerId(1)] as MoveParamValue,
           displayName: 'Table, Player 1',
-          isLegal: true,
+          legality: 'legal',
           illegalReason: null,
         },
       ],
@@ -232,14 +232,14 @@ describe('render-model types', () => {
     const scalarOption: RenderChoiceOption = {
       value: 'zone:main' as MoveParamValue,
       displayName: 'Main Zone',
-      isLegal: true,
+      legality: 'legal',
       illegalReason: null,
     };
 
     const vectorOption: RenderChoiceOption = {
       value: ['zone:main', asPlayerId(1)] as MoveParamValue,
       displayName: 'Main Zone + Player 1',
-      isLegal: true,
+      legality: 'legal',
       illegalReason: null,
     };
 

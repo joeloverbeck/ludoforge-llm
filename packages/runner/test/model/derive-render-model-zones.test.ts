@@ -348,6 +348,7 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           name: 'pick-target',
           type: 'chooseOne',
           options: ['reserve:none'],
+          optionLegality: [{ value: 'reserve:none', legality: 'legal', illegalReason: null }],
           targetKinds: ['zone'],
         },
         choiceStack: [{ decisionId: 'fromZone', name: 'from-zone', value: 'table:none' }],
@@ -763,6 +764,10 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           name: 'pick-target',
           type: 'chooseOne',
           options: ['table:none', 't2'],
+          optionLegality: [
+            { value: 'table:none', legality: 'legal', illegalReason: null },
+            { value: 't2', legality: 'legal', illegalReason: null },
+          ],
           targetKinds: ['zone'],
         },
       }),
@@ -787,6 +792,10 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           name: 'pick-target',
           type: 'chooseOne',
           options: ['table:none', ['t2', asPlayerId(1)]],
+          optionLegality: [
+            { value: 'table:none', legality: 'legal', illegalReason: null },
+            { value: ['t2', asPlayerId(1)], legality: 'legal', illegalReason: null },
+          ],
           targetKinds: ['token'],
         },
       }),
@@ -809,10 +818,103 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           name: 'pick-target',
           type: 'chooseOne',
           options: ['table:none'],
+          optionLegality: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
           targetKinds: ['zone'],
         },
       }),
     );
     expect(composedDecisionIdModel.zones.find((zone) => zone.id === 'table:none')?.isSelectable).toBe(true);
+  });
+
+  it('does not mark illegal pending options as selectable targets', () => {
+    const def = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'table',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+        },
+        {
+          id: 'reserve',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+        },
+      ],
+    });
+    const state = initialState(def, 191, 2);
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        selectedAction: asActionId('choose-zone'),
+        choicePending: {
+          kind: 'pending',
+          complete: false,
+          decisionId: 'targetZone',
+          name: 'pick-target',
+          type: 'chooseOne',
+          options: ['table:none', 'reserve:none'],
+          optionLegality: [
+            { value: 'table:none', legality: 'legal', illegalReason: null },
+            { value: 'reserve:none', legality: 'illegal', illegalReason: 'pipelineLegalityFailed' },
+          ],
+          targetKinds: ['zone'],
+        },
+      }),
+    );
+
+    expect(model.zones.find((zone) => zone.id === 'table:none')?.isSelectable).toBe(true);
+    expect(model.zones.find((zone) => zone.id === 'reserve:none')?.isSelectable).toBe(false);
+  });
+
+  it('does not mark unknown pending options as selectable targets', () => {
+    const def = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'table',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+        },
+        {
+          id: 'reserve',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+        },
+      ],
+    });
+    const state = initialState(def, 192, 2);
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        selectedAction: asActionId('choose-zone'),
+        choicePending: {
+          kind: 'pending',
+          complete: false,
+          decisionId: 'targetZone',
+          name: 'pick-target',
+          type: 'chooseOne',
+          options: ['table:none', 'reserve:none'],
+          optionLegality: [
+            { value: 'table:none', legality: 'legal', illegalReason: null },
+            { value: 'reserve:none', legality: 'unknown', illegalReason: null },
+          ],
+          targetKinds: ['zone'],
+        },
+      }),
+    );
+
+    expect(model.zones.find((zone) => zone.id === 'table:none')?.isSelectable).toBe(true);
+    expect(model.zones.find((zone) => zone.id === 'reserve:none')?.isSelectable).toBe(false);
   });
 });

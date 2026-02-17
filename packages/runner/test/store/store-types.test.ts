@@ -41,6 +41,7 @@ describe('store-types', () => {
       name: 'Choose Card',
       type: 'chooseOne',
       options: ['card:a'],
+      optionLegality: [{ value: 'card:a', legality: 'legal', illegalReason: null }],
       targetKinds: [],
     };
 

@@ -953,7 +953,7 @@ phase: [asPhaseId('main')],
             effects: [
               {
                 chooseOne: {
-                  internalDecisionId: 'decision:$target',
+                  internalDecisionId: 'decision:probe::$target',
                   bind: '$target',
                   options: { query: 'enums', values: ['a', 'b'] },
                 },
@@ -967,11 +967,120 @@ phase: [asPhaseId('main')],
       const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
       const state = makeBaseState();
 
-      const result = legalChoices(def, state, makeMove('deferredCostValidationOp'));
+      const result = legalChoices(def, state, makeMove('deferredCostValidationOp'), { includeOptionLegality: true });
       assert.equal(result.complete, false);
+      assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseOne');
-      assert.equal(result.decisionId, 'decision:$target');
+      assert.equal(result.decisionId, 'decision:probe::$target');
       assert.deepStrictEqual(result.options, ['a', 'b']);
+      assert.deepStrictEqual(result.optionLegality, [
+        { value: 'a', legality: 'legal', illegalReason: null },
+        { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
+      ]);
+    });
+
+    it('computes chooseN option legality from downstream pipeline cost validation', () => {
+      const action: ActionDef = {
+        id: asActionId('deferredChooseNCostValidationOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'deferredChooseNCostValidationProfile',
+        actionId: asActionId('deferredChooseNCostValidationOp'),
+        legality: null,
+        costValidation: {
+          op: 'not',
+          arg: {
+            op: 'in',
+            item: 'b',
+            set: { ref: 'binding', name: '$targets' },
+          },
+        },
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseN: {
+                  internalDecisionId: 'decision:probe::$targets',
+                  bind: '$targets',
+                  options: { query: 'enums', values: ['a', 'b', 'c'] },
+                  min: 1,
+                  max: 2,
+                },
+              } as EffectAST,
+            ],
+          },
+        ],
+        atomicity: 'atomic',
+      };
+
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const state = makeBaseState();
+
+      const result = legalChoices(def, state, makeMove('deferredChooseNCostValidationOp'), { includeOptionLegality: true });
+      assert.equal(result.complete, false);
+      assert.equal(result.kind, 'pending');
+      assert.equal(result.type, 'chooseN');
+      assert.equal(result.decisionId, 'decision:probe::$targets');
+      assert.deepStrictEqual(result.options, ['a', 'b', 'c']);
+      assert.deepStrictEqual(result.optionLegality, [
+        { value: 'a', legality: 'legal', illegalReason: null },
+        { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
+        { value: 'c', legality: 'legal', illegalReason: null },
+      ]);
+      assert.deepStrictEqual(
+        result.optionLegality.map((entry) => entry.legality),
+        ['legal', 'illegal', 'legal'],
+      );
+    });
+
+    it('marks chooseN option legality as unknown when probe combinations exceed cap', () => {
+      const action: ActionDef = {
+        id: asActionId('chooseNOverflowOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseN: {
+              internalDecisionId: 'decision:overflow::$targets',
+              bind: '$targets',
+              options: {
+                query: 'enums',
+                values: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm'],
+              },
+              n: 5,
+            },
+          } as EffectAST,
+        ],
+        limits: [],
+      };
+
+      const result = legalChoices(
+        makeBaseDef({ actions: [action] }),
+        makeBaseState(),
+        makeMove('chooseNOverflowOp'),
+        { includeOptionLegality: true },
+      );
+
+      assert.equal(result.kind, 'pending');
+      assert.equal(result.type, 'chooseN');
+      assert.equal(result.optionLegality?.length, 13);
+      assert.ok(result.optionLegality?.every((entry) => entry.legality === 'unknown'));
+      assert.ok(result.optionLegality?.every((entry) => entry.illegalReason === null));
     });
 
     it('does not mask nonrecoverable costValidation evaluation failures', () => {

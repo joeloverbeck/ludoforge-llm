@@ -54,6 +54,7 @@ function makeAdjacency(overrides: Partial<RenderAdjacency> = {}): RenderAdjacenc
   return {
     from: 'zone:a',
     to: 'zone:b',
+    isHighlighted: false,
     ...overrides,
   };
 }
@@ -191,6 +192,10 @@ describe('adjacenciesVisuallyEqual', () => {
 
   it('returns false when from/to values change', () => {
     expect(adjacenciesVisuallyEqual([makeAdjacency()], [makeAdjacency({ from: 'zone:z' })])).toBe(false);
+  });
+
+  it('returns false when highlight state changes', () => {
+    expect(adjacenciesVisuallyEqual([makeAdjacency()], [makeAdjacency({ isHighlighted: true })])).toBe(false);
   });
 
   it('returns false when pair ordering changes', () => {

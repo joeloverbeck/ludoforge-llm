@@ -91,7 +91,11 @@ function tokensVisuallyEqualItem(previous: RenderToken, current: RenderToken): b
 }
 
 function adjacenciesVisuallyEqualItem(previous: RenderAdjacency, current: RenderAdjacency): boolean {
-  return previous.from === current.from && previous.to === current.to;
+  return (
+    previous.from === current.from
+    && previous.to === current.to
+    && previous.isHighlighted === current.isHighlighted
+  );
 }
 
 function orderedArrayEqual<T>(

@@ -48,6 +48,7 @@ export interface RenderZone {
 export interface RenderAdjacency {
   readonly from: string;
   readonly to: string;
+  readonly isHighlighted: boolean;
 }
 
 export interface RenderMapSpace {

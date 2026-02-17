@@ -57,13 +57,20 @@ export function deriveRenderModel(
   const selectionTargets = deriveSelectionTargets(context);
   const zoneDerivation = deriveZones(state, def, context, selectionTargets.selectableZoneIDs);
   const zones = zoneDerivation.zones;
+  const selectedZoneIDs = deriveSelectedZoneIDs(context.choiceStack, zones);
+  const highlightedAdjacencyKeys = deriveHighlightedAdjacencyKeys(
+    def,
+    zones,
+    selectionTargets.selectableZoneIDs,
+    selectedZoneIDs,
+  );
   const tokens = deriveTokens(
     state,
     zones,
     zoneDerivation.visibleTokenIDsByZone,
     selectionTargets.selectableTokenIDs,
   );
-  const adjacencies = deriveAdjacencies(def, zones);
+  const adjacencies = deriveAdjacencies(def, zones, highlightedAdjacencyKeys);
   const globalVars = deriveGlobalVars(state);
   const playerVars = derivePlayerVars(state);
   const globalMarkers = deriveGlobalMarkers(state, staticDerivation.globalMarkerStatesById);
@@ -444,7 +451,11 @@ function grantRevealsToken(grant: RevealGrant, token: Token): boolean {
   return matchesAllTokenFilterPredicates(token, grant.filter);
 }
 
-function deriveAdjacencies(def: GameDef, zones: readonly RenderZone[]): readonly RenderAdjacency[] {
+function deriveAdjacencies(
+  def: GameDef,
+  zones: readonly RenderZone[],
+  highlightedAdjacencyKeys: ReadonlySet<string>,
+): readonly RenderAdjacency[] {
   const renderedZoneIDs = new Set(zones.map((zone) => zone.id));
   const deduped = new Set<string>();
   const adjacencies: RenderAdjacency[] = [];
@@ -461,8 +472,8 @@ function deriveAdjacencies(def: GameDef, zones: readonly RenderZone[]): readonly
         continue;
       }
 
-      pushAdjacency(adjacencies, deduped, from, to);
-      pushAdjacency(adjacencies, deduped, to, from);
+      pushAdjacency(adjacencies, deduped, from, to, highlightedAdjacencyKeys.has(toAdjacencyKey(from, to)));
+      pushAdjacency(adjacencies, deduped, to, from, highlightedAdjacencyKeys.has(toAdjacencyKey(to, from)));
     }
   }
 
@@ -474,14 +485,19 @@ function pushAdjacency(
   deduped: Set<string>,
   from: string,
   to: string,
+  isHighlighted: boolean,
 ): void {
-  const key = `${from}->${to}`;
+  const key = toAdjacencyKey(from, to);
   if (deduped.has(key)) {
     return;
   }
 
   deduped.add(key);
-  output.push({ from, to });
+  output.push({ from, to, isHighlighted });
+}
+
+function toAdjacencyKey(from: string, to: string): string {
+  return `${from}->${to}`;
 }
 
 function deriveMapSpaces(def: GameDef): readonly RenderMapSpace[] {
@@ -583,6 +599,62 @@ function addStringChoiceValues(value: MoveParamValue, output: Set<string>): void
   if (typeof value === 'string') {
     output.add(value);
   }
+}
+
+function deriveSelectedZoneIDs(
+  choiceStack: RenderContext['choiceStack'],
+  zones: readonly RenderZone[],
+): ReadonlySet<string> {
+  if (choiceStack.length === 0 || zones.length === 0) {
+    return new Set<string>();
+  }
+
+  const renderedZoneIDs = new Set(zones.map((zone) => zone.id));
+  const selectedZoneIDs = new Set<string>();
+  for (const step of choiceStack) {
+    const candidates = new Set<string>();
+    addStringChoiceValues(step.value, candidates);
+    for (const candidate of candidates) {
+      if (renderedZoneIDs.has(candidate)) {
+        selectedZoneIDs.add(candidate);
+      }
+    }
+  }
+
+  return selectedZoneIDs;
+}
+
+function deriveHighlightedAdjacencyKeys(
+  def: GameDef,
+  zones: readonly RenderZone[],
+  selectableZoneIDs: ReadonlySet<string>,
+  selectedZoneIDs: ReadonlySet<string>,
+): ReadonlySet<string> {
+  if (selectableZoneIDs.size === 0 || selectedZoneIDs.size === 0 || zones.length === 0) {
+    return new Set<string>();
+  }
+
+  const renderedZoneIDs = new Set(zones.map((zone) => zone.id));
+  const highlighted = new Set<string>();
+
+  for (const zoneDef of def.zones) {
+    const from = String(zoneDef.id);
+    if (!renderedZoneIDs.has(from) || !selectedZoneIDs.has(from)) {
+      continue;
+    }
+
+    for (const adjacentTo of zoneDef.adjacentTo ?? []) {
+      const to = String(adjacentTo);
+      if (!renderedZoneIDs.has(to) || !selectableZoneIDs.has(to)) {
+        continue;
+      }
+
+      highlighted.add(toAdjacencyKey(from, to));
+      highlighted.add(toAdjacencyKey(to, from));
+    }
+  }
+
+  return highlighted;
 }
 
 function deriveFactionByPlayer(state: GameState): ReadonlyMap<PlayerId, string> {

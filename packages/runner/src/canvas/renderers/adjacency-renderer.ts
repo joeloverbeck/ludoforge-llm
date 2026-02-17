@@ -1,0 +1,108 @@
+import { Graphics, type Container } from 'pixi.js';
+
+import type { RenderAdjacency } from '../../model/render-model';
+import type { AdjacencyRenderer, Position } from './renderer-types';
+
+const DEFAULT_LINE_STYLE = {
+  color: 0x6b7280,
+  width: 1.5,
+  alpha: 0.3,
+} as const;
+
+const HIGHLIGHTED_LINE_STYLE = {
+  color: 0x93c5fd,
+  width: 3,
+  alpha: 0.7,
+} as const;
+
+interface PairRenderState {
+  readonly from: string;
+  readonly to: string;
+  readonly isHighlighted: boolean;
+}
+
+export function createAdjacencyRenderer(
+  parentContainer: Container,
+): AdjacencyRenderer {
+  const graphicsByPair = new Map<string, Graphics>();
+
+  return {
+    update(
+      adjacencies: readonly RenderAdjacency[],
+      positions: ReadonlyMap<string, Position>,
+    ): void {
+      const nextPairs = new Map<string, PairRenderState>();
+      for (const adjacency of adjacencies) {
+        const pairKey = toPairKey(adjacency.from, adjacency.to);
+        const existing = nextPairs.get(pairKey);
+        if (existing === undefined) {
+          nextPairs.set(pairKey, adjacency);
+          continue;
+        }
+
+        nextPairs.set(pairKey, {
+          ...existing,
+          isHighlighted: existing.isHighlighted || adjacency.isHighlighted,
+        });
+      }
+
+      for (const [pairKey, graphics] of graphicsByPair) {
+        if (nextPairs.has(pairKey)) {
+          continue;
+        }
+
+        graphics.removeFromParent();
+        graphics.destroy();
+        graphicsByPair.delete(pairKey);
+      }
+
+      for (const [pairKey, adjacency] of nextPairs) {
+        const fromPosition = positions.get(adjacency.from);
+        const toPosition = positions.get(adjacency.to);
+
+        let graphics = graphicsByPair.get(pairKey);
+        if (fromPosition === undefined || toPosition === undefined) {
+          if (graphics !== undefined) {
+            graphics.visible = false;
+          }
+          continue;
+        }
+
+        if (graphics === undefined) {
+          graphics = new Graphics();
+          graphicsByPair.set(pairKey, graphics);
+          parentContainer.addChild(graphics);
+        }
+
+        drawAdjacencyLine(graphics, fromPosition, toPosition, adjacency.isHighlighted);
+      }
+    },
+
+    destroy(): void {
+      for (const graphics of graphicsByPair.values()) {
+        graphics.removeFromParent();
+        graphics.destroy();
+      }
+      graphicsByPair.clear();
+    },
+  };
+}
+
+function toPairKey(from: string, to: string): string {
+  return [from, to].sort().join(':');
+}
+
+function drawAdjacencyLine(
+  graphics: Graphics,
+  fromPosition: Position,
+  toPosition: Position,
+  isHighlighted: boolean,
+): void {
+  graphics
+    .clear()
+    .moveTo(fromPosition.x, fromPosition.y)
+    .lineTo(toPosition.x, toPosition.y)
+    .stroke(isHighlighted ? HIGHLIGHTED_LINE_STYLE : DEFAULT_LINE_STYLE);
+
+  graphics.visible = true;
+}

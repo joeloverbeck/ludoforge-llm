@@ -223,8 +223,55 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
     const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.adjacencies).toEqual([
-      { from: 'table:none', to: 'hand:0' },
-      { from: 'hand:0', to: 'table:none' },
+      { from: 'table:none', to: 'hand:0', isHighlighted: false },
+      { from: 'hand:0', to: 'table:none', isHighlighted: false },
+    ]);
+  });
+
+  it('highlights adjacency pairs when a selected zone connects to selectable zones', () => {
+    const def = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'table',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: ['reserve:none'],
+        },
+        {
+          id: 'reserve',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: ['table:none'],
+        },
+      ],
+    });
+
+    const state = initialState(def, 27, 2);
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        selectedAction: asActionId('choose-zone'),
+        choicePending: {
+          kind: 'pending',
+          complete: false,
+          decisionId: 'targetZone',
+          name: 'pick-target',
+          type: 'chooseOne',
+          options: ['reserve:none'],
+          targetKinds: ['zone'],
+        },
+        choiceStack: [{ decisionId: 'fromZone', name: 'from-zone', value: 'table:none' }],
+      }),
+    );
+
+    expect(model.adjacencies).toEqual([
+      { from: 'table:none', to: 'reserve:none', isHighlighted: true },
+      { from: 'reserve:none', to: 'table:none', isHighlighted: true },
     ]);
   });
 

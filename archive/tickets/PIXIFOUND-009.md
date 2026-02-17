@@ -1,16 +1,17 @@
 # PIXIFOUND-009: Adjacency Connection Renderer
 
+**Status**: ✅ COMPLETED
 **Spec**: 38 (PixiJS Canvas Foundation)
 **Deliverable**: D5
 **Priority**: P0
-**Depends on**: PIXIFOUND-002, PIXIFOUND-004
+**Depends on**: Existing D2/D11 foundations already present in repo (`layers.ts`, `renderer-types.ts`)
 **Blocks**: PIXIFOUND-011
 
 ---
 
 ## Objective
 
-Implement the `AdjacencyRenderer` that renders `RenderAdjacency[]` as lines between zone centers using per-pair Graphics objects (not a single Graphics cleared each update). Supports incremental add/remove/update of adjacency lines.
+Implement the `AdjacencyRenderer` that renders `RenderAdjacency[]` as lines between zone centers using per-pair `Graphics` objects (not a single `Graphics` cleared each update). Supports incremental add/remove/update of adjacency lines.
 
 ---
 
@@ -28,7 +29,7 @@ Implement the `AdjacencyRenderer` that renders `RenderAdjacency[]` as lines betw
 
 - Do NOT implement zone or token renderers — those are PIXIFOUND-008/010.
 - Do NOT implement the canvas-updater subscription wiring — that is PIXIFOUND-011.
-- Do NOT implement highlighted adjacency paths for valid movement — highlight state is a property on `RenderAdjacency`; rendering it here is fine, but actual game logic determining which paths to highlight is out of scope.
+- Do NOT implement highlighted adjacency paths for valid movement. Current `RenderAdjacency` has only `from`/`to`; highlight state is not yet part of the render-model contract.
 - Do NOT modify any files in `packages/engine/`.
 - Do NOT modify existing runner source files (`store/`, `model/`, `worker/`, `bridge/`).
 - Do NOT modify `renderer-types.ts`, `position-store.ts`, or any other PIXIFOUND file.
@@ -51,13 +52,13 @@ export function createAdjacencyRenderer(
 - On each `update()`:
   - New pairs: create `Graphics`, draw line from `positions.get(from)` to `positions.get(to)`, add to map and parent.
   - Removed pairs: destroy `Graphics`, remove from parent and map.
-  - Existing pairs: update line endpoints if positions changed. Update visual style if highlight state changed.
+  - Existing pairs: update line endpoints if positions changed.
 - No `graphics.clear()` + full redraw pattern — incremental updates only.
 
 ### Default line style
 
 - Semi-transparent (alpha ~0.3), thin (lineWidth ~1.5), muted gray color.
-- Highlighted state: thicker (lineWidth ~3), brighter, higher alpha (~0.7) — for showing valid movement paths.
+- No highlighted variant in this ticket; renderer should stay game-agnostic and follow current `RenderAdjacency` schema.
 
 ---
 
@@ -83,3 +84,22 @@ export function createAdjacencyRenderer(
 - Uses per-pair Graphics objects (not a single Graphics cleared each frame).
 - Pair key normalization ensures no duplicate lines for bidirectional adjacency.
 - No game-specific logic — purely driven by `RenderAdjacency[]` and position data.
+
+---
+
+## Outcome
+
+- **Completion date**: 2026-02-17
+- **What changed**:
+  - Added `packages/runner/src/canvas/renderers/adjacency-renderer.ts` with incremental per-pair `Graphics` lifecycle (add/remove/update/destroy), sorted-pair dedupe, and default neutral line style.
+  - Added `packages/runner/test/canvas/renderers/adjacency-renderer.test.ts` covering creation, dedupe, incremental updates, missing-position handling, and full teardown.
+  - Corrected ticket assumptions to match the current codebase:
+    - Replaced non-existent ticket dependencies with current in-repo prerequisites.
+    - Removed highlight-state requirements that are not representable by current `RenderAdjacency` (`from`/`to` only).
+- **Deviations from original plan**:
+  - Original ticket assumed a highlight field on `RenderAdjacency`; implementation remains schema-faithful and game-agnostic by using a single default style.
+  - For robustness, when an existing adjacency temporarily loses a zone position, its line is hidden instead of destroyed so it can recover on subsequent position updates.
+- **Verification results**:
+  - `pnpm -F @ludoforge/runner test` ✅
+  - `pnpm -F @ludoforge/runner typecheck` ✅
+  - `pnpm -F @ludoforge/runner lint` ✅

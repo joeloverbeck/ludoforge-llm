@@ -31,7 +31,7 @@ describe('render-model types', () => {
           metadata: {},
         },
       ],
-      adjacencies: [{ from: 'table', to: 'reserve' }],
+      adjacencies: [{ from: 'table', to: 'reserve', isHighlighted: false }],
       mapSpaces: [
         {
           id: 'city-a',

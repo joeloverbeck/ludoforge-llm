@@ -168,6 +168,33 @@ describe('createGameWorker', () => {
     expect(worker.getState().globalVars.tick).toBe(1);
   });
 
+  it('executes playSequence with 10+ moves and reports each step', () => {
+    const worker = createGameWorker();
+    worker.init(TEST_DEF, 50);
+
+    const moves = Array.from({ length: 15 }, () => LEGAL_TICK_MOVE);
+    const callbackIndices: number[] = [];
+
+    const results = worker.playSequence(moves, (_result, index) => {
+      callbackIndices.push(index);
+    });
+
+    expect(results).toHaveLength(15);
+    expect(callbackIndices).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+    expect(worker.getState().globalVars.tick).toBe(15);
+    expect(worker.getHistoryLength()).toBe(15);
+
+    for (const result of results) {
+      expect(result).toEqual(
+        expect.objectContaining({
+          state: expect.any(Object),
+          triggerFirings: expect.any(Array),
+          warnings: expect.any(Array),
+        }),
+      );
+    }
+  });
+
   it('returns null terminal result for non-terminal state', () => {
     const worker = createGameWorker();
     worker.init(TEST_DEF, 16);

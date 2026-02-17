@@ -79,7 +79,7 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [x] Existing engine tests pass via `pnpm -F @ludoforge/engine test`
 - [x] Kernel runs in Web Worker, Comlink RPC is typed and functional
 - [x] Effect trace enabled by default — `applyMove()` returns `effectTrace` for animation pipeline
-- [ ] `playSequence()` batch execution verified with 10+ move sequences
+- [x] `playSequence()` batch execution verified with 10+ move sequences
 - [x] `enumerateLegalMoves()` exposes move enumeration warnings to UI layer
 - [x] `WorkerError` error taxonomy implemented with structured error codes
 - [x] Zustand store receives state updates from worker

@@ -1,4 +1,4 @@
-import { asPlayerId, type GameDef } from '@ludoforge/engine/runtime';
+import { assertValidatedGameDefInput, asPlayerId } from '@ludoforge/engine/runtime';
 import { type ReactElement, useEffect, useRef } from 'react';
 import type { StoreApi } from 'zustand';
 
@@ -15,7 +15,7 @@ interface AppBootstrap {
 
 const DEFAULT_BOOTSTRAP_SEED = 42;
 const DEFAULT_BOOTSTRAP_PLAYER_ID = asPlayerId(0);
-const DEFAULT_BOOTSTRAP_GAME_DEF = defaultBootstrapGameDef as unknown as GameDef;
+const DEFAULT_BOOTSTRAP_GAME_DEF = assertValidatedGameDefInput(defaultBootstrapGameDef, 'runner bootstrap fixture');
 
 export function App(): ReactElement {
   const bootstrapRef = useRef<AppBootstrap | null>(null);

@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testDoubles = vi.hoisted(() => ({
   initGame: vi.fn(),
@@ -47,14 +47,14 @@ vi.mock('../../src/ui/ErrorBoundary.js', () => ({
   },
 }));
 
-import { App } from '../../src/App.js';
-
-function renderApp(): string {
+async function renderApp(): Promise<string> {
+  const { App } = await import('../../src/App.js');
   return renderToStaticMarkup(createElement(App));
 }
 
 describe('App', () => {
   beforeEach(() => {
+    vi.resetModules();
     testDoubles.effectCleanups = [];
     testDoubles.gameContainerStore = null;
     testDoubles.initGame.mockReset();
@@ -75,15 +75,19 @@ describe('App', () => {
     testDoubles.createGameStore.mockReturnValue(store);
   });
 
-  it('renders with ErrorBoundary wrapping GameContainer', () => {
-    const html = renderApp();
+  afterEach(() => {
+    vi.doUnmock('../../src/bootstrap/default-game-def.json');
+  });
+
+  it('renders with ErrorBoundary wrapping GameContainer', async () => {
+    const html = await renderApp();
 
     expect(html).toContain('data-testid="error-boundary"');
     expect(html).toContain('data-testid="game-container"');
   });
 
-  it('creates bridge and store once per mount', () => {
-    renderApp();
+  it('creates bridge and store once per mount', async () => {
+    await renderApp();
 
     expect(testDoubles.createGameBridge).toHaveBeenCalledTimes(1);
     expect(testDoubles.createGameStore).toHaveBeenCalledTimes(1);
@@ -91,8 +95,8 @@ describe('App', () => {
     expect(testDoubles.gameContainerStore).toBe(testDoubles.createGameStore.mock.results[0]?.value);
   });
 
-  it('calls initGame on mount with deterministic seed and player', () => {
-    renderApp();
+  it('calls initGame on mount with deterministic seed and player', async () => {
+    await renderApp();
 
     expect(testDoubles.initGame).toHaveBeenCalledTimes(1);
     const [gameDef, seed, playerID] = testDoubles.initGame.mock.calls[0]!;
@@ -101,11 +105,21 @@ describe('App', () => {
     expect((gameDef as { readonly metadata?: { readonly id?: string } }).metadata?.id).toBe('runner-bootstrap-default');
   });
 
-  it('terminates worker on unmount cleanup', () => {
-    renderApp();
+  it('terminates worker on unmount cleanup', async () => {
+    await renderApp();
 
     expect(testDoubles.effectCleanups).toHaveLength(1);
     testDoubles.effectCleanups[0]!();
     expect(testDoubles.terminate).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails fast when bootstrap fixture is not a valid GameDef payload', async () => {
+    vi.doMock('../../src/bootstrap/default-game-def.json', () => ({
+      default: { invalid: true },
+    }));
+
+    await expect(import('../../src/App.js')).rejects.toMatchObject({
+      message: expect.stringContaining('Invalid GameDef input from runner bootstrap fixture'),
+    });
   });
 });

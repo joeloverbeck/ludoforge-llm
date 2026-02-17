@@ -304,7 +304,11 @@ describe('createGameWorker', () => {
       throw new Error('Expected loadFromUrl to throw');
     } catch (error) {
       const workerError = expectWorkerError(error, 'VALIDATION_FAILED');
-      expect(workerError.message).toContain('Invalid GameDef from URL:');
+      expect(workerError.message).toContain('Invalid GameDef input from URL https://example.com/invalid-def.json');
+      expect(workerError.details).toMatchObject({
+        source: 'URL https://example.com/invalid-def.json',
+        receivedType: 'object',
+      });
     }
   });
 });

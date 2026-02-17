@@ -1,12 +1,13 @@
 import {
   applyMove,
+  assertValidatedGameDefInput,
   enumerateLegalMoves,
   initialState,
   legalChoices,
   legalMoves,
   terminalResult,
-  validateGameDef,
 } from '@ludoforge/engine/runtime';
+
 import type {
   ApplyMoveResult,
   ChoiceRequest,
@@ -301,26 +302,7 @@ export function createGameWorker(): GameWorkerAPI {
         }
 
         const parsed = await response.json();
-        const nextDef = parsed as GameDef;
-        let diagnostics;
-        try {
-          diagnostics = validateGameDef(nextDef);
-        } catch (error) {
-          throw {
-            message: 'Invalid GameDef from URL: validation failed.',
-            details: { url, cause: error },
-          };
-        }
-        const errorDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity === 'error');
-        if (errorDiagnostics.length > 0) {
-          throw {
-            message: `Invalid GameDef from URL: ${errorDiagnostics.length} validation error(s).`,
-            details: {
-              url,
-              diagnostics: errorDiagnostics,
-            },
-          };
-        }
+        const nextDef = assertValidatedGameDefInput(parsed, `URL ${url}`);
 
         return api.init(nextDef, seed, options);
       });

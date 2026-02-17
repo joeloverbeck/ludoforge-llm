@@ -118,7 +118,7 @@ function pickOneOption(store: ReturnType<typeof createGameStore>): ChoiceScalar 
   if (pending === null) {
     throw new Error('Expected pending choice options.');
   }
-  return asChoiceScalar(pending.options[0]!, 'pending');
+  return asChoiceScalar(pending.options[0]!.value, 'pending');
 }
 
 type Awaitable<T> = T | Promise<T>;
@@ -222,7 +222,7 @@ describe('createGameStore', () => {
       throw new Error('Expected first pending request.');
     }
 
-    const firstChoice = asChoiceScalar(firstPending.options[0]!, 'first');
+    const firstChoice = asChoiceScalar(firstPending.options[0]!.value, 'first');
     await store.getState().chooseOne(firstChoice);
     expect(store.getState().choiceStack).toHaveLength(1);
     const secondPending = store.getState().choicePending;
@@ -230,8 +230,10 @@ describe('createGameStore', () => {
     if (secondPending === null) {
       throw new Error('Expected second pending request.');
     }
-    const secondChoice = secondPending.options.slice(0, 2);
-    const secondChoiceValues = secondChoice.filter((value): value is string => typeof value === 'string');
+    const secondChoiceValues = secondPending.options
+      .slice(0, 2)
+      .map((option) => option.value)
+      .filter((value): value is string => typeof value === 'string');
     await store.getState().chooseN(secondChoiceValues);
 
     const state = store.getState();
@@ -279,8 +281,7 @@ describe('createGameStore', () => {
             decisionId: 'decision:first',
             name: 'firstZone',
             type: 'chooseOne',
-            options: ['table:none', 'reserve:none'],
-            optionLegality: [
+            options: [
               { value: 'table:none', legality: 'legal', illegalReason: null },
               { value: 'reserve:none', legality: 'legal', illegalReason: null },
             ],
@@ -404,9 +405,10 @@ describe('createGameStore', () => {
       throw new Error('Expected chooseN request.');
     }
 
-    const selected = pending.options.slice(0, 2);
-    expect(selected).toEqual(['a', 'b']);
-    const selectedValues = selected.filter((value): value is string => typeof value === 'string');
+    const selectedValues = pending.options
+      .slice(0, 2)
+      .map((option) => option.value)
+      .filter((value): value is string => typeof value === 'string');
     expect(selectedValues).toEqual(['a', 'b']);
     await store.getState().chooseN(selectedValues);
 
@@ -430,7 +432,7 @@ describe('createGameStore', () => {
     if (pending === null) {
       throw new Error('Expected chooseOne request.');
     }
-    const choice = asChoiceScalar(pending.options[0]!, 'chooseOne');
+    const choice = asChoiceScalar(pending.options[0]!.value, 'chooseOne');
     await store.getState().chooseOne(choice);
 
     const state = store.getState();
@@ -536,7 +538,10 @@ describe('createGameStore', () => {
     if (secondPending === null) {
       throw new Error('Expected second pending request.');
     }
-    const selected = secondPending.options.slice(0, 2).filter((value): value is string => typeof value === 'string');
+    const selected = secondPending.options
+      .slice(0, 2)
+      .map((option) => option.value)
+      .filter((value): value is string => typeof value === 'string');
     await store.getState().chooseN(selected);
     expect(store.getState().choicePending).toBeNull();
 

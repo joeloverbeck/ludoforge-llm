@@ -187,7 +187,7 @@ export function createGameWorker(): GameWorkerAPI {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         return legalChoices(current.def, current.state, partialMove, {
-          includeOptionLegality: true,
+          probeOptionLegality: true,
           ...options,
         });
       });

@@ -38,11 +38,16 @@ const matchesRule = (rule: DecisionOverrideRule, request: ChoicePendingRequest):
 };
 
 const deterministicDefault = (request: ChoicePendingRequest): MoveParamValue => {
+  const nonIllegalOptions = request.options
+    .filter((option) => option.legality !== 'illegal')
+    .map((option) => option.value);
+  const options = nonIllegalOptions.length > 0
+    ? nonIllegalOptions
+    : request.options.map((option) => option.value);
   if (request.type === 'chooseOne') {
-    return (request.options?.[0] ?? null) as MoveParamScalar;
+    return (options[0] ?? null) as MoveParamScalar;
   }
   const min = request.min ?? 0;
-  const options = request.options ?? [];
   const targetCount = min > 0 ? min : Math.min(1, options.length);
   return options.slice(0, targetCount) as MoveParamScalar[];
 };

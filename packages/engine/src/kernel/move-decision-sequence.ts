@@ -26,18 +26,23 @@ export interface ResolveMoveDecisionSequenceResult {
 }
 
 const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefined => {
-  const options = request.options ?? [];
+  const nonIllegalOptionValues = request.options
+    .filter((option) => option.legality !== 'illegal')
+    .map((option) => option.value);
+  const optionValues = nonIllegalOptionValues.length > 0
+    ? nonIllegalOptionValues
+    : request.options.map((option) => option.value);
   if (request.type === 'chooseOne') {
-    const selected = options[0];
+    const selected = optionValues[0];
     return selected === undefined ? undefined : (selected as MoveParamScalar);
   }
 
   if (request.type === 'chooseN') {
     const min = request.min ?? 0;
-    if (options.length < min) {
+    if (optionValues.length < min) {
       return undefined;
     }
-    return options.slice(0, min) as MoveParamScalar[];
+    return optionValues.slice(0, min) as MoveParamScalar[];
   }
 
   return undefined;
@@ -66,7 +71,6 @@ export const resolveMoveDecisionSequence = (
       onDeferredPredicatesEvaluated: (count) => {
         deferredPredicatesEvaluated += count;
       },
-      includeOptionLegality: false,
     });
     if (deferredPredicatesEvaluated > maxDeferredPredicates) {
       emitWarning({

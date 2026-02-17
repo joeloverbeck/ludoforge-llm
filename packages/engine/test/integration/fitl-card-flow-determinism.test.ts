@@ -137,7 +137,8 @@ const completeProfileMoveDeterministically = (
     state,
     (request) => {
       const min = request.min ?? 0;
-      const options = request.options ?? [];
+      const nonIllegalOptions = request.options.filter((option) => option.legality !== 'illegal');
+      const options = nonIllegalOptions.length > 0 ? nonIllegalOptions : request.options;
       if (request.type === 'chooseN' && options.length < min) {
         return undefined;
       }

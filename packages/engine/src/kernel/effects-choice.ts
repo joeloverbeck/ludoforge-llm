@@ -87,10 +87,9 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
           decisionId,
           name: resolvedBind,
           type: 'chooseOne',
-          options: normalizedOptions,
-          optionLegality: normalizedOptions.map((value) => ({
+          options: normalizedOptions.map((value) => ({
             value,
-            legality: 'legal',
+            legality: 'unknown',
             illegalReason: null,
           })),
           targetKinds,
@@ -216,10 +215,9 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
           decisionId,
           name: bind,
           type: 'chooseN',
-          options: normalizedOptions,
-          optionLegality: normalizedOptions.map((value) => ({
+          options: normalizedOptions.map((value) => ({
             value,
-            legality: 'legal',
+            legality: 'unknown',
             illegalReason: null,
           })),
           targetKinds,

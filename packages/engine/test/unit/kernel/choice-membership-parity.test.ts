@@ -107,7 +107,7 @@ describe('choice membership parity', () => {
 
     const pending = legalChoices(def, state, makeMove({}));
     assert.equal(pending.kind, 'pending');
-    assert.deepEqual(pending.options, [asTokenId('tok-1')]);
+    assert.deepEqual(pending.options.map((option) => option.value), [asTokenId('tok-1')]);
 
     assert.deepEqual(legalChoices(def, state, makeMove({ 'decision:$token': asTokenId('tok-1') })), {
       kind: 'complete',

@@ -569,14 +569,7 @@ function deriveSelectionTargets(context: RenderContext): SelectionTargets {
   }
 
   const candidateIDs = new Set<string>();
-  const optionLegality = pending.optionLegality
-    ?? pending.options.map((value) => ({
-      value,
-      legality: 'unknown' as const,
-      illegalReason: null,
-    }));
-
-  for (const option of optionLegality) {
+  for (const option of pending.options) {
     if (option.legality !== 'legal') {
       continue;
     }
@@ -786,14 +779,7 @@ function deriveChoiceOptions(context: RenderContext): RenderModel['currentChoice
     return null;
   }
 
-  const optionLegality = context.choicePending.optionLegality
-    ?? context.choicePending.options.map((value) => ({
-      value,
-      legality: 'unknown' as const,
-      illegalReason: null,
-    }));
-
-  return optionLegality.map((option) => ({
+  return context.choicePending.options.map((option) => ({
     value: option.value,
     displayName: formatIdAsDisplayName(String(option.value)),
     legality: option.legality,

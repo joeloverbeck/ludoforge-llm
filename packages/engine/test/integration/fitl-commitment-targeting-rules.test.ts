@@ -82,7 +82,7 @@ describe('FITL commitment targeting rules', () => {
     assert.equal(destinationChoice.kind, 'pending');
     assert.equal(destinationChoice.type, 'chooseOne');
 
-    const options = destinationChoice.options?.map((value) => String(value)) ?? [];
+    const options = destinationChoice.options.map((option) => String(option.value));
     assert.ok(options.includes('saigon:none'), 'Saigon must be a legal commitment destination');
     assert.ok(options.includes('loc-saigon-cam-ranh:none'), 'LoC must be a legal commitment destination');
     assert.ok(options.includes('hue:none'), 'COIN-controlled city must be a legal commitment destination');

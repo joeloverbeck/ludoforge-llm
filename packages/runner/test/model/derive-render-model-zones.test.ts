@@ -347,8 +347,7 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           decisionId: 'targetZone',
           name: 'pick-target',
           type: 'chooseOne',
-          options: ['reserve:none'],
-          optionLegality: [{ value: 'reserve:none', legality: 'legal', illegalReason: null }],
+          options: [{ value: 'reserve:none', legality: 'legal', illegalReason: null }],
           targetKinds: ['zone'],
         },
         choiceStack: [{ decisionId: 'fromZone', name: 'from-zone', value: 'table:none' }],
@@ -763,8 +762,7 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           decisionId: 'targetZone',
           name: 'pick-target',
           type: 'chooseOne',
-          options: ['table:none', 't2'],
-          optionLegality: [
+          options: [
             { value: 'table:none', legality: 'legal', illegalReason: null },
             { value: 't2', legality: 'legal', illegalReason: null },
           ],
@@ -791,8 +789,7 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           decisionId: 'targetToken',
           name: 'pick-target',
           type: 'chooseOne',
-          options: ['table:none', ['t2', asPlayerId(1)]],
-          optionLegality: [
+          options: [
             { value: 'table:none', legality: 'legal', illegalReason: null },
             { value: ['t2', asPlayerId(1)], legality: 'legal', illegalReason: null },
           ],
@@ -817,8 +814,7 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           decisionId: 'decision:internal::targetZone',
           name: 'pick-target',
           type: 'chooseOne',
-          options: ['table:none'],
-          optionLegality: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
+          options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
           targetKinds: ['zone'],
         },
       }),
@@ -858,8 +854,7 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           decisionId: 'targetZone',
           name: 'pick-target',
           type: 'chooseOne',
-          options: ['table:none', 'reserve:none'],
-          optionLegality: [
+          options: [
             { value: 'table:none', legality: 'legal', illegalReason: null },
             { value: 'reserve:none', legality: 'illegal', illegalReason: 'pipelineLegalityFailed' },
           ],
@@ -904,8 +899,7 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           decisionId: 'targetZone',
           name: 'pick-target',
           type: 'chooseOne',
-          options: ['table:none', 'reserve:none'],
-          optionLegality: [
+          options: [
             { value: 'table:none', legality: 'legal', illegalReason: null },
             { value: 'reserve:none', legality: 'unknown', illegalReason: null },
           ],

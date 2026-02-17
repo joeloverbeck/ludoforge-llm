@@ -87,12 +87,17 @@ export interface RuntimeSmokeGateResult {
 const MAX_DECISION_STEPS = 256;
 
 const deterministicDefaultDecision = (request: ChoicePendingRequest): MoveParamValue => {
+  const nonIllegalOptions = request.options
+    .filter((option) => option.legality !== 'illegal')
+    .map((option) => option.value);
+  const options = nonIllegalOptions.length > 0
+    ? nonIllegalOptions
+    : request.options.map((option) => option.value);
   if (request.type === 'chooseOne') {
-    return (request.options?.[0] ?? null) as MoveParamScalar;
+    return (options[0] ?? null) as MoveParamScalar;
   }
 
   const min = request.min ?? 0;
-  const options = request.options ?? [];
   return options.slice(0, min) as MoveParamScalar[];
 };
 

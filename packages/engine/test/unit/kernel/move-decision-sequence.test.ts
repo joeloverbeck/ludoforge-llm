@@ -142,7 +142,7 @@ phase: [asPhaseId('main')],
     assert.equal(result.complete, false);
     assert.equal(result.nextDecision?.name, '$targets');
     assert.equal(result.nextDecision?.type, 'chooseN');
-    assert.equal((result.nextDecision?.options ?? []).length, 0);
+    assert.equal(result.nextDecision?.options.length ?? 0, 0);
     assert.equal(result.nextDecision?.min, 1);
     assert.equal(isMoveDecisionSequenceSatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
   });
@@ -185,7 +185,7 @@ phase: [asPhaseId('main')],
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('custom-choose-op'), {
-      choose: (request) => request.options?.[2],
+      choose: (request) => request.options[2]?.value,
     });
     assert.equal(result.complete, true);
     assert.equal(result.move.params['decision:$target'], 'c');
@@ -322,7 +322,7 @@ phase: [asPhaseId('main')],
     const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('nested-op'), {
       choose: (request) => {
         selectedDecisionIds.push(request.decisionId);
-        return request.options?.[1];
+        return request.options[1]?.value;
       },
     });
 
@@ -499,7 +499,7 @@ phase: [asPhaseId('main')],
 
     assert.equal(result.complete, false);
     assert.equal(result.nextDecision?.decisionId, 'decision:$zone');
-    assert.deepEqual(result.nextDecision?.options, ['board:cambodia']);
+    assert.deepEqual(result.nextDecision?.options.map((option) => option.value), ['board:cambodia']);
   });
 
   it('rejects decision selections outside the free-operation zone filter domain', () => {

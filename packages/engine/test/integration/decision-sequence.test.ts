@@ -378,25 +378,35 @@ describe('decision sequence integration', () => {
     // First call: should ask for $mode (chooseOne)
     const first = legalChoices(def, state, template);
     assert.equal(first.complete, false);
+    assert.equal(first.kind, 'pending');
+    if (first.kind !== 'pending') {
+      throw new Error('Expected pending first decision.');
+    }
     assert.equal(first.decisionId, 'decision:$mode');
     assert.equal(first.name, '$mode');
     assert.equal(first.type, 'chooseOne');
-    assert.deepEqual(first.options, ['normal', 'bonus']);
+    assert.deepEqual(first.options.map((option) => option.value), ['normal', 'bonus']);
 
     // Fill $mode, second call: should ask for $selectedTokens (chooseN)
     const withMode: Move = { ...template, params: { ...template.params, 'decision:$mode': 'normal' } };
     const second = legalChoices(def, state, withMode);
     assert.equal(second.complete, false);
+    assert.equal(second.kind, 'pending');
+    if (second.kind !== 'pending') {
+      throw new Error('Expected pending second decision.');
+    }
     assert.equal(second.decisionId, 'decision:$selectedTokens');
     assert.equal(second.name, '$selectedTokens');
     assert.equal(second.type, 'chooseN');
     assert.equal(second.min, 1);
     assert.ok(second.max !== undefined && second.max <= 3);
-    assert.ok(second.options !== undefined && second.options.length === 3, 'should offer 3 tokens');
+    assert.equal(second.options.length, 3, 'should offer 3 tokens');
 
     // Fill $selectedTokens, third call: should be complete
     // chooseN expects an array of scalars as the param value
-    const tokenIds = second.options!.slice(0, 2) as unknown as readonly import('../../src/kernel/types.js').MoveParamScalar[];
+    const tokenIds = second.options
+      .slice(0, 2)
+      .map((option) => option.value) as unknown as readonly import('../../src/kernel/types.js').MoveParamScalar[];
     const withTokens: Move = { ...withMode, params: { ...withMode.params, 'decision:$selectedTokens': tokenIds } };
     const third = legalChoices(def, state, withTokens);
     assert.equal(third.complete, true, 'all decisions filled → complete');

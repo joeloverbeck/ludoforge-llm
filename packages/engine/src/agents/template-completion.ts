@@ -20,7 +20,12 @@ const selectFromChooseOne = (
   choices: ChoicePendingRequest,
   rng: Rng,
 ): { readonly selected: MoveParamValue; readonly rng: Rng } => {
-  const options = choices.options!;
+  const nonIllegalOptions = choices.options
+    .filter((option) => option.legality !== 'illegal')
+    .map((option) => option.value);
+  const options = nonIllegalOptions.length > 0
+    ? nonIllegalOptions
+    : choices.options.map((option) => option.value);
   const [index, nextRng] = nextInt(rng, 0, options.length - 1);
   return { selected: options[index]!, rng: nextRng };
 };
@@ -29,7 +34,12 @@ const selectFromChooseN = (
   choices: ChoicePendingRequest,
   rng: Rng,
 ): { readonly selected: MoveParamValue; readonly rng: Rng } => {
-  const options = choices.options!;
+  const nonIllegalOptions = choices.options
+    .filter((option) => option.legality !== 'illegal')
+    .map((option) => option.value);
+  const options = nonIllegalOptions.length > 0
+    ? nonIllegalOptions
+    : choices.options.map((option) => option.value);
   const min = choices.min ?? 0;
   const max = choices.max ?? options.length;
   const [count, rng1] = nextInt(rng, min, max);
@@ -60,7 +70,7 @@ export const completeTemplateMove = (
   rng: Rng,
 ): { readonly move: Move; readonly rng: Rng } | null => {
   let current = templateMove;
-  let choices = legalChoices(def, state, current, { includeOptionLegality: false });
+  let choices = legalChoices(def, state, current);
   let cursor = rng;
   let iterations = 0;
 
@@ -71,7 +81,10 @@ export const completeTemplateMove = (
       );
     }
 
-    if (choices.options !== undefined && choices.options.length === 0) {
+    const nonIllegalOptions = choices.options.filter((option) => option.legality !== 'illegal');
+    const optionCount = nonIllegalOptions.length > 0 ? nonIllegalOptions.length : choices.options.length;
+    const min = choices.min ?? 0;
+    if (optionCount === 0 || (choices.type === 'chooseN' && optionCount < min)) {
       return null;
     }
 
@@ -82,7 +95,7 @@ export const completeTemplateMove = (
 
     cursor = nextRng;
     current = { ...current, params: { ...current.params, [choices.decisionId]: selected } };
-    choices = legalChoices(def, state, current, { includeOptionLegality: false });
+    choices = legalChoices(def, state, current);
   }
 
   if (choices.kind === 'illegal') {

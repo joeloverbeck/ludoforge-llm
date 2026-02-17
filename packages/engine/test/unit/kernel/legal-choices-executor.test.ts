@@ -77,7 +77,7 @@ describe('legalChoices executor context', () => {
 
     assert.equal(request.kind, 'pending');
     assert.equal(request.decisionId, 'decision:$zone');
-    assert.deepEqual(request.options, [asZoneId('hand:1')]);
+    assert.deepEqual(request.options.map((option) => option.value), [asZoneId('hand:1')]);
   });
 
   it('returns illegal when fixed executor is outside playerCount', () => {

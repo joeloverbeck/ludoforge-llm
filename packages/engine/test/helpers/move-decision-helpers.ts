@@ -9,12 +9,17 @@ import {
 } from '../../src/kernel/index.js';
 
 export const pickDeterministicDecisionValue = (request: ChoicePendingRequest): MoveParamValue => {
+  const nonIllegalOptions = request.options
+    .filter((option) => option.legality !== 'illegal')
+    .map((option) => option.value);
+  const options = nonIllegalOptions.length > 0
+    ? nonIllegalOptions
+    : request.options.map((option) => option.value);
   if (request.type === 'chooseOne') {
-    return (request.options?.[0] ?? null) as MoveParamScalar;
+    return (options[0] ?? null) as MoveParamScalar;
   }
 
   const min = request.min ?? 0;
-  const options = request.options ?? [];
   return options.slice(0, min) as MoveParamScalar[];
 };
 
@@ -32,7 +37,7 @@ export const completeMoveDecisionSequenceOrThrow = (
 
   const nextDecision = result.nextDecision;
   const min = nextDecision?.min ?? 0;
-  const optionsCount = nextDecision?.options?.length ?? 0;
+  const optionsCount = nextDecision?.options.length ?? 0;
   const detail =
     nextDecision === undefined
       ? `illegal=${result.illegal?.reason ?? 'unknown'}`

@@ -17,7 +17,7 @@ import { resolveFreeOperationExecutionPlayer, resolveFreeOperationZoneFilter } f
 import { isCardEventActionId } from './action-capabilities.js';
 import type {
   ActionDef,
-  ChoiceOptionLegality,
+  ChoiceOption,
   ChoicePendingRequest,
   ChoiceRequest,
   EffectAST,
@@ -31,7 +31,7 @@ const MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS = 1024;
 
 export interface LegalChoicesOptions {
   readonly onDeferredPredicatesEvaluated?: (count: number) => void;
-  readonly includeOptionLegality?: boolean;
+  readonly probeOptionLegality?: boolean;
 }
 
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
@@ -110,28 +110,28 @@ const enumerateCombinations = (
   walk(0, k);
 };
 
-const mapChooseNOptionLegality = (
+const mapChooseNOptions = (
   def: GameDef,
   state: GameState,
   partialMove: Move,
   request: ChoicePendingRequest,
-): readonly ChoiceOptionLegality[] => {
+): readonly ChoiceOption[] => {
   const uniqueOptions: Move['params'][string][] = [];
   const uniqueByKey = new Map<string, Move['params'][string]>();
   for (const option of request.options) {
-    const key = optionKey(option);
+    const key = optionKey(option.value);
     if (uniqueByKey.has(key)) {
       continue;
     }
-    uniqueByKey.set(key, option);
-    uniqueOptions.push(option);
+    uniqueByKey.set(key, option.value);
+    uniqueOptions.push(option.value);
   }
 
   const min = request.min ?? 0;
   const max = Math.min(request.max ?? uniqueOptions.length, uniqueOptions.length);
   if (min > max) {
-    return request.options.map((value) => ({
-      value,
+    return request.options.map((option) => ({
+      value: option.value,
       legality: 'illegal',
       illegalReason: null,
     }));
@@ -145,15 +145,15 @@ const mapChooseNOptionLegality = (
       MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS - totalCombinations + 1,
     );
     if (totalCombinations > MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS) {
-      return request.options.map((value) => ({
-        value,
+      return request.options.map((option) => ({
+        value: option.value,
         legality: 'unknown',
         illegalReason: null,
       }));
     }
   }
 
-  const optionLegalityByKey = new Map<string, { legality: ChoiceOptionLegality['legality']; illegalReason: ChoiceOptionLegality['illegalReason'] }>();
+  const optionLegalityByKey = new Map<string, { legality: ChoiceOption['legality']; illegalReason: ChoiceOption['illegalReason'] }>();
   for (const option of uniqueOptions) {
     optionLegalityByKey.set(optionKey(option), { legality: 'illegal', illegalReason: null });
   }
@@ -175,8 +175,7 @@ const mapChooseNOptionLegality = (
             ...partialMove.params,
             [request.decisionId]: selectedChoice,
           },
-        },
-        { includeOptionLegality: false },
+        }
       );
 
       for (const option of selected) {
@@ -199,35 +198,35 @@ const mapChooseNOptionLegality = (
     });
   }
 
-  return request.options.map((value) => {
-    const status = optionLegalityByKey.get(optionKey(value));
+  return request.options.map((option) => {
+    const status = optionLegalityByKey.get(optionKey(option.value));
     if (status === undefined) {
       return {
-        value,
+        value: option.value,
         legality: 'unknown',
         illegalReason: null,
       };
     }
 
     return {
-      value,
+      value: option.value,
       legality: status.legality,
       illegalReason: status.legality === 'legal' ? null : status.illegalReason,
     };
   });
 };
 
-const mapOptionLegalityForPendingChoice = (
+const mapOptionsForPendingChoice = (
   def: GameDef,
   state: GameState,
   partialMove: Move,
   request: ChoicePendingRequest,
-): readonly ChoiceOptionLegality[] => {
+): readonly ChoiceOption[] => {
   if (request.type === 'chooseN') {
-    return mapChooseNOptionLegality(def, state, partialMove, request);
+    return mapChooseNOptions(def, state, partialMove, request);
   }
 
-  return request.options.map((value) => {
+  return request.options.map((option) => {
     const probed = legalChoices(
       def,
       state,
@@ -235,29 +234,18 @@ const mapOptionLegalityForPendingChoice = (
         ...partialMove,
         params: {
           ...partialMove.params,
-          [request.decisionId]: value,
+          [request.decisionId]: option.value,
         },
-      },
-      { includeOptionLegality: false },
+      }
     );
 
     const illegalReason = probed.kind === 'illegal' ? probed.reason : null;
     return {
-      value,
+      value: option.value,
       legality: illegalReason === null ? 'legal' : 'illegal',
       illegalReason,
     };
   });
-};
-
-const stripOptionLegality = (request: ChoiceRequest): ChoiceRequest => {
-  if (request.kind !== 'pending') {
-    return request;
-  }
-
-  const { optionLegality, ...withoutOptionLegality } = request;
-  void optionLegality;
-  return withoutOptionLegality;
 };
 
 export function legalChoices(
@@ -322,8 +310,7 @@ export function legalChoices(
   const eventEffects = isCardEventActionId(def, action.id)
     ? resolveEventEffectList(def, state, partialMove)
     : [];
-
-  const includeOptionLegality = options?.includeOptionLegality ?? false;
+  const probeOptionLegality = options?.probeOptionLegality ?? false;
 
   if (pipelineDispatch.kind === 'matched') {
     const pipeline = pipelineDispatch.profile;
@@ -343,23 +330,23 @@ export function legalChoices(
         ? pipeline.stages.flatMap((stage) => stage.effects)
         : action.effects;
     const request = executeDiscoveryEffects([...resolutionEffects, ...eventEffects], evalCtx, partialMove);
-    if (!includeOptionLegality || request.kind !== 'pending') {
-      return includeOptionLegality ? request : stripOptionLegality(request);
+    if (!probeOptionLegality || request.kind !== 'pending') {
+      return request;
     }
 
     return {
       ...request,
-      optionLegality: mapOptionLegalityForPendingChoice(def, state, partialMove, request),
+      options: mapOptionsForPendingChoice(def, state, partialMove, request),
     };
   }
 
   const request = executeDiscoveryEffects([...action.effects, ...eventEffects], evalCtx, partialMove);
-  if (!includeOptionLegality || request.kind !== 'pending') {
-    return includeOptionLegality ? request : stripOptionLegality(request);
+  if (!probeOptionLegality || request.kind !== 'pending') {
+    return request;
   }
 
   return {
     ...request,
-    optionLegality: mapOptionLegalityForPendingChoice(def, state, partialMove, request),
+    options: mapOptionsForPendingChoice(def, state, partialMove, request),
   };
 }

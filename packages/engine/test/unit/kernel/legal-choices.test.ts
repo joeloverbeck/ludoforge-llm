@@ -176,7 +176,7 @@ phase: [asPhaseId('main')],
     assert.equal(result1.decisionId, 'decision:$color');
     assert.equal(result1.name, '$color');
     assert.equal(result1.type, 'chooseOne');
-    assert.deepStrictEqual(result1.options, ['red', 'blue', 'green']);
+    assert.deepStrictEqual(result1.options.map((option) => option.value), ['red', 'blue', 'green']);
     assert.deepStrictEqual(result1.targetKinds, []);
 
     // Second call: param filled → complete
@@ -215,7 +215,7 @@ phase: [asPhaseId('main')],
     assert.equal(result.kind, 'pending');
     assert.equal(result.name, '$targets');
     assert.equal(result.type, 'chooseN');
-    assert.deepStrictEqual(result.options, ['a', 'b', 'c']);
+    assert.deepStrictEqual(result.options.map((option) => option.value), ['a', 'b', 'c']);
     assert.deepStrictEqual(result.targetKinds, []);
     assert.equal(result.min, 1);
     assert.equal(result.max, 3); // clamped from 10 to domain size 3
@@ -581,8 +581,12 @@ phase: [asPhaseId('main')],
     const stateHigh = makeBaseState({ globalVars: { score: 7 } });
     const r2 = legalChoices(def, stateHigh, makeMove('conditionalChoice'));
     assert.equal(r2.complete, false);
+    assert.equal(r2.kind, 'pending');
+    if (r2.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
     assert.equal(r2.name, '$bonus');
-    assert.deepStrictEqual(r2.options, ['gold', 'silver']);
+    assert.deepStrictEqual(r2.options.map((option) => option.value), ['gold', 'silver']);
   });
 
   it('7. chooseN with min >= 1 and empty domain returns ChoiceRequest with options: []', () => {
@@ -613,9 +617,13 @@ phase: [asPhaseId('main')],
 
     const result = legalChoices(def, state, makeMove('emptyDomain'));
     assert.equal(result.complete, false);
+    assert.equal(result.kind, 'pending');
+    if (result.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
     assert.equal(result.name, '$targets');
     assert.equal(result.type, 'chooseN');
-    assert.deepStrictEqual(result.options, []);
+    assert.deepStrictEqual(result.options.map((option) => option.value), []);
     assert.equal(result.min, 1);
     assert.equal(result.max, 0); // clamped to domain size 0
   });
@@ -658,9 +666,13 @@ phase: [asPhaseId('main')],
 
     const result = legalChoices(def, state, makeMove('letThenChoose'));
     assert.equal(result.complete, false);
+    assert.equal(result.kind, 'pending');
+    if (result.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
     assert.equal(result.name, '$pick');
     assert.equal(result.type, 'chooseOne');
-    assert.deepStrictEqual(result.options, [1, 2, 3]);
+    assert.deepStrictEqual(result.options.map((option) => option.value), [1, 2, 3]);
   });
 
   it('8b. legalChoices preserves transferVar actualBind exported from let-scoped effects', () => {
@@ -775,9 +787,13 @@ phase: [asPhaseId('main')],
 
     const result = legalChoices(def, state, makeMove('exactPick'));
     assert.equal(result.complete, false);
+    assert.equal(result.kind, 'pending');
+    if (result.kind !== 'pending') {
+      throw new Error('expected pending choice');
+    }
     assert.equal(result.name, '$exactTargets');
     assert.equal(result.type, 'chooseN');
-    assert.deepStrictEqual(result.options, ['alpha', 'beta', 'gamma', 'delta']);
+    assert.deepStrictEqual(result.options.map((option) => option.value), ['alpha', 'beta', 'gamma', 'delta']);
     assert.equal(result.min, 2);
     assert.equal(result.max, 2);
 
@@ -830,9 +846,13 @@ phase: [asPhaseId('main')],
 
       const result = legalChoices(def, state, makeMove('trainOp'));
       assert.equal(result.complete, false);
+      assert.equal(result.kind, 'pending');
+      if (result.kind !== 'pending') {
+        throw new Error('expected pending choice');
+      }
       assert.equal(result.name, '$spaces');
       assert.equal(result.type, 'chooseN');
-      assert.deepStrictEqual(result.options, ['saigon', 'hue', 'danang']);
+      assert.deepStrictEqual(result.options.map((option) => option.value), ['saigon', 'hue', 'danang']);
       assert.equal(result.min, 1);
       assert.equal(result.max, 3); // clamped from 10
     });
@@ -967,13 +987,12 @@ phase: [asPhaseId('main')],
       const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
       const state = makeBaseState();
 
-      const result = legalChoices(def, state, makeMove('deferredCostValidationOp'), { includeOptionLegality: true });
+      const result = legalChoices(def, state, makeMove('deferredCostValidationOp'), { probeOptionLegality: true });
       assert.equal(result.complete, false);
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseOne');
       assert.equal(result.decisionId, 'decision:probe::$target');
-      assert.deepStrictEqual(result.options, ['a', 'b']);
-      assert.deepStrictEqual(result.optionLegality, [
+      assert.deepStrictEqual(result.options, [
         { value: 'a', legality: 'legal', illegalReason: null },
         { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
       ]);
@@ -1027,19 +1046,18 @@ phase: [asPhaseId('main')],
       const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
       const state = makeBaseState();
 
-      const result = legalChoices(def, state, makeMove('deferredChooseNCostValidationOp'), { includeOptionLegality: true });
+      const result = legalChoices(def, state, makeMove('deferredChooseNCostValidationOp'), { probeOptionLegality: true });
       assert.equal(result.complete, false);
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseN');
       assert.equal(result.decisionId, 'decision:probe::$targets');
-      assert.deepStrictEqual(result.options, ['a', 'b', 'c']);
-      assert.deepStrictEqual(result.optionLegality, [
+      assert.deepStrictEqual(result.options, [
         { value: 'a', legality: 'legal', illegalReason: null },
         { value: 'b', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
         { value: 'c', legality: 'legal', illegalReason: null },
       ]);
       assert.deepStrictEqual(
-        result.optionLegality.map((entry) => entry.legality),
+        result.options.map((entry) => entry.legality),
         ['legal', 'illegal', 'legal'],
       );
     });
@@ -1073,14 +1091,14 @@ phase: [asPhaseId('main')],
         makeBaseDef({ actions: [action] }),
         makeBaseState(),
         makeMove('chooseNOverflowOp'),
-        { includeOptionLegality: true },
+        { probeOptionLegality: true },
       );
 
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseN');
-      assert.equal(result.optionLegality?.length, 13);
-      assert.ok(result.optionLegality?.every((entry) => entry.legality === 'unknown'));
-      assert.ok(result.optionLegality?.every((entry) => entry.illegalReason === null));
+      assert.equal(result.options.length, 13);
+      assert.ok(result.options.every((entry) => entry.legality === 'unknown'));
+      assert.ok(result.options.every((entry) => entry.illegalReason === null));
     });
 
     it('does not mask nonrecoverable costValidation evaluation failures', () => {
@@ -1252,9 +1270,13 @@ phase: [asPhaseId('main')],
 
       const result = legalChoices(def, makeBaseState(), makeMove('mapChoiceOp'));
       assert.equal(result.complete, false);
+      assert.equal(result.kind, 'pending');
+      if (result.kind !== 'pending') {
+        throw new Error('expected pending choice');
+      }
       assert.equal(result.name, '$spaces');
       assert.equal(result.type, 'chooseN');
-      assert.deepStrictEqual(result.options, ['hand:0']);
+      assert.deepStrictEqual(result.options.map((option) => option.value), ['hand:0']);
     });
 
     it('validates sequential dependent choices against progressed state across pipeline stages', () => {
@@ -1461,9 +1483,13 @@ phase: [asPhaseId('main')],
       const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
       const result = legalChoices(def, makeBaseState(), makeMove('reduceTraversalOp'));
       assert.equal(result.complete, false);
+      assert.equal(result.kind, 'pending');
+      if (result.kind !== 'pending') {
+        throw new Error('expected pending choice');
+      }
       assert.equal(result.name, '$picked');
       assert.equal(result.type, 'chooseN');
-      assert.deepStrictEqual(result.options, [1, 2, 3, 4, 5, 6]);
+      assert.deepStrictEqual(result.options.map((option) => option.value), [1, 2, 3, 4, 5, 6]);
       assert.equal(result.min, 1);
       assert.equal(result.max, 1);
     });
@@ -1594,7 +1620,7 @@ phase: [asPhaseId('main')],
       const result = legalChoices(def, state, makeMove('removeThenChoose'));
       assert.equal(result.kind, 'pending');
       assert.equal(result.type, 'chooseOne');
-      assert.deepStrictEqual(result.options, [asTokenId('tok-1')]);
+      assert.deepStrictEqual(result.options.map((option) => option.value), [asTokenId('tok-1')]);
     });
 
     it('throws typed errors for malformed free-operation zone filters instead of silently denying zones', () => {

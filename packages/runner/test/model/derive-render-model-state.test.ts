@@ -469,8 +469,7 @@ describe('deriveRenderModel state metadata', () => {
       type: 'chooseN',
       min: 1,
       max: 2,
-      options: ['table:none', 'token-a'],
-      optionLegality: [
+      options: [
         { value: 'table:none', legality: 'legal', illegalReason: null },
         { value: 'token-a', legality: 'legal', illegalReason: null },
       ],
@@ -528,8 +527,7 @@ describe('deriveRenderModel state metadata', () => {
       decisionId: 'target',
       name: 'target',
       type: 'chooseOne',
-      options: ['table:none', 'blocked-zone'],
-      optionLegality: [
+      options: [
         { value: 'table:none', legality: 'legal', illegalReason: null },
         { value: 'blocked-zone', legality: 'illegal', illegalReason: 'pipelineLegalityFailed' },
       ],
@@ -565,8 +563,7 @@ describe('deriveRenderModel state metadata', () => {
       decisionId: 'target',
       name: 'target',
       type: 'chooseOne',
-      options: ['table:none', 'undetermined-zone'],
-      optionLegality: [
+      options: [
         { value: 'table:none', legality: 'legal', illegalReason: null },
         { value: 'undetermined-zone', legality: 'unknown', illegalReason: null },
       ],

@@ -13,6 +13,8 @@ This roadmap governs implementation of the browser-based game runner (Specs 35â€
 Design document: `brainstorming/browser-based-game-runner.md`
 Technology decisions: Appendix A of the same document.
 
+Spec 35 is completed and archived at `archive/specs/35-monorepo-restructure-build-system.md`.
+
 ---
 
 ## Spec Registry
@@ -71,8 +73,8 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 ### Milestone F1: Foundation (Specs 35â€“37)
 
 **Gate criteria**:
-- [ ] Monorepo builds with `pnpm turbo build`
-- [ ] Existing engine tests pass via `pnpm -F @ludoforge/engine test`
+- [x] Monorepo builds with `pnpm turbo build`
+- [x] Existing engine tests pass via `pnpm -F @ludoforge/engine test`
 - [ ] Kernel runs in Web Worker, Comlink RPC is typed and functional
 - [ ] Zustand store receives state updates from worker
 - [ ] `deriveRenderModel()` is unit-tested with both FITL and Texas Hold'em GameDefs
@@ -125,17 +127,17 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 
 | Artifact | Source | Consumer |
 |----------|--------|----------|
-| `GameDef` JSON | `compileGameSpecToGameDef()` in `src/cnl/` | Worker bridge (Spec 36) loads GameDef to initialize kernel |
-| `GameState` | `initialState()` in `src/kernel/` | Zustand store (Spec 37) holds current state |
-| `Move` / `LegalMovesResult` | `legalMoves()` in `src/kernel/` | DOM UI (Spec 39) renders action toolbar |
-| `ChoicePendingRequest` | `legalChoices()` in `src/kernel/` | DOM UI (Spec 39) renders progressive choice UI |
-| `EffectTraceEntry[]` | `applyMove()` in `src/kernel/` | Animation system (Spec 40) drives GSAP timelines |
-| `TerminalResult` | `terminalResult()` in `src/kernel/` | DOM UI (Spec 39) displays game end state |
+| `GameDef` JSON | `compileGameSpecToGameDef()` in `packages/engine/src/cnl/` | Worker bridge (Spec 36) loads GameDef to initialize kernel |
+| `GameState` | `initialState()` in `packages/engine/src/kernel/` | Zustand store (Spec 37) holds current state |
+| `Move` / `LegalMovesResult` | `legalMoves()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) renders action toolbar |
+| `ChoicePendingRequest` | `legalChoices()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) renders progressive choice UI |
+| `EffectTraceEntry[]` | `applyMove()` in `packages/engine/src/kernel/` | Animation system (Spec 40) drives GSAP timelines |
+| `TerminalResult` | `terminalResult()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) displays game end state |
 | `GameSpecDoc` metadata | Parsed from Markdown+YAML | Game selection screen (Spec 42) displays game info |
 
 ### No changes required to existing engine code
 
-The runner is a pure consumer of the kernel's public API. No modifications to `src/kernel/`, `src/cnl/`, `src/agents/`, or `src/sim/` are required. The monorepo restructure (Spec 35) moves existing code into `packages/engine/` but does not change its interfaces.
+The runner is a pure consumer of the kernel's public API. No modifications to `packages/engine/src/kernel/`, `packages/engine/src/cnl/`, `packages/engine/src/agents/`, or `packages/engine/src/sim/` are required. The monorepo restructure (Spec 35) moved existing code into `packages/engine/` without changing interfaces.
 
 ### Future engine specs that may affect the runner
 

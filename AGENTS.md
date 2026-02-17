@@ -14,9 +14,10 @@
 
 ## Project Structure & Module Organization
 This repository contains both implementation code and design artifacts.
-- `src/`: TypeScript source modules (`kernel`, `cnl`, `agents`, `sim`, `cli`).
-- `schemas/`: JSON schema artifacts (`GameDef`, `Trace`, `EvalReport`).
-- `test/`: `unit`, `integration`, `e2e`, plus `fixtures`, `memory`, and `performance`.
+- `packages/engine/src/`: TypeScript engine modules (`kernel`, `cnl`, `agents`, `sim`, `cli`).
+- `packages/engine/schemas/`: JSON schema artifacts (`GameDef`, `Trace`, `EvalReport`).
+- `packages/engine/test/`: `unit`, `integration`, `e2e`, plus `fixtures`, `helpers`, `memory`, and `performance`.
+- `packages/runner/`: Vite + React runner scaffold.
 - `specs/`: canonical numbered implementation specs.
 - `tickets/`: active implementation tickets.
 - `archive/`: completed or retired `tickets`, `specs`, `brainstorming`, and reports.
@@ -24,16 +25,15 @@ This repository contains both implementation code and design artifacts.
 
 ## Build, Test, and Development Commands
 Primary workflow commands:
-- `pnpm run build`: compile TypeScript with `tsc`.
-- `pnpm run clean`: remove `dist/`.
-- `pnpm run lint`: run ESLint.
-- `pnpm run lint:fix`: run ESLint with autofix.
-- `pnpm run typecheck`: run `tsc --noEmit`.
-- `pnpm test`: run unit + integration tests (via compiled output in `dist/`).
-- `pnpm run test:all`: run unit + integration + e2e tests.
-- `pnpm run test:unit`: run only unit tests.
-- `pnpm run test:integration`: run only integration tests.
-- `pnpm run test:e2e`: run only e2e tests.
+- `pnpm turbo build`: build all workspace packages in dependency order.
+- `pnpm turbo test`: run workspace tests with build preconditions.
+- `pnpm turbo lint`: run lint tasks across packages.
+- `pnpm turbo typecheck`: run type checks across packages.
+- `pnpm turbo schema:artifacts`: regenerate/check engine schema artifacts.
+- `pnpm -F @ludoforge/engine test`: run engine unit + integration tests.
+- `pnpm -F @ludoforge/engine test:e2e`: run engine e2e tests.
+- `pnpm -F @ludoforge/runner dev`: start runner Vite dev server.
+- `pnpm -F @ludoforge/runner typecheck`: run runner TypeScript checks.
 
 Useful repo-navigation commands:
 - `rg --files`: list tracked files quickly.
@@ -49,7 +49,7 @@ For documentation updates:
 For TypeScript code:
 - strict TypeScript, immutable state updates, side-effect-free kernel logic.
 - prefer feature/domain-oriented modules over broad utility dumps.
-- keep schema/type changes synchronized across `src/kernel`, `schemas/`, and tests.
+- keep schema/type changes synchronized across `packages/engine/src/kernel`, `packages/engine/schemas`, and tests.
 
 ## Testing Guidelines
 For docs/spec/ticket changes:
@@ -57,10 +57,10 @@ For docs/spec/ticket changes:
 - ensure roadmap and individual specs do not conflict.
 
 For code changes:
-- place tests in the relevant `test/` domain (`unit`, `integration`, `e2e`, `memory`, or `performance`).
-- run targeted tests when possible (example: `node --test dist/test/unit/<file>.test.js`).
-- if running `node --test` directly, run `pnpm run build` first so `dist/` is up to date.
-- run at least `pnpm test` before finalizing; use `pnpm run test:all` when behavior spans CLI/pipeline flows.
+- place tests in the relevant `packages/engine/test/` domain (`unit`, `integration`, `e2e`, `memory`, or `performance`).
+- run targeted tests when possible (example: `node --test packages/engine/dist/test/unit/<file>.test.js`).
+- if running `node --test` directly, run `pnpm turbo build` first so `packages/engine/dist/` is up to date.
+- run at least `pnpm turbo test` before finalizing; include `pnpm -F @ludoforge/engine test:e2e` when behavior spans CLI/pipeline flows.
 
 ## Commit & Pull Request Guidelines
 Keep commit subjects short and imperative. Common patterns in this repo include:

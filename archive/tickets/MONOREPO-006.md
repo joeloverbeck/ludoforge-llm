@@ -1,5 +1,6 @@
 # MONOREPO-006: Engine Package Configuration & Path Fix
 
+**Status**: ✅ COMPLETED
 **Spec**: 35 — Monorepo Restructure & Build System (D3 package.json, D4 engine tsconfig, D6 root package.json, Path Resolution fix)
 **Priority**: P0
 **Depends on**: MONOREPO-004, MONOREPO-005
@@ -213,3 +214,34 @@ This is the ONLY source code change in the entire restructure — a test infrast
 - `FIXTURE_BASE_PATH` in production-spec-helpers.ts still uses `process.cwd()` + `test/fixtures/...` (unchanged — `test/` moved with engine).
 - The only code change in engine is the 2-line path fix in `production-spec-helpers.ts`.
 - `git log --follow packages/engine/src/kernel/index.ts` still shows full pre-move history.
+
+---
+
+## Architecture Reassessment
+
+The implemented changes are more robust than the previous single-package layout:
+
+- Engine build/test/schema concerns are now encapsulated in `@ludoforge/engine`.
+- Root scripts act as orchestration only (`turbo`), which scales cleanly to additional packages.
+- Shared lint config remains centralized while package outputs are correctly ignored via `**/dist/**`.
+- The `production-spec-helpers.ts` path fix preserves root `data/` ownership without coupling tests to legacy layout assumptions.
+
+## Outcome
+
+- **Completion date**: 2026-02-17
+- **What changed vs. original plan**:
+  - Created `packages/engine/package.json` and `packages/engine/tsconfig.json`.
+  - Converted root `package.json` to workspace orchestration scripts and moved engine runtime/dev deps into the engine package.
+  - Updated ESLint ignores for package-scoped build outputs.
+  - Fixed `packages/engine/test/helpers/production-spec-helpers.ts` `data/` path resolution.
+  - Regenerated `pnpm-lock.yaml` under workspace layout.
+- **Deviations**:
+  - Engine `test` script uses `pnpm run schema:artifacts:check` (not `npm run`) to maintain package-manager consistency.
+- **Verification results**:
+  - `pnpm install`: pass
+  - `pnpm turbo build`: pass
+  - `pnpm turbo test`: pass (`243` engine tests, `243` passed)
+  - `pnpm turbo schema:artifacts`: pass
+  - `pnpm turbo lint`: pass
+  - `pnpm turbo typecheck`: pass
+  - `pnpm turbo build && pnpm -F @ludoforge/engine test:e2e`: pass (`3` e2e tests, `3` passed)

@@ -10,8 +10,8 @@ export interface CompiledProductionSpec {
   readonly compiled: ReturnType<typeof compileGameSpecToGameDef>;
 }
 
-const FITL_PRODUCTION_SPEC_PATH = join(process.cwd(), 'data', 'games', 'fire-in-the-lake');
-const TEXAS_PRODUCTION_SPEC_PATH = join(process.cwd(), 'data', 'games', 'texas-holdem');
+const FITL_PRODUCTION_SPEC_PATH = join(process.cwd(), '..', '..', 'data', 'games', 'fire-in-the-lake');
+const TEXAS_PRODUCTION_SPEC_PATH = join(process.cwd(), '..', '..', 'data', 'games', 'texas-holdem');
 const FIXTURE_BASE_PATH = join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler');
 
 let cachedFitlResult: CompiledProductionSpec | null = null;

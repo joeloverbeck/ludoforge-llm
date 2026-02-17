@@ -1,6 +1,6 @@
 # Spec 35: Monorepo Restructure & Build System
 
-**Status**: ACTIVE
+**Status**: ✅ COMPLETED
 **Priority**: P0 (must come first)
 **Complexity**: M
 **Dependencies**: None
@@ -409,3 +409,27 @@ Verified all `process.cwd()` and `import.meta.url` usage in the codebase:
 - Deployment configuration (static hosting, CDN)
 - Package publishing to npm
 - CI pipeline setup (see D7)
+
+---
+
+## Outcome
+
+- **Completion date**: 2026-02-17
+- **What was actually changed**:
+  - Completed monorepo migration from single-package layout to pnpm workspaces + Turborepo.
+  - Relocated engine code to `packages/engine/` with history-preserving rename operations.
+  - Added `@ludoforge/engine` and `@ludoforge/runner` package boundaries and configs.
+  - Added shared TS base config and package-level TS configs.
+  - Applied required `data/` root path fix in engine test helper after relocation.
+  - Updated project documentation to monorepo command/path conventions.
+- **Deviations from original plan**:
+  - Migration steps were completed as an uninterrupted sequence so repository build/test/lint/typecheck stayed green before archival.
+  - Engine `test` script uses `pnpm run schema:artifacts:check` for package-manager consistency.
+- **Verification results**:
+  - `pnpm turbo build`: pass
+  - `pnpm turbo test`: pass (`243/243` engine tests)
+  - `pnpm turbo lint`: pass
+  - `pnpm turbo typecheck`: pass
+  - `pnpm turbo schema:artifacts`: pass
+  - `pnpm turbo build && pnpm -F @ludoforge/engine test:e2e`: pass (`3/3` e2e tests)
+  - `pnpm -F @ludoforge/runner dev`: startup smoke passed

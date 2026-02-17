@@ -38,24 +38,28 @@ Active development. The core engine (kernel, compiler, agents, simulator) is imp
 
 - **Language**: TypeScript (strict mode)
 - **Runtime**: Node.js (>=18.0.0)
+- **Package manager / workspace**: pnpm workspaces
+- **Task orchestration**: Turborepo
 - **Testing**: Node.js built-in test runner (`node --test`)
-- **Build**: `tsc` (TypeScript compiler)
+- **Build**: TypeScript (`tsc`) for engine, Vite for runner
 - **Linting**: ESLint with typescript-eslint
-- **Runtime deps**: `yaml` (YAML 1.2 parsing), `zod` v4 (schema validation)
+- **Runner UI scaffold**: React 19 + Vite
+- **Runtime deps (engine)**: `yaml` (YAML 1.2 parsing), `zod` v4 (schema validation)
 - **Dev deps**: `ajv` (JSON Schema validation in tests), `eslint` v9, `typescript` v5.9
 
 ## Architecture
 
-Five source modules under `src/`, plus supporting directories:
+Engine source modules are under `packages/engine/src/`, with a separate runner package under `packages/runner/`:
 
 | Directory | Purpose |
 |-----------|---------|
-| `src/kernel/` | Pure, deterministic game engine — state init, legal move enumeration, condition eval, effect application, trigger dispatch, terminal detection, spatial queries, derived values |
-| `src/cnl/` | Game Spec parsing (Markdown + YAML blocks, YAML 1.2 strict), validation, macro expansion (including board generation), compilation to GameDef JSON |
-| `src/agents/` | Bot implementations (RandomAgent, GreedyAgent) conforming to a strict `Agent` interface |
-| `src/sim/` | Simulation runner, trace logging, state delta engine |
-| `src/cli/` | Developer commands (stub — not yet implemented) |
-| `schemas/` | JSON Schemas for GameDef, Trace, EvalReport (top-level, not under `src/`) |
+| `packages/engine/src/kernel/` | Pure, deterministic game engine — state init, legal move enumeration, condition eval, effect application, trigger dispatch, terminal detection, spatial queries, derived values |
+| `packages/engine/src/cnl/` | Game Spec parsing (Markdown + YAML blocks, YAML 1.2 strict), validation, macro expansion (including board generation), compilation to GameDef JSON |
+| `packages/engine/src/agents/` | Bot implementations (RandomAgent, GreedyAgent) conforming to a strict `Agent` interface |
+| `packages/engine/src/sim/` | Simulation runner, trace logging, state delta engine |
+| `packages/engine/src/cli/` | Developer commands (stub — not yet implemented) |
+| `packages/engine/schemas/` | JSON Schemas for GameDef, Trace, EvalReport |
+| `packages/runner/src/` | Browser runner scaffold (React entry point/UI shell) |
 | `data/` | Optional game reference artifacts and fixtures — `data/games/fire-in-the-lake/` and `data/games/texas-holdem/` (not required at runtime) |
 
 ### Core Design Constraints
@@ -80,43 +84,50 @@ The kernel operates on ASTs for conditions, effects, and references. Core types:
 ## Build & Test Commands
 
 ```bash
-# Build
-npm run build                        # TypeScript compilation (tsc)
-npm run clean                        # Remove dist/ for fresh build
+# Canonical root workflow (Turborepo-ordered)
+pnpm turbo build
+pnpm turbo test
+pnpm turbo lint
+pnpm turbo typecheck
+pnpm turbo schema:artifacts
 
-# Schema artifacts
-npm run schema:artifacts:generate    # Regenerate JSON Schema artifacts from types
-npm run schema:artifacts:check       # Verify schema artifacts are up to date (runs in pretest)
+# Package-filtered engine checks
+pnpm -F @ludoforge/engine build
+pnpm -F @ludoforge/engine test
+pnpm -F @ludoforge/engine test:e2e
 
-# Test (runs against compiled JS in dist/)
-npm test                             # Auto-builds via pretest, then unit + integration
-npm run test:unit                    # Unit tests only
-npm run test:integration             # Integration tests only
-npm run test:e2e                     # E2E tests only
-npm run test:all                     # Unit + integration + e2e
-npm run test:single -- dist/test/unit/kernel.test.js  # Build + run single test
-
-# Single test file (manual — must build first)
-npm run build && node --test dist/test/unit/kernel.test.js
-
-# Lint & Typecheck
-npm run lint                         # ESLint
-npm run lint:fix                     # ESLint with autofix
-npm run typecheck                    # tsc --noEmit
+# Package-filtered runner checks
+pnpm -F @ludoforge/runner typecheck
+pnpm -F @ludoforge/runner dev
 ```
 
-**Important**: Tests run against compiled JS in `dist/`. If running `node --test` directly (without `npm test`), run `npm run build` first so `dist/` is up to date.
+**Important**: Use `pnpm turbo ...` as the canonical path so build ordering remains deterministic across packages. Engine tests still run against compiled JS in `packages/engine/dist/`.
 
 ## Project Structure
 
 ```
-src/
-  kernel/          # Deterministic game engine
-  cnl/             # Parser, validator, compiler
-  agents/          # Bot implementations
-  sim/             # Simulator and trace
-  cli/             # CLI commands (stub)
-schemas/           # JSON Schema artifacts
+packages/
+  engine/
+    src/
+      kernel/      # Deterministic game engine
+      cnl/         # Parser, validator, compiler
+      agents/      # Bot implementations
+      sim/         # Simulator and trace
+      cli/         # CLI commands (stub)
+    test/
+      unit/        # Individual functions, utilities
+      integration/ # Cross-module interactions
+      e2e/         # Full pipeline (Game Spec -> compile -> run -> eval)
+      fixtures/    # Test fixture files (GameDef JSON, spec Markdown, golden outputs)
+      helpers/     # Shared test utilities
+      performance/ # Benchmarks
+      memory/      # Memory leak detection
+    schemas/       # JSON Schema artifacts
+    scripts/       # Schema artifact generation/check scripts
+  runner/
+    src/           # Browser runner scaffold
+    index.html     # Vite entrypoint
+    vite.config.ts # Vite + React config
 data/              # Optional game reference data
 docs/              # Design plans and technical documentation
 specs/             # Numbered implementation specs
@@ -124,14 +135,6 @@ tickets/           # Active implementation tickets
 archive/           # Completed tickets, specs, brainstorming, reports
 brainstorming/     # Design documents
 reports/           # Analysis and evaluation reports
-test/
-  unit/            # Individual functions, utilities
-  integration/     # Cross-module interactions
-  e2e/             # Full pipeline (Game Spec -> compile -> run -> eval)
-  fixtures/        # Test fixture files (GameDef JSON, spec Markdown, golden outputs)
-  helpers/         # Shared test utilities (production spec compilation, state setup)
-  performance/     # Benchmarks
-  memory/          # Memory leak detection
 ```
 
 ### Testing Requirements
@@ -139,7 +142,7 @@ test/
 - **Determinism tests**: same seed + same move sequence = identical final state hash
 - **Property tests** (quickcheck style): applyMove never produces invalid var bounds, tokens never duplicate across zones, legalMoves pass preconditions, no crash on random play for N turns
 - **Golden tests**: known Game Spec -> expected JSON, known seed trace -> expected output
-- **FITL game-rule tests**: compile `data/games/fire-in-the-lake/*.md` via `compileProductionSpec()` from `test/helpers/production-spec-helpers.ts`. Do NOT create separate fixture files for FITL profiles, events, or special activities. Foundation fixtures (`fitl-foundation-inline-assets.md`, `fitl-foundation-coup-victory-inline-assets.md`) are kept for engine-level testing with minimal setups.
+- **FITL game-rule tests**: compile `data/games/fire-in-the-lake/*.md` via `compileProductionSpec()` from `packages/engine/test/helpers/production-spec-helpers.ts`. Do NOT create separate fixture files for FITL profiles, events, or special activities. Foundation fixtures (`fitl-foundation-inline-assets.md`, `fitl-foundation-coup-victory-inline-assets.md`) are kept for engine-level testing with minimal setups.
 - **Texas Hold'em tests**: compile `data/games/texas-holdem/*.md` similarly. Texas Hold'em serves as the engine-agnosticism validation game — tests should confirm that no FITL-specific logic leaks into the kernel.
 
 ## Coding Conventions
@@ -150,7 +153,7 @@ test/
 - **Error handling**: Always handle errors with descriptive messages. Use Zod for input validation at system boundaries.
 - **Kernel purity**: The `kernel/` module must be pure and side-effect free. All state transitions return new state objects.
 - **Deterministic terminology**: Use `GameDef`, `GameSpecDoc`, `GameTrace` exactly as defined.
-- **Schema synchronization**: Keep schema/type changes synchronized across `src/kernel/`, `schemas/`, and tests.
+- **Schema synchronization**: Keep schema/type changes synchronized across `packages/engine/src/kernel/`, `packages/engine/schemas/`, and tests.
 
 ## Commit Conventions
 

@@ -1,5 +1,6 @@
 # MONOREPO-005: Shared TypeScript Base Configuration
 
+**Status**: ✅ COMPLETED
 **Spec**: 35 — Monorepo Restructure & Build System (D4 — base tsconfig only)
 **Priority**: P0
 **Depends on**: MONOREPO-004
@@ -74,3 +75,16 @@ Create `tsconfig.base.json` at repo root with shared compiler options extracted 
 - Old `tsconfig.json` no longer exists at repo root.
 - No source or test files modified.
 - Every strict option from the old `tsconfig.json` is preserved in `tsconfig.base.json` (either explicitly or via `strict: true`).
+
+---
+
+## Outcome
+
+- **Completion date**: 2026-02-17
+- **What changed vs. original plan**:
+  - Created root `tsconfig.base.json` with shared strict compiler options.
+  - Removed legacy root `tsconfig.json`.
+  - Continued directly into MONOREPO-006/007 so the repository never remained in a broken transitional state.
+- **Verification results**:
+  - `tsconfig.base.json` contains the expected shared options and no package-specific module settings.
+  - Package-specific TS configs now extend the base (`packages/engine/tsconfig.json`, `packages/runner/tsconfig.json`).

@@ -1,8 +1,5 @@
 {
   "name": "ludoforge-llm",
-  "version": "0.0.0",
-  "description": "LLM-driven board game evolution engine",
-  "license": "GPL-3.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.12.1",
@@ -10,33 +7,19 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "tsc",
-    "clean": "rm -rf dist",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "pnpm run lint -- --fix",
-    "typecheck": "tsc --noEmit",
-    "schema:artifacts:generate": "pnpm run build && node scripts/schema-artifacts.mjs",
-    "schema:artifacts:check": "node scripts/schema-artifacts.mjs --check",
-    "pretest": "pnpm run clean && pnpm run build",
-    "test:unit": "node --test \"dist/test/unit/**/*.test.js\"",
-    "test:integration": "node --test \"dist/test/integration/**/*.test.js\"",
-    "test:e2e": "node --test \"dist/test/e2e/**/*.test.js\"",
-    "test:single": "pnpm run build && node --test",
-    "test": "pnpm run schema:artifacts:check && node --test \"dist/test/unit/**/*.test.js\" \"dist/test/integration/**/*.test.js\"",
-    "test:all": "node --test \"dist/test/unit/**/*.test.js\" \"dist/test/integration/**/*.test.js\" \"dist/test/e2e/**/*.test.js\""
-  },
-  "dependencies": {
-    "yaml": "^2.8.0",
-    "zod": "^4.1.5"
+    "build": "turbo build",
+    "clean": "turbo clean",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "dev": "turbo dev",
+    "schema:artifacts": "turbo schema:artifacts"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
-    "@types/node": "^24.3.1",
-    "ajv": "^8.17.1",
     "eslint": "^9.34.0",
     "globals": "^16.3.0",
     "turbo": "^2.8.9",
-    "typescript": "^5.9.2",
     "typescript-eslint": "^8.41.0"
   }
 }

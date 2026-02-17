@@ -1,5 +1,6 @@
 # MONOREPO-007: Create Runner Package Scaffold
 
+**Status**: ✅ COMPLETED
 **Spec**: 35 — Monorepo Restructure & Build System (D5)
 **Priority**: P0
 **Depends on**: MONOREPO-005, MONOREPO-006
@@ -147,3 +148,27 @@ Placeholder component that:
 - `pnpm -F @ludoforge/runner dev` starts Vite dev server and serves the React app.
 - No changes to engine source, tests, or configuration.
 - Runner has zero game-specific logic — it's a blank scaffold.
+
+---
+
+## Architecture Reassessment
+
+The runner scaffold is a net architectural improvement:
+
+- It establishes a clean consumer boundary (`@ludoforge/runner` depends on `@ludoforge/engine` via workspace protocol) with no aliasing hacks.
+- Type-level linkage validates cross-package contracts early without introducing game-specific runtime behavior.
+- Vite/React are isolated to the runner package, preserving engine purity and reusability.
+
+## Outcome
+
+- **Completion date**: 2026-02-17
+- **What changed vs. original plan**:
+  - Added `packages/runner/` scaffold (`package.json`, `tsconfig.json`, `vite.config.ts`, `index.html`, `src/main.tsx`, `src/App.tsx`).
+  - Added explicit engine type import usage in `App.tsx` to verify cross-package type resolution.
+  - Updated lockfile for new runner dependencies.
+- **Deviations**:
+  - Initial `GameDef` field pick in `App.tsx` used a non-existent top-level key and failed typecheck; corrected to `GameDef['metadata']`.
+- **Verification results**:
+  - `pnpm -F @ludoforge/runner typecheck`: pass
+  - `pnpm turbo build`: pass (engine + runner)
+  - `pnpm -F @ludoforge/runner dev`: Vite server started successfully (`VITE v7.3.1 ready`)

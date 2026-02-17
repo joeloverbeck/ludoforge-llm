@@ -8,6 +8,7 @@ describe('lifecycle-transition', () => {
       ['idle', 'idle'],
       ['idle', 'initializing'],
       ['initializing', 'idle'],
+      ['initializing', 'initializing'],
       ['initializing', 'playing'],
       ['initializing', 'terminal'],
       ['playing', 'initializing'],
@@ -27,7 +28,6 @@ describe('lifecycle-transition', () => {
     const rejected: ReadonlyArray<readonly [GameLifecycle, GameLifecycle]> = [
       ['idle', 'playing'],
       ['idle', 'terminal'],
-      ['initializing', 'initializing'],
     ];
 
     for (const [from, to] of rejected) {

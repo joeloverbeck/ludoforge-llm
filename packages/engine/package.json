@@ -8,6 +8,10 @@
       "types": "./dist/src/kernel/index.d.ts",
       "import": "./dist/src/kernel/index.js"
     },
+    "./runtime": {
+      "types": "./dist/src/kernel/runtime.d.ts",
+      "import": "./dist/src/kernel/runtime.js"
+    },
     "./cnl": {
       "types": "./dist/src/cnl/index.d.ts",
       "import": "./dist/src/cnl/index.js"

@@ -1,5 +1,5 @@
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
-import { asActionId, type GameDef, type Move } from '@ludoforge/engine';
+import { asActionId, type GameDef, type Move } from '@ludoforge/engine/runtime';
 
 interface TestDefOptions {
   readonly gameId: string;

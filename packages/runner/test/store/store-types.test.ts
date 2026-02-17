@@ -4,8 +4,8 @@ import type {
   LegalMoveEnumerationResult,
   MoveParamValue,
   TerminalResult,
-} from '@ludoforge/engine';
-import { asActionId, asPlayerId } from '@ludoforge/engine';
+} from '@ludoforge/engine/runtime';
+import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { PartialChoice, RenderContext } from '../../src/store/store-types';
 

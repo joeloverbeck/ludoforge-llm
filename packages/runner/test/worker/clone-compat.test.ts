@@ -13,7 +13,7 @@ import {
   type RuntimeWarning,
   type TerminalResult,
   type TriggerLogEntry,
-} from '@ludoforge/engine';
+} from '@ludoforge/engine/runtime';
 
 import { createGameWorker, type GameMetadata, type WorkerError } from '../../src/worker/game-worker-api';
 import { LEGAL_TICK_MOVE, TEST_DEF } from './test-fixtures';
@@ -177,14 +177,14 @@ const RUNTIME_WARNINGS: readonly RuntimeWarning[] = [
 ];
 
 describe('worker boundary structured clone compatibility', () => {
-  it('round-trips GameDef, GameState, Move, ApplyMoveResult, ChoiceRequest, TerminalResult, and legal move enumeration', () => {
+  it('round-trips GameDef, GameState, Move, ApplyMoveResult, ChoiceRequest, TerminalResult, and legal move enumeration', async () => {
     const worker = createGameWorker();
-    const state = worker.init(TEST_DEF, 31);
-    const legalMoveEnumeration = worker.enumerateLegalMoves();
+    const state = await worker.init(TEST_DEF, 31);
+    const legalMoveEnumeration = await worker.enumerateLegalMoves();
     const move = legalMoveEnumeration.moves[0] ?? LEGAL_TICK_MOVE;
-    const applyMoveResult = worker.applyMove(move);
-    const choiceRequest = worker.legalChoices(move);
-    const terminal = worker.terminalResult();
+    const applyMoveResult = await worker.applyMove(move);
+    const choiceRequest = await worker.legalChoices(move);
+    const terminal = await worker.terminalResult();
 
     roundTripClone(TEST_DEF);
     const clonedState = roundTripClone(state);
@@ -253,10 +253,10 @@ describe('worker boundary structured clone compatibility', () => {
     }
   });
 
-  it('round-trips GameMetadata and WorkerError variants', () => {
+  it('round-trips GameMetadata and WorkerError variants', async () => {
     const worker = createGameWorker();
-    worker.init(TEST_DEF, 41);
-    const metadata = worker.getMetadata();
+    await worker.init(TEST_DEF, 41);
+    const metadata = await worker.getMetadata();
 
     const errors: readonly WorkerError[] = [
       { code: 'ILLEGAL_MOVE', message: 'Illegal move.' },

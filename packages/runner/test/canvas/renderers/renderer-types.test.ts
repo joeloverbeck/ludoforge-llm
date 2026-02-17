@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { asPlayerId } from '@ludoforge/engine';
-import type { PlayerId } from '@ludoforge/engine';
+import { asPlayerId } from '@ludoforge/engine/runtime';
+import type { PlayerId } from '@ludoforge/engine/runtime';
 import type { Container } from 'pixi.js';
 
 import type {

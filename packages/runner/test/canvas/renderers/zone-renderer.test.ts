@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { asPlayerId } from '@ludoforge/engine';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 import type { Container } from 'pixi.js';
 
 const {

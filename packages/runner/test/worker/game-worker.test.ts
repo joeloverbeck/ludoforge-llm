@@ -15,7 +15,7 @@ describe('createGameWorker', () => {
     vi.unstubAllGlobals();
   });
 
-  it('throws NOT_INITIALIZED for methods that require init', () => {
+  it('throws NOT_INITIALIZED for methods that require init', async () => {
     const worker = createGameWorker();
 
     const operations = [
@@ -32,7 +32,7 @@ describe('createGameWorker', () => {
 
     for (const operation of operations) {
       try {
-        operation();
+        await operation();
         throw new Error('Expected operation to throw');
       } catch (error) {
         expectWorkerError(error, 'NOT_INITIALIZED');
@@ -40,43 +40,43 @@ describe('createGameWorker', () => {
     }
   });
 
-  it('enables trace by default and allows per-call override', () => {
+  it('enables trace by default and allows per-call override', async () => {
     const worker = createGameWorker();
-    worker.init(TEST_DEF, 7);
+    await worker.init(TEST_DEF, 7);
 
-    const traced = worker.applyMove(LEGAL_TICK_MOVE);
+    const traced = await worker.applyMove(LEGAL_TICK_MOVE);
     expect(traced.effectTrace).toBeDefined();
 
-    const noTrace = worker.applyMove(LEGAL_TICK_MOVE, { trace: false });
+    const noTrace = await worker.applyMove(LEGAL_TICK_MOVE, { trace: false });
     expect(noTrace.effectTrace).toBeUndefined();
   });
 
-  it('supports explicit playerCount on init', () => {
+  it('supports explicit playerCount on init', async () => {
     const worker = createGameWorker();
-    const state = worker.init(ALT_TEST_DEF, 8, { playerCount: 3 });
+    const state = await worker.init(ALT_TEST_DEF, 8, { playerCount: 3 });
     expect(state.playerCount).toBe(3);
   });
 
-  it('respects init-level trace config', () => {
+  it('respects init-level trace config', async () => {
     const worker = createGameWorker();
-    worker.init(TEST_DEF, 9, { enableTrace: false });
+    await worker.init(TEST_DEF, 9, { enableTrace: false });
 
-    const result = worker.applyMove(LEGAL_TICK_MOVE);
+    const result = await worker.applyMove(LEGAL_TICK_MOVE);
     expect(result.effectTrace).toBeUndefined();
   });
 
-  it('returns legal move surfaces with expected shape and deterministic budget truncation', () => {
+  it('returns legal move surfaces with expected shape and deterministic budget truncation', async () => {
     const worker = createGameWorker();
-    worker.init(TEST_DEF, 10);
+    await worker.init(TEST_DEF, 10);
 
-    const legal = worker.legalMoves();
+    const legal = await worker.legalMoves();
     expect(legal.length).toBeGreaterThan(0);
 
-    const enumerated = worker.enumerateLegalMoves();
+    const enumerated = await worker.enumerateLegalMoves();
     expect(enumerated.moves.length).toBeGreaterThan(0);
     expect(Array.isArray(enumerated.warnings)).toBe(true);
 
-    const truncated = worker.enumerateLegalMoves({
+    const truncated = await worker.enumerateLegalMoves({
       budgets: { maxTemplates: 0 },
     });
     expect(truncated.moves).toEqual([]);
@@ -87,11 +87,11 @@ describe('createGameWorker', () => {
     );
   });
 
-  it('returns applyMove result shape and updates state progression across sequential moves', () => {
+  it('returns applyMove result shape and updates state progression across sequential moves', async () => {
     const worker = createGameWorker();
-    worker.init(TEST_DEF, 11);
+    await worker.init(TEST_DEF, 11);
 
-    const first = worker.applyMove(LEGAL_TICK_MOVE, { trace: true });
+    const first = await worker.applyMove(LEGAL_TICK_MOVE, { trace: true });
     expect(first).toEqual(
       expect.objectContaining({
         state: expect.any(Object),
@@ -102,60 +102,60 @@ describe('createGameWorker', () => {
     expect(first.effectTrace).toBeDefined();
     expect(first.state.globalVars.tick).toBe(1);
 
-    const second = worker.applyMove(LEGAL_TICK_MOVE, { trace: false });
+    const second = await worker.applyMove(LEGAL_TICK_MOVE, { trace: false });
     expect(second.effectTrace).toBeUndefined();
     expect(second.state.globalVars.tick).toBe(2);
-    expect(worker.getState()).toEqual(second.state);
+    expect(await worker.getState()).toEqual(second.state);
   });
 
-  it('returns a complete choice request variant for a fully specified move', () => {
+  it('returns a complete choice request variant for a fully specified move', async () => {
     const worker = createGameWorker();
-    worker.init(TEST_DEF, 12);
-    const request = worker.legalChoices(LEGAL_TICK_MOVE);
+    await worker.init(TEST_DEF, 12);
+    const request = await worker.legalChoices(LEGAL_TICK_MOVE);
     expect(request.kind).toBe('complete');
     expect(request.complete).toBe(true);
   });
 
-  it('rolls back history when applyMove fails', () => {
+  it('rolls back history when applyMove fails', async () => {
     const worker = createGameWorker();
-    const initial = worker.init(TEST_DEF, 13);
+    const initial = await worker.init(TEST_DEF, 13);
 
-    expect(worker.getHistoryLength()).toBe(0);
+    expect(await worker.getHistoryLength()).toBe(0);
 
     try {
-      worker.applyMove(ILLEGAL_MOVE);
+      await worker.applyMove(ILLEGAL_MOVE);
       throw new Error('Expected applyMove to throw');
     } catch (error) {
       expectWorkerError(error, 'ILLEGAL_MOVE');
     }
 
-    expect(worker.getHistoryLength()).toBe(0);
-    expect(worker.getState()).toEqual(initial);
+    expect(await worker.getHistoryLength()).toBe(0);
+    expect(await worker.getState()).toEqual(initial);
   });
 
-  it('returns one playSequence result per move and invokes callbacks in order', () => {
+  it('returns one playSequence result per move and invokes callbacks in order', async () => {
     const worker = createGameWorker();
-    worker.init(TEST_DEF, 14);
+    await worker.init(TEST_DEF, 14);
 
     const callbackIndices: number[] = [];
-    const results = worker.playSequence([LEGAL_TICK_MOVE, LEGAL_TICK_MOVE], (_result, index) => {
+    const results = await worker.playSequence([LEGAL_TICK_MOVE, LEGAL_TICK_MOVE], (_result, index) => {
       callbackIndices.push(index);
     });
 
     expect(results).toHaveLength(2);
     expect(callbackIndices).toEqual([0, 1]);
-    expect(worker.getHistoryLength()).toBe(2);
-    expect(worker.getState().globalVars.tick).toBe(2);
+    expect(await worker.getHistoryLength()).toBe(2);
+    expect((await worker.getState()).globalVars.tick).toBe(2);
   });
 
-  it('applies successful playSequence steps and keeps history consistent on failure', () => {
+  it('applies successful playSequence steps and keeps history consistent on failure', async () => {
     const worker = createGameWorker();
-    worker.init(TEST_DEF, 15);
+    await worker.init(TEST_DEF, 15);
 
     const callbackIndices: number[] = [];
 
     try {
-      worker.playSequence([LEGAL_TICK_MOVE, ILLEGAL_MOVE], (_result, index) => {
+      await worker.playSequence([LEGAL_TICK_MOVE, ILLEGAL_MOVE], (_result, index) => {
         callbackIndices.push(index);
       });
       throw new Error('Expected playSequence to throw');
@@ -164,25 +164,25 @@ describe('createGameWorker', () => {
     }
 
     expect(callbackIndices).toEqual([0]);
-    expect(worker.getHistoryLength()).toBe(1);
-    expect(worker.getState().globalVars.tick).toBe(1);
+    expect(await worker.getHistoryLength()).toBe(1);
+    expect((await worker.getState()).globalVars.tick).toBe(1);
   });
 
-  it('executes playSequence with 10+ moves and reports each step', () => {
+  it('executes playSequence with 10+ moves and reports each step', async () => {
     const worker = createGameWorker();
-    worker.init(TEST_DEF, 50);
+    await worker.init(TEST_DEF, 50);
 
     const moves = Array.from({ length: 15 }, () => LEGAL_TICK_MOVE);
     const callbackIndices: number[] = [];
 
-    const results = worker.playSequence(moves, (_result, index) => {
+    const results = await worker.playSequence(moves, (_result, index) => {
       callbackIndices.push(index);
     });
 
     expect(results).toHaveLength(15);
     expect(callbackIndices).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
-    expect(worker.getState().globalVars.tick).toBe(15);
-    expect(worker.getHistoryLength()).toBe(15);
+    expect((await worker.getState()).globalVars.tick).toBe(15);
+    expect(await worker.getHistoryLength()).toBe(15);
 
     for (const result of results) {
       expect(result).toEqual(
@@ -195,17 +195,17 @@ describe('createGameWorker', () => {
     }
   });
 
-  it('returns null terminal result for non-terminal state', () => {
+  it('returns null terminal result for non-terminal state', async () => {
     const worker = createGameWorker();
-    worker.init(TEST_DEF, 16);
-    expect(worker.terminalResult()).toBeNull();
+    await worker.init(TEST_DEF, 16);
+    expect(await worker.terminalResult()).toBeNull();
   });
 
-  it('supports metadata, undo, and reset lifecycle', () => {
+  it('supports metadata, undo, and reset lifecycle', async () => {
     const worker = createGameWorker();
-    const initial = worker.init(TEST_DEF, 17);
+    const initial = await worker.init(TEST_DEF, 17);
 
-    const metadata = worker.getMetadata();
+    const metadata = await worker.getMetadata();
     expect(metadata).toEqual({
       gameId: 'runner-worker-test',
       playerCount: 2,
@@ -214,39 +214,39 @@ describe('createGameWorker', () => {
       zoneNames: ['table:none'],
     });
 
-    worker.applyMove(LEGAL_TICK_MOVE);
-    expect(worker.getHistoryLength()).toBe(1);
-    expect(worker.getState().globalVars.tick).toBe(1);
+    await worker.applyMove(LEGAL_TICK_MOVE);
+    expect(await worker.getHistoryLength()).toBe(1);
+    expect((await worker.getState()).globalVars.tick).toBe(1);
 
-    const undone = worker.undo();
+    const undone = await worker.undo();
     expect(undone).toEqual(initial);
-    expect(worker.getHistoryLength()).toBe(0);
+    expect(await worker.getHistoryLength()).toBe(0);
 
-    worker.applyMove(LEGAL_TICK_MOVE);
-    expect(worker.getHistoryLength()).toBe(1);
+    await worker.applyMove(LEGAL_TICK_MOVE);
+    expect(await worker.getHistoryLength()).toBe(1);
 
-    const reset = worker.reset();
+    const reset = await worker.reset();
     expect(reset.globalVars.tick).toBe(0);
-    expect(worker.getHistoryLength()).toBe(0);
+    expect(await worker.getHistoryLength()).toBe(0);
   });
 
-  it('returns null when undo is called on initial state', () => {
+  it('returns null when undo is called on initial state', async () => {
     const worker = createGameWorker();
-    worker.init(TEST_DEF, 18);
-    expect(worker.undo()).toBeNull();
+    await worker.init(TEST_DEF, 18);
+    expect(await worker.undo()).toBeNull();
   });
 
-  it('supports reset with new seed, new def, and new playerCount', () => {
+  it('supports reset with new seed, new def, and new playerCount', async () => {
     const worker = createGameWorker();
-    const initial = worker.init(RANGE_TEST_DEF, 19, { playerCount: 2 });
+    const initial = await worker.init(RANGE_TEST_DEF, 19, { playerCount: 2 });
 
-    const reseeded = worker.reset(undefined, 20);
+    const reseeded = await worker.reset(undefined, 20);
     expect(reseeded.rng.state).not.toEqual(initial.rng.state);
-    expect(worker.getHistoryLength()).toBe(0);
+    expect(await worker.getHistoryLength()).toBe(0);
 
-    const resetWithNewDef = worker.reset(ALT_TEST_DEF, 21, { playerCount: 3 });
+    const resetWithNewDef = await worker.reset(ALT_TEST_DEF, 21, { playerCount: 3 });
     expect(resetWithNewDef.playerCount).toBe(3);
-    expect(worker.getMetadata()).toEqual({
+    expect(await worker.getMetadata()).toEqual({
       gameId: 'runner-worker-test-alt',
       playerCount: 3,
       phaseNames: ['main'],
@@ -254,7 +254,7 @@ describe('createGameWorker', () => {
       zoneNames: ['table:none'],
     });
 
-    const resetWithNewPlayerCount = worker.reset(RANGE_TEST_DEF, 22, { playerCount: 4 });
+    const resetWithNewPlayerCount = await worker.reset(RANGE_TEST_DEF, 22, { playerCount: 4 });
     expect(resetWithNewPlayerCount.playerCount).toBe(4);
   });
 
@@ -270,9 +270,9 @@ describe('createGameWorker', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('https://example.com/game-def.json');
     expect(state.playerCount).toBe(2);
-    expect(worker.getHistoryLength()).toBe(0);
+    expect(await worker.getHistoryLength()).toBe(0);
 
-    const applyResult = worker.applyMove(LEGAL_TICK_MOVE);
+    const applyResult = await worker.applyMove(LEGAL_TICK_MOVE);
     expect(applyResult.effectTrace).toBeUndefined();
   });
 

@@ -1,4 +1,4 @@
-import type { PlayerId } from '@ludoforge/engine';
+import type { PlayerId } from '@ludoforge/engine/runtime';
 import type { Container } from 'pixi.js';
 
 import type { Position } from '../geometry';

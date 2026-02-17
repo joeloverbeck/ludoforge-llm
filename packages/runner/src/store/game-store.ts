@@ -13,8 +13,8 @@ import type {
   PlayerId,
   TerminalResult,
   TriggerLogEntry,
-} from '@ludoforge/engine';
-import { asPlayerId } from '@ludoforge/engine';
+} from '@ludoforge/engine/runtime';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import { deriveRenderModel } from '../model/derive-render-model.js';
 import type { RenderModel } from '../model/render-model.js';
@@ -44,14 +44,14 @@ interface GameStoreState {
 type MutableGameStoreState = Omit<GameStoreState, 'renderModel'>;
 
 interface GameStoreActions {
-  initGame(def: GameDef, seed: number, playerID: PlayerId): void;
-  selectAction(actionId: ActionId): void;
-  chooseOne(choice: Exclude<MoveParamValue, readonly unknown[]>): void;
-  chooseN(choice: readonly Exclude<MoveParamValue, readonly unknown[]>[]): void;
-  confirmMove(): void;
-  cancelChoice(): void;
+  initGame(def: GameDef, seed: number, playerID: PlayerId): Promise<void>;
+  selectAction(actionId: ActionId): Promise<void>;
+  chooseOne(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
+  chooseN(choice: readonly Exclude<MoveParamValue, readonly unknown[]>[]): Promise<void>;
+  confirmMove(): Promise<void>;
+  cancelChoice(): Promise<void>;
   cancelMove(): void;
-  undo(): void;
+  undo(): Promise<void>;
   setAnimationPlaying(playing: boolean): void;
   clearError(): void;
 }
@@ -77,6 +77,13 @@ interface MutationTransitionInputs {
 }
 
 type ChoiceActionType = ChoicePendingRequest['type'];
+type OperationKind = 'init' | 'action';
+
+interface OperationContext {
+  readonly epoch: number;
+  readonly token: number;
+  readonly kind: OperationKind;
+}
 
 interface ChoiceValidationIssue {
   readonly reason: 'CHOICE_TYPE_MISMATCH' | 'CHOICE_VALUE_SHAPE_INVALID';
@@ -378,6 +385,53 @@ function materializeNextState(current: GameStore, patch: Partial<MutableGameStor
 export function createGameStore(bridge: GameWorkerAPI) {
   return create<GameStore>()(
     subscribeWithSelector((set, get) => {
+      let sessionEpoch = 0;
+      let operationToken = 0;
+      let activeOperation: OperationContext | null = null;
+
+      const isCurrentOperation = (operation: OperationContext): boolean => {
+        return activeOperation?.epoch === operation.epoch && activeOperation.token === operation.token;
+      };
+
+      const beginOperation = (kind: OperationKind): OperationContext => {
+        if (kind === 'init') {
+          sessionEpoch += 1;
+        }
+        operationToken += 1;
+        const operation: OperationContext = {
+          epoch: sessionEpoch,
+          token: operationToken,
+          kind,
+        };
+        activeOperation = operation;
+        set({ loading: true });
+        return operation;
+      };
+
+      const finishOperation = (operation: OperationContext): void => {
+        if (!isCurrentOperation(operation)) {
+          return;
+        }
+        activeOperation = null;
+        set({ loading: false });
+      };
+
+      const guardSet = (operation: OperationContext, patch: Partial<MutableGameStoreState>): boolean => {
+        if (!isCurrentOperation(operation)) {
+          return false;
+        }
+        set(patch);
+        return true;
+      };
+
+      const invalidateActiveActionOperation = (): void => {
+        if (activeOperation === null || activeOperation.kind !== 'action' || activeOperation.epoch !== sessionEpoch) {
+          return;
+        }
+        activeOperation = null;
+        set({ loading: false });
+      };
+
       const setAndDerive = (patch: Partial<MutableGameStoreState>): void => {
         set((current) => {
           const nextState = materializeNextState(current, patch);
@@ -388,24 +442,34 @@ export function createGameStore(bridge: GameWorkerAPI) {
         });
       };
 
-      const runBridge = (operation: () => void): void => {
-        set({ loading: true });
+      const guardSetAndDerive = (operation: OperationContext, patch: Partial<MutableGameStoreState>): boolean => {
+        if (!isCurrentOperation(operation)) {
+          return false;
+        }
+        setAndDerive(patch);
+        return true;
+      };
+
+      const runActionOperation = async (operation: (ctx: OperationContext) => void | Promise<void>): Promise<void> => {
+        const ctx = beginOperation('action');
         try {
-          operation();
+          await operation(ctx);
         } catch (error) {
-          const lifecycle = get().gameLifecycle;
-          set({
-            error: toWorkerError(error),
-            gameLifecycle: assertLifecycleTransition(lifecycle, lifecycle, 'runBridge:error'),
-          });
+          if (isCurrentOperation(ctx)) {
+            const lifecycle = get().gameLifecycle;
+            set({
+              error: toWorkerError(error),
+              gameLifecycle: assertLifecycleTransition(lifecycle, lifecycle, 'runBridge:error'),
+            });
+          }
         } finally {
-          set({ loading: false });
+          finishOperation(ctx);
         }
       };
 
-      const deriveMutationInputs = (gameState: GameState): MutationTransitionInputs => {
-        const legalMoveResult = bridge.enumerateLegalMoves();
-        const terminal = bridge.terminalResult();
+      const deriveMutationInputs = async (gameState: GameState): Promise<MutationTransitionInputs> => {
+        const legalMoveResult = await bridge.enumerateLegalMoves();
+        const terminal = await bridge.terminalResult();
         return {
           gameState,
           legalMoveResult,
@@ -413,8 +477,8 @@ export function createGameStore(bridge: GameWorkerAPI) {
         };
       };
 
-      const submitChoice = (choice: MoveParamValue, actionType: ChoiceActionType): void => {
-        runBridge(() => {
+      const submitChoice = async (choice: MoveParamValue, actionType: ChoiceActionType): Promise<void> => {
+        await runActionOperation(async (ctx) => {
           const state = get();
           if (state.selectedAction === null || state.choicePending === null) {
             return;
@@ -422,7 +486,7 @@ export function createGameStore(bridge: GameWorkerAPI) {
 
           const validationError = validateChoiceSubmission(state.choicePending.type, actionType, choice);
           if (validationError !== null) {
-            set({ error: validationError });
+            guardSet(ctx, { error: validationError });
             return;
           }
 
@@ -433,13 +497,13 @@ export function createGameStore(bridge: GameWorkerAPI) {
           };
           const nextChoiceStack = [...state.choiceStack, nextChoice];
           const nextMove = buildMove(state.selectedAction, nextChoiceStack);
-          const choiceRequest = bridge.legalChoices(nextMove);
+          const choiceRequest = await bridge.legalChoices(nextMove);
           if (choiceRequest.kind === 'illegal') {
-            set({ error: toIllegalChoiceError(choiceRequest) });
+            guardSet(ctx, { error: toIllegalChoiceError(choiceRequest) });
             return;
           }
 
-          setAndDerive({
+          guardSetAndDerive(ctx, {
             partialMove: nextMove,
             choiceStack: nextChoiceStack,
             choicePending: choiceRequest.kind === 'pending' ? choiceRequest : null,
@@ -452,46 +516,46 @@ export function createGameStore(bridge: GameWorkerAPI) {
         ...INITIAL_STATE,
         playerSeats: new Map<PlayerId, PlayerSeat>(),
 
-        initGame(def, seed, playerID) {
+        async initGame(def, seed, playerID) {
+          const operation = beginOperation('init');
           const currentLifecycle = get().gameLifecycle;
           const initializingLifecycle = assertLifecycleTransition(currentLifecycle, 'initializing', 'initGame:start');
-          set({
+          guardSet(operation, {
             gameLifecycle: initializingLifecycle,
-            loading: true,
             error: null,
           });
 
           try {
-            const gameState = bridge.init(def, seed);
-            const legalMoveResult = bridge.enumerateLegalMoves();
-            const terminal = bridge.terminalResult();
+            const gameState = await bridge.init(def, seed);
+            const legalMoveResult = await bridge.enumerateLegalMoves();
+            const terminal = await bridge.terminalResult();
             const lifecycle = assertLifecycleTransition(
               get().gameLifecycle,
               lifecycleFromTerminal(terminal),
               'initGame:success',
             );
-            setAndDerive(buildInitSuccessState(def, gameState, playerID, legalMoveResult, terminal, lifecycle));
+            guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerID, legalMoveResult, terminal, lifecycle));
           } catch (error) {
             const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'initGame:failure');
-            setAndDerive(buildInitFailureState(error, lifecycle));
+            guardSetAndDerive(operation, buildInitFailureState(error, lifecycle));
           } finally {
-            set({ loading: false });
+            finishOperation(operation);
           }
         },
 
-        selectAction(actionId) {
-          runBridge(() => {
+        async selectAction(actionId) {
+          await runActionOperation(async (ctx) => {
             const baseMove: Move = { actionId, params: {} };
-            const choiceRequest = bridge.legalChoices(baseMove);
+            const choiceRequest = await bridge.legalChoices(baseMove);
             if (choiceRequest.kind === 'illegal') {
-              setAndDerive({
+              guardSetAndDerive(ctx, {
                 error: toIllegalChoiceError(choiceRequest),
                 ...resetMoveConstructionState(),
               });
               return;
             }
 
-            setAndDerive({
+            guardSetAndDerive(ctx, {
               selectedAction: actionId,
               partialMove: baseMove,
               choiceStack: [],
@@ -501,29 +565,29 @@ export function createGameStore(bridge: GameWorkerAPI) {
           });
         },
 
-        chooseOne(choice) {
-          submitChoice(choice, 'chooseOne');
+        async chooseOne(choice) {
+          await submitChoice(choice, 'chooseOne');
         },
 
-        chooseN(choice) {
-          submitChoice(choice, 'chooseN');
+        async chooseN(choice) {
+          await submitChoice(choice, 'chooseN');
         },
 
-        confirmMove() {
-          runBridge(() => {
+        async confirmMove() {
+          await runActionOperation(async (ctx) => {
             const state = get();
             if (state.partialMove === null) {
               return;
             }
 
-            const result = bridge.applyMove(state.partialMove);
-            const mutationInputs = deriveMutationInputs(result.state);
+            const result = await bridge.applyMove(state.partialMove);
+            const mutationInputs = await deriveMutationInputs(result.state);
             const lifecycle = assertLifecycleTransition(
               state.gameLifecycle,
               lifecycleFromTerminal(mutationInputs.terminal),
               'confirmMove',
             );
-            setAndDerive({
+            guardSetAndDerive(ctx, {
               ...buildStateMutationState(
                 mutationInputs.gameState,
                 mutationInputs.legalMoveResult,
@@ -536,8 +600,8 @@ export function createGameStore(bridge: GameWorkerAPI) {
           });
         },
 
-        cancelChoice() {
-          runBridge(() => {
+        async cancelChoice() {
+          await runActionOperation(async (ctx) => {
             const state = get();
             if (state.selectedAction === null || state.choiceStack.length === 0) {
               return;
@@ -545,13 +609,13 @@ export function createGameStore(bridge: GameWorkerAPI) {
 
             const nextChoiceStack = state.choiceStack.slice(0, state.choiceStack.length - 1);
             const nextMove = buildMove(state.selectedAction, nextChoiceStack);
-            const choiceRequest = bridge.legalChoices(nextMove);
+            const choiceRequest = await bridge.legalChoices(nextMove);
             if (choiceRequest.kind === 'illegal') {
-              set({ error: toIllegalChoiceError(choiceRequest) });
+              guardSet(ctx, { error: toIllegalChoiceError(choiceRequest) });
               return;
             }
 
-            setAndDerive({
+            guardSetAndDerive(ctx, {
               partialMove: nextMove,
               choiceStack: nextChoiceStack,
               choicePending: choiceRequest.kind === 'pending' ? choiceRequest : null,
@@ -561,24 +625,25 @@ export function createGameStore(bridge: GameWorkerAPI) {
         },
 
         cancelMove() {
+          invalidateActiveActionOperation();
           setAndDerive(resetMoveConstructionState());
         },
 
-        undo() {
-          runBridge(() => {
+        async undo() {
+          await runActionOperation(async (ctx) => {
             const state = get();
-            const restored = bridge.undo();
+            const restored = await bridge.undo();
             if (restored === null) {
               return;
             }
 
-            const mutationInputs = deriveMutationInputs(restored);
+            const mutationInputs = await deriveMutationInputs(restored);
             const lifecycle = assertLifecycleTransition(
               state.gameLifecycle,
               lifecycleFromTerminal(mutationInputs.terminal),
               'undo',
             );
-            setAndDerive({
+            guardSetAndDerive(ctx, {
               ...buildStateMutationState(
                 mutationInputs.gameState,
                 mutationInputs.legalMoveResult,

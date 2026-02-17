@@ -1,4 +1,4 @@
-import type { PlayerId } from '@ludoforge/engine';
+import type { PlayerId } from '@ludoforge/engine/runtime';
 
 import type { FactionColorProvider } from './renderer-types';
 

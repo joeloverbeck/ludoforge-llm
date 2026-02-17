@@ -5,7 +5,7 @@ import type {
   MoveParamValue,
   PlayerId,
   TerminalResult,
-} from '@ludoforge/engine';
+} from '@ludoforge/engine/runtime';
 
 export type PlayerSeat = 'human' | 'ai-random' | 'ai-greedy';
 

@@ -13,7 +13,7 @@ import {
   type Move,
   type TerminalResult,
   type Token,
-} from '@ludoforge/engine';
+} from '@ludoforge/engine/runtime';
 
 import { deriveRenderModel } from '../../src/model/derive-render-model.js';
 import type { RenderContext } from '../../src/store/store-types.js';

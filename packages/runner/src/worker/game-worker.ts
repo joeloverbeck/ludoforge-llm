@@ -9,6 +9,6 @@ export type {
   GameMetadata,
   GameWorkerAPI,
   WorkerError,
-} from './game-worker-api';
+} from './game-worker-api.js';
 
 expose(gameWorker);

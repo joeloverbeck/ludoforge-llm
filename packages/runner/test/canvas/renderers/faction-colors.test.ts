@@ -1,4 +1,4 @@
-import { asPlayerId } from '@ludoforge/engine';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 import { describe, expect, it } from 'vitest';
 
 import {

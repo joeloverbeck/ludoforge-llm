@@ -10,7 +10,7 @@ import {
   type RevealGrant,
   type TerminalResult,
   type Token,
-} from '@ludoforge/engine';
+} from '@ludoforge/engine/runtime';
 
 import type {
   RenderAdjacency,

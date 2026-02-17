@@ -1,4 +1,4 @@
-import type { MoveParamValue, PlayerId } from '@ludoforge/engine';
+import type { MoveParamValue, PlayerId } from '@ludoforge/engine/runtime';
 
 export interface RenderModel {
   readonly zones: readonly RenderZone[];

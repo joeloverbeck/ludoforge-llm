@@ -6,7 +6,7 @@ import {
   legalMoves,
   terminalResult,
   validateGameDef,
-} from '@ludoforge/engine';
+} from '@ludoforge/engine/runtime';
 import type {
   ApplyMoveResult,
   ChoiceRequest,
@@ -18,7 +18,7 @@ import type {
   LegalMoveEnumerationResult,
   Move,
   TerminalResult,
-} from '@ludoforge/engine';
+} from '@ludoforge/engine/runtime';
 
 export interface WorkerError {
   readonly code: 'ILLEGAL_MOVE' | 'VALIDATION_FAILED' | 'NOT_INITIALIZED' | 'INTERNAL_ERROR';
@@ -37,6 +37,25 @@ export interface GameMetadata {
 export interface BridgeInitOptions {
   readonly playerCount?: number;
   readonly enableTrace?: boolean;
+}
+
+export interface GameWorkerAPI {
+  init(nextDef: GameDef, seed: number, options?: BridgeInitOptions): Promise<GameState>;
+  legalMoves(options?: LegalMoveEnumerationOptions): Promise<readonly Move[]>;
+  enumerateLegalMoves(options?: LegalMoveEnumerationOptions): Promise<LegalMoveEnumerationResult>;
+  legalChoices(partialMove: Move, options?: LegalChoicesOptions): Promise<ChoiceRequest>;
+  applyMove(move: Move, options?: { readonly trace?: boolean }): Promise<ApplyMoveResult>;
+  playSequence(
+    moves: readonly Move[],
+    onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
+  ): Promise<readonly ApplyMoveResult[]>;
+  terminalResult(): Promise<TerminalResult | null>;
+  getState(): Promise<GameState>;
+  getMetadata(): Promise<GameMetadata>;
+  getHistoryLength(): Promise<number>;
+  undo(): Promise<GameState | null>;
+  reset(nextDef?: GameDef, seed?: number, options?: BridgeInitOptions): Promise<GameState>;
+  loadFromUrl(url: string, seed: number, options?: BridgeInitOptions): Promise<GameState>;
 }
 
 const isWorkerErrorCode = (value: unknown): value is WorkerError['code'] => {
@@ -108,17 +127,17 @@ const assertInitialized = (
   return { def, state };
 };
 
-const withInternalErrorMapping = <T>(run: () => T): T => {
+const withInternalErrorMapping = async <T>(run: () => T | Promise<T>): Promise<T> => {
   try {
-    return run();
+    return await run();
   } catch (error) {
     throw toWorkerError('INTERNAL_ERROR', error, 'Unexpected worker error.');
   }
 };
 
-const withIllegalMoveMapping = <T>(run: () => T): T => {
+const withIllegalMoveMapping = async <T>(run: () => T | Promise<T>): Promise<T> => {
   try {
-    return run();
+    return await run();
   } catch (error) {
     throw toWorkerError('ILLEGAL_MOVE', error, 'Illegal move.');
   }
@@ -132,14 +151,14 @@ const withValidationFailureMapping = async <T>(run: () => Promise<T>): Promise<T
   }
 };
 
-export function createGameWorker() {
+export function createGameWorker(): GameWorkerAPI {
   let def: GameDef | null = null;
   let state: GameState | null = null;
   let history: GameState[] = [];
   let enableTrace = true;
 
-  const api = {
-    init(nextDef: GameDef, seed: number, options?: BridgeInitOptions): GameState {
+  const api: GameWorkerAPI = {
+    async init(nextDef: GameDef, seed: number, options?: BridgeInitOptions): Promise<GameState> {
       return withInternalErrorMapping(() => {
         def = nextDef;
         state = initialState(nextDef, seed, options?.playerCount);
@@ -149,28 +168,28 @@ export function createGameWorker() {
       });
     },
 
-    legalMoves(options?: LegalMoveEnumerationOptions): readonly Move[] {
+    async legalMoves(options?: LegalMoveEnumerationOptions): Promise<readonly Move[]> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         return legalMoves(current.def, current.state, options);
       });
     },
 
-    enumerateLegalMoves(options?: LegalMoveEnumerationOptions): LegalMoveEnumerationResult {
+    async enumerateLegalMoves(options?: LegalMoveEnumerationOptions): Promise<LegalMoveEnumerationResult> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         return enumerateLegalMoves(current.def, current.state, options);
       });
     },
 
-    legalChoices(partialMove: Move, options?: LegalChoicesOptions): ChoiceRequest {
+    async legalChoices(partialMove: Move, options?: LegalChoicesOptions): Promise<ChoiceRequest> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         return legalChoices(current.def, current.state, partialMove, options);
       });
     },
 
-    applyMove(move: Move, options?: { readonly trace?: boolean }): ApplyMoveResult {
+    async applyMove(move: Move, options?: { readonly trace?: boolean }): Promise<ApplyMoveResult> {
       const current = assertInitialized(def, state);
       history.push(current.state);
       return withIllegalMoveMapping(() => {
@@ -191,7 +210,7 @@ export function createGameWorker() {
     playSequence(
       moves: readonly Move[],
       onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
-    ): readonly ApplyMoveResult[] {
+    ): Promise<readonly ApplyMoveResult[]> {
       const current = assertInitialized(def, state);
       const results: ApplyMoveResult[] = [];
 
@@ -219,21 +238,21 @@ export function createGameWorker() {
       });
     },
 
-    terminalResult(): TerminalResult | null {
+    async terminalResult(): Promise<TerminalResult | null> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         return terminalResult(current.def, current.state);
       });
     },
 
-    getState(): GameState {
+    async getState(): Promise<GameState> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         return current.state;
       });
     },
 
-    getMetadata(): GameMetadata {
+    async getMetadata(): Promise<GameMetadata> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         return {
@@ -246,11 +265,11 @@ export function createGameWorker() {
       });
     },
 
-    getHistoryLength(): number {
+    async getHistoryLength(): Promise<number> {
       return history.length;
     },
 
-    undo(): GameState | null {
+    async undo(): Promise<GameState | null> {
       if (history.length === 0) {
         return null;
       }
@@ -258,13 +277,13 @@ export function createGameWorker() {
       return state;
     },
 
-    reset(nextDef?: GameDef, seed?: number, options?: BridgeInitOptions): GameState {
+    async reset(nextDef?: GameDef, seed?: number, options?: BridgeInitOptions): Promise<GameState> {
       const resolvedDef = nextDef ?? def;
       if (resolvedDef === null) {
         throw toWorkerError('NOT_INITIALIZED', undefined, 'No GameDef available. Provide one or call init() first.');
       }
       const resolvedSeed = seed ?? 0;
-      return api.init(resolvedDef, resolvedSeed, options);
+      return await api.init(resolvedDef, resolvedSeed, options);
     },
 
     async loadFromUrl(url: string, seed: number, options?: BridgeInitOptions): Promise<GameState> {
@@ -310,5 +329,3 @@ export function createGameWorker() {
 
   return api;
 }
-
-export type GameWorkerAPI = ReturnType<typeof createGameWorker>;

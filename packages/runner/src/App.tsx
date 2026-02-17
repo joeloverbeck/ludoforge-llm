@@ -1,15 +1,48 @@
-import type { GameDef } from '@ludoforge/engine';
+import { asPlayerId, type GameDef } from '@ludoforge/engine/runtime';
+import { type ReactElement, useEffect, useRef } from 'react';
+import type { StoreApi } from 'zustand';
 
-const previewMetadata: GameDef['metadata'] = {
-  id: 'runner-preview',
-  players: { min: 1, max: 4 },
-};
+import { createGameBridge, type GameBridgeHandle } from './bridge/game-bridge.js';
+import defaultBootstrapGameDef from './bootstrap/default-game-def.json';
+import { createGameStore, type GameStore } from './store/game-store.js';
+import { ErrorBoundary } from './ui/ErrorBoundary.js';
+import { GameContainer } from './ui/GameContainer.js';
 
-export function App() {
+interface AppBootstrap {
+  readonly bridgeHandle: GameBridgeHandle;
+  readonly store: StoreApi<GameStore>;
+}
+
+const DEFAULT_BOOTSTRAP_SEED = 42;
+const DEFAULT_BOOTSTRAP_PLAYER_ID = asPlayerId(0);
+const DEFAULT_BOOTSTRAP_GAME_DEF = defaultBootstrapGameDef as unknown as GameDef;
+
+export function App(): ReactElement {
+  const bootstrapRef = useRef<AppBootstrap | null>(null);
+
+  if (bootstrapRef.current === null) {
+    const bridgeHandle = createGameBridge();
+    const store = createGameStore(bridgeHandle.bridge);
+    bootstrapRef.current = { bridgeHandle, store };
+  }
+
+  const { bridgeHandle, store } = bootstrapRef.current;
+
+  useEffect(() => {
+    void store.getState().initGame(
+      DEFAULT_BOOTSTRAP_GAME_DEF,
+      DEFAULT_BOOTSTRAP_SEED,
+      DEFAULT_BOOTSTRAP_PLAYER_ID,
+    );
+
+    return () => {
+      bridgeHandle.terminate();
+    };
+  }, [bridgeHandle, store]);
+
   return (
-    <main>
-      <h1>LudoForge Runner</h1>
-      <p>Engine type bridge ready: {previewMetadata.id}</p>
-    </main>
+    <ErrorBoundary>
+      <GameContainer store={store} />
+    </ErrorBoundary>
   );
 }

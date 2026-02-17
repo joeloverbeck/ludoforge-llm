@@ -1,4 +1,4 @@
-import { asPlayerId } from '@ludoforge/engine';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { describe, expect, it, vi } from 'vitest';

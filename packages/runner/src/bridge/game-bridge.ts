@@ -1,9 +1,9 @@
 import { proxy, wrap, type Remote } from 'comlink';
 
-import type { GameWorkerAPI } from '../worker/game-worker';
+import type { GameWorkerAPI } from '../worker/game-worker-api.js';
 
 export { proxy };
-export type { GameWorkerAPI } from '../worker/game-worker';
+export type { GameWorkerAPI } from '../worker/game-worker-api.js';
 
 export type GameBridge = Remote<GameWorkerAPI>;
 

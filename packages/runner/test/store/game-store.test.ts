@@ -9,7 +9,7 @@ import {
   type GameDef,
   type Move,
   type TriggerLogEntry,
-} from '@ludoforge/engine';
+} from '@ludoforge/engine/runtime';
 
 import { createGameStore } from '../../src/store/game-store.js';
 import { createGameWorker, type GameWorkerAPI, type WorkerError } from '../../src/worker/game-worker-api.js';
@@ -121,35 +121,55 @@ function pickOneOption(store: ReturnType<typeof createGameStore>): ChoiceScalar 
   return asChoiceScalar(pending.options[0]!, 'pending');
 }
 
-function createBridgeStub(overrides: Partial<GameWorkerAPI>): GameWorkerAPI {
-  const fallbackError = (): never => {
+type Awaitable<T> = T | Promise<T>;
+
+type BridgeOverride<K extends keyof GameWorkerAPI> = (
+  ...args: Parameters<GameWorkerAPI[K]>
+) => Awaitable<Awaited<ReturnType<GameWorkerAPI[K]>>>;
+
+type BridgeOverrides = {
+  [K in keyof GameWorkerAPI]?: BridgeOverride<K>;
+};
+
+function createBridgeStub(overrides: BridgeOverrides): GameWorkerAPI {
+  const fallbackError = (): Promise<never> => {
     throw new Error('Unexpected bridge call in test stub.');
   };
 
+  const resolveOverride = <K extends keyof GameWorkerAPI>(key: K): GameWorkerAPI[K] => {
+    const override = overrides[key];
+    if (override === undefined) {
+      return fallbackError as GameWorkerAPI[K];
+    }
+    return (async (...args: Parameters<GameWorkerAPI[K]>) => {
+      return await override(...args);
+    }) as GameWorkerAPI[K];
+  };
+
   return {
-    init: overrides.init ?? fallbackError,
-    legalMoves: overrides.legalMoves ?? fallbackError,
-    enumerateLegalMoves: overrides.enumerateLegalMoves ?? fallbackError,
-    legalChoices: overrides.legalChoices ?? fallbackError,
-    applyMove: overrides.applyMove ?? fallbackError,
-    playSequence: overrides.playSequence ?? fallbackError,
-    terminalResult: overrides.terminalResult ?? fallbackError,
-    getState: overrides.getState ?? fallbackError,
-    getMetadata: overrides.getMetadata ?? fallbackError,
-    getHistoryLength: overrides.getHistoryLength ?? fallbackError,
-    undo: overrides.undo ?? fallbackError,
-    reset: overrides.reset ?? fallbackError,
-    loadFromUrl: overrides.loadFromUrl ?? fallbackError,
+    init: resolveOverride('init'),
+    legalMoves: resolveOverride('legalMoves'),
+    enumerateLegalMoves: resolveOverride('enumerateLegalMoves'),
+    legalChoices: resolveOverride('legalChoices'),
+    applyMove: resolveOverride('applyMove'),
+    playSequence: resolveOverride('playSequence'),
+    terminalResult: resolveOverride('terminalResult'),
+    getState: resolveOverride('getState'),
+    getMetadata: resolveOverride('getMetadata'),
+    getHistoryLength: resolveOverride('getHistoryLength'),
+    undo: resolveOverride('undo'),
+    reset: resolveOverride('reset'),
+    loadFromUrl: resolveOverride('loadFromUrl'),
   };
 }
 
 describe('createGameStore', () => {
-  it('initGame populates state and enters playing lifecycle', () => {
+  it('initGame populates state and enters playing lifecycle', async () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
 
-    store.getState().initGame(def, 11, asPlayerId(0));
+    await store.getState().initGame(def, 11, asPlayerId(0));
     const state = store.getState();
 
     expect(state.gameDef).toEqual(def);
@@ -161,23 +181,23 @@ describe('createGameStore', () => {
     expect(state.loading).toBe(false);
   });
 
-  it('initGame with terminal state enters terminal lifecycle', () => {
+  it('initGame with terminal state enters terminal lifecycle', async () => {
     const def = compileStoreFixture(0);
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
 
-    store.getState().initGame(def, 12, asPlayerId(0));
+    await store.getState().initGame(def, 12, asPlayerId(0));
 
     expect(store.getState().terminal).not.toBeNull();
     expect(store.getState().gameLifecycle).toBe('terminal');
   });
 
-  it('selectAction initializes progressive choice state from real worker legalChoices', () => {
+  it('selectAction initializes progressive choice state from real worker legalChoices', async () => {
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(CHOOSE_ONE_TEST_DEF, 13, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 13, asPlayerId(0));
 
-    store.getState().selectAction(asActionId('pick-one'));
+    await store.getState().selectAction(asActionId('pick-one'));
     const state = store.getState();
 
     expect(state.selectedAction).toEqual(asActionId('pick-one'));
@@ -190,11 +210,11 @@ describe('createGameStore', () => {
     expect(state.choicePending?.type).toBe('chooseOne');
   });
 
-  it('real-worker mixed progressive flow advances through chooseOne -> chooseN and stores decisionId-keyed params', () => {
+  it('real-worker mixed progressive flow advances through chooseOne -> chooseN and stores decisionId-keyed params', async () => {
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 14, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-mixed'));
+    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 14, asPlayerId(0));
+    await store.getState().selectAction(asActionId('pick-mixed'));
 
     const firstPending = store.getState().choicePending;
     expect(firstPending?.type).toBe('chooseOne');
@@ -203,7 +223,7 @@ describe('createGameStore', () => {
     }
 
     const firstChoice = asChoiceScalar(firstPending.options[0]!, 'first');
-    store.getState().chooseOne(firstChoice);
+    await store.getState().chooseOne(firstChoice);
     expect(store.getState().choiceStack).toHaveLength(1);
     const secondPending = store.getState().choicePending;
     expect(secondPending?.type).toBe('chooseN');
@@ -212,7 +232,7 @@ describe('createGameStore', () => {
     }
     const secondChoice = secondPending.options.slice(0, 2);
     const secondChoiceValues = secondChoice.filter((value): value is string => typeof value === 'string');
-    store.getState().chooseN(secondChoiceValues);
+    await store.getState().chooseN(secondChoiceValues);
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
@@ -223,16 +243,16 @@ describe('createGameStore', () => {
     expect(state.partialMove?.params[secondPending.name]).toBeUndefined();
   });
 
-  it('clearing real-worker choicePending clears render-model choice fields', () => {
+  it('clearing real-worker choicePending clears render-model choice fields', async () => {
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-one'));
+    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
+    await store.getState().selectAction(asActionId('pick-one'));
 
     expect(store.getState().renderModel?.choiceType).toBe('chooseOne');
     expect(store.getState().renderModel?.currentChoiceOptions).not.toBeNull();
 
-    store.getState().chooseOne(pickOneOption(store));
+    await store.getState().chooseOne(pickOneOption(store));
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
@@ -242,7 +262,7 @@ describe('createGameStore', () => {
     expect(state.renderModel?.currentChoiceOptions).toBeNull();
   });
 
-  it('chooseOne illegal sets error and preserves previous move construction', () => {
+  it('chooseOne illegal sets error and preserves previous move construction', async () => {
     const def = compileStoreFixture(5);
     const bridge = createBridgeStub({
       init: () => initialState(def, 15, 2),
@@ -272,11 +292,11 @@ describe('createGameStore', () => {
       },
     });
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 15, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-two'));
+    await store.getState().initGame(def, 15, asPlayerId(0));
+    await store.getState().selectAction(asActionId('pick-two'));
 
     const before = store.getState();
-    store.getState().chooseOne('unknown-zone');
+    await store.getState().chooseOne('unknown-zone');
     const after = store.getState();
 
     expect(after.error).toMatchObject({ code: 'ILLEGAL_MOVE' });
@@ -285,16 +305,16 @@ describe('createGameStore', () => {
     expect(after.choicePending).toEqual(before.choicePending);
   });
 
-  it('pending chooseOne rejects chooseN action before bridge call without mutating move construction state', () => {
+  it('pending chooseOne rejects chooseN action before bridge call without mutating move construction state', async () => {
     const bridge = createGameWorker();
     const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
     const store = createGameStore(bridge);
-    store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-one'));
+    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
+    await store.getState().selectAction(asActionId('pick-one'));
 
     const callsBefore = legalChoicesSpy.mock.calls.length;
     const before = store.getState();
-    store.getState().chooseN(['a']);
+    await store.getState().chooseN(['a']);
     const after = store.getState();
 
     expect(legalChoicesSpy).toHaveBeenCalledTimes(callsBefore);
@@ -312,16 +332,16 @@ describe('createGameStore', () => {
     expect(after.choicePending).toEqual(before.choicePending);
   });
 
-  it('pending chooseN rejects chooseOne action before bridge call without mutating move construction state', () => {
+  it('pending chooseN rejects chooseOne action before bridge call without mutating move construction state', async () => {
     const bridge = createGameWorker();
     const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
     const store = createGameStore(bridge);
-    store.getState().initGame(CHOOSE_N_TEST_DEF, 15, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-many'));
+    await store.getState().initGame(CHOOSE_N_TEST_DEF, 15, asPlayerId(0));
+    await store.getState().selectAction(asActionId('pick-many'));
 
     const callsBefore = legalChoicesSpy.mock.calls.length;
     const before = store.getState();
-    store.getState().chooseOne('a');
+    await store.getState().chooseOne('a');
     const after = store.getState();
 
     expect(legalChoicesSpy).toHaveBeenCalledTimes(callsBefore);
@@ -339,16 +359,16 @@ describe('createGameStore', () => {
     expect(after.choicePending).toEqual(before.choicePending);
   });
 
-  it('chooseOne rejects array payload shape with deterministic validation error', () => {
+  it('chooseOne rejects array payload shape with deterministic validation error', async () => {
     const bridge = createGameWorker();
     const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
     const store = createGameStore(bridge);
-    store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-one'));
+    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
+    await store.getState().selectAction(asActionId('pick-one'));
 
     const callsBefore = legalChoicesSpy.mock.calls.length;
     const before = store.getState();
-    store.getState().chooseOne(['a'] as unknown as ChoiceScalar);
+    await store.getState().chooseOne(['a'] as unknown as ChoiceScalar);
     const after = store.getState();
 
     expect(legalChoicesSpy).toHaveBeenCalledTimes(callsBefore);
@@ -366,11 +386,11 @@ describe('createGameStore', () => {
     expect(after.choicePending).toEqual(before.choicePending);
   });
 
-  it('chooseN supports options with min/max metadata through createGameWorker', () => {
+  it('chooseN supports options with min/max metadata through createGameWorker', async () => {
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(CHOOSE_N_TEST_DEF, 15, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-many'));
+    await store.getState().initGame(CHOOSE_N_TEST_DEF, 15, asPlayerId(0));
+    await store.getState().selectAction(asActionId('pick-many'));
 
     const pending = store.getState().choicePending;
     expect(pending?.type).toBe('chooseN');
@@ -384,7 +404,7 @@ describe('createGameStore', () => {
     expect(selected).toEqual(['a', 'b']);
     const selectedValues = selected.filter((value): value is string => typeof value === 'string');
     expect(selectedValues).toEqual(['a', 'b']);
-    store.getState().chooseN(selectedValues);
+    await store.getState().chooseN(selectedValues);
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
@@ -395,11 +415,11 @@ describe('createGameStore', () => {
     expect(state.renderModel?.choiceMax).toBeNull();
   });
 
-  it('real-worker chooseOne stores value under decisionId key (not decision name)', () => {
+  it('real-worker chooseOne stores value under decisionId key (not decision name)', async () => {
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-one'));
+    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
+    await store.getState().selectAction(asActionId('pick-one'));
 
     const pending = store.getState().choicePending;
     expect(pending?.type).toBe('chooseOne');
@@ -407,7 +427,7 @@ describe('createGameStore', () => {
       throw new Error('Expected chooseOne request.');
     }
     const choice = asChoiceScalar(pending.options[0]!, 'chooseOne');
-    store.getState().chooseOne(choice);
+    await store.getState().chooseOne(choice);
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
@@ -415,14 +435,14 @@ describe('createGameStore', () => {
     expect(state.partialMove?.params[pending.name]).toBeUndefined();
   });
 
-  it('confirmMove applies move, refreshes state, and resets move construction', () => {
+  it('confirmMove applies move, refreshes state, and resets move construction', async () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 16, asPlayerId(0));
-    store.getState().selectAction(asActionId('tick'));
+    await store.getState().initGame(def, 16, asPlayerId(0));
+    await store.getState().selectAction(asActionId('tick'));
 
-    store.getState().confirmMove();
+    await store.getState().confirmMove();
     const state = store.getState();
 
     expect(state.gameState?.globalVars.round).toBe(1);
@@ -434,7 +454,7 @@ describe('createGameStore', () => {
     expect(state.choicePending).toBeNull();
   });
 
-  it('confirmMove stores effect trace and trigger firings from applyMove', () => {
+  it('confirmMove stores effect trace and trigger firings from applyMove', async () => {
     const def = compileStoreFixture(5);
     const baseState = initialState(def, 16, 2);
     const move = { actionId: asActionId('tick'), params: {} };
@@ -480,43 +500,43 @@ describe('createGameStore', () => {
       terminalResult: () => null,
     });
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 16, asPlayerId(0));
-    store.getState().selectAction(asActionId('tick'));
+    await store.getState().initGame(def, 16, asPlayerId(0));
+    await store.getState().selectAction(asActionId('tick'));
 
-    store.getState().confirmMove();
+    await store.getState().confirmMove();
 
     expect(store.getState().effectTrace).toEqual(effectTrace);
     expect(store.getState().triggerFirings).toEqual(triggerFirings);
   });
 
-  it('confirmMove is a no-op when no partialMove is selected', () => {
+  it('confirmMove is a no-op when no partialMove is selected', async () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
     const applySpy = vi.spyOn(bridge, 'applyMove');
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 17, asPlayerId(0));
+    await store.getState().initGame(def, 17, asPlayerId(0));
 
-    store.getState().confirmMove();
+    await store.getState().confirmMove();
 
     expect(applySpy).not.toHaveBeenCalled();
   });
 
-  it('real-worker cancelChoice pops one choice and re-queries pending decision', () => {
+  it('real-worker cancelChoice pops one choice and re-queries pending decision', async () => {
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-mixed'));
+    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, asPlayerId(0));
+    await store.getState().selectAction(asActionId('pick-mixed'));
     const firstChoice = pickOneOption(store);
-    store.getState().chooseOne(firstChoice);
+    await store.getState().chooseOne(firstChoice);
     const secondPending = store.getState().choicePending;
     if (secondPending === null) {
       throw new Error('Expected second pending request.');
     }
     const selected = secondPending.options.slice(0, 2).filter((value): value is string => typeof value === 'string');
-    store.getState().chooseN(selected);
+    await store.getState().chooseN(selected);
     expect(store.getState().choicePending).toBeNull();
 
-    store.getState().cancelChoice();
+    await store.getState().cancelChoice();
 
     expect(store.getState().choiceStack).toHaveLength(1);
     expect(store.getState().choicePending?.kind).toBe('pending');
@@ -524,12 +544,12 @@ describe('createGameStore', () => {
     expect(store.getState().choicePending?.type).toBe('chooseN');
   });
 
-  it('real-worker cancelMove clears selected action and progressive choice state', () => {
+  it('real-worker cancelMove clears selected action and progressive choice state', async () => {
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-mixed'));
-    store.getState().chooseOne(pickOneOption(store));
+    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, asPlayerId(0));
+    await store.getState().selectAction(asActionId('pick-mixed'));
+    await store.getState().chooseOne(pickOneOption(store));
 
     store.getState().cancelMove();
 
@@ -539,51 +559,51 @@ describe('createGameStore', () => {
     expect(store.getState().choicePending).toBeNull();
   });
 
-  it('cancelChoice with empty stack is a no-op', () => {
+  it('cancelChoice with empty stack is a no-op', async () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
     const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 19, asPlayerId(0));
-    store.getState().selectAction(asActionId('tick'));
+    await store.getState().initGame(def, 19, asPlayerId(0));
+    await store.getState().selectAction(asActionId('tick'));
     const callsBefore = legalChoicesSpy.mock.calls.length;
 
-    store.getState().cancelChoice();
+    await store.getState().cancelChoice();
 
     expect(legalChoicesSpy).toHaveBeenCalledTimes(callsBefore);
     expect(store.getState().choiceStack).toEqual([]);
   });
 
-  it('undo restores previous state and transitions terminal -> playing', () => {
+  it('undo restores previous state and transitions terminal -> playing', async () => {
     const def = compileStoreFixture(1);
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 20, asPlayerId(0));
-    store.getState().selectAction(asActionId('tick'));
-    store.getState().confirmMove();
+    await store.getState().initGame(def, 20, asPlayerId(0));
+    await store.getState().selectAction(asActionId('tick'));
+    await store.getState().confirmMove();
     expect(store.getState().gameLifecycle).toBe('terminal');
 
-    store.getState().undo();
+    await store.getState().undo();
 
     expect(store.getState().gameLifecycle).toBe('playing');
     expect(store.getState().gameState?.globalVars.round).toBe(0);
     expect(store.getState().legalMoveResult).not.toBeNull();
   });
 
-  it('undo re-enumerates legal moves, re-checks terminal result, and re-derives render model', () => {
+  it('undo re-enumerates legal moves, re-checks terminal result, and re-derives render model', async () => {
     const def = compileStoreFixture(1);
     const bridge = createGameWorker();
     const enumerateSpy = vi.spyOn(bridge, 'enumerateLegalMoves');
     const terminalSpy = vi.spyOn(bridge, 'terminalResult');
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 20, asPlayerId(0));
-    store.getState().selectAction(asActionId('tick'));
-    store.getState().confirmMove();
+    await store.getState().initGame(def, 20, asPlayerId(0));
+    await store.getState().selectAction(asActionId('tick'));
+    await store.getState().confirmMove();
     expect(store.getState().renderModel?.terminal).not.toBeNull();
 
     const enumerateCallsBeforeUndo = enumerateSpy.mock.calls.length;
     const terminalCallsBeforeUndo = terminalSpy.mock.calls.length;
-    store.getState().undo();
+    await store.getState().undo();
 
     expect(enumerateSpy.mock.calls.length).toBe(enumerateCallsBeforeUndo + 1);
     expect(terminalSpy.mock.calls.length).toBe(terminalCallsBeforeUndo + 1);
@@ -591,11 +611,11 @@ describe('createGameStore', () => {
     expect(store.getState().renderModel?.terminal).toBeNull();
   });
 
-  it('omitted derivation fields remain stable on unrelated updates', () => {
+  it('omitted derivation fields remain stable on unrelated updates', async () => {
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(CHOOSE_ONE_TEST_DEF, 20, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-one'));
+    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 20, asPlayerId(0));
+    await store.getState().selectAction(asActionId('pick-one'));
 
     const before = store.getState();
     store.getState().setAnimationPlaying(true);
@@ -613,24 +633,24 @@ describe('createGameStore', () => {
     expect(after.renderModel).toBe(before.renderModel);
   });
 
-  it('undo with no history is a no-op', () => {
+  it('undo with no history is a no-op', async () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 21, asPlayerId(0));
+    await store.getState().initGame(def, 21, asPlayerId(0));
     const before = store.getState().gameState;
 
-    store.getState().undo();
+    await store.getState().undo();
 
     expect(store.getState().gameState).toEqual(before);
   });
 
-  it('loading brackets bridge calls during initGame', () => {
+  it('loading brackets bridge calls during initGame', async () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
     const baseState = initialState(def, 22, 2);
     const originalEnumerate = bridge.enumerateLegalMoves.bind(bridge);
-    const initSpy = vi.spyOn(bridge, 'init').mockImplementation(() => baseState);
+    const initSpy = vi.spyOn(bridge, 'init').mockImplementation(async () => baseState);
     const enumerateSpy = vi.spyOn(bridge, 'enumerateLegalMoves');
     let store!: ReturnType<typeof createGameStore>;
 
@@ -640,14 +660,14 @@ describe('createGameStore', () => {
     });
 
     store = createGameStore(bridge);
-    store.getState().initGame(def, 22, asPlayerId(0));
+    await store.getState().initGame(def, 22, asPlayerId(0));
 
     expect(initSpy).toHaveBeenCalledTimes(1);
     expect(enumerateSpy).toHaveBeenCalledTimes(1);
     expect(store.getState().loading).toBe(false);
   });
 
-  it('lifecycle transitions through initializing before reaching terminal', () => {
+  it('lifecycle transitions through initializing before reaching terminal', async () => {
     const def = compileStoreFixture(0);
     const baseState = initialState(def, 22, 2);
     let sawInitializing = false;
@@ -663,13 +683,13 @@ describe('createGameStore', () => {
 
     store = createGameStore(bridge);
     expect(store.getState().gameLifecycle).toBe('idle');
-    store.getState().initGame(def, 22, asPlayerId(0));
+    await store.getState().initGame(def, 22, asPlayerId(0));
 
     expect(sawInitializing).toBe(true);
     expect(store.getState().gameLifecycle).toBe('terminal');
   });
 
-  it('failed initGame after prior successful game clears stale session snapshot', () => {
+  it('failed initGame after prior successful game clears stale session snapshot', async () => {
     const def = compileStoreFixture(5);
     const workerError: WorkerError = {
       code: 'VALIDATION_FAILED',
@@ -678,7 +698,7 @@ describe('createGameStore', () => {
     const gameState = initialState(def, 24, 2);
     const initMock = vi
       .fn<GameWorkerAPI['init']>()
-      .mockReturnValueOnce(gameState)
+      .mockResolvedValueOnce(gameState)
       .mockImplementationOnce(() => {
         throw workerError;
       });
@@ -690,12 +710,12 @@ describe('createGameStore', () => {
     });
     const store = createGameStore(bridge);
 
-    store.getState().initGame(def, 24, asPlayerId(0));
-    store.getState().selectAction(asActionId('tick'));
+    await store.getState().initGame(def, 24, asPlayerId(0));
+    await store.getState().selectAction(asActionId('tick'));
     expect(store.getState().renderModel).not.toBeNull();
     expect(store.getState().selectedAction).toEqual(asActionId('tick'));
 
-    store.getState().initGame(def, 24, asPlayerId(0));
+    await store.getState().initGame(def, 24, asPlayerId(0));
 
     const state = store.getState();
     expect(state.gameLifecycle).toBe('idle');
@@ -715,7 +735,7 @@ describe('createGameStore', () => {
     expect(state.renderModel).toBeNull();
   });
 
-  it('failed initGame keeps structured WorkerError while clearing render/session fields', () => {
+  it('failed initGame keeps structured WorkerError while clearing render/session fields', async () => {
     const def = compileStoreFixture(5);
     const workerError: WorkerError = {
       code: 'VALIDATION_FAILED',
@@ -725,7 +745,7 @@ describe('createGameStore', () => {
     const gameState = initialState(def, 25, 2);
     const initMock = vi
       .fn<GameWorkerAPI['init']>()
-      .mockReturnValueOnce(gameState)
+      .mockResolvedValueOnce(gameState)
       .mockImplementationOnce(() => {
         throw workerError;
       });
@@ -736,10 +756,10 @@ describe('createGameStore', () => {
     });
     const store = createGameStore(bridge);
 
-    store.getState().initGame(def, 25, asPlayerId(0));
+    await store.getState().initGame(def, 25, asPlayerId(0));
     expect(store.getState().renderModel).not.toBeNull();
 
-    store.getState().initGame(def, 25, asPlayerId(0));
+    await store.getState().initGame(def, 25, asPlayerId(0));
 
     const state = store.getState();
     expect(state.error).toEqual(workerError);
@@ -752,7 +772,7 @@ describe('createGameStore', () => {
     expect(state.playerSeats.size).toBe(0);
   });
 
-  it('retry initGame after failure succeeds and rebuilds render model', () => {
+  it('retry initGame after failure succeeds and rebuilds render model', async () => {
     const def = compileStoreFixture(5);
     const gameState = initialState(def, 26, 2);
     const initMock = vi
@@ -760,7 +780,7 @@ describe('createGameStore', () => {
       .mockImplementationOnce(() => {
         throw new Error('boom');
       })
-      .mockReturnValueOnce(gameState);
+      .mockResolvedValueOnce(gameState);
     const bridge = createBridgeStub({
       init: initMock,
       enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
@@ -768,12 +788,12 @@ describe('createGameStore', () => {
     });
     const store = createGameStore(bridge);
 
-    store.getState().initGame(def, 26, asPlayerId(0));
+    await store.getState().initGame(def, 26, asPlayerId(0));
     expect(store.getState().gameLifecycle).toBe('idle');
     expect(store.getState().renderModel).toBeNull();
     expect(store.getState().error).toMatchObject({ code: 'INTERNAL_ERROR' });
 
-    store.getState().initGame(def, 26, asPlayerId(0));
+    await store.getState().initGame(def, 26, asPlayerId(0));
 
     const state = store.getState();
     expect(state.gameLifecycle).toBe('playing');
@@ -786,7 +806,7 @@ describe('createGameStore', () => {
     expect(state.renderModel).not.toBeNull();
   });
 
-  it('bridge errors are captured as WorkerError and clearError resets them', () => {
+  it('bridge errors are captured as WorkerError and clearError resets them', async () => {
     const def = compileStoreFixture(5);
     const workerError: WorkerError = {
       code: 'VALIDATION_FAILED',
@@ -801,7 +821,7 @@ describe('createGameStore', () => {
     });
 
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 23, asPlayerId(0));
+    await store.getState().initGame(def, 23, asPlayerId(0));
 
     expect(store.getState().error).toEqual(workerError);
     expect(store.getState().loading).toBe(false);
@@ -809,7 +829,7 @@ describe('createGameStore', () => {
     expect(store.getState().error).toBeNull();
   });
 
-  it('non-init bridge errors preserve current lifecycle while setting structured error', () => {
+  it('non-init bridge errors preserve current lifecycle while setting structured error', async () => {
     const def = compileStoreFixture(5);
     const workerError: WorkerError = {
       code: 'INTERNAL_ERROR',
@@ -825,17 +845,17 @@ describe('createGameStore', () => {
     });
     const store = createGameStore(bridge);
 
-    store.getState().initGame(def, 23, asPlayerId(0));
+    await store.getState().initGame(def, 23, asPlayerId(0));
     expect(store.getState().gameLifecycle).toBe('playing');
 
-    store.getState().selectAction(asActionId('tick'));
+    await store.getState().selectAction(asActionId('tick'));
 
     expect(store.getState().gameLifecycle).toBe('playing');
     expect(store.getState().error).toEqual(workerError);
     expect(store.getState().loading).toBe(false);
   });
 
-  it('setAnimationPlaying toggles animation flag', () => {
+  it('setAnimationPlaying toggles animation flag', async () => {
     const store = createGameStore(createGameWorker());
     expect(store.getState().animationPlaying).toBe(false);
 

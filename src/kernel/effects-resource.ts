@@ -3,6 +3,7 @@ import { emitTrace } from './execution-collector.js';
 import { effectRuntimeError } from './effect-error.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
+import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import type { PlayerId } from './branded.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST, PlayerSel } from './types.js';
@@ -286,24 +287,42 @@ export const applyTransferVar = (
     ...(maxAmount === undefined ? {} : { maxAmount }),
     provenance,
   });
-  emitTrace(ctx.collector, {
-    kind: 'varChange',
-    scope: source.scope === 'global' ? 'global' : 'perPlayer',
-    ...(source.scope === 'pvar' ? { player: source.player! } : {}),
-    varName: source.var,
-    oldValue: source.before,
-    newValue: sourceAfter,
-    provenance,
-  });
-  emitTrace(ctx.collector, {
-    kind: 'varChange',
-    scope: destination.scope === 'global' ? 'global' : 'perPlayer',
-    ...(destination.scope === 'pvar' ? { player: destination.player! } : {}),
-    varName: destination.var,
-    oldValue: destination.before,
-    newValue: destinationAfter,
-    provenance,
-  });
+  if (source.scope === 'global') {
+    emitVarChangeTraceIfChanged(ctx, {
+      scope: 'global',
+      varName: source.var,
+      oldValue: source.before,
+      newValue: sourceAfter,
+      provenance,
+    });
+  } else {
+    emitVarChangeTraceIfChanged(ctx, {
+      scope: 'perPlayer',
+      player: source.player!,
+      varName: source.var,
+      oldValue: source.before,
+      newValue: sourceAfter,
+      provenance,
+    });
+  }
+  if (destination.scope === 'global') {
+    emitVarChangeTraceIfChanged(ctx, {
+      scope: 'global',
+      varName: destination.var,
+      oldValue: destination.before,
+      newValue: destinationAfter,
+      provenance,
+    });
+  } else {
+    emitVarChangeTraceIfChanged(ctx, {
+      scope: 'perPlayer',
+      player: destination.player!,
+      varName: destination.var,
+      oldValue: destination.before,
+      newValue: destinationAfter,
+      provenance,
+    });
+  }
 
   let nextGlobalVars = ctx.state.globalVars;
   let nextPerPlayerVars = ctx.state.perPlayerVars;

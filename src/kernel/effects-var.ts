@@ -1,8 +1,7 @@
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { evalValue } from './eval-value.js';
-import { emitTrace } from './execution-collector.js';
 import { effectRuntimeError } from './effect-error.js';
-import { resolveTraceProvenance } from './trace-provenance.js';
+import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { PlayerId } from './branded.js';
 import type { EffectAST } from './types.js';
@@ -111,17 +110,16 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
       variableDef.type === 'int'
         ? clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max)
         : expectBoolean(evaluatedValue, 'setVar', 'value');
-    if (nextValue === currentValue) {
+    if (
+      !emitVarChangeTraceIfChanged(ctx, {
+        scope: 'global',
+        varName: variableName,
+        oldValue: currentValue,
+        newValue: nextValue,
+      })
+    ) {
       return { state: ctx.state, rng: ctx.rng };
     }
-    emitTrace(ctx.collector, {
-      kind: 'varChange',
-      scope: 'global',
-      varName: variableName,
-      oldValue: currentValue,
-      newValue: nextValue,
-      provenance: resolveTraceProvenance(ctx),
-    });
 
     return {
       state: {
@@ -183,18 +181,17 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     variableDef.type === 'int'
       ? clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max)
       : expectBoolean(evaluatedValue, 'setVar', 'value');
-  if (nextValue === currentValue) {
+  if (
+    !emitVarChangeTraceIfChanged(ctx, {
+      scope: 'perPlayer',
+      player: playerId,
+      varName: variableName,
+      oldValue: currentValue,
+      newValue: nextValue,
+    })
+  ) {
     return { state: ctx.state, rng: ctx.rng };
   }
-  emitTrace(ctx.collector, {
-    kind: 'varChange',
-    scope: 'perPlayer',
-    player: playerId,
-    varName: variableName,
-    oldValue: currentValue,
-    newValue: nextValue,
-    provenance: resolveTraceProvenance(ctx),
-  });
 
   return {
     state: {
@@ -238,15 +235,14 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     }
 
     const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
-    emitTrace(ctx.collector, {
-      kind: 'varChange',
-      scope: 'global',
-      varName: variableName,
-      oldValue: currentValue,
-      newValue: nextValue,
-      provenance: resolveTraceProvenance(ctx),
-    });
-    if (nextValue === currentValue) {
+    if (
+      !emitVarChangeTraceIfChanged(ctx, {
+        scope: 'global',
+        varName: variableName,
+        oldValue: currentValue,
+        newValue: nextValue,
+      })
+    ) {
       return { state: ctx.state, rng: ctx.rng };
     }
 
@@ -315,16 +311,15 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   }
 
   const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
-  emitTrace(ctx.collector, {
-    kind: 'varChange',
-    scope: 'perPlayer',
-    player: playerId,
-    varName: variableName,
-    oldValue: currentValue,
-    newValue: nextValue,
-    provenance: resolveTraceProvenance(ctx),
-  });
-  if (nextValue === currentValue) {
+  if (
+    !emitVarChangeTraceIfChanged(ctx, {
+      scope: 'perPlayer',
+      player: playerId,
+      varName: variableName,
+      oldValue: currentValue,
+      newValue: nextValue,
+    })
+  ) {
     return { state: ctx.state, rng: ctx.rng };
   }
 

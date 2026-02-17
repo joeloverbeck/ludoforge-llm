@@ -19,6 +19,7 @@ import {
   runtimeTableRowsUnavailableEvalError,
 } from './runtime-table-eval-errors.js';
 import { filterRowsByPredicates, type PredicateValue, type ResolvedRowPredicate } from './query-predicate.js';
+import { filterTokensByPredicates } from './token-filter.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterPredicate, ValueExpr } from './types.js';
 
@@ -251,31 +252,8 @@ function resolvePredicateValue(
   return resolved;
 }
 
-function tokenFilterFieldValue(token: Token, field: string): string | number | boolean | undefined {
-  if (field === 'id') {
-    return token.id;
-  }
-  return token.props[field];
-}
-
-function resolveTokenPredicates(filters: readonly TokenFilterPredicate[], ctx: EvalContext): readonly ResolvedRowPredicate[] {
-  return filters.map((predicate) => ({
-    field: predicate.prop,
-    op: predicate.op,
-    value: resolvePredicateValue(predicate.value, ctx),
-  }));
-}
-
 function applyTokenFilters(tokens: readonly Token[], filters: readonly TokenFilterPredicate[], ctx: EvalContext): readonly Token[] {
-  const resolvedPredicates = resolveTokenPredicates(filters, ctx);
-  return filterRowsByPredicates(tokens, resolvedPredicates, {
-    getFieldValue: (token, field) => tokenFilterFieldValue(token, field),
-    context: (predicate, token) => ({
-      domain: 'token',
-      predicate,
-      tokenId: token.id,
-    }),
-  });
+  return filterTokensByPredicates(tokens, filters, (value) => resolvePredicateValue(value, ctx));
 }
 
 function resolveAssetRowPredicates(where: readonly AssetRowPredicate[], ctx: EvalContext): readonly ResolvedRowPredicate[] {

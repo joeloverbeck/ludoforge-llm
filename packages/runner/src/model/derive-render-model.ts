@@ -1,4 +1,4 @@
-import { asPlayerId, type GameDef, type GameState, type PlayerId } from '@ludoforge/engine';
+import { asPlayerId, matchesAllTokenFilterPredicates, type GameDef, type GameState, type PlayerId, type RevealGrant, type Token } from '@ludoforge/engine';
 
 import type { RenderAdjacency, RenderMapSpace, RenderModel, RenderToken, RenderZone } from './render-model.js';
 import type { RenderContext } from '../store/store-types.js';
@@ -9,10 +9,11 @@ const OWNER_ZONE_ID_PATTERN = /^.+:(\d+)$/;
 export function deriveRenderModel(
   state: GameState,
   def: GameDef,
-  _context: RenderContext,
+  context: RenderContext,
 ): RenderModel {
-  const zones = deriveZones(state, def);
-  const tokens = deriveTokens(state, zones);
+  const zoneDerivation = deriveZones(state, def, context);
+  const zones = zoneDerivation.zones;
+  const tokens = deriveTokens(state, zones, zoneDerivation.visibleTokenIDsByZone);
   const adjacencies = deriveAdjacencies(def, zones);
   const mapSpaces = deriveMapSpaces(def);
 
@@ -48,8 +49,14 @@ export function deriveRenderModel(
   };
 }
 
-function deriveZones(state: GameState, def: GameDef): readonly RenderZone[] {
+interface ZoneDerivationResult {
+  readonly zones: readonly RenderZone[];
+  readonly visibleTokenIDsByZone: ReadonlyMap<string, readonly string[]>;
+}
+
+function deriveZones(state: GameState, def: GameDef, context: RenderContext): ZoneDerivationResult {
   const zones: RenderZone[] = [];
+  const visibleTokenIDsByZone = new Map<string, readonly string[]>();
 
   for (const zoneDef of def.zones) {
     const zoneID = String(zoneDef.id);
@@ -57,13 +64,23 @@ function deriveZones(state: GameState, def: GameDef): readonly RenderZone[] {
     if (zoneDef.owner === 'player' && ownerID === null) {
       continue;
     }
+    const zoneTokens = state.zones[zoneID] ?? [];
+    const visibleTokenIDs = deriveVisibleTokenIDs(
+      zoneTokens,
+      zoneDef.visibility,
+      ownerID,
+      context.playerID,
+      state.reveals?.[zoneID] ?? [],
+    );
+
+    visibleTokenIDsByZone.set(zoneID, visibleTokenIDs);
 
     zones.push({
       id: zoneID,
       displayName: formatIdAsDisplayName(zoneID),
       ordering: zoneDef.ordering,
-      tokenIDs: (state.zones[zoneID] ?? []).map((token) => String(token.id)),
-      hiddenTokenCount: 0,
+      tokenIDs: visibleTokenIDs,
+      hiddenTokenCount: zoneTokens.length - visibleTokenIDs.length,
       markers: [],
       visibility: zoneDef.visibility,
       isSelectable: false,
@@ -73,14 +90,31 @@ function deriveZones(state: GameState, def: GameDef): readonly RenderZone[] {
     });
   }
 
-  return zones;
+  return {
+    zones,
+    visibleTokenIDsByZone,
+  };
 }
 
-function deriveTokens(state: GameState, zones: readonly RenderZone[]): readonly RenderToken[] {
+function deriveTokens(
+  state: GameState,
+  zones: readonly RenderZone[],
+  visibleTokenIDsByZone: ReadonlyMap<string, readonly string[]>,
+): readonly RenderToken[] {
   const tokens: RenderToken[] = [];
 
   for (const zone of zones) {
+    const visibleTokenIDs = visibleTokenIDsByZone.get(zone.id) ?? [];
+    if (visibleTokenIDs.length === 0) {
+      continue;
+    }
+    const visibleTokenIDSet = new Set(visibleTokenIDs);
+
     for (const token of state.zones[zone.id] ?? []) {
+      if (!visibleTokenIDSet.has(String(token.id))) {
+        continue;
+      }
+
       tokens.push({
         id: String(token.id),
         type: token.type,
@@ -95,6 +129,67 @@ function deriveTokens(state: GameState, zones: readonly RenderZone[]): readonly 
   }
 
   return tokens;
+}
+
+function deriveVisibleTokenIDs(
+  zoneTokens: readonly Token[],
+  visibility: RenderZone['visibility'],
+  ownerID: PlayerId | null,
+  viewingPlayerID: PlayerId,
+  grants: readonly RevealGrant[],
+): readonly string[] {
+  const visibleTokenIDSet = new Set<string>();
+
+  if (zoneVisibleByDefault(visibility, ownerID, viewingPlayerID)) {
+    for (const token of zoneTokens) {
+      visibleTokenIDSet.add(String(token.id));
+    }
+  }
+
+  for (const grant of grants) {
+    if (!grantAppliesToViewer(grant, viewingPlayerID)) {
+      continue;
+    }
+    for (const token of zoneTokens) {
+      if (grantRevealsToken(grant, token)) {
+        visibleTokenIDSet.add(String(token.id));
+      }
+    }
+  }
+
+  return zoneTokens
+    .map((token) => String(token.id))
+    .filter((tokenID) => visibleTokenIDSet.has(tokenID));
+}
+
+function zoneVisibleByDefault(
+  visibility: RenderZone['visibility'],
+  ownerID: PlayerId | null,
+  viewingPlayerID: PlayerId,
+): boolean {
+  switch (visibility) {
+    case 'public':
+      return true;
+    case 'owner':
+      return ownerID !== null && ownerID === viewingPlayerID;
+    case 'hidden':
+      return false;
+  }
+}
+
+function grantAppliesToViewer(grant: RevealGrant, viewingPlayerID: PlayerId): boolean {
+  if (grant.observers === 'all') {
+    return true;
+  }
+  return grant.observers.some((observerID) => observerID === viewingPlayerID);
+}
+
+function grantRevealsToken(grant: RevealGrant, token: Token): boolean {
+  if (grant.filter === undefined || grant.filter.length === 0) {
+    return true;
+  }
+
+  return matchesAllTokenFilterPredicates(token, grant.filter);
 }
 
 function deriveAdjacencies(def: GameDef, zones: readonly RenderZone[]): readonly RenderAdjacency[] {

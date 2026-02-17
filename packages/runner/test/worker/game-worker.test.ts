@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createGameWorker, type WorkerError } from '../../src/worker/game-worker-api';
 import { ILLEGAL_MOVE, LEGAL_TICK_MOVE, TEST_DEF } from './test-fixtures';
@@ -10,6 +10,11 @@ const expectWorkerError = (error: unknown, code: WorkerError['code']): WorkerErr
 };
 
 describe('createGameWorker', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it('throws NOT_INITIALIZED for methods that require init', () => {
     const worker = createGameWorker();
 
@@ -118,5 +123,55 @@ describe('createGameWorker', () => {
     const reset = worker.reset();
     expect(reset.globalVars.tick).toBe(0);
     expect(worker.getHistoryLength()).toBe(0);
+  });
+
+  it('loads and initializes a GameDef from URL', async () => {
+    const worker = createGameWorker();
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(TEST_DEF), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const state = await worker.loadFromUrl('https://example.com/game-def.json', 23, {
+      playerCount: 2,
+      enableTrace: false,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith('https://example.com/game-def.json');
+    expect(state.playerCount).toBe(2);
+    expect(worker.getHistoryLength()).toBe(0);
+
+    const applyResult = worker.applyMove(LEGAL_TICK_MOVE);
+    expect(applyResult.effectTrace).toBeUndefined();
+  });
+
+  it('throws VALIDATION_FAILED when URL fetch fails with non-OK status', async () => {
+    const worker = createGameWorker();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('not found', { status: 404, statusText: 'Not Found' })));
+
+    await expect(worker.loadFromUrl('https://example.com/missing.json', 5)).rejects.toMatchObject({
+      code: 'VALIDATION_FAILED',
+      message: 'Failed to fetch GameDef: 404 Not Found',
+    });
+  });
+
+  it('throws VALIDATION_FAILED when URL payload is invalid JSON', async () => {
+    const worker = createGameWorker();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{invalid-json', { status: 200 })));
+
+    await expect(worker.loadFromUrl('https://example.com/bad-json.json', 5)).rejects.toMatchObject({
+      code: 'VALIDATION_FAILED',
+    });
+  });
+
+  it('throws VALIDATION_FAILED when URL payload is not a valid GameDef', async () => {
+    const worker = createGameWorker();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ invalid: true }), { status: 200 })));
+
+    try {
+      await worker.loadFromUrl('https://example.com/invalid-def.json', 5);
+      throw new Error('Expected loadFromUrl to throw');
+    } catch (error) {
+      const workerError = expectWorkerError(error, 'VALIDATION_FAILED');
+      expect(workerError.message).toContain('Invalid GameDef from URL:');
+    }
   });
 });

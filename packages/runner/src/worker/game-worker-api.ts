@@ -5,6 +5,7 @@ import {
   legalChoices,
   legalMoves,
   terminalResult,
+  validateGameDef,
 } from '@ludoforge/engine';
 import type {
   ApplyMoveResult,
@@ -78,6 +79,18 @@ const toWorkerError = (code: WorkerError['code'], error: unknown, fallbackMessag
     };
   }
 
+  if (typeof error === 'object' && error !== null) {
+    const message = Reflect.get(error, 'message');
+    const details = Reflect.get(error, 'details');
+    if (typeof message === 'string') {
+      return {
+        code,
+        message,
+        ...(details === undefined ? {} : { details }),
+      };
+    }
+  }
+
   return {
     code,
     message: fallbackMessage,
@@ -108,6 +121,14 @@ const withIllegalMoveMapping = <T>(run: () => T): T => {
     return run();
   } catch (error) {
     throw toWorkerError('ILLEGAL_MOVE', error, 'Illegal move.');
+  }
+};
+
+const withValidationFailureMapping = async <T>(run: () => Promise<T>): Promise<T> => {
+  try {
+    return await run();
+  } catch (error) {
+    throw toWorkerError('VALIDATION_FAILED', error, 'GameDef validation failed.');
   }
 };
 
@@ -244,6 +265,46 @@ export function createGameWorker() {
       }
       const resolvedSeed = seed ?? 0;
       return api.init(resolvedDef, resolvedSeed, options);
+    },
+
+    async loadFromUrl(url: string, seed: number, options?: BridgeInitOptions): Promise<GameState> {
+      return withValidationFailureMapping(async () => {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw {
+            message: `Failed to fetch GameDef: ${response.status} ${response.statusText}`.trim(),
+            details: {
+              url,
+              status: response.status,
+              statusText: response.statusText,
+            },
+          };
+        }
+
+        const parsed = await response.json();
+        const nextDef = parsed as GameDef;
+        let diagnostics;
+        try {
+          diagnostics = validateGameDef(nextDef);
+        } catch (error) {
+          throw {
+            message: 'Invalid GameDef from URL: validation failed.',
+            details: { url, cause: error },
+          };
+        }
+        const errorDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity === 'error');
+        if (errorDiagnostics.length > 0) {
+          throw {
+            message: `Invalid GameDef from URL: ${errorDiagnostics.length} validation error(s).`,
+            details: {
+              url,
+              diagnostics: errorDiagnostics,
+            },
+          };
+        }
+
+        return api.init(nextDef, seed, options);
+      });
     },
   };
 

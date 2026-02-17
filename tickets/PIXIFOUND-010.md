@@ -78,7 +78,7 @@ export function createTokenRenderer(
 **`token-renderer.test.ts`** (mock PixiJS Container/Graphics/BitmapText):
 - `update()` with empty token array creates no containers.
 - `update()` with 3 tokens creates 3 containers in the map.
-- Token color matches `colorProvider.getColor(ownerID, playerIndex)`.
+- Token color matches `colorProvider.getColor(factionId, ownerID)`.
 - Face-down token shows "?" label instead of type.
 - Face-up token shows type label.
 - Token with `isSelectable: true` has glow visual.

@@ -47,9 +47,9 @@ export class DefaultFactionColorProvider implements FactionColorProvider {
     '#6a4c93', '#1982c4', '#ff595e', '#8ac926',
   ];
 
-  getColor(factionId: string | null, playerIndex: number): string {
+  getColor(factionId: string | null, playerId: PlayerId): string {
     // Deterministic: if factionId is non-null, hash it to palette index.
-    // Otherwise fall back to playerIndex mod palette length.
+    // Otherwise fall back to a stable hash of playerId.
   }
 }
 ```
@@ -69,10 +69,10 @@ Simple pool for reusable `Container` instances:
 ### Tests that must pass
 
 **`faction-colors.test.ts`**:
-- Same `(factionId, playerIndex)` always returns the same color (deterministic).
+- Same `(factionId, playerId)` always returns the same color (deterministic).
 - Different faction IDs return different colors (up to palette size).
-- `null` factionId falls back to playerIndex-based color.
-- Palette wraps correctly when playerIndex exceeds palette length.
+- `null` factionId falls back to playerId-based color.
+- Palette wraps correctly for large `playerId` values.
 - Colors are valid hex strings matching `#[0-9a-f]{6}`.
 
 **`container-pool.test.ts`**:

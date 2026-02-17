@@ -337,7 +337,7 @@ export interface AdjacencyRenderer {
 }
 
 export interface FactionColorProvider {
-  getColor(factionId: string | null, playerIndex: number): string;
+  getColor(factionId: string | null, playerId: PlayerId): string;
 }
 ```
 
@@ -348,8 +348,9 @@ export class DefaultFactionColorProvider implements FactionColorProvider {
     '#e63946', '#457b9d', '#2a9d8f', '#e9c46a',
     '#6a4c93', '#1982c4', '#ff595e', '#8ac926'
   ];
-  getColor(factionId: string | null, playerIndex: number): string {
-    // Deterministic: sort factionIds, assign palette by index
+  getColor(factionId: string | null, playerId: PlayerId): string {
+    // Deterministic: if factionId exists, hash factionId.
+    // Otherwise hash playerId for a stable fallback color.
   }
 }
 ```

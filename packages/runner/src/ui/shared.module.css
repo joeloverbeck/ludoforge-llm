@@ -1,0 +1,51 @@
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: var(--space-md);
+}
+
+.panelHover {
+  composes: panel;
+}
+
+.panelHover:hover {
+  background: var(--bg-panel-hover);
+}
+
+.interactive {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.textPrimary {
+  color: var(--text-primary);
+}
+
+.textSecondary {
+  color: var(--text-secondary);
+}
+
+.textMuted {
+  color: var(--text-muted);
+}
+
+.fontMono {
+  font-family: var(--font-mono);
+}
+
+.fontUi {
+  font-family: var(--font-ui);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,0 +1,40 @@
+:root {
+  /* Faction palette - generic defaults, overridden by visual config (Spec 42) */
+  --faction-0: #4a90d9;
+  --faction-1: #d94a4a;
+  --faction-2: #4ad94a;
+  --faction-3: #d9d94a;
+
+  /* UI chrome */
+  --bg-panel: rgba(11, 16, 32, 0.85);
+  --bg-panel-hover: rgba(11, 16, 32, 0.95);
+  --text-primary: #e8e8e8;
+  --text-secondary: #a0a0a0;
+  --text-muted: #606060;
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --accent: #4a90d9;
+  --danger: #d94a4a;
+  --success: #4ad94a;
+
+  /* Spacing scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Typography */
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-ui: system-ui, sans-serif;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+
+  /* Z-index layers */
+  --z-canvas: 0;
+  --z-overlay: 10;
+  --z-panel: 20;
+  --z-tooltip: 30;
+  --z-modal: 40;
+}

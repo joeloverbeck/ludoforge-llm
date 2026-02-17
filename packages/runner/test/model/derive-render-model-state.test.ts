@@ -6,8 +6,12 @@ import {
   asPlayerId,
   asTokenId,
   initialState,
+  type ChoicePendingRequest,
   type GameDef,
   type GameState,
+  type LegalMoveEnumerationResult,
+  type Move,
+  type TerminalResult,
   type Token,
 } from '@ludoforge/engine';
 
@@ -111,7 +115,11 @@ function compileFixture(): GameDef {
   return compiled.gameDef;
 }
 
-function makeRenderContext(playerCount: number, playerID = asPlayerId(0)): RenderContext {
+function makeRenderContext(
+  playerCount: number,
+  playerID = asPlayerId(0),
+  overrides: Partial<RenderContext> = {},
+): RenderContext {
   return {
     playerID,
     legalMoveResult: { moves: [], warnings: [] },
@@ -122,6 +130,7 @@ function makeRenderContext(playerCount: number, playerID = asPlayerId(0)): Rende
       Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), 'human' as const]),
     ),
     terminal: null,
+    ...overrides,
   };
 }
 
@@ -375,5 +384,199 @@ describe('deriveRenderModel state metadata', () => {
         discardSize: 1,
       },
     ]);
+  });
+
+  it('derives players and card-driven turn order', () => {
+    const baseDef = compileFixture();
+    const baseState = initialState(baseDef, 21, 2);
+    const { def, state } = withStateMetadata(baseDef, {
+      ...baseState,
+      activePlayer: asPlayerId(1),
+      perPlayerVars: {
+        ...baseState.perPlayerVars,
+        '1': { ...baseState.perPlayerVars['1'], eliminated: true },
+      },
+    });
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        playerSeats: new Map([
+          [asPlayerId(0), 'human'],
+          [asPlayerId(1), 'ai-random'],
+        ]),
+      }),
+    );
+
+    expect(model.players).toEqual([
+      {
+        id: asPlayerId(0),
+        displayName: 'Us',
+        isHuman: true,
+        isActive: false,
+        isEliminated: false,
+        factionId: 'us',
+      },
+      {
+        id: asPlayerId(1),
+        displayName: 'Nva',
+        isHuman: false,
+        isActive: true,
+        isEliminated: true,
+        factionId: 'nva',
+      },
+    ]);
+    expect(model.turnOrder).toEqual([asPlayerId(0), asPlayerId(1)]);
+  });
+
+  it('derives fixed-order turn order from currentIndex', () => {
+    const def = compileFixture();
+    const baseState = initialState(def, 22, 2);
+    const state: GameState = {
+      ...baseState,
+      turnOrderState: {
+        type: 'fixedOrder',
+        currentIndex: 1,
+      },
+    };
+
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+
+    expect(model.turnOrderType).toBe('fixedOrder');
+    expect(model.turnOrder).toEqual([asPlayerId(1), asPlayerId(0)]);
+  });
+
+  it('groups actions, derives choice fields, and maps move warnings', () => {
+    const def = compileFixture();
+    const state = initialState(def, 23, 2);
+
+    const legalMoveResult: LegalMoveEnumerationResult = {
+      moves: [
+        { actionId: asActionId('train-us'), params: {}, actionClass: 'ops' },
+        { actionId: asActionId('train-us'), params: { amount: 1 }, actionClass: 'ops' },
+        { actionId: asActionId('pass'), params: {} },
+      ] satisfies readonly Move[],
+      warnings: [
+        { code: 'EMPTY_QUERY_RESULT', message: 'query produced no rows', context: { query: 'q1' } },
+      ],
+    };
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'pick-target',
+      name: 'pickTarget',
+      type: 'chooseN',
+      min: 1,
+      max: 2,
+      options: ['table:none', 'token-a'],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        legalMoveResult,
+        choicePending,
+        choiceStack: [{ decisionId: 'pick-action', name: 'pickAction', value: 'train-us' }],
+      }),
+    );
+
+    expect(model.actionGroups).toEqual([
+      {
+        groupName: 'Ops',
+        actions: [{ actionId: 'train-us', displayName: 'Train Us', isAvailable: true }],
+      },
+      {
+        groupName: 'Actions',
+        actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }],
+      },
+    ]);
+    expect(model.choiceType).toBe('chooseN');
+    expect(model.choiceMin).toBe(1);
+    expect(model.choiceMax).toBe(2);
+    expect(model.choiceBreadcrumb).toEqual([
+      {
+        decisionId: 'pick-action',
+        name: 'pickAction',
+        displayName: 'Pick Action',
+        chosenValue: 'train-us',
+        chosenDisplayName: 'Train Us',
+      },
+    ]);
+    expect(model.currentChoiceOptions).toEqual([
+      { value: 'table:none', displayName: 'Table None', isLegal: true, illegalReason: null },
+      { value: 'token-a', displayName: 'Token A', isLegal: true, illegalReason: null },
+    ]);
+    expect(model.moveEnumerationWarnings).toEqual([
+      { code: 'EMPTY_QUERY_RESULT', message: 'query produced no rows' },
+    ]);
+  });
+
+  it('maps terminal variants to render terminal payloads', () => {
+    const def = compileFixture();
+    const state = initialState(def, 24, 2);
+    const winTerminal: TerminalResult = {
+      type: 'win',
+      player: asPlayerId(1),
+      victory: {
+        timing: 'duringCoup',
+        checkpointId: 'checkpoint-a',
+        winnerFaction: 'us',
+        ranking: [{ faction: 'us', margin: 2, rank: 1, tieBreakKey: 'score' }],
+      },
+    };
+    const scoreTerminal: TerminalResult = {
+      type: 'score',
+      ranking: [
+        { player: asPlayerId(1), score: 9 },
+        { player: asPlayerId(0), score: 4 },
+      ],
+    };
+
+    const winModel = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), { terminal: winTerminal }),
+    );
+    expect(winModel.terminal).toEqual({
+      type: 'win',
+      player: asPlayerId(1),
+      message: 'Player 1 wins!',
+      victory: {
+        timing: 'duringCoup',
+        checkpointId: 'checkpoint-a',
+        winnerFaction: 'us',
+        ranking: [{ faction: 'us', margin: 2, rank: 1, tieBreakKey: 'score' }],
+      },
+    });
+
+    const lossModel = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), { terminal: { type: 'lossAll' } }),
+    );
+    expect(lossModel.terminal).toEqual({ type: 'lossAll', message: 'All players lose.' });
+
+    const drawModel = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), { terminal: { type: 'draw' } }),
+    );
+    expect(drawModel.terminal).toEqual({ type: 'draw', message: 'The game is a draw.' });
+
+    const scoreModel = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), { terminal: scoreTerminal }),
+    );
+    expect(scoreModel.terminal).toEqual({
+      type: 'score',
+      ranking: [
+        { player: asPlayerId(1), score: 9 },
+        { player: asPlayerId(0), score: 4 },
+      ],
+      message: 'Game over - final rankings.',
+    });
   });
 });

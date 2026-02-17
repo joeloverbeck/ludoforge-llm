@@ -3,9 +3,13 @@ import {
   matchesAllTokenFilterPredicates,
   type GameDef,
   type GameState,
+  type Move,
+  type MoveParamValue,
   type NumericTrackDef,
+  type OptionsQuery,
   type PlayerId,
   type RevealGrant,
+  type TerminalResult,
   type Token,
 } from '@ludoforge/engine';
 
@@ -51,9 +55,15 @@ export function deriveRenderModel(
   context: RenderContext,
 ): RenderModel {
   const staticDerivation = deriveStaticRenderDerivation(def);
-  const zoneDerivation = deriveZones(state, def, context);
+  const selectionTargets = deriveSelectionTargets(def, context);
+  const zoneDerivation = deriveZones(state, def, context, selectionTargets.selectableZoneIDs);
   const zones = zoneDerivation.zones;
-  const tokens = deriveTokens(state, zones, zoneDerivation.visibleTokenIDsByZone);
+  const tokens = deriveTokens(
+    state,
+    zones,
+    zoneDerivation.visibleTokenIDsByZone,
+    selectionTargets.selectableTokenIDs,
+  );
   const adjacencies = deriveAdjacencies(def, zones);
   const globalVars = deriveGlobalVars(state);
   const playerVars = derivePlayerVars(state);
@@ -62,6 +72,9 @@ export function deriveRenderModel(
   const activeEffects = deriveActiveEffects(state, staticDerivation.cardTitleById);
   const interruptStack = state.interruptPhaseStack ?? [];
   const eventDecks = deriveEventDecks(state, staticDerivation.eventDecks, staticDerivation.playedCardZoneId);
+  const factionByPlayer = deriveFactionByPlayer(state);
+  const players = derivePlayers(state, context, factionByPlayer);
+  const turnOrder = deriveTurnOrder(state, factionByPlayer);
 
   return {
     zones: zones.map((zone) => ({
@@ -76,9 +89,9 @@ export function deriveRenderModel(
     globalMarkers,
     tracks,
     activeEffects,
-    players: [],
+    players,
     activePlayerID: state.activePlayer,
-    turnOrder: [],
+    turnOrder,
     turnOrderType: state.turnOrderState.type,
     simultaneousSubmitted: deriveSimultaneousSubmitted(state),
     interruptStack,
@@ -86,15 +99,18 @@ export function deriveRenderModel(
     phaseName: String(state.currentPhase),
     phaseDisplayName: formatIdAsDisplayName(String(state.currentPhase)),
     eventDecks,
-    actionGroups: [],
-    choiceBreadcrumb: [],
-    currentChoiceOptions: null,
+    actionGroups: deriveActionGroups(context.legalMoveResult?.moves ?? []),
+    choiceBreadcrumb: deriveChoiceBreadcrumb(context),
+    currentChoiceOptions: deriveChoiceOptions(context),
     currentChoiceDomain: null,
-    choiceType: null,
-    choiceMin: null,
-    choiceMax: null,
-    moveEnumerationWarnings: [],
-    terminal: null,
+    choiceType: context.choicePending?.type ?? null,
+    choiceMin: context.choicePending?.min ?? null,
+    choiceMax: context.choicePending?.max ?? null,
+    moveEnumerationWarnings: (context.legalMoveResult?.warnings ?? []).map((warning) => ({
+      code: warning.code,
+      message: warning.message,
+    })),
+    terminal: deriveTerminal(context.terminal),
   };
 }
 
@@ -285,7 +301,12 @@ interface ZoneDerivationResult {
   readonly visibleTokenIDsByZone: ReadonlyMap<string, readonly string[]>;
 }
 
-function deriveZones(state: GameState, def: GameDef, context: RenderContext): ZoneDerivationResult {
+function deriveZones(
+  state: GameState,
+  def: GameDef,
+  context: RenderContext,
+  selectableZoneIDs: ReadonlySet<string>,
+): ZoneDerivationResult {
   const zones: RenderZone[] = [];
   const visibleTokenIDsByZone = new Map<string, readonly string[]>();
 
@@ -314,7 +335,7 @@ function deriveZones(state: GameState, def: GameDef, context: RenderContext): Zo
       hiddenTokenCount: zoneTokens.length - visibleTokenIDs.length,
       markers: [],
       visibility: zoneDef.visibility,
-      isSelectable: false,
+      isSelectable: selectableZoneIDs.has(zoneID),
       isHighlighted: false,
       ownerID,
       metadata: {},
@@ -331,6 +352,7 @@ function deriveTokens(
   state: GameState,
   zones: readonly RenderZone[],
   visibleTokenIDsByZone: ReadonlyMap<string, readonly string[]>,
+  selectableTokenIDs: ReadonlySet<string>,
 ): readonly RenderToken[] {
   const tokens: RenderToken[] = [];
 
@@ -353,7 +375,7 @@ function deriveTokens(
         ownerID: zone.ownerID,
         faceUp: true,
         properties: token.props,
-        isSelectable: false,
+        isSelectable: selectableTokenIDs.has(String(token.id)),
         isSelected: false,
       });
     }
@@ -504,4 +526,314 @@ function parseOwnerPlayerId(zoneID: string, playerCount: number): PlayerId | nul
   }
 
   return asPlayerId(numericPlayerId);
+}
+
+interface SelectionTargets {
+  readonly selectableZoneIDs: ReadonlySet<string>;
+  readonly selectableTokenIDs: ReadonlySet<string>;
+}
+
+function deriveSelectionTargets(def: GameDef, context: RenderContext): SelectionTargets {
+  const pending = context.choicePending;
+  if (pending === null) {
+    return {
+      selectableZoneIDs: new Set<string>(),
+      selectableTokenIDs: new Set<string>(),
+    };
+  }
+
+  const targetKinds = resolveChoiceTargetKinds(def, context.selectedAction, pending.decisionId);
+  if (targetKinds.size === 0) {
+    return {
+      selectableZoneIDs: new Set<string>(),
+      selectableTokenIDs: new Set<string>(),
+    };
+  }
+
+  const candidateIDs = new Set<string>();
+  for (const option of pending.options) {
+    addStringChoiceValues(option, candidateIDs);
+  }
+
+  const selectableZoneIDs = new Set<string>();
+  const selectableTokenIDs = new Set<string>();
+  for (const candidateId of candidateIDs) {
+    if (targetKinds.has('zone')) {
+      selectableZoneIDs.add(candidateId);
+    }
+    if (targetKinds.has('token')) {
+      selectableTokenIDs.add(candidateId);
+    }
+  }
+  return {
+    selectableZoneIDs,
+    selectableTokenIDs,
+  };
+}
+
+function addStringChoiceValues(value: MoveParamValue, output: Set<string>): void {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (typeof item === 'string') {
+        output.add(item);
+      }
+    }
+    return;
+  }
+
+  if (typeof value === 'string') {
+    output.add(value);
+  }
+}
+
+type ChoiceTargetKind = 'zone' | 'token';
+
+function resolveChoiceTargetKinds(
+  def: GameDef,
+  selectedAction: RenderContext['selectedAction'],
+  decisionId: string,
+): ReadonlySet<ChoiceTargetKind> {
+  if (selectedAction === null) {
+    return new Set<ChoiceTargetKind>();
+  }
+
+  const action = def.actions.find((candidate) => candidate.id === selectedAction);
+  if (action === undefined) {
+    return new Set<ChoiceTargetKind>();
+  }
+
+  const decisionNameCandidates = deriveDecisionNameCandidates(decisionId);
+  const param = action.params.find((candidate) => decisionNameCandidates.has(candidate.name));
+  if (param === undefined) {
+    return new Set<ChoiceTargetKind>();
+  }
+
+  return deriveTargetKindsFromDomain(param.domain);
+}
+
+function deriveDecisionNameCandidates(decisionId: string): ReadonlySet<string> {
+  const candidates = new Set<string>([decisionId]);
+  if (decisionId.startsWith('decision:')) {
+    const decisionBody = decisionId.slice('decision:'.length);
+    if (decisionBody.length > 0) {
+      candidates.add(decisionBody);
+    }
+
+    const separatorIndex = decisionBody.indexOf('::');
+    if (separatorIndex >= 0) {
+      const resolvedBind = decisionBody.slice(separatorIndex + 2);
+      if (resolvedBind.length > 0) {
+        candidates.add(resolvedBind);
+      }
+    }
+  }
+  return candidates;
+}
+
+function deriveTargetKindsFromDomain(domain: OptionsQuery): ReadonlySet<ChoiceTargetKind> {
+  const kinds = new Set<ChoiceTargetKind>();
+
+  const visit = (query: OptionsQuery): void => {
+    switch (query.query) {
+      case 'concat':
+        query.sources.forEach(visit);
+        return;
+      case 'zones':
+      case 'adjacentZones':
+      case 'connectedZones':
+        kinds.add('zone');
+        return;
+      case 'tokensInZone':
+      case 'tokensInAdjacentZones':
+      case 'tokensInMapSpaces':
+        kinds.add('token');
+        return;
+      default:
+        return;
+    }
+  };
+
+  visit(domain);
+  return kinds;
+}
+
+function deriveFactionByPlayer(state: GameState): ReadonlyMap<PlayerId, string> {
+  const factionByPlayer = new Map<PlayerId, string>();
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return factionByPlayer;
+  }
+
+  state.turnOrderState.runtime.factionOrder.forEach((faction, index) => {
+    if (index >= state.playerCount) {
+      return;
+    }
+
+    factionByPlayer.set(asPlayerId(index), faction);
+  });
+
+  return factionByPlayer;
+}
+
+function derivePlayers(
+  state: GameState,
+  context: RenderContext,
+  factionByPlayer: ReadonlyMap<PlayerId, string>,
+): RenderModel['players'] {
+  return Array.from({ length: state.playerCount }, (_unused, index) => {
+    const playerId = asPlayerId(index);
+    const faction = factionByPlayer.get(playerId) ?? null;
+    return {
+      id: playerId,
+      displayName: faction === null ? formatIdAsDisplayName(String(index)) : formatIdAsDisplayName(faction),
+      isHuman: context.playerSeats.get(playerId) === 'human',
+      isActive: playerId === state.activePlayer,
+      isEliminated: state.perPlayerVars[String(index)]?.eliminated === true,
+      factionId: faction,
+    };
+  });
+}
+
+function deriveTurnOrder(state: GameState, factionByPlayer: ReadonlyMap<PlayerId, string>): readonly PlayerId[] {
+  const allPlayers = Array.from({ length: state.playerCount }, (_unused, index) => asPlayerId(index));
+  if (state.turnOrderState.type === 'fixedOrder') {
+    const normalizedIndex = normalizeIndex(state.turnOrderState.currentIndex, state.playerCount);
+    return [...allPlayers.slice(normalizedIndex), ...allPlayers.slice(0, normalizedIndex)];
+  }
+
+  if (state.turnOrderState.type === 'cardDriven') {
+    const byFaction = state.turnOrderState.runtime.factionOrder
+      .map((faction) => findPlayerIdForFaction(factionByPlayer, faction))
+      .filter((playerId): playerId is PlayerId => playerId !== null);
+    const seen = new Set(byFaction);
+    const remaining = allPlayers.filter((playerId) => !seen.has(playerId));
+    return [...byFaction, ...remaining];
+  }
+
+  return allPlayers;
+}
+
+function normalizeIndex(index: number, playerCount: number): number {
+  if (playerCount <= 0) {
+    return 0;
+  }
+  const normalized = index % playerCount;
+  return normalized < 0 ? normalized + playerCount : normalized;
+}
+
+function findPlayerIdForFaction(
+  factionByPlayer: ReadonlyMap<PlayerId, string>,
+  faction: string,
+): PlayerId | null {
+  for (const [playerId, playerFaction] of factionByPlayer.entries()) {
+    if (playerFaction === faction) {
+      return playerId;
+    }
+  }
+  return null;
+}
+
+function deriveActionGroups(moves: readonly Move[]): RenderModel['actionGroups'] {
+  const groupsByClass = new Map<string, Map<string, string>>();
+  for (const move of moves) {
+    const actionClass = typeof move.actionClass === 'string' && move.actionClass.length > 0 ? move.actionClass : null;
+    const groupKey = actionClass ?? 'Actions';
+    const group = groupsByClass.get(groupKey) ?? new Map<string, string>();
+    if (!groupsByClass.has(groupKey)) {
+      groupsByClass.set(groupKey, group);
+    }
+
+    const actionId = String(move.actionId);
+    if (!group.has(actionId)) {
+      group.set(actionId, formatIdAsDisplayName(actionId));
+    }
+  }
+
+  return Array.from(groupsByClass.entries()).map(([groupKey, actionsById]) => ({
+    groupName: groupKey === 'Actions' ? 'Actions' : formatIdAsDisplayName(groupKey),
+    actions: Array.from(actionsById.entries()).map(([actionId, displayName]) => ({
+      actionId,
+      displayName,
+      isAvailable: true,
+    })),
+  }));
+}
+
+function deriveChoiceBreadcrumb(context: RenderContext): RenderModel['choiceBreadcrumb'] {
+  return context.choiceStack.map((step) => ({
+    decisionId: step.decisionId,
+    name: step.name,
+    displayName: formatIdAsDisplayName(step.name),
+    chosenValue: step.value,
+    chosenDisplayName: formatIdAsDisplayName(String(step.value)),
+  }));
+}
+
+function deriveChoiceOptions(context: RenderContext): RenderModel['currentChoiceOptions'] {
+  if (context.choicePending === null) {
+    return null;
+  }
+
+  return context.choicePending.options.map((value) => ({
+    value,
+    displayName: formatIdAsDisplayName(String(value)),
+    isLegal: true,
+    illegalReason: null,
+  }));
+}
+
+function deriveTerminal(terminal: TerminalResult | null): RenderModel['terminal'] {
+  if (terminal === null) {
+    return null;
+  }
+
+  switch (terminal.type) {
+    case 'win':
+      if (terminal.victory === undefined) {
+        return {
+          type: 'win',
+          player: terminal.player,
+          message: `Player ${terminal.player} wins!`,
+        };
+      }
+
+      return {
+        type: 'win',
+        player: terminal.player,
+        message: `Player ${terminal.player} wins!`,
+        victory: {
+          timing: terminal.victory.timing,
+          checkpointId: terminal.victory.checkpointId,
+          winnerFaction: terminal.victory.winnerFaction,
+          ...(terminal.victory.ranking === undefined
+            ? {}
+            : {
+                ranking: terminal.victory.ranking.map((entry) => ({
+                  faction: entry.faction,
+                  margin: entry.margin,
+                  rank: entry.rank,
+                  tieBreakKey: entry.tieBreakKey,
+                })),
+              }),
+        },
+      };
+    case 'lossAll':
+      return {
+        type: 'lossAll',
+        message: 'All players lose.',
+      };
+    case 'draw':
+      return {
+        type: 'draw',
+        message: 'The game is a draw.',
+      };
+    case 'score':
+      return {
+        type: 'score',
+        ranking: terminal.ranking.map((entry) => ({
+          player: entry.player,
+          score: entry.score,
+        })),
+        message: 'Game over - final rankings.',
+      };
+  }
 }

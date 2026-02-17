@@ -60,6 +60,38 @@ function compileFixture(options: CompileFixtureOptions): GameDef {
         effects: [{ addVar: { scope: 'global', var: 'tick', delta: 1 } }],
         limits: [],
       },
+      {
+        id: 'choose-zone',
+        actor: 'active',
+        executor: 'actor',
+        phase: ['main'],
+        params: [
+          {
+            name: 'targetZone',
+            domain: { query: 'zones' },
+          },
+        ],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: 'choose-token',
+        actor: 'active',
+        executor: 'actor',
+        phase: ['main'],
+        params: [
+          {
+            name: 'targetToken',
+            domain: { query: 'tokensInMapSpaces' },
+          },
+        ],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
     ],
     terminal: {
       conditions: [
@@ -78,7 +110,11 @@ function compileFixture(options: CompileFixtureOptions): GameDef {
   return compiled.gameDef;
 }
 
-function makeRenderContext(playerCount: number, playerID = asPlayerId(0)): RenderContext {
+function makeRenderContext(
+  playerCount: number,
+  playerID = asPlayerId(0),
+  overrides: Partial<RenderContext> = {},
+): RenderContext {
   return {
     playerID,
     legalMoveResult: { moves: [], warnings: [] },
@@ -89,6 +125,7 @@ function makeRenderContext(playerCount: number, playerID = asPlayerId(0)): Rende
       Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), 'human' as const]),
     ),
     terminal: null,
+    ...overrides,
   };
 }
 
@@ -558,5 +595,89 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
       ['hand:1', [], 0],
     ]);
     expect(model.tokens).toEqual([]);
+  });
+
+  it('marks zones and tokens selectable when referenced by pending choice options', () => {
+    const def = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'table',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+        },
+      ],
+    });
+    const baseState = initialState(def, 19, 2);
+    const state: GameState = {
+      ...baseState,
+      zones: {
+        ...baseState.zones,
+        'table:none': [token('t1'), token('t2')],
+      },
+    };
+
+    const zoneModel = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        selectedAction: asActionId('choose-zone'),
+        choicePending: {
+          kind: 'pending',
+          complete: false,
+          decisionId: 'targetZone',
+          name: 'pick-target',
+          type: 'chooseOne',
+          options: ['table:none', 't2'],
+        },
+      }),
+    );
+
+    expect(zoneModel.zones.find((zone) => zone.id === 'table:none')?.isSelectable).toBe(true);
+    expect(zoneModel.tokens.map((renderToken) => [renderToken.id, renderToken.isSelectable])).toEqual([
+      ['t1', false],
+      ['t2', false],
+    ]);
+    expect(zoneModel.zones.find((zone) => zone.id === 'table:none')?.isHighlighted).toBe(false);
+
+    const tokenModel = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        selectedAction: asActionId('choose-token'),
+        choicePending: {
+          kind: 'pending',
+          complete: false,
+          decisionId: 'targetToken',
+          name: 'pick-target',
+          type: 'chooseOne',
+          options: ['table:none', ['t2', asPlayerId(1)]],
+        },
+      }),
+    );
+    expect(tokenModel.zones.find((zone) => zone.id === 'table:none')?.isSelectable).toBe(false);
+    expect(tokenModel.tokens.map((renderToken) => [renderToken.id, renderToken.isSelectable])).toEqual([
+      ['t1', false],
+      ['t2', true],
+    ]);
+
+    const composedDecisionIdModel = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        selectedAction: asActionId('choose-zone'),
+        choicePending: {
+          kind: 'pending',
+          complete: false,
+          decisionId: 'decision:internal::targetZone',
+          name: 'pick-target',
+          type: 'chooseOne',
+          options: ['table:none'],
+        },
+      }),
+    );
+    expect(composedDecisionIdModel.zones.find((zone) => zone.id === 'table:none')?.isSelectable).toBe(true);
   });
 });

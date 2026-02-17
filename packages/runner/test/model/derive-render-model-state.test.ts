@@ -470,6 +470,7 @@ describe('deriveRenderModel state metadata', () => {
       min: 1,
       max: 2,
       options: ['table:none', 'token-a'],
+      targetKinds: [],
     };
 
     const model = deriveRenderModel(

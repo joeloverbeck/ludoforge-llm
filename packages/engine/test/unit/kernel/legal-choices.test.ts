@@ -172,10 +172,12 @@ phase: [asPhaseId('main')],
     // First call: no params → returns choice request
     const result1 = legalChoices(def, state, makeMove('pickColor'));
     assert.equal(result1.complete, false);
+    assert.equal(result1.kind, 'pending');
     assert.equal(result1.decisionId, 'decision:$color');
     assert.equal(result1.name, '$color');
     assert.equal(result1.type, 'chooseOne');
     assert.deepStrictEqual(result1.options, ['red', 'blue', 'green']);
+    assert.deepStrictEqual(result1.targetKinds, []);
 
     // Second call: param filled → complete
     const result2 = legalChoices(def, state, makeMove('pickColor', { 'decision:$color': 'blue' }));
@@ -210,11 +212,126 @@ phase: [asPhaseId('main')],
 
     const result = legalChoices(def, state, makeMove('pickTargets'));
     assert.equal(result.complete, false);
+    assert.equal(result.kind, 'pending');
     assert.equal(result.name, '$targets');
     assert.equal(result.type, 'chooseN');
     assert.deepStrictEqual(result.options, ['a', 'b', 'c']);
+    assert.deepStrictEqual(result.targetKinds, []);
     assert.equal(result.min, 1);
     assert.equal(result.max, 3); // clamped from 10 to domain size 3
+  });
+
+  it('3d. chooseOne on zone queries exposes canonical zone target metadata', () => {
+    const action: ActionDef = {
+      id: asActionId('pickZone'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$zone',
+            bind: '$zone',
+            options: { query: 'zones' },
+          },
+        },
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const request = legalChoices(def, makeBaseState(), makeMove('pickZone'));
+    assert.equal(request.kind, 'pending');
+    assert.deepStrictEqual(request.targetKinds, ['zone']);
+  });
+
+  it('3e. chooseN on token queries exposes canonical token target metadata', () => {
+    const action: ActionDef = {
+      id: asActionId('pickTokens'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseN: {
+            internalDecisionId: 'decision:$tokens',
+            bind: '$tokens',
+            options: { query: 'tokensInZone', zone: asZoneId('board:none') },
+            min: 1,
+            max: 2,
+          },
+        } as EffectAST,
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action], tokenTypes: [{ id: 'piece', props: {} }] });
+    const state = makeBaseState({
+      zones: {
+        'board:none': [{ id: asTokenId('tok-1'), type: 'piece', props: {} }],
+        'hand:0': [],
+      },
+    });
+    const request = legalChoices(def, state, makeMove('pickTokens'));
+    assert.equal(request.kind, 'pending');
+    assert.deepStrictEqual(request.targetKinds, ['token']);
+  });
+
+  it('3f. target metadata is stable across decisionId formatting changes', () => {
+    const plainAction: ActionDef = {
+      id: asActionId('pickZonePlain'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:$zone',
+            bind: '$zone',
+            options: { query: 'zones' },
+          },
+        },
+      ],
+      limits: [],
+    };
+    const reformattedAction: ActionDef = {
+      id: asActionId('pickZoneReformatted'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        {
+          chooseOne: {
+            internalDecisionId: 'decision:internal-zone',
+            bind: '$zone',
+            options: { query: 'zones' },
+          },
+        },
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [plainAction, reformattedAction] });
+    const state = makeBaseState();
+    const plainRequest = legalChoices(def, state, makeMove('pickZonePlain'));
+    const reformattedRequest = legalChoices(def, state, makeMove('pickZoneReformatted'));
+    assert.equal(plainRequest.kind, 'pending');
+    assert.equal(reformattedRequest.kind, 'pending');
+    assert.notEqual(plainRequest.decisionId, reformattedRequest.decisionId);
+    assert.deepStrictEqual(plainRequest.targetKinds, ['zone']);
+    assert.deepStrictEqual(reformattedRequest.targetKinds, ['zone']);
   });
 
   it('3b. chooseN evaluates expression-valued min/max at decision time', () => {

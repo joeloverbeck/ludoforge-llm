@@ -6,7 +6,6 @@ import {
   type Move,
   type MoveParamValue,
   type NumericTrackDef,
-  type OptionsQuery,
   type PlayerId,
   type RevealGrant,
   type TerminalResult,
@@ -55,7 +54,7 @@ export function deriveRenderModel(
   context: RenderContext,
 ): RenderModel {
   const staticDerivation = deriveStaticRenderDerivation(def);
-  const selectionTargets = deriveSelectionTargets(def, context);
+  const selectionTargets = deriveSelectionTargets(context);
   const zoneDerivation = deriveZones(state, def, context, selectionTargets.selectableZoneIDs);
   const zones = zoneDerivation.zones;
   const tokens = deriveTokens(
@@ -533,7 +532,7 @@ interface SelectionTargets {
   readonly selectableTokenIDs: ReadonlySet<string>;
 }
 
-function deriveSelectionTargets(def: GameDef, context: RenderContext): SelectionTargets {
+function deriveSelectionTargets(context: RenderContext): SelectionTargets {
   const pending = context.choicePending;
   if (pending === null) {
     return {
@@ -542,7 +541,7 @@ function deriveSelectionTargets(def: GameDef, context: RenderContext): Selection
     };
   }
 
-  const targetKinds = resolveChoiceTargetKinds(def, context.selectedAction, pending.decisionId);
+  const targetKinds = new Set(pending.targetKinds);
   if (targetKinds.size === 0) {
     return {
       selectableZoneIDs: new Set<string>(),
@@ -584,77 +583,6 @@ function addStringChoiceValues(value: MoveParamValue, output: Set<string>): void
   if (typeof value === 'string') {
     output.add(value);
   }
-}
-
-type ChoiceTargetKind = 'zone' | 'token';
-
-function resolveChoiceTargetKinds(
-  def: GameDef,
-  selectedAction: RenderContext['selectedAction'],
-  decisionId: string,
-): ReadonlySet<ChoiceTargetKind> {
-  if (selectedAction === null) {
-    return new Set<ChoiceTargetKind>();
-  }
-
-  const action = def.actions.find((candidate) => candidate.id === selectedAction);
-  if (action === undefined) {
-    return new Set<ChoiceTargetKind>();
-  }
-
-  const decisionNameCandidates = deriveDecisionNameCandidates(decisionId);
-  const param = action.params.find((candidate) => decisionNameCandidates.has(candidate.name));
-  if (param === undefined) {
-    return new Set<ChoiceTargetKind>();
-  }
-
-  return deriveTargetKindsFromDomain(param.domain);
-}
-
-function deriveDecisionNameCandidates(decisionId: string): ReadonlySet<string> {
-  const candidates = new Set<string>([decisionId]);
-  if (decisionId.startsWith('decision:')) {
-    const decisionBody = decisionId.slice('decision:'.length);
-    if (decisionBody.length > 0) {
-      candidates.add(decisionBody);
-    }
-
-    const separatorIndex = decisionBody.indexOf('::');
-    if (separatorIndex >= 0) {
-      const resolvedBind = decisionBody.slice(separatorIndex + 2);
-      if (resolvedBind.length > 0) {
-        candidates.add(resolvedBind);
-      }
-    }
-  }
-  return candidates;
-}
-
-function deriveTargetKindsFromDomain(domain: OptionsQuery): ReadonlySet<ChoiceTargetKind> {
-  const kinds = new Set<ChoiceTargetKind>();
-
-  const visit = (query: OptionsQuery): void => {
-    switch (query.query) {
-      case 'concat':
-        query.sources.forEach(visit);
-        return;
-      case 'zones':
-      case 'adjacentZones':
-      case 'connectedZones':
-        kinds.add('zone');
-        return;
-      case 'tokensInZone':
-      case 'tokensInAdjacentZones':
-      case 'tokensInMapSpaces':
-        kinds.add('token');
-        return;
-      default:
-        return;
-    }
-  };
-
-  visit(domain);
-  return kinds;
 }
 
 function deriveFactionByPlayer(state: GameState): ReadonlyMap<PlayerId, string> {

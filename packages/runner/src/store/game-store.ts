@@ -256,7 +256,7 @@ function buildPlayerSeats(playerCount: number, humanPlayer: PlayerId): ReadonlyM
 function buildMove(actionId: ActionId, choices: readonly PartialChoice[]): Move {
   return {
     actionId,
-    params: Object.fromEntries(choices.map((choice) => [choice.name, choice.value])),
+    params: Object.fromEntries(choices.map((choice) => [choice.decisionId, choice.value])),
   };
 }
 

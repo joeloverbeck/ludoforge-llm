@@ -1,6 +1,7 @@
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { composeDecisionId } from './decision-id.js';
+import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
 import { resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { effectRuntimeError } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
@@ -75,6 +76,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   });
   if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
     if (resolveInterpreterMode(ctx) === 'discovery') {
+      const targetKinds = deriveChoiceTargetKinds(effect.chooseOne.options);
       return {
         state: ctx.state,
         rng: ctx.rng,
@@ -86,6 +88,7 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
           name: resolvedBind,
           type: 'chooseOne',
           options: normalizedOptions,
+          targetKinds,
         },
       };
     }
@@ -197,6 +200,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const clampedMax = Math.min(maxCardinality, normalizedOptions.length);
   if (!Object.prototype.hasOwnProperty.call(ctx.moveParams, decisionId)) {
     if (resolveInterpreterMode(ctx) === 'discovery') {
+      const targetKinds = deriveChoiceTargetKinds(chooseN.options);
       return {
         state: ctx.state,
         rng: ctx.rng,
@@ -208,6 +212,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
           name: bind,
           type: 'chooseN',
           options: normalizedOptions,
+          targetKinds,
           min: minCardinality,
           max: clampedMax,
         },

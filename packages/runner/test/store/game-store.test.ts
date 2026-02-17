@@ -13,6 +13,7 @@ import {
 
 import { createGameStore } from '../../src/store/game-store.js';
 import { createGameWorker, type GameWorkerAPI, type WorkerError } from '../../src/worker/game-worker-api.js';
+import { CHOOSE_N_TEST_DEF } from '../worker/test-fixtures.js';
 
 function compileStoreFixture(terminalThreshold: number): GameDef {
   const compiled = compileGameSpecToGameDef({
@@ -133,6 +134,8 @@ function createChoiceBridgeStub(def: GameDef): GameWorkerAPI {
   const state = initialState(def, 100, 2);
   const legalMove = { actionId: asActionId('pick-two'), params: {} };
   const validChoices = new Set(['table:none', 'reserve:none']);
+  const firstDecisionId = 'decision:first';
+  const secondDecisionId = 'decision:second';
 
   return createBridgeStub({
     init: () => state,
@@ -142,16 +145,17 @@ function createChoiceBridgeStub(def: GameDef): GameWorkerAPI {
     }),
     terminalResult: () => null,
     legalChoices: (partialMove) => {
-      const firstZone = partialMove.params.firstZone;
-      const secondZone = partialMove.params.secondZone;
+      const firstZone = partialMove.params[firstDecisionId];
+      const secondZone = partialMove.params[secondDecisionId];
       if (firstZone === undefined) {
         return {
           kind: 'pending',
           complete: false,
-          decisionId: 'decision:first',
+          decisionId: firstDecisionId,
           name: 'firstZone',
           type: 'chooseOne',
           options: ['table:none', 'reserve:none'],
+          targetKinds: ['zone'],
         };
       }
 
@@ -167,57 +171,15 @@ function createChoiceBridgeStub(def: GameDef): GameWorkerAPI {
         return {
           kind: 'pending',
           complete: false,
-          decisionId: 'decision:second',
+          decisionId: secondDecisionId,
           name: 'secondZone',
           type: 'chooseOne',
           options: ['table:none', 'reserve:none'],
+          targetKinds: ['zone'],
         };
       }
 
       if (typeof secondZone !== 'string' || !validChoices.has(secondZone)) {
-        return {
-          kind: 'illegal',
-          complete: false,
-          reason: 'pipelineLegalityFailed',
-        };
-      }
-
-      return {
-        kind: 'complete',
-        complete: true,
-      };
-    },
-  });
-}
-
-function createChooseNBridgeStub(def: GameDef): GameWorkerAPI {
-  const state = initialState(def, 100, 2);
-  const legalMove = { actionId: asActionId('pick-two'), params: {} };
-  const validChoices = new Set(['table:none', 'reserve:none']);
-
-  return createBridgeStub({
-    init: () => state,
-    enumerateLegalMoves: () => ({
-      moves: [legalMove],
-      warnings: [],
-    }),
-    terminalResult: () => null,
-    legalChoices: (partialMove) => {
-      const firstZone = partialMove.params.firstZone;
-      if (firstZone === undefined) {
-        return {
-          kind: 'pending',
-          complete: false,
-          decisionId: 'decision:first-many',
-          name: 'firstZone',
-          type: 'chooseN',
-          min: 1,
-          max: 2,
-          options: ['table:none', 'reserve:none'],
-        };
-      }
-
-      if (!Array.isArray(firstZone) || firstZone.some((choice) => typeof choice !== 'string' || !validChoices.has(choice))) {
         return {
           kind: 'illegal',
           complete: false,
@@ -299,8 +261,8 @@ describe('createGameStore', () => {
     expect(state.choicePending).toBeNull();
     expect(state.choiceStack).toHaveLength(2);
     expect(state.partialMove?.params).toEqual({
-      firstZone: firstChoice,
-      secondZone: secondChoice,
+      'decision:first': firstChoice,
+      'decision:second': secondChoice,
     });
   });
 
@@ -342,21 +304,32 @@ describe('createGameStore', () => {
     expect(after.choicePending).toEqual(before.choicePending);
   });
 
-  it('makeChoice supports chooseN options with min/max metadata', () => {
-    const def = compileStoreFixture(5);
-    const bridge = createChooseNBridgeStub(def);
+  it('makeChoice supports chooseN options with min/max metadata through createGameWorker', () => {
+    const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 15, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-two'));
+    store.getState().initGame(CHOOSE_N_TEST_DEF, 15, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-many'));
 
-    expect(store.getState().choicePending?.type).toBe('chooseN');
-    expect(store.getState().choicePending?.min).toBe(1);
-    expect(store.getState().choicePending?.max).toBe(2);
+    const pending = store.getState().choicePending;
+    expect(pending?.type).toBe('chooseN');
+    expect(pending?.min).toBe(1);
+    expect(pending?.max).toBe(2);
+    if (pending === null) {
+      throw new Error('Expected chooseN request.');
+    }
 
-    store.getState().makeChoice(['table:none', 'reserve:none']);
+    const selected = pending.options.slice(0, 2);
+    expect(selected).toEqual(['a', 'b']);
+    const selectedValues = selected.filter((value): value is string => typeof value === 'string');
+    expect(selectedValues).toEqual(['a', 'b']);
+    store.getState().makeChoice(selectedValues);
 
-    expect(store.getState().choicePending).toBeNull();
-    expect(store.getState().partialMove?.params.firstZone).toEqual(['table:none', 'reserve:none']);
+    const state = store.getState();
+    expect(state.choicePending).toBeNull();
+    expect(state.partialMove?.params[pending.decisionId]).toEqual(['a', 'b']);
+    expect(state.renderModel?.choiceType).toBeNull();
+    expect(state.renderModel?.choiceMin).toBeNull();
+    expect(state.renderModel?.choiceMax).toBeNull();
   });
 
   it('confirmMove applies move, refreshes state, and resets move construction', () => {

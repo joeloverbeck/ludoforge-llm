@@ -631,6 +631,7 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           name: 'pick-target',
           type: 'chooseOne',
           options: ['table:none', 't2'],
+          targetKinds: ['zone'],
         },
       }),
     );
@@ -654,6 +655,7 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           name: 'pick-target',
           type: 'chooseOne',
           options: ['table:none', ['t2', asPlayerId(1)]],
+          targetKinds: ['token'],
         },
       }),
     );
@@ -675,6 +677,7 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
           name: 'pick-target',
           type: 'chooseOne',
           options: ['table:none'],
+          targetKinds: ['zone'],
         },
       }),
     );

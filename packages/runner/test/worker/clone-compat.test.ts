@@ -216,6 +216,7 @@ describe('worker boundary structured clone compatibility', () => {
         name: 'pick',
         type: 'chooseOne',
         options: [1, 'x', true],
+        targetKinds: [],
       },
       {
         kind: 'complete',

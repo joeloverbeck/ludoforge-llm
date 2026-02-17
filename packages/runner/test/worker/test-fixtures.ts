@@ -93,6 +93,78 @@ export const RANGE_TEST_DEF = makeTestDef({
   maxPlayers: 4,
 });
 
+export const CHOOSE_N_TEST_DEF = (() => {
+  const compiled = compileGameSpecToGameDef({
+    ...createEmptyGameSpecDoc(),
+    metadata: {
+      id: 'runner-worker-test-choose-n',
+      players: {
+        min: 2,
+        max: 2,
+      },
+    },
+    globalVars: [
+      {
+        name: 'tick',
+        type: 'int',
+        init: 0,
+        min: 0,
+        max: 100,
+      },
+    ],
+    zones: [
+      {
+        id: 'table',
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+      },
+    ],
+    turnStructure: {
+      phases: [{ id: 'main' }],
+    },
+    actions: [
+      {
+        id: 'pick-many',
+        actor: 'active',
+        executor: 'actor',
+        phase: ['main'],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseN: {
+              bind: '$targets',
+              options: {
+                query: 'enums',
+                values: ['a', 'b', 'c'],
+              },
+              min: 1,
+              max: 2,
+            },
+          },
+        ],
+        limits: [],
+      },
+    ],
+    terminal: {
+      conditions: [
+        {
+          when: { op: '>=', left: { ref: 'gvar', var: 'tick' }, right: 999 },
+          result: { type: 'draw' },
+        },
+      ],
+    },
+  });
+
+  if (compiled.gameDef === null) {
+    throw new Error(`Expected chooseN GameDef fixture to compile: ${JSON.stringify(compiled.diagnostics)}`);
+  }
+
+  return compiled.gameDef;
+})();
+
 export const LEGAL_TICK_MOVE: Move = {
   actionId: asActionId('tick'),
   params: {},

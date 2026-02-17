@@ -7,11 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "clean": "rm -rf dist",
+    "lint": "eslint . --ext .ts,.tsx",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview"
   },
   "dependencies": {
     "@ludoforge/engine": "workspace:*",
+    "comlink": "^4.4.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
@@ -20,6 +23,7 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
     "typescript": "^5.9.2",
-    "vite": "^7.0.0"
+    "vite": "^7.0.0",
+    "vitest": "^3.2.4"
   }
 }

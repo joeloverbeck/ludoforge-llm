@@ -26,13 +26,16 @@ This repository contains both implementation code and design artifacts.
 ## Build, Test, and Development Commands
 Primary workflow commands:
 - `pnpm turbo build`: build all workspace packages in dependency order.
-- `pnpm turbo test`: run workspace tests with build preconditions.
+- `pnpm turbo test`: run workspace tests with build preconditions (Turbo may return cached results when inputs are unchanged).
 - `pnpm turbo lint`: run lint tasks across packages.
 - `pnpm turbo typecheck`: run type checks across packages.
 - `pnpm turbo schema:artifacts`: regenerate/check engine schema artifacts.
 - `pnpm -F @ludoforge/engine test`: run engine unit + integration tests.
 - `pnpm -F @ludoforge/engine test:e2e`: run engine e2e tests.
+- `pnpm -F @ludoforge/engine test:all`: run full engine suite (unit + integration + e2e).
 - `pnpm -F @ludoforge/runner dev`: start runner Vite dev server.
+- `pnpm -F @ludoforge/runner test`: run runner tests (Vitest).
+- `pnpm -F @ludoforge/runner lint`: run runner lint checks.
 - `pnpm -F @ludoforge/runner typecheck`: run runner TypeScript checks.
 
 Useful repo-navigation commands:
@@ -61,6 +64,7 @@ For code changes:
 - run targeted tests when possible (example: `node --test packages/engine/dist/test/unit/<file>.test.js`).
 - if running `node --test` directly, run `pnpm turbo build` first so `packages/engine/dist/` is up to date.
 - run at least `pnpm turbo test` before finalizing; include `pnpm -F @ludoforge/engine test:e2e` when behavior spans CLI/pipeline flows.
+- when you need a guaranteed fresh engine test execution, prefer `pnpm -F @ludoforge/engine test` (or `test:all`) or run `pnpm turbo test --force` to bypass Turbo cache.
 
 ## Commit & Pull Request Guidelines
 Keep commit subjects short and imperative. Common patterns in this repo include:

@@ -9,6 +9,12 @@ interface TestDefOptions {
   readonly maxPlayers: number;
 }
 
+interface ProgressiveTestDefOptions {
+  readonly gameId: string;
+  readonly actionId: string;
+  readonly effects: readonly ({ readonly chooseOne: unknown } | { readonly chooseN: unknown })[];
+}
+
 const makeTestDef = (options: TestDefOptions): GameDef => {
   const doc = {
     ...createEmptyGameSpecDoc(),
@@ -93,11 +99,11 @@ export const RANGE_TEST_DEF = makeTestDef({
   maxPlayers: 4,
 });
 
-export const CHOOSE_N_TEST_DEF = (() => {
+const makeProgressiveTestDef = (options: ProgressiveTestDefOptions): GameDef => {
   const compiled = compileGameSpecToGameDef({
     ...createEmptyGameSpecDoc(),
     metadata: {
-      id: 'runner-worker-test-choose-n',
+      id: options.gameId,
       players: {
         min: 2,
         max: 2,
@@ -125,26 +131,14 @@ export const CHOOSE_N_TEST_DEF = (() => {
     },
     actions: [
       {
-        id: 'pick-many',
+        id: options.actionId,
         actor: 'active',
         executor: 'actor',
         phase: ['main'],
         params: [],
         pre: null,
         cost: [],
-        effects: [
-          {
-            chooseN: {
-              bind: '$targets',
-              options: {
-                query: 'enums',
-                values: ['a', 'b', 'c'],
-              },
-              min: 1,
-              max: 2,
-            },
-          },
-        ],
+        effects: options.effects,
         limits: [],
       },
     ],
@@ -159,11 +153,72 @@ export const CHOOSE_N_TEST_DEF = (() => {
   });
 
   if (compiled.gameDef === null) {
-    throw new Error(`Expected chooseN GameDef fixture to compile: ${JSON.stringify(compiled.diagnostics)}`);
+    throw new Error(`Expected progressive GameDef fixture to compile: ${JSON.stringify(compiled.diagnostics)}`);
   }
 
   return compiled.gameDef;
-})();
+};
+
+export const CHOOSE_N_TEST_DEF = makeProgressiveTestDef({
+  gameId: 'runner-worker-test-choose-n',
+  actionId: 'pick-many',
+  effects: [
+    {
+      chooseN: {
+        bind: '$targets',
+        options: {
+          query: 'enums',
+          values: ['a', 'b', 'c'],
+        },
+        min: 1,
+        max: 2,
+      },
+    },
+  ],
+});
+
+export const CHOOSE_ONE_TEST_DEF = makeProgressiveTestDef({
+  gameId: 'runner-worker-test-choose-one',
+  actionId: 'pick-one',
+  effects: [
+    {
+      chooseOne: {
+        bind: '$target',
+        options: {
+          query: 'enums',
+          values: ['a', 'b', 'c'],
+        },
+      },
+    },
+  ],
+});
+
+export const CHOOSE_MIXED_TEST_DEF = makeProgressiveTestDef({
+  gameId: 'runner-worker-test-choose-mixed',
+  actionId: 'pick-mixed',
+  effects: [
+    {
+      chooseOne: {
+        bind: '$single',
+        options: {
+          query: 'enums',
+          values: ['x', 'y'],
+        },
+      },
+    },
+    {
+      chooseN: {
+        bind: '$many',
+        options: {
+          query: 'enums',
+          values: ['m1', 'm2', 'm3'],
+        },
+        min: 1,
+        max: 2,
+      },
+    },
+  ],
+});
 
 export const LEGAL_TICK_MOVE: Move = {
   actionId: asActionId('tick'),

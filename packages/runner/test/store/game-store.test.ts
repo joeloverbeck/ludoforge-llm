@@ -13,7 +13,7 @@ import {
 
 import { createGameStore } from '../../src/store/game-store.js';
 import { createGameWorker, type GameWorkerAPI, type WorkerError } from '../../src/worker/game-worker-api.js';
-import { CHOOSE_N_TEST_DEF } from '../worker/test-fixtures.js';
+import { CHOOSE_MIXED_TEST_DEF, CHOOSE_N_TEST_DEF, CHOOSE_ONE_TEST_DEF } from '../worker/test-fixtures.js';
 
 function compileStoreFixture(terminalThreshold: number): GameDef {
   const compiled = compileGameSpecToGameDef({
@@ -130,71 +130,6 @@ function createBridgeStub(overrides: Partial<GameWorkerAPI>): GameWorkerAPI {
   };
 }
 
-function createChoiceBridgeStub(def: GameDef): GameWorkerAPI {
-  const state = initialState(def, 100, 2);
-  const legalMove = { actionId: asActionId('pick-two'), params: {} };
-  const validChoices = new Set(['table:none', 'reserve:none']);
-  const firstDecisionId = 'decision:first';
-  const secondDecisionId = 'decision:second';
-
-  return createBridgeStub({
-    init: () => state,
-    enumerateLegalMoves: () => ({
-      moves: [legalMove],
-      warnings: [],
-    }),
-    terminalResult: () => null,
-    legalChoices: (partialMove) => {
-      const firstZone = partialMove.params[firstDecisionId];
-      const secondZone = partialMove.params[secondDecisionId];
-      if (firstZone === undefined) {
-        return {
-          kind: 'pending',
-          complete: false,
-          decisionId: firstDecisionId,
-          name: 'firstZone',
-          type: 'chooseOne',
-          options: ['table:none', 'reserve:none'],
-          targetKinds: ['zone'],
-        };
-      }
-
-      if (typeof firstZone !== 'string' || !validChoices.has(firstZone)) {
-        return {
-          kind: 'illegal',
-          complete: false,
-          reason: 'pipelineLegalityFailed',
-        };
-      }
-
-      if (secondZone === undefined) {
-        return {
-          kind: 'pending',
-          complete: false,
-          decisionId: secondDecisionId,
-          name: 'secondZone',
-          type: 'chooseOne',
-          options: ['table:none', 'reserve:none'],
-          targetKinds: ['zone'],
-        };
-      }
-
-      if (typeof secondZone !== 'string' || !validChoices.has(secondZone)) {
-        return {
-          kind: 'illegal',
-          complete: false,
-          reason: 'pipelineLegalityFailed',
-        };
-      }
-
-      return {
-        kind: 'complete',
-        complete: true,
-      };
-    },
-  });
-}
-
 describe('createGameStore', () => {
   it('initGame populates state and enters playing lifecycle', () => {
     const def = compileStoreFixture(5);
@@ -224,59 +159,69 @@ describe('createGameStore', () => {
     expect(store.getState().gameLifecycle).toBe('terminal');
   });
 
-  it('selectAction initializes progressive choice state from legalChoices', () => {
-    const def = compileStoreFixture(5);
-    const bridge = createChoiceBridgeStub(def);
+  it('selectAction initializes progressive choice state from real worker legalChoices', () => {
+    const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 13, asPlayerId(0));
+    store.getState().initGame(CHOOSE_ONE_TEST_DEF, 13, asPlayerId(0));
 
-    store.getState().selectAction(asActionId('pick-two'));
+    store.getState().selectAction(asActionId('pick-one'));
     const state = store.getState();
 
-    expect(state.selectedAction).toEqual(asActionId('pick-two'));
+    expect(state.selectedAction).toEqual(asActionId('pick-one'));
     expect(state.partialMove).toEqual({
-      actionId: asActionId('pick-two'),
+      actionId: asActionId('pick-one'),
       params: {},
     });
     expect(state.choiceStack).toEqual([]);
     expect(state.choicePending?.kind).toBe('pending');
+    expect(state.choicePending?.type).toBe('chooseOne');
   });
 
-  it('makeChoice advances pending -> complete and stores breadcrumb choices', () => {
-    const def = compileStoreFixture(5);
-    const bridge = createChoiceBridgeStub(def);
+  it('real-worker mixed progressive flow advances through chooseOne -> chooseN and stores decisionId-keyed params', () => {
+    const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 14, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-two'));
+    store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 14, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-mixed'));
 
-    const firstChoice = pickOneOption(store);
+    const firstPending = store.getState().choicePending;
+    expect(firstPending?.type).toBe('chooseOne');
+    if (firstPending === null) {
+      throw new Error('Expected first pending request.');
+    }
+
+    const firstChoice = firstPending.options[0];
+    if (firstChoice === undefined) {
+      throw new Error('Expected first choice option.');
+    }
     store.getState().makeChoice(firstChoice);
     expect(store.getState().choiceStack).toHaveLength(1);
-    expect(store.getState().choicePending?.kind).toBe('pending');
-
-    const secondChoice = pickOneOption(store);
-    store.getState().makeChoice(secondChoice);
+    const secondPending = store.getState().choicePending;
+    expect(secondPending?.type).toBe('chooseN');
+    if (secondPending === null) {
+      throw new Error('Expected second pending request.');
+    }
+    const secondChoice = secondPending.options.slice(0, 2);
+    const secondChoiceValues = secondChoice.filter((value): value is string => typeof value === 'string');
+    store.getState().makeChoice(secondChoiceValues);
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
     expect(state.choiceStack).toHaveLength(2);
-    expect(state.partialMove?.params).toEqual({
-      'decision:first': firstChoice,
-      'decision:second': secondChoice,
-    });
+    expect(state.partialMove?.params[firstPending.decisionId]).toEqual(firstChoice);
+    expect(state.partialMove?.params[secondPending.decisionId]).toEqual(secondChoiceValues);
+    expect(state.partialMove?.params[firstPending.name]).toBeUndefined();
+    expect(state.partialMove?.params[secondPending.name]).toBeUndefined();
   });
 
-  it('clearing choicePending clears render-model choice fields', () => {
-    const def = compileStoreFixture(5);
-    const bridge = createChoiceBridgeStub(def);
+  it('clearing real-worker choicePending clears render-model choice fields', () => {
+    const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 15, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-two'));
+    store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-one'));
 
     expect(store.getState().renderModel?.choiceType).toBe('chooseOne');
     expect(store.getState().renderModel?.currentChoiceOptions).not.toBeNull();
 
-    store.getState().makeChoice(pickOneOption(store));
     store.getState().makeChoice(pickOneOption(store));
 
     const state = store.getState();
@@ -289,7 +234,33 @@ describe('createGameStore', () => {
 
   it('makeChoice illegal sets error and preserves previous move construction', () => {
     const def = compileStoreFixture(5);
-    const bridge = createChoiceBridgeStub(def);
+    const bridge = createBridgeStub({
+      init: () => initialState(def, 15, 2),
+      enumerateLegalMoves: () => ({
+        moves: [{ actionId: asActionId('pick-two'), params: {} }],
+        warnings: [],
+      }),
+      terminalResult: () => null,
+      legalChoices: (partialMove) => {
+        if (partialMove.params['decision:first'] === undefined) {
+          return {
+            kind: 'pending',
+            complete: false,
+            decisionId: 'decision:first',
+            name: 'firstZone',
+            type: 'chooseOne',
+            options: ['table:none', 'reserve:none'],
+            targetKinds: ['zone'],
+          };
+        }
+
+        return {
+          kind: 'illegal',
+          complete: false,
+          reason: 'pipelineLegalityFailed',
+        };
+      },
+    });
     const store = createGameStore(bridge);
     store.getState().initGame(def, 15, asPlayerId(0));
     store.getState().selectAction(asActionId('pick-two'));
@@ -327,9 +298,33 @@ describe('createGameStore', () => {
     const state = store.getState();
     expect(state.choicePending).toBeNull();
     expect(state.partialMove?.params[pending.decisionId]).toEqual(['a', 'b']);
+    expect(state.partialMove?.params[pending.name]).toBeUndefined();
     expect(state.renderModel?.choiceType).toBeNull();
     expect(state.renderModel?.choiceMin).toBeNull();
     expect(state.renderModel?.choiceMax).toBeNull();
+  });
+
+  it('real-worker chooseOne stores value under decisionId key (not decision name)', () => {
+    const bridge = createGameWorker();
+    const store = createGameStore(bridge);
+    store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-one'));
+
+    const pending = store.getState().choicePending;
+    expect(pending?.type).toBe('chooseOne');
+    if (pending === null) {
+      throw new Error('Expected chooseOne request.');
+    }
+    const choice = pending.options[0];
+    if (choice === undefined) {
+      throw new Error('Expected chooseOne option.');
+    }
+    store.getState().makeChoice(choice);
+
+    const state = store.getState();
+    expect(state.choicePending).toBeNull();
+    expect(state.partialMove?.params[pending.decisionId]).toEqual(choice);
+    expect(state.partialMove?.params[pending.name]).toBeUndefined();
   });
 
   it('confirmMove applies move, refreshes state, and resets move construction', () => {
@@ -418,29 +413,34 @@ describe('createGameStore', () => {
     expect(applySpy).not.toHaveBeenCalled();
   });
 
-  it('cancelChoice pops one choice and re-queries pending decision', () => {
-    const def = compileStoreFixture(5);
-    const bridge = createChoiceBridgeStub(def);
+  it('real-worker cancelChoice pops one choice and re-queries pending decision', () => {
+    const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 18, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-two'));
-
-    store.getState().makeChoice(pickOneOption(store));
-    store.getState().makeChoice(pickOneOption(store));
+    store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-mixed'));
+    const firstChoice = pickOneOption(store);
+    store.getState().makeChoice(firstChoice);
+    const secondPending = store.getState().choicePending;
+    if (secondPending === null) {
+      throw new Error('Expected second pending request.');
+    }
+    const selected = secondPending.options.slice(0, 2).filter((value): value is string => typeof value === 'string');
+    store.getState().makeChoice(selected);
     expect(store.getState().choicePending).toBeNull();
 
     store.getState().cancelChoice();
 
     expect(store.getState().choiceStack).toHaveLength(1);
     expect(store.getState().choicePending?.kind).toBe('pending');
+    expect(store.getState().choicePending?.decisionId).toBe(secondPending.decisionId);
+    expect(store.getState().choicePending?.type).toBe('chooseN');
   });
 
-  it('cancelMove clears selected action and progressive choice state', () => {
-    const def = compileStoreFixture(5);
-    const bridge = createChoiceBridgeStub(def);
+  it('real-worker cancelMove clears selected action and progressive choice state', () => {
+    const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 18, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-two'));
+    store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-mixed'));
     store.getState().makeChoice(pickOneOption(store));
 
     store.getState().cancelMove();
@@ -504,11 +504,10 @@ describe('createGameStore', () => {
   });
 
   it('omitted derivation fields remain stable on unrelated updates', () => {
-    const def = compileStoreFixture(5);
-    const bridge = createChoiceBridgeStub(def);
+    const bridge = createGameWorker();
     const store = createGameStore(bridge);
-    store.getState().initGame(def, 20, asPlayerId(0));
-    store.getState().selectAction(asActionId('pick-two'));
+    store.getState().initGame(CHOOSE_ONE_TEST_DEF, 20, asPlayerId(0));
+    store.getState().selectAction(asActionId('pick-one'));
 
     const before = store.getState();
     store.getState().setAnimationPlaying(true);

@@ -1062,6 +1062,51 @@ phase: [asPhaseId('main')],
       );
     });
 
+    it('prepares probe context once for a probed chooseN request', () => {
+      const action: ActionDef = {
+        id: asActionId('chooseNContextReuseOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseN: {
+              internalDecisionId: 'decision:reuse::$targets',
+              bind: '$targets',
+              options: { query: 'enums', values: ['a', 'b', 'c'] },
+              min: 1,
+              max: 2,
+            },
+          } as EffectAST,
+        ],
+        limits: [],
+      };
+
+      let preparedCount = 0;
+      const result = legalChoices(
+        makeBaseDef({ actions: [action] }),
+        makeBaseState(),
+        makeMove('chooseNContextReuseOp'),
+        {
+          probeOptionLegality: true,
+          onProbeContextPrepared: () => {
+            preparedCount += 1;
+          },
+        },
+      );
+
+      assert.equal(preparedCount, 1);
+      assert.equal(result.kind, 'pending');
+      assert.equal(result.type, 'chooseN');
+      assert.deepStrictEqual(
+        result.options.map((entry) => entry.legality),
+        ['legal', 'legal', 'legal'],
+      );
+    });
+
     it('marks chooseN option legality as unknown when probe combinations exceed cap', () => {
       const action: ActionDef = {
         id: asActionId('chooseNOverflowOp'),

@@ -32,10 +32,19 @@ const MAX_CHOOSE_N_OPTION_LEGALITY_COMBINATIONS = 1024;
 export interface LegalChoicesOptions {
   readonly onDeferredPredicatesEvaluated?: (count: number) => void;
   readonly probeOptionLegality?: boolean;
+  readonly onProbeContextPrepared?: () => void;
 }
 
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
+
+interface LegalChoicesPreparedContext {
+  readonly def: GameDef;
+  readonly state: GameState;
+  readonly action: ActionDef;
+  readonly adjacencyGraph: ReturnType<typeof buildAdjacencyGraph>;
+  readonly runtimeTableIndex: ReturnType<typeof buildRuntimeTableIndex>;
+}
 
 const executeDiscoveryEffects = (
   effects: readonly EffectAST[],
@@ -111,8 +120,7 @@ const enumerateCombinations = (
 };
 
 const mapChooseNOptions = (
-  def: GameDef,
-  state: GameState,
+  evaluateProbeMove: (move: Move) => ChoiceRequest,
   partialMove: Move,
   request: ChoicePendingRequest,
 ): readonly ChoiceOption[] => {
@@ -166,16 +174,14 @@ const mapChooseNOptions = (
     enumerateCombinations(uniqueOptions.length, size, (indices) => {
       const selected = indices.map((index) => uniqueOptions[index]!);
       const selectedChoice = selected as Move['params'][string];
-      const probed = legalChoices(
-        def,
-        state,
+      const probed = evaluateProbeMove(
         {
           ...partialMove,
           params: {
             ...partialMove.params,
             [request.decisionId]: selectedChoice,
           },
-        }
+        },
       );
 
       for (const option of selected) {
@@ -217,26 +223,23 @@ const mapChooseNOptions = (
 };
 
 const mapOptionsForPendingChoice = (
-  def: GameDef,
-  state: GameState,
+  evaluateProbeMove: (move: Move) => ChoiceRequest,
   partialMove: Move,
   request: ChoicePendingRequest,
 ): readonly ChoiceOption[] => {
   if (request.type === 'chooseN') {
-    return mapChooseNOptions(def, state, partialMove, request);
+    return mapChooseNOptions(evaluateProbeMove, partialMove, request);
   }
 
   return request.options.map((option) => {
-    const probed = legalChoices(
-      def,
-      state,
+    const probed = evaluateProbeMove(
       {
         ...partialMove,
         params: {
           ...partialMove.params,
           [request.decisionId]: option.value,
         },
-      }
+      },
     );
 
     const illegalReason = probed.kind === 'illegal' ? probed.reason : null;
@@ -248,23 +251,12 @@ const mapOptionsForPendingChoice = (
   });
 };
 
-export function legalChoices(
-  def: GameDef,
-  state: GameState,
+const legalChoicesWithPreparedContext = (
+  context: LegalChoicesPreparedContext,
   partialMove: Move,
   options?: LegalChoicesOptions,
-): ChoiceRequest {
-  const action = findAction(def, partialMove.actionId);
-  if (action === undefined) {
-    throw kernelRuntimeError(
-      'LEGAL_CHOICES_UNKNOWN_ACTION',
-      `legalChoices: unknown action id: ${String(partialMove.actionId)}`,
-      { actionId: partialMove.actionId },
-    );
-  }
-
-  const adjacencyGraph = buildAdjacencyGraph(def.zones);
-  const runtimeTableIndex = buildRuntimeTableIndex(def);
+): ChoiceRequest => {
+  const { def, state, action, adjacencyGraph, runtimeTableIndex } = context;
   const baseBindings: Record<string, unknown> = {
     ...buildMoveRuntimeBindings(partialMove),
   };
@@ -336,7 +328,11 @@ export function legalChoices(
 
     return {
       ...request,
-      options: mapOptionsForPendingChoice(def, state, partialMove, request),
+      options: mapOptionsForPendingChoice(
+        (probeMove) => legalChoicesWithPreparedContext(context, probeMove),
+        partialMove,
+        request,
+      ),
     };
   }
 
@@ -347,6 +343,36 @@ export function legalChoices(
 
   return {
     ...request,
-    options: mapOptionsForPendingChoice(def, state, partialMove, request),
+    options: mapOptionsForPendingChoice(
+      (probeMove) => legalChoicesWithPreparedContext(context, probeMove),
+      partialMove,
+      request,
+    ),
   };
+};
+
+export function legalChoices(
+  def: GameDef,
+  state: GameState,
+  partialMove: Move,
+  options?: LegalChoicesOptions,
+): ChoiceRequest {
+  const action = findAction(def, partialMove.actionId);
+  if (action === undefined) {
+    throw kernelRuntimeError(
+      'LEGAL_CHOICES_UNKNOWN_ACTION',
+      `legalChoices: unknown action id: ${String(partialMove.actionId)}`,
+      { actionId: partialMove.actionId },
+    );
+  }
+
+  const context: LegalChoicesPreparedContext = {
+    def,
+    state,
+    action,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    runtimeTableIndex: buildRuntimeTableIndex(def),
+  };
+  options?.onProbeContextPrepared?.();
+  return legalChoicesWithPreparedContext(context, partialMove, options);
 }

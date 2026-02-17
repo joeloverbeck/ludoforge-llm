@@ -10,6 +10,10 @@
 
 Run the full Spec 35 D8 post-move verification checklist. Update `CLAUDE.md` and `AGENTS.md` to reflect the new monorepo directory structure. Verify that the schema artifacts pipeline, ESLint, and all test suites work correctly in the new layout.
 
+Execution policy for post-move verification:
+- Use Turborepo commands as the canonical path for ordered execution.
+- Do not run test commands that read `dist/` concurrently with commands that rebuild/clean `dist/`.
+
 ---
 
 ## Tasks
@@ -30,6 +34,7 @@ Run each and confirm:
 - [ ] No Vite resolve aliases used (check `packages/runner/vite.config.ts`).
 - [ ] `pnpm turbo lint` passes.
 - [ ] `pnpm turbo typecheck` passes.
+- [ ] If `pnpm -F @ludoforge/engine test:e2e` is run, it is executed only after `pnpm turbo build` and never in parallel with `pnpm turbo test`.
 
 ### 2. Update `CLAUDE.md`
 
@@ -81,6 +86,7 @@ After updating, verify that every command listed in CLAUDE.md actually works whe
 ### Invariants that must remain true
 
 - `CLAUDE.md` "Build & Test Commands" section uses `pnpm turbo` commands (not `npm`).
+- `CLAUDE.md` documents `pnpm turbo` as the canonical path for build/test ordering.
 - `CLAUDE.md` "Project Structure" tree shows `packages/engine/` and `packages/runner/`.
 - `CLAUDE.md` "Tech Stack" mentions pnpm, Turborepo, Vite, React 19.
 - All engine test counts match the MONOREPO-001 baseline (no tests lost or broken).

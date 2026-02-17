@@ -11,6 +11,10 @@
 
 Configure the engine as a proper workspace package: create its `package.json` with subpath exports, create its `tsconfig.json` extending the base, update the root `package.json` for turbo-driven scripts, update `eslint.config.js` for the new directory layout, and fix the `data/` path resolution in `production-spec-helpers.ts`. After this ticket, `pnpm turbo build` and `pnpm -F @ludoforge/engine test` must succeed.
 
+Execution policy for this ticket:
+- Canonical verification path is Turborepo (`pnpm turbo ...`) to guarantee task ordering.
+- Direct filtered package commands are allowed only when build outputs are already present from the same run, or when explicitly prefixed with a build step in the same command sequence.
+
 ---
 
 ## Tasks
@@ -146,7 +150,7 @@ This is the ONLY source code change in the entire restructure — a test infrast
 - `pnpm turbo build` compiles the engine
 - `pnpm -F @ludoforge/engine test` passes all tests
 - `pnpm turbo schema:artifacts` generates schemas correctly
-- `pnpm -F @ludoforge/engine test:e2e` runs e2e tests
+- `pnpm -F @ludoforge/engine test:e2e` runs e2e tests only after an explicit build precondition (`pnpm turbo build && pnpm -F @ludoforge/engine test:e2e`)
 
 ---
 
@@ -180,8 +184,9 @@ This is the ONLY source code change in the entire restructure — a test infrast
 
 - `pnpm install` exits 0 with no peer dependency errors.
 - `pnpm turbo build` exits 0 and produces `packages/engine/dist/`.
-- `pnpm -F @ludoforge/engine test` exits 0 with identical test count/results to MONOREPO-001 baseline.
-- `pnpm -F @ludoforge/engine test:e2e` exits 0 (e2e tests that use `data/` paths pass).
+- `pnpm turbo test` exits 0 (canonical build-ordered path).
+- `pnpm -F @ludoforge/engine test` exits 0 with identical test count/results to MONOREPO-001 baseline when run after `pnpm turbo build`.
+- `pnpm -F @ludoforge/engine test:e2e` exits 0 when run after `pnpm turbo build` (e2e tests that use `data/` paths pass).
 - `pnpm turbo schema:artifacts` exits 0 and writes to `packages/engine/schemas/`.
 - `pnpm turbo lint` exits 0.
 - `pnpm turbo typecheck` exits 0.
@@ -193,6 +198,7 @@ This is the ONLY source code change in the entire restructure — a test infrast
 - `packages/engine/tsconfig.json` extends `../../tsconfig.base.json`.
 - `packages/engine/tsconfig.json` has `"composite": true`.
 - Root `package.json` scripts all use `turbo` (no direct `tsc` or `node --test`).
+- Verification steps do not run `pnpm turbo test` and direct `pnpm -F @ludoforge/engine test:e2e` concurrently.
 - Root `package.json` has no `dependencies` (only `devDependencies`).
 - Engine tests compile and reference `data/` at repo root via `../../data/`.
 - `FIXTURE_BASE_PATH` in production-spec-helpers.ts still uses `process.cwd()` + `test/fixtures/...` (unchanged — `test/` moved with engine).

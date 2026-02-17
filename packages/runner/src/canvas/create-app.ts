@@ -36,7 +36,7 @@ export async function createGameCanvas(
   });
 
   container.appendChild(app.canvas);
-  const layers = createLayerHierarchy(app.stage);
+  const layers = createLayerHierarchy();
 
   return {
     app,

@@ -20,7 +20,7 @@ function configureLayer(
   layer.sortableChildren = true;
 }
 
-export function createLayerHierarchy(stage: Container): LayerHierarchy {
+export function createLayerHierarchy(): LayerHierarchy {
   const boardGroup = new Container();
   const adjacencyLayer = new Container();
   const zoneLayer = new Container();
@@ -44,7 +44,6 @@ export function createLayerHierarchy(stage: Container): LayerHierarchy {
   zoneLayer.sortableChildren = true;
 
   boardGroup.addChild(adjacencyLayer, zoneLayer);
-  stage.addChild(boardGroup, tokenGroup, effectsGroup, interfaceGroup, hudGroup);
 
   return {
     boardGroup,

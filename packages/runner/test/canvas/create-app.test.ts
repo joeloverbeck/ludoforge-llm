@@ -86,7 +86,7 @@ describe('createGameCanvas', () => {
     expect(initOptions.resolution).toBeGreaterThan(0);
 
     expect(appendChild).toHaveBeenCalledWith(app.canvas);
-    expect(createLayerHierarchyMock).toHaveBeenCalledWith(app.stage);
+    expect(createLayerHierarchyMock).toHaveBeenCalledWith();
     expect(gameCanvas.app).toBe(app);
     expect(gameCanvas.layers).toBe(layersMock);
   });

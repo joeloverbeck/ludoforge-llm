@@ -1,6 +1,6 @@
 # WRKBRIDGE-004: Structured Clone Compatibility Tests (D3)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: S
 **Spec**: 36, Deliverable D3 (Structured Clone Verification)
@@ -10,12 +10,26 @@
 
 All data crossing the Worker boundary must survive `structuredClone()`. The kernel uses branded types (string/number aliases — clone-safe), BigInt for Zobrist hashes and PRNG state (structuredClone supports BigInt natively), and deeply nested plain objects. We need tests that verify every kernel type used by the bridge round-trips through `structuredClone()` without data loss.
 
+## Assumptions Reassessment (2026-02-17)
+
+- Runner tests are executed with Vitest (`pnpm -F @ludoforge/runner test`), not `node --test`.
+- Worker contracts are authored in `packages/runner/src/worker/game-worker-api.ts` and re-exported via `packages/runner/src/worker/game-worker.ts`.
+- D3 clone checks should focus on values that actually cross the bridge boundary today:
+  - engine API payloads (`GameDef`, `GameState`, `Move`, `ApplyMoveResult`, `ChoiceRequest`, `TerminalResult`, `LegalMoveEnumerationResult`, warnings/trace arrays),
+  - worker-specific payloads (`GameMetadata`, `WorkerError`).
+- `GameState` has branded scalar fields (`activePlayer`, `currentPhase`) and bigint fields (`stateHash`, PRNG state words). Zone references are plain string keys in maps, not `ZoneId`-typed fields.
+- Existing worker behavior tests already cover API semantics (`packages/runner/test/worker/game-worker.test.ts`). This ticket remains focused on structured-clone safety.
+
+## Scope Decision
+
+The proposed change (dedicated clone-compat tests) is more beneficial than the current architecture because it enforces a non-negotiable worker boundary invariant without changing runtime code paths. This is additive verification, not aliasing/backward-compat scaffolding, and strengthens long-term robustness for Comlink/Worker transport.
+
 ## What to Change
 
 Create `packages/runner/test/worker/clone-compat.test.ts` containing structured clone round-trip tests for every type that crosses the worker boundary:
 
 ### State & definitions
-1. `GameState` round-trips (including `stateHash: bigint`, `rng` state with bigint fields, branded `PlayerId`/`ZoneId`).
+1. `GameState` round-trips (including `stateHash: bigint`, `rng` state with bigint fields, branded scalar ids such as `PlayerId`/`PhaseId`).
 2. `GameDef` round-trips (full definition with nested objects — zones, actions, turn structure, data assets).
 3. `Move` round-trips (with branded `ActionId` and typed params).
 
@@ -42,6 +56,7 @@ Create `packages/runner/test/worker/clone-compat.test.ts` containing structured 
 - Use a minimal test GameDef fixture (compile a tiny spec or hand-craft a minimal GameDef) to produce real instances of each type.
 - Alternatively, use the engine's `initialState` + `legalMoves` + `applyMove` to produce real runtime objects, then `structuredClone()` them and `deepStrictEqual` the result.
 - For types that are hard to produce naturally (some TriggerLogEntry/EffectTraceEntry variants), hand-craft representative plain objects matching the type shape.
+- Import all types from `@ludoforge/engine` and worker-local contracts from `../../src/worker/game-worker-api`; do not redefine contracts locally.
 
 ### BigInt verification
 - Explicitly test that `GameState.stateHash` (bigint) survives `structuredClone()`.
@@ -50,6 +65,8 @@ Create `packages/runner/test/worker/clone-compat.test.ts` containing structured 
 ## Files to Touch
 
 - `packages/runner/test/worker/clone-compat.test.ts` — **NEW FILE**
+- `packages/runner/test/worker/test-fixtures.ts` — **NEW FILE** (shared worker test fixture)
+- `packages/runner/test/worker/game-worker.test.ts` — reuse shared fixture to keep worker tests DRY
 
 ## Out of Scope
 
@@ -61,7 +78,7 @@ Create `packages/runner/test/worker/clone-compat.test.ts` containing structured 
 ## Acceptance Criteria
 
 ### Tests that must pass
-- All clone-compat tests pass: `node --test packages/runner/test/worker/clone-compat.test.ts` (or equivalent runner test command).
+- All clone-compat tests pass: `pnpm -F @ludoforge/runner test -- test/worker/clone-compat.test.ts` (or equivalent Vitest invocation).
 - Each test verifies `deepStrictEqual(original, structuredClone(original))`.
 
 ### Invariants
@@ -69,3 +86,19 @@ Create `packages/runner/test/worker/clone-compat.test.ts` containing structured 
 - Every type listed in Spec 36 D3 has at least one round-trip test.
 - BigInt fields are explicitly verified (not just "it didn't throw").
 - No engine source files are modified.
+
+## Outcome
+
+- **Completion date**: 2026-02-17
+- **What changed**:
+  - Added `packages/runner/test/worker/clone-compat.test.ts` with structured-clone round-trip tests covering all D3 type families, including explicit bigint checks for `GameState.stateHash` and PRNG words.
+  - Added `packages/runner/test/worker/test-fixtures.ts` so worker tests share a single minimal compiled fixture definition/move set.
+  - Updated `packages/runner/test/worker/game-worker.test.ts` to use shared fixtures (no behavior change).
+  - Updated ticket assumptions/scope to match current repo architecture and test tooling.
+- **Deviations from original plan**:
+  - The original ticket expected a single new test file; a small fixture module extraction was added to prevent repeated fixture construction across worker tests.
+  - Acceptance command was corrected from `node --test` to Vitest.
+- **Verification results**:
+  - `pnpm -F @ludoforge/runner test` ✅
+  - `pnpm -F @ludoforge/runner typecheck` ✅
+  - `pnpm -F @ludoforge/runner lint` ✅

@@ -1,0 +1,12 @@
+.container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.canvasLayer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-canvas);
+}

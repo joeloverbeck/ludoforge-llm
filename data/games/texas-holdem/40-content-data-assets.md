@@ -5,6 +5,10 @@ dataAssets:
   - id: standard-52-deck
     kind: pieceCatalog
     payload:
+      factions:
+        - id: neutral
+          color: "#6c757d"
+          displayName: Neutral
       pieceTypes:
         - id: card-2S
           faction: neutral

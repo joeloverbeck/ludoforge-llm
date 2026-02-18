@@ -545,6 +545,49 @@ describe('createTokenRenderer', () => {
     expect(countBadge.visible).toBe(true);
   });
 
+  it('does not stack non-selectable tokens when ownerID differs', () => {
+    const parent = new MockContainer();
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [
+        makeToken({ id: 'token:1', type: 'troop', zoneID: 'zone:a', ownerID: asPlayerId(0), isSelectable: false }),
+        makeToken({ id: 'token:2', type: 'troop', zoneID: 'zone:a', ownerID: asPlayerId(1), isSelectable: false }),
+      ],
+      createZoneContainers([
+        ['zone:a', { x: 50, y: 75 }],
+      ]),
+    );
+
+    expect(parent.children).toHaveLength(2);
+    const firstContainer = renderer.getContainerMap().get('token:1');
+    const secondContainer = renderer.getContainerMap().get('token:2');
+    expect(firstContainer).toBeDefined();
+    expect(secondContainer).toBeDefined();
+    expect(firstContainer).not.toBe(secondContainer);
+  });
+
+  it('uses collision-safe stack keying for zone/type dimensions', () => {
+    const parent = new MockContainer();
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [
+        makeToken({ id: 'token:1', zoneID: 'zone:a', type: 'troop', isSelectable: false }),
+        makeToken({ id: 'token:2', zoneID: 'zone', type: 'a:troop', isSelectable: false }),
+      ],
+      createZoneContainers([
+        ['zone:a', { x: 50, y: 75 }],
+        ['zone', { x: 80, y: 75 }],
+      ]),
+    );
+
+    expect(parent.children).toHaveLength(2);
+    expect(renderer.getContainerMap().get('token:1')).not.toBe(renderer.getContainerMap().get('token:2'));
+  });
+
   it('rebinds stack hover/selection handlers when representative token id changes', () => {
     const parent = new MockContainer();
     const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };

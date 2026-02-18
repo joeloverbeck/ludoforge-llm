@@ -791,8 +791,7 @@ actor: 'active',
     assert.equal(
       compiled.diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'DATA_ASSET_SCHEMA_INVALID' &&
-          diagnostic.path === 'doc.dataAssets.1.payload.factions',
+          diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID' && diagnostic.path === 'asset.payload.factions',
       ),
       true,
     );

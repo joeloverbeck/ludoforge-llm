@@ -234,7 +234,7 @@ describe('data asset loader scaffold', () => {
     assert.equal(
       result.diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'DATA_ASSET_SCHEMA_INVALID' && diagnostic.path === 'doc.dataAssets.0.payload.factions',
+          diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID' && diagnostic.path === 'asset.payload.factions',
       ),
       true,
     );

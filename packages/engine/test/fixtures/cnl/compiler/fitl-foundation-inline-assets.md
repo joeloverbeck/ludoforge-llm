@@ -32,6 +32,9 @@ dataAssets:
   - id: fitl-piece-catalog-foundation
     kind: pieceCatalog
     payload:
+      factions:
+        - id: vc
+          color: "#e9c46a"
       pieceTypes:
         - id: vc-guerrilla
           faction: vc

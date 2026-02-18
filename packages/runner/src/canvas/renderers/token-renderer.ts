@@ -302,7 +302,7 @@ function buildRenderEntries(tokens: readonly RenderToken[]): readonly TokenRende
       continue;
     }
 
-    const key = `stack:${token.zoneID}:${token.type}:${token.factionId ?? 'none'}:${token.faceUp ? 'up' : 'down'}`;
+    const key = stackGroupKey(token);
     const list = grouped.get(key);
     if (list === undefined) {
       grouped.set(key, [token]);
@@ -320,6 +320,17 @@ function buildRenderEntries(tokens: readonly RenderToken[]): readonly TokenRende
   }
 
   return entries;
+}
+
+function stackGroupKey(token: RenderToken): string {
+  return JSON.stringify([
+    'stack',
+    token.zoneID,
+    token.type,
+    token.factionId,
+    token.ownerID,
+    token.faceUp,
+  ]);
 }
 
 function toTokenLabel(type: string): string {

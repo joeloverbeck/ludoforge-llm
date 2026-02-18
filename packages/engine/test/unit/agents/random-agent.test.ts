@@ -3,6 +3,12 @@ import { describe, it } from 'node:test';
 
 import { RandomAgent } from '../../../src/agents/random-agent.js';
 import {
+  createTemplateChooseNDuplicatesAction,
+  createTemplateChooseNDuplicatesProfile,
+  createTemplateChooseOneAction,
+  createTemplateChooseOneProfile,
+} from '../../helpers/agent-template-fixtures.js';
+import {
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -62,49 +68,6 @@ const createInput = (legalMoves: readonly Move[], rngSeed = 42n) => ({
 });
 
 // --- Fixtures for template move tests ---
-
-const createActionWithChooseOne = (id: string): ActionDef => ({
-  id: asActionId(id),
-actor: 'active',
-executor: 'actor',
-phase: [phaseId],
-  params: [],
-  pre: null,
-  cost: [],
-  effects: [
-    {
-      chooseOne: {
-        internalDecisionId: 'decision:$target',
-        bind: '$target',
-        options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
-      },
-    },
-  ],
-  limits: [],
-});
-
-const createProfileForAction = (actionId: string): ActionPipelineDef => ({
-  id: `profile-${actionId}`,
-  actionId: asActionId(actionId),
-  legality: null,
-  costValidation: null, costEffects: [],
-  targeting: {},
-  stages: [
-    {
-      stage: 'resolve',
-      effects: [
-        {
-          chooseOne: {
-            internalDecisionId: 'decision:$target',
-            bind: '$target',
-            options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
-          },
-        },
-      ],
-    },
-  ],
-  atomicity: 'atomic',
-});
 
 const createEmptyOptionsProfile = (actionId: string): ActionPipelineDef => ({
   id: `profile-${actionId}`,
@@ -210,8 +173,8 @@ describe('RandomAgent', () => {
   // --- Template move tests ---
 
   it('can play operations via template moves (fills params via legalChoicesDiscover() loop)', () => {
-    const action = createActionWithChooseOne('op1');
-    const profile = createProfileForAction('op1');
+    const action = createTemplateChooseOneAction(asActionId('op1'), phaseId);
+    const profile = createTemplateChooseOneProfile(asActionId('op1'));
     const def = createDefWithProfile([action], [profile]);
 
     const templateMove: Move = { actionId: asActionId('op1'), params: {} };
@@ -243,8 +206,8 @@ describe('RandomAgent', () => {
   });
 
   it('produces deterministic results with same seed for template moves', () => {
-    const action = createActionWithChooseOne('op1');
-    const profile = createProfileForAction('op1');
+    const action = createTemplateChooseOneAction(asActionId('op1'), phaseId);
+    const profile = createTemplateChooseOneProfile(asActionId('op1'));
     const def = createDefWithProfile([action], [profile]);
 
     const templateMove: Move = { actionId: asActionId('op1'), params: {} };
@@ -264,8 +227,31 @@ describe('RandomAgent', () => {
     assert.deepEqual(first, second);
   });
 
+  it('completes chooseN template moves with unique selections when options contain duplicates', () => {
+    const action = createTemplateChooseNDuplicatesAction(asActionId('op-choose-n'), phaseId);
+    const profile = createTemplateChooseNDuplicatesProfile(asActionId('op-choose-n'));
+    const def = createDefWithProfile([action], [profile]);
+
+    const templateMove: Move = { actionId: asActionId('op-choose-n'), params: {} };
+    const agent = new RandomAgent();
+    const result = agent.chooseMove({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: [templateMove],
+      rng: createRng(42n),
+    });
+
+    const selected = result.move.params['decision:$targets'];
+    assert.ok(Array.isArray(selected), 'expected chooseN param to be an array');
+    assert.equal(selected.length, 2);
+    assert.equal(new Set(selected).size, 2);
+    assert.equal(selected.includes('alpha'), true);
+    assert.equal(selected.includes('beta'), true);
+  });
+
   it('skips unplayable templates (empty options domain)', () => {
-    const action = createActionWithChooseOne('unplayable');
+    const action = createTemplateChooseOneAction(asActionId('unplayable'), phaseId);
     const emptyProfile = createEmptyOptionsProfile('unplayable');
 
     // Also add a simple non-template action so there's something to pick

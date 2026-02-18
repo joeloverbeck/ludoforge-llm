@@ -1,5 +1,8 @@
 import { legalChoicesEvaluate } from '../kernel/legal-choices.js';
-import { selectChoiceOptionValuesByLegalityPrecedence } from '../kernel/choice-option-policy.js';
+import {
+  selectChoiceOptionValuesByLegalityPrecedence,
+  selectUniqueChoiceOptionValuesByLegalityPrecedence,
+} from '../kernel/choice-option-policy.js';
 import { nextInt } from '../kernel/prng.js';
 import type {
   GameDef,
@@ -69,7 +72,9 @@ export const completeTemplateMove = (
       );
     }
 
-    const options = selectChoiceOptionValuesByLegalityPrecedence(choices);
+    const options = choices.type === 'chooseN'
+      ? selectUniqueChoiceOptionValuesByLegalityPrecedence(choices)
+      : selectChoiceOptionValuesByLegalityPrecedence(choices);
     const optionCount = options.length;
     const min = choices.min ?? 0;
     if (optionCount === 0) {

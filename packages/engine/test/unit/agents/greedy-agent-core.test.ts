@@ -3,6 +3,12 @@ import { describe, it } from 'node:test';
 
 import { GreedyAgent } from '../../../src/agents/greedy-agent.js';
 import {
+  createTemplateChooseNDuplicatesAction,
+  createTemplateChooseNDuplicatesProfile,
+  createTemplateChooseOneAction,
+  createTemplateChooseOneProfile,
+} from '../../helpers/agent-template-fixtures.js';
+import {
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -82,49 +88,6 @@ const stateStub: GameState = {
   turnOrderState: { type: 'roundRobin' },
   markers: {},
 };
-
-const createActionWithChooseOne = (id: string): ActionDef => ({
-  id: asActionId(id),
-actor: 'active',
-executor: 'actor',
-phase: [phaseId],
-  params: [],
-  pre: null,
-  cost: [],
-  effects: [
-    {
-      chooseOne: {
-        internalDecisionId: 'decision:$target',
-        bind: '$target',
-        options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
-      },
-    },
-  ],
-  limits: [],
-});
-
-const createProfileForAction = (actionId: string): ActionPipelineDef => ({
-  id: `profile-${actionId}`,
-  actionId: asActionId(actionId),
-  legality: null,
-  costValidation: null, costEffects: [],
-  targeting: {},
-  stages: [
-    {
-      stage: 'resolve',
-      effects: [
-        {
-          chooseOne: {
-            internalDecisionId: 'decision:$target',
-            bind: '$target',
-            options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
-          },
-        },
-      ],
-    },
-  ],
-  atomicity: 'atomic',
-});
 
 const createDefWithProfile = (
   actions: readonly ActionDef[],
@@ -280,8 +243,8 @@ describe('GreedyAgent core', () => {
   // --- Template move tests ---
 
   it('can play operations via template moves', () => {
-    const action = createActionWithChooseOne('op1');
-    const profile = createProfileForAction('op1');
+    const action = createTemplateChooseOneAction(asActionId('op1'), phaseId);
+    const profile = createTemplateChooseOneProfile(asActionId('op1'));
     const def = createDefWithProfile([action], [profile]);
 
     const templateMove: Move = { actionId: asActionId('op1'), params: {} };
@@ -314,8 +277,8 @@ describe('GreedyAgent core', () => {
   });
 
   it('produces deterministic results with same seed for template moves', () => {
-    const action = createActionWithChooseOne('op1');
-    const profile = createProfileForAction('op1');
+    const action = createTemplateChooseOneAction(asActionId('op1'), phaseId);
+    const profile = createTemplateChooseOneProfile(asActionId('op1'));
     const def = createDefWithProfile([action], [profile]);
 
     const templateMove: Move = { actionId: asActionId('op1'), params: {} };
@@ -336,8 +299,8 @@ describe('GreedyAgent core', () => {
   });
 
   it('respects maxMovesToEvaluate cap with template moves', () => {
-    const action = createActionWithChooseOne('op1');
-    const profile = createProfileForAction('op1');
+    const action = createTemplateChooseOneAction(asActionId('op1'), phaseId);
+    const profile = createTemplateChooseOneProfile(asActionId('op1'));
     const def = createDefWithProfile([action], [profile]);
 
     const templateMove: Move = { actionId: asActionId('op1'), params: {} };
@@ -354,5 +317,28 @@ describe('GreedyAgent core', () => {
     // Should still produce a valid complete move despite cap
     assert.equal(result.move.actionId, asActionId('op1'));
     assert.ok('decision:$target' in result.move.params);
+  });
+
+  it('completes chooseN template moves with unique selections when options contain duplicates', () => {
+    const action = createTemplateChooseNDuplicatesAction(asActionId('op-choose-n'), phaseId);
+    const profile = createTemplateChooseNDuplicatesProfile(asActionId('op-choose-n'));
+    const def = createDefWithProfile([action], [profile]);
+
+    const templateMove: Move = { actionId: asActionId('op-choose-n'), params: {} };
+    const agent = new GreedyAgent({ completionsPerTemplate: 1 });
+    const result = agent.chooseMove({
+      def,
+      state: stateStub,
+      playerId: asPlayerId(0),
+      legalMoves: [templateMove],
+      rng: createRng(42n),
+    });
+
+    const selected = result.move.params['decision:$targets'];
+    assert.ok(Array.isArray(selected), 'expected chooseN param to be an array');
+    assert.equal(selected.length, 2);
+    assert.equal(new Set(selected).size, 2);
+    assert.equal(selected.includes('alpha'), true);
+    assert.equal(selected.includes('beta'), true);
   });
 });

@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactElement } from 'react';
 import type { StoreApi } from 'zustand';
 
+import type { KeyboardCoordinator } from '../input/keyboard-coordinator.js';
 import type { GameStore } from '../store/game-store';
 import type { CoordinateBridge } from './coordinate-bridge';
 import { createCoordinateBridge } from './coordinate-bridge';
@@ -9,7 +10,7 @@ import { createGameCanvas, type GameCanvas as PixiGameCanvas } from './create-ap
 import { attachTokenSelectHandlers } from './interactions/token-select';
 import { attachZoneSelectHandlers } from './interactions/zone-select';
 import { createAriaAnnouncer } from './interactions/aria-announcer';
-import { attachKeyboardSelect } from './interactions/keyboard-select';
+import { attachKeyboardSelect, handleKeyboardSelectKeyDown } from './interactions/keyboard-select';
 import { createCanvasInteractionController } from './interactions/canvas-interaction-controller';
 import { createHoverTargetController } from './interactions/hover-target-controller';
 import { createPositionStore, type PositionStore } from './position-store';
@@ -42,6 +43,7 @@ interface SelectorSubscribeStore<TState> extends StoreApi<TState> {
 export interface GameCanvasProps {
   readonly store: StoreApi<GameStore>;
   readonly backgroundColor?: number;
+  readonly keyboardCoordinator?: KeyboardCoordinator;
   readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
   readonly onError?: (error: unknown) => void;
 }
@@ -55,6 +57,7 @@ interface GameCanvasRuntimeOptions {
   readonly container: HTMLElement;
   readonly store: StoreApi<GameStore>;
   readonly backgroundColor: number;
+  readonly keyboardCoordinator?: KeyboardCoordinator;
   readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
 }
 
@@ -181,19 +184,25 @@ export async function createGameCanvasRuntime(
   const unsubscribeZoneIDs = selectorStore.subscribe(selectZoneIDs, (zoneIDs) => {
     positionStore.setZoneIDs(zoneIDs);
   }, { equalityFn: stringArraysEqual });
-  const cleanupKeyboardSelect = deps.attachKeyboardSelect({
+  const keyboardSelectConfig = {
     getSelectableZoneIDs: () => interactionController.getSelectableZoneIDs(),
     getCurrentFocusedZoneID: () => interactionController.getFocusedZoneID(),
-    onSelect: (zoneId) => {
+    onSelect: (zoneId: string) => {
       interactionController.onSelectTarget({ type: 'zone', id: zoneId });
     },
-    onFocusChange: (zoneId) => {
+    onFocusChange: (zoneId: string | null) => {
       interactionController.onFocusChange(zoneId);
     },
-    onFocusAnnounce: (zoneId) => {
+    onFocusAnnounce: (zoneId: string) => {
       interactionController.onFocusAnnounce(zoneId);
     },
-  });
+  };
+  const cleanupKeyboardSelect = options.keyboardCoordinator === undefined
+    ? deps.attachKeyboardSelect(keyboardSelectConfig)
+    : options.keyboardCoordinator.register(
+      (event) => handleKeyboardSelectKeyDown(event, keyboardSelectConfig),
+      { priority: 10 },
+    );
 
   canvasUpdater.start();
 
@@ -263,6 +272,7 @@ export async function createGameCanvasRuntime(
 export function GameCanvas({
   store,
   backgroundColor = DEFAULT_BACKGROUND_COLOR,
+  keyboardCoordinator,
   onHoverAnchorChange,
   onError,
 }: GameCanvasProps): ReactElement {
@@ -282,6 +292,7 @@ export function GameCanvas({
       container,
       store,
       backgroundColor,
+      ...(keyboardCoordinator === undefined ? {} : { keyboardCoordinator }),
       ...(onHoverAnchorChange === undefined ? {} : { onHoverAnchorChange }),
     };
 
@@ -305,6 +316,7 @@ export function GameCanvas({
   }, [
     store,
     backgroundColor,
+    keyboardCoordinator,
     onHoverAnchorChange,
     onError,
   ]);

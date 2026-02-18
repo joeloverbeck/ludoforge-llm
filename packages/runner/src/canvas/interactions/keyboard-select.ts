@@ -8,6 +8,7 @@ export interface KeyboardSelectConfig {
 
 interface KeyboardEventLike {
   readonly key: string;
+  readonly defaultPrevented?: boolean;
   preventDefault(): void;
 }
 
@@ -20,6 +21,39 @@ const NEXT_KEYS = new Set(['ArrowDown', 'ArrowRight']);
 const PREVIOUS_KEYS = new Set(['ArrowUp', 'ArrowLeft']);
 const CONFIRM_KEYS = new Set(['Enter', ' ', 'Spacebar']);
 
+export function handleKeyboardSelectKeyDown(event: KeyboardEventLike, config: KeyboardSelectConfig): boolean {
+  const selectableZoneIDs = config.getSelectableZoneIDs();
+  if (selectableZoneIDs.length === 0) {
+    return false;
+  }
+
+  if (NEXT_KEYS.has(event.key)) {
+    moveFocus(config, selectableZoneIDs, 1);
+    return true;
+  }
+
+  if (PREVIOUS_KEYS.has(event.key)) {
+    moveFocus(config, selectableZoneIDs, -1);
+    return true;
+  }
+
+  if (CONFIRM_KEYS.has(event.key)) {
+    const focusedZoneID = config.getCurrentFocusedZoneID();
+    if (focusedZoneID === null || !selectableZoneIDs.includes(focusedZoneID)) {
+      return false;
+    }
+    config.onSelect(focusedZoneID);
+    return true;
+  }
+
+  if (event.key === 'Escape') {
+    config.onFocusChange(null);
+    return true;
+  }
+
+  return false;
+}
+
 export function attachKeyboardSelect(config: KeyboardSelectConfig): () => void {
   const keydownTarget = resolveKeydownTarget();
   if (keydownTarget === null) {
@@ -27,36 +61,12 @@ export function attachKeyboardSelect(config: KeyboardSelectConfig): () => void {
   }
 
   const onKeyDown = (event: KeyboardEventLike): void => {
-    const selectableZoneIDs = config.getSelectableZoneIDs();
-    if (selectableZoneIDs.length === 0) {
+    if (event.defaultPrevented === true) {
       return;
     }
 
-    if (NEXT_KEYS.has(event.key)) {
+    if (handleKeyboardSelectKeyDown(event, config)) {
       event.preventDefault();
-      moveFocus(config, selectableZoneIDs, 1);
-      return;
-    }
-
-    if (PREVIOUS_KEYS.has(event.key)) {
-      event.preventDefault();
-      moveFocus(config, selectableZoneIDs, -1);
-      return;
-    }
-
-    if (CONFIRM_KEYS.has(event.key)) {
-      const focusedZoneID = config.getCurrentFocusedZoneID();
-      if (focusedZoneID === null || !selectableZoneIDs.includes(focusedZoneID)) {
-        return;
-      }
-      event.preventDefault();
-      config.onSelect(focusedZoneID);
-      return;
-    }
-
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      config.onFocusChange(null);
     }
   };
 

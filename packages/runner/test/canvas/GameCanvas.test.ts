@@ -304,6 +304,35 @@ describe('createGameCanvasRuntime', () => {
     expect(onHoverAnchorChange).toHaveBeenLastCalledWith(null);
   });
 
+  it('uses provided keyboard coordinator instead of attaching a second document listener', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+    const coordinatorCleanup = vi.fn(() => {
+      fixture.lifecycle.push('keyboard-cleanup');
+    });
+    const register = vi.fn(() => coordinatorCleanup);
+    const keyboardCoordinator = {
+      register,
+      destroy: vi.fn(),
+    };
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x111111,
+        keyboardCoordinator,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    expect(register).toHaveBeenCalledTimes(1);
+    expect(fixture.attachKeyboardSelect).not.toHaveBeenCalled();
+
+    runtime.destroy();
+    expect(coordinatorCleanup).toHaveBeenCalledTimes(1);
+  });
+
   it('emits explicit screen-space hover anchors on enter/leave', async () => {
     const fixture = createRuntimeFixture();
     const onHoverAnchorChange = vi.fn();

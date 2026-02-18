@@ -1,10 +1,11 @@
-import { useCallback, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { useStore } from 'zustand';
 import type { StoreApi } from 'zustand';
 
 import { GameCanvas } from '../canvas/GameCanvas.js';
 import type { ScreenRect } from '../canvas/coordinate-bridge.js';
 import type { HoverAnchor, HoveredCanvasTarget } from '../canvas/hover-anchor-contract.js';
+import { createKeyboardCoordinator } from '../input/keyboard-coordinator.js';
 import type { GameStore } from '../store/game-store.js';
 import { ActionToolbar } from './ActionToolbar.js';
 import { ChoicePanel } from './ChoicePanel.js';
@@ -26,6 +27,7 @@ import { WarningsToast } from './WarningsToast.js';
 import { TooltipLayer } from './TooltipLayer.js';
 import { TerminalOverlay } from './TerminalOverlay.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
+import { useKeyboardShortcuts } from './useKeyboardShortcuts.js';
 import styles from './GameContainer.module.css';
 
 interface GameContainerProps {
@@ -87,6 +89,19 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
   const error = useStore(store, (state) => state.error);
   const renderModel = useStore(store, (state) => state.renderModel);
   const [hoverAnchor, setHoverAnchor] = useState<HoverAnchor | null>(null);
+  const keyboardShortcutsEnabled = error === null && (gameLifecycle === 'playing' || gameLifecycle === 'terminal');
+  const keyboardCoordinator = useMemo(
+    () => (typeof document === 'undefined' ? null : createKeyboardCoordinator(document)),
+    [],
+  );
+
+  useKeyboardShortcuts(store, keyboardShortcutsEnabled, keyboardCoordinator ?? undefined);
+
+  useEffect(() => {
+    return () => {
+      keyboardCoordinator?.destroy();
+    };
+  }, [keyboardCoordinator]);
 
   if (error !== null) {
     return (
@@ -137,6 +152,7 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
       <div className={styles.canvasLayer}>
         <GameCanvas
           store={store}
+          {...(keyboardCoordinator === null ? {} : { keyboardCoordinator })}
           onHoverAnchorChange={onHoverAnchorChange}
         />
       </div>

@@ -352,6 +352,53 @@ describe('data asset loader scaffold', () => {
     }
   });
 
+  it('enforces array-valued attributeEquals in marker constraints by value', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
+    try {
+      const assetPath = join(dir, 'foundation-map-marker-constraint-array-attrs.v1.json');
+      writeFileSync(
+        assetPath,
+        JSON.stringify({
+          id: 'fitl-map-marker-constraint-array-attrs',
+          kind: 'map',
+          payload: {
+            spaces: [
+              {
+                id: 'hue:none',
+                category: 'city',
+                attributes: { terrainTags: ['urban', 'coastal'] },
+                adjacentTo: [],
+              },
+            ],
+            markerLattices: [
+              {
+                id: 'support-opposition',
+                states: ['neutral', 'passive-support'],
+                defaultState: 'neutral',
+                constraints: [
+                  {
+                    attributeEquals: { terrainTags: ['urban', 'coastal'] },
+                    allowedStates: ['neutral'],
+                  },
+                ],
+              },
+            ],
+            spaceMarkers: [{ spaceId: 'hue:none', markerId: 'support-opposition', state: 'passive-support' }],
+          },
+        }),
+        'utf8',
+      );
+
+      const result = loadDataAssetEnvelopeFromFile(assetPath);
+      assert.equal(result.asset, null);
+      const diag = result.diagnostics.find((entry) => entry.code === 'MAP_MARKER_CONSTRAINT_VIOLATION');
+      assert.notEqual(diag, undefined);
+      assert.equal(diag?.path, 'asset.payload.spaces[0].id');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('rejects piece-catalog transitions for undeclared dimensions with asset context', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
     try {

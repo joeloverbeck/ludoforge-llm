@@ -27,9 +27,19 @@ const FITL_BOOTSTRAP_DESCRIPTOR: BootstrapDescriptor = {
   resolveGameDefInput: async () => (await import('./fitl-game-def.json')).default,
 };
 
+const TEXAS_BOOTSTRAP_DESCRIPTOR: BootstrapDescriptor = {
+  id: 'texas',
+  queryValue: 'texas',
+  defaultSeed: 42,
+  defaultPlayerId: 0,
+  sourceLabel: "Texas Hold'em bootstrap fixture",
+  resolveGameDefInput: async () => (await import('./texas-game-def.json')).default,
+};
+
 const BOOTSTRAP_REGISTRY: readonly BootstrapDescriptor[] = [
   DEFAULT_BOOTSTRAP_DESCRIPTOR,
   FITL_BOOTSTRAP_DESCRIPTOR,
+  TEXAS_BOOTSTRAP_DESCRIPTOR,
 ];
 
 assertBootstrapRegistry(BOOTSTRAP_REGISTRY);
@@ -80,4 +90,3 @@ export function assertBootstrapRegistry(descriptors: readonly BootstrapDescripto
     queryValues.add(descriptor.queryValue);
   }
 }
-

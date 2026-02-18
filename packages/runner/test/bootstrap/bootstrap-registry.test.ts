@@ -18,6 +18,11 @@ describe('bootstrap-registry', () => {
     expect(descriptor.id).toBe('fitl');
   });
 
+  it('resolves texas descriptor by query value', () => {
+    const descriptor = resolveBootstrapDescriptor('texas');
+    expect(descriptor.id).toBe('texas');
+  });
+
   it('falls back to default descriptor for unknown query values', () => {
     const descriptor = resolveBootstrapDescriptor('unknown');
     expect(descriptor.id).toBe('default');
@@ -65,4 +70,3 @@ function descriptor(
     ...overrides,
   };
 }
-

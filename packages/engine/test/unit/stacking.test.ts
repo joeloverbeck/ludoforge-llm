@@ -219,6 +219,54 @@ describe('checkStackingConstraints', () => {
     assert.equal(violations.length, 1);
   });
 
+  it('matches array-valued attributeEquals filters by value', () => {
+    const constraint: StackingConstraint = {
+      id: 'terrain-restricted',
+      description: 'No bases in exact terrain profile',
+      spaceFilter: { attributeEquals: { terrainTags: ['highland', 'jungle'] } },
+      pieceFilter: { pieceTypeIds: ['base'] },
+      rule: 'prohibit',
+    };
+    const spaces = [
+      makeSpace('loc1', {
+        attributes: {
+          population: 1,
+          econ: 0,
+          terrainTags: ['highland', 'jungle'],
+          country: 'southVietnam',
+          coastal: false,
+        },
+      }),
+    ];
+
+    const violations = checkStackingConstraints([constraint], spaces, 'loc1', [makeToken('b1', 'base', 'US')]);
+    assert.equal(violations.length, 1);
+  });
+
+  it('does not match array-valued attributeEquals filters when order differs', () => {
+    const constraint: StackingConstraint = {
+      id: 'terrain-restricted-order',
+      description: 'No bases in exact terrain profile',
+      spaceFilter: { attributeEquals: { terrainTags: ['highland', 'jungle'] } },
+      pieceFilter: { pieceTypeIds: ['base'] },
+      rule: 'prohibit',
+    };
+    const spaces = [
+      makeSpace('loc1', {
+        attributes: {
+          population: 1,
+          econ: 0,
+          terrainTags: ['jungle', 'highland'],
+          country: 'southVietnam',
+          coastal: false,
+        },
+      }),
+    ];
+
+    const violations = checkStackingConstraints([constraint], spaces, 'loc1', [makeToken('b1', 'base', 'US')]);
+    assert.equal(violations.length, 0);
+  });
+
   it('multiple constraints can produce multiple violations', () => {
     const spaces = [makeSpace('route1', { category: 'loc' })];
     const tokens = [

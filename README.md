@@ -9,8 +9,10 @@ Evolving board games relying on LLMs for design/judgement, and executable protot
 
 ## Runner Dev Bootstrap
 - Generate FITL bootstrap fixture: `pnpm -F @ludoforge/runner bootstrap:fitl`
+- Generate Texas Hold'em bootstrap fixture: `pnpm -F @ludoforge/runner bootstrap:texas`
 - Start runner: `pnpm -F @ludoforge/runner dev`
 - FITL URL: `http://localhost:5173/?game=fitl`
+- Texas URL: `http://localhost:5173/?game=texas`
 
 ## Schema Artifacts
 - Source-of-truth schemas in `src/kernel/schemas-core.ts` define all generated artifacts:

@@ -2577,6 +2577,67 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
     assert.ok(diag);
     assert.ok(diag.message.includes('hanoi'));
   });
+
+  it('matches array-valued attributeEquals filters by value', () => {
+    const arrayConstraint: StackingConstraint = {
+      id: 'terrain-array-filter',
+      description: 'No bases in terrain-tagged spaces',
+      spaceFilter: { attributeEquals: { terrainTags: ['highland', 'jungle'] } },
+      pieceFilter: { pieceTypeIds: ['base'] },
+      rule: 'prohibit',
+    };
+    const spacesWithTerrain: readonly ZoneDef[] = [
+      {
+        ...spaces[0]!,
+        attributes: {
+          ...(spaces[0]!.attributes ?? {}),
+          terrainTags: ['highland', 'jungle'],
+        },
+      } as ZoneDef,
+    ];
+    const placements: readonly ScenarioPiecePlacement[] = [
+      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'US', count: 1 },
+    ];
+
+    const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
+      [arrayConstraint],
+      placements,
+      spacesWithTerrain,
+    );
+
+    assert.equal(diagnostics.length, 1);
+    assert.equal(diagnostics[0]?.code, 'STACKING_CONSTRAINT_VIOLATION');
+  });
+
+  it('does not match array-valued attributeEquals filters when order differs', () => {
+    const arrayConstraint: StackingConstraint = {
+      id: 'terrain-array-filter-order',
+      description: 'No bases in terrain-tagged spaces',
+      spaceFilter: { attributeEquals: { terrainTags: ['highland', 'jungle'] } },
+      pieceFilter: { pieceTypeIds: ['base'] },
+      rule: 'prohibit',
+    };
+    const spacesWithTerrain: readonly ZoneDef[] = [
+      {
+        ...spaces[0]!,
+        attributes: {
+          ...(spaces[0]!.attributes ?? {}),
+          terrainTags: ['jungle', 'highland'],
+        },
+      } as ZoneDef,
+    ];
+    const placements: readonly ScenarioPiecePlacement[] = [
+      { spaceId: 'quang-tri', pieceTypeId: 'base', faction: 'US', count: 1 },
+    ];
+
+    const diagnostics = validateInitialPlacementsAgainstStackingConstraints(
+      [arrayConstraint],
+      placements,
+      spacesWithTerrain,
+    );
+
+    assert.deepEqual(diagnostics, []);
+  });
 });
 
 describe('validateGameDef arithmetic diagnostics', () => {

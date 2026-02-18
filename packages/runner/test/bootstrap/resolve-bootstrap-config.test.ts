@@ -9,6 +9,7 @@ describe('resolveBootstrapConfig', () => {
     vi.resetModules();
     vi.doUnmock('../../src/bootstrap/default-game-def.json');
     vi.doUnmock('../../src/bootstrap/fitl-game-def.json');
+    vi.doUnmock('../../src/bootstrap/texas-game-def.json');
     vi.doUnmock('../../src/bootstrap/bootstrap-registry');
   });
 
@@ -30,6 +31,16 @@ describe('resolveBootstrapConfig', () => {
     expect(resolved.seed).toBe(77);
     expect(resolved.playerId).toBe(3);
     expect(gameDef.metadata.id).toBe('fire-in-the-lake');
+  });
+
+  it('returns Texas bootstrap config when game=texas and applies params', async () => {
+    const { resolveBootstrapConfig } = await importResolver();
+    const resolved = resolveBootstrapConfig('?game=texas&seed=77&player=3');
+    const gameDef = await resolved.resolveGameDef();
+
+    expect(resolved.seed).toBe(77);
+    expect(resolved.playerId).toBe(3);
+    expect(gameDef.metadata.id).toBe('texas-holdem-nlhe-tournament');
   });
 
   it('returns FITL bootstrap zones with board-map category/shape invariants needed by generic rendering', async () => {
@@ -117,6 +128,18 @@ describe('resolveBootstrapConfig', () => {
     const resolved = resolveBootstrapConfig('?game=fitl');
     await expect(resolved.resolveGameDef()).rejects.toThrowError(
       /Invalid GameDef input from FITL bootstrap fixture/u,
+    );
+  });
+
+  it("fails fast when Texas Hold'em bootstrap fixture is invalid", async () => {
+    vi.doMock('../../src/bootstrap/texas-game-def.json', () => ({
+      default: { invalid: true },
+    }));
+
+    const { resolveBootstrapConfig } = await importResolver();
+    const resolved = resolveBootstrapConfig('?game=texas');
+    await expect(resolved.resolveGameDef()).rejects.toThrowError(
+      /Invalid GameDef input from Texas Hold'em bootstrap fixture/u,
     );
   });
 });

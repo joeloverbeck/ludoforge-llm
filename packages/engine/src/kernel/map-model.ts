@@ -1,5 +1,6 @@
 import type { Diagnostic } from './diagnostics.js';
 import { MapPayloadSchema } from './schemas.js';
+import { attributeValueEquals } from './attribute-value-equals.js';
 import type {
   MapPayload,
   MapSpaceInput,
@@ -343,7 +344,7 @@ function constraintApplies(constraint: SpaceMarkerConstraintDef, space: MapSpace
   if (constraint.attributeEquals !== undefined) {
     for (const [key, expected] of Object.entries(constraint.attributeEquals)) {
       const actual = space.attributes?.[key];
-      if (actual !== expected) {
+      if (!attributeValueEquals(actual, expected)) {
         return false;
       }
     }
@@ -386,16 +387,6 @@ export function mapVisualRuleMatchApplies(match: MapVisualRuleMatch | undefined,
   }
 
   return true;
-}
-
-function attributeValueEquals(left: unknown, right: unknown): boolean {
-  if (Array.isArray(left) || Array.isArray(right)) {
-    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
-      return false;
-    }
-    return left.every((value, index) => value === right[index]);
-  }
-  return left === right;
 }
 
 function withContext(diagnostic: Diagnostic, context: MapPayloadDiagnosticContext): Diagnostic {

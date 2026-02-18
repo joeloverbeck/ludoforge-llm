@@ -1,4 +1,5 @@
 import type { StackingConstraint, Token, ZoneDef } from './types.js';
+import { attributeValueEquals } from './attribute-value-equals.js';
 
 export interface StackingViolation {
   readonly constraintId: string;
@@ -24,7 +25,7 @@ const zoneMatchesFilter = (
   if (filter.attributeEquals !== undefined) {
     for (const [key, expected] of Object.entries(filter.attributeEquals)) {
       const actual = zone.attributes?.[key];
-      if (actual !== expected) {
+      if (!attributeValueEquals(actual, expected)) {
         return false;
       }
     }

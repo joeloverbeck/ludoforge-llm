@@ -1,4 +1,5 @@
 import type { Diagnostic } from './diagnostics.js';
+import { attributeValueEquals } from './attribute-value-equals.js';
 import { RUNTIME_RESERVED_MOVE_BINDING_NAMES } from './move-runtime-bindings.js';
 import { resolveRuntimeTableRowsByPath } from './runtime-table-path.js';
 import type { GameDef, PlayerSel, ScenarioPiecePlacement, StackingConstraint, ZoneDef } from './types.js';
@@ -1017,7 +1018,7 @@ const zoneMatchesFilter = (zone: ZoneDef, filter: StackingConstraint['spaceFilte
   if (filter.attributeEquals !== undefined) {
     for (const [key, expected] of Object.entries(filter.attributeEquals)) {
       const actual = zone.attributes?.[key];
-      if (actual !== expected) {
+      if (!attributeValueEquals(actual, expected)) {
         return false;
       }
     }

@@ -221,7 +221,14 @@ describe('GameContainer', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
-              options: [{ choiceValueId: 's:1:x', value: 'x', displayName: 'X', legality: 'legal', illegalReason: null }],
+              options: [{
+                choiceValueId: 's:1:x',
+                value: 'x',
+                displayName: 'X',
+                target: { kind: 'scalar', entityId: null, displaySource: 'fallback' },
+                legality: 'legal',
+                illegalReason: null,
+              }],
             },
           }),
           selectedAction: asActionId('pass'),

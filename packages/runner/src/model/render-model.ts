@@ -156,8 +156,15 @@ export interface RenderChoiceOption {
   readonly choiceValueId: string;
   readonly value: MoveParamValue;
   readonly displayName: string;
+  readonly target: RenderChoiceTarget;
   readonly legality: 'legal' | 'illegal' | 'unknown';
   readonly illegalReason: string | null;
+}
+
+export interface RenderChoiceTarget {
+  readonly kind: 'zone' | 'token' | 'scalar';
+  readonly entityId: string | null;
+  readonly displaySource: 'zone' | 'token' | 'fallback';
 }
 
 export interface RenderChoiceDomain {

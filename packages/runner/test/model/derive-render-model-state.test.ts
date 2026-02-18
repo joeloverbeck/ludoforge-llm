@@ -6,6 +6,7 @@ import {
   asPlayerId,
   asTokenId,
   initialState,
+  type MoveParamValue,
   type ChoicePendingRequest,
   type GameDef,
   type GameState,
@@ -149,11 +150,17 @@ function expectedRenderChoiceOption(
   displayName: string,
   legality: 'legal' | 'illegal' | 'unknown',
   illegalReason: string | null,
+  target: {
+    readonly kind: 'zone' | 'token' | 'scalar';
+    readonly entityId: string | null;
+    readonly displaySource: 'zone' | 'token' | 'fallback';
+  } = { kind: 'scalar', entityId: null, displaySource: 'fallback' },
 ) {
   return {
     choiceValueId: serializeChoiceValueIdentity(value),
     value,
     displayName,
+    target,
     legality,
     illegalReason,
   } as const;
@@ -579,8 +586,57 @@ describe('deriveRenderModel state metadata', () => {
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
       options: [
-        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null),
+        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
+          kind: 'zone',
+          entityId: 'table:none',
+          displaySource: 'zone',
+        }),
         expectedRenderChoiceOption('blocked-zone', 'Blocked Zone', 'illegal', 'pipelineLegalityFailed'),
+      ],
+    });
+  });
+
+  it('resolves token target labels and metadata using projected tokens', () => {
+    const def = compileFixture();
+    const baseState = initialState(def, 2310, 2);
+    const state: GameState = {
+      ...baseState,
+      zones: {
+        ...baseState.zones,
+        'table:none': [token('token-a', 'agent')],
+      },
+    };
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'target',
+      name: 'target',
+      type: 'chooseOne',
+      options: [
+        { value: 'token-a', legality: 'legal', illegalReason: null },
+      ],
+      targetKinds: ['token'],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+      }),
+    );
+
+    expect(model.choiceUi).toEqual({
+      kind: 'discreteOne',
+      options: [
+        expectedRenderChoiceOption('token-a', 'Agent (Token A)', 'legal', null, {
+          kind: 'token',
+          entityId: 'token-a',
+          displaySource: 'token',
+        }),
       ],
     });
   });
@@ -661,7 +717,11 @@ describe('deriveRenderModel state metadata', () => {
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
       options: [
-        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null),
+        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
+          kind: 'zone',
+          entityId: 'table:none',
+          displaySource: 'zone',
+        }),
         expectedRenderChoiceOption('undetermined-zone', 'Undetermined Zone', 'unknown', null),
       ],
     });
@@ -721,7 +781,11 @@ describe('deriveRenderModel state metadata', () => {
     );
     expect(model.choiceUi).toEqual({
       kind: 'discreteMany',
-      options: [expectedRenderChoiceOption('table:none', 'Table None', 'legal', null)],
+      options: [expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
+        kind: 'zone',
+        entityId: 'table:none',
+        displaySource: 'zone',
+      })],
       min: 3,
       max: 3,
     });

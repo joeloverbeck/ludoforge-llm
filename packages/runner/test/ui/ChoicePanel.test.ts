@@ -114,11 +114,17 @@ describe('ChoicePanel', () => {
     displayName: string,
     legality: 'legal' | 'illegal' | 'unknown' = 'legal',
     illegalReason: string | null = null,
+    target: {
+      readonly kind: 'zone' | 'token' | 'scalar';
+      readonly entityId: string | null;
+      readonly displaySource: 'zone' | 'token' | 'fallback';
+    } = { kind: 'scalar', entityId: null, displaySource: 'fallback' },
   ) {
     return {
       choiceValueId: serializeChoiceValueIdentity(value),
       value,
       displayName,
+      target,
       legality,
       illegalReason,
     } as const;

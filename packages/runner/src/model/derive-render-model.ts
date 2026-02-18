@@ -15,6 +15,7 @@ import {
 import type {
   RenderAdjacency,
   RenderChoiceOption,
+  RenderChoiceTarget,
   RenderChoiceUi,
   RenderChoiceUiInvalidReason,
   RenderEventDeck,
@@ -86,6 +87,7 @@ export function deriveRenderModel(
   const eventDecks = deriveEventDecks(state, staticDerivation.eventDecks, staticDerivation.playedCardZoneId);
   const players = derivePlayers(state, context, factionByPlayer);
   const turnOrder = deriveTurnOrder(state, factionByPlayer);
+  const choiceUi = deriveChoiceUi(context, zones, tokens, players);
 
   return {
     zones: zones.map((zone) => ({
@@ -112,7 +114,7 @@ export function deriveRenderModel(
     eventDecks,
     actionGroups: deriveActionGroups(context.legalMoveResult?.moves ?? []),
     choiceBreadcrumb: deriveChoiceBreadcrumb(context),
-    choiceUi: deriveChoiceUi(context),
+    choiceUi,
     moveEnumerationWarnings: (context.legalMoveResult?.warnings ?? []).map((warning) => ({
       code: warning.code,
       message: warning.message,
@@ -783,9 +785,87 @@ function deriveRenderChoiceOptions(context: RenderContext): readonly RenderChoic
     choiceValueId: serializeChoiceValueIdentity(option.value),
     value: option.value,
     displayName: formatChoiceValueFallback(option.value),
+    target: {
+      kind: 'scalar',
+      entityId: null,
+      displaySource: 'fallback',
+    },
     legality: option.legality,
     illegalReason: option.illegalReason,
   }));
+}
+
+interface ChoiceOptionResolution {
+  readonly displayName: string;
+  readonly target: RenderChoiceTarget;
+}
+
+function resolveChoiceOption(
+  value: MoveParamValue,
+  targetKinds: readonly ('zone' | 'token')[],
+  zonesById: ReadonlyMap<string, RenderZone>,
+  tokensById: ReadonlyMap<string, RenderToken>,
+  playersById: ReadonlyMap<PlayerId, RenderModel['players'][number]>,
+): ChoiceOptionResolution {
+  const fallback: ChoiceOptionResolution = {
+    displayName: formatChoiceValueFallback(value),
+    target: {
+      kind: 'scalar',
+      entityId: null,
+      displaySource: 'fallback',
+    },
+  };
+
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+
+  for (const targetKind of targetKinds) {
+    if (targetKind === 'zone') {
+      const zone = zonesById.get(value);
+      if (zone !== undefined) {
+        return {
+          displayName: zone.displayName,
+          target: {
+            kind: 'zone',
+            entityId: zone.id,
+            displaySource: 'zone',
+          },
+        };
+      }
+      continue;
+    }
+
+    const token = tokensById.get(value);
+    if (token !== undefined) {
+      return {
+        displayName: formatTokenChoiceDisplayName(token, playersById),
+        target: {
+          kind: 'token',
+          entityId: token.id,
+          displaySource: 'token',
+        },
+      };
+    }
+  }
+
+  return fallback;
+}
+
+function formatTokenChoiceDisplayName(
+  token: RenderToken,
+  playersById: ReadonlyMap<PlayerId, RenderModel['players'][number]>,
+): string {
+  const tokenType = formatIdAsDisplayName(token.type);
+  const tokenId = formatIdAsDisplayName(token.id);
+  const ownerDisplayName = token.ownerID === null
+    ? null
+    : playersById.get(token.ownerID)?.displayName ?? `Player ${token.ownerID}`;
+
+  if (ownerDisplayName === null) {
+    return `${tokenType} (${tokenId})`;
+  }
+  return `${tokenType} (${tokenId}, ${ownerDisplayName})`;
 }
 
 function normalizeChoiceBound(value: number | undefined): number | null {
@@ -802,7 +882,12 @@ function toInvalidChoiceUi(reason: RenderChoiceUiInvalidReason): RenderChoiceUi 
   };
 }
 
-function deriveChoiceUi(context: RenderContext): RenderChoiceUi {
+function deriveChoiceUi(
+  context: RenderContext,
+  zones: readonly RenderZone[],
+  tokens: readonly RenderToken[],
+  players: readonly RenderModel['players'][number][],
+): RenderChoiceUi {
   const pending = context.choicePending;
   const hasSelectedAction = context.selectedAction !== null;
   const hasPartialMove = context.partialMove !== null;
@@ -822,7 +907,23 @@ function deriveChoiceUi(context: RenderContext): RenderChoiceUi {
       return toInvalidChoiceUi('PENDING_CHOICE_MISSING_PARTIAL_MOVE');
     }
 
-    const options = deriveRenderChoiceOptions(context);
+    const zonesById = new Map(zones.map((zone) => [zone.id, zone] as const));
+    const tokensById = new Map(tokens.map((token) => [token.id, token] as const));
+    const playersById = new Map(players.map((player) => [player.id, player] as const));
+    const options = deriveRenderChoiceOptions(context).map((option) => {
+      const resolved = resolveChoiceOption(
+        option.value,
+        pending.targetKinds,
+        zonesById,
+        tokensById,
+        playersById,
+      );
+      return {
+        ...option,
+        displayName: resolved.displayName,
+        target: resolved.target,
+      };
+    });
     if (pending.type === 'chooseN') {
       const min = normalizeChoiceBound(pending.min);
       const rawMax = normalizeChoiceBound(pending.max);

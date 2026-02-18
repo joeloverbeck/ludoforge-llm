@@ -28,15 +28,19 @@ function formatChoiceScalar(value: MoveParamScalar): string {
   return value ? 'True' : 'False';
 }
 
+function isChoiceVector(value: MoveParamValue): value is readonly MoveParamScalar[] {
+  return Array.isArray(value);
+}
+
 export function serializeChoiceValueIdentity(value: MoveParamValue): string {
-  if (Array.isArray(value)) {
+  if (isChoiceVector(value)) {
     return `a:[${value.map((entry) => serializeScalarIdentity(entry)).join('|')}]`;
   }
   return serializeScalarIdentity(value);
 }
 
 export function formatChoiceValueFallback(value: MoveParamValue): string {
-  if (Array.isArray(value)) {
+  if (isChoiceVector(value)) {
     const formattedEntries = value.map((entry) => formatChoiceScalar(entry)).join(', ');
     return `[${formattedEntries}]`;
   }

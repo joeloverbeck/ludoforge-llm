@@ -1073,6 +1073,76 @@ phase: [asPhaseId('main')],
       );
     });
 
+    it('marks chooseOne options illegal when downstream decision sequence is unsatisfiable', () => {
+      const action: ActionDef = {
+        id: asActionId('nestedUnsatLegalityOp'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      };
+
+      const profile: ActionPipelineDef = {
+        id: 'nestedUnsatLegalityProfile',
+        actionId: asActionId('nestedUnsatLegalityOp'),
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [
+          {
+            effects: [
+              {
+                chooseOne: {
+                  internalDecisionId: 'decision:$mode',
+                  bind: '$mode',
+                  options: { query: 'enums', values: ['trap', 'safe'] },
+                },
+              } as EffectAST,
+              {
+                if: {
+                  when: { op: '==', left: { ref: 'binding', name: '$mode' }, right: 'trap' },
+                  then: [
+                    {
+                      chooseOne: {
+                        internalDecisionId: 'decision:$trapChoice',
+                        bind: '$trapChoice',
+                        options: { query: 'enums', values: [] },
+                      },
+                    } as EffectAST,
+                  ],
+                  else: [
+                    {
+                      chooseOne: {
+                        internalDecisionId: 'decision:$safeChoice',
+                        bind: '$safeChoice',
+                        options: { query: 'enums', values: ['ok'] },
+                      },
+                    } as EffectAST,
+                  ],
+                },
+              } as EffectAST,
+            ],
+          },
+        ],
+        atomicity: 'partial',
+      };
+
+      const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+      const result = legalChoicesEvaluate(def, makeBaseState(), makeMove('nestedUnsatLegalityOp'));
+
+      assert.equal(result.kind, 'pending');
+      assert.equal(result.decisionId, 'decision:$mode');
+      assert.deepStrictEqual(result.options, [
+        { value: 'trap', legality: 'illegal', illegalReason: null },
+        { value: 'safe', legality: 'legal', illegalReason: null },
+      ]);
+    });
+
     it('prepares probe context once for a probed chooseN request', () => {
       const action: ActionDef = {
         id: asActionId('chooseNContextReuseOp'),

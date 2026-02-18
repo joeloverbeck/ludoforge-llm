@@ -9,6 +9,7 @@ import {
   createRng,
   initialState,
   legalChoicesDiscover,
+  legalChoicesEvaluate,
   legalMoves,
   type GameDef,
   type GameState,
@@ -183,6 +184,96 @@ const runGreedyAgentTurn = (
 // ---------------------------------------------------------------------------
 
 describe('decision sequence integration', () => {
+  it('keeps satisfiable templates while evaluated legality marks unsatisfiable first-branch options illegal', () => {
+    const actionId = asActionId('branchingDeploy');
+    const def = {
+      metadata: { id: 'decision-sequence-branching-int', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [{ id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' }],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actionPipelines: [
+        {
+          id: 'branchingDeployProfile',
+          actionId,
+          legality: null,
+          costValidation: null,
+          costEffects: [],
+          targeting: {},
+          stages: [
+            {
+              effects: [
+                {
+                  chooseOne: {
+                    internalDecisionId: 'decision:$mode',
+                    bind: '$mode',
+                    options: { query: 'enums', values: ['trap', 'safe'] },
+                  },
+                },
+                {
+                  if: {
+                    when: { op: '==', left: { ref: 'binding', name: '$mode' }, right: 'trap' },
+                    then: [
+                      {
+                        chooseOne: {
+                          internalDecisionId: 'decision:$trapChoice',
+                          bind: '$trapChoice',
+                          options: { query: 'enums', values: [] },
+                        },
+                      },
+                    ],
+                    else: [
+                      {
+                        chooseOne: {
+                          internalDecisionId: 'decision:$safeChoice',
+                          bind: '$safeChoice',
+                          options: { query: 'enums', values: ['ok'] },
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+          atomicity: 'partial',
+        },
+      ],
+      actions: [
+        {
+          id: actionId,
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state = initialState(def, 123, 2);
+    const template = findTemplateMove(legalMoves(def, state), actionId);
+    assert.ok(template !== undefined, 'template remains legal when at least one downstream branch is satisfiable');
+
+    const evaluated = legalChoicesEvaluate(def, state, { actionId, params: {} });
+    assert.equal(evaluated.kind, 'pending');
+    if (evaluated.kind !== 'pending') {
+      throw new Error('Expected pending evaluated choices.');
+    }
+    assert.deepEqual(evaluated.options, [
+      { value: 'trap', legality: 'illegal', illegalReason: null },
+      { value: 'safe', legality: 'legal', illegalReason: null },
+    ]);
+  });
+
   it('legalMoves returns template move for profiled action and full move for simple action', () => {
     const def = createDecisionSequenceDef();
     const state = initialState(def, 42, 2);

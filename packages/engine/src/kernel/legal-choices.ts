@@ -11,6 +11,10 @@ import {
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { toChoiceIllegalReason } from './legality-outcome.js';
 import { kernelRuntimeError } from './runtime-error.js';
+import {
+  classifyDecisionSequenceSatisfiability,
+  type DecisionSequenceSatisfiability,
+} from './decision-sequence-satisfiability.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { resolveFreeOperationExecutionPlayer, resolveFreeOperationZoneFilter } from './turn-flow-eligibility.js';
@@ -120,6 +124,7 @@ const enumerateCombinations = (
 
 const mapChooseNOptions = (
   evaluateProbeMove: (move: Move) => ChoiceRequest,
+  classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
   partialMove: Move,
   request: ChoicePendingRequest,
 ): readonly ChoiceOption[] => {
@@ -183,6 +188,18 @@ const mapChooseNOptions = (
         },
       );
 
+      const classification = probed.kind === 'pending'
+        ? classifyProbeMoveSatisfiability(
+            {
+              ...partialMove,
+              params: {
+                ...partialMove.params,
+                [request.decisionId]: selectedChoice,
+              },
+            },
+          )
+        : null;
+
       for (const option of selected) {
         const key = optionKey(option);
         const status = optionLegalityByKey.get(key);
@@ -190,8 +207,14 @@ const mapChooseNOptions = (
           continue;
         }
 
-        if (probed.kind === 'illegal') {
-          if (status.illegalReason === null) {
+        if (classification === 'unknown') {
+          status.legality = 'unknown';
+          status.illegalReason = null;
+          continue;
+        }
+
+        if (probed.kind === 'illegal' || classification === 'unsatisfiable') {
+          if (status.illegalReason === null && probed.kind === 'illegal') {
             status.illegalReason = probed.reason;
           }
           continue;
@@ -223,11 +246,12 @@ const mapChooseNOptions = (
 
 const mapOptionsForPendingChoice = (
   evaluateProbeMove: (move: Move) => ChoiceRequest,
+  classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
   partialMove: Move,
   request: ChoicePendingRequest,
 ): readonly ChoiceOption[] => {
   if (request.type === 'chooseN') {
-    return mapChooseNOptions(evaluateProbeMove, partialMove, request);
+    return mapChooseNOptions(evaluateProbeMove, classifyProbeMoveSatisfiability, partialMove, request);
   }
 
   return request.options.map((option) => {
@@ -242,10 +266,27 @@ const mapOptionsForPendingChoice = (
     );
 
     const illegalReason = probed.kind === 'illegal' ? probed.reason : null;
+    const classification = probed.kind === 'pending'
+      ? classifyProbeMoveSatisfiability(
+          {
+            ...partialMove,
+            params: {
+              ...partialMove.params,
+              [request.decisionId]: option.value,
+            },
+          },
+        )
+      : null;
     return {
       value: option.value,
-      legality: illegalReason === null ? 'legal' : 'illegal',
-      illegalReason,
+      legality: illegalReason !== null
+        ? 'illegal'
+        : classification === 'unsatisfiable'
+          ? 'illegal'
+          : classification === 'unknown'
+            ? 'unknown'
+            : 'legal',
+      illegalReason: illegalReason ?? null,
     };
   });
 };
@@ -328,6 +369,17 @@ const legalChoicesWithPreparedContext = (
       ...request,
       options: mapOptionsForPendingChoice(
         (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false),
+        (probeMove) =>
+          classifyDecisionSequenceSatisfiability(
+            probeMove,
+            (candidateMove, discoverOptions) =>
+              legalChoicesWithPreparedContext(context, candidateMove, false, {
+                onDeferredPredicatesEvaluated: (count) => {
+                  options?.onDeferredPredicatesEvaluated?.(count);
+                  discoverOptions?.onDeferredPredicatesEvaluated?.(count);
+                },
+              }),
+          ).classification,
         partialMove,
         request,
       ),
@@ -343,6 +395,17 @@ const legalChoicesWithPreparedContext = (
     ...request,
     options: mapOptionsForPendingChoice(
       (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false),
+      (probeMove) =>
+        classifyDecisionSequenceSatisfiability(
+          probeMove,
+          (candidateMove, discoverOptions) =>
+            legalChoicesWithPreparedContext(context, candidateMove, false, {
+              onDeferredPredicatesEvaluated: (count) => {
+                options?.onDeferredPredicatesEvaluated?.(count);
+                discoverOptions?.onDeferredPredicatesEvaluated?.(count);
+              },
+            }),
+        ).classification,
       partialMove,
       request,
     ),

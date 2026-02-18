@@ -147,6 +147,72 @@ phase: [asPhaseId('main')],
     assert.equal(isMoveDecisionSequenceSatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
   });
 
+  it('reports satisfiable when at least one downstream branch can complete', () => {
+    const action: ActionDef = {
+      id: asActionId('branching-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'branching-profile',
+      actionId: asActionId('branching-op'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$mode',
+                bind: '$mode',
+                options: { query: 'enums', values: ['trap', 'safe'] },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+            {
+              if: {
+                when: { op: '==', left: { ref: 'binding', name: '$mode' }, right: 'trap' },
+                then: [
+                  {
+                    chooseOne: {
+                      internalDecisionId: 'decision:$trapChoice',
+                      bind: '$trapChoice',
+                      options: { query: 'enums', values: [] },
+                    },
+                  } as GameDef['actions'][number]['effects'][number],
+                ],
+                else: [
+                  {
+                    chooseOne: {
+                      internalDecisionId: 'decision:$safeChoice',
+                      bind: '$safeChoice',
+                      options: { query: 'enums', values: ['ok'] },
+                    },
+                  } as GameDef['actions'][number]['effects'][number],
+                ],
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const state = makeBaseState();
+
+    assert.equal(resolveMoveDecisionSequence(def, state, makeMove('branching-op')).complete, false);
+    assert.equal(isMoveDecisionSequenceSatisfiable(def, state, makeMove('branching-op')), true);
+  });
+
   it('respects custom chooser for decision sequence completion', () => {
     const action: ActionDef = {
       id: asActionId('custom-choose-op'),

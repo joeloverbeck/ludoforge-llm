@@ -1,4 +1,8 @@
 import { legalChoicesDiscover } from './legal-choices.js';
+import {
+  classifyDecisionSequenceSatisfiability,
+  type DecisionSequenceSatisfiabilityResult,
+} from './decision-sequence-satisfiability.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import type {
   ChoiceIllegalRequest,
@@ -24,6 +28,8 @@ export interface ResolveMoveDecisionSequenceResult {
   readonly illegal?: ChoiceIllegalRequest;
   readonly warnings: readonly RuntimeWarning[];
 }
+
+export interface MoveDecisionSequenceSatisfiabilityResult extends DecisionSequenceSatisfiabilityResult {}
 
 const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefined => {
   const nonIllegalOptionValues = request.options
@@ -122,5 +128,26 @@ export const isMoveDecisionSequenceSatisfiable = (
   baseMove: Move,
   options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
 ): boolean => {
-  return resolveMoveDecisionSequence(def, state, baseMove, options).complete;
+  return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options).classification === 'satisfiable';
+};
+
+export const classifyMoveDecisionSequenceSatisfiability = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+): MoveDecisionSequenceSatisfiabilityResult => {
+  return classifyDecisionSequenceSatisfiability(
+    baseMove,
+    (move, discoverOptions) =>
+      legalChoicesDiscover(def, state, move, {
+        ...(discoverOptions?.onDeferredPredicatesEvaluated === undefined
+          ? {}
+          : { onDeferredPredicatesEvaluated: discoverOptions.onDeferredPredicatesEvaluated }),
+      }),
+    {
+      ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
+      ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
+    },
+  );
 };

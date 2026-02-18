@@ -30,6 +30,9 @@ describe('render-model types', () => {
           isSelectable: false,
           isHighlighted: false,
           ownerID: null,
+          category: null,
+          attributes: {},
+          visual: null,
           metadata: {},
         },
       ],
@@ -166,6 +169,9 @@ describe('render-model types', () => {
       isSelectable: false,
       isHighlighted: false,
       ownerID: asPlayerId(0),
+      category: null,
+      attributes: {},
+      visual: null,
       metadata: {},
     };
 

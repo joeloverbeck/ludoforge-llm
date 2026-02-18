@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
 import {
+  type AttributeValue,
   asActionId,
   asPlayerId,
   asTokenId,
@@ -8,6 +9,7 @@ import {
   type GameDef,
   type GameState,
   type Token,
+  type ZoneVisualHints,
 } from '@ludoforge/engine/runtime';
 
 import { deriveRenderModel } from '../../src/model/derive-render-model.js';
@@ -20,6 +22,9 @@ interface CompileFixtureOptions {
     readonly visibility: 'public' | 'owner' | 'hidden';
     readonly ordering: 'stack' | 'queue' | 'set';
     readonly adjacentTo?: readonly string[];
+    readonly category?: string;
+    readonly attributes?: Readonly<Record<string, AttributeValue>>;
+    readonly visual?: ZoneVisualHints;
   }[];
   readonly minPlayers: number;
   readonly maxPlayers: number;
@@ -139,6 +144,89 @@ function token(id: string, type = 'piece', props: Token['props'] = {}): Token {
 }
 
 describe('deriveRenderModel zones/tokens/adjacencies', () => {
+  it('projects zone category/attributes/visual fields and applies null-or-empty defaults', () => {
+    const def = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'city',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, canFortify: true },
+          visual: { shape: 'hexagon', color: '#123456', label: 'Urban' },
+        },
+        {
+          id: 'plain',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+        },
+      ],
+    });
+
+    const state = initialState(def, 99, 2);
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+
+    const cityZone = model.zones.find((zone) => zone.id === 'city:none');
+    expect(cityZone).toMatchObject({
+      category: 'city',
+      attributes: { population: 2, canFortify: true },
+      visual: { shape: 'hexagon', color: '#123456', label: 'Urban' },
+    });
+
+    const plainZone = model.zones.find((zone) => zone.id === 'plain:none');
+    expect(plainZone).toMatchObject({
+      category: null,
+      attributes: {},
+      visual: null,
+    });
+  });
+
+  it('does not preserve prior zone references during stabilization when category/visual change', () => {
+    const defA = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'table',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          visual: { shape: 'hexagon', color: '#111111' },
+        },
+      ],
+    });
+    const defB = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'table',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'fort',
+          visual: { shape: 'rectangle', color: '#222222' },
+        },
+      ],
+    });
+    const state = initialState(defA, 123, 2);
+    const context = makeRenderContext(state.playerCount);
+
+    const firstModel = deriveRenderModel(state, defA, context);
+    const secondModel = deriveRenderModel(state, defB, context, firstModel);
+
+    expect(secondModel.zones[0]).not.toBe(firstModel.zones[0]);
+    expect(secondModel.zones[0]).toMatchObject({
+      category: 'fort',
+      visual: { shape: 'rectangle', color: '#222222' },
+    });
+  });
+
   it('maps materialized zones and filters owner zones by state.playerCount', () => {
     const def = compileFixture({
       minPlayers: 2,

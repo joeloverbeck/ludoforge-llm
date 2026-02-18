@@ -199,6 +199,9 @@ function isZoneEquivalent(left: RenderZone, right: RenderZone): boolean {
     && left.isSelectable === right.isSelectable
     && left.isHighlighted === right.isHighlighted
     && left.ownerID === right.ownerID
+    && left.category === right.category
+    && isAttributeRecordEqual(left.attributes, right.attributes)
+    && isZoneVisualEqual(left.visual, right.visual)
     && isStringArrayEqual(left.tokenIDs, right.tokenIDs)
     && isMarkerArrayEqual(left.markers, right.markers)
     && isShallowRecordEqual(left.metadata, right.metadata);
@@ -250,6 +253,43 @@ function isShallowRecordEqual(
     return false;
   }
   return leftKeys.every((key) => Object.is(left[key], right[key]));
+}
+
+function isAttributeRecordEqual(
+  left: RenderZone['attributes'],
+  right: RenderZone['attributes'],
+): boolean {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+  return leftKeys.every((key) => {
+    const leftValue = left[key];
+    const rightValue = right[key];
+    if (leftValue === undefined || rightValue === undefined) {
+      return false;
+    }
+    if (Array.isArray(leftValue) || Array.isArray(rightValue)) {
+      return Array.isArray(leftValue) && Array.isArray(rightValue) && isStringArrayEqual(leftValue, rightValue);
+    }
+    return Object.is(leftValue, rightValue);
+  });
+}
+
+function isZoneVisualEqual(left: RenderZone['visual'], right: RenderZone['visual']): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (left === null || right === null) {
+    return false;
+  }
+  const leftEntries = Object.entries(left) as readonly (readonly [string, unknown])[];
+  const rightEntries = Object.entries(right) as readonly (readonly [string, unknown])[];
+  if (leftEntries.length !== rightEntries.length) {
+    return false;
+  }
+  return leftEntries.every(([key, value]) => Object.is(value, right[key as keyof typeof right]));
 }
 
 function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
@@ -518,6 +558,9 @@ function deriveZones(
       isSelectable: selectableZoneIDs.has(zoneID),
       isHighlighted: false,
       ownerID,
+      category: zoneDef.category ?? null,
+      attributes: zoneDef.attributes ?? {},
+      visual: zoneDef.visual ?? null,
       metadata: {},
     });
   }

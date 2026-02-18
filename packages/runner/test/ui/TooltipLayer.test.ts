@@ -113,6 +113,9 @@ describe('TooltipLayer', () => {
         isSelectable: true,
         isHighlighted: false,
         ownerID: asPlayerId(0),
+        category: null,
+        attributes: {},
+        visual: null,
         metadata: {},
       }],
     }));
@@ -196,6 +199,9 @@ describe('TooltipLayer', () => {
         isSelectable: true,
         isHighlighted: false,
         ownerID: null,
+        category: null,
+        attributes: {},
+        visual: null,
         metadata: {},
       }],
     }));
@@ -238,6 +244,9 @@ describe('TooltipLayer', () => {
         isSelectable: true,
         isHighlighted: false,
         ownerID: null,
+        category: null,
+        attributes: {},
+        visual: null,
         metadata: {},
       }],
     }));

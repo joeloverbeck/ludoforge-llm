@@ -26,6 +26,9 @@ describe('tooltip-payload projection', () => {
         isSelectable: true,
         isHighlighted: false,
         ownerID: asPlayerId(0),
+        category: null,
+        attributes: {},
+        visual: null,
         metadata: {},
       }],
     });

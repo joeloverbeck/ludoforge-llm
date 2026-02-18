@@ -151,6 +151,9 @@ function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
     isSelectable: false,
     isHighlighted: false,
     ownerID: null,
+    category: null,
+    attributes: {},
+    visual: null,
     metadata: {},
     ...overrides,
   };

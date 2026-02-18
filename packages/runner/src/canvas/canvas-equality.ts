@@ -70,6 +70,8 @@ function zonesVisuallyEqualItem(previous: RenderZone, current: RenderZone): bool
     && previous.displayName === current.displayName
     && previous.visibility === current.visibility
     && previous.ownerID === current.ownerID
+    && previous.category === current.category
+    && isZoneVisualEqual(previous.visual, current.visual)
     && previous.isSelectable === current.isSelectable
     && previous.isHighlighted === current.isHighlighted
     && previous.hiddenTokenCount === current.hiddenTokenCount
@@ -168,6 +170,30 @@ function markersEqual(prev: readonly RenderMarker[], next: readonly RenderMarker
       || previous.displayName !== current.displayName
       || previous.state !== current.state
     ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isZoneVisualEqual(previous: RenderZone['visual'], current: RenderZone['visual']): boolean {
+  if (previous === current) {
+    return true;
+  }
+
+  if (previous === null || current === null) {
+    return false;
+  }
+
+  const previousKeys = Object.keys(previous);
+  const currentKeys = Object.keys(current);
+  if (previousKeys.length !== currentKeys.length) {
+    return false;
+  }
+
+  for (const key of previousKeys) {
+    if (!Object.is(previous[key as keyof typeof previous], current[key as keyof typeof current])) {
       return false;
     }
   }

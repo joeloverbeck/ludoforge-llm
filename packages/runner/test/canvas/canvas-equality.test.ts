@@ -32,6 +32,9 @@ function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
     isSelectable: false,
     isHighlighted: false,
     ownerID: null,
+    category: null,
+    attributes: {},
+    visual: null,
     metadata: {},
     ...overrides,
   };
@@ -126,6 +129,19 @@ describe('zonesVisuallyEqual', () => {
 
   it('returns false when ownerID changes', () => {
     expect(zonesVisuallyEqual([makeZone()], [makeZone({ ownerID: asPlayerId(1) })])).toBe(false);
+  });
+
+  it('returns false when category changes', () => {
+    expect(zonesVisuallyEqual([makeZone()], [makeZone({ category: 'city' })])).toBe(false);
+  });
+
+  it('returns false when visual hints change', () => {
+    expect(
+      zonesVisuallyEqual(
+        [makeZone()],
+        [makeZone({ visual: { shape: 'hexagon', color: '#345678' } })],
+      ),
+    ).toBe(false);
   });
 
   it('returns true when all compared fields are equal', () => {
@@ -255,8 +271,8 @@ describe('createCanvasEqualityComparators', () => {
 
     expect(
       comparators.zonesVisuallyEqual(
-        [makeZone({ isHighlighted: false })],
-        [makeZone({ isHighlighted: true })],
+        [makeZone({ category: 'city' })],
+        [makeZone({ category: 'fort' })],
       ),
     ).toBe(true);
     expect(comparators.zonesVisuallyEqual([makeZone({ id: 'zone:a' })], [makeZone({ id: 'zone:b' })])).toBe(false);

@@ -598,9 +598,30 @@ describe('deriveRenderModel state metadata', () => {
     });
   });
 
-  it('normalizes invalid chooseN bounds deterministically', () => {
+  it('maps chooseOne with empty options to discreteOne without numeric inference', () => {
     const def = compileFixture();
     const state = initialState(def, 232, 2);
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'target',
+      name: 'target',
+      type: 'chooseOne',
+      min: 1,
+      max: 5,
+      options: [],
+      targetKinds: [],
+    };
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0), { choicePending }));
+    expect(model.choiceUi).toEqual({
+      kind: 'discreteOne',
+      options: [],
+    });
+  });
+
+  it('normalizes invalid chooseN bounds deterministically', () => {
+    const def = compileFixture();
+    const state = initialState(def, 233, 2);
     const choicePending: ChoicePendingRequest = {
       kind: 'pending',
       complete: false,
@@ -623,7 +644,7 @@ describe('deriveRenderModel state metadata', () => {
 
   it('maps no-pending selected-action context to confirmReady choiceUi', () => {
     const def = compileFixture();
-    const state = initialState(def, 233, 2);
+    const state = initialState(def, 234, 2);
     const model = deriveRenderModel(
       state,
       def,

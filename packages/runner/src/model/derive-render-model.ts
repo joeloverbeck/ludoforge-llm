@@ -791,22 +791,6 @@ function normalizeChoiceBound(value: number | undefined): number | null {
   return value;
 }
 
-function deriveNumericChoiceDomain(
-  minRaw: number | undefined,
-  maxRaw: number | undefined,
-): { readonly min: number; readonly max: number; readonly step: number } | null {
-  const min = normalizeChoiceBound(minRaw);
-  const max = normalizeChoiceBound(maxRaw);
-  if (min === null || max === null) {
-    return null;
-  }
-  return {
-    min,
-    max: max < min ? min : max,
-    step: 1,
-  };
-}
-
 function deriveChoiceUi(context: RenderContext): RenderChoiceUi {
   const pending = context.choicePending;
   if (pending !== null) {
@@ -820,14 +804,6 @@ function deriveChoiceUi(context: RenderContext): RenderChoiceUi {
         options,
         min,
         max,
-      };
-    }
-
-    const numericDomain = options.length === 0 ? deriveNumericChoiceDomain(pending.min, pending.max) : null;
-    if (numericDomain !== null) {
-      return {
-        kind: 'numeric',
-        domain: numericDomain,
       };
     }
 

@@ -213,6 +213,74 @@ describe('compiler structured section results', () => {
     );
   });
 
+  it('projects factions into gameDef when selected piece catalog declares them', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      dataAssets: [
+        {
+          id: 'pieces',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            factions: [{ id: 'us', color: '#e63946', displayName: 'United States' }],
+            pieceTypes: [
+              {
+                id: 'us-troops',
+                faction: 'us',
+                statusDimensions: [],
+                transitions: [],
+              },
+            ],
+            inventory: [{ pieceTypeId: 'us-troops', faction: 'us', total: 5 }],
+          },
+        },
+      ],
+      tokenTypes: null,
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.notEqual(result.gameDef, null);
+    assert.deepEqual(result.gameDef?.factions, [{ id: 'us', color: '#e63946', displayName: 'United States' }]);
+  });
+
+  it('fails compile when selected piece catalog omits required factions catalog', () => {
+    const base = createMinimalCompilableDoc();
+    const doc = {
+      ...base,
+      dataAssets: [
+        {
+          id: 'pieces',
+          kind: 'pieceCatalog' as const,
+          payload: {
+            pieceTypes: [
+              {
+                id: 'us-troops',
+                faction: 'us',
+                statusDimensions: [],
+                transitions: [],
+              },
+            ],
+            inventory: [{ pieceTypeId: 'us-troops', faction: 'us', total: 5 }],
+          },
+        },
+      ],
+      tokenTypes: null,
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'DATA_ASSET_SCHEMA_INVALID' &&
+          diagnostic.path === 'doc.dataAssets.0.payload.factions',
+      ),
+      true,
+    );
+  });
+
   it('eventDecks section compiles when declared', () => {
     const base = createMinimalCompilableDoc();
     const doc = {

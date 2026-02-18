@@ -57,7 +57,7 @@ export const PieceCatalogPayloadSchema = z
   .object({
     pieceTypes: z.array(PieceTypeCatalogEntrySchema),
     inventory: z.array(PieceInventoryEntrySchema),
-    factions: z.array(FactionDefSchema).optional(),
+    factions: z.array(FactionDefSchema).min(1),
   })
   .strict();
 

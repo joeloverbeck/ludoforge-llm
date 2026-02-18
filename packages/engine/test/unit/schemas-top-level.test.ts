@@ -245,6 +245,7 @@ describe('top-level runtime schemas', () => {
       id: 'fitl-piece-catalog',
       kind: 'pieceCatalog',
       payload: {
+        factions: [{ id: 'vc', color: '#e9c46a' }],
         pieceTypes: [],
         inventory: [],
       },
@@ -346,6 +347,7 @@ describe('top-level runtime schemas', () => {
 
   it('parses valid piece-catalog payload contracts', () => {
     const result = PieceCatalogPayloadSchema.safeParse({
+      factions: [{ id: 'vc', color: '#e9c46a' }],
       pieceTypes: [
         {
           id: 'vc-guerrilla',
@@ -358,6 +360,16 @@ describe('top-level runtime schemas', () => {
     });
 
     assert.equal(result.success, true);
+  });
+
+  it('rejects piece-catalog payloads missing factions catalog', () => {
+    const result = PieceCatalogPayloadSchema.safeParse({
+      pieceTypes: [],
+      inventory: [],
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'factions'));
   });
 
   it('parses a minimal valid GameDef with zero issues', () => {

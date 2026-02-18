@@ -190,6 +190,7 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-foundation',
           kind: 'pieceCatalog',
           payload: {
+            factions: [{ id: 'vc', color: '#e9c46a' }],
             pieceTypes: [
               {
                 id: 'vc-guerrilla',
@@ -214,6 +215,29 @@ describe('data asset loader scaffold', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it('rejects piece-catalog payloads that omit required factions', () => {
+    const result = validateDataAssetEnvelope(
+      {
+        id: 'fitl-piece-catalog-missing-factions',
+        kind: 'pieceCatalog',
+        payload: {
+          pieceTypes: [],
+          inventory: [],
+        },
+      },
+      { pathPrefix: 'doc.dataAssets.0' },
+    );
+
+    assert.equal(result.asset, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'DATA_ASSET_SCHEMA_INVALID' && diagnostic.path === 'doc.dataAssets.0.payload.factions',
+      ),
+      true,
+    );
   });
 
   it('rejects map tracks with out-of-bounds defaults', () => {
@@ -409,6 +433,7 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-invalid-transition',
           kind: 'pieceCatalog',
           payload: {
+            factions: [{ id: 'vc', color: '#e9c46a' }],
             pieceTypes: [
               {
                 id: 'vc-base',
@@ -444,6 +469,7 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-missing-inventory',
           kind: 'pieceCatalog',
           payload: {
+            factions: [{ id: 'vc', color: '#e9c46a' }],
             pieceTypes: [
               {
                 id: 'vc-guerrilla',
@@ -479,6 +505,7 @@ describe('data asset loader scaffold', () => {
           id: 'fitl-piece-catalog-negative-total',
           kind: 'pieceCatalog',
           payload: {
+            factions: [{ id: 'vc', color: '#e9c46a' }],
             pieceTypes: [
               {
                 id: 'vc-guerrilla',

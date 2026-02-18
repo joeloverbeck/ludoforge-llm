@@ -248,6 +248,7 @@ actor: 'active',
           id: 'pieces-foundation',
           kind: 'pieceCatalog',
           payload: {
+            factions: [{ id: 'US', color: '#e63946' }],
             pieceTypes: [
               {
                 id: 'us-troops',

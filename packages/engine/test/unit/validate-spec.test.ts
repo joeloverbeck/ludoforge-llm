@@ -64,7 +64,11 @@ describe('validateGameSpec structural rules', () => {
       ...createStructurallyValidDoc(),
       dataAssets: [
         { id: 'fitl-map-foundation', kind: 'map', payload: { spaces: [] } },
-        { id: 'fitl-pieces-foundation', kind: 'pieceCatalog', payload: { pieceTypes: [], inventory: [] } },
+        {
+          id: 'fitl-pieces-foundation',
+          kind: 'pieceCatalog',
+          payload: { factions: [{ id: 'us', color: '#e63946' }], pieceTypes: [], inventory: [] },
+        },
         {
           id: 'fitl-scenario-foundation',
           kind: 'scenario',

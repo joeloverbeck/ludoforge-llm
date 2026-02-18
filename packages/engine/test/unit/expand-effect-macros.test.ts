@@ -403,6 +403,7 @@ phase: ['main'],
           id: 'pieces',
           kind: 'pieceCatalog',
           payload: {
+            factions: [{ id: 'US', color: '#e63946' }],
             pieceTypes: [
               { id: 'us-troops', faction: 'US', statusDimensions: [], transitions: [], runtimeProps: { type: 'troops' } },
             ],
@@ -444,6 +445,7 @@ phase: ['main'],
           id: 'pieces',
           kind: 'pieceCatalog',
           payload: {
+            factions: [{ id: 'US', color: '#e63946' }],
             pieceTypes: [
               { id: 'us-troops', faction: 'US', statusDimensions: [], transitions: [], runtimeProps: { type: 'troops' } },
             ],
@@ -485,6 +487,7 @@ phase: ['main'],
           id: 'pieces',
           kind: 'pieceCatalog',
           payload: {
+            factions: [{ id: 'US', color: '#e63946' }],
             pieceTypes: [
               { id: 'us-troops', faction: 'US', statusDimensions: [], transitions: [], runtimeProps: { type: 'troops' } },
             ],

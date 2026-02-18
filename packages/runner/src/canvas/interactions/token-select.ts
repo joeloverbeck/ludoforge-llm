@@ -20,6 +20,7 @@ export function attachTokenSelectHandlers(
   const hoverTarget: HoveredCanvasTarget = { kind: 'token', id: tokenId };
   let pointerDown = false;
   let dragIntent = false;
+  let hoverActive = false;
   let pointerDownX = 0;
   let pointerDownY = 0;
 
@@ -56,11 +57,22 @@ export function attachTokenSelectHandlers(
   };
 
   const onPointerOver = (): void => {
+    if (hoverActive) {
+      return;
+    }
+    hoverActive = true;
     tokenContainer.cursor = isSelectable() ? 'pointer' : 'default';
     options.onHoverEnter?.(hoverTarget);
   };
 
   const onPointerOut = (): void => {
+    if (!hoverActive) {
+      pointerDown = false;
+      dragIntent = false;
+      tokenContainer.cursor = 'default';
+      return;
+    }
+    hoverActive = false;
     tokenContainer.cursor = 'default';
     pointerDown = false;
     dragIntent = false;
@@ -73,24 +85,16 @@ export function attachTokenSelectHandlers(
   tokenContainer.on('pointermove', onPointerMove);
   tokenContainer.on('pointerup', onPointerUp);
   tokenContainer.on('pointerupoutside', onPointerOut);
-  tokenContainer.on('pointerover', onPointerOver);
   tokenContainer.on('pointerenter', onPointerOver);
-  tokenContainer.on('mouseover', onPointerOver);
-  tokenContainer.on('pointerout', onPointerOut);
   tokenContainer.on('pointerleave', onPointerOut);
-  tokenContainer.on('mouseout', onPointerOut);
 
   return (): void => {
     tokenContainer.off('pointerdown', onPointerDown);
     tokenContainer.off('pointermove', onPointerMove);
     tokenContainer.off('pointerup', onPointerUp);
     tokenContainer.off('pointerupoutside', onPointerOut);
-    tokenContainer.off('pointerover', onPointerOver);
     tokenContainer.off('pointerenter', onPointerOver);
-    tokenContainer.off('mouseover', onPointerOver);
-    tokenContainer.off('pointerout', onPointerOut);
     tokenContainer.off('pointerleave', onPointerOut);
-    tokenContainer.off('mouseout', onPointerOut);
     tokenContainer.cursor = 'default';
   };
 }

@@ -127,12 +127,8 @@ describe('attachZoneSelectHandlers', () => {
     expect(container.listenerCount('pointermove')).toBe(1);
     expect(container.listenerCount('pointerup')).toBe(1);
     expect(container.listenerCount('pointerupoutside')).toBe(1);
-    expect(container.listenerCount('pointerover')).toBe(1);
     expect(container.listenerCount('pointerenter')).toBe(1);
-    expect(container.listenerCount('mouseover')).toBe(1);
-    expect(container.listenerCount('pointerout')).toBe(1);
     expect(container.listenerCount('pointerleave')).toBe(1);
-    expect(container.listenerCount('mouseout')).toBe(1);
 
     cleanup();
 
@@ -140,12 +136,8 @@ describe('attachZoneSelectHandlers', () => {
     expect(container.listenerCount('pointermove')).toBe(0);
     expect(container.listenerCount('pointerup')).toBe(0);
     expect(container.listenerCount('pointerupoutside')).toBe(0);
-    expect(container.listenerCount('pointerover')).toBe(0);
     expect(container.listenerCount('pointerenter')).toBe(0);
-    expect(container.listenerCount('mouseover')).toBe(0);
-    expect(container.listenerCount('pointerout')).toBe(0);
     expect(container.listenerCount('pointerleave')).toBe(0);
-    expect(container.listenerCount('mouseout')).toBe(0);
   });
 
   it('emits target-aware hover enter and leave callbacks', () => {
@@ -161,10 +153,32 @@ describe('attachZoneSelectHandlers', () => {
       { onHoverEnter, onHoverLeave },
     );
 
-    container.emit('pointerover', pointer(0, 0));
-    container.emit('pointerout', pointer(0, 0));
+    container.emit('pointerenter', pointer(0, 0));
+    container.emit('pointerleave', pointer(0, 0));
 
     expect(onHoverEnter).toHaveBeenCalledWith({ kind: 'zone', id: 'zone:a' });
     expect(onHoverLeave).toHaveBeenCalledWith({ kind: 'zone', id: 'zone:a' });
+  });
+
+  it('suppresses duplicate hover enter/leave emissions within one logical transition', () => {
+    const container = new MockInteractiveContainer();
+    const onHoverEnter = vi.fn();
+    const onHoverLeave = vi.fn();
+
+    attachZoneSelectHandlers(
+      container as unknown as Container,
+      'zone:a',
+      () => true,
+      vi.fn(),
+      { onHoverEnter, onHoverLeave },
+    );
+
+    container.emit('pointerenter', pointer(0, 0));
+    container.emit('pointerenter', pointer(0, 0));
+    container.emit('pointerleave', pointer(0, 0));
+    container.emit('pointerleave', pointer(0, 0));
+
+    expect(onHoverEnter).toHaveBeenCalledTimes(1);
+    expect(onHoverLeave).toHaveBeenCalledTimes(1);
   });
 });

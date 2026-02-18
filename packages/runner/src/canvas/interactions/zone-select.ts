@@ -18,6 +18,7 @@ export function attachZoneSelectHandlers(
   const hoverTarget: HoveredCanvasTarget = { kind: 'zone', id: zoneId };
   let pointerDown = false;
   let dragIntent = false;
+  let hoverActive = false;
   let pointerDownX = 0;
   let pointerDownY = 0;
 
@@ -53,11 +54,22 @@ export function attachZoneSelectHandlers(
   };
 
   const onPointerOver = (): void => {
+    if (hoverActive) {
+      return;
+    }
+    hoverActive = true;
     zoneContainer.cursor = isSelectable() ? 'pointer' : 'default';
     options.onHoverEnter?.(hoverTarget);
   };
 
   const onPointerOut = (): void => {
+    if (!hoverActive) {
+      pointerDown = false;
+      dragIntent = false;
+      zoneContainer.cursor = 'default';
+      return;
+    }
+    hoverActive = false;
     zoneContainer.cursor = 'default';
     pointerDown = false;
     dragIntent = false;
@@ -70,24 +82,16 @@ export function attachZoneSelectHandlers(
   zoneContainer.on('pointermove', onPointerMove);
   zoneContainer.on('pointerup', onPointerUp);
   zoneContainer.on('pointerupoutside', onPointerOut);
-  zoneContainer.on('pointerover', onPointerOver);
   zoneContainer.on('pointerenter', onPointerOver);
-  zoneContainer.on('mouseover', onPointerOver);
-  zoneContainer.on('pointerout', onPointerOut);
   zoneContainer.on('pointerleave', onPointerOut);
-  zoneContainer.on('mouseout', onPointerOut);
 
   return (): void => {
     zoneContainer.off('pointerdown', onPointerDown);
     zoneContainer.off('pointermove', onPointerMove);
     zoneContainer.off('pointerup', onPointerUp);
     zoneContainer.off('pointerupoutside', onPointerOut);
-    zoneContainer.off('pointerover', onPointerOver);
     zoneContainer.off('pointerenter', onPointerOver);
-    zoneContainer.off('mouseover', onPointerOver);
-    zoneContainer.off('pointerout', onPointerOut);
     zoneContainer.off('pointerleave', onPointerOut);
-    zoneContainer.off('mouseout', onPointerOut);
     zoneContainer.cursor = 'default';
   };
 }

@@ -879,6 +879,110 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
   });
 };
 
+function zoneMatchesDerivedMetricFilter(
+  zone: ZoneDef,
+  filter: NonNullable<NonNullable<GameDef['derivedMetrics']>[number]['zoneFilter']>,
+): boolean {
+  if (filter.zoneKinds !== undefined && filter.zoneKinds.length > 0) {
+    const zoneKind = zone.zoneKind ?? 'aux';
+    if (!filter.zoneKinds.includes(zoneKind)) {
+      return false;
+    }
+  }
+  if (filter.category !== undefined && filter.category.length > 0) {
+    if (zone.category === undefined || !filter.category.includes(zone.category)) {
+      return false;
+    }
+  }
+  if (filter.attributeEquals !== undefined) {
+    for (const [key, expected] of Object.entries(filter.attributeEquals)) {
+      const actual = zone.attributes?.[key];
+      if (!attributeValueEquals(actual, expected)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+export const validateDerivedMetrics = (
+  diagnostics: Diagnostic[],
+  def: GameDef,
+  context: ValidationContext,
+): void => {
+  if (def.derivedMetrics === undefined || def.derivedMetrics.length === 0) {
+    return;
+  }
+
+  checkDuplicateIds(
+    diagnostics,
+    def.derivedMetrics.map((metric) => metric.id),
+    'DUPLICATE_DERIVED_METRIC_ID',
+    'derived metric id',
+    'derivedMetrics',
+  );
+
+  const zoneIndicesById = new Map(def.zones.map((zone, index) => [zone.id, index] as const));
+  for (const [metricIndex, metric] of def.derivedMetrics.entries()) {
+    const metricPath = `derivedMetrics[${metricIndex}]`;
+    if (metric.requirements.length === 0) {
+      diagnostics.push({
+        code: 'DERIVED_METRIC_REQUIREMENTS_EMPTY',
+        path: `${metricPath}.requirements`,
+        severity: 'error',
+        message: `Derived metric "${metric.id}" must declare at least one requirement.`,
+        suggestion: 'Add one or more numeric attribute requirements.',
+      });
+      continue;
+    }
+
+    const requestedZoneIds = metric.zoneFilter?.zoneIds;
+    if (requestedZoneIds !== undefined) {
+      for (const [zoneIdIndex, zoneId] of requestedZoneIds.entries()) {
+        if (context.zoneNames.has(zoneId)) {
+          continue;
+        }
+        pushMissingReferenceDiagnostic(
+          diagnostics,
+          'DERIVED_METRIC_ZONE_REFERENCE_MISSING',
+          `${metricPath}.zoneFilter.zoneIds[${zoneIdIndex}]`,
+          `Derived metric "${metric.id}" references unknown zone "${zoneId}".`,
+          zoneId,
+          context.zoneCandidates,
+        );
+      }
+    }
+
+    const candidateZones = def.zones.filter((zone) => {
+      if (requestedZoneIds !== undefined && requestedZoneIds.length > 0 && !requestedZoneIds.includes(zone.id)) {
+        return false;
+      }
+      if (metric.zoneFilter === undefined) {
+        return true;
+      }
+      return zoneMatchesDerivedMetricFilter(zone, metric.zoneFilter);
+    });
+
+    for (const requirement of metric.requirements) {
+      for (const zone of candidateZones) {
+        const value = zone.attributes?.[requirement.key];
+        if (typeof value === requirement.expectedType) {
+          continue;
+        }
+        const zoneIndex = zoneIndicesById.get(zone.id);
+        const zonePath = zoneIndex === undefined ? `zones[id=${String(zone.id)}]` : `zones[${zoneIndex}]`;
+        diagnostics.push({
+          code: 'DERIVED_METRIC_ZONE_ATTRIBUTE_INVALID',
+          path: `${zonePath}.attributes.${requirement.key}`,
+          severity: 'error',
+          message: `Derived metric "${metric.id}" (${metric.computation}) requires "${requirement.key}" to be ${requirement.expectedType} on zone "${zone.id}".`,
+          suggestion: `Set zones.attributes.${requirement.key} to a ${requirement.expectedType} value for all zones selected by this metric.`,
+        });
+      }
+    }
+  }
+};
+
 export const buildValidationContext = (
   def: GameDef,
 ): {

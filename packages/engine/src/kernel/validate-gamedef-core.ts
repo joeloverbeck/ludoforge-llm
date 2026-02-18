@@ -5,6 +5,7 @@ import { validateConditionAst, validateEffectAst, validateOptionsQuery, validate
 import { validateActionPipelines, validateCoupPlan, validateTerminal } from './validate-gamedef-extensions.js';
 import {
   buildValidationContext,
+  validateDerivedMetrics,
   pushMissingReferenceDiagnostic,
   validatePlayerSelector,
   validateInitialPlacementsAgainstStackingConstraints,
@@ -17,6 +18,7 @@ export const validateGameDef = (def: GameDef): Diagnostic[] => {
   validateStructureSections(diagnostics, def);
 
   const { context, phaseCandidates, actionCandidates } = buildValidationContext(def);
+  validateDerivedMetrics(diagnostics, def, context);
 
   validateCoupPlan(diagnostics, def);
   validateTerminal(diagnostics, def, context);

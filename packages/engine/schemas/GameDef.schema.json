@@ -1363,6 +1363,118 @@
         "additionalProperties": false
       }
     },
+    "derivedMetrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "computation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "markerTotal"
+              },
+              {
+                "type": "string",
+                "const": "controlledPopulation"
+              },
+              {
+                "type": "string",
+                "const": "totalEcon"
+              }
+            ]
+          },
+          "zoneFilter": {
+            "type": "object",
+            "properties": {
+              "zoneIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "zoneKinds": {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "board"
+                    },
+                    {
+                      "type": "string",
+                      "const": "aux"
+                    }
+                  ]
+                }
+              },
+              "category": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "attributeEquals": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "requirements": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "expectedType": {
+                  "type": "string",
+                  "const": "number"
+                }
+              },
+              "required": [
+                "key",
+                "expectedType"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "computation",
+          "requirements"
+        ],
+        "additionalProperties": false
+      }
+    },
     "actions": {
       "type": "array",
       "items": {

@@ -258,6 +258,27 @@ export interface GameSpecActionPipelineDef {
   readonly linkedWindows?: readonly string[];
 }
 
+export type GameSpecDerivedMetricComputation = 'markerTotal' | 'controlledPopulation' | 'totalEcon';
+
+export interface GameSpecDerivedMetricZoneFilter {
+  readonly zoneIds?: readonly string[];
+  readonly zoneKinds?: readonly ('board' | 'aux')[];
+  readonly category?: readonly string[];
+  readonly attributeEquals?: Readonly<Record<string, AttributeValue>>;
+}
+
+export interface GameSpecDerivedMetricRequirement {
+  readonly key: string;
+  readonly expectedType: 'number';
+}
+
+export interface GameSpecDerivedMetricDef {
+  readonly id: string;
+  readonly computation: GameSpecDerivedMetricComputation;
+  readonly zoneFilter?: GameSpecDerivedMetricZoneFilter;
+  readonly requirements: readonly GameSpecDerivedMetricRequirement[];
+}
+
 export interface GameSpecCoupPlanPhase {
   readonly id: string;
   readonly steps: readonly string[];
@@ -353,6 +374,7 @@ export interface GameSpecDoc {
   readonly turnStructure: GameSpecTurnStructure | null;
   readonly turnOrder: GameSpecTurnOrder | null;
   readonly actionPipelines: readonly GameSpecActionPipelineDef[] | null;
+  readonly derivedMetrics: readonly GameSpecDerivedMetricDef[] | null;
   readonly eventDecks: readonly EventDeckDef[] | null;
   readonly terminal: GameSpecTerminal | null;
   readonly actions: readonly GameSpecActionDef[] | null;
@@ -376,6 +398,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     turnStructure: null,
     turnOrder: null,
     actionPipelines: null,
+    derivedMetrics: null,
     eventDecks: null,
     terminal: null,
     actions: null,

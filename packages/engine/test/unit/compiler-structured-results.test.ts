@@ -403,6 +403,7 @@ describe('compiler structured section results', () => {
       'turnStructure',
       'turnOrder',
       'actionPipelines',
+      'derivedMetrics',
       'terminal',
       'actions',
       'triggers',
@@ -430,6 +431,7 @@ describe('compiler structured section results', () => {
       | 'turnStructure'
       | 'turnOrder'
       | 'actionPipelines'
+      | 'derivedMetrics'
       | 'terminal'
       | 'actions'
       | 'triggers'

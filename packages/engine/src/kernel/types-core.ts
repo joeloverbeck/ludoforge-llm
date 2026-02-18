@@ -213,6 +213,27 @@ export interface TerminalEvaluationDef {
   readonly scoring?: ScoringDef;
 }
 
+export type DerivedMetricComputation = 'markerTotal' | 'controlledPopulation' | 'totalEcon';
+
+export interface DerivedMetricZoneFilter {
+  readonly zoneIds?: readonly ZoneId[];
+  readonly zoneKinds?: readonly ('board' | 'aux')[];
+  readonly category?: readonly string[];
+  readonly attributeEquals?: Readonly<Record<string, AttributeValue>>;
+}
+
+export interface DerivedMetricRequirement {
+  readonly key: string;
+  readonly expectedType: 'number';
+}
+
+export interface DerivedMetricDef {
+  readonly id: string;
+  readonly computation: DerivedMetricComputation;
+  readonly zoneFilter?: DerivedMetricZoneFilter;
+  readonly requirements: readonly DerivedMetricRequirement[];
+}
+
 export interface GameDef {
   readonly metadata: {
     readonly id: string;
@@ -231,6 +252,7 @@ export interface GameDef {
   readonly turnStructure: TurnStructure;
   readonly turnOrder?: TurnOrderStrategy;
   readonly actionPipelines?: readonly ActionPipelineDef[];
+  readonly derivedMetrics?: readonly DerivedMetricDef[];
   readonly actions: readonly ActionDef[];
   readonly triggers: readonly TriggerDef[];
   readonly terminal: TerminalEvaluationDef;

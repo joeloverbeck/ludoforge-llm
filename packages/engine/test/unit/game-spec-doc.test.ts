@@ -21,6 +21,7 @@ describe('game-spec-doc', () => {
       turnStructure: null,
       turnOrder: null,
       actionPipelines: null,
+      derivedMetrics: null,
       eventDecks: null,
       terminal: null,
       actions: null,

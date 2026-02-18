@@ -268,6 +268,37 @@ export const RuntimeTableContractSchema = z
   })
   .strict();
 
+export const DerivedMetricComputationSchema = z.union([
+  z.literal('markerTotal'),
+  z.literal('controlledPopulation'),
+  z.literal('totalEcon'),
+]);
+
+export const DerivedMetricZoneFilterSchema = z
+  .object({
+    zoneIds: z.array(StringSchema).optional(),
+    zoneKinds: z.array(z.union([z.literal('board'), z.literal('aux')])).optional(),
+    category: z.array(StringSchema).optional(),
+    attributeEquals: z.record(StringSchema, AttributeValueSchema).optional(),
+  })
+  .strict();
+
+export const DerivedMetricRequirementSchema = z
+  .object({
+    key: StringSchema,
+    expectedType: z.literal('number'),
+  })
+  .strict();
+
+export const DerivedMetricDefSchema = z
+  .object({
+    id: StringSchema,
+    computation: DerivedMetricComputationSchema,
+    zoneFilter: DerivedMetricZoneFilterSchema.optional(),
+    requirements: z.array(DerivedMetricRequirementSchema).min(1),
+  })
+  .strict();
+
 export const GameDefSchema = z
   .object({
     metadata: z
@@ -289,6 +320,7 @@ export const GameDefSchema = z
     turnStructure: TurnStructureSchema,
     turnOrder: TurnOrderSchema.optional(),
     actionPipelines: z.array(ActionPipelineSchema).optional(),
+    derivedMetrics: z.array(DerivedMetricDefSchema).optional(),
     actions: z.array(ActionDefSchema),
     triggers: z.array(TriggerDefSchema),
     terminal: TerminalEvaluationDefSchema,

@@ -1,10 +1,97 @@
-import type { GameState, ZoneDef, Token } from './types.js';
+import type { DerivedMetricDef, GameDef, GameState, ZoneDef, Token } from './types.js';
+import { attributeValueEquals } from './attribute-value-equals.js';
 import { kernelRuntimeError } from './runtime-error.js';
 
-/** Extract a numeric zone attribute, defaulting to 0 when absent or non-numeric. */
-function numericAttribute(zone: ZoneDef, key: string): number {
+type DerivedComputationId = 'computeMarkerTotal' | 'computeTotalEcon' | 'sumControlledPopulation';
+
+type DerivedMetricComputation = DerivedMetricDef['computation'];
+type DerivedMetricsContext = Readonly<Pick<GameDef, 'derivedMetrics'>>;
+
+function describeAttributeType(value: unknown): string {
+  if (value === undefined) {
+    return 'missing';
+  }
+  if (Array.isArray(value)) {
+    return 'array';
+  }
+  return typeof value;
+}
+
+function requireNumericZoneAttribute(
+  gameDef: DerivedMetricsContext,
+  zone: ZoneDef,
+  key: string,
+  computation: DerivedComputationId,
+  metricComputation: DerivedMetricComputation,
+): number {
+  const metrics = (gameDef.derivedMetrics ?? []).filter((metric) => {
+    if (metric.computation !== metricComputation) {
+      return false;
+    }
+    return derivedMetricMatchesZone(metric, zone);
+  });
+
+  const hasDeclaredRequirement = metrics.some((metric) =>
+    metric.requirements.some((requirement) => requirement.key === key && requirement.expectedType === 'number'),
+  );
+  if (!hasDeclaredRequirement) {
+    throw kernelRuntimeError(
+      'DERIVED_VALUE_CONTRACT_MISSING',
+      `Derived computation "${computation}" requires a declared contract for zone "${zone.id}" attribute "${key}".`,
+      {
+        computation,
+        zoneId: zone.id,
+        attributeKey: key,
+      },
+    );
+  }
+
   const value = zone.attributes?.[key];
-  return typeof value === 'number' ? value : 0;
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  const actualType = describeAttributeType(value);
+  throw kernelRuntimeError(
+    'DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID',
+    `Derived computation "${computation}" requires zone "${zone.id}" attribute "${key}" to be number; got ${actualType}.`,
+    {
+      computation,
+      zoneId: zone.id,
+      attributeKey: key,
+      expectedType: 'number',
+      actualType,
+    },
+  );
+}
+
+function derivedMetricMatchesZone(metric: DerivedMetricDef, zone: ZoneDef): boolean {
+  const filter = metric.zoneFilter;
+  if (filter === undefined) {
+    return true;
+  }
+  if (filter.zoneIds !== undefined && filter.zoneIds.length > 0 && !filter.zoneIds.includes(zone.id)) {
+    return false;
+  }
+  if (filter.zoneKinds !== undefined && filter.zoneKinds.length > 0) {
+    const zoneKind = zone.zoneKind ?? 'aux';
+    if (!filter.zoneKinds.includes(zoneKind)) {
+      return false;
+    }
+  }
+  if (filter.category !== undefined && filter.category.length > 0) {
+    if (zone.category === undefined || !filter.category.includes(zone.category)) {
+      return false;
+    }
+  }
+  if (filter.attributeEquals !== undefined) {
+    for (const [attributeKey, expected] of Object.entries(filter.attributeEquals)) {
+      if (!attributeValueEquals(zone.attributes?.[attributeKey], expected)) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 // ─── Configuration Types ─────────────────────────────────────────────────────
@@ -126,6 +213,7 @@ export function getPopulationMultiplier(markerState: string, config: MarkerWeigh
  * `markerStates` maps spaceId → marker state name. Missing entries use `defaultMarkerState`.
  */
 export function computeMarkerTotal(
+  gameDef: DerivedMetricsContext,
   spaces: readonly ZoneDef[],
   markerStates: Readonly<Record<string, string>>,
   config: MarkerWeightConfig,
@@ -134,7 +222,8 @@ export function computeMarkerTotal(
   let total = 0;
   for (const space of spaces) {
     const marker = markerStates[space.id] ?? defaultMarkerState;
-    total += numericAttribute(space, 'population') * getPopulationMultiplier(marker, config);
+    const population = requireNumericZoneAttribute(gameDef, space, 'population', 'computeMarkerTotal', 'markerTotal');
+    total += population * getPopulationMultiplier(marker, config);
   }
   return total;
 }
@@ -143,24 +232,26 @@ export function computeMarkerTotal(
  * Convenience: compute Total Support using a support-specific MarkerWeightConfig.
  */
 export function computeTotalSupport(
+  gameDef: DerivedMetricsContext,
   spaces: readonly ZoneDef[],
   markerStates: Readonly<Record<string, string>>,
   config: MarkerWeightConfig,
   defaultMarkerState: string = 'neutral',
 ): number {
-  return computeMarkerTotal(spaces, markerStates, config, defaultMarkerState);
+  return computeMarkerTotal(gameDef, spaces, markerStates, config, defaultMarkerState);
 }
 
 /**
  * Convenience: compute Total Opposition using an opposition-specific MarkerWeightConfig.
  */
 export function computeTotalOpposition(
+  gameDef: DerivedMetricsContext,
   spaces: readonly ZoneDef[],
   markerStates: Readonly<Record<string, string>>,
   config: MarkerWeightConfig,
   defaultMarkerState: string = 'neutral',
 ): number {
-  return computeMarkerTotal(spaces, markerStates, config, defaultMarkerState);
+  return computeMarkerTotal(gameDef, spaces, markerStates, config, defaultMarkerState);
 }
 
 // ─── Econ and Sabotage ───────────────────────────────────────────────────────
@@ -177,6 +268,7 @@ export function isSabotaged(state: GameState, spaceId: string, terrorTokenType: 
  * Total Econ = sum of econ for LoCs that are COIN-controlled and NOT sabotaged.
  */
 export function computeTotalEcon(
+  gameDef: DerivedMetricsContext,
   state: GameState,
   spaces: readonly ZoneDef[],
   factionConfig: FactionConfig,
@@ -188,7 +280,7 @@ export function computeTotalEcon(
     if (space.category !== locSpaceType) continue;
     if (!isCoinControlled(state, space.id, factionConfig)) continue;
     if (isSabotaged(state, space.id, terrorTokenType)) continue;
-    total += numericAttribute(space, 'econ');
+    total += requireNumericZoneAttribute(gameDef, space, 'econ', 'computeTotalEcon', 'totalEcon');
   }
   return total;
 }
@@ -199,6 +291,7 @@ export function computeTotalEcon(
  * Sum population of spaces where the given control function returns true.
  */
 export function sumControlledPopulation(
+  gameDef: DerivedMetricsContext,
   state: GameState,
   spaces: readonly ZoneDef[],
   controlFn: (state: GameState, spaceId: string, factionConfig: FactionConfig) => boolean,
@@ -207,7 +300,7 @@ export function sumControlledPopulation(
   let total = 0;
   for (const space of spaces) {
     if (controlFn(state, space.id, factionConfig)) {
-      total += numericAttribute(space, 'population');
+      total += requireNumericZoneAttribute(gameDef, space, 'population', 'sumControlledPopulation', 'controlledPopulation');
     }
   }
   return total;
@@ -256,6 +349,7 @@ export function countBasesOnMap(
  * Compute a victory marker value using a game-agnostic formula.
  */
 export function computeVictoryMarker(
+  gameDef: DerivedMetricsContext,
   state: GameState,
   spaces: readonly ZoneDef[],
   markerStates: Readonly<Record<string, string>>,
@@ -264,12 +358,12 @@ export function computeVictoryMarker(
 ): number {
   switch (formula.type) {
     case 'markerTotalPlusZoneCount': {
-      const markerTotal = computeMarkerTotal(spaces, markerStates, formula.markerConfig);
+      const markerTotal = computeMarkerTotal(gameDef, spaces, markerStates, formula.markerConfig);
       const zoneCount = countTokensInZone(state, formula.countZone);
       return markerTotal + zoneCount;
     }
     case 'markerTotalPlusMapBases': {
-      const markerTotal = computeMarkerTotal(spaces, markerStates, formula.markerConfig);
+      const markerTotal = computeMarkerTotal(gameDef, spaces, markerStates, formula.markerConfig);
       const bases = countBasesOnMap(
         state,
         spaces,
@@ -281,7 +375,7 @@ export function computeVictoryMarker(
     }
     case 'controlledPopulationPlusMapBases': {
       const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloFactionControlled;
-      const pop = sumControlledPopulation(state, spaces, controlFn, factionConfig);
+      const pop = sumControlledPopulation(gameDef, state, spaces, controlFn, factionConfig);
       const bases = countBasesOnMap(
         state,
         spaces,
@@ -293,7 +387,7 @@ export function computeVictoryMarker(
     }
     case 'controlledPopulationPlusGlobalVar': {
       const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloFactionControlled;
-      const pop = sumControlledPopulation(state, spaces, controlFn, factionConfig);
+      const pop = sumControlledPopulation(gameDef, state, spaces, controlFn, factionConfig);
       const varValue = state.globalVars[formula.varName];
       if (typeof varValue !== 'number') {
         throw kernelRuntimeError(

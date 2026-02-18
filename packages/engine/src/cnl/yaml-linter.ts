@@ -29,6 +29,7 @@ const CANONICAL_SECTION_KEYS = new Set<string>([
   'turnStructure',
   'turnOrder',
   'actionPipelines',
+  'derivedMetrics',
   'terminal',
   'actions',
   'triggers',

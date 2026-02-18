@@ -12,6 +12,7 @@ import { expandConditionMacros } from './expand-condition-macros.js';
 import {
   lowerActions,
   lowerConstants,
+  lowerDerivedMetrics,
   lowerEndConditions,
   lowerEffectsWithDiagnostics,
   lowerGlobalMarkerLattices,
@@ -53,6 +54,7 @@ export interface CompileSectionResults {
   readonly turnStructure: GameDef['turnStructure'] | null;
   readonly turnOrder: Exclude<GameDef['turnOrder'], undefined> | null;
   readonly actionPipelines: Exclude<GameDef['actionPipelines'], undefined> | null;
+  readonly derivedMetrics: Exclude<GameDef['derivedMetrics'], undefined> | null;
   readonly terminal: GameDef['terminal'] | null;
   readonly actions: GameDef['actions'] | null;
   readonly triggers: GameDef['triggers'] | null;
@@ -201,6 +203,7 @@ function compileExpandedDoc(
     turnStructure: null,
     turnOrder: null,
     actionPipelines: null,
+    derivedMetrics: null,
     terminal: null,
     actions: null,
     triggers: null,
@@ -331,6 +334,13 @@ function compileExpandedDoc(
       actionPipelines.failed || actionPipelines.value === undefined ? null : actionPipelines.value;
   }
 
+  if (resolvedTableRefDoc.derivedMetrics !== null) {
+    const derivedMetrics = compileSection(diagnostics, () =>
+      lowerDerivedMetrics(resolvedTableRefDoc.derivedMetrics, diagnostics),
+    );
+    sections.derivedMetrics = derivedMetrics.failed ? null : derivedMetrics.value;
+  }
+
   let actions: GameDef['actions'] | null = null;
   const rawActions = resolvedTableRefDoc.actions;
   if (rawActions === null) {
@@ -440,6 +450,7 @@ function compileExpandedDoc(
     turnStructure,
     ...(sections.turnOrder === null ? {} : { turnOrder: sections.turnOrder }),
     ...(sections.actionPipelines === null ? {} : { actionPipelines: sections.actionPipelines }),
+    ...(sections.derivedMetrics === null ? {} : { derivedMetrics: sections.derivedMetrics }),
     actions,
     triggers: triggers.value,
     terminal,

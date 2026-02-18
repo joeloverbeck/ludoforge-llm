@@ -21,6 +21,7 @@ describe('parseGameSpec API shape', () => {
       turnStructure: null,
       turnOrder: null,
       actionPipelines: null,
+      derivedMetrics: null,
       eventDecks: null,
       terminal: null,
       actions: null,
@@ -277,6 +278,24 @@ describe('parseGameSpec API shape', () => {
     assert.equal(result.doc.actionPipelines?.[0]?.id, 'patrol-profile');
     assert.ok(result.sourceMap.byPath['actionPipelines[0].id'] !== undefined);
     assert.ok(result.sourceMap.byPath['actionPipelines[0].atomicity'] !== undefined);
+  });
+
+  it('parses derivedMetrics section and anchors merged list paths', () => {
+    const result = parseGameSpec([
+      '```yaml',
+      'derivedMetrics:',
+      '  - id: support-total',
+      '    computation: markerTotal',
+      '    requirements:',
+      '      - key: population',
+      '        expectedType: number',
+      '```',
+    ].join('\n'));
+
+    assert.equal(result.doc.derivedMetrics?.length, 1);
+    assert.equal(result.doc.derivedMetrics?.[0]?.id, 'support-total');
+    assert.ok(result.sourceMap.byPath['derivedMetrics[0].id'] !== undefined);
+    assert.ok(result.sourceMap.byPath['derivedMetrics[0].requirements[0].key'] !== undefined);
   });
 
   it('parses turnOrder cardDriven config and terminal singleton sections', () => {

@@ -12,6 +12,7 @@ export const CANONICAL_SECTION_KEYS = [
   'turnStructure',
   'turnOrder',
   'actionPipelines',
+  'derivedMetrics',
   'eventDecks',
   'terminal',
   'actions',

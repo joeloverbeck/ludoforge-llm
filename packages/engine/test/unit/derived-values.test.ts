@@ -18,7 +18,9 @@ import {
   countTokensInZone,
   countBasesOnMap,
   computeVictoryMarker,
+  isKernelErrorCode,
   type FactionConfig,
+  type GameDef,
   type MarkerWeightConfig,
   type VictoryFormula,
   type GameState,
@@ -59,6 +61,19 @@ const makeSpace = (overrides: {
   },
 });
 
+const makeSpaceWithoutAttributes = (overrides: {
+  id: string;
+  category?: string;
+  adjacentTo?: readonly string[];
+}): ZoneDef => ({
+  id: asZoneId(overrides.id),
+  owner: 'none',
+  visibility: 'public',
+  ordering: 'set',
+  adjacentTo: (overrides.adjacentTo ?? []).map(asZoneId),
+  category: overrides.category ?? 'province',
+});
+
 const makeState = (zones: Record<string, readonly Token[]>, globalVars: Record<string, number> = {}): GameState => ({
   globalVars,
   perPlayerVars: {},
@@ -90,6 +105,23 @@ const SUPPORT_CONFIG: MarkerWeightConfig = {
 const OPPOSITION_CONFIG: MarkerWeightConfig = {
   activeState: 'activeOpposition',
   passiveState: 'passiveOpposition',
+};
+
+const DERIVED_METRICS_CONTEXT: Pick<GameDef, 'derivedMetrics'> = {
+  derivedMetrics: [
+    { id: 'marker-total', computation: 'markerTotal', requirements: [{ key: 'population', expectedType: 'number' }] },
+    {
+      id: 'controlled-pop',
+      computation: 'controlledPopulation',
+      requirements: [{ key: 'population', expectedType: 'number' }],
+    },
+    {
+      id: 'total-econ',
+      computation: 'totalEcon',
+      zoneFilter: { category: ['loc'] },
+      requirements: [{ key: 'econ', expectedType: 'number' }],
+    },
+  ],
 };
 
 // ─── countFactionTokens ──────────────────────────────────────────────────────
@@ -251,7 +283,7 @@ describe('computeTotalSupport', () => {
       s2: 'passiveSupport',
       s3: 'neutral',
     };
-    assert.equal(computeTotalSupport(spaces, markerStates, SUPPORT_CONFIG), 5);
+    assert.equal(computeTotalSupport(DERIVED_METRICS_CONTEXT, spaces, markerStates, SUPPORT_CONFIG), 5);
   });
 
   it('zero population spaces contribute nothing regardless of marker state', () => {
@@ -259,7 +291,7 @@ describe('computeTotalSupport', () => {
       makeSpace({ id: 's1', population: 0 }),
     ];
     const markerStates: Record<string, string> = { s1: 'activeSupport' };
-    assert.equal(computeTotalSupport(spaces, markerStates, SUPPORT_CONFIG), 0);
+    assert.equal(computeTotalSupport(DERIVED_METRICS_CONTEXT, spaces, markerStates, SUPPORT_CONFIG), 0);
   });
 
   it('uses defaultMarkerState for missing entries', () => {
@@ -267,7 +299,45 @@ describe('computeTotalSupport', () => {
       makeSpace({ id: 's1', population: 3 }),
     ];
     // s1 not in markerStates → uses default 'neutral' → multiplier 0
-    assert.equal(computeTotalSupport(spaces, {}, SUPPORT_CONFIG), 0);
+    assert.equal(computeTotalSupport(DERIVED_METRICS_CONTEXT, spaces, {}, SUPPORT_CONFIG), 0);
+  });
+
+  it('fails fast when a space required by marker totals is missing population', () => {
+    const spaces: readonly ZoneDef[] = [makeSpaceWithoutAttributes({ id: 's1' })];
+
+    assert.throws(
+      () => computeTotalSupport(DERIVED_METRICS_CONTEXT, spaces, { s1: 'activeSupport' }, SUPPORT_CONFIG),
+      (error: unknown) => {
+        assert.equal(isKernelErrorCode(error, 'DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID'), true);
+        if (!isKernelErrorCode(error, 'DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID')) {
+          return false;
+        }
+        assert.equal(error.context?.computation, 'computeMarkerTotal');
+        assert.equal(error.context?.zoneId, 's1');
+        assert.equal(error.context?.attributeKey, 'population');
+        assert.equal(error.context?.expectedType, 'number');
+        assert.equal(error.context?.actualType, 'missing');
+        return true;
+      },
+    );
+  });
+
+  it('fails fast when derivedMetrics contract is missing for markerTotal population', () => {
+    const spaces: readonly ZoneDef[] = [makeSpace({ id: 's1', population: 2 })];
+
+    assert.throws(
+      () => computeTotalSupport({ derivedMetrics: [] }, spaces, { s1: 'activeSupport' }, SUPPORT_CONFIG),
+      (error: unknown) => {
+        assert.equal(isKernelErrorCode(error, 'DERIVED_VALUE_CONTRACT_MISSING'), true);
+        if (!isKernelErrorCode(error, 'DERIVED_VALUE_CONTRACT_MISSING')) {
+          return false;
+        }
+        assert.equal(error.context?.computation, 'computeMarkerTotal');
+        assert.equal(error.context?.zoneId, 's1');
+        assert.equal(error.context?.attributeKey, 'population');
+        return true;
+      },
+    );
   });
 });
 
@@ -283,7 +353,7 @@ describe('computeTotalOpposition', () => {
       s2: 'passiveOpposition',
       s3: 'neutral',
     };
-    assert.equal(computeTotalOpposition(spaces, markerStates, OPPOSITION_CONFIG), 5);
+    assert.equal(computeTotalOpposition(DERIVED_METRICS_CONTEXT, spaces, markerStates, OPPOSITION_CONFIG), 5);
   });
 });
 
@@ -341,7 +411,7 @@ describe('computeTotalEcon', () => {
       ],
       'province-1': [makeFactionToken('t8', 'US'), makeFactionToken('t9', 'US')],
     });
-    assert.equal(computeTotalEcon(state, spaces, DEFAULT_FACTION_CONFIG, 'terror'), 2);
+    assert.equal(computeTotalEcon(DERIVED_METRICS_CONTEXT, state, spaces, DEFAULT_FACTION_CONFIG, 'terror'), 2);
   });
 
   it('excludes sabotaged LoC even if COIN-controlled', () => {
@@ -352,14 +422,52 @@ describe('computeTotalEcon', () => {
         { id: asTokenId('terror-1'), type: 'terror', props: {} },
       ],
     });
-    assert.equal(computeTotalEcon(state, spaces, DEFAULT_FACTION_CONFIG, 'terror'), 0);
+    assert.equal(computeTotalEcon(DERIVED_METRICS_CONTEXT, state, spaces, DEFAULT_FACTION_CONFIG, 'terror'), 0);
   });
 
   it('ignores non-LoC spaces even if COIN-controlled with econ > 0', () => {
     const state = makeState({
       'province-1': [makeFactionToken('t1', 'US')],
     });
-    assert.equal(computeTotalEcon(state, spaces, DEFAULT_FACTION_CONFIG, 'terror'), 0);
+    assert.equal(computeTotalEcon(DERIVED_METRICS_CONTEXT, state, spaces, DEFAULT_FACTION_CONFIG, 'terror'), 0);
+  });
+
+  it('fails fast when a counted LoC has non-numeric econ', () => {
+    const baseLoc = makeSpace({ id: 'loc-bad', category: 'loc', econ: 1 });
+    const brokenLoc: ZoneDef = { ...baseLoc, attributes: { ...(baseLoc.attributes ?? {}), econ: 'bad' } };
+    const localSpaces: readonly ZoneDef[] = [brokenLoc];
+    const state = makeState({
+      'loc-bad': [makeFactionToken('t1', 'US')],
+    });
+
+    assert.throws(
+      () => computeTotalEcon(DERIVED_METRICS_CONTEXT, state, localSpaces, DEFAULT_FACTION_CONFIG, 'terror'),
+      (error: unknown) => {
+        assert.equal(isKernelErrorCode(error, 'DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID'), true);
+        if (!isKernelErrorCode(error, 'DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID')) {
+          return false;
+        }
+        assert.equal(error.context?.computation, 'computeTotalEcon');
+        assert.equal(error.context?.zoneId, 'loc-bad');
+        assert.equal(error.context?.attributeKey, 'econ');
+        assert.equal(error.context?.expectedType, 'number');
+        assert.equal(error.context?.actualType, 'string');
+        return true;
+      },
+    );
+  });
+
+  it('does not require econ on spaces excluded by loc category filter', () => {
+    const spacesWithMissingProvinceEcon: readonly ZoneDef[] = [
+      makeSpace({ id: 'loc-1', category: 'loc', econ: 2 }),
+      makeSpaceWithoutAttributes({ id: 'province-raw', category: 'province' }),
+    ];
+    const state = makeState({
+      'loc-1': [makeFactionToken('t1', 'US')],
+      'province-raw': [makeFactionToken('t2', 'US')],
+    });
+
+    assert.equal(computeTotalEcon(DERIVED_METRICS_CONTEXT, state, spacesWithMissingProvinceEcon, DEFAULT_FACTION_CONFIG, 'terror'), 2);
   });
 });
 
@@ -380,7 +488,7 @@ describe('sumControlledPopulation', () => {
     // s1: COIN 2 > insurgent 0 → pop 2
     // s2: COIN 0 < insurgent 2 → excluded
     // s3: COIN 1 > insurgent 0 → pop 1
-    assert.equal(sumControlledPopulation(state, spaces, isCoinControlled, DEFAULT_FACTION_CONFIG), 3);
+    assert.equal(sumControlledPopulation(DERIVED_METRICS_CONTEXT, state, spaces, isCoinControlled, DEFAULT_FACTION_CONFIG), 3);
   });
 });
 
@@ -462,7 +570,7 @@ describe('computeVictoryMarker', () => {
       markerConfig: SUPPORT_CONFIG,
       countZone: 'available',
     };
-    assert.equal(computeVictoryMarker(state, spaces, markerStates, DEFAULT_FACTION_CONFIG, formula), 8);
+    assert.equal(computeVictoryMarker(DERIVED_METRICS_CONTEXT, state, spaces, markerStates, DEFAULT_FACTION_CONFIG, formula), 8);
   });
 
   it('markerTotalPlusMapBases: Total Opposition (3) + VC bases on map (1) = 4', () => {
@@ -485,7 +593,7 @@ describe('computeVictoryMarker', () => {
       baseFaction: 'VC',
       basePieceTypes: ['base'],
     };
-    assert.equal(computeVictoryMarker(state, oppSpaces, oppMarkers, DEFAULT_FACTION_CONFIG, formula), 4);
+    assert.equal(computeVictoryMarker(DERIVED_METRICS_CONTEXT, state, oppSpaces, oppMarkers, DEFAULT_FACTION_CONFIG, formula), 4);
   });
 
   it('controlledPopulationPlusMapBases (solo): pop of solo-controlled (6) + bases (2) = 8', () => {
@@ -522,7 +630,7 @@ describe('computeVictoryMarker', () => {
       baseFaction: 'NVA',
       basePieceTypes: ['base'],
     };
-    assert.equal(computeVictoryMarker(state, nvaSpaces, {}, DEFAULT_FACTION_CONFIG, formula), 8);
+    assert.equal(computeVictoryMarker(DERIVED_METRICS_CONTEXT, state, nvaSpaces, {}, DEFAULT_FACTION_CONFIG, formula), 8);
   });
 
   it('controlledPopulationPlusGlobalVar (COIN): pop of COIN-controlled (4) + Patronage (18) = 22', () => {
@@ -547,7 +655,7 @@ describe('computeVictoryMarker', () => {
       controlFn: 'coin',
       varName: 'patronage',
     };
-    assert.equal(computeVictoryMarker(state, arvnSpaces, {}, DEFAULT_FACTION_CONFIG, formula), 22);
+    assert.equal(computeVictoryMarker(DERIVED_METRICS_CONTEXT, state, arvnSpaces, {}, DEFAULT_FACTION_CONFIG, formula), 22);
   });
 
   it('throws typed error when controlledPopulationPlusGlobalVar references a non-numeric global var', () => {
@@ -560,7 +668,7 @@ describe('computeVictoryMarker', () => {
     };
 
     assert.throws(
-      () => computeVictoryMarker(state, spaces, {}, DEFAULT_FACTION_CONFIG, formula),
+      () => computeVictoryMarker(DERIVED_METRICS_CONTEXT, state, spaces, {}, DEFAULT_FACTION_CONFIG, formula),
       (error: unknown) => {
         assert.ok(error instanceof Error);
         const details = error as Error & { code?: unknown };

@@ -197,6 +197,63 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('reports missing zone references in derived metric filters', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      derivedMetrics: [
+        {
+          id: 'support-total',
+          computation: 'markerTotal',
+          zoneFilter: { zoneIds: ['missing-zone' as ZoneId] },
+          requirements: [{ key: 'population', expectedType: 'number' }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'DERIVED_METRIC_ZONE_REFERENCE_MISSING' && diag.path === 'derivedMetrics[0].zoneFilter.zoneIds[0]',
+      ),
+    );
+  });
+
+  it('reports non-numeric zone attributes required by derived metrics', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        {
+          id: 'market:none',
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: '2', econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
+          adjacentTo: [],
+        },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      ],
+      derivedMetrics: [
+        {
+          id: 'support-total',
+          computation: 'markerTotal',
+          zoneFilter: { zoneKinds: ['board'] as const, category: ['city'] },
+          requirements: [{ key: 'population', expectedType: 'number' }],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) => diag.code === 'DERIVED_METRIC_ZONE_ATTRIBUTE_INVALID' && diag.path === 'zones[0].attributes.population',
+      ),
+    );
+  });
+
   it('reports explicit zoneProp selectors that are not declared map spaces', () => {
     const base = createValidGameDef();
     const def = {

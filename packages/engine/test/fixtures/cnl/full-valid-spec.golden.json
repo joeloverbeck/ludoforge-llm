@@ -34,6 +34,7 @@
     },
     "turnOrder": null,
     "actionPipelines": null,
+    "derivedMetrics": null,
     "eventDecks": null,
     "terminal": {
       "conditions": [

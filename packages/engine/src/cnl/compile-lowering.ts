@@ -1,10 +1,11 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import { asActionId, asPhaseId, asPlayerId, asTriggerId, type PhaseId } from '../kernel/branded.js';
+import { asActionId, asPhaseId, asPlayerId, asTriggerId, asZoneId, type PhaseId } from '../kernel/branded.js';
 import type {
   ActionDef,
   ConditionAST,
   EffectAST,
   EndCondition,
+  DerivedMetricDef,
   GameDef,
   GlobalMarkerLatticeDef,
   LimitDef,
@@ -227,6 +228,169 @@ export function lowerTurnStructure(
     phases,
     ...(interrupts.length === 0 ? {} : { interrupts }),
   };
+}
+
+export function lowerDerivedMetrics(
+  derivedMetrics: GameSpecDoc['derivedMetrics'],
+  diagnostics: Diagnostic[],
+): readonly DerivedMetricDef[] {
+  if (derivedMetrics === null) {
+    return [];
+  }
+
+  const lowered: DerivedMetricDef[] = [];
+  for (const [index, metric] of derivedMetrics.entries()) {
+    const path = `doc.derivedMetrics.${index}`;
+    if (!isRecord(metric)) {
+      diagnostics.push(missingCapabilityDiagnostic(path, 'derived metric definition', metric));
+      continue;
+    }
+    if (typeof metric.id !== 'string' || metric.id.trim() === '') {
+      diagnostics.push(missingCapabilityDiagnostic(`${path}.id`, 'derived metric id', metric.id, ['string']));
+      continue;
+    }
+    if (
+      metric.computation !== 'markerTotal'
+      && metric.computation !== 'controlledPopulation'
+      && metric.computation !== 'totalEcon'
+    ) {
+      diagnostics.push(
+        missingCapabilityDiagnostic(`${path}.computation`, 'derived metric computation', metric.computation, [
+          'markerTotal',
+          'controlledPopulation',
+          'totalEcon',
+        ]),
+      );
+      continue;
+    }
+    if (!Array.isArray(metric.requirements) || metric.requirements.length === 0) {
+      diagnostics.push(
+        missingCapabilityDiagnostic(`${path}.requirements`, 'derived metric requirements', metric.requirements, [
+          'non-empty array',
+        ]),
+      );
+      continue;
+    }
+
+    const requirements: Array<{ key: string; expectedType: 'number' }> = [];
+    let requirementsValid = true;
+    for (const [requirementIndex, requirement] of metric.requirements.entries()) {
+      const requirementPath = `${path}.requirements.${requirementIndex}`;
+      if (!isRecord(requirement)) {
+        diagnostics.push(missingCapabilityDiagnostic(requirementPath, 'derived metric requirement', requirement));
+        requirementsValid = false;
+        continue;
+      }
+      if (typeof requirement.key !== 'string' || requirement.key.trim() === '') {
+        diagnostics.push(missingCapabilityDiagnostic(`${requirementPath}.key`, 'derived metric requirement key', requirement.key, ['string']));
+        requirementsValid = false;
+        continue;
+      }
+      if (requirement.expectedType !== 'number') {
+        diagnostics.push(
+          missingCapabilityDiagnostic(
+            `${requirementPath}.expectedType`,
+            'derived metric requirement expectedType',
+            requirement.expectedType,
+            ['number'],
+          ),
+        );
+        requirementsValid = false;
+        continue;
+      }
+      requirements.push({ key: requirement.key, expectedType: 'number' });
+    }
+    if (!requirementsValid) {
+      continue;
+    }
+
+    let zoneFilter: DerivedMetricDef['zoneFilter'] | undefined;
+    if (metric.zoneFilter !== undefined) {
+      if (!isRecord(metric.zoneFilter)) {
+        diagnostics.push(missingCapabilityDiagnostic(`${path}.zoneFilter`, 'derived metric zoneFilter', metric.zoneFilter));
+        continue;
+      }
+
+      const zoneIds =
+        Array.isArray(metric.zoneFilter.zoneIds) && metric.zoneFilter.zoneIds.every((entry) => typeof entry === 'string')
+          ? metric.zoneFilter.zoneIds.map((zoneId) => asZoneId(zoneId))
+          : undefined;
+      if (metric.zoneFilter.zoneIds !== undefined && zoneIds === undefined) {
+        diagnostics.push(missingCapabilityDiagnostic(`${path}.zoneFilter.zoneIds`, 'derived metric zone ids', metric.zoneFilter.zoneIds, ['string[]']));
+        continue;
+      }
+
+      const zoneKinds =
+        Array.isArray(metric.zoneFilter.zoneKinds)
+          && metric.zoneFilter.zoneKinds.every((entry) => entry === 'board' || entry === 'aux')
+          ? metric.zoneFilter.zoneKinds
+          : undefined;
+      if (metric.zoneFilter.zoneKinds !== undefined && zoneKinds === undefined) {
+        diagnostics.push(
+          missingCapabilityDiagnostic(`${path}.zoneFilter.zoneKinds`, 'derived metric zone kinds', metric.zoneFilter.zoneKinds, ['board|aux[]']),
+        );
+        continue;
+      }
+
+      const category =
+        Array.isArray(metric.zoneFilter.category) && metric.zoneFilter.category.every((entry) => typeof entry === 'string')
+          ? metric.zoneFilter.category
+          : undefined;
+      if (metric.zoneFilter.category !== undefined && category === undefined) {
+        diagnostics.push(
+          missingCapabilityDiagnostic(`${path}.zoneFilter.category`, 'derived metric zone categories', metric.zoneFilter.category, ['string[]']),
+        );
+        continue;
+      }
+
+      const attributeEquals = isRecord(metric.zoneFilter.attributeEquals)
+        ? metric.zoneFilter.attributeEquals as Record<string, unknown>
+        : undefined;
+      if (metric.zoneFilter.attributeEquals !== undefined && attributeEquals === undefined) {
+        diagnostics.push(
+          missingCapabilityDiagnostic(`${path}.zoneFilter.attributeEquals`, 'derived metric attributeEquals', metric.zoneFilter.attributeEquals, ['record']),
+        );
+        continue;
+      }
+
+      const normalizedAttributeEquals: Record<string, string | number | boolean | readonly string[]> = {};
+      let attributesValid = true;
+      for (const [key, value] of Object.entries(attributeEquals ?? {})) {
+        if (
+          typeof value === 'string'
+          || typeof value === 'number'
+          || typeof value === 'boolean'
+          || (Array.isArray(value) && value.every((entry) => typeof entry === 'string'))
+        ) {
+          normalizedAttributeEquals[key] = value as string | number | boolean | readonly string[];
+          continue;
+        }
+        diagnostics.push(
+          missingCapabilityDiagnostic(`${path}.zoneFilter.attributeEquals.${key}`, 'derived metric attribute value', value),
+        );
+        attributesValid = false;
+      }
+      if (!attributesValid) {
+        continue;
+      }
+
+      zoneFilter = {
+        ...(zoneIds === undefined ? {} : { zoneIds }),
+        ...(zoneKinds === undefined ? {} : { zoneKinds }),
+        ...(category === undefined ? {} : { category }),
+        ...(Object.keys(normalizedAttributeEquals).length === 0 ? {} : { attributeEquals: normalizedAttributeEquals }),
+      };
+    }
+
+    lowered.push({
+      id: metric.id,
+      computation: metric.computation,
+      ...(zoneFilter === undefined ? {} : { zoneFilter }),
+      requirements,
+    });
+  }
+
+  return lowered;
 }
 
 export function lowerActions(

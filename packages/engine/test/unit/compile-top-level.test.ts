@@ -538,6 +538,45 @@ describe('compile top-level actions/triggers/end conditions', () => {
     ]);
   });
 
+  it('preserves derivedMetrics contracts when declared', () => {
+    const doc = {
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'derived-metric-pass-through', players: { min: 2, max: 4 } },
+      zones: [
+        {
+          id: 'city:none',
+          zoneKind: 'board' as const,
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, econ: 0, terrainTags: [], country: 'test', coastal: false },
+        },
+      ],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'patrol', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      derivedMetrics: [
+        {
+          id: 'support-total',
+          computation: 'markerTotal' as const,
+          zoneFilter: { zoneKinds: ['board' as const], category: ['city'] },
+          requirements: [{ key: 'population', expectedType: 'number' as const }],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [{ when: { op: '>=', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+
+    assert.equal(result.gameDef !== null, true);
+    assertNoDiagnostics(result);
+    assert.equal(result.gameDef?.derivedMetrics?.[0]?.id, 'support-total');
+    assert.equal(result.gameDef?.derivedMetrics?.[0]?.computation, 'markerTotal');
+    assert.deepEqual(result.gameDef?.derivedMetrics?.[0]?.zoneFilter?.zoneKinds, ['board']);
+    assert.deepEqual(result.gameDef?.derivedMetrics?.[0]?.requirements, [{ key: 'population', expectedType: 'number' }]);
+  });
+
   it('carries only sequentially-visible binders across pipeline stages', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

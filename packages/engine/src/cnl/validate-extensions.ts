@@ -31,6 +31,12 @@ interface DataAssetValidationContext {
   readonly hasMapAsset: boolean;
 }
 
+const DERIVED_METRIC_KEYS = ['id', 'computation', 'zoneFilter', 'requirements'] as const;
+const DERIVED_METRIC_ZONE_FILTER_KEYS = ['zoneIds', 'zoneKinds', 'category', 'attributeEquals'] as const;
+const DERIVED_METRIC_REQUIREMENT_KEYS = ['key', 'expectedType'] as const;
+const DERIVED_METRIC_COMPUTATION_VALUES = ['markerTotal', 'controlledPopulation', 'totalEcon'] as const;
+const DERIVED_METRIC_ZONE_KIND_VALUES = ['board', 'aux'] as const;
+
 export function validateDataAssets(doc: GameSpecDoc, diagnostics: Diagnostic[]): DataAssetValidationContext {
   if (doc.dataAssets === null) {
     return { hasMapAsset: false };
@@ -203,6 +209,184 @@ export function validateScoring(doc: GameSpecDoc, diagnostics: Diagnostic[]): vo
       suggestion: 'Provide a ValueExpr-compatible scoring value.',
     });
   }
+}
+
+export function validateDerivedMetrics(
+  doc: GameSpecDoc,
+  zoneIds: readonly string[],
+  diagnostics: Diagnostic[],
+): void {
+  if (doc.derivedMetrics === null) {
+    return;
+  }
+
+  const derivedMetricIds: string[] = [];
+  const zoneIdSet = new Set(zoneIds.map((zoneId) => normalizeIdentifier(zoneId)));
+
+  for (const [metricIndex, metric] of doc.derivedMetrics.entries()) {
+    const metricPath = `doc.derivedMetrics.${metricIndex}`;
+    if (!isRecord(metric)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_DERIVED_METRIC_SHAPE_INVALID',
+        path: metricPath,
+        severity: 'error',
+        message: 'derivedMetrics entry must be an object.',
+        suggestion: 'Provide id, computation, optional zoneFilter, and requirements.',
+      });
+      continue;
+    }
+
+    validateUnknownKeys(metric, DERIVED_METRIC_KEYS, metricPath, diagnostics, 'derived metric');
+
+    const metricId = validateIdentifierField(metric, 'id', `${metricPath}.id`, diagnostics, 'derived metric id');
+    if (metricId !== undefined) {
+      derivedMetricIds.push(metricId);
+    }
+
+    validateEnumField(metric, 'computation', DERIVED_METRIC_COMPUTATION_VALUES, metricPath, diagnostics, 'derived metric');
+
+    if (!Array.isArray(metric.requirements) || metric.requirements.length === 0) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_DERIVED_METRIC_REQUIREMENTS_INVALID',
+        path: `${metricPath}.requirements`,
+        severity: 'error',
+        message: 'derivedMetrics.requirements must be a non-empty array.',
+        suggestion: 'Add one or more requirements with key and expectedType.',
+      });
+    } else {
+      for (const [requirementIndex, requirement] of metric.requirements.entries()) {
+        const requirementPath = `${metricPath}.requirements.${requirementIndex}`;
+        if (!isRecord(requirement)) {
+          diagnostics.push({
+            code: 'CNL_VALIDATOR_DERIVED_METRIC_REQUIREMENT_SHAPE_INVALID',
+            path: requirementPath,
+            severity: 'error',
+            message: 'Requirement must be an object.',
+            suggestion: 'Set requirement fields { key, expectedType }.',
+          });
+          continue;
+        }
+        validateUnknownKeys(requirement, DERIVED_METRIC_REQUIREMENT_KEYS, requirementPath, diagnostics, 'derived metric requirement');
+        validateIdentifierField(requirement, 'key', `${requirementPath}.key`, diagnostics, 'derived metric attribute key');
+        validateEnumField(requirement, 'expectedType', ['number'], requirementPath, diagnostics, 'derived metric requirement');
+      }
+    }
+
+    if (metric.zoneFilter === undefined) {
+      continue;
+    }
+    if (!isRecord(metric.zoneFilter)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_DERIVED_METRIC_ZONE_FILTER_SHAPE_INVALID',
+        path: `${metricPath}.zoneFilter`,
+        severity: 'error',
+        message: 'zoneFilter must be an object when declared.',
+        suggestion: 'Set zoneFilter to an object with zoneIds/zoneKinds/category/attributeEquals fields.',
+      });
+      continue;
+    }
+
+    const zoneFilter = metric.zoneFilter;
+    const zoneFilterPath = `${metricPath}.zoneFilter`;
+    validateUnknownKeys(zoneFilter, DERIVED_METRIC_ZONE_FILTER_KEYS, zoneFilterPath, diagnostics, 'derived metric zoneFilter');
+
+    if (zoneFilter.zoneIds !== undefined) {
+      if (!Array.isArray(zoneFilter.zoneIds)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_DERIVED_METRIC_ZONE_IDS_INVALID',
+          path: `${zoneFilterPath}.zoneIds`,
+          severity: 'error',
+          message: 'zoneFilter.zoneIds must be an array of zone ids.',
+          suggestion: 'Provide zone ids as an array of strings.',
+        });
+      } else {
+        for (const [zoneIndex, zoneId] of zoneFilter.zoneIds.entries()) {
+          if (typeof zoneId !== 'string' || zoneId.trim() === '') {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_DERIVED_METRIC_ZONE_IDS_INVALID',
+              path: `${zoneFilterPath}.zoneIds.${zoneIndex}`,
+              severity: 'error',
+              message: 'zoneFilter.zoneIds entries must be non-empty strings.',
+              suggestion: 'Replace invalid entries with declared zone ids.',
+            });
+            continue;
+          }
+          const normalizedZoneId = normalizeIdentifier(zoneId);
+          if (normalizedZoneId.length > 0 && !zoneIdSet.has(normalizedZoneId)) {
+            pushMissingReferenceDiagnostic(
+              diagnostics,
+              'CNL_VALIDATOR_REFERENCE_MISSING',
+              `${zoneFilterPath}.zoneIds.${zoneIndex}`,
+              `Unknown zone "${zoneId}".`,
+              normalizedZoneId,
+              zoneIds,
+              'Use one of the declared zone ids.',
+            );
+          }
+        }
+      }
+    }
+
+    if (zoneFilter.zoneKinds !== undefined) {
+      if (!Array.isArray(zoneFilter.zoneKinds)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_DERIVED_METRIC_ZONE_KINDS_INVALID',
+          path: `${zoneFilterPath}.zoneKinds`,
+          severity: 'error',
+          message: 'zoneFilter.zoneKinds must be an array.',
+          suggestion: 'Use one or more values from: board, aux.',
+        });
+      } else {
+        for (const [zoneKindIndex, zoneKind] of zoneFilter.zoneKinds.entries()) {
+          if (zoneKind !== 'board' && zoneKind !== 'aux') {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_DERIVED_METRIC_ZONE_KINDS_INVALID',
+              path: `${zoneFilterPath}.zoneKinds.${zoneKindIndex}`,
+              severity: 'error',
+              message: `Unknown zone kind "${String(zoneKind)}".`,
+              suggestion: `Use one of: ${DERIVED_METRIC_ZONE_KIND_VALUES.join(', ')}.`,
+            });
+          }
+        }
+      }
+    }
+
+    if (zoneFilter.category !== undefined) {
+      if (!Array.isArray(zoneFilter.category)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_DERIVED_METRIC_CATEGORY_INVALID',
+          path: `${zoneFilterPath}.category`,
+          severity: 'error',
+          message: 'zoneFilter.category must be an array.',
+          suggestion: 'Provide one or more category strings.',
+        });
+      } else {
+        for (const [categoryIndex, category] of zoneFilter.category.entries()) {
+          if (typeof category !== 'string' || category.trim() === '') {
+            diagnostics.push({
+              code: 'CNL_VALIDATOR_DERIVED_METRIC_CATEGORY_INVALID',
+              path: `${zoneFilterPath}.category.${categoryIndex}`,
+              severity: 'error',
+              message: 'zoneFilter.category entries must be non-empty strings.',
+              suggestion: 'Replace invalid category entries with non-empty strings.',
+            });
+          }
+        }
+      }
+    }
+
+    if (zoneFilter.attributeEquals !== undefined && !isRecord(zoneFilter.attributeEquals)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_DERIVED_METRIC_ATTRIBUTE_EQUALS_INVALID',
+        path: `${zoneFilterPath}.attributeEquals`,
+        severity: 'error',
+        message: 'zoneFilter.attributeEquals must be an object.',
+        suggestion: 'Set attributeEquals to a key/value object.',
+      });
+    }
+  }
+
+  pushDuplicateNormalizedIdDiagnostics(diagnostics, derivedMetricIds, 'doc.derivedMetrics', 'derived metric id');
 }
 
 export function validateEventDecks(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {

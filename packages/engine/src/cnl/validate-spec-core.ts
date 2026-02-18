@@ -5,6 +5,7 @@ import { validateActions, validateTerminal, validateTurnStructure } from './vali
 import {
   validateActionPipelines,
   validateDataAssets,
+  validateDerivedMetrics,
   validateEventDecks,
   validateScoring,
   validateTurnOrder,
@@ -47,6 +48,7 @@ export function validateGameSpec(
   const phaseIds = validateTurnStructure(doc, diagnostics);
   validateTurnOrder(doc, diagnostics);
   validateActionPipelines(doc, actionIds, diagnostics);
+  validateDerivedMetrics(doc, zoneIds, diagnostics);
   validateEventDecks(doc, diagnostics);
   validateScoring(doc, diagnostics);
 

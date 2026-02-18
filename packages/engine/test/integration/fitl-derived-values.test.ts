@@ -15,6 +15,7 @@ import {
   computeTotalEcon,
   computeVictoryMarker,
   type FactionConfig,
+  type GameDef,
   type GameState,
   type MapPayload,
   type MapSpaceInput,
@@ -191,6 +192,23 @@ const FITL_OPPOSITION_CONFIG: MarkerWeightConfig = {
   passiveState: 'passiveOpposition',
 };
 
+const FITL_DERIVED_METRICS_CONTEXT: Pick<GameDef, 'derivedMetrics'> = {
+  derivedMetrics: [
+    { id: 'fitl-marker-total', computation: 'markerTotal', requirements: [{ key: 'population', expectedType: 'number' }] },
+    {
+      id: 'fitl-controlled-population',
+      computation: 'controlledPopulation',
+      requirements: [{ key: 'population', expectedType: 'number' }],
+    },
+    {
+      id: 'fitl-total-econ',
+      computation: 'totalEcon',
+      zoneFilter: { category: ['loc'] },
+      requirements: [{ key: 'econ', expectedType: 'number' }],
+    },
+  ],
+};
+
 // ─── Victory Formulas ────────────────────────────────────────────────────────
 
 /** US = Total Support + available US pieces in the "available" zone. */
@@ -300,7 +318,7 @@ describe('FITL derived values — integration', () => {
       it(`${label} scenario totalEcon is computable without errors`, () => {
         const scenario = data.scenarios.get(id)!;
         const state = buildStateFromScenario(data.mapPayload, data.catalogPayload, scenario);
-        const result = computeTotalEcon(state, spaces, FITL_FACTION_CONFIG, 'terror');
+        const result = computeTotalEcon(FITL_DERIVED_METRICS_CONTEXT, state, spaces, FITL_FACTION_CONFIG, 'terror');
         assert.equal(typeof result, 'number');
         assert.equal(result >= 0, true, 'totalEcon must be non-negative');
       });
@@ -324,37 +342,37 @@ describe('FITL derived values — integration', () => {
       const expected = goldenMarkers.get(id)!;
 
       it('Total Support matches golden value component', () => {
-        const totalSupport = computeTotalSupport(spaces, markerStates, FITL_SUPPORT_CONFIG);
+        const totalSupport = computeTotalSupport(FITL_DERIVED_METRICS_CONTEXT, spaces, markerStates, FITL_SUPPORT_CONFIG);
         // Total Support is a building block; verify it's sensible
         assert.equal(typeof totalSupport, 'number');
         assert.equal(totalSupport >= 0, true, 'Total Support must be non-negative');
       });
 
       it('Total Opposition matches golden value component', () => {
-        const totalOpposition = computeTotalOpposition(spaces, markerStates, FITL_OPPOSITION_CONFIG);
+        const totalOpposition = computeTotalOpposition(FITL_DERIVED_METRICS_CONTEXT, spaces, markerStates, FITL_OPPOSITION_CONFIG);
         assert.equal(typeof totalOpposition, 'number');
         assert.equal(totalOpposition >= 0, true, 'Total Opposition must be non-negative');
       });
 
       it(`VC marker = ${expected.vc}`, () => {
-        const vc = computeVictoryMarker(state, spaces, markerStates, FITL_FACTION_CONFIG, VC_FORMULA);
+        const vc = computeVictoryMarker(FITL_DERIVED_METRICS_CONTEXT, state, spaces, markerStates, FITL_FACTION_CONFIG, VC_FORMULA);
         assert.equal(vc, expected.vc, `VC victory marker for ${label}`);
       });
 
       it(`NVA marker = ${expected.nva}`, () => {
-        const nva = computeVictoryMarker(state, spaces, markerStates, FITL_FACTION_CONFIG, NVA_FORMULA);
+        const nva = computeVictoryMarker(FITL_DERIVED_METRICS_CONTEXT, state, spaces, markerStates, FITL_FACTION_CONFIG, NVA_FORMULA);
         assert.equal(nva, expected.nva, `NVA victory marker for ${label}`);
       });
 
       it(`ARVN marker = ${expected.arvn}`, () => {
-        const arvn = computeVictoryMarker(state, spaces, markerStates, FITL_FACTION_CONFIG, ARVN_FORMULA);
+        const arvn = computeVictoryMarker(FITL_DERIVED_METRICS_CONTEXT, state, spaces, markerStates, FITL_FACTION_CONFIG, ARVN_FORMULA);
         assert.equal(arvn, expected.arvn, `ARVN victory marker for ${label}`);
       });
 
       // US marker requires available pieces (inventory - placed - outOfPlay), which
       // computeVictoryMarker doesn't handle directly. Verify the components.
       it(`US marker components sum to ${expected.us}`, () => {
-        const totalSupport = computeTotalSupport(spaces, markerStates, FITL_SUPPORT_CONFIG);
+        const totalSupport = computeTotalSupport(FITL_DERIVED_METRICS_CONTEXT, spaces, markerStates, FITL_SUPPORT_CONFIG);
         const placements = scenario.initialPlacements ?? [];
 
         // Available = total - placed - outOfPlay for US troops + US bases

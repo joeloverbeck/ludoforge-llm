@@ -15,6 +15,7 @@ const LIST_SECTIONS = [
   'tokenTypes',
   'setup',
   'actionPipelines',
+  'derivedMetrics',
   'eventDecks',
   'actions',
   'triggers',
@@ -282,6 +283,9 @@ function assignListSection(
       break;
     case 'actionPipelines':
       mutable.actionPipelines = value as MutableGameSpecDoc['actionPipelines'];
+      break;
+    case 'derivedMetrics':
+      mutable.derivedMetrics = value as MutableGameSpecDoc['derivedMetrics'];
       break;
     case 'eventDecks':
       mutable.eventDecks = value as MutableGameSpecDoc['eventDecks'];

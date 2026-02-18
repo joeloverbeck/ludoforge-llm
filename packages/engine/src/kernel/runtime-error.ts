@@ -22,7 +22,9 @@ export type KernelRuntimeErrorCode =
   | 'TERMINAL_MARGIN_NON_NUMERIC'
   | 'TERMINAL_CHECKPOINT_FACTION_UNMAPPED'
   | 'TERMINAL_WINNER_FACTION_UNMAPPED'
-  | 'DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR';
+  | 'DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR'
+  | 'DERIVED_VALUE_CONTRACT_MISSING'
+  | 'DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID';
 
 export type SelectorBoundarySurface = 'applyMove' | 'legalChoices' | 'legalMoves';
 
@@ -89,6 +91,18 @@ export interface KernelRuntimeErrorContextByCode {
   }>;
   readonly DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR: Readonly<{
     readonly varName: string;
+  }>;
+  readonly DERIVED_VALUE_CONTRACT_MISSING: Readonly<{
+    readonly computation: 'computeMarkerTotal' | 'computeTotalEcon' | 'sumControlledPopulation';
+    readonly zoneId: string;
+    readonly attributeKey: string;
+  }>;
+  readonly DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID: Readonly<{
+    readonly computation: 'computeMarkerTotal' | 'computeTotalEcon' | 'sumControlledPopulation';
+    readonly zoneId: string;
+    readonly attributeKey: string;
+    readonly expectedType: 'number';
+    readonly actualType: string;
   }>;
 }
 

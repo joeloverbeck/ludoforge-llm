@@ -558,6 +558,59 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('accepts valid optional derivedMetrics section', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      zones: [
+        {
+          id: 'city:none',
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, econ: 0, terrainTags: [], country: 'test', coastal: false },
+        },
+      ],
+      derivedMetrics: [
+        {
+          id: 'support-total',
+          computation: 'markerTotal',
+          zoneFilter: { zoneKinds: ['board'], category: ['city'] },
+          requirements: [{ key: 'population', expectedType: 'number' }],
+        },
+      ],
+    });
+
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path.startsWith('doc.derivedMetrics')), false);
+  });
+
+  it('reports malformed derivedMetrics entries with nested paths', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      derivedMetrics: [
+        {
+          id: 'support-total',
+          computation: 'bad-computation',
+          zoneFilter: {
+            zoneIds: ['missing-zone'],
+            zoneKinds: ['bad-kind'],
+            category: [''],
+            attributeEquals: 'bad',
+          },
+          requirements: [{ key: '', expectedType: 'string' }],
+        },
+      ],
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path === 'doc.derivedMetrics.0.computation'), true);
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path === 'doc.derivedMetrics.0.zoneFilter.zoneIds.0'), true);
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path === 'doc.derivedMetrics.0.zoneFilter.zoneKinds.0'), true);
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path === 'doc.derivedMetrics.0.zoneFilter.attributeEquals'), true);
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path === 'doc.derivedMetrics.0.requirements.0.key'), true);
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.path === 'doc.derivedMetrics.0.requirements.0.expectedType'), true);
+  });
+
   it('reports missing phase reference in action with alternatives', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

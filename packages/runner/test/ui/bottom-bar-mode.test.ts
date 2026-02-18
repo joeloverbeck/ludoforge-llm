@@ -98,4 +98,55 @@ describe('deriveBottomBarState', () => {
     const mode = deriveBottomBarState(makeRenderModel());
     expect(mode).toEqual({ kind: 'actions' });
   });
+
+  it('derives deterministic precedence/fallback for contradictory edge states', () => {
+    const cases: ReadonlyArray<{
+      readonly name: string;
+      readonly renderModel: NonNullable<GameStore['renderModel']> | null;
+      readonly expected: ReturnType<typeof deriveBottomBarState>;
+    }> = [
+      {
+        name: 'ai turn overrides pending choice mode',
+        renderModel: makeRenderModel({
+          activePlayerID: asPlayerId(1),
+          choiceUi: {
+            kind: 'discreteOne',
+            options: [{
+              choiceValueId: 's:1:x',
+              value: 'x',
+              displayName: 'X',
+              target: { kind: 'scalar', entityId: null, displaySource: 'fallback' },
+              legality: 'legal',
+              illegalReason: null,
+            }],
+          },
+        }),
+        expected: { kind: 'aiTurn' },
+      },
+      {
+        name: 'ai turn overrides confirm-ready mode',
+        renderModel: makeRenderModel({
+          activePlayerID: asPlayerId(1),
+          choiceUi: { kind: 'confirmReady' },
+        }),
+        expected: { kind: 'aiTurn' },
+      },
+      {
+        name: 'unknown active player falls back to aiTurn',
+        renderModel: makeRenderModel({
+          activePlayerID: asPlayerId(99),
+        }),
+        expected: { kind: 'aiTurn' },
+      },
+      {
+        name: 'null render model is hidden',
+        renderModel: null,
+        expected: { kind: 'hidden' },
+      },
+    ];
+
+    for (const testCase of cases) {
+      expect(deriveBottomBarState(testCase.renderModel), testCase.name).toEqual(testCase.expected);
+    }
+  });
 });

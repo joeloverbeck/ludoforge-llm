@@ -323,6 +323,48 @@ describe('ChoicePanel', () => {
     expect(chooseOne).toHaveBeenCalledWith('zone-a');
   });
 
+  it('keeps unknown-legality options non-actionable with deterministic feedback', () => {
+    const chooseOne = vi.fn(async () => {});
+
+    const tree = ChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: {
+            kind: 'discreteOne',
+            options: [makeChoiceOption('zone-u', 'Zone U', 'unknown', null)],
+          },
+        }),
+        chooseOne,
+      }),
+    });
+
+    const unknownOption = findElementByTestId(tree, choiceOptionTestId('zone-u'));
+    expect(unknownOption).not.toBeNull();
+    if (unknownOption === null || unknownOption.props.onClick === undefined) {
+      throw new Error('Expected unknown option button click handler.');
+    }
+
+    expect(unknownOption.props.disabled).toBe(true);
+    unknownOption.props.onClick();
+    expect(chooseOne).toHaveBeenCalledTimes(0);
+
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choicePending',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceUi: {
+              kind: 'discreteOne',
+              options: [makeChoiceOption('zone-u', 'Zone U', 'unknown', null)],
+            },
+          }),
+        }),
+      }),
+    );
+    expect(html).toContain('This option is currently unavailable.');
+  });
+
   it('uses stable distinct option identities for scalar/array value collisions', () => {
     const html = renderToStaticMarkup(
       createElement(ChoicePanel, {

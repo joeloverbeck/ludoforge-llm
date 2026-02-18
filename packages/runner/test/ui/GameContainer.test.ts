@@ -303,6 +303,29 @@ describe('GameContainer', () => {
     expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
   });
 
+  it('keeps aiTurn precedence even with contradictory choice/confirm state', () => {
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel({
+            activePlayerID: asPlayerId(1),
+            choiceUi: { kind: 'confirmReady' },
+          }),
+          selectedAction: asActionId('pass'),
+          partialMove: { actionId: asActionId('pass'), params: {} },
+        }),
+      }),
+    );
+
+    expect(html).not.toContain('data-testid="action-toolbar"');
+    expect(html).not.toContain('data-testid="undo-control"');
+    expect(html).not.toContain('data-testid="choice-panel-choicePending"');
+    expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
+    expect(html).not.toContain('data-testid="choice-panel-choiceInvalid"');
+  });
+
   it('ErrorState retry callback calls clearError on the store', () => {
     testDoubles.errorStateProps = null;
     const clearError = vi.fn();

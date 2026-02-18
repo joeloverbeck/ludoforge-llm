@@ -8,8 +8,8 @@ Evolving board games relying on LLMs for design/judgement, and executable protot
 - Automation contract: protected branch/release CI must run the full e2e lane (`test:e2e:all`) or an equivalent split that always includes `test:e2e:slow`.
 
 ## Runner Dev Bootstrap
-- Generate FITL bootstrap fixture: `pnpm -F @ludoforge/runner bootstrap:fitl`
-- Generate Texas Hold'em bootstrap fixture: `pnpm -F @ludoforge/runner bootstrap:texas`
+- Generate all runner bootstrap fixtures: `pnpm -F @ludoforge/runner bootstrap:fixtures`
+- Check fixture drift (fails on stale fixtures): `pnpm -F @ludoforge/runner bootstrap:fixtures:check`
 - Start runner: `pnpm -F @ludoforge/runner dev`
 - FITL URL: `http://localhost:5173/?game=fitl`
 - Texas URL: `http://localhost:5173/?game=texas`

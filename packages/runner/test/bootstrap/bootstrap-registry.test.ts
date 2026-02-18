@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   assertBootstrapRegistry,
+  assertBootstrapTargetDefinitions,
   listBootstrapDescriptors,
   resolveBootstrapDescriptor,
   type BootstrapDescriptor,
@@ -37,6 +38,12 @@ describe('bootstrap-registry', () => {
     expect(queryValues.size).toBe(descriptors.length);
   });
 
+  it('exports expected descriptors from canonical bootstrap target manifest', () => {
+    const descriptors = listBootstrapDescriptors();
+    expect(descriptors.map((descriptor) => descriptor.id)).toEqual(['default', 'fitl', 'texas']);
+    expect(descriptors.map((descriptor) => descriptor.queryValue)).toEqual(['default', 'fitl', 'texas']);
+  });
+
   it('throws when descriptor validation receives duplicate query values', () => {
     const descriptors: readonly BootstrapDescriptor[] = [
       descriptor('d0', 'dup'),
@@ -53,6 +60,15 @@ describe('bootstrap-registry', () => {
     expect(() => assertBootstrapRegistry([invalidSeedDescriptor])).toThrow(/defaultSeed/u);
     expect(() => assertBootstrapRegistry([invalidPlayerDescriptor])).toThrow(/defaultPlayerId/u);
   });
+
+  it('throws when target manifest validation receives duplicate fixture files', () => {
+    const targets = [
+      target('d0', 'd0', 'same.json'),
+      target('d1', 'd1', 'same.json'),
+    ];
+
+    expect(() => assertBootstrapTargetDefinitions(targets)).toThrow(/fixtureFile must be unique/u);
+  });
 });
 
 function descriptor(
@@ -68,5 +84,27 @@ function descriptor(
     sourceLabel: 'test fixture',
     resolveGameDefInput: async () => ({}),
     ...overrides,
+  };
+}
+
+function target(
+  id: string,
+  queryValue: string,
+  fixtureFile: string,
+): {
+  id: string;
+  queryValue: string;
+  defaultSeed: number;
+  defaultPlayerId: number;
+  sourceLabel: string;
+  fixtureFile: string;
+} {
+  return {
+    id,
+    queryValue,
+    defaultSeed: 42,
+    defaultPlayerId: 0,
+    sourceLabel: 'test fixture',
+    fixtureFile,
   };
 }

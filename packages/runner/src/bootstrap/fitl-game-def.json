@@ -346,6 +346,7 @@
   "zones": [
     {
       "id": "hue:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -372,6 +373,7 @@
     },
     {
       "id": "da-nang:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -400,6 +402,7 @@
     },
     {
       "id": "kontum:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -429,6 +432,7 @@
     },
     {
       "id": "qui-nhon:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -457,6 +461,7 @@
     },
     {
       "id": "cam-ranh:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -485,6 +490,7 @@
     },
     {
       "id": "an-loc:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -512,6 +518,7 @@
     },
     {
       "id": "saigon:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -544,6 +551,7 @@
     },
     {
       "id": "can-tho:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -575,6 +583,7 @@
     },
     {
       "id": "central-laos:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -605,6 +614,7 @@
     },
     {
       "id": "southern-laos:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -638,6 +648,7 @@
     },
     {
       "id": "northeast-cambodia:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -666,6 +677,7 @@
     },
     {
       "id": "the-fishhook:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -699,6 +711,7 @@
     },
     {
       "id": "the-parrots-beak:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -730,6 +743,7 @@
     },
     {
       "id": "sihanoukville:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -757,6 +771,7 @@
     },
     {
       "id": "north-vietnam:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -785,6 +800,7 @@
     },
     {
       "id": "quang-tri-thua-thien:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -816,6 +832,7 @@
     },
     {
       "id": "quang-nam:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -848,6 +865,7 @@
     },
     {
       "id": "quang-tin-quang-ngai:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -879,6 +897,7 @@
     },
     {
       "id": "binh-dinh:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -914,6 +933,7 @@
     },
     {
       "id": "pleiku-darlac:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -952,6 +972,7 @@
     },
     {
       "id": "phu-bon-phu-yen:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -985,6 +1006,7 @@
     },
     {
       "id": "khanh-hoa:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1021,6 +1043,7 @@
     },
     {
       "id": "phuoc-long:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1051,6 +1074,7 @@
     },
     {
       "id": "quang-duc-long-khanh:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1088,6 +1112,7 @@
     },
     {
       "id": "binh-tuy-binh-thuan:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1121,6 +1146,7 @@
     },
     {
       "id": "tay-ninh:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1154,6 +1180,7 @@
     },
     {
       "id": "kien-phong:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1187,6 +1214,7 @@
     },
     {
       "id": "kien-hoa-vinh-binh:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1218,6 +1246,7 @@
     },
     {
       "id": "ba-xuyen:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1248,6 +1277,7 @@
     },
     {
       "id": "kien-giang-an-xuyen:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1280,6 +1310,7 @@
     },
     {
       "id": "loc-hue-khe-sanh:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1309,6 +1340,7 @@
     },
     {
       "id": "loc-hue-da-nang:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1338,6 +1370,7 @@
     },
     {
       "id": "loc-da-nang-dak-to:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1370,6 +1403,7 @@
     },
     {
       "id": "loc-da-nang-qui-nhon:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1399,6 +1433,7 @@
     },
     {
       "id": "loc-kontum-dak-to:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1429,6 +1464,7 @@
     },
     {
       "id": "loc-kontum-qui-nhon:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1458,6 +1494,7 @@
     },
     {
       "id": "loc-kontum-ban-me-thuot:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1490,6 +1527,7 @@
     },
     {
       "id": "loc-qui-nhon-cam-ranh:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1519,6 +1557,7 @@
     },
     {
       "id": "loc-cam-ranh-da-lat:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1550,6 +1589,7 @@
     },
     {
       "id": "loc-ban-me-thuot-da-lat:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1583,6 +1623,7 @@
     },
     {
       "id": "loc-saigon-cam-ranh:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1611,6 +1652,7 @@
     },
     {
       "id": "loc-saigon-da-lat:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1642,6 +1684,7 @@
     },
     {
       "id": "loc-saigon-an-loc-ban-me-thuot:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1677,6 +1720,7 @@
     },
     {
       "id": "loc-saigon-can-tho:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1706,6 +1750,7 @@
     },
     {
       "id": "loc-can-tho-chau-doc:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1735,6 +1780,7 @@
     },
     {
       "id": "loc-can-tho-bac-lieu:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1763,6 +1809,7 @@
     },
     {
       "id": "loc-can-tho-long-phu:none",
+      "zoneKind": "board",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
@@ -1791,66 +1838,77 @@
     },
     {
       "id": "deck:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "hidden",
       "ordering": "stack"
     },
     {
       "id": "available-US:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
       "ordering": "set"
     },
     {
       "id": "out-of-play-US:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
       "ordering": "set"
     },
     {
       "id": "available-ARVN:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
       "ordering": "set"
     },
     {
       "id": "out-of-play-ARVN:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
       "ordering": "set"
     },
     {
       "id": "available-NVA:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
       "ordering": "set"
     },
     {
       "id": "available-VC:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
       "ordering": "set"
     },
     {
       "id": "casualties-US:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
       "ordering": "set"
     },
     {
       "id": "leader:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
       "ordering": "stack"
     },
     {
       "id": "lookahead:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
       "ordering": "stack"
     },
     {
       "id": "played:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
       "ordering": "stack"

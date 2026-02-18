@@ -1,4 +1,14 @@
-import defaultBootstrapGameDef from './default-game-def.json';
+import bootstrapTargets from './bootstrap-targets.json';
+
+export interface BootstrapTargetDefinition {
+  readonly id: string;
+  readonly queryValue: string;
+  readonly defaultSeed: number;
+  readonly defaultPlayerId: number;
+  readonly sourceLabel: string;
+  readonly fixtureFile: string;
+  readonly generatedFromSpecPath?: string;
+}
 
 export interface BootstrapDescriptor {
   readonly id: string;
@@ -9,40 +19,29 @@ export interface BootstrapDescriptor {
   readonly resolveGameDefInput: () => Promise<unknown>;
 }
 
-const DEFAULT_BOOTSTRAP_DESCRIPTOR: BootstrapDescriptor = {
-  id: 'default',
-  queryValue: 'default',
-  defaultSeed: 42,
-  defaultPlayerId: 0,
-  sourceLabel: 'runner bootstrap fixture',
-  resolveGameDefInput: async () => defaultBootstrapGameDef,
-};
+const BOOTSTRAP_TARGET_DEFINITIONS = assertBootstrapTargetDefinitions(bootstrapTargets as unknown);
+const FIXTURE_LOADERS = import.meta.glob('./*-game-def.json', { import: 'default' }) as Record<string, () => Promise<unknown>>;
 
-const FITL_BOOTSTRAP_DESCRIPTOR: BootstrapDescriptor = {
-  id: 'fitl',
-  queryValue: 'fitl',
-  defaultSeed: 42,
-  defaultPlayerId: 0,
-  sourceLabel: 'FITL bootstrap fixture',
-  resolveGameDefInput: async () => (await import('./fitl-game-def.json')).default,
-};
+const BOOTSTRAP_REGISTRY: readonly BootstrapDescriptor[] = BOOTSTRAP_TARGET_DEFINITIONS.map((target) => {
+  const fixturePath = `./${target.fixtureFile}`;
+  const fixtureLoader = FIXTURE_LOADERS[fixturePath];
+  if (fixtureLoader === undefined) {
+    throw new Error(`Bootstrap target fixture file does not exist (id=${target.id}, fixtureFile=${target.fixtureFile})`);
+  }
 
-const TEXAS_BOOTSTRAP_DESCRIPTOR: BootstrapDescriptor = {
-  id: 'texas',
-  queryValue: 'texas',
-  defaultSeed: 42,
-  defaultPlayerId: 0,
-  sourceLabel: "Texas Hold'em bootstrap fixture",
-  resolveGameDefInput: async () => (await import('./texas-game-def.json')).default,
-};
-
-const BOOTSTRAP_REGISTRY: readonly BootstrapDescriptor[] = [
-  DEFAULT_BOOTSTRAP_DESCRIPTOR,
-  FITL_BOOTSTRAP_DESCRIPTOR,
-  TEXAS_BOOTSTRAP_DESCRIPTOR,
-];
+  return {
+    id: target.id,
+    queryValue: target.queryValue,
+    defaultSeed: target.defaultSeed,
+    defaultPlayerId: target.defaultPlayerId,
+    sourceLabel: target.sourceLabel,
+    resolveGameDefInput: fixtureLoader,
+  } satisfies BootstrapDescriptor;
+});
 
 assertBootstrapRegistry(BOOTSTRAP_REGISTRY);
+
+const DEFAULT_BOOTSTRAP_DESCRIPTOR = resolveDefaultBootstrapDescriptor(BOOTSTRAP_REGISTRY);
 
 export function listBootstrapDescriptors(): readonly BootstrapDescriptor[] {
   return BOOTSTRAP_REGISTRY;
@@ -89,4 +88,89 @@ export function assertBootstrapRegistry(descriptors: readonly BootstrapDescripto
     ids.add(descriptor.id);
     queryValues.add(descriptor.queryValue);
   }
+}
+
+export function assertBootstrapTargetDefinitions(targetsInput: unknown): readonly BootstrapTargetDefinition[] {
+  if (!Array.isArray(targetsInput) || targetsInput.length === 0) {
+    throw new Error('Bootstrap targets manifest must be a non-empty array');
+  }
+
+  const ids = new Set<string>();
+  const queryValues = new Set<string>();
+  const fixtureFiles = new Set<string>();
+
+  const targets = targetsInput.map((target, index) => {
+    if (target === null || typeof target !== 'object') {
+      throw new Error(`Bootstrap target at index ${index} must be an object`);
+    }
+
+    const candidate = target as Record<string, unknown>;
+    const id = requireNonEmptyString(candidate.id, `Bootstrap target id (index=${index})`);
+    const queryValue = requireNonEmptyString(candidate.queryValue, `Bootstrap target queryValue (id=${id})`);
+    const sourceLabel = requireNonEmptyString(candidate.sourceLabel, `Bootstrap target sourceLabel (id=${id})`);
+    const fixtureFile = requireNonEmptyString(candidate.fixtureFile, `Bootstrap target fixtureFile (id=${id})`);
+
+    if (!Number.isSafeInteger(candidate.defaultSeed) || (candidate.defaultSeed as number) < 0) {
+      throw new Error(`Bootstrap target defaultSeed must be a non-negative safe integer (id=${id})`);
+    }
+    if (!Number.isSafeInteger(candidate.defaultPlayerId) || (candidate.defaultPlayerId as number) < 0) {
+      throw new Error(`Bootstrap target defaultPlayerId must be a non-negative safe integer (id=${id})`);
+    }
+
+    const generatedFromSpecPathRaw = candidate.generatedFromSpecPath;
+    const generatedFromSpecPath = generatedFromSpecPathRaw === undefined
+      ? undefined
+      : requireNonEmptyString(generatedFromSpecPathRaw, `Bootstrap target generatedFromSpecPath (id=${id})`);
+
+    if (ids.has(id)) {
+      throw new Error(`Bootstrap target id must be unique (id=${id})`);
+    }
+    if (queryValues.has(queryValue)) {
+      throw new Error(`Bootstrap target queryValue must be unique (queryValue=${queryValue})`);
+    }
+    if (fixtureFiles.has(fixtureFile)) {
+      throw new Error(`Bootstrap target fixtureFile must be unique (fixtureFile=${fixtureFile})`);
+    }
+
+    ids.add(id);
+    queryValues.add(queryValue);
+    fixtureFiles.add(fixtureFile);
+
+    const base = {
+      id,
+      queryValue,
+      defaultSeed: candidate.defaultSeed as number,
+      defaultPlayerId: candidate.defaultPlayerId as number,
+      sourceLabel,
+      fixtureFile,
+    };
+
+    if (generatedFromSpecPath !== undefined) {
+      return {
+        ...base,
+        generatedFromSpecPath,
+      } satisfies BootstrapTargetDefinition;
+    }
+
+    return base satisfies BootstrapTargetDefinition;
+  });
+
+  return targets;
+}
+
+function resolveDefaultBootstrapDescriptor(
+  descriptors: readonly BootstrapDescriptor[],
+): BootstrapDescriptor {
+  const descriptor = descriptors.find((entry) => entry.id === 'default');
+  if (descriptor === undefined) {
+    throw new Error('Bootstrap registry must define a default descriptor (id=default)');
+  }
+  return descriptor;
+}
+
+function requireNonEmptyString(value: unknown, label: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(`${label} must be a non-empty string`);
+  }
+  return value;
 }

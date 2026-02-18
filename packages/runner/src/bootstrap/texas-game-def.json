@@ -178,87 +178,108 @@
   "zones": [
     {
       "id": "deck:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "hidden",
       "ordering": "stack"
     },
     {
       "id": "burn:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "hidden",
       "ordering": "set"
     },
     {
       "id": "community:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
       "ordering": "queue"
     },
     {
       "id": "hand:0",
+      "zoneKind": "aux",
       "owner": "player",
       "visibility": "owner",
       "ordering": "set"
     },
     {
       "id": "hand:1",
+      "zoneKind": "aux",
       "owner": "player",
       "visibility": "owner",
       "ordering": "set"
     },
     {
       "id": "hand:2",
+      "zoneKind": "aux",
       "owner": "player",
       "visibility": "owner",
       "ordering": "set"
     },
     {
       "id": "hand:3",
+      "zoneKind": "aux",
       "owner": "player",
       "visibility": "owner",
       "ordering": "set"
     },
     {
       "id": "hand:4",
+      "zoneKind": "aux",
       "owner": "player",
       "visibility": "owner",
       "ordering": "set"
     },
     {
       "id": "hand:5",
+      "zoneKind": "aux",
       "owner": "player",
       "visibility": "owner",
       "ordering": "set"
     },
     {
       "id": "hand:6",
+      "zoneKind": "aux",
       "owner": "player",
       "visibility": "owner",
       "ordering": "set"
     },
     {
       "id": "hand:7",
+      "zoneKind": "aux",
       "owner": "player",
       "visibility": "owner",
       "ordering": "set"
     },
     {
       "id": "hand:8",
+      "zoneKind": "aux",
       "owner": "player",
       "visibility": "owner",
       "ordering": "set"
     },
     {
       "id": "hand:9",
+      "zoneKind": "aux",
       "owner": "player",
       "visibility": "owner",
       "ordering": "set"
     },
     {
       "id": "muck:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "hidden",
       "ordering": "set"
+    }
+  ],
+  "factions": [
+    {
+      "id": "neutral",
+      "color": "#6c757d",
+      "displayName": "Neutral"
     }
   ],
   "globalMarkerLattices": [],
@@ -267,6 +288,13 @@
       "id": "standard-52-deck",
       "kind": "pieceCatalog",
       "payload": {
+        "factions": [
+          {
+            "id": "neutral",
+            "color": "#6c757d",
+            "displayName": "Neutral"
+          }
+        ],
         "pieceTypes": [
           {
             "id": "card-2S",
@@ -1250,6 +1278,36 @@
     }
   ],
   "tableContracts": [
+    {
+      "id": "standard-52-deck::factions",
+      "assetId": "standard-52-deck",
+      "tablePath": "factions",
+      "fields": [
+        {
+          "field": "color",
+          "type": "string"
+        },
+        {
+          "field": "displayName",
+          "type": "string"
+        },
+        {
+          "field": "id",
+          "type": "string"
+        }
+      ],
+      "uniqueBy": [
+        [
+          "color"
+        ],
+        [
+          "displayName"
+        ],
+        [
+          "id"
+        ]
+      ]
+    },
     {
       "id": "standard-52-deck::inventory",
       "assetId": "standard-52-deck",

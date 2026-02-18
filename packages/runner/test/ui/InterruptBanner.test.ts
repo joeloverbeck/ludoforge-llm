@@ -1,11 +1,7 @@
 import { createElement } from 'react';
 import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { StoreApi } from 'zustand';
 import { describe, expect, it, vi } from 'vitest';
-import { asPlayerId } from '@ludoforge/engine/runtime';
-
-import type { GameStore } from '../../src/store/game-store.js';
 
 vi.mock('zustand', () => ({
   useStore: <TState, TSlice>(store: { getState(): TState }, selector: (state: TState) => TSlice): TSlice => {
@@ -14,67 +10,38 @@ vi.mock('zustand', () => ({
 }));
 
 import { InterruptBanner } from '../../src/ui/InterruptBanner.js';
-
-function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']>> = {}): NonNullable<GameStore['renderModel']> {
-  return {
-    zones: [],
-    adjacencies: [],
-    mapSpaces: [],
-    tokens: [],
-    globalVars: [],
-    playerVars: new Map(),
-    globalMarkers: [],
-    tracks: [],
-    activeEffects: [],
-    players: [
-      {
-        id: asPlayerId(0),
-        displayName: 'Human',
-        isHuman: true,
-        isActive: true,
-        isEliminated: false,
-        factionId: null,
-      },
-    ],
-    activePlayerID: asPlayerId(0),
-    turnOrder: [asPlayerId(0)],
-    turnOrderType: 'roundRobin',
-    simultaneousSubmitted: [],
-    interruptStack: [{ phase: 'headline', resumePhase: 'action-round' }],
-    isInInterrupt: true,
-    phaseName: 'main',
-    phaseDisplayName: 'Main',
-    eventDecks: [],
-    actionGroups: [],
-    choiceBreadcrumb: [],
-    choiceUi: { kind: 'none' },
-    moveEnumerationWarnings: [],
-    terminal: null,
-    ...overrides,
-  };
-}
-
-function createStore(renderModel: GameStore['renderModel']): StoreApi<GameStore> {
-  return {
-    getState: () => ({ renderModel }),
-  } as unknown as StoreApi<GameStore>;
-}
+import { createRenderModelStore as createStore, makeRenderModelFixture as makeRenderModel } from './helpers/render-model-fixture.js';
 
 describe('InterruptBanner', () => {
   it('renders when isInInterrupt is true', () => {
-    const html = renderToStaticMarkup(createElement(InterruptBanner, { store: createStore(makeRenderModel()) }));
+    const html = renderToStaticMarkup(createElement(InterruptBanner, {
+      store: createStore(makeRenderModel({
+        interruptStack: [{ phase: 'headline', resumePhase: 'action-round' }],
+        isInInterrupt: true,
+      })),
+    }));
 
     expect(html).toContain('data-testid="interrupt-banner"');
   });
 
   it('shows interrupt phase name', () => {
-    const html = renderToStaticMarkup(createElement(InterruptBanner, { store: createStore(makeRenderModel()) }));
+    const html = renderToStaticMarkup(createElement(InterruptBanner, {
+      store: createStore(makeRenderModel({
+        interruptStack: [{ phase: 'headline', resumePhase: 'action-round' }],
+        isInInterrupt: true,
+      })),
+    }));
 
     expect(html).toContain('Interrupt: headline');
   });
 
   it('shows resume phase name', () => {
-    const html = renderToStaticMarkup(createElement(InterruptBanner, { store: createStore(makeRenderModel()) }));
+    const html = renderToStaticMarkup(createElement(InterruptBanner, {
+      store: createStore(makeRenderModel({
+        interruptStack: [{ phase: 'headline', resumePhase: 'action-round' }],
+        isInInterrupt: true,
+      })),
+    }));
 
     expect(html).toContain('Resumes: action-round');
   });
@@ -88,6 +55,7 @@ describe('InterruptBanner', () => {
               { phase: 'first', resumePhase: 'main' },
               { phase: 'second', resumePhase: 'combat' },
             ],
+            isInInterrupt: true,
           }),
         ),
       }),

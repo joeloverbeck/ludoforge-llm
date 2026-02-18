@@ -1,10 +1,6 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { StoreApi } from 'zustand';
 import { describe, expect, it, vi } from 'vitest';
-import { asPlayerId } from '@ludoforge/engine/runtime';
-
-import type { GameStore } from '../../src/store/game-store.js';
 
 vi.mock('zustand', () => ({
   useStore: <TState, TSlice>(store: { getState(): TState }, selector: (state: TState) => TSlice): TSlice => {
@@ -13,72 +9,43 @@ vi.mock('zustand', () => ({
 }));
 
 import { EventDeckPanel } from '../../src/ui/EventDeckPanel.js';
-
-function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']>> = {}): NonNullable<GameStore['renderModel']> {
-  return {
-    zones: [],
-    adjacencies: [],
-    mapSpaces: [],
-    tokens: [],
-    globalVars: [],
-    playerVars: new Map(),
-    globalMarkers: [],
-    tracks: [],
-    activeEffects: [],
-    players: [
-      {
-        id: asPlayerId(0),
-        displayName: 'Human',
-        isHuman: true,
-        isActive: true,
-        isEliminated: false,
-        factionId: null,
-      },
-    ],
-    activePlayerID: asPlayerId(0),
-    turnOrder: [asPlayerId(0)],
-    turnOrderType: 'roundRobin',
-    simultaneousSubmitted: [],
-    interruptStack: [],
-    isInInterrupt: false,
-    phaseName: 'main',
-    phaseDisplayName: 'Main',
-    eventDecks: [
-      {
-        id: 'strategy',
-        displayName: 'Strategy Deck',
-        drawZoneId: 'deck',
-        discardZoneId: 'discard',
-        currentCardId: 'card-1',
-        currentCardTitle: 'Containment',
-        deckSize: 22,
-        discardSize: 3,
-      },
-    ],
-    actionGroups: [],
-    choiceBreadcrumb: [],
-    choiceUi: { kind: 'none' },
-    moveEnumerationWarnings: [],
-    terminal: null,
-    ...overrides,
-  };
-}
-
-function createStore(renderModel: GameStore['renderModel']): StoreApi<GameStore> {
-  return {
-    getState: () => ({ renderModel }),
-  } as unknown as StoreApi<GameStore>;
-}
+import { createRenderModelStore as createStore, makeRenderModelFixture as makeRenderModel } from './helpers/render-model-fixture.js';
 
 describe('EventDeckPanel', () => {
   it('renders deck display name', () => {
-    const html = renderToStaticMarkup(createElement(EventDeckPanel, { store: createStore(makeRenderModel()) }));
+    const html = renderToStaticMarkup(createElement(EventDeckPanel, {
+      store: createStore(makeRenderModel({
+        eventDecks: [{
+          id: 'strategy',
+          displayName: 'Strategy Deck',
+          drawZoneId: 'deck',
+          discardZoneId: 'discard',
+          currentCardId: 'card-1',
+          currentCardTitle: 'Containment',
+          deckSize: 22,
+          discardSize: 3,
+        }],
+      })),
+    }));
 
     expect(html).toContain('Strategy Deck');
   });
 
   it('shows current card title', () => {
-    const html = renderToStaticMarkup(createElement(EventDeckPanel, { store: createStore(makeRenderModel()) }));
+    const html = renderToStaticMarkup(createElement(EventDeckPanel, {
+      store: createStore(makeRenderModel({
+        eventDecks: [{
+          id: 'strategy',
+          displayName: 'Strategy Deck',
+          drawZoneId: 'deck',
+          discardZoneId: 'discard',
+          currentCardId: 'card-1',
+          currentCardTitle: 'Containment',
+          deckSize: 22,
+          discardSize: 3,
+        }],
+      })),
+    }));
 
     expect(html).toContain('Containment');
   });
@@ -109,7 +76,20 @@ describe('EventDeckPanel', () => {
   });
 
   it('shows deck and discard counts', () => {
-    const html = renderToStaticMarkup(createElement(EventDeckPanel, { store: createStore(makeRenderModel()) }));
+    const html = renderToStaticMarkup(createElement(EventDeckPanel, {
+      store: createStore(makeRenderModel({
+        eventDecks: [{
+          id: 'strategy',
+          displayName: 'Strategy Deck',
+          drawZoneId: 'deck',
+          discardZoneId: 'discard',
+          currentCardId: 'card-1',
+          currentCardTitle: 'Containment',
+          deckSize: 22,
+          discardSize: 3,
+        }],
+      })),
+    }));
 
     expect(html).toContain('Deck: 22');
     expect(html).toContain('Discard: 3');

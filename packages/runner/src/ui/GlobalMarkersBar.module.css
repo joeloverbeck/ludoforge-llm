@@ -1,0 +1,30 @@
+.chipList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chip {
+  composes: fontUi from './shared.module.css';
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 2px var(--space-sm);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.markerId {
+  composes: textSecondary from './shared.module.css';
+  font-size: var(--font-size-sm);
+}
+
+.markerState {
+  composes: textPrimary from './shared.module.css';
+  composes: fontMono from './shared.module.css';
+  font-size: var(--font-size-sm);
+}

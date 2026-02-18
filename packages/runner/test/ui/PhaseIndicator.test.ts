@@ -1,10 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { StoreApi } from 'zustand';
 import { describe, expect, it, vi } from 'vitest';
 import { asPlayerId } from '@ludoforge/engine/runtime';
-
-import type { GameStore } from '../../src/store/game-store.js';
 
 vi.mock('zustand', () => ({
   useStore: <TState, TSlice>(store: { getState(): TState }, selector: (state: TState) => TSlice): TSlice => {
@@ -13,61 +10,7 @@ vi.mock('zustand', () => ({
 }));
 
 import { PhaseIndicator } from '../../src/ui/PhaseIndicator.js';
-
-function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']>> = {}): NonNullable<GameStore['renderModel']> {
-  return {
-    zones: [],
-    adjacencies: [],
-    mapSpaces: [],
-    tokens: [],
-    globalVars: [],
-    playerVars: new Map(),
-    globalMarkers: [],
-    tracks: [],
-    activeEffects: [],
-    players: [
-      {
-        id: asPlayerId(0),
-        displayName: 'Human',
-        isHuman: true,
-        isActive: true,
-        isEliminated: false,
-        factionId: 'ussr',
-      },
-      {
-        id: asPlayerId(1),
-        displayName: 'AI',
-        isHuman: false,
-        isActive: false,
-        isEliminated: false,
-        factionId: null,
-      },
-    ],
-    activePlayerID: asPlayerId(0),
-    turnOrder: [asPlayerId(0), asPlayerId(1)],
-    turnOrderType: 'roundRobin',
-    simultaneousSubmitted: [],
-    interruptStack: [],
-    isInInterrupt: false,
-    phaseName: 'main',
-    phaseDisplayName: 'Main',
-    eventDecks: [],
-    actionGroups: [],
-    choiceBreadcrumb: [],
-    choiceUi: { kind: 'none' },
-    moveEnumerationWarnings: [],
-    terminal: null,
-    ...overrides,
-  };
-}
-
-function createStore(renderModel: GameStore['renderModel']): StoreApi<GameStore> {
-  return {
-    getState: () => ({
-      renderModel,
-    }),
-  } as unknown as StoreApi<GameStore>;
-}
+import { createRenderModelStore as createStore, makeRenderModelFixture as makeRenderModel } from './helpers/render-model-fixture.js';
 
 describe('PhaseIndicator', () => {
   it('renders the phase display name', () => {
@@ -93,7 +36,27 @@ describe('PhaseIndicator', () => {
   it('shows active player display name', () => {
     const html = renderToStaticMarkup(
       createElement(PhaseIndicator, {
-        store: createStore(makeRenderModel({ activePlayerID: asPlayerId(1) })),
+        store: createStore(makeRenderModel({
+          activePlayerID: asPlayerId(1),
+          players: [
+            {
+              id: asPlayerId(0),
+              displayName: 'Human',
+              isHuman: true,
+              isActive: true,
+              isEliminated: false,
+              factionId: 'ussr',
+            },
+            {
+              id: asPlayerId(1),
+              displayName: 'AI',
+              isHuman: false,
+              isActive: false,
+              isEliminated: false,
+              factionId: null,
+            },
+          ],
+        })),
       }),
     );
 
@@ -103,7 +66,19 @@ describe('PhaseIndicator', () => {
   it('applies CSS-variable-based faction color binding with fallback', () => {
     const html = renderToStaticMarkup(
       createElement(PhaseIndicator, {
-        store: createStore(makeRenderModel({ activePlayerID: asPlayerId(0) })),
+        store: createStore(makeRenderModel({
+          activePlayerID: asPlayerId(0),
+          players: [
+            {
+              id: asPlayerId(0),
+              displayName: 'Human',
+              isHuman: true,
+              isActive: true,
+              isEliminated: false,
+              factionId: 'ussr',
+            },
+          ],
+        })),
       }),
     );
 

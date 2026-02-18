@@ -56,6 +56,14 @@ vi.mock('../../src/ui/Scoreboard.js', () => ({
   Scoreboard: () => createElement('div', { 'data-testid': 'scoreboard' }),
 }));
 
+vi.mock('../../src/ui/GlobalMarkersBar.js', () => ({
+  GlobalMarkersBar: () => createElement('div', { 'data-testid': 'global-markers-bar' }),
+}));
+
+vi.mock('../../src/ui/ActiveEffectsPanel.js', () => ({
+  ActiveEffectsPanel: () => createElement('div', { 'data-testid': 'active-effects-panel' }),
+}));
+
 vi.mock('../../src/ui/ErrorState.js', () => ({
   ErrorState: (props: CapturedErrorStateProps) => {
     testDoubles.errorStateProps = props;
@@ -209,6 +217,8 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="event-deck-panel"');
     expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-testid="scoreboard"');
+    expect(html).toContain('data-testid="global-markers-bar"');
+    expect(html).toContain('data-testid="active-effects-panel"');
   });
 
   it('renders GameCanvas and UIOverlay when lifecycle is terminal', () => {
@@ -229,6 +239,8 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="event-deck-panel"');
     expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-testid="scoreboard"');
+    expect(html).toContain('data-testid="global-markers-bar"');
+    expect(html).toContain('data-testid="active-effects-panel"');
   });
 
   it('renders actions mode branch only', () => {

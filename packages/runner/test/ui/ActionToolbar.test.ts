@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { StoreApi } from 'zustand';
 import { describe, expect, it, vi } from 'vitest';
-import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
+import { makeRenderModelFixture as makeRenderModel } from './helpers/render-model-fixture.js';
 
 vi.mock('zustand', () => ({
   useStore: <TState, TSlice>(store: { getState(): TState }, selector: (state: TState) => TSlice): TSlice => {
@@ -22,6 +22,29 @@ type TraversableElement = ReactElement<{
   readonly ['data-testid']?: string;
   readonly ['aria-disabled']?: 'true';
 }>;
+
+const DEFAULT_ACTION_GROUPS: NonNullable<GameStore['renderModel']>['actionGroups'] = [
+  {
+    groupName: 'Core',
+    actions: [
+      { actionId: 'move', displayName: 'Move', isAvailable: true },
+      { actionId: 'pass', displayName: 'Pass', isAvailable: false },
+    ],
+  },
+  {
+    groupName: 'Special',
+    actions: [{ actionId: 'trade', displayName: 'Trade', isAvailable: true }],
+  },
+];
+
+function makeToolbarRenderModel(
+  overrides: Partial<NonNullable<GameStore['renderModel']>> = {},
+): NonNullable<GameStore['renderModel']> {
+  return makeRenderModel({
+    actionGroups: DEFAULT_ACTION_GROUPS,
+    ...overrides,
+  });
+}
 
 function findElementsByType(node: ReactNode, type: string): TraversableElement[] {
   if (!isValidElement(node)) {
@@ -63,65 +86,6 @@ function findElementByTestId(node: ReactNode, testId: string): TraversableElemen
   return findElementByTestId(children, testId);
 }
 
-function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']>> = {}): NonNullable<GameStore['renderModel']> {
-  return {
-    zones: [],
-    adjacencies: [],
-    mapSpaces: [],
-    tokens: [],
-    globalVars: [],
-    playerVars: new Map(),
-    globalMarkers: [],
-    tracks: [],
-    activeEffects: [],
-    players: [
-      {
-        id: asPlayerId(0),
-        displayName: 'Player 0',
-        isHuman: true,
-        isActive: true,
-        isEliminated: false,
-        factionId: null,
-      },
-      {
-        id: asPlayerId(1),
-        displayName: 'Player 1',
-        isHuman: false,
-        isActive: false,
-        isEliminated: false,
-        factionId: null,
-      },
-    ],
-    activePlayerID: asPlayerId(0),
-    turnOrder: [asPlayerId(0), asPlayerId(1)],
-    turnOrderType: 'roundRobin',
-    simultaneousSubmitted: [],
-    interruptStack: [],
-    isInInterrupt: false,
-    phaseName: 'main',
-    phaseDisplayName: 'Main',
-    eventDecks: [],
-    actionGroups: [
-      {
-        groupName: 'Core',
-        actions: [
-          { actionId: 'move', displayName: 'Move', isAvailable: true },
-          { actionId: 'pass', displayName: 'Pass', isAvailable: false },
-        ],
-      },
-      {
-        groupName: 'Special',
-        actions: [{ actionId: 'trade', displayName: 'Trade', isAvailable: true }],
-      },
-    ],
-    choiceBreadcrumb: [],
-    choiceUi: { kind: 'none' },
-    moveEnumerationWarnings: [],
-    terminal: null,
-    ...overrides,
-  };
-}
-
 function createToolbarStore(state: {
   readonly renderModel: GameStore['renderModel'];
   readonly selectAction?: GameStore['selectAction'];
@@ -137,7 +101,7 @@ function createToolbarStore(state: {
 describe('ActionToolbar', () => {
   it('renders action buttons from grouped RenderActionGroup data', () => {
     const store = createToolbarStore({
-      renderModel: makeRenderModel(),
+      renderModel: makeToolbarRenderModel(),
     });
 
     const html = renderToStaticMarkup(createElement(ActionToolbar, { store }));
@@ -152,7 +116,7 @@ describe('ActionToolbar', () => {
   it('renders disabled actions with aria-disabled="true"', () => {
     const tree = ActionToolbar({
       store: createToolbarStore({
-        renderModel: makeRenderModel(),
+        renderModel: makeToolbarRenderModel(),
       }),
     });
 
@@ -171,7 +135,7 @@ describe('ActionToolbar', () => {
 
     const tree = ActionToolbar({
       store: createToolbarStore({
-        renderModel: makeRenderModel(),
+        renderModel: makeToolbarRenderModel(),
         selectAction,
       }),
     });
@@ -200,7 +164,7 @@ describe('ActionToolbar', () => {
   it('does not render when action groups have no actions', () => {
     const tree = ActionToolbar({
       store: createToolbarStore({
-        renderModel: makeRenderModel({
+        renderModel: makeToolbarRenderModel({
           actionGroups: [{ groupName: 'Empty', actions: [] }],
         }),
       }),
@@ -213,7 +177,7 @@ describe('ActionToolbar', () => {
     const html = renderToStaticMarkup(
       createElement(ActionToolbar, {
         store: createToolbarStore({
-          renderModel: makeRenderModel(),
+          renderModel: makeToolbarRenderModel(),
         }),
       }),
     );
@@ -225,7 +189,7 @@ describe('ActionToolbar', () => {
   it('renders number hints in flattened visual order', () => {
     const tree = ActionToolbar({
       store: createToolbarStore({
-        renderModel: makeRenderModel(),
+        renderModel: makeToolbarRenderModel(),
       }),
     });
 

@@ -120,6 +120,7 @@ function makeRenderContext(
     legalMoveResult: { moves: [], warnings: [] },
     choicePending: null,
     selectedAction: asActionId('tick'),
+    partialMove: null,
     choiceStack: [],
     playerSeats: new Map(
       Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), 'human' as const]),

@@ -4,6 +4,7 @@ import type { MoveParamValue, PlayerId } from '@ludoforge/engine/runtime';
 
 import type {
   RenderChoiceOption,
+  RenderChoiceUi,
   RenderModel,
   RenderTerminal,
   RenderToken,
@@ -136,18 +137,19 @@ describe('render-model types', () => {
           chosenDisplayName: 'Table',
         },
       ],
-      currentChoiceOptions: [
-        {
-          value: ['table', asPlayerId(1)] as MoveParamValue,
-          displayName: 'Table, Player 1',
-          legality: 'legal',
-          illegalReason: null,
-        },
-      ],
-      currentChoiceDomain: { min: 0, max: 3, step: 1 },
-      choiceType: 'chooseN',
-      choiceMin: 1,
-      choiceMax: 2,
+      choiceUi: {
+        kind: 'discreteMany',
+        options: [
+          {
+            value: ['table', asPlayerId(1)] as MoveParamValue,
+            displayName: 'Table, Player 1',
+            legality: 'legal',
+            illegalReason: null,
+          },
+        ],
+        min: 1,
+        max: 2,
+      },
       moveEnumerationWarnings: [{ code: 'WARN', message: 'warning message' }],
       terminal: {
         type: 'win',
@@ -245,5 +247,27 @@ describe('render-model types', () => {
 
     expectTypeOf(scalarOption.value).toMatchTypeOf<MoveParamValue>();
     expectTypeOf(vectorOption.value).toMatchTypeOf<MoveParamValue>();
+  });
+
+  it('covers all RenderChoiceUi variants', () => {
+    const choices: readonly RenderChoiceUi[] = [
+      { kind: 'none' },
+      { kind: 'confirmReady' },
+      {
+        kind: 'discreteOne',
+        options: [{ value: 'zone:a' as MoveParamValue, displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+      },
+      {
+        kind: 'discreteMany',
+        options: [{ value: 'zone:a' as MoveParamValue, displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+        min: 1,
+        max: 2,
+      },
+      {
+        kind: 'numeric',
+        domain: { min: 0, max: 5, step: 1 },
+      },
+    ];
+    expect(choices).toHaveLength(5);
   });
 });

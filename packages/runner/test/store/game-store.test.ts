@@ -251,17 +251,13 @@ describe('createGameStore', () => {
     await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-one'));
 
-    expect(store.getState().renderModel?.choiceType).toBe('chooseOne');
-    expect(store.getState().renderModel?.currentChoiceOptions).not.toBeNull();
+    expect(store.getState().renderModel?.choiceUi.kind).toBe('discreteOne');
 
     await store.getState().chooseOne(pickOneOption(store));
 
     const state = store.getState();
     expect(state.choicePending).toBeNull();
-    expect(state.renderModel?.choiceType).toBeNull();
-    expect(state.renderModel?.choiceMin).toBeNull();
-    expect(state.renderModel?.choiceMax).toBeNull();
-    expect(state.renderModel?.currentChoiceOptions).toBeNull();
+    expect(state.renderModel?.choiceUi.kind).toBe('confirmReady');
   });
 
   it('chooseOne illegal sets error and preserves previous move construction', async () => {
@@ -416,9 +412,7 @@ describe('createGameStore', () => {
     expect(state.choicePending).toBeNull();
     expect(state.partialMove?.params[pending.decisionId]).toEqual(['a', 'b']);
     expect(state.partialMove?.params[pending.name]).toBeUndefined();
-    expect(state.renderModel?.choiceType).toBeNull();
-    expect(state.renderModel?.choiceMin).toBeNull();
-    expect(state.renderModel?.choiceMax).toBeNull();
+    expect(state.renderModel?.choiceUi.kind).toBe('confirmReady');
   });
 
   it('real-worker chooseOne stores value under decisionId key (not decision name)', async () => {

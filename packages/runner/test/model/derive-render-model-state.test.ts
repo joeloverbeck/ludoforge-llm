@@ -125,6 +125,7 @@ function makeRenderContext(
     legalMoveResult: { moves: [], warnings: [] },
     choicePending: null,
     selectedAction: asActionId('tick'),
+    partialMove: null,
     choiceStack: [],
     playerSeats: new Map(
       Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), 'human' as const]),
@@ -496,9 +497,15 @@ describe('deriveRenderModel state metadata', () => {
         actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }],
       },
     ]);
-    expect(model.choiceType).toBe('chooseN');
-    expect(model.choiceMin).toBe(1);
-    expect(model.choiceMax).toBe(2);
+    expect(model.choiceUi).toEqual({
+      kind: 'discreteMany',
+      options: [
+        { value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null },
+        { value: 'token-a', displayName: 'Token A', legality: 'legal', illegalReason: null },
+      ],
+      min: 1,
+      max: 2,
+    });
     expect(model.choiceBreadcrumb).toEqual([
       {
         decisionId: 'pick-action',
@@ -507,10 +514,6 @@ describe('deriveRenderModel state metadata', () => {
         chosenValue: 'train-us',
         chosenDisplayName: 'Train Us',
       },
-    ]);
-    expect(model.currentChoiceOptions).toEqual([
-      { value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null },
-      { value: 'token-a', displayName: 'Token A', legality: 'legal', illegalReason: null },
     ]);
     expect(model.moveEnumerationWarnings).toEqual([
       { code: 'EMPTY_QUERY_RESULT', message: 'query produced no rows' },
@@ -542,15 +545,18 @@ describe('deriveRenderModel state metadata', () => {
       }),
     );
 
-    expect(model.currentChoiceOptions).toEqual([
-      { value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null },
-      {
-        value: 'blocked-zone',
-        displayName: 'Blocked Zone',
-        legality: 'illegal',
-        illegalReason: 'pipelineLegalityFailed',
-      },
-    ]);
+    expect(model.choiceUi).toEqual({
+      kind: 'discreteOne',
+      options: [
+        { value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null },
+        {
+          value: 'blocked-zone',
+          displayName: 'Blocked Zone',
+          legality: 'illegal',
+          illegalReason: 'pipelineLegalityFailed',
+        },
+      ],
+    });
   });
 
   it('surfaces unknown legality in rendered choice options', () => {
@@ -578,15 +584,56 @@ describe('deriveRenderModel state metadata', () => {
       }),
     );
 
-    expect(model.currentChoiceOptions).toEqual([
-      { value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null },
-      {
-        value: 'undetermined-zone',
-        displayName: 'Undetermined Zone',
-        legality: 'unknown',
-        illegalReason: null,
-      },
-    ]);
+    expect(model.choiceUi).toEqual({
+      kind: 'discreteOne',
+      options: [
+        { value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null },
+        {
+          value: 'undetermined-zone',
+          displayName: 'Undetermined Zone',
+          legality: 'unknown',
+          illegalReason: null,
+        },
+      ],
+    });
+  });
+
+  it('normalizes invalid chooseN bounds deterministically', () => {
+    const def = compileFixture();
+    const state = initialState(def, 232, 2);
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'target',
+      name: 'target',
+      type: 'chooseN',
+      min: 3,
+      max: 1,
+      options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
+      targetKinds: ['zone'],
+    };
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0), { choicePending }));
+    expect(model.choiceUi).toEqual({
+      kind: 'discreteMany',
+      options: [{ value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null }],
+      min: 3,
+      max: 3,
+    });
+  });
+
+  it('maps no-pending selected-action context to confirmReady choiceUi', () => {
+    const def = compileFixture();
+    const state = initialState(def, 233, 2);
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending: null,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+      }),
+    );
+    expect(model.choiceUi).toEqual({ kind: 'confirmReady' });
   });
 
   it('maps terminal variants to render terminal payloads', () => {

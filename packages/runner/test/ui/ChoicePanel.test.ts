@@ -78,11 +78,7 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
     eventDecks: [],
     actionGroups: [],
     choiceBreadcrumb: [],
-    currentChoiceOptions: null,
-    currentChoiceDomain: null,
-    choiceType: null,
-    choiceMin: null,
-    choiceMax: null,
+    choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     terminal: null,
     ...overrides,
@@ -118,7 +114,12 @@ describe('ChoicePanel', () => {
         mode: 'choicePending',
         store: createChoiceStore({
           renderModel: makeRenderModel({
-            choiceType: 'chooseOne',
+            choiceUi: {
+              kind: 'discreteOne',
+              options: [
+                { value: 'zone-c', displayName: 'Zone C', legality: 'legal', illegalReason: null },
+              ],
+            },
             choiceBreadcrumb: [
               {
                 decisionId: 'step-1',
@@ -134,9 +135,6 @@ describe('ChoicePanel', () => {
                 chosenValue: 'zone-b',
                 chosenDisplayName: 'Zone B',
               },
-            ],
-            currentChoiceOptions: [
-              { value: 'zone-c', displayName: 'Zone C', legality: 'legal', illegalReason: null },
             ],
           }),
         }),
@@ -172,8 +170,10 @@ describe('ChoicePanel', () => {
       mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
-          choiceType: 'chooseOne',
-          currentChoiceOptions: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+          choiceUi: {
+            kind: 'discreteOne',
+            options: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+          },
           choiceBreadcrumb: [],
         }),
         cancelChoice,
@@ -196,8 +196,10 @@ describe('ChoicePanel', () => {
       mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
-          choiceType: 'chooseOne',
-          currentChoiceOptions: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+          choiceUi: {
+            kind: 'discreteOne',
+            options: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+          },
           choiceBreadcrumb: [
             {
               decisionId: 'step-1',
@@ -229,8 +231,10 @@ describe('ChoicePanel', () => {
       mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
-          choiceType: 'chooseOne',
-          currentChoiceOptions: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+          choiceUi: {
+            kind: 'discreteOne',
+            options: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+          },
         }),
         cancelMove,
       }),
@@ -252,11 +256,13 @@ describe('ChoicePanel', () => {
         mode: 'choicePending',
         store: createChoiceStore({
           renderModel: makeRenderModel({
-            choiceType: 'chooseOne',
-            currentChoiceOptions: [
-              { value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null },
-              { value: 'zone-b', displayName: 'Zone B', legality: 'illegal', illegalReason: 'blocked' },
-            ],
+            choiceUi: {
+              kind: 'discreteOne',
+              options: [
+                { value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null },
+                { value: 'zone-b', displayName: 'Zone B', legality: 'illegal', illegalReason: 'blocked' },
+              ],
+            },
           }),
         }),
       }),
@@ -275,8 +281,10 @@ describe('ChoicePanel', () => {
       mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
-          choiceType: 'chooseOne',
-          currentChoiceOptions: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+          choiceUi: {
+            kind: 'discreteOne',
+            options: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+          },
         }),
         chooseOne,
       }),
@@ -300,9 +308,7 @@ describe('ChoicePanel', () => {
       mode: 'choiceConfirm',
       store: createChoiceStore({
         renderModel: makeRenderModel({
-          choiceType: null,
-          currentChoiceOptions: null,
-          currentChoiceDomain: null,
+          choiceUi: { kind: 'confirmReady' },
         }),
         selectedAction: asActionId('pass'),
         partialMove: { actionId: asActionId('pass'), params: {} },
@@ -326,8 +332,12 @@ describe('ChoicePanel', () => {
         mode: 'choicePending',
         store: createChoiceStore({
           renderModel: makeRenderModel({
-            choiceType: 'chooseN',
-            currentChoiceOptions: [],
+            choiceUi: {
+              kind: 'discreteMany',
+              options: [],
+              min: 1,
+              max: 2,
+            },
           }),
         }),
       }),
@@ -339,9 +349,10 @@ describe('ChoicePanel', () => {
         mode: 'choicePending',
         store: createChoiceStore({
           renderModel: makeRenderModel({
-            choiceType: 'chooseOne',
-            currentChoiceDomain: { min: 0, max: 3, step: 1 },
-            currentChoiceOptions: null,
+            choiceUi: {
+              kind: 'numeric',
+              domain: { min: 0, max: 3, step: 1 },
+            },
           }),
         }),
       }),
@@ -368,7 +379,7 @@ describe('ChoicePanel', () => {
         mode: 'choicePending',
         store: createChoiceStore({
           renderModel: makeRenderModel({
-            choiceType: null,
+            choiceUi: { kind: 'confirmReady' },
           }),
           selectedAction: asActionId('pass'),
           partialMove: { actionId: asActionId('pass'), params: {} },
@@ -384,7 +395,7 @@ describe('ChoicePanel', () => {
       mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
-          choiceType: null,
+          choiceUi: { kind: 'none' },
         }),
       }),
     });
@@ -397,8 +408,10 @@ describe('ChoicePanel', () => {
       mode: 'choiceConfirm',
       store: createChoiceStore({
         renderModel: makeRenderModel({
-          choiceType: 'chooseOne',
-          currentChoiceOptions: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+          choiceUi: {
+            kind: 'discreteOne',
+            options: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+          },
         }),
       }),
     });

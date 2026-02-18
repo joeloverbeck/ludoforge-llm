@@ -26,17 +26,18 @@ export function deriveBottomBarState(
     return { kind: 'aiTurn' };
   }
 
-  if (renderModel.choiceType !== null) {
-    return { kind: 'choicePending' };
-  }
-
-  if (
-    selectedAction != null
-    && partialMove != null
-    && renderModel.currentChoiceOptions === null
-    && renderModel.currentChoiceDomain === null
-  ) {
-    return { kind: 'choiceConfirm' };
+  switch (renderModel.choiceUi.kind) {
+    case 'discreteOne':
+    case 'discreteMany':
+    case 'numeric':
+      return { kind: 'choicePending' };
+    case 'confirmReady':
+      if (selectedAction != null && partialMove != null) {
+        return { kind: 'choiceConfirm' };
+      }
+      return { kind: 'actions' };
+    case 'none':
+      break;
   }
 
   return { kind: 'actions' };

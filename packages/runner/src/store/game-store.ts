@@ -65,6 +65,7 @@ interface RenderDerivationInputs {
   readonly legalMoveResult: LegalMoveEnumerationResult | null;
   readonly choicePending: ChoicePendingRequest | null;
   readonly selectedAction: ActionId | null;
+  readonly partialMove: Move | null;
   readonly choiceStack: readonly PartialChoice[];
   readonly playerSeats: ReadonlyMap<PlayerId, PlayerSeat>;
   readonly terminal: TerminalResult | null;
@@ -323,6 +324,7 @@ function toRenderContext(inputs: RenderDerivationInputs): RenderContext | null {
     legalMoveResult: inputs.legalMoveResult,
     choicePending: inputs.choicePending,
     selectedAction: inputs.selectedAction,
+    partialMove: inputs.partialMove,
     choiceStack: inputs.choiceStack,
     playerSeats: inputs.playerSeats,
     terminal: inputs.terminal,
@@ -348,6 +350,7 @@ function toRenderDerivationInputs(state: MutableGameStoreState): RenderDerivatio
     legalMoveResult: state.legalMoveResult,
     choicePending: state.choicePending,
     selectedAction: state.selectedAction,
+    partialMove: state.partialMove,
     choiceStack: state.choiceStack,
     playerSeats: state.playerSeats,
     terminal: state.terminal,

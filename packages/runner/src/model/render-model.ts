@@ -22,11 +22,7 @@ export interface RenderModel {
   readonly eventDecks: readonly RenderEventDeck[];
   readonly actionGroups: readonly RenderActionGroup[];
   readonly choiceBreadcrumb: readonly RenderChoiceStep[];
-  readonly currentChoiceOptions: readonly RenderChoiceOption[] | null;
-  readonly currentChoiceDomain: RenderChoiceDomain | null;
-  readonly choiceType: 'chooseOne' | 'chooseN' | null;
-  readonly choiceMin: number | null;
-  readonly choiceMax: number | null;
+  readonly choiceUi: RenderChoiceUi;
   readonly moveEnumerationWarnings: readonly RenderWarning[];
   readonly terminal: RenderTerminal | null;
 }
@@ -167,6 +163,28 @@ export interface RenderChoiceDomain {
   readonly max: number;
   readonly step: number;
 }
+
+export type RenderChoiceUi =
+  | {
+      readonly kind: 'none';
+    }
+  | {
+      readonly kind: 'discreteOne';
+      readonly options: readonly RenderChoiceOption[];
+    }
+  | {
+      readonly kind: 'discreteMany';
+      readonly options: readonly RenderChoiceOption[];
+      readonly min: number | null;
+      readonly max: number | null;
+    }
+  | {
+      readonly kind: 'numeric';
+      readonly domain: RenderChoiceDomain;
+    }
+  | {
+      readonly kind: 'confirmReady';
+    };
 
 export interface RenderWarning {
   readonly code: string;

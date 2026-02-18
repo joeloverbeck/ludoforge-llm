@@ -44,11 +44,7 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
     eventDecks: [],
     actionGroups: [{ groupName: 'Core', actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }] }],
     choiceBreadcrumb: [],
-    currentChoiceOptions: null,
-    currentChoiceDomain: null,
-    choiceType: null,
-    choiceMin: null,
-    choiceMax: null,
+    choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     terminal: null,
     ...overrides,
@@ -65,11 +61,13 @@ describe('deriveBottomBarState', () => {
     expect(mode).toEqual({ kind: 'aiTurn' });
   });
 
-  it('returns choicePending when choiceType is non-null', () => {
+  it('returns choicePending when choiceUi is a pending variant', () => {
     const mode = deriveBottomBarState(
       makeRenderModel({
-        choiceType: 'chooseOne',
-        currentChoiceOptions: [{ value: 'x', displayName: 'X', legality: 'legal', illegalReason: null }],
+        choiceUi: {
+          kind: 'discreteOne',
+          options: [{ value: 'x', displayName: 'X', legality: 'legal', illegalReason: null }],
+        },
       }),
       asActionId('pass'),
       { actionId: asActionId('pass'), params: {} },
@@ -80,14 +78,17 @@ describe('deriveBottomBarState', () => {
   it('returns choiceConfirm when move is fully constructed and no pending choice payload remains', () => {
     const mode = deriveBottomBarState(
       makeRenderModel({
-        choiceType: null,
-        currentChoiceOptions: null,
-        currentChoiceDomain: null,
+        choiceUi: { kind: 'confirmReady' },
       }),
       asActionId('pass'),
       { actionId: asActionId('pass'), params: {} },
     );
     expect(mode).toEqual({ kind: 'choiceConfirm' });
+  });
+
+  it('falls back to actions when choiceUi is confirmReady without a full move payload', () => {
+    const mode = deriveBottomBarState(makeRenderModel({ choiceUi: { kind: 'confirmReady' } }), asActionId('pass'), null);
+    expect(mode).toEqual({ kind: 'actions' });
   });
 
   it('returns actions for human-turn default state', () => {

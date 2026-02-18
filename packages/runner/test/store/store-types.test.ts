@@ -54,6 +54,7 @@ describe('store-types', () => {
       legalMoveResult,
       choicePending,
       selectedAction: asActionId('play-card'),
+      partialMove: { actionId: asActionId('play-card'), params: {} },
       choiceStack: [],
       playerSeats: new Map([
         [asPlayerId(0), 'human'],

@@ -41,10 +41,11 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
     return null;
   }
   const choiceModel = renderModel as NonNullable<GameStore['renderModel']>;
-  const isPendingChoice = choiceModel.choiceType !== null;
-  const isConfirmReady = choiceModel.choiceType === null
-    && choiceModel.currentChoiceOptions === null
-    && choiceModel.currentChoiceDomain === null;
+  const choiceUi = choiceModel.choiceUi;
+  const isPendingChoice = choiceUi.kind === 'discreteOne'
+    || choiceUi.kind === 'discreteMany'
+    || choiceUi.kind === 'numeric';
+  const isConfirmReady = choiceUi.kind === 'confirmReady';
 
   if (mode === 'choicePending' && !isPendingChoice) {
     return null;
@@ -72,7 +73,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
             {step.chosenDisplayName}
           </button>
         ))}
-        {choiceModel.choiceType !== null ? (
+        {isPendingChoice ? (
           <span className={styles.breadcrumbCurrent} data-testid="choice-breadcrumb-current">
             Current
           </span>
@@ -80,9 +81,9 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
       </div>
 
       <div className={styles.body}>
-        {choiceModel.choiceType === 'chooseOne' && choiceModel.currentChoiceOptions !== null ? (
+        {choiceUi.kind === 'discreteOne' ? (
           <div className={styles.options} data-testid="choice-mode-discrete">
-            {choiceModel.currentChoiceOptions.map((option, index) => {
+            {choiceUi.options.map((option, index) => {
               const isLegal = option.legality === 'legal';
               return (
                 <div key={`${String(option.value)}:${index}`} className={styles.optionRow}>
@@ -108,13 +109,13 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
           </div>
         ) : null}
 
-        {choiceModel.choiceType === 'chooseN' ? (
+        {choiceUi.kind === 'discreteMany' ? (
           <p className={styles.placeholder} data-testid="choice-mode-choose-n-placeholder">
             Multi-select coming soon
           </p>
         ) : null}
 
-        {choiceModel.choiceType === 'chooseOne' && choiceModel.currentChoiceDomain !== null ? (
+        {choiceUi.kind === 'numeric' ? (
           <p className={styles.placeholder} data-testid="choice-mode-numeric-placeholder">
             Numeric input coming soon
           </p>

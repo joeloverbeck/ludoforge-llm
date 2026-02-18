@@ -14,6 +14,8 @@ import {
 
 import type {
   RenderAdjacency,
+  RenderChoiceOption,
+  RenderChoiceUi,
   RenderEventDeck,
   RenderGlobalMarker,
   RenderLastingEffect,
@@ -108,11 +110,7 @@ export function deriveRenderModel(
     eventDecks,
     actionGroups: deriveActionGroups(context.legalMoveResult?.moves ?? []),
     choiceBreadcrumb: deriveChoiceBreadcrumb(context),
-    currentChoiceOptions: deriveChoiceOptions(context),
-    currentChoiceDomain: null,
-    choiceType: context.choicePending?.type ?? null,
-    choiceMin: context.choicePending?.min ?? null,
-    choiceMax: context.choicePending?.max ?? null,
+    choiceUi: deriveChoiceUi(context),
     moveEnumerationWarnings: (context.legalMoveResult?.warnings ?? []).map((warning) => ({
       code: warning.code,
       message: warning.message,
@@ -774,17 +772,80 @@ function deriveChoiceBreadcrumb(context: RenderContext): RenderModel['choiceBrea
   }));
 }
 
-function deriveChoiceOptions(context: RenderContext): RenderModel['currentChoiceOptions'] {
+function deriveRenderChoiceOptions(context: RenderContext): readonly RenderChoiceOption[] {
   if (context.choicePending === null) {
-    return null;
+    return [];
   }
-
   return context.choicePending.options.map((option) => ({
     value: option.value,
     displayName: formatIdAsDisplayName(String(option.value)),
     legality: option.legality,
     illegalReason: option.illegalReason,
   }));
+}
+
+function normalizeChoiceBound(value: number | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null;
+  }
+  return value;
+}
+
+function deriveNumericChoiceDomain(
+  minRaw: number | undefined,
+  maxRaw: number | undefined,
+): { readonly min: number; readonly max: number; readonly step: number } | null {
+  const min = normalizeChoiceBound(minRaw);
+  const max = normalizeChoiceBound(maxRaw);
+  if (min === null || max === null) {
+    return null;
+  }
+  return {
+    min,
+    max: max < min ? min : max,
+    step: 1,
+  };
+}
+
+function deriveChoiceUi(context: RenderContext): RenderChoiceUi {
+  const pending = context.choicePending;
+  if (pending !== null) {
+    const options = deriveRenderChoiceOptions(context);
+    if (pending.type === 'chooseN') {
+      const min = normalizeChoiceBound(pending.min);
+      const rawMax = normalizeChoiceBound(pending.max);
+      const max = min !== null && rawMax !== null && rawMax < min ? min : rawMax;
+      return {
+        kind: 'discreteMany',
+        options,
+        min,
+        max,
+      };
+    }
+
+    const numericDomain = options.length === 0 ? deriveNumericChoiceDomain(pending.min, pending.max) : null;
+    if (numericDomain !== null) {
+      return {
+        kind: 'numeric',
+        domain: numericDomain,
+      };
+    }
+
+    return {
+      kind: 'discreteOne',
+      options,
+    };
+  }
+
+  if (context.selectedAction !== null && context.partialMove !== null) {
+    return {
+      kind: 'confirmReady',
+    };
+  }
+
+  return {
+    kind: 'none',
+  };
 }
 
 function deriveTerminal(terminal: TerminalResult | null): RenderModel['terminal'] {

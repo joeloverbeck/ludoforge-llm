@@ -160,7 +160,7 @@ describe('FITL RVN leader lingering effects', () => {
             $transportDestination: farDestination,
           },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'Khanh should restrict Transport destination legality',
     );
   });

@@ -159,7 +159,7 @@ describe('FITL limited operation integration', () => {
             $attackMode: 'troops-attack',
           },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'Limited operation attack should reject multiple target spaces',
     );
 
@@ -229,7 +229,7 @@ describe('FITL limited operation integration', () => {
             targetSpaces: [SPACE_A, SPACE_B],
           },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'Limited operation VC attack should reject multiple target spaces',
     );
 

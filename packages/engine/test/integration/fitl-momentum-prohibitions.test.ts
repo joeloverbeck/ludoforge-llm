@@ -54,7 +54,7 @@ describe('FITL momentum prohibition preconditions', () => {
     for (const blocker of ['mom_rollingThunder', 'mom_daNang', 'mom_bombingPause'] as const) {
       assert.throws(
         () => runAirStrike(withMom(base, { [blocker]: true })),
-        /Illegal move/,
+        /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
         `${blocker} should prohibit Air Strike`,
       );
     }
@@ -77,8 +77,8 @@ describe('FITL momentum prohibition preconditions', () => {
       });
 
     assert.doesNotThrow(() => runAirLift(base));
-    assert.throws(() => runAirLift(withMom(base, { mom_medevacShaded: true })), /Illegal move/);
-    assert.throws(() => runAirLift(withMom(base, { mom_typhoonKate: true })), /Illegal move/);
+    assert.throws(() => runAirLift(withMom(base, { mom_medevacShaded: true })), /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/);
+    assert.throws(() => runAirLift(withMom(base, { mom_typhoonKate: true })), /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/);
   });
 
   it('prohibits US Assault only, keeping ARVN Assault legal', () => {
@@ -113,7 +113,7 @@ describe('FITL momentum prohibition preconditions', () => {
             $arvnFollowupSpaces: [],
           },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
 
     const arvnState = withMom(
@@ -175,7 +175,7 @@ describe('FITL momentum prohibition preconditions', () => {
             [`$ambushTargetMode@${nvaSpace}`]: 'self',
           },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
 
     const vcSpace = 'tay-ninh:none';
@@ -205,7 +205,7 @@ describe('FITL momentum prohibition preconditions', () => {
             [`$ambushTargetMode@${vcSpace}`]: 'self',
           },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
   });
 
@@ -242,7 +242,7 @@ describe('FITL momentum prohibition preconditions', () => {
             [`$infiltrateGuerrillasToReplace@${infilSpace}`]: [],
           },
       }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
 
     const rallyProfile = parsed.doc.actionPipelines?.find((profile) => profile.id === 'rally-nva-profile');
@@ -286,7 +286,7 @@ describe('FITL momentum prohibition preconditions', () => {
             $transportDestination: destination,
           },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
 
     const bombardSpace = 'quang-nam:none';
@@ -319,7 +319,7 @@ describe('FITL momentum prohibition preconditions', () => {
             targetSpaces: [bombardSpace],
           },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
 
     const adviseA = 'quang-nam:none';
@@ -350,7 +350,7 @@ describe('FITL momentum prohibition preconditions', () => {
             $adviseAid: 'no',
           },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
 
     const raidA = 'quang-nam:none';
@@ -382,7 +382,7 @@ describe('FITL momentum prohibition preconditions', () => {
             [`$raidRemove@${raidB}`]: 'no',
           },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
   });
 

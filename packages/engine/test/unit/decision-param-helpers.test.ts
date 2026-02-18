@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  ILLEGAL_MOVE_REASONS,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -12,7 +13,7 @@ import {
   type GameState,
   type Move,
 } from '../../src/kernel/index.js';
-import { normalizeDecisionParamsForMove } from '../helpers/decision-param-helpers.js';
+import { applyMoveWithResolvedDecisionIds, normalizeDecisionParamsForMove } from '../helpers/decision-param-helpers.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -101,6 +102,77 @@ phase: [asPhaseId('main')],
   return makeBaseDef({ actions: [action], actionPipelines: [profile] });
 };
 
+const makeDefWithCompoundAccompanyingConstraintAndUnresolvedSa = (): GameDef => {
+  const operation: ActionDef = {
+    id: asActionId('operate'),
+    actor: 'active',
+    executor: 'actor',
+    phase: [asPhaseId('main')],
+    params: [],
+    pre: null,
+    cost: [],
+    effects: [],
+    limits: [],
+  };
+  const train: ActionDef = {
+    id: asActionId('train'),
+    actor: 'active',
+    executor: 'actor',
+    phase: [asPhaseId('main')],
+    params: [],
+    pre: null,
+    cost: [],
+    effects: [],
+    limits: [],
+  };
+  const sa: ActionDef = {
+    id: asActionId('sa'),
+    actor: 'active',
+    executor: 'actor',
+    phase: [asPhaseId('main')],
+    params: [],
+    pre: null,
+    cost: [],
+    effects: [
+      {
+        chooseOne: {
+          internalDecisionId: 'decision:$target',
+          bind: '$target',
+          options: { query: 'enums', values: [] },
+        },
+      } as ActionDef['effects'][number],
+    ],
+    limits: [],
+  };
+
+  return makeBaseDef({
+    actions: [operation, train, sa],
+    actionPipelines: [
+      {
+        id: 'operate-profile',
+        actionId: operation.id,
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [{ effects: [] }],
+        atomicity: 'atomic',
+      },
+      {
+        id: 'sa-profile',
+        actionId: sa.id,
+        accompanyingOps: ['train'],
+        legality: null,
+        costValidation: null,
+        costEffects: [],
+        targeting: {},
+        stages: [{ effects: sa.effects }],
+        atomicity: 'atomic',
+      },
+    ],
+  });
+};
+
 describe('decision param helper', () => {
   it('fills nested templated decision ids with deterministic defaults', () => {
     const resolved = normalizeDecisionParamsForMove(makeDefWithNestedTemplatedChoices(), makeBaseState(), makeMove());
@@ -145,5 +217,58 @@ describe('decision param helper', () => {
 
     assert.equal(resolved.params['decision:$mode@{$region}::$mode@north'], 'hold');
     assert.equal(resolved.params['decision:$mode@{$region}::$mode@south'], 'hold');
+  });
+
+  it('fails with diagnostics when canonical selection cannot resolve a pending decision', () => {
+    const unresolvedDef = makeBaseDef({
+      actions: [
+        {
+          id: asActionId('nested-choice-op'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            {
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: [] },
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+          limits: [],
+        },
+      ],
+    });
+
+    assert.throws(
+      () => normalizeDecisionParamsForMove(unresolvedDef, makeBaseState(), makeMove()),
+      /Could not normalize decision params for actionId=nested-choice-op: unresolved decisionId=decision:\$target name=\$target type=chooseOne options=0 min=0/,
+    );
+  });
+
+  it('preserves compound legality diagnostics even when SA decision normalization is unresolved', () => {
+    const def = makeDefWithCompoundAccompanyingConstraintAndUnresolvedSa();
+    const state = makeBaseState();
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, state, {
+          actionId: asActionId('operate'),
+          params: {},
+          compound: {
+            timing: 'after',
+            specialActivity: { actionId: asActionId('sa'), params: {} },
+          },
+        }),
+      (error: unknown) => {
+        const details = error as { readonly reason?: string };
+        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED);
+        return true;
+      },
+    );
   });
 });

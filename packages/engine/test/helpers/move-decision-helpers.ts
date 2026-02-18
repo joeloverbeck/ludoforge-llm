@@ -8,12 +8,8 @@ import {
   type MoveParamValue,
 } from '../../src/kernel/index.js';
 
-export const pickDeterministicDecisionValue = (request: ChoicePendingRequest): MoveParamValue => {
-  const selected = pickDeterministicChoiceValue(request);
-  if (selected !== undefined) {
-    return selected;
-  }
-  return request.type === 'chooseN' ? [] : (null as unknown as MoveParamValue);
+export const pickDeterministicDecisionValue = (request: ChoicePendingRequest): MoveParamValue | undefined => {
+  return pickDeterministicChoiceValue(request);
 };
 
 export const completeMoveDecisionSequenceOrThrow = (

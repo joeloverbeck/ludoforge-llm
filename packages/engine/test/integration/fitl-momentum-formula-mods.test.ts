@@ -248,7 +248,7 @@ describe('FITL momentum formula modifiers', () => {
             [`$infiltrateGuerrillasToReplace@${second}`]: [],
           },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
   });
 

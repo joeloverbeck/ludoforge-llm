@@ -37,12 +37,8 @@ const matchesRule = (rule: DecisionOverrideRule, request: ChoicePendingRequest):
   return matchText(request.decisionId) || matchText(request.name);
 };
 
-const deterministicDefault = (request: ChoicePendingRequest): MoveParamValue => {
-  const selected = pickDeterministicChoiceValue(request);
-  if (selected !== undefined) {
-    return selected;
-  }
-  return request.type === 'chooseN' ? [] : (null as unknown as MoveParamValue);
+const deterministicDefault = (request: ChoicePendingRequest): MoveParamValue | undefined => {
+  return pickDeterministicChoiceValue(request);
 };
 
 const resolveDecisionValue = (
@@ -71,25 +67,51 @@ const resolveDecisionValue = (
   return deterministicDefault(request);
 };
 
+const formatResolutionFailure = (move: Move, result: ReturnType<typeof resolveMoveDecisionSequence>): string => {
+  if (result.nextDecision !== undefined) {
+    const decision = result.nextDecision;
+    return `unresolved decisionId=${decision.decisionId} name=${decision.name} type=${decision.type} options=${decision.options.length} min=${decision.min ?? 0}`;
+  }
+  if (result.illegal !== undefined) {
+    return `illegal=${result.illegal.reason}`;
+  }
+  return 'decision probing did not complete';
+};
+
+const normalizeDecisionParamsForMoveInternal = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  preserveIncomplete: boolean,
+  options?: ResolveDecisionParamsOptions,
+): Move => {
+  const result = resolveMoveDecisionSequence(def, state, move, {
+    budgets: {
+      maxDecisionProbeSteps: options?.maxDecisionProbeSteps ?? MAX_DECISION_STEPS,
+    },
+    choose: (request) => resolveDecisionValue(request, move, options),
+  });
+  if (result.complete) {
+    return result.move;
+  }
+  if (result.illegal !== undefined) {
+    // Keep canonical illegal-move behavior for callers that assert applyMove failures.
+    return move;
+  }
+  if (preserveIncomplete) {
+    return move;
+  }
+  throw new Error(
+    `Could not normalize decision params for actionId=${String(move.actionId)}: ${formatResolutionFailure(move, result)}`,
+  );
+};
+
 export const normalizeDecisionParamsForMove = (
   def: GameDef,
   state: GameState,
   move: Move,
   options?: ResolveDecisionParamsOptions,
-): Move => {
-  try {
-    const result = resolveMoveDecisionSequence(def, state, move, {
-      budgets: {
-        maxDecisionProbeSteps: options?.maxDecisionProbeSteps ?? MAX_DECISION_STEPS,
-      },
-      choose: (request) => resolveDecisionValue(request, move, options),
-    });
-    return result.complete ? result.move : move;
-  } catch {
-    // Preserve input move when scripted params are invalid; applyMove should surface the canonical illegal-move error.
-    return move;
-  }
-};
+): Move => normalizeDecisionParamsForMoveInternal(def, state, move, false, options);
 
 export const applyMoveWithResolvedDecisionIds = (
   def: GameDef,
@@ -97,14 +119,16 @@ export const applyMoveWithResolvedDecisionIds = (
   move: Move,
   options?: ResolveDecisionParamsOptions,
 ): ApplyMoveResult => {
-  const normalized = normalizeDecisionParamsForMove(def, state, move, options);
+  const normalized = normalizeDecisionParamsForMoveInternal(def, state, move, false, options);
   const withCompound = normalized.compound === undefined
     ? normalized
     : {
       ...normalized,
       compound: {
         ...normalized.compound,
-        specialActivity: normalizeDecisionParamsForMove(def, state, normalized.compound.specialActivity, options),
+        // Compound legality/constraint diagnostics belong to applyMove's compound-aware validation path.
+        // Preserve unresolved SA decisions here to avoid masking canonical compound errors.
+        specialActivity: normalizeDecisionParamsForMoveInternal(def, state, normalized.compound.specialActivity, true, options),
       },
     };
   return applyMove(def, state, withCompound);

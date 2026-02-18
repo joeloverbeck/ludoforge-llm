@@ -33,13 +33,8 @@ export interface LegalitySurfaceParityOptions {
   }) => boolean;
 }
 
-const defaultChoose = (request: ChoicePendingRequest): MoveParamValue => {
-  const selected = pickDeterministicChoiceValue(request);
-  if (selected !== undefined) {
-    return selected;
-  }
-  return request.type === 'chooseN' ? [] : (null as unknown as MoveParamValue);
-};
+const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefined =>
+  pickDeterministicChoiceValue(request);
 
 const defaultActionPresenceProbe = ({ def, state, move }: { readonly def: GameDef; readonly state: GameState; readonly move: Move }): boolean =>
   legalMoves(def, state).some((candidate) => String(candidate.actionId) === String(move.actionId));

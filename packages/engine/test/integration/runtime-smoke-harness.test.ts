@@ -50,6 +50,41 @@ const createHarnessFixtureDef = (): GameDef =>
     },
   }) as unknown as GameDef;
 
+const createUnresolvableDecisionFixtureDef = (): GameDef =>
+  ({
+    metadata: { id: 'runtime-smoke-harness-unresolved-fixture', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    constants: {},
+    globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 100 }],
+    perPlayerVars: [],
+    zones: [],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    actions: [
+      {
+        id: asActionId('unresolved'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$target',
+              bind: '$target',
+              options: { query: 'enums', values: [] },
+            },
+          },
+        ],
+        limits: [],
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+  }) as unknown as GameDef;
+
 describe('runtime smoke harness integration', () => {
   it('proves policy determinism and invariant plug-in wiring across policy types', () => {
     const def = createHarnessFixtureDef();
@@ -186,5 +221,20 @@ describe('runtime smoke harness integration', () => {
     for (let index = 1; index < result.actionIds.length; index += 1) {
       assert.notEqual(result.actionIds[index], result.actionIds[index - 1]);
     }
+  });
+
+  it('surfaces unresolved move decisions instead of fabricating fallback params', () => {
+    const def = createUnresolvableDecisionFixtureDef();
+    assert.throws(
+      () =>
+        runRuntimeSmokeGate({
+          def,
+          seed: 29,
+          playerCount: 2,
+          maxSteps: 2,
+          policy: firstLegalPolicy(),
+        }),
+      /Could not complete move decisions for action unresolved: decision=decision:\$target name=\$target/,
+    );
   });
 });

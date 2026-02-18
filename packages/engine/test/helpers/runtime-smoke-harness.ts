@@ -86,12 +86,8 @@ export interface RuntimeSmokeGateResult {
 
 const MAX_DECISION_STEPS = 256;
 
-const deterministicDefaultDecision = (request: ChoicePendingRequest): MoveParamValue => {
-  const selected = pickDeterministicChoiceValue(request);
-  if (selected !== undefined) {
-    return selected;
-  }
-  return request.type === 'chooseN' ? [] : (null as unknown as MoveParamValue);
+const deterministicDefaultDecision = (request: ChoicePendingRequest): MoveParamValue | undefined => {
+  return pickDeterministicChoiceValue(request);
 };
 
 const assertNumericBounds = (def: GameDef, state: GameState): void => {

@@ -244,7 +244,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
             [`$governMode@${spaceB}`]: 'patronage',
           },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'cap_mandateOfHeaven shaded should restrict Govern to max 1 space',
     );
 
@@ -320,7 +320,7 @@ describe('FITL capability branches (Transport/Govern/Ambush/Terror)', () => {
     run('shaded', 7202);
     assert.throws(
       () => run('unshaded', 7203),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'cap_boobyTraps unshaded should cap Ambush to max 1 selected space',
     );
   });

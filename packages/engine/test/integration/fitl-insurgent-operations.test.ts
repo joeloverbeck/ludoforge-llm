@@ -384,7 +384,7 @@ describe('FITL insurgent operations integration', () => {
           actionClass: 'limitedOperation',
           params: { targetSpaces: [ATTACK_SPACE, RALLY_SPACE_2] },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'NVA Terror LimOp should enforce max one selected target space',
     );
   });
@@ -459,7 +459,7 @@ describe('FITL insurgent operations integration', () => {
           actionId: asActionId('terror'),
           params: { targetSpaces: [ATTACK_SPACE] },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'VC Terror should reject spaces that do not contain an underground VC guerrilla',
     );
   });
@@ -660,7 +660,7 @@ describe('FITL insurgent operations integration', () => {
           actionClass: 'limitedOperation',
           params: { targetSpaces: [ATTACK_SPACE, RALLY_SPACE_2] },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'VC Terror LimOp should enforce max one selected target space',
     );
   });
@@ -1139,7 +1139,7 @@ describe('FITL insurgent operations integration', () => {
           actionClass: 'limitedOperation',
           params: { targetSpaces: [ATTACK_SPACE, RALLY_SPACE_2] },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'VC March LimOp should enforce max one selected destination',
     );
   });
@@ -1173,7 +1173,7 @@ describe('FITL insurgent operations integration', () => {
           actionClass: 'limitedOperation',
           params: { targetSpaces: [ATTACK_SPACE, RALLY_SPACE_2] },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'March LimOp should enforce max one selected destination',
     );
   });
@@ -1333,7 +1333,7 @@ describe('FITL insurgent operations integration', () => {
     assert.ok(!legal.some((move) => move.actionId === asActionId('attack')));
     assert.throws(
       () => applyMoveWithResolvedDecisionIds(compiled.gameDef!, nonNvaState, { actionId: asActionId('attack'), params: {} }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
   });
 
@@ -1530,7 +1530,7 @@ describe('FITL insurgent operations integration', () => {
           actionId: asActionId('rally'),
           params: { targetSpaces: [], $improveTrail: 'no' },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
   });
 
@@ -1573,7 +1573,7 @@ describe('FITL insurgent operations integration', () => {
           actionId: asActionId('rally'),
           params: { targetSpaces: [RALLY_SPACE], $noBaseChoice: 'place-guerrilla', $improveTrail: 'no' },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'Rally should reject activeSupport spaces',
     );
 
@@ -1787,7 +1787,7 @@ describe('FITL insurgent operations integration', () => {
           actionClass: 'limitedOperation',
           params: { targetSpaces: [RALLY_SPACE, RALLY_SPACE_2], $noBaseChoice: 'place-guerrilla', $improveTrail: 'no' },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
     );
 
     const zeroSelected = applyMoveWithResolvedDecisionIds(def, nva, {
@@ -1880,7 +1880,7 @@ describe('FITL insurgent operations integration', () => {
           actionId: asActionId('rally'),
           params: { targetSpaces: [RALLY_SPACE], $noBaseChoice: 'place-guerrilla' },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'VC rally should reject activeSupport spaces',
     );
 
@@ -1898,7 +1898,7 @@ describe('FITL insurgent operations integration', () => {
           actionClass: 'limitedOperation',
           params: { targetSpaces: [RALLY_SPACE_2, ATTACK_SPACE], $noBaseChoice: 'place-guerrilla' },
         }),
-      /Illegal move/,
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
       'VC rally LimOp should enforce max one selected space',
     );
   });

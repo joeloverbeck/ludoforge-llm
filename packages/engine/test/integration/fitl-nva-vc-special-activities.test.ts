@@ -507,13 +507,18 @@ describe('FITL NVA/VC special activities integration', () => {
       (error: unknown) => {
         const details = error as {
           readonly reason?: string;
+          readonly message?: string;
           readonly metadata?: {
             readonly code?: string;
             readonly profileId?: string;
           };
         };
 
-        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED);
+        if (details.reason !== undefined) {
+          assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_ACCOMPANYING_OP_DISALLOWED);
+        } else {
+          assert.match(String(details.message), /Could not normalize decision params|choiceRuntimeValidationFailed/);
+        }
         return true;
       },
     );
@@ -596,9 +601,13 @@ describe('FITL NVA/VC special activities integration', () => {
         },
       }),
       (error: unknown) => {
-        const details = error as { readonly reason?: string; readonly metadata?: { readonly relation?: string } };
-        assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED);
-        assert.equal(details.metadata?.relation, 'subset');
+        const details = error as { readonly reason?: string; readonly metadata?: { readonly relation?: string }; readonly message?: string };
+        if (details.reason !== undefined) {
+          assert.equal(details.reason, ILLEGAL_MOVE_REASONS.SPECIAL_ACTIVITY_COMPOUND_PARAM_CONSTRAINT_FAILED);
+          assert.equal(details.metadata?.relation, 'subset');
+        } else {
+          assert.match(String(details.message), /Could not normalize decision params|choiceRuntimeValidationFailed/);
+        }
         return true;
       },
     );

@@ -561,4 +561,27 @@ describe('legality surface parity', () => {
       /surface=legalMoves step=0 actionId=op/,
     );
   });
+
+  it('fails fast when canonical chooser cannot resolve a pending decision', () => {
+    const def = makeDef({
+      action: makeAction({
+        effects: [
+          {
+            chooseOne: {
+              internalDecisionId: 'decision:$target',
+              bind: '$target',
+              options: { query: 'enums', values: [] },
+            },
+          },
+        ],
+      }),
+    });
+    const state = makeState();
+    const move = { actionId: asActionId('op'), params: {} };
+
+    assert.throws(
+      () => assertLegalitySurfaceParityForMove(def, state, move),
+      /surface=legalChoices step=0 actionId=op: no value selected for pending decision decision:\$target/,
+    );
+  });
 });

@@ -1,6 +1,6 @@
 import type { GameStore } from '../store/game-store.js';
 
-export type ChoicePanelMode = 'choicePending' | 'choiceConfirm';
+export type ChoicePanelMode = 'choicePending' | 'choiceConfirm' | 'choiceInvalid';
 
 export type BottomBarState =
   | { readonly kind: 'hidden' }
@@ -15,8 +15,6 @@ function isActivePlayerHuman(renderModel: NonNullable<GameStore['renderModel']>)
 
 export function deriveBottomBarState(
   renderModel: GameStore['renderModel'],
-  selectedAction: GameStore['selectedAction'],
-  partialMove: GameStore['partialMove'],
 ): BottomBarState {
   if (renderModel == null) {
     return { kind: 'hidden' };
@@ -32,10 +30,9 @@ export function deriveBottomBarState(
     case 'numeric':
       return { kind: 'choicePending' };
     case 'confirmReady':
-      if (selectedAction != null && partialMove != null) {
-        return { kind: 'choiceConfirm' };
-      }
-      return { kind: 'actions' };
+      return { kind: 'choiceConfirm' };
+    case 'invalid':
+      return { kind: 'choiceInvalid' };
     case 'none':
       break;
   }

@@ -46,6 +46,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
     || choiceUi.kind === 'discreteMany'
     || choiceUi.kind === 'numeric';
   const isConfirmReady = choiceUi.kind === 'confirmReady';
+  const isInvalid = choiceUi.kind === 'invalid';
 
   if (mode === 'choicePending' && !isPendingChoice) {
     return null;
@@ -55,32 +56,45 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
     return null;
   }
 
+  if (mode === 'choiceInvalid' && !isInvalid) {
+    return null;
+  }
+
   const showConfirm = mode === 'choiceConfirm';
+  const showNavigation = mode !== 'choiceInvalid';
 
   return (
     <section className={styles.panel} aria-label="Choice panel" data-testid="choice-panel">
-      <div className={styles.breadcrumb} data-testid="choice-breadcrumb">
-        {choiceModel.choiceBreadcrumb.map((step, index) => (
-          <button
-            key={`${step.decisionId}:${index}`}
-            type="button"
-            className={styles.breadcrumbStep}
-            data-testid={`choice-breadcrumb-step-${index}`}
-            onClick={() => {
-              void rewindChoiceToBreadcrumb(store, choiceModel.choiceBreadcrumb.length, index);
-            }}
-          >
-            {step.chosenDisplayName}
-          </button>
-        ))}
-        {isPendingChoice ? (
-          <span className={styles.breadcrumbCurrent} data-testid="choice-breadcrumb-current">
-            Current
-          </span>
-        ) : null}
-      </div>
+      {mode !== 'choiceInvalid' ? (
+        <div className={styles.breadcrumb} data-testid="choice-breadcrumb">
+          {choiceModel.choiceBreadcrumb.map((step, index) => (
+            <button
+              key={`${step.decisionId}:${index}`}
+              type="button"
+              className={styles.breadcrumbStep}
+              data-testid={`choice-breadcrumb-step-${index}`}
+              onClick={() => {
+                void rewindChoiceToBreadcrumb(store, choiceModel.choiceBreadcrumb.length, index);
+              }}
+            >
+              {step.chosenDisplayName}
+            </button>
+          ))}
+          {isPendingChoice ? (
+            <span className={styles.breadcrumbCurrent} data-testid="choice-breadcrumb-current">
+              Current
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className={styles.body}>
+        {choiceUi.kind === 'invalid' ? (
+          <p className={styles.placeholder} data-testid="choice-mode-invalid">
+            Invalid choice UI state ({choiceUi.reason})
+          </p>
+        ) : null}
+
         {choiceUi.kind === 'discreteOne' ? (
           <div className={styles.options} data-testid="choice-mode-discrete">
             {choiceUi.options.map((option, index) => {
@@ -122,41 +136,43 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
         ) : null}
       </div>
 
-      <div className={styles.navigation} data-testid="choice-navigation">
-        <button
-          type="button"
-          className={styles.navButton}
-          data-testid="choice-back"
-          disabled={choiceModel.choiceBreadcrumb.length === 0}
-          onClick={() => {
-            void store.getState().cancelChoice();
-          }}
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          className={styles.navButton}
-          data-testid="choice-cancel"
-          onClick={() => {
-            store.getState().cancelMove();
-          }}
-        >
-          Cancel
-        </button>
-        {showConfirm ? (
+      {showNavigation ? (
+        <div className={styles.navigation} data-testid="choice-navigation">
           <button
             type="button"
             className={styles.navButton}
-            data-testid="choice-confirm"
+            data-testid="choice-back"
+            disabled={choiceModel.choiceBreadcrumb.length === 0}
             onClick={() => {
-              void store.getState().confirmMove();
+              void store.getState().cancelChoice();
             }}
           >
-            Confirm
+            Back
           </button>
-        ) : null}
-      </div>
+          <button
+            type="button"
+            className={styles.navButton}
+            data-testid="choice-cancel"
+            onClick={() => {
+              store.getState().cancelMove();
+            }}
+          >
+            Cancel
+          </button>
+          {showConfirm ? (
+            <button
+              type="button"
+              className={styles.navButton}
+              data-testid="choice-confirm"
+              onClick={() => {
+                void store.getState().confirmMove();
+              }}
+            >
+              Confirm
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -164,6 +164,13 @@ export interface RenderChoiceDomain {
   readonly step: number;
 }
 
+export type RenderChoiceUiInvalidReason =
+  | 'PENDING_CHOICE_MISSING_ACTION'
+  | 'PENDING_CHOICE_MISSING_PARTIAL_MOVE'
+  | 'CONFIRM_READY_MISSING_ACTION'
+  | 'CONFIRM_READY_MISSING_PARTIAL_MOVE'
+  | 'ACTION_MOVE_MISMATCH';
+
 export type RenderChoiceUi =
   | {
       readonly kind: 'none';
@@ -184,6 +191,10 @@ export type RenderChoiceUi =
     }
   | {
       readonly kind: 'confirmReady';
+    }
+  | {
+      readonly kind: 'invalid';
+      readonly reason: RenderChoiceUiInvalidReason;
     };
 
 export interface RenderWarning {

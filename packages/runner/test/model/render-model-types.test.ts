@@ -267,7 +267,11 @@ describe('render-model types', () => {
         kind: 'numeric',
         domain: { min: 0, max: 5, step: 1 },
       },
+      {
+        kind: 'invalid',
+        reason: 'ACTION_MOVE_MISMATCH',
+      },
     ];
-    expect(choices).toHaveLength(5);
+    expect(choices).toHaveLength(6);
   });
 });

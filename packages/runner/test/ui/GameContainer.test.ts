@@ -257,6 +257,26 @@ describe('GameContainer', () => {
     expect(html).not.toContain('data-testid="choice-panel-choicePending"');
   });
 
+  it('renders choiceInvalid mode branch only', () => {
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel({
+            choiceUi: { kind: 'invalid', reason: 'ACTION_MOVE_MISMATCH' },
+          }),
+        }),
+      }),
+    );
+
+    expect(html).toContain('data-testid="choice-panel-choiceInvalid"');
+    expect(html).not.toContain('data-testid="action-toolbar"');
+    expect(html).not.toContain('data-testid="undo-control"');
+    expect(html).not.toContain('data-testid="choice-panel-choicePending"');
+    expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
+  });
+
   it('renders no interactive branch in aiTurn mode', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {

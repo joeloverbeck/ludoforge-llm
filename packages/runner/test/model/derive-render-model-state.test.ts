@@ -124,7 +124,7 @@ function makeRenderContext(
     playerID,
     legalMoveResult: { moves: [], warnings: [] },
     choicePending: null,
-    selectedAction: asActionId('tick'),
+    selectedAction: null,
     partialMove: null,
     choiceStack: [],
     playerSeats: new Map(
@@ -483,6 +483,8 @@ describe('deriveRenderModel state metadata', () => {
       makeRenderContext(state.playerCount, asPlayerId(0), {
         legalMoveResult,
         choicePending,
+        selectedAction: asActionId('train-us'),
+        partialMove: { actionId: asActionId('train-us'), params: {} },
         choiceStack: [{ decisionId: 'pick-action', name: 'pickAction', value: 'train-us' }],
       }),
     );
@@ -542,6 +544,8 @@ describe('deriveRenderModel state metadata', () => {
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
         choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
       }),
     );
 
@@ -581,6 +585,8 @@ describe('deriveRenderModel state metadata', () => {
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
         choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
       }),
     );
 
@@ -612,7 +618,15 @@ describe('deriveRenderModel state metadata', () => {
       options: [],
       targetKinds: [],
     };
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0), { choicePending }));
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+      }),
+    );
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
       options: [],
@@ -633,7 +647,15 @@ describe('deriveRenderModel state metadata', () => {
       options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
       targetKinds: ['zone'],
     };
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0), { choicePending }));
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+      }),
+    );
     expect(model.choiceUi).toEqual({
       kind: 'discreteMany',
       options: [{ value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null }],
@@ -655,6 +677,60 @@ describe('deriveRenderModel state metadata', () => {
       }),
     );
     expect(model.choiceUi).toEqual({ kind: 'confirmReady' });
+  });
+
+  it('maps pending choice without selectedAction to invalid choiceUi', () => {
+    const def = compileFixture();
+    const state = initialState(def, 235, 2);
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'target',
+      name: 'target',
+      type: 'chooseOne',
+      options: [{ value: 'table:none', legality: 'legal', illegalReason: null }],
+      targetKinds: ['zone'],
+    };
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: null,
+        partialMove: { actionId: asActionId('tick'), params: {} },
+      }),
+    );
+    expect(model.choiceUi).toEqual({ kind: 'invalid', reason: 'PENDING_CHOICE_MISSING_ACTION' });
+  });
+
+  it('maps selectedAction without partialMove to invalid confirm-ready state', () => {
+    const def = compileFixture();
+    const state = initialState(def, 236, 2);
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending: null,
+        selectedAction: asActionId('tick'),
+        partialMove: null,
+      }),
+    );
+    expect(model.choiceUi).toEqual({ kind: 'invalid', reason: 'CONFIRM_READY_MISSING_PARTIAL_MOVE' });
+  });
+
+  it('maps selectedAction/partialMove action mismatch to invalid choiceUi', () => {
+    const def = compileFixture();
+    const state = initialState(def, 237, 2);
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending: null,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('other-action'), params: {} },
+      }),
+    );
+    expect(model.choiceUi).toEqual({ kind: 'invalid', reason: 'ACTION_MOVE_MISMATCH' });
   });
 
   it('maps terminal variants to render terminal payloads', () => {

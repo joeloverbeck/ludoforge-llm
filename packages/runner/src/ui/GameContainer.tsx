@@ -21,8 +21,6 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
   const gameLifecycle = useStore(store, (state) => state.gameLifecycle);
   const error = useStore(store, (state) => state.error);
   const renderModel = useStore(store, (state) => state.renderModel);
-  const selectedAction = useStore(store, (state) => state.selectedAction);
-  const partialMove = useStore(store, (state) => state.partialMove);
 
   if (error !== null) {
     return (
@@ -40,7 +38,7 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
     );
   }
 
-  const bottomBarState = deriveBottomBarState(renderModel, selectedAction, partialMove);
+  const bottomBarState = deriveBottomBarState(renderModel);
   const bottomBarContent = (() => {
     switch (bottomBarState.kind) {
       case 'actions':
@@ -52,6 +50,7 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
         );
       case 'choicePending':
       case 'choiceConfirm':
+      case 'choiceInvalid':
         return <ChoicePanel store={store} mode={bottomBarState.kind} />;
       case 'aiTurn':
       case 'hidden':

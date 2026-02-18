@@ -418,4 +418,36 @@ describe('ChoicePanel', () => {
 
     expect(tree).toBeNull();
   });
+
+  it('renders deterministic non-interactive output for invalid mode', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choiceInvalid',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceUi: { kind: 'invalid', reason: 'ACTION_MOVE_MISMATCH' },
+          }),
+        }),
+      }),
+    );
+
+    expect(html).toContain('data-testid="choice-mode-invalid"');
+    expect(html).toContain('Invalid choice UI state (ACTION_MOVE_MISMATCH)');
+    expect(html).not.toContain('data-testid="choice-back"');
+    expect(html).not.toContain('data-testid="choice-cancel"');
+    expect(html).not.toContain('data-testid="choice-confirm"');
+  });
+
+  it('returns null when mode is choiceInvalid but choiceUi is not invalid', () => {
+    const tree = ChoicePanel({
+      mode: 'choiceInvalid',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: { kind: 'none' },
+        }),
+      }),
+    });
+
+    expect(tree).toBeNull();
+  });
 });

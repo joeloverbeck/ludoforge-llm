@@ -16,6 +16,7 @@ import type {
   RenderAdjacency,
   RenderChoiceOption,
   RenderChoiceUi,
+  RenderChoiceUiInvalidReason,
   RenderEventDeck,
   RenderGlobalMarker,
   RenderLastingEffect,
@@ -791,9 +792,33 @@ function normalizeChoiceBound(value: number | undefined): number | null {
   return value;
 }
 
+function toInvalidChoiceUi(reason: RenderChoiceUiInvalidReason): RenderChoiceUi {
+  return {
+    kind: 'invalid',
+    reason,
+  };
+}
+
 function deriveChoiceUi(context: RenderContext): RenderChoiceUi {
   const pending = context.choicePending;
+  const hasSelectedAction = context.selectedAction !== null;
+  const hasPartialMove = context.partialMove !== null;
+  const hasActionMoveMismatch = hasSelectedAction
+    && hasPartialMove
+    && context.partialMove.actionId !== context.selectedAction;
+
+  if (hasActionMoveMismatch) {
+    return toInvalidChoiceUi('ACTION_MOVE_MISMATCH');
+  }
+
   if (pending !== null) {
+    if (!hasSelectedAction) {
+      return toInvalidChoiceUi('PENDING_CHOICE_MISSING_ACTION');
+    }
+    if (!hasPartialMove) {
+      return toInvalidChoiceUi('PENDING_CHOICE_MISSING_PARTIAL_MOVE');
+    }
+
     const options = deriveRenderChoiceOptions(context);
     if (pending.type === 'chooseN') {
       const min = normalizeChoiceBound(pending.min);
@@ -813,10 +838,18 @@ function deriveChoiceUi(context: RenderContext): RenderChoiceUi {
     };
   }
 
-  if (context.selectedAction !== null && context.partialMove !== null) {
+  if (hasSelectedAction && hasPartialMove) {
     return {
       kind: 'confirmReady',
     };
+  }
+
+  if (hasSelectedAction && !hasPartialMove) {
+    return toInvalidChoiceUi('CONFIRM_READY_MISSING_PARTIAL_MOVE');
+  }
+
+  if (!hasSelectedAction && hasPartialMove) {
+    return toInvalidChoiceUi('CONFIRM_READY_MISSING_ACTION');
   }
 
   return {

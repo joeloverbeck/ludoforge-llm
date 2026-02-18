@@ -118,6 +118,18 @@ const loadTrace = (
   return trace;
 };
 
+const formatRunawayDiagnostics = (trace: GameTrace): string =>
+  JSON.stringify({
+    stopReason: trace.stopReason,
+    turnsCount: trace.turnsCount,
+    moves: trace.moves.length,
+    currentPhase: trace.finalState.currentPhase,
+    activePlayers: Number(trace.finalState.globalVars.activePlayers ?? -1),
+    handsPlayed: Number(trace.finalState.globalVars.handsPlayed ?? -1),
+    blindLevel: Number(trace.finalState.globalVars.blindLevel ?? -1),
+    stateHash: trace.finalState.stateHash.toString(),
+  });
+
 describe('texas hold\'em tournament e2e', () => {
   if (RUN_SLOW_E2E) {
     it('[slow] completes a 4-player random-agent tournament run with stable end-state invariants', () => {
@@ -127,7 +139,11 @@ describe('texas hold\'em tournament e2e', () => {
 
       const totalInitialChips = totalChipsInPlay(initialState(def, 42, playerCount));
       assert.equal(totalChipsInPlay(trace.finalState), totalInitialChips);
-      assert.equal(trace.stopReason === 'terminal' || trace.stopReason === 'maxTurns', true);
+      assert.notEqual(
+        trace.stopReason,
+        'noLegalMoves',
+        `slow tournament hit no-legal-moves stop reason; expected bounded progress or terminal completion: ${formatRunawayDiagnostics(trace)}`,
+      );
 
       const alive = nonEliminatedPlayers(trace.finalState);
       if (trace.stopReason === 'terminal') {
@@ -138,8 +154,18 @@ describe('texas hold\'em tournament e2e', () => {
         return;
       }
 
-      assert.equal(trace.result, null);
-      assert.equal(alive.length > 1, true);
+      assert.equal(
+        trace.stopReason,
+        'maxTurns',
+        `slow tournament stopped unexpectedly: ${formatRunawayDiagnostics(trace)}`,
+      );
+      assert.equal(
+        Number(trace.finalState.globalVars.handsPlayed) > 0,
+        true,
+        `slow tournament reached maxTurns without recording completed hands: ${formatRunawayDiagnostics(trace)}`,
+      );
+      assert.equal(trace.result, null, `slow tournament reached maxTurns with non-null result: ${formatRunawayDiagnostics(trace)}`);
+      assert.equal(alive.length > 1, true, `slow tournament reached maxTurns with <=1 survivors: ${formatRunawayDiagnostics(trace)}`);
     });
   } else {
     it.skip('[slow] completes a 4-player random-agent tournament run with stable end-state invariants', () => {});

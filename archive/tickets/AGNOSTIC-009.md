@@ -1,6 +1,6 @@
 # AGNOSTIC-009: Data-Driven Runner Bootstrap Registry (No Game-Specific Branches)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Runner + optional compile metadata plumbing
@@ -35,3 +35,19 @@
 4. `pnpm -F @ludoforge/runner test`
 5. `pnpm -F @ludoforge/runner typecheck`
 
+## Outcome
+
+- **Completed**: 2026-02-18
+- **What changed**:
+  - Added descriptor-based bootstrap registry in `packages/runner/src/bootstrap/bootstrap-registry.ts`.
+  - Updated `resolveBootstrapConfig` to resolve exclusively through the registry (removed game-specific branch logic).
+  - Added registry validation/parsing tests in `packages/runner/test/bootstrap/bootstrap-registry.test.ts`.
+  - Extended resolver tests for unknown-id fallback and retained FITL/default behavior in `packages/runner/test/bootstrap/resolve-bootstrap-config.test.ts`.
+  - Documented bootstrap target onboarding flow in `packages/runner/src/bootstrap/README.md`.
+- **Deviations from original plan**:
+  - Kept default fallback behavior (unknown ids resolve to default descriptor) to preserve deterministic bootstrap behavior.
+  - No engine/compiler metadata plumbing was required for this scope.
+- **Verification**:
+  - `pnpm -F @ludoforge/runner test` passed.
+  - `pnpm -F @ludoforge/runner typecheck` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.

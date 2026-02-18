@@ -1,9 +1,6 @@
 import { assertValidatedGameDefInput, asPlayerId, type GameDef, type PlayerId } from '@ludoforge/engine/runtime';
 
-import defaultBootstrapGameDef from './default-game-def.json';
-
-const DEFAULT_BOOTSTRAP_SEED = 42;
-const DEFAULT_BOOTSTRAP_PLAYER_ID = asPlayerId(0);
+import { resolveBootstrapDescriptor } from './bootstrap-registry';
 
 export interface BootstrapConfig {
   readonly seed: number;
@@ -13,25 +10,17 @@ export interface BootstrapConfig {
 
 export function resolveBootstrapConfig(search = resolveWindowSearch()): BootstrapConfig {
   const params = new URLSearchParams(search);
-  const game = params.get('game');
-  const seed = parseNonNegativeInteger(params.get('seed'), DEFAULT_BOOTSTRAP_SEED);
-  const playerId = asPlayerId(parseNonNegativeInteger(params.get('player'), DEFAULT_BOOTSTRAP_PLAYER_ID));
-
-  if (game === 'fitl') {
-    return {
-      seed,
-      playerId,
-      resolveGameDef: async () => {
-        const fitlBootstrapGameDef = (await import('./fitl-game-def.json')).default;
-        return assertValidatedGameDefInput(fitlBootstrapGameDef, 'FITL bootstrap fixture');
-      },
-    };
-  }
+  const descriptor = resolveBootstrapDescriptor(params.get('game'));
+  const seed = parseNonNegativeInteger(params.get('seed'), descriptor.defaultSeed);
+  const playerId = asPlayerId(parseNonNegativeInteger(params.get('player'), descriptor.defaultPlayerId));
 
   return {
     seed,
     playerId,
-    resolveGameDef: async () => assertValidatedGameDefInput(defaultBootstrapGameDef, 'runner bootstrap fixture'),
+    resolveGameDef: async () => {
+      const gameDefInput = await descriptor.resolveGameDefInput();
+      return assertValidatedGameDefInput(gameDefInput, descriptor.sourceLabel);
+    },
   };
 }
 

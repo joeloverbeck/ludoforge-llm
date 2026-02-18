@@ -103,9 +103,9 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [x] Variables display panel (global + per-player)
 - [x] Phase/turn indicator with active player highlight
 - [x] Can complete a full game of Texas Hold'em against AI opponents
-- [ ] Can render FITL board (even without graph layout — manual or default positions)
+- [x] Can render FITL board (even without graph layout — manual or default positions)
 
-**Outcome**: Any compiled game is playable through the browser runner with basic visuals. Human can make moves, AI opponents respond, game reaches terminal state.
+**F2 Outcome**: All gate criteria met. FITL renders through the generic runner using default grid positioning and data-driven visuals (58 total zones, including 47 board-map zones: 8 cities, 22 provinces, 17 LoCs). Graph layout remains deferred to Spec 41. Closed 2026-02-18.
 
 ### Milestone F3: Polished Experience (Specs 40–42)
 

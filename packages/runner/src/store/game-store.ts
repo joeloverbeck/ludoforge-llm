@@ -20,7 +20,7 @@ import { deriveRenderModel } from '../model/derive-render-model.js';
 import type { RenderModel } from '../model/render-model.js';
 import { assertLifecycleTransition, lifecycleFromTerminal, type GameLifecycle } from './lifecycle-transition.js';
 import type { PartialChoice, PlayerSeat, RenderContext } from './store-types.js';
-import type { GameWorkerAPI, WorkerError } from '../worker/game-worker-api.js';
+import type { GameWorkerAPI, OperationStamp, WorkerError } from '../worker/game-worker-api.js';
 
 interface GameStoreState {
   readonly gameDef: GameDef | null;
@@ -97,6 +97,7 @@ const WORKER_ERROR_CODES: readonly WorkerError['code'][] = [
   'VALIDATION_FAILED',
   'NOT_INITIALIZED',
   'INTERNAL_ERROR',
+  'STALE_OPERATION',
 ];
 
 const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
@@ -411,6 +412,11 @@ export function createGameStore(bridge: GameWorkerAPI) {
         return operation;
       };
 
+      const toOperationStamp = (operation: OperationContext): OperationStamp => ({
+        epoch: operation.epoch,
+        token: operation.token,
+      });
+
       const finishOperation = (operation: OperationContext): void => {
         if (!isCurrentOperation(operation)) {
           return;
@@ -529,7 +535,7 @@ export function createGameStore(bridge: GameWorkerAPI) {
           });
 
           try {
-            const gameState = await bridge.init(def, seed);
+            const gameState = await bridge.init(def, seed, undefined, toOperationStamp(operation));
             const legalMoveResult = await bridge.enumerateLegalMoves();
             const terminal = await bridge.terminalResult();
             const lifecycle = assertLifecycleTransition(
@@ -583,7 +589,7 @@ export function createGameStore(bridge: GameWorkerAPI) {
               return;
             }
 
-            const result = await bridge.applyMove(state.partialMove);
+            const result = await bridge.applyMove(state.partialMove, undefined, toOperationStamp(ctx));
             const mutationInputs = await deriveMutationInputs(result.state);
             const lifecycle = assertLifecycleTransition(
               state.gameLifecycle,
@@ -635,7 +641,7 @@ export function createGameStore(bridge: GameWorkerAPI) {
         async undo() {
           await runActionOperation(async (ctx) => {
             const state = get();
-            const restored = await bridge.undo();
+            const restored = await bridge.undo(toOperationStamp(ctx));
             if (restored === null) {
               return;
             }

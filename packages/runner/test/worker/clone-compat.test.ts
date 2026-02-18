@@ -15,13 +15,18 @@ import {
   type TriggerLogEntry,
 } from '@ludoforge/engine/runtime';
 
-import { createGameWorker, type GameMetadata, type WorkerError } from '../../src/worker/game-worker-api';
+import { createGameWorker, type GameMetadata, type OperationStamp, type WorkerError } from '../../src/worker/game-worker-api';
 import { LEGAL_TICK_MOVE, TEST_DEF } from './test-fixtures';
 
 const roundTripClone = <T>(value: T): T => {
   const cloned = structuredClone(value);
   deepStrictEqual(cloned, value);
   return cloned;
+};
+
+const createStampFactory = (): (() => OperationStamp) => {
+  let token = 0;
+  return () => ({ epoch: 0, token: ++token });
 };
 
 const EFFECT_PROVENANCE = {
@@ -179,10 +184,11 @@ const RUNTIME_WARNINGS: readonly RuntimeWarning[] = [
 describe('worker boundary structured clone compatibility', () => {
   it('round-trips GameDef, GameState, Move, ApplyMoveResult, ChoiceRequest, TerminalResult, and legal move enumeration', async () => {
     const worker = createGameWorker();
-    const state = await worker.init(TEST_DEF, 31);
+    const nextStamp = createStampFactory();
+    const state = await worker.init(TEST_DEF, 31, undefined, nextStamp());
     const legalMoveEnumeration = await worker.enumerateLegalMoves();
     const move = legalMoveEnumeration.moves[0] ?? LEGAL_TICK_MOVE;
-    const applyMoveResult = await worker.applyMove(move);
+    const applyMoveResult = await worker.applyMove(move, undefined, nextStamp());
     const choiceRequest = await worker.legalChoices(move);
     const terminal = await worker.terminalResult();
 
@@ -259,7 +265,8 @@ describe('worker boundary structured clone compatibility', () => {
 
   it('round-trips GameMetadata and WorkerError variants', async () => {
     const worker = createGameWorker();
-    await worker.init(TEST_DEF, 41);
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 41, undefined, nextStamp());
     const metadata = await worker.getMetadata();
 
     const errors: readonly WorkerError[] = [
@@ -267,6 +274,7 @@ describe('worker boundary structured clone compatibility', () => {
       { code: 'VALIDATION_FAILED', message: 'Bad GameDef.' },
       { code: 'NOT_INITIALIZED', message: 'Call init first.' },
       { code: 'INTERNAL_ERROR', message: 'Unexpected worker error.', details: { fatal: true } },
+      { code: 'STALE_OPERATION', message: 'Superseded operation.' },
     ];
 
     const gameMetadata: GameMetadata = metadata;

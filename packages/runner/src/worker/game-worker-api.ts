@@ -21,9 +21,14 @@ import type {
 } from '@ludoforge/engine/runtime';
 
 export interface WorkerError {
-  readonly code: 'ILLEGAL_MOVE' | 'VALIDATION_FAILED' | 'NOT_INITIALIZED' | 'INTERNAL_ERROR';
+  readonly code: 'ILLEGAL_MOVE' | 'VALIDATION_FAILED' | 'NOT_INITIALIZED' | 'INTERNAL_ERROR' | 'STALE_OPERATION';
   readonly message: string;
   readonly details?: unknown;
+}
+
+export interface OperationStamp {
+  readonly epoch: number;
+  readonly token: number;
 }
 
 export interface GameMetadata {
@@ -40,29 +45,35 @@ export interface BridgeInitOptions {
 }
 
 export interface GameWorkerAPI {
-  init(nextDef: GameDef, seed: number, options?: BridgeInitOptions): Promise<GameState>;
+  init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<GameState>;
   legalMoves(options?: LegalMoveEnumerationOptions): Promise<readonly Move[]>;
   enumerateLegalMoves(options?: LegalMoveEnumerationOptions): Promise<LegalMoveEnumerationResult>;
   legalChoices(partialMove: Move): Promise<ChoiceRequest>;
-  applyMove(move: Move, options?: { readonly trace?: boolean }): Promise<ApplyMoveResult>;
+  applyMove(
+    move: Move,
+    options: { readonly trace?: boolean } | undefined,
+    stamp: OperationStamp,
+  ): Promise<ApplyMoveResult>;
   playSequence(
     moves: readonly Move[],
     onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
+    stamp: OperationStamp,
   ): Promise<readonly ApplyMoveResult[]>;
   terminalResult(): Promise<TerminalResult | null>;
   getState(): Promise<GameState>;
   getMetadata(): Promise<GameMetadata>;
   getHistoryLength(): Promise<number>;
-  undo(): Promise<GameState | null>;
-  reset(nextDef?: GameDef, seed?: number, options?: BridgeInitOptions): Promise<GameState>;
-  loadFromUrl(url: string, seed: number, options?: BridgeInitOptions): Promise<GameState>;
+  undo(stamp: OperationStamp): Promise<GameState | null>;
+  reset(nextDef: GameDef | undefined, seed: number | undefined, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<GameState>;
+  loadFromUrl(url: string, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<GameState>;
 }
 
 const isWorkerErrorCode = (value: unknown): value is WorkerError['code'] => {
   return value === 'ILLEGAL_MOVE'
     || value === 'VALIDATION_FAILED'
     || value === 'NOT_INITIALIZED'
-    || value === 'INTERNAL_ERROR';
+    || value === 'INTERNAL_ERROR'
+    || value === 'STALE_OPERATION';
 };
 
 const isWorkerError = (error: unknown): error is WorkerError => {
@@ -156,15 +167,35 @@ export function createGameWorker(): GameWorkerAPI {
   let state: GameState | null = null;
   let history: GameState[] = [];
   let enableTrace = true;
+  let latestMutationStamp: OperationStamp | null = null;
+
+  const compareOperationStamp = (left: OperationStamp, right: OperationStamp): number => {
+    if (left.epoch !== right.epoch) {
+      return left.epoch - right.epoch;
+    }
+    return left.token - right.token;
+  };
+
+  const ensureFreshMutation = (stamp: OperationStamp): void => {
+    if (latestMutationStamp !== null && compareOperationStamp(stamp, latestMutationStamp) <= 0) {
+      throw toWorkerError('STALE_OPERATION', undefined, 'Mutation rejected because a newer operation already executed.');
+    }
+    latestMutationStamp = stamp;
+  };
+
+  const initState = (nextDef: GameDef, seed: number, options?: BridgeInitOptions): GameState => {
+    def = nextDef;
+    state = initialState(nextDef, seed, options?.playerCount);
+    history = [];
+    enableTrace = options?.enableTrace ?? true;
+    return state;
+  };
 
   const api: GameWorkerAPI = {
-    async init(nextDef: GameDef, seed: number, options?: BridgeInitOptions): Promise<GameState> {
+    async init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<GameState> {
       return withInternalErrorMapping(() => {
-        def = nextDef;
-        state = initialState(nextDef, seed, options?.playerCount);
-        history = [];
-        enableTrace = options?.enableTrace ?? true;
-        return state;
+        ensureFreshMutation(stamp);
+        return initState(nextDef, seed, options);
       });
     },
 
@@ -189,8 +220,13 @@ export function createGameWorker(): GameWorkerAPI {
       });
     },
 
-    async applyMove(move: Move, options?: { readonly trace?: boolean }): Promise<ApplyMoveResult> {
+    async applyMove(
+      move: Move,
+      options: { readonly trace?: boolean } | undefined,
+      stamp: OperationStamp,
+    ): Promise<ApplyMoveResult> {
       const current = assertInitialized(def, state);
+      ensureFreshMutation(stamp);
       history.push(current.state);
       return withIllegalMoveMapping(() => {
         try {
@@ -210,8 +246,10 @@ export function createGameWorker(): GameWorkerAPI {
     playSequence(
       moves: readonly Move[],
       onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
+      stamp: OperationStamp,
     ): Promise<readonly ApplyMoveResult[]> {
       const current = assertInitialized(def, state);
+      ensureFreshMutation(stamp);
       const results: ApplyMoveResult[] = [];
 
       return withIllegalMoveMapping(() => {
@@ -269,7 +307,8 @@ export function createGameWorker(): GameWorkerAPI {
       return history.length;
     },
 
-    async undo(): Promise<GameState | null> {
+    async undo(stamp: OperationStamp): Promise<GameState | null> {
+      ensureFreshMutation(stamp);
       if (history.length === 0) {
         return null;
       }
@@ -277,16 +316,28 @@ export function createGameWorker(): GameWorkerAPI {
       return state;
     },
 
-    async reset(nextDef?: GameDef, seed?: number, options?: BridgeInitOptions): Promise<GameState> {
+    async reset(
+      nextDef: GameDef | undefined,
+      seed: number | undefined,
+      options: BridgeInitOptions | undefined,
+      stamp: OperationStamp,
+    ): Promise<GameState> {
+      ensureFreshMutation(stamp);
       const resolvedDef = nextDef ?? def;
       if (resolvedDef === null) {
         throw toWorkerError('NOT_INITIALIZED', undefined, 'No GameDef available. Provide one or call init() first.');
       }
       const resolvedSeed = seed ?? 0;
-      return await api.init(resolvedDef, resolvedSeed, options);
+      return initState(resolvedDef, resolvedSeed, options);
     },
 
-    async loadFromUrl(url: string, seed: number, options?: BridgeInitOptions): Promise<GameState> {
+    async loadFromUrl(
+      url: string,
+      seed: number,
+      options: BridgeInitOptions | undefined,
+      stamp: OperationStamp,
+    ): Promise<GameState> {
+      ensureFreshMutation(stamp);
       return withValidationFailureMapping(async () => {
         const response = await fetch(url);
         if (!response.ok) {
@@ -302,8 +353,10 @@ export function createGameWorker(): GameWorkerAPI {
 
         const parsed = await response.json();
         const nextDef = assertValidatedGameDefInput(parsed, `URL ${url}`);
-
-        return api.init(nextDef, seed, options);
+        if (latestMutationStamp === null || compareOperationStamp(stamp, latestMutationStamp) !== 0) {
+          throw toWorkerError('STALE_OPERATION', undefined, 'Mutation rejected because a newer operation already executed.');
+        }
+        return initState(nextDef, seed, options);
       });
     },
   };

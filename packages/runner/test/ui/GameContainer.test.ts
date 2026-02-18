@@ -40,6 +40,14 @@ vi.mock('../../src/ui/TurnOrderDisplay.js', () => ({
   TurnOrderDisplay: () => createElement('div', { 'data-testid': 'turn-order-display' }),
 }));
 
+vi.mock('../../src/ui/VariablesPanel.js', () => ({
+  VariablesPanel: () => createElement('div', { 'data-testid': 'variables-panel' }),
+}));
+
+vi.mock('../../src/ui/Scoreboard.js', () => ({
+  Scoreboard: () => createElement('div', { 'data-testid': 'scoreboard' }),
+}));
+
 vi.mock('../../src/ui/ErrorState.js', () => ({
   ErrorState: (props: CapturedErrorStateProps) => {
     testDoubles.errorStateProps = props;
@@ -189,6 +197,8 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="ui-overlay"');
     expect(html).toContain('data-testid="phase-indicator"');
     expect(html).toContain('data-testid="turn-order-display"');
+    expect(html).toContain('data-testid="variables-panel"');
+    expect(html).toContain('data-testid="scoreboard"');
   });
 
   it('renders GameCanvas and UIOverlay when lifecycle is terminal', () => {
@@ -205,6 +215,8 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="ui-overlay"');
     expect(html).toContain('data-testid="phase-indicator"');
     expect(html).toContain('data-testid="turn-order-display"');
+    expect(html).toContain('data-testid="variables-panel"');
+    expect(html).toContain('data-testid="scoreboard"');
   });
 
   it('renders actions mode branch only', () => {

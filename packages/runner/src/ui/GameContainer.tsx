@@ -9,9 +9,11 @@ import { ChoicePanel } from './ChoicePanel.js';
 import { ErrorState } from './ErrorState.js';
 import { LoadingState } from './LoadingState.js';
 import { PhaseIndicator } from './PhaseIndicator.js';
+import { Scoreboard } from './Scoreboard.js';
 import { TurnOrderDisplay } from './TurnOrderDisplay.js';
 import { UndoControl } from './UndoControl.js';
 import { UIOverlay } from './UIOverlay.js';
+import { VariablesPanel } from './VariablesPanel.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 import styles from './GameContainer.module.css';
 
@@ -72,6 +74,12 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
           <>
             <PhaseIndicator store={store} />
             <TurnOrderDisplay store={store} />
+          </>
+        )}
+        sidePanelContent={(
+          <>
+            <VariablesPanel store={store} />
+            <Scoreboard store={store} />
           </>
         )}
         bottomBarContent={bottomBarContent}

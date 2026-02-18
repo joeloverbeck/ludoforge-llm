@@ -41,6 +41,18 @@ describe('UIOverlay', () => {
     expect(html).toContain('top controls');
   });
 
+  it('renders provided sidePanelContent in side region', () => {
+    const html = renderToStaticMarkup(
+      createElement(UIOverlay, {
+        sidePanelContent: createElement('div', { 'data-testid': 'side-slot-content' }, 'side content'),
+      }),
+    );
+
+    expect(html).toContain('data-testid="ui-overlay-side"');
+    expect(html).toContain('data-testid="side-slot-content"');
+    expect(html).toContain('side content');
+  });
+
   it('exports expected CSS module classes', () => {
     expect(styles).toMatchObject({
       overlay: expect.any(String),

@@ -21,6 +21,11 @@
   inset: 72px 0 96px auto;
   width: 320px;
   max-width: 34vw;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md) 0 0;
+  overflow-y: auto;
   pointer-events: none;
 }
 

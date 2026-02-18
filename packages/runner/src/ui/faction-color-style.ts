@@ -11,18 +11,22 @@ function normalizeFactionId(factionId: string | null): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
+export function buildFactionColorValue(factionId: string | null, fallbackIndex: number): string {
+  const fallbackColor = `var(--faction-${fallbackIndex})`;
+  const normalizedFactionId = normalizeFactionId(factionId);
+
+  return normalizedFactionId === null
+    ? fallbackColor
+    : `var(--faction-${normalizedFactionId}, ${fallbackColor})`;
+}
+
 export function buildFactionColorStyle(
   player: RenderPlayer,
   players: readonly RenderPlayer[],
 ): CSSProperties {
   const index = players.findIndex((candidate) => candidate.id === player.id);
   const fallbackIndex = index >= 0 ? index : 0;
-  const fallbackColor = `var(--faction-${fallbackIndex})`;
-
-  const normalizedFactionId = normalizeFactionId(player.factionId);
-  const colorValue = normalizedFactionId === null
-    ? fallbackColor
-    : `var(--faction-${normalizedFactionId}, ${fallbackColor})`;
+  const colorValue = buildFactionColorValue(player.factionId, fallbackIndex);
 
   return {
     color: colorValue,

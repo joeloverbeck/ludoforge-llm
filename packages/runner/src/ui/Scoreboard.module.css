@@ -1,0 +1,54 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+  color: var(--text-primary);
+}
+
+.factionGroup {
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: var(--space-xs);
+}
+
+.factionTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.trackRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.trackHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-sm);
+  color: var(--text-secondary);
+}
+
+.trackValue {
+  composes: fontMono from './shared.module.css';
+  color: var(--text-primary);
+}
+
+.trackBar {
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.trackFill {
+  height: 100%;
+  width: 0;
+}

@@ -64,6 +64,10 @@ vi.mock('../../src/ui/ActiveEffectsPanel.js', () => ({
   ActiveEffectsPanel: () => createElement('div', { 'data-testid': 'active-effects-panel' }),
 }));
 
+vi.mock('../../src/ui/PlayerHandPanel.js', () => ({
+  PlayerHandPanel: () => createElement('div', { 'data-testid': 'player-hand-panel' }),
+}));
+
 vi.mock('../../src/ui/ErrorState.js', () => ({
   ErrorState: (props: CapturedErrorStateProps) => {
     testDoubles.errorStateProps = props;
@@ -230,6 +234,7 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="scoreboard"');
     expect(html).toContain('data-testid="global-markers-bar"');
     expect(html).toContain('data-testid="active-effects-panel"');
+    expect(html).toContain('data-testid="player-hand-panel"');
     expectAppearsInOrder(html, [
       'interrupt-banner',
       'phase-indicator',
@@ -264,6 +269,7 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="scoreboard"');
     expect(html).toContain('data-testid="global-markers-bar"');
     expect(html).toContain('data-testid="active-effects-panel"');
+    expect(html).toContain('data-testid="player-hand-panel"');
     expectAppearsInOrder(html, [
       'interrupt-banner',
       'phase-indicator',

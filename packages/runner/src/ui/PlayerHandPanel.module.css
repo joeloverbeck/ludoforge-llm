@@ -1,0 +1,48 @@
+.container {
+  position: absolute;
+  left: var(--space-md);
+  bottom: 104px;
+  max-width: min(560px, calc(100vw - (2 * var(--space-md))));
+}
+
+.tokenRow {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.tokenItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 104px;
+  max-width: 160px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.tokenSelectable {
+  cursor: pointer;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.tokenType {
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.tokenProperties {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.2;
+  word-break: break-word;
+}

@@ -18,6 +18,7 @@ import { TurnOrderDisplay } from './TurnOrderDisplay.js';
 import { UndoControl } from './UndoControl.js';
 import { UIOverlay } from './UIOverlay.js';
 import { VariablesPanel } from './VariablesPanel.js';
+import { PlayerHandPanel } from './PlayerHandPanel.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 import styles from './GameContainer.module.css';
 
@@ -41,7 +42,9 @@ const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayRegi
     GlobalMarkersBar,
     ActiveEffectsPanel,
   ],
-  floating: [],
+  floating: [
+    PlayerHandPanel,
+  ],
 };
 
 function renderOverlayRegionPanels(

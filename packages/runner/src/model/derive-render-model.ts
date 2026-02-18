@@ -30,6 +30,7 @@ import type {
 } from './render-model.js';
 import type { RenderContext } from '../store/store-types.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
+import { formatChoiceValueFallback, serializeChoiceValueIdentity } from './choice-value-utils.js';
 
 const OWNER_ZONE_ID_PATTERN = /^.+:(\d+)$/;
 
@@ -768,8 +769,9 @@ function deriveChoiceBreadcrumb(context: RenderContext): RenderModel['choiceBrea
     decisionId: step.decisionId,
     name: step.name,
     displayName: formatIdAsDisplayName(step.name),
+    chosenValueId: serializeChoiceValueIdentity(step.value),
     chosenValue: step.value,
-    chosenDisplayName: formatIdAsDisplayName(String(step.value)),
+    chosenDisplayName: formatChoiceValueFallback(step.value),
   }));
 }
 
@@ -778,8 +780,9 @@ function deriveRenderChoiceOptions(context: RenderContext): readonly RenderChoic
     return [];
   }
   return context.choicePending.options.map((option) => ({
+    choiceValueId: serializeChoiceValueIdentity(option.value),
     value: option.value,
-    displayName: formatIdAsDisplayName(String(option.value)),
+    displayName: formatChoiceValueFallback(option.value),
     legality: option.legality,
     illegalReason: option.illegalReason,
   }));

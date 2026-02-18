@@ -147,11 +147,13 @@ export interface RenderChoiceStep {
   readonly decisionId: string;
   readonly name: string;
   readonly displayName: string;
+  readonly chosenValueId: string;
   readonly chosenValue: MoveParamValue;
   readonly chosenDisplayName: string;
 }
 
 export interface RenderChoiceOption {
+  readonly choiceValueId: string;
   readonly value: MoveParamValue;
   readonly displayName: string;
   readonly legality: 'legal' | 'illegal' | 'unknown';

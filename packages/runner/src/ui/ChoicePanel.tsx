@@ -69,7 +69,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
         <div className={styles.breadcrumb} data-testid="choice-breadcrumb">
           {choiceModel.choiceBreadcrumb.map((step, index) => (
             <button
-              key={`${step.decisionId}:${index}`}
+              key={`${step.decisionId}:${step.chosenValueId}`}
               type="button"
               className={styles.breadcrumbStep}
               data-testid={`choice-breadcrumb-step-${index}`}
@@ -97,16 +97,16 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
 
         {choiceUi.kind === 'discreteOne' ? (
           <div className={styles.options} data-testid="choice-mode-discrete">
-            {choiceUi.options.map((option, index) => {
+            {choiceUi.options.map((option) => {
               const isLegal = option.legality === 'legal';
               return (
-                <div key={`${String(option.value)}:${index}`} className={styles.optionRow}>
+                <div key={option.choiceValueId} className={styles.optionRow}>
                   <button
                     type="button"
                     className={styles.optionButton}
                     disabled={!isLegal}
                     aria-disabled={isLegal ? undefined : 'true'}
-                    data-testid={`choice-option-${String(option.value)}`}
+                    data-testid={`choice-option-${option.choiceValueId}`}
                     onClick={() => {
                       if (!isLegal || !isChoiceScalar(option.value)) {
                         return;

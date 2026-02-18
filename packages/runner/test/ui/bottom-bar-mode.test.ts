@@ -66,7 +66,7 @@ describe('deriveBottomBarState', () => {
       makeRenderModel({
         choiceUi: {
           kind: 'discreteOne',
-          options: [{ value: 'x', displayName: 'X', legality: 'legal', illegalReason: null }],
+          options: [{ choiceValueId: 's:1:x', value: 'x', displayName: 'X', legality: 'legal', illegalReason: null }],
         },
       }),
     );

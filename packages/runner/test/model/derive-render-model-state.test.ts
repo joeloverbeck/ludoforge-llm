@@ -16,6 +16,7 @@ import {
 } from '@ludoforge/engine/runtime';
 
 import { deriveRenderModel } from '../../src/model/derive-render-model.js';
+import { serializeChoiceValueIdentity } from '../../src/model/choice-value-utils.js';
 import type { RenderContext } from '../../src/store/store-types.js';
 
 function compileFixture(): GameDef {
@@ -141,6 +142,38 @@ function token(id: string, type = 'piece', props: Token['props'] = {}): Token {
     type,
     props,
   };
+}
+
+function expectedRenderChoiceOption(
+  value: MoveParamValue,
+  displayName: string,
+  legality: 'legal' | 'illegal' | 'unknown',
+  illegalReason: string | null,
+) {
+  return {
+    choiceValueId: serializeChoiceValueIdentity(value),
+    value,
+    displayName,
+    legality,
+    illegalReason,
+  } as const;
+}
+
+function expectedRenderChoiceStep(
+  decisionId: string,
+  name: string,
+  displayName: string,
+  chosenValue: MoveParamValue,
+  chosenDisplayName: string,
+) {
+  return {
+    decisionId,
+    name,
+    displayName,
+    chosenValueId: serializeChoiceValueIdentity(chosenValue),
+    chosenValue,
+    chosenDisplayName,
+  } as const;
 }
 
 function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly def: GameDef; readonly state: GameState } {
@@ -502,20 +535,14 @@ describe('deriveRenderModel state metadata', () => {
     expect(model.choiceUi).toEqual({
       kind: 'discreteMany',
       options: [
-        { value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null },
-        { value: 'token-a', displayName: 'Token A', legality: 'legal', illegalReason: null },
+        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null),
+        expectedRenderChoiceOption('token-a', 'Token A', 'legal', null),
       ],
       min: 1,
       max: 2,
     });
     expect(model.choiceBreadcrumb).toEqual([
-      {
-        decisionId: 'pick-action',
-        name: 'pickAction',
-        displayName: 'Pick Action',
-        chosenValue: 'train-us',
-        chosenDisplayName: 'Train Us',
-      },
+      expectedRenderChoiceStep('pick-action', 'pickAction', 'Pick Action', 'train-us', 'Train Us'),
     ]);
     expect(model.moveEnumerationWarnings).toEqual([
       { code: 'EMPTY_QUERY_RESULT', message: 'query produced no rows' },
@@ -552,15 +579,56 @@ describe('deriveRenderModel state metadata', () => {
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
       options: [
-        { value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null },
-        {
-          value: 'blocked-zone',
-          displayName: 'Blocked Zone',
-          legality: 'illegal',
-          illegalReason: 'pipelineLegalityFailed',
-        },
+        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null),
+        expectedRenderChoiceOption('blocked-zone', 'Blocked Zone', 'illegal', 'pipelineLegalityFailed'),
       ],
     });
+  });
+
+  it('formats scalar and array choice values deterministically without coercion collisions', () => {
+    const def = compileFixture();
+    const state = initialState(def, 233, 2);
+
+    const choicePending: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'target',
+      name: 'target',
+      type: 'chooseOne',
+      options: [
+        { value: 'a,b', legality: 'legal', illegalReason: null },
+        { value: ['a', 'b'], legality: 'legal', illegalReason: null },
+      ],
+      targetKinds: ['zone'],
+    };
+
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        choicePending,
+        selectedAction: asActionId('tick'),
+        partialMove: { actionId: asActionId('tick'), params: {} },
+        choiceStack: [{ decisionId: 'prev', name: 'previousChoice', value: ['table:none', 'token-a'] }],
+      }),
+    );
+
+    expect(model.choiceUi).toEqual({
+      kind: 'discreteOne',
+      options: [
+        expectedRenderChoiceOption('a,b', 'A,b', 'legal', null),
+        expectedRenderChoiceOption(['a', 'b'], '[A, B]', 'legal', null),
+      ],
+    });
+    expect(model.choiceBreadcrumb).toEqual([
+      expectedRenderChoiceStep(
+        'prev',
+        'previousChoice',
+        'Previous Choice',
+        ['table:none', 'token-a'],
+        '[Table None, Token A]',
+      ),
+    ]);
   });
 
   it('surfaces unknown legality in rendered choice options', () => {
@@ -593,13 +661,8 @@ describe('deriveRenderModel state metadata', () => {
     expect(model.choiceUi).toEqual({
       kind: 'discreteOne',
       options: [
-        { value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null },
-        {
-          value: 'undetermined-zone',
-          displayName: 'Undetermined Zone',
-          legality: 'unknown',
-          illegalReason: null,
-        },
+        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null),
+        expectedRenderChoiceOption('undetermined-zone', 'Undetermined Zone', 'unknown', null),
       ],
     });
   });
@@ -658,7 +721,7 @@ describe('deriveRenderModel state metadata', () => {
     );
     expect(model.choiceUi).toEqual({
       kind: 'discreteMany',
-      options: [{ value: 'table:none', displayName: 'Table None', legality: 'legal', illegalReason: null }],
+      options: [expectedRenderChoiceOption('table:none', 'Table None', 'legal', null)],
       min: 3,
       max: 3,
     });

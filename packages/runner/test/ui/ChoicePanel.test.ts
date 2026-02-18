@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
+import { serializeChoiceValueIdentity } from '../../src/model/choice-value-utils.js';
 
 vi.mock('zustand', () => ({
   useStore: <TState, TSlice>(store: { getState(): TState }, selector: (state: TState) => TSlice): TSlice => {
@@ -108,6 +109,41 @@ function createChoiceStore(state: {
 }
 
 describe('ChoicePanel', () => {
+  function makeChoiceOption(
+    value: string | number | boolean | readonly (string | number | boolean)[],
+    displayName: string,
+    legality: 'legal' | 'illegal' | 'unknown' = 'legal',
+    illegalReason: string | null = null,
+  ) {
+    return {
+      choiceValueId: serializeChoiceValueIdentity(value),
+      value,
+      displayName,
+      legality,
+      illegalReason,
+    } as const;
+  }
+
+  function makeBreadcrumbStep(
+    decisionId: string,
+    name: string,
+    chosenValue: string | number | boolean | readonly (string | number | boolean)[],
+    chosenDisplayName: string,
+  ) {
+    return {
+      decisionId,
+      name,
+      displayName: name,
+      chosenValueId: serializeChoiceValueIdentity(chosenValue),
+      chosenValue,
+      chosenDisplayName,
+    } as const;
+  }
+
+  function choiceOptionTestId(value: string | number | boolean | readonly (string | number | boolean)[]): string {
+    return `choice-option-${serializeChoiceValueIdentity(value)}`;
+  }
+
   it('renders breadcrumb chips from choiceBreadcrumb', () => {
     const html = renderToStaticMarkup(
       createElement(ChoicePanel, {
@@ -116,25 +152,11 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteOne',
-              options: [
-                { value: 'zone-c', displayName: 'Zone C', legality: 'legal', illegalReason: null },
-              ],
+              options: [makeChoiceOption('zone-c', 'Zone C')],
             },
             choiceBreadcrumb: [
-              {
-                decisionId: 'step-1',
-                name: 'first',
-                displayName: 'First',
-                chosenValue: 'zone-a',
-                chosenDisplayName: 'Zone A',
-              },
-              {
-                decisionId: 'step-2',
-                name: 'second',
-                displayName: 'Second',
-                chosenValue: 'zone-b',
-                chosenDisplayName: 'Zone B',
-              },
+              makeBreadcrumbStep('step-1', 'first', 'zone-a', 'Zone A'),
+              makeBreadcrumbStep('step-2', 'second', 'zone-b', 'Zone B'),
             ],
           }),
         }),
@@ -172,7 +194,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
-            options: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+            options: [makeChoiceOption('zone-a', 'Zone A')],
           },
           choiceBreadcrumb: [],
         }),
@@ -198,16 +220,10 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
-            options: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+            options: [makeChoiceOption('zone-a', 'Zone A')],
           },
           choiceBreadcrumb: [
-            {
-              decisionId: 'step-1',
-              name: 'first',
-              displayName: 'First',
-              chosenValue: 'zone-a',
-              chosenDisplayName: 'Zone A',
-            },
+            makeBreadcrumbStep('step-1', 'first', 'zone-a', 'Zone A'),
           ],
         }),
         cancelChoice,
@@ -233,7 +249,7 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
-            options: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+            options: [makeChoiceOption('zone-a', 'Zone A')],
           },
         }),
         cancelMove,
@@ -259,8 +275,8 @@ describe('ChoicePanel', () => {
             choiceUi: {
               kind: 'discreteOne',
               options: [
-                { value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null },
-                { value: 'zone-b', displayName: 'Zone B', legality: 'illegal', illegalReason: 'blocked' },
+                makeChoiceOption('zone-a', 'Zone A'),
+                makeChoiceOption('zone-b', 'Zone B', 'illegal', 'blocked'),
               ],
             },
           }),
@@ -269,8 +285,8 @@ describe('ChoicePanel', () => {
     );
 
     expect(html).toContain('data-testid="choice-mode-discrete"');
-    expect(html).toContain('data-testid="choice-option-zone-a"');
-    expect(html).toContain('data-testid="choice-option-zone-b"');
+    expect(html).toContain(`data-testid="${choiceOptionTestId('zone-a')}"`);
+    expect(html).toContain(`data-testid="${choiceOptionTestId('zone-b')}"`);
     expect(html).toContain('data-testid="illegality-feedback"');
   });
 
@@ -283,14 +299,14 @@ describe('ChoicePanel', () => {
         renderModel: makeRenderModel({
           choiceUi: {
             kind: 'discreteOne',
-            options: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+            options: [makeChoiceOption('zone-a', 'Zone A')],
           },
         }),
         chooseOne,
       }),
     });
 
-    const option = findElementByTestId(tree, 'choice-option-zone-a');
+    const option = findElementByTestId(tree, choiceOptionTestId('zone-a'));
     expect(option).not.toBeNull();
     if (option === null || option.props.onClick === undefined) {
       throw new Error('Expected legal option button click handler.');
@@ -299,6 +315,28 @@ describe('ChoicePanel', () => {
     option.props.onClick();
     expect(chooseOne).toHaveBeenCalledTimes(1);
     expect(chooseOne).toHaveBeenCalledWith('zone-a');
+  });
+
+  it('uses stable distinct option identities for scalar/array value collisions', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choicePending',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceUi: {
+              kind: 'discreteOne',
+              options: [
+                makeChoiceOption('a,b', 'A B String'),
+                makeChoiceOption(['a', 'b'] as const, 'A B Array'),
+              ],
+            },
+          }),
+        }),
+      }),
+    );
+
+    expect(html).toContain(`data-testid="${choiceOptionTestId('a,b')}"`);
+    expect(html).toContain(`data-testid="${choiceOptionTestId(['a', 'b'])}"`);
   });
 
   it('renders confirm button only when move is ready and dispatches confirmMove', () => {
@@ -409,9 +447,9 @@ describe('ChoicePanel', () => {
       store: createChoiceStore({
         renderModel: makeRenderModel({
           choiceUi: {
-            kind: 'discreteOne',
-            options: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
-          },
+              kind: 'discreteOne',
+              options: [makeChoiceOption('zone-a', 'Zone A')],
+            },
         }),
       }),
     });

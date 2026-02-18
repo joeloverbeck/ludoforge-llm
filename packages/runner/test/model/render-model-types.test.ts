@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import { asPlayerId } from '@ludoforge/engine/runtime';
 import type { MoveParamValue, PlayerId } from '@ludoforge/engine/runtime';
 
+import { serializeChoiceValueIdentity } from '../../src/model/choice-value-utils';
 import type {
   RenderChoiceOption,
   RenderChoiceUi,
@@ -133,6 +134,7 @@ describe('render-model types', () => {
           decisionId: 'pick-zone',
           name: 'Pick Zone',
           displayName: 'Pick Zone',
+          chosenValueId: serializeChoiceValueIdentity('table' as MoveParamValue),
           chosenValue: 'table' as MoveParamValue,
           chosenDisplayName: 'Table',
         },
@@ -141,6 +143,7 @@ describe('render-model types', () => {
         kind: 'discreteMany',
         options: [
           {
+            choiceValueId: serializeChoiceValueIdentity(['table', asPlayerId(1)] as MoveParamValue),
             value: ['table', asPlayerId(1)] as MoveParamValue,
             displayName: 'Table, Player 1',
             legality: 'legal',
@@ -232,6 +235,7 @@ describe('render-model types', () => {
 
   it('accepts MoveParamValue scalars and arrays for RenderChoiceOption.value', () => {
     const scalarOption: RenderChoiceOption = {
+      choiceValueId: serializeChoiceValueIdentity('zone:main' as MoveParamValue),
       value: 'zone:main' as MoveParamValue,
       displayName: 'Main Zone',
       legality: 'legal',
@@ -239,6 +243,7 @@ describe('render-model types', () => {
     };
 
     const vectorOption: RenderChoiceOption = {
+      choiceValueId: serializeChoiceValueIdentity(['zone:main', asPlayerId(1)] as MoveParamValue),
       value: ['zone:main', asPlayerId(1)] as MoveParamValue,
       displayName: 'Main Zone + Player 1',
       legality: 'legal',
@@ -255,11 +260,23 @@ describe('render-model types', () => {
       { kind: 'confirmReady' },
       {
         kind: 'discreteOne',
-        options: [{ value: 'zone:a' as MoveParamValue, displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+        options: [{
+          choiceValueId: serializeChoiceValueIdentity('zone:a' as MoveParamValue),
+          value: 'zone:a' as MoveParamValue,
+          displayName: 'Zone A',
+          legality: 'legal',
+          illegalReason: null,
+        }],
       },
       {
         kind: 'discreteMany',
-        options: [{ value: 'zone:a' as MoveParamValue, displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+        options: [{
+          choiceValueId: serializeChoiceValueIdentity('zone:a' as MoveParamValue),
+          value: 'zone:a' as MoveParamValue,
+          displayName: 'Zone A',
+          legality: 'legal',
+          illegalReason: null,
+        }],
         min: 1,
         max: 2,
       },

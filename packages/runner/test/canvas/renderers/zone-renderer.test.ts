@@ -86,15 +86,39 @@ const {
 
     roundRectArgs: [number, number, number, number, number] | null = null;
 
+    circleArgs: [number, number, number] | null = null;
+
+    ellipseArgs: [number, number, number, number] | null = null;
+
+    polyArgs: number[] | null = null;
+
     clear(): this {
       this.fillStyle = undefined;
       this.strokeStyle = undefined;
       this.roundRectArgs = null;
+      this.circleArgs = null;
+      this.ellipseArgs = null;
+      this.polyArgs = null;
       return this;
     }
 
     roundRect(x: number, y: number, width: number, height: number, radius: number): this {
       this.roundRectArgs = [x, y, width, height, radius];
+      return this;
+    }
+
+    circle(x: number, y: number, radius: number): this {
+      this.circleArgs = [x, y, radius];
+      return this;
+    }
+
+    ellipse(x: number, y: number, halfWidth: number, halfHeight: number): this {
+      this.ellipseArgs = [x, y, halfWidth, halfHeight];
+      return this;
+    }
+
+    poly(points: number[]): this {
+      this.polyArgs = points;
       return this;
     }
 
@@ -360,5 +384,82 @@ describe('createZoneRenderer', () => {
     renderer.destroy();
 
     expect(cleanupByZoneId.get('zone:a')).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses zone.visual.label override and updates label layout from visual dimensions', () => {
+    const { renderer } = createRendererHarness();
+    renderer.update(
+      [makeZone({ visual: { label: 'Saigon', width: 100, height: 80 } })],
+      new Map(),
+    );
+
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+    const nameLabel = zoneContainer.children[1] as InstanceType<typeof MockText>;
+    const badgeLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
+    const markersLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
+
+    expect(nameLabel.text).toBe('Saigon');
+    expect(nameLabel.position.x).toBe(-44);
+    expect(nameLabel.position.y).toBeCloseTo(-7.2);
+    expect(badgeLabel.position.x).toBe(35);
+    expect(badgeLabel.position.y).toBeCloseTo(-30.4);
+    expect(markersLabel.position.x).toBe(-44);
+    expect(markersLabel.position.y).toBeCloseTo(12.8);
+  });
+
+  it('uses visual color when valid and falls back to default color when invalid', () => {
+    const { renderer } = createRendererHarness();
+    renderer.update([makeZone({ visual: { color: '#e63946' } })], new Map());
+
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+    const base = zoneContainer.children[0] as InstanceType<typeof MockGraphics>;
+    expect(base.fillStyle).toEqual({ color: 0xe63946 });
+
+    renderer.update(
+      [makeZone({ visual: { color: 'not-a-color' }, visibility: 'hidden' })],
+      new Map(),
+    );
+    expect(base.fillStyle).toEqual({ color: 0x2a2f38 });
+  });
+
+  it('dispatches all supported zone shapes from visual hints', () => {
+    const { renderer } = createRendererHarness();
+    const shapes = [
+      { shape: 'rectangle', expect: { roundRectRadius: 12 } },
+      { shape: 'circle', expect: { circleRadius: 20 } },
+      { shape: 'ellipse', expect: { ellipse: [0, 0, 40, 20] } },
+      { shape: 'diamond', expect: { polyPoints: 8 } },
+      { shape: 'hexagon', expect: { polyPoints: 12 } },
+      { shape: 'triangle', expect: { polyPoints: 6 } },
+      { shape: 'octagon', expect: { polyPoints: 16 } },
+      { shape: 'line', expect: { roundRectRadius: 4 } },
+    ] as const;
+
+    for (const entry of shapes) {
+      renderer.update(
+        [
+          makeZone({
+            visual: { shape: entry.shape, width: 80, height: 40 },
+          }),
+        ],
+        new Map(),
+      );
+
+      const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+      const base = zoneContainer.children[0] as InstanceType<typeof MockGraphics>;
+
+      if ('roundRectRadius' in entry.expect) {
+        expect(base.roundRectArgs?.[4]).toBe(entry.expect.roundRectRadius);
+      }
+      if ('circleRadius' in entry.expect) {
+        expect(base.circleArgs).toEqual([0, 0, entry.expect.circleRadius]);
+      }
+      if ('ellipse' in entry.expect) {
+        expect(base.ellipseArgs).toEqual(entry.expect.ellipse);
+      }
+      if ('polyPoints' in entry.expect) {
+        expect(base.polyArgs).toHaveLength(entry.expect.polyPoints);
+      }
+    }
   });
 });

@@ -4,10 +4,16 @@ import type { RenderZone } from '../../model/render-model';
 import type { Position } from '../geometry';
 import type { ZoneRenderer } from './renderer-types';
 import { ContainerPool } from './container-pool';
+import {
+  drawZoneShape,
+  parseHexColor,
+  resolveVisualDimensions,
+} from './shape-utils';
 
 const ZONE_WIDTH = 180;
 const ZONE_HEIGHT = 110;
 const ZONE_CORNER_RADIUS = 12;
+const LINE_CORNER_RADIUS = 4;
 
 interface ZoneVisualElements {
   readonly base: Graphics;
@@ -164,9 +170,14 @@ function updateZoneVisuals(
   visuals: ZoneVisualElements,
   zone: RenderZone,
 ): void {
+  const dimensions = resolveVisualDimensions(zone.visual, {
+    width: ZONE_WIDTH,
+    height: ZONE_HEIGHT,
+  });
   drawZoneBase(visuals.base, zone);
+  layoutZoneLabels(visuals, dimensions.width, dimensions.height);
 
-  visuals.nameLabel.text = zone.displayName;
+  visuals.nameLabel.text = zone.visual?.label ?? zone.displayName;
 
   const tokenTotal = zone.tokenIDs.length + zone.hiddenTokenCount;
   visuals.tokenCountBadge.text = String(tokenTotal);
@@ -180,15 +191,26 @@ function updateZoneVisuals(
 function drawZoneBase(base: Graphics, zone: RenderZone): void {
   const fill = resolveFillColor(zone);
   const stroke = resolveStroke(zone);
+  const dimensions = resolveVisualDimensions(zone.visual, {
+    width: ZONE_WIDTH,
+    height: ZONE_HEIGHT,
+  });
+  const shape = zone.visual?.shape ?? 'rectangle';
 
-  base
-    .clear()
-    .roundRect(-ZONE_WIDTH / 2, -ZONE_HEIGHT / 2, ZONE_WIDTH, ZONE_HEIGHT, ZONE_CORNER_RADIUS)
-    .fill({ color: fill })
-    .stroke(stroke);
+  base.clear();
+  drawZoneShape(base, shape, dimensions, {
+    rectangleCornerRadius: ZONE_CORNER_RADIUS,
+    lineCornerRadius: LINE_CORNER_RADIUS,
+  });
+  base.fill({ color: fill }).stroke(stroke);
 }
 
 function resolveFillColor(zone: RenderZone): number {
+  const visualColor = parseHexColor(zone.visual?.color);
+  if (visualColor !== null) {
+    return visualColor;
+  }
+
   if (zone.visibility === 'hidden') {
     return 0x2a2f38;
   }
@@ -202,6 +224,12 @@ function resolveFillColor(zone: RenderZone): number {
   }
 
   return 0x4d5c6d;
+}
+
+function layoutZoneLabels(visuals: ZoneVisualElements, width: number, height: number): void {
+  visuals.nameLabel.position.set(-width * 0.44, -height * 0.09);
+  visuals.tokenCountBadge.position.set(width * 0.35, -height * 0.38);
+  visuals.markersLabel.position.set(-width * 0.44, height * 0.16);
 }
 
 function resolveStroke(zone: RenderZone): { color: number; width: number; alpha: number } {

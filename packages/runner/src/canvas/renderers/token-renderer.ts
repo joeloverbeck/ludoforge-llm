@@ -2,6 +2,7 @@ import { Container, Graphics, Text } from 'pixi.js';
 
 import type { RenderToken } from '../../model/render-model';
 import type { FactionColorProvider, TokenRenderer } from './renderer-types';
+import { parseHexColor } from './shape-utils';
 
 const TOKEN_RADIUS = 14;
 const TOKENS_PER_ROW = 4;
@@ -193,7 +194,8 @@ function resolveTokenColor(token: RenderToken, colorProvider: FactionColorProvid
     return NEUTRAL_TOKEN_COLOR;
   }
 
-  return hexToNumber(colorProvider.getColor(token.factionId, token.ownerID));
+  return parseHexColor(colorProvider.getColor(token.factionId, token.ownerID), { allowShortHex: true })
+    ?? NEUTRAL_TOKEN_COLOR;
 }
 
 function resolveStroke(token: RenderToken): { color: number; width: number; alpha: number } {
@@ -216,19 +218,4 @@ function tokenOffset(index: number): { x: number; y: number } {
     x: (column - (TOKENS_PER_ROW - 1) / 2) * TOKEN_SPACING,
     y: row * TOKEN_SPACING - TOKEN_SPACING / 2,
   };
-}
-
-function hexToNumber(hex: string): number {
-  const normalized = hex.trim();
-
-  if (/^#[0-9a-fA-F]{6}$/.test(normalized)) {
-    return Number.parseInt(normalized.slice(1), 16);
-  }
-
-  if (/^#[0-9a-fA-F]{3}$/.test(normalized)) {
-    const [r, g, b] = normalized.slice(1);
-    return Number.parseInt(`${r}${r}${g}${g}${b}${b}`, 16);
-  }
-
-  return NEUTRAL_TOKEN_COLOR;
 }

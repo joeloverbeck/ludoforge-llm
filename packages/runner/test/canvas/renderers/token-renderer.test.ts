@@ -233,6 +233,32 @@ describe('createTokenRenderer', () => {
     expect(base.fillStyle).toEqual({ color: 0x6b7280 });
   });
 
+  it('parses owned token colors from #RGB and falls back to neutral for invalid provider colors', () => {
+    const parent = new MockContainer();
+    const colorProvider = { getColor: vi.fn(() => '#abc') };
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', ownerID: asPlayerId(0) })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const base = tokenContainer.children[0] as InstanceType<typeof MockGraphics>;
+    expect(base.fillStyle).toEqual({ color: 0xaabbcc });
+
+    colorProvider.getColor.mockReturnValue('invalid');
+    renderer.update(
+      [makeToken({ id: 'token:1', ownerID: asPlayerId(0) })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+    expect(base.fillStyle).toEqual({ color: 0x6b7280 });
+  });
+
   it('shows ? for face-down tokens and type for face-up tokens', () => {
     const parent = new MockContainer();
     const colorProvider = { getColor: vi.fn(() => '#112233') };

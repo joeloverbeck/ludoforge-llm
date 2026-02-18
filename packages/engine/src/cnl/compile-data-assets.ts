@@ -1,10 +1,12 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
+import { mapVisualRuleMatchApplies } from '../kernel/map-model.js';
 import { RuntimeTableConstraintSchema } from '../kernel/schemas-core.js';
 import type {
   EffectAST,
   FactionDef,
   MapPayload,
+  MapSpaceInput,
   NumericTrackDef,
   PieceCatalogPayload,
   PieceStatusDimension,
@@ -15,6 +17,7 @@ import type {
   SpaceMarkerValueDef,
   StackingConstraint,
   TokenVisualHints,
+  ZoneVisualHints,
 } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord, normalizeIdentifier } from './compile-lowering.js';
@@ -228,7 +231,7 @@ export function deriveSectionsFromDataAssets(
   const zones =
     selectedMap === undefined
       ? null
-      : selectedMap.payload.spaces.map((space) => ({
+      : resolveMapSpaceVisuals(selectedMap.payload).map((space) => ({
           id: space.id,
           owner: 'none',
           visibility: 'public',
@@ -379,6 +382,57 @@ const inferRuntimePropSchema = (
       typeof value === 'number' ? 'int' : typeof value === 'boolean' ? 'boolean' : 'string',
     ]),
   );
+
+function resolveMapSpaceVisuals(payload: MapPayload): readonly MapSpaceInput[] {
+  if ((payload.visualRules ?? []).length === 0) {
+    return payload.spaces;
+  }
+
+  return payload.spaces.map((space) => {
+    let mergedVisual: ZoneVisualHints | undefined;
+    for (const rule of payload.visualRules ?? []) {
+      if (!mapVisualRuleMatchApplies(rule.match, space)) {
+        continue;
+      }
+      mergedVisual = mergeZoneVisualHints(mergedVisual, rule.visual);
+    }
+    mergedVisual = mergeZoneVisualHints(mergedVisual, space.visual);
+
+    if (mergedVisual === undefined) {
+      return space;
+    }
+
+    return {
+      ...space,
+      visual: mergedVisual,
+    };
+  });
+}
+
+function mergeZoneVisualHints(
+  base: ZoneVisualHints | undefined,
+  next: ZoneVisualHints | undefined,
+): ZoneVisualHints | undefined {
+  if (next === undefined) {
+    return base;
+  }
+
+  const merged: ZoneVisualHints = {
+    ...(base ?? {}),
+    ...next,
+  };
+
+  if (
+    merged.shape === undefined
+    && merged.width === undefined
+    && merged.height === undefined
+    && merged.color === undefined
+    && merged.label === undefined
+  ) {
+    return undefined;
+  }
+  return merged;
+}
 
 function buildTokenTypeVisualsMap(
   pieceTypes: PieceCatalogPayload['pieceTypes'],

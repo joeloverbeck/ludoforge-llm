@@ -346,8 +346,21 @@ export interface MapSpaceInput {
   readonly visual?: ZoneVisualHints;
 }
 
+export interface MapVisualRuleMatch {
+  readonly spaceIds?: readonly string[];
+  readonly category?: readonly string[];
+  readonly attributeEquals?: Readonly<Record<string, AttributeValue>>;
+  readonly attributeContains?: Readonly<Record<string, string>>;
+}
+
+export interface MapVisualRule {
+  readonly match?: MapVisualRuleMatch;
+  readonly visual: ZoneVisualHints;
+}
+
 export interface MapPayload {
   readonly spaces: readonly MapSpaceInput[];
+  readonly visualRules?: readonly MapVisualRule[];
   readonly provisionalAdjacency?: readonly ProvisionalAdjacencyDef[];
   readonly tracks?: readonly NumericTrackDef[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];

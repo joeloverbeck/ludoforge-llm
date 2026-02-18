@@ -106,6 +106,22 @@ export const MapSpaceSchema = z
   })
   .strict();
 
+export const MapVisualRuleMatchSchema = z
+  .object({
+    spaceIds: z.array(StringSchema.min(1)).optional(),
+    category: z.array(StringSchema.min(1)).optional(),
+    attributeEquals: z.record(StringSchema, AttributeValueSchema).optional(),
+    attributeContains: z.record(StringSchema, StringSchema.min(1)).optional(),
+  })
+  .strict();
+
+export const MapVisualRuleSchema = z
+  .object({
+    match: MapVisualRuleMatchSchema.optional(),
+    visual: ZoneVisualHintsSchema,
+  })
+  .strict();
+
 export const ProvisionalAdjacencySchema = z
   .object({
     from: StringSchema.min(1),
@@ -193,6 +209,7 @@ export const StackingConstraintSchema = z
 export const MapPayloadSchema = z
   .object({
     spaces: z.array(MapSpaceSchema),
+    visualRules: z.array(MapVisualRuleSchema).optional(),
     provisionalAdjacency: z.array(ProvisionalAdjacencySchema).optional(),
     tracks: z.array(NumericTrackSchema).optional(),
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),

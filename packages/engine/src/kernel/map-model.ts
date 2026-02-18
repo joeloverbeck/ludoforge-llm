@@ -3,6 +3,7 @@ import { MapPayloadSchema } from './schemas.js';
 import type {
   MapPayload,
   MapSpaceInput,
+  MapVisualRuleMatch,
   SpaceMarkerConstraintDef,
   SpaceMarkerLatticeDef,
 } from './types.js';
@@ -37,6 +38,46 @@ export function validateMapPayload(
 
   const spaceIds = new Set(spaces.map((space) => space.id));
   const categories = new Set(spaces.filter((space) => space.category !== undefined).map((space) => space.category!));
+  const visualRules = mapPayload.visualRules ?? [];
+
+  visualRules.forEach((rule, ruleIndex) => {
+    const match = rule.match;
+    if (match === undefined) {
+      return;
+    }
+
+    match.spaceIds?.forEach((spaceId, spaceIdIndex) => {
+      if (spaceIds.has(spaceId)) {
+        return;
+      }
+
+      diagnostics.push(withContext(
+        {
+          code: 'MAP_VISUAL_RULE_SPACE_UNKNOWN',
+          path: `asset.payload.visualRules[${ruleIndex}].match.spaceIds[${spaceIdIndex}]`,
+          severity: 'error',
+          message: `Visual rule references unknown space "${spaceId}".`,
+        },
+        context,
+      ));
+    });
+
+    match.category?.forEach((category, categoryIndex) => {
+      if (categories.has(category)) {
+        return;
+      }
+
+      diagnostics.push(withContext(
+        {
+          code: 'MAP_VISUAL_RULE_CATEGORY_UNKNOWN',
+          path: `asset.payload.visualRules[${ruleIndex}].match.category[${categoryIndex}]`,
+          severity: 'error',
+          message: `Visual rule references unknown category "${category}".`,
+        },
+        context,
+      ));
+    });
+  });
 
   const trackKeys = new Set<string>();
   tracks.forEach((track, trackIndex) => {
@@ -309,6 +350,52 @@ function constraintApplies(constraint: SpaceMarkerConstraintDef, space: MapSpace
   }
 
   return true;
+}
+
+export function mapVisualRuleMatchApplies(match: MapVisualRuleMatch | undefined, space: MapSpaceInput): boolean {
+  if (match === undefined) {
+    return true;
+  }
+
+  if (match.spaceIds !== undefined && !match.spaceIds.includes(space.id)) {
+    return false;
+  }
+
+  if (match.category !== undefined && match.category.length > 0) {
+    if (space.category === undefined || !match.category.includes(space.category)) {
+      return false;
+    }
+  }
+
+  if (match.attributeEquals !== undefined) {
+    for (const [key, expected] of Object.entries(match.attributeEquals)) {
+      const actual = space.attributes?.[key];
+      if (!attributeValueEquals(actual, expected)) {
+        return false;
+      }
+    }
+  }
+
+  if (match.attributeContains !== undefined) {
+    for (const [key, expected] of Object.entries(match.attributeContains)) {
+      const actual = space.attributes?.[key];
+      if (!Array.isArray(actual) || !actual.includes(expected)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function attributeValueEquals(left: unknown, right: unknown): boolean {
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+    return left.every((value, index) => value === right[index]);
+  }
+  return left === right;
 }
 
 function withContext(diagnostic: Diagnostic, context: MapPayloadDiagnosticContext): Diagnostic {

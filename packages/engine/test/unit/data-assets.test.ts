@@ -281,6 +281,43 @@ describe('data asset loader scaffold', () => {
     }
   });
 
+  it('rejects map visual rules that reference unknown categories', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
+    try {
+      const assetPath = join(dir, 'foundation-map-visual-rule-category-invalid.v1.json');
+      writeFileSync(
+        assetPath,
+        JSON.stringify({
+          id: 'fitl-map-visual-rule-category-invalid',
+          kind: 'map',
+          payload: {
+            spaces: [
+              {
+                id: 'hue:none',
+                category: 'city',
+                attributes: { terrainTags: ['urban'] },
+                adjacentTo: [],
+              },
+            ],
+            visualRules: [
+              {
+                match: { category: ['province'] },
+                visual: { shape: 'rectangle' },
+              },
+            ],
+          },
+        }),
+        'utf8',
+      );
+
+      const result = loadDataAssetEnvelopeFromFile(assetPath);
+      assert.equal(result.asset, null);
+      assert.equal(result.diagnostics.some((entry) => entry.code === 'MAP_VISUAL_RULE_CATEGORY_UNKNOWN'), true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('rejects map lattice constraints that reference unknown spaces', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
     try {

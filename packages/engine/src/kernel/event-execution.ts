@@ -260,7 +260,6 @@ const applyEffectList = (
     },
     effectPath: '',
     ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
-    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   });
   return {
     state: result.state,

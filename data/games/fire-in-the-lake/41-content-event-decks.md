@@ -320,8 +320,8 @@ eventDecks:
                 filter:
                   op: or
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
               cardinality: { max: 3 }
           effects:
             - macro: shift-support-opposition
@@ -337,8 +337,8 @@ eventDecks:
                 filter:
                   op: or
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
               cardinality: { max: 3 }
           effects:
             - macro: shift-support-opposition
@@ -408,7 +408,7 @@ eventDecks:
                 query: mapSpaces
                 filter:
                   op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  left: { ref: zoneProp, zone: $zone, prop: category }
                   right: city
               cardinality: { max: 1 }
           effects:
@@ -434,7 +434,7 @@ eventDecks:
                 query: mapSpaces
                 filter:
                   op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  left: { ref: zoneProp, zone: $zone, prop: category }
                   right: city
               cardinality: { max: 1 }
           effects:
@@ -654,7 +654,7 @@ eventDecks:
                         query: mapSpaces
                         filter:
                           op: '=='
-                          left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                          left: { ref: zoneProp, zone: $zone, prop: category }
                           right: 'city'
                   - moveToken:
                       token: $usOutOfPlayPiece
@@ -1244,7 +1244,7 @@ eventDecks:
                 query: mapSpaces
                 filter:
                   op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  left: { ref: zoneProp, zone: $zone, prop: category }
                   right: loc
               cardinality: { max: 1 }
           effects:
@@ -1267,7 +1267,7 @@ eventDecks:
                 query: mapSpaces
                 filter:
                   op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  left: { ref: zoneProp, zone: $zone, prop: category }
                   right: loc
               cardinality: { max: 1 }
           effects:
@@ -1463,7 +1463,7 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
                     - op: '>'
                       left:
                         aggregate:
@@ -1810,7 +1810,7 @@ eventDecks:
                 query: mapSpaces
                 filter:
                   op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  left: { ref: zoneProp, zone: $zone, prop: category }
                   right: city
               cardinality: { max: 1 }
           effects:
@@ -1865,7 +1865,7 @@ eventDecks:
                     query: mapSpaces
                     filter:
                       op: '=='
-                      left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                      left: { ref: zoneProp, zone: $zone, prop: category }
                       right: province
                   cardinality: { max: 1 }
               effects:
@@ -2170,7 +2170,7 @@ eventDecks:
                 query: mapSpaces
                 filter:
                   op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  left: { ref: zoneProp, zone: $zone, prop: category }
                   right: province
               cardinality: { max: 1 }
           effects:
@@ -2245,7 +2245,7 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
                     - op: '>'
                       left:
                         aggregate:
@@ -2269,7 +2269,7 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
                     - op: '>'
                       left:
                         aggregate:
@@ -2315,7 +2315,7 @@ eventDecks:
                 filter:
                   op: and
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
                     - { op: adjacent, left: $zone, right: saigon:none }
               cardinality: { max: 2 }
           effects:
@@ -2449,7 +2449,7 @@ eventDecks:
                 query: mapSpaces
                 filter:
                   op: '=='
-                  left: { ref: zoneProp, zone: $zone, prop: spaceType }
+                  left: { ref: zoneProp, zone: $zone, prop: category }
                   right: city
               cardinality: { max: 3 }
           effects:

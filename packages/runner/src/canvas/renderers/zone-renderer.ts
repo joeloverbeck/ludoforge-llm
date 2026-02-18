@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 
-import type { RenderMapSpace, RenderZone } from '../../model/render-model';
+import type { RenderZone } from '../../model/render-model';
 import type { Position } from '../geometry';
 import type { ZoneRenderer } from './renderer-types';
 import { ContainerPool } from './container-pool';
@@ -13,10 +13,6 @@ interface ZoneVisualElements {
   readonly base: Graphics;
   readonly nameLabel: Text;
   readonly tokenCountBadge: Text;
-  readonly populationBadge: Text;
-  readonly econBadge: Text;
-  readonly terrainBadge: Text;
-  readonly coastalBadge: Text;
   readonly markersLabel: Text;
 }
 
@@ -41,11 +37,9 @@ export function createZoneRenderer(
   return {
     update(
       zones: readonly RenderZone[],
-      mapSpaces: readonly RenderMapSpace[],
       positions: ReadonlyMap<string, Position>,
     ): void {
       const nextZoneIds = new Set(zones.map((zone) => zone.id));
-      const mapSpaceById = new Map(mapSpaces.map((mapSpace) => [mapSpace.id, mapSpace]));
 
       for (const [zoneId, zoneContainer] of zoneContainers) {
         if (nextZoneIds.has(zoneId)) {
@@ -75,10 +69,6 @@ export function createZoneRenderer(
             visuals.base,
             visuals.nameLabel,
             visuals.tokenCountBadge,
-            visuals.populationBadge,
-            visuals.econBadge,
-            visuals.terrainBadge,
-            visuals.coastalBadge,
             visuals.markersLabel,
           );
 
@@ -110,7 +100,7 @@ export function createZoneRenderer(
           zoneContainer.position.set(position.x, position.y);
         }
 
-        updateZoneVisuals(visuals, zone, mapSpaceById.get(zone.id));
+        updateZoneVisuals(visuals, zone);
       }
     },
 
@@ -141,17 +131,8 @@ function createZoneVisualElements(): ZoneVisualElements {
 
   const nameLabel = createText('', -ZONE_WIDTH * 0.44, -10, 14);
   const tokenCountBadge = createText('', ZONE_WIDTH * 0.35, -ZONE_HEIGHT * 0.38, 12);
-
-  const populationBadge = createText('', -ZONE_WIDTH * 0.42, -ZONE_HEIGHT * 0.38, 11);
-  const econBadge = createText('', ZONE_WIDTH * 0.22, -ZONE_HEIGHT * 0.38, 11);
-  const terrainBadge = createText('', -ZONE_WIDTH * 0.42, ZONE_HEIGHT * 0.32, 11);
-  const coastalBadge = createText('', ZONE_WIDTH * 0.02, ZONE_HEIGHT * 0.32, 11);
   const markersLabel = createText('', -ZONE_WIDTH * 0.44, 18, 11);
 
-  populationBadge.visible = false;
-  econBadge.visible = false;
-  terrainBadge.visible = false;
-  coastalBadge.visible = false;
   tokenCountBadge.visible = false;
   markersLabel.visible = false;
 
@@ -159,10 +140,6 @@ function createZoneVisualElements(): ZoneVisualElements {
     base,
     nameLabel,
     tokenCountBadge,
-    populationBadge,
-    econBadge,
-    terrainBadge,
-    coastalBadge,
     markersLabel,
   };
 }
@@ -186,7 +163,6 @@ function createText(text: string, x: number, y: number, fontSize: number): Text 
 function updateZoneVisuals(
   visuals: ZoneVisualElements,
   zone: RenderZone,
-  mapSpace: RenderMapSpace | undefined,
 ): void {
   drawZoneBase(visuals.base, zone);
 
@@ -199,39 +175,6 @@ function updateZoneVisuals(
   const markerText = zone.markers.map((marker) => `${marker.displayName}:${marker.state}`).join('  ');
   visuals.markersLabel.text = markerText;
   visuals.markersLabel.visible = markerText.length > 0;
-
-  if (mapSpace === undefined) {
-    visuals.populationBadge.visible = false;
-    visuals.econBadge.visible = false;
-    visuals.terrainBadge.visible = false;
-    visuals.coastalBadge.visible = false;
-    return;
-  }
-
-  visuals.populationBadge.text = `POP ${mapSpace.population}`;
-  visuals.populationBadge.visible = true;
-
-  visuals.econBadge.text = `EC ${mapSpace.econ}`;
-  visuals.econBadge.visible = true;
-
-  const terrainTag = mapSpace.terrainTags[0];
-  if (terrainTag === undefined) {
-    visuals.terrainBadge.visible = false;
-  } else {
-    visuals.terrainBadge.text = abbreviateTerrainTag(terrainTag);
-    visuals.terrainBadge.visible = true;
-  }
-
-  visuals.coastalBadge.text = 'COAST';
-  visuals.coastalBadge.visible = mapSpace.coastal;
-}
-
-function abbreviateTerrainTag(terrainTag: string): string {
-  return terrainTag
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, '')
-    .slice(0, 3);
 }
 
 function drawZoneBase(base: Graphics, zone: RenderZone): void {

@@ -49,7 +49,6 @@ export const resolveActionExecutor = ({
     bindings,
     runtimeTableIndex,
     collector: createCollector(),
-    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   };
   try {
     return {

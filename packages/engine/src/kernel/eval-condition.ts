@@ -113,30 +113,35 @@ export function evalCondition(cond: ConditionAST, ctx: EvalContext): boolean {
 
     case 'zonePropIncludes': {
       const zoneId = resolveMapSpaceId(cond.zone, ctx);
-      const mapSpaces = ctx.mapSpaces;
-      if (mapSpaces === undefined) {
-        throw zonePropNotFoundError('No mapSpaces available to look up zone properties', {
+      const zoneDef = ctx.def.zones.find((zone) => zone.id === String(zoneId));
+      if (zoneDef === undefined) {
+        throw zonePropNotFoundError(`Zone not found: ${String(zoneId)}`, {
           condition: cond,
           zoneId,
+          availableZoneIds: ctx.def.zones.map((zone) => zone.id).sort(),
         });
       }
 
-      const spaceDef = mapSpaces.find((space) => space.id === String(zoneId));
-      if (spaceDef === undefined) {
-        throw zonePropNotFoundError(`Zone not found in mapSpaces: ${String(zoneId)}`, {
-          condition: cond,
-          zoneId,
-          availableSpaceIds: mapSpaces.map((space) => space.id).sort(),
-        });
+      // Synthetic zone properties: 'id' and 'category' are scalars, not arrays.
+      if (cond.prop === 'id' || cond.prop === 'category') {
+        throw typeMismatchError(
+          `Property "${cond.prop}" on zone ${String(zoneId)} is a scalar, not an array. Use zoneProp reference with a comparison condition instead.`,
+          {
+            condition: cond,
+            zoneId,
+            prop: cond.prop,
+            actualType: 'scalar',
+          },
+        );
       }
 
-      const propValue = (spaceDef as unknown as Record<string, unknown>)[cond.prop];
+      const propValue = zoneDef.attributes?.[cond.prop];
       if (propValue === undefined) {
         throw zonePropNotFoundError(`Property "${cond.prop}" not found on zone ${String(zoneId)}`, {
           condition: cond,
           zoneId,
           prop: cond.prop,
-          availableProps: Object.keys(spaceDef).sort(),
+          availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})].sort(),
         });
       }
 

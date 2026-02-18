@@ -146,12 +146,8 @@ describe('compiler structured section results', () => {
             spaces: [
               {
                 id: 'alpha:none',
-                spaceType: 'province',
-                population: 1,
-                econ: 1,
-                terrainTags: ['lowland'],
-                country: 'south-vietnam',
-                coastal: false,
+                category: 'province',
+                attributes: { population: 1, econ: 1, terrainTags: ['lowland'], country: 'south-vietnam', coastal: false },
                 adjacentTo: [],
               },
             ],
@@ -180,12 +176,8 @@ describe('compiler structured section results', () => {
             spaces: [
               {
                 id: 'alpha:none',
-                spaceType: 'province',
-                population: 1,
-                econ: 1,
-                terrainTags: ['lowland'],
-                country: 'south-vietnam',
-                coastal: false,
+                category: 'province',
+                attributes: { population: 1, econ: 1, terrainTags: ['lowland'], country: 'south-vietnam', coastal: false },
                 adjacentTo: [],
               },
             ],

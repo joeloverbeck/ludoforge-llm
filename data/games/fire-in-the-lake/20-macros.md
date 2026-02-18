@@ -406,7 +406,7 @@ effectMacros:
                       right: 0
                     - op: and
                       args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
                         - op: '>'
                           left:
                             aggregate:
@@ -473,7 +473,7 @@ effectMacros:
                               - { prop: faction, op: in, value: { ref: namedSet, name: COIN } }
                       in:
                         - if:
-                            when: { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: loc }
+                            when: { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: loc }
                             then:
                               - if:
                                   when:
@@ -736,9 +736,9 @@ effectMacros:
                                 right: 0
                       - op: or
                         args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
                 min: 1
                 max: 1
           else:
@@ -768,9 +768,9 @@ effectMacros:
                                 right: 0
                       - op: or
                         args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
                 min: 1
                 max: 99
 
@@ -810,7 +810,7 @@ effectMacros:
                 effects:
                   - setTokenProp: { token: $g, prop: activity, value: active }
       - if:
-          when: { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: spaceType }, right: 'loc' }
+          when: { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: category }, right: 'loc' }
           then:
             - if:
                 when:
@@ -862,7 +862,7 @@ effectMacros:
             op: and
             args:
               - { op: '!=', left: { ref: binding, name: __freeOperation }, right: true }
-              - { op: '!=', left: { ref: zoneProp, zone: { param: space }, prop: spaceType }, right: 'loc' }
+              - { op: '!=', left: { ref: zoneProp, zone: { param: space }, prop: category }, right: 'loc' }
           then:
             - addVar: { scope: global, var: { param: resource }, delta: { param: amount } }
 
@@ -951,7 +951,7 @@ effectMacros:
                           when:
                             op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: { param: destSpace }, prop: spaceType }, right: 'loc' }
+                              - { op: '==', left: { ref: zoneProp, zone: { param: destSpace }, prop: category }, right: 'loc' }
                               - op: or
                                 args:
                                   - { op: '==', left: { ref: markerState, space: { param: destSpace }, marker: supportOpposition }, right: 'passiveSupport' }
@@ -1035,9 +1035,9 @@ effectMacros:
                     args:
                       - op: or
                         args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
                       - op: '>'
                         left:
                           aggregate:
@@ -1061,9 +1061,9 @@ effectMacros:
                     args:
                       - op: or
                         args:
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
-                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
                       - op: '>'
                         left:
                           aggregate:
@@ -1159,8 +1159,8 @@ effectMacros:
               args:
                 - op: or
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
           min: 1
           max: { param: maxSpaces }
@@ -1180,8 +1180,8 @@ effectMacros:
               args:
                 - op: or
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
                 - op: or
                   args:
                     - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
@@ -1300,7 +1300,7 @@ effectMacros:
                   right: 0
                 - op: or
                   args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
                     - op: <=
                       left:
                         aggregate:
@@ -1631,8 +1631,8 @@ effectMacros:
               - { op: '==', left: { ref: globalMarkerState, marker: cap_searchAndDestroy }, right: shaded }
               - op: or
                 args:
-                  - { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: spaceType }, right: province }
-                  - { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: spaceType }, right: city }
+                  - { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: category }, right: province }
+                  - { op: '==', left: { ref: zoneProp, zone: { param: space }, prop: category }, right: city }
               - { op: '>', left: { ref: zoneProp, zone: { param: space }, prop: population }, right: 0 }
               - { op: '!=', left: { ref: markerState, space: { param: space }, marker: supportOpposition }, right: activeOpposition }
           then:

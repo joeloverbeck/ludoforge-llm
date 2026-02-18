@@ -359,7 +359,6 @@ const evaluateZoneFilterForMove = (
         actorPlayer: state.activePlayer,
         bindings: baseBindings,
         collector: createCollector(),
-        ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
       });
     } catch (cause) {
       throw freeOperationZoneFilterEvaluationError({
@@ -385,7 +384,6 @@ const evaluateZoneFilterForMove = (
           $zone: zone,
         },
         collector: createCollector(),
-        ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
       })) {
         return true;
       }

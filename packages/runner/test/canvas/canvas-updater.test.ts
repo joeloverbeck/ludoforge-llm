@@ -7,7 +7,7 @@ import { createCanvasUpdater } from '../../src/canvas/canvas-updater';
 import { createPositionStore } from '../../src/canvas/position-store';
 import type { AdjacencyRenderer, TokenRenderer, ZoneRenderer } from '../../src/canvas/renderers/renderer-types';
 import type { ViewportResult } from '../../src/canvas/viewport-setup';
-import type { RenderMapSpace, RenderModel, RenderToken, RenderZone } from '../../src/model/render-model';
+import type { RenderModel, RenderToken, RenderZone } from '../../src/model/render-model';
 import type { GameStore } from '../../src/store/game-store';
 
 interface CanvasTestStoreState {
@@ -47,26 +47,10 @@ function makeToken(overrides: Partial<RenderToken> = {}): RenderToken {
   };
 }
 
-function makeMapSpace(overrides: Partial<RenderMapSpace> = {}): RenderMapSpace {
-  return {
-    id: 'zone:a',
-    displayName: 'Zone A',
-    spaceType: 'land',
-    population: 1,
-    econ: 1,
-    terrainTags: ['plains'],
-    country: 'N/A',
-    coastal: false,
-    adjacentTo: ['zone:b'],
-    ...overrides,
-  };
-}
-
 function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
   return {
     zones: [makeZone()],
     adjacencies: [{ from: 'zone:a', to: 'zone:b', isHighlighted: false }],
-    mapSpaces: [makeMapSpace()],
     tokens: [makeToken()],
     globalVars: [],
     playerVars: new Map(),
@@ -192,7 +176,7 @@ describe('createCanvasUpdater', () => {
     updater.start();
 
     expect(viewport.updateWorldBounds).toHaveBeenCalledWith(snapshot.bounds);
-    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, model.mapSpaces, snapshot.positions);
+    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, snapshot.positions);
     expect(renderers.adjacencyRenderer.update).toHaveBeenCalledWith(model.adjacencies, snapshot.positions);
     expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
       model.tokens,
@@ -237,35 +221,6 @@ describe('createCanvasUpdater', () => {
     });
 
     expect(renderers.zoneRenderer.update).not.toHaveBeenCalled();
-  });
-
-  it('updates zone renderer when mapSpaces change', () => {
-    const model = makeRenderModel();
-    const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
-    const positionStore = createPositionStore(['zone:a']);
-
-    const renderers = createRendererMocks();
-    const viewport = createViewportMock();
-
-    const updater = createCanvasUpdater({
-      store: store as unknown as StoreApi<GameStore>,
-      positionStore,
-      zoneRenderer: renderers.zoneRenderer,
-      adjacencyRenderer: renderers.adjacencyRenderer,
-      tokenRenderer: renderers.tokenRenderer,
-      viewport,
-    });
-
-    updater.start();
-    vi.clearAllMocks();
-
-    store.setState({
-      renderModel: makeRenderModel({
-        mapSpaces: [makeMapSpace({ population: 3 })],
-      }),
-    });
-
-    expect(renderers.zoneRenderer.update).toHaveBeenCalledTimes(1);
   });
 
   it('updates token and adjacency renderers when their slices change', () => {
@@ -340,7 +295,7 @@ describe('createCanvasUpdater', () => {
     const latestSnapshot = positionStore.getSnapshot();
 
     expect(viewport.updateWorldBounds).toHaveBeenCalledWith(latestSnapshot.bounds);
-    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, model.mapSpaces, latestSnapshot.positions);
+    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, latestSnapshot.positions);
   });
 
   it('gates renderer updates while animation is playing', () => {

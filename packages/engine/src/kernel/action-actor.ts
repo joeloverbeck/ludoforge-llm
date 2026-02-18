@@ -48,7 +48,6 @@ export const resolveActionActor = ({
     bindings,
     runtimeTableIndex,
     collector: createCollector(),
-    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   };
   try {
     const resolvedActors = resolvePlayerSel(action.actor, selectorContext);

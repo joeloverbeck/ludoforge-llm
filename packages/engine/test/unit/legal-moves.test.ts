@@ -898,31 +898,9 @@ phase: [asPhaseId('main')],
     const def: GameDef = {
       ...createDef(),
       metadata: { id: 'free-op-template-zone-filter-discovery', players: { min: 2, max: 2 } },
-      mapSpaces: [
-        {
-          id: 'board:cambodia',
-          spaceType: 'province',
-          population: 1,
-          econ: 0,
-          terrainTags: [],
-          country: 'cambodia',
-          coastal: false,
-          adjacentTo: [],
-        },
-        {
-          id: 'board:vietnam',
-          spaceType: 'province',
-          population: 1,
-          econ: 0,
-          terrainTags: [],
-          country: 'southVietnam',
-          coastal: false,
-          adjacentTo: [],
-        },
-      ],
       zones: [
-        { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set' },
-        { id: asZoneId('board:vietnam'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
+        { id: asZoneId('board:vietnam'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false }, adjacentTo: [] },
       ],
       turnOrder: {
         type: 'cardDriven',

@@ -68,12 +68,46 @@ export type VariableDef = IntVariableDef | BooleanVariableDef;
 
 export type VariableValue = number | boolean;
 
+export type AttributeValue = string | number | boolean | readonly string[];
+
+export type ZoneShape =
+  | 'rectangle' | 'circle' | 'hexagon' | 'diamond'
+  | 'ellipse' | 'triangle' | 'line' | 'octagon';
+
+export type TokenShape =
+  | 'circle' | 'square' | 'triangle' | 'diamond'
+  | 'hexagon' | 'cylinder' | 'meeple' | 'card';
+
+export interface ZoneVisualHints {
+  readonly shape?: ZoneShape;
+  readonly width?: number;
+  readonly height?: number;
+  readonly color?: string;
+  readonly label?: string;
+}
+
+export interface TokenVisualHints {
+  readonly shape?: TokenShape;
+  readonly color?: string;
+  readonly size?: number;
+  readonly symbol?: string;
+}
+
+export interface FactionDef {
+  readonly id: string;
+  readonly color: string;
+  readonly displayName?: string;
+}
+
 export interface ZoneDef {
   readonly id: ZoneId;
   readonly owner: 'none' | 'player';
   readonly visibility: 'public' | 'owner' | 'hidden';
   readonly ordering: 'stack' | 'queue' | 'set';
   readonly adjacentTo?: readonly ZoneId[];
+  readonly category?: string;
+  readonly attributes?: Readonly<Record<string, AttributeValue>>;
+  readonly visual?: ZoneVisualHints;
 }
 
 export interface TokenTypeTransition {
@@ -87,6 +121,7 @@ export interface TokenTypeDef {
   readonly faction?: string;
   readonly props: Readonly<Record<string, 'int' | 'string' | 'boolean'>>;
   readonly transitions?: readonly TokenTypeTransition[];
+  readonly visual?: TokenVisualHints;
 }
 
 export interface Token {
@@ -187,7 +222,7 @@ export interface GameDef {
   readonly globalVars: readonly VariableDef[];
   readonly perPlayerVars: readonly VariableDef[];
   readonly zones: readonly ZoneDef[];
-  readonly mapSpaces?: readonly MapSpaceDef[];
+  readonly factions?: readonly FactionDef[];
   readonly tracks?: readonly NumericTrackDef[];
   readonly spaceMarkers?: readonly SpaceMarkerValueDef[];
   readonly tokenTypes: readonly TokenTypeDef[];
@@ -246,17 +281,6 @@ export interface PieceCatalogPayload {
   readonly inventory: readonly PieceInventoryEntry[];
 }
 
-export interface MapSpaceDef {
-  readonly id: string;
-  readonly spaceType: string;
-  readonly population: number;
-  readonly econ: number;
-  readonly terrainTags: readonly string[];
-  readonly country: string;
-  readonly coastal: boolean;
-  readonly adjacentTo: readonly string[];
-}
-
 export interface ProvisionalAdjacencyDef {
   readonly from: string;
   readonly to: string;
@@ -274,8 +298,8 @@ export interface NumericTrackDef {
 
 export interface SpaceMarkerConstraintDef {
   readonly spaceIds?: readonly string[];
-  readonly spaceTypes?: readonly string[];
-  readonly populationEquals?: number;
+  readonly category?: readonly string[];
+  readonly attributeEquals?: Readonly<Record<string, AttributeValue>>;
   readonly allowedStates: readonly string[];
 }
 
@@ -303,9 +327,8 @@ export interface StackingConstraint {
   readonly description: string;
   readonly spaceFilter: {
     readonly spaceIds?: readonly string[];
-    readonly spaceTypes?: readonly string[];
-    readonly country?: readonly string[];
-    readonly populationEquals?: number;
+    readonly category?: readonly string[];
+    readonly attributeEquals?: Readonly<Record<string, AttributeValue>>;
   };
   readonly pieceFilter: {
     readonly pieceTypeIds?: readonly string[];
@@ -315,8 +338,16 @@ export interface StackingConstraint {
   readonly maxCount?: number;
 }
 
+export interface MapSpaceInput {
+  readonly id: string;
+  readonly category?: string;
+  readonly attributes?: Readonly<Record<string, AttributeValue>>;
+  readonly adjacentTo: readonly string[];
+  readonly visual?: ZoneVisualHints;
+}
+
 export interface MapPayload {
-  readonly spaces: readonly MapSpaceDef[];
+  readonly spaces: readonly MapSpaceInput[];
   readonly provisionalAdjacency?: readonly ProvisionalAdjacencyDef[];
   readonly tracks?: readonly NumericTrackDef[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];

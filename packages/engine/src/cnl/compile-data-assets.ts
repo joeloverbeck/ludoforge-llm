@@ -3,8 +3,8 @@ import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
 import { RuntimeTableConstraintSchema } from '../kernel/schemas-core.js';
 import type {
   EffectAST,
+  FactionDef,
   MapPayload,
-  MapSpaceDef,
   NumericTrackDef,
   PieceCatalogPayload,
   PieceStatusDimension,
@@ -14,6 +14,7 @@ import type {
   SpaceMarkerLatticeDef,
   SpaceMarkerValueDef,
   StackingConstraint,
+  TokenVisualHints,
 } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord, normalizeIdentifier } from './compile-lowering.js';
@@ -58,7 +59,7 @@ export function deriveSectionsFromDataAssets(
 ): {
   readonly zones: GameSpecDoc['zones'];
   readonly tokenTypes: GameSpecDoc['tokenTypes'];
-  readonly mapSpaces: readonly MapSpaceDef[] | null;
+  readonly factions: readonly FactionDef[] | null;
   readonly tracks: readonly NumericTrackDef[] | null;
   readonly scenarioInitialTrackValues: ReadonlyArray<{ readonly trackId: string; readonly value: number }> | null;
   readonly markerLattices: readonly SpaceMarkerLatticeDef[] | null;
@@ -73,12 +74,13 @@ export function deriveSectionsFromDataAssets(
     readonly pieceCatalog: boolean;
   };
   readonly tokenTraitVocabulary: Readonly<Record<string, readonly string[]>> | null;
+  readonly tokenTypeVisuals: ReadonlyMap<string, TokenVisualHints> | null;
 } {
   if (doc.dataAssets === null) {
     return {
       zones: null,
       tokenTypes: null,
-      mapSpaces: null,
+      factions: null,
       tracks: null,
       scenarioInitialTrackValues: null,
       markerLattices: null,
@@ -92,6 +94,7 @@ export function deriveSectionsFromDataAssets(
         pieceCatalog: false,
       },
       tokenTraitVocabulary: null,
+      tokenTypeVisuals: null,
     };
   }
 
@@ -231,6 +234,9 @@ export function deriveSectionsFromDataAssets(
           visibility: 'public',
           ordering: 'set',
           adjacentTo: [...space.adjacentTo].sort((left, right) => left.localeCompare(right)),
+          ...(space.category === undefined ? {} : { category: space.category }),
+          ...(space.attributes === undefined ? {} : { attributes: space.attributes }),
+          ...(space.visual === undefined ? {} : { visual: space.visual }),
         }));
 
   const tokenTypes =
@@ -249,7 +255,20 @@ export function deriveSectionsFromDataAssets(
               ),
             }),
           ),
+          ...(pieceType.visual === undefined
+            ? {}
+            : {
+                visual: {
+                  ...(pieceType.visual.color === undefined ? {} : { color: pieceType.visual.color }),
+                  ...(pieceType.visual.activeSymbol === undefined ? {} : { symbol: pieceType.visual.activeSymbol }),
+                } satisfies TokenVisualHints,
+              }),
         }));
+
+  const tokenTypeVisuals: ReadonlyMap<string, TokenVisualHints> | null =
+    selectedPieceCatalog === undefined
+      ? null
+      : buildTokenTypeVisualsMap(selectedPieceCatalog.payload.pieceTypes);
 
   const scenarioSetupEffects = buildScenarioSetupEffects({
     selectedScenario,
@@ -260,7 +279,7 @@ export function deriveSectionsFromDataAssets(
   return {
     zones,
     tokenTypes,
-    mapSpaces: selectedMap?.payload.spaces ?? null,
+    factions: null,
     tracks: selectedMap?.payload.tracks ?? null,
     scenarioInitialTrackValues: selectedScenario?.initialTrackValues ?? null,
     markerLattices: selectedMap?.payload.markerLattices ?? null,
@@ -278,6 +297,7 @@ export function deriveSectionsFromDataAssets(
       selectedPieceCatalog === undefined
         ? null
         : deriveTokenTraitVocabularyFromPieceCatalogPayload(selectedPieceCatalog.payload),
+    tokenTypeVisuals,
   };
 }
 
@@ -359,6 +379,21 @@ const inferRuntimePropSchema = (
       typeof value === 'number' ? 'int' : typeof value === 'boolean' ? 'boolean' : 'string',
     ]),
   );
+
+function buildTokenTypeVisualsMap(
+  pieceTypes: PieceCatalogPayload['pieceTypes'],
+): ReadonlyMap<string, TokenVisualHints> | null {
+  const map = new Map<string, TokenVisualHints>();
+  for (const pieceType of pieceTypes) {
+    if (pieceType.visual !== undefined) {
+      map.set(pieceType.id, {
+        ...(pieceType.visual.color === undefined ? {} : { color: pieceType.visual.color }),
+        ...(pieceType.visual.activeSymbol === undefined ? {} : { symbol: pieceType.visual.activeSymbol }),
+      });
+    }
+  }
+  return map.size === 0 ? null : map;
+}
 
 interface ScenarioSetupContext {
   readonly selectedScenario:

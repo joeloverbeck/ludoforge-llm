@@ -1,4 +1,4 @@
-import type { MapSpaceDef, StackingConstraint, Token } from './types.js';
+import type { StackingConstraint, Token, ZoneDef } from './types.js';
 
 export interface StackingViolation {
   readonly constraintId: string;
@@ -9,21 +9,25 @@ export interface StackingViolation {
   readonly maxCount?: number;
 }
 
-const spaceMatchesFilter = (
-  space: MapSpaceDef,
+const zoneMatchesFilter = (
+  zone: ZoneDef,
   filter: StackingConstraint['spaceFilter'],
 ): boolean => {
-  if (filter.spaceIds !== undefined && filter.spaceIds.length > 0 && !filter.spaceIds.includes(space.id)) {
+  if (filter.spaceIds !== undefined && filter.spaceIds.length > 0 && !filter.spaceIds.includes(zone.id)) {
     return false;
   }
-  if (filter.spaceTypes !== undefined && filter.spaceTypes.length > 0 && !filter.spaceTypes.includes(space.spaceType)) {
-    return false;
+  if (filter.category !== undefined && filter.category.length > 0) {
+    if (zone.category === undefined || !filter.category.includes(zone.category)) {
+      return false;
+    }
   }
-  if (filter.country !== undefined && filter.country.length > 0 && !filter.country.includes(space.country)) {
-    return false;
-  }
-  if (filter.populationEquals !== undefined && space.population !== filter.populationEquals) {
-    return false;
+  if (filter.attributeEquals !== undefined) {
+    for (const [key, expected] of Object.entries(filter.attributeEquals)) {
+      const actual = zone.attributes?.[key];
+      if (actual !== expected) {
+        return false;
+      }
+    }
   }
   return true;
 };
@@ -52,13 +56,13 @@ const tokenMatchesPieceFilter = (
  * This is a pure function — no mutation of state.
  *
  * @param constraints - Stacking constraints from GameDef
- * @param mapSpaces - Map space definitions for space filter resolution
+ * @param zones - Zone definitions for space filter resolution
  * @param zoneId - Destination zone ID
  * @param zoneContentsAfter - All tokens in the zone after the placement
  */
 export function checkStackingConstraints(
   constraints: readonly StackingConstraint[],
-  mapSpaces: readonly MapSpaceDef[],
+  zones: readonly ZoneDef[],
   zoneId: string,
   zoneContentsAfter: readonly Token[],
   tokenTypeFactionById?: ReadonlyMap<string, string>,
@@ -67,15 +71,15 @@ export function checkStackingConstraints(
     return [];
   }
 
-  const space = mapSpaces.find((s) => s.id === zoneId);
-  if (space === undefined) {
+  const zone = zones.find((z) => z.id === zoneId);
+  if (zone === undefined) {
     return [];
   }
 
   const violations: StackingViolation[] = [];
 
   for (const constraint of constraints) {
-    if (!spaceMatchesFilter(space, constraint.spaceFilter)) {
+    if (!zoneMatchesFilter(zone, constraint.spaceFilter)) {
       continue;
     }
 

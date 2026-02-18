@@ -1,6 +1,6 @@
 import type { StoreApi } from 'zustand';
 
-import type { RenderAdjacency, RenderMapSpace, RenderToken, RenderZone } from '../model/render-model';
+import type { RenderAdjacency, RenderToken, RenderZone } from '../model/render-model';
 import type { GameStore } from '../store/game-store';
 import { adjacenciesVisuallyEqual, tokensVisuallyEqual, zonesVisuallyEqual } from './canvas-equality';
 import type { PositionStore } from './position-store';
@@ -11,7 +11,6 @@ interface CanvasSnapshotSelectorResult {
   readonly zones: readonly RenderZone[];
   readonly tokens: readonly RenderToken[];
   readonly adjacencies: readonly RenderAdjacency[];
-  readonly mapSpaces: readonly RenderMapSpace[];
 }
 
 interface SelectorSubscribeStore<TState> extends StoreApi<TState> {
@@ -45,7 +44,6 @@ export interface CanvasUpdater {
 const EMPTY_ZONES: readonly RenderZone[] = [];
 const EMPTY_TOKENS: readonly RenderToken[] = [];
 const EMPTY_ADJACENCIES: readonly RenderAdjacency[] = [];
-const EMPTY_MAP_SPACES: readonly RenderMapSpace[] = [];
 
 export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
   const store = deps.store as SelectorSubscribeStore<GameStore>;
@@ -58,7 +56,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
   let queuedSnapshot: CanvasSnapshotSelectorResult | null = null;
 
   const applySnapshot = (snapshot: CanvasSnapshotSelectorResult): void => {
-    deps.zoneRenderer.update(snapshot.zones, snapshot.mapSpaces, latestPositionSnapshot.positions);
+    deps.zoneRenderer.update(snapshot.zones, latestPositionSnapshot.positions);
     deps.adjacencyRenderer.update(snapshot.adjacencies, latestPositionSnapshot.positions);
     deps.tokenRenderer.update(snapshot.tokens, deps.zoneRenderer.getContainerMap());
   };
@@ -144,7 +142,6 @@ function selectCanvasSnapshot(state: GameStore): CanvasSnapshotSelectorResult {
       zones: EMPTY_ZONES,
       tokens: EMPTY_TOKENS,
       adjacencies: EMPTY_ADJACENCIES,
-      mapSpaces: EMPTY_MAP_SPACES,
     };
   }
 
@@ -152,7 +149,6 @@ function selectCanvasSnapshot(state: GameStore): CanvasSnapshotSelectorResult {
     zones: renderModel.zones,
     tokens: renderModel.tokens,
     adjacencies: renderModel.adjacencies,
-    mapSpaces: renderModel.mapSpaces,
   };
 }
 
@@ -161,59 +157,5 @@ function canvasSnapshotsEqual(prev: CanvasSnapshotSelectorResult, next: CanvasSn
     zonesVisuallyEqual(prev.zones, next.zones)
     && tokensVisuallyEqual(prev.tokens, next.tokens)
     && adjacenciesVisuallyEqual(prev.adjacencies, next.adjacencies)
-    && mapSpacesVisuallyEqual(prev.mapSpaces, next.mapSpaces)
   );
-}
-
-function mapSpacesVisuallyEqual(prev: readonly RenderMapSpace[], next: readonly RenderMapSpace[]): boolean {
-  if (prev === next) {
-    return true;
-  }
-
-  if (prev.length !== next.length) {
-    return false;
-  }
-
-  for (let index = 0; index < prev.length; index += 1) {
-    const previous = prev[index];
-    const current = next[index];
-
-    if (previous === undefined || current === undefined) {
-      return false;
-    }
-
-    if (
-      previous.id !== current.id
-      || previous.displayName !== current.displayName
-      || previous.spaceType !== current.spaceType
-      || previous.population !== current.population
-      || previous.econ !== current.econ
-      || previous.country !== current.country
-      || previous.coastal !== current.coastal
-      || !stringArraysEqual(previous.terrainTags, current.terrainTags)
-      || !stringArraysEqual(previous.adjacentTo, current.adjacentTo)
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function stringArraysEqual(prev: readonly string[], next: readonly string[]): boolean {
-  if (prev === next) {
-    return true;
-  }
-
-  if (prev.length !== next.length) {
-    return false;
-  }
-
-  for (let index = 0; index < prev.length; index += 1) {
-    if (prev[index] !== next[index]) {
-      return false;
-    }
-  }
-
-  return true;
 }

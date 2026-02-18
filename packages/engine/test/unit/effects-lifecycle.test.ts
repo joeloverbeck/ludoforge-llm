@@ -16,7 +16,6 @@ import {
   type EffectAST,
   type GameDef,
   type GameState,
-  type MapSpaceDef,
   type SpaceMarkerLatticeDef,
   type StackingConstraint,
   type Token,
@@ -212,31 +211,25 @@ describe('effects createToken stacking enforcement', () => {
     {
       id: 'no-bases-loc',
       description: 'No Bases on LoCs',
-      spaceFilter: { spaceTypes: ['loc'] },
+      spaceFilter: { category: ['loc'] },
       pieceFilter: { pieceTypeIds: ['base'] },
       rule: 'prohibit',
     },
   ];
 
-  const mapSpaces: MapSpaceDef[] = [
-    {
-      id: 'deck:none',
-      spaceType: 'loc',
-      population: 0,
-      econ: 1,
-      terrainTags: [],
-      country: 'southVietnam',
-      coastal: false,
-      adjacentTo: [],
-    },
+  const stackingZones = (): GameDef['zones'] => [
+    { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack', category: 'loc', attributes: { population: 0, econ: 1, terrainTags: [], country: 'southVietnam', coastal: false } },
+    { id: asZoneId('discard:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
+    { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' },
   ];
 
   it('createToken in zone violating prohibit rule throws STACKING_VIOLATION', () => {
     const def: GameDef = {
       ...makeDef(),
+      zones: stackingZones(),
       stackingConstraints: prohibitConstraint,
     };
-    const ctx = makeCtx({ def, mapSpaces });
+    const ctx = makeCtx({ def });
 
     assert.throws(
       () =>
@@ -251,10 +244,11 @@ describe('effects createToken stacking enforcement', () => {
   it('createToken succeeds when constraint does not apply', () => {
     const def: GameDef = {
       ...makeDef(),
+      zones: stackingZones(),
       stackingConstraints: prohibitConstraint,
     };
-    // discard:none is not in mapSpaces (not a loc), so constraint doesn't apply
-    const ctx = makeCtx({ def, mapSpaces });
+    // discard:none does not have category 'loc', so constraint doesn't apply
+    const ctx = makeCtx({ def });
 
     const result = applyEffect(
       { createToken: { type: 'base', zone: 'discard:none', props: { faction: 'US' } } },

@@ -138,7 +138,7 @@ function token(id: string, type = 'piece', props: Token['props'] = {}): Token {
   };
 }
 
-describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
+describe('deriveRenderModel zones/tokens/adjacencies', () => {
   it('maps materialized zones and filters owner zones by state.playerCount', () => {
     const def = compileFixture({
       minPlayers: 2,
@@ -358,54 +358,6 @@ describe('deriveRenderModel zones/tokens/adjacencies/mapSpaces', () => {
     expect(model.adjacencies).toEqual([
       { from: 'table:none', to: 'reserve:none', isHighlighted: true },
       { from: 'reserve:none', to: 'table:none', isHighlighted: true },
-    ]);
-  });
-
-  it('copies map spaces with derived display names', () => {
-    const defBase = compileFixture({
-      minPlayers: 2,
-      maxPlayers: 2,
-      zones: [
-        {
-          id: 'table',
-          owner: 'none',
-          visibility: 'public',
-          ordering: 'set',
-        },
-      ],
-    });
-
-    const def: GameDef = {
-      ...defBase,
-      mapSpaces: [
-        {
-          id: 'city-alpha',
-          spaceType: 'urban',
-          population: 2,
-          econ: 1,
-          terrainTags: ['river'],
-          country: 'us',
-          coastal: false,
-          adjacentTo: ['city-beta'],
-        },
-      ],
-    };
-
-    const state = initialState(def, 8, 2);
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
-
-    expect(model.mapSpaces).toEqual([
-      {
-        id: 'city-alpha',
-        displayName: 'City Alpha',
-        spaceType: 'urban',
-        population: 2,
-        econ: 1,
-        terrainTags: ['river'],
-        country: 'us',
-        coastal: false,
-        adjacentTo: ['city-beta'],
-      },
     ]);
   });
 

@@ -14,7 +14,6 @@ import {
   type EffectContext,
   type GameDef,
   type GameState,
-  type MapSpaceDef,
   type StackingConstraint,
   type Token,
   createCollector,
@@ -255,30 +254,24 @@ describe('effects moveToken stacking enforcement', () => {
     {
       id: 'max-2-bases',
       description: 'Max 2 Bases per Province',
-      spaceFilter: { spaceTypes: ['province'] },
+      spaceFilter: { category: ['province'] },
       pieceFilter: { pieceTypeIds: ['base'] },
       rule: 'maxCount',
       maxCount: 2,
     },
   ];
 
-  const mapSpaces: MapSpaceDef[] = [
-    {
-      id: 'discard:none',
-      spaceType: 'province',
-      population: 2,
-      econ: 0,
-      terrainTags: [],
-      country: 'southVietnam',
-      coastal: false,
-      adjacentTo: [],
-    },
+  const stackingZones = (): GameDef['zones'] => [
+    { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+    { id: asZoneId('discard:none'), owner: 'none', visibility: 'public', ordering: 'stack', category: 'province', attributes: { population: 2, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false } },
+    { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' },
+    { id: asZoneId('hand:1'), owner: 'player', visibility: 'owner', ordering: 'stack' },
   ];
 
   const base = (id: string): Token => ({ id: asTokenId(id), type: 'base', props: { faction: 'US' } });
 
   it('moveToken to zone exceeding maxCount throws STACKING_VIOLATION', () => {
-    const def = { ...makeDef(), stackingConstraints };
+    const def = { ...makeDef(), zones: stackingZones(), stackingConstraints };
     const state: GameState = {
       ...makeState(),
       zones: {
@@ -287,7 +280,7 @@ describe('effects moveToken stacking enforcement', () => {
         'discard:none': [base('b1'), base('b2')],
       },
     };
-    const ctx = makeCtx({ def, state, mapSpaces });
+    const ctx = makeCtx({ def, state });
 
     assert.throws(
       () =>
@@ -300,7 +293,7 @@ describe('effects moveToken stacking enforcement', () => {
   });
 
   it('moveToken to zone within maxCount succeeds normally', () => {
-    const def = { ...makeDef(), stackingConstraints };
+    const def = { ...makeDef(), zones: stackingZones(), stackingConstraints };
     const state: GameState = {
       ...makeState(),
       zones: {
@@ -309,7 +302,7 @@ describe('effects moveToken stacking enforcement', () => {
         'discard:none': [base('b1')],
       },
     };
-    const ctx = makeCtx({ def, state, mapSpaces });
+    const ctx = makeCtx({ def, state });
 
     const result = applyEffect(
       { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } },

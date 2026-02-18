@@ -25,18 +25,17 @@ const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
   actionPipelines?: readonly ActionPipelineDef[];
   globalVars?: readonly VariableDef[];
-  mapSpaces?: GameDef['mapSpaces'];
+  zones?: GameDef['zones'];
 }): GameDef =>
   ({
     metadata: { id: 'apply-move-test', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: overrides?.globalVars ?? [resourcesVar],
     perPlayerVars: [],
-    zones: [
+    zones: overrides?.zones ?? [
       { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
       { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set' },
     ],
-    ...(overrides?.mapSpaces === undefined ? {} : { mapSpaces: overrides.mapSpaces }),
     tokenTypes: [],
     setup: [],
     turnStructure: {
@@ -823,7 +822,7 @@ describe('applyMove() __actionClass binding (FITLOPEFULEFF-001)', () => {
 });
 
 describe('applyMove() map-aware pipeline evaluation', () => {
-  it('evaluates zoneProp in profile legality/effects using def.mapSpaces', () => {
+  it('evaluates zoneProp in profile legality/effects using zone category/attributes', () => {
     const mapFlagVar: VariableDef = { name: 'mapFlag', type: 'int', init: 0, min: 0, max: 1 };
 
     const action: ActionDef = {
@@ -843,7 +842,7 @@ phase: [asPhaseId('main')],
       actionId: asActionId('mapAwareOp'),
       legality: {
         op: '==',
-        left: { ref: 'zoneProp', zone: 'city:none', prop: 'spaceType' },
+        left: { ref: 'zoneProp', zone: 'city:none', prop: 'category' },
         right: 'city',
       },
       costValidation: null,
@@ -874,17 +873,9 @@ phase: [asPhaseId('main')],
       actions: [action],
       actionPipelines: [profile],
       globalVars: [resourcesVar, mapFlagVar],
-      mapSpaces: [
-        {
-          id: 'city:none',
-          spaceType: 'city',
-          population: 2,
-          econ: 0,
-          terrainTags: ['urban'],
-          country: 'southVietnam',
-          coastal: false,
-          adjacentTo: [],
-        },
+      zones: [
+        { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'city', attributes: { population: 2, econ: 0, terrainTags: ['urban'], country: 'southVietnam', coastal: false } },
       ],
     });
 

@@ -58,9 +58,9 @@ const getMapSpace = (spaceId: string): { readonly population: number; readonly e
   const mapAsset = (parsed.doc.dataAssets ?? []).find((asset) => asset.id === 'fitl-map-production' && asset.kind === 'map');
   assert.ok(mapAsset, 'Expected fitl-map-production map asset');
   const mapPayload = mapAsset.payload as MapPayload;
-  const space = mapPayload.spaces.find((entry) => entry.id === spaceId);
-  assert.ok(space, `Expected map space ${spaceId}`);
-  return { population: space.population, econ: space.econ };
+  const rawSpace = mapPayload.spaces.find((entry) => entry.id === spaceId);
+  assert.ok(rawSpace, `Expected map space ${spaceId}`);
+  return { population: (rawSpace.attributes?.population as number) ?? 0, econ: (rawSpace.attributes?.econ as number) ?? 0 };
 };
 
 describe('FITL NVA/VC special activities integration', () => {

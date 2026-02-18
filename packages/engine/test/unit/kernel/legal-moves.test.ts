@@ -18,18 +18,17 @@ const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
   actionPipelines?: readonly ActionPipelineDef[];
   globalVars?: GameDef['globalVars'];
-  mapSpaces?: GameDef['mapSpaces'];
+  zones?: GameDef['zones'];
 }): GameDef =>
   ({
     metadata: { id: 'legal-moves-test', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: overrides?.globalVars ?? [],
     perPlayerVars: [],
-    zones: [
+    zones: overrides?.zones ?? [
       { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
       { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set' },
     ],
-    ...(overrides?.mapSpaces === undefined ? {} : { mapSpaces: overrides.mapSpaces }),
     tokenTypes: [],
     setup: [],
     turnStructure: {
@@ -493,7 +492,7 @@ phase: [asPhaseId('main')],
     assert.equal(moves.length, 0);
   });
 
-  it('11. map-aware profile legality evaluates against def.mapSpaces', () => {
+  it('11. map-aware profile legality evaluates against zone category/attributes', () => {
     const action: ActionDef = {
       id: asActionId('mapAwareOp'),
 actor: 'active',
@@ -511,7 +510,7 @@ phase: [asPhaseId('main')],
       actionId: asActionId('mapAwareOp'),
       legality: {
         op: '==',
-        left: { ref: 'zoneProp', zone: 'city:none', prop: 'spaceType' },
+        left: { ref: 'zoneProp', zone: 'city:none', prop: 'category' },
         right: 'city',
       },
       costValidation: null,
@@ -524,17 +523,9 @@ phase: [asPhaseId('main')],
     const def = makeBaseDef({
       actions: [action],
       actionPipelines: [profile],
-      mapSpaces: [
-        {
-          id: 'city:none',
-          spaceType: 'city',
-          population: 2,
-          econ: 0,
-          terrainTags: [],
-          country: 'southVietnam',
-          coastal: false,
-          adjacentTo: [],
-        },
+      zones: [
+        { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'city', attributes: { population: 2, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false } },
       ],
     });
 

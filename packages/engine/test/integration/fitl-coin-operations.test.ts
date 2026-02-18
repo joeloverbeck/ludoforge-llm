@@ -248,13 +248,13 @@ describe('FITL COIN operations integration', () => {
       assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 for LimOp');
       assert.ok(normalChooseN.length >= 1, 'Expected chooseN max:99 for full operation');
 
-      const spaceTypeGuards = findDeep(selectSpaces.effects, (node: any) =>
+      const categoryGuards = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '==' &&
         node?.left?.ref === 'zoneProp' &&
-        node?.left?.prop === 'spaceType' &&
+        node?.left?.prop === 'category' &&
         (node?.right === 'province' || node?.right === 'city'),
       );
-      assert.ok(spaceTypeGuards.length >= 4, 'Expected province/city filters in both selection branches');
+      assert.ok(categoryGuards.length >= 4, 'Expected province/city filters in both selection branches');
 
       const northVietnamExclusions = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '!=' &&
@@ -287,7 +287,7 @@ describe('FITL COIN operations integration', () => {
       const hopEligibilityGuard = findDeep(moveTroops.effects, (node: any) =>
         node?.if?.when?.op === 'and' &&
         findDeep(node.if.when.args, (inner: any) =>
-          inner?.op === '==' && inner?.left?.ref === 'zoneProp' && inner?.left?.prop === 'spaceType' && inner?.right === 'loc',
+          inner?.op === '==' && inner?.left?.ref === 'zoneProp' && inner?.left?.prop === 'category' && inner?.right === 'loc',
         ).length > 0 &&
         findDeep(node.if.when.args, (inner: any) => inner?.op === '==' && inner?.right === 0).length > 0,
       );
@@ -375,13 +375,13 @@ describe('FITL COIN operations integration', () => {
       assert.ok(limOpChooseN.length >= 1, 'Expected chooseN max:1 in LimOp branch');
       assert.ok(normalChooseN.length >= 1, 'Expected chooseN max:99 in full-op branch');
 
-      const spaceTypeGuards = findDeep(selectSpaces.effects, (node: any) =>
+      const categoryGuards = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '==' &&
         node?.left?.ref === 'zoneProp' &&
-        node?.left?.prop === 'spaceType' &&
+        node?.left?.prop === 'category' &&
         (node?.right === 'province' || node?.right === 'city'),
       );
-      assert.ok(spaceTypeGuards.length >= 4, 'Expected province/city filters in both branches');
+      assert.ok(categoryGuards.length >= 4, 'Expected province/city filters in both branches');
 
       const northVietnamExclusions = findDeep(selectSpaces.effects, (node: any) =>
         node?.op === '!=' &&
@@ -714,7 +714,7 @@ describe('FITL COIN operations integration', () => {
         node?.op === 'or' &&
         Array.isArray(node?.args) &&
         findDeep(node.args, (n: any) =>
-          n?.op === '==' && n?.left?.ref === 'zoneProp' && n?.left?.prop === 'spaceType' && n?.right === 'city',
+          n?.op === '==' && n?.left?.ref === 'zoneProp' && n?.left?.prop === 'category' && n?.right === 'city',
         ).length > 0,
       );
       assert.ok(cityOrBaseCondition.length >= 1, 'Expected city-or-COIN-base condition for cube placement');
@@ -1513,7 +1513,7 @@ describe('FITL COIN operations integration', () => {
       assert.equal(profile.legality, true);
     });
 
-    it('AC3: targets LoCs only (spaceType filter)', () => {
+    it('AC3: targets LoCs only (category filter)', () => {
       const profile = getPatrolProfile();
       const selectLoCs = profile.stages[0]!;
       assert.equal(selectLoCs.stage, 'select-locs');
@@ -1521,7 +1521,7 @@ describe('FITL COIN operations integration', () => {
       const locFilters = findDeep(selectLoCs.effects, (node: any) =>
         node?.op === '==' &&
         node?.left?.ref === 'zoneProp' &&
-        node?.left?.prop === 'spaceType' &&
+        node?.left?.prop === 'category' &&
         node?.right === 'loc',
       );
       assert.ok(

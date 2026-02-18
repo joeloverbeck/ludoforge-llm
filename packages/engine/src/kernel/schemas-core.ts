@@ -31,12 +31,15 @@ import {
   TurnOrderSchema
 } from './schemas-extensions.js';
 import {
-  MapSpaceSchema,
+  AttributeValueSchema,
+  FactionDefSchema,
   NumericTrackSchema,
   GlobalMarkerLatticeSchema,
   SpaceMarkerLatticeSchema,
   SpaceMarkerValueSchema,
   StackingConstraintSchema,
+  TokenVisualHintsSchema,
+  ZoneVisualHintsSchema,
 } from './schemas-gamespec.js';
 
 export const IntVariableDefSchema = z
@@ -66,6 +69,9 @@ export const ZoneDefSchema = z
     visibility: z.union([z.literal('public'), z.literal('owner'), z.literal('hidden')]),
     ordering: z.union([z.literal('stack'), z.literal('queue'), z.literal('set')]),
     adjacentTo: z.array(StringSchema).optional(),
+    category: StringSchema.optional(),
+    attributes: z.record(StringSchema, AttributeValueSchema).optional(),
+    visual: ZoneVisualHintsSchema.optional(),
   })
   .strict();
 
@@ -83,6 +89,7 @@ export const TokenTypeDefSchema = z
     faction: StringSchema.optional(),
     props: z.record(StringSchema, z.union([z.literal('int'), z.literal('string'), z.literal('boolean')])),
     transitions: z.array(TokenTypeTransitionSchema).optional(),
+    visual: TokenVisualHintsSchema.optional(),
   })
   .strict();
 
@@ -273,7 +280,7 @@ export const GameDefSchema = z
     globalVars: z.array(VariableDefSchema),
     perPlayerVars: z.array(VariableDefSchema),
     zones: z.array(ZoneDefSchema),
-    mapSpaces: z.array(MapSpaceSchema).optional(),
+    factions: z.array(FactionDefSchema).optional(),
     tracks: z.array(NumericTrackSchema).optional(),
     spaceMarkers: z.array(SpaceMarkerValueSchema).optional(),
     tokenTypes: z.array(TokenTypeDefSchema),

@@ -271,30 +271,39 @@ export function resolveRef(ref: Reference, ctx: EvalContext): number | boolean |
 
   if (ref.ref === 'zoneProp') {
     const zoneId = resolveMapSpaceId(ref.zone, ctx);
-    const mapSpaces = ctx.mapSpaces;
-    if (mapSpaces === undefined) {
-      throw zonePropNotFoundError(`No mapSpaces available to look up zone properties`, {
+    const zoneDef = ctx.def.zones.find((zone) => zone.id === String(zoneId));
+    if (zoneDef === undefined) {
+      throw zonePropNotFoundError(`Zone not found: ${String(zoneId)}`, {
         reference: ref,
         zoneId,
+        availableZoneIds: ctx.def.zones.map((zone) => zone.id).sort(),
       });
     }
 
-    const spaceDef = mapSpaces.find((space) => space.id === String(zoneId));
-    if (spaceDef === undefined) {
-      throw zonePropNotFoundError(`Zone not found in mapSpaces: ${String(zoneId)}`, {
-        reference: ref,
-        zoneId,
-        availableSpaceIds: mapSpaces.map((space) => space.id).sort(),
-      });
+    // Synthetic zone properties: 'id' and 'category' are first-class ZoneDef fields,
+    // not stored in attributes.
+    if (ref.prop === 'id') {
+      return zoneDef.id;
+    }
+    if (ref.prop === 'category') {
+      if (zoneDef.category === undefined) {
+        throw zonePropNotFoundError(`Property "${ref.prop}" not found on zone ${String(zoneId)} (zone has no category)`, {
+          reference: ref,
+          zoneId,
+          prop: ref.prop,
+          availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})].sort(),
+        });
+      }
+      return zoneDef.category;
     }
 
-    const propValue = (spaceDef as unknown as Record<string, unknown>)[ref.prop];
+    const propValue = zoneDef.attributes?.[ref.prop];
     if (propValue === undefined) {
       throw zonePropNotFoundError(`Property "${ref.prop}" not found on zone ${String(zoneId)}`, {
         reference: ref,
         zoneId,
         prop: ref.prop,
-        availableProps: Object.keys(spaceDef).sort(),
+        availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})].sort(),
       });
     }
 

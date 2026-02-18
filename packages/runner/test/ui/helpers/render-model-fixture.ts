@@ -9,7 +9,6 @@ export function makeRenderModelFixture(
   return {
     zones: [],
     adjacencies: [],
-    mapSpaces: [],
     tokens: [],
     globalVars: [],
     playerVars: new Map<PlayerId, readonly { readonly name: string; readonly value: number | boolean; readonly displayName: string }[]>(),

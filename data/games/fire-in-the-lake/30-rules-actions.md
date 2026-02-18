@@ -171,14 +171,14 @@ actions:
                   filter:
                     op: or
                     args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
                       - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
                       - op: and
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
                           - op: '>'
                             left:
                               aggregate:
@@ -245,14 +245,14 @@ actions:
                                   - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: tokenZone, token: $movingTroopFromMap } }
                                   - op: or
                                     args:
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
                                       - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
                                       - op: and
                                         args:
                                           - op: or
                                             args:
-                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
-                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
                                           - op: '>'
                                             left:
                                               aggregate:
@@ -295,14 +295,14 @@ actions:
                   filter:
                     op: or
                     args:
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
                       - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
                       - op: and
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
                           - op: '>'
                             left:
                               aggregate:
@@ -369,14 +369,14 @@ actions:
                                   - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: tokenZone, token: $movingBaseFromMap } }
                                   - op: or
                                     args:
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
                                       - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
                                       - op: and
                                         args:
                                           - op: or
                                             args:
-                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
-                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
                                           - op: '>'
                                             left:
                                               aggregate:
@@ -434,8 +434,8 @@ actionPipelines:
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
                           - op: '>'
                             left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'US' }] } } }
                             right: 0
@@ -451,8 +451,8 @@ actionPipelines:
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
                           - op: '>'
                             left: { aggregate: { op: count, query: { query: tokensInZone, zone: $zone, filter: [{ prop: faction, eq: 'US' }] } } }
                             right: 0
@@ -690,8 +690,8 @@ actionPipelines:
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
                           # Without NVA Control (NVA pieces <= COIN+VC pieces)
                           - op: <=
                             left:
@@ -722,8 +722,8 @@ actionPipelines:
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
                           - op: <=
                             left:
                               aggregate:
@@ -782,7 +782,7 @@ actionPipelines:
                         # Must be City or have COIN Base
                         - op: or
                           args:
-                            - { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: 'city' }
+                            - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: 'city' }
                             - op: '>'
                               left: { aggregate: { op: count, query: { query: tokensInZone, zone: $space, filter: [{ prop: faction, op: in, value: ['US', 'ARVN'] }, { prop: type, eq: base }] } } }
                               right: 0
@@ -937,7 +937,7 @@ actionPipelines:
                     bind: targetLoCs
                     options:
                       query: mapSpaces
-                      filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                      filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
                     min: 1
                     max: 1
               else:
@@ -945,7 +945,7 @@ actionPipelines:
                     bind: targetLoCs
                     options:
                       query: mapSpaces
-                      filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                      filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
                     min: 1
                     max: 99
 
@@ -1066,7 +1066,7 @@ actionPipelines:
                     bind: targetLoCs
                     options:
                       query: mapSpaces
-                      filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                      filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
                     min: 1
                     max: 1
               else:
@@ -1074,7 +1074,7 @@ actionPipelines:
                     bind: targetLoCs
                     options:
                       query: mapSpaces
-                      filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'loc' }
+                      filter: { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
                     min: 1
                     max: 99
 
@@ -1180,8 +1180,8 @@ actionPipelines:
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                           - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                     min: 1
                     max: 1
@@ -1198,8 +1198,8 @@ actionPipelines:
                               args:
                                 - op: or
                                   args:
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
                           max: 2
@@ -1213,8 +1213,8 @@ actionPipelines:
                               args:
                                 - op: or
                                   args:
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
                           max: 99
@@ -1258,7 +1258,7 @@ actionPipelines:
                           when:
                             op: and
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $hopLoc, prop: spaceType }, right: 'loc' }
+                              - { op: '==', left: { ref: zoneProp, zone: $hopLoc, prop: category }, right: 'loc' }
                               - op: '=='
                                 left:
                                   aggregate:
@@ -1334,8 +1334,8 @@ actionPipelines:
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                           - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                     min: 1
                     max: 1
@@ -1352,8 +1352,8 @@ actionPipelines:
                               args:
                                 - op: or
                                   args:
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
                           max: 2
@@ -1367,8 +1367,8 @@ actionPipelines:
                               args:
                                 - op: or
                                   args:
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                                 - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: 'northVietnam' }
                           min: 1
                           max: 99
@@ -1663,7 +1663,7 @@ actionPipelines:
                     bind: $isProvince
                     value:
                       if:
-                        when: { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: 'province' }
+                        when: { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: 'province' }
                         then: 1
                         else: 0
                     in:
@@ -1725,8 +1725,8 @@ actionPipelines:
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                           - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
                           - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
                     min: 0
@@ -1741,8 +1741,8 @@ actionPipelines:
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                           - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
                           - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
                     min: 0
@@ -1911,8 +1911,8 @@ actionPipelines:
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                           - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
                           - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
                     min: 0
@@ -1927,8 +1927,8 @@ actionPipelines:
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'province' }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: 'city' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'province' }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'city' }
                           - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
                           - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
                     min: 0
@@ -2054,8 +2054,8 @@ actionPipelines:
                                 right: 0
                               - op: or
                                 args:
-                                  - { op: '==', left: { ref: zoneProp, zone: $cadresSpace, prop: spaceType }, right: city }
-                                  - { op: '==', left: { ref: zoneProp, zone: $cadresSpace, prop: spaceType }, right: province }
+                                  - { op: '==', left: { ref: zoneProp, zone: $cadresSpace, prop: category }, right: city }
+                                  - { op: '==', left: { ref: zoneProp, zone: $cadresSpace, prop: category }, right: province }
                               - { op: '>', left: { ref: zoneProp, zone: $cadresSpace, prop: population }, right: 0 }
                               - { op: '!=', left: { ref: markerState, space: $cadresSpace, marker: supportOpposition }, right: activeOpposition }
                           then:
@@ -2422,7 +2422,7 @@ actionPipelines:
                           bind: $isProvince
                           value:
                             if:
-                              when: { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: province }
+                              when: { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: province }
                               then: 1
                               else: 0
                           in:
@@ -2806,8 +2806,8 @@ actionPipelines:
                                               args:
                                                 - op: or
                                                   args:
-                                                    - { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: province }
-                                                    - { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: city }
+                                                    - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: province }
+                                                    - { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: city }
                                                 - { op: '>', left: { ref: zoneProp, zone: $space, prop: population }, right: 0 }
                                                 - { op: '!=', left: { ref: markerState, space: $space, marker: supportOpposition }, right: activeOpposition }
                                                 - op: or
@@ -3034,8 +3034,8 @@ actionPipelines:
                         args:
                           - op: or
                             args:
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: province }
-                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: province }
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
                           - op: or
                             args:
                               - { op: '==', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: passiveSupport }
@@ -3230,8 +3230,8 @@ actionPipelines:
                                 args:
                                   - op: or
                                     args:
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
                                   - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
                                   - op: '=='
                                     left:
@@ -3254,8 +3254,8 @@ actionPipelines:
                                 args:
                                   - op: or
                                     args:
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: loc }
-                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: spaceType }, right: city }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
                                   - { op: '!=', left: { ref: zoneProp, zone: $zone, prop: country }, right: northVietnam }
                                   - op: '=='
                                     left:
@@ -3879,7 +3879,7 @@ actionPipelines:
                     effects:
                       - setTokenProp: { token: $taxingGuerrilla, prop: activity, value: active }
                 - if:
-                    when: { op: '==', left: { ref: zoneProp, zone: $space, prop: spaceType }, right: loc }
+                    when: { op: '==', left: { ref: zoneProp, zone: $space, prop: category }, right: loc }
                     then:
                       - addVar:
                           scope: global

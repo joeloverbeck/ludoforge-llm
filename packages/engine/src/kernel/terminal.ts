@@ -25,7 +25,6 @@ function buildEvalContext(
     actorPlayer,
     bindings: {},
     runtimeTableIndex,
-    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
     collector: createCollector(),
   };
 }

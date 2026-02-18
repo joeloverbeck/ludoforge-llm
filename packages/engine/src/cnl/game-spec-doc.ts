@@ -1,4 +1,4 @@
-import type { ConditionAST, EventDeckDef, ValueExpr } from '../kernel/types.js';
+import type { AttributeValue, ConditionAST, EventDeckDef, TokenVisualHints, ValueExpr, ZoneVisualHints } from '../kernel/types.js';
 
 export interface GameSpecMetadata {
   readonly id: string;
@@ -28,11 +28,16 @@ export interface GameSpecZoneDef {
   readonly visibility: string;
   readonly ordering: string;
   readonly adjacentTo?: readonly string[];
+  readonly category?: string;
+  readonly attributes?: Readonly<Record<string, AttributeValue>>;
+  readonly visual?: ZoneVisualHints;
 }
 
 export interface GameSpecTokenTypeDef {
   readonly id: string;
   readonly props: Readonly<Record<string, string>>;
+  readonly faction?: string;
+  readonly visual?: TokenVisualHints;
 }
 
 export interface GameSpecTurnStructure {

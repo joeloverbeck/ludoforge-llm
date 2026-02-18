@@ -23,14 +23,14 @@ const makeBaseDef = (overrides?: {
   globalVars?: GameDef['globalVars'];
   perPlayerVars?: GameDef['perPlayerVars'];
   tokenTypes?: GameDef['tokenTypes'];
-  mapSpaces?: GameDef['mapSpaces'];
+  zones?: GameDef['zones'];
 }): GameDef =>
   ({
     metadata: { id: 'legal-choices-test', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: overrides?.globalVars ?? [],
     perPlayerVars: overrides?.perPlayerVars ?? [],
-    zones: [
+    zones: overrides?.zones ?? [
       { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
       { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' },
     ],
@@ -41,7 +41,6 @@ const makeBaseDef = (overrides?: {
     },
     actions: overrides?.actions ?? [],
     actionPipelines: overrides?.actionPipelines,
-    ...(overrides?.mapSpaces === undefined ? {} : { mapSpaces: overrides.mapSpaces }),
     triggers: [],
     terminal: { conditions: [] },
   }) as unknown as GameDef;
@@ -1318,7 +1317,7 @@ phase: [asPhaseId('main')],
       assert.deepStrictEqual(result, { kind: 'illegal', complete: false, reason: 'pipelineNotApplicable' });
     });
 
-    it('evaluates map-aware zones filters in profile chooseN options via def.mapSpaces', () => {
+    it('evaluates map-aware zones filters in profile chooseN options via zone category/attributes', () => {
       const action: ActionDef = {
         id: asActionId('mapChoiceOp'),
 actor: 'active',
@@ -1350,7 +1349,7 @@ phase: [asPhaseId('main')],
                     filter: {
                       condition: {
                         op: '==',
-                        left: { ref: 'zoneProp', zone: '$zone', prop: 'spaceType' },
+                        left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
                         right: 'city',
                       },
                     },
@@ -1368,27 +1367,9 @@ phase: [asPhaseId('main')],
       const def = makeBaseDef({
         actions: [action],
         actionPipelines: [profile],
-        mapSpaces: [
-          {
-            id: 'board:none',
-            spaceType: 'province',
-            population: 1,
-            econ: 0,
-            terrainTags: [],
-            country: 'southVietnam',
-            coastal: false,
-            adjacentTo: [],
-          },
-          {
-            id: 'hand:0',
-            spaceType: 'city',
-            population: 2,
-            econ: 0,
-            terrainTags: [],
-            country: 'southVietnam',
-            coastal: false,
-            adjacentTo: [],
-          },
+        zones: [
+          { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false } },
+          { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack', category: 'city', attributes: { population: 2, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false } },
         ],
       });
 

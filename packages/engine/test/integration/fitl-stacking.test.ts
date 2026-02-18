@@ -14,10 +14,10 @@ import {
   type EffectContext,
   type GameDef,
   type GameState,
-  type MapSpaceDef,
   type ScenarioPiecePlacement,
   type StackingConstraint,
   type Token,
+  type ZoneDef,
   createCollector,
 } from '../../src/kernel/index.js';
 
@@ -27,7 +27,7 @@ const fitlConstraints: readonly StackingConstraint[] = [
   {
     id: 'max-2-bases-province-city',
     description: 'Max 2 Bases per Province or City',
-    spaceFilter: { spaceTypes: ['province', 'city'] },
+    spaceFilter: { category: ['province', 'city'] },
     pieceFilter: { pieceTypeIds: ['base'] },
     rule: 'maxCount',
     maxCount: 2,
@@ -35,24 +35,24 @@ const fitlConstraints: readonly StackingConstraint[] = [
   {
     id: 'no-bases-loc',
     description: 'No Bases on LoCs',
-    spaceFilter: { spaceTypes: ['loc'] },
+    spaceFilter: { category: ['loc'] },
     pieceFilter: { pieceTypeIds: ['base'] },
     rule: 'prohibit',
   },
   {
     id: 'nv-restriction',
     description: 'Only NVA/VC in North Vietnam',
-    spaceFilter: { country: ['northVietnam'] },
+    spaceFilter: { attributeEquals: { country: 'northVietnam' } },
     pieceFilter: { factions: ['US', 'ARVN'] },
     rule: 'prohibit',
   },
 ];
 
-const mapSpaces: readonly MapSpaceDef[] = [
-  { id: 'quangTri', spaceType: 'province', population: 1, econ: 0, terrainTags: ['highland'], country: 'southVietnam', coastal: true, adjacentTo: ['hue', 'quangNam'] },
-  { id: 'hue', spaceType: 'city', population: 2, econ: 0, terrainTags: [], country: 'southVietnam', coastal: true, adjacentTo: ['quangTri'] },
-  { id: 'route1', spaceType: 'loc', population: 0, econ: 1, terrainTags: ['highway'], country: 'southVietnam', coastal: false, adjacentTo: ['quangTri', 'hue'] },
-  { id: 'hanoi', spaceType: 'city', population: 3, econ: 0, terrainTags: [], country: 'northVietnam', coastal: false, adjacentTo: [] },
+const compileTimeZones: readonly ZoneDef[] = [
+  { id: asZoneId('quangTri'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('hue'), asZoneId('quangNam')], category: 'province', attributes: { population: 1, econ: 0, terrainTags: ['highland'], country: 'southVietnam', coastal: true } },
+  { id: asZoneId('hue'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('quangTri')], category: 'city', attributes: { population: 2, econ: 0, terrainTags: [], country: 'southVietnam', coastal: true } },
+  { id: asZoneId('route1'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('quangTri'), asZoneId('hue')], category: 'loc', attributes: { population: 0, econ: 1, terrainTags: ['highway'], country: 'southVietnam', coastal: false } },
+  { id: asZoneId('hanoi'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [], category: 'city', attributes: { population: 3, econ: 0, terrainTags: [], country: 'northVietnam', coastal: false } },
 ];
 const pieceTypeFactionById = new Map<string, string>([
   ['base', 'US'],
@@ -79,7 +79,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       const diags = validateInitialPlacementsAgainstStackingConstraints(
         fitlConstraints,
         placements,
-        [...mapSpaces],
+        [...compileTimeZones],
         pieceTypeFactionById,
       );
       assert.ok(diags.length > 0, 'Expected compile-time stacking violation');
@@ -94,7 +94,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       const diags = validateInitialPlacementsAgainstStackingConstraints(
         fitlConstraints,
         placements,
-        [...mapSpaces],
+        [...compileTimeZones],
         pieceTypeFactionById,
       );
       assert.ok(diags.length > 0);
@@ -109,7 +109,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       const diags = validateInitialPlacementsAgainstStackingConstraints(
         fitlConstraints,
         placements,
-        [...mapSpaces],
+        [...compileTimeZones],
         pieceTypeFactionById,
       );
       assert.ok(diags.length > 0);
@@ -127,7 +127,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       const diags = validateInitialPlacementsAgainstStackingConstraints(
         fitlConstraints,
         placements,
-        [...mapSpaces],
+        [...compileTimeZones],
         pieceTypeFactionById,
       );
       assert.equal(diags.length, 0, `Unexpected violations: ${diags.map((d) => d.message).join('; ')}`);
@@ -142,9 +142,9 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       globalVars: [],
       perPlayerVars: [],
       zones: [
-        { id: asZoneId('quangTri:none'), owner: 'none', visibility: 'public', ordering: 'set' },
-        { id: asZoneId('route1:none'), owner: 'none', visibility: 'public', ordering: 'set' },
-        { id: asZoneId('hanoi:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('quangTri:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: ['highland'], country: 'southVietnam', coastal: true } },
+        { id: asZoneId('route1:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'loc', attributes: { population: 0, econ: 1, terrainTags: ['highway'], country: 'southVietnam', coastal: false } },
+        { id: asZoneId('hanoi:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'city', attributes: { population: 3, econ: 0, terrainTags: [], country: 'northVietnam', coastal: false } },
         { id: asZoneId('available:none'), owner: 'none', visibility: 'public', ordering: 'set' },
       ],
       tokenTypes: [
@@ -159,13 +159,6 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       terminal: { conditions: [] },
       stackingConstraints: [...fitlConstraints],
     });
-
-    // Map spaces use the zone IDs (with :none suffix) so stacking checks can resolve them
-    const runtimeMapSpaces: readonly MapSpaceDef[] = [
-      { id: 'quangTri:none', spaceType: 'province', population: 1, econ: 0, terrainTags: ['highland'], country: 'southVietnam', coastal: true, adjacentTo: [] },
-      { id: 'route1:none', spaceType: 'loc', population: 0, econ: 1, terrainTags: ['highway'], country: 'southVietnam', coastal: false, adjacentTo: [] },
-      { id: 'hanoi:none', spaceType: 'city', population: 3, econ: 0, terrainTags: [], country: 'northVietnam', coastal: false, adjacentTo: [] },
-    ];
 
     const makeState = (): GameState => ({
       globalVars: {},
@@ -198,7 +191,6 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       bindings: {},
       moveParams: {},
       collector: createCollector(),
-      mapSpaces: [...runtimeMapSpaces],
       ...overrides,
     });
 
@@ -242,14 +234,14 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
     });
 
     it('same constraint set produces both compile-time and runtime violations', () => {
-      // Compile-time: 3 bases in province (uses MapSpaceDef IDs without :none suffix)
+      // Compile-time: 3 bases in province (uses zone IDs without :none suffix)
       const placements: ScenarioPiecePlacement[] = [
         { spaceId: 'quangTri', pieceTypeId: 'base', faction: 'US', count: 3 },
       ];
       const compileTimeDiags = validateInitialPlacementsAgainstStackingConstraints(
         fitlConstraints,
         placements,
-        [...mapSpaces],
+        [...compileTimeZones],
         pieceTypeFactionById,
       );
       assert.ok(compileTimeDiags.length > 0, 'Expected compile-time violation');

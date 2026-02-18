@@ -2,7 +2,7 @@ import type { Diagnostic } from './diagnostics.js';
 import { MapPayloadSchema } from './schemas.js';
 import type {
   MapPayload,
-  MapSpaceDef,
+  MapSpaceInput,
   SpaceMarkerConstraintDef,
   SpaceMarkerLatticeDef,
 } from './types.js';
@@ -36,7 +36,7 @@ export function validateMapPayload(
   const spaceMarkers = mapPayload.spaceMarkers ?? [];
 
   const spaceIds = new Set(spaces.map((space) => space.id));
-  const spaceTypes = new Set(spaces.map((space) => space.spaceType));
+  const categories = new Set(spaces.filter((space) => space.category !== undefined).map((space) => space.category!));
 
   const trackKeys = new Set<string>();
   tracks.forEach((track, trackIndex) => {
@@ -180,17 +180,17 @@ export function validateMapPayload(
         ));
       });
 
-      constraint.spaceTypes?.forEach((spaceType, spaceTypeIndex) => {
-        if (spaceTypes.has(spaceType)) {
+      constraint.category?.forEach((cat, catIndex) => {
+        if (categories.has(cat)) {
           return;
         }
 
         diagnostics.push(withContext(
           {
-            code: 'MAP_MARKER_CONSTRAINT_SPACE_TYPE_UNKNOWN',
-            path: `asset.payload.markerLattices[${latticeIndex}].constraints[${constraintIndex}].spaceTypes[${spaceTypeIndex}]`,
+            code: 'MAP_MARKER_CONSTRAINT_CATEGORY_UNKNOWN',
+            path: `asset.payload.markerLattices[${latticeIndex}].constraints[${constraintIndex}].category[${catIndex}]`,
             severity: 'error',
-            message: `Constraint references unknown space type "${spaceType}".`,
+            message: `Constraint references unknown category "${cat}".`,
           },
           context,
         ));
@@ -288,17 +288,24 @@ export function validateMapPayload(
   return diagnostics;
 }
 
-function constraintApplies(constraint: SpaceMarkerConstraintDef, space: MapSpaceDef): boolean {
+function constraintApplies(constraint: SpaceMarkerConstraintDef, space: MapSpaceInput): boolean {
   if (constraint.spaceIds !== undefined && !constraint.spaceIds.includes(space.id)) {
     return false;
   }
 
-  if (constraint.spaceTypes !== undefined && !constraint.spaceTypes.includes(space.spaceType)) {
-    return false;
+  if (constraint.category !== undefined && constraint.category.length > 0) {
+    if (space.category === undefined || !constraint.category.includes(space.category)) {
+      return false;
+    }
   }
 
-  if (constraint.populationEquals !== undefined && constraint.populationEquals !== space.population) {
-    return false;
+  if (constraint.attributeEquals !== undefined) {
+    for (const [key, expected] of Object.entries(constraint.attributeEquals)) {
+      const actual = space.attributes?.[key];
+      if (actual !== expected) {
+        return false;
+      }
+    }
   }
 
   return true;

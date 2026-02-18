@@ -10,6 +10,7 @@ import {
   type GameDef,
   type GameState,
   type Token,
+  type ZoneDef,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
@@ -94,7 +95,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     const def = compileDef();
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
-    const cityZoneIds = (def.mapSpaces ?? []).filter((space) => space.spaceType === 'city').map((space) => space.id);
+    const cityZoneIds = def.zones.filter((zone: ZoneDef) => zone.category === 'city').map((zone: ZoneDef) => zone.id);
     assert.ok(cityZoneIds.length > 0, 'Expected at least one city zone');
 
     const baseState = clearAllZones(initialState(def, 1301, 2));
@@ -115,11 +116,11 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     const unshadedMove = eventMoves.find((move) => move.params.side === 'unshaded');
     assert.notEqual(unshadedMove, undefined, 'Expected unshaded event move');
 
-    const usInCitiesBefore = cityZoneIds.reduce((sum, zoneId) => sum + countFactionTokens(setup, zoneId, 'US'), 0);
+    const usInCitiesBefore = cityZoneIds.reduce((sum: number, zoneId: string) => sum + countFactionTokens(setup, zoneId, 'US'), 0);
     const outOfPlayBefore = countFactionTokens(setup, 'out-of-play-US:none', 'US');
     const result = applyMove(def, setup, unshadedMove!).state;
 
-    const usInCitiesAfter = cityZoneIds.reduce((sum, zoneId) => sum + countFactionTokens(result, zoneId, 'US'), 0);
+    const usInCitiesAfter = cityZoneIds.reduce((sum: number, zoneId: string) => sum + countFactionTokens(result, zoneId, 'US'), 0);
     const outOfPlayAfter = countFactionTokens(result, 'out-of-play-US:none', 'US');
 
     assert.equal(outOfPlayBefore - outOfPlayAfter, 6, 'Expected exactly 6 US pieces moved out of out-of-play');

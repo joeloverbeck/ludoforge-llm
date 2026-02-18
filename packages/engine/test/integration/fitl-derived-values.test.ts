@@ -7,6 +7,7 @@ import {
   asPhaseId,
   asPlayerId,
   asTokenId,
+  asZoneId,
   isCoinControlled,
   isSoloFactionControlled,
   computeTotalSupport,
@@ -16,12 +17,34 @@ import {
   type FactionConfig,
   type GameState,
   type MapPayload,
+  type MapSpaceInput,
   type MarkerWeightConfig,
   type PieceCatalogPayload,
   type ScenarioPayload,
   type Token,
   type VictoryFormula,
+  type ZoneDef,
 } from '../../src/kernel/index.js';
+
+// ─── Map Space Conversion ────────────────────────────────────────────────────
+
+/**
+ * Convert MapSpaceInput (compiler-internal) to ZoneDef (compiled output).
+ * Mirrors the transformation in compile-data-assets.ts.
+ * Data is now in canonical format (category/attributes), no legacy normalization needed.
+ */
+function mapSpaceInputToZoneDef(space: MapSpaceInput): ZoneDef {
+  return {
+    id: asZoneId(space.id),
+    owner: 'none',
+    visibility: 'public',
+    ordering: 'set',
+    adjacentTo: [...space.adjacentTo].sort((left, right) => left.localeCompare(right)).map(asZoneId),
+    ...(space.category === undefined ? {} : { category: space.category }),
+    ...(space.attributes === undefined ? {} : { attributes: space.attributes }),
+    ...(space.visual === undefined ? {} : { visual: space.visual }),
+  };
+}
 
 // ─── Data Loading ────────────────────────────────────────────────────────────
 
@@ -202,7 +225,8 @@ const ARVN_FORMULA: VictoryFormula = {
 
 describe('FITL derived values — integration', () => {
   const data = loadFitlData();
-  const spaces = data.mapPayload.spaces;
+  const rawSpaces = data.mapPayload.spaces;
+  const spaces: readonly ZoneDef[] = rawSpaces.map(mapSpaceInputToZoneDef);
 
   const scenarioConfigs = [
     { id: 'fitl-scenario-full', label: 'full' },
@@ -253,7 +277,7 @@ describe('FITL derived values — integration', () => {
         it(`${spaceId} has Pop 0 so NVA control contributes nothing to pop total`, () => {
           const space = spaces.find((s) => s.id === spaceId);
           assert.ok(space, `Space ${spaceId} not found`);
-          assert.equal(space.population, 0);
+          assert.equal(space.attributes?.population ?? 0, 0);
         });
       }
     });

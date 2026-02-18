@@ -96,7 +96,6 @@ function makeEvalContext(
     bindings,
     runtimeTableIndex,
     collector: createCollector(),
-    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   };
 }
 

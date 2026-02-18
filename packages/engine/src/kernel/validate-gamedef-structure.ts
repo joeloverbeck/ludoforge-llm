@@ -1,7 +1,7 @@
 import type { Diagnostic } from './diagnostics.js';
 import { RUNTIME_RESERVED_MOVE_BINDING_NAMES } from './move-runtime-bindings.js';
 import { resolveRuntimeTableRowsByPath } from './runtime-table-path.js';
-import type { GameDef, MapSpaceDef, PlayerSel, ScenarioPiecePlacement, StackingConstraint } from './types.js';
+import type { GameDef, PlayerSel, ScenarioPiecePlacement, StackingConstraint, ZoneDef } from './types.js';
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
 const PLAYER_ZONE_QUALIFIER_PATTERN = /^[0-9]+$/;
@@ -913,10 +913,10 @@ export const buildValidationContext = (
   const actionCandidates = [...new Set(def.actions.map((action) => action.id))].sort((left, right) =>
     left.localeCompare(right),
   );
-  const mapSpaceZoneCandidates = [...new Set((def.mapSpaces ?? []).map((space) => space.id))].sort((left, right) =>
+  const mapSpaceZoneCandidates = [...new Set(def.zones.filter((zone) => zone.category !== undefined).map((zone) => zone.id))].sort((left, right) =>
     left.localeCompare(right),
   );
-  const mapSpacePropKinds = classifyMapSpacePropertyKinds(def.mapSpaces);
+  const mapSpacePropKinds = classifyZoneAttributePropertyKinds(def.zones);
   const mapSpacePropCandidates = [...mapSpacePropKinds.keys()].sort((left, right) => left.localeCompare(right));
   const runtimeDataAssets = def.runtimeDataAssets ?? [];
   const runtimeDataAssetIdsByNormalized = new Map<string, string>();
@@ -975,20 +975,21 @@ export const buildValidationContext = (
   return { context, phaseCandidates, actionCandidates };
 };
 
-function classifyMapSpacePropertyKinds(
-  mapSpaces: readonly MapSpaceDef[] | undefined,
+function classifyZoneAttributePropertyKinds(
+  zones: readonly ZoneDef[],
 ): ReadonlyMap<string, 'scalar' | 'array' | 'mixed'> {
   const kinds = new Map<string, 'scalar' | 'array' | 'mixed'>();
-  if (mapSpaces === undefined || mapSpaces.length === 0) {
-    return kinds;
-  }
 
-  for (const space of mapSpaces) {
-    for (const [key, value] of Object.entries(space as unknown as Record<string, unknown>)) {
-      if (!Array.isArray(value) && typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
-        continue;
-      }
+  // Synthetic zone properties accessible via zoneProp / zonePropIncludes.
+  // 'id' and 'category' are first-class ZoneDef fields, not stored in attributes.
+  kinds.set('id', 'scalar');
+  kinds.set('category', 'scalar');
 
+  for (const zone of zones) {
+    if (zone.attributes === undefined) {
+      continue;
+    }
+    for (const [key, value] of Object.entries(zone.attributes)) {
       const nextKind = Array.isArray(value) ? 'array' : 'scalar';
       const existingKind = kinds.get(key);
       if (existingKind === undefined) {
@@ -1004,18 +1005,22 @@ function classifyMapSpacePropertyKinds(
   return kinds;
 }
 
-const spaceMatchesFilter = (space: MapSpaceDef, filter: StackingConstraint['spaceFilter']): boolean => {
-  if (filter.spaceIds !== undefined && filter.spaceIds.length > 0 && !filter.spaceIds.includes(space.id)) {
+const zoneMatchesFilter = (zone: ZoneDef, filter: StackingConstraint['spaceFilter']): boolean => {
+  if (filter.spaceIds !== undefined && filter.spaceIds.length > 0 && !filter.spaceIds.includes(zone.id)) {
     return false;
   }
-  if (filter.spaceTypes !== undefined && filter.spaceTypes.length > 0 && !filter.spaceTypes.includes(space.spaceType)) {
-    return false;
+  if (filter.category !== undefined && filter.category.length > 0) {
+    if (zone.category === undefined || !filter.category.includes(zone.category)) {
+      return false;
+    }
   }
-  if (filter.country !== undefined && filter.country.length > 0 && !filter.country.includes(space.country)) {
-    return false;
-  }
-  if (filter.populationEquals !== undefined && space.population !== filter.populationEquals) {
-    return false;
+  if (filter.attributeEquals !== undefined) {
+    for (const [key, expected] of Object.entries(filter.attributeEquals)) {
+      const actual = zone.attributes?.[key];
+      if (actual !== expected) {
+        return false;
+      }
+    }
   }
   return true;
 };
@@ -1044,11 +1049,11 @@ const placementMatchesPieceFilter = (
 export const validateInitialPlacementsAgainstStackingConstraints = (
   constraints: readonly StackingConstraint[],
   placements: readonly ScenarioPiecePlacement[],
-  spaces: readonly MapSpaceDef[],
+  zones: readonly ZoneDef[],
   pieceTypeFactionById?: ReadonlyMap<string, string>,
 ): Diagnostic[] => {
   const diagnostics: Diagnostic[] = [];
-  const spaceMap = new Map(spaces.map((space) => [space.id, space]));
+  const zoneMap = new Map(zones.map((zone) => [String(zone.id), zone]));
   const reportedMissingFactionKeys = new Set<string>();
 
   for (const constraint of constraints) {
@@ -1078,27 +1083,27 @@ export const validateInitialPlacementsAgainstStackingConstraints = (
       }
     }
 
-    const matchingSpaceIds = spaces
-      .filter((space) => spaceMatchesFilter(space, constraint.spaceFilter))
-      .map((space) => space.id);
+    const matchingZoneIds = zones
+      .filter((zone) => zoneMatchesFilter(zone, constraint.spaceFilter))
+      .map((zone) => String(zone.id));
 
-    const matchingSpaceSet = new Set(matchingSpaceIds);
+    const matchingZoneSet = new Set(matchingZoneIds);
 
-    const countBySpace = new Map<string, number>();
+    const countByZone = new Map<string, number>();
     for (const placement of placements) {
-      if (!matchingSpaceSet.has(placement.spaceId)) {
+      if (!matchingZoneSet.has(placement.spaceId)) {
         continue;
       }
       if (!placementMatchesPieceFilter(placement, constraint.pieceFilter, pieceTypeFactionById)) {
         continue;
       }
-      const current = countBySpace.get(placement.spaceId) ?? 0;
-      countBySpace.set(placement.spaceId, current + placement.count);
+      const current = countByZone.get(placement.spaceId) ?? 0;
+      countByZone.set(placement.spaceId, current + placement.count);
     }
 
-    for (const [spaceId, count] of countBySpace) {
-      const space = spaceMap.get(spaceId);
-      const spaceLabel = space ? `${spaceId} (${space.spaceType})` : spaceId;
+    for (const [spaceId, count] of countByZone) {
+      const zone = zoneMap.get(spaceId);
+      const spaceLabel = zone ? `${spaceId} (${zone.category ?? 'zone'})` : spaceId;
 
       if (constraint.rule === 'prohibit' && count > 0) {
         diagnostics.push({

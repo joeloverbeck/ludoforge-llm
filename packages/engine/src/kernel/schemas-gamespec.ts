@@ -52,16 +52,57 @@ export const PieceCatalogPayloadSchema = z
   })
   .strict();
 
+export const AttributeValueSchema = z.union([
+  StringSchema,
+  NumberSchema,
+  BooleanSchema,
+  z.array(StringSchema),
+]);
+
+export const ZoneShapeSchema = z.union([
+  z.literal('rectangle'), z.literal('circle'), z.literal('hexagon'), z.literal('diamond'),
+  z.literal('ellipse'), z.literal('triangle'), z.literal('line'), z.literal('octagon'),
+]);
+
+export const TokenShapeSchema = z.union([
+  z.literal('circle'), z.literal('square'), z.literal('triangle'), z.literal('diamond'),
+  z.literal('hexagon'), z.literal('cylinder'), z.literal('meeple'), z.literal('card'),
+]);
+
+export const ZoneVisualHintsSchema = z
+  .object({
+    shape: ZoneShapeSchema.optional(),
+    width: NumberSchema.optional(),
+    height: NumberSchema.optional(),
+    color: StringSchema.optional(),
+    label: StringSchema.optional(),
+  })
+  .strict();
+
+export const TokenVisualHintsSchema = z
+  .object({
+    shape: TokenShapeSchema.optional(),
+    color: StringSchema.optional(),
+    size: NumberSchema.optional(),
+    symbol: StringSchema.optional(),
+  })
+  .strict();
+
+export const FactionDefSchema = z
+  .object({
+    id: StringSchema.min(1),
+    color: StringSchema.min(1),
+    displayName: StringSchema.optional(),
+  })
+  .strict();
+
 export const MapSpaceSchema = z
   .object({
     id: StringSchema.min(1),
-    spaceType: StringSchema.min(1),
-    population: IntegerSchema.min(0),
-    econ: IntegerSchema.min(0),
-    terrainTags: z.array(StringSchema.min(1)),
-    country: StringSchema.min(1),
-    coastal: BooleanSchema,
+    category: StringSchema.min(1).optional(),
+    attributes: z.record(StringSchema, AttributeValueSchema).optional(),
     adjacentTo: z.array(StringSchema.min(1)),
+    visual: ZoneVisualHintsSchema.optional(),
   })
   .strict();
 
@@ -87,8 +128,8 @@ export const NumericTrackSchema = z
 export const SpaceMarkerConstraintSchema = z
   .object({
     spaceIds: z.array(StringSchema.min(1)).optional(),
-    spaceTypes: z.array(StringSchema.min(1)).optional(),
-    populationEquals: IntegerSchema.min(0).optional(),
+    category: z.array(StringSchema.min(1)).optional(),
+    attributeEquals: z.record(StringSchema, AttributeValueSchema).optional(),
     allowedStates: z.array(StringSchema.min(1)),
   })
   .strict();
@@ -125,9 +166,8 @@ export const StackingConstraintSchema = z
     spaceFilter: z
       .object({
         spaceIds: z.array(StringSchema.min(1)).optional(),
-        spaceTypes: z.array(StringSchema.min(1)).optional(),
-        country: z.array(StringSchema.min(1)).optional(),
-        populationEquals: IntegerSchema.min(0).optional(),
+        category: z.array(StringSchema.min(1)).optional(),
+        attributeEquals: z.record(StringSchema, AttributeValueSchema).optional(),
       })
       .strict(),
     pieceFilter: z

@@ -3,7 +3,6 @@ import type { MoveParamValue, PlayerId } from '@ludoforge/engine/runtime';
 export interface RenderModel {
   readonly zones: readonly RenderZone[];
   readonly adjacencies: readonly RenderAdjacency[];
-  readonly mapSpaces: readonly RenderMapSpace[];
   readonly tokens: readonly RenderToken[];
   readonly globalVars: readonly RenderVariable[];
   readonly playerVars: ReadonlyMap<PlayerId, readonly RenderVariable[]>;
@@ -45,18 +44,6 @@ export interface RenderAdjacency {
   readonly from: string;
   readonly to: string;
   readonly isHighlighted: boolean;
-}
-
-export interface RenderMapSpace {
-  readonly id: string;
-  readonly displayName: string;
-  readonly spaceType: string;
-  readonly population: number;
-  readonly econ: number;
-  readonly terrainTags: readonly string[];
-  readonly country: string;
-  readonly coastal: boolean;
-  readonly adjacentTo: readonly string[];
 }
 
 export interface RenderToken {

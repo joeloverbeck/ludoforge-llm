@@ -4,19 +4,30 @@ import { describe, it } from 'node:test';
 import {
   checkStackingConstraints,
 } from '../../src/kernel/index.js';
-import type { MapSpaceDef, StackingConstraint, Token } from '../../src/kernel/types.js';
-import { asTokenId } from '../../src/kernel/branded.js';
+import type { AttributeValue, StackingConstraint, Token, ZoneDef } from '../../src/kernel/types.js';
+import { asTokenId, asZoneId } from '../../src/kernel/branded.js';
 
-const makeSpace = (overrides: Partial<MapSpaceDef> & Pick<MapSpaceDef, 'id'>): MapSpaceDef => ({
-  spaceType: 'province',
-  population: 2,
-  econ: 0,
-  terrainTags: [],
-  country: 'southVietnam',
-  coastal: false,
-  adjacentTo: [],
-  ...overrides,
-});
+const makeSpace = (
+  id: string,
+  overrides?: {
+    category?: string;
+    attributes?: Readonly<Record<string, AttributeValue>>;
+    adjacentTo?: readonly string[];
+  },
+): ZoneDef => {
+  const base: ZoneDef = {
+    id: asZoneId(id),
+    owner: 'none',
+    visibility: 'public',
+    ordering: 'set',
+    category: overrides?.category ?? 'province',
+    attributes: overrides?.attributes ?? { population: 2, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false },
+  };
+  if (overrides?.adjacentTo !== undefined) {
+    return { ...base, adjacentTo: overrides.adjacentTo.map(asZoneId) };
+  }
+  return base;
+};
 
 const makeToken = (id: string, type: string, faction: string): Token => ({
   id: asTokenId(id),
@@ -27,7 +38,7 @@ const makeToken = (id: string, type: string, faction: string): Token => ({
 const maxTwoBases: StackingConstraint = {
   id: 'max-2-bases',
   description: 'Max 2 Bases per Province or City',
-  spaceFilter: { spaceTypes: ['province', 'city'] },
+  spaceFilter: { category: ['province', 'city'] },
   pieceFilter: { pieceTypeIds: ['base'] },
   rule: 'maxCount',
   maxCount: 2,
@@ -36,7 +47,7 @@ const maxTwoBases: StackingConstraint = {
 const noBasesOnLocs: StackingConstraint = {
   id: 'no-bases-loc',
   description: 'No Bases on LoCs',
-  spaceFilter: { spaceTypes: ['loc'] },
+  spaceFilter: { category: ['loc'] },
   pieceFilter: { pieceTypeIds: ['base'] },
   rule: 'prohibit',
 };
@@ -44,7 +55,7 @@ const noBasesOnLocs: StackingConstraint = {
 const noUsArvnInNv: StackingConstraint = {
   id: 'nv-restriction',
   description: 'Only NVA/VC in North Vietnam',
-  spaceFilter: { country: ['northVietnam'] },
+  spaceFilter: { attributeEquals: { country: 'northVietnam' } },
   pieceFilter: { factions: ['US', 'ARVN'] },
   rule: 'prohibit',
 };
@@ -57,7 +68,7 @@ const tokenTypeFactionById = new Map<string, string>([
 
 describe('checkStackingConstraints', () => {
   it('returns no violations when maxCount is not exceeded', () => {
-    const spaces = [makeSpace({ id: 'quangTri', spaceType: 'province' })];
+    const spaces = [makeSpace('quangTri', { category: 'province' })];
     const tokens = [
       makeToken('b1', 'base', 'US'),
       makeToken('b2', 'base', 'ARVN'),
@@ -68,7 +79,7 @@ describe('checkStackingConstraints', () => {
   });
 
   it('returns violation when maxCount is exceeded', () => {
-    const spaces = [makeSpace({ id: 'quangTri', spaceType: 'province' })];
+    const spaces = [makeSpace('quangTri', { category: 'province' })];
     const tokens = [
       makeToken('b1', 'base', 'US'),
       makeToken('b2', 'base', 'ARVN'),
@@ -84,7 +95,7 @@ describe('checkStackingConstraints', () => {
   });
 
   it('returns violation for prohibit rule with matching piece', () => {
-    const spaces = [makeSpace({ id: 'route1', spaceType: 'loc' })];
+    const spaces = [makeSpace('route1', { category: 'loc' })];
     const tokens = [makeToken('b1', 'base', 'US')];
 
     const violations = checkStackingConstraints([noBasesOnLocs], spaces, 'route1', tokens);
@@ -94,7 +105,7 @@ describe('checkStackingConstraints', () => {
   });
 
   it('returns no violation for prohibit rule with non-matching piece type', () => {
-    const spaces = [makeSpace({ id: 'route1', spaceType: 'loc' })];
+    const spaces = [makeSpace('route1', { category: 'loc' })];
     const tokens = [makeToken('t1', 'troops', 'US')];
 
     const violations = checkStackingConstraints([noBasesOnLocs], spaces, 'route1', tokens);
@@ -102,7 +113,7 @@ describe('checkStackingConstraints', () => {
   });
 
   it('returns no violation when no constraints are defined', () => {
-    const spaces = [makeSpace({ id: 'quangTri', spaceType: 'province' })];
+    const spaces = [makeSpace('quangTri', { category: 'province' })];
     const tokens = [makeToken('b1', 'base', 'US')];
 
     const violations = checkStackingConstraints([], spaces, 'quangTri', tokens);
@@ -110,7 +121,7 @@ describe('checkStackingConstraints', () => {
   });
 
   it('returns no violation when spaceFilter does not match destination', () => {
-    const spaces = [makeSpace({ id: 'route1', spaceType: 'loc' })];
+    const spaces = [makeSpace('route1', { category: 'loc' })];
     const tokens = [
       makeToken('b1', 'base', 'US'),
       makeToken('b2', 'base', 'ARVN'),
@@ -123,7 +134,7 @@ describe('checkStackingConstraints', () => {
   });
 
   it('returns no violation when pieceFilter does not match token', () => {
-    const spaces = [makeSpace({ id: 'quangTri', spaceType: 'province' })];
+    const spaces = [makeSpace('quangTri', { category: 'province' })];
     const tokens = [
       makeToken('t1', 'troops', 'US'),
       makeToken('t2', 'troops', 'US'),
@@ -135,8 +146,8 @@ describe('checkStackingConstraints', () => {
     assert.equal(violations.length, 0);
   });
 
-  it('returns no violation when zone is not in mapSpaces', () => {
-    const spaces = [makeSpace({ id: 'differentZone', spaceType: 'province' })];
+  it('returns no violation when zone is not in zones list', () => {
+    const spaces = [makeSpace('differentZone', { category: 'province' })];
     const tokens = [
       makeToken('b1', 'base', 'US'),
       makeToken('b2', 'base', 'ARVN'),
@@ -148,7 +159,7 @@ describe('checkStackingConstraints', () => {
   });
 
   it('enforces country-based prohibit constraint', () => {
-    const spaces = [makeSpace({ id: 'hanoi', spaceType: 'city', country: 'northVietnam' })];
+    const spaces = [makeSpace('hanoi', { category: 'city', attributes: { population: 2, econ: 0, terrainTags: [], country: 'northVietnam', coastal: false } })];
     const tokens = [makeToken('t1', 'troops', 'US')];
 
     const violations = checkStackingConstraints([noUsArvnInNv], spaces, 'hanoi', tokens, tokenTypeFactionById);
@@ -158,7 +169,7 @@ describe('checkStackingConstraints', () => {
   });
 
   it('allows NVA/VC pieces in North Vietnam with country-based prohibit', () => {
-    const spaces = [makeSpace({ id: 'hanoi', spaceType: 'city', country: 'northVietnam' })];
+    const spaces = [makeSpace('hanoi', { category: 'city', attributes: { population: 2, econ: 0, terrainTags: [], country: 'northVietnam', coastal: false } })];
     const tokens = [
       makeToken('g1', 'guerrilla', 'NVA'),
       makeToken('g2', 'guerrilla', 'VC'),
@@ -169,12 +180,12 @@ describe('checkStackingConstraints', () => {
   });
 
   it('uses canonical token-type faction mapping when provided', () => {
-    const spaces = [makeSpace({ id: 'hanoi', spaceType: 'city', country: 'northVietnam' })];
+    const spaces = [makeSpace('hanoi', { category: 'city', attributes: { population: 2, econ: 0, terrainTags: [], country: 'northVietnam', coastal: false } })];
     const tokens = [makeToken('t1', 'us-troops', 'US')];
     const lowerCaseConstraint: StackingConstraint = {
       id: 'nv-restriction-canonical',
       description: 'Only nva/vc in North Vietnam (canonical ids)',
-      spaceFilter: { country: ['northVietnam'] },
+      spaceFilter: { attributeEquals: { country: 'northVietnam' } },
       pieceFilter: { factions: ['us', 'arvn'] },
       rule: 'prohibit',
     };
@@ -192,16 +203,16 @@ describe('checkStackingConstraints', () => {
     assert.equal(violationsWithMapping[0]!.constraintId, 'nv-restriction-canonical');
   });
 
-  it('checks populationEquals filter', () => {
+  it('checks attributeEquals filter', () => {
     const constraint: StackingConstraint = {
       id: 'pop-zero-limit',
       description: 'No bases in unpopulated spaces',
-      spaceFilter: { populationEquals: 0 },
+      spaceFilter: { attributeEquals: { population: 0 } },
       pieceFilter: { pieceTypeIds: ['base'] },
       rule: 'prohibit',
     };
 
-    const spaces = [makeSpace({ id: 'loc1', population: 0 })];
+    const spaces = [makeSpace('loc1', { attributes: { population: 0, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false } })];
     const tokens = [makeToken('b1', 'base', 'US')];
 
     const violations = checkStackingConstraints([constraint], spaces, 'loc1', tokens);
@@ -209,7 +220,7 @@ describe('checkStackingConstraints', () => {
   });
 
   it('multiple constraints can produce multiple violations', () => {
-    const spaces = [makeSpace({ id: 'route1', spaceType: 'loc' })];
+    const spaces = [makeSpace('route1', { category: 'loc' })];
     const tokens = [
       makeToken('b1', 'base', 'US'),
       makeToken('b2', 'base', 'ARVN'),
@@ -232,7 +243,7 @@ describe('checkStackingConstraints', () => {
       maxCount: 1,
     };
 
-    const spaces = [makeSpace({ id: 'saigon', spaceType: 'city' })];
+    const spaces = [makeSpace('saigon', { category: 'city' })];
     const tokens = [
       makeToken('b1', 'base', 'US'),
       makeToken('b2', 'base', 'ARVN'),

@@ -160,7 +160,6 @@ export const resolveActionApplicabilityPreflight = ({
     ...(freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter }),
     ...(freeOperationZoneFilterDiagnostics === undefined ? {} : { freeOperationZoneFilterDiagnostics }),
     ...(maxQueryResults === undefined ? {} : { maxQueryResults }),
-    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
     collector: createCollector(),
   };
 

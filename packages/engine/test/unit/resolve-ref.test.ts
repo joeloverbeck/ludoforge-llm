@@ -13,7 +13,6 @@ import {
   type EvalContext,
   type GameDef,
   type GameState,
-  type MapSpaceDef,
   type Token,
 } from '../../src/kernel/index.js';
 
@@ -342,38 +341,53 @@ describe('resolveRef', () => {
     );
   });
 
-  it('resolves zoneProp — returns scalar properties from mapSpaces', () => {
-    const mapSpaces: readonly MapSpaceDef[] = [
-      {
-        id: 'saigon',
-        spaceType: 'city',
-        population: 2,
-        econ: 3,
-        terrainTags: ['lowland'],
-        country: 'south-vietnam',
-        coastal: true,
-        adjacentTo: ['hue'],
+  it('resolves zoneProp — returns scalar properties from zone attributes', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        zones: [
+          ...makeDef().zones,
+          {
+            id: asZoneId('saigon'),
+            owner: 'none' as const,
+            visibility: 'public' as const,
+            ordering: 'set' as const,
+            adjacentTo: [asZoneId('hue')],
+            category: 'city',
+            attributes: { population: 2, econ: 3, terrainTags: ['lowland'], country: 'south-vietnam', coastal: true },
+          },
+        ],
       },
-    ];
-    const ctx = makeCtx({ mapSpaces });
-    assert.equal(resolveRef({ ref: 'zoneProp', zone: 'saigon', prop: 'spaceType' }, ctx), 'city');
+    });
     assert.equal(resolveRef({ ref: 'zoneProp', zone: 'saigon', prop: 'population' }, ctx), 2);
     assert.equal(resolveRef({ ref: 'zoneProp', zone: 'saigon', prop: 'coastal' }, ctx), true);
   });
 
-  it('throws ZONE_PROP_NOT_FOUND when zone is not in mapSpaces', () => {
-    const ctx = makeCtx({ mapSpaces: [] });
+  it('throws ZONE_PROP_NOT_FOUND when zone is not in def.zones', () => {
+    const ctx = makeCtx();
     assert.throws(
-      () => resolveRef({ ref: 'zoneProp', zone: 'unknown', prop: 'spaceType' }, ctx),
+      () => resolveRef({ ref: 'zoneProp', zone: 'unknown', prop: 'population' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND'),
     );
   });
 
   it('throws ZONE_PROP_NOT_FOUND when property is not on zone', () => {
-    const mapSpaces: readonly MapSpaceDef[] = [
-      { id: 'hue', spaceType: 'city', population: 1, econ: 1, terrainTags: [], country: 'south-vietnam', coastal: false, adjacentTo: [] },
-    ];
-    const ctx = makeCtx({ mapSpaces });
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        zones: [
+          ...makeDef().zones,
+          {
+            id: asZoneId('hue'),
+            owner: 'none' as const,
+            visibility: 'public' as const,
+            ordering: 'set' as const,
+            category: 'city',
+            attributes: { population: 1, econ: 1, country: 'south-vietnam', coastal: false },
+          },
+        ],
+      },
+    });
     assert.throws(
       () => resolveRef({ ref: 'zoneProp', zone: 'hue', prop: 'missingProp' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND'),
@@ -381,10 +395,22 @@ describe('resolveRef', () => {
   });
 
   it('throws TYPE_MISMATCH when zoneProp targets an array property', () => {
-    const mapSpaces: readonly MapSpaceDef[] = [
-      { id: 'hue', spaceType: 'city', population: 1, econ: 1, terrainTags: ['highland'], country: 'south-vietnam', coastal: false, adjacentTo: [] },
-    ];
-    const ctx = makeCtx({ mapSpaces });
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        zones: [
+          ...makeDef().zones,
+          {
+            id: asZoneId('hue'),
+            owner: 'none' as const,
+            visibility: 'public' as const,
+            ordering: 'set' as const,
+            category: 'city',
+            attributes: { population: 1, econ: 1, terrainTags: ['highland'], country: 'south-vietnam', coastal: false },
+          },
+        ],
+      },
+    });
     assert.throws(
       () => resolveRef({ ref: 'zoneProp', zone: 'hue', prop: 'terrainTags' }, ctx),
       (error: unknown) =>

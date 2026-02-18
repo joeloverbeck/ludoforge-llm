@@ -338,36 +338,29 @@ describe('evalValue', () => {
   });
 
   it('supports aggregate valueExpr evaluation from filtered map spaces', () => {
-    const mapSpaces = [
-      {
-        id: 'alpha:none',
-        spaceType: 'city',
-        population: 3,
-        econ: 1,
-        terrainTags: [],
-        country: 'sv',
-        coastal: false,
-        adjacentTo: ['beta:none'],
-      },
-      {
-        id: 'beta:none',
-        spaceType: 'province',
-        population: 2,
-        econ: 1,
-        terrainTags: [],
-        country: 'sv',
-        coastal: false,
-        adjacentTo: ['alpha:none'],
-      },
-    ] as const;
     const def: GameDef = {
       ...makeDef(),
       zones: [
         ...makeDef().zones,
-        { id: asZoneId('alpha:none'), owner: 'none', visibility: 'public', ordering: 'set' },
-        { id: asZoneId('beta:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        {
+          id: asZoneId('alpha:none'),
+          owner: 'none' as const,
+          visibility: 'public' as const,
+          ordering: 'set' as const,
+          adjacentTo: [asZoneId('beta:none')],
+          category: 'city',
+          attributes: { population: 3, econ: 1, country: 'sv', coastal: false },
+        },
+        {
+          id: asZoneId('beta:none'),
+          owner: 'none' as const,
+          visibility: 'public' as const,
+          ordering: 'set' as const,
+          adjacentTo: [asZoneId('alpha:none')],
+          category: 'province',
+          attributes: { population: 2, econ: 1, country: 'sv', coastal: false },
+        },
       ],
-      mapSpaces,
     };
     const state: GameState = {
       ...makeState(),
@@ -381,7 +374,7 @@ describe('evalValue', () => {
         'beta:none': { supportOpposition: 'neutral' },
       },
     };
-    const ctx = makeCtx({ def, state, mapSpaces, adjacencyGraph: buildAdjacencyGraph(def.zones) });
+    const ctx = makeCtx({ def, state, adjacencyGraph: buildAdjacencyGraph(def.zones) });
     const expr: ValueExpr = {
       aggregate: {
         op: 'sum',

@@ -6,8 +6,8 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { readProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type MarkerConstraintDef = {
-  readonly spaceTypes?: readonly string[];
-  readonly populationEquals?: number;
+  readonly category?: readonly string[];
+  readonly attributeEquals?: Readonly<Record<string, unknown>>;
   readonly allowedStates: readonly string[];
 };
 
@@ -59,14 +59,14 @@ describe('FITL production support/opposition marker lattice', () => {
     assert.ok(Array.isArray(supportOpposition.constraints));
     assert.equal(supportOpposition.constraints.length, 2);
 
-    const locConstraint = supportOpposition.constraints.find((constraint) => constraint.spaceTypes !== undefined);
+    const locConstraint = supportOpposition.constraints.find((constraint) => constraint.category !== undefined);
     assert.notEqual(locConstraint, undefined);
-    assert.deepEqual(locConstraint?.spaceTypes, ['loc']);
+    assert.deepEqual(locConstraint?.category, ['loc']);
     assert.deepEqual(locConstraint?.allowedStates, ['neutral']);
 
-    const popZeroConstraint = supportOpposition.constraints.find((constraint) => constraint.populationEquals !== undefined);
+    const popZeroConstraint = supportOpposition.constraints.find((constraint) => constraint.attributeEquals !== undefined);
     assert.notEqual(popZeroConstraint, undefined);
-    assert.equal(popZeroConstraint?.populationEquals, 0);
+    assert.equal((popZeroConstraint?.attributeEquals as Record<string, unknown> | undefined)?.population, 0);
     assert.deepEqual(popZeroConstraint?.allowedStates, ['neutral']);
 
     const terrorLattice = markerLattices.find((lattice) => lattice.id === 'terror');
@@ -74,8 +74,8 @@ describe('FITL production support/opposition marker lattice', () => {
     assert.deepEqual(terrorLattice.states, ['none', 'terror']);
     assert.equal(terrorLattice.defaultState, 'none');
     assert.ok(Array.isArray(terrorLattice.constraints));
-    const terrorLocConstraint = terrorLattice.constraints.find((constraint) => constraint.spaceTypes !== undefined);
-    assert.deepEqual(terrorLocConstraint?.spaceTypes, ['loc']);
+    const terrorLocConstraint = terrorLattice.constraints.find((constraint) => constraint.category !== undefined);
+    assert.deepEqual(terrorLocConstraint?.category, ['loc']);
     assert.deepEqual(terrorLocConstraint?.allowedStates, ['none']);
 
     const sabotageLattice = markerLattices.find((lattice) => lattice.id === 'sabotage');
@@ -83,8 +83,8 @@ describe('FITL production support/opposition marker lattice', () => {
     assert.deepEqual(sabotageLattice.states, ['none', 'sabotage']);
     assert.equal(sabotageLattice.defaultState, 'none');
     assert.ok(Array.isArray(sabotageLattice.constraints));
-    const sabotageConstraint = sabotageLattice.constraints.find((constraint) => constraint.spaceTypes !== undefined);
-    assert.deepEqual(sabotageConstraint?.spaceTypes, ['city', 'province']);
+    const sabotageConstraint = sabotageLattice.constraints.find((constraint) => constraint.category !== undefined);
+    assert.deepEqual(sabotageConstraint?.category, ['city', 'province']);
     assert.deepEqual(sabotageConstraint?.allowedStates, ['none']);
 
     assert.equal(spaceMarkers === undefined || spaceMarkers.length === 0, true);

@@ -34,19 +34,6 @@ describe('render-model types', () => {
         },
       ],
       adjacencies: [{ from: 'table', to: 'reserve', isHighlighted: false }],
-      mapSpaces: [
-        {
-          id: 'city-a',
-          displayName: 'City A',
-          spaceType: 'urban',
-          population: 2,
-          econ: 1,
-          terrainTags: ['river'],
-          country: 'us',
-          coastal: false,
-          adjacentTo: ['city-b'],
-        },
-      ],
       tokens: [
         {
           id: 'token:1',

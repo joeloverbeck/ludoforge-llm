@@ -1308,29 +1308,21 @@ describe('evalQuery', () => {
   });
 
   it('mapSpaces query evaluates zoneProp filters only across map spaces', () => {
+    const defWithMapSpaces = {
+      ...makeDef(),
+      zones: makeDef().zones.map((zone) => {
+        if (zone.id === asZoneId('battlefield:none')) {
+          return { ...zone, category: 'province', attributes: { population: 1, econ: 0, terrainTags: ['lowland'], country: 'southVietnam', coastal: false } };
+        }
+        if (zone.id === asZoneId('tableau:2')) {
+          return { ...zone, category: 'city', attributes: { population: 2, econ: 0, terrainTags: ['urban'], country: 'southVietnam', coastal: false } };
+        }
+        return zone;
+      }),
+    };
     const ctx = makeCtx({
-      mapSpaces: [
-        {
-          id: 'battlefield:none',
-          spaceType: 'province',
-          population: 1,
-          econ: 0,
-          terrainTags: ['lowland'],
-          country: 'southVietnam',
-          coastal: false,
-          adjacentTo: [],
-        },
-        {
-          id: 'tableau:2',
-          spaceType: 'city',
-          population: 2,
-          econ: 0,
-          terrainTags: ['urban'],
-          country: 'southVietnam',
-          coastal: false,
-          adjacentTo: [],
-        },
-      ],
+      def: defWithMapSpaces,
+      adjacencyGraph: buildAdjacencyGraph(defWithMapSpaces.zones),
     });
 
     assert.deepEqual(
@@ -1340,7 +1332,7 @@ describe('evalQuery', () => {
           filter: {
             condition: {
               op: '==',
-              left: { ref: 'zoneProp', zone: '$zone', prop: 'spaceType' },
+              left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
               right: 'city',
             },
           },
@@ -1352,29 +1344,21 @@ describe('evalQuery', () => {
   });
 
   it('tokensInMapSpaces query composes map-space condition filters with token filters', () => {
+    const defWithMapSpaces = {
+      ...makeDef(),
+      zones: makeDef().zones.map((zone) => {
+        if (zone.id === asZoneId('battlefield:none')) {
+          return { ...zone, category: 'province', attributes: { population: 1, econ: 0, terrainTags: ['lowland'], country: 'southVietnam', coastal: false } };
+        }
+        if (zone.id === asZoneId('tableau:2')) {
+          return { ...zone, category: 'city', attributes: { population: 2, econ: 0, terrainTags: ['urban'], country: 'northVietnam', coastal: false } };
+        }
+        return zone;
+      }),
+    };
     const ctx = makeCtx({
-      mapSpaces: [
-        {
-          id: 'battlefield:none',
-          spaceType: 'province',
-          population: 1,
-          econ: 0,
-          terrainTags: ['lowland'],
-          country: 'southVietnam',
-          coastal: false,
-          adjacentTo: [],
-        },
-        {
-          id: 'tableau:2',
-          spaceType: 'city',
-          population: 2,
-          econ: 0,
-          terrainTags: ['urban'],
-          country: 'northVietnam',
-          coastal: false,
-          adjacentTo: [],
-        },
-      ],
+      def: defWithMapSpaces,
+      adjacencyGraph: buildAdjacencyGraph(defWithMapSpaces.zones),
     });
 
     assert.deepEqual(
@@ -1397,19 +1381,18 @@ describe('evalQuery', () => {
   });
 
   it('zones query no longer suppresses zoneProp lookup errors from non-map zones', () => {
+    const defWithMapSpaces = {
+      ...makeDef(),
+      zones: makeDef().zones.map((zone) => {
+        if (zone.id === asZoneId('battlefield:none')) {
+          return { ...zone, category: 'province', attributes: { population: 1, econ: 0, terrainTags: ['lowland'], country: 'southVietnam', coastal: false } };
+        }
+        return zone;
+      }),
+    };
     const ctx = makeCtx({
-      mapSpaces: [
-        {
-          id: 'battlefield:none',
-          spaceType: 'province',
-          population: 1,
-          econ: 0,
-          terrainTags: ['lowland'],
-          country: 'southVietnam',
-          coastal: false,
-          adjacentTo: [],
-        },
-      ],
+      def: defWithMapSpaces,
+      adjacencyGraph: buildAdjacencyGraph(defWithMapSpaces.zones),
     });
 
     assert.throws(
@@ -1420,7 +1403,7 @@ describe('evalQuery', () => {
             filter: {
               condition: {
                 op: '==',
-                left: { ref: 'zoneProp', zone: '$zone', prop: 'spaceType' },
+                left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
                 right: 'city',
               },
             },

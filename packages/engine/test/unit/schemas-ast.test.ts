@@ -76,7 +76,7 @@ describe('AST and selector schemas', () => {
   it('parses reference ValueExpr variants used by dynamic zone/property logic', () => {
     const references = [
       { ref: 'tokenZone', token: '$piece' },
-      { ref: 'zoneProp', zone: 'quang-tri:none', prop: 'spaceType' },
+      { ref: 'zoneProp', zone: 'quang-tri:none', prop: 'category' },
       { ref: 'assetField', row: '$blindLevel', tableId: 'tournament-standard::blindSchedule.levels', field: 'smallBlind' },
     ] as const;
 

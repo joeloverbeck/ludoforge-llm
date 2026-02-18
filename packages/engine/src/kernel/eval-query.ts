@@ -352,9 +352,8 @@ function evalMapSpacesQuery(
   query: Extract<OptionsQuery, { readonly query: 'mapSpaces' }>,
   ctx: EvalContext,
 ): readonly ZoneId[] {
-  const mapSpaceIds = new Set((ctx.mapSpaces ?? []).map((space) => space.id));
   const mapSpaceZones = [...ctx.def.zones]
-    .filter((zone) => mapSpaceIds.has(zone.id))
+    .filter((zone) => zone.category !== undefined)
     .sort((left, right) => left.id.localeCompare(right.id));
   return applyZonesFilter(mapSpaceZones, query.filter, ctx);
 }
@@ -363,9 +362,8 @@ function evalTokensInMapSpacesQuery(
   query: Extract<OptionsQuery, { readonly query: 'tokensInMapSpaces' }>,
   ctx: EvalContext,
 ): readonly Token[] {
-  const mapSpaceIds = new Set((ctx.mapSpaces ?? []).map((space) => space.id));
   const mapSpaceZones = [...ctx.def.zones]
-    .filter((zone) => mapSpaceIds.has(zone.id))
+    .filter((zone) => zone.category !== undefined)
     .sort((left, right) => left.id.localeCompare(right.id));
   const selectedZones = applyZonesFilter(mapSpaceZones, query.spaceFilter, ctx);
   const zoneTokens = selectedZones.flatMap((zoneId) => [...(ctx.state.zones[String(zoneId)] ?? [])]);

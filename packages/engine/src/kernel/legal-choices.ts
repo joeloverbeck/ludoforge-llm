@@ -68,7 +68,6 @@ const executeDiscoveryEffects = (
     effectPath: '',
     mode: 'discovery',
     ...(evalCtx.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: evalCtx.runtimeTableIndex }),
-    ...(evalCtx.mapSpaces === undefined ? {} : { mapSpaces: evalCtx.mapSpaces }),
     ...(evalCtx.freeOperationZoneFilter === undefined ? {} : { freeOperationZoneFilter: evalCtx.freeOperationZoneFilter }),
     ...(evalCtx.freeOperationZoneFilterDiagnostics === undefined
       ? {}

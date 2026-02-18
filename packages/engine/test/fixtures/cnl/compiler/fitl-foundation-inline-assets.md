@@ -12,20 +12,22 @@ dataAssets:
     payload:
       spaces:
         - id: hue:none
-          spaceType: city
-          population: 1
-          econ: 1
-          terrainTags: [urban]
-          country: south-vietnam
-          coastal: true
+          category: city
+          attributes:
+            population: 1
+            econ: 1
+            terrainTags: [urban]
+            country: south-vietnam
+            coastal: true
           adjacentTo: [quang-tri:none]
         - id: quang-tri:none
-          spaceType: province
-          population: 1
-          econ: 1
-          terrainTags: [lowland]
-          country: south-vietnam
-          coastal: true
+          category: province
+          attributes:
+            population: 1
+            econ: 1
+            terrainTags: [lowland]
+            country: south-vietnam
+            coastal: true
           adjacentTo: [hue:none]
   - id: fitl-piece-catalog-foundation
     kind: pieceCatalog

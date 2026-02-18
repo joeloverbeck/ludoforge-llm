@@ -12,11 +12,17 @@ import {
   type EffectContext,
   type GameDef,
   type GameState,
-  type MapSpaceDef,
+  type ZoneDef,
   createCollector,
 } from '../../src/kernel/index.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+
+const mapZones: readonly ZoneDef[] = [
+  { id: asZoneId('quangTri:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: ['highland'], country: 'southVietnam', coastal: true } },
+  { id: asZoneId('route1:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'loc', attributes: { population: 0, econ: 1, terrainTags: ['highway'], country: 'southVietnam', coastal: false } },
+  { id: asZoneId('saigon:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'city', attributes: { population: 6, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false } },
+];
 
 function makeDef(): GameDef {
   return {
@@ -26,11 +32,7 @@ function makeDef(): GameDef {
       { name: 'resources', type: 'int', init: 30, min: 0, max: 75 },
     ],
     perPlayerVars: [],
-    zones: [
-      { id: asZoneId('quangTri:none'), owner: 'none', visibility: 'public', ordering: 'set' },
-      { id: asZoneId('route1:none'), owner: 'none', visibility: 'public', ordering: 'set' },
-      { id: asZoneId('saigon:none'), owner: 'none', visibility: 'public', ordering: 'set' },
-    ],
+    zones: mapZones,
     tokenTypes: [],
     setup: [],
     turnStructure: { phases: [{ id: asPhaseId('main') }] },
@@ -63,12 +65,6 @@ function makeState(overrides?: Partial<GameState>): GameState {
   };
 }
 
-const mapSpaces: readonly MapSpaceDef[] = [
-  { id: 'quangTri:none', spaceType: 'province', population: 1, econ: 0, terrainTags: ['highland'], country: 'southVietnam', coastal: true, adjacentTo: [] },
-  { id: 'route1:none', spaceType: 'loc', population: 0, econ: 1, terrainTags: ['highway'], country: 'southVietnam', coastal: false, adjacentTo: [] },
-  { id: 'saigon:none', spaceType: 'city', population: 6, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false, adjacentTo: [] },
-];
-
 function makeCtx(overrides?: Partial<EffectContext>): EffectContext {
   return {
     def: makeDef(),
@@ -80,7 +76,6 @@ function makeCtx(overrides?: Partial<EffectContext>): EffectContext {
     bindings: { __freeOperation: false },
     moveParams: {},
     collector: createCollector(),
-    mapSpaces,
     ...overrides,
   };
 }
@@ -94,7 +89,7 @@ describe('FITL per-province-city-cost macro', () => {
             op: 'and',
             args: [
               { op: '!=', left: { ref: 'binding', name: '__freeOperation' }, right: true },
-              { op: '!=', left: { ref: 'zoneProp', zone: 'quangTri:none', prop: 'spaceType' }, right: 'loc' },
+              { op: '!=', left: { ref: 'zoneProp', zone: 'quangTri:none', prop: 'category' }, right: 'loc' },
             ],
           },
           then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],
@@ -113,7 +108,7 @@ describe('FITL per-province-city-cost macro', () => {
             op: 'and',
             args: [
               { op: '!=', left: { ref: 'binding', name: '__freeOperation' }, right: true },
-              { op: '!=', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'spaceType' }, right: 'loc' },
+              { op: '!=', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'category' }, right: 'loc' },
             ],
           },
           then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],
@@ -132,7 +127,7 @@ describe('FITL per-province-city-cost macro', () => {
             op: 'and',
             args: [
               { op: '!=', left: { ref: 'binding', name: '__freeOperation' }, right: true },
-              { op: '!=', left: { ref: 'zoneProp', zone: 'route1:none', prop: 'spaceType' }, right: 'loc' },
+              { op: '!=', left: { ref: 'zoneProp', zone: 'route1:none', prop: 'category' }, right: 'loc' },
             ],
           },
           then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],
@@ -151,7 +146,7 @@ describe('FITL per-province-city-cost macro', () => {
             op: 'and',
             args: [
               { op: '!=', left: { ref: 'binding', name: '__freeOperation' }, right: true },
-              { op: '!=', left: { ref: 'zoneProp', zone: 'quangTri:none', prop: 'spaceType' }, right: 'loc' },
+              { op: '!=', left: { ref: 'zoneProp', zone: 'quangTri:none', prop: 'category' }, right: 'loc' },
             ],
           },
           then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],

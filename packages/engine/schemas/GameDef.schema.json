@@ -214,6 +214,88 @@
             "items": {
               "type": "string"
             }
+          },
+          "category": {
+            "type": "string"
+          },
+          "attributes": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          },
+          "visual": {
+            "type": "object",
+            "properties": {
+              "shape": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "rectangle"
+                  },
+                  {
+                    "type": "string",
+                    "const": "circle"
+                  },
+                  {
+                    "type": "string",
+                    "const": "hexagon"
+                  },
+                  {
+                    "type": "string",
+                    "const": "diamond"
+                  },
+                  {
+                    "type": "string",
+                    "const": "ellipse"
+                  },
+                  {
+                    "type": "string",
+                    "const": "triangle"
+                  },
+                  {
+                    "type": "string",
+                    "const": "line"
+                  },
+                  {
+                    "type": "string",
+                    "const": "octagon"
+                  }
+                ]
+              },
+              "width": {
+                "type": "number"
+              },
+              "height": {
+                "type": "number"
+              },
+              "color": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
           }
         },
         "required": [
@@ -225,7 +307,7 @@
         "additionalProperties": false
       }
     },
-    "mapSpaces": {
+    "factions": {
       "type": "array",
       "items": {
         "type": "object",
@@ -234,51 +316,17 @@
             "type": "string",
             "minLength": 1
           },
-          "spaceType": {
+          "color": {
             "type": "string",
             "minLength": 1
           },
-          "population": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "econ": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "terrainTags": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "country": {
-            "type": "string",
-            "minLength": 1
-          },
-          "coastal": {
-            "type": "boolean"
-          },
-          "adjacentTo": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
+          "displayName": {
+            "type": "string"
           }
         },
         "required": [
           "id",
-          "spaceType",
-          "population",
-          "econ",
-          "terrainTags",
-          "country",
-          "coastal",
-          "adjacentTo"
+          "color"
         ],
         "additionalProperties": false
       }
@@ -415,6 +463,57 @@
               ],
               "additionalProperties": false
             }
+          },
+          "visual": {
+            "type": "object",
+            "properties": {
+              "shape": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "circle"
+                  },
+                  {
+                    "type": "string",
+                    "const": "square"
+                  },
+                  {
+                    "type": "string",
+                    "const": "triangle"
+                  },
+                  {
+                    "type": "string",
+                    "const": "diamond"
+                  },
+                  {
+                    "type": "string",
+                    "const": "hexagon"
+                  },
+                  {
+                    "type": "string",
+                    "const": "cylinder"
+                  },
+                  {
+                    "type": "string",
+                    "const": "meeple"
+                  },
+                  {
+                    "type": "string",
+                    "const": "card"
+                  }
+                ]
+              },
+              "color": {
+                "type": "string"
+              },
+              "size": {
+                "type": "number"
+              },
+              "symbol": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
           }
         },
         "required": [
@@ -3182,24 +3281,37 @@
                   "minLength": 1
                 }
               },
-              "spaceTypes": {
+              "category": {
                 "type": "array",
                 "items": {
                   "type": "string",
                   "minLength": 1
                 }
               },
-              "country": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1
+              "attributeEquals": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  ]
                 }
-              },
-              "populationEquals": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
               }
             },
             "additionalProperties": false
@@ -3284,17 +3396,37 @@
                     "minLength": 1
                   }
                 },
-                "spaceTypes": {
+                "category": {
                   "type": "array",
                   "items": {
                     "type": "string",
                     "minLength": 1
                   }
                 },
-                "populationEquals": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 9007199254740991
+                "attributeEquals": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    ]
+                  }
                 },
                 "allowedStates": {
                   "type": "array",

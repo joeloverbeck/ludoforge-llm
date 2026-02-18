@@ -137,7 +137,7 @@ vi.mock('pixi.js', () => ({
 import { createZoneRenderer } from '../../../src/canvas/renderers/zone-renderer';
 import { ContainerPool } from '../../../src/canvas/renderers/container-pool';
 import type { Position } from '../../../src/canvas/geometry';
-import type { RenderMapSpace, RenderZone } from '../../../src/model/render-model';
+import type { RenderZone } from '../../../src/model/render-model';
 
 function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
   return {
@@ -152,21 +152,6 @@ function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
     isHighlighted: false,
     ownerID: null,
     metadata: {},
-    ...overrides,
-  };
-}
-
-function makeMapSpace(overrides: Partial<RenderMapSpace> = {}): RenderMapSpace {
-  return {
-    id: 'zone:a',
-    displayName: 'Zone A Space',
-    spaceType: 'land',
-    population: 3,
-    econ: 2,
-    terrainTags: ['mountain'],
-    country: 'X',
-    coastal: false,
-    adjacentTo: [],
     ...overrides,
   };
 }
@@ -190,7 +175,7 @@ describe('createZoneRenderer', () => {
   it('update with empty arrays creates no containers', () => {
     const { parent, renderer } = createRendererHarness();
 
-    renderer.update([], [], new Map());
+    renderer.update([], new Map());
 
     expect(renderer.getContainerMap().size).toBe(0);
     expect(parent.children).toHaveLength(0);
@@ -202,7 +187,6 @@ describe('createZoneRenderer', () => {
     const zones = [makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' }), makeZone({ id: 'zone:c' })];
     renderer.update(
       zones,
-      [],
       createPositions([
         ['zone:a', { x: 10, y: 20 }],
         ['zone:b', { x: 30, y: 40 }],
@@ -218,7 +202,6 @@ describe('createZoneRenderer', () => {
 
     renderer.update(
       [makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' }), makeZone({ id: 'zone:d' })],
-      [],
       createPositions([
         ['zone:a', { x: 100, y: 200 }],
         ['zone:b', { x: 300, y: 400 }],
@@ -241,18 +224,17 @@ describe('createZoneRenderer', () => {
 
     renderer.update(
       [makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' }), makeZone({ id: 'zone:c' })],
-      [],
       new Map(),
     );
 
     const removedContainer = renderer.getContainerMap().get('zone:c');
 
-    renderer.update([makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' })], [], new Map());
+    renderer.update([makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' })], new Map());
 
     expect(renderer.getContainerMap().size).toBe(2);
     expect(releaseSpy).toHaveBeenCalledWith(removedContainer);
 
-    renderer.update([makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' }), makeZone({ id: 'zone:d' })], [], new Map());
+    renderer.update([makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' }), makeZone({ id: 'zone:d' })], new Map());
 
     expect(renderer.getContainerMap().size).toBe(3);
     expect(acquireSpy).toHaveBeenCalled();
@@ -261,7 +243,7 @@ describe('createZoneRenderer', () => {
   it('updates existing zone position and display name in place', () => {
     const { renderer } = createRendererHarness();
 
-    renderer.update([makeZone({ id: 'zone:a', displayName: 'Zone A' })], [], createPositions([['zone:a', { x: 5, y: 6 }]]));
+    renderer.update([makeZone({ id: 'zone:a', displayName: 'Zone A' })], createPositions([['zone:a', { x: 5, y: 6 }]]));
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
     const nameLabel = zoneContainer.children[1] as InstanceType<typeof MockText>;
@@ -272,7 +254,6 @@ describe('createZoneRenderer', () => {
 
     renderer.update(
       [makeZone({ id: 'zone:a', displayName: 'Zone Prime' })],
-      [],
       createPositions([['zone:a', { x: 50, y: 60 }]]),
     );
 
@@ -285,41 +266,16 @@ describe('createZoneRenderer', () => {
   it('renders selectable and highlighted states with distinct border styles', () => {
     const { renderer } = createRendererHarness();
 
-    renderer.update([makeZone({ id: 'zone:a', isSelectable: true })], [], new Map());
+    renderer.update([makeZone({ id: 'zone:a', isSelectable: true })], new Map());
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
     const base = zoneContainer.children[0] as InstanceType<typeof MockGraphics>;
 
     expect(base.strokeStyle).toEqual({ color: 0x93c5fd, width: 2, alpha: 0.95 });
 
-    renderer.update([makeZone({ id: 'zone:a', isHighlighted: true })], [], new Map());
+    renderer.update([makeZone({ id: 'zone:a', isHighlighted: true })], new Map());
 
     expect(base.strokeStyle).toEqual({ color: 0xfacc15, width: 4, alpha: 1 });
-  });
-
-  it('renders mapSpace overlays and coastal indicator when mapSpace matches zone ID', () => {
-    const { renderer } = createRendererHarness();
-
-    renderer.update(
-      [makeZone({ id: 'zone:a' })],
-      [makeMapSpace({ id: 'zone:a', population: 9, econ: 4, terrainTags: ['forest'], coastal: true })],
-      new Map(),
-    );
-
-    const container = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const population = container.children[3] as InstanceType<typeof MockText>;
-    const econ = container.children[4] as InstanceType<typeof MockText>;
-    const terrain = container.children[5] as InstanceType<typeof MockText>;
-    const coastal = container.children[6] as InstanceType<typeof MockText>;
-
-    expect(population.text).toBe('POP 9');
-    expect(population.visible).toBe(true);
-    expect(econ.text).toBe('EC 4');
-    expect(econ.visible).toBe(true);
-    expect(terrain.text).toBe('FOR');
-    expect(terrain.visible).toBe(true);
-    expect(coastal.text).toBe('COAST');
-    expect(coastal.visible).toBe(true);
   });
 
   it('renders markers below the name and updates token badge count', () => {
@@ -337,13 +293,12 @@ describe('createZoneRenderer', () => {
           ],
         }),
       ],
-      [],
       new Map(),
     );
 
     const container = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
     const badge = container.children[2] as InstanceType<typeof MockText>;
-    const markers = container.children[7] as InstanceType<typeof MockText>;
+    const markers = container.children[3] as InstanceType<typeof MockText>;
 
     expect(badge.text).toBe('3');
     expect(badge.visible).toBe(true);
@@ -351,7 +306,7 @@ describe('createZoneRenderer', () => {
     expect(markers.text).toContain('Supply:on');
     expect(markers.visible).toBe(true);
 
-    renderer.update([makeZone({ id: 'zone:a', tokenIDs: [], hiddenTokenCount: 0, markers: [] })], [], new Map());
+    renderer.update([makeZone({ id: 'zone:a', tokenIDs: [], hiddenTokenCount: 0, markers: [] })], new Map());
 
     expect(badge.visible).toBe(false);
     expect(markers.visible).toBe(false);
@@ -367,7 +322,6 @@ describe('createZoneRenderer', () => {
         makeZone({ id: 'zone:a' }),
         makeZone({ id: 'zone:b', ownerID: asPlayerId(1), visibility: 'owner' }),
       ],
-      [],
       new Map(),
     );
 
@@ -394,8 +348,8 @@ describe('createZoneRenderer', () => {
       bindSelection: (zoneContainer, zoneId, _isSelectable) => bindSelection(zoneContainer, zoneId),
     });
 
-    renderer.update([makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' })], [], new Map());
-    renderer.update([makeZone({ id: 'zone:a' })], [], new Map());
+    renderer.update([makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' })], new Map());
+    renderer.update([makeZone({ id: 'zone:a' })], new Map());
 
     expect(cleanupByZoneId.get('zone:b')).toHaveBeenCalledTimes(1);
     expect(cleanupByZoneId.get('zone:a')).toHaveBeenCalledTimes(0);

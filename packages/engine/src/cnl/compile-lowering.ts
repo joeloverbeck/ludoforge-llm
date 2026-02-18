@@ -170,6 +170,8 @@ export function lowerTokenTypes(tokenTypes: GameSpecDoc['tokenTypes'], diagnosti
     lowered.push({
       id: tokenType.id,
       props,
+      ...(tokenType.faction === undefined ? {} : { faction: tokenType.faction }),
+      ...(tokenType.visual === undefined ? {} : { visual: tokenType.visual }),
     });
   }
   return lowered;

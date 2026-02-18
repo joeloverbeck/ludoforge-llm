@@ -4,7 +4,6 @@ import type { Container } from 'pixi.js';
 import type { Position } from '../geometry';
 import type {
   RenderAdjacency,
-  RenderMapSpace,
   RenderToken,
   RenderZone,
 } from '../../model/render-model';
@@ -12,7 +11,6 @@ import type {
 export interface ZoneRenderer {
   update(
     zones: readonly RenderZone[],
-    mapSpaces: readonly RenderMapSpace[],
     positions: ReadonlyMap<string, Position>,
   ): void;
   getContainerMap(): ReadonlyMap<string, Container>;

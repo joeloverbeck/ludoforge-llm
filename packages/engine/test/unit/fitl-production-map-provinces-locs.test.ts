@@ -7,12 +7,14 @@ import { readProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type MapSpace = {
   readonly id: string;
-  readonly spaceType: string;
-  readonly population: number;
-  readonly econ: number;
-  readonly terrainTags: readonly string[];
-  readonly country: string;
-  readonly coastal: boolean;
+  readonly category: string;
+  readonly attributes: {
+    readonly population: number;
+    readonly econ: number;
+    readonly terrainTags: readonly string[];
+    readonly country: string;
+    readonly coastal: boolean;
+  };
   readonly adjacentTo: readonly string[];
 };
 
@@ -34,8 +36,8 @@ const readMapSpaces = (): MapSpace[] => {
 describe('FITL production map provinces and LoCs', () => {
   it('encodes 22 provinces, 17 LoCs, and 47 total spaces with canonical IDs', () => {
     const spaces = readMapSpaces();
-    const provinces = spaces.filter((space) => space.spaceType === 'province');
-    const locs = spaces.filter((space) => space.spaceType === 'loc');
+    const provinces = spaces.filter((space) => space.category === 'province');
+    const locs = spaces.filter((space) => space.category === 'loc');
 
     assert.equal(provinces.length, 22);
     assert.equal(locs.length, 17);
@@ -45,8 +47,8 @@ describe('FITL production map provinces and LoCs', () => {
 
   it('encodes province country/terrain/population/econ/coastal values and LoC type/econ/coastal values', () => {
     const spaces = readMapSpaces();
-    const provinces = spaces.filter((space) => space.spaceType === 'province');
-    const locs = spaces.filter((space) => space.spaceType === 'loc');
+    const provinces = spaces.filter((space) => space.category === 'province');
+    const locs = spaces.filter((space) => space.category === 'loc');
 
     const foreignByCountry = new Map<string, readonly string[]>([
       ['laos', ['central-laos:none', 'southern-laos:none']],
@@ -58,7 +60,7 @@ describe('FITL production map provinces and LoCs', () => {
       assert.deepEqual(
         provinces
           .filter((province) => ids.includes(province.id))
-          .map((province) => province.country)
+          .map((province) => province.attributes.country)
           .sort(),
         ids.map(() => country),
       );
@@ -66,7 +68,7 @@ describe('FITL production map provinces and LoCs', () => {
     assert.equal(
       provinces
         .filter((province) => ![...foreignByCountry.values()].flat().includes(province.id))
-        .every((province) => province.country === 'southVietnam'),
+        .every((province) => province.attributes.country === 'southVietnam'),
       true,
     );
 
@@ -74,12 +76,12 @@ describe('FITL production map provinces and LoCs', () => {
     assert.equal(
       provinces.every(
         (province) =>
-          province.terrainTags.length === 1 && province.terrainTags.every((tag) => allowedProvinceTerrain.has(tag)),
+          province.attributes.terrainTags.length === 1 && province.attributes.terrainTags.every((tag) => allowedProvinceTerrain.has(tag)),
       ),
       true,
     );
-    assert.equal(provinces.every((province) => province.population >= 0 && province.population <= 2), true);
-    assert.equal(provinces.every((province) => province.econ === 0), true);
+    assert.equal(provinces.every((province) => province.attributes.population >= 0 && province.attributes.population <= 2), true);
+    assert.equal(provinces.every((province) => province.attributes.econ === 0), true);
 
     const expectedCoastalProvinces = new Set([
       'binh-dinh:none',
@@ -97,7 +99,7 @@ describe('FITL production map provinces and LoCs', () => {
     ]);
     assert.deepEqual(
       provinces
-        .filter((province) => province.coastal)
+        .filter((province) => province.attributes.coastal)
         .map((province) => province.id)
         .sort(),
       [...expectedCoastalProvinces].sort(),
@@ -110,15 +112,15 @@ describe('FITL production map provinces and LoCs', () => {
       'loc-saigon-can-tho:none',
     ]);
     assert.equal(
-      locs.every((loc) => loc.terrainTags.includes('highway') || loc.terrainTags.includes('mekong')),
+      locs.every((loc) => loc.attributes.terrainTags.includes('highway') || loc.attributes.terrainTags.includes('mekong')),
       true,
     );
-    assert.equal(locs.filter((loc) => loc.terrainTags.includes('mekong')).every((loc) => mekongLocs.has(loc.id)), true);
+    assert.equal(locs.filter((loc) => loc.attributes.terrainTags.includes('mekong')).every((loc) => mekongLocs.has(loc.id)), true);
     assert.equal(
-      locs.filter((loc) => !mekongLocs.has(loc.id)).every((loc) => loc.terrainTags.length === 1 && loc.terrainTags[0] === 'highway'),
+      locs.filter((loc) => !mekongLocs.has(loc.id)).every((loc) => loc.attributes.terrainTags.length === 1 && loc.attributes.terrainTags[0] === 'highway'),
       true,
     );
-    assert.equal(locs.every((loc) => loc.population === 0), true);
+    assert.equal(locs.every((loc) => loc.attributes.population === 0), true);
 
     const expectedLocEcon = new Map<string, number>([
       ['loc-hue-khe-sanh:none', 1],
@@ -140,7 +142,7 @@ describe('FITL production map provinces and LoCs', () => {
       ['loc-can-tho-long-phu:none', 1],
     ]);
     const actualLocEcon = locs
-      .map((loc): [string, number] => [loc.id, loc.econ])
+      .map((loc): [string, number] => [loc.id, loc.attributes.econ])
       .sort((left, right) => left[0].localeCompare(right[0]));
     const expectedSortedLocEcon = [...expectedLocEcon.entries()].sort((left, right) => left[0].localeCompare(right[0]));
     assert.deepEqual(
@@ -148,7 +150,7 @@ describe('FITL production map provinces and LoCs', () => {
       expectedSortedLocEcon,
     );
     assert.deepEqual(
-      locs.filter((loc) => loc.coastal).map((loc) => loc.id).sort(),
+      locs.filter((loc) => loc.attributes.coastal).map((loc) => loc.id).sort(),
       [
         'loc-can-tho-bac-lieu:none',
         'loc-can-tho-long-phu:none',
@@ -159,6 +161,6 @@ describe('FITL production map provinces and LoCs', () => {
         'loc-saigon-cam-ranh:none',
       ],
     );
-    assert.equal(locs.every((loc) => loc.country === 'southVietnam'), true);
+    assert.equal(locs.every((loc) => loc.attributes.country === 'southVietnam'), true);
   });
 });

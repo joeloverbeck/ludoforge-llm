@@ -84,7 +84,7 @@ phase: [asPhaseId('main')],
             var: 'round',
             value: {
               if: {
-                when: { op: '==', left: { ref: 'zoneProp', zone: 'discard:none', prop: 'spaceType' }, right: 'city' },
+                when: { op: '==', left: { ref: 'zoneProp', zone: 'discard:none', prop: 'category' }, right: 'city' },
                 then: { op: 'floorDiv', left: 5, right: 2 },
                 else: { op: 'ceilDiv', left: 5, right: 2 },
               },

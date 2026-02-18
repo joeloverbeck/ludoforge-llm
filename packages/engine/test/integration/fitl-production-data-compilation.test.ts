@@ -6,8 +6,10 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 interface MapSpaceLike {
   readonly id: string;
-  readonly spaceType: string;
-  readonly terrainTags: readonly string[];
+  readonly category: string;
+  readonly attributes: {
+    readonly terrainTags: readonly string[];
+  };
   readonly adjacentTo: readonly string[];
 }
 
@@ -142,9 +144,9 @@ describe('FITL production data integration compilation', () => {
       }
     }
 
-    const locs = spaces.filter((space) => space.spaceType === 'loc');
+    const locs = spaces.filter((space) => space.category === 'loc');
     assert.equal(
-      locs.every((space) => space.terrainTags.includes('highway') || space.terrainTags.includes('mekong')),
+      locs.every((space) => space.attributes.terrainTags.includes('highway') || space.attributes.terrainTags.includes('mekong')),
       true,
       'Every LoC must include at least one of highway or mekong terrain tags',
     );

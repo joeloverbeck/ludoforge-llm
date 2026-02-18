@@ -5,6 +5,7 @@ import {
   asPhaseId,
   asPlayerId,
   asTokenId,
+  asZoneId,
   countFactionTokens,
   isCoinControlled,
   isSoloFactionControlled,
@@ -21,7 +22,7 @@ import {
   type MarkerWeightConfig,
   type VictoryFormula,
   type GameState,
-  type MapSpaceDef,
+  type ZoneDef,
   type Token,
 } from '../../src/kernel/index.js';
 
@@ -33,15 +34,29 @@ const makeFactionToken = (id: string, faction: string, type: string = 'piece'): 
   props: { faction },
 });
 
-const makeSpace = (overrides: Partial<MapSpaceDef> & { id: string }): MapSpaceDef => ({
-  spaceType: 'province',
-  population: 0,
-  econ: 0,
-  terrainTags: [],
-  country: 'test',
-  coastal: false,
-  adjacentTo: [],
-  ...overrides,
+const makeSpace = (overrides: {
+  id: string;
+  category?: string;
+  population?: number;
+  econ?: number;
+  terrainTags?: readonly string[];
+  country?: string;
+  coastal?: boolean;
+  adjacentTo?: readonly string[];
+}): ZoneDef => ({
+  id: asZoneId(overrides.id),
+  owner: 'none',
+  visibility: 'public',
+  ordering: 'set',
+  adjacentTo: (overrides.adjacentTo ?? []).map(asZoneId),
+  category: overrides.category ?? 'province',
+  attributes: {
+    population: overrides.population ?? 0,
+    econ: overrides.econ ?? 0,
+    terrainTags: overrides.terrainTags ?? [],
+    country: overrides.country ?? 'test',
+    coastal: overrides.coastal ?? false,
+  },
 });
 
 const makeState = (zones: Record<string, readonly Token[]>, globalVars: Record<string, number> = {}): GameState => ({
@@ -226,7 +241,7 @@ describe('getPopulationMultiplier', () => {
 
 describe('computeTotalSupport', () => {
   it('computes Active Support (pop 2) + Passive Support (pop 1) + Neutral (pop 3) = 5', () => {
-    const spaces: readonly MapSpaceDef[] = [
+    const spaces: readonly ZoneDef[] = [
       makeSpace({ id: 's1', population: 2 }),
       makeSpace({ id: 's2', population: 1 }),
       makeSpace({ id: 's3', population: 3 }),
@@ -240,7 +255,7 @@ describe('computeTotalSupport', () => {
   });
 
   it('zero population spaces contribute nothing regardless of marker state', () => {
-    const spaces: readonly MapSpaceDef[] = [
+    const spaces: readonly ZoneDef[] = [
       makeSpace({ id: 's1', population: 0 }),
     ];
     const markerStates: Record<string, string> = { s1: 'activeSupport' };
@@ -248,7 +263,7 @@ describe('computeTotalSupport', () => {
   });
 
   it('uses defaultMarkerState for missing entries', () => {
-    const spaces: readonly MapSpaceDef[] = [
+    const spaces: readonly ZoneDef[] = [
       makeSpace({ id: 's1', population: 3 }),
     ];
     // s1 not in markerStates → uses default 'neutral' → multiplier 0
@@ -258,7 +273,7 @@ describe('computeTotalSupport', () => {
 
 describe('computeTotalOpposition', () => {
   it('computes Active Opposition (pop 2) + Passive Opposition (pop 1) + Neutral (pop 3) = 5', () => {
-    const spaces: readonly MapSpaceDef[] = [
+    const spaces: readonly ZoneDef[] = [
       makeSpace({ id: 's1', population: 2 }),
       makeSpace({ id: 's2', population: 1 }),
       makeSpace({ id: 's3', population: 3 }),
@@ -301,12 +316,12 @@ describe('isSabotaged', () => {
 // ─── computeTotalEcon ────────────────────────────────────────────────────────
 
 describe('computeTotalEcon', () => {
-  const spaces: readonly MapSpaceDef[] = [
-    makeSpace({ id: 'loc-1', spaceType: 'loc', econ: 1 }),
-    makeSpace({ id: 'loc-2', spaceType: 'loc', econ: 1 }),
-    makeSpace({ id: 'loc-3', spaceType: 'loc', econ: 1 }),
-    makeSpace({ id: 'loc-4', spaceType: 'loc', econ: 1 }),
-    makeSpace({ id: 'province-1', spaceType: 'province', econ: 5 }),
+  const spaces: readonly ZoneDef[] = [
+    makeSpace({ id: 'loc-1', category: 'loc', econ: 1 }),
+    makeSpace({ id: 'loc-2', category: 'loc', econ: 1 }),
+    makeSpace({ id: 'loc-3', category: 'loc', econ: 1 }),
+    makeSpace({ id: 'loc-4', category: 'loc', econ: 1 }),
+    makeSpace({ id: 'province-1', category: 'province', econ: 5 }),
   ];
 
   it('sums econ of COIN-controlled unsabotaged LoCs', () => {
@@ -352,7 +367,7 @@ describe('computeTotalEcon', () => {
 
 describe('sumControlledPopulation', () => {
   it('sums population of COIN-controlled spaces', () => {
-    const spaces: readonly MapSpaceDef[] = [
+    const spaces: readonly ZoneDef[] = [
       makeSpace({ id: 's1', population: 2 }),
       makeSpace({ id: 's2', population: 3 }),
       makeSpace({ id: 's3', population: 1 }),
@@ -396,7 +411,7 @@ describe('countTokensInZone', () => {
 
 describe('countBasesOnMap', () => {
   it('counts bases of a specific faction across all map spaces', () => {
-    const spaces: readonly MapSpaceDef[] = [
+    const spaces: readonly ZoneDef[] = [
       makeSpace({ id: 's1' }),
       makeSpace({ id: 's2' }),
       makeSpace({ id: 's3' }),
@@ -420,7 +435,7 @@ describe('computeVictoryMarker', () => {
   // Spaces: s1 (pop 2, active support), s2 (pop 1, passive support), s3 (pop 3, neutral)
   // Total Support = 2×2 + 1×1 + 3×0 = 5
   // Total Opposition = 2×0 + 1×0 + 3×0 = 0
-  const spaces: readonly MapSpaceDef[] = [
+  const spaces: readonly ZoneDef[] = [
     makeSpace({ id: 's1', population: 2 }),
     makeSpace({ id: 's2', population: 1 }),
     makeSpace({ id: 's3', population: 3 }),
@@ -451,7 +466,7 @@ describe('computeVictoryMarker', () => {
   });
 
   it('markerTotalPlusMapBases: Total Opposition (3) + VC bases on map (1) = 4', () => {
-    const oppSpaces: readonly MapSpaceDef[] = [
+    const oppSpaces: readonly ZoneDef[] = [
       makeSpace({ id: 's1', population: 1 }),
       makeSpace({ id: 's2', population: 1 }),
     ];
@@ -474,7 +489,7 @@ describe('computeVictoryMarker', () => {
   });
 
   it('controlledPopulationPlusMapBases (solo): pop of solo-controlled (6) + bases (2) = 8', () => {
-    const nvaSpaces: readonly MapSpaceDef[] = [
+    const nvaSpaces: readonly ZoneDef[] = [
       makeSpace({ id: 's1', population: 3 }),
       makeSpace({ id: 's2', population: 3 }),
       makeSpace({ id: 's3', population: 2 }),
@@ -511,7 +526,7 @@ describe('computeVictoryMarker', () => {
   });
 
   it('controlledPopulationPlusGlobalVar (COIN): pop of COIN-controlled (4) + Patronage (18) = 22', () => {
-    const arvnSpaces: readonly MapSpaceDef[] = [
+    const arvnSpaces: readonly ZoneDef[] = [
       makeSpace({ id: 's1', population: 2 }),
       makeSpace({ id: 's2', population: 2 }),
       makeSpace({ id: 's3', population: 3 }),
@@ -536,7 +551,7 @@ describe('computeVictoryMarker', () => {
   });
 
   it('throws typed error when controlledPopulationPlusGlobalVar references a non-numeric global var', () => {
-    const spaces: readonly MapSpaceDef[] = [makeSpace({ id: 's1', population: 2 })];
+    const spaces: readonly ZoneDef[] = [makeSpace({ id: 's1', population: 2 })];
     const state = makeState({ s1: [makeFactionToken('u1', 'US')] });
     const formula: VictoryFormula = {
       type: 'controlledPopulationPlusGlobalVar',

@@ -12,7 +12,6 @@ import type {
 import type { Position } from '../../../src/canvas/geometry';
 import type {
   RenderAdjacency,
-  RenderMapSpace,
   RenderToken,
   RenderZone,
 } from '../../../src/model/render-model';
@@ -31,7 +30,6 @@ describe('renderer-types', () => {
     const renderer: ZoneRenderer = {
       update: (
         _zones: readonly RenderZone[],
-        _mapSpaces: readonly RenderMapSpace[],
         _positions: ReadonlyMap<string, Position>,
       ) => {},
       getContainerMap: () => containerMap,

@@ -129,7 +129,6 @@ const resolveMatchedPipelineForMove = (
     activePlayer: executionPlayer,
     actorPlayer: executionPlayer,
     bindings: runtimeBindingsForMove(move, undefined),
-    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
     collector: createCollector(),
   });
   if (dispatch.kind !== 'matched') {
@@ -537,7 +536,6 @@ const executeMoveAction = (
     },
     effectPath: '',
     ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
-    ...(def.mapSpaces === undefined ? {} : { mapSpaces: def.mapSpaces }),
   } as const;
 
   const pipelineDispatch = resolveActionPipelineDispatch(def, action, { ...effectCtxBase, state });

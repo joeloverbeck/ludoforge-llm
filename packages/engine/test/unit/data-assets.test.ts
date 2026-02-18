@@ -75,12 +75,8 @@ describe('data asset loader scaffold', () => {
             spaces: [
               {
                 id: 'hue:none',
-                spaceType: 'city',
-                population: 1,
-                econ: 1,
-                terrainTags: ['urban'],
-                country: 'south-vietnam',
-                coastal: true,
+                category: 'city',
+                attributes: { population: 1, econ: 1, terrainTags: ['urban'], country: 'south-vietnam', coastal: true },
                 adjacentTo: [],
               },
             ],
@@ -90,7 +86,7 @@ describe('data asset loader scaffold', () => {
                 id: 'support-opposition',
                 states: ['neutral', 'passive-support'],
                 defaultState: 'neutral',
-                constraints: [{ spaceTypes: ['city'], allowedStates: ['neutral', 'passive-support'] }],
+                constraints: [{ category: ['city'], allowedStates: ['neutral', 'passive-support'] }],
               },
             ],
             spaceMarkers: [{ spaceId: 'hue:none', markerId: 'support-opposition', state: 'passive-support' }],
@@ -261,12 +257,8 @@ describe('data asset loader scaffold', () => {
             spaces: [
               {
                 id: 'hue:none',
-                spaceType: 'city',
-                population: 1,
-                econ: 1,
-                terrainTags: ['urban'],
-                country: 'south-vietnam',
-                coastal: true,
+                category: 'city',
+                attributes: { population: 1, econ: 1, terrainTags: ['urban'], country: 'south-vietnam', coastal: true },
                 adjacentTo: [],
               },
             ],

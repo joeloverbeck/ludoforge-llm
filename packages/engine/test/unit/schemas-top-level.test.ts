@@ -185,12 +185,8 @@ describe('top-level runtime schemas', () => {
       spaces: [
         {
           id: 'hue:none',
-          spaceType: 'city',
-          population: 1,
-          econ: 1,
-          terrainTags: ['urban'],
-          country: 'south-vietnam',
-          coastal: true,
+          category: 'city',
+          attributes: { population: 1, econ: 1, terrainTags: ['urban'], country: 'south-vietnam', coastal: true },
           adjacentTo: ['south_vietnam:none'],
         },
       ],
@@ -200,7 +196,7 @@ describe('top-level runtime schemas', () => {
           id: 'support-opposition',
           states: ['neutral', 'passive-support'],
           defaultState: 'neutral',
-          constraints: [{ spaceTypes: ['city'], allowedStates: ['neutral', 'passive-support'] }],
+          constraints: [{ category: ['city'], allowedStates: ['neutral', 'passive-support'] }],
         },
       ],
       spaceMarkers: [{ spaceId: 'hue:none', markerId: 'support-opposition', state: 'passive-support' }],
@@ -645,7 +641,7 @@ describe('StackingConstraintSchema', () => {
     const result = StackingConstraintSchema.safeParse({
       id: 'max-2-bases',
       description: 'Max 2 bases per province or city',
-      spaceFilter: { spaceTypes: ['province', 'city'] },
+      spaceFilter: { category: ['province', 'city'] },
       pieceFilter: { pieceTypeIds: ['base'] },
       rule: 'maxCount',
       maxCount: 2,
@@ -658,7 +654,7 @@ describe('StackingConstraintSchema', () => {
     const result = StackingConstraintSchema.safeParse({
       id: 'no-bases-on-loc',
       description: 'No bases on LoCs',
-      spaceFilter: { spaceTypes: ['loc'] },
+      spaceFilter: { category: ['loc'] },
       pieceFilter: { pieceTypeIds: ['base'] },
       rule: 'prohibit',
     });
@@ -670,7 +666,7 @@ describe('StackingConstraintSchema', () => {
     const result = StackingConstraintSchema.safeParse({
       id: 'max-2-bases',
       description: 'Max 2 bases per province or city',
-      spaceFilter: { spaceTypes: ['province', 'city'] },
+      spaceFilter: { category: ['province', 'city'] },
       pieceFilter: { pieceTypeIds: ['base'] },
       rule: 'maxCount',
     });
@@ -692,11 +688,11 @@ describe('StackingConstraintSchema', () => {
     assert.equal(result.success, true);
   });
 
-  it('accepts constraint with country filter', () => {
+  it('accepts constraint with attributeEquals country filter', () => {
     const result = StackingConstraintSchema.safeParse({
       id: 'nv-restriction',
       description: 'Only NVA/VC in North Vietnam',
-      spaceFilter: { country: ['northVietnam'] },
+      spaceFilter: { attributeEquals: { country: 'northVietnam' } },
       pieceFilter: { factions: ['US', 'ARVN'] },
       rule: 'prohibit',
     });
@@ -704,11 +700,11 @@ describe('StackingConstraintSchema', () => {
     assert.equal(result.success, true);
   });
 
-  it('accepts constraint with populationEquals filter', () => {
+  it('accepts constraint with attributeEquals filter', () => {
     const result = StackingConstraintSchema.safeParse({
       id: 'zero-pop-limit',
       description: 'Limit pieces in zero-pop spaces',
-      spaceFilter: { populationEquals: 0 },
+      spaceFilter: { attributeEquals: { population: 0 } },
       pieceFilter: {},
       rule: 'maxCount',
       maxCount: 5,
@@ -724,12 +720,8 @@ describe('MapPayloadSchema with stackingConstraints', () => {
       spaces: [
         {
           id: 'saigon',
-          spaceType: 'city',
-          population: 6,
-          econ: 0,
-          terrainTags: [],
-          country: 'south-vietnam',
-          coastal: true,
+          category: 'city',
+          attributes: { population: 6, econ: 0, terrainTags: [], country: 'south-vietnam', coastal: true },
           adjacentTo: [],
         },
       ],
@@ -737,7 +729,7 @@ describe('MapPayloadSchema with stackingConstraints', () => {
         {
           id: 'max-2-bases',
           description: 'Max 2 bases per province or city',
-          spaceFilter: { spaceTypes: ['province', 'city'] },
+          spaceFilter: { category: ['province', 'city'] },
           pieceFilter: { pieceTypeIds: ['base'] },
           rule: 'maxCount',
           maxCount: 2,
@@ -765,7 +757,7 @@ describe('GameDefSchema with stackingConstraints', () => {
         {
           id: 'no-bases-on-loc',
           description: 'No bases on LoCs',
-          spaceFilter: { spaceTypes: ['loc'] },
+          spaceFilter: { category: ['loc'] },
           pieceFilter: { pieceTypeIds: ['base'] },
           rule: 'prohibit',
         },

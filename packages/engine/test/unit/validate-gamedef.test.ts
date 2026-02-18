@@ -5,9 +5,10 @@ import { describe, it } from 'node:test';
 
 import {
   type GameDef,
-  type MapSpaceDef,
   type ScenarioPiecePlacement,
   type StackingConstraint,
+  type ZoneDef,
+  type ZoneId,
   isValidatedGameDef,
   validateGameDef,
   validateGameDefBoundary,
@@ -103,17 +104,17 @@ describe('validateGameDef reference checks', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      mapSpaces: [
+      zones: [
         {
           id: 'market:none',
-          spaceType: 'city',
-          population: 2,
-          econ: 1,
-          terrainTags: ['urban'],
-          country: 'southVietnam',
-          coastal: false,
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
           adjacentTo: [],
         },
+        { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
       actions: [
         {
@@ -135,17 +136,17 @@ describe('validateGameDef reference checks', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      mapSpaces: [
+      zones: [
         {
           id: 'market:none',
-          spaceType: 'city',
-          population: 2,
-          econ: 1,
-          terrainTags: ['urban'],
-          country: 'southVietnam',
-          coastal: false,
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
           adjacentTo: [],
         },
+        { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
       actions: [
         {
@@ -167,22 +168,22 @@ describe('validateGameDef reference checks', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      mapSpaces: [
+      zones: [
         {
           id: 'market:none',
-          spaceType: 'city',
-          population: 2,
-          econ: 1,
-          terrainTags: ['urban'],
-          country: 'southVietnam',
-          coastal: false,
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
           adjacentTo: [],
         },
+        { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
       actions: [
         {
           ...base.actions[0],
-          pre: { op: 'zonePropIncludes', zone: 'market:none', prop: 'spaceType', value: 'city' },
+          pre: { op: 'zonePropIncludes', zone: 'market:none', prop: 'category', value: 'city' },
         },
       ],
     } as unknown as GameDef;
@@ -197,22 +198,22 @@ describe('validateGameDef reference checks', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      mapSpaces: [
+      zones: [
         {
           id: 'market:none',
-          spaceType: 'city',
-          population: 2,
-          econ: 1,
-          terrainTags: ['urban'],
-          country: 'southVietnam',
-          coastal: false,
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
           adjacentTo: [],
         },
+        { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
       actions: [
         {
           ...base.actions[0],
-          pre: { op: '==', left: { ref: 'zoneProp', zone: 'deck:none', prop: 'spaceType' }, right: 'city' },
+          pre: { op: '==', left: { ref: 'zoneProp', zone: 'deck:none', prop: 'category' }, right: 'city' },
         },
       ],
     } as unknown as GameDef;
@@ -261,6 +262,18 @@ describe('validateGameDef reference checks', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
+      zones: [
+        {
+          id: 'market:none',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 1, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
+          adjacentTo: [],
+        },
+        { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      ],
       actions: [
         {
           ...base.actions[0],
@@ -279,7 +292,7 @@ describe('validateGameDef reference checks', () => {
                         filter: {
                           condition: {
                             op: '==',
-                            left: { ref: 'zoneProp', zone: '$zone', prop: 'spaceType' },
+                            left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
                             right: 'city',
                           },
                         },
@@ -290,18 +303,6 @@ describe('validateGameDef reference checks', () => {
               },
             },
           ],
-        },
-      ],
-      mapSpaces: [
-        {
-          id: 'market:none',
-          spaceType: 'city',
-          population: 1,
-          econ: 1,
-          terrainTags: ['urban'],
-          country: 'southVietnam',
-          coastal: false,
-          adjacentTo: [],
         },
       ],
     } as unknown as GameDef;
@@ -955,12 +956,8 @@ describe('validateGameDef reference checks', () => {
       mapSpaces: [
         {
           id: 'market:none',
-          spaceType: 'city',
-          population: 2,
-          econ: 1,
-          terrainTags: ['urban'],
-          country: 'southVietnam',
-          coastal: false,
+          category: 'city',
+          attributes: { population: 2, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
           adjacentTo: [],
         },
       ],
@@ -2379,17 +2376,17 @@ describe('validateGameDef constraints and warnings', () => {
 });
 
 describe('validateInitialPlacementsAgainstStackingConstraints', () => {
-  const spaces: readonly MapSpaceDef[] = [
-    { id: 'quang-tri', spaceType: 'province', population: 1, econ: 0, terrainTags: [], country: 'south-vietnam', coastal: false, adjacentTo: [] },
-    { id: 'hue', spaceType: 'city', population: 2, econ: 0, terrainTags: [], country: 'south-vietnam', coastal: true, adjacentTo: [] },
-    { id: 'route-1', spaceType: 'loc', population: 0, econ: 1, terrainTags: [], country: 'south-vietnam', coastal: false, adjacentTo: [] },
-    { id: 'hanoi', spaceType: 'city', population: 3, econ: 0, terrainTags: [], country: 'north-vietnam', coastal: false, adjacentTo: [] },
+  const spaces: readonly ZoneDef[] = [
+    { id: 'quang-tri' as ZoneId, owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, country: 'south-vietnam', coastal: false } },
+    { id: 'hue' as ZoneId, owner: 'none', visibility: 'public', ordering: 'set', category: 'city', attributes: { population: 2, econ: 0, country: 'south-vietnam', coastal: true } },
+    { id: 'route-1' as ZoneId, owner: 'none', visibility: 'public', ordering: 'set', category: 'loc', attributes: { population: 0, econ: 1, country: 'south-vietnam', coastal: false } },
+    { id: 'hanoi' as ZoneId, owner: 'none', visibility: 'public', ordering: 'set', category: 'city', attributes: { population: 3, econ: 0, country: 'north-vietnam', coastal: false } },
   ];
 
   const maxBasesConstraint: StackingConstraint = {
     id: 'max-2-bases',
     description: 'Max 2 bases per province or city',
-    spaceFilter: { spaceTypes: ['province', 'city'] },
+    spaceFilter: { category: ['province', 'city'] },
     pieceFilter: { pieceTypeIds: ['base'] },
     rule: 'maxCount',
     maxCount: 2,
@@ -2398,7 +2395,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
   const noBasesOnLocConstraint: StackingConstraint = {
     id: 'no-bases-on-loc',
     description: 'No bases on LoCs',
-    spaceFilter: { spaceTypes: ['loc'] },
+    spaceFilter: { category: ['loc'] },
     pieceFilter: { pieceTypeIds: ['base'] },
     rule: 'prohibit',
   };
@@ -2406,7 +2403,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
   const nvRestrictionConstraint: StackingConstraint = {
     id: 'nv-restriction',
     description: 'Only NVA/VC in North Vietnam',
-    spaceFilter: { country: ['north-vietnam'] },
+    spaceFilter: { attributeEquals: { country: 'north-vietnam' } },
     pieceFilter: { factions: ['US', 'ARVN'] },
     rule: 'prohibit',
   };
@@ -2559,7 +2556,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
     const canonicalConstraint: StackingConstraint = {
       id: 'nv-restriction-canonical',
       description: 'Only nva/vc in North Vietnam (canonical ids)',
-      spaceFilter: { country: ['north-vietnam'] },
+      spaceFilter: { attributeEquals: { country: 'north-vietnam' } },
       pieceFilter: { factions: ['us', 'arvn'] },
       rule: 'prohibit',
     };

@@ -77,12 +77,12 @@ export function materializeZoneDefs(
 
     mergeZoneOwnership(ownershipMap, base, owner);
     if (owner === 'none') {
-      outputZones.push(createZoneDef(`${base}:none`, 'none', visibility, ordering, zone.adjacentTo));
+      outputZones.push(createZoneDef(`${base}:none`, 'none', visibility, ordering, zone.adjacentTo, zone.category, zone.attributes, zone.visual));
       continue;
     }
 
     for (let playerId = 0; playerId < playersMax; playerId += 1) {
-      outputZones.push(createZoneDef(`${base}:${playerId}`, 'player', visibility, ordering, zone.adjacentTo));
+      outputZones.push(createZoneDef(`${base}:${playerId}`, 'player', visibility, ordering, zone.adjacentTo, zone.category, zone.attributes, zone.visual));
     }
   }
 
@@ -277,22 +277,19 @@ function createZoneDef(
   visibility: ZoneDef['visibility'],
   ordering: ZoneDef['ordering'],
   adjacentTo: GameSpecZoneDef['adjacentTo'],
+  category: GameSpecZoneDef['category'],
+  attributes: GameSpecZoneDef['attributes'],
+  visual: GameSpecZoneDef['visual'],
 ): ZoneDef {
   const normalizedAdjacentTo = normalizeAdjacentTo(adjacentTo);
-  if (normalizedAdjacentTo === undefined) {
-    return {
-      id: asZoneId(id),
-      owner,
-      visibility,
-      ordering,
-    };
-  }
-
   return {
     id: asZoneId(id),
     owner,
     visibility,
     ordering,
-    adjacentTo: normalizedAdjacentTo as readonly ZoneId[],
+    ...(normalizedAdjacentTo === undefined ? {} : { adjacentTo: normalizedAdjacentTo }),
+    ...(category === undefined ? {} : { category }),
+    ...(attributes === undefined ? {} : { attributes }),
+    ...(visual === undefined ? {} : { visual }),
   };
 }

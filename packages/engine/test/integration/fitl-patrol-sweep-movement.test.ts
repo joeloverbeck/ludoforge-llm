@@ -13,7 +13,6 @@ import {
   type EffectContext,
   type GameDef,
   type GameState,
-  type MapSpaceDef,
   type Token,
   type ZoneDef,
   createCollector,
@@ -84,12 +83,6 @@ const zoneDefs: readonly ZoneDef[] = [
   { id: availableARVN, owner: 'none', visibility: 'public', ordering: 'set' },
 ];
 
-const mapSpaces: readonly MapSpaceDef[] = [
-  { id: locId, spaceType: 'loc', population: 0, econ: 1, terrainTags: ['highway'], country: 'southVietnam', coastal: false, adjacentTo: [adjProvince1Id, adjProvince2Id] },
-  { id: adjProvince1Id, spaceType: 'province', population: 2, econ: 0, terrainTags: ['lowland'], country: 'southVietnam', coastal: false, adjacentTo: [locId] },
-  { id: adjProvince2Id, spaceType: 'province', population: 1, econ: 0, terrainTags: ['lowland'], country: 'southVietnam', coastal: false, adjacentTo: [locId] },
-];
-
 function makeCtx(state: GameState, bindings?: Record<string, unknown>): EffectContext {
   const def = makeDef(zoneDefs);
   return {
@@ -102,7 +95,6 @@ function makeCtx(state: GameState, bindings?: Record<string, unknown>): EffectCo
     bindings: bindings ?? {},
     moveParams: {},
     collector: createCollector(),
-    mapSpaces,
   };
 }
 

@@ -1,5 +1,11 @@
-import type { GameState, MapSpaceDef, Token } from './types.js';
+import type { GameState, ZoneDef, Token } from './types.js';
 import { kernelRuntimeError } from './runtime-error.js';
+
+/** Extract a numeric zone attribute, defaulting to 0 when absent or non-numeric. */
+function numericAttribute(zone: ZoneDef, key: string): number {
+  const value = zone.attributes?.[key];
+  return typeof value === 'number' ? value : 0;
+}
 
 // ─── Configuration Types ─────────────────────────────────────────────────────
 
@@ -120,7 +126,7 @@ export function getPopulationMultiplier(markerState: string, config: MarkerWeigh
  * `markerStates` maps spaceId → marker state name. Missing entries use `defaultMarkerState`.
  */
 export function computeMarkerTotal(
-  spaces: readonly MapSpaceDef[],
+  spaces: readonly ZoneDef[],
   markerStates: Readonly<Record<string, string>>,
   config: MarkerWeightConfig,
   defaultMarkerState: string = 'neutral',
@@ -128,7 +134,7 @@ export function computeMarkerTotal(
   let total = 0;
   for (const space of spaces) {
     const marker = markerStates[space.id] ?? defaultMarkerState;
-    total += space.population * getPopulationMultiplier(marker, config);
+    total += numericAttribute(space, 'population') * getPopulationMultiplier(marker, config);
   }
   return total;
 }
@@ -137,7 +143,7 @@ export function computeMarkerTotal(
  * Convenience: compute Total Support using a support-specific MarkerWeightConfig.
  */
 export function computeTotalSupport(
-  spaces: readonly MapSpaceDef[],
+  spaces: readonly ZoneDef[],
   markerStates: Readonly<Record<string, string>>,
   config: MarkerWeightConfig,
   defaultMarkerState: string = 'neutral',
@@ -149,7 +155,7 @@ export function computeTotalSupport(
  * Convenience: compute Total Opposition using an opposition-specific MarkerWeightConfig.
  */
 export function computeTotalOpposition(
-  spaces: readonly MapSpaceDef[],
+  spaces: readonly ZoneDef[],
   markerStates: Readonly<Record<string, string>>,
   config: MarkerWeightConfig,
   defaultMarkerState: string = 'neutral',
@@ -172,17 +178,17 @@ export function isSabotaged(state: GameState, spaceId: string, terrorTokenType: 
  */
 export function computeTotalEcon(
   state: GameState,
-  spaces: readonly MapSpaceDef[],
+  spaces: readonly ZoneDef[],
   factionConfig: FactionConfig,
   terrorTokenType: string,
   locSpaceType: string = 'loc',
 ): number {
   let total = 0;
   for (const space of spaces) {
-    if (space.spaceType !== locSpaceType) continue;
+    if (space.category !== locSpaceType) continue;
     if (!isCoinControlled(state, space.id, factionConfig)) continue;
     if (isSabotaged(state, space.id, terrorTokenType)) continue;
-    total += space.econ;
+    total += numericAttribute(space, 'econ');
   }
   return total;
 }
@@ -194,14 +200,14 @@ export function computeTotalEcon(
  */
 export function sumControlledPopulation(
   state: GameState,
-  spaces: readonly MapSpaceDef[],
+  spaces: readonly ZoneDef[],
   controlFn: (state: GameState, spaceId: string, factionConfig: FactionConfig) => boolean,
   factionConfig: FactionConfig,
 ): number {
   let total = 0;
   for (const space of spaces) {
     if (controlFn(state, space.id, factionConfig)) {
-      total += space.population;
+      total += numericAttribute(space, 'population');
     }
   }
   return total;
@@ -227,7 +233,7 @@ export function countTokensInZone(
  */
 export function countBasesOnMap(
   state: GameState,
-  spaces: readonly MapSpaceDef[],
+  spaces: readonly ZoneDef[],
   faction: string,
   basePieceTypes: readonly string[],
   factionProp: string,
@@ -251,7 +257,7 @@ export function countBasesOnMap(
  */
 export function computeVictoryMarker(
   state: GameState,
-  spaces: readonly MapSpaceDef[],
+  spaces: readonly ZoneDef[],
   markerStates: Readonly<Record<string, string>>,
   factionConfig: FactionConfig,
   formula: VictoryFormula,

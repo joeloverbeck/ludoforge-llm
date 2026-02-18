@@ -5,6 +5,7 @@ import {
   applyMove,
   asPlayerId,
   asTokenId,
+  asZoneId,
   initialState,
   legalChoicesDiscover,
   legalMoves,
@@ -12,6 +13,7 @@ import {
   type GameState,
   type Move,
   type Token,
+  type ZoneDef,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
@@ -88,14 +90,14 @@ describe('FITL commitment targeting rules', () => {
     assert.ok(options.includes('hue:none'), 'COIN-controlled city must be a legal commitment destination');
     assert.equal(options.includes('quang-nam:none'), false, 'Non-COIN-controlled province must be illegal');
 
-    const mapById = new Map((def.mapSpaces ?? []).map((space) => [space.id, space] as const));
+    const mapById = new Map(def.zones.filter((z: ZoneDef) => z.category !== undefined).map((z: ZoneDef) => [z.id, z] as const));
     for (const option of options) {
-      const space = mapById.get(option);
-      assert.notEqual(space, undefined, `Destination option ${option} must be a declared map space`);
+      const zone = mapById.get(asZoneId(option));
+      assert.notEqual(zone, undefined, `Destination option ${option} must be a declared map space`);
       const allowed =
-        space!.spaceType === 'loc' ||
+        zone!.category === 'loc' ||
         option === 'saigon:none' ||
-        ((space!.spaceType === 'province' || space!.spaceType === 'city') && isCoinControlled(inCommitment, option));
+        ((zone!.category === 'province' || zone!.category === 'city') && isCoinControlled(inCommitment, option));
       assert.equal(allowed, true, `Illegal commitment destination leaked into options: ${option}`);
     }
   });

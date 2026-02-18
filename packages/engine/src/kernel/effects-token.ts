@@ -17,8 +17,7 @@ const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unkn
 
 const enforceStacking = (ctx: EffectContext, zoneId: string, zoneContentsAfter: readonly Token[], effectType: string): void => {
   const constraints = ctx.def.stackingConstraints;
-  const mapSpaces = ctx.mapSpaces;
-  if (constraints === undefined || constraints.length === 0 || mapSpaces === undefined || mapSpaces.length === 0) {
+  if (constraints === undefined || constraints.length === 0) {
     return;
   }
 
@@ -63,7 +62,7 @@ const enforceStacking = (ctx: EffectContext, zoneId: string, zoneContentsAfter: 
   }
   const violations = checkStackingConstraints(
     constraints,
-    mapSpaces,
+    ctx.def.zones,
     zoneId,
     zoneContentsAfter,
     tokenTypeFactionById,

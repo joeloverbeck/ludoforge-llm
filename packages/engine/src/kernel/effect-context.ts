@@ -9,7 +9,6 @@ import type {
   ExecutionCollector,
   GameDef,
   GameState,
-  MapSpaceDef,
   MoveParamValue,
   Rng,
   TriggerEvent,
@@ -41,7 +40,6 @@ export interface EffectContext {
   readonly traceContext?: EffectTraceContext;
   readonly effectPath?: string;
   readonly maxEffectOps?: number;
-  readonly mapSpaces?: readonly MapSpaceDef[];
   readonly freeOperation?: boolean;
   readonly freeOperationZoneFilter?: ConditionAST;
   readonly freeOperationZoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;

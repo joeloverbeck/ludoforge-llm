@@ -5,7 +5,7 @@ import { parseGameSpec } from '../../src/cnl/index.js';
 import { readProductionSpec } from '../helpers/production-spec-helpers.js';
 import type {
   MapPayload,
-  MapSpaceDef,
+  MapSpaceInput,
   PieceCatalogPayload,
   PieceInventoryEntry,
   ScenarioPayload,
@@ -182,10 +182,20 @@ interface VictoryMarkers {
   readonly nva: number;
 }
 
+function getPopulation(space: MapSpaceInput): number {
+  const pop = space.attributes?.population;
+  return typeof pop === 'number' ? pop : 0;
+}
+
+function getEcon(space: MapSpaceInput): number {
+  const econ = space.attributes?.econ;
+  return typeof econ === 'number' ? econ : 0;
+}
+
 function computeVictoryMarkers(
   scenario: ScenarioPayload,
   catalogPayload: PieceCatalogPayload,
-  spaces: readonly MapSpaceDef[],
+  spaces: readonly MapSpaceInput[],
 ): VictoryMarkers {
   const placements = scenario.initialPlacements ?? [];
   const spacePieceMap = buildSpacePieceMap(placements);
@@ -197,22 +207,24 @@ function computeVictoryMarkers(
   // Total Support: sum of pop * weight for spaces with support (positive weight)
   let totalSupport = 0;
   for (const space of spaces) {
-    if (space.population === 0) continue;
+    const pop = getPopulation(space);
+    if (pop === 0) continue;
     const alignState = getAlignmentState(markers, space.id);
     const weight = getAlignmentWeight(alignState);
     if (weight > 0) {
-      totalSupport += space.population * weight;
+      totalSupport += pop * weight;
     }
   }
 
   // Total Opposition: sum of pop * |weight| for spaces with opposition (negative weight)
   let totalOpposition = 0;
   for (const space of spaces) {
-    if (space.population === 0) continue;
+    const pop = getPopulation(space);
+    if (pop === 0) continue;
     const alignState = getAlignmentState(markers, space.id);
     const weight = getAlignmentWeight(alignState);
     if (weight < 0) {
-      totalOpposition += space.population * Math.abs(weight);
+      totalOpposition += pop * Math.abs(weight);
     }
   }
 
@@ -233,12 +245,13 @@ function computeVictoryMarkers(
   // COIN-Controlled Population: sum of pop for spaces where COIN > Insurgent
   let coinControlledPop = 0;
   for (const space of spaces) {
-    if (space.population === 0) continue;
+    const pop = getPopulation(space);
+    if (pop === 0) continue;
     const pieces = spacePieceMap.get(space.id);
     const coin = coinForces(pieces);
     const ins = insurgentForces(pieces);
     if (coin > ins) {
-      coinControlledPop += space.population;
+      coinControlledPop += pop;
     }
   }
 
@@ -254,12 +267,13 @@ function computeVictoryMarkers(
   // NVA-Controlled Population: sum of pop for spaces where NVA forces alone > all other forces
   let nvaControlledPop = 0;
   for (const space of spaces) {
-    if (space.population === 0) continue;
+    const pop = getPopulation(space);
+    if (pop === 0) continue;
     const pieces = spacePieceMap.get(space.id);
     const nva = nvaForces(pieces);
     const others = nonNvaForces(pieces);
     if (nva > others) {
-      nvaControlledPop += space.population;
+      nvaControlledPop += pop;
     }
   }
 
@@ -280,19 +294,20 @@ function computeVictoryMarkers(
  */
 function computeTotalEcon(
   scenario: ScenarioPayload,
-  spaces: readonly MapSpaceDef[],
+  spaces: readonly MapSpaceInput[],
 ): number {
   const placements = scenario.initialPlacements ?? [];
   const spacePieceMap = buildSpacePieceMap(placements);
 
   let totalEcon = 0;
   for (const space of spaces) {
-    if (space.spaceType !== 'loc') continue;
-    if (space.econ === 0) continue;
+    if (space.category !== 'loc') continue;
+    const econ = getEcon(space);
+    if (econ === 0) continue;
     const pieces = spacePieceMap.get(space.id);
     const ins = insurgentForces(pieces);
     if (ins === 0) {
-      totalEcon += space.econ;
+      totalEcon += econ;
     }
   }
 
@@ -472,7 +487,7 @@ describe('FITL scenario conservation and golden validation', () => {
         it(`${spaceId} has Pop 0 (no population control impact)`, () => {
           const space = spaces.find((s) => s.id === spaceId);
           assert.ok(space, `Space ${spaceId} not found`);
-          assert.equal(space.population, 0, `${spaceId} should have Pop 0`);
+          assert.equal(getPopulation(space), 0, `${spaceId} should have Pop 0`);
           // NVA controls these spaces, but Pop 0 means no contribution to NVA-Controlled Pop
           const pieces = spacePieceMap.get(spaceId);
           const nva = nvaForces(pieces);

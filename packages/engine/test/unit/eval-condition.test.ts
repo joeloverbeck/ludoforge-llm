@@ -12,7 +12,6 @@ import {
   type EvalContext,
   type GameDef,
   type GameState,
-  type MapSpaceDef,
 } from '../../src/kernel/index.js';
 
 const makeDef = (): GameDef => ({
@@ -191,19 +190,22 @@ describe('evalCondition', () => {
   });
 
   it('evaluates zonePropIncludes for array properties', () => {
-    const mapSpaces: readonly MapSpaceDef[] = [
-      {
-        id: 'quang-tri',
-        spaceType: 'province',
-        population: 1,
-        econ: 0,
-        terrainTags: ['highland', 'jungle'],
-        country: 'south-vietnam',
-        coastal: false,
-        adjacentTo: [],
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        zones: [
+          ...makeDef().zones,
+          {
+            id: asZoneId('quang-tri'),
+            owner: 'none' as const,
+            visibility: 'public' as const,
+            ordering: 'set' as const,
+            category: 'province',
+            attributes: { population: 1, econ: 0, terrainTags: ['highland', 'jungle'], country: 'south-vietnam', coastal: false },
+          },
+        ],
       },
-    ];
-    const ctx = makeCtx({ mapSpaces });
+    });
 
     assert.equal(
       evalCondition({ op: 'zonePropIncludes', zone: 'quang-tri', prop: 'terrainTags', value: 'highland' }, ctx),
@@ -216,12 +218,24 @@ describe('evalCondition', () => {
   });
 
   it('throws TYPE_MISMATCH when zonePropIncludes targets a non-array property', () => {
-    const mapSpaces: readonly MapSpaceDef[] = [
-      { id: 'hue', spaceType: 'city', population: 2, econ: 3, terrainTags: [], country: 'south-vietnam', coastal: false, adjacentTo: [] },
-    ];
-    const ctx = makeCtx({ mapSpaces });
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        zones: [
+          ...makeDef().zones,
+          {
+            id: asZoneId('hue'),
+            owner: 'none' as const,
+            visibility: 'public' as const,
+            ordering: 'set' as const,
+            category: 'city',
+            attributes: { population: 2, econ: 3, country: 'south-vietnam', coastal: false },
+          },
+        ],
+      },
+    });
     assert.throws(
-      () => evalCondition({ op: 'zonePropIncludes', zone: 'hue', prop: 'spaceType', value: 'city' }, ctx),
+      () => evalCondition({ op: 'zonePropIncludes', zone: 'hue', prop: 'population', value: 2 }, ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'TYPE_MISMATCH') &&
         typeof error.message === 'string' &&
@@ -230,7 +244,7 @@ describe('evalCondition', () => {
   });
 
   it('throws ZONE_PROP_NOT_FOUND when zonePropIncludes zone not found', () => {
-    const ctx = makeCtx({ mapSpaces: [] });
+    const ctx = makeCtx();
     assert.throws(
       () => evalCondition({ op: 'zonePropIncludes', zone: 'unknown', prop: 'terrainTags', value: 'highland' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND'),

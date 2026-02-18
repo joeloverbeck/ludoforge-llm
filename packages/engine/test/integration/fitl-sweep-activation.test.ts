@@ -13,7 +13,6 @@ import {
   type EffectContext,
   type GameDef,
   type GameState,
-  type MapSpaceDef,
   type Token,
   createCollector,
 } from '../../src/kernel/index.js';
@@ -98,15 +97,7 @@ function buildSweepActivationEffects(zone: string, cubeCount: number, sfCount: n
   ];
 }
 
-const nonJungleMapSpaces: readonly MapSpaceDef[] = [
-  { id: 'quangTri:none', spaceType: 'province', population: 1, econ: 0, terrainTags: ['lowland'], country: 'southVietnam', coastal: false, adjacentTo: [] },
-];
-
-const jungleMapSpaces: readonly MapSpaceDef[] = [
-  { id: 'quangTri:none', spaceType: 'province', population: 1, econ: 0, terrainTags: ['jungle'], country: 'southVietnam', coastal: false, adjacentTo: [] },
-];
-
-function makeCtx(state: GameState, mapSpaces: readonly MapSpaceDef[]): EffectContext {
+function makeCtx(state: GameState): EffectContext {
   return {
     def: makeDef(),
     adjacencyGraph: buildAdjacencyGraph([]),
@@ -117,7 +108,6 @@ function makeCtx(state: GameState, mapSpaces: readonly MapSpaceDef[]): EffectCon
     bindings: {},
     moveParams: {},
     collector: createCollector(),
-    mapSpaces,
   };
 }
 
@@ -141,7 +131,7 @@ describe('FITL sweep-activation macro', () => {
       });
 
       const effects = buildSweepActivationEffects('quangTri:none', 3, 1, false);
-      const ctx = makeCtx(state, nonJungleMapSpaces);
+      const ctx = makeCtx(state);
       const result = applyEffects(effects, ctx);
 
       const guerrillas = result.state.zones['quangTri:none']?.filter(
@@ -168,7 +158,7 @@ describe('FITL sweep-activation macro', () => {
       });
 
       const effects = buildSweepActivationEffects('quangTri:none', 3, 1, false);
-      const ctx = makeCtx(state, nonJungleMapSpaces);
+      const ctx = makeCtx(state);
       const result = applyEffects(effects, ctx);
 
       const guerrillas = result.state.zones['quangTri:none']?.filter(
@@ -192,7 +182,7 @@ describe('FITL sweep-activation macro', () => {
       });
 
       const effects = buildSweepActivationEffects('quangTri:none', 2, 0, false);
-      const ctx = makeCtx(state, nonJungleMapSpaces);
+      const ctx = makeCtx(state);
       const result = applyEffects(effects, ctx);
 
       const guerrillas = result.state.zones['quangTri:none']?.filter(
@@ -225,7 +215,7 @@ describe('FITL sweep-activation macro', () => {
       });
 
       const effects = buildSweepActivationEffects('quangTri:none', 4, 1, true);
-      const ctx = makeCtx(state, jungleMapSpaces);
+      const ctx = makeCtx(state);
       const result = applyEffects(effects, ctx);
 
       const guerrillas = result.state.zones['quangTri:none']?.filter(
@@ -249,7 +239,7 @@ describe('FITL sweep-activation macro', () => {
       });
 
       const effects = buildSweepActivationEffects('quangTri:none', 1, 0, true);
-      const ctx = makeCtx(state, jungleMapSpaces);
+      const ctx = makeCtx(state);
       const result = applyEffects(effects, ctx);
 
       const guerrillas = result.state.zones['quangTri:none']?.filter(

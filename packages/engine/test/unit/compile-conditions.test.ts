@@ -610,7 +610,7 @@ describe('compile-conditions lowering', () => {
         filter: {
           op: 'and',
           args: [
-            { op: '==', left: { ref: 'zoneProp', zone: 'board', prop: 'spaceType' }, right: 'province' },
+            { op: '==', left: { ref: 'zoneProp', zone: 'board', prop: 'category' }, right: 'province' },
             { op: 'not', arg: { op: '==', left: { ref: 'zoneProp', zone: 'board', prop: 'control' }, right: 'NVA' } },
           ],
         },
@@ -626,7 +626,7 @@ describe('compile-conditions lowering', () => {
         condition: {
           op: 'and',
           args: [
-            { op: '==', left: { ref: 'zoneProp', zone: 'board:none', prop: 'spaceType' }, right: 'province' },
+            { op: '==', left: { ref: 'zoneProp', zone: 'board:none', prop: 'category' }, right: 'province' },
             { op: 'not', arg: { op: '==', left: { ref: 'zoneProp', zone: 'board:none', prop: 'control' }, right: 'NVA' } },
           ],
         },
@@ -640,7 +640,7 @@ describe('compile-conditions lowering', () => {
         query: 'mapSpaces',
         filter: {
           op: '==',
-          left: { ref: 'zoneProp', zone: 'board', prop: 'spaceType' },
+          left: { ref: 'zoneProp', zone: 'board', prop: 'category' },
           right: 'province',
         },
       },
@@ -654,7 +654,7 @@ describe('compile-conditions lowering', () => {
       filter: {
         condition: {
           op: '==',
-          left: { ref: 'zoneProp', zone: 'board:none', prop: 'spaceType' },
+          left: { ref: 'zoneProp', zone: 'board:none', prop: 'category' },
           right: 'province',
         },
       },

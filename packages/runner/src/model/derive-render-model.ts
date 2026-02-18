@@ -23,7 +23,6 @@ import type {
   RenderGlobalMarker,
   RenderLastingEffect,
   RenderLastingEffectAttribute,
-  RenderMapSpace,
   RenderMarker,
   RenderModel,
   RenderToken,
@@ -38,7 +37,6 @@ import { formatChoiceValueFallback, serializeChoiceValueIdentity } from './choic
 const OWNER_ZONE_ID_PATTERN = /^.+:(\d+)$/;
 
 interface StaticRenderDerivation {
-  readonly mapSpaces: readonly RenderMapSpace[];
   readonly markerStatesById: ReadonlyMap<string, readonly string[]>;
   readonly globalMarkerStatesById: ReadonlyMap<string, readonly string[]>;
   readonly cardTitleById: ReadonlyMap<string, string>;
@@ -98,7 +96,6 @@ export function deriveRenderModel(
       markers: deriveZoneMarkers(zone.id, state, staticDerivation.markerStatesById),
     })),
     adjacencies,
-    mapSpaces: staticDerivation.mapSpaces,
     tokens,
     globalVars,
     playerVars,
@@ -279,7 +276,6 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
     : null;
 
   return {
-    mapSpaces: deriveMapSpaces(def),
     markerStatesById: buildMarkerStatesById(def.markerLattices),
     globalMarkerStatesById: buildMarkerStatesById(def.globalMarkerLattices),
     cardTitleById,
@@ -678,13 +674,6 @@ function pushAdjacency(
 
 function toAdjacencyKey(from: string, to: string): string {
   return `${from}->${to}`;
-}
-
-function deriveMapSpaces(def: GameDef): readonly RenderMapSpace[] {
-  return (def.mapSpaces ?? []).map((space) => ({
-    ...space,
-    displayName: formatIdAsDisplayName(space.id),
-  }));
 }
 
 function deriveSimultaneousSubmitted(state: GameState): readonly PlayerId[] {

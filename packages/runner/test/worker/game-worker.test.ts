@@ -30,7 +30,7 @@ describe('createGameWorker', () => {
       () => worker.enumerateLegalMoves(),
       () => worker.legalChoices(LEGAL_TICK_MOVE),
       () => worker.applyMove(LEGAL_TICK_MOVE, undefined, nextStamp()),
-      () => worker.playSequence([LEGAL_TICK_MOVE], undefined, nextStamp()),
+      () => worker.playSequence([LEGAL_TICK_MOVE], nextStamp(), undefined),
       () => worker.terminalResult(),
       () => worker.getState(),
       () => worker.getMetadata(),
@@ -172,10 +172,10 @@ describe('createGameWorker', () => {
     const callbackIndices: number[] = [];
     const results = await worker.playSequence(
       [LEGAL_TICK_MOVE, LEGAL_TICK_MOVE],
+      nextStamp(),
       (_result, index) => {
         callbackIndices.push(index);
       },
-      nextStamp(),
     );
 
     expect(results).toHaveLength(2);
@@ -194,10 +194,10 @@ describe('createGameWorker', () => {
     try {
       await worker.playSequence(
         [LEGAL_TICK_MOVE, ILLEGAL_MOVE],
+        nextStamp(),
         (_result, index) => {
           callbackIndices.push(index);
         },
-        nextStamp(),
       );
       throw new Error('Expected playSequence to throw');
     } catch (error) {
@@ -219,10 +219,10 @@ describe('createGameWorker', () => {
 
     const results = await worker.playSequence(
       moves,
+      nextStamp(),
       (_result, index) => {
         callbackIndices.push(index);
       },
-      nextStamp(),
     );
 
     expect(results).toHaveLength(15);

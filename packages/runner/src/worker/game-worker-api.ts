@@ -56,8 +56,8 @@ export interface GameWorkerAPI {
   ): Promise<ApplyMoveResult>;
   playSequence(
     moves: readonly Move[],
-    onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
     stamp: OperationStamp,
+    onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
   ): Promise<readonly ApplyMoveResult[]>;
   terminalResult(): Promise<TerminalResult | null>;
   getState(): Promise<GameState>;
@@ -245,8 +245,8 @@ export function createGameWorker(): GameWorkerAPI {
 
     playSequence(
       moves: readonly Move[],
-      onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
       stamp: OperationStamp,
+      onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
     ): Promise<readonly ApplyMoveResult[]> {
       const current = assertInitialized(def, state);
       ensureFreshMutation(stamp);

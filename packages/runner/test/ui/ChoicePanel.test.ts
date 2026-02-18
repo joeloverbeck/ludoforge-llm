@@ -1,8 +1,13 @@
-import { createElement, isValidElement, type ReactElement, type ReactNode } from 'react';
+// @vitest-environment jsdom
+
+import { createElement } from 'react';
 import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { StoreApi } from 'zustand';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
@@ -16,36 +21,9 @@ vi.mock('zustand', () => ({
 
 import { ChoicePanel, countChoicesToCancel, rewindChoiceToBreadcrumb } from '../../src/ui/ChoicePanel.js';
 
-type TraversableElement = ReactElement<{
-  readonly children?: ReactNode;
-  readonly onClick?: () => void;
-  readonly disabled?: boolean;
-  readonly ['data-testid']?: string;
-}>;
-
-function findElementByTestId(node: ReactNode, testId: string): TraversableElement | null {
-  if (!isValidElement(node)) {
-    return null;
-  }
-
-  const element = node as TraversableElement;
-  if (element.props['data-testid'] === testId) {
-    return element;
-  }
-
-  const children = element.props.children;
-  if (Array.isArray(children)) {
-    for (const child of children) {
-      const found = findElementByTestId(child, testId);
-      if (found !== null) {
-        return found;
-      }
-    }
-    return null;
-  }
-
-  return findElementByTestId(children, testId);
-}
+afterEach(() => {
+  cleanup();
+});
 
 function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']>> = {}): NonNullable<GameStore['renderModel']> {
   return {
@@ -91,6 +69,7 @@ function createChoiceStore(state: {
   readonly selectedAction?: GameStore['selectedAction'];
   readonly partialMove?: GameStore['partialMove'];
   readonly chooseOne?: GameStore['chooseOne'];
+  readonly chooseN?: GameStore['chooseN'];
   readonly cancelChoice?: GameStore['cancelChoice'];
   readonly cancelMove?: GameStore['cancelMove'];
   readonly confirmMove?: GameStore['confirmMove'];
@@ -101,6 +80,7 @@ function createChoiceStore(state: {
       selectedAction: state.selectedAction ?? null,
       partialMove: state.partialMove ?? null,
       chooseOne: state.chooseOne ?? (async () => {}),
+      chooseN: state.chooseN ?? (async () => {}),
       cancelChoice: state.cancelChoice ?? (async () => {}),
       cancelMove: state.cancelMove ?? (() => {}),
       confirmMove: state.confirmMove ?? (async () => {}),
@@ -109,6 +89,18 @@ function createChoiceStore(state: {
 }
 
 describe('ChoicePanel', () => {
+  function renderChoicePanel(props: { readonly mode: 'choicePending' | 'choiceConfirm' | 'choiceInvalid'; readonly store: StoreApi<GameStore> }) {
+    return render(createElement(ChoicePanel, props));
+  }
+
+  function getByTestId(testId: string): HTMLElement {
+    return screen.getByTestId(testId);
+  }
+
+  function queryByTestId(testId: string): HTMLElement | null {
+    return screen.queryByTestId(testId);
+  }
+
   function makeChoiceOption(
     value: string | number | boolean | readonly (string | number | boolean)[],
     displayName: string,
@@ -194,7 +186,7 @@ describe('ChoicePanel', () => {
 
   it('Back dispatches cancelChoice and is disabled when breadcrumb is empty', () => {
     const cancelChoice = vi.fn(async () => {});
-    const tree = ChoicePanel({
+    renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
@@ -208,19 +200,14 @@ describe('ChoicePanel', () => {
       }),
     });
 
-    const backButton = findElementByTestId(tree, 'choice-back');
-    expect(backButton).not.toBeNull();
-    if (backButton === null || backButton.props.onClick === undefined) {
-      throw new Error('Expected Back button.');
-    }
-
-    expect(backButton.props.disabled).toBe(true);
+    const backButton = getByTestId('choice-back') as HTMLButtonElement;
+    expect(backButton.disabled).toBe(true);
     expect(cancelChoice).toHaveBeenCalledTimes(0);
   });
 
   it('Back dispatches cancelChoice when breadcrumb has prior steps', () => {
     const cancelChoice = vi.fn(async () => {});
-    const tree = ChoicePanel({
+    renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
@@ -236,20 +223,15 @@ describe('ChoicePanel', () => {
       }),
     });
 
-    const backButton = findElementByTestId(tree, 'choice-back');
-    expect(backButton).not.toBeNull();
-    if (backButton === null || backButton.props.onClick === undefined) {
-      throw new Error('Expected Back button.');
-    }
-
-    expect(backButton.props.disabled).toBe(false);
-    backButton.props.onClick();
+    const backButton = getByTestId('choice-back');
+    expect((backButton as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(backButton);
     expect(cancelChoice).toHaveBeenCalledTimes(1);
   });
 
   it('Cancel dispatches cancelMove', () => {
     const cancelMove = vi.fn();
-    const tree = ChoicePanel({
+    renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
@@ -262,13 +244,8 @@ describe('ChoicePanel', () => {
       }),
     });
 
-    const cancelButton = findElementByTestId(tree, 'choice-cancel');
-    expect(cancelButton).not.toBeNull();
-    if (cancelButton === null || cancelButton.props.onClick === undefined) {
-      throw new Error('Expected Cancel button.');
-    }
-
-    cancelButton.props.onClick();
+    const cancelButton = getByTestId('choice-cancel');
+    fireEvent.click(cancelButton);
     expect(cancelMove).toHaveBeenCalledTimes(1);
   });
 
@@ -299,7 +276,7 @@ describe('ChoicePanel', () => {
   it('clicking a legal option dispatches chooseOne(value)', () => {
     const chooseOne = vi.fn(async () => {});
 
-    const tree = ChoicePanel({
+    renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
@@ -312,13 +289,8 @@ describe('ChoicePanel', () => {
       }),
     });
 
-    const option = findElementByTestId(tree, choiceOptionTestId('zone-a'));
-    expect(option).not.toBeNull();
-    if (option === null || option.props.onClick === undefined) {
-      throw new Error('Expected legal option button click handler.');
-    }
-
-    option.props.onClick();
+    const option = getByTestId(choiceOptionTestId('zone-a'));
+    fireEvent.click(option);
     expect(chooseOne).toHaveBeenCalledTimes(1);
     expect(chooseOne).toHaveBeenCalledWith('zone-a');
   });
@@ -326,7 +298,7 @@ describe('ChoicePanel', () => {
   it('keeps unknown-legality options non-actionable with deterministic feedback', () => {
     const chooseOne = vi.fn(async () => {});
 
-    const tree = ChoicePanel({
+    renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
@@ -339,14 +311,9 @@ describe('ChoicePanel', () => {
       }),
     });
 
-    const unknownOption = findElementByTestId(tree, choiceOptionTestId('zone-u'));
-    expect(unknownOption).not.toBeNull();
-    if (unknownOption === null || unknownOption.props.onClick === undefined) {
-      throw new Error('Expected unknown option button click handler.');
-    }
-
-    expect(unknownOption.props.disabled).toBe(true);
-    unknownOption.props.onClick();
+    const unknownOption = getByTestId(choiceOptionTestId('zone-u')) as HTMLButtonElement;
+    expect(unknownOption.disabled).toBe(true);
+    fireEvent.click(unknownOption);
     expect(chooseOne).toHaveBeenCalledTimes(0);
 
     const html = renderToStaticMarkup(
@@ -390,7 +357,7 @@ describe('ChoicePanel', () => {
   it('renders confirm button only when move is ready and dispatches confirmMove', () => {
     const confirmMove = vi.fn(async () => {});
 
-    const tree = ChoicePanel({
+    renderChoicePanel({
       mode: 'choiceConfirm',
       store: createChoiceStore({
         renderModel: makeRenderModel({
@@ -402,52 +369,220 @@ describe('ChoicePanel', () => {
       }),
     });
 
-    const confirm = findElementByTestId(tree, 'choice-confirm');
-    expect(confirm).not.toBeNull();
-    if (confirm === null || confirm.props.onClick === undefined) {
-      throw new Error('Expected Confirm button click handler.');
-    }
-
-    confirm.props.onClick();
+    const confirm = getByTestId('choice-confirm');
+    fireEvent.click(confirm);
     expect(confirmMove).toHaveBeenCalledTimes(1);
   });
 
-  it('renders placeholders for chooseN and numeric modes', () => {
-    const chooseNHtml = renderToStaticMarkup(
+  it('Mode B renders toggle controls and deterministic selected-count indicator', () => {
+    renderChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: {
+            kind: 'discreteMany',
+            options: [
+              makeChoiceOption('zone-a', 'Zone A'),
+              makeChoiceOption('zone-b', 'Zone B'),
+            ],
+            min: 1,
+            max: 2,
+          },
+        }),
+      }),
+    });
+
+    expect(queryByTestId('choice-mode-discrete-many')).not.toBeNull();
+    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 0 of 1-2');
+    expect(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`)).not.toBeNull();
+    expect(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`)).not.toBeNull();
+  });
+
+  it('Mode B enables confirm only within bounds and dispatches chooseN(selectedValues)', () => {
+    const chooseN = vi.fn(async () => {});
+    renderChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: {
+            kind: 'discreteMany',
+            options: [
+              makeChoiceOption('zone-a', 'Zone A'),
+              makeChoiceOption('zone-b', 'Zone B'),
+              makeChoiceOption('zone-c', 'Zone C'),
+            ],
+            min: 2,
+            max: 2,
+          },
+        }),
+        chooseN,
+      }),
+    });
+
+    const confirm = getByTestId('choice-multi-confirm') as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+
+    fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`));
+    fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`));
+
+    expect((getByTestId('choice-multi-confirm') as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(getByTestId('choice-multi-confirm'));
+    expect(chooseN).toHaveBeenCalledTimes(1);
+    expect(chooseN).toHaveBeenCalledWith(['zone-a', 'zone-b']);
+  });
+
+  it('Mode B keeps non-legal options non-selectable and shows illegality feedback', () => {
+    const chooseN = vi.fn(async () => {});
+    renderChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: {
+            kind: 'discreteMany',
+            options: [
+              makeChoiceOption('zone-a', 'Zone A'),
+              makeChoiceOption('zone-b', 'Zone B', 'illegal', 'blocked'),
+            ],
+            min: 1,
+            max: 1,
+          },
+        }),
+        chooseN,
+      }),
+    });
+
+    const illegalButton = getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`) as HTMLButtonElement;
+    expect(illegalButton.disabled).toBe(true);
+    expect(queryByTestId('illegality-feedback')).not.toBeNull();
+
+    fireEvent.click(illegalButton);
+    fireEvent.click(getByTestId('choice-multi-confirm'));
+    expect(chooseN).toHaveBeenCalledTimes(0);
+  });
+
+  it('Mode B enforces effective max and deterministic nullable bound text', () => {
+    renderChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: {
+            kind: 'discreteMany',
+            options: [
+              makeChoiceOption('zone-a', 'Zone A'),
+              makeChoiceOption('zone-b', 'Zone B'),
+            ],
+            min: null,
+            max: null,
+          },
+        }),
+      }),
+    });
+
+    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 0 of 0-2');
+    fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`));
+    fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`));
+    expect((getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`) as HTMLButtonElement).disabled).toBe(false);
+    expect((getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('Mode C renders slider/number inputs from domain and keeps them synchronized', () => {
+    renderChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: {
+            kind: 'numeric',
+            domain: { min: 0, max: 10, step: 2 },
+          },
+        }),
+      }),
+    });
+
+    const slider = getByTestId('choice-numeric-slider') as HTMLInputElement;
+    const input = getByTestId('choice-numeric-input') as HTMLInputElement;
+    expect(slider.min).toBe('0');
+    expect(slider.max).toBe('10');
+    expect(slider.step).toBe('2');
+    expect(slider.value).toBe('0');
+    expect(input.value).toBe('0');
+
+    fireEvent.change(slider, { target: { value: '6' } });
+
+    expect((getByTestId('choice-numeric-slider') as HTMLInputElement).value).toBe('6');
+    expect((getByTestId('choice-numeric-input') as HTMLInputElement).value).toBe('6');
+  });
+
+  it('Mode C quick-select buttons snap to valid stepped values', () => {
+    renderChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: {
+            kind: 'numeric',
+            domain: { min: 1, max: 11, step: 2 },
+          },
+        }),
+      }),
+    });
+
+    fireEvent.click(getByTestId('choice-numeric-quick-25'));
+    expect((getByTestId('choice-numeric-input') as HTMLInputElement).value).toBe('3');
+
+    fireEvent.click(getByTestId('choice-numeric-quick-50'));
+    expect((getByTestId('choice-numeric-input') as HTMLInputElement).value).toBe('7');
+
+    fireEvent.click(getByTestId('choice-numeric-quick-75'));
+    expect((getByTestId('choice-numeric-input') as HTMLInputElement).value).toBe('9');
+
+    fireEvent.click(getByTestId('choice-numeric-quick-max'));
+    expect((getByTestId('choice-numeric-input') as HTMLInputElement).value).toBe('11');
+  });
+
+  it('Mode C confirm dispatches chooseOne(numericValue)', () => {
+    const chooseOne = vi.fn(async () => {});
+    renderChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceUi: {
+            kind: 'numeric',
+            domain: { min: 0, max: 10, step: 1 },
+          },
+        }),
+        chooseOne,
+      }),
+    });
+
+    fireEvent.change(getByTestId('choice-numeric-input'), { target: { value: '8' } });
+    fireEvent.click(getByTestId('choice-numeric-confirm'));
+    expect(chooseOne).toHaveBeenCalledTimes(1);
+    expect(chooseOne).toHaveBeenCalledWith(8);
+  });
+
+  it('does not render Mode B/Mode C placeholder copy', () => {
+    const html = renderToStaticMarkup(
       createElement(ChoicePanel, {
         mode: 'choicePending',
         store: createChoiceStore({
           renderModel: makeRenderModel({
             choiceUi: {
               kind: 'discreteMany',
-              options: [],
+              options: [makeChoiceOption('zone-a', 'Zone A')],
               min: 1,
-              max: 2,
+              max: 1,
             },
           }),
         }),
       }),
     );
-    expect(chooseNHtml).toContain('data-testid="choice-mode-choose-n-placeholder"');
-
-    const numericHtml = renderToStaticMarkup(
-      createElement(ChoicePanel, {
-        mode: 'choicePending',
-        store: createChoiceStore({
-          renderModel: makeRenderModel({
-            choiceUi: {
-              kind: 'numeric',
-              domain: { min: 0, max: 3, step: 1 },
-            },
-          }),
-        }),
-      }),
-    );
-    expect(numericHtml).toContain('data-testid="choice-mode-numeric-placeholder"');
+    expect(html).not.toContain('Multi-select coming soon');
+    expect(html).not.toContain('Numeric input coming soon');
   });
 
   it('keeps interactive controls pointer-active via CSS contract', () => {
-    const css = readFileSync(new URL('../../src/ui/ChoicePanel.module.css', import.meta.url), 'utf-8');
+    const currentDir = dirname(fileURLToPath(import.meta.url));
+    const cssPath = resolve(currentDir, '../../src/ui/ChoicePanel.module.css');
+    const css = readFileSync(cssPath, 'utf-8');
     const panelBlock = css.match(/\.panel\s*\{[^}]*\}/u)?.[0] ?? '';
     const breadcrumbStepBlock = css.match(/\.breadcrumbStep\s*\{[^}]*\}/u)?.[0] ?? '';
     const optionButtonBlock = css.match(/\.optionButton\s*\{[^}]*\}/u)?.[0] ?? '';
@@ -477,32 +612,34 @@ describe('ChoicePanel', () => {
   });
 
   it('returns null when mode is choicePending but no pending choice exists', () => {
-    const tree = ChoicePanel({
-      mode: 'choicePending',
-      store: createChoiceStore({
-        renderModel: makeRenderModel({
-          choiceUi: { kind: 'none' },
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choicePending',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceUi: { kind: 'none' },
+          }),
         }),
       }),
-    });
-
-    expect(tree).toBeNull();
+    );
+    expect(html).toBe('');
   });
 
   it('returns null when mode is choiceConfirm but choice is still pending', () => {
-    const tree = ChoicePanel({
-      mode: 'choiceConfirm',
-      store: createChoiceStore({
-        renderModel: makeRenderModel({
-          choiceUi: {
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choiceConfirm',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceUi: {
               kind: 'discreteOne',
               options: [makeChoiceOption('zone-a', 'Zone A')],
             },
+          }),
         }),
       }),
-    });
-
-    expect(tree).toBeNull();
+    );
+    expect(html).toBe('');
   });
 
   it('renders deterministic non-interactive output for invalid mode', () => {
@@ -525,15 +662,16 @@ describe('ChoicePanel', () => {
   });
 
   it('returns null when mode is choiceInvalid but choiceUi is not invalid', () => {
-    const tree = ChoicePanel({
-      mode: 'choiceInvalid',
-      store: createChoiceStore({
-        renderModel: makeRenderModel({
-          choiceUi: { kind: 'none' },
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choiceInvalid',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceUi: { kind: 'none' },
+          }),
         }),
       }),
-    });
-
-    expect(tree).toBeNull();
+    );
+    expect(html).toBe('');
   });
 });

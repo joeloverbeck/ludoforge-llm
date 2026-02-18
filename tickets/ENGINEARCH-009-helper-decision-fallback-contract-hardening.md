@@ -2,7 +2,7 @@
 
 **Status**: PENDING
 **Priority**: P2
-**Depends on**: ENGINEARCH-006
+**Depends on**: ENGINEARCH-006 (`archive/tickets/ENGINEARCH-006-canonical-option-policy-consolidation.md`)
 
 ---
 

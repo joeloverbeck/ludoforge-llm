@@ -2,7 +2,6 @@ import { legalChoicesEvaluate } from '../kernel/legal-choices.js';
 import { selectChoiceOptionValuesByLegalityPrecedence } from '../kernel/choice-option-policy.js';
 import { nextInt } from '../kernel/prng.js';
 import type {
-  ChoicePendingRequest,
   GameDef,
   GameState,
   Move,
@@ -18,21 +17,19 @@ export const isTemplateMoveForProfile = (def: GameDef, move: Move): boolean =>
   && Object.keys(move.params).length === 0;
 
 const selectFromChooseOne = (
-  choices: ChoicePendingRequest,
+  options: readonly MoveParamValue[],
   rng: Rng,
 ): { readonly selected: MoveParamValue; readonly rng: Rng } => {
-  const options = selectChoiceOptionValuesByLegalityPrecedence(choices);
   const [index, nextRng] = nextInt(rng, 0, options.length - 1);
   return { selected: options[index]!, rng: nextRng };
 };
 
 const selectFromChooseN = (
-  choices: ChoicePendingRequest,
+  options: readonly MoveParamValue[],
+  min: number,
+  max: number,
   rng: Rng,
 ): { readonly selected: MoveParamValue; readonly rng: Rng } => {
-  const options = selectChoiceOptionValuesByLegalityPrecedence(choices);
-  const min = choices.min ?? 0;
-  const max = choices.max ?? options.length;
   const [count, rng1] = nextInt(rng, min, max);
 
   // Fisher-Yates partial shuffle to pick `count` items
@@ -72,16 +69,23 @@ export const completeTemplateMove = (
       );
     }
 
-    const optionCount = selectChoiceOptionValuesByLegalityPrecedence(choices).length;
+    const options = selectChoiceOptionValuesByLegalityPrecedence(choices);
+    const optionCount = options.length;
     const min = choices.min ?? 0;
-    if (optionCount === 0 || (choices.type === 'chooseN' && optionCount < min)) {
+    if (optionCount === 0) {
+      return null;
+    }
+
+    const declaredMax = choices.type === 'chooseN' ? (choices.max ?? optionCount) : optionCount;
+    const max = Math.min(declaredMax, optionCount);
+    if (choices.type === 'chooseN' && (optionCount < min || max < min)) {
       return null;
     }
 
     const { selected, rng: nextRng } =
       choices.type === 'chooseN'
-        ? selectFromChooseN(choices, cursor)
-        : selectFromChooseOne(choices, cursor);
+        ? selectFromChooseN(options, min, max, cursor)
+        : selectFromChooseOne(options, cursor);
 
     cursor = nextRng;
     current = { ...current, params: { ...current.params, [choices.decisionId]: selected } };

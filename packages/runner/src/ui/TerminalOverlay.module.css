@@ -1,0 +1,104 @@
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-modal);
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 19, 0.6);
+  padding: var(--space-lg);
+}
+
+.card {
+  width: min(520px, calc(100vw - (2 * var(--space-lg))));
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-panel) 90%, black);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.42);
+  color: var(--text-primary);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-family: var(--font-ui);
+}
+
+.winner {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  padding: var(--space-xs) var(--space-sm);
+  width: fit-content;
+}
+
+.message {
+  margin: 0;
+  font-family: var(--font-ui);
+  color: var(--text-secondary);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-family: var(--font-ui);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.listRow {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: baseline;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg-panel) 82%, white 8%);
+}
+
+.rank {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.meta {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.button {
+  align-self: flex-end;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent) 36%, var(--bg-panel));
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.button:hover {
+  background: color-mix(in srgb, var(--accent) 52%, var(--bg-panel));
+}

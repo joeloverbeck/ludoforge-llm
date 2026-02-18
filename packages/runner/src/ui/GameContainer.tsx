@@ -24,6 +24,7 @@ import { PlayerHandPanel } from './PlayerHandPanel.js';
 import { AITurnOverlay } from './AITurnOverlay.js';
 import { WarningsToast } from './WarningsToast.js';
 import { TooltipLayer } from './TooltipLayer.js';
+import { TerminalOverlay } from './TerminalOverlay.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 import styles from './GameContainer.module.css';
 
@@ -50,6 +51,7 @@ const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayRegi
   floating: [
     WarningsToast,
     PlayerHandPanel,
+    TerminalOverlay,
   ],
 };
 

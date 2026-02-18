@@ -95,6 +95,10 @@ vi.mock('../../src/ui/WarningsToast.js', () => ({
   WarningsToast: () => createElement('div', { 'data-testid': 'warnings-toast' }),
 }));
 
+vi.mock('../../src/ui/TerminalOverlay.js', () => ({
+  TerminalOverlay: () => createElement('div', { 'data-testid': 'terminal-overlay' }),
+}));
+
 vi.mock('../../src/ui/TooltipLayer.js', () => ({
   TooltipLayer: (props: CapturedTooltipLayerProps) => {
     testDoubles.tooltipLayerProps = props;
@@ -272,6 +276,7 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="active-effects-panel"');
     expect(html).toContain('data-testid="warnings-toast"');
     expect(html).toContain('data-testid="player-hand-panel"');
+    expect(html).toContain('data-testid="terminal-overlay"');
     expect(html).toContain('data-testid="tooltip-layer"');
     expectAppearsInOrder(html, [
       'interrupt-banner',
@@ -318,6 +323,7 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="global-markers-bar"');
     expect(html).toContain('data-testid="active-effects-panel"');
     expect(html).toContain('data-testid="player-hand-panel"');
+    expect(html).toContain('data-testid="terminal-overlay"');
     expectAppearsInOrder(html, [
       'interrupt-banner',
       'phase-indicator',

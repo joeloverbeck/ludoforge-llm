@@ -1,6 +1,7 @@
 import { asPlayerId, type EffectTraceEntry } from '@ludoforge/engine/runtime';
 import { describe, expect, it } from 'vitest';
 
+import { createPresetRegistry, type PresetTweenFactory } from '../../src/animation/preset-registry';
 import { traceToDescriptors } from '../../src/animation/trace-to-descriptors';
 
 function traceEntryProvenance(eventContext: EffectTraceEntry['provenance']['eventContext']) {
@@ -206,6 +207,66 @@ describe('traceToDescriptors', () => {
         eventType: 'phaseEnter',
         phase: 'main',
         preset: 'pulse',
+        isTriggered: false,
+      },
+    ]);
+  });
+
+  it('rejects incompatible preset overrides', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    expect(
+      () =>
+        traceToDescriptors(trace, {
+          presetOverrides: new Map([['moveToken', 'fade-in-scale']]),
+        }),
+    ).toThrow(/not compatible/u);
+  });
+
+  it('supports custom preset overrides when provided registry includes compatible preset', () => {
+    const noopFactory: PresetTweenFactory = () => {
+      // noop
+    };
+    const customRegistry = createPresetRegistry().register({
+      id: 'custom-move-tween',
+      defaultDurationSeconds: 0.2,
+      compatibleKinds: ['moveToken'],
+      createTween: noopFactory,
+    });
+
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    expect(
+      traceToDescriptors(
+        trace,
+        {
+          presetOverrides: new Map([['moveToken', 'custom-move-tween']]),
+        },
+        customRegistry,
+      ),
+    ).toEqual([
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'custom-move-tween',
         isTriggered: false,
       },
     ]);

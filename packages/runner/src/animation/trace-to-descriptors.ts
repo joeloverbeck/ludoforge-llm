@@ -6,18 +6,14 @@ import type {
   AnimationMappingOptions,
   AnimationPresetId,
 } from './animation-types.js';
+import {
+  createPresetRegistry,
+  resolveDefaultPresetIdForTraceKind,
+  type PresetCompatibleDescriptorKind,
+  type PresetRegistry,
+} from './preset-registry.js';
 
-const DEFAULT_PRESETS: Readonly<Record<EffectTraceEntry['kind'], AnimationPresetId | null>> = {
-  moveToken: 'arc-tween',
-  createToken: 'fade-in-scale',
-  destroyToken: 'fade-out-scale',
-  setTokenProp: 'tint-flash',
-  varChange: 'counter-roll',
-  resourceTransfer: 'counter-roll',
-  lifecycleEvent: 'banner-slide',
-  forEach: null,
-  reduce: null,
-};
+const BUILTIN_PRESET_REGISTRY = createPresetRegistry();
 
 function isTriggered(entry: EffectTraceEntry): boolean {
   return entry.provenance.eventContext === 'triggerEffect';
@@ -25,21 +21,21 @@ function isTriggered(entry: EffectTraceEntry): boolean {
 
 function resolvePreset(
   traceKind: EffectTraceEntry['kind'],
+  descriptorKind: PresetCompatibleDescriptorKind,
   options: AnimationMappingOptions | undefined,
+  presetRegistry: PresetRegistry,
 ): AnimationPresetId {
   const override = options?.presetOverrides?.get(traceKind);
-  if (override !== undefined) {
-    return override;
-  }
-
-  const preset = DEFAULT_PRESETS[traceKind];
-  if (preset === null) {
-    throw new Error(`Trace kind "${traceKind}" does not map to a visual animation preset.`);
-  }
-  return preset;
+  const presetId = override ?? resolveDefaultPresetIdForTraceKind(traceKind);
+  presetRegistry.requireCompatible(presetId, descriptorKind);
+  return presetId;
 }
 
-function mapEntry(entry: EffectTraceEntry, options: AnimationMappingOptions | undefined): AnimationDescriptor | null {
+function mapEntry(
+  entry: EffectTraceEntry,
+  options: AnimationMappingOptions | undefined,
+  presetRegistry: PresetRegistry,
+): AnimationDescriptor | null {
   const triggered = isTriggered(entry);
   switch (entry.kind) {
     case 'moveToken':
@@ -48,7 +44,7 @@ function mapEntry(entry: EffectTraceEntry, options: AnimationMappingOptions | un
         tokenId: entry.tokenId,
         from: entry.from,
         to: entry.to,
-        preset: resolvePreset(entry.kind, options),
+        preset: resolvePreset(entry.kind, 'moveToken', options, presetRegistry),
         isTriggered: triggered,
       };
     case 'createToken':
@@ -57,7 +53,7 @@ function mapEntry(entry: EffectTraceEntry, options: AnimationMappingOptions | un
         tokenId: entry.tokenId,
         type: entry.type,
         zone: entry.zone,
-        preset: resolvePreset(entry.kind, options),
+        preset: resolvePreset(entry.kind, 'createToken', options, presetRegistry),
         isTriggered: triggered,
       };
     case 'destroyToken':
@@ -66,7 +62,7 @@ function mapEntry(entry: EffectTraceEntry, options: AnimationMappingOptions | un
         tokenId: entry.tokenId,
         type: entry.type,
         zone: entry.zone,
-        preset: resolvePreset(entry.kind, options),
+        preset: resolvePreset(entry.kind, 'destroyToken', options, presetRegistry),
         isTriggered: triggered,
       };
     case 'setTokenProp':
@@ -76,7 +72,7 @@ function mapEntry(entry: EffectTraceEntry, options: AnimationMappingOptions | un
         prop: entry.prop,
         oldValue: entry.oldValue,
         newValue: entry.newValue,
-        preset: resolvePreset(entry.kind, options),
+        preset: resolvePreset(entry.kind, 'setTokenProp', options, presetRegistry),
         isTriggered: triggered,
       };
     case 'varChange':
@@ -87,7 +83,7 @@ function mapEntry(entry: EffectTraceEntry, options: AnimationMappingOptions | un
         oldValue: entry.oldValue,
         newValue: entry.newValue,
         ...(entry.player === undefined ? {} : { player: entry.player }),
-        preset: resolvePreset(entry.kind, options),
+        preset: resolvePreset(entry.kind, 'varChange', options, presetRegistry),
         isTriggered: triggered,
       };
     case 'resourceTransfer':
@@ -101,7 +97,7 @@ function mapEntry(entry: EffectTraceEntry, options: AnimationMappingOptions | un
         destinationHeadroom: entry.destinationHeadroom,
         ...(entry.minAmount === undefined ? {} : { minAmount: entry.minAmount }),
         ...(entry.maxAmount === undefined ? {} : { maxAmount: entry.maxAmount }),
-        preset: resolvePreset(entry.kind, options),
+        preset: resolvePreset(entry.kind, 'resourceTransfer', options, presetRegistry),
         isTriggered: triggered,
       };
     case 'lifecycleEvent':
@@ -112,7 +108,7 @@ function mapEntry(entry: EffectTraceEntry, options: AnimationMappingOptions | un
         kind: 'phaseTransition',
         eventType: entry.eventType,
         ...(entry.phase === undefined ? {} : { phase: entry.phase }),
-        preset: resolvePreset(entry.kind, options),
+        preset: resolvePreset(entry.kind, 'phaseTransition', options, presetRegistry),
         isTriggered: triggered,
       };
     case 'forEach':
@@ -153,12 +149,13 @@ function passesDetailFilter(detailLevel: AnimationDetailLevel, descriptor: Anima
 export function traceToDescriptors(
   trace: readonly EffectTraceEntry[],
   options?: AnimationMappingOptions,
+  presetRegistry: PresetRegistry = BUILTIN_PRESET_REGISTRY,
 ): readonly AnimationDescriptor[] {
   const detailLevel = options?.detailLevel ?? 'full';
   const mapped: AnimationDescriptor[] = [];
 
   for (const entry of trace) {
-    const descriptor = mapEntry(entry, options);
+    const descriptor = mapEntry(entry, options, presetRegistry);
     if (descriptor === null) {
       continue;
     }

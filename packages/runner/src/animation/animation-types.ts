@@ -10,7 +10,8 @@ export const ANIMATION_PRESET_IDS = [
   'pulse',
 ] as const;
 
-export type AnimationPresetId = (typeof ANIMATION_PRESET_IDS)[number];
+export type BuiltinAnimationPresetId = (typeof ANIMATION_PRESET_IDS)[number];
+export type AnimationPresetId = string;
 
 export type AnimationDetailLevel = 'full' | 'standard' | 'minimal';
 

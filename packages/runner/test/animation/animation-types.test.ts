@@ -117,12 +117,12 @@ describe('animation-types', () => {
       detailLevel,
       presetOverrides: new Map<string, AnimationPresetId>([
         ['moveToken', 'arc-tween'],
-        ['varChange', 'counter-roll'],
+        ['varChange', 'custom-counter-roll'],
       ]),
     };
 
     expect(options.detailLevel).toBe('standard');
     expect(options.presetOverrides?.get('moveToken')).toBe('arc-tween');
+    expect(options.presetOverrides?.get('varChange')).toBe('custom-counter-roll');
   });
 });
-

@@ -340,7 +340,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     expect(handOneZone?.hiddenTokenCount).toBe(1);
   });
 
-  it('derives token factionId from card-driven faction order for player-owned zones', () => {
+  it('does not infer token factionId from card-driven faction order for player-owned zones', () => {
     const baseDef = compileFixture({
       minPlayers: 2,
       maxPlayers: 2,
@@ -419,11 +419,11 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       factionId: renderToken.factionId,
     }))).toEqual([
       { id: 'public-1', ownerID: null, factionId: null },
-      { id: 'h0-a', ownerID: asPlayerId(0), factionId: 'us' },
+      { id: 'h0-a', ownerID: asPlayerId(0), factionId: null },
     ]);
   });
 
-  it('derives token factionId from token props faction aliases in public zones', () => {
+  it('derives token factionId from tokenTypes.faction and ignores token props faction values', () => {
     const baseDef = compileFixture({
       minPlayers: 2,
       maxPlayers: 2,
@@ -442,6 +442,10 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         { id: 'us', displayName: 'United States', color: '#e63946' },
         { id: 'arvn', displayName: 'ARVN', color: '#457b9d' },
       ],
+      tokenTypes: [
+        { id: 'us-troops', faction: 'us', props: { faction: 'string' } },
+        { id: 'arvn-police', faction: 'arvn', props: { faction: 'string' } },
+      ],
     };
     const baseState = initialState(def, 112, 2);
     const state: GameState = {
@@ -449,8 +453,8 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       zones: {
         ...baseState.zones,
         'table:none': [
-          token('u1', 'us-troops', { faction: 'US' }),
-          token('a1', 'arvn-police', { faction: 'ARVN' }),
+          token('u1', 'us-troops', { faction: 'ARVN' }),
+          token('a1', 'arvn-police', { faction: 'US' }),
         ],
       },
     };

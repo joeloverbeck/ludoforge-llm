@@ -2472,6 +2472,25 @@ describe('validateGameDef constraints and warnings', () => {
     const diagnostics = validateGameDef(def);
     assert.ok(diagnostics.some((diag) => diag.code === 'STACKING_CONSTRAINT_TOKEN_TYPE_FACTION_MISSING'));
   });
+
+  it('reports error when token type faction references undeclared faction id', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      factions: [{ id: 'us', color: '#e63946' }],
+      tokenTypes: [{ id: 'troops', faction: 'arvn', props: { faction: 'string' } }],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      diagnostics.some(
+        (diag) =>
+          diag.code === 'TOKEN_TYPE_FACTION_UNDECLARED'
+          && diag.path === 'tokenTypes[0].faction'
+          && diag.severity === 'error',
+      ),
+    );
+  });
 });
 
 describe('validateInitialPlacementsAgainstStackingConstraints', () => {

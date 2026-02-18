@@ -371,6 +371,21 @@ export const validateStructureSections = (diagnostics: Diagnostic[], def: GameDe
     'token type id',
     'tokenTypes',
   );
+  const declaredFactionIds = new Set((def.factions ?? []).map((faction) => faction.id));
+  if (declaredFactionIds.size > 0) {
+    def.tokenTypes.forEach((tokenType, tokenTypeIndex) => {
+      if (tokenType.faction === undefined || declaredFactionIds.has(tokenType.faction)) {
+        return;
+      }
+      diagnostics.push({
+        code: 'TOKEN_TYPE_FACTION_UNDECLARED',
+        path: `tokenTypes[${tokenTypeIndex}].faction`,
+        severity: 'error',
+        message: `Token type "${tokenType.id}" references unknown faction "${tokenType.faction}".`,
+        suggestion: 'Use one of the ids declared in factions[].id.',
+      });
+    });
+  }
   checkDuplicateIds(
     diagnostics,
     def.turnStructure.phases.map((phase) => phase.id),

@@ -78,6 +78,9 @@ export function validateZones(doc: GameSpecDoc, diagnostics: Diagnostic[]): read
     }
 
     validateUnknownKeys(zone, ZONE_KEYS, basePath, diagnostics, 'zone');
+    if (zone.zoneKind !== undefined) {
+      validateEnumField(zone, 'zoneKind', ['board', 'aux'], basePath, diagnostics, 'zone');
+    }
     validateEnumField(zone, 'owner', ['none', 'player'], basePath, diagnostics, 'zone');
     validateEnumField(zone, 'visibility', ['public', 'owner', 'hidden'], basePath, diagnostics, 'zone');
     validateEnumField(zone, 'ordering', ['stack', 'queue', 'set'], basePath, diagnostics, 'zone');

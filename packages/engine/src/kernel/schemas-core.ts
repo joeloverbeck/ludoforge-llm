@@ -65,6 +65,7 @@ export const VariableDefSchema = z.discriminatedUnion('type', [IntVariableDefSch
 export const ZoneDefSchema = z
   .object({
     id: StringSchema,
+    zoneKind: z.union([z.literal('board'), z.literal('aux')]).optional(),
     owner: z.union([z.literal('none'), z.literal('player')]),
     visibility: z.union([z.literal('public'), z.literal('owner'), z.literal('hidden')]),
     ordering: z.union([z.literal('stack'), z.literal('queue'), z.literal('set')]),

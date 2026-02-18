@@ -14,18 +14,21 @@
     "zones": [
       {
         "id": "deck:none",
+        "zoneKind": "aux",
         "owner": "none",
         "visibility": "hidden",
         "ordering": "stack"
       },
       {
         "id": "hand:0",
+        "zoneKind": "aux",
         "owner": "player",
         "visibility": "owner",
         "ordering": "set"
       },
       {
         "id": "hand:1",
+        "zoneKind": "aux",
         "owner": "player",
         "visibility": "owner",
         "ordering": "set"

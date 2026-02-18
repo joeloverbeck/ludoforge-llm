@@ -25,6 +25,7 @@ const makeDef = (): GameDef => ({
   zones: [
     {
       id: asZoneId('deck:none'),
+      zoneKind: 'aux',
       owner: 'none',
       visibility: 'hidden',
       ordering: 'stack',
@@ -32,6 +33,7 @@ const makeDef = (): GameDef => ({
     },
     {
       id: asZoneId('hand:0'),
+      zoneKind: 'aux',
       owner: 'player',
       visibility: 'owner',
       ordering: 'stack',
@@ -39,6 +41,7 @@ const makeDef = (): GameDef => ({
     },
     {
       id: asZoneId('hand:1'),
+      zoneKind: 'aux',
       owner: 'player',
       visibility: 'owner',
       ordering: 'stack',
@@ -46,6 +49,7 @@ const makeDef = (): GameDef => ({
     },
     {
       id: asZoneId('bench:1'),
+      zoneKind: 'aux',
       owner: 'player',
       visibility: 'public',
       ordering: 'queue',
@@ -53,6 +57,7 @@ const makeDef = (): GameDef => ({
     },
     {
       id: asZoneId('tableau:2'),
+      zoneKind: 'aux',
       owner: 'player',
       visibility: 'public',
       ordering: 'set',
@@ -60,6 +65,7 @@ const makeDef = (): GameDef => ({
     },
     {
       id: asZoneId('battlefield:none'),
+      zoneKind: 'aux',
       owner: 'none',
       visibility: 'public',
       ordering: 'set',
@@ -408,8 +414,20 @@ describe('evalQuery', () => {
     };
     const zones = [
       ...def.zones,
-      { id: asZoneId('hand:2'), owner: 'player' as const, visibility: 'owner' as const, ordering: 'stack' as const },
-      { id: asZoneId('hand:3'), owner: 'player' as const, visibility: 'owner' as const, ordering: 'stack' as const },
+      {
+        id: asZoneId('hand:2'),
+        zoneKind: 'aux' as const,
+        owner: 'player' as const,
+        visibility: 'owner' as const,
+        ordering: 'stack' as const,
+      },
+      {
+        id: asZoneId('hand:3'),
+        zoneKind: 'aux' as const,
+        owner: 'player' as const,
+        visibility: 'owner' as const,
+        ordering: 'stack' as const,
+      },
     ];
     const ctx = makeCtx({
       def: { ...def, zones },
@@ -1312,10 +1330,20 @@ describe('evalQuery', () => {
       ...makeDef(),
       zones: makeDef().zones.map((zone) => {
         if (zone.id === asZoneId('battlefield:none')) {
-          return { ...zone, category: 'province', attributes: { population: 1, econ: 0, terrainTags: ['lowland'], country: 'southVietnam', coastal: false } };
+          return {
+            ...zone,
+            zoneKind: 'board' as const,
+            category: 'province',
+            attributes: { population: 1, econ: 0, terrainTags: ['lowland'], country: 'southVietnam', coastal: false },
+          };
         }
         if (zone.id === asZoneId('tableau:2')) {
-          return { ...zone, category: 'city', attributes: { population: 2, econ: 0, terrainTags: ['urban'], country: 'southVietnam', coastal: false } };
+          return {
+            ...zone,
+            zoneKind: 'board' as const,
+            category: 'city',
+            attributes: { population: 2, econ: 0, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
+          };
         }
         return zone;
       }),
@@ -1348,10 +1376,20 @@ describe('evalQuery', () => {
       ...makeDef(),
       zones: makeDef().zones.map((zone) => {
         if (zone.id === asZoneId('battlefield:none')) {
-          return { ...zone, category: 'province', attributes: { population: 1, econ: 0, terrainTags: ['lowland'], country: 'southVietnam', coastal: false } };
+          return {
+            ...zone,
+            zoneKind: 'board' as const,
+            category: 'province',
+            attributes: { population: 1, econ: 0, terrainTags: ['lowland'], country: 'southVietnam', coastal: false },
+          };
         }
         if (zone.id === asZoneId('tableau:2')) {
-          return { ...zone, category: 'city', attributes: { population: 2, econ: 0, terrainTags: ['urban'], country: 'northVietnam', coastal: false } };
+          return {
+            ...zone,
+            zoneKind: 'board' as const,
+            category: 'city',
+            attributes: { population: 2, econ: 0, terrainTags: ['urban'], country: 'northVietnam', coastal: false },
+          };
         }
         return zone;
       }),
@@ -1377,6 +1415,86 @@ describe('evalQuery', () => {
         ctx,
       ).map((token) => (token as Token).id),
       [asTokenId('us-troop-1'), asTokenId('us-troop-2')],
+    );
+  });
+
+  it('mapSpaces includes board zones even when category is absent', () => {
+    const defWithUncategorizedBoard = {
+      ...makeDef(),
+      zones: makeDef().zones.map((zone) =>
+        zone.id === asZoneId('battlefield:none') ? { ...zone, zoneKind: 'board' as const } : zone,
+      ),
+    };
+    const ctx = makeCtx({
+      def: defWithUncategorizedBoard,
+      adjacencyGraph: buildAdjacencyGraph(defWithUncategorizedBoard.zones),
+    });
+
+    assert.deepEqual(evalQuery({ query: 'mapSpaces' }, ctx), ['battlefield:none']);
+  });
+
+  it('mapSpaces excludes aux zones even when category is present', () => {
+    const defWithCategorizedAuxZone = {
+      ...makeDef(),
+      zones: makeDef().zones.map((zone) =>
+        zone.id === asZoneId('tableau:2')
+          ? {
+              ...zone,
+              zoneKind: 'aux' as const,
+              category: 'city',
+              attributes: { population: 2, econ: 0, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
+            }
+          : zone,
+      ),
+    };
+    const ctx = makeCtx({
+      def: defWithCategorizedAuxZone,
+      adjacencyGraph: buildAdjacencyGraph(defWithCategorizedAuxZone.zones),
+    });
+
+    assert.deepEqual(evalQuery({ query: 'mapSpaces' }, ctx), []);
+  });
+
+  it('tokensInMapSpaces mirrors zoneKind-based board selection', () => {
+    const defWithBoardAndAuxMix = {
+      ...makeDef(),
+      zones: makeDef().zones.map((zone) => {
+        if (zone.id === asZoneId('battlefield:none')) {
+          return { ...zone, zoneKind: 'board' as const };
+        }
+        if (zone.id === asZoneId('tableau:2')) {
+          return {
+            ...zone,
+            zoneKind: 'aux' as const,
+            category: 'city',
+            attributes: { population: 2, econ: 0, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
+          };
+        }
+        return zone;
+      }),
+    };
+    const state: GameState = {
+      ...makeState(),
+      zones: {
+        ...makeState().zones,
+        'tableau:2': [makeFactionToken('aux-piece', 'US')],
+      },
+    };
+    const ctx = makeCtx({
+      def: defWithBoardAndAuxMix,
+      state,
+      adjacencyGraph: buildAdjacencyGraph(defWithBoardAndAuxMix.zones),
+    });
+
+    assert.deepEqual(
+      evalQuery({ query: 'tokensInMapSpaces' }, ctx).map((token) => (token as Token).id),
+      [
+        asTokenId('us-troop-1'),
+        asTokenId('us-troop-2'),
+        asTokenId('arvn-troop-1'),
+        asTokenId('nva-guerrilla-1'),
+        asTokenId('vc-guerrilla-1'),
+      ],
     );
   });
 
@@ -1421,6 +1539,7 @@ describe('evalQuery', () => {
       ...def.zones,
       {
         id: malformedZoneId,
+        zoneKind: 'aux' as const,
         owner: 'none' as const,
         visibility: 'public' as const,
         ordering: 'set' as const,

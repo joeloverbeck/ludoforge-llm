@@ -101,6 +101,7 @@ export interface FactionDef {
 
 export interface ZoneDef {
   readonly id: ZoneId;
+  readonly zoneKind?: 'board' | 'aux';
   readonly owner: 'none' | 'player';
   readonly visibility: 'public' | 'owner' | 'hidden';
   readonly ordering: 'stack' | 'queue' | 'set';

@@ -914,10 +914,11 @@ export const buildValidationContext = (
   const actionCandidates = [...new Set(def.actions.map((action) => action.id))].sort((left, right) =>
     left.localeCompare(right),
   );
-  const mapSpaceZoneCandidates = [...new Set(def.zones.filter((zone) => zone.category !== undefined).map((zone) => zone.id))].sort((left, right) =>
+  const mapSpaceZones = def.zones.filter((zone) => zone.zoneKind === 'board');
+  const mapSpaceZoneCandidates = [...new Set(mapSpaceZones.map((zone) => zone.id))].sort((left, right) =>
     left.localeCompare(right),
   );
-  const mapSpacePropKinds = classifyZoneAttributePropertyKinds(def.zones);
+  const mapSpacePropKinds = classifyZoneAttributePropertyKinds(mapSpaceZones);
   const mapSpacePropCandidates = [...mapSpacePropKinds.keys()].sort((left, right) => left.localeCompare(right));
   const runtimeDataAssets = def.runtimeDataAssets ?? [];
   const runtimeDataAssetIdsByNormalized = new Map<string, string>();

@@ -353,7 +353,7 @@ function evalMapSpacesQuery(
   ctx: EvalContext,
 ): readonly ZoneId[] {
   const mapSpaceZones = [...ctx.def.zones]
-    .filter((zone) => zone.category !== undefined)
+    .filter((zone) => zone.zoneKind === 'board')
     .sort((left, right) => left.id.localeCompare(right.id));
   return applyZonesFilter(mapSpaceZones, query.filter, ctx);
 }
@@ -363,7 +363,7 @@ function evalTokensInMapSpacesQuery(
   ctx: EvalContext,
 ): readonly Token[] {
   const mapSpaceZones = [...ctx.def.zones]
-    .filter((zone) => zone.category !== undefined)
+    .filter((zone) => zone.zoneKind === 'board')
     .sort((left, right) => left.id.localeCompare(right.id));
   const selectedZones = applyZonesFilter(mapSpaceZones, query.spaceFilter, ctx);
   const zoneTokens = selectedZones.flatMap((zoneId) => [...(ctx.state.zones[String(zoneId)] ?? [])]);

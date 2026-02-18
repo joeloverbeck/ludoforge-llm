@@ -29,8 +29,8 @@ const createValidGameDef = (): GameDef =>
     globalVars: [{ name: 'money', type: 'int', init: 0, min: 0, max: 99 }],
     perPlayerVars: [{ name: 'vp', type: 'int', init: 0, min: 0, max: 100 }],
     zones: [
-      { id: 'market:none', owner: 'none', visibility: 'public', ordering: 'set' },
-      { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      { id: 'market:none', zoneKind: 'aux', owner: 'none', visibility: 'public', ordering: 'set' },
+      { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
     ],
     tokenTypes: [{ id: 'card', props: {} }],
     markerLattices: [
@@ -107,6 +107,7 @@ describe('validateGameDef reference checks', () => {
       zones: [
         {
           id: 'market:none',
+          zoneKind: 'board',
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
@@ -114,7 +115,7 @@ describe('validateGameDef reference checks', () => {
           attributes: { population: 2, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
           adjacentTo: [],
         },
-        { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
       actions: [
         {
@@ -139,6 +140,7 @@ describe('validateGameDef reference checks', () => {
       zones: [
         {
           id: 'market:none',
+          zoneKind: 'board',
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
@@ -146,7 +148,7 @@ describe('validateGameDef reference checks', () => {
           attributes: { population: 2, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
           adjacentTo: [],
         },
-        { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
       actions: [
         {
@@ -171,6 +173,7 @@ describe('validateGameDef reference checks', () => {
       zones: [
         {
           id: 'market:none',
+          zoneKind: 'board',
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
@@ -178,7 +181,7 @@ describe('validateGameDef reference checks', () => {
           attributes: { population: 2, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
           adjacentTo: [],
         },
-        { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
       actions: [
         {
@@ -201,6 +204,7 @@ describe('validateGameDef reference checks', () => {
       zones: [
         {
           id: 'market:none',
+          zoneKind: 'board',
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
@@ -208,7 +212,7 @@ describe('validateGameDef reference checks', () => {
           attributes: { population: 2, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
           adjacentTo: [],
         },
-        { id: 'deck:none', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
       actions: [
         {
@@ -224,6 +228,44 @@ describe('validateGameDef reference checks', () => {
         (diag) => diag.code === 'REF_MAP_SPACE_MISSING' && diag.path === 'actions[0].pre.left.zone',
       ),
     );
+  });
+
+  it('does not treat category on aux zones as map-space identity', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        {
+          id: 'board-space:none',
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false },
+          adjacentTo: [],
+        },
+        {
+          id: 'market:none',
+          zoneKind: 'aux',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2, econ: 1, terrainTags: ['urban'], country: 'southVietnam', coastal: false },
+          adjacentTo: [],
+        },
+        { id: 'deck:none', zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+      ],
+      actions: [
+        {
+          ...base.actions[0],
+          pre: { op: '==', left: { ref: 'zoneProp', zone: 'market:none', prop: 'category' }, right: 'city' },
+        },
+      ],
+    } as unknown as GameDef;
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(diagnostics.some((diag) => diag.code === 'REF_MAP_SPACE_MISSING' && diag.path === 'actions[0].pre.left.zone'));
   });
 
   it('accepts binding-qualified zone selectors for player-owned zone bases', () => {

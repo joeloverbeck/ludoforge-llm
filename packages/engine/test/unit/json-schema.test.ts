@@ -38,12 +38,13 @@ const fullGameDef: GameDef = {
   zones: [
     {
       id: asZoneId('deck:none'),
+      zoneKind: 'aux',
       owner: 'none',
       visibility: 'hidden',
       ordering: 'stack',
       adjacentTo: [asZoneId('discard:none')],
     },
-    { id: asZoneId('discard:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
+    { id: asZoneId('discard:none'), zoneKind: 'aux', owner: 'none', visibility: 'public', ordering: 'stack' },
   ],
   tokenTypes: [{ id: 'card', props: { cost: 'int', name: 'string', rare: 'boolean' } }],
   setup: [{ shuffle: { zone: 'deck:none' } }],

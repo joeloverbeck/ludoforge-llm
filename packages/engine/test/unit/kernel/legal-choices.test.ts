@@ -1368,8 +1368,24 @@ phase: [asPhaseId('main')],
         actions: [action],
         actionPipelines: [profile],
         zones: [
-          { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false } },
-          { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack', category: 'city', attributes: { population: 2, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false } },
+          {
+            id: asZoneId('board:none'),
+            zoneKind: 'board',
+            owner: 'none',
+            visibility: 'public',
+            ordering: 'set',
+            category: 'city',
+            attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false },
+          },
+          {
+            id: asZoneId('hand:0'),
+            zoneKind: 'aux',
+            owner: 'player',
+            visibility: 'owner',
+            ordering: 'stack',
+            category: 'city',
+            attributes: { population: 2, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false },
+          },
         ],
       });
 
@@ -1381,7 +1397,7 @@ phase: [asPhaseId('main')],
       }
       assert.equal(result.name, '$spaces');
       assert.equal(result.type, 'chooseN');
-      assert.deepStrictEqual(result.options.map((option) => option.value), ['hand:0']);
+      assert.deepStrictEqual(result.options.map((option) => option.value), ['board:none']);
     });
 
     it('validates sequential dependent choices against progressed state across pipeline stages', () => {

@@ -13,6 +13,11 @@ interface MapSpaceLike {
   readonly adjacentTo: readonly string[];
 }
 
+interface ZoneLike {
+  readonly id: string;
+  readonly zoneKind: 'board' | 'aux';
+}
+
 interface TrackLike {
   readonly id: string;
 }
@@ -138,6 +143,14 @@ describe('FITL production data integration compilation', () => {
     assert.ok(Array.isArray(mapPayload.spaces), 'Expected map spaces array');
     const spaces = [...mapPayload.spaces];
     assert.equal(spaces.length, 47);
+    const compiledZones = (compiled.gameDef?.zones ?? []) as readonly ZoneLike[];
+    const compiledBoardSpaceIds = new Set(compiledZones.filter((zone) => zone.zoneKind === 'board').map((zone) => zone.id));
+    assert.equal(compiledBoardSpaceIds.size, spaces.length, 'Compiled GameDef must mark all map-derived spaces as zoneKind=board');
+    assert.equal(
+      spaces.every((space) => compiledBoardSpaceIds.has(space.id)),
+      true,
+      'Each map payload space must compile to a board-kind zone',
+    );
 
     const spaceById = new Map(spaces.map((space) => [space.id, space]));
     for (const space of spaces) {

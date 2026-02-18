@@ -23,10 +23,10 @@ const makeDef = (): GameDef => ({
   globalVars: [],
   perPlayerVars: [],
   zones: [
-    { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
-    { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' },
-    { id: asZoneId('hand:1'), owner: 'player', visibility: 'owner', ordering: 'stack' },
-    { id: asZoneId('tableau:0'), owner: 'player', visibility: 'public', ordering: 'set' },
+    { id: asZoneId('deck:none'), zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+    { id: asZoneId('hand:0'), zoneKind: 'aux', owner: 'player', visibility: 'owner', ordering: 'stack' },
+    { id: asZoneId('hand:1'), zoneKind: 'aux', owner: 'player', visibility: 'owner', ordering: 'stack' },
+    { id: asZoneId('tableau:0'), zoneKind: 'aux', owner: 'player', visibility: 'public', ordering: 'set' },
   ],
   tokenTypes: [],
   setup: [],
@@ -344,6 +344,7 @@ describe('evalValue', () => {
         ...makeDef().zones,
         {
           id: asZoneId('alpha:none'),
+          zoneKind: 'board',
           owner: 'none' as const,
           visibility: 'public' as const,
           ordering: 'set' as const,
@@ -353,6 +354,7 @@ describe('evalValue', () => {
         },
         {
           id: asZoneId('beta:none'),
+          zoneKind: 'board',
           owner: 'none' as const,
           visibility: 'public' as const,
           ordering: 'set' as const,

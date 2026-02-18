@@ -165,6 +165,18 @@
           "id": {
             "type": "string"
           },
+          "zoneKind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "board"
+              },
+              {
+                "type": "string",
+                "const": "aux"
+              }
+            ]
+          },
           "owner": {
             "anyOf": [
               {

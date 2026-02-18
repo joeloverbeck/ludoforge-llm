@@ -75,14 +75,50 @@ export function materializeZoneDefs(
       continue;
     }
 
+    const zoneKind = normalizeZoneKind(zone.zoneKind);
+    if (zoneKind === null) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_ZONE_KIND_INVALID',
+        path: `${zonePath}.zoneKind`,
+        severity: 'error',
+        message: `Zone kind "${String(zone.zoneKind)}" is invalid.`,
+        suggestion: 'Use zoneKind "board" or "aux".',
+      });
+      continue;
+    }
+
     mergeZoneOwnership(ownershipMap, base, owner);
     if (owner === 'none') {
-      outputZones.push(createZoneDef(`${base}:none`, 'none', visibility, ordering, zone.adjacentTo, zone.category, zone.attributes, zone.visual));
+      outputZones.push(
+        createZoneDef(
+          `${base}:none`,
+          'none',
+          visibility,
+          ordering,
+          zone.adjacentTo,
+          zoneKind,
+          zone.category,
+          zone.attributes,
+          zone.visual,
+        ),
+      );
       continue;
     }
 
     for (let playerId = 0; playerId < playersMax; playerId += 1) {
-      outputZones.push(createZoneDef(`${base}:${playerId}`, 'player', visibility, ordering, zone.adjacentTo, zone.category, zone.attributes, zone.visual));
+      outputZones.push(
+        createZoneDef(
+          `${base}:${playerId}`,
+          'player',
+          visibility,
+          ordering,
+          zone.adjacentTo,
+          zoneKind,
+          zone.category,
+          zone.attributes,
+          zone.visual,
+        ),
+      );
     }
   }
 
@@ -219,6 +255,16 @@ function normalizeZoneOrdering(value: string): ZoneDef['ordering'] | null {
   return null;
 }
 
+function normalizeZoneKind(value: GameSpecZoneDef['zoneKind']): 'board' | 'aux' | null {
+  if (value === undefined) {
+    return 'aux';
+  }
+  if (value === 'board' || value === 'aux') {
+    return value;
+  }
+  return null;
+}
+
 function mergeZoneOwnership(map: Map<string, ZoneOwnershipKind>, base: string, owner: 'none' | 'player'): void {
   const existing = map.get(base);
   if (existing === undefined) {
@@ -277,6 +323,7 @@ function createZoneDef(
   visibility: ZoneDef['visibility'],
   ordering: ZoneDef['ordering'],
   adjacentTo: GameSpecZoneDef['adjacentTo'],
+  zoneKind: 'board' | 'aux',
   category: GameSpecZoneDef['category'],
   attributes: GameSpecZoneDef['attributes'],
   visual: GameSpecZoneDef['visual'],
@@ -284,6 +331,7 @@ function createZoneDef(
   const normalizedAdjacentTo = normalizeAdjacentTo(adjacentTo);
   return {
     id: asZoneId(id),
+    zoneKind,
     owner,
     visibility,
     ordering,

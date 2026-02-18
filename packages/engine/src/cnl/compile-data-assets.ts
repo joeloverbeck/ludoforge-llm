@@ -233,6 +233,7 @@ export function deriveSectionsFromDataAssets(
       ? null
       : resolveMapSpaceVisuals(selectedMap.payload).map((space) => ({
           id: space.id,
+          zoneKind: 'board' as const,
           owner: 'none',
           visibility: 'public',
           ordering: 'set',

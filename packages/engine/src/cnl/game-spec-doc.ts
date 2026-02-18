@@ -24,6 +24,7 @@ export interface GameSpecGlobalMarkerLatticeDef {
 
 export interface GameSpecZoneDef {
   readonly id: string;
+  readonly zoneKind?: 'board' | 'aux';
   readonly owner: string;
   readonly visibility: string;
   readonly ordering: string;

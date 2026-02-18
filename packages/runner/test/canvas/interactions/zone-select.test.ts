@@ -139,4 +139,23 @@ describe('attachZoneSelectHandlers', () => {
     expect(container.listenerCount('pointerover')).toBe(0);
     expect(container.listenerCount('pointerout')).toBe(0);
   });
+
+  it('emits hover enter and leave callbacks', () => {
+    const container = new MockInteractiveContainer();
+    const onHoverChange = vi.fn();
+
+    attachZoneSelectHandlers(
+      container as unknown as Container,
+      'zone:a',
+      () => true,
+      vi.fn(),
+      { onHoverChange },
+    );
+
+    container.emit('pointerover', pointer(0, 0));
+    container.emit('pointerout', pointer(0, 0));
+
+    expect(onHoverChange).toHaveBeenNthCalledWith(1, true);
+    expect(onHoverChange).toHaveBeenNthCalledWith(2, false);
+  });
 });

@@ -12,12 +12,40 @@ interface CapturedErrorStateProps {
   readonly onRetry: () => void;
 }
 
+interface CapturedTooltipLayerProps {
+  readonly hoverTarget: { readonly kind: 'zone' | 'token'; readonly id: string } | null;
+  readonly anchorRect: { readonly x: number; readonly y: number; readonly width: number; readonly height: number } | null;
+}
+
+interface CapturedGameCanvasProps {
+  readonly onCoordinateBridgeReady?: (bridge: {
+    worldBoundsToScreenRect(bounds: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }): { x: number; y: number; width: number; height: number };
+  } | null) => void;
+  readonly onHoverTargetChange?: (target: { kind: 'zone' | 'token'; id: string } | null) => void;
+  readonly onHoverBoundsResolverReady?: (resolver: ((target: { kind: 'zone' | 'token'; id: string }) => {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null) | null) => void;
+}
+
 const testDoubles = vi.hoisted(() => ({
   errorStateProps: null as CapturedErrorStateProps | null,
+  tooltipLayerProps: null as CapturedTooltipLayerProps | null,
+  gameCanvasProps: null as CapturedGameCanvasProps | null,
 }));
 
 vi.mock('../../src/canvas/GameCanvas.js', () => ({
-  GameCanvas: () => createElement('div', { 'data-testid': 'game-canvas' }),
+  GameCanvas: (props: CapturedGameCanvasProps) => {
+    testDoubles.gameCanvasProps = props;
+    return createElement('div', { 'data-testid': 'game-canvas' });
+  },
 }));
 
 vi.mock('../../src/ui/ActionToolbar.js', () => ({
@@ -74,6 +102,13 @@ vi.mock('../../src/ui/PlayerHandPanel.js', () => ({
 
 vi.mock('../../src/ui/WarningsToast.js', () => ({
   WarningsToast: () => createElement('div', { 'data-testid': 'warnings-toast' }),
+}));
+
+vi.mock('../../src/ui/TooltipLayer.js', () => ({
+  TooltipLayer: (props: CapturedTooltipLayerProps) => {
+    testDoubles.tooltipLayerProps = props;
+    return createElement('div', { 'data-testid': 'tooltip-layer' });
+  },
 }));
 
 vi.mock('../../src/ui/ErrorState.js', () => ({
@@ -223,6 +258,8 @@ describe('GameContainer', () => {
   });
 
   it('renders GameCanvas and UIOverlay when lifecycle is playing', () => {
+    testDoubles.tooltipLayerProps = null;
+    testDoubles.gameCanvasProps = null;
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
         store: createContainerStore({
@@ -244,6 +281,7 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="active-effects-panel"');
     expect(html).toContain('data-testid="warnings-toast"');
     expect(html).toContain('data-testid="player-hand-panel"');
+    expect(html).toContain('data-testid="tooltip-layer"');
     expectAppearsInOrder(html, [
       'interrupt-banner',
       'phase-indicator',
@@ -256,6 +294,18 @@ describe('GameContainer', () => {
       'global-markers-bar',
       'active-effects-panel',
     ]);
+    expect(testDoubles.tooltipLayerProps).toMatchObject({
+      hoverTarget: null,
+      anchorRect: null,
+    });
+    const gameCanvasProps = testDoubles.gameCanvasProps as CapturedGameCanvasProps | null;
+    expect(gameCanvasProps).not.toBeNull();
+    if (gameCanvasProps === null) {
+      throw new Error('Expected GameCanvas props to be captured.');
+    }
+    expect(gameCanvasProps.onCoordinateBridgeReady).toEqual(expect.any(Function));
+    expect(gameCanvasProps.onHoverTargetChange).toEqual(expect.any(Function));
+    expect(gameCanvasProps.onHoverBoundsResolverReady).toEqual(expect.any(Function));
   });
 
   it('renders GameCanvas and UIOverlay when lifecycle is terminal', () => {

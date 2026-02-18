@@ -56,9 +56,18 @@ function createRuntimeFixture() {
     }),
   };
 
+  const zoneContainer = {
+    getBounds: vi.fn(() => ({ x: 10, y: 20, width: 180, height: 110 })),
+  };
+  const tokenContainer = {
+    getBounds: vi.fn(() => ({ x: 40, y: 60, width: 28, height: 28 })),
+  };
+  const zoneContainerMap = new Map([['zone:a', zoneContainer]]);
+  const tokenContainerMap = new Map([['token:1', tokenContainer]]);
+
   const zoneRenderer = {
     update: vi.fn(),
-    getContainerMap: vi.fn(() => new Map()),
+    getContainerMap: vi.fn(() => zoneContainerMap),
     destroy: vi.fn(() => {
       lifecycle.push('zone-renderer-destroy');
     }),
@@ -73,7 +82,7 @@ function createRuntimeFixture() {
 
   const tokenRenderer = {
     update: vi.fn(),
-    getContainerMap: vi.fn(() => new Map()),
+    getContainerMap: vi.fn(() => tokenContainerMap),
     destroy: vi.fn(() => {
       lifecycle.push('token-renderer-destroy');
     }),
@@ -131,17 +140,27 @@ function createRuntimeFixture() {
   });
 
   const attachKeyboardSelect = vi.fn(() => keyboardCleanup);
+  const attachZoneSelectHandlers = vi.fn(() => vi.fn());
+  const attachTokenSelectHandlers = vi.fn(() => vi.fn());
 
   const deps = {
     createGameCanvas: vi.fn(async () => gameCanvas),
     setupViewport: vi.fn(() => viewportResult),
     createPositionStore: vi.fn(() => positionStore),
-    createZoneRenderer: vi.fn(() => zoneRenderer),
+    createZoneRenderer: vi.fn((_parent, _pool, options: { bindSelection?: (zoneContainer: unknown, zoneId: string, isSelectable: () => boolean) => () => void }) => {
+      options.bindSelection?.(zoneContainer, 'zone:a', () => true);
+      return zoneRenderer;
+    }),
     createAdjacencyRenderer: vi.fn(() => adjacencyRenderer),
-    createTokenRenderer: vi.fn(() => tokenRenderer),
+    createTokenRenderer: vi.fn((_parent, _colors, options: { bindSelection?: (tokenContainer: unknown, tokenId: string, isSelectable: () => boolean) => () => void }) => {
+      options.bindSelection?.(tokenContainer, 'token:1', () => true);
+      return tokenRenderer;
+    }),
     createCanvasUpdater: vi.fn(() => canvasUpdater),
     createCoordinateBridge: vi.fn(() => bridge),
     createAriaAnnouncer: vi.fn(() => ariaAnnouncer),
+    attachZoneSelectHandlers,
+    attachTokenSelectHandlers,
     attachKeyboardSelect,
   };
 
@@ -157,8 +176,12 @@ function createRuntimeFixture() {
     gameCanvas,
     positionStore,
     ariaAnnouncer,
+    attachZoneSelectHandlers,
+    attachTokenSelectHandlers,
     attachKeyboardSelect,
     keyboardCleanup,
+    zoneContainerMap,
+    tokenContainerMap,
   };
 }
 
@@ -183,6 +206,7 @@ describe('createGameCanvasRuntime', () => {
     const fixture = createRuntimeFixture();
     const store = createRuntimeStore(makeRenderModel(['zone:a', 'zone:b']));
     const onCoordinateBridgeReady = vi.fn();
+    const onHoverBoundsResolverReady = vi.fn();
 
     await createGameCanvasRuntime(
       {
@@ -190,6 +214,7 @@ describe('createGameCanvasRuntime', () => {
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x000000,
         onCoordinateBridgeReady,
+        onHoverBoundsResolverReady,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -205,14 +230,19 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.deps.createCanvasUpdater).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createAriaAnnouncer).toHaveBeenCalledTimes(1);
     expect(fixture.attachKeyboardSelect).toHaveBeenCalledTimes(1);
+    expect(fixture.attachZoneSelectHandlers).toHaveBeenCalledTimes(1);
+    expect(fixture.attachTokenSelectHandlers).toHaveBeenCalledTimes(1);
     expect(fixture.canvasUpdater.start).toHaveBeenCalledTimes(1);
     expect(onCoordinateBridgeReady).toHaveBeenCalledWith(fixture.bridge);
+    expect(onHoverBoundsResolverReady).toHaveBeenCalledWith(expect.any(Function));
   });
 
   it('tears down in strict order and clears coordinate bridge', async () => {
     const fixture = createRuntimeFixture();
     const store = createRuntimeStore(makeRenderModel(['zone:a']));
     const onCoordinateBridgeReady = vi.fn();
+    const onHoverTargetChange = vi.fn();
+    const onHoverBoundsResolverReady = vi.fn();
 
     const runtime = await createGameCanvasRuntime(
       {
@@ -220,6 +250,8 @@ describe('createGameCanvasRuntime', () => {
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x111111,
         onCoordinateBridgeReady,
+        onHoverTargetChange,
+        onHoverBoundsResolverReady,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -240,6 +272,68 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.keyboardCleanup).toHaveBeenCalledTimes(1);
     expect(fixture.ariaAnnouncer.destroy).toHaveBeenCalledTimes(1);
     expect(onCoordinateBridgeReady).toHaveBeenLastCalledWith(null);
+    expect(onHoverTargetChange).toHaveBeenLastCalledWith(null);
+    expect(onHoverBoundsResolverReady).toHaveBeenLastCalledWith(null);
+  });
+
+  it('forwards hover enter and leave from zone and token handlers', async () => {
+    const fixture = createRuntimeFixture();
+    const onHoverTargetChange = vi.fn();
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: createRuntimeStore(makeRenderModel(['zone:a'])) as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x111111,
+        onHoverTargetChange,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    const zoneHandlerCall = fixture.attachZoneSelectHandlers.mock.calls[0] as unknown[] | undefined;
+    const tokenHandlerCall = fixture.attachTokenSelectHandlers.mock.calls[0] as unknown[] | undefined;
+    const zoneHoverOptions = zoneHandlerCall?.[4] as { onHoverChange?: (isHovered: boolean) => void } | undefined;
+    const tokenHoverOptions = tokenHandlerCall?.[4] as { onHoverChange?: (isHovered: boolean) => void } | undefined;
+
+    zoneHoverOptions?.onHoverChange?.(true);
+    zoneHoverOptions?.onHoverChange?.(false);
+    tokenHoverOptions?.onHoverChange?.(true);
+    tokenHoverOptions?.onHoverChange?.(false);
+
+    expect(onHoverTargetChange).toHaveBeenNthCalledWith(1, { kind: 'zone', id: 'zone:a' });
+    expect(onHoverTargetChange).toHaveBeenNthCalledWith(2, null);
+    expect(onHoverTargetChange).toHaveBeenNthCalledWith(3, { kind: 'token', id: 'token:1' });
+    expect(onHoverTargetChange).toHaveBeenNthCalledWith(4, null);
+
+    runtime.destroy();
+  });
+
+  it('emits a world-bounds resolver for hovered entities', async () => {
+    const fixture = createRuntimeFixture();
+    const onHoverBoundsResolverReady = vi.fn();
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: createRuntimeStore(makeRenderModel(['zone:a'])) as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x222222,
+        onHoverBoundsResolverReady,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    const resolver = onHoverBoundsResolverReady.mock.calls[0]?.[0] as
+      | ((target: { kind: 'zone' | 'token'; id: string }) => { x: number; y: number; width: number; height: number } | null)
+      | undefined;
+
+    expect(resolver?.({ kind: 'zone', id: 'zone:a' })).toEqual({ x: 10, y: 20, width: 180, height: 110 });
+    expect(resolver?.({ kind: 'token', id: 'token:1' })).toEqual({ x: 40, y: 60, width: 28, height: 28 });
+    expect(resolver?.({ kind: 'zone', id: 'zone:missing' })).toBeNull();
+
+    fixture.zoneContainerMap.delete('zone:a');
+    expect(resolver?.({ kind: 'zone', id: 'zone:a' })).toBeNull();
+
+    runtime.destroy();
   });
 
   it('remounts cleanly with paired updater start/destroy and no leaked zone subscriptions', async () => {

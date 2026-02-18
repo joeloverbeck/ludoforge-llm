@@ -9,6 +9,9 @@ export function attachZoneSelectHandlers(
   zoneId: string,
   isSelectable: () => boolean,
   dispatcher: (target: { readonly type: 'zone'; readonly id: string }) => void,
+  options: {
+    readonly onHoverChange?: (isHovered: boolean) => void;
+  } = {},
 ): () => void {
   let pointerDown = false;
   let dragIntent = false;
@@ -48,12 +51,14 @@ export function attachZoneSelectHandlers(
 
   const onPointerOver = (): void => {
     zoneContainer.cursor = isSelectable() ? 'pointer' : 'default';
+    options.onHoverChange?.(true);
   };
 
   const onPointerOut = (): void => {
     zoneContainer.cursor = 'default';
     pointerDown = false;
     dragIntent = false;
+    options.onHoverChange?.(false);
   };
 
   zoneContainer.eventMode = 'static';

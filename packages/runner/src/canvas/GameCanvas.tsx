@@ -41,6 +41,8 @@ export interface GameCanvasProps {
   readonly store: StoreApi<GameStore>;
   readonly backgroundColor?: number;
   readonly onCoordinateBridgeReady?: (bridge: CoordinateBridge | null) => void;
+  readonly onHoverTargetChange?: (target: HoveredCanvasTarget | null) => void;
+  readonly onHoverBoundsResolverReady?: (resolver: HoverBoundsResolver | null) => void;
   readonly onError?: (error: unknown) => void;
 }
 
@@ -54,6 +56,8 @@ interface GameCanvasRuntimeOptions {
   readonly store: StoreApi<GameStore>;
   readonly backgroundColor: number;
   readonly onCoordinateBridgeReady?: (bridge: CoordinateBridge | null) => void;
+  readonly onHoverTargetChange?: (target: HoveredCanvasTarget | null) => void;
+  readonly onHoverBoundsResolverReady?: (resolver: HoverBoundsResolver | null) => void;
 }
 
 interface GameCanvasRuntimeDeps {
@@ -66,6 +70,8 @@ interface GameCanvasRuntimeDeps {
   readonly createCanvasUpdater: typeof createCanvasUpdater;
   readonly createCoordinateBridge: typeof createCoordinateBridge;
   readonly createAriaAnnouncer: typeof createAriaAnnouncer;
+  readonly attachZoneSelectHandlers: typeof attachZoneSelectHandlers;
+  readonly attachTokenSelectHandlers: typeof attachTokenSelectHandlers;
   readonly attachKeyboardSelect: typeof attachKeyboardSelect;
 }
 
@@ -79,8 +85,23 @@ const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   createCanvasUpdater,
   createCoordinateBridge,
   createAriaAnnouncer,
+  attachZoneSelectHandlers,
+  attachTokenSelectHandlers,
   attachKeyboardSelect,
 };
+
+export type HoveredCanvasTarget =
+  | { readonly kind: 'zone'; readonly id: string }
+  | { readonly kind: 'token'; readonly id: string };
+
+export interface CanvasWorldBounds {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export type HoverBoundsResolver = (target: HoveredCanvasTarget) => CanvasWorldBounds | null;
 
 const LIVE_REGION_STYLE = {
   position: 'absolute',
@@ -115,18 +136,38 @@ export async function createGameCanvasRuntime(
 
   const zoneRenderer = deps.createZoneRenderer(gameCanvas.layers.zoneLayer, zonePool, {
     bindSelection: (zoneContainer, zoneId, isSelectable) =>
-      attachZoneSelectHandlers(zoneContainer, zoneId, isSelectable, (target) => {
-        interactionController.onSelectTarget(target);
-      }),
+      deps.attachZoneSelectHandlers(
+        zoneContainer,
+        zoneId,
+        isSelectable,
+        (target) => {
+          interactionController.onSelectTarget(target);
+        },
+        {
+          onHoverChange: (isHovered) => {
+            options.onHoverTargetChange?.(isHovered ? { kind: 'zone', id: zoneId } : null);
+          },
+        },
+      ),
   });
 
   const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer);
 
   const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, new DefaultFactionColorProvider(), {
     bindSelection: (tokenContainer, tokenId, isSelectable) =>
-      attachTokenSelectHandlers(tokenContainer, tokenId, isSelectable, (target) => {
-        interactionController.onSelectTarget(target);
-      }),
+      deps.attachTokenSelectHandlers(
+        tokenContainer,
+        tokenId,
+        isSelectable,
+        (target) => {
+          interactionController.onSelectTarget(target);
+        },
+        {
+          onHoverChange: (isHovered) => {
+            options.onHoverTargetChange?.(isHovered ? { kind: 'token', id: tokenId } : null);
+          },
+        },
+      ),
   });
 
   const canvasUpdater = deps.createCanvasUpdater({
@@ -158,7 +199,23 @@ export async function createGameCanvasRuntime(
   canvasUpdater.start();
 
   const coordinateBridge = deps.createCoordinateBridge(viewportResult.viewport, gameCanvas.app.canvas);
+  const hoverBoundsResolver: HoverBoundsResolver = (target) => {
+    const containers = target.kind === 'zone' ? zoneRenderer.getContainerMap() : tokenRenderer.getContainerMap();
+    const container = containers.get(target.id);
+    if (container === undefined) {
+      return null;
+    }
+    const bounds = container.getBounds();
+    return {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+    };
+  };
+
   options.onCoordinateBridgeReady?.(coordinateBridge);
+  options.onHoverBoundsResolverReady?.(hoverBoundsResolver);
 
   let destroyed = false;
 
@@ -171,6 +228,8 @@ export async function createGameCanvasRuntime(
       destroyed = true;
 
       options.onCoordinateBridgeReady?.(null);
+      options.onHoverTargetChange?.(null);
+      options.onHoverBoundsResolverReady?.(null);
       unsubscribeZoneIDs();
       cleanupKeyboardSelect();
       ariaAnnouncer.destroy();
@@ -183,6 +242,8 @@ export function GameCanvas({
   store,
   backgroundColor = DEFAULT_BACKGROUND_COLOR,
   onCoordinateBridgeReady,
+  onHoverTargetChange,
+  onHoverBoundsResolverReady,
   onError,
 }: GameCanvasProps): ReactElement {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -202,6 +263,8 @@ export function GameCanvas({
       store,
       backgroundColor,
       ...(onCoordinateBridgeReady === undefined ? {} : { onCoordinateBridgeReady }),
+      ...(onHoverTargetChange === undefined ? {} : { onHoverTargetChange }),
+      ...(onHoverBoundsResolverReady === undefined ? {} : { onHoverBoundsResolverReady }),
     };
 
     void createGameCanvasRuntime(runtimeOptions).then((createdRuntime) => {
@@ -213,6 +276,8 @@ export function GameCanvas({
     }).catch((error: unknown) => {
       if (!cancelled) {
         onCoordinateBridgeReady?.(null);
+        onHoverTargetChange?.(null);
+        onHoverBoundsResolverReady?.(null);
         onError?.(error);
       }
     });
@@ -221,7 +286,14 @@ export function GameCanvas({
       cancelled = true;
       runtime?.destroy();
     };
-  }, [store, backgroundColor, onCoordinateBridgeReady, onError]);
+  }, [
+    store,
+    backgroundColor,
+    onCoordinateBridgeReady,
+    onHoverTargetChange,
+    onHoverBoundsResolverReady,
+    onError,
+  ]);
 
   return (
     <div ref={rootRef}>

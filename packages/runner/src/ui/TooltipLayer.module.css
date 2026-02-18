@@ -1,0 +1,49 @@
+.tooltip {
+  pointer-events: auto;
+  z-index: var(--z-tooltip);
+  max-width: 320px;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: rgba(6, 10, 20, 0.95);
+  color: var(--text-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-size: var(--font-size-sm);
+}
+
+.title {
+  margin: 0 0 var(--space-xs) 0;
+  font-size: var(--font-size-md);
+}
+
+.row {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.row span {
+  color: var(--text-secondary);
+}
+
+.properties {
+  margin-top: var(--space-xs);
+}
+
+.propertiesTitle {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--text-secondary);
+}
+
+.propertyList {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.propertyRow {
+  line-height: 1.35;
+}
+
+.none {
+  color: var(--text-muted);
+}

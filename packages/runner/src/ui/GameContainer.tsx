@@ -1,8 +1,9 @@
-import type { ReactElement } from 'react';
+import { useCallback, useMemo, useState, type ReactElement } from 'react';
 import { useStore } from 'zustand';
 import type { StoreApi } from 'zustand';
 
-import { GameCanvas } from '../canvas/GameCanvas.js';
+import { GameCanvas, type HoverBoundsResolver, type HoveredCanvasTarget } from '../canvas/GameCanvas.js';
+import type { CoordinateBridge, ScreenRect } from '../canvas/coordinate-bridge.js';
 import type { GameStore } from '../store/game-store.js';
 import { ActionToolbar } from './ActionToolbar.js';
 import { ChoicePanel } from './ChoicePanel.js';
@@ -21,6 +22,7 @@ import { VariablesPanel } from './VariablesPanel.js';
 import { PlayerHandPanel } from './PlayerHandPanel.js';
 import { AITurnOverlay } from './AITurnOverlay.js';
 import { WarningsToast } from './WarningsToast.js';
+import { TooltipLayer } from './TooltipLayer.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 import styles from './GameContainer.module.css';
 
@@ -63,6 +65,9 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
   const gameLifecycle = useStore(store, (state) => state.gameLifecycle);
   const error = useStore(store, (state) => state.error);
   const renderModel = useStore(store, (state) => state.renderModel);
+  const [coordinateBridge, setCoordinateBridge] = useState<CoordinateBridge | null>(null);
+  const [hoverTarget, setHoverTarget] = useState<HoveredCanvasTarget | null>(null);
+  const [hoverBoundsResolver, setHoverBoundsResolver] = useState<HoverBoundsResolver | null>(null);
 
   if (error !== null) {
     return (
@@ -81,6 +86,26 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
   }
 
   const bottomBarState = deriveBottomBarState(renderModel);
+  const onCoordinateBridgeReady = useCallback((bridge: CoordinateBridge | null) => {
+    setCoordinateBridge(bridge);
+  }, []);
+  const onHoverTargetChange = useCallback((target: HoveredCanvasTarget | null) => {
+    setHoverTarget(target);
+  }, []);
+  const onHoverBoundsResolverReady = useCallback((resolver: HoverBoundsResolver | null) => {
+    setHoverBoundsResolver(() => resolver);
+  }, []);
+  const tooltipAnchorRect = useMemo<ScreenRect | null>(() => {
+    if (coordinateBridge === null || hoverTarget === null || hoverBoundsResolver === null) {
+      return null;
+    }
+    const worldBounds = hoverBoundsResolver(hoverTarget);
+    if (worldBounds === null) {
+      return null;
+    }
+    return coordinateBridge.worldBoundsToScreenRect(worldBounds);
+  }, [coordinateBridge, hoverBoundsResolver, hoverTarget]);
+
   const bottomBarContent = (() => {
     switch (bottomBarState.kind) {
       case 'actions':
@@ -106,13 +131,27 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
   return (
     <div className={styles.container}>
       <div className={styles.canvasLayer}>
-        <GameCanvas store={store} />
+        <GameCanvas
+          store={store}
+          onCoordinateBridgeReady={onCoordinateBridgeReady}
+          onHoverTargetChange={onHoverTargetChange}
+          onHoverBoundsResolverReady={onHoverBoundsResolverReady}
+        />
       </div>
       <UIOverlay
         topBarContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, store)}
         sidePanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, store)}
         bottomBarContent={bottomBarContent}
-        floatingContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, store)}
+        floatingContent={(
+          <>
+            {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, store)}
+            <TooltipLayer
+              store={store}
+              hoverTarget={hoverTarget}
+              anchorRect={tooltipAnchorRect}
+            />
+          </>
+        )}
       />
     </div>
   );

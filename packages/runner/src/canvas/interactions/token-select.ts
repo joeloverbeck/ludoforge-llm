@@ -11,6 +11,9 @@ export function attachTokenSelectHandlers(
   tokenId: string,
   isSelectable: () => boolean,
   dispatcher: (target: { readonly type: 'token'; readonly id: string }) => void,
+  options: {
+    readonly onHoverChange?: (isHovered: boolean) => void;
+  } = {},
 ): () => void {
   let pointerDown = false;
   let dragIntent = false;
@@ -51,12 +54,14 @@ export function attachTokenSelectHandlers(
 
   const onPointerOver = (): void => {
     tokenContainer.cursor = isSelectable() ? 'pointer' : 'default';
+    options.onHoverChange?.(true);
   };
 
   const onPointerOut = (): void => {
     tokenContainer.cursor = 'default';
     pointerDown = false;
     dragIntent = false;
+    options.onHoverChange?.(false);
   };
 
   tokenContainer.eventMode = 'static';

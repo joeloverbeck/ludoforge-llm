@@ -17,6 +17,7 @@ Spec 35 is completed and archived at `archive/specs/35-monorepo-restructure-buil
 Spec 36 is completed and archived at `archive/specs/36-game-kernel-web-worker-bridge.md`.
 Spec 37 is completed and archived at `archive/specs/37-state-management-render-model.md`.
 Spec 38 is completed and archived at `archive/specs/38-pixijs-canvas-foundation.md`.
+Spec 39 is completed and archived at `archive/specs/39-react-dom-ui-layer.md`.
 
 ---
 
@@ -28,7 +29,7 @@ Spec 38 is completed and archived at `archive/specs/38-pixijs-canvas-foundation.
 | 36 | Game Kernel Web Worker Bridge (completed) | P0 | M | 35 |
 | 37 | State Management & Render Model (completed) | P0 | L | 36 |
 | 38 | PixiJS Canvas Foundation (completed) | P0 | L | 37 |
-| 39 | React DOM UI Layer | P1 | L | 37, 38 |
+| 39 | React DOM UI Layer (completed) | P1 | L | 37, 38 |
 | 40 | Animation System | P1 | L | 38 |
 | 41 | Board Layout Engine | P1 | M | 38 |
 | 42 | Per-Game Visual Config & Session Mgmt | P2 | M | 38, 39 |
@@ -95,13 +96,13 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [x] PixiJS renders zones and tokens from RenderModel for any compiled game
 - [x] pixi-viewport provides pan/zoom with board clamping
 - [x] Zone click-to-select interaction works
-- [ ] Action toolbar displays grouped legal moves
-- [ ] Multi-step choice UI with breadcrumb/progress and back/cancel
-- [ ] Numeric input for parameterized choices (slider with min/max)
-- [ ] Player hand panel shows owner-visible zone contents
-- [ ] Variables display panel (global + per-player)
-- [ ] Phase/turn indicator with active player highlight
-- [ ] Can complete a full game of Texas Hold'em against AI opponents
+- [x] Action toolbar displays grouped legal moves
+- [x] Multi-step choice UI with breadcrumb/progress and back/cancel
+- [x] Numeric input for parameterized choices (slider with min/max)
+- [x] Player hand panel shows owner-visible zone contents
+- [x] Variables display panel (global + per-player)
+- [x] Phase/turn indicator with active player highlight
+- [x] Can complete a full game of Texas Hold'em against AI opponents
 - [ ] Can render FITL board (even without graph layout — manual or default positions)
 
 **Outcome**: Any compiled game is playable through the browser runner with basic visuals. Human can make moves, AI opponents respond, game reaches terminal state.

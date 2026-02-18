@@ -1,11 +1,11 @@
 # Spec 39: React DOM UI Layer
 
-**Status**: ACTIVE
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: Spec 37 (State Management & Render Model), Spec 38 (PixiJS Canvas Foundation)
-**Roadmap**: [35-00-frontend-implementation-roadmap.md](./35-00-frontend-implementation-roadmap.md)
-**Design doc**: [brainstorming/browser-based-game-runner.md](../brainstorming/browser-based-game-runner.md), Sections 1, 4
+**Roadmap**: [35-00-frontend-implementation-roadmap.md](../../specs/35-00-frontend-implementation-roadmap.md)
+**Design doc**: [brainstorming/browser-based-game-runner.md](../../brainstorming/browser-based-game-runner.md), Sections 1, 4
 
 ---
 
@@ -558,7 +558,7 @@ This section clarifies which RenderModel fields each component consumes.
 
 ## Suggested Ticket Grouping
 
-After this spec is approved, ticket generation (REACTUI-001 through REACTUI-N) will follow the project's existing pattern. Suggested grouping:
+Ticket generation followed the project's existing pattern (REACTUI-001 through REACTUI-N), grouped as:
 
 1. **Foundation**: D1 tokens.css + D2 GameContainer + D3 App bootstrap + D21-D23 error/loading
 2. **Core interaction**: D4 ActionToolbar + D5 ChoicePanel + D6 IllegalityFeedback + D7 UndoControl
@@ -581,3 +581,21 @@ After this spec is approved, ticket generation (REACTUI-001 through REACTUI-N) w
 - Visual config loading and theming (Spec 42)
 - Drag-and-drop interaction
 - Mobile optimization
+
+---
+
+## Outcome
+
+- **Completion date**: 2026-02-18
+- **What was changed**:
+  - Implemented Spec 39 UI deliverables in `packages/runner/src/ui/`, including:
+    - Foundation and shell (`GameContainer`, `UIOverlay`, `LoadingState`, `ErrorState`, `ErrorBoundary`, shared tokens/styles)
+    - Core interaction (`ActionToolbar`, `ChoicePanel`, `IllegalityFeedback`, `UndoControl`, `useKeyboardShortcuts`)
+    - State display panels (`PhaseIndicator`, `TurnOrderDisplay`, `PlayerHandPanel`, `VariablesPanel`, `Scoreboard`, `EventDeckPanel`, `GlobalMarkersBar`, `ActiveEffectsPanel`, `InterruptBanner`)
+    - Feedback/overlay components (`AITurnOverlay`, `WarningsToast`, `TooltipLayer`, `TerminalOverlay`)
+  - Completed the REACTUI ticket series under `archive/tickets/REACTUI-*.md`.
+- **Deviations from original plan**:
+  - No material scope deviations; work shipped through the ticketed decomposition rather than as a single batch.
+- **Verification results**:
+  - Component and integration coverage exists under `packages/runner/test/ui/` and related runner test domains.
+  - Architecture constraints from this spec (store-driven, game-agnostic DOM overlay over canvas) are represented in the implemented component/store structure.

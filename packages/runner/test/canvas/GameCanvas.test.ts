@@ -213,6 +213,10 @@ function createRuntimeFixture() {
   };
 }
 
+function flushMicrotasks(): Promise<void> {
+  return Promise.resolve();
+}
+
 describe('GameCanvas', () => {
   it('renders an accessible game board container', () => {
     const html = renderToStaticMarkup(
@@ -316,13 +320,23 @@ describe('createGameCanvasRuntime', () => {
 
     const zoneHandlerCall = fixture.attachZoneSelectHandlers.mock.calls[0] as unknown[] | undefined;
     const tokenHandlerCall = fixture.attachTokenSelectHandlers.mock.calls[0] as unknown[] | undefined;
-    const zoneHoverOptions = zoneHandlerCall?.[4] as { onHoverChange?: (isHovered: boolean) => void } | undefined;
-    const tokenHoverOptions = tokenHandlerCall?.[4] as { onHoverChange?: (isHovered: boolean) => void } | undefined;
+    const zoneHoverOptions = zoneHandlerCall?.[4] as {
+      onHoverEnter?: (target: { kind: 'zone'; id: string }) => void;
+      onHoverLeave?: (target: { kind: 'zone'; id: string }) => void;
+    } | undefined;
+    const tokenHoverOptions = tokenHandlerCall?.[4] as {
+      onHoverEnter?: (target: { kind: 'token'; id: string }) => void;
+      onHoverLeave?: (target: { kind: 'token'; id: string }) => void;
+    } | undefined;
 
-    zoneHoverOptions?.onHoverChange?.(true);
-    zoneHoverOptions?.onHoverChange?.(false);
-    tokenHoverOptions?.onHoverChange?.(true);
-    tokenHoverOptions?.onHoverChange?.(false);
+    zoneHoverOptions?.onHoverEnter?.({ kind: 'zone', id: 'zone:a' });
+    await flushMicrotasks();
+    zoneHoverOptions?.onHoverLeave?.({ kind: 'zone', id: 'zone:a' });
+    await flushMicrotasks();
+    tokenHoverOptions?.onHoverEnter?.({ kind: 'token', id: 'token:1' });
+    await flushMicrotasks();
+    tokenHoverOptions?.onHoverLeave?.({ kind: 'token', id: 'token:1' });
+    await flushMicrotasks();
 
     expect(onHoverAnchorChange).toHaveBeenNthCalledWith(1, {
       target: { kind: 'zone', id: 'zone:a' },
@@ -375,9 +389,12 @@ describe('createGameCanvasRuntime', () => {
     );
 
     const zoneHandlerCall = fixture.attachZoneSelectHandlers.mock.calls[0] as unknown[] | undefined;
-    const zoneHoverOptions = zoneHandlerCall?.[4] as { onHoverChange?: (isHovered: boolean) => void } | undefined;
+    const zoneHoverOptions = zoneHandlerCall?.[4] as {
+      onHoverEnter?: (target: { kind: 'zone'; id: string }) => void;
+    } | undefined;
 
-    zoneHoverOptions?.onHoverChange?.(true);
+    zoneHoverOptions?.onHoverEnter?.({ kind: 'zone', id: 'zone:a' });
+    await flushMicrotasks();
     fixture.setNextScreenRect({ x: 160, y: 260, width: 180, height: 110 });
     fixture.emitViewportMoved();
 
@@ -397,6 +414,54 @@ describe('createGameCanvasRuntime', () => {
       space: 'screen',
       version: 2,
     }));
+
+    runtime.destroy();
+  });
+
+  it('keeps hover anchor stable across overlapping zone/token leave ordering', async () => {
+    const fixture = createRuntimeFixture();
+    const onHoverAnchorChange = vi.fn();
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: createRuntimeStore(makeRenderModel(['zone:a'])) as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x232323,
+        onHoverAnchorChange,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    const zoneHandlerCall = fixture.attachZoneSelectHandlers.mock.calls[0] as unknown[] | undefined;
+    const tokenHandlerCall = fixture.attachTokenSelectHandlers.mock.calls[0] as unknown[] | undefined;
+    const zoneHoverOptions = zoneHandlerCall?.[4] as {
+      onHoverEnter?: (target: { kind: 'zone'; id: string }) => void;
+      onHoverLeave?: (target: { kind: 'zone'; id: string }) => void;
+    } | undefined;
+    const tokenHoverOptions = tokenHandlerCall?.[4] as {
+      onHoverEnter?: (target: { kind: 'token'; id: string }) => void;
+      onHoverLeave?: (target: { kind: 'token'; id: string }) => void;
+    } | undefined;
+
+    zoneHoverOptions?.onHoverEnter?.({ kind: 'zone', id: 'zone:a' });
+    await flushMicrotasks();
+    tokenHoverOptions?.onHoverEnter?.({ kind: 'token', id: 'token:1' });
+    zoneHoverOptions?.onHoverLeave?.({ kind: 'zone', id: 'zone:a' });
+    await flushMicrotasks();
+
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      target: { kind: 'zone', id: 'zone:a' },
+      version: 1,
+    }));
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      target: { kind: 'token', id: 'token:1' },
+      version: 2,
+    }));
+    expect(onHoverAnchorChange).toHaveBeenCalledTimes(2);
+
+    tokenHoverOptions?.onHoverLeave?.({ kind: 'token', id: 'token:1' });
+    await flushMicrotasks();
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(3, null);
 
     runtime.destroy();
   });

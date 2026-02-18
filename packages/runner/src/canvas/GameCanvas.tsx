@@ -11,6 +11,7 @@ import { attachZoneSelectHandlers } from './interactions/zone-select';
 import { createAriaAnnouncer } from './interactions/aria-announcer';
 import { attachKeyboardSelect } from './interactions/keyboard-select';
 import { createCanvasInteractionController } from './interactions/canvas-interaction-controller';
+import { createHoverTargetController } from './interactions/hover-target-controller';
 import { createPositionStore, type PositionStore } from './position-store';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
 import { ContainerPool } from './renderers/container-pool';
@@ -116,10 +117,14 @@ export async function createGameCanvasRuntime(
   const accessibilityContainer = options.container.parentElement ?? options.container;
   const ariaAnnouncer = deps.createAriaAnnouncer(accessibilityContainer);
   const interactionController = createCanvasInteractionController(() => selectorStore.getState(), ariaAnnouncer);
+  const hoverTargetController = createHoverTargetController({
+    onTargetChange: () => {
+      publishHoverAnchor();
+    },
+  });
 
   const viewportResult = createViewportResult(deps, gameCanvas, positionStore);
   const zonePool = new ContainerPool();
-  let hoveredTarget: HoveredCanvasTarget | null = null;
   let publishHoverAnchor: () => void = () => {};
 
   const zoneRenderer = deps.createZoneRenderer(gameCanvas.layers.zoneLayer, zonePool, {
@@ -132,9 +137,11 @@ export async function createGameCanvasRuntime(
           interactionController.onSelectTarget(target);
         },
         {
-          onHoverChange: (isHovered) => {
-            hoveredTarget = isHovered ? { kind: 'zone', id: zoneId } : null;
-            publishHoverAnchor();
+          onHoverEnter: (target) => {
+            hoverTargetController.onHoverEnter(target);
+          },
+          onHoverLeave: (target) => {
+            hoverTargetController.onHoverLeave(target);
           },
         },
       ),
@@ -152,9 +159,11 @@ export async function createGameCanvasRuntime(
           interactionController.onSelectTarget(target);
         },
         {
-          onHoverChange: (isHovered) => {
-            hoveredTarget = isHovered ? { kind: 'token', id: tokenId } : null;
-            publishHoverAnchor();
+          onHoverEnter: (target) => {
+            hoverTargetController.onHoverEnter(target);
+          },
+          onHoverLeave: (target) => {
+            hoverTargetController.onHoverLeave(target);
           },
         },
       ),
@@ -206,6 +215,7 @@ export async function createGameCanvasRuntime(
   let hoverAnchorVersion = 0;
 
   publishHoverAnchor = (): void => {
+    const hoveredTarget = hoverTargetController.getCurrentTarget();
     if (hoveredTarget === null) {
       options.onHoverAnchorChange?.(null);
       return;
@@ -240,6 +250,7 @@ export async function createGameCanvasRuntime(
       destroyed = true;
 
       viewport.off('moved', publishHoverAnchor);
+      hoverTargetController.destroy();
       options.onHoverAnchorChange?.(null);
       unsubscribeZoneIDs();
       cleanupKeyboardSelect();

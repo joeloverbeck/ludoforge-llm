@@ -1,4 +1,5 @@
 import type { Container, FederatedPointerEvent } from 'pixi.js';
+import type { HoveredCanvasTarget } from '../hover-anchor-contract.js';
 
 const DRAG_INTENT_THRESHOLD_PX = 5;
 
@@ -10,9 +11,11 @@ export function attachZoneSelectHandlers(
   isSelectable: () => boolean,
   dispatcher: (target: { readonly type: 'zone'; readonly id: string }) => void,
   options: {
-    readonly onHoverChange?: (isHovered: boolean) => void;
+    readonly onHoverEnter?: (target: HoveredCanvasTarget) => void;
+    readonly onHoverLeave?: (target: HoveredCanvasTarget) => void;
   } = {},
 ): () => void {
+  const hoverTarget: HoveredCanvasTarget = { kind: 'zone', id: zoneId };
   let pointerDown = false;
   let dragIntent = false;
   let pointerDownX = 0;
@@ -51,14 +54,14 @@ export function attachZoneSelectHandlers(
 
   const onPointerOver = (): void => {
     zoneContainer.cursor = isSelectable() ? 'pointer' : 'default';
-    options.onHoverChange?.(true);
+    options.onHoverEnter?.(hoverTarget);
   };
 
   const onPointerOut = (): void => {
     zoneContainer.cursor = 'default';
     pointerDown = false;
     dragIntent = false;
-    options.onHoverChange?.(false);
+    options.onHoverLeave?.(hoverTarget);
   };
 
   zoneContainer.eventMode = 'static';

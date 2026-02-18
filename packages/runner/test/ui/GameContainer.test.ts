@@ -40,6 +40,14 @@ vi.mock('../../src/ui/TurnOrderDisplay.js', () => ({
   TurnOrderDisplay: () => createElement('div', { 'data-testid': 'turn-order-display' }),
 }));
 
+vi.mock('../../src/ui/EventDeckPanel.js', () => ({
+  EventDeckPanel: () => createElement('div', { 'data-testid': 'event-deck-panel' }),
+}));
+
+vi.mock('../../src/ui/InterruptBanner.js', () => ({
+  InterruptBanner: () => createElement('div', { 'data-testid': 'interrupt-banner' }),
+}));
+
 vi.mock('../../src/ui/VariablesPanel.js', () => ({
   VariablesPanel: () => createElement('div', { 'data-testid': 'variables-panel' }),
 }));
@@ -195,8 +203,10 @@ describe('GameContainer', () => {
 
     expect(html).toContain('data-testid="game-canvas"');
     expect(html).toContain('data-testid="ui-overlay"');
+    expect(html).toContain('data-testid="interrupt-banner"');
     expect(html).toContain('data-testid="phase-indicator"');
     expect(html).toContain('data-testid="turn-order-display"');
+    expect(html).toContain('data-testid="event-deck-panel"');
     expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-testid="scoreboard"');
   });
@@ -213,8 +223,10 @@ describe('GameContainer', () => {
 
     expect(html).toContain('data-testid="game-canvas"');
     expect(html).toContain('data-testid="ui-overlay"');
+    expect(html).toContain('data-testid="interrupt-banner"');
     expect(html).toContain('data-testid="phase-indicator"');
     expect(html).toContain('data-testid="turn-order-display"');
+    expect(html).toContain('data-testid="event-deck-panel"');
     expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-testid="scoreboard"');
   });

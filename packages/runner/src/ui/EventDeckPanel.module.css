@@ -1,0 +1,37 @@
+.container {
+  display: inline-flex;
+  align-items: stretch;
+  gap: var(--space-sm);
+  pointer-events: none;
+}
+
+.deck {
+  display: grid;
+  gap: 2px;
+  min-width: 170px;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+}
+
+.deckLabel {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.counts {
+  display: flex;
+  gap: var(--space-sm);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}

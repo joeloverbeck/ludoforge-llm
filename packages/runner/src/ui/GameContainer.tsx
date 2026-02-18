@@ -7,7 +7,9 @@ import type { GameStore } from '../store/game-store.js';
 import { ActionToolbar } from './ActionToolbar.js';
 import { ChoicePanel } from './ChoicePanel.js';
 import { ErrorState } from './ErrorState.js';
+import { EventDeckPanel } from './EventDeckPanel.js';
 import { LoadingState } from './LoadingState.js';
+import { InterruptBanner } from './InterruptBanner.js';
 import { PhaseIndicator } from './PhaseIndicator.js';
 import { Scoreboard } from './Scoreboard.js';
 import { TurnOrderDisplay } from './TurnOrderDisplay.js';
@@ -72,8 +74,10 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
       <UIOverlay
         topBarContent={(
           <>
+            <InterruptBanner store={store} />
             <PhaseIndicator store={store} />
             <TurnOrderDisplay store={store} />
+            <EventDeckPanel store={store} />
           </>
         )}
         sidePanelContent={(

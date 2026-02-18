@@ -1,0 +1,23 @@
+.banner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: 10px;
+  border: 1px solid var(--danger);
+  background: rgba(217, 74, 74, 0.2);
+  color: var(--text-primary);
+  pointer-events: none;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.resume {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}

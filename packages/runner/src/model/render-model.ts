@@ -101,10 +101,14 @@ export interface RenderTrack {
 
 export interface RenderLastingEffect {
   readonly id: string;
-  readonly sourceCardId: string;
-  readonly side: 'unshaded' | 'shaded';
-  readonly duration: string;
   readonly displayName: string;
+  readonly attributes: readonly RenderLastingEffectAttribute[];
+}
+
+export interface RenderLastingEffectAttribute {
+  readonly key: string;
+  readonly label: string;
+  readonly value: string;
 }
 
 export interface RenderInterruptFrame {

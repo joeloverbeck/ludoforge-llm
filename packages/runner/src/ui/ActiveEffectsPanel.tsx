@@ -13,10 +13,6 @@ interface ActiveEffectsPanelProps {
 
 const EMPTY_EFFECTS: readonly RenderLastingEffect[] = [];
 
-function formatEffectSide(side: RenderLastingEffect['side']): string {
-  return side === 'shaded' ? 'Shaded' : 'Unshaded';
-}
-
 export function ActiveEffectsPanel({ store }: ActiveEffectsPanelProps): ReactElement | null {
   const activeEffects = useStore(store, (state) => state.renderModel?.activeEffects ?? EMPTY_EFFECTS);
 
@@ -36,18 +32,12 @@ export function ActiveEffectsPanel({ store }: ActiveEffectsPanelProps): ReactEle
           <li key={effect.id} className={styles.row} data-testid={`active-effect-${effect.id}`}>
             <p className={styles.displayName}>{effect.displayName}</p>
             <dl className={styles.metaList}>
-              <div className={styles.metaItem}>
-                <dt className={styles.metaLabel}>Source</dt>
-                <dd className={styles.metaValue}>{effect.sourceCardId}</dd>
-              </div>
-              <div className={styles.metaItem}>
-                <dt className={styles.metaLabel}>Side</dt>
-                <dd className={styles.metaValue}>{formatEffectSide(effect.side)}</dd>
-              </div>
-              <div className={styles.metaItem}>
-                <dt className={styles.metaLabel}>Duration</dt>
-                <dd className={styles.metaValue}>{effect.duration}</dd>
-              </div>
+              {effect.attributes.map((attribute) => (
+                <div key={attribute.key} className={styles.metaItem}>
+                  <dt className={styles.metaLabel}>{attribute.label}</dt>
+                  <dd className={styles.metaValue}>{attribute.value}</dd>
+                </div>
+              ))}
             </dl>
           </li>
         ))}
@@ -55,5 +45,3 @@ export function ActiveEffectsPanel({ store }: ActiveEffectsPanelProps): ReactEle
     </CollapsiblePanel>
   );
 }
-
-export { formatEffectSide };

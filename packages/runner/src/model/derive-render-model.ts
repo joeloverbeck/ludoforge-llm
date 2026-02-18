@@ -1,4 +1,5 @@
 import {
+  type ActiveLastingEffect,
   asPlayerId,
   matchesAllTokenFilterPredicates,
   type GameDef,
@@ -21,6 +22,7 @@ import type {
   RenderEventDeck,
   RenderGlobalMarker,
   RenderLastingEffect,
+  RenderLastingEffectAttribute,
   RenderMapSpace,
   RenderMarker,
   RenderModel,
@@ -265,11 +267,52 @@ function deriveActiveEffects(
 ): readonly RenderLastingEffect[] {
   return (state.activeLastingEffects ?? []).map((effect) => ({
     id: effect.id,
-    sourceCardId: effect.sourceCardId,
-    side: effect.side,
-    duration: effect.duration,
-    displayName: cardTitleById.get(effect.sourceCardId) ?? formatIdAsDisplayName(effect.sourceCardId),
+    displayName: deriveEffectDisplayName(effect, cardTitleById),
+    attributes: deriveEffectAttributes(effect),
   }));
+}
+
+function deriveEffectDisplayName(
+  effect: ActiveLastingEffect,
+  cardTitleById: ReadonlyMap<string, string>,
+): string {
+  const sourceCardId = effect.sourceCardId;
+  return cardTitleById.get(sourceCardId) ?? formatIdAsDisplayName(sourceCardId);
+}
+
+function deriveEffectAttributes(effect: ActiveLastingEffect): readonly RenderLastingEffectAttribute[] {
+  const entries: RenderLastingEffectAttribute[] = [];
+  const excludedKeys = new Set(['id', 'setupEffects', 'teardownEffects']);
+  const effectEntries = Object.entries(effect) as readonly (readonly [string, unknown])[];
+  const valuesByKey = new Map(effectEntries);
+  const attributeKeys = effectEntries
+    .map(([key]) => key)
+    .filter((key) => !excludedKeys.has(key))
+    .sort((left, right) => left.localeCompare(right));
+
+  for (const key of attributeKeys) {
+    const value = toEffectAttributeValue(valuesByKey.get(key));
+    if (value === null) {
+      continue;
+    }
+    entries.push({
+      key,
+      label: formatIdAsDisplayName(key),
+      value,
+    });
+  }
+
+  return entries;
+}
+
+function toEffectAttributeValue(value: unknown): string | null {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return null;
 }
 
 function deriveEventDecks(

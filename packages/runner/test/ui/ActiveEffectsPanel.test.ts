@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ActiveEffectsPanel, formatEffectSide } from '../../src/ui/ActiveEffectsPanel.js';
+import { ActiveEffectsPanel } from '../../src/ui/ActiveEffectsPanel.js';
 import { createRenderModelStore as createStore, makeRenderModelFixture as makeRenderModel } from './helpers/render-model-fixture.js';
 
 vi.mock('zustand', () => ({
@@ -19,17 +19,17 @@ describe('ActiveEffectsPanel', () => {
           activeEffects: [
             {
               id: 'effect-a',
-              sourceCardId: 'card-a',
-              side: 'unshaded',
-              duration: 'turn',
               displayName: 'Card A',
+              attributes: [
+                { key: 'duration', label: 'Duration', value: 'turn' },
+              ],
             },
             {
               id: 'effect-b',
-              sourceCardId: 'card-b',
-              side: 'shaded',
-              duration: 'round',
               displayName: 'Card B',
+              attributes: [
+                { key: 'duration', label: 'Duration', value: 'round' },
+              ],
             },
           ],
         })),
@@ -40,17 +40,19 @@ describe('ActiveEffectsPanel', () => {
     expect(html).toContain('data-testid="active-effect-effect-b"');
   });
 
-  it('shows displayName, sourceCardId, side, and duration', () => {
+  it('shows displayName and generic attribute rows', () => {
     const html = renderToStaticMarkup(
       createElement(ActiveEffectsPanel, {
         store: createStore(makeRenderModel({
           activeEffects: [
             {
               id: 'effect-a',
-              sourceCardId: 'card-a',
-              side: 'shaded',
-              duration: 'turn',
               displayName: 'Card A',
+              attributes: [
+                { key: 'sourceCardId', label: 'Source Card Id', value: 'card-a' },
+                { key: 'side', label: 'Side', value: 'shaded' },
+                { key: 'duration', label: 'Duration', value: 'turn' },
+              ],
             },
           ],
         })),
@@ -59,7 +61,7 @@ describe('ActiveEffectsPanel', () => {
 
     expect(html).toContain('Card A');
     expect(html).toContain('card-a');
-    expect(html).toContain('Shaded');
+    expect(html).toContain('shaded');
     expect(html).toContain('turn');
   });
 
@@ -71,10 +73,5 @@ describe('ActiveEffectsPanel', () => {
     );
 
     expect(html).toBe('');
-  });
-
-  it('formats side labels for UI display', () => {
-    expect(formatEffectSide('shaded')).toBe('Shaded');
-    expect(formatEffectSide('unshaded')).toBe('Unshaded');
   });
 });

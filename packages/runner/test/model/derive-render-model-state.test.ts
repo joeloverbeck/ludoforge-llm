@@ -393,17 +393,21 @@ describe('deriveRenderModel state metadata', () => {
     expect(model.activeEffects).toEqual([
       {
         id: 'effect-card-a',
-        sourceCardId: 'card-a',
-        side: 'unshaded',
-        duration: 'turn',
         displayName: 'Card A',
+        attributes: [
+          { key: 'duration', label: 'Duration', value: 'turn' },
+          { key: 'side', label: 'Side', value: 'unshaded' },
+          { key: 'sourceCardId', label: 'Source Card Id', value: 'card-a' },
+        ],
       },
       {
         id: 'effect-missing-card',
-        sourceCardId: 'missing-card',
-        side: 'shaded',
-        duration: 'round',
         displayName: 'Missing Card',
+        attributes: [
+          { key: 'duration', label: 'Duration', value: 'round' },
+          { key: 'side', label: 'Side', value: 'shaded' },
+          { key: 'sourceCardId', label: 'Source Card Id', value: 'missing-card' },
+        ],
       },
     ]);
     expect(model.interruptStack).toEqual([
@@ -423,6 +427,43 @@ describe('deriveRenderModel state metadata', () => {
         currentCardTitle: 'Card A',
         deckSize: 2,
         discardSize: 1,
+      },
+    ]);
+  });
+
+  it('projects lasting effect attributes deterministically and excludes non-display payloads', () => {
+    const baseDef = compileFixture();
+    const baseState = initialState(baseDef, 80, 2);
+    const { def, state: stateWithMetadata } = withStateMetadata(baseDef, baseState);
+    const state: GameState = {
+      ...stateWithMetadata,
+      activeLastingEffects: [
+        {
+          id: 'effect-extended',
+          sourceCardId: 'card-a',
+          side: 'unshaded',
+          branchId: 'ops-window',
+          duration: 'turn',
+          setupEffects: [],
+          teardownEffects: [],
+          remainingTurnBoundaries: 2,
+        },
+      ],
+    };
+
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+
+    expect(model.activeEffects).toEqual([
+      {
+        id: 'effect-extended',
+        displayName: 'Card A',
+        attributes: [
+          { key: 'branchId', label: 'Branch Id', value: 'ops-window' },
+          { key: 'duration', label: 'Duration', value: 'turn' },
+          { key: 'remainingTurnBoundaries', label: 'Remaining Turn Boundaries', value: '2' },
+          { key: 'side', label: 'Side', value: 'unshaded' },
+          { key: 'sourceCardId', label: 'Source Card Id', value: 'card-a' },
+        ],
       },
     ]);
   });

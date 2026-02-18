@@ -79,10 +79,11 @@ describe('render-model types', () => {
       activeEffects: [
         {
           id: 'effect:1',
-          sourceCardId: 'card:1',
-          side: 'unshaded',
-          duration: 'round',
           displayName: 'Effect 1',
+          attributes: [
+            { key: 'duration', label: 'Duration', value: 'round' },
+            { key: 'side', label: 'Side', value: 'unshaded' },
+          ],
         },
       ],
       players: [

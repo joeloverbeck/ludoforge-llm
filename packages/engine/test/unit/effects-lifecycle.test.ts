@@ -175,6 +175,25 @@ describe('effects token lifecycle', () => {
     assert.equal(result.state.nextTokenOrdinal, ctx.state.nextTokenOrdinal);
   });
 
+  it('destroyToken emits a destroyToken trace entry with token type and zone', () => {
+    const collector = createCollector({ trace: true });
+    const ctx = makeCtx({ collector });
+    const doomed = ctx.state.zones['deck:none']?.[1];
+    assert.ok(doomed !== undefined);
+
+    applyEffect({ destroyToken: { token: '$token' } }, { ...ctx, bindings: { $token: doomed } });
+
+    const traceEntries = collector.trace ?? [];
+    const destroyEntries = traceEntries.filter((entry) => entry.kind === 'destroyToken');
+    assert.equal(destroyEntries.length, 1);
+    const entry = destroyEntries[0]!;
+    assert.equal(entry.kind, 'destroyToken');
+    assert.equal(entry.tokenId, String(doomed.id));
+    assert.equal(entry.type, doomed.type);
+    assert.equal(entry.zone, 'deck:none');
+    assert.ok(entry.provenance !== undefined);
+  });
+
   it('destroyToken throws when token is not found', () => {
     const ctx = makeCtx({ bindings: { $token: asTokenId('missing') } });
 

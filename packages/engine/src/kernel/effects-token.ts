@@ -389,6 +389,14 @@ export const applyDestroyToken = (effect: Extract<EffectAST, { readonly destroyT
   const sourceTokens = ctx.state.zones[occurrence.zoneId]!;
   const zoneAfter = [...sourceTokens.slice(0, occurrence.index), ...sourceTokens.slice(occurrence.index + 1)];
 
+  emitTrace(ctx.collector, {
+    kind: 'destroyToken',
+    tokenId: String(tokenId),
+    type: occurrence.token.type,
+    zone: occurrence.zoneId,
+    provenance: resolveTraceProvenance(ctx),
+  });
+
   return {
     state: {
       ...ctx.state,

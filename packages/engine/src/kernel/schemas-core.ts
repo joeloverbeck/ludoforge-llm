@@ -555,6 +555,15 @@ export const EffectTraceEntrySchema = z.union([
       provenance: EffectTraceProvenanceSchema,
     })
     .strict(),
+  z
+    .object({
+      kind: z.literal('destroyToken'),
+      tokenId: StringSchema,
+      type: StringSchema,
+      zone: StringSchema,
+      provenance: EffectTraceProvenanceSchema,
+    })
+    .strict(),
 ]);
 
 export const TriggerFiringSchema = z

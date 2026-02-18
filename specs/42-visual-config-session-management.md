@@ -139,9 +139,11 @@ variables:
 
 `packages/runner/src/config/action-animations.ts`
 
-- Map action IDs to animation effect names from visual config.
-- Feed into the animation system (Spec 40) to select appropriate effects.
-- Fallback: unmapped actions use default token movement only.
+- Map action IDs to animation preset names from Spec 40's preset registry.
+- The `animations.actions` section in `visual-config.yaml` maps action IDs (e.g., `bombard`, `deal`) to preset names (e.g., `explosion`, `card-fly`).
+- Games can register custom presets for game-specific animations (card-flip, card-deal, explosion, etc.) by defining them in their visual config. These presets are loaded into Spec 40's `PresetRegistry` at game start.
+- The visual config loader passes overrides to `traceToDescriptors()` via the `presetOverrides` parameter, allowing game-specific preset selection.
+- Fallback: unmapped actions use default token movement only (Spec 40's built-in presets).
 
 ### D5: Card Face Templates
 

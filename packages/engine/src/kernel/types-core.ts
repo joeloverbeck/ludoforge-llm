@@ -740,6 +740,14 @@ export interface EffectTraceCreateToken {
   readonly provenance: EffectTraceProvenance;
 }
 
+export interface EffectTraceDestroyToken {
+  readonly kind: 'destroyToken';
+  readonly tokenId: string;
+  readonly type: string;
+  readonly zone: string;
+  readonly provenance: EffectTraceProvenance;
+}
+
 export type EffectTraceEventContext =
   | 'actionCost'
   | 'actionEffect'
@@ -762,6 +770,7 @@ export type EffectTraceEntry =
   | EffectTraceVarChange
   | EffectTraceResourceTransfer
   | EffectTraceCreateToken
+  | EffectTraceDestroyToken
   | EffectTraceLifecycleEvent;
 
 // ── Execution Options & Collector ─────────────────────────

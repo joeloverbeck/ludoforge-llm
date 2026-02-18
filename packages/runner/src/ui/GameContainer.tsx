@@ -20,6 +20,7 @@ import { UIOverlay } from './UIOverlay.js';
 import { VariablesPanel } from './VariablesPanel.js';
 import { PlayerHandPanel } from './PlayerHandPanel.js';
 import { AITurnOverlay } from './AITurnOverlay.js';
+import { WarningsToast } from './WarningsToast.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 import styles from './GameContainer.module.css';
 
@@ -44,6 +45,7 @@ const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayRegi
     ActiveEffectsPanel,
   ],
   floating: [
+    WarningsToast,
     PlayerHandPanel,
   ],
 };

@@ -1,0 +1,67 @@
+.container {
+  position: absolute;
+  top: 72px;
+  left: var(--space-md);
+  width: min(460px, calc(100vw - (2 * var(--space-md))));
+  pointer-events: none;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.item {
+  pointer-events: auto;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--border-subtle));
+  background: color-mix(in srgb, var(--bg-panel) 82%, var(--danger) 18%);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
+}
+
+.itemDismissing {
+  animation: fadeOut 200ms ease forwards;
+}
+
+.dismissButton {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  cursor: pointer;
+  pointer-events: auto;
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.2;
+  color: color-mix(in srgb, var(--danger) 65%, white);
+  letter-spacing: 0.03em;
+}
+
+.message {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

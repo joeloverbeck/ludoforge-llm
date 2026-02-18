@@ -30,6 +30,7 @@ function makeRenderModel(zoneIds: readonly string[]): GameStore['renderModel'] {
 
 function createRuntimeFixture() {
   const lifecycle: string[] = [];
+  let movedListener: (() => void) | null = null;
 
   const positionStore = {
     getSnapshot: vi.fn(() => ({
@@ -88,8 +89,21 @@ function createRuntimeFixture() {
     }),
   };
 
+  const viewportEvents = {
+    on: vi.fn((event: string, listener: () => void) => {
+      if (event === 'moved') {
+        movedListener = listener;
+      }
+    }),
+    off: vi.fn((event: string, listener: () => void) => {
+      if (event === 'moved' && movedListener === listener) {
+        movedListener = null;
+      }
+    }),
+  };
+
   const viewportResult = {
-    viewport: {} as never,
+    viewport: viewportEvents as never,
     worldLayers: [],
     updateWorldBounds: vi.fn(),
     destroy: vi.fn(() => {
@@ -120,10 +134,17 @@ function createRuntimeFixture() {
     }),
   };
 
+  let nextRect = { x: 100, y: 200, width: 180, height: 110 };
   const bridge = {
     canvasToScreen: vi.fn(),
     screenToCanvas: vi.fn(),
-    worldBoundsToScreenRect: vi.fn(),
+    worldBoundsToScreenRect: vi.fn(() => ({
+      ...nextRect,
+      left: nextRect.x,
+      top: nextRect.y,
+      right: nextRect.x + nextRect.width,
+      bottom: nextRect.y + nextRect.height,
+    })),
   } as CoordinateBridge;
 
   const ariaAnnouncer = {
@@ -182,6 +203,13 @@ function createRuntimeFixture() {
     keyboardCleanup,
     zoneContainerMap,
     tokenContainerMap,
+    viewportEvents,
+    emitViewportMoved: () => {
+      movedListener?.();
+    },
+    setNextScreenRect: (rect: { x: number; y: number; width: number; height: number }) => {
+      nextRect = rect;
+    },
   };
 }
 
@@ -202,19 +230,17 @@ describe('GameCanvas', () => {
 });
 
 describe('createGameCanvasRuntime', () => {
-  it('initializes canvas pipeline and emits coordinate bridge', async () => {
+  it('initializes canvas pipeline and wires hover-anchor publishing', async () => {
     const fixture = createRuntimeFixture();
     const store = createRuntimeStore(makeRenderModel(['zone:a', 'zone:b']));
-    const onCoordinateBridgeReady = vi.fn();
-    const onHoverBoundsResolverReady = vi.fn();
+    const onHoverAnchorChange = vi.fn();
 
-    await createGameCanvasRuntime(
+    const runtime = await createGameCanvasRuntime(
       {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x000000,
-        onCoordinateBridgeReady,
-        onHoverBoundsResolverReady,
+        onHoverAnchorChange,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -233,25 +259,24 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.attachZoneSelectHandlers).toHaveBeenCalledTimes(1);
     expect(fixture.attachTokenSelectHandlers).toHaveBeenCalledTimes(1);
     expect(fixture.canvasUpdater.start).toHaveBeenCalledTimes(1);
-    expect(onCoordinateBridgeReady).toHaveBeenCalledWith(fixture.bridge);
-    expect(onHoverBoundsResolverReady).toHaveBeenCalledWith(expect.any(Function));
+    expect(runtime.coordinateBridge).toBe(fixture.bridge);
+    expect(fixture.viewportEvents.on).toHaveBeenCalledWith('moved', expect.any(Function));
+    expect(onHoverAnchorChange).not.toHaveBeenCalled();
+
+    runtime.destroy();
   });
 
-  it('tears down in strict order and clears coordinate bridge', async () => {
+  it('tears down in strict order and clears hover anchor', async () => {
     const fixture = createRuntimeFixture();
     const store = createRuntimeStore(makeRenderModel(['zone:a']));
-    const onCoordinateBridgeReady = vi.fn();
-    const onHoverTargetChange = vi.fn();
-    const onHoverBoundsResolverReady = vi.fn();
+    const onHoverAnchorChange = vi.fn();
 
     const runtime = await createGameCanvasRuntime(
       {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x111111,
-        onCoordinateBridgeReady,
-        onHoverTargetChange,
-        onHoverBoundsResolverReady,
+        onHoverAnchorChange,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -271,21 +296,20 @@ describe('createGameCanvasRuntime', () => {
     ]);
     expect(fixture.keyboardCleanup).toHaveBeenCalledTimes(1);
     expect(fixture.ariaAnnouncer.destroy).toHaveBeenCalledTimes(1);
-    expect(onCoordinateBridgeReady).toHaveBeenLastCalledWith(null);
-    expect(onHoverTargetChange).toHaveBeenLastCalledWith(null);
-    expect(onHoverBoundsResolverReady).toHaveBeenLastCalledWith(null);
+    expect(fixture.viewportEvents.off).toHaveBeenCalledWith('moved', expect.any(Function));
+    expect(onHoverAnchorChange).toHaveBeenLastCalledWith(null);
   });
 
-  it('forwards hover enter and leave from zone and token handlers', async () => {
+  it('emits explicit screen-space hover anchors on enter/leave', async () => {
     const fixture = createRuntimeFixture();
-    const onHoverTargetChange = vi.fn();
+    const onHoverAnchorChange = vi.fn();
 
     const runtime = await createGameCanvasRuntime(
       {
         container: {} as HTMLElement,
         store: createRuntimeStore(makeRenderModel(['zone:a'])) as unknown as StoreApi<GameStore>,
         backgroundColor: 0x111111,
-        onHoverTargetChange,
+        onHoverAnchorChange,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -300,38 +324,79 @@ describe('createGameCanvasRuntime', () => {
     tokenHoverOptions?.onHoverChange?.(true);
     tokenHoverOptions?.onHoverChange?.(false);
 
-    expect(onHoverTargetChange).toHaveBeenNthCalledWith(1, { kind: 'zone', id: 'zone:a' });
-    expect(onHoverTargetChange).toHaveBeenNthCalledWith(2, null);
-    expect(onHoverTargetChange).toHaveBeenNthCalledWith(3, { kind: 'token', id: 'token:1' });
-    expect(onHoverTargetChange).toHaveBeenNthCalledWith(4, null);
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(1, {
+      target: { kind: 'zone', id: 'zone:a' },
+      rect: {
+        x: 100,
+        y: 200,
+        width: 180,
+        height: 110,
+        left: 100,
+        top: 200,
+        right: 280,
+        bottom: 310,
+      },
+      space: 'screen',
+      version: 1,
+    });
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(2, null);
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(3, {
+      target: { kind: 'token', id: 'token:1' },
+      rect: {
+        x: 100,
+        y: 200,
+        width: 180,
+        height: 110,
+        left: 100,
+        top: 200,
+        right: 280,
+        bottom: 310,
+      },
+      space: 'screen',
+      version: 2,
+    });
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(4, null);
 
     runtime.destroy();
   });
 
-  it('emits a world-bounds resolver for hovered entities', async () => {
+  it('refreshes anchor while viewport transform changes with stable hover target', async () => {
     const fixture = createRuntimeFixture();
-    const onHoverBoundsResolverReady = vi.fn();
+    const onHoverAnchorChange = vi.fn();
 
     const runtime = await createGameCanvasRuntime(
       {
         container: {} as HTMLElement,
         store: createRuntimeStore(makeRenderModel(['zone:a'])) as unknown as StoreApi<GameStore>,
         backgroundColor: 0x222222,
-        onHoverBoundsResolverReady,
+        onHoverAnchorChange,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
 
-    const resolver = onHoverBoundsResolverReady.mock.calls[0]?.[0] as
-      | ((target: { kind: 'zone' | 'token'; id: string }) => { x: number; y: number; width: number; height: number } | null)
-      | undefined;
+    const zoneHandlerCall = fixture.attachZoneSelectHandlers.mock.calls[0] as unknown[] | undefined;
+    const zoneHoverOptions = zoneHandlerCall?.[4] as { onHoverChange?: (isHovered: boolean) => void } | undefined;
 
-    expect(resolver?.({ kind: 'zone', id: 'zone:a' })).toEqual({ x: 10, y: 20, width: 180, height: 110 });
-    expect(resolver?.({ kind: 'token', id: 'token:1' })).toEqual({ x: 40, y: 60, width: 28, height: 28 });
-    expect(resolver?.({ kind: 'zone', id: 'zone:missing' })).toBeNull();
+    zoneHoverOptions?.onHoverChange?.(true);
+    fixture.setNextScreenRect({ x: 160, y: 260, width: 180, height: 110 });
+    fixture.emitViewportMoved();
 
-    fixture.zoneContainerMap.delete('zone:a');
-    expect(resolver?.({ kind: 'zone', id: 'zone:a' })).toBeNull();
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      target: { kind: 'zone', id: 'zone:a' },
+      space: 'screen',
+      version: 1,
+    }));
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      target: { kind: 'zone', id: 'zone:a' },
+      rect: expect.objectContaining({
+        x: 160,
+        y: 260,
+        width: 180,
+        height: 110,
+      }),
+      space: 'screen',
+      version: 2,
+    }));
 
     runtime.destroy();
   });

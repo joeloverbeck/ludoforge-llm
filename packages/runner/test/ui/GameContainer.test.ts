@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
-import { GameContainer } from '../../src/ui/GameContainer.js';
+import { GameContainer, resolveTooltipAnchorState } from '../../src/ui/GameContainer.js';
 
 interface CapturedErrorStateProps {
   readonly error: { readonly message: string };
@@ -18,21 +18,12 @@ interface CapturedTooltipLayerProps {
 }
 
 interface CapturedGameCanvasProps {
-  readonly onCoordinateBridgeReady?: (bridge: {
-    worldBoundsToScreenRect(bounds: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    }): { x: number; y: number; width: number; height: number };
+  readonly onHoverAnchorChange?: (anchor: {
+    readonly target: { readonly kind: 'zone' | 'token'; readonly id: string };
+    readonly rect: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+    readonly space: 'world' | 'screen';
+    readonly version: number;
   } | null) => void;
-  readonly onHoverTargetChange?: (target: { kind: 'zone' | 'token'; id: string } | null) => void;
-  readonly onHoverBoundsResolverReady?: (resolver: ((target: { kind: 'zone' | 'token'; id: string }) => {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } | null) | null) => void;
 }
 
 const testDoubles = vi.hoisted(() => ({
@@ -303,9 +294,7 @@ describe('GameContainer', () => {
     if (gameCanvasProps === null) {
       throw new Error('Expected GameCanvas props to be captured.');
     }
-    expect(gameCanvasProps.onCoordinateBridgeReady).toEqual(expect.any(Function));
-    expect(gameCanvasProps.onHoverTargetChange).toEqual(expect.any(Function));
-    expect(gameCanvasProps.onHoverBoundsResolverReady).toEqual(expect.any(Function));
+    expect(gameCanvasProps.onHoverAnchorChange).toEqual(expect.any(Function));
   });
 
   it('renders GameCanvas and UIOverlay when lifecycle is terminal', () => {
@@ -501,5 +490,50 @@ describe('GameContainer', () => {
 
     capturedErrorStateProps.onRetry();
     expect(clearError).toHaveBeenCalledTimes(1);
+  });
+
+  it('maps only screen-space anchors into tooltip state', () => {
+    expect(resolveTooltipAnchorState(null)).toEqual({
+      hoverTarget: null,
+      anchorRect: null,
+    });
+
+    expect(resolveTooltipAnchorState({
+      target: { kind: 'zone', id: 'zone:a' },
+      rect: { x: 10, y: 20, width: 100, height: 40 },
+      space: 'world',
+      version: 1,
+    })).toEqual({
+      hoverTarget: null,
+      anchorRect: null,
+    });
+
+    expect(resolveTooltipAnchorState({
+      target: { kind: 'zone', id: 'zone:a' },
+      rect: {
+        x: 30,
+        y: 50,
+        width: 120,
+        height: 48,
+        left: 30,
+        top: 50,
+        right: 150,
+        bottom: 98,
+      },
+      space: 'screen',
+      version: 2,
+    })).toEqual({
+      hoverTarget: { kind: 'zone', id: 'zone:a' },
+      anchorRect: {
+        x: 30,
+        y: 50,
+        width: 120,
+        height: 48,
+        left: 30,
+        top: 50,
+        right: 150,
+        bottom: 98,
+      },
+    });
   });
 });

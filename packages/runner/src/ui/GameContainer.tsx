@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useState, type ReactElement } from 'react';
 import { useStore } from 'zustand';
 import type { StoreApi } from 'zustand';
 
-import { GameCanvas, type HoverBoundsResolver, type HoveredCanvasTarget } from '../canvas/GameCanvas.js';
-import type { CoordinateBridge, ScreenRect } from '../canvas/coordinate-bridge.js';
+import { GameCanvas } from '../canvas/GameCanvas.js';
+import type { ScreenRect } from '../canvas/coordinate-bridge.js';
+import type { HoverAnchor, HoveredCanvasTarget } from '../canvas/hover-anchor-contract.js';
 import type { GameStore } from '../store/game-store.js';
 import { ActionToolbar } from './ActionToolbar.js';
 import { ChoicePanel } from './ChoicePanel.js';
@@ -61,13 +62,29 @@ function renderOverlayRegionPanels(
   ));
 }
 
+interface TooltipAnchorState {
+  readonly hoverTarget: HoveredCanvasTarget | null;
+  readonly anchorRect: ScreenRect | null;
+}
+
+export function resolveTooltipAnchorState(hoverAnchor: HoverAnchor | null): TooltipAnchorState {
+  if (hoverAnchor === null || hoverAnchor.space !== 'screen') {
+    return {
+      hoverTarget: null,
+      anchorRect: null,
+    };
+  }
+  return {
+    hoverTarget: hoverAnchor.target,
+    anchorRect: hoverAnchor.rect,
+  };
+}
+
 export function GameContainer({ store }: GameContainerProps): ReactElement {
   const gameLifecycle = useStore(store, (state) => state.gameLifecycle);
   const error = useStore(store, (state) => state.error);
   const renderModel = useStore(store, (state) => state.renderModel);
-  const [coordinateBridge, setCoordinateBridge] = useState<CoordinateBridge | null>(null);
-  const [hoverTarget, setHoverTarget] = useState<HoveredCanvasTarget | null>(null);
-  const [hoverBoundsResolver, setHoverBoundsResolver] = useState<HoverBoundsResolver | null>(null);
+  const [hoverAnchor, setHoverAnchor] = useState<HoverAnchor | null>(null);
 
   if (error !== null) {
     return (
@@ -86,25 +103,10 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
   }
 
   const bottomBarState = deriveBottomBarState(renderModel);
-  const onCoordinateBridgeReady = useCallback((bridge: CoordinateBridge | null) => {
-    setCoordinateBridge(bridge);
+  const onHoverAnchorChange = useCallback((anchor: HoverAnchor | null) => {
+    setHoverAnchor(anchor);
   }, []);
-  const onHoverTargetChange = useCallback((target: HoveredCanvasTarget | null) => {
-    setHoverTarget(target);
-  }, []);
-  const onHoverBoundsResolverReady = useCallback((resolver: HoverBoundsResolver | null) => {
-    setHoverBoundsResolver(() => resolver);
-  }, []);
-  const tooltipAnchorRect = useMemo<ScreenRect | null>(() => {
-    if (coordinateBridge === null || hoverTarget === null || hoverBoundsResolver === null) {
-      return null;
-    }
-    const worldBounds = hoverBoundsResolver(hoverTarget);
-    if (worldBounds === null) {
-      return null;
-    }
-    return coordinateBridge.worldBoundsToScreenRect(worldBounds);
-  }, [coordinateBridge, hoverBoundsResolver, hoverTarget]);
+  const tooltipAnchorState = resolveTooltipAnchorState(hoverAnchor);
 
   const bottomBarContent = (() => {
     switch (bottomBarState.kind) {
@@ -133,9 +135,7 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
       <div className={styles.canvasLayer}>
         <GameCanvas
           store={store}
-          onCoordinateBridgeReady={onCoordinateBridgeReady}
-          onHoverTargetChange={onHoverTargetChange}
-          onHoverBoundsResolverReady={onHoverBoundsResolverReady}
+          onHoverAnchorChange={onHoverAnchorChange}
         />
       </div>
       <UIOverlay
@@ -147,8 +147,8 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
             {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, store)}
             <TooltipLayer
               store={store}
-              hoverTarget={hoverTarget}
-              anchorRect={tooltipAnchorRect}
+              hoverTarget={tooltipAnchorState.hoverTarget}
+              anchorRect={tooltipAnchorState.anchorRect}
             />
           </>
         )}

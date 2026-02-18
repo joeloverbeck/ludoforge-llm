@@ -3,7 +3,7 @@ import { flip, offset, shift, useFloating, type VirtualElement } from '@floating
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
 
-import type { HoveredCanvasTarget } from '../canvas/GameCanvas.js';
+import type { HoveredCanvasTarget } from '../canvas/hover-anchor-contract.js';
 import type { ScreenRect } from '../canvas/coordinate-bridge.js';
 import type { RenderToken, RenderZone } from '../model/render-model.js';
 import type { GameStore } from '../store/game-store.js';

@@ -1,4 +1,5 @@
 import { legalChoicesEvaluate } from '../kernel/legal-choices.js';
+import { selectChoiceOptionValuesByLegalityPrecedence } from '../kernel/choice-option-policy.js';
 import { nextInt } from '../kernel/prng.js';
 import type {
   ChoicePendingRequest,
@@ -20,12 +21,7 @@ const selectFromChooseOne = (
   choices: ChoicePendingRequest,
   rng: Rng,
 ): { readonly selected: MoveParamValue; readonly rng: Rng } => {
-  const nonIllegalOptions = choices.options
-    .filter((option) => option.legality !== 'illegal')
-    .map((option) => option.value);
-  const options = nonIllegalOptions.length > 0
-    ? nonIllegalOptions
-    : choices.options.map((option) => option.value);
+  const options = selectChoiceOptionValuesByLegalityPrecedence(choices);
   const [index, nextRng] = nextInt(rng, 0, options.length - 1);
   return { selected: options[index]!, rng: nextRng };
 };
@@ -34,12 +30,7 @@ const selectFromChooseN = (
   choices: ChoicePendingRequest,
   rng: Rng,
 ): { readonly selected: MoveParamValue; readonly rng: Rng } => {
-  const nonIllegalOptions = choices.options
-    .filter((option) => option.legality !== 'illegal')
-    .map((option) => option.value);
-  const options = nonIllegalOptions.length > 0
-    ? nonIllegalOptions
-    : choices.options.map((option) => option.value);
+  const options = selectChoiceOptionValuesByLegalityPrecedence(choices);
   const min = choices.min ?? 0;
   const max = choices.max ?? options.length;
   const [count, rng1] = nextInt(rng, min, max);
@@ -81,8 +72,7 @@ export const completeTemplateMove = (
       );
     }
 
-    const nonIllegalOptions = choices.options.filter((option) => option.legality !== 'illegal');
-    const optionCount = nonIllegalOptions.length > 0 ? nonIllegalOptions.length : choices.options.length;
+    const optionCount = selectChoiceOptionValuesByLegalityPrecedence(choices).length;
     const min = choices.min ?? 0;
     if (optionCount === 0 || (choices.type === 'chooseN' && optionCount < min)) {
       return null;

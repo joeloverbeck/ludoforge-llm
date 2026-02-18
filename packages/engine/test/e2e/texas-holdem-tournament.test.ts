@@ -32,6 +32,7 @@ interface BlindScheduleRow {
 
 const FULL_TOURNAMENT_MAX_TURNS = 10_000;
 const SHORT_TOURNAMENT_MAX_TURNS = 80;
+const RUN_SLOW_E2E = process.env.RUN_SLOW_E2E === '1';
 const PLAYER_COUNT_SEEDS: Readonly<Record<number, number>> = {
   2: 102,
   3: 103,
@@ -118,27 +119,31 @@ const loadTrace = (
 };
 
 describe('texas hold\'em tournament e2e', () => {
-  it('completes a 4-player random-agent tournament run with stable end-state invariants', () => {
-    const def = compileTexasDef();
-    const playerCount = 4;
-    const trace = loadTrace(def, 42, createAgents(playerCount, 'random'), playerCount, FULL_TOURNAMENT_MAX_TURNS);
+  if (RUN_SLOW_E2E) {
+    it('[slow] completes a 4-player random-agent tournament run with stable end-state invariants', () => {
+      const def = compileTexasDef();
+      const playerCount = 4;
+      const trace = loadTrace(def, 42, createAgents(playerCount, 'random'), playerCount, FULL_TOURNAMENT_MAX_TURNS);
 
-    const totalInitialChips = totalChipsInPlay(initialState(def, 42, playerCount));
-    assert.equal(totalChipsInPlay(trace.finalState), totalInitialChips);
-    assert.equal(trace.stopReason === 'terminal' || trace.stopReason === 'maxTurns', true);
+      const totalInitialChips = totalChipsInPlay(initialState(def, 42, playerCount));
+      assert.equal(totalChipsInPlay(trace.finalState), totalInitialChips);
+      assert.equal(trace.stopReason === 'terminal' || trace.stopReason === 'maxTurns', true);
 
-    const alive = nonEliminatedPlayers(trace.finalState);
-    if (trace.stopReason === 'terminal') {
-      assert.notEqual(trace.result, null);
-      assert.deepEqual(alive.length, 1);
-      const winner = alive[0]!;
-      assert.equal(Number(trace.finalState.perPlayerVars[String(winner)]?.chipStack ?? 0), totalInitialChips);
-      return;
-    }
+      const alive = nonEliminatedPlayers(trace.finalState);
+      if (trace.stopReason === 'terminal') {
+        assert.notEqual(trace.result, null);
+        assert.deepEqual(alive.length, 1);
+        const winner = alive[0]!;
+        assert.equal(Number(trace.finalState.perPlayerVars[String(winner)]?.chipStack ?? 0), totalInitialChips);
+        return;
+      }
 
-    assert.equal(trace.result, null);
-    assert.equal(alive.length > 1, true);
-  });
+      assert.equal(trace.result, null);
+      assert.equal(alive.length > 1, true);
+    });
+  } else {
+    it.skip('[slow] completes a 4-player random-agent tournament run with stable end-state invariants', () => {});
+  }
 
   for (const playerCount of [2, 3, 6, 10]) {
     it(`completes random-agent tournament at playerCount=${playerCount}`, () => {

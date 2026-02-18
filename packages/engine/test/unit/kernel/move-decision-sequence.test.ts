@@ -7,7 +7,9 @@ import {
   asPlayerId,
   asZoneId,
   isMoveDecisionSequenceSatisfiable,
+  pickDeterministicChoiceValue,
   resolveMoveDecisionSequence,
+  type ChoicePendingRequest,
   type ActionDef,
   type ActionPipelineDef,
   type GameDef,
@@ -97,6 +99,24 @@ phase: [asPhaseId('main')],
     const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('choose-one-op'));
     assert.equal(result.complete, true);
     assert.equal(result.move.params['decision:$target'], 'a');
+  });
+
+  it('default chooser follows canonical legality precedence', () => {
+    const request: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionId: 'decision:$mode',
+      name: '$mode',
+      type: 'chooseOne',
+      options: [
+        { value: 'unknown', legality: 'unknown', illegalReason: null },
+        { value: 'legal', legality: 'legal', illegalReason: null },
+        { value: 'illegal', legality: 'illegal', illegalReason: null },
+      ],
+      targetKinds: [],
+    };
+
+    assert.equal(pickDeterministicChoiceValue(request), 'legal');
   });
 
   it('returns incomplete for unsatisfiable chooseN', () => {

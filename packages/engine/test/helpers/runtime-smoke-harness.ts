@@ -6,13 +6,13 @@ import {
   initialState,
   legalMoves,
   nextInt,
+  pickDeterministicChoiceValue,
   resolveMoveDecisionSequence,
   terminalResult,
   type ChoicePendingRequest,
   type GameDef,
   type GameState,
   type Move,
-  type MoveParamScalar,
   type MoveParamValue,
 } from '../../src/kernel/index.js';
 
@@ -87,18 +87,11 @@ export interface RuntimeSmokeGateResult {
 const MAX_DECISION_STEPS = 256;
 
 const deterministicDefaultDecision = (request: ChoicePendingRequest): MoveParamValue => {
-  const nonIllegalOptions = request.options
-    .filter((option) => option.legality !== 'illegal')
-    .map((option) => option.value);
-  const options = nonIllegalOptions.length > 0
-    ? nonIllegalOptions
-    : request.options.map((option) => option.value);
-  if (request.type === 'chooseOne') {
-    return (options[0] ?? null) as MoveParamScalar;
+  const selected = pickDeterministicChoiceValue(request);
+  if (selected !== undefined) {
+    return selected;
   }
-
-  const min = request.min ?? 0;
-  return options.slice(0, min) as MoveParamScalar[];
+  return request.type === 'chooseN' ? [] : (null as unknown as MoveParamValue);
 };
 
 const assertNumericBounds = (def: GameDef, state: GameState): void => {

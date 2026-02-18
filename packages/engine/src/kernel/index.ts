@@ -1,4 +1,5 @@
 export * from './branded.js';
+export * from './choice-option-policy.js';
 export * from './choose-n-cardinality.js';
 export * from './initial-state.js';
 export * from './legal-choices.js';

@@ -1,4 +1,8 @@
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
+import {
+  selectChoiceOptionValuesByLegalityPrecedence,
+  selectUniqueChoiceOptionValuesByLegalityPrecedence,
+} from './choice-option-policy.js';
 import type {
   ChoicePendingRequest,
   ChoiceRequest,
@@ -27,79 +31,72 @@ export type DecisionSequenceChoiceDiscoverer = (
   },
 ) => ChoiceRequest;
 
-const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
-
 const collectSelectableOptionValues = (request: ChoicePendingRequest): readonly MoveParamValue[] => {
-  const nonIllegalOptionValues = request.options
-    .filter((option) => option.legality !== 'illegal')
-    .map((option) => option.value);
-
-  if (nonIllegalOptionValues.length === 0) {
-    return [];
-  }
-
   if (request.type === 'chooseOne') {
-    return nonIllegalOptionValues;
+    return selectChoiceOptionValuesByLegalityPrecedence(request);
   }
-
-  const uniqueValues: MoveParamValue[] = [];
-  const seen = new Set<string>();
-  for (const value of nonIllegalOptionValues) {
-    const key = optionKey(value);
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    uniqueValues.push(value);
-  }
-  return uniqueValues;
+  return selectUniqueChoiceOptionValuesByLegalityPrecedence(request);
 };
 
-const collectChooseNSelections = (
+const enumerateChooseNSelections = (
   request: ChoicePendingRequest,
   selectableValues: readonly MoveParamValue[],
-): readonly MoveParamValue[] => {
+  visit: (selection: MoveParamValue) => boolean,
+): boolean => {
   const min = request.min ?? 0;
   const max = Math.min(request.max ?? selectableValues.length, selectableValues.length);
   if (min > max) {
-    return [];
+    return true;
   }
 
-  const selections: MoveParamValue[] = [];
   const current: MoveParamScalar[] = [];
 
-  const enumerate = (start: number, remaining: number): void => {
+  const enumerate = (start: number, remaining: number): boolean => {
     if (remaining === 0) {
-      selections.push([...current]);
-      return;
+      return visit([...current]);
     }
 
     const upper = selectableValues.length - remaining;
     for (let index = start; index <= upper; index += 1) {
       current.push(selectableValues[index] as MoveParamScalar);
-      enumerate(index + 1, remaining - 1);
+      if (!enumerate(index + 1, remaining - 1)) {
+        return false;
+      }
       current.pop();
     }
+    return true;
   };
 
   for (let size = min; size <= max; size += 1) {
     if (size === 0) {
-      selections.push([]);
+      if (!visit([])) {
+        return false;
+      }
       continue;
     }
-    enumerate(0, size);
+    if (!enumerate(0, size)) {
+      return false;
+    }
   }
 
-  return selections;
+  return true;
 };
 
-const collectDecisionSelections = (request: ChoicePendingRequest): readonly MoveParamValue[] => {
+const forEachDecisionSelection = (
+  request: ChoicePendingRequest,
+  visit: (selection: MoveParamValue) => boolean,
+): boolean => {
   const selectableValues = collectSelectableOptionValues(request);
   if (request.type === 'chooseOne') {
-    return selectableValues;
+    for (const selection of selectableValues) {
+      if (!visit(selection)) {
+        return false;
+      }
+    }
+    return true;
   }
 
-  return collectChooseNSelections(request, selectableValues);
+  return enumerateChooseNSelections(request, selectableValues, visit);
 };
 
 export const classifyDecisionSequenceSatisfiability = (
@@ -114,12 +111,11 @@ export const classifyDecisionSequenceSatisfiability = (
     options?.onWarning?.(warning);
   };
 
-  const stack: Move[] = [baseMove];
   let decisionProbeSteps = 0;
   let deferredPredicatesEvaluated = 0;
   let paramExpansions = 0;
 
-  while (stack.length > 0) {
+  const classifyFromMove = (move: Move): DecisionSequenceSatisfiability => {
     if (decisionProbeSteps >= budgets.maxDecisionProbeSteps) {
       emitWarning({
         code: 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED',
@@ -129,10 +125,9 @@ export const classifyDecisionSequenceSatisfiability = (
           maxDecisionProbeSteps: budgets.maxDecisionProbeSteps,
         },
       });
-      return { classification: 'unknown', warnings };
+      return 'unknown';
     }
 
-    const move = stack.pop()!;
     decisionProbeSteps += 1;
 
     const request = discoverChoices(move, {
@@ -151,20 +146,19 @@ export const classifyDecisionSequenceSatisfiability = (
           deferredPredicatesEvaluated,
         },
       });
-      return { classification: 'unknown', warnings };
+      return 'unknown';
     }
 
     if (request.kind === 'complete') {
-      return { classification: 'satisfiable', warnings };
+      return 'satisfiable';
     }
 
     if (request.kind === 'illegal') {
-      continue;
+      return 'unsatisfiable';
     }
 
-    const selections = collectDecisionSelections(request);
-    for (let index = selections.length - 1; index >= 0; index -= 1) {
-      const selection = selections[index]!;
+    let branchOutcome: DecisionSequenceSatisfiability = 'unsatisfiable';
+    const exhausted = forEachDecisionSelection(request, (selection) => {
       paramExpansions += 1;
       if (paramExpansions > budgets.maxParamExpansions) {
         emitWarning({
@@ -176,18 +170,35 @@ export const classifyDecisionSequenceSatisfiability = (
             paramExpansions,
           },
         });
-        return { classification: 'unknown', warnings };
+        return false;
       }
-
-      stack.push({
+      const outcome = classifyFromMove({
         ...move,
         params: {
           ...move.params,
           [request.decisionId]: selection,
         },
       });
-    }
-  }
+      if (outcome === 'satisfiable') {
+        branchOutcome = 'satisfiable';
+        return false;
+      }
+      if (outcome === 'unknown') {
+        branchOutcome = 'unknown';
+        return false;
+      }
+      return true;
+    });
 
-  return { classification: 'unsatisfiable', warnings };
+    if (branchOutcome !== 'unsatisfiable') {
+      return branchOutcome;
+    }
+    if (!exhausted) {
+      return 'unknown';
+    }
+
+    return 'unsatisfiable';
+  };
+
+  return { classification: classifyFromMove(baseMove), warnings };
 };

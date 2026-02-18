@@ -3,6 +3,7 @@ import {
   classifyDecisionSequenceSatisfiability,
   type DecisionSequenceSatisfiabilityResult,
 } from './decision-sequence-satisfiability.js';
+import { pickDeterministicChoiceValue } from './choice-option-policy.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import type {
   ChoiceIllegalRequest,
@@ -10,7 +11,6 @@ import type {
   GameDef,
   GameState,
   Move,
-  MoveParamScalar,
   MoveParamValue,
   RuntimeWarning,
 } from './types.js';
@@ -29,30 +29,10 @@ export interface ResolveMoveDecisionSequenceResult {
   readonly warnings: readonly RuntimeWarning[];
 }
 
-export interface MoveDecisionSequenceSatisfiabilityResult extends DecisionSequenceSatisfiabilityResult {}
+export type MoveDecisionSequenceSatisfiabilityResult = DecisionSequenceSatisfiabilityResult;
 
-const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefined => {
-  const nonIllegalOptionValues = request.options
-    .filter((option) => option.legality !== 'illegal')
-    .map((option) => option.value);
-  const optionValues = nonIllegalOptionValues.length > 0
-    ? nonIllegalOptionValues
-    : request.options.map((option) => option.value);
-  if (request.type === 'chooseOne') {
-    const selected = optionValues[0];
-    return selected === undefined ? undefined : (selected as MoveParamScalar);
-  }
-
-  if (request.type === 'chooseN') {
-    const min = request.min ?? 0;
-    if (optionValues.length < min) {
-      return undefined;
-    }
-    return optionValues.slice(0, min) as MoveParamScalar[];
-  }
-
-  return undefined;
-};
+const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefined =>
+  pickDeterministicChoiceValue(request);
 
 export const resolveMoveDecisionSequence = (
   def: GameDef,

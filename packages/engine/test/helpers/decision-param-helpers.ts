@@ -1,12 +1,12 @@
 import {
   applyMove,
+  pickDeterministicChoiceValue,
   resolveMoveDecisionSequence,
   type ApplyMoveResult,
   type ChoicePendingRequest,
   type GameDef,
   type GameState,
   type Move,
-  type MoveParamScalar,
   type MoveParamValue,
 } from '../../src/kernel/index.js';
 
@@ -38,18 +38,11 @@ const matchesRule = (rule: DecisionOverrideRule, request: ChoicePendingRequest):
 };
 
 const deterministicDefault = (request: ChoicePendingRequest): MoveParamValue => {
-  const nonIllegalOptions = request.options
-    .filter((option) => option.legality !== 'illegal')
-    .map((option) => option.value);
-  const options = nonIllegalOptions.length > 0
-    ? nonIllegalOptions
-    : request.options.map((option) => option.value);
-  if (request.type === 'chooseOne') {
-    return (options[0] ?? null) as MoveParamScalar;
+  const selected = pickDeterministicChoiceValue(request);
+  if (selected !== undefined) {
+    return selected;
   }
-  const min = request.min ?? 0;
-  const targetCount = min > 0 ? min : Math.min(1, options.length);
-  return options.slice(0, targetCount) as MoveParamScalar[];
+  return request.type === 'chooseN' ? [] : (null as unknown as MoveParamValue);
 };
 
 const resolveDecisionValue = (

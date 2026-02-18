@@ -59,6 +59,7 @@ export function deriveRenderModel(
   state: GameState,
   def: GameDef,
   context: RenderContext,
+  previousModel: RenderModel | null = null,
 ): RenderModel {
   const staticDerivation = deriveStaticRenderDerivation(def);
   const selectionTargets = deriveSelectionTargets(context);
@@ -91,7 +92,7 @@ export function deriveRenderModel(
   const turnOrder = deriveTurnOrder(state, factionByPlayer);
   const choiceUi = deriveChoiceUi(context, zones, tokens, players);
 
-  return {
+  const nextModel: RenderModel = {
     zones: zones.map((zone) => ({
       ...zone,
       markers: deriveZoneMarkers(zone.id, state, staticDerivation.markerStatesById),
@@ -123,6 +124,135 @@ export function deriveRenderModel(
     })),
     terminal: deriveTerminal(context.terminal),
   };
+
+  return stabilizeRenderModel(previousModel, nextModel);
+}
+
+function stabilizeRenderModel(previous: RenderModel | null, next: RenderModel): RenderModel {
+  if (previous === null) {
+    return next;
+  }
+
+  const stabilizedZones = stabilizeZoneArray(previous.zones, next.zones);
+  const stabilizedTokens = stabilizeTokenArray(previous.tokens, next.tokens);
+
+  if (stabilizedZones === next.zones && stabilizedTokens === next.tokens) {
+    return next;
+  }
+
+  return {
+    ...next,
+    zones: stabilizedZones,
+    tokens: stabilizedTokens,
+  };
+}
+
+function stabilizeZoneArray(previous: readonly RenderZone[], next: readonly RenderZone[]): readonly RenderZone[] {
+  if (previous.length === 0 || next.length === 0) {
+    return next;
+  }
+
+  const previousById = new Map(previous.map((zone) => [zone.id, zone] as const));
+  let hasChange = false;
+  const stabilized = next.map((zone) => {
+    const prior = previousById.get(zone.id);
+    if (prior === undefined || !isZoneEquivalent(prior, zone)) {
+      hasChange = true;
+      return zone;
+    }
+    return prior;
+  });
+
+  if (!hasChange && stabilized.length === previous.length && stabilized.every((zone, index) => zone === previous[index])) {
+    return previous;
+  }
+
+  return hasChange ? stabilized : next;
+}
+
+function stabilizeTokenArray(previous: readonly RenderToken[], next: readonly RenderToken[]): readonly RenderToken[] {
+  if (previous.length === 0 || next.length === 0) {
+    return next;
+  }
+
+  const previousById = new Map(previous.map((token) => [token.id, token] as const));
+  let hasChange = false;
+  const stabilized = next.map((token) => {
+    const prior = previousById.get(token.id);
+    if (prior === undefined || !isTokenEquivalent(prior, token)) {
+      hasChange = true;
+      return token;
+    }
+    return prior;
+  });
+
+  if (!hasChange && stabilized.length === previous.length && stabilized.every((token, index) => token === previous[index])) {
+    return previous;
+  }
+
+  return hasChange ? stabilized : next;
+}
+
+function isZoneEquivalent(left: RenderZone, right: RenderZone): boolean {
+  return left.id === right.id
+    && left.displayName === right.displayName
+    && left.ordering === right.ordering
+    && left.hiddenTokenCount === right.hiddenTokenCount
+    && left.visibility === right.visibility
+    && left.isSelectable === right.isSelectable
+    && left.isHighlighted === right.isHighlighted
+    && left.ownerID === right.ownerID
+    && isStringArrayEqual(left.tokenIDs, right.tokenIDs)
+    && isMarkerArrayEqual(left.markers, right.markers)
+    && isShallowRecordEqual(left.metadata, right.metadata);
+}
+
+function isTokenEquivalent(left: RenderToken, right: RenderToken): boolean {
+  return left.id === right.id
+    && left.type === right.type
+    && left.zoneID === right.zoneID
+    && left.ownerID === right.ownerID
+    && left.factionId === right.factionId
+    && left.faceUp === right.faceUp
+    && left.isSelectable === right.isSelectable
+    && left.isSelected === right.isSelected
+    && isShallowRecordEqual(left.properties, right.properties);
+}
+
+function isMarkerArrayEqual(left: readonly RenderMarker[], right: readonly RenderMarker[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((leftMarker, index) => {
+    const rightMarker = right[index];
+    if (rightMarker === undefined) {
+      return false;
+    }
+    return leftMarker.id === rightMarker.id
+      && leftMarker.displayName === rightMarker.displayName
+      && leftMarker.state === rightMarker.state
+      && isStringArrayEqual(leftMarker.possibleStates, rightMarker.possibleStates);
+  });
+}
+
+function isStringArrayEqual(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((value, index) => value === right[index]);
+}
+
+function isShallowRecordEqual(
+  left: Readonly<Record<string, unknown>>,
+  right: Readonly<Record<string, unknown>>,
+): boolean {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+  return leftKeys.every((key) => Object.is(left[key], right[key]));
 }
 
 function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {

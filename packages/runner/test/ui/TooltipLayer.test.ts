@@ -3,10 +3,11 @@
 import { createElement } from 'react';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import { asPlayerId } from '@ludoforge/engine/runtime';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { StoreApi } from 'zustand';
+import { createStore, type StoreApi as VanillaStoreApi } from 'zustand/vanilla';
 
 import type { GameStore } from '../../src/store/game-store.js';
 import { makeRenderModelFixture as makeRenderModel } from './helpers/render-model-fixture.js';
@@ -40,11 +41,12 @@ vi.mock('@floating-ui/react-dom', () => ({
   },
 }));
 
-vi.mock('zustand', () => ({
-  useStore: <TState, TSlice>(store: { getState(): TState }, selector: (state: TState) => TSlice): TSlice => selector(store.getState()),
-}));
-
 import { TooltipLayer } from '../../src/ui/TooltipLayer.js';
+
+interface TooltipStoreState {
+  readonly renderModel: NonNullable<GameStore['renderModel']>;
+  readonly revision: number;
+}
 
 afterEach(() => {
   cleanup();
@@ -56,16 +58,36 @@ afterEach(() => {
   floatingMocks.useFloatingOptions = null;
 });
 
-function createStore(renderModel: NonNullable<GameStore['renderModel']>): StoreApi<GameStore> {
+function createLiveStore(
+  renderModel: NonNullable<GameStore['renderModel']>,
+): {
+    readonly store: StoreApi<GameStore>;
+    readonly liveStore: VanillaStoreApi<TooltipStoreState>;
+  } {
+  const liveStore = createStore<TooltipStoreState>(() => ({ renderModel, revision: 0 }));
   return {
-    getState: () => ({ renderModel }),
-  } as unknown as StoreApi<GameStore>;
+    store: liveStore as unknown as StoreApi<GameStore>,
+    liveStore,
+  };
 }
+
+const ANCHOR_RECT = {
+  x: 10,
+  y: 20,
+  width: 100,
+  height: 40,
+  left: 10,
+  top: 20,
+  right: 110,
+  bottom: 60,
+} as const;
 
 describe('TooltipLayer', () => {
   it('returns null when hover target is missing', () => {
+    const { store } = createLiveStore(makeRenderModel());
+
     render(createElement(TooltipLayer, {
-      store: createStore(makeRenderModel()),
+      store,
       hoverTarget: null,
       anchorRect: null,
     }));
@@ -73,8 +95,8 @@ describe('TooltipLayer', () => {
     expect(screen.queryByTestId('tooltip-layer')).toBeNull();
   });
 
-  it('renders zone details for hovered zones', () => {
-    const store = createStore(makeRenderModel({
+  it('renders normalized payload rows for hovered zones', () => {
+    const { store } = createLiveStore(makeRenderModel({
       zones: [{
         id: 'zone:alpha',
         displayName: 'Alpha Zone',
@@ -90,7 +112,7 @@ describe('TooltipLayer', () => {
         visibility: 'public',
         isSelectable: true,
         isHighlighted: false,
-        ownerID: null,
+        ownerID: asPlayerId(0),
         metadata: {},
       }],
     }));
@@ -98,26 +120,21 @@ describe('TooltipLayer', () => {
     render(createElement(TooltipLayer, {
       store,
       hoverTarget: { kind: 'zone', id: 'zone:alpha' },
-      anchorRect: {
-        x: 10,
-        y: 20,
-        width: 100,
-        height: 40,
-        left: 10,
-        top: 20,
-        right: 110,
-        bottom: 60,
-      },
+      anchorRect: ANCHOR_RECT,
     }));
 
-    expect(screen.getByTestId('tooltip-layer').textContent).toContain('Alpha Zone');
-    expect(screen.getByTestId('tooltip-layer').textContent).toContain('Tokens: 3');
-    expect(screen.getByTestId('tooltip-layer').textContent).toContain('Visibility: public');
-    expect(screen.getByTestId('tooltip-layer').textContent).toContain('Control:Blue');
+    const tooltip = screen.getByTestId('tooltip-layer');
+    expect(tooltip.textContent).toContain('Alpha Zone');
+    expect(tooltip.textContent).toContain('Zone ID: zone:alpha');
+    expect(tooltip.textContent).toContain('Tokens: 3');
+    expect(tooltip.textContent).toContain('Visibility: public');
+    expect(tooltip.textContent).toContain('Owner: 0');
+    expect(tooltip.textContent).toContain('Markers');
+    expect(tooltip.textContent).toContain('Control: Blue');
   });
 
-  it('renders token details for hovered tokens', () => {
-    const store = createStore(makeRenderModel({
+  it('renders normalized payload rows for hovered tokens', () => {
+    const { store } = createLiveStore(makeRenderModel({
       tokens: [{
         id: 'token:7',
         type: 'Infantry',
@@ -137,40 +154,27 @@ describe('TooltipLayer', () => {
     render(createElement(TooltipLayer, {
       store,
       hoverTarget: { kind: 'token', id: 'token:7' },
-      anchorRect: {
-        x: 10,
-        y: 20,
-        width: 100,
-        height: 40,
-        left: 10,
-        top: 20,
-        right: 110,
-        bottom: 60,
-      },
+      anchorRect: ANCHOR_RECT,
     }));
 
     const tooltip = screen.getByTestId('tooltip-layer');
     expect(tooltip.textContent).toContain('Infantry');
+    expect(tooltip.textContent).toContain('Token ID: token:7');
     expect(tooltip.textContent).toContain('Owner: 1');
     expect(tooltip.textContent).toContain('Face Up: yes');
-    expect(tooltip.textContent).toContain('strength: 3');
+    expect(tooltip.textContent).toContain('Zone: zone:alpha');
+    expect(tooltip.textContent).toContain('Properties');
     expect(tooltip.textContent).toContain('ready: true');
+    expect(tooltip.textContent).toContain('strength: 3');
   });
 
   it('configures Floating UI middleware', () => {
+    const { store } = createLiveStore(makeRenderModel());
+
     render(createElement(TooltipLayer, {
-      store: createStore(makeRenderModel()),
+      store,
       hoverTarget: { kind: 'zone', id: 'missing' },
-      anchorRect: {
-        x: 10,
-        y: 20,
-        width: 100,
-        height: 40,
-        left: 10,
-        top: 20,
-        right: 110,
-        bottom: 60,
-      },
+      anchorRect: ANCHOR_RECT,
     }));
 
     expect(floatingMocks.offset).toHaveBeenCalledWith(10);
@@ -180,7 +184,7 @@ describe('TooltipLayer', () => {
   });
 
   it('repositions when anchor rect changes', () => {
-    const store = createStore(makeRenderModel({
+    const { store } = createLiveStore(makeRenderModel({
       zones: [{
         id: 'zone:alpha',
         displayName: 'Alpha Zone',
@@ -199,16 +203,7 @@ describe('TooltipLayer', () => {
     const view = render(createElement(TooltipLayer, {
       store,
       hoverTarget: { kind: 'zone', id: 'zone:alpha' },
-      anchorRect: {
-        x: 10,
-        y: 20,
-        width: 100,
-        height: 40,
-        left: 10,
-        top: 20,
-        right: 110,
-        bottom: 60,
-      },
+      anchorRect: ANCHOR_RECT,
     }));
 
     view.rerender(createElement(TooltipLayer, {
@@ -228,6 +223,47 @@ describe('TooltipLayer', () => {
 
     expect(floatingMocks.setReference).toHaveBeenCalled();
     expect(floatingMocks.update).toHaveBeenCalled();
+  });
+
+  it('ignores unrelated store updates when hovered payload is unchanged', () => {
+    const { store, liveStore } = createLiveStore(makeRenderModel({
+      zones: [{
+        id: 'zone:alpha',
+        displayName: 'Alpha Zone',
+        ordering: 'stack',
+        tokenIDs: ['token:1'],
+        hiddenTokenCount: 0,
+        markers: [],
+        visibility: 'public',
+        isSelectable: true,
+        isHighlighted: false,
+        ownerID: null,
+        metadata: {},
+      }],
+    }));
+
+    let renderCount = 0;
+    function RenderCounter() {
+      renderCount += 1;
+      return createElement(TooltipLayer, {
+        store,
+        hoverTarget: { kind: 'zone', id: 'zone:alpha' },
+        anchorRect: ANCHOR_RECT,
+      });
+    }
+
+    render(createElement(RenderCounter));
+    expect(renderCount).toBe(1);
+
+    act(() => {
+      liveStore.setState((state) => ({
+        ...state,
+        revision: state.revision + 1,
+      }));
+    });
+
+    expect(renderCount).toBe(1);
+    expect(screen.getByTestId('tooltip-layer').textContent).toContain('Alpha Zone');
   });
 
   it('keeps tooltip content pointer-active via CSS contract', () => {

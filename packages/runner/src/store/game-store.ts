@@ -344,7 +344,7 @@ function toRenderContext(inputs: RenderDerivationInputs): RenderContext | null {
   };
 }
 
-function deriveStoreRenderModel(inputs: RenderDerivationInputs): RenderModel | null {
+function deriveStoreRenderModel(inputs: RenderDerivationInputs, previousModel: RenderModel | null): RenderModel | null {
   if (inputs.gameDef === null || inputs.gameState === null) {
     return null;
   }
@@ -352,7 +352,7 @@ function deriveStoreRenderModel(inputs: RenderDerivationInputs): RenderModel | n
   if (context === null) {
     return null;
   }
-  return deriveRenderModel(inputs.gameState, inputs.gameDef, context);
+  return deriveRenderModel(inputs.gameState, inputs.gameDef, context, previousModel);
 }
 
 function toRenderDerivationInputs(state: MutableGameStoreState): RenderDerivationInputs {
@@ -458,7 +458,7 @@ export function createGameStore(bridge: GameWorkerAPI) {
           const nextState = materializeNextState(current, patch);
           return {
             ...patch,
-            renderModel: deriveStoreRenderModel(toRenderDerivationInputs(nextState)),
+            renderModel: deriveStoreRenderModel(toRenderDerivationInputs(nextState), current.renderModel),
           };
         });
       };

@@ -19,6 +19,7 @@ interface CompileFixtureOptions {
   readonly zones: readonly {
     readonly id: string;
     readonly owner: 'none' | 'player';
+    readonly zoneKind?: 'board' | 'aux';
     readonly visibility: 'public' | 'owner' | 'hidden';
     readonly ordering: 'stack' | 'queue' | 'set';
     readonly adjacentTo?: readonly string[];
@@ -152,6 +153,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
         {
           id: 'city',
           owner: 'none',
+          zoneKind: 'board',
           visibility: 'public',
           ordering: 'set',
           category: 'city',
@@ -175,6 +177,12 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       category: 'city',
       attributes: { population: 2, canFortify: true },
       visual: { shape: 'hexagon', color: '#123456', label: 'Urban' },
+      metadata: {
+        zoneKind: 'board',
+        category: 'city',
+        attributes: { population: 2, canFortify: true },
+        visual: { shape: 'hexagon', color: '#123456', label: 'Urban' },
+      },
     });
 
     const plainZone = model.zones.find((zone) => zone.id === 'plain:none');
@@ -182,6 +190,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
       category: null,
       attributes: {},
       visual: null,
+      metadata: { zoneKind: 'aux' },
     });
   });
 
@@ -224,7 +233,49 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     expect(secondModel.zones[0]).toMatchObject({
       category: 'fort',
       visual: { shape: 'rectangle', color: '#222222' },
+      metadata: {
+        zoneKind: 'aux',
+        category: 'fort',
+        visual: { shape: 'rectangle', color: '#222222' },
+      },
     });
+  });
+
+  it('does not preserve prior zone references during stabilization when only metadata projection changes', () => {
+    const defA = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'table',
+          owner: 'none',
+          zoneKind: 'aux',
+          visibility: 'public',
+          ordering: 'set',
+        },
+      ],
+    });
+    const defB = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'table',
+          owner: 'none',
+          zoneKind: 'board',
+          visibility: 'public',
+          ordering: 'set',
+        },
+      ],
+    });
+    const state = initialState(defA, 123, 2);
+    const context = makeRenderContext(state.playerCount);
+
+    const firstModel = deriveRenderModel(state, defA, context);
+    const secondModel = deriveRenderModel(state, defB, context, firstModel);
+
+    expect(secondModel.zones[0]).not.toBe(firstModel.zones[0]);
+    expect(secondModel.zones[0]).toMatchObject({ metadata: { zoneKind: 'board' } });
   });
 
   it('maps materialized zones and filters owner zones by state.playerCount', () => {

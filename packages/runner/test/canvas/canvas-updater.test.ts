@@ -187,7 +187,7 @@ describe('createCanvasUpdater', () => {
     );
   });
 
-  it('updates renderers when zones change and ignores visually equal changes', () => {
+  it('updates renderers when zones change and ignores metadata-only changes under visual equality gating', () => {
     const model = makeRenderModel();
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
     const positionStore = createPositionStore(['zone:a']);

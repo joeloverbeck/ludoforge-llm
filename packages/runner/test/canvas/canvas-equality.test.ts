@@ -163,6 +163,13 @@ describe('zonesVisuallyEqual', () => {
 
     expect(zonesVisuallyEqual(prev, next)).toBe(true);
   });
+
+  it('ignores nested metadata-only changes', () => {
+    const prev = [makeZone({ metadata: { projection: { zoneKind: 'aux', score: 1 } } })];
+    const next = [makeZone({ metadata: { projection: { zoneKind: 'board', score: 5 } } })];
+
+    expect(zonesVisuallyEqual(prev, next)).toBe(true);
+  });
 });
 
 describe('tokensVisuallyEqual', () => {

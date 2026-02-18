@@ -564,7 +564,7 @@ function deriveZones(
       category: zoneDef.category ?? null,
       attributes: zoneDef.attributes ?? {},
       visual: zoneDef.visual ?? null,
-      metadata: {},
+      metadata: deriveZoneMetadata(zoneDef),
     });
   }
 
@@ -572,6 +572,26 @@ function deriveZones(
     zones,
     visibleTokenIDsByZone,
   };
+}
+
+function deriveZoneMetadata(zoneDef: GameDef['zones'][number]): Readonly<Record<string, unknown>> {
+  const metadata: Record<string, unknown> = {
+    zoneKind: zoneDef.zoneKind ?? 'aux',
+  };
+
+  if (zoneDef.category !== undefined) {
+    metadata.category = zoneDef.category;
+  }
+
+  if (zoneDef.attributes !== undefined) {
+    metadata.attributes = zoneDef.attributes;
+  }
+
+  if (zoneDef.visual !== undefined) {
+    metadata.visual = zoneDef.visual;
+  }
+
+  return metadata;
 }
 
 function deriveTokens(

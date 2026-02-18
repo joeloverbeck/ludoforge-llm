@@ -67,4 +67,17 @@ describe('GlobalMarkersBar', () => {
     expect(buildPossibleStatesTitle(['a', 'b'])).toBe('Possible states: a, b');
     expect(buildPossibleStatesTitle([])).toBe('Possible states: none');
   });
+
+  it('renders deterministic none-title tooltip when possible states are empty', () => {
+    const html = renderToStaticMarkup(
+      createElement(GlobalMarkersBar, {
+        store: createStore(makeRenderModel({
+          globalMarkers: [{ id: 'threat', displayName: 'Threat', state: 'low', possibleStates: [] }],
+        })),
+      }),
+    );
+
+    expect(html).toContain('data-testid="global-marker-threat"');
+    expect(html).toContain('title="Possible states: none"');
+  });
 });

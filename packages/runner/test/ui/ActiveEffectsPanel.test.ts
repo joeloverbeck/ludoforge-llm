@@ -74,4 +74,23 @@ describe('ActiveEffectsPanel', () => {
 
     expect(html).toBe('');
   });
+
+  it('renders sparse effects with no attributes without crashing', () => {
+    const html = renderToStaticMarkup(
+      createElement(ActiveEffectsPanel, {
+        store: createStore(makeRenderModel({
+          activeEffects: [
+            {
+              id: 'effect-empty',
+              displayName: 'No Metadata Effect',
+              attributes: [],
+            },
+          ],
+        })),
+      }),
+    );
+
+    expect(html).toContain('data-testid="active-effect-effect-empty"');
+    expect(html).toContain('No Metadata Effect');
+  });
 });

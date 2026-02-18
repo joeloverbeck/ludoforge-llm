@@ -334,6 +334,29 @@ describe('deriveRenderModel state metadata', () => {
     ]);
   });
 
+  it('keeps unknown marker states while retaining known lattice state domains', () => {
+    const baseDef = compileFixture();
+    const baseState = initialState(baseDef, 50, 2);
+    const { def, state: stateWithMetadata } = withStateMetadata(baseDef, baseState);
+    const state: GameState = {
+      ...stateWithMetadata,
+      globalMarkers: {
+        support: 'unexpected-state',
+      },
+    };
+
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+
+    expect(model.globalMarkers).toEqual([
+      {
+        id: 'support',
+        displayName: 'Support',
+        state: 'unexpected-state',
+        possibleStates: ['low', 'high'],
+      },
+    ]);
+  });
+
   it('handles missing optional metadata without crashing', () => {
     const def = compileFixture();
     const state = initialState(def, 6, 2);
@@ -468,6 +491,43 @@ describe('deriveRenderModel state metadata', () => {
         ],
       },
     ]);
+  });
+
+  it('projects global markers and active effects in deterministic source order/key order', () => {
+    const baseDef = compileFixture();
+    const baseState = initialState(baseDef, 81, 2);
+    const { def, state: stateWithMetadata } = withStateMetadata(baseDef, baseState);
+    const state: GameState = {
+      ...stateWithMetadata,
+      globalMarkers: {
+        zeta: 'high',
+        alpha: 'low',
+      },
+      activeLastingEffects: [
+        {
+          id: 'effect-b',
+          sourceCardId: 'card-b',
+          side: 'shaded',
+          duration: 'round',
+          setupEffects: [],
+        },
+        {
+          id: 'effect-a',
+          sourceCardId: 'card-a',
+          side: 'unshaded',
+          duration: 'turn',
+          setupEffects: [],
+        },
+      ],
+    };
+
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+
+    expect(model.globalMarkers).toEqual([
+      { id: 'alpha', displayName: 'Alpha', state: 'low', possibleStates: [] },
+      { id: 'zeta', displayName: 'Zeta', state: 'high', possibleStates: [] },
+    ]);
+    expect(model.activeEffects.map((effect) => effect.id)).toEqual(['effect-b', 'effect-a']);
   });
 
   it('derives players and card-driven turn order', () => {

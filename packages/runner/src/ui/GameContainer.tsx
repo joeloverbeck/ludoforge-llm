@@ -5,6 +5,7 @@ import type { StoreApi } from 'zustand';
 import { GameCanvas } from '../canvas/GameCanvas.js';
 import type { GameStore } from '../store/game-store.js';
 import { ActionToolbar } from './ActionToolbar.js';
+import { ChoicePanel } from './ChoicePanel.js';
 import { ErrorState } from './ErrorState.js';
 import { LoadingState } from './LoadingState.js';
 import { UndoControl } from './UndoControl.js';
@@ -43,6 +44,7 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
       <UIOverlay
         bottomBarContent={(
           <>
+            <ChoicePanel store={store} />
             <ActionToolbar store={store} />
             <UndoControl store={store} />
           </>

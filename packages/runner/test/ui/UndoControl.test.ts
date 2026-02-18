@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { StoreApi } from 'zustand';
 import { describe, expect, it, vi } from 'vitest';
-import { asPlayerId } from '@ludoforge/engine/runtime';
+import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
 
@@ -98,11 +98,13 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
 
 function createUndoStore(state: {
   readonly renderModel: GameStore['renderModel'];
+  readonly selectedAction?: GameStore['selectedAction'];
   readonly undo?: GameStore['undo'];
 }): StoreApi<GameStore> {
   return {
     getState: () => ({
       renderModel: state.renderModel,
+      selectedAction: state.selectedAction ?? null,
       undo: state.undo ?? (async () => {}),
     }),
   } as unknown as StoreApi<GameStore>;
@@ -156,6 +158,17 @@ describe('UndoControl', () => {
     const tree = UndoControl({
       store: createUndoStore({
         renderModel: makeRenderModel({ activePlayerID: asPlayerId(1) }),
+      }),
+    });
+
+    expect(tree).toBeNull();
+  });
+
+  it('is hidden when a move is currently being constructed', () => {
+    const tree = UndoControl({
+      store: createUndoStore({
+        renderModel: makeRenderModel(),
+        selectedAction: asActionId('move'),
       }),
     });
 

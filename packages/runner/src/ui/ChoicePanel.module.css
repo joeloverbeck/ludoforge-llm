@@ -1,0 +1,116 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  pointer-events: auto;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  pointer-events: auto;
+}
+
+.breadcrumbStep {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.breadcrumbCurrent {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.optionRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.optionButton {
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-md);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.optionButton:hover:enabled {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.optionButton:disabled,
+.optionButton[aria-disabled='true'] {
+  color: var(--text-muted);
+  opacity: 0.65;
+  cursor: default;
+}
+
+.placeholder {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-md);
+}
+
+.navigation {
+  display: flex;
+  gap: var(--space-xs);
+  pointer-events: auto;
+}
+
+.navButton {
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-md);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.navButton:hover:enabled {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.navButton:disabled {
+  color: var(--text-muted);
+  opacity: 0.65;
+  cursor: default;
+}

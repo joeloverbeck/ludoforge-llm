@@ -26,8 +26,9 @@ function canRenderToolbar(renderModel: GameStore['renderModel']): boolean {
 
 export function ActionToolbar({ store }: ActionToolbarProps): ReactElement | null {
   const renderModel = useStore(store, (state) => state.renderModel);
+  const selectedAction = useStore(store, (state) => state.selectedAction);
 
-  if (!canRenderToolbar(renderModel)) {
+  if (!canRenderToolbar(renderModel) || selectedAction !== null) {
     return null;
   }
   const toolbarModel = renderModel as NonNullable<GameStore['renderModel']>;

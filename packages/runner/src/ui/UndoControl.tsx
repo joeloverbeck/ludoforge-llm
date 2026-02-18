@@ -20,8 +20,9 @@ function canRenderUndo(renderModel: GameStore['renderModel']): boolean {
 
 export function UndoControl({ store }: UndoControlProps): ReactElement | null {
   const renderModel = useStore(store, (state) => state.renderModel);
+  const selectedAction = useStore(store, (state) => state.selectedAction);
 
-  if (!canRenderUndo(renderModel)) {
+  if (!canRenderUndo(renderModel) || selectedAction !== null) {
     return null;
   }
 

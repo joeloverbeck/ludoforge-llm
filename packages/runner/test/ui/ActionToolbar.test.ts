@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { StoreApi } from 'zustand';
 import { describe, expect, it, vi } from 'vitest';
-import { asPlayerId } from '@ludoforge/engine/runtime';
+import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
 
@@ -128,11 +128,13 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
 
 function createToolbarStore(state: {
   readonly renderModel: GameStore['renderModel'];
+  readonly selectedAction?: GameStore['selectedAction'];
   readonly selectAction?: GameStore['selectAction'];
 }): StoreApi<GameStore> {
   return {
     getState: () => ({
       renderModel: state.renderModel,
+      selectedAction: state.selectedAction ?? null,
       selectAction: state.selectAction ?? (async () => {}),
     }),
   } as unknown as StoreApi<GameStore>;
@@ -205,6 +207,17 @@ describe('ActionToolbar', () => {
     const tree = ActionToolbar({
       store: createToolbarStore({
         renderModel: makeRenderModel({ activePlayerID: asPlayerId(1) }),
+      }),
+    });
+
+    expect(tree).toBeNull();
+  });
+
+  it('does not render when a move is currently being constructed', () => {
+    const tree = ActionToolbar({
+      store: createToolbarStore({
+        renderModel: makeRenderModel(),
+        selectedAction: asActionId('move'),
       }),
     });
 

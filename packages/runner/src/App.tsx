@@ -1,9 +1,8 @@
-import { assertValidatedGameDefInput, asPlayerId } from '@ludoforge/engine/runtime';
 import { type ReactElement, useEffect, useRef } from 'react';
 import type { StoreApi } from 'zustand';
 
 import { createGameBridge, type GameBridgeHandle } from './bridge/game-bridge.js';
-import defaultBootstrapGameDef from './bootstrap/default-game-def.json';
+import { resolveBootstrapConfig } from './bootstrap/resolve-bootstrap-config.js';
 import { createGameStore, type GameStore } from './store/game-store.js';
 import { ErrorBoundary } from './ui/ErrorBoundary.js';
 import { GameContainer } from './ui/GameContainer.js';
@@ -11,34 +10,52 @@ import { GameContainer } from './ui/GameContainer.js';
 interface AppBootstrap {
   readonly bridgeHandle: GameBridgeHandle;
   readonly store: StoreApi<GameStore>;
+  readonly bootstrapConfig: ReturnType<typeof resolveBootstrapConfig>;
 }
-
-const DEFAULT_BOOTSTRAP_SEED = 42;
-const DEFAULT_BOOTSTRAP_PLAYER_ID = asPlayerId(0);
-const DEFAULT_BOOTSTRAP_GAME_DEF = assertValidatedGameDefInput(defaultBootstrapGameDef, 'runner bootstrap fixture');
 
 export function App(): ReactElement {
   const bootstrapRef = useRef<AppBootstrap | null>(null);
+  const mountCountRef = useRef(0);
 
   if (bootstrapRef.current === null) {
     const bridgeHandle = createGameBridge();
     const store = createGameStore(bridgeHandle.bridge);
-    bootstrapRef.current = { bridgeHandle, store };
+    bootstrapRef.current = {
+      bridgeHandle,
+      store,
+      bootstrapConfig: resolveBootstrapConfig(),
+    };
   }
 
-  const { bridgeHandle, store } = bootstrapRef.current;
+  const { bridgeHandle, store, bootstrapConfig } = bootstrapRef.current;
 
   useEffect(() => {
-    void store.getState().initGame(
-      DEFAULT_BOOTSTRAP_GAME_DEF,
-      DEFAULT_BOOTSTRAP_SEED,
-      DEFAULT_BOOTSTRAP_PLAYER_ID,
-    );
+    mountCountRef.current += 1;
+    let cancelled = false;
+    void (async () => {
+      const gameDef = await bootstrapConfig.resolveGameDef();
+      if (cancelled) {
+        return;
+      }
+      await store.getState().initGame(
+        gameDef,
+        bootstrapConfig.seed,
+        bootstrapConfig.playerId,
+      );
+    })().catch((error) => {
+      console.error('Failed to resolve bootstrap game definition.', error);
+    });
 
     return () => {
-      bridgeHandle.terminate();
+      cancelled = true;
+      mountCountRef.current -= 1;
+      queueMicrotask(() => {
+        if (mountCountRef.current === 0) {
+          bridgeHandle.terminate();
+        }
+      });
     };
-  }, [bridgeHandle, store]);
+  }, [bootstrapConfig, bridgeHandle, store]);
 
   return (
     <ErrorBoundary>

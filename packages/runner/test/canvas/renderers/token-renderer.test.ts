@@ -4,6 +4,7 @@ import type { Container } from 'pixi.js';
 
 const {
   MockContainer,
+  MockCircle,
   MockGraphics,
   MockText,
 } = vi.hoisted(() => {
@@ -137,14 +138,30 @@ const {
     }
   }
 
+  class HoistedMockCircle {
+    x: number;
+
+    y: number;
+
+    radius: number;
+
+    constructor(x: number, y: number, radius: number) {
+      this.x = x;
+      this.y = y;
+      this.radius = radius;
+    }
+  }
+
   return {
     MockContainer: HoistedMockContainer,
+    MockCircle: HoistedMockCircle,
     MockGraphics: HoistedMockGraphics,
     MockText: HoistedMockText,
   };
 });
 
 vi.mock('pixi.js', () => ({
+  Circle: MockCircle,
   Container: MockContainer,
   Graphics: MockGraphics,
   Text: MockText,
@@ -183,7 +200,7 @@ function createZoneContainers(entries: readonly [string, { x: number; y: number 
 describe('createTokenRenderer', () => {
   it('update with empty token array creates no containers', () => {
     const parent = new MockContainer();
-    const colorProvider = { getColor: vi.fn(() => '#abcdef') };
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#abcdef') };
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update([], new Map());
@@ -194,14 +211,14 @@ describe('createTokenRenderer', () => {
 
   it('creates token containers and calls color provider for owned tokens', () => {
     const parent = new MockContainer();
-    const colorProvider = { getColor: vi.fn(() => '#112233') };
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
       [
-        makeToken({ id: 'token:1', ownerID: asPlayerId(1) }),
-        makeToken({ id: 'token:2', ownerID: asPlayerId(2) }),
-        makeToken({ id: 'token:3', ownerID: asPlayerId(3) }),
+        makeToken({ id: 'token:1', type: 'troop-a', ownerID: asPlayerId(1) }),
+        makeToken({ id: 'token:2', type: 'troop-b', ownerID: asPlayerId(2) }),
+        makeToken({ id: 'token:3', type: 'troop-c', ownerID: asPlayerId(3) }),
       ],
       createZoneContainers([
         ['zone:a', { x: 100, y: 200 }],
@@ -212,15 +229,17 @@ describe('createTokenRenderer', () => {
     expect(parent.children).toHaveLength(3);
     expect(colorProvider.getColor).toHaveBeenCalledTimes(3);
     expect(colorProvider.getColor).toHaveBeenCalledWith('faction:a', asPlayerId(1));
+    const tokenContainer = renderer.getContainerMap().get('token:1') as unknown as { hitArea?: { radius: number } };
+    expect(tokenContainer.hitArea?.radius).toBe(14);
   });
 
   it('uses neutral fallback for unowned tokens without calling color provider', () => {
     const parent = new MockContainer();
-    const colorProvider = { getColor: vi.fn(() => '#112233') };
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
-      [makeToken({ id: 'token:1', ownerID: null })],
+      [makeToken({ id: 'token:1', ownerID: null, factionId: null })],
       createZoneContainers([
         ['zone:a', { x: 100, y: 200 }],
       ]),
@@ -235,7 +254,7 @@ describe('createTokenRenderer', () => {
 
   it('parses owned token colors from #RGB and falls back to neutral for invalid provider colors', () => {
     const parent = new MockContainer();
-    const colorProvider = { getColor: vi.fn(() => '#abc') };
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#abc') };
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -259,13 +278,34 @@ describe('createTokenRenderer', () => {
     expect(base.fillStyle).toEqual({ color: 0x6b7280 });
   });
 
-  it('shows ? for face-down tokens and type for face-up tokens', () => {
+  it('prioritizes token type visual color over faction color and supports named colors', () => {
     const parent = new MockContainer();
-    const colorProvider = { getColor: vi.fn(() => '#112233') };
+    const colorProvider = {
+      getTokenTypeColor: vi.fn(() => 'bright-blue'),
+      getColor: vi.fn(() => '#ff0000'),
+    };
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
-      [makeToken({ id: 'token:1', type: 'leader', faceUp: false })],
+      [makeToken({ id: 'token:1', type: 'vc-guerrillas', ownerID: asPlayerId(0), factionId: 'vc' })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const base = tokenContainer.children[0] as InstanceType<typeof MockGraphics>;
+    expect(base.fillStyle).toEqual({ color: 0x00bfff });
+    expect(colorProvider.getColor).not.toHaveBeenCalled();
+  });
+
+  it('shows ? for face-down tokens and type for face-up tokens', () => {
+    const parent = new MockContainer();
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'leader', faceUp: false, isSelectable: true })],
       createZoneContainers([
         ['zone:a', { x: 0, y: 0 }],
       ]),
@@ -276,18 +316,18 @@ describe('createTokenRenderer', () => {
     expect(label.text).toBe('?');
 
     renderer.update(
-      [makeToken({ id: 'token:1', type: 'leader', faceUp: true })],
+      [makeToken({ id: 'token:1', type: 'leader', faceUp: true, isSelectable: true })],
       createZoneContainers([
         ['zone:a', { x: 0, y: 0 }],
       ]),
     );
 
-    expect(label.text).toBe('leader');
+    expect(label.text).toBe('LEA');
   });
 
   it('renders selectable and selected states with distinct stroke styles and scale', () => {
     const parent = new MockContainer();
-    const colorProvider = { getColor: vi.fn(() => '#112233') };
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -316,11 +356,11 @@ describe('createTokenRenderer', () => {
 
   it('removes and destroys containers for deleted token IDs', () => {
     const parent = new MockContainer();
-    const colorProvider = { getColor: vi.fn(() => '#112233') };
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
-      [makeToken({ id: 'token:1' }), makeToken({ id: 'token:2' })],
+      [makeToken({ id: 'token:1', isSelectable: true }), makeToken({ id: 'token:2', isSelectable: true })],
       createZoneContainers([
         ['zone:a', { x: 0, y: 0 }],
       ]),
@@ -329,7 +369,14 @@ describe('createTokenRenderer', () => {
     const removed = renderer.getContainerMap().get('token:2') as InstanceType<typeof MockContainer>;
 
     renderer.update(
-      [makeToken({ id: 'token:1' })],
+      [makeToken({ id: 'token:1', type: 'troop-a' }), makeToken({ id: 'token:2', type: 'troop-b' })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'troop-a' })],
       createZoneContainers([
         ['zone:a', { x: 0, y: 0 }],
       ]),
@@ -342,17 +389,17 @@ describe('createTokenRenderer', () => {
 
   it('hides tokens whose zone container is missing and restores when zone reappears', () => {
     const parent = new MockContainer();
-    const colorProvider = { getColor: vi.fn(() => '#112233') };
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
-    renderer.update([makeToken({ id: 'token:1', zoneID: 'zone:missing' })], new Map());
+    renderer.update([makeToken({ id: 'token:1', zoneID: 'zone:missing', isSelectable: true })], new Map());
 
     const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
     expect(tokenContainer.visible).toBe(false);
     expect(tokenContainer.alpha).toBe(0);
 
     renderer.update(
-      [makeToken({ id: 'token:1', zoneID: 'zone:a' })],
+      [makeToken({ id: 'token:1', zoneID: 'zone:a', isSelectable: true })],
       createZoneContainers([
         ['zone:a', { x: 300, y: 400 }],
       ]),
@@ -366,11 +413,11 @@ describe('createTokenRenderer', () => {
 
   it('keeps container references stable for unchanged token IDs across updates', () => {
     const parent = new MockContainer();
-    const colorProvider = { getColor: vi.fn(() => '#112233') };
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
-      [makeToken({ id: 'token:1' }), makeToken({ id: 'token:2' })],
+      [makeToken({ id: 'token:1', isSelectable: true }), makeToken({ id: 'token:2', isSelectable: true })],
       createZoneContainers([
         ['zone:a', { x: 0, y: 0 }],
       ]),
@@ -380,7 +427,7 @@ describe('createTokenRenderer', () => {
     const firstTokenTwo = renderer.getContainerMap().get('token:2');
 
     renderer.update(
-      [makeToken({ id: 'token:1', faceUp: false }), makeToken({ id: 'token:2', isSelectable: true })],
+      [makeToken({ id: 'token:1', faceUp: false, isSelectable: true }), makeToken({ id: 'token:2', isSelectable: true })],
       createZoneContainers([
         ['zone:a', { x: 50, y: 75 }],
       ]),
@@ -392,14 +439,14 @@ describe('createTokenRenderer', () => {
 
   it('positions tokens using zone anchor plus per-zone deterministic offsets', () => {
     const parent = new MockContainer();
-    const colorProvider = { getColor: vi.fn(() => '#112233') };
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
       [
         makeToken({ id: 'token:1' }),
-        makeToken({ id: 'token:2' }),
-        makeToken({ id: 'token:3' }),
+        makeToken({ id: 'token:2', type: 'troop-b' }),
+        makeToken({ id: 'token:3', type: 'troop-c' }),
       ],
       createZoneContainers([
         ['zone:a', { x: 500, y: 250 }],
@@ -420,7 +467,7 @@ describe('createTokenRenderer', () => {
 
   it('getContainerMap returns a live map and destroy clears all containers', () => {
     const parent = new MockContainer();
-    const colorProvider = { getColor: vi.fn(() => '#112233') };
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -441,7 +488,7 @@ describe('createTokenRenderer', () => {
 
   it('invokes bound selection cleanup when tokens are removed or renderer is destroyed', () => {
     const parent = new MockContainer();
-    const colorProvider = { getColor: vi.fn(() => '#112233') };
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
     const cleanupByTokenId = new Map<string, ReturnType<typeof vi.fn>>();
     const bindSelection = vi.fn((_: Container, tokenId: string) => {
       const cleanup = vi.fn();
@@ -453,13 +500,13 @@ describe('createTokenRenderer', () => {
     });
 
     renderer.update(
-      [makeToken({ id: 'token:1' }), makeToken({ id: 'token:2' })],
+      [makeToken({ id: 'token:1', isSelectable: true }), makeToken({ id: 'token:2', isSelectable: true })],
       createZoneContainers([
         ['zone:a', { x: 0, y: 0 }],
       ]),
     );
     renderer.update(
-      [makeToken({ id: 'token:1' })],
+      [makeToken({ id: 'token:1', isSelectable: true })],
       createZoneContainers([
         ['zone:a', { x: 0, y: 0 }],
       ]),
@@ -471,5 +518,70 @@ describe('createTokenRenderer', () => {
     renderer.destroy();
 
     expect(cleanupByTokenId.get('token:1')).toHaveBeenCalledTimes(1);
+  });
+
+  it('stacks non-selectable tokens of same type/faction and shows a count badge', () => {
+    const parent = new MockContainer();
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [
+        makeToken({ id: 'token:1', type: 'troop', zoneID: 'zone:a', isSelectable: false }),
+        makeToken({ id: 'token:2', type: 'troop', zoneID: 'zone:a', isSelectable: false }),
+        makeToken({ id: 'token:3', type: 'troop', zoneID: 'zone:a', isSelectable: false }),
+      ],
+      createZoneContainers([
+        ['zone:a', { x: 50, y: 75 }],
+      ]),
+    );
+
+    expect(parent.children).toHaveLength(1);
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    expect(renderer.getContainerMap().get('token:2')).toBe(tokenContainer);
+    expect(renderer.getContainerMap().get('token:3')).toBe(tokenContainer);
+    const countBadge = tokenContainer.children[2] as InstanceType<typeof MockText>;
+    expect(countBadge.text).toBe('3');
+    expect(countBadge.visible).toBe(true);
+  });
+
+  it('rebinds stack hover/selection handlers when representative token id changes', () => {
+    const parent = new MockContainer();
+    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const cleanupByTokenId = new Map<string, ReturnType<typeof vi.fn>>();
+    const bindSelection = vi.fn((_: Container, tokenId: string) => {
+      const cleanup = vi.fn();
+      cleanupByTokenId.set(tokenId, cleanup);
+      return cleanup;
+    });
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider, {
+      bindSelection: (tokenContainer, tokenId, _isSelectable) => bindSelection(tokenContainer, tokenId),
+    });
+
+    renderer.update(
+      [
+        makeToken({ id: 'token:1', type: 'troop', zoneID: 'zone:a', isSelectable: false }),
+        makeToken({ id: 'token:2', type: 'troop', zoneID: 'zone:a', isSelectable: false }),
+      ],
+      createZoneContainers([
+        ['zone:a', { x: 50, y: 75 }],
+      ]),
+    );
+
+    renderer.update(
+      [
+        makeToken({ id: 'token:2', type: 'troop', zoneID: 'zone:a', isSelectable: false }),
+        makeToken({ id: 'token:3', type: 'troop', zoneID: 'zone:a', isSelectable: false }),
+      ],
+      createZoneContainers([
+        ['zone:a', { x: 50, y: 75 }],
+      ]),
+    );
+
+    expect(bindSelection).toHaveBeenCalledTimes(2);
+    expect(bindSelection).toHaveBeenNthCalledWith(1, expect.any(MockContainer), 'token:1');
+    expect(bindSelection).toHaveBeenNthCalledWith(2, expect.any(MockContainer), 'token:2');
+    expect(cleanupByTokenId.get('token:1')).toHaveBeenCalledTimes(1);
+    expect(cleanupByTokenId.get('token:2')).toHaveBeenCalledTimes(0);
   });
 });

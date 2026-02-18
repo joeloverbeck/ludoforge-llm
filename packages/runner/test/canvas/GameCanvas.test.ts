@@ -141,6 +141,13 @@ function createRuntimeFixture() {
   const bridge = {
     canvasToScreen: vi.fn(),
     screenToCanvas: vi.fn(),
+    canvasBoundsToScreenRect: vi.fn(() => ({
+      ...nextRect,
+      left: nextRect.x,
+      top: nextRect.y,
+      right: nextRect.x + nextRect.width,
+      bottom: nextRect.y + nextRect.height,
+    })),
     worldBoundsToScreenRect: vi.fn(() => ({
       ...nextRect,
       left: nextRect.x,

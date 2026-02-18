@@ -128,7 +128,11 @@ describe('attachZoneSelectHandlers', () => {
     expect(container.listenerCount('pointerup')).toBe(1);
     expect(container.listenerCount('pointerupoutside')).toBe(1);
     expect(container.listenerCount('pointerover')).toBe(1);
+    expect(container.listenerCount('pointerenter')).toBe(1);
+    expect(container.listenerCount('mouseover')).toBe(1);
     expect(container.listenerCount('pointerout')).toBe(1);
+    expect(container.listenerCount('pointerleave')).toBe(1);
+    expect(container.listenerCount('mouseout')).toBe(1);
 
     cleanup();
 
@@ -137,7 +141,11 @@ describe('attachZoneSelectHandlers', () => {
     expect(container.listenerCount('pointerup')).toBe(0);
     expect(container.listenerCount('pointerupoutside')).toBe(0);
     expect(container.listenerCount('pointerover')).toBe(0);
+    expect(container.listenerCount('pointerenter')).toBe(0);
+    expect(container.listenerCount('mouseover')).toBe(0);
     expect(container.listenerCount('pointerout')).toBe(0);
+    expect(container.listenerCount('pointerleave')).toBe(0);
+    expect(container.listenerCount('mouseout')).toBe(0);
   });
 
   it('emits target-aware hover enter and leave callbacks', () => {

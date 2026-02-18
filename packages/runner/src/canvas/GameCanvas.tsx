@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactElement } from 'react';
-import type { FactionDef } from '@ludoforge/engine/runtime';
+import type { FactionDef, TokenTypeDef } from '@ludoforge/engine/runtime';
 import type { StoreApi } from 'zustand';
 
 import type { KeyboardCoordinator } from '../input/keyboard-coordinator.js';
@@ -154,6 +154,7 @@ export async function createGameCanvasRuntime(
   const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer);
 
   const factionColorProvider = new GameDefFactionColorProvider(selectGameDefFactions(selectorStore.getState()));
+  factionColorProvider.setTokenTypes(selectGameDefTokenTypes(selectorStore.getState()));
   const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, factionColorProvider, {
     bindSelection: (tokenContainer, tokenId, isSelectable) =>
       deps.attachTokenSelectHandlers(
@@ -194,6 +195,15 @@ export async function createGameCanvasRuntime(
       tokenRenderer.update(renderTokens, zoneRenderer.getContainerMap());
     },
     { equalityFn: factionDefsEqual },
+  );
+  const unsubscribeTokenTypeDefs = selectorStore.subscribe(
+    selectGameDefTokenTypes,
+    (tokenTypes) => {
+      factionColorProvider.setTokenTypes(tokenTypes);
+      const renderTokens = selectorStore.getState().renderModel?.tokens ?? [];
+      tokenRenderer.update(renderTokens, zoneRenderer.getContainerMap());
+    },
+    { equalityFn: tokenTypeDefsEqual },
   );
   const keyboardSelectConfig = {
     getSelectableZoneIDs: () => interactionController.getSelectableZoneIDs(),
@@ -248,7 +258,7 @@ export async function createGameCanvasRuntime(
     hoverAnchorVersion += 1;
     options.onHoverAnchorChange?.({
       target: hoveredTarget,
-      rect: coordinateBridge.worldBoundsToScreenRect(worldBounds),
+      rect: coordinateBridge.canvasBoundsToScreenRect(worldBounds),
       space: 'screen',
       version: hoverAnchorVersion,
     });
@@ -274,6 +284,7 @@ export async function createGameCanvasRuntime(
       options.onHoverAnchorChange?.(null);
       unsubscribeZoneIDs();
       unsubscribeFactionDefs();
+      unsubscribeTokenTypeDefs();
       cleanupKeyboardSelect();
       ariaAnnouncer.destroy();
       destroyCanvasPipeline(canvasUpdater, zoneRenderer, adjacencyRenderer, tokenRenderer, zonePool, viewportResult, gameCanvas);
@@ -334,8 +345,8 @@ export function GameCanvas({
   ]);
 
   return (
-    <div ref={rootRef}>
-      <div ref={containerRef} role="application" aria-label="Game board" />
+    <div ref={rootRef} style={{ width: '100%', height: '100%' }}>
+      <div ref={containerRef} role="application" aria-label="Game board" style={{ width: '100%', height: '100%' }} />
       <div
         data-ludoforge-live-region="true"
         role="status"
@@ -400,6 +411,10 @@ function selectGameDefFactions(state: GameStore): readonly FactionDef[] | undefi
   return state.gameDef?.factions;
 }
 
+function selectGameDefTokenTypes(state: GameStore): readonly TokenTypeDef[] | undefined {
+  return state.gameDef?.tokenTypes;
+}
+
 function stringArraysEqual(prev: readonly string[], next: readonly string[]): boolean {
   if (prev.length !== next.length) {
     return false;
@@ -433,6 +448,34 @@ function factionDefsEqual(
       prev[index]?.id !== next[index]?.id
       || prev[index]?.color !== next[index]?.color
       || prev[index]?.displayName !== next[index]?.displayName
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function tokenTypeDefsEqual(
+  prev: readonly TokenTypeDef[] | undefined,
+  next: readonly TokenTypeDef[] | undefined,
+): boolean {
+  if (prev === next) {
+    return true;
+  }
+  if (prev === undefined || next === undefined) {
+    return false;
+  }
+  if (prev.length !== next.length) {
+    return false;
+  }
+
+  for (let index = 0; index < prev.length; index += 1) {
+    const prevVisual = prev[index]?.visual;
+    const nextVisual = next[index]?.visual;
+    if (
+      prev[index]?.id !== next[index]?.id
+      || prevVisual?.color !== nextVisual?.color
     ) {
       return false;
     }

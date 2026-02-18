@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics, Rectangle, Text } from 'pixi.js';
 
 import type { RenderZone } from '../../model/render-model';
 import type { Position } from '../geometry';
@@ -107,6 +107,16 @@ export function createZoneRenderer(
         }
 
         updateZoneVisuals(visuals, zone);
+        const dimensions = resolveVisualDimensions(zone.visual, {
+          width: ZONE_WIDTH,
+          height: ZONE_HEIGHT,
+        });
+        zoneContainer.hitArea = new Rectangle(
+          -dimensions.width / 2,
+          -dimensions.height / 2,
+          dimensions.width,
+          dimensions.height,
+        );
       }
     },
 

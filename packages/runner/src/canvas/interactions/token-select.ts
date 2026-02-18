@@ -74,7 +74,11 @@ export function attachTokenSelectHandlers(
   tokenContainer.on('pointerup', onPointerUp);
   tokenContainer.on('pointerupoutside', onPointerOut);
   tokenContainer.on('pointerover', onPointerOver);
+  tokenContainer.on('pointerenter', onPointerOver);
+  tokenContainer.on('mouseover', onPointerOver);
   tokenContainer.on('pointerout', onPointerOut);
+  tokenContainer.on('pointerleave', onPointerOut);
+  tokenContainer.on('mouseout', onPointerOut);
 
   return (): void => {
     tokenContainer.off('pointerdown', onPointerDown);
@@ -82,7 +86,11 @@ export function attachTokenSelectHandlers(
     tokenContainer.off('pointerup', onPointerUp);
     tokenContainer.off('pointerupoutside', onPointerOut);
     tokenContainer.off('pointerover', onPointerOver);
+    tokenContainer.off('pointerenter', onPointerOver);
+    tokenContainer.off('mouseover', onPointerOver);
     tokenContainer.off('pointerout', onPointerOut);
+    tokenContainer.off('pointerleave', onPointerOut);
+    tokenContainer.off('mouseout', onPointerOut);
     tokenContainer.cursor = 'default';
   };
 }

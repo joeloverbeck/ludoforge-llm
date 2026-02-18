@@ -89,6 +89,32 @@ describe('createCoordinateBridge', () => {
     });
   });
 
+  it('converts canvas-space bounds to screen rect using only canvas offset', () => {
+    const state: TransformState = { scale: 2.5, translateX: 99, translateY: -77 };
+    const bridge = createCoordinateBridge(
+      createMockViewport(state),
+      createMockCanvas(() => ({ left: 300, top: 120 })),
+    );
+
+    const rect = bridge.canvasBoundsToScreenRect({
+      x: 40,
+      y: 30,
+      width: 28,
+      height: 28,
+    });
+
+    expect(rect).toEqual({
+      x: 340,
+      y: 150,
+      width: 28,
+      height: 28,
+      left: 340,
+      top: 150,
+      right: 368,
+      bottom: 178,
+    });
+  });
+
   it('throws for invalid world bounds', () => {
     const bridge = createCoordinateBridge(
       createMockViewport({ scale: 1, translateX: 0, translateY: 0 }),
@@ -102,6 +128,10 @@ describe('createCoordinateBridge', () => {
     expect(() => {
       bridge.worldBoundsToScreenRect({ x: Number.NaN, y: 0, width: 1, height: 2 });
     }).toThrow('world bounds must contain finite numbers');
+
+    expect(() => {
+      bridge.canvasBoundsToScreenRect({ x: 0, y: 0, width: -1, height: 2 });
+    }).toThrow('world bounds width/height must be non-negative');
   });
 });
 

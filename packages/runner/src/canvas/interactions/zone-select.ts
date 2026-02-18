@@ -71,7 +71,11 @@ export function attachZoneSelectHandlers(
   zoneContainer.on('pointerup', onPointerUp);
   zoneContainer.on('pointerupoutside', onPointerOut);
   zoneContainer.on('pointerover', onPointerOver);
+  zoneContainer.on('pointerenter', onPointerOver);
+  zoneContainer.on('mouseover', onPointerOver);
   zoneContainer.on('pointerout', onPointerOut);
+  zoneContainer.on('pointerleave', onPointerOut);
+  zoneContainer.on('mouseout', onPointerOut);
 
   return (): void => {
     zoneContainer.off('pointerdown', onPointerDown);
@@ -79,7 +83,11 @@ export function attachZoneSelectHandlers(
     zoneContainer.off('pointerup', onPointerUp);
     zoneContainer.off('pointerupoutside', onPointerOut);
     zoneContainer.off('pointerover', onPointerOver);
+    zoneContainer.off('pointerenter', onPointerOver);
+    zoneContainer.off('mouseover', onPointerOver);
     zoneContainer.off('pointerout', onPointerOut);
+    zoneContainer.off('pointerleave', onPointerOut);
+    zoneContainer.off('mouseout', onPointerOut);
     zoneContainer.cursor = 'default';
   };
 }

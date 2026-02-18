@@ -43,6 +43,7 @@ interface StaticRenderDerivation {
   readonly trackDefs: readonly NumericTrackDef[];
   readonly eventDecks: readonly GameDefEventDeckProjection[];
   readonly playedCardZoneId: string | null;
+  readonly factionAliasToId: ReadonlyMap<string, string>;
 }
 
 interface GameDefEventDeckProjection {
@@ -77,6 +78,7 @@ export function deriveRenderModel(
     zoneDerivation.visibleTokenIDsByZone,
     selectionTargets.selectableTokenIDs,
     factionByPlayer,
+    staticDerivation.factionAliasToId,
   );
   const adjacencies = deriveAdjacencies(def, zones, highlightedAdjacencyKeys);
   const globalVars = deriveGlobalVars(state);
@@ -322,6 +324,7 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
     trackDefs: def.tracks ?? [],
     eventDecks,
     playedCardZoneId,
+    factionAliasToId: buildFactionAliasToId(def),
   };
 }
 
@@ -577,6 +580,7 @@ function deriveTokens(
   visibleTokenIDsByZone: ReadonlyMap<string, readonly string[]>,
   selectableTokenIDs: ReadonlySet<string>,
   factionByPlayer: ReadonlyMap<PlayerId, string>,
+  factionAliasToId: ReadonlyMap<string, string>,
 ): readonly RenderToken[] {
   const tokens: RenderToken[] = [];
 
@@ -597,7 +601,7 @@ function deriveTokens(
         type: token.type,
         zoneID: zone.id,
         ownerID: zone.ownerID,
-        factionId: zone.ownerID === null ? null : factionByPlayer.get(zone.ownerID) ?? null,
+        factionId: resolveTokenFactionId(token, zone.ownerID, factionByPlayer, factionAliasToId),
         faceUp: true,
         properties: token.props,
         isSelectable: selectableTokenIDs.has(String(token.id)),
@@ -607,6 +611,49 @@ function deriveTokens(
   }
 
   return tokens;
+}
+
+function buildFactionAliasToId(def: GameDef): ReadonlyMap<string, string> {
+  const aliases = new Map<string, string>();
+  for (const faction of def.factions ?? []) {
+    const idAlias = normalizeFactionAlias(faction.id);
+    aliases.set(idAlias, faction.id);
+    const displayAlias = normalizeFactionAlias(faction.displayName ?? faction.id);
+    aliases.set(displayAlias, faction.id);
+  }
+  return aliases;
+}
+
+function resolveTokenFactionId(
+  token: Token,
+  ownerID: PlayerId | null,
+  factionByPlayer: ReadonlyMap<PlayerId, string>,
+  factionAliasToId: ReadonlyMap<string, string>,
+): string | null {
+  const factionProp = token.props.faction;
+  if (typeof factionProp === 'string') {
+    const normalized = normalizeFactionAlias(factionProp);
+    const match = factionAliasToId.get(normalized);
+    if (match !== undefined) {
+      return match;
+    }
+  }
+
+  const typePrefix = token.type.split('-')[0] ?? token.type;
+  const typeAlias = normalizeFactionAlias(typePrefix);
+  const typeMatch = factionAliasToId.get(typeAlias);
+  if (typeMatch !== undefined) {
+    return typeMatch;
+  }
+
+  if (ownerID !== null) {
+    return factionByPlayer.get(ownerID) ?? null;
+  }
+  return null;
+}
+
+function normalizeFactionAlias(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/gu, '');
 }
 
 function deriveVisibleTokenIDs(

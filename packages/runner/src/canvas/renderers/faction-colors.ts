@@ -1,4 +1,4 @@
-import type { FactionDef, PlayerId } from '@ludoforge/engine/runtime';
+import type { FactionDef, PlayerId, TokenTypeDef } from '@ludoforge/engine/runtime';
 
 import type { FactionColorProvider } from './renderer-types';
 
@@ -33,6 +33,10 @@ function toPaletteIndex(seed: number, paletteSize: number): number {
 export class DefaultFactionColorProvider implements FactionColorProvider {
   private readonly palette = DEFAULT_FACTION_PALETTE;
 
+  getTokenTypeColor(_tokenTypeId: string): string | null {
+    return null;
+  }
+
   getColor(factionId: string | null, playerId: PlayerId): string {
     const seed = factionId === null ? playerId : hashString(factionId);
     const paletteIndex = toPaletteIndex(seed, this.palette.length);
@@ -42,6 +46,7 @@ export class DefaultFactionColorProvider implements FactionColorProvider {
 
 export class GameDefFactionColorProvider implements FactionColorProvider {
   private colorByFaction = new Map<string, string>();
+  private colorByTokenType = new Map<string, string>();
   private readonly fallback: FactionColorProvider;
 
   constructor(factions: readonly FactionDef[] | undefined, fallback?: FactionColorProvider) {
@@ -51,6 +56,21 @@ export class GameDefFactionColorProvider implements FactionColorProvider {
 
   setFactions(factions: readonly FactionDef[] | undefined): void {
     this.colorByFaction = new Map((factions ?? []).map((faction) => [faction.id, faction.color]));
+  }
+
+  setTokenTypes(tokenTypes: readonly TokenTypeDef[] | undefined): void {
+    this.colorByTokenType = new Map(
+      (tokenTypes ?? [])
+        .map((tokenType) => {
+          const color = tokenType.visual?.color;
+          return typeof color === 'string' ? ([tokenType.id, color] as const) : null;
+        })
+        .filter((entry): entry is readonly [string, string] => entry !== null),
+    );
+  }
+
+  getTokenTypeColor(tokenTypeId: string): string | null {
+    return this.colorByTokenType.get(tokenTypeId) ?? this.fallback.getTokenTypeColor(tokenTypeId);
   }
 
   getColor(factionId: string | null, playerId: PlayerId): string {

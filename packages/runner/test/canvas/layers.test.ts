@@ -17,8 +17,9 @@ describe('createLayerHierarchy', () => {
       hudGroup: expect.any(Container),
     });
 
-    expect(layers.boardGroup.eventMode).toBe('static');
-    expect(layers.tokenGroup.eventMode).toBe('static');
+    expect(layers.boardGroup.eventMode).toBe('passive');
+    expect(layers.tokenGroup.eventMode).toBe('passive');
+    expect(layers.zoneLayer.eventMode).toBe('passive');
     expect(layers.effectsGroup.eventMode).toBe('none');
     expect(layers.interfaceGroup.eventMode).toBe('none');
   });

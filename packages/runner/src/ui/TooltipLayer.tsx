@@ -69,6 +69,7 @@ export function TooltipLayer({ store, hoverTarget, anchorRect }: TooltipLayerPro
 
   return (
     <section
+      ref={refs.setFloating}
       className={styles.tooltip}
       data-testid="tooltip-layer"
       style={{

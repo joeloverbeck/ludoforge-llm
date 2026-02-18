@@ -14,6 +14,7 @@ import { makeRenderModelFixture as makeRenderModel } from './helpers/render-mode
 
 const floatingMocks = vi.hoisted(() => ({
   setReference: vi.fn(),
+  setFloating: vi.fn(),
   update: vi.fn(async () => {}),
   offset: vi.fn((value: number) => ({ name: 'offset', options: value })),
   flip: vi.fn(() => ({ name: 'flip' })),
@@ -35,6 +36,7 @@ vi.mock('@floating-ui/react-dom', () => ({
       strategy: 'absolute',
       refs: {
         setReference: floatingMocks.setReference,
+        setFloating: floatingMocks.setFloating,
       },
       update: floatingMocks.update,
     };
@@ -51,6 +53,7 @@ interface TooltipStoreState {
 afterEach(() => {
   cleanup();
   floatingMocks.setReference.mockClear();
+  floatingMocks.setFloating.mockClear();
   floatingMocks.update.mockClear();
   floatingMocks.offset.mockClear();
   floatingMocks.flip.mockClear();
@@ -228,6 +231,7 @@ describe('TooltipLayer', () => {
     }));
 
     expect(floatingMocks.setReference).toHaveBeenCalled();
+    expect(floatingMocks.setFloating).toHaveBeenCalled();
     expect(floatingMocks.update).toHaveBeenCalled();
   });
 

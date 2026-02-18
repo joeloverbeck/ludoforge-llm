@@ -5,6 +5,7 @@ import type { Container } from 'pixi.js';
 const {
   MockContainer,
   MockGraphics,
+  MockRectangle,
   MockText,
 } = vi.hoisted(() => {
   class MockPoint {
@@ -145,9 +146,27 @@ const {
     }
   }
 
+  class HoistedMockRectangle {
+    x: number;
+
+    y: number;
+
+    width: number;
+
+    height: number;
+
+    constructor(x: number, y: number, width: number, height: number) {
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.height = height;
+    }
+  }
+
   return {
     MockContainer: HoistedMockContainer,
     MockGraphics: HoistedMockGraphics,
+    MockRectangle: HoistedMockRectangle,
     MockText: HoistedMockText,
   };
 });
@@ -155,6 +174,7 @@ const {
 vi.mock('pixi.js', () => ({
   Container: MockContainer,
   Graphics: MockGraphics,
+  Rectangle: MockRectangle,
   Text: MockText,
 }));
 
@@ -226,6 +246,11 @@ describe('createZoneRenderer', () => {
 
     expect(renderer.getContainerMap().size).toBe(3);
     expect(parent.children).toHaveLength(3);
+    const zoneA = renderer.getContainerMap().get('zone:a') as unknown as {
+      hitArea?: { width: number; height: number };
+    };
+    expect(zoneA.hitArea?.width).toBe(180);
+    expect(zoneA.hitArea?.height).toBe(110);
 
     renderer.update(
       [makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' }), makeZone({ id: 'zone:d' })],

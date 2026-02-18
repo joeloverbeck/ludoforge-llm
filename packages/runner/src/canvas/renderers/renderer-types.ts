@@ -35,5 +35,6 @@ export interface AdjacencyRenderer {
 }
 
 export interface FactionColorProvider {
+  getTokenTypeColor(tokenTypeId: string): string | null;
   getColor(factionId: string | null, playerId: PlayerId): string;
 }

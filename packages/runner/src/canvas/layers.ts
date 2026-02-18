@@ -12,7 +12,7 @@ export interface LayerHierarchy {
 
 function configureLayer(
   layer: Container,
-  eventMode: 'static' | 'none',
+  eventMode: 'passive' | 'none',
   interactiveChildren: boolean,
 ): void {
   layer.eventMode = eventMode;
@@ -29,8 +29,8 @@ export function createLayerHierarchy(): LayerHierarchy {
   const interfaceGroup = new Container();
   const hudGroup = new Container();
 
-  configureLayer(boardGroup, 'static', true);
-  configureLayer(tokenGroup, 'static', true);
+  configureLayer(boardGroup, 'passive', true);
+  configureLayer(tokenGroup, 'passive', true);
   configureLayer(effectsGroup, 'none', false);
   configureLayer(interfaceGroup, 'none', false);
   configureLayer(hudGroup, 'none', false);
@@ -39,7 +39,7 @@ export function createLayerHierarchy(): LayerHierarchy {
   adjacencyLayer.interactiveChildren = false;
   adjacencyLayer.sortableChildren = true;
 
-  zoneLayer.eventMode = 'none';
+  zoneLayer.eventMode = 'passive';
   zoneLayer.interactiveChildren = true;
   zoneLayer.sortableChildren = true;
 

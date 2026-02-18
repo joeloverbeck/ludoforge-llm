@@ -372,6 +372,48 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     ]);
   });
 
+  it('derives token factionId from token props faction aliases in public zones', () => {
+    const baseDef = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'table',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+        },
+      ],
+    });
+    const def: GameDef = {
+      ...baseDef,
+      factions: [
+        { id: 'us', displayName: 'United States', color: '#e63946' },
+        { id: 'arvn', displayName: 'ARVN', color: '#457b9d' },
+      ],
+    };
+    const baseState = initialState(def, 112, 2);
+    const state: GameState = {
+      ...baseState,
+      zones: {
+        ...baseState.zones,
+        'table:none': [
+          token('u1', 'us-troops', { faction: 'US' }),
+          token('a1', 'arvn-police', { faction: 'ARVN' }),
+        ],
+      },
+    };
+
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount, asPlayerId(0)));
+    expect(model.tokens.map((renderToken) => ({
+      id: renderToken.id,
+      factionId: renderToken.factionId,
+    }))).toEqual([
+      { id: 'u1', factionId: 'us' },
+      { id: 'a1', factionId: 'arvn' },
+    ]);
+  });
+
   it('normalizes adjacencies bidirectionally and deduplicates pairs', () => {
     const def = compileFixture({
       minPlayers: 2,

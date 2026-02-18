@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testDoubles = vi.hoisted(() => ({
   initGame: vi.fn(),
@@ -11,6 +11,7 @@ const testDoubles = vi.hoisted(() => ({
   effectCleanups: [] as Array<() => void>,
   gameContainerStore: null as unknown,
   bridge: {} as unknown,
+  resolveBootstrapConfig: vi.fn(),
 }));
 
 vi.mock('react', async () => {
@@ -47,9 +48,17 @@ vi.mock('../../src/ui/ErrorBoundary.js', () => ({
   },
 }));
 
+vi.mock('../../src/bootstrap/resolve-bootstrap-config.js', () => ({
+  resolveBootstrapConfig: testDoubles.resolveBootstrapConfig,
+}));
+
 async function renderApp(): Promise<string> {
   const { App } = await import('../../src/App.js');
   return renderToStaticMarkup(createElement(App));
+}
+
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve();
 }
 
 describe('App', () => {
@@ -61,6 +70,7 @@ describe('App', () => {
     testDoubles.terminate.mockReset();
     testDoubles.createGameBridge.mockReset();
     testDoubles.createGameStore.mockReset();
+    testDoubles.resolveBootstrapConfig.mockReset();
 
     const store = {
       getState: () => ({
@@ -73,10 +83,11 @@ describe('App', () => {
       terminate: testDoubles.terminate,
     });
     testDoubles.createGameStore.mockReturnValue(store);
-  });
-
-  afterEach(() => {
-    vi.doUnmock('../../src/bootstrap/default-game-def.json');
+    testDoubles.resolveBootstrapConfig.mockReturnValue({
+      seed: 42,
+      playerId: 0,
+      resolveGameDef: async () => ({ metadata: { id: 'runner-bootstrap-default' } }),
+    });
   });
 
   it('renders with ErrorBoundary wrapping GameContainer', async () => {
@@ -88,6 +99,7 @@ describe('App', () => {
 
   it('creates bridge and store once per mount', async () => {
     await renderApp();
+    await flushMicrotasks();
 
     expect(testDoubles.createGameBridge).toHaveBeenCalledTimes(1);
     expect(testDoubles.createGameStore).toHaveBeenCalledTimes(1);
@@ -95,31 +107,52 @@ describe('App', () => {
     expect(testDoubles.gameContainerStore).toBe(testDoubles.createGameStore.mock.results[0]?.value);
   });
 
-  it('calls initGame on mount with deterministic seed and player', async () => {
+  it('calls initGame on mount with resolved bootstrap config', async () => {
+    const resolvedGameDef = { metadata: { id: 'fire-in-the-lake' } };
+    testDoubles.resolveBootstrapConfig.mockReturnValue({
+      seed: 99,
+      playerId: 2,
+      resolveGameDef: async () => resolvedGameDef,
+    });
+
     await renderApp();
+    await flushMicrotasks();
 
     expect(testDoubles.initGame).toHaveBeenCalledTimes(1);
     const [gameDef, seed, playerID] = testDoubles.initGame.mock.calls[0]!;
-    expect(seed).toBe(42);
-    expect(playerID).toBe(0);
-    expect((gameDef as { readonly metadata?: { readonly id?: string } }).metadata?.id).toBe('runner-bootstrap-default');
+    expect(gameDef).toBe(resolvedGameDef);
+    expect(seed).toBe(99);
+    expect(playerID).toBe(2);
   });
 
   it('terminates worker on unmount cleanup', async () => {
     await renderApp();
+    await flushMicrotasks();
 
     expect(testDoubles.effectCleanups).toHaveLength(1);
     testDoubles.effectCleanups[0]!();
+    await flushMicrotasks();
     expect(testDoubles.terminate).toHaveBeenCalledTimes(1);
   });
 
-  it('fails fast when bootstrap fixture is not a valid GameDef payload', async () => {
-    vi.doMock('../../src/bootstrap/default-game-def.json', () => ({
-      default: { invalid: true },
-    }));
-
-    await expect(import('../../src/App.js')).rejects.toMatchObject({
-      message: expect.stringContaining('Invalid GameDef input from runner bootstrap fixture'),
+  it('fails fast when bootstrap config resolution throws', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    testDoubles.resolveBootstrapConfig.mockReturnValue({
+      seed: 42,
+      playerId: 0,
+      resolveGameDef: async () => {
+        throw new Error('bootstrap config failed');
+      },
     });
+
+    await renderApp();
+    await flushMicrotasks();
+
+    expect(testDoubles.initGame).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      'Failed to resolve bootstrap game definition.',
+      expect.objectContaining({ message: 'bootstrap config failed' }),
+    );
+    consoleError.mockRestore();
   });
 });

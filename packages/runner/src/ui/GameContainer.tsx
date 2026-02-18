@@ -105,6 +105,10 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
     };
   }, [keyboardCoordinator]);
 
+  const onHoverAnchorChange = useCallback((anchor: HoverAnchor | null): void => {
+    setHoverAnchor(anchor);
+  }, []);
+
   if (error !== null) {
     return (
       <div className={styles.container}>
@@ -122,13 +126,7 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
   }
 
   const bottomBarState = deriveBottomBarState(renderModel);
-  const onHoverAnchorChange = useCallback((anchor: HoverAnchor | null) => {
-    setHoverAnchor(anchor);
-  }, []);
-  const factionCssVariableStyle = useMemo(
-    () => buildFactionCssVariableStyle(gameDefFactions),
-    [gameDefFactions],
-  );
+  const factionCssVariableStyle = buildFactionCssVariableStyle(gameDefFactions);
   const tooltipAnchorState = resolveTooltipAnchorState(hoverAnchor);
 
   const bottomBarContent = (() => {

@@ -23,6 +23,7 @@ export interface ScreenRect {
 export interface CoordinateBridge {
   canvasToScreen(worldPos: Position): Position;
   screenToCanvas(screenPos: Position): Position;
+  canvasBoundsToScreenRect(canvasBounds: WorldBounds): ScreenRect;
   worldBoundsToScreenRect(worldBounds: WorldBounds): ScreenRect;
 }
 
@@ -52,6 +53,16 @@ export function createCoordinateBridge(
         x: point.x,
         y: point.y,
       };
+    },
+
+    canvasBoundsToScreenRect(canvasBounds: WorldBounds): ScreenRect {
+      assertWorldBounds(canvasBounds);
+      const rect = canvasElement.getBoundingClientRect();
+      const left = canvasBounds.x + rect.left;
+      const top = canvasBounds.y + rect.top;
+      const right = left + canvasBounds.width;
+      const bottom = top + canvasBounds.height;
+      return createScreenRect(left, top, right, bottom);
     },
 
     worldBoundsToScreenRect(worldBounds: WorldBounds): ScreenRect {

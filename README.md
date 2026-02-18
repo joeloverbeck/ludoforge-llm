@@ -7,6 +7,11 @@ Evolving board games relying on LLMs for design/judgement, and executable protot
 - Full e2e lane (includes slow coverage): `pnpm -F @ludoforge/engine test:e2e:all`
 - Automation contract: protected branch/release CI must run the full e2e lane (`test:e2e:all`) or an equivalent split that always includes `test:e2e:slow`.
 
+## Runner Dev Bootstrap
+- Generate FITL bootstrap fixture: `pnpm -F @ludoforge/runner bootstrap:fitl`
+- Start runner: `pnpm -F @ludoforge/runner dev`
+- FITL URL: `http://localhost:5173/?game=fitl`
+
 ## Schema Artifacts
 - Source-of-truth schemas in `src/kernel/schemas-core.ts` define all generated artifacts:
   - `GameDef.schema.json` from `GameDefSchema`

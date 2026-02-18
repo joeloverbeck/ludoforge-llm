@@ -970,6 +970,37 @@ describe('createGameStore', () => {
     expect(store.getState().error).toBeNull();
   });
 
+  it('reportBootstrapFailure clears stale session state and preserves structured error payload', async () => {
+    const def = compileStoreFixture(5);
+    const bridge = createBridgeStub({
+      init: () => initialState(def, 30, 2),
+      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      terminalResult: () => null,
+    });
+    const store = createGameStore(bridge);
+
+    await store.getState().initGame(def, 30, asPlayerId(0));
+    expect(store.getState().gameLifecycle).toBe('playing');
+    expect(store.getState().renderModel).not.toBeNull();
+    store.setState({ gameLifecycle: 'initializing' });
+
+    const workerError: WorkerError = {
+      code: 'VALIDATION_FAILED',
+      message: 'bootstrap fixture malformed',
+      details: { source: 'bootstrap' },
+    };
+    store.getState().reportBootstrapFailure(workerError);
+
+    const state = store.getState();
+    expect(state.gameLifecycle).toBe('idle');
+    expect(state.gameDef).toBeNull();
+    expect(state.gameState).toBeNull();
+    expect(state.playerID).toBeNull();
+    expect(state.legalMoveResult).toBeNull();
+    expect(state.renderModel).toBeNull();
+    expect(state.error).toEqual(workerError);
+  });
+
   it('non-init bridge errors preserve current lifecycle while setting structured error', async () => {
     const def = compileStoreFixture(5);
     const workerError: WorkerError = {

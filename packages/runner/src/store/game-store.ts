@@ -46,6 +46,7 @@ type MutableGameStoreState = Omit<GameStoreState, 'renderModel'>;
 
 interface GameStoreActions {
   initGame(def: GameDef, seed: number, playerID: PlayerId): Promise<void>;
+  reportBootstrapFailure(error: unknown): void;
   selectAction(actionId: ActionId): Promise<void>;
   chooseOne(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
   chooseN(choice: readonly Exclude<MoveParamValue, readonly unknown[]>[]): Promise<void>;
@@ -562,6 +563,11 @@ export function createGameStore(bridge: GameWorkerAPI) {
           } finally {
             finishOperation(operation);
           }
+        },
+
+        reportBootstrapFailure(error) {
+          const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'reportBootstrapFailure');
+          setAndDerive(buildInitFailureState(error, lifecycle));
         },
 
         async selectAction(actionId) {

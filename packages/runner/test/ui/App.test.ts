@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testDoubles = vi.hoisted(() => ({
   initGame: vi.fn(),
+  reportBootstrapFailure: vi.fn(),
   terminate: vi.fn(),
   createGameBridge: vi.fn(),
   createGameStore: vi.fn(),
@@ -67,6 +68,7 @@ describe('App', () => {
     testDoubles.effectCleanups = [];
     testDoubles.gameContainerStore = null;
     testDoubles.initGame.mockReset();
+    testDoubles.reportBootstrapFailure.mockReset();
     testDoubles.terminate.mockReset();
     testDoubles.createGameBridge.mockReset();
     testDoubles.createGameStore.mockReset();
@@ -75,6 +77,7 @@ describe('App', () => {
     const store = {
       getState: () => ({
         initGame: testDoubles.initGame,
+        reportBootstrapFailure: testDoubles.reportBootstrapFailure,
       }),
     };
 
@@ -135,8 +138,7 @@ describe('App', () => {
     expect(testDoubles.terminate).toHaveBeenCalledTimes(1);
   });
 
-  it('fails fast when bootstrap config resolution throws', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it('routes bootstrap config resolution failure through bootstrap error path', async () => {
     testDoubles.resolveBootstrapConfig.mockReturnValue({
       seed: 42,
       playerId: 0,
@@ -149,10 +151,22 @@ describe('App', () => {
     await flushMicrotasks();
 
     expect(testDoubles.initGame).not.toHaveBeenCalled();
-    expect(consoleError).toHaveBeenCalledWith(
-      'Failed to resolve bootstrap game definition.',
+    expect(testDoubles.reportBootstrapFailure).toHaveBeenCalledTimes(1);
+    expect(testDoubles.reportBootstrapFailure).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'bootstrap config failed' }),
     );
-    consoleError.mockRestore();
+  });
+
+  it('routes unexpected initGame rejection through bootstrap error path', async () => {
+    testDoubles.initGame.mockRejectedValue(new Error('initGame exploded'));
+
+    await renderApp();
+    await flushMicrotasks();
+
+    expect(testDoubles.initGame).toHaveBeenCalledTimes(1);
+    expect(testDoubles.reportBootstrapFailure).toHaveBeenCalledTimes(1);
+    expect(testDoubles.reportBootstrapFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'initGame exploded' }),
+    );
   });
 });

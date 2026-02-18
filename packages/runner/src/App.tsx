@@ -43,7 +43,10 @@ export function App(): ReactElement {
         bootstrapConfig.playerId,
       );
     })().catch((error) => {
-      console.error('Failed to resolve bootstrap game definition.', error);
+      if (cancelled) {
+        return;
+      }
+      store.getState().reportBootstrapFailure(error);
     });
 
     return () => {

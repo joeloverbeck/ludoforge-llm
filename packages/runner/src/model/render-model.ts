@@ -79,12 +79,14 @@ export interface RenderVariable {
 
 export interface RenderMarker {
   readonly id: string;
+  readonly displayName: string;
   readonly state: string;
   readonly possibleStates: readonly string[];
 }
 
 export interface RenderGlobalMarker {
   readonly id: string;
+  readonly displayName: string;
   readonly state: string;
   readonly possibleStates: readonly string[];
 }

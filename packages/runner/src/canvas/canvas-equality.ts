@@ -163,7 +163,11 @@ function markersEqual(prev: readonly RenderMarker[], next: readonly RenderMarker
       return false;
     }
 
-    if (previous.id !== current.id || previous.state !== current.state) {
+    if (
+      previous.id !== current.id
+      || previous.displayName !== current.displayName
+      || previous.state !== current.state
+    ) {
       return false;
     }
   }

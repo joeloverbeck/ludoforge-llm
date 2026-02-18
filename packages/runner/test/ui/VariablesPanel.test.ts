@@ -70,7 +70,7 @@ describe('VariablesPanel', () => {
 
     const store = {
       getState: () => state,
-    };
+    } as ReturnType<typeof createStore>;
 
     render(createElement(VariablesPanel, { store }));
 
@@ -92,7 +92,7 @@ describe('VariablesPanel', () => {
 
     const store = {
       getState: () => state,
-    };
+    } as ReturnType<typeof createStore>;
 
     const { rerender } = render(createElement(VariablesPanel, { store }));
 

@@ -23,6 +23,7 @@ function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
     markers: [
       {
         id: 'control',
+        displayName: 'Control',
         state: 'blue',
         possibleStates: ['blue', 'red'],
       },
@@ -101,7 +102,16 @@ describe('zonesVisuallyEqual', () => {
     expect(
       zonesVisuallyEqual(
         [makeZone()],
-        [makeZone({ markers: [{ id: 'control', state: 'red', possibleStates: ['blue', 'red'] }] })],
+        [makeZone({ markers: [{ id: 'control', displayName: 'Control', state: 'red', possibleStates: ['blue', 'red'] }] })],
+      ),
+    ).toBe(false);
+  });
+
+  it('returns false when marker displayName changes', () => {
+    expect(
+      zonesVisuallyEqual(
+        [makeZone()],
+        [makeZone({ markers: [{ id: 'control', displayName: 'Influence', state: 'blue', possibleStates: ['blue', 'red'] }] })],
       ),
     ).toBe(false);
   });

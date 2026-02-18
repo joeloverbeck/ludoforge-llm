@@ -43,7 +43,7 @@ export function GlobalMarkersBar({ store }: GlobalMarkersBarProps): ReactElement
             data-testid={`global-marker-${marker.id}`}
             title={buildPossibleStatesTitle(marker.possibleStates)}
           >
-            <span className={styles.markerId}>{marker.id}</span>
+            <span className={styles.markerId}>{marker.displayName}</span>
             <span className={styles.markerState}>{marker.state}</span>
           </li>
         ))}

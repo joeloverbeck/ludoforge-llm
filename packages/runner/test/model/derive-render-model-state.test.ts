@@ -249,6 +249,7 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
     },
     globalMarkers: {
       support: 'high',
+      threat_level: 'low',
     },
     activeLastingEffects: [
       {
@@ -324,11 +325,12 @@ describe('deriveRenderModel state metadata', () => {
     ]);
 
     expect(model.zones.find((zone) => zone.id === 'table:none')?.markers).toEqual([
-      { id: 'status', state: 'fortified', possibleStates: [] },
-      { id: 'terror', state: 'high', possibleStates: ['none', 'low', 'high'] },
+      { id: 'status', displayName: 'Status', state: 'fortified', possibleStates: [] },
+      { id: 'terror', displayName: 'Terror', state: 'high', possibleStates: ['none', 'low', 'high'] },
     ]);
     expect(model.globalMarkers).toEqual([
-      { id: 'support', state: 'high', possibleStates: ['low', 'high'] },
+      { id: 'support', displayName: 'Support', state: 'high', possibleStates: ['low', 'high'] },
+      { id: 'threat_level', displayName: 'Threat Level', state: 'low', possibleStates: [] },
     ]);
   });
 

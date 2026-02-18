@@ -211,6 +211,7 @@ function deriveZoneMarkers(
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([id, markerState]) => ({
       id,
+      displayName: formatIdAsDisplayName(id),
       state: markerState,
       possibleStates: markerStatesById.get(id) ?? [],
     }));
@@ -224,6 +225,7 @@ function deriveGlobalMarkers(
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([id, markerState]) => ({
       id,
+      displayName: formatIdAsDisplayName(id),
       state: markerState,
       possibleStates: statesById.get(id) ?? [],
     }));

@@ -196,7 +196,7 @@ function updateZoneVisuals(
   visuals.tokenCountBadge.text = String(tokenTotal);
   visuals.tokenCountBadge.visible = tokenTotal > 0;
 
-  const markerText = zone.markers.map((marker) => `${marker.id}:${marker.state}`).join('  ');
+  const markerText = zone.markers.map((marker) => `${marker.displayName}:${marker.state}`).join('  ');
   visuals.markersLabel.text = markerText;
   visuals.markersLabel.visible = markerText.length > 0;
 

@@ -17,8 +17,8 @@ describe('GlobalMarkersBar', () => {
       createElement(GlobalMarkersBar, {
         store: createStore(makeRenderModel({
           globalMarkers: [
-            { id: 'support', state: 'high', possibleStates: ['low', 'high'] },
-            { id: 'threat', state: 'low', possibleStates: ['low', 'high'] },
+            { id: 'support', displayName: 'Support', state: 'high', possibleStates: ['low', 'high'] },
+            { id: 'threat', displayName: 'Threat', state: 'low', possibleStates: ['low', 'high'] },
           ],
         })),
       }),
@@ -28,16 +28,16 @@ describe('GlobalMarkersBar', () => {
     expect(html).toContain('data-testid="global-marker-threat"');
   });
 
-  it('shows marker id and current state on each chip', () => {
+  it('shows marker displayName and current state on each chip', () => {
     const html = renderToStaticMarkup(
       createElement(GlobalMarkersBar, {
         store: createStore(makeRenderModel({
-          globalMarkers: [{ id: 'support', state: 'high', possibleStates: ['low', 'high'] }],
+          globalMarkers: [{ id: 'support', displayName: 'Support', state: 'high', possibleStates: ['low', 'high'] }],
         })),
       }),
     );
 
-    expect(html).toContain('support');
+    expect(html).toContain('Support');
     expect(html).toContain('high');
   });
 
@@ -55,7 +55,7 @@ describe('GlobalMarkersBar', () => {
     const html = renderToStaticMarkup(
       createElement(GlobalMarkersBar, {
         store: createStore(makeRenderModel({
-          globalMarkers: [{ id: 'support', state: 'high', possibleStates: ['low', 'high'] }],
+          globalMarkers: [{ id: 'support', displayName: 'Support', state: 'high', possibleStates: ['low', 'high'] }],
         })),
       }),
     );

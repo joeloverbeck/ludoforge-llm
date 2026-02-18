@@ -25,7 +25,7 @@ describe('render-model types', () => {
           ordering: 'set',
           tokenIDs: ['token:1'],
           hiddenTokenCount: 0,
-          markers: [{ id: 'control', state: 'blue', possibleStates: ['blue', 'red'] }],
+          markers: [{ id: 'control', displayName: 'Control', state: 'blue', possibleStates: ['blue', 'red'] }],
           visibility: 'public',
           isSelectable: false,
           isHighlighted: false,
@@ -64,7 +64,7 @@ describe('render-model types', () => {
       playerVars: new Map<PlayerId, readonly { readonly name: string; readonly value: number | boolean; readonly displayName: string }[]>([
         [playerZero, [{ name: 'money', value: 3, displayName: 'Money' }]],
       ]),
-      globalMarkers: [{ id: 'threat', state: 'low', possibleStates: ['low', 'high'] }],
+      globalMarkers: [{ id: 'threat', displayName: 'Threat', state: 'low', possibleStates: ['low', 'high'] }],
       tracks: [
         {
           id: 'tempo',

@@ -332,8 +332,8 @@ describe('createZoneRenderer', () => {
           tokenIDs: ['token:1', 'token:2'],
           hiddenTokenCount: 1,
           markers: [
-            { id: 'control', state: 'red', possibleStates: ['red', 'blue'] },
-            { id: 'supply', state: 'on', possibleStates: ['on', 'off'] },
+            { id: 'control', displayName: 'Control', state: 'red', possibleStates: ['red', 'blue'] },
+            { id: 'supply', displayName: 'Supply', state: 'on', possibleStates: ['on', 'off'] },
           ],
         }),
       ],
@@ -347,8 +347,8 @@ describe('createZoneRenderer', () => {
 
     expect(badge.text).toBe('3');
     expect(badge.visible).toBe(true);
-    expect(markers.text).toContain('control:red');
-    expect(markers.text).toContain('supply:on');
+    expect(markers.text).toContain('Control:red');
+    expect(markers.text).toContain('Supply:on');
     expect(markers.visible).toBe(true);
 
     renderer.update([makeZone({ id: 'zone:a', tokenIDs: [], hiddenTokenCount: 0, markers: [] })], [], new Map());

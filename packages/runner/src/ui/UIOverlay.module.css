@@ -8,6 +8,10 @@
 .topBar {
   position: absolute;
   inset: 0 0 auto 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
   min-height: 64px;
   pointer-events: none;
 }

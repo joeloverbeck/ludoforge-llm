@@ -29,6 +29,18 @@ describe('UIOverlay', () => {
     expect(html).toContain('bottom controls');
   });
 
+  it('renders provided topBarContent in top region', () => {
+    const html = renderToStaticMarkup(
+      createElement(UIOverlay, {
+        topBarContent: createElement('div', { 'data-testid': 'top-slot-content' }, 'top controls'),
+      }),
+    );
+
+    expect(html).toContain('data-testid="ui-overlay-top"');
+    expect(html).toContain('data-testid="top-slot-content"');
+    expect(html).toContain('top controls');
+  });
+
   it('exports expected CSS module classes', () => {
     expect(styles).toMatchObject({
       overlay: expect.any(String),

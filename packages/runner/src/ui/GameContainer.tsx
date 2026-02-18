@@ -8,6 +8,8 @@ import { ActionToolbar } from './ActionToolbar.js';
 import { ChoicePanel } from './ChoicePanel.js';
 import { ErrorState } from './ErrorState.js';
 import { LoadingState } from './LoadingState.js';
+import { PhaseIndicator } from './PhaseIndicator.js';
+import { TurnOrderDisplay } from './TurnOrderDisplay.js';
 import { UndoControl } from './UndoControl.js';
 import { UIOverlay } from './UIOverlay.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
@@ -66,6 +68,12 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
         <GameCanvas store={store} />
       </div>
       <UIOverlay
+        topBarContent={(
+          <>
+            <PhaseIndicator store={store} />
+            <TurnOrderDisplay store={store} />
+          </>
+        )}
         bottomBarContent={bottomBarContent}
       />
     </div>

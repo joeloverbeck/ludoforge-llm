@@ -32,6 +32,14 @@ vi.mock('../../src/ui/ChoicePanel.js', () => ({
   ChoicePanel: ({ mode }: { readonly mode: string }) => createElement('div', { 'data-testid': `choice-panel-${mode}` }),
 }));
 
+vi.mock('../../src/ui/PhaseIndicator.js', () => ({
+  PhaseIndicator: () => createElement('div', { 'data-testid': 'phase-indicator' }),
+}));
+
+vi.mock('../../src/ui/TurnOrderDisplay.js', () => ({
+  TurnOrderDisplay: () => createElement('div', { 'data-testid': 'turn-order-display' }),
+}));
+
 vi.mock('../../src/ui/ErrorState.js', () => ({
   ErrorState: (props: CapturedErrorStateProps) => {
     testDoubles.errorStateProps = props;
@@ -179,6 +187,8 @@ describe('GameContainer', () => {
 
     expect(html).toContain('data-testid="game-canvas"');
     expect(html).toContain('data-testid="ui-overlay"');
+    expect(html).toContain('data-testid="phase-indicator"');
+    expect(html).toContain('data-testid="turn-order-display"');
   });
 
   it('renders GameCanvas and UIOverlay when lifecycle is terminal', () => {
@@ -193,6 +203,8 @@ describe('GameContainer', () => {
 
     expect(html).toContain('data-testid="game-canvas"');
     expect(html).toContain('data-testid="ui-overlay"');
+    expect(html).toContain('data-testid="phase-indicator"');
+    expect(html).toContain('data-testid="turn-order-display"');
   });
 
   it('renders actions mode branch only', () => {

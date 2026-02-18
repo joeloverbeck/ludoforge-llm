@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { describe, expect, it, vi } from 'vitest';
+import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
 import { GameContainer } from '../../src/ui/GameContainer.js';
@@ -19,6 +20,18 @@ vi.mock('../../src/canvas/GameCanvas.js', () => ({
   GameCanvas: () => createElement('div', { 'data-testid': 'game-canvas' }),
 }));
 
+vi.mock('../../src/ui/ActionToolbar.js', () => ({
+  ActionToolbar: () => createElement('div', { 'data-testid': 'action-toolbar' }),
+}));
+
+vi.mock('../../src/ui/UndoControl.js', () => ({
+  UndoControl: () => createElement('div', { 'data-testid': 'undo-control' }),
+}));
+
+vi.mock('../../src/ui/ChoicePanel.js', () => ({
+  ChoicePanel: ({ mode }: { readonly mode: string }) => createElement('div', { 'data-testid': `choice-panel-${mode}` }),
+}));
+
 vi.mock('../../src/ui/ErrorState.js', () => ({
   ErrorState: (props: CapturedErrorStateProps) => {
     testDoubles.errorStateProps = props;
@@ -32,18 +45,78 @@ type WorkerError = Exclude<GameStore['error'], null>;
 interface MinimalContainerState {
   readonly gameLifecycle: GameLifecycle;
   readonly error: WorkerError | null;
+  readonly renderModel: GameStore['renderModel'];
+  readonly selectedAction: GameStore['selectedAction'];
+  readonly partialMove: GameStore['partialMove'];
   clearError(): void;
+}
+
+function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']>> = {}): NonNullable<GameStore['renderModel']> {
+  return {
+    zones: [],
+    adjacencies: [],
+    mapSpaces: [],
+    tokens: [],
+    globalVars: [],
+    playerVars: new Map(),
+    globalMarkers: [],
+    tracks: [],
+    activeEffects: [],
+    players: [
+      {
+        id: asPlayerId(0),
+        displayName: 'Human',
+        isHuman: true,
+        isActive: true,
+        isEliminated: false,
+        factionId: null,
+      },
+      {
+        id: asPlayerId(1),
+        displayName: 'AI',
+        isHuman: false,
+        isActive: false,
+        isEliminated: false,
+        factionId: null,
+      },
+    ],
+    activePlayerID: asPlayerId(0),
+    turnOrder: [asPlayerId(0), asPlayerId(1)],
+    turnOrderType: 'roundRobin',
+    simultaneousSubmitted: [],
+    interruptStack: [],
+    isInInterrupt: false,
+    phaseName: 'main',
+    phaseDisplayName: 'Main',
+    eventDecks: [],
+    actionGroups: [{ groupName: 'Core', actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }] }],
+    choiceBreadcrumb: [],
+    currentChoiceOptions: null,
+    currentChoiceDomain: null,
+    choiceType: null,
+    choiceMin: null,
+    choiceMax: null,
+    moveEnumerationWarnings: [],
+    terminal: null,
+    ...overrides,
+  };
 }
 
 function createContainerStore(state: {
   readonly gameLifecycle: GameLifecycle;
   readonly error: WorkerError | null;
+  readonly renderModel?: GameStore['renderModel'];
+  readonly selectedAction?: GameStore['selectedAction'];
+  readonly partialMove?: GameStore['partialMove'];
   readonly clearError?: () => void;
 }): StoreApi<GameStore> {
   const clearError = state.clearError ?? (() => {});
   return createStore<MinimalContainerState>(() => ({
     gameLifecycle: state.gameLifecycle,
     error: state.error,
+    renderModel: state.renderModel ?? null,
+    selectedAction: state.selectedAction ?? null,
+    partialMove: state.partialMove ?? null,
     clearError,
   })) as unknown as StoreApi<GameStore>;
 }
@@ -124,6 +197,87 @@ describe('GameContainer', () => {
 
     expect(html).toContain('data-testid="game-canvas"');
     expect(html).toContain('data-testid="ui-overlay"');
+  });
+
+  it('renders actions mode branch only', () => {
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel(),
+        }),
+      }),
+    );
+
+    expect(html).toContain('data-testid="action-toolbar"');
+    expect(html).toContain('data-testid="undo-control"');
+    expect(html).not.toContain('data-testid="choice-panel-choicePending"');
+    expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
+  });
+
+  it('renders choicePending mode branch only', () => {
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel({
+            choiceType: 'chooseOne',
+            currentChoiceOptions: [{ value: 'x', displayName: 'X', legality: 'legal', illegalReason: null }],
+          }),
+          selectedAction: asActionId('pass'),
+          partialMove: { actionId: asActionId('pass'), params: {} },
+        }),
+      }),
+    );
+
+    expect(html).toContain('data-testid="choice-panel-choicePending"');
+    expect(html).not.toContain('data-testid="action-toolbar"');
+    expect(html).not.toContain('data-testid="undo-control"');
+    expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
+  });
+
+  it('renders choiceConfirm mode branch only', () => {
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel({
+            choiceType: null,
+            currentChoiceOptions: null,
+            currentChoiceDomain: null,
+          }),
+          selectedAction: asActionId('pass'),
+          partialMove: { actionId: asActionId('pass'), params: {} },
+        }),
+      }),
+    );
+
+    expect(html).toContain('data-testid="choice-panel-choiceConfirm"');
+    expect(html).not.toContain('data-testid="action-toolbar"');
+    expect(html).not.toContain('data-testid="undo-control"');
+    expect(html).not.toContain('data-testid="choice-panel-choicePending"');
+  });
+
+  it('renders no interactive branch in aiTurn mode', () => {
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel({
+            activePlayerID: asPlayerId(1),
+          }),
+        }),
+      }),
+    );
+
+    expect(html).not.toContain('data-testid="action-toolbar"');
+    expect(html).not.toContain('data-testid="undo-control"');
+    expect(html).not.toContain('data-testid="choice-panel-choicePending"');
+    expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
   });
 
   it('ErrorState retry callback calls clearError on the store', () => {

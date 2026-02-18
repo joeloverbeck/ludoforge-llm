@@ -10,6 +10,7 @@ import { ErrorState } from './ErrorState.js';
 import { LoadingState } from './LoadingState.js';
 import { UndoControl } from './UndoControl.js';
 import { UIOverlay } from './UIOverlay.js';
+import { deriveBottomBarState } from './bottom-bar-mode.js';
 import styles from './GameContainer.module.css';
 
 interface GameContainerProps {
@@ -19,6 +20,9 @@ interface GameContainerProps {
 export function GameContainer({ store }: GameContainerProps): ReactElement {
   const gameLifecycle = useStore(store, (state) => state.gameLifecycle);
   const error = useStore(store, (state) => state.error);
+  const renderModel = useStore(store, (state) => state.renderModel);
+  const selectedAction = useStore(store, (state) => state.selectedAction);
+  const partialMove = useStore(store, (state) => state.partialMove);
 
   if (error !== null) {
     return (
@@ -36,19 +40,34 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
     );
   }
 
+  const bottomBarState = deriveBottomBarState(renderModel, selectedAction, partialMove);
+  const bottomBarContent = (() => {
+    switch (bottomBarState.kind) {
+      case 'actions':
+        return (
+          <>
+            <ActionToolbar store={store} />
+            <UndoControl store={store} />
+          </>
+        );
+      case 'choicePending':
+      case 'choiceConfirm':
+        return <ChoicePanel store={store} mode={bottomBarState.kind} />;
+      case 'aiTurn':
+      case 'hidden':
+        return null;
+      default:
+        return null;
+    }
+  })();
+
   return (
     <div className={styles.container}>
       <div className={styles.canvasLayer}>
         <GameCanvas store={store} />
       </div>
       <UIOverlay
-        bottomBarContent={(
-          <>
-            <ChoicePanel store={store} />
-            <ActionToolbar store={store} />
-            <UndoControl store={store} />
-          </>
-        )}
+        bottomBarContent={bottomBarContent}
       />
     </div>
   );

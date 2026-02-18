@@ -10,19 +10,13 @@ interface UndoControlProps {
 }
 
 function canRenderUndo(renderModel: GameStore['renderModel']): boolean {
-  if (renderModel == null || renderModel.choiceType !== null) {
-    return false;
-  }
-
-  const activePlayer = renderModel.players.find((player) => player.id === renderModel.activePlayerID);
-  return activePlayer?.isHuman === true;
+  return renderModel != null;
 }
 
 export function UndoControl({ store }: UndoControlProps): ReactElement | null {
   const renderModel = useStore(store, (state) => state.renderModel);
-  const selectedAction = useStore(store, (state) => state.selectedAction);
 
-  if (!canRenderUndo(renderModel) || selectedAction !== null) {
+  if (!canRenderUndo(renderModel)) {
     return null;
   }
 

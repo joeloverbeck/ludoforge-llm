@@ -23,6 +23,7 @@ Add targeted invariant tests for bottom-bar exclusivity and choice-state validit
   - no enabled action controls during confirm-ready choice state.
 - Add table-driven fixtures for high-risk state combinations (including invalid/edge combinations).
 - Ensure tests assert deterministic fallback behavior for invalid source states.
+- Align assertions with container-owned mode orchestration from REACTUI-023 (no child-component ownership assertions for global bottom-bar mode).
 
 ---
 
@@ -41,17 +42,15 @@ Add targeted invariant tests for bottom-bar exclusivity and choice-state validit
   - adds table-driven invariant cases for choice projection validity.
 - `packages/runner/test/ui/GameContainer.test.ts`
   - asserts bottom-bar exclusivity across lifecycle/turn/choice scenarios.
+- `packages/runner/test/ui/bottom-bar-mode.test.ts`
+  - asserts deterministic mode derivation from store-facing inputs.
 - `packages/runner/test/ui/ChoicePanel.test.ts`
   - asserts no mixed-mode rendering and no silent actionable dead controls.
-- `packages/runner/test/ui/ActionToolbar.test.ts`
-  - asserts toolbar hidden for non-action bottom-bar modes.
-- `packages/runner/test/ui/UndoControl.test.ts`
-  - asserts undo hidden for non-action bottom-bar modes.
 
 ### Invariants
 
 - Bottom bar renders exactly one mode at a time.
 - Choice UI mode is mutually exclusive and exhaustively handled.
 - Invalid choice-state combinations cannot leak to interactive dead-end controls.
+- Global mode ownership is centralized in container + shared derivation helper.
 - Regression tests are deterministic, readable, and enforce architecture contracts.
-

@@ -12,12 +12,7 @@ interface ActionToolbarProps {
 type SelectActionId = Parameters<GameStore['selectAction']>[0];
 
 function canRenderToolbar(renderModel: GameStore['renderModel']): boolean {
-  if (renderModel == null || renderModel.choiceType !== null) {
-    return false;
-  }
-
-  const activePlayer = renderModel.players.find((player) => player.id === renderModel.activePlayerID);
-  if (activePlayer?.isHuman !== true) {
+  if (renderModel == null) {
     return false;
   }
 
@@ -26,9 +21,8 @@ function canRenderToolbar(renderModel: GameStore['renderModel']): boolean {
 
 export function ActionToolbar({ store }: ActionToolbarProps): ReactElement | null {
   const renderModel = useStore(store, (state) => state.renderModel);
-  const selectedAction = useStore(store, (state) => state.selectedAction);
 
-  if (!canRenderToolbar(renderModel) || selectedAction !== null) {
+  if (!canRenderToolbar(renderModel)) {
     return null;
   }
   const toolbarModel = renderModel as NonNullable<GameStore['renderModel']>;

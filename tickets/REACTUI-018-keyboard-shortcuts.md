@@ -2,7 +2,7 @@
 
 **Spec**: 39 (React DOM UI Layer) — Keyboard Shortcuts section
 **Priority**: P2
-**Depends on**: REACTUI-003, REACTUI-005, REACTUI-007, REACTUI-014
+**Depends on**: REACTUI-003, REACTUI-005, REACTUI-007, REACTUI-014, REACTUI-023
 **Estimated complexity**: M
 
 ---
@@ -46,19 +46,17 @@ Attaches a single `keydown` listener on `document` (or the game container elemen
 
 ### Context detection
 
-The hook reads from the store (via `store.getState()` on each keydown — not via subscription, to avoid stale closures):
+The hook reads from the store (via `store.getState()` on each keydown — not via subscription, to avoid stale closures) and uses the same bottom-bar state derivation contract as `GameContainer`:
 
-- `renderModel.choiceType` — whether a choice is pending
-- `renderModel.actionGroups` — available actions for number keys
-- `renderModel.activePlayerID` + `renderModel.players` — whether it's a human or AI turn
-- `selectedAction` + `choicePending` — whether a move is fully constructed
+- `deriveBottomBarState(renderModel, selectedAction, partialMove)` for `actions` / `choicePending` / `choiceConfirm` / `aiTurn` context
+- `renderModel.actionGroups` for number-key action mapping when `kind === 'actions'`
 
 ### Guard conditions
 
 - Number keys (1-9): only dispatch if the index is within bounds of available actions.
-- Enter: only dispatch if the move is fully constructed and ready to confirm.
-- Z: only dispatch if it's the human's turn and no choice is pending.
-- Space: only dispatch if it's an AI turn.
+- Enter: only dispatch if bottom-bar state is `choiceConfirm`.
+- Z: only dispatch if bottom-bar state is `actions`.
+- Space: only dispatch if bottom-bar state is `aiTurn`.
 - All keys: do nothing if the target element is an `<input>`, `<textarea>`, or `<select>` (avoid interfering with form inputs in ChoicePanel numeric mode).
 
 ### GameContainer integration
@@ -101,6 +99,7 @@ The hook reads from the store (via `store.getState()` on each keydown — not vi
 
 - **Single listener**: one `keydown` handler on `document`, not per-component listeners.
 - Uses `store.getState()` on each keydown — NOT stale closure state.
+- Must not re-implement independent UI-mode heuristics; keyboard gating must share bottom-bar state derivation with container orchestration.
 - Does NOT interfere with browser defaults (does not `preventDefault` on keys that have no game action in the current context).
 - Does NOT call `preventDefault` on form elements (input, textarea, select).
 - Cleanup: removes listener on component unmount.

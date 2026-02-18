@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { StoreApi } from 'zustand';
 import { describe, expect, it, vi } from 'vitest';
-import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
 
@@ -128,13 +128,11 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
 
 function createToolbarStore(state: {
   readonly renderModel: GameStore['renderModel'];
-  readonly selectedAction?: GameStore['selectedAction'];
   readonly selectAction?: GameStore['selectAction'];
 }): StoreApi<GameStore> {
   return {
     getState: () => ({
       renderModel: state.renderModel,
-      selectedAction: state.selectedAction ?? null,
       selectAction: state.selectAction ?? (async () => {}),
     }),
   } as unknown as StoreApi<GameStore>;
@@ -193,31 +191,22 @@ describe('ActionToolbar', () => {
     expect(selectAction).toHaveBeenCalledWith('move');
   });
 
-  it('does not render when choiceType is non-null', () => {
+  it('does not render when renderModel is null', () => {
     const tree = ActionToolbar({
       store: createToolbarStore({
-        renderModel: makeRenderModel({ choiceType: 'chooseOne' }),
+        renderModel: null,
       }),
     });
 
     expect(tree).toBeNull();
   });
 
-  it('does not render when active player is not human', () => {
+  it('does not render when action groups have no actions', () => {
     const tree = ActionToolbar({
       store: createToolbarStore({
-        renderModel: makeRenderModel({ activePlayerID: asPlayerId(1) }),
-      }),
-    });
-
-    expect(tree).toBeNull();
-  });
-
-  it('does not render when a move is currently being constructed', () => {
-    const tree = ActionToolbar({
-      store: createToolbarStore({
-        renderModel: makeRenderModel(),
-        selectedAction: asActionId('move'),
+        renderModel: makeRenderModel({
+          actionGroups: [{ groupName: 'Empty', actions: [] }],
+        }),
       }),
     });
 

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { StoreApi } from 'zustand';
 import { describe, expect, it, vi } from 'vitest';
-import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
 
@@ -98,20 +98,18 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
 
 function createUndoStore(state: {
   readonly renderModel: GameStore['renderModel'];
-  readonly selectedAction?: GameStore['selectedAction'];
   readonly undo?: GameStore['undo'];
 }): StoreApi<GameStore> {
   return {
     getState: () => ({
       renderModel: state.renderModel,
-      selectedAction: state.selectedAction ?? null,
       undo: state.undo ?? (async () => {}),
     }),
   } as unknown as StoreApi<GameStore>;
 }
 
 describe('UndoControl', () => {
-  it('renders undo button when human turn and no pending choice', () => {
+  it('renders undo button when renderModel is present', () => {
     const html = renderToStaticMarkup(
       createElement(UndoControl, {
         store: createUndoStore({
@@ -144,31 +142,10 @@ describe('UndoControl', () => {
     expect(undo).toHaveBeenCalledTimes(1);
   });
 
-  it('is hidden when choice is pending', () => {
+  it('is hidden when renderModel is null', () => {
     const tree = UndoControl({
       store: createUndoStore({
-        renderModel: makeRenderModel({ choiceType: 'chooseOne' }),
-      }),
-    });
-
-    expect(tree).toBeNull();
-  });
-
-  it('is hidden when active player is not human', () => {
-    const tree = UndoControl({
-      store: createUndoStore({
-        renderModel: makeRenderModel({ activePlayerID: asPlayerId(1) }),
-      }),
-    });
-
-    expect(tree).toBeNull();
-  });
-
-  it('is hidden when a move is currently being constructed', () => {
-    const tree = UndoControl({
-      store: createUndoStore({
-        renderModel: makeRenderModel(),
-        selectedAction: asActionId('move'),
+        renderModel: null,
       }),
     });
 

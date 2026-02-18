@@ -112,19 +112,10 @@ function createChoiceStore(state: {
 }
 
 describe('ChoicePanel', () => {
-  it('is not visible when no choice is pending and no move is awaiting confirmation', () => {
-    const tree = ChoicePanel({
-      store: createChoiceStore({
-        renderModel: makeRenderModel({ choiceType: null }),
-      }),
-    });
-
-    expect(tree).toBeNull();
-  });
-
   it('renders breadcrumb chips from choiceBreadcrumb', () => {
     const html = renderToStaticMarkup(
       createElement(ChoicePanel, {
+        mode: 'choicePending',
         store: createChoiceStore({
           renderModel: makeRenderModel({
             choiceType: 'chooseOne',
@@ -158,9 +149,9 @@ describe('ChoicePanel', () => {
   });
 
   it('computes breadcrumb rewind count from total steps and clicked index', () => {
-    expect(countChoicesToCancel(3, 0)).toBe(3);
-    expect(countChoicesToCancel(3, 1)).toBe(2);
-    expect(countChoicesToCancel(3, 2)).toBe(1);
+    expect(countChoicesToCancel(3, 0)).toBe(2);
+    expect(countChoicesToCancel(3, 1)).toBe(1);
+    expect(countChoicesToCancel(3, 2)).toBe(0);
     expect(countChoicesToCancel(3, 3)).toBe(0);
   });
 
@@ -172,12 +163,13 @@ describe('ChoicePanel', () => {
     });
     await rewindChoiceToBreadcrumb(store, 3, 1);
 
-    expect(cancelChoice).toHaveBeenCalledTimes(2);
+    expect(cancelChoice).toHaveBeenCalledTimes(1);
   });
 
   it('Back dispatches cancelChoice and is disabled when breadcrumb is empty', () => {
     const cancelChoice = vi.fn(async () => {});
     const tree = ChoicePanel({
+      mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
           choiceType: 'chooseOne',
@@ -201,6 +193,7 @@ describe('ChoicePanel', () => {
   it('Back dispatches cancelChoice when breadcrumb has prior steps', () => {
     const cancelChoice = vi.fn(async () => {});
     const tree = ChoicePanel({
+      mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
           choiceType: 'chooseOne',
@@ -233,6 +226,7 @@ describe('ChoicePanel', () => {
   it('Cancel dispatches cancelMove', () => {
     const cancelMove = vi.fn();
     const tree = ChoicePanel({
+      mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
           choiceType: 'chooseOne',
@@ -255,6 +249,7 @@ describe('ChoicePanel', () => {
   it('Mode A renders legal options enabled and non-legal options disabled with illegality feedback', () => {
     const html = renderToStaticMarkup(
       createElement(ChoicePanel, {
+        mode: 'choicePending',
         store: createChoiceStore({
           renderModel: makeRenderModel({
             choiceType: 'chooseOne',
@@ -277,6 +272,7 @@ describe('ChoicePanel', () => {
     const chooseOne = vi.fn(async () => {});
 
     const tree = ChoicePanel({
+      mode: 'choicePending',
       store: createChoiceStore({
         renderModel: makeRenderModel({
           choiceType: 'chooseOne',
@@ -301,6 +297,7 @@ describe('ChoicePanel', () => {
     const confirmMove = vi.fn(async () => {});
 
     const tree = ChoicePanel({
+      mode: 'choiceConfirm',
       store: createChoiceStore({
         renderModel: makeRenderModel({
           choiceType: null,
@@ -326,6 +323,7 @@ describe('ChoicePanel', () => {
   it('renders placeholders for chooseN and numeric modes', () => {
     const chooseNHtml = renderToStaticMarkup(
       createElement(ChoicePanel, {
+        mode: 'choicePending',
         store: createChoiceStore({
           renderModel: makeRenderModel({
             choiceType: 'chooseN',
@@ -338,6 +336,7 @@ describe('ChoicePanel', () => {
 
     const numericHtml = renderToStaticMarkup(
       createElement(ChoicePanel, {
+        mode: 'choicePending',
         store: createChoiceStore({
           renderModel: makeRenderModel({
             choiceType: 'chooseOne',
@@ -361,5 +360,49 @@ describe('ChoicePanel', () => {
     expect(breadcrumbStepBlock).toContain('pointer-events: auto;');
     expect(optionButtonBlock).toContain('pointer-events: auto;');
     expect(navButtonBlock).toContain('pointer-events: auto;');
+  });
+
+  it('does not render confirm button when in choicePending mode', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choicePending',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceType: null,
+          }),
+          selectedAction: asActionId('pass'),
+          partialMove: { actionId: asActionId('pass'), params: {} },
+        }),
+      }),
+    );
+
+    expect(html).not.toContain('data-testid="choice-confirm"');
+  });
+
+  it('returns null when mode is choicePending but no pending choice exists', () => {
+    const tree = ChoicePanel({
+      mode: 'choicePending',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceType: null,
+        }),
+      }),
+    });
+
+    expect(tree).toBeNull();
+  });
+
+  it('returns null when mode is choiceConfirm but choice is still pending', () => {
+    const tree = ChoicePanel({
+      mode: 'choiceConfirm',
+      store: createChoiceStore({
+        renderModel: makeRenderModel({
+          choiceType: 'chooseOne',
+          currentChoiceOptions: [{ value: 'zone-a', displayName: 'Zone A', legality: 'legal', illegalReason: null }],
+        }),
+      }),
+    });
+
+    expect(tree).toBeNull();
   });
 });

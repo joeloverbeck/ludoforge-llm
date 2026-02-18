@@ -4,17 +4,23 @@ import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
 
 import type { GameStore } from '../store/game-store.js';
+import type { ChoicePanelMode } from './bottom-bar-mode.js';
 import { IllegalityFeedback } from './IllegalityFeedback.js';
 import styles from './ChoicePanel.module.css';
 
 interface ChoicePanelProps {
   readonly store: StoreApi<GameStore>;
+  readonly mode: ChoicePanelMode;
+}
+
+function isChoiceScalar(value: MoveParamValue): value is ChoiceScalar {
+  return !Array.isArray(value);
 }
 
 type ChoiceScalar = Exclude<MoveParamValue, readonly unknown[]>;
 
 export function countChoicesToCancel(totalSteps: number, clickedIndex: number): number {
-  return Math.max(0, totalSteps - clickedIndex);
+  return Math.max(0, totalSteps - clickedIndex - 1);
 }
 
 export async function rewindChoiceToBreadcrumb(
@@ -28,46 +34,27 @@ export async function rewindChoiceToBreadcrumb(
   }
 }
 
-function canRenderChoicePanel(
-  renderModel: GameStore['renderModel'],
-  selectedAction: GameStore['selectedAction'],
-  partialMove: GameStore['partialMove'],
-): boolean {
-  if (renderModel == null) {
-    return false;
-  }
-
-  const hasPendingChoice = renderModel.choiceType !== null;
-  const hasConfirmableMove = selectedAction != null && partialMove != null && renderModel.choiceType === null;
-  return hasPendingChoice || hasConfirmableMove;
-}
-
-function canConfirmMove(
-  renderModel: NonNullable<GameStore['renderModel']>,
-  selectedAction: GameStore['selectedAction'],
-  partialMove: GameStore['partialMove'],
-): boolean {
-  return selectedAction != null
-    && partialMove != null
-    && renderModel.choiceType === null
-    && renderModel.currentChoiceOptions === null
-    && renderModel.currentChoiceDomain === null;
-}
-
-function isChoiceScalar(value: MoveParamValue): value is ChoiceScalar {
-  return !Array.isArray(value);
-}
-
-export function ChoicePanel({ store }: ChoicePanelProps): ReactElement | null {
+export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | null {
   const renderModel = useStore(store, (state) => state.renderModel);
-  const selectedAction = useStore(store, (state) => state.selectedAction);
-  const partialMove = useStore(store, (state) => state.partialMove);
 
-  if (!canRenderChoicePanel(renderModel, selectedAction, partialMove)) {
+  if (renderModel == null) {
     return null;
   }
   const choiceModel = renderModel as NonNullable<GameStore['renderModel']>;
-  const showConfirm = canConfirmMove(choiceModel, selectedAction, partialMove);
+  const isPendingChoice = choiceModel.choiceType !== null;
+  const isConfirmReady = choiceModel.choiceType === null
+    && choiceModel.currentChoiceOptions === null
+    && choiceModel.currentChoiceDomain === null;
+
+  if (mode === 'choicePending' && !isPendingChoice) {
+    return null;
+  }
+
+  if (mode === 'choiceConfirm' && !isConfirmReady) {
+    return null;
+  }
+
+  const showConfirm = mode === 'choiceConfirm';
 
   return (
     <section className={styles.panel} aria-label="Choice panel" data-testid="choice-panel">

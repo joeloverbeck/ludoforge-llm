@@ -1,6 +1,6 @@
 import type { EffectTraceEntry } from '@ludoforge/engine/runtime';
 
-import type { GsapLike } from './gsap-setup.js';
+import type { GsapLike, GsapTimelineLike } from './gsap-setup.js';
 import {
   ANIMATION_PRESET_IDS,
   type AnimationDescriptor,
@@ -13,8 +13,14 @@ export type PresetCompatibleDescriptorKind = VisualAnimationDescriptor['kind'];
 
 export interface PresetTweenContext {
   readonly gsap: GsapLike;
-  readonly timeline: unknown;
-  readonly spriteRefs: unknown;
+  readonly timeline: GsapTimelineLike;
+  readonly spriteRefs: {
+    readonly tokenContainers: ReadonlyMap<string, unknown>;
+    readonly zoneContainers: ReadonlyMap<string, unknown>;
+    readonly zonePositions: {
+      readonly positions: ReadonlyMap<string, { readonly x: number; readonly y: number }>;
+    };
+  };
 }
 
 export type PresetTweenFactory = (

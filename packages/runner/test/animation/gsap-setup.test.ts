@@ -13,19 +13,23 @@ function createRuntimeFixture(): {
   readonly runtime: GsapRuntime;
   readonly registerPlugin: ReturnType<typeof vi.fn>;
   readonly defaults: ReturnType<typeof vi.fn>;
+  readonly timeline: ReturnType<typeof vi.fn>;
 } {
   const registerPlugin = vi.fn();
   const defaults = vi.fn();
+  const timeline = vi.fn(() => ({ add: vi.fn() }));
   return {
     runtime: {
       gsap: {
         registerPlugin,
         defaults,
+        timeline,
       },
       PixiPlugin: { name: 'PixiPlugin' },
     },
     registerPlugin,
     defaults,
+    timeline,
   };
 }
 
@@ -74,4 +78,3 @@ describe('gsap-setup', () => {
     );
   });
 });
-

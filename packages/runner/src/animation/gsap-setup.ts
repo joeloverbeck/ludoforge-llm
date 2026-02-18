@@ -2,6 +2,10 @@ export interface GsapPlugin {
   readonly name?: string;
 }
 
+export interface GsapTimelineLike {
+  add(child: unknown, position?: number | string): GsapTimelineLike;
+}
+
 export interface GsapDefaults {
   readonly ease: string;
   readonly overwrite: 'auto' | false;
@@ -10,6 +14,7 @@ export interface GsapDefaults {
 export interface GsapLike {
   registerPlugin(...plugins: readonly GsapPlugin[]): void;
   defaults(config: GsapDefaults): void;
+  timeline(config?: Record<string, unknown>): GsapTimelineLike;
 }
 
 export interface GsapRuntime {
@@ -52,4 +57,3 @@ export function isGsapRuntimeConfigured(): boolean {
 export function resetGsapRuntimeForTests(): void {
   configuredRuntime = null;
 }
-

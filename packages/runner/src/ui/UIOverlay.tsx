@@ -6,9 +6,15 @@ interface UIOverlayProps {
   readonly topBarContent?: ReactNode;
   readonly sidePanelContent?: ReactNode;
   readonly bottomBarContent?: ReactNode;
+  readonly floatingContent?: ReactNode;
 }
 
-export function UIOverlay({ topBarContent, sidePanelContent, bottomBarContent }: UIOverlayProps): ReactElement {
+export function UIOverlay({
+  topBarContent,
+  sidePanelContent,
+  bottomBarContent,
+  floatingContent,
+}: UIOverlayProps): ReactElement {
   return (
     <div className={styles.overlay} data-testid="ui-overlay">
       <div className={styles.topBar} data-testid="ui-overlay-top">
@@ -20,7 +26,9 @@ export function UIOverlay({ topBarContent, sidePanelContent, bottomBarContent }:
       <div className={styles.bottomBar} data-testid="ui-overlay-bottom">
         {bottomBarContent}
       </div>
-      <div className={styles.floating} data-testid="ui-overlay-floating" />
+      <div className={styles.floating} data-testid="ui-overlay-floating">
+        {floatingContent}
+      </div>
     </div>
   );
 }

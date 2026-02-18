@@ -150,6 +150,17 @@ function createContainerStore(state: {
 }
 
 describe('GameContainer', () => {
+  function expectAppearsInOrder(html: string, orderedTestIds: readonly string[]): void {
+    let previousPosition = -1;
+    for (const testId of orderedTestIds) {
+      const token = `data-testid="${testId}"`;
+      const currentPosition = html.indexOf(token);
+      expect(currentPosition).toBeGreaterThan(-1);
+      expect(currentPosition).toBeGreaterThan(previousPosition);
+      previousPosition = currentPosition;
+    }
+  }
+
   it('renders LoadingState when lifecycle is idle', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
@@ -219,6 +230,18 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="scoreboard"');
     expect(html).toContain('data-testid="global-markers-bar"');
     expect(html).toContain('data-testid="active-effects-panel"');
+    expectAppearsInOrder(html, [
+      'interrupt-banner',
+      'phase-indicator',
+      'turn-order-display',
+      'event-deck-panel',
+    ]);
+    expectAppearsInOrder(html, [
+      'variables-panel',
+      'scoreboard',
+      'global-markers-bar',
+      'active-effects-panel',
+    ]);
   });
 
   it('renders GameCanvas and UIOverlay when lifecycle is terminal', () => {
@@ -241,6 +264,18 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="scoreboard"');
     expect(html).toContain('data-testid="global-markers-bar"');
     expect(html).toContain('data-testid="active-effects-panel"');
+    expectAppearsInOrder(html, [
+      'interrupt-banner',
+      'phase-indicator',
+      'turn-order-display',
+      'event-deck-panel',
+    ]);
+    expectAppearsInOrder(html, [
+      'variables-panel',
+      'scoreboard',
+      'global-markers-bar',
+      'active-effects-panel',
+    ]);
   });
 
   it('renders actions mode branch only', () => {

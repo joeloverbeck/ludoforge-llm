@@ -25,6 +25,34 @@ interface GameContainerProps {
   readonly store: StoreApi<GameStore>;
 }
 
+type OverlayRegionPanel = (props: { readonly store: StoreApi<GameStore> }) => ReactElement;
+type OverlayRegion = 'top' | 'side' | 'floating';
+
+const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayRegionPanel[]>> = {
+  top: [
+    InterruptBanner,
+    PhaseIndicator,
+    TurnOrderDisplay,
+    EventDeckPanel,
+  ],
+  side: [
+    VariablesPanel,
+    Scoreboard,
+    GlobalMarkersBar,
+    ActiveEffectsPanel,
+  ],
+  floating: [],
+};
+
+function renderOverlayRegionPanels(
+  panels: readonly OverlayRegionPanel[],
+  store: StoreApi<GameStore>,
+): ReactElement[] {
+  return panels.map((Panel, index) => (
+    <Panel key={Panel.name || `overlay-panel-${index}`} store={store} />
+  ));
+}
+
 export function GameContainer({ store }: GameContainerProps): ReactElement {
   const gameLifecycle = useStore(store, (state) => state.gameLifecycle);
   const error = useStore(store, (state) => state.error);
@@ -74,23 +102,10 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
         <GameCanvas store={store} />
       </div>
       <UIOverlay
-        topBarContent={(
-          <>
-            <InterruptBanner store={store} />
-            <PhaseIndicator store={store} />
-            <TurnOrderDisplay store={store} />
-            <EventDeckPanel store={store} />
-          </>
-        )}
-        sidePanelContent={(
-          <>
-            <VariablesPanel store={store} />
-            <Scoreboard store={store} />
-            <GlobalMarkersBar store={store} />
-            <ActiveEffectsPanel store={store} />
-          </>
-        )}
+        topBarContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, store)}
+        sidePanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, store)}
         bottomBarContent={bottomBarContent}
+        floatingContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, store)}
       />
     </div>
   );

@@ -53,6 +53,18 @@ describe('UIOverlay', () => {
     expect(html).toContain('side content');
   });
 
+  it('renders provided floatingContent in floating region', () => {
+    const html = renderToStaticMarkup(
+      createElement(UIOverlay, {
+        floatingContent: createElement('div', { 'data-testid': 'floating-slot-content' }, 'floating content'),
+      }),
+    );
+
+    expect(html).toContain('data-testid="ui-overlay-floating"');
+    expect(html).toContain('data-testid="floating-slot-content"');
+    expect(html).toContain('floating content');
+  });
+
   it('exports expected CSS module classes', () => {
     expect(styles).toMatchObject({
       overlay: expect.any(String),

@@ -20,6 +20,7 @@ import { deriveRenderModel } from '../model/derive-render-model.js';
 import type { RenderModel } from '../model/render-model.js';
 import { assertLifecycleTransition, lifecycleFromTerminal, type GameLifecycle } from './lifecycle-transition.js';
 import type { PartialChoice, PlayerSeat, RenderContext } from './store-types.js';
+import { resolveAiSeat, selectAiMove } from './ai-move-policy.js';
 import type { GameWorkerAPI, OperationStamp, WorkerError } from '../worker/game-worker-api.js';
 
 interface GameStoreState {
@@ -49,6 +50,7 @@ interface GameStoreActions {
   chooseOne(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
   chooseN(choice: readonly Exclude<MoveParamValue, readonly unknown[]>[]): Promise<void>;
   confirmMove(): Promise<void>;
+  resolveAiTurn(): Promise<void>;
   cancelChoice(): Promise<void>;
   cancelMove(): void;
   undo(): Promise<void>;
@@ -118,6 +120,8 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   animationPlaying: false,
   renderModel: null,
 };
+
+const MAX_AI_SKIP_MOVES = 512;
 
 function resetSessionState(): Pick<
   GameStoreState,
@@ -313,6 +317,14 @@ function buildMove(actionId: ActionId, choices: readonly PartialChoice[]): Move 
     actionId,
     params: Object.fromEntries(choices.map((choice) => [choice.decisionId, choice.value])),
   };
+}
+
+function isHumanTurn(renderModel: RenderModel | null): boolean {
+  if (renderModel === null) {
+    return false;
+  }
+  const activePlayer = renderModel.players.find((player) => player.id === renderModel.activePlayerID);
+  return activePlayer?.isHuman === true;
 }
 
 function toRenderContext(inputs: RenderDerivationInputs): RenderContext | null {
@@ -605,6 +617,53 @@ export function createGameStore(bridge: GameWorkerAPI) {
                 result.effectTrace ?? [],
                 result.triggerFirings,
               ),
+            });
+          });
+        },
+
+        async resolveAiTurn() {
+          await runActionOperation(async (ctx) => {
+            for (let resolvedMoves = 0; resolvedMoves < MAX_AI_SKIP_MOVES; resolvedMoves += 1) {
+              const state = get();
+              if (state.gameLifecycle === 'terminal' || state.renderModel === null || isHumanTurn(state.renderModel)) {
+                return;
+              }
+
+              const legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
+              const activeSeat = resolveAiSeat(state.playerSeats.get(state.renderModel.activePlayerID));
+              const aiMove = selectAiMove(activeSeat, legalMoveResult.moves);
+              if (aiMove === null) {
+                guardSetAndDerive(ctx, {
+                  legalMoveResult,
+                  error: null,
+                });
+                return;
+              }
+
+              const result = await bridge.applyMove(aiMove, undefined, toOperationStamp(ctx));
+              const mutationInputs = await deriveMutationInputs(result.state);
+              const lifecycle = assertLifecycleTransition(
+                state.gameLifecycle,
+                lifecycleFromTerminal(mutationInputs.terminal),
+                'resolveAiTurn',
+              );
+              const wasApplied = guardSetAndDerive(ctx, {
+                ...buildStateMutationState(
+                  mutationInputs.gameState,
+                  mutationInputs.legalMoveResult,
+                  mutationInputs.terminal,
+                  lifecycle,
+                  result.effectTrace ?? [],
+                  result.triggerFirings,
+                ),
+              });
+              if (!wasApplied) {
+                return;
+              }
+            }
+
+            guardSet(ctx, {
+              error: toWorkerError(`AI turn resolution exceeded ${MAX_AI_SKIP_MOVES} moves without reaching a human turn or terminal state.`),
             });
           });
         },

@@ -521,6 +521,144 @@ describe('createGameStore', () => {
     expect(applySpy).not.toHaveBeenCalled();
   });
 
+  it('resolveAiTurn advances through non-human turn to the next human turn', async () => {
+    const def = compileStoreFixture(8);
+    const aiMove: Move = { actionId: asActionId('tick'), params: {} };
+    const aiState = {
+      ...initialState(def, 27, 2),
+      activePlayer: asPlayerId(1),
+    };
+    const humanState = {
+      ...aiState,
+      activePlayer: asPlayerId(0),
+      globalVars: {
+        ...aiState.globalVars,
+        round: 1,
+      },
+    };
+    const enumerateLegalMoves = vi
+      .fn<GameWorkerAPI['enumerateLegalMoves']>()
+      .mockResolvedValueOnce({ moves: [aiMove], warnings: [] })
+      .mockResolvedValue({ moves: [aiMove], warnings: [] });
+    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+      state: humanState,
+      effectTrace: [],
+      triggerFirings: [],
+      warnings: [],
+    }));
+    const bridge = createBridgeStub({
+      init: () => aiState,
+      enumerateLegalMoves,
+      terminalResult: () => null,
+      applyMove,
+    });
+    const store = createGameStore(bridge);
+
+    await store.getState().initGame(def, 27, asPlayerId(0));
+
+    const beforeResolve = store.getState();
+    expect(beforeResolve.renderModel?.activePlayerID).toEqual(asPlayerId(1));
+    expect(beforeResolve.renderModel?.players.find((player) => player.id === asPlayerId(1))?.isHuman).toBe(false);
+
+    await store.getState().resolveAiTurn();
+
+    const afterResolve = store.getState();
+    expect(applyMove).toHaveBeenCalledTimes(1);
+    expect(afterResolve.gameState?.globalVars.round).toBe(1);
+    expect(afterResolve.renderModel?.activePlayerID).toEqual(asPlayerId(0));
+    expect(afterResolve.renderModel?.players.find((player) => player.id === asPlayerId(0))?.isHuman).toBe(true);
+    expect(afterResolve.error).toBeNull();
+  });
+
+  it('resolveAiTurn no-ops on a human turn', async () => {
+    const def = compileStoreFixture(8);
+    const bridge = createGameWorker();
+    const applySpy = vi.spyOn(bridge, 'applyMove');
+    const store = createGameStore(bridge);
+
+    await store.getState().initGame(def, 28, asPlayerId(0));
+    expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(0));
+
+    await store.getState().resolveAiTurn();
+
+    expect(applySpy).not.toHaveBeenCalled();
+    expect(store.getState().error).toBeNull();
+  });
+
+  it('resolveAiTurn no-ops safely when no session is initialized', async () => {
+    const bridge = createBridgeStub({});
+    const store = createGameStore(bridge);
+
+    await store.getState().resolveAiTurn();
+
+    expect(store.getState().loading).toBe(false);
+    expect(store.getState().error).toBeNull();
+    expect(store.getState().renderModel).toBeNull();
+  });
+
+  it('resolveAiTurn uses seat policy to select AI move', async () => {
+    const def = compileStoreFixture(8);
+    const aiState = {
+      ...initialState(def, 31, 2),
+      activePlayer: asPlayerId(1),
+    };
+    const moveA: Move = { actionId: asActionId('tick'), params: { pick: 'a' } };
+    const moveB: Move = { actionId: asActionId('tick'), params: { pick: 'b' } };
+    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+      state: {
+        ...aiState,
+        activePlayer: asPlayerId(0),
+      },
+      effectTrace: [],
+      triggerFirings: [],
+      warnings: [],
+    }));
+    const bridge = createBridgeStub({
+      init: () => aiState,
+      enumerateLegalMoves: () => ({ moves: [moveA, moveB], warnings: [] }),
+      terminalResult: () => null,
+      applyMove,
+    });
+    const store = createGameStore(bridge);
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+
+    try {
+      await store.getState().initGame(def, 31, asPlayerId(0));
+      await store.getState().resolveAiTurn();
+    } finally {
+      randomSpy.mockRestore();
+    }
+
+    expect(applyMove).toHaveBeenCalledTimes(1);
+    expect(applyMove.mock.calls[0]?.[0]).toEqual(moveB);
+  });
+
+  it('resolveAiTurn preserves state when AI turn has no legal moves', async () => {
+    const def = compileStoreFixture(8);
+    const aiState = {
+      ...initialState(def, 29, 2),
+      activePlayer: asPlayerId(1),
+    };
+    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => {
+      throw new Error('applyMove should not be called when there are no legal moves');
+    });
+    const bridge = createBridgeStub({
+      init: () => aiState,
+      enumerateLegalMoves: () => ({ moves: [], warnings: [] }),
+      terminalResult: () => null,
+      applyMove,
+    });
+    const store = createGameStore(bridge);
+
+    await store.getState().initGame(def, 29, asPlayerId(0));
+    await store.getState().resolveAiTurn();
+
+    expect(applyMove).not.toHaveBeenCalled();
+    expect(store.getState().gameState).toEqual(aiState);
+    expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(1));
+    expect(store.getState().error).toBeNull();
+  });
+
   it('real-worker cancelChoice pops one choice and re-queries pending decision', async () => {
     const bridge = createGameWorker();
     const store = createGameStore(bridge);

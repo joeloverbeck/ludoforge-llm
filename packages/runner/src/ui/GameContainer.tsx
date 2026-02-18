@@ -19,6 +19,7 @@ import { UndoControl } from './UndoControl.js';
 import { UIOverlay } from './UIOverlay.js';
 import { VariablesPanel } from './VariablesPanel.js';
 import { PlayerHandPanel } from './PlayerHandPanel.js';
+import { AITurnOverlay } from './AITurnOverlay.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 import styles from './GameContainer.module.css';
 
@@ -26,7 +27,7 @@ interface GameContainerProps {
   readonly store: StoreApi<GameStore>;
 }
 
-type OverlayRegionPanel = (props: { readonly store: StoreApi<GameStore> }) => ReactElement;
+type OverlayRegionPanel = (props: { readonly store: StoreApi<GameStore> }) => ReactElement | null;
 type OverlayRegion = 'top' | 'side' | 'floating';
 
 const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayRegionPanel[]>> = {
@@ -92,6 +93,7 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
       case 'choiceInvalid':
         return <ChoicePanel store={store} mode={bottomBarState.kind} />;
       case 'aiTurn':
+        return <AITurnOverlay store={store} />;
       case 'hidden':
         return null;
       default:

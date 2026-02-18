@@ -32,6 +32,10 @@ vi.mock('../../src/ui/ChoicePanel.js', () => ({
   ChoicePanel: ({ mode }: { readonly mode: string }) => createElement('div', { 'data-testid': `choice-panel-${mode}` }),
 }));
 
+vi.mock('../../src/ui/AITurnOverlay.js', () => ({
+  AITurnOverlay: () => createElement('div', { 'data-testid': 'ai-turn-overlay' }),
+}));
+
 vi.mock('../../src/ui/PhaseIndicator.js', () => ({
   PhaseIndicator: () => createElement('div', { 'data-testid': 'phase-indicator' }),
 }));
@@ -373,7 +377,7 @@ describe('GameContainer', () => {
     expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
   });
 
-  it('renders no interactive branch in aiTurn mode', () => {
+  it('renders aiTurn branch only', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
         store: createContainerStore({
@@ -390,6 +394,7 @@ describe('GameContainer', () => {
     expect(html).not.toContain('data-testid="undo-control"');
     expect(html).not.toContain('data-testid="choice-panel-choicePending"');
     expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
+    expect(html).toContain('data-testid="ai-turn-overlay"');
   });
 
   it('keeps aiTurn precedence even with contradictory choice/confirm state', () => {
@@ -413,6 +418,7 @@ describe('GameContainer', () => {
     expect(html).not.toContain('data-testid="choice-panel-choicePending"');
     expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
     expect(html).not.toContain('data-testid="choice-panel-choiceInvalid"');
+    expect(html).toContain('data-testid="ai-turn-overlay"');
   });
 
   it('ErrorState retry callback calls clearError on the store', () => {

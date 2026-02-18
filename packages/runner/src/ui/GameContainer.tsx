@@ -27,6 +27,7 @@ import { WarningsToast } from './WarningsToast.js';
 import { TooltipLayer } from './TooltipLayer.js';
 import { TerminalOverlay } from './TerminalOverlay.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
+import { buildFactionCssVariableStyle } from './faction-color-style.js';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts.js';
 import styles from './GameContainer.module.css';
 
@@ -88,6 +89,7 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
   const gameLifecycle = useStore(store, (state) => state.gameLifecycle);
   const error = useStore(store, (state) => state.error);
   const renderModel = useStore(store, (state) => state.renderModel);
+  const gameDefFactions = useStore(store, (state) => state.gameDef?.factions);
   const [hoverAnchor, setHoverAnchor] = useState<HoverAnchor | null>(null);
   const keyboardShortcutsEnabled = error === null && (gameLifecycle === 'playing' || gameLifecycle === 'terminal');
   const keyboardCoordinator = useMemo(
@@ -123,6 +125,10 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
   const onHoverAnchorChange = useCallback((anchor: HoverAnchor | null) => {
     setHoverAnchor(anchor);
   }, []);
+  const factionCssVariableStyle = useMemo(
+    () => buildFactionCssVariableStyle(gameDefFactions),
+    [gameDefFactions],
+  );
   const tooltipAnchorState = resolveTooltipAnchorState(hoverAnchor);
 
   const bottomBarContent = (() => {
@@ -148,7 +154,7 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
   })();
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} style={factionCssVariableStyle}>
       <div className={styles.canvasLayer}>
         <GameCanvas
           store={store}

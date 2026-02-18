@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react';
+import type { FactionDef } from '@ludoforge/engine/runtime';
 
 import type { RenderPlayer } from '../model/render-model.js';
 
-function normalizeFactionId(factionId: string | null): string | null {
+export function normalizeFactionId(factionId: string | null): string | null {
   if (typeof factionId !== 'string') {
     return null;
   }
@@ -32,4 +33,18 @@ export function buildFactionColorStyle(
     color: colorValue,
     borderColor: colorValue,
   };
+}
+
+export function buildFactionCssVariableStyle(factions: readonly FactionDef[] | undefined): CSSProperties {
+  const style: Record<string, string> = {};
+  for (const faction of factions ?? []) {
+    const normalizedFactionId = normalizeFactionId(faction.id);
+    if (normalizedFactionId === null) {
+      continue;
+    }
+
+    style[`--faction-${normalizedFactionId}`] = faction.color;
+  }
+
+  return style as CSSProperties;
 }

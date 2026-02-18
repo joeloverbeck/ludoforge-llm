@@ -455,4 +455,42 @@ describe('data asset loader scaffold', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('rejects piece-catalog pieceTypes that reference undeclared factions', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ludoforge-assets-'));
+    try {
+      const assetPath = join(dir, 'foundation-pieces-faction-undeclared.v1.json');
+      writeFileSync(
+        assetPath,
+        JSON.stringify({
+          id: 'fitl-piece-catalog-faction-undeclared',
+          kind: 'pieceCatalog',
+          payload: {
+            factions: [{ id: 'us', color: '#e63946' }],
+            pieceTypes: [
+              {
+                id: 'vc-guerrilla',
+                faction: 'vc',
+                statusDimensions: ['activity'],
+                transitions: [{ dimension: 'activity', from: 'underground', to: 'active' }],
+              },
+            ],
+            inventory: [{ pieceTypeId: 'vc-guerrilla', faction: 'vc', total: 10 }],
+          },
+        }),
+        'utf8',
+      );
+
+      const result = loadDataAssetEnvelopeFromFile(assetPath);
+      assert.equal(result.asset, null);
+      const pieceTypeDiag = result.diagnostics.find((entry) => entry.code === 'PIECE_CATALOG_PIECE_TYPE_FACTION_UNDECLARED');
+      const inventoryDiag = result.diagnostics.find((entry) => entry.code === 'PIECE_CATALOG_INVENTORY_FACTION_UNDECLARED');
+      assert.notEqual(pieceTypeDiag, undefined);
+      assert.notEqual(inventoryDiag, undefined);
+      assert.equal(pieceTypeDiag?.path, 'asset.payload.pieceTypes[0].faction');
+      assert.equal(inventoryDiag?.path, 'asset.payload.inventory[0].faction');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

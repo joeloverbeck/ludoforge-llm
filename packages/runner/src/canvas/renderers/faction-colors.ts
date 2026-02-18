@@ -1,4 +1,4 @@
-import type { PlayerId } from '@ludoforge/engine/runtime';
+import type { FactionDef, PlayerId } from '@ludoforge/engine/runtime';
 
 import type { FactionColorProvider } from './renderer-types';
 
@@ -37,5 +37,30 @@ export class DefaultFactionColorProvider implements FactionColorProvider {
     const seed = factionId === null ? playerId : hashString(factionId);
     const paletteIndex = toPaletteIndex(seed, this.palette.length);
     return this.palette[paletteIndex]!;
+  }
+}
+
+export class GameDefFactionColorProvider implements FactionColorProvider {
+  private colorByFaction = new Map<string, string>();
+  private readonly fallback: FactionColorProvider;
+
+  constructor(factions: readonly FactionDef[] | undefined, fallback?: FactionColorProvider) {
+    this.fallback = fallback ?? new DefaultFactionColorProvider();
+    this.setFactions(factions);
+  }
+
+  setFactions(factions: readonly FactionDef[] | undefined): void {
+    this.colorByFaction = new Map((factions ?? []).map((faction) => [faction.id, faction.color]));
+  }
+
+  getColor(factionId: string | null, playerId: PlayerId): string {
+    if (factionId !== null) {
+      const color = this.colorByFaction.get(factionId);
+      if (color !== undefined) {
+        return color;
+      }
+    }
+
+    return this.fallback.getColor(factionId, playerId);
   }
 }

@@ -31,6 +31,22 @@ export function validatePieceCatalogPayload(
   const diagnostics: Diagnostic[] = [];
   const catalog = parseResult.data as PieceCatalogPayload;
   const pieceTypeById = new Map<string, PieceCatalogPayload['pieceTypes'][number]>();
+  const declaredFactions = new Set<string>();
+  for (const [index, faction] of (catalog.factions ?? []).entries()) {
+    if (!declaredFactions.has(faction.id)) {
+      declaredFactions.add(faction.id);
+      continue;
+    }
+    diagnostics.push(withContext(
+      {
+        code: 'PIECE_CATALOG_DUPLICATE_FACTION',
+        path: `asset.payload.factions[${index}].id`,
+        severity: 'error',
+        message: `Duplicate faction id "${faction.id}" in piece catalog payload.`,
+      },
+      context,
+    ));
+  }
 
   catalog.pieceTypes.forEach((pieceType, index) => {
     if (pieceTypeById.has(pieceType.id)) {
@@ -47,6 +63,20 @@ export function validatePieceCatalogPayload(
     }
 
     pieceTypeById.set(pieceType.id, pieceType);
+
+    if (declaredFactions.size > 0 && !declaredFactions.has(pieceType.faction)) {
+      diagnostics.push(withContext(
+        {
+          code: 'PIECE_CATALOG_PIECE_TYPE_FACTION_UNDECLARED',
+          path: `asset.payload.pieceTypes[${index}].faction`,
+          severity: 'error',
+          message: `Piece type "${pieceType.id}" references undeclared faction "${pieceType.faction}".`,
+          suggestion: 'Add the faction to payload.factions or update pieceTypes[*].faction.',
+        },
+        context,
+      ));
+    }
+
     const declaredDimensions = new Set(pieceType.statusDimensions);
 
     pieceType.transitions.forEach((transition, transitionIndex) => {
@@ -114,6 +144,19 @@ export function validatePieceCatalogPayload(
           path: `asset.payload.inventory[${index}].faction`,
           severity: 'error',
           message: `Inventory faction "${entry.faction}" does not match piece type "${entry.pieceTypeId}" faction "${pieceType.faction}".`,
+        },
+        context,
+      ));
+    }
+
+    if (declaredFactions.size > 0 && !declaredFactions.has(entry.faction)) {
+      diagnostics.push(withContext(
+        {
+          code: 'PIECE_CATALOG_INVENTORY_FACTION_UNDECLARED',
+          path: `asset.payload.inventory[${index}].faction`,
+          severity: 'error',
+          message: `Inventory entry for piece type "${entry.pieceTypeId}" references undeclared faction "${entry.faction}".`,
+          suggestion: 'Add the faction to payload.factions or update inventory[*].faction.',
         },
         context,
       ));

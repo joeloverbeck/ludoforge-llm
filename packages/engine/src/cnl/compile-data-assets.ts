@@ -282,7 +282,7 @@ export function deriveSectionsFromDataAssets(
   return {
     zones,
     tokenTypes,
-    factions: null,
+    factions: selectedPieceCatalog?.payload.factions ?? null,
     tracks: selectedMap?.payload.tracks ?? null,
     scenarioInitialTrackValues: selectedScenario?.initialTrackValues ?? null,
     markerLattices: selectedMap?.payload.markerLattices ?? null,

@@ -36,6 +36,11 @@ interface InventoryEntryLike {
   readonly total: number;
 }
 
+interface FactionLike {
+  readonly id: string;
+  readonly color: string;
+}
+
 interface EventCardLike {
   readonly id: string;
   readonly title: string;
@@ -250,13 +255,25 @@ describe('FITL production data integration compilation', () => {
     const pieceCatalogPayload = pieceCatalogAsset.payload as {
       readonly pieceTypes?: readonly PieceTypeLike[];
       readonly inventory?: readonly InventoryEntryLike[];
+      readonly factions?: readonly FactionLike[];
     };
     assert.ok(Array.isArray(pieceCatalogPayload.pieceTypes), 'Expected pieceTypes array');
     assert.ok(Array.isArray(pieceCatalogPayload.inventory), 'Expected inventory array');
+    assert.ok(Array.isArray(pieceCatalogPayload.factions), 'Expected factions array');
 
     assert.equal(pieceCatalogPayload.pieceTypes.length, 12);
     const inventoryTotal = pieceCatalogPayload.inventory.reduce((sum, entry) => sum + entry.total, 0);
     assert.equal(inventoryTotal, 229);
+    assert.deepEqual(
+      (compiled.gameDef?.factions ?? []).map((faction) => ({ id: faction.id, color: faction.color })),
+      [
+        { id: 'us', color: '#e63946' },
+        { id: 'arvn', color: '#457b9d' },
+        { id: 'nva', color: '#2a9d8f' },
+        { id: 'vc', color: '#e9c46a' },
+      ],
+      'Compiled GameDef factions must be lowered from selected piece catalog asset',
+    );
 
     const allAssets = parsed.doc.dataAssets ?? [];
     const scenarioAssets = allAssets.filter((asset) => asset.kind === 'scenario');

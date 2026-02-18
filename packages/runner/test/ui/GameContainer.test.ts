@@ -119,6 +119,7 @@ type WorkerError = Exclude<GameStore['error'], null>;
 interface MinimalContainerState {
   readonly gameLifecycle: GameLifecycle;
   readonly error: WorkerError | null;
+  readonly gameDef: GameStore['gameDef'];
   readonly renderModel: GameStore['renderModel'];
   readonly selectedAction: GameStore['selectedAction'];
   readonly partialMove: GameStore['partialMove'];
@@ -174,6 +175,7 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
 function createContainerStore(state: {
   readonly gameLifecycle: GameLifecycle;
   readonly error: WorkerError | null;
+  readonly gameDef?: GameStore['gameDef'];
   readonly renderModel?: GameStore['renderModel'];
   readonly selectedAction?: GameStore['selectedAction'];
   readonly partialMove?: GameStore['partialMove'];
@@ -183,6 +185,7 @@ function createContainerStore(state: {
   return createStore<MinimalContainerState>(() => ({
     gameLifecycle: state.gameLifecycle,
     error: state.error,
+    gameDef: state.gameDef ?? null,
     renderModel: state.renderModel ?? null,
     selectedAction: state.selectedAction ?? null,
     partialMove: state.partialMove ?? null,
@@ -335,6 +338,26 @@ describe('GameContainer', () => {
       'global-markers-bar',
       'active-effects-panel',
     ]);
+  });
+
+  it('exposes faction CSS variables from gameDef factions on container root', () => {
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          gameDef: {
+            factions: [
+              { id: 'us', color: '#e63946', displayName: 'United States' },
+              { id: 'nva force', color: '#2a9d8f', displayName: 'NVA' },
+            ],
+          } as unknown as GameStore['gameDef'],
+        }),
+      }),
+    );
+
+    expect(html).toContain('--faction-us:#e63946');
+    expect(html).toContain('--faction-nva-force:#2a9d8f');
   });
 
   it('renders actions mode branch only', () => {

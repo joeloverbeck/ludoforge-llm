@@ -279,6 +279,7 @@ export interface PieceInventoryEntry {
 export interface PieceCatalogPayload {
   readonly pieceTypes: readonly PieceTypeCatalogEntry[];
   readonly inventory: readonly PieceInventoryEntry[];
+  readonly factions?: readonly FactionDef[];
 }
 
 export interface ProvisionalAdjacencyDef {

@@ -715,6 +715,19 @@ dataAssets:
   - id: fitl-piece-catalog-production
     kind: pieceCatalog
     payload:
+      factions:
+        - id: us
+          color: "#e63946"
+          displayName: United States
+        - id: arvn
+          color: "#457b9d"
+          displayName: ARVN
+        - id: nva
+          color: "#2a9d8f"
+          displayName: NVA
+        - id: vc
+          color: "#e9c46a"
+          displayName: Viet Cong
       pieceTypes:
         - id: us-troops
           faction: us

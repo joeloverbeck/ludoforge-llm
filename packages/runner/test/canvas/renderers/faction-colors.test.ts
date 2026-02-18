@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_FACTION_PALETTE,
   DefaultFactionColorProvider,
+  GameDefFactionColorProvider,
 } from '../../../src/canvas/renderers/faction-colors';
 
 describe('DefaultFactionColorProvider', () => {
@@ -65,5 +66,48 @@ describe('DefaultFactionColorProvider', () => {
     ]);
 
     expect(colors.size).toBeGreaterThan(1);
+  });
+});
+
+describe('GameDefFactionColorProvider', () => {
+  it('returns configured game-def color for known factions', () => {
+    const provider = new GameDefFactionColorProvider([
+      { id: 'us', color: '#e63946', displayName: 'United States' },
+      { id: 'arvn', color: '#457b9d', displayName: 'ARVN' },
+    ]);
+
+    expect(provider.getColor('us', asPlayerId(0))).toBe('#e63946');
+    expect(provider.getColor('arvn', asPlayerId(2))).toBe('#457b9d');
+  });
+
+  it('falls back to default provider for unknown factions', () => {
+    const fallback = new DefaultFactionColorProvider();
+    const provider = new GameDefFactionColorProvider([{ id: 'us', color: '#e63946' }], fallback);
+
+    expect(provider.getColor('unknown-faction', asPlayerId(7))).toBe(fallback.getColor('unknown-faction', asPlayerId(7)));
+  });
+
+  it('falls back to default provider for null faction IDs', () => {
+    const fallback = new DefaultFactionColorProvider();
+    const provider = new GameDefFactionColorProvider([{ id: 'us', color: '#e63946' }], fallback);
+
+    expect(provider.getColor(null, asPlayerId(7))).toBe(fallback.getColor(null, asPlayerId(7)));
+  });
+
+  it('behaves like default provider when no factions are defined', () => {
+    const fallback = new DefaultFactionColorProvider();
+    const provider = new GameDefFactionColorProvider([], fallback);
+
+    expect(provider.getColor('faction-a', asPlayerId(1))).toBe(fallback.getColor('faction-a', asPlayerId(1)));
+    expect(provider.getColor(null, asPlayerId(9))).toBe(fallback.getColor(null, asPlayerId(9)));
+  });
+
+  it('supports updating factions after construction', () => {
+    const fallback = new DefaultFactionColorProvider();
+    const provider = new GameDefFactionColorProvider(undefined, fallback);
+
+    expect(provider.getColor('us', asPlayerId(0))).toBe(fallback.getColor('us', asPlayerId(0)));
+    provider.setFactions([{ id: 'us', color: '#e63946' }]);
+    expect(provider.getColor('us', asPlayerId(0))).toBe('#e63946');
   });
 });

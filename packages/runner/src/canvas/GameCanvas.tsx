@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactElement } from 'react';
+import type { FactionDef } from '@ludoforge/engine/runtime';
 import type { StoreApi } from 'zustand';
 
 import type { KeyboardCoordinator } from '../input/keyboard-coordinator.js';
@@ -16,7 +17,7 @@ import { createHoverTargetController } from './interactions/hover-target-control
 import { createPositionStore, type PositionStore } from './position-store';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
 import { ContainerPool } from './renderers/container-pool';
-import { DefaultFactionColorProvider } from './renderers/faction-colors';
+import { GameDefFactionColorProvider } from './renderers/faction-colors';
 import type { AdjacencyRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
 import { createTokenRenderer } from './renderers/token-renderer';
 import { createZoneRenderer } from './renderers/zone-renderer';
@@ -152,7 +153,8 @@ export async function createGameCanvasRuntime(
 
   const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer);
 
-  const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, new DefaultFactionColorProvider(), {
+  const factionColorProvider = new GameDefFactionColorProvider(selectGameDefFactions(selectorStore.getState()));
+  const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, factionColorProvider, {
     bindSelection: (tokenContainer, tokenId, isSelectable) =>
       deps.attachTokenSelectHandlers(
         tokenContainer,
@@ -184,6 +186,15 @@ export async function createGameCanvasRuntime(
   const unsubscribeZoneIDs = selectorStore.subscribe(selectZoneIDs, (zoneIDs) => {
     positionStore.setZoneIDs(zoneIDs);
   }, { equalityFn: stringArraysEqual });
+  const unsubscribeFactionDefs = selectorStore.subscribe(
+    selectGameDefFactions,
+    (factions) => {
+      factionColorProvider.setFactions(factions);
+      const renderTokens = selectorStore.getState().renderModel?.tokens ?? [];
+      tokenRenderer.update(renderTokens, zoneRenderer.getContainerMap());
+    },
+    { equalityFn: factionDefsEqual },
+  );
   const keyboardSelectConfig = {
     getSelectableZoneIDs: () => interactionController.getSelectableZoneIDs(),
     getCurrentFocusedZoneID: () => interactionController.getFocusedZoneID(),
@@ -262,6 +273,7 @@ export async function createGameCanvasRuntime(
       hoverTargetController.destroy();
       options.onHoverAnchorChange?.(null);
       unsubscribeZoneIDs();
+      unsubscribeFactionDefs();
       cleanupKeyboardSelect();
       ariaAnnouncer.destroy();
       destroyCanvasPipeline(canvasUpdater, zoneRenderer, adjacencyRenderer, tokenRenderer, zonePool, viewportResult, gameCanvas);
@@ -384,6 +396,10 @@ function selectZoneIDs(state: GameStore): readonly string[] {
   return zones.map((zone) => zone.id);
 }
 
+function selectGameDefFactions(state: GameStore): readonly FactionDef[] | undefined {
+  return state.gameDef?.factions;
+}
+
 function stringArraysEqual(prev: readonly string[], next: readonly string[]): boolean {
   if (prev.length !== next.length) {
     return false;
@@ -391,6 +407,33 @@ function stringArraysEqual(prev: readonly string[], next: readonly string[]): bo
 
   for (let index = 0; index < prev.length; index += 1) {
     if (prev[index] !== next[index]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function factionDefsEqual(
+  prev: readonly FactionDef[] | undefined,
+  next: readonly FactionDef[] | undefined,
+): boolean {
+  if (prev === next) {
+    return true;
+  }
+  if (prev === undefined || next === undefined) {
+    return false;
+  }
+  if (prev.length !== next.length) {
+    return false;
+  }
+
+  for (let index = 0; index < prev.length; index += 1) {
+    if (
+      prev[index]?.id !== next[index]?.id
+      || prev[index]?.color !== next[index]?.color
+      || prev[index]?.displayName !== next[index]?.displayName
+    ) {
       return false;
     }
   }

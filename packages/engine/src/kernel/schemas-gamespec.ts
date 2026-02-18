@@ -45,10 +45,19 @@ export const PieceInventoryEntrySchema = z
   })
   .strict();
 
+export const FactionDefSchema = z
+  .object({
+    id: StringSchema.min(1),
+    color: StringSchema.min(1),
+    displayName: StringSchema.optional(),
+  })
+  .strict();
+
 export const PieceCatalogPayloadSchema = z
   .object({
     pieceTypes: z.array(PieceTypeCatalogEntrySchema),
     inventory: z.array(PieceInventoryEntrySchema),
+    factions: z.array(FactionDefSchema).optional(),
   })
   .strict();
 
@@ -85,14 +94,6 @@ export const TokenVisualHintsSchema = z
     color: StringSchema.optional(),
     size: NumberSchema.optional(),
     symbol: StringSchema.optional(),
-  })
-  .strict();
-
-export const FactionDefSchema = z
-  .object({
-    id: StringSchema.min(1),
-    color: StringSchema.min(1),
-    displayName: StringSchema.optional(),
   })
   .strict();
 

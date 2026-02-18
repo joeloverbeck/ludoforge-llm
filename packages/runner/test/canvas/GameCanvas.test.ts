@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { describe, expect, it, vi } from 'vitest';
+import type { GameDef } from '@ludoforge/engine/runtime';
 
 import { GameCanvas, createGameCanvasRuntime } from '../../src/canvas/GameCanvas';
 import type { CoordinateBridge } from '../../src/canvas/coordinate-bridge';
@@ -10,13 +11,15 @@ import type { GameStore } from '../../src/store/game-store';
 
 interface RuntimeStoreState {
   readonly renderModel: GameStore['renderModel'];
+  readonly gameDef: GameDef | null;
   chooseOne(choice: string): void;
 }
 
 function createRuntimeStore(initialRenderModel: GameStore['renderModel']): StoreApi<RuntimeStoreState> {
   return createStore<RuntimeStoreState>()(
-    subscribeWithSelector(() => ({
+    subscribeWithSelector((): RuntimeStoreState => ({
       renderModel: initialRenderModel,
+      gameDef: null,
       chooseOne: (_choice: string) => {},
     })),
   );
@@ -491,6 +494,30 @@ describe('createGameCanvasRuntime', () => {
     tokenHoverOptions?.onHoverLeave?.({ kind: 'token', id: 'token:1' });
     await flushMicrotasks();
     expect(onHoverAnchorChange).toHaveBeenNthCalledWith(3, null);
+
+    runtime.destroy();
+  });
+
+  it('refreshes token rendering when GameDef faction colors change', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x232323,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    store.setState({
+      gameDef: {
+        factions: [{ id: 'us', color: '#e63946', displayName: 'United States' }],
+      } as unknown as GameDef,
+    });
+
+    expect(fixture.tokenRenderer.update).toHaveBeenCalledWith([], fixture.zoneContainerMap);
 
     runtime.destroy();
   });

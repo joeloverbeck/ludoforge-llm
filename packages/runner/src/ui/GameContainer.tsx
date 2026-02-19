@@ -26,6 +26,7 @@ import { AITurnOverlay } from './AITurnOverlay.js';
 import { WarningsToast } from './WarningsToast.js';
 import { TooltipLayer } from './TooltipLayer.js';
 import { TerminalOverlay } from './TerminalOverlay.js';
+import { AnimationControls } from './AnimationControls.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 import { buildFactionCssVariableStyle } from './faction-color-style.js';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts.js';
@@ -44,6 +45,7 @@ const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayRegi
     PhaseIndicator,
     TurnOrderDisplay,
     EventDeckPanel,
+    AnimationControls,
   ],
   side: [
     VariablesPanel,

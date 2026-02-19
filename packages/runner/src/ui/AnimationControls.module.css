@@ -1,0 +1,44 @@
+.container {
+  pointer-events: auto;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: rgba(15, 22, 37, 0.92);
+}
+
+.group {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.speedButton,
+.controlButton,
+.select {
+  pointer-events: auto;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.speedButton[aria-pressed='true'] {
+  color: var(--text-primary);
+  border-color: currentColor;
+}
+
+.controlButton:disabled {
+  opacity: 0.55;
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}

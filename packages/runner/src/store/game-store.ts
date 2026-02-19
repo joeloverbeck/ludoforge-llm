@@ -20,7 +20,7 @@ import { deriveRenderModel } from '../model/derive-render-model.js';
 import type { RenderModel } from '../model/render-model.js';
 import { assertLifecycleTransition, lifecycleFromTerminal, type GameLifecycle } from './lifecycle-transition.js';
 import type { PartialChoice, PlayerSeat, RenderContext } from './store-types.js';
-import type { AnimationDetailLevel } from '../animation/animation-types.js';
+import type { AnimationDetailLevel, AnimationPlaybackSpeed } from '../animation/animation-types.js';
 import { resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove, type AiPlaybackSpeed } from './ai-move-policy.js';
 import type { GameWorkerAPI, OperationStamp, WorkerError } from '../worker/game-worker-api.js';
 
@@ -40,6 +40,9 @@ interface GameStoreState {
   readonly partialMove: Move | null;
   readonly choiceStack: readonly PartialChoice[];
   readonly animationPlaying: boolean;
+  readonly animationPlaybackSpeed: AnimationPlaybackSpeed;
+  readonly animationPaused: boolean;
+  readonly animationSkipRequestToken: number;
   readonly aiPlaybackDetailLevel: AnimationDetailLevel;
   readonly aiPlaybackSpeed: AiPlaybackSpeed;
   readonly aiPlaybackAutoSkip: boolean;
@@ -68,6 +71,9 @@ interface GameStoreActions {
   cancelMove(): void;
   undo(): Promise<void>;
   setAnimationPlaying(playing: boolean): void;
+  setAnimationPlaybackSpeed(speed: AnimationPlaybackSpeed): void;
+  setAnimationPaused(paused: boolean): void;
+  requestAnimationSkipCurrent(): void;
   clearError(): void;
 }
 
@@ -131,6 +137,9 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   partialMove: null,
   choiceStack: [],
   animationPlaying: false,
+  animationPlaybackSpeed: '1x',
+  animationPaused: false,
+  animationSkipRequestToken: 0,
   aiPlaybackDetailLevel: 'standard',
   aiPlaybackSpeed: '1x',
   aiPlaybackAutoSkip: false,
@@ -405,6 +414,9 @@ function snapshotMutableState(state: GameStore): MutableGameStoreState {
     partialMove: state.partialMove,
     choiceStack: state.choiceStack,
     animationPlaying: state.animationPlaying,
+    animationPlaybackSpeed: state.animationPlaybackSpeed,
+    animationPaused: state.animationPaused,
+    animationSkipRequestToken: state.animationSkipRequestToken,
     aiPlaybackDetailLevel: state.aiPlaybackDetailLevel,
     aiPlaybackSpeed: state.aiPlaybackSpeed,
     aiPlaybackAutoSkip: state.aiPlaybackAutoSkip,
@@ -789,7 +801,22 @@ export function createGameStore(bridge: GameWorkerAPI) {
         },
 
         setAnimationPlaying(playing) {
-          set({ animationPlaying: playing });
+          set({
+            animationPlaying: playing,
+            ...(playing ? {} : { animationPaused: false }),
+          });
+        },
+
+        setAnimationPlaybackSpeed(speed) {
+          set({ animationPlaybackSpeed: speed });
+        },
+
+        setAnimationPaused(paused) {
+          set({ animationPaused: paused });
+        },
+
+        requestAnimationSkipCurrent() {
+          set((state) => ({ animationSkipRequestToken: state.animationSkipRequestToken + 1 }));
         },
 
         clearError() {

@@ -314,4 +314,48 @@ describe('createAnimationController', () => {
 
     controller.destroy();
   });
+
+  it('forwards playback controls to queue', () => {
+    const store = createControllerStore();
+    const queue = {
+      enqueue: vi.fn(),
+      skipCurrent: vi.fn(),
+      skipAll: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      setSpeed: vi.fn(),
+      isPlaying: false,
+      queueLength: 0,
+      onAllComplete: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => queue,
+        traceToDescriptors: vi.fn(() => []),
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+      },
+    );
+
+    controller.setSpeed(4);
+    controller.pause();
+    controller.resume();
+    controller.skipCurrent();
+    controller.skipAll();
+
+    expect(queue.setSpeed).toHaveBeenCalledWith(4);
+    expect(queue.pause).toHaveBeenCalledTimes(1);
+    expect(queue.resume).toHaveBeenCalledTimes(1);
+    expect(queue.skipCurrent).toHaveBeenCalledTimes(1);
+    expect(queue.skipAll).toHaveBeenCalledTimes(1);
+  });
 });

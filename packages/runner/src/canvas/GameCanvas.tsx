@@ -3,6 +3,7 @@ import type { FactionDef, TokenTypeDef } from '@ludoforge/engine/runtime';
 import type { StoreApi } from 'zustand';
 
 import type { KeyboardCoordinator } from '../input/keyboard-coordinator.js';
+import type { AnimationPlaybackSpeed } from '../animation/animation-types.js';
 import type { GameStore } from '../store/game-store';
 import { createAnimationController, type AnimationController } from '../animation/animation-controller.js';
 import { createAiPlaybackController, type AiPlaybackController } from '../animation/ai-playback.js';
@@ -28,6 +29,12 @@ import { setupViewport, type ViewportResult } from './viewport-setup';
 
 const DEFAULT_BACKGROUND_COLOR = 0x0b1020;
 const DEFAULT_WORLD_SIZE = 1;
+
+const ANIMATION_PLAYBACK_SPEED_MULTIPLIERS: Readonly<Record<AnimationPlaybackSpeed, number>> = {
+  '1x': 1,
+  '2x': 2,
+  '4x': 4,
+};
 
 interface SelectorSubscribeStore<TState> extends StoreApi<TState> {
   subscribe: {
@@ -203,6 +210,20 @@ export async function createGameCanvasRuntime(
     selectorStore.getState().setAnimationPlaying(false);
     console.warn('Animation controller initialization failed. Continuing without animations.', error);
   }
+
+  const applyAnimationSpeed = (speed: AnimationPlaybackSpeed): void => {
+    animationController?.setSpeed(ANIMATION_PLAYBACK_SPEED_MULTIPLIERS[speed]);
+  };
+  const applyAnimationPaused = (paused: boolean): void => {
+    if (paused) {
+      animationController?.pause();
+      return;
+    }
+    animationController?.resume();
+  };
+  applyAnimationSpeed(selectorStore.getState().animationPlaybackSpeed);
+  applyAnimationPaused(selectorStore.getState().animationPaused);
+
   try {
     aiPlaybackController = deps.createAiPlaybackController({
       store: options.store,
@@ -240,6 +261,33 @@ export async function createGameCanvasRuntime(
       tokenRenderer.update(renderTokens, zoneRenderer.getContainerMap());
     },
     { equalityFn: tokenTypeDefsEqual },
+  );
+  const unsubscribeAnimationPlaybackSpeed = selectorStore.subscribe(
+    (state) => state.animationPlaybackSpeed,
+    (speed, previousSpeed) => {
+      if (speed === previousSpeed) {
+        return;
+      }
+      applyAnimationSpeed(speed);
+    },
+  );
+  const unsubscribeAnimationPaused = selectorStore.subscribe(
+    (state) => state.animationPaused,
+    (paused, previousPaused) => {
+      if (paused === previousPaused) {
+        return;
+      }
+      applyAnimationPaused(paused);
+    },
+  );
+  const unsubscribeAnimationSkipRequestToken = selectorStore.subscribe(
+    (state) => state.animationSkipRequestToken,
+    (token, previousToken) => {
+      if (token === previousToken) {
+        return;
+      }
+      animationController?.skipCurrent();
+    },
   );
   const keyboardSelectConfig = {
     getSelectableZoneIDs: () => interactionController.getSelectableZoneIDs(),
@@ -321,6 +369,9 @@ export async function createGameCanvasRuntime(
       unsubscribeZoneIDs();
       unsubscribeFactionDefs();
       unsubscribeTokenTypeDefs();
+      unsubscribeAnimationPlaybackSpeed();
+      unsubscribeAnimationPaused();
+      unsubscribeAnimationSkipRequestToken();
       cleanupKeyboardSelect();
       aiPlaybackController?.destroy();
       animationController?.destroy();

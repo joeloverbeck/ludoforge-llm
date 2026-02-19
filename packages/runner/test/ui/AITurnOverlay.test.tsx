@@ -3,9 +3,9 @@
 import { createElement } from 'react';
 import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { StoreApi } from 'zustand';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
@@ -19,26 +19,18 @@ vi.mock('zustand', () => ({
 
 import { AITurnOverlay } from '../../src/ui/AITurnOverlay.js';
 
+afterEach(() => {
+  cleanup();
+});
+
 function createAiTurnStore(state: {
   readonly renderModel: GameStore['renderModel'];
   readonly requestAiTurnSkip?: GameStore['requestAiTurnSkip'];
-  readonly aiPlaybackSpeed?: GameStore['aiPlaybackSpeed'];
-  readonly aiPlaybackDetailLevel?: GameStore['aiPlaybackDetailLevel'];
-  readonly aiPlaybackAutoSkip?: GameStore['aiPlaybackAutoSkip'];
-  readonly setAiPlaybackSpeed?: GameStore['setAiPlaybackSpeed'];
-  readonly setAiPlaybackDetailLevel?: GameStore['setAiPlaybackDetailLevel'];
-  readonly setAiPlaybackAutoSkip?: GameStore['setAiPlaybackAutoSkip'];
 }): StoreApi<GameStore> {
   return {
     getState: () => ({
       renderModel: state.renderModel,
       requestAiTurnSkip: state.requestAiTurnSkip ?? (() => {}),
-      aiPlaybackSpeed: state.aiPlaybackSpeed ?? '1x',
-      aiPlaybackDetailLevel: state.aiPlaybackDetailLevel ?? 'standard',
-      aiPlaybackAutoSkip: state.aiPlaybackAutoSkip ?? false,
-      setAiPlaybackSpeed: state.setAiPlaybackSpeed ?? (() => {}),
-      setAiPlaybackDetailLevel: state.setAiPlaybackDetailLevel ?? (() => {}),
-      setAiPlaybackAutoSkip: state.setAiPlaybackAutoSkip ?? (() => {}),
     }),
   } as unknown as StoreApi<GameStore>;
 }
@@ -182,66 +174,12 @@ describe('AITurnOverlay', () => {
     expect(requestAiTurnSkip).toHaveBeenCalledTimes(1);
   });
 
-  it('renders speed selector buttons and dispatches setAiPlaybackSpeed', () => {
-    const setAiPlaybackSpeed = vi.fn();
-    render(createElement(AITurnOverlay, {
-      store: createAiTurnStore({
-        renderModel: makeRenderModel({
-          activePlayerID: asPlayerId(1),
-        }),
-        setAiPlaybackSpeed,
-        aiPlaybackSpeed: '1x',
-      }),
-    }));
-
-    const speed1 = screen.getByTestId('ai-speed-1x');
-    const speed2 = screen.getByTestId('ai-speed-2x');
-    const speed4 = screen.getByTestId('ai-speed-4x');
-
-    expect(speed1).not.toBeNull();
-    expect(speed2).not.toBeNull();
-    expect(speed4).not.toBeNull();
-    expect(speed1.getAttribute('aria-pressed')).toBe('true');
-
-    fireEvent.click(speed4);
-    expect(setAiPlaybackSpeed).toHaveBeenCalledWith('4x');
-  });
-
-  it('binds detail level and auto-skip controls to store actions', () => {
-    const setAiPlaybackDetailLevel = vi.fn();
-    const setAiPlaybackAutoSkip = vi.fn();
-
-    render(createElement(AITurnOverlay, {
-      store: createAiTurnStore({
-        renderModel: makeRenderModel({
-          activePlayerID: asPlayerId(1),
-        }),
-        aiPlaybackDetailLevel: 'minimal',
-        aiPlaybackAutoSkip: false,
-        setAiPlaybackDetailLevel,
-        setAiPlaybackAutoSkip,
-      }),
-    }));
-
-    const detailSelect = screen.getByTestId('ai-detail-level') as HTMLSelectElement;
-    expect(detailSelect.value).toBe('minimal');
-    fireEvent.change(detailSelect, { target: { value: 'full' } });
-    expect(setAiPlaybackDetailLevel).toHaveBeenCalledWith('full');
-
-    const autoSkipToggle = screen.getByTestId('ai-auto-skip') as HTMLInputElement;
-    expect(autoSkipToggle.checked).toBe(false);
-    fireEvent.click(autoSkipToggle);
-    expect(setAiPlaybackAutoSkip).toHaveBeenCalledWith(true);
-  });
-
   it('keeps overlay controls pointer-active via CSS contract', () => {
-    const css = readFileSync(new URL('../../src/ui/AITurnOverlay.module.css', import.meta.url), 'utf-8');
+    const css = readFileSync('src/ui/AITurnOverlay.module.css', 'utf-8');
     const containerBlock = css.match(/\.container\s*\{[^}]*\}/u)?.[0] ?? '';
     const skipButtonBlock = css.match(/\.skipButton\s*\{[^}]*\}/u)?.[0] ?? '';
-    const speedButtonBlock = css.match(/\.speedButton\s*\{[^}]*\}/u)?.[0] ?? '';
 
     expect(containerBlock).toContain('pointer-events: auto;');
     expect(skipButtonBlock).toContain('pointer-events: auto;');
-    expect(speedButtonBlock).toContain('pointer-events: auto;');
   });
 });

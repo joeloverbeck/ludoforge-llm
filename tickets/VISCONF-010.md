@@ -9,7 +9,7 @@
 
 ## Summary
 
-Remove all visual/presentation data from the FITL and Texas Hold'em game spec Markdown files. After VISCONF-009, the compiler's validator will reject these fields as unknown keys — this ticket removes them so compilation succeeds.
+Remove all visual/presentation data from the FITL and Texas Hold'em game spec Markdown files. After VISCONF-009, the compiler's validator must reject these fields as compile-blocking errors — this ticket removes them so compilation succeeds.
 
 ---
 

@@ -10,6 +10,7 @@
 ## Summary
 
 Remove all visual field handling from the engine compiler (`cnl/`): lowering functions, data asset extraction, validation, and spec types. After this ticket, the compiler passes through zero visual data.
+Enforcement must be strict: once visual keys are removed from the contracts, reintroducing them in `GameSpecDoc` must fail compilation with error diagnostics.
 
 ---
 
@@ -74,6 +75,16 @@ Remove all visual field handling from the engine compiler (`cnl/`): lowering fun
 - `METADATA_KEYS`: Remove `'cardAnimation'` and `'layoutMode'` → becomes `['id', 'players', 'maxTriggerDepth', 'defaultScenarioAssetId', 'namedSets']`
 - `ZONE_KEYS`: Remove `'layoutRole'` → becomes `['id', 'zoneKind', 'owner', 'visibility', 'ordering', 'adjacentTo']`
 - `CARD_ANIMATION_KEYS`: Remove entire constant
+- Unknown-key diagnostics for removed visual keys must be compile-blocking (`severity: 'error'`), not warnings.
+
+### Strict rejection requirement
+
+Legacy visual keys in `GameSpecDoc` must now hard-fail validation/compile, including:
+- `metadata.cardAnimation`, `metadata.layoutMode`
+- `zones[*].layoutRole`, `zones[*].visual`
+- `pieceTypes[*].visual`
+- `factions[*].color`, `factions[*].displayName`
+- `map.visualRules`, `spaces[*].visual`
 
 ### validate-metadata.ts
 
@@ -116,6 +127,7 @@ Remove all visual field handling from the engine compiler (`cnl/`): lowering fun
 
 1. `pnpm -F @ludoforge/engine typecheck` passes (no references to removed types in src/)
 2. `pnpm -F @ludoforge/engine build` succeeds
+3. New/updated validator tests assert removed visual keys emit error diagnostics (not warnings)
 
 Note: Engine tests may still fail at this point because test fixtures reference removed fields. That's addressed in VISCONF-012.
 
@@ -130,5 +142,5 @@ Note: Engine tests may still fail at this point because test fixtures reference 
 
 - The compiler still compiles valid game specs to GameDef (minus visual fields)
 - Validation still catches unknown keys in metadata and zones (with updated key lists)
-- No visual field is silently ignored — they are actively stripped from the valid key lists, so leftover visual fields in game specs will produce "unknown key" diagnostics
+- No visual field is silently ignored — leftover visual fields in game specs must produce compile-blocking diagnostics
 - `game-spec-doc.ts` spec types match the data that YAML files actually contain (after VISCONF-010 strips visual data)

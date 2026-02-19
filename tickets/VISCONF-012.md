@@ -10,6 +10,7 @@
 ## Summary
 
 Update all engine test files that reference removed visual fields. Remove visual assertions from compilation tests, update fixtures, and relocate card animation compilation tests to the runner (or delete them if runner tests in VISCONF-007 cover the same logic).
+Also add negative validation coverage proving legacy visual keys in `GameSpecDoc` are rejected with error diagnostics so modders cannot reintroduce presentation fields into engine specs.
 
 ---
 
@@ -28,6 +29,7 @@ Update all engine test files that reference removed visual fields. Remove visual
 | `packages/engine/test/unit/fitl-production-map-provinces-locs.test.ts` | Remove assertions on zone `visual` properties in province/LoC zone output |
 | `packages/engine/test/unit/fitl-production-piece-inventory.test.ts` | Remove assertions on `visual` properties in piece type output |
 | `packages/engine/test/integration/fitl-derived-values.test.ts` | Remove visual field references if any are asserted in derived value tests |
+| `packages/engine/test/unit/validate-spec.test.ts` (or existing validator test file) | Add negative tests asserting removed visual keys now fail with `severity: 'error'` diagnostics |
 
 ## Engine test files to check (may not need changes)
 
@@ -113,6 +115,13 @@ Search `packages/engine/test/fixtures/` for any `.json` or `.ts` fixture files t
 - `"color":` (in faction context)
 - `"displayName":` (in faction context)
 
+### New strict-boundary tests
+
+Add tests that parse/validate minimal specs containing one legacy visual field at a time and assert:
+- compile/validation returns diagnostics with `severity: 'error'`
+- diagnostic path points to the offending visual key (for example `doc.metadata.cardAnimation`, `doc.zones.0.layoutRole`)
+- no backward-compat aliasing path is accepted
+
 ---
 
 ## Out of scope
@@ -134,6 +143,7 @@ Search `packages/engine/test/fixtures/` for any `.json` or `.ts` fixture files t
 2. `pnpm -F @ludoforge/engine test:e2e` — ALL E2E tests pass
 3. `pnpm -F @ludoforge/engine typecheck` — no type errors in test files
 4. `pnpm turbo test` — full suite passes (engine + runner)
+5. New strict-boundary tests pass for removed visual keys (error severity expected)
 
 ### Verification
 
@@ -146,4 +156,5 @@ Search `packages/engine/test/fixtures/` for any `.json` or `.ts` fixture files t
 - No engine test asserts the existence or value of any visual field
 - Production FITL/Texas Hold'em spec compilation tests still validate all non-visual aspects (zone structure, token properties, scenarios, variables, phases, actions, triggers)
 - Test coverage for non-visual compilation logic is unchanged
+- Legacy visual keys in GameSpecDoc are verified as hard errors, not warnings
 - `pnpm turbo build && pnpm turbo test` passes end-to-end

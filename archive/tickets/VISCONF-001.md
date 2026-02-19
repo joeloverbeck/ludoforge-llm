@@ -1,6 +1,7 @@
 # VISCONF-001: Define visual config types, Zod schema, VisualConfigProvider, and defaults
 
 **Spec**: 42 (Per-Game Visual Config)
+**Status**: ✅ COMPLETED
 **Priority**: P0 (blocks all other VISCONF tickets)
 **Depends on**: Nothing
 **Blocks**: VISCONF-002, 003, 004, 005, 006, 007
@@ -16,6 +17,27 @@ Create the foundational `packages/runner/src/config/` module with:
 3. **VisualConfigProvider** — stateless resolver class that encapsulates the layered merge chain: `defaults -> categoryStyles -> attributeRules -> overrides`.
 4. **Default values** — fallback constants for every visual property when no config file exists.
 
+## Assumption Reassessment (2026-02-19)
+
+The original ticket assumptions were partially stale against the current runner codebase.
+
+### Confirmed assumptions
+
+- `packages/runner/src/config/` does not exist yet and must be created.
+- A layered resolver (`defaults -> categoryStyles -> attributeRules -> overrides`) is still the right architecture for Spec 42.
+- This ticket should remain runner-only and should not modify engine packages.
+
+### Corrected assumptions
+
+- **Dependency gap**: runner currently has no `zod` dependency, so this ticket must include adding `zod` to `packages/runner/package.json`.
+- **Architectural baseline**: current runner still reads visual data from engine-owned `GameDef` fields (`zone.visual`, `zone.layoutRole`, `metadata.layoutMode`, `cardAnimation`, `TokenVisualHints`). This ticket does **not** remove those integrations; it establishes the config foundation that later VISCONF tickets will wire in.
+- **Test baseline**: existing tests currently target engine-driven visual behavior. New tests in this ticket must validate only schema/provider/default invariants and must not rewrite existing integration behavior yet.
+
+### Scope correction
+
+- This ticket is explicitly **foundational only** (types/schema/defaults/provider + tests).
+- Wiring into render/layout/animation systems remains out of scope here and is deferred to VISCONF-004/005/006/007.
+
 ---
 
 ## Files to create
@@ -28,10 +50,11 @@ Create the foundational `packages/runner/src/config/` module with:
 | `packages/runner/src/config/index.ts` | Barrel re-exports |
 | `packages/runner/test/config/visual-config-provider.test.ts` | Unit tests for provider |
 | `packages/runner/test/config/visual-config-schema.test.ts` | Zod schema validation tests |
+| `packages/runner/package.json` | Add `zod` dependency for runtime/schema validation |
 
 ## Files NOT touched
 
-No existing files are modified in this ticket.
+No existing runtime integration files are modified in this ticket.
 
 ---
 
@@ -269,3 +292,23 @@ interface ResolvedTokenVisual {
 - No imports from `@ludoforge/engine` — types are runner-owned
 - `pnpm -F @ludoforge/runner typecheck` passes
 - `pnpm -F @ludoforge/runner test` passes (new tests + all existing tests unchanged)
+
+---
+
+## Outcome
+
+- **Completion date**: 2026-02-19
+- **What changed**:
+  - Added `packages/runner/src/config/visual-config-types.ts` with runner-owned visual config types and `VisualConfigSchema` (Zod).
+  - Added `packages/runner/src/config/visual-config-defaults.ts` with default visual constants, 8-color palette, and deterministic FNV-1a faction color hashing.
+  - Added `packages/runner/src/config/visual-config-provider.ts` implementing a stateless layered resolver (`defaults -> categoryStyles -> attributeRules -> overrides`) plus faction/token/layout/card/animation/variables accessors.
+  - Added `packages/runner/src/config/index.ts` barrel exports.
+  - Added `packages/runner/test/config/visual-config-schema.test.ts` and `packages/runner/test/config/visual-config-provider.test.ts`.
+  - Added runner dependency `zod` in `packages/runner/package.json`.
+- **Deviations from original plan**:
+  - Original ticket said no existing files modified; this was corrected because adding Zod requires touching `packages/runner/package.json`.
+  - Ticket assumptions were updated before implementation to document current runner coupling to engine visual fields and keep this ticket foundational only.
+- **Verification results**:
+  - `pnpm -F @ludoforge/runner test` passed.
+  - `pnpm -F @ludoforge/runner typecheck` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.

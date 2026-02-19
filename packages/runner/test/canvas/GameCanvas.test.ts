@@ -13,8 +13,14 @@ interface RuntimeStoreState {
   readonly renderModel: GameStore['renderModel'];
   readonly gameDef: GameDef | null;
   readonly animationPlaying: boolean;
+  readonly animationPlaybackSpeed: GameStore['animationPlaybackSpeed'];
+  readonly animationPaused: boolean;
+  readonly animationSkipRequestToken: number;
   chooseOne(choice: string): void;
   setAnimationPlaying(playing: boolean): void;
+  setAnimationPlaybackSpeed(speed: GameStore['animationPlaybackSpeed']): void;
+  setAnimationPaused(paused: boolean): void;
+  requestAnimationSkipCurrent(): void;
 }
 
 function createRuntimeStore(initialRenderModel: GameStore['renderModel']): StoreApi<RuntimeStoreState> {
@@ -24,9 +30,21 @@ function createRuntimeStore(initialRenderModel: GameStore['renderModel']): Store
       renderModel: initialRenderModel,
       gameDef: null,
       animationPlaying: false,
+      animationPlaybackSpeed: '1x',
+      animationPaused: false,
+      animationSkipRequestToken: 0,
       chooseOne: (_choice: string) => {},
       setAnimationPlaying: (playing: boolean) => {
         store.setState({ animationPlaying: playing });
+      },
+      setAnimationPlaybackSpeed: (speed: GameStore['animationPlaybackSpeed']) => {
+        store.setState({ animationPlaybackSpeed: speed });
+      },
+      setAnimationPaused: (paused: boolean) => {
+        store.setState({ animationPaused: paused });
+      },
+      requestAnimationSkipCurrent: () => {
+        store.setState((state) => ({ animationSkipRequestToken: state.animationSkipRequestToken + 1 }));
       },
     })),
   );
@@ -186,6 +204,10 @@ function createRuntimeFixture() {
     }),
     setDetailLevel: vi.fn(),
     setReducedMotion: vi.fn(),
+    setSpeed: vi.fn(),
+    pause: vi.fn(),
+    resume: vi.fn(),
+    skipCurrent: vi.fn(),
     skipAll: vi.fn(),
   };
   const aiPlaybackController = {
@@ -315,6 +337,34 @@ describe('createGameCanvasRuntime', () => {
     expect(runtime.coordinateBridge).toBe(fixture.bridge);
     expect(fixture.viewportEvents.on).toHaveBeenCalledWith('moved', expect.any(Function));
     expect(onHoverAnchorChange).not.toHaveBeenCalled();
+
+    runtime.destroy();
+  });
+
+  it('routes animation control state to animation controller', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x0,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    expect(fixture.animationController.setSpeed).toHaveBeenCalledWith(1);
+    expect(fixture.animationController.resume).toHaveBeenCalledTimes(1);
+
+    store.getState().setAnimationPlaybackSpeed('4x');
+    store.getState().setAnimationPaused(true);
+    store.getState().requestAnimationSkipCurrent();
+    await flushMicrotasks();
+
+    expect(fixture.animationController.setSpeed).toHaveBeenLastCalledWith(4);
+    expect(fixture.animationController.pause).toHaveBeenCalledTimes(1);
+    expect(fixture.animationController.skipCurrent).toHaveBeenCalledTimes(1);
 
     runtime.destroy();
   });

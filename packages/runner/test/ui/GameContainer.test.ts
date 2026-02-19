@@ -67,6 +67,10 @@ vi.mock('../../src/ui/EventDeckPanel.js', () => ({
   EventDeckPanel: () => createElement('div', { 'data-testid': 'event-deck-panel' }),
 }));
 
+vi.mock('../../src/ui/AnimationControls.js', () => ({
+  AnimationControls: () => createElement('div', { 'data-testid': 'animation-controls' }),
+}));
+
 vi.mock('../../src/ui/InterruptBanner.js', () => ({
   InterruptBanner: () => createElement('div', { 'data-testid': 'interrupt-banner' }),
 }));
@@ -272,6 +276,7 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="phase-indicator"');
     expect(html).toContain('data-testid="turn-order-display"');
     expect(html).toContain('data-testid="event-deck-panel"');
+    expect(html).toContain('data-testid="animation-controls"');
     expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-testid="scoreboard"');
     expect(html).toContain('data-testid="global-markers-bar"');
@@ -285,6 +290,7 @@ describe('GameContainer', () => {
       'phase-indicator',
       'turn-order-display',
       'event-deck-panel',
+      'animation-controls',
     ]);
     expectAppearsInOrder(html, [
       'variables-panel',
@@ -320,6 +326,7 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="phase-indicator"');
     expect(html).toContain('data-testid="turn-order-display"');
     expect(html).toContain('data-testid="event-deck-panel"');
+    expect(html).toContain('data-testid="animation-controls"');
     expect(html).toContain('data-testid="variables-panel"');
     expect(html).toContain('data-testid="scoreboard"');
     expect(html).toContain('data-testid="global-markers-bar"');
@@ -331,6 +338,7 @@ describe('GameContainer', () => {
       'phase-indicator',
       'turn-order-display',
       'event-deck-panel',
+      'animation-controls',
     ]);
     expectAppearsInOrder(html, [
       'variables-panel',

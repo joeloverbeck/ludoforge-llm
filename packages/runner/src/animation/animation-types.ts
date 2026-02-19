@@ -14,6 +14,7 @@ export type BuiltinAnimationPresetId = (typeof ANIMATION_PRESET_IDS)[number];
 export type AnimationPresetId = string;
 
 export type AnimationDetailLevel = 'full' | 'standard' | 'minimal';
+export type AnimationPlaybackSpeed = '1x' | '2x' | '4x';
 
 export interface AnimationMappingOptions {
   readonly presetOverrides?: ReadonlyMap<string, AnimationPresetId>;

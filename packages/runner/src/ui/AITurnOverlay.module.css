@@ -71,26 +71,6 @@
   padding: 6px 10px;
 }
 
-.speedGroup {
-  display: inline-flex;
-  gap: 4px;
-  pointer-events: auto;
-}
-
-.speedButton {
-  pointer-events: auto;
-  border: 1px solid var(--border-subtle);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-secondary);
-  border-radius: 8px;
-  padding: 6px 8px;
-}
-
-.speedButton[aria-pressed='true'] {
-  color: var(--text-primary);
-  border-color: currentColor;
-}
-
 @keyframes pulse {
   0%,
   100% {

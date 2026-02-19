@@ -30,6 +30,10 @@ export interface AnimationController {
   destroy(): void;
   setDetailLevel(level: AnimationDetailLevel): void;
   setReducedMotion(reduced: boolean): void;
+  setSpeed(multiplier: number): void;
+  pause(): void;
+  resume(): void;
+  skipCurrent(): void;
   skipAll(): void;
 }
 
@@ -138,6 +142,34 @@ export function createAnimationController(
       if (reducedMotion) {
         queue.skipAll();
       }
+    },
+
+    setSpeed(multiplier): void {
+      if (destroyed) {
+        return;
+      }
+      queue.setSpeed(multiplier);
+    },
+
+    pause(): void {
+      if (destroyed) {
+        return;
+      }
+      queue.pause();
+    },
+
+    resume(): void {
+      if (destroyed) {
+        return;
+      }
+      queue.resume();
+    },
+
+    skipCurrent(): void {
+      if (destroyed) {
+        return;
+      }
+      queue.skipCurrent();
     },
 
     skipAll(): void {

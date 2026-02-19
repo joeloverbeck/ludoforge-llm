@@ -819,6 +819,9 @@ describe('createGameStore', () => {
     expect(after.playerSeats).toBe(before.playerSeats);
     expect(after.terminal).toEqual(before.terminal);
     expect(after.renderModel).toBe(before.renderModel);
+    expect(after.animationPlaybackSpeed).toEqual(before.animationPlaybackSpeed);
+    expect(after.animationPaused).toEqual(before.animationPaused);
+    expect(after.animationSkipRequestToken).toEqual(before.animationSkipRequestToken);
   });
 
   it('undo with no history is a no-op', async () => {
@@ -1074,15 +1077,34 @@ describe('createGameStore', () => {
     expect(store.getState().loading).toBe(false);
   });
 
-  it('setAnimationPlaying toggles animation flag', async () => {
+  it('setAnimationPlaying toggles animation flag and resets paused when queue drains', async () => {
     const store = createGameStore(createGameWorker());
     expect(store.getState().animationPlaying).toBe(false);
 
     store.getState().setAnimationPlaying(true);
+    store.getState().setAnimationPaused(true);
     expect(store.getState().animationPlaying).toBe(true);
+    expect(store.getState().animationPaused).toBe(true);
 
     store.getState().setAnimationPlaying(false);
     expect(store.getState().animationPlaying).toBe(false);
+    expect(store.getState().animationPaused).toBe(false);
+  });
+
+  it('stores animation playback preferences and skip-current requests', () => {
+    const store = createGameStore(createGameWorker());
+
+    expect(store.getState().animationPlaybackSpeed).toBe('1x');
+    expect(store.getState().animationPaused).toBe(false);
+    expect(store.getState().animationSkipRequestToken).toBe(0);
+
+    store.getState().setAnimationPlaybackSpeed('4x');
+    store.getState().setAnimationPaused(true);
+    store.getState().requestAnimationSkipCurrent();
+
+    expect(store.getState().animationPlaybackSpeed).toBe('4x');
+    expect(store.getState().animationPaused).toBe(true);
+    expect(store.getState().animationSkipRequestToken).toBe(1);
   });
 
   it('stores AI playback preferences and skip requests', () => {

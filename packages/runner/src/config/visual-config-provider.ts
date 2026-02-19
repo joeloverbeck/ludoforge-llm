@@ -8,6 +8,7 @@ import {
   type TokenShape,
   type ZoneShape,
 } from './visual-config-defaults.js';
+import { hashStableValue } from '../utils/stable-hash.js';
 import type {
   AttributeRule,
   CardAnimationConfig,
@@ -33,9 +34,11 @@ export interface ResolvedTokenVisual {
 
 export class VisualConfigProvider {
   private readonly config: VisualConfig | null;
+  readonly configHash: string;
 
   constructor(config: VisualConfig | null) {
     this.config = config;
+    this.configHash = config === null ? 'null' : hashStableValue(config);
   }
 
   resolveZoneVisual(

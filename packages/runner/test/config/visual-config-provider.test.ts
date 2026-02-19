@@ -247,4 +247,27 @@ describe('VisualConfigProvider', () => {
     expect(zoneB).toEqual(zoneA);
     expect(tokenB).toEqual(tokenA);
   });
+
+  it('exposes deterministic configHash and null sentinel hash', () => {
+    const nullProvider = new VisualConfigProvider(null);
+    const first = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        layoutRoles: {
+          deck: 'card',
+        },
+      },
+    });
+    const second = new VisualConfigProvider({
+      zones: {
+        layoutRoles: {
+          deck: 'card',
+        },
+      },
+      version: 1,
+    });
+
+    expect(nullProvider.configHash).toBe('null');
+    expect(first.configHash).toBe(second.configHash);
+  });
 });

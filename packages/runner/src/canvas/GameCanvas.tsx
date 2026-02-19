@@ -147,7 +147,7 @@ export async function createGameCanvasRuntime(
       return;
     }
 
-    const layoutResult = getOrComputeLayout(gameDef);
+    const layoutResult = getOrComputeLayout(gameDef, options.visualConfigProvider);
     const gameDefZoneIDs = gameDef.zones.map((zone) => zone.id);
     positionStore.setPositions(layoutResult.positionMap, gameDefZoneIDs);
   };

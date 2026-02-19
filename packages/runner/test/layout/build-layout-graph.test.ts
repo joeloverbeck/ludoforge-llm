@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { asZoneId, type GameDef, type ZoneDef } from '@ludoforge/engine/runtime';
 
+import { VisualConfigProvider } from '../../src/config/visual-config-provider';
 import { buildLayoutGraph, partitionZones, resolveLayoutMode } from '../../src/layout/build-layout-graph';
 
 describe('resolveLayoutMode', () => {
-  it('passes through explicit grid mode', () => {
-    expect(resolveLayoutMode(makeDef([], 'grid'))).toBe('grid');
+  it('uses provider-configured grid mode', () => {
+    expect(resolveLayoutMode(makeDef([]), providerWithMode('grid'))).toBe('grid');
   });
 
-  it('passes through explicit track mode', () => {
-    expect(resolveLayoutMode(makeDef([], 'track'))).toBe('track');
+  it('uses provider-configured track mode', () => {
+    expect(resolveLayoutMode(makeDef([]), providerWithMode('track'))).toBe('track');
   });
 
   it('auto-detects graph when any zone has adjacency', () => {
@@ -18,7 +19,7 @@ describe('resolveLayoutMode', () => {
       zone('b'),
     ]);
 
-    expect(resolveLayoutMode(def)).toBe('graph');
+    expect(resolveLayoutMode(def, new VisualConfigProvider(null))).toBe('graph');
   });
 
   it('auto-detects table when zones have no adjacency', () => {
@@ -27,11 +28,16 @@ describe('resolveLayoutMode', () => {
       zone('b'),
     ]);
 
-    expect(resolveLayoutMode(def)).toBe('table');
+    expect(resolveLayoutMode(def, new VisualConfigProvider(null))).toBe('table');
   });
 
   it('returns table for empty zones', () => {
-    expect(resolveLayoutMode(makeDef([]))).toBe('table');
+    expect(resolveLayoutMode(makeDef([]), new VisualConfigProvider(null))).toBe('table');
+  });
+
+  it('ignores GameDef metadata.layoutMode and uses provider/fallback behavior', () => {
+    const def = makeDef([zone('a', { adjacentTo: ['b'] }), zone('b')], 'grid');
+    expect(resolveLayoutMode(def, new VisualConfigProvider(null))).toBe('graph');
   });
 });
 
@@ -108,19 +114,17 @@ describe('buildLayoutGraph', () => {
     expect(graph.hasUndirectedEdge('a', 'b')).toBe(true);
   });
 
-  it('preserves node category, attributes, and visual data', () => {
+  it('preserves node category and attributes only', () => {
     const graph = buildLayoutGraph([
       zone('a', {
         category: 'city',
         attributes: { region: 'north', score: 2 },
-        visual: { shape: 'hexagon', color: '#123456' },
       }),
     ]);
 
     expect(graph.getNodeAttributes('a')).toEqual({
       category: 'city',
       attributes: { region: 'north', score: 2 },
-      visual: { shape: 'hexagon', color: '#123456' },
     });
   });
 
@@ -190,7 +194,6 @@ interface ZoneOverrides {
   readonly adjacentTo?: readonly string[];
   readonly category?: ZoneDef['category'];
   readonly attributes?: ZoneDef['attributes'];
-  readonly visual?: ZoneDef['visual'];
 }
 
 function zone(id: string, overrides: ZoneOverrides = {}): ZoneDef {
@@ -208,4 +211,13 @@ function zone(id: string, overrides: ZoneOverrides = {}): ZoneDef {
 
 function ids(zones: readonly ZoneDef[]): string[] {
   return zones.map((zoneDef) => zoneDef.id);
+}
+
+function providerWithMode(mode: 'graph' | 'table' | 'track' | 'grid'): VisualConfigProvider {
+  return new VisualConfigProvider({
+    version: 1,
+    layout: {
+      mode,
+    },
+  });
 }

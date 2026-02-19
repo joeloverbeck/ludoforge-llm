@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { asZoneId, type GameDef, type ZoneDef } from '@ludoforge/engine/runtime';
 
+import { VisualConfigProvider } from '../../src/config/visual-config-provider';
 import { clearLayoutCache, getOrComputeLayout } from '../../src/layout/layout-cache';
 import { ZONE_HALF_WIDTH, ZONE_HALF_HEIGHT } from '../../src/layout/layout-constants';
+
+const NULL_PROVIDER = new VisualConfigProvider(null);
 
 describe('layout-cache', () => {
   beforeEach(() => {
@@ -16,16 +19,16 @@ describe('layout-cache', () => {
       zone('hand:0', { zoneKind: 'aux', owner: 'player', visibility: 'owner' }),
     ], 'table');
 
-    const first = getOrComputeLayout(def);
-    const second = getOrComputeLayout(def);
+    const first = getOrComputeLayout(def, NULL_PROVIDER);
+    const second = getOrComputeLayout(def, NULL_PROVIDER);
 
     expect(second).toBe(first);
     expect(second.positionMap.positions.size).toBe(3);
   });
 
   it('keeps separate cache entries per GameDef metadata id', () => {
-    const first = getOrComputeLayout(makeDef('game-a', [zone('a', { zoneKind: 'board' })], 'table'));
-    const second = getOrComputeLayout(makeDef('game-b', [zone('a', { zoneKind: 'board' })], 'table'));
+    const first = getOrComputeLayout(makeDef('game-a', [zone('a', { zoneKind: 'board' })], 'table'), NULL_PROVIDER);
+    const second = getOrComputeLayout(makeDef('game-b', [zone('a', { zoneKind: 'board' })], 'table'), NULL_PROVIDER);
 
     expect(second).not.toBe(first);
   });
@@ -34,13 +37,13 @@ describe('layout-cache', () => {
     const first = getOrComputeLayout(makeDef('game-a', [
       zone('board-a', { zoneKind: 'board', owner: 'none' }),
       zone('hand:0', { zoneKind: 'aux', owner: 'player', visibility: 'owner' }),
-    ], 'table'));
+    ], 'table'), NULL_PROVIDER);
 
     const second = getOrComputeLayout(makeDef('game-a', [
       zone('board-a', { zoneKind: 'board', owner: 'none' }),
       zone('hand:0', { zoneKind: 'aux', owner: 'player', visibility: 'owner' }),
       zone('hand:1', { zoneKind: 'aux', owner: 'player', visibility: 'owner' }),
-    ], 'table'));
+    ], 'table'), NULL_PROVIDER);
 
     expect(second).not.toBe(first);
     expect(second.positionMap.positions.size).toBe(3);
@@ -50,12 +53,12 @@ describe('layout-cache', () => {
     const first = getOrComputeLayout(makeDef('game-a', [
       zone('board-a', { zoneKind: 'board', owner: 'none' }),
       zone('hand:0', { zoneKind: 'aux', owner: 'player', visibility: 'owner' }),
-    ], 'table'));
+    ], 'table'), NULL_PROVIDER);
 
     const second = getOrComputeLayout(makeDef('game-a', [
       zone('board-a', { zoneKind: 'board', owner: 'none' }),
       zone('hand:0', { zoneKind: 'aux', owner: 'player', visibility: 'owner' }),
-    ], 'table'));
+    ], 'table'), NULL_PROVIDER);
 
     expect(second).toBe(first);
   });
@@ -63,9 +66,9 @@ describe('layout-cache', () => {
   it('recomputes after clearLayoutCache', () => {
     const def = makeDef('game-a', [zone('a', { zoneKind: 'board' })], 'table');
 
-    const first = getOrComputeLayout(def);
+    const first = getOrComputeLayout(def, NULL_PROVIDER);
     clearLayoutCache();
-    const second = getOrComputeLayout(def);
+    const second = getOrComputeLayout(def, NULL_PROVIDER);
 
     expect(second).not.toBe(first);
   });
@@ -78,7 +81,7 @@ describe('layout-cache', () => {
       zone('hand:0', { zoneKind: 'aux', owner: 'player', visibility: 'owner' }),
     ], 'table');
 
-    const result = getOrComputeLayout(def);
+    const result = getOrComputeLayout(def, NULL_PROVIDER);
 
     expect([...result.positionMap.positions.keys()].sort()).toEqual(['board-a', 'board-b', 'deck:none', 'hand:0']);
 
@@ -94,16 +97,16 @@ describe('layout-cache', () => {
     const def = makeDef('game-a', [
       zone('track-0', { zoneKind: 'board', adjacentTo: ['track-1'] }),
       zone('track-1', { zoneKind: 'board', adjacentTo: ['track-0'] }),
-    ], 'track');
+    ]);
 
-    const result = getOrComputeLayout(def);
+    const result = getOrComputeLayout(def, providerWithLayoutMode('track'));
 
     expect(result.mode).toBe('track');
     expect(result.positionMap.positions.size).toBe(2);
   });
 
   it('returns empty positions with zero-area bounds for empty zone lists', () => {
-    const result = getOrComputeLayout(makeDef('game-a', [], 'table'));
+    const result = getOrComputeLayout(makeDef('game-a', [], 'table'), NULL_PROVIDER);
 
     expect(result.positionMap.positions.size).toBe(0);
     expect(result.positionMap.bounds).toEqual({ minX: 0, minY: 0, maxX: 0, maxY: 0 });
@@ -115,7 +118,7 @@ describe('layout-cache', () => {
       zone('board-b', { zoneKind: 'board', owner: 'none' }),
     ], 'table');
 
-    const result = getOrComputeLayout(def);
+    const result = getOrComputeLayout(def, NULL_PROVIDER);
     const rawPositions = [...result.positionMap.positions.values()];
     const rawMinX = Math.min(...rawPositions.map((p) => p.x));
     const rawMaxX = Math.max(...rawPositions.map((p) => p.x));
@@ -133,13 +136,35 @@ describe('layout-cache', () => {
       zone('solo', { zoneKind: 'board', owner: 'none' }),
     ], 'table');
 
-    const result = getOrComputeLayout(def);
+    const result = getOrComputeLayout(def, NULL_PROVIDER);
     const pos = result.positionMap.positions.get('solo')!;
 
     expect(result.positionMap.bounds.minX).toBe(pos.x - ZONE_HALF_WIDTH);
     expect(result.positionMap.bounds.maxX).toBe(pos.x + ZONE_HALF_WIDTH);
     expect(result.positionMap.bounds.minY).toBe(pos.y - ZONE_HALF_HEIGHT);
     expect(result.positionMap.bounds.maxY).toBe(pos.y + ZONE_HALF_HEIGHT);
+  });
+
+  it('recomputes when visual config identity changes for the same GameDef', () => {
+    const def = makeDef('game-a', [
+      zone('track-0', { zoneKind: 'board', adjacentTo: ['track-1'] }),
+      zone('track-1', { zoneKind: 'board', adjacentTo: ['track-0'] }),
+    ]);
+
+    const first = getOrComputeLayout(def, providerWithLayoutMode('table'));
+    const second = getOrComputeLayout(def, providerWithLayoutMode('graph'));
+
+    expect(second).not.toBe(first);
+    expect(first.mode).toBe('table');
+    expect(second.mode).toBe('graph');
+  });
+
+  it('keeps cache hits deterministic across distinct null-config providers', () => {
+    const def = makeDef('game-a', [zone('a', { zoneKind: 'board' })]);
+    const first = getOrComputeLayout(def, new VisualConfigProvider(null));
+    const second = getOrComputeLayout(def, new VisualConfigProvider(null));
+
+    expect(second).toBe(first);
   });
 });
 
@@ -177,4 +202,13 @@ function zone(id: string, overrides: ZoneOverrides = {}): ZoneDef {
     ...overrides,
     ...(normalizedAdjacentTo === undefined ? {} : { adjacentTo: normalizedAdjacentTo }),
   } as ZoneDef;
+}
+
+function providerWithLayoutMode(mode: 'graph' | 'table' | 'track' | 'grid'): VisualConfigProvider {
+  return new VisualConfigProvider({
+    version: 1,
+    layout: {
+      mode,
+    },
+  });
 }

@@ -786,7 +786,7 @@ describe('createGameCanvasRuntime', () => {
       gameDef,
     });
 
-    expect(mockedGetOrComputeLayout).toHaveBeenCalledWith(gameDef);
+    expect(mockedGetOrComputeLayout).toHaveBeenCalledWith(gameDef, TEST_VISUAL_CONFIG_PROVIDER);
     expect(fixture.positionStore.setPositions).toHaveBeenCalledWith(expect.objectContaining({
       positions: expect.any(Map),
       bounds: expect.any(Object),
@@ -816,7 +816,7 @@ describe('createGameCanvasRuntime', () => {
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
 
-    expect(mockedGetOrComputeLayout).toHaveBeenCalledWith(gameDef);
+    expect(mockedGetOrComputeLayout).toHaveBeenCalledWith(gameDef, TEST_VISUAL_CONFIG_PROVIDER);
     expect(fixture.positionStore.setPositions).toHaveBeenCalledWith(expect.objectContaining({
       positions: expect.any(Map),
       bounds: expect.any(Object),
@@ -846,8 +846,8 @@ describe('createGameCanvasRuntime', () => {
     store.setState({ gameDef: firstDef });
     store.setState({ gameDef: secondDef });
 
-    expect(mockedGetOrComputeLayout).toHaveBeenNthCalledWith(1, firstDef);
-    expect(mockedGetOrComputeLayout).toHaveBeenNthCalledWith(2, secondDef);
+    expect(mockedGetOrComputeLayout).toHaveBeenNthCalledWith(1, firstDef, TEST_VISUAL_CONFIG_PROVIDER);
+    expect(mockedGetOrComputeLayout).toHaveBeenNthCalledWith(2, secondDef, TEST_VISUAL_CONFIG_PROVIDER);
     expect(fixture.positionStore.setPositions).toHaveBeenNthCalledWith(1, expect.any(Object), ['zone:deck', 'zone:burn']);
     expect(fixture.positionStore.setPositions).toHaveBeenNthCalledWith(2, expect.any(Object), ['zone:alpha', 'zone:beta', 'zone:gamma']);
 

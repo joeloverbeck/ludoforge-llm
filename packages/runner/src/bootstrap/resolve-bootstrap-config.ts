@@ -1,5 +1,10 @@
 import { assertValidatedGameDefInput, asPlayerId, type GameDef, type PlayerId } from '@ludoforge/engine/runtime';
-import type { VisualConfigProvider } from '../config/visual-config-provider.js';
+import {
+  buildRefValidationContext,
+  parseVisualConfigStrict,
+  validateVisualConfigRefs,
+  VisualConfigProvider,
+} from '../config/index.js';
 
 import { resolveBootstrapDescriptor } from './bootstrap-registry';
 
@@ -15,14 +20,26 @@ export function resolveBootstrapConfig(search = resolveWindowSearch()): Bootstra
   const descriptor = resolveBootstrapDescriptor(params.get('game'));
   const seed = parseNonNegativeInteger(params.get('seed'), descriptor.defaultSeed);
   const playerId = asPlayerId(parseNonNegativeInteger(params.get('player'), descriptor.defaultPlayerId));
+  const rawVisualConfig = descriptor.resolveVisualConfigYaml();
+  const parsedVisualConfig = parseVisualConfigStrict(rawVisualConfig);
+  const visualConfigProvider = new VisualConfigProvider(parsedVisualConfig);
 
   return {
     seed,
     playerId,
-    visualConfigProvider: descriptor.resolveVisualConfigProvider(),
+    visualConfigProvider,
     resolveGameDef: async () => {
       const gameDefInput = await descriptor.resolveGameDefInput();
-      return assertValidatedGameDefInput(gameDefInput, descriptor.sourceLabel);
+      const gameDef = assertValidatedGameDefInput(gameDefInput, descriptor.sourceLabel);
+      const context = buildRefValidationContext(gameDef);
+      const errors = parsedVisualConfig === null ? [] : validateVisualConfigRefs(parsedVisualConfig, context);
+      if (errors.length > 0) {
+        const message = errors
+          .map((error) => `${error.configPath} -> "${error.referencedId}" (${error.message})`)
+          .join('\n');
+        throw new Error(`Invalid visual config references:\n${message}`);
+      }
+      return gameDef;
     },
   };
 }

@@ -1,5 +1,13 @@
 import { VisualConfigProvider } from './visual-config-provider.js';
 import { VisualConfigSchema, type VisualConfig } from './visual-config-types.js';
+export {
+  buildRefValidationContext,
+  parseVisualConfigStrict,
+  type VisualConfigRefError,
+  type VisualConfigRefValidationContext,
+  validateAndCreateProvider,
+  validateVisualConfigRefs,
+} from './validate-visual-config-refs.js';
 
 import fitlVisualConfigYaml from '../../../../data/games/fire-in-the-lake/visual-config.yaml';
 import texasVisualConfigYaml from '../../../../data/games/texas-holdem/visual-config.yaml';

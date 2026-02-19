@@ -146,4 +146,34 @@ describe('resolveBootstrapConfig', () => {
       /Invalid GameDef input from Texas Hold'em bootstrap fixture/u,
     );
   });
+
+  it('fails fast when visual config contains invalid cross-reference ids', async () => {
+    vi.doMock('../../src/bootstrap/bootstrap-registry', async () => {
+      const defaultFixture = (await import('../../src/bootstrap/default-game-def.json')).default;
+      return {
+        resolveBootstrapDescriptor: () => ({
+          id: 'default',
+          queryValue: 'default',
+          defaultSeed: 42,
+          defaultPlayerId: 0,
+          sourceLabel: 'runner bootstrap fixture',
+          resolveGameDefInput: async () => defaultFixture,
+          resolveVisualConfigYaml: () => ({
+            version: 1,
+            zones: {
+              overrides: {
+                'not-a-real-zone': { label: 'bad' },
+              },
+            },
+          }),
+        }),
+      };
+    });
+
+    const { resolveBootstrapConfig } = await importResolver();
+    const resolved = resolveBootstrapConfig('');
+    await expect(resolved.resolveGameDef()).rejects.toThrowError(
+      /Invalid visual config references/u,
+    );
+  });
 });

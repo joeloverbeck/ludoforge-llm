@@ -1,9 +1,7 @@
 import bootstrapTargets from './bootstrap-targets.json';
 import {
-  createVisualConfigProvider,
   FITL_VISUAL_CONFIG_YAML,
   TEXAS_VISUAL_CONFIG_YAML,
-  type VisualConfigProvider,
 } from '../config/index.js';
 
 export interface BootstrapTargetDefinition {
@@ -23,7 +21,7 @@ export interface BootstrapDescriptor {
   readonly defaultPlayerId: number;
   readonly sourceLabel: string;
   readonly resolveGameDefInput: () => Promise<unknown>;
-  readonly resolveVisualConfigProvider: () => VisualConfigProvider;
+  readonly resolveVisualConfigYaml: () => unknown;
 }
 
 const BOOTSTRAP_TARGET_DEFINITIONS = assertBootstrapTargetDefinitions(bootstrapTargets as unknown);
@@ -43,7 +41,7 @@ const BOOTSTRAP_REGISTRY: readonly BootstrapDescriptor[] = BOOTSTRAP_TARGET_DEFI
     defaultPlayerId: target.defaultPlayerId,
     sourceLabel: target.sourceLabel,
     resolveGameDefInput: fixtureLoader,
-    resolveVisualConfigProvider: () => createVisualConfigProvider(resolveVisualConfigYaml(target.id)),
+    resolveVisualConfigYaml: () => resolveVisualConfigYaml(target.id),
   } satisfies BootstrapDescriptor;
 });
 

@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { compileGameSpecToGameDef, loadGameSpecSource, parseGameSpec, validateGameSpec } from '../../src/cnl/index.js';
 
@@ -10,9 +12,25 @@ export interface CompiledProductionSpec {
   readonly compiled: ReturnType<typeof compileGameSpecToGameDef>;
 }
 
-const FITL_PRODUCTION_SPEC_PATH = join(process.cwd(), '..', '..', 'data', 'games', 'fire-in-the-lake');
-const TEXAS_PRODUCTION_SPEC_PATH = join(process.cwd(), '..', '..', 'data', 'games', 'texas-holdem');
-const FIXTURE_BASE_PATH = join(process.cwd(), 'test', 'fixtures', 'cnl', 'compiler');
+function resolveRepoRoot(): string {
+  const here = fileURLToPath(new URL('.', import.meta.url));
+  let cursor = here;
+
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (existsSync(join(cursor, 'pnpm-workspace.yaml'))) {
+      return cursor;
+    }
+    cursor = join(cursor, '..');
+  }
+
+  // Fallback preserves previous behavior if the workspace marker is unavailable.
+  return process.cwd();
+}
+
+const REPO_ROOT = resolveRepoRoot();
+const FITL_PRODUCTION_SPEC_PATH = join(REPO_ROOT, 'data', 'games', 'fire-in-the-lake');
+const TEXAS_PRODUCTION_SPEC_PATH = join(REPO_ROOT, 'data', 'games', 'texas-holdem');
+const FIXTURE_BASE_PATH = join(REPO_ROOT, 'packages', 'engine', 'test', 'fixtures', 'cnl', 'compiler');
 
 let cachedFitlResult: CompiledProductionSpec | null = null;
 let cachedFitlHash: string | null = null;

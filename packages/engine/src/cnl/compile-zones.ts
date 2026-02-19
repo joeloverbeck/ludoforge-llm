@@ -87,18 +87,6 @@ export function materializeZoneDefs(
       continue;
     }
 
-    const layoutRole = normalizeZoneLayoutRole(zone.layoutRole);
-    if (layoutRole === null) {
-      diagnostics.push({
-        code: 'CNL_COMPILER_ZONE_LAYOUT_ROLE_INVALID',
-        path: `${zonePath}.layoutRole`,
-        severity: 'error',
-        message: `Zone layoutRole "${String(zone.layoutRole)}" is invalid.`,
-        suggestion: 'Use layoutRole "card", "forcePool", "hand", or "other".',
-      });
-      continue;
-    }
-
     mergeZoneOwnership(ownershipMap, base, owner);
     if (owner === 'none') {
       outputZones.push(
@@ -110,10 +98,8 @@ export function materializeZoneDefs(
           ordering,
           zone.adjacentTo,
           zoneKind,
-          layoutRole,
           zone.category,
           zone.attributes,
-          zone.visual,
         ),
       );
       continue;
@@ -129,10 +115,8 @@ export function materializeZoneDefs(
           ordering,
           zone.adjacentTo,
           zoneKind,
-          layoutRole,
           zone.category,
           zone.attributes,
-          zone.visual,
         ),
       );
     }
@@ -281,16 +265,6 @@ function normalizeZoneKind(value: GameSpecZoneDef['zoneKind']): 'board' | 'aux' 
   return null;
 }
 
-function normalizeZoneLayoutRole(value: GameSpecZoneDef['layoutRole']): ZoneDef['layoutRole'] | null {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (value === 'card' || value === 'forcePool' || value === 'hand' || value === 'other') {
-    return value;
-  }
-  return null;
-}
-
 function mergeZoneOwnership(map: Map<string, ZoneOwnershipKind>, base: string, owner: 'none' | 'player'): void {
   const existing = map.get(base);
   if (existing === undefined) {
@@ -351,10 +325,8 @@ function createZoneDef(
   ordering: ZoneDef['ordering'],
   adjacentTo: GameSpecZoneDef['adjacentTo'],
   zoneKind: 'board' | 'aux',
-  layoutRole: ZoneDef['layoutRole'],
   category: GameSpecZoneDef['category'],
   attributes: GameSpecZoneDef['attributes'],
-  visual: GameSpecZoneDef['visual'],
 ): ZoneDef {
   const normalizedAdjacentTo = normalizeAdjacentTo(adjacentTo);
   return {
@@ -364,10 +336,8 @@ function createZoneDef(
     ...(ownerPlayerIndex === undefined ? {} : { ownerPlayerIndex }),
     visibility,
     ordering,
-    ...(layoutRole === undefined ? {} : { layoutRole }),
     ...(normalizedAdjacentTo === undefined ? {} : { adjacentTo: normalizedAdjacentTo }),
     ...(category === undefined ? {} : { category }),
     ...(attributes === undefined ? {} : { attributes }),
-    ...(visual === undefined ? {} : { visual }),
   };
 }

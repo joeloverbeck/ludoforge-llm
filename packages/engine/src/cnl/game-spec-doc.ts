@@ -2,28 +2,8 @@ import type {
   AttributeValue,
   ConditionAST,
   EventDeckDef,
-  TokenVisualHints,
   ValueExpr,
-  ZoneVisualHints,
 } from '../kernel/types.js';
-
-export interface GameSpecCardTokenTypeSelectors {
-  readonly ids?: readonly string[];
-  readonly idPrefixes?: readonly string[];
-}
-
-export interface GameSpecCardAnimationZoneRoles {
-  readonly draw: readonly string[];
-  readonly hand: readonly string[];
-  readonly shared: readonly string[];
-  readonly burn: readonly string[];
-  readonly discard: readonly string[];
-}
-
-export interface GameSpecCardAnimationMetadata {
-  readonly cardTokenTypes: GameSpecCardTokenTypeSelectors;
-  readonly zoneRoles: GameSpecCardAnimationZoneRoles;
-}
 
 export interface GameSpecMetadata {
   readonly id: string;
@@ -31,8 +11,6 @@ export interface GameSpecMetadata {
   readonly maxTriggerDepth?: number;
   readonly defaultScenarioAssetId?: string;
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
-  readonly cardAnimation?: GameSpecCardAnimationMetadata;
-  readonly layoutMode?: 'graph' | 'table' | 'track' | 'grid';
 }
 
 export interface GameSpecVarDef {
@@ -52,21 +30,18 @@ export interface GameSpecGlobalMarkerLatticeDef {
 export interface GameSpecZoneDef {
   readonly id: string;
   readonly zoneKind?: 'board' | 'aux';
-  readonly layoutRole?: 'card' | 'forcePool' | 'hand' | 'other';
   readonly owner: string;
   readonly visibility: string;
   readonly ordering: string;
   readonly adjacentTo?: readonly string[];
   readonly category?: string;
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
-  readonly visual?: ZoneVisualHints;
 }
 
 export interface GameSpecTokenTypeDef {
   readonly id: string;
   readonly props: Readonly<Record<string, string>>;
   readonly faction?: string;
-  readonly visual?: TokenVisualHints;
 }
 
 export interface GameSpecTurnStructure {

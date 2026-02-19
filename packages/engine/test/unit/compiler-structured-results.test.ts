@@ -222,7 +222,7 @@ describe('compiler structured section results', () => {
           id: 'pieces',
           kind: 'pieceCatalog' as const,
           payload: {
-            factions: [{ id: 'us', color: '#e63946', displayName: 'United States' }],
+            factions: [{ id: 'us' }],
             pieceTypes: [
               {
                 id: 'us-troops',
@@ -241,7 +241,7 @@ describe('compiler structured section results', () => {
     const result = compileGameSpecToGameDef(doc);
 
     assert.notEqual(result.gameDef, null);
-    assert.deepEqual(result.gameDef?.factions, [{ id: 'us', color: '#e63946', displayName: 'United States' }]);
+    assert.deepEqual(result.gameDef?.factions, [{ id: 'us' }]);
   });
 
   it('fails compile when selected piece catalog omits required factions catalog', () => {
@@ -460,7 +460,6 @@ describe('compiler structured section results', () => {
 
     const keys: ReadonlyArray<keyof CompileSectionResults> = [
       'metadata',
-      'cardAnimation',
       'constants',
       'globalVars',
       'globalMarkerLattices',
@@ -489,7 +488,6 @@ describe('compiler structured section results', () => {
   it('CompileSectionResults keys stay aligned with the structured compiler contract', () => {
     type ExpectedKeys =
       | 'metadata'
-      | 'cardAnimation'
       | 'constants'
       | 'globalVars'
       | 'globalMarkerLattices'

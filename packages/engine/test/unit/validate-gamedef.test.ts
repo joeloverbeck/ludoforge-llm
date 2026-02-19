@@ -2477,7 +2477,7 @@ describe('validateGameDef constraints and warnings', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      factions: [{ id: 'us', color: '#e63946' }],
+      factions: [{ id: 'us' }],
       tokenTypes: [{ id: 'troops', faction: 'arvn', props: { faction: 'string' } }],
     } as unknown as GameDef;
 

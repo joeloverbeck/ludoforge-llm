@@ -32,10 +32,12 @@ describe('production spec strict-binding regression', () => {
   });
 
   it('fails compile-time validation when Texas blind schedule violates declared table contracts', () => {
-    const malformedMarkdown = readTexasProductionSpec().replace(
-      '- { level: 1, sb: 15, bb: 30, ante: 0, handsUntilNext: 10 }',
-      '- { level: 2, sb: 15, bb: 30, ante: 0, handsUntilNext: 0 }',
+    const texasMarkdown = readTexasProductionSpec();
+    const malformedMarkdown = texasMarkdown.replace(
+      /(level:\s+1[\s\S]*?handsUntilNext:\s+)10/,
+      '$10',
     );
+    assert.notEqual(malformedMarkdown, texasMarkdown);
     const parsed = parseGameSpec(malformedMarkdown);
     assertNoErrors(parsed);
 

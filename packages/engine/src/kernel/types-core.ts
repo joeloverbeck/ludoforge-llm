@@ -70,52 +70,13 @@ export type VariableValue = number | boolean;
 
 export type AttributeValue = string | number | boolean | readonly string[];
 
-export type ZoneShape =
-  | 'rectangle' | 'circle' | 'hexagon' | 'diamond'
-  | 'ellipse' | 'triangle' | 'line' | 'octagon';
-
-export type TokenShape =
-  | 'circle' | 'square' | 'triangle' | 'diamond'
-  | 'hexagon' | 'cylinder' | 'meeple' | 'card';
-
-export interface ZoneVisualHints {
-  readonly shape?: ZoneShape;
-  readonly width?: number;
-  readonly height?: number;
-  readonly color?: string;
-  readonly label?: string;
-}
-
-export interface TokenVisualHints {
-  readonly shape?: TokenShape;
-  readonly color?: string;
-  readonly size?: number;
-  readonly symbol?: string;
-}
-
-export type CardAnimationZoneRole = 'draw' | 'hand' | 'shared' | 'burn' | 'discard';
-
-export interface CardAnimationMetadata {
-  readonly cardTokenTypeIds: readonly string[];
-  readonly zoneRoles: {
-    readonly draw: readonly ZoneId[];
-    readonly hand: readonly ZoneId[];
-    readonly shared: readonly ZoneId[];
-    readonly burn: readonly ZoneId[];
-    readonly discard: readonly ZoneId[];
-  };
-}
-
 export interface FactionDef {
   readonly id: string;
-  readonly color: string;
-  readonly displayName?: string;
 }
 
 export interface ZoneDef {
   readonly id: ZoneId;
   readonly zoneKind?: 'board' | 'aux';
-  readonly layoutRole?: 'card' | 'forcePool' | 'hand' | 'other';
   readonly ownerPlayerIndex?: number;
   readonly owner: 'none' | 'player';
   readonly visibility: 'public' | 'owner' | 'hidden';
@@ -123,7 +84,6 @@ export interface ZoneDef {
   readonly adjacentTo?: readonly ZoneId[];
   readonly category?: string;
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
-  readonly visual?: ZoneVisualHints;
 }
 
 export interface TokenTypeTransition {
@@ -137,7 +97,6 @@ export interface TokenTypeDef {
   readonly faction?: string;
   readonly props: Readonly<Record<string, 'int' | 'string' | 'boolean'>>;
   readonly transitions?: readonly TokenTypeTransition[];
-  readonly visual?: TokenVisualHints;
 }
 
 export interface Token {
@@ -254,7 +213,6 @@ export interface GameDef {
     readonly id: string;
     readonly players: { readonly min: number; readonly max: number };
     readonly maxTriggerDepth?: number;
-    readonly layoutMode?: 'graph' | 'table' | 'track' | 'grid';
   };
   readonly constants: Readonly<Record<string, number>>;
   readonly globalVars: readonly VariableDef[];
@@ -278,7 +236,6 @@ export interface GameDef {
   readonly globalMarkerLattices?: readonly GlobalMarkerLatticeDef[];
   readonly runtimeDataAssets?: readonly RuntimeDataAsset[];
   readonly tableContracts?: readonly RuntimeTableContract[];
-  readonly cardAnimation?: CardAnimationMetadata;
 }
 
 export const KNOWN_DATA_ASSET_KINDS = ['map', 'scenario', 'pieceCatalog'] as const;
@@ -295,19 +252,12 @@ export interface PieceStatusTransition {
   readonly to: PieceStatusValue;
 }
 
-export interface PieceVisualMetadata {
-  readonly color: string;
-  readonly shape: string;
-  readonly activeSymbol?: string;
-}
-
 export interface PieceTypeCatalogEntry {
   readonly id: string;
   readonly faction: string;
   readonly statusDimensions: readonly PieceStatusDimension[];
   readonly transitions: readonly PieceStatusTransition[];
   readonly runtimeProps?: Readonly<Record<string, string | number | boolean>>;
-  readonly visual?: PieceVisualMetadata;
 }
 
 export interface PieceInventoryEntry {
@@ -384,24 +334,10 @@ export interface MapSpaceInput {
   readonly category?: string;
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
   readonly adjacentTo: readonly string[];
-  readonly visual?: ZoneVisualHints;
-}
-
-export interface MapVisualRuleMatch {
-  readonly spaceIds?: readonly string[];
-  readonly category?: readonly string[];
-  readonly attributeEquals?: Readonly<Record<string, AttributeValue>>;
-  readonly attributeContains?: Readonly<Record<string, string>>;
-}
-
-export interface MapVisualRule {
-  readonly match?: MapVisualRuleMatch;
-  readonly visual: ZoneVisualHints;
 }
 
 export interface MapPayload {
   readonly spaces: readonly MapSpaceInput[];
-  readonly visualRules?: readonly MapVisualRule[];
   readonly provisionalAdjacency?: readonly ProvisionalAdjacencyDef[];
   readonly tracks?: readonly NumericTrackDef[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];

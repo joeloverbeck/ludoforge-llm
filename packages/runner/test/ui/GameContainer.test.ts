@@ -7,6 +7,7 @@ import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 import type { GameStore } from '../../src/store/game-store.js';
 import { GameContainer, resolveTooltipAnchorState } from '../../src/ui/GameContainer.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
+import { computeDefaultFactionColor } from '../../src/config/visual-config-defaults.js';
 
 interface CapturedErrorStateProps {
   readonly error: { readonly message: string };
@@ -355,7 +356,7 @@ describe('GameContainer', () => {
     ]);
   });
 
-  it('exposes faction CSS variables from gameDef factions on container root', () => {
+  it('exposes faction CSS variables for gameDef faction ids on container root', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
         store: createContainerStore({
@@ -363,8 +364,8 @@ describe('GameContainer', () => {
           error: null,
           gameDef: {
             factions: [
-              { id: 'us', color: '#e63946', displayName: 'United States' },
-              { id: 'nva force', color: '#2a9d8f', displayName: 'NVA' },
+              { id: 'us' },
+              { id: 'nva force' },
             ],
           } as unknown as GameStore['gameDef'],
         }),
@@ -372,8 +373,8 @@ describe('GameContainer', () => {
       }),
     );
 
-    expect(html).toContain('--faction-us:#e63946');
-    expect(html).toContain('--faction-nva-force:#2a9d8f');
+    expect(html).toContain(`--faction-us:${computeDefaultFactionColor('us')}`);
+    expect(html).toContain(`--faction-nva-force:${computeDefaultFactionColor('nva force')}`);
   });
 
   it('renders actions mode branch only', () => {

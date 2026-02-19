@@ -38,9 +38,6 @@ import {
   SpaceMarkerLatticeSchema,
   SpaceMarkerValueSchema,
   StackingConstraintSchema,
-  CardAnimationMetadataSchema,
-  TokenVisualHintsSchema,
-  ZoneVisualHintsSchema,
 } from './schemas-gamespec.js';
 
 export const IntVariableDefSchema = z
@@ -67,7 +64,6 @@ export const ZoneDefSchema = z
   .object({
     id: StringSchema,
     zoneKind: z.union([z.literal('board'), z.literal('aux')]).optional(),
-    layoutRole: z.union([z.literal('card'), z.literal('forcePool'), z.literal('hand'), z.literal('other')]).optional(),
     ownerPlayerIndex: IntegerSchema.nonnegative().optional(),
     owner: z.union([z.literal('none'), z.literal('player')]),
     visibility: z.union([z.literal('public'), z.literal('owner'), z.literal('hidden')]),
@@ -75,7 +71,6 @@ export const ZoneDefSchema = z
     adjacentTo: z.array(StringSchema).optional(),
     category: StringSchema.optional(),
     attributes: z.record(StringSchema, AttributeValueSchema).optional(),
-    visual: ZoneVisualHintsSchema.optional(),
   })
   .strict();
 
@@ -93,7 +88,6 @@ export const TokenTypeDefSchema = z
     faction: StringSchema.optional(),
     props: z.record(StringSchema, z.union([z.literal('int'), z.literal('string'), z.literal('boolean')])),
     transitions: z.array(TokenTypeTransitionSchema).optional(),
-    visual: TokenVisualHintsSchema.optional(),
   })
   .strict();
 
@@ -309,7 +303,6 @@ export const GameDefSchema = z
         id: StringSchema,
         players: z.object({ min: NumberSchema, max: NumberSchema }).strict(),
         maxTriggerDepth: NumberSchema.optional(),
-        layoutMode: z.union([z.literal('graph'), z.literal('table'), z.literal('track'), z.literal('grid')]).optional(),
       })
       .strict(),
     constants: z.record(StringSchema, NumberSchema),
@@ -334,7 +327,6 @@ export const GameDefSchema = z
     globalMarkerLattices: z.array(GlobalMarkerLatticeSchema).optional(),
     runtimeDataAssets: z.array(RuntimeDataAssetSchema).optional(),
     tableContracts: z.array(RuntimeTableContractSchema).optional(),
-    cardAnimation: CardAnimationMetadataSchema.optional(),
   })
   .strict();
 

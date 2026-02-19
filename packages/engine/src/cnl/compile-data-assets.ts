@@ -1,12 +1,10 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
-import { mapVisualRuleMatchApplies } from '../kernel/map-model.js';
 import { RuntimeTableConstraintSchema } from '../kernel/schemas-core.js';
 import type {
   EffectAST,
   FactionDef,
   MapPayload,
-  MapSpaceInput,
   NumericTrackDef,
   PieceCatalogPayload,
   PieceStatusDimension,
@@ -16,8 +14,6 @@ import type {
   SpaceMarkerLatticeDef,
   SpaceMarkerValueDef,
   StackingConstraint,
-  TokenVisualHints,
-  ZoneVisualHints,
 } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord, normalizeIdentifier } from './compile-lowering.js';
@@ -77,7 +73,6 @@ export function deriveSectionsFromDataAssets(
     readonly pieceCatalog: boolean;
   };
   readonly tokenTraitVocabulary: Readonly<Record<string, readonly string[]>> | null;
-  readonly tokenTypeVisuals: ReadonlyMap<string, TokenVisualHints> | null;
 } {
   if (doc.dataAssets === null) {
     return {
@@ -97,7 +92,6 @@ export function deriveSectionsFromDataAssets(
         pieceCatalog: false,
       },
       tokenTraitVocabulary: null,
-      tokenTypeVisuals: null,
     };
   }
 
@@ -231,7 +225,7 @@ export function deriveSectionsFromDataAssets(
   const zones =
     selectedMap === undefined
       ? null
-      : resolveMapSpaceVisuals(selectedMap.payload).map((space) => ({
+      : selectedMap.payload.spaces.map((space) => ({
           id: space.id,
           zoneKind: 'board' as const,
           owner: 'none',
@@ -240,7 +234,6 @@ export function deriveSectionsFromDataAssets(
           adjacentTo: [...space.adjacentTo].sort((left, right) => left.localeCompare(right)),
           ...(space.category === undefined ? {} : { category: space.category }),
           ...(space.attributes === undefined ? {} : { attributes: space.attributes }),
-          ...(space.visual === undefined ? {} : { visual: space.visual }),
         }));
 
   const tokenTypes =
@@ -259,20 +252,7 @@ export function deriveSectionsFromDataAssets(
               ),
             }),
           ),
-          ...(pieceType.visual === undefined
-            ? {}
-            : {
-                visual: {
-                  ...(pieceType.visual.color === undefined ? {} : { color: pieceType.visual.color }),
-                  ...(pieceType.visual.activeSymbol === undefined ? {} : { symbol: pieceType.visual.activeSymbol }),
-                } satisfies TokenVisualHints,
-              }),
         }));
-
-  const tokenTypeVisuals: ReadonlyMap<string, TokenVisualHints> | null =
-    selectedPieceCatalog === undefined
-      ? null
-      : buildTokenTypeVisualsMap(selectedPieceCatalog.payload.pieceTypes);
 
   const scenarioSetupEffects = buildScenarioSetupEffects({
     selectedScenario,
@@ -301,7 +281,6 @@ export function deriveSectionsFromDataAssets(
       selectedPieceCatalog === undefined
         ? null
         : deriveTokenTraitVocabularyFromPieceCatalogPayload(selectedPieceCatalog.payload),
-    tokenTypeVisuals,
   };
 }
 
@@ -383,72 +362,6 @@ const inferRuntimePropSchema = (
       typeof value === 'number' ? 'int' : typeof value === 'boolean' ? 'boolean' : 'string',
     ]),
   );
-
-function resolveMapSpaceVisuals(payload: MapPayload): readonly MapSpaceInput[] {
-  if ((payload.visualRules ?? []).length === 0) {
-    return payload.spaces;
-  }
-
-  return payload.spaces.map((space) => {
-    let mergedVisual: ZoneVisualHints | undefined;
-    for (const rule of payload.visualRules ?? []) {
-      if (!mapVisualRuleMatchApplies(rule.match, space)) {
-        continue;
-      }
-      mergedVisual = mergeZoneVisualHints(mergedVisual, rule.visual);
-    }
-    mergedVisual = mergeZoneVisualHints(mergedVisual, space.visual);
-
-    if (mergedVisual === undefined) {
-      return space;
-    }
-
-    return {
-      ...space,
-      visual: mergedVisual,
-    };
-  });
-}
-
-function mergeZoneVisualHints(
-  base: ZoneVisualHints | undefined,
-  next: ZoneVisualHints | undefined,
-): ZoneVisualHints | undefined {
-  if (next === undefined) {
-    return base;
-  }
-
-  const merged: ZoneVisualHints = {
-    ...(base ?? {}),
-    ...next,
-  };
-
-  if (
-    merged.shape === undefined
-    && merged.width === undefined
-    && merged.height === undefined
-    && merged.color === undefined
-    && merged.label === undefined
-  ) {
-    return undefined;
-  }
-  return merged;
-}
-
-function buildTokenTypeVisualsMap(
-  pieceTypes: PieceCatalogPayload['pieceTypes'],
-): ReadonlyMap<string, TokenVisualHints> | null {
-  const map = new Map<string, TokenVisualHints>();
-  for (const pieceType of pieceTypes) {
-    if (pieceType.visual !== undefined) {
-      map.set(pieceType.id, {
-        ...(pieceType.visual.color === undefined ? {} : { color: pieceType.visual.color }),
-        ...(pieceType.visual.activeSymbol === undefined ? {} : { symbol: pieceType.visual.activeSymbol }),
-      });
-    }
-  }
-  return map.size === 0 ? null : map;
-}
 
 interface ScenarioSetupContext {
   readonly selectedScenario:

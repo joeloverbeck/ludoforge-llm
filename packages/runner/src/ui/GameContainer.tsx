@@ -130,7 +130,10 @@ export function GameContainer({ store, visualConfigProvider }: GameContainerProp
   }
 
   const bottomBarState = deriveBottomBarState(renderModel);
-  const factionCssVariableStyle = buildFactionCssVariableStyle(gameDefFactions);
+  const factionCssVariableStyle = buildFactionCssVariableStyle(
+    gameDefFactions?.map((faction) => faction.id),
+    (factionId) => visualConfigProvider.getFactionColor(factionId),
+  );
   const tooltipAnchorState = resolveTooltipAnchorState(hoverAnchor);
 
   const bottomBarContent = (() => {

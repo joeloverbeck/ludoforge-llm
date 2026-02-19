@@ -2,16 +2,11 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { compileGameSpecToGameDef, loadGameSpecSource, parseGameSpec } from '@ludoforge/engine/cnl';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 import { VisualConfigSchema } from '../../src/config/visual-config-types';
-
-interface BootstrapZone {
-  readonly id: string;
-  readonly zoneKind?: 'board' | 'aux';
-  readonly layoutRole?: 'card' | 'forcePool' | 'hand' | 'other';
-}
 
 function repoRootPath(): string {
   const testDir = dirname(fileURLToPath(import.meta.url));
@@ -26,8 +21,12 @@ function readYaml(pathFromRepoRoot: string): unknown {
   return parse(readText(pathFromRepoRoot));
 }
 
-function readJson<T>(pathFromRepoRoot: string): T {
-  return JSON.parse(readText(pathFromRepoRoot)) as T;
+function compileProductionGameDef(pathFromRepoRoot: string) {
+  const markdown = loadGameSpecSource(resolve(repoRootPath(), pathFromRepoRoot)).markdown;
+  const parsed = parseGameSpec(markdown);
+  const compiled = compileGameSpecToGameDef(parsed.doc, { sourceMap: parsed.sourceMap });
+  expect(compiled.gameDef).not.toBeNull();
+  return compiled.gameDef!;
 }
 
 describe('visual-config.yaml files', () => {
@@ -42,16 +41,12 @@ describe('visual-config.yaml files', () => {
 
   it('FITL visual-config uses canonical runtime ids and expected visual rule chain', () => {
     const parsed = VisualConfigSchema.parse(readYaml('data/games/fire-in-the-lake/visual-config.yaml'));
-    const fitlBootstrap = readJson<{ readonly zones: readonly BootstrapZone[] }>(
-      'packages/runner/src/bootstrap/fitl-game-def.json',
-    );
+    const fitlGameDef = compileProductionGameDef('data/games/fire-in-the-lake');
 
     const boardZoneIds = new Set(
-      fitlBootstrap.zones.filter((zone) => zone.zoneKind === 'board').map((zone) => zone.id),
+      fitlGameDef.zones.filter((zone) => zone.zoneKind === 'board').map((zone) => zone.id as string),
     );
-    const roleZoneMap = new Map(
-      fitlBootstrap.zones.filter((zone) => zone.layoutRole !== undefined).map((zone) => [zone.id, zone.layoutRole]),
-    );
+    const allZoneIds = new Set(fitlGameDef.zones.map((zone) => zone.id as string));
 
     const overrideKeys = Object.keys(parsed.zones?.overrides ?? {});
     expect(overrideKeys.length).toBe(47);
@@ -61,7 +56,8 @@ describe('visual-config.yaml files', () => {
 
     const layoutRoles = parsed.zones?.layoutRoles ?? {};
     for (const [zoneId, role] of Object.entries(layoutRoles)) {
-      expect(roleZoneMap.get(zoneId)).toBe(role);
+      expect(allZoneIds.has(zoneId)).toBe(true);
+      expect(['card', 'forcePool', 'hand', 'other']).toContain(role);
     }
 
     const attributeRules = parsed.zones?.attributeRules ?? [];
@@ -95,13 +91,8 @@ describe('visual-config.yaml files', () => {
     expect(raw.trimStart().startsWith('version: 1')).toBe(true);
 
     const parsed = VisualConfigSchema.parse(readYaml('data/games/texas-holdem/visual-config.yaml'));
-    const texasBootstrap = readJson<{ readonly zones: readonly BootstrapZone[] }>(
-      'packages/runner/src/bootstrap/texas-game-def.json',
-    );
-
-    const bootstrapRoles = new Map(
-      texasBootstrap.zones.filter((zone) => zone.layoutRole !== undefined).map((zone) => [zone.id, zone.layoutRole]),
-    );
+    const texasGameDef = compileProductionGameDef('data/games/texas-holdem');
+    const texasZoneIds = new Set(texasGameDef.zones.map((zone) => zone.id as string));
 
     expect(parsed.layout?.mode).toBe('table');
     expect(parsed.cardAnimation?.cardTokenTypes.idPrefixes).toEqual(['card-']);
@@ -114,9 +105,9 @@ describe('visual-config.yaml files', () => {
     });
 
     const layoutRoles = parsed.zones?.layoutRoles ?? {};
-    expect(Object.keys(layoutRoles).sort()).toEqual([...bootstrapRoles.keys()].sort());
     for (const [zoneId, role] of Object.entries(layoutRoles)) {
-      expect(bootstrapRoles.get(zoneId)).toBe(role);
+      expect(texasZoneIds.has(zoneId)).toBe(true);
+      expect(['card', 'forcePool', 'hand', 'other']).toContain(role);
     }
   });
 });

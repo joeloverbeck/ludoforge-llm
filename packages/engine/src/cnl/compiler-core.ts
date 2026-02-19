@@ -11,7 +11,6 @@ import { expandEffectMacros } from './expand-effect-macros.js';
 import { expandConditionMacros } from './expand-condition-macros.js';
 import {
   lowerActions,
-  lowerCardAnimationMetadata,
   lowerConstants,
   lowerDerivedMetrics,
   lowerEndConditions,
@@ -45,7 +44,6 @@ export interface CompileOptions {
 
 export interface CompileSectionResults {
   readonly metadata: GameDef['metadata'] | null;
-  readonly cardAnimation: Exclude<GameDef['cardAnimation'], undefined> | null;
   readonly constants: GameDef['constants'] | null;
   readonly globalVars: GameDef['globalVars'] | null;
   readonly globalMarkerLattices: Exclude<GameDef['globalMarkerLattices'], undefined> | null;
@@ -195,7 +193,6 @@ function compileExpandedDoc(
   const effectiveTokenTypes = resolvedTableRefDoc.tokenTypes ?? derivedFromAssets.tokenTypes;
   const sections: MutableCompileSectionResults = {
     metadata: null,
-    cardAnimation: null,
     constants: null,
     globalVars: null,
     globalMarkerLattices: null,
@@ -221,7 +218,6 @@ function compileExpandedDoc(
           id: metadata.id,
           players: metadata.players,
           ...(metadata.maxTriggerDepth === undefined ? {} : { maxTriggerDepth: metadata.maxTriggerDepth }),
-          ...(metadata.layoutMode === undefined ? {} : { layoutMode: metadata.layoutMode }),
         };
   if (metadata === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.metadata', 'metadata'));
@@ -285,17 +281,6 @@ function compileExpandedDoc(
     tokenTypes = compileSection(diagnostics, () => lowerTokenTypes(effectiveTokenTypes, diagnostics));
     sections.tokenTypes = tokenTypes.failed ? null : tokenTypes.value;
   }
-
-  const cardAnimation = compileSection(diagnostics, () =>
-    lowerCardAnimationMetadata(
-      metadata,
-      ownershipByBase,
-      zones ?? [],
-      tokenTypes.value,
-      diagnostics,
-    ),
-  );
-  sections.cardAnimation = cardAnimation.failed ? null : cardAnimation.value ?? null;
 
   const setup = compileSection(diagnostics, () =>
     lowerEffectsWithDiagnostics(
@@ -460,7 +445,6 @@ function compileExpandedDoc(
     ...(sections.globalMarkerLattices === null ? {} : { globalMarkerLattices: sections.globalMarkerLattices }),
     ...(derivedFromAssets.runtimeDataAssets.length === 0 ? {} : { runtimeDataAssets: derivedFromAssets.runtimeDataAssets }),
     ...(derivedFromAssets.tableContracts.length === 0 ? {} : { tableContracts: derivedFromAssets.tableContracts }),
-    ...(cardAnimation.value === undefined ? {} : { cardAnimation: cardAnimation.value }),
     tokenTypes: tokenTypes.value,
     setup: mergedSetup,
     turnStructure,

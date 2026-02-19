@@ -43,7 +43,6 @@ function mapSpaceInputToZoneDef(space: MapSpaceInput): ZoneDef {
     adjacentTo: [...space.adjacentTo].sort((left, right) => left.localeCompare(right)).map(asZoneId),
     ...(space.category === undefined ? {} : { category: space.category }),
     ...(space.attributes === undefined ? {} : { attributes: space.attributes }),
-    ...(space.visual === undefined ? {} : { visual: space.visual }),
   };
 }
 

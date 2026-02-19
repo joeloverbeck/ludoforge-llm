@@ -205,31 +205,6 @@ describe('top-level runtime schemas', () => {
     assert.equal(result.success, true);
   });
 
-  it('parses map visualRules for category and attributeContains matching', () => {
-    const result = MapPayloadSchema.safeParse({
-      spaces: [
-        {
-          id: 'hue:none',
-          category: 'city',
-          attributes: { terrainTags: ['urban'] },
-          adjacentTo: [],
-        },
-      ],
-      visualRules: [
-        {
-          match: { category: ['city'] },
-          visual: { shape: 'circle', width: 90, height: 90, color: '#5b7fa5' },
-        },
-        {
-          match: { attributeContains: { terrainTags: 'urban' } },
-          visual: { color: '#4a7a8c' },
-        },
-      ],
-    });
-
-    assert.equal(result.success, true);
-  });
-
   it('rejects malformed map tracks without explicit bounds', () => {
     const result = MapPayloadSchema.safeParse({
       spaces: [],
@@ -245,7 +220,7 @@ describe('top-level runtime schemas', () => {
       id: 'fitl-piece-catalog',
       kind: 'pieceCatalog',
       payload: {
-        factions: [{ id: 'vc', color: '#e9c46a' }],
+        factions: [{ id: 'vc' }],
         pieceTypes: [],
         inventory: [],
       },
@@ -347,7 +322,7 @@ describe('top-level runtime schemas', () => {
 
   it('parses valid piece-catalog payload contracts', () => {
     const result = PieceCatalogPayloadSchema.safeParse({
-      factions: [{ id: 'vc', color: '#e9c46a' }],
+      factions: [{ id: 'vc' }],
       pieceTypes: [
         {
           id: 'vc-guerrilla',

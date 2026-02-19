@@ -449,8 +449,8 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     const def: GameDef = {
       ...baseDef,
       factions: [
-        { id: 'us', displayName: 'United States', color: '#e63946' },
-        { id: 'arvn', displayName: 'ARVN', color: '#457b9d' },
+        { id: 'us' },
+        { id: 'arvn' },
       ],
       tokenTypes: [
         { id: 'us-troops', faction: 'us', props: { faction: 'string' } },

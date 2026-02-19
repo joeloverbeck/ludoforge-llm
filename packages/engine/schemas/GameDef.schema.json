@@ -26,26 +26,6 @@
         },
         "maxTriggerDepth": {
           "type": "number"
-        },
-        "layoutMode": {
-          "anyOf": [
-            {
-              "type": "string",
-              "const": "graph"
-            },
-            {
-              "type": "string",
-              "const": "table"
-            },
-            {
-              "type": "string",
-              "const": "track"
-            },
-            {
-              "type": "string",
-              "const": "grid"
-            }
-          ]
         }
       },
       "required": [
@@ -197,26 +177,6 @@
               }
             ]
           },
-          "layoutRole": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "card"
-              },
-              {
-                "type": "string",
-                "const": "forcePool"
-              },
-              {
-                "type": "string",
-                "const": "hand"
-              },
-              {
-                "type": "string",
-                "const": "other"
-              }
-            ]
-          },
           "ownerPlayerIndex": {
             "type": "integer",
             "minimum": 0,
@@ -299,60 +259,6 @@
                 }
               ]
             }
-          },
-          "visual": {
-            "type": "object",
-            "properties": {
-              "shape": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "const": "rectangle"
-                  },
-                  {
-                    "type": "string",
-                    "const": "circle"
-                  },
-                  {
-                    "type": "string",
-                    "const": "hexagon"
-                  },
-                  {
-                    "type": "string",
-                    "const": "diamond"
-                  },
-                  {
-                    "type": "string",
-                    "const": "ellipse"
-                  },
-                  {
-                    "type": "string",
-                    "const": "triangle"
-                  },
-                  {
-                    "type": "string",
-                    "const": "line"
-                  },
-                  {
-                    "type": "string",
-                    "const": "octagon"
-                  }
-                ]
-              },
-              "width": {
-                "type": "number"
-              },
-              "height": {
-                "type": "number"
-              },
-              "color": {
-                "type": "string"
-              },
-              "label": {
-                "type": "string"
-              }
-            },
-            "additionalProperties": false
           }
         },
         "required": [
@@ -372,18 +278,10 @@
           "id": {
             "type": "string",
             "minLength": 1
-          },
-          "color": {
-            "type": "string",
-            "minLength": 1
-          },
-          "displayName": {
-            "type": "string"
           }
         },
         "required": [
-          "id",
-          "color"
+          "id"
         ],
         "additionalProperties": false
       }
@@ -520,57 +418,6 @@
               ],
               "additionalProperties": false
             }
-          },
-          "visual": {
-            "type": "object",
-            "properties": {
-              "shape": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "const": "circle"
-                  },
-                  {
-                    "type": "string",
-                    "const": "square"
-                  },
-                  {
-                    "type": "string",
-                    "const": "triangle"
-                  },
-                  {
-                    "type": "string",
-                    "const": "diamond"
-                  },
-                  {
-                    "type": "string",
-                    "const": "hexagon"
-                  },
-                  {
-                    "type": "string",
-                    "const": "cylinder"
-                  },
-                  {
-                    "type": "string",
-                    "const": "meeple"
-                  },
-                  {
-                    "type": "string",
-                    "const": "card"
-                  }
-                ]
-              },
-              "color": {
-                "type": "string"
-              },
-              "size": {
-                "type": "number"
-              },
-              "symbol": {
-                "type": "string"
-              }
-            },
-            "additionalProperties": false
           }
         },
         "required": [
@@ -3825,77 +3672,6 @@
         ],
         "additionalProperties": false
       }
-    },
-    "cardAnimation": {
-      "type": "object",
-      "properties": {
-        "cardTokenTypeIds": {
-          "minItems": 1,
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "zoneRoles": {
-          "type": "object",
-          "properties": {
-            "draw": {
-              "minItems": 1,
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "hand": {
-              "minItems": 1,
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "shared": {
-              "minItems": 1,
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "burn": {
-              "minItems": 1,
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "discard": {
-              "minItems": 1,
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            }
-          },
-          "required": [
-            "draw",
-            "hand",
-            "shared",
-            "burn",
-            "discard"
-          ],
-          "additionalProperties": false
-        }
-      },
-      "required": [
-        "cardTokenTypeIds",
-        "zoneRoles"
-      ],
-      "additionalProperties": false
     }
   },
   "required": [

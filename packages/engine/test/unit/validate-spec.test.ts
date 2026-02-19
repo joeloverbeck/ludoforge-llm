@@ -67,7 +67,7 @@ describe('validateGameSpec structural rules', () => {
         {
           id: 'fitl-pieces-foundation',
           kind: 'pieceCatalog',
-          payload: { factions: [{ id: 'us', color: '#e63946' }], pieceTypes: [], inventory: [] },
+          payload: { factions: [{ id: 'us' }], pieceTypes: [], inventory: [] },
         },
         {
           id: 'fitl-scenario-foundation',
@@ -283,6 +283,52 @@ describe('validateGameSpec structural rules', () => {
       'doc.zones.0.owner',
       'doc.zones.0.visibility',
     ]);
+  });
+
+  it('rejects removed metadata visual keys as errors', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        players: { min: 2, max: 4 },
+        layoutMode: 'graph',
+        cardAnimation: { cardTokenTypes: { idPrefixes: ['card-'] }, zoneRoles: { draw: ['deck'] } },
+      } as unknown as Parameters<typeof validateGameSpec>[0]['metadata'],
+    });
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_LAYOUT_MODE_REMOVED'),
+      true,
+    );
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_CARD_ANIMATION_REMOVED'),
+      true,
+    );
+  });
+
+  it('rejects removed zone visual keys as errors', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      zones: [
+        {
+          id: 'deck',
+          owner: 'none',
+          visibility: 'hidden',
+          ordering: 'stack',
+          layoutRole: 'card',
+          visual: { shape: 'rectangle' },
+        },
+      ] as unknown as Parameters<typeof validateGameSpec>[0]['zones'],
+    });
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_ZONE_LAYOUT_ROLE_REMOVED'),
+      true,
+    );
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_ZONE_VISUAL_REMOVED'),
+      true,
+    );
   });
 
   it('validates action required fields and shape constraints', () => {

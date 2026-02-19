@@ -40,37 +40,6 @@ describe('materializeZoneDefs', () => {
     assert.equal(result.value.ownershipByBase.market, 'none');
   });
 
-  it('preserves explicit zone layoutRole in emitted ZoneDef records', () => {
-    const result = materializeZoneDefs(
-      [
-        { id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack', layoutRole: 'card' },
-        { id: 'pool', owner: 'none', visibility: 'public', ordering: 'set', layoutRole: 'forcePool' },
-      ],
-      2,
-    );
-
-    assertNoDiagnostics(result);
-    assert.equal(result.value.zones[0]?.layoutRole, 'card');
-    assert.equal(result.value.zones[1]?.layoutRole, 'forcePool');
-  });
-
-  it('rejects invalid layoutRole values', () => {
-    const result = materializeZoneDefs(
-      [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack', layoutRole: 'invalid-role' as unknown as 'card' }],
-      2,
-    );
-
-    assert.equal(result.value.zones.length, 0);
-    assert.deepEqual(result.diagnostics, [
-      {
-        code: 'CNL_COMPILER_ZONE_LAYOUT_ROLE_INVALID',
-        path: 'doc.zones.0.layoutRole',
-        severity: 'error',
-        message: 'Zone layoutRole "invalid-role" is invalid.',
-        suggestion: 'Use layoutRole "card", "forcePool", "hand", or "other".',
-      },
-    ]);
-  });
 });
 
 describe('canonicalizeZoneSelector', () => {

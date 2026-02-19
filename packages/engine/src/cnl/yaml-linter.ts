@@ -38,7 +38,7 @@ const CANONICAL_SECTION_KEYS = new Set<string>([
 const BOOLEAN_LIKE = new Set(['yes', 'no', 'true', 'false', 'on', 'off']);
 const SPECIAL_CHARS_PATTERN = /[#{}\[\]&*]/;
 const NUMERIC_LITERAL_PATTERN = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
-const STRING_EXPECTED_KEYS = new Set(['id', 'name', 'type', 'owner', 'visibility', 'ordering', 'layoutRole', 'phase']);
+const STRING_EXPECTED_KEYS = new Set(['id', 'name', 'type', 'owner', 'visibility', 'ordering', 'phase']);
 
 export function lintYamlHardening(
   rawYaml: string,

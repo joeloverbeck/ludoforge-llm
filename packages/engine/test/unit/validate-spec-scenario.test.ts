@@ -57,8 +57,8 @@ function createMapPayload() {
 function createPieceCatalogPayload() {
   return {
     factions: [
-      { id: 'us', color: '#e63946' },
-      { id: 'nva', color: '#2a9d8f' },
+      { id: 'us' },
+      { id: 'nva' },
     ],
     pieceTypes: [
       {

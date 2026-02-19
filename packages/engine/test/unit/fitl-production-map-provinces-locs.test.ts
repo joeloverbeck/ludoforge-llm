@@ -3,18 +3,11 @@ import { describe, it } from 'node:test';
 
 import { parseGameSpec } from '../../src/cnl/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { compileProductionSpec, readProductionSpec } from '../helpers/production-spec-helpers.js';
+import { readProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type MapSpace = {
   readonly id: string;
   readonly category: string;
-  readonly visual?: {
-    readonly shape?: string;
-    readonly width?: number;
-    readonly height?: number;
-    readonly color?: string;
-    readonly label?: string;
-  };
   readonly attributes: {
     readonly population: number;
     readonly econ: number;
@@ -38,26 +31,6 @@ const readMapSpaces = (): MapSpace[] => {
   const payload = mapAsset.payload as { readonly spaces?: readonly MapSpace[] };
   assert.ok(Array.isArray(payload.spaces));
   return [...payload.spaces];
-};
-
-type CompiledZone = {
-  readonly id: string;
-  readonly category?: string;
-  readonly visual?: {
-    readonly shape?: string;
-    readonly width?: number;
-    readonly height?: number;
-    readonly color?: string;
-    readonly label?: string;
-  };
-};
-
-const readCompiledZones = (): readonly CompiledZone[] => {
-  const { compiled } = compileProductionSpec();
-  if (compiled.gameDef === null) {
-    throw new Error('Expected production FITL spec to compile successfully');
-  }
-  return compiled.gameDef.zones;
 };
 
 describe('FITL production map provinces and LoCs', () => {
@@ -191,51 +164,4 @@ describe('FITL production map provinces and LoCs', () => {
     assert.equal(locs.every((loc) => loc.attributes.country === 'southVietnam'), true);
   });
 
-  it('encodes visual shapes, dimensions, labels, and terrain-based colors for provinces and LoCs', () => {
-    const spaces = readCompiledZones();
-    const sourceSpacesById = new Map(readMapSpaces().map((space) => [space.id, space] as const));
-    const provinces = spaces.filter((space) => space.category === 'province');
-    const locs = spaces.filter((space) => space.category === 'loc');
-
-    assert.equal(provinces.every((province) => province.visual?.shape === 'rectangle'), true);
-    assert.equal(provinces.every((province) => province.visual?.width === 160), true);
-    assert.equal(provinces.every((province) => province.visual?.height === 100), true);
-    assert.equal(locs.every((loc) => loc.visual?.shape === 'line'), true);
-    assert.equal(locs.every((loc) => loc.visual?.width === 120), true);
-    assert.equal(locs.every((loc) => loc.visual?.height === 36), true);
-    assert.equal(
-      [...provinces, ...locs].every(
-        (space) => typeof space.visual?.label === 'string' && space.visual.label.trim().length > 0,
-      ),
-      true,
-    );
-
-    const provinceColorByTerrain = new Map<string, string>([
-      ['highland', '#6b5b3e'],
-      ['jungle', '#3d5c3a'],
-      ['lowland', '#5a7a52'],
-    ]);
-    for (const province of provinces) {
-      const sourceSpace = sourceSpacesById.get(province.id);
-      if (sourceSpace === undefined) {
-        throw new Error(`Expected source map space for ${province.id}`);
-      }
-      const terrain = sourceSpace.attributes.terrainTags[0];
-      if (terrain === undefined) {
-        throw new Error(`Expected province ${province.id} to have a terrain tag.`);
-      }
-      assert.equal(province.visual?.color, provinceColorByTerrain.get(terrain), `Unexpected province color for ${province.id}`);
-    }
-
-    const mekongLocs = new Set([
-      'loc-saigon-can-tho:none',
-      'loc-can-tho-chau-doc:none',
-      'loc-can-tho-bac-lieu:none',
-      'loc-can-tho-long-phu:none',
-    ]);
-    for (const loc of locs) {
-      const expectedColor = mekongLocs.has(loc.id) ? '#4a7a8c' : '#8b7355';
-      assert.equal(loc.visual?.color, expectedColor);
-    }
-  });
 });

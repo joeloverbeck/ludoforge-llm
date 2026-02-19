@@ -8,11 +8,6 @@ import { readProductionSpec } from '../helpers/production-spec-helpers.js';
 interface PieceTypeLike {
   readonly id: string;
   readonly faction: string;
-  readonly visual?: {
-    readonly color?: string;
-    readonly shape?: string;
-    readonly activeSymbol?: string;
-  };
 }
 
 interface InventoryEntryLike {
@@ -21,8 +16,8 @@ interface InventoryEntryLike {
   readonly total: number;
 }
 
-describe('fitl production piece inventory and visual metadata', () => {
-  it('encodes the full 229-piece inventory with visual metadata', () => {
+describe('fitl production piece inventory', () => {
+  it('encodes the full 229-piece inventory', () => {
     const markdown = readProductionSpec();
     const parsed = parseGameSpec(markdown);
     assertNoErrors(parsed);
@@ -73,17 +68,5 @@ describe('fitl production piece inventory and visual metadata', () => {
     assert.equal(totalsByFaction.get('arvn'), 69);
     assert.equal(totalsByFaction.get('nva'), 69);
     assert.equal(totalsByFaction.get('vc'), 39);
-
-    const starIds = new Set(['us-irregulars', 'arvn-rangers', 'nva-guerrillas', 'vc-guerrillas']);
-    for (const pieceType of pieceTypes) {
-      assert.equal(typeof pieceType.visual?.color, 'string', `${pieceType.id} visual.color must be defined`);
-      assert.equal(typeof pieceType.visual?.shape, 'string', `${pieceType.id} visual.shape must be defined`);
-
-      if (starIds.has(pieceType.id)) {
-        assert.equal(pieceType.visual?.activeSymbol, 'star', `${pieceType.id} active symbol must be star`);
-      } else {
-        assert.equal(pieceType.visual?.activeSymbol, undefined, `${pieceType.id} must not define activeSymbol`);
-      }
-    }
   });
 });

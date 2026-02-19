@@ -182,6 +182,43 @@ describe('computeLayout graph mode', () => {
 
     expect(largeSpan).toBeGreaterThan(smallSpan * 1.5);
   });
+
+  it('groups same-country zones into the same angular sector via attribute seeding', () => {
+    const zones = [
+      zone('a1', { zoneKind: 'board', adjacentTo: ['a2'], attributes: { country: 'alpha' }, category: 'city' }),
+      zone('a2', { zoneKind: 'board', adjacentTo: ['a1', 'b1'], attributes: { country: 'alpha' }, category: 'province' }),
+      zone('b1', { zoneKind: 'board', adjacentTo: ['a2', 'b2'], attributes: { country: 'beta' }, category: 'city' }),
+      zone('b2', { zoneKind: 'board', adjacentTo: ['b1'], attributes: { country: 'beta' }, category: 'province' }),
+    ];
+    const layout = computeLayout(makeDef(zones), 'graph');
+
+    const centroidAlpha = centroid([layout.positions.get('a1')!, layout.positions.get('a2')!]);
+    const centroidBeta = centroid([layout.positions.get('b1')!, layout.positions.get('b2')!]);
+    const interGroupDist = Math.hypot(centroidAlpha.x - centroidBeta.x, centroidAlpha.y - centroidBeta.y);
+
+    const intraAlphaDist = Math.hypot(
+      layout.positions.get('a1')!.x - layout.positions.get('a2')!.x,
+      layout.positions.get('a1')!.y - layout.positions.get('a2')!.y,
+    );
+
+    expect(interGroupDist).toBeGreaterThan(intraAlphaDist * 0.5);
+  });
+
+  it('falls back to category-only seeding when zones lack grouping attributes', () => {
+    const zones = [
+      zone('x1', { zoneKind: 'board', adjacentTo: ['x2'], category: 'city' }),
+      zone('x2', { zoneKind: 'board', adjacentTo: ['x1', 'y1'], category: 'city' }),
+      zone('y1', { zoneKind: 'board', adjacentTo: ['x2', 'y2'], category: 'province' }),
+      zone('y2', { zoneKind: 'board', adjacentTo: ['y1'], category: 'province' }),
+    ];
+    const layout = computeLayout(makeDef(zones), 'graph');
+
+    expect(layout.positions.size).toBe(4);
+    for (const position of layout.positions.values()) {
+      expect(Number.isFinite(position.x)).toBe(true);
+      expect(Number.isFinite(position.y)).toBe(true);
+    }
+  });
 });
 
 describe('computeLayout dispatcher', () => {
@@ -532,4 +569,10 @@ function buildLinearChain(length: number): readonly ZoneDef[] {
     }
     return zone(id, { zoneKind: 'board', adjacentTo });
   });
+}
+
+function centroid(points: readonly { x: number; y: number }[]): { x: number; y: number } {
+  const sumX = points.reduce((sum, p) => sum + p.x, 0);
+  const sumY = points.reduce((sum, p) => sum + p.y, 0);
+  return { x: sumX / points.length, y: sumY / points.length };
 }

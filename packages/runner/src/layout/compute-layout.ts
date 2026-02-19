@@ -129,8 +129,7 @@ function seedInitialPositions(
   const categoryBuckets = new Map<string, string[]>();
 
   for (const nodeID of sortedNodeIDs) {
-    const category = graph.getNodeAttribute(nodeID, 'category');
-    const key = typeof category === 'string' && category.length > 0 ? category : '__uncategorized__';
+    const key = buildSeedGroupKey(graph, nodeID);
     const bucket = categoryBuckets.get(key);
     if (bucket === undefined) {
       categoryBuckets.set(key, [nodeID]);
@@ -170,6 +169,20 @@ function seedInitialPositions(
   }
 }
 
+
+function buildSeedGroupKey(
+  graph: ReturnType<typeof buildLayoutGraph>,
+  nodeID: string,
+): string {
+  const category = graph.getNodeAttribute(nodeID, 'category');
+  const categoryStr = typeof category === 'string' && category.length > 0 ? category : '';
+  const attributes = graph.getNodeAttribute(nodeID, 'attributes') as Record<string, unknown> | undefined;
+  const country = typeof attributes?.country === 'string' ? attributes.country : '';
+  if (country.length > 0) {
+    return categoryStr.length > 0 ? `${country}:${categoryStr}` : country;
+  }
+  return categoryStr.length > 0 ? categoryStr : '__ungrouped__';
+}
 
 function placeSharedZones(zones: readonly ZoneDef[], positions: Map<string, MutablePosition>): void {
   if (zones.length === 0) {

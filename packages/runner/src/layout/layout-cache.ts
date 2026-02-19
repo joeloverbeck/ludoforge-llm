@@ -3,6 +3,7 @@ import type { GameDef } from '@ludoforge/engine/runtime';
 import { computeAuxLayout } from './aux-zone-layout.js';
 import { partitionZones, resolveLayoutMode } from './build-layout-graph.js';
 import { computeLayout } from './compute-layout.js';
+import { ZONE_HALF_HEIGHT, ZONE_HALF_WIDTH } from './layout-constants.js';
 import { EMPTY_BOUNDS } from './layout-helpers.js';
 import type { LayoutMode } from './layout-types.js';
 import type { Position, ZonePositionMap } from '../spatial/position-types.js';
@@ -75,7 +76,12 @@ function computeUnifiedBounds(positions: ReadonlyMap<string, Position>): ZonePos
     }
   }
 
-  return { minX, minY, maxX, maxY };
+  return {
+    minX: minX - ZONE_HALF_WIDTH,
+    minY: minY - ZONE_HALF_HEIGHT,
+    maxX: maxX + ZONE_HALF_WIDTH,
+    maxY: maxY + ZONE_HALF_HEIGHT,
+  };
 }
 
 function createLayoutCacheKey(def: GameDef): string {

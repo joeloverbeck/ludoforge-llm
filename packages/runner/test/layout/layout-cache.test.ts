@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { asZoneId, type GameDef, type ZoneDef } from '@ludoforge/engine/runtime';
 
 import { clearLayoutCache, getOrComputeLayout } from '../../src/layout/layout-cache';
+import { ZONE_HALF_WIDTH, ZONE_HALF_HEIGHT } from '../../src/layout/layout-constants';
 
 describe('layout-cache', () => {
   beforeEach(() => {
@@ -106,6 +107,39 @@ describe('layout-cache', () => {
 
     expect(result.positionMap.positions.size).toBe(0);
     expect(result.positionMap.bounds).toEqual({ minX: 0, minY: 0, maxX: 0, maxY: 0 });
+  });
+
+  it('unified bounds pad by half zone dimensions beyond position extremes', () => {
+    const def = makeDef('bounds-pad', [
+      zone('board-a', { zoneKind: 'board', owner: 'none' }),
+      zone('board-b', { zoneKind: 'board', owner: 'none' }),
+    ], 'table');
+
+    const result = getOrComputeLayout(def);
+    const rawPositions = [...result.positionMap.positions.values()];
+    const rawMinX = Math.min(...rawPositions.map((p) => p.x));
+    const rawMaxX = Math.max(...rawPositions.map((p) => p.x));
+    const rawMinY = Math.min(...rawPositions.map((p) => p.y));
+    const rawMaxY = Math.max(...rawPositions.map((p) => p.y));
+
+    expect(result.positionMap.bounds.minX).toBeLessThanOrEqual(rawMinX - ZONE_HALF_WIDTH);
+    expect(result.positionMap.bounds.maxX).toBeGreaterThanOrEqual(rawMaxX + ZONE_HALF_WIDTH);
+    expect(result.positionMap.bounds.minY).toBeLessThanOrEqual(rawMinY - ZONE_HALF_HEIGHT);
+    expect(result.positionMap.bounds.maxY).toBeGreaterThanOrEqual(rawMaxY + ZONE_HALF_HEIGHT);
+  });
+
+  it('single-position unified bounds still pads by half zone dimensions', () => {
+    const def = makeDef('bounds-single', [
+      zone('solo', { zoneKind: 'board', owner: 'none' }),
+    ], 'table');
+
+    const result = getOrComputeLayout(def);
+    const pos = result.positionMap.positions.get('solo')!;
+
+    expect(result.positionMap.bounds.minX).toBe(pos.x - ZONE_HALF_WIDTH);
+    expect(result.positionMap.bounds.maxX).toBe(pos.x + ZONE_HALF_WIDTH);
+    expect(result.positionMap.bounds.minY).toBe(pos.y - ZONE_HALF_HEIGHT);
+    expect(result.positionMap.bounds.maxY).toBe(pos.y + ZONE_HALF_HEIGHT);
   });
 });
 

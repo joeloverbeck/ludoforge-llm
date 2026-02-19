@@ -27,6 +27,7 @@ import { createTokenRenderer } from './renderers/token-renderer';
 import { createZoneRenderer } from './renderers/zone-renderer';
 import { createCanvasUpdater, type CanvasUpdater } from './canvas-updater';
 import { setupViewport, type ViewportResult } from './viewport-setup';
+import { getOrComputeLayout } from '../layout/layout-cache.js';
 
 const DEFAULT_BACKGROUND_COLOR = 0x0b1020;
 const DEFAULT_WORLD_SIZE = 1;
@@ -128,8 +129,30 @@ export async function createGameCanvasRuntime(
   deps: GameCanvasRuntimeDeps = DEFAULT_RUNTIME_DEPS,
 ): Promise<GameCanvasRuntime> {
   const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
-  const initialZoneIDs = selectZoneIDs(selectorStore.getState());
-  const positionStore = deps.createPositionStore(initialZoneIDs);
+  const initialState = selectorStore.getState();
+  const initialZoneIDs = selectZoneIDs(initialState);
+  const initialGameDef = initialState.gameDef;
+  const positionStore = deps.createPositionStore(initialGameDef === null ? initialZoneIDs : []);
+
+  const applyGameDefLayout = (gameDef: GameStore['gameDef']): void => {
+    if (gameDef === null) {
+      positionStore.setZoneIDs(selectZoneIDs(selectorStore.getState()));
+      return;
+    }
+
+    if (!Array.isArray(gameDef.zones)) {
+      positionStore.setZoneIDs(selectZoneIDs(selectorStore.getState()));
+      return;
+    }
+
+    const layoutResult = getOrComputeLayout(gameDef);
+    const gameDefZoneIDs = gameDef.zones.map((zone) => zone.id);
+    positionStore.setPositions(layoutResult.positionMap, gameDefZoneIDs);
+  };
+
+  if (initialGameDef !== null) {
+    applyGameDefLayout(initialGameDef);
+  }
 
   const gameCanvas = await deps.createGameCanvas(options.container, {
     backgroundColor: options.backgroundColor,
@@ -249,8 +272,20 @@ export async function createGameCanvasRuntime(
   }
 
   const unsubscribeZoneIDs = selectorStore.subscribe(selectZoneIDs, (zoneIDs) => {
+    if (selectorStore.getState().gameDef !== null) {
+      return;
+    }
     positionStore.setZoneIDs(zoneIDs);
   }, { equalityFn: stringArraysEqual });
+  const unsubscribeGameDef = selectorStore.subscribe(
+    (state) => state.gameDef,
+    (gameDef, previousGameDef) => {
+      if (gameDef === previousGameDef) {
+        return;
+      }
+      applyGameDefLayout(gameDef);
+    },
+  );
   const unsubscribeFactionDefs = selectorStore.subscribe(
     selectGameDefFactions,
     (factions) => {
@@ -388,6 +423,7 @@ export async function createGameCanvasRuntime(
       hoverTargetController.destroy();
       options.onHoverAnchorChange?.(null);
       unsubscribeZoneIDs();
+      unsubscribeGameDef();
       unsubscribeFactionDefs();
       unsubscribeTokenTypeDefs();
       unsubscribeAnimationPlaybackSpeed();

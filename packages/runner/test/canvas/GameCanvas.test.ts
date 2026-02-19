@@ -2,12 +2,17 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameDef } from '@ludoforge/engine/runtime';
 
 import { GameCanvas, createGameCanvasRuntime } from '../../src/canvas/GameCanvas';
 import type { CoordinateBridge } from '../../src/canvas/coordinate-bridge';
 import type { GameStore } from '../../src/store/game-store';
+import { getOrComputeLayout } from '../../src/layout/layout-cache.js';
+
+vi.mock('../../src/layout/layout-cache.js', () => ({
+  getOrComputeLayout: vi.fn(),
+}));
 
 interface RuntimeStoreState {
   readonly renderModel: GameStore['renderModel'];
@@ -310,6 +315,17 @@ function flushMicrotasks(): Promise<void> {
   return Promise.resolve();
 }
 
+const mockedGetOrComputeLayout = vi.mocked(getOrComputeLayout);
+
+function makeGameDefWithZones(zoneIDs: readonly string[]): GameDef {
+  return {
+    metadata: {
+      id: 'test-game',
+    },
+    zones: zoneIDs.map((zoneID) => ({ id: zoneID })),
+  } as unknown as GameDef;
+}
+
 describe('GameCanvas', () => {
   it('renders an accessible game board container', () => {
     const html = renderToStaticMarkup(
@@ -327,6 +343,26 @@ describe('GameCanvas', () => {
 });
 
 describe('createGameCanvasRuntime', () => {
+  beforeEach(() => {
+    mockedGetOrComputeLayout.mockReset();
+    mockedGetOrComputeLayout.mockReturnValue({
+      mode: 'table',
+      positionMap: {
+        positions: new Map([
+          ['zone:deck', { x: 40, y: 60 }],
+          ['zone:burn', { x: 140, y: 60 }],
+          ['zone:hand:p1', { x: 240, y: 60 }],
+        ]),
+        bounds: {
+          minX: 0,
+          minY: 0,
+          maxX: 320,
+          maxY: 120,
+        },
+      },
+    });
+  });
+
   it('initializes canvas pipeline and wires hover-anchor publishing', async () => {
     const fixture = createRuntimeFixture();
     const store = createRuntimeStore(makeRenderModel(['zone:a', 'zone:b']));
@@ -716,9 +752,10 @@ describe('createGameCanvasRuntime', () => {
     runtime.destroy();
   });
 
-  it('updates position zone ids from GameDef zones when they become available', async () => {
+  it('applies layout engine positions when GameDef zones become available', async () => {
     const fixture = createRuntimeFixture();
     const store = createRuntimeStore(makeRenderModel(['zone:visible-only']));
+    const gameDef = makeGameDefWithZones(['zone:deck', 'zone:burn', 'zone:hand:p1']);
 
     const runtime = await createGameCanvasRuntime(
       {
@@ -730,22 +767,140 @@ describe('createGameCanvasRuntime', () => {
     );
 
     store.setState({
-      gameDef: {
-        zones: [
-          { id: 'zone:deck' },
-          { id: 'zone:burn' },
-          { id: 'zone:hand:p1' },
-        ],
-      } as unknown as GameDef,
+      gameDef,
     });
 
-    expect(fixture.positionStore.setZoneIDs).toHaveBeenCalledWith([
+    expect(mockedGetOrComputeLayout).toHaveBeenCalledWith(gameDef);
+    expect(fixture.positionStore.setPositions).toHaveBeenCalledWith(expect.objectContaining({
+      positions: expect.any(Map),
+      bounds: expect.any(Object),
+    }), [
       'zone:deck',
       'zone:burn',
       'zone:hand:p1',
     ]);
+    expect(fixture.positionStore.setZoneIDs).not.toHaveBeenCalled();
 
     runtime.destroy();
+  });
+
+  it('applies layout positions during runtime creation when initial GameDef exists', async () => {
+    const fixture = createRuntimeFixture();
+    const gameDef = makeGameDefWithZones(['zone:deck', 'zone:burn', 'zone:hand:p1']);
+    const store = createRuntimeStore(makeRenderModel(['zone:visible-only']));
+    store.setState({ gameDef });
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x454545,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    expect(mockedGetOrComputeLayout).toHaveBeenCalledWith(gameDef);
+    expect(fixture.positionStore.setPositions).toHaveBeenCalledWith(expect.objectContaining({
+      positions: expect.any(Map),
+      bounds: expect.any(Object),
+    }), ['zone:deck', 'zone:burn', 'zone:hand:p1']);
+    expect(fixture.positionStore.setZoneIDs).not.toHaveBeenCalled();
+
+    runtime.destroy();
+  });
+
+  it('recomputes and reapplies layout when GameDef changes', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x454545,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    const firstDef = makeGameDefWithZones(['zone:deck', 'zone:burn']);
+    const secondDef = makeGameDefWithZones(['zone:alpha', 'zone:beta', 'zone:gamma']);
+
+    store.setState({ gameDef: firstDef });
+    store.setState({ gameDef: secondDef });
+
+    expect(mockedGetOrComputeLayout).toHaveBeenNthCalledWith(1, firstDef);
+    expect(mockedGetOrComputeLayout).toHaveBeenNthCalledWith(2, secondDef);
+    expect(fixture.positionStore.setPositions).toHaveBeenNthCalledWith(1, expect.any(Object), ['zone:deck', 'zone:burn']);
+    expect(fixture.positionStore.setPositions).toHaveBeenNthCalledWith(2, expect.any(Object), ['zone:alpha', 'zone:beta', 'zone:gamma']);
+
+    runtime.destroy();
+  });
+
+  it('keeps grid fallback from overriding layout while GameDef is active', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x454545,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    store.setState({
+      gameDef: makeGameDefWithZones(['zone:deck', 'zone:burn']),
+      renderModel: makeRenderModel(['zone:render-only-a', 'zone:render-only-b']),
+    });
+
+    expect(fixture.positionStore.setPositions).toHaveBeenCalledTimes(1);
+    expect(fixture.positionStore.setZoneIDs).not.toHaveBeenCalled();
+
+    runtime.destroy();
+  });
+
+  it('restores grid fallback when GameDef is cleared', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+    const gameDef = makeGameDefWithZones(['zone:deck', 'zone:burn']);
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x454545,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    store.setState({ gameDef });
+    store.setState({ gameDef: null, renderModel: makeRenderModel(['zone:render-fallback']) });
+
+    expect(fixture.positionStore.setPositions).toHaveBeenCalledTimes(1);
+    expect(fixture.positionStore.setZoneIDs).toHaveBeenCalledWith(['zone:render-fallback']);
+
+    runtime.destroy();
+  });
+
+  it('unsubscribes GameDef layout listener on destroy', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x454545,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    runtime.destroy();
+    store.setState({ gameDef: makeGameDefWithZones(['zone:deck', 'zone:burn']) });
+
+    expect(mockedGetOrComputeLayout).not.toHaveBeenCalled();
+    expect(fixture.positionStore.setPositions).not.toHaveBeenCalled();
   });
 
   it('remounts cleanly with paired updater start/destroy and no leaked zone subscriptions', async () => {

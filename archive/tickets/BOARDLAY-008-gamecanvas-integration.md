@@ -1,6 +1,6 @@
 # BOARDLAY-008: GameCanvas Integration — Layout-Driven Position Store
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: No
@@ -10,7 +10,7 @@
 
 The layout engine (BOARDLAY-001 through -007) produces zone positions but nothing wires them into the rendering pipeline. Currently, `createGameCanvasRuntime()` in `GameCanvas.tsx` subscribes to zone ID changes and calls `positionStore.setZoneIDs()`, which triggers `computeGridLayout()` (a simple square grid). When a GameDef is available with layout data, the runtime should instead call `getOrComputeLayout(def)` and pass the computed positions to `positionStore.setPositions()`.
 
-This is the final integration ticket: it connects the layout engine to the existing canvas pipeline.
+This ticket must establish one clear precedence rule: **layout-derived positions win whenever `gameDef` is present**; the grid path is fallback-only for `gameDef === null`.
 
 ## What to Change
 
@@ -23,18 +23,21 @@ This is the final integration ticket: it connects the layout engine to the exist
 1. **Add `gameDef` subscription** in `createGameCanvasRuntime()`:
    - Subscribe to `state.gameDef` changes using the existing `selectorStore.subscribe()` pattern.
    - When `gameDef` is non-null, call `getOrComputeLayout(gameDef)`.
-   - Call `positionStore.setPositions(result.positionMap, allZoneIDs)` with the merged layout positions.
+   - Call `positionStore.setPositions(result.positionMap, gameDef.zones.map((zone) => zone.id))` with merged board+aux positions.
 
 2. **Modify initial position computation**:
-   - On runtime creation, if the initial store state has a `gameDef`, immediately compute layout and call `setPositions()` instead of relying on `computeGridLayout()` from `setZoneIDs()`.
+   - On runtime creation, if initial store state has a `gameDef`, immediately compute layout and call `setPositions()`.
+   - Only call `setZoneIDs(initialZoneIDs)` when initial `gameDef` is null.
 
-3. **Preserve fallback behavior**:
+3. **Preserve fallback behavior without overriding layout**:
    - If `gameDef` is null (e.g., during initialization before GameDef loads), keep the existing `setZoneIDs()` → `computeGridLayout()` fallback.
-   - The existing `unsubscribeZoneIDs` subscription remains as a safety net for edge cases where GameDef is not available.
+   - Keep the zone-ID subscription, but guard it: only call `setZoneIDs()` while `selectorStore.getState().gameDef === null`.
+   - When `gameDef` becomes null again (session reset/error), re-apply fallback from current `selectZoneIDs(state)`.
 
-4. **Cache clearing on game change**:
-   - When a new `gameDef` with a different ID arrives, `getOrComputeLayout()` handles caching automatically (returns cached result for same ID, computes for new ID).
-   - Call `clearLayoutCache()` in the `destroy()` method to prevent stale cache entries from leaking across game sessions.
+4. **Cache lifecycle**:
+   - Do not clear layout cache in `GameCanvasRuntime.destroy()`. Destroying/remounting canvas should not discard per-`GameDef` cached layouts.
+   - `getOrComputeLayout()` cache keying already handles recompute on meaningful `GameDef` changes.
+   - Any cache eviction policy changes are out of scope for this ticket.
 
 5. **Cleanup**: Add `unsubscribeGameDef()` call in the `destroy()` method alongside the other unsubscribe calls.
 
@@ -65,7 +68,7 @@ This is the final integration ticket: it connects the layout engine to the exist
 1. **Layout-driven positions when GameDef available**: When store has a `gameDef` with zones, `positionStore.setPositions()` is called with layout-computed positions (not grid fallback).
 2. **Fallback when no GameDef**: When `gameDef` is null, the existing `setZoneIDs()` → `computeGridLayout()` path still works.
 3. **GameDef change triggers re-layout**: When `gameDef` changes (new game loaded), layout is recomputed and position store is updated.
-4. **Destroy clears layout cache**: Calling `runtime.destroy()` calls `clearLayoutCache()`.
+4. **Fallback does not override active layout**: While `gameDef` is non-null, zone-ID subscription updates do not call `setZoneIDs()`.
 5. **Destroy unsubscribes gameDef listener**: No layout recomputation after destroy.
 6. **All existing GameCanvas tests pass**: No regression in canvas initialization, zone rendering, token rendering, adjacency rendering, or interaction handling.
 
@@ -76,5 +79,23 @@ This is the final integration ticket: it connects the layout engine to the exist
 3. `viewport-setup.ts` is NOT modified — `updateWorldBounds()` is already triggered by canvas-updater.
 4. The layout subscription uses the same `selectorStore.subscribe()` pattern as existing subscriptions (zone IDs, factions, token types).
 5. The `destroy()` method properly cleans up the new subscription.
-6. `pnpm turbo build` and `pnpm -F @ludoforge/runner test` pass.
-7. All existing runner tests remain green.
+6. Runtime code does not call `clearLayoutCache()` during destroy/remount flows.
+7. `pnpm turbo build` and `pnpm -F @ludoforge/runner test` pass.
+8. All existing runner tests remain green.
+
+## Outcome
+
+- **Completed**: 2026-02-19
+- **What changed**:
+  - `createGameCanvasRuntime()` now applies layout-engine positions from `getOrComputeLayout(gameDef)` when `gameDef` is present.
+  - Initial runtime bootstrap now prefers layout positions (when `gameDef` exists) instead of defaulting to grid.
+  - Zone-ID subscription is now explicitly fallback-only and does not override active layout positions.
+  - Added `gameDef` subscription cleanup in `destroy()`.
+  - Added/updated `GameCanvas` tests for layout wiring, fallback gating, gameDef change behavior, and listener teardown.
+- **Deviation from original plan**:
+  - Did **not** clear layout cache on `runtime.destroy()`. Cache lifecycle remains owned by layout-cache semantics; destroy/remount no longer forces cache eviction.
+  - Added a defensive guard for malformed/partial `gameDef` values missing `zones` to avoid runtime crashes in fallback scenarios.
+- **Verification**:
+  - `pnpm -F @ludoforge/runner test` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.
+  - `pnpm turbo build` passed.

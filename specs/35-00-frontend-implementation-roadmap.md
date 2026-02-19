@@ -19,6 +19,7 @@ Spec 37 is completed and archived at `archive/specs/37-state-management-render-m
 Spec 38 is completed and archived at `archive/specs/38-pixijs-canvas-foundation.md`.
 Spec 39 is completed and archived at `archive/specs/39-react-dom-ui-layer.md`.
 Spec 40 is completed and archived at `archive/specs/40-animation-system.md`.
+Spec 41 is completed and archived at `archive/specs/41-board-layout-engine.md`.
 
 ---
 
@@ -32,7 +33,7 @@ Spec 40 is completed and archived at `archive/specs/40-animation-system.md`.
 | 38 | PixiJS Canvas Foundation (completed) | P0 | L | 37 |
 | 39 | React DOM UI Layer (completed) | P1 | L | 37, 38 |
 | 40 | Animation System (completed) | P1 | L | 38 |
-| 41 | Board Layout Engine | P1 | M | 38 |
+| 41 | Board Layout Engine (completed) | P1 | M | 38 |
 | 42 | Per-Game Visual Config & Session Mgmt | P2 | M | 38, 39, 41 |
 
 Priority key: P0 = critical path, P1 = required for playable experience, P2 = polish/enhancement.
@@ -119,12 +120,12 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [x] Card animations (deal, flip, burn) work
 - [x] Animation speed control (1x, 2x, 4x, pause, skip)
 - [x] AI turn playback with configurable detail level
-- [ ] Board auto-layouts from zone adjacency graph via ForceAtlas2 (Spec 41 D1-D2)
-- [ ] Board/aux zone split: board zones in main area, aux zones in sidebar (Spec 41 D1, D4)
-- [ ] `layoutMode` auto-detection from GameDef adjacency (Spec 41 D1)
-- [ ] Table-only mode for games without adjacency (Spec 41 D2)
-- [ ] Track and grid layout modes for linear/grid boards (Spec 41 D2)
-- [ ] Layout caching per GameDef (Spec 41 D3)
+- [x] Board auto-layouts from zone adjacency graph via ForceAtlas2 (Spec 41 D1-D2)
+- [x] Board/aux zone split: board zones in main area, aux zones in sidebar (Spec 41 D1, D4)
+- [x] `layoutMode` auto-detection from GameDef adjacency (Spec 41 D1)
+- [x] Table-only mode for games without adjacency (Spec 41 D2)
+- [x] Track and grid layout modes for linear/grid boards (Spec 41 D2)
+- [x] Layout caching per GameDef (Spec 41 D3)
 - [ ] Zone style hints from zone metadata (Spec 42 D-NEW-1)
 - [ ] Layout hints from visual config (Spec 42 D-NEW-2)
 - [ ] Token stacking within zones with expand-on-click (Spec 42 D-NEW-3)
@@ -135,7 +136,7 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [ ] Replay mode (step-forward, step-backward, speed control) (Spec 42 D12)
 - [ ] Event log panel with clickable, filterable entries (Spec 42 D13)
 
-**F3 Progress**: In progress. Spec 40 is completed (closed 2026-02-19). Spec 41 restructured (2026-02-19): scope narrowed to D1-D4 (layout engine core, computation, caching, aux sidebar); styling, token stacking, and layout hints moved to Spec 42. Engine `layoutMode` metadata field added. Spec 42 updated with three new deliverables (D-NEW-1/2/3) and now depends on Spec 41. Implementation of Spec 41 and Spec 42 remains open.
+**F3 Progress**: In progress. Spec 40 is completed (closed 2026-02-19). Spec 41 is completed and archived (closed 2026-02-19): D1-D4 delivered (layout engine core, computation, caching, aux sidebar), with styling, token stacking, and visual-config-driven layout hints scoped to Spec 42. Engine `layoutMode` metadata field is implemented. Spec 42 remains open.
 
 ---
 

@@ -1,6 +1,6 @@
 # Spec 41: Board Layout Engine
 
-**Status**: ACTIVE
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: M
 **Dependencies**: Spec 38 (PixiJS Canvas Foundation)
@@ -203,3 +203,18 @@ function computeAuxLayout(
 - Manual zone position editing by the user
 - 3D or isometric board rendering
 - Per-game visual config creation (Spec 42)
+
+---
+
+## Outcome
+
+- **Completed**: 2026-02-19
+- **Implemented changes**:
+  - Added a generic board layout pipeline in the runner with mode resolution (`graph`/`table`/`track`/`grid`), board/aux partitioning, graph construction, per-mode layout computation, and aux sidebar placement.
+  - Integrated layout caching (`getOrComputeLayout`, `clearLayoutCache`) and GameCanvas position-store application via `setPositions()` with merged board+aux coordinates.
+  - Added/updated runner layout test coverage across graph/table/track/grid dispatch, layout mode resolution, partitioning, cache behavior, aux grouping/layout, and canvas integration points.
+- **Deviations from original plan**:
+  - Aux force-pool grouping defaults to explicit `layoutRole: 'forcePool'` semantics rather than inferring solely from zone-id patterns.
+- **Verification**:
+  - Layout-focused runner tests pass, including `build-layout-graph`, `compute-layout`, `aux-zone-layout`, and `layout-cache` suites.
+  - GameCanvas integration tests pass with layout cache wiring.

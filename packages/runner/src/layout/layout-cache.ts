@@ -26,7 +26,9 @@ export function getOrComputeLayout(def: GameDef, visualConfigProvider: VisualCon
 
   const mode = resolveLayoutMode(def, visualConfigProvider);
   const partitioned = partitionZones(def);
-  const boardLayout = computeLayout(def, mode);
+  const hints = visualConfigProvider.getLayoutHints();
+  const regionHints = hints?.regions ?? null;
+  const boardLayout = computeLayout(def, mode, regionHints);
   const auxLayout = computeAuxLayout(partitioned.aux, boardLayout.boardBounds, visualConfigProvider);
 
   const positions = new Map<string, Position>();

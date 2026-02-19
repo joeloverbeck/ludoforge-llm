@@ -155,6 +155,9 @@ function validateStringList(
 
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
+    if (value === undefined) {
+      continue;
+    }
     if (!knownIds.has(value)) {
       errors.push({
         category,
@@ -179,7 +182,11 @@ function validateArray<T>(
   }
 
   for (let index = 0; index < values.length; index += 1) {
-    const referencedId = getValue(values[index]);
+    const entry = values[index];
+    if (entry === undefined) {
+      continue;
+    }
+    const referencedId = getValue(entry);
     if (!knownIds.has(referencedId)) {
       errors.push({
         category,
@@ -204,9 +211,16 @@ function validateNestedArray<T>(
   }
 
   for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
-    const items = getItems(groups[groupIndex]);
+    const group = groups[groupIndex];
+    if (group === undefined) {
+      continue;
+    }
+    const items = getItems(group);
     for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
       const referencedId = items[itemIndex];
+      if (referencedId === undefined) {
+        continue;
+      }
       if (!knownIds.has(referencedId)) {
         errors.push({
           category,

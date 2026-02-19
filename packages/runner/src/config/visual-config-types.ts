@@ -26,10 +26,14 @@ export const TokenShapeSchema = z.enum([
 ]);
 export const LayoutRoleSchema = z.enum(['card', 'forcePool', 'hand', 'other']);
 
+export const CompassPositionSchema = z.enum([
+  'n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw', 'center',
+]);
+
 const RegionHintSchema = z.object({
   name: z.string(),
   zones: z.array(z.string()),
-  position: z.string().optional(),
+  position: CompassPositionSchema.optional(),
 });
 
 const FixedPositionHintSchema = z.object({
@@ -202,6 +206,7 @@ export const VisualConfigSchema = z.object({
 
 export type LayoutMode = z.infer<typeof LayoutModeSchema>;
 export type LayoutRole = z.infer<typeof LayoutRoleSchema>;
+export type CompassPosition = z.infer<typeof CompassPositionSchema>;
 
 export type LayoutConfig = z.infer<typeof LayoutConfigSchema>;
 export type LayoutHints = z.infer<typeof LayoutHintsSchema>;

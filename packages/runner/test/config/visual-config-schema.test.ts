@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { VisualConfigSchema } from '../../src/config/visual-config-types';
+import { CompassPositionSchema, VisualConfigSchema } from '../../src/config/visual-config-types';
 
 describe('VisualConfigSchema', () => {
   it('parses a valid FITL-shaped config', () => {
@@ -13,7 +13,7 @@ describe('VisualConfigSchema', () => {
             {
               name: 'North Vietnam',
               zones: ['hanoi:none', 'haiphong:none'],
-              position: 'top-left',
+              position: 'nw',
             },
           ],
           fixed: [
@@ -276,6 +276,48 @@ describe('VisualConfigSchema', () => {
       version: 1,
       cardAnimation: {
         cardTokenTypes: { ids: ['card'] },
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts all 9 compass position values', () => {
+    for (const position of ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw', 'center']) {
+      const result = CompassPositionSchema.safeParse(position);
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it('rejects invalid compass position values', () => {
+    for (const position of ['top-left', 'north', 'up', 'bottom-right', '']) {
+      const result = CompassPositionSchema.safeParse(position);
+      expect(result.success).toBe(false);
+    }
+  });
+
+  it('accepts region hints with missing position (optional)', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      layout: {
+        hints: {
+          regions: [
+            { name: 'Region A', zones: ['zone-a'] },
+          ],
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects region hints with invalid compass position', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      layout: {
+        hints: {
+          regions: [
+            { name: 'Region A', zones: ['zone-a'], position: 'top-left' },
+          ],
+        },
       },
     });
     expect(result.success).toBe(false);

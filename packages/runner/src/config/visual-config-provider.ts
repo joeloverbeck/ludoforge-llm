@@ -16,6 +16,7 @@ import type {
   CardTemplate,
   TokenTypeSelectors,
   TokenSymbolRule,
+  LayoutHints,
   LayoutMode,
   LayoutRole,
   VariablesConfig,
@@ -200,6 +201,10 @@ export class VisualConfigProvider {
 
   getVariablesConfig(): VariablesConfig | null {
     return this.config?.variables ?? null;
+  }
+
+  getLayoutHints(): LayoutHints | null {
+    return this.config?.layout?.hints ?? null;
   }
 }
 

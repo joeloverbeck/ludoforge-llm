@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { asZoneId, type GameDef, type ZoneDef } from '@ludoforge/engine/runtime';
+import type { RegionHint } from '../../src/config/visual-config-types';
 import {
   ZONE_RENDER_WIDTH,
   ZONE_RENDER_HEIGHT,
@@ -218,6 +219,88 @@ describe('computeLayout graph mode', () => {
       expect(Number.isFinite(position.x)).toBe(true);
       expect(Number.isFinite(position.y)).toBe(true);
     }
+  });
+});
+
+describe('computeLayout graph mode with region hints', () => {
+  it('places compass-hinted regions in correct quadrants', () => {
+    const zones = [
+      zone('nw1', { zoneKind: 'board', adjacentTo: [{ to: 'nw2' }], category: 'province' }),
+      zone('nw2', { zoneKind: 'board', adjacentTo: [{ to: 'nw1' }, { to: 'se1' }], category: 'province' }),
+      zone('se1', { zoneKind: 'board', adjacentTo: [{ to: 'nw2' }, { to: 'se2' }], category: 'city' }),
+      zone('se2', { zoneKind: 'board', adjacentTo: [{ to: 'se1' }], category: 'city' }),
+    ];
+    const hints: RegionHint[] = [
+      { name: 'Northwest', zones: ['nw1', 'nw2'], position: 'nw' },
+      { name: 'Southeast', zones: ['se1', 'se2'], position: 'se' },
+    ];
+
+    const layout = computeLayout(makeDef(zones), 'graph', hints);
+
+    const nwCentroid = centroid([layout.positions.get('nw1')!, layout.positions.get('nw2')!]);
+    const seCentroid = centroid([layout.positions.get('se1')!, layout.positions.get('se2')!]);
+
+    expect(nwCentroid.x).toBeLessThan(seCentroid.x);
+    expect(nwCentroid.y).toBeLessThan(seCentroid.y);
+  });
+
+  it('center position zones cluster closer to origin than cardinal regions', () => {
+    const zones = [
+      zone('c1', { zoneKind: 'board', adjacentTo: [{ to: 'c2' }], category: 'city' }),
+      zone('c2', { zoneKind: 'board', adjacentTo: [{ to: 'c1' }, { to: 'n1' }], category: 'city' }),
+      zone('n1', { zoneKind: 'board', adjacentTo: [{ to: 'c2' }, { to: 'n2' }], category: 'province' }),
+      zone('n2', { zoneKind: 'board', adjacentTo: [{ to: 'n1' }, { to: 's1' }], category: 'province' }),
+      zone('s1', { zoneKind: 'board', adjacentTo: [{ to: 'n2' }, { to: 's2' }], category: 'other' }),
+      zone('s2', { zoneKind: 'board', adjacentTo: [{ to: 's1' }], category: 'other' }),
+    ];
+    const hints: RegionHint[] = [
+      { name: 'Center', zones: ['c1', 'c2'], position: 'center' },
+      { name: 'North', zones: ['n1', 'n2'], position: 'n' },
+      { name: 'South', zones: ['s1', 's2'], position: 's' },
+    ];
+
+    const layout = computeLayout(makeDef(zones), 'graph', hints);
+
+    const centerCentroid = centroid([layout.positions.get('c1')!, layout.positions.get('c2')!]);
+    const northCentroid = centroid([layout.positions.get('n1')!, layout.positions.get('n2')!]);
+
+    const centerDist = Math.hypot(centerCentroid.x, centerCentroid.y);
+    const northDist = Math.hypot(northCentroid.x, northCentroid.y);
+
+    expect(centerDist).toBeLessThan(northDist);
+  });
+
+  it('zones not in any region get valid finite positions', () => {
+    const zones = [
+      zone('hinted', { zoneKind: 'board', adjacentTo: [{ to: 'unhinted' }], category: 'city' }),
+      zone('unhinted', { zoneKind: 'board', adjacentTo: [{ to: 'hinted' }], category: 'province' }),
+    ];
+    const hints: RegionHint[] = [
+      { name: 'North', zones: ['hinted'], position: 'n' },
+    ];
+
+    const layout = computeLayout(makeDef(zones), 'graph', hints);
+
+    for (const position of layout.positions.values()) {
+      expect(Number.isFinite(position.x)).toBe(true);
+      expect(Number.isFinite(position.y)).toBe(true);
+    }
+    expect(layout.positions.size).toBe(2);
+  });
+
+  it('absent region hints preserve existing behavior', () => {
+    const zones = [
+      zone('a', { zoneKind: 'board', adjacentTo: [{ to: 'b' }] }),
+      zone('b', { zoneKind: 'board', adjacentTo: [{ to: 'a' }] }),
+    ];
+
+    const withNull = computeLayout(makeDef(zones), 'graph', null);
+    const withUndefined = computeLayout(makeDef(zones), 'graph');
+    const withEmpty = computeLayout(makeDef(zones), 'graph', []);
+
+    expect(withNull.positions.size).toBe(2);
+    expect(withUndefined.positions.size).toBe(2);
+    expect(withEmpty.positions.size).toBe(2);
   });
 });
 

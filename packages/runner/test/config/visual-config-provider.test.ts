@@ -386,6 +386,39 @@ describe('VisualConfigProvider', () => {
     expect(tokenB).toEqual(tokenA);
   });
 
+  it('getLayoutHints returns null when config is null', () => {
+    const provider = new VisualConfigProvider(null);
+    expect(provider.getLayoutHints()).toBeNull();
+  });
+
+  it('getLayoutHints returns null when no hints configured', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      layout: { mode: 'graph' },
+    });
+    expect(provider.getLayoutHints()).toBeNull();
+  });
+
+  it('getLayoutHints returns hints when regions are configured', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      layout: {
+        hints: {
+          regions: [
+            { name: 'North', zones: ['zone-a', 'zone-b'], position: 'n' },
+            { name: 'South', zones: ['zone-c'] },
+          ],
+        },
+      },
+    });
+
+    const hints = provider.getLayoutHints();
+    expect(hints).not.toBeNull();
+    expect(hints!.regions).toHaveLength(2);
+    expect(hints!.regions![0]!.position).toBe('n');
+    expect(hints!.regions![1]!.position).toBeUndefined();
+  });
+
   it('exposes deterministic configHash and null sentinel hash', () => {
     const nullProvider = new VisualConfigProvider(null);
     const first = new VisualConfigProvider({

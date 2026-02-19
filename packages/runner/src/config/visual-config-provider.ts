@@ -115,10 +115,10 @@ function applyZoneStyle(
   target: { shape: ZoneShape; width: number; height: number; color: string | null },
   source:
     | {
-      readonly shape?: ZoneShape;
-      readonly width?: number;
-      readonly height?: number;
-      readonly color?: string;
+      readonly shape?: ZoneShape | undefined;
+      readonly width?: number | undefined;
+      readonly height?: number | undefined;
+      readonly color?: string | undefined;
     }
     | undefined,
 ): void {

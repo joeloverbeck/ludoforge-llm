@@ -208,7 +208,7 @@ describe('VisualConfigProvider', () => {
   it('animation preset and variables config return configured values', () => {
     const variables = {
       prominent: ['pot'],
-    } as const;
+    };
 
     const provider = new VisualConfigProvider({
       version: 1,

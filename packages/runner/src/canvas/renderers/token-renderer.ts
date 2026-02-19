@@ -1,7 +1,8 @@
 import { Circle, Container, Graphics, Text } from 'pixi.js';
-import { asPlayerId, type TokenShape } from '@ludoforge/engine/runtime';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { RenderToken } from '../../model/render-model';
+import type { TokenShape } from '../../config/visual-config-defaults.js';
 import type { FactionColorProvider, TokenRenderer } from './renderer-types';
 import { parseHexColor } from './shape-utils';
 

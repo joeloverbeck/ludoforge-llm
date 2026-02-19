@@ -3,6 +3,8 @@ import type { Container } from 'pixi.js';
 import type { StoreApi } from 'zustand';
 
 import type { ZonePositionMap } from '../spatial/position-types.js';
+import type { CardAnimationConfig } from '../config/visual-config-types.js';
+import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { GameStore } from '../store/game-store.js';
 import type {
   AnimationDescriptor,
@@ -43,6 +45,7 @@ export interface AnimationController {
 
 export interface AnimationControllerOptions {
   readonly store: StoreApi<GameStore>;
+  readonly visualConfigProvider: VisualConfigProvider;
   readonly tokenContainers: () => ReadonlyMap<string, Container>;
   readonly zoneContainers: () => ReadonlyMap<string, Container>;
   readonly zonePositions: () => ZonePositionMap;
@@ -77,7 +80,7 @@ export function createAnimationController(
 
     try {
       const state = options.store.getState();
-      const cardContext = buildCardContext(state);
+      const cardContext = buildCardContext(state, options.visualConfigProvider);
       const descriptors = deps.traceToDescriptors(
         trace,
         {
@@ -194,20 +197,24 @@ export function createAnimationController(
   };
 }
 
-function buildCardContext(state: GameStore): CardAnimationMappingContext | undefined {
-  const cardAnimation = state.gameDef?.cardAnimation;
+function buildCardContext(
+  state: GameStore,
+  visualConfigProvider: VisualConfigProvider,
+): CardAnimationMappingContext | undefined {
+  const cardAnimation = visualConfigProvider.getCardAnimation();
   const renderModel = state.renderModel;
-  if (cardAnimation === undefined || renderModel === null) {
+  if (cardAnimation === null || renderModel === null) {
     return undefined;
   }
 
+  const tokenTypeIds = state.gameDef?.tokenTypes.map((tokenType) => tokenType.id) ?? [];
   const tokenTypeByTokenId = new Map<string, string>();
   for (const token of renderModel.tokens) {
     tokenTypeByTokenId.set(token.id, token.type);
   }
 
   return {
-    cardTokenTypeIds: new Set(cardAnimation.cardTokenTypeIds),
+    cardTokenTypeIds: resolveCardTokenTypeIds(cardAnimation, tokenTypeIds),
     tokenTypeByTokenId,
     zoneRoles: {
       draw: new Set(cardAnimation.zoneRoles.draw),
@@ -217,6 +224,27 @@ function buildCardContext(state: GameStore): CardAnimationMappingContext | undef
       discard: new Set(cardAnimation.zoneRoles.discard),
     },
   };
+}
+
+function resolveCardTokenTypeIds(
+  config: CardAnimationConfig,
+  tokenTypeIds: readonly string[],
+): ReadonlySet<string> {
+  const result = new Set<string>();
+
+  for (const id of config.cardTokenTypes.ids ?? []) {
+    result.add(id);
+  }
+
+  for (const prefix of config.cardTokenTypes.idPrefixes ?? []) {
+    for (const tokenTypeId of tokenTypeIds) {
+      if (tokenTypeId.startsWith(prefix)) {
+        result.add(tokenTypeId);
+      }
+    }
+  }
+
+  return result;
 }
 
 function hasVisualDescriptors(descriptors: readonly AnimationDescriptor[]): boolean {

@@ -6,22 +6,16 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { createAnimationController } from '../../src/animation/animation-controller';
 import { createPresetRegistry } from '../../src/animation/preset-registry';
 import { traceToDescriptors } from '../../src/animation/trace-to-descriptors';
+import { VisualConfigProvider } from '../../src/config/visual-config-provider';
 import type { GameStore } from '../../src/store/game-store';
 
 interface ControllerStoreState {
   readonly effectTrace: readonly EffectTraceEntry[];
   readonly animationPlaying: boolean;
   readonly gameDef: {
-    readonly cardAnimation?: {
-      readonly cardTokenTypeIds: readonly string[];
-      readonly zoneRoles: {
-        readonly draw: readonly string[];
-        readonly hand: readonly string[];
-        readonly shared: readonly string[];
-        readonly burn: readonly string[];
-        readonly discard: readonly string[];
-      };
-    };
+    readonly tokenTypes?: readonly {
+      readonly id: string;
+    }[];
   } | null;
   readonly renderModel: {
     readonly tokens: readonly {
@@ -41,6 +35,8 @@ interface TimelineFixture {
   readonly progress: ReturnType<typeof vi.fn>;
   readonly kill: ReturnType<typeof vi.fn>;
 }
+
+const NULL_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
 
 function createControllerStore(): StoreApi<ControllerStoreState> {
   let store!: StoreApi<ControllerStoreState>;
@@ -127,8 +123,22 @@ function cardTraceEntries(): readonly EffectTraceEntry[] {
 
 function cardGameDef() {
   return {
+    tokenTypes: [
+      { id: 'card' },
+      { id: 'chip' },
+      { id: 'card-special' },
+    ],
+  } as const;
+}
+
+function cardAnimationProvider(): VisualConfigProvider {
+  return new VisualConfigProvider({
+    version: 1,
     cardAnimation: {
-      cardTokenTypeIds: ['card'],
+      cardTokenTypes: {
+        ids: ['card'],
+        idPrefixes: ['card-'],
+      },
       zoneRoles: {
         draw: ['zone:deck'],
         hand: ['zone:hand:p1'],
@@ -137,7 +147,7 @@ function cardGameDef() {
         discard: ['zone:discard'],
       },
     },
-  } as const;
+  });
 }
 
 function cardRenderModel() {
@@ -188,6 +198,7 @@ describe('createAnimationController', () => {
     const controller = createAnimationController(
       {
         store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
         tokenContainers: () => tokenContainers as never,
         zoneContainers: () => zoneContainers as never,
         zonePositions: () => zonePositions,
@@ -233,6 +244,7 @@ describe('createAnimationController', () => {
     const controller = createAnimationController(
       {
         store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
         tokenContainers: () => new Map() as never,
         zoneContainers: () => new Map() as never,
         zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
@@ -282,6 +294,7 @@ describe('createAnimationController', () => {
     const controller = createAnimationController(
       {
         store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
         tokenContainers: () => new Map() as never,
         zoneContainers: () => new Map() as never,
         zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
@@ -324,6 +337,7 @@ describe('createAnimationController', () => {
     const controller = createAnimationController(
       {
         store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
         tokenContainers: () => new Map([['tok:1', {}]]) as never,
         zoneContainers: () => new Map([['zone:a', {}], ['zone:b', {}]]) as never,
         zonePositions: () => ({
@@ -369,6 +383,7 @@ describe('createAnimationController', () => {
     const controller = createAnimationController(
       {
         store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
         tokenContainers: () => new Map() as never,
         zoneContainers: () => new Map() as never,
         zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
@@ -399,13 +414,14 @@ describe('createAnimationController', () => {
     controller.destroy();
   });
 
-  it('provides card mapping context when gameDef metadata and render tokens are present', () => {
+  it('provides card mapping context from visual config selectors and render tokens', () => {
     const store = createControllerStore();
     const traceToDescriptorsMock = vi.fn(() => []);
 
     const controller = createAnimationController(
       {
         store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: cardAnimationProvider(),
         tokenContainers: () => new Map() as never,
         zoneContainers: () => new Map() as never,
         zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
@@ -425,21 +441,11 @@ describe('createAnimationController', () => {
 
     controller.start();
     store.setState({
-      gameDef: {
-        cardAnimation: {
-          cardTokenTypeIds: ['card'],
-          zoneRoles: {
-            draw: ['zone:deck'],
-            hand: ['zone:hand:p1'],
-            shared: ['zone:board'],
-            burn: ['zone:burn'],
-            discard: ['zone:discard'],
-          },
-        },
-      },
+      gameDef: cardGameDef(),
       renderModel: {
         tokens: [
           { id: 'tok:card', type: 'card' },
+          { id: 'tok:card-special', type: 'card-special' },
           { id: 'tok:chip', type: 'chip' },
         ],
       },
@@ -485,6 +491,7 @@ describe('createAnimationController', () => {
       };
     };
     expect(mappingOptions.cardContext.cardTokenTypeIds.has('card')).toBe(true);
+    expect(mappingOptions.cardContext.cardTokenTypeIds.has('card-special')).toBe(true);
     expect(mappingOptions.cardContext.tokenTypeByTokenId.get('tok:card')).toBe('card');
     expect(mappingOptions.cardContext.zoneRoles.burn.has('zone:burn')).toBe(true);
 
@@ -508,6 +515,7 @@ describe('createAnimationController', () => {
     const controller = createAnimationController(
       {
         store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
         tokenContainers: () => new Map() as never,
         zoneContainers: () => new Map() as never,
         zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
@@ -555,6 +563,7 @@ describe('createAnimationController', () => {
     const controller = createAnimationController(
       {
         store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: cardAnimationProvider(),
         tokenContainers: () => new Map([['tok:card', {}]]) as never,
         zoneContainers: () => new Map([
           ['zone:deck', {}],
@@ -632,6 +641,7 @@ describe('createAnimationController', () => {
     const controller = createAnimationController(
       {
         store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: cardAnimationProvider(),
         tokenContainers: () => new Map([['tok:card', {}]]) as never,
         zoneContainers: () => new Map([
           ['zone:deck', {}],

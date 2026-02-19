@@ -229,6 +229,7 @@ export async function createGameCanvasRuntime(
   try {
     animationController = deps.createAnimationController({
       store: options.store,
+      visualConfigProvider: options.visualConfigProvider,
       tokenContainers: () => tokenRenderer.getContainerMap(),
       zoneContainers: () => zoneRenderer.getContainerMap(),
       zonePositions: () => positionStore.getSnapshot(),

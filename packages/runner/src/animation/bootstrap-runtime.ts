@@ -1,3 +1,6 @@
+import { gsap } from 'gsap';
+import { PixiPlugin } from 'gsap/PixiPlugin';
+
 import {
   configureGsapRuntime,
   getGsapRuntime,
@@ -26,8 +29,15 @@ export function initializeAnimationRuntime(options: AnimationRuntimeBootstrapOpt
     return getGsapRuntime();
   }
 
-  const runtime = options.runtime ?? createNoopGsapRuntime();
+  const runtime = options.runtime ?? createDefaultGsapRuntime();
   return configureGsapRuntime(runtime);
+}
+
+function createDefaultGsapRuntime(): GsapRuntime {
+  return {
+    gsap: gsap as unknown as GsapLike,
+    PixiPlugin: PixiPlugin as unknown as { readonly name?: string },
+  };
 }
 
 export function createNoopGsapRuntime(): GsapRuntime {
@@ -39,12 +49,42 @@ export function createNoopGsapRuntime(): GsapRuntime {
       // No-op runtime for deterministic initialization before real GSAP/Pixi wiring lands.
     },
     timeline: () => createNoopTimeline(),
+    to: (target, vars) => {
+      applyTweenVars(target as Record<string, unknown>, vars);
+      return {};
+    },
   };
 
   return {
     gsap,
     PixiPlugin: { name: 'NoopPixiPlugin' },
   };
+}
+
+function applyTweenVars(
+  target: Record<string, unknown>,
+  vars: Record<string, unknown> & { readonly duration?: number },
+): void {
+  for (const [key, value] of Object.entries(vars)) {
+    if (key === 'duration' || key === 'ease' || key === 'overwrite' || key === 'repeat' || key === 'yoyo') {
+      continue;
+    }
+
+    if (key === 'scale' && typeof value === 'number') {
+      const scale = target.scale as { set?: (x: number, y?: number) => void; x?: number; y?: number } | undefined;
+      if (scale?.set !== undefined) {
+        scale.set(value, value);
+      } else if (scale !== undefined) {
+        scale.x = value;
+        scale.y = value;
+      } else {
+        target.scale = { x: value, y: value };
+      }
+      continue;
+    }
+
+    target[key] = value;
+  }
 }
 
 function createNoopTimeline(): InternalNoopTimeline {

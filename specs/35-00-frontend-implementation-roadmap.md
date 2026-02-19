@@ -18,6 +18,7 @@ Spec 36 is completed and archived at `archive/specs/36-game-kernel-web-worker-br
 Spec 37 is completed and archived at `archive/specs/37-state-management-render-model.md`.
 Spec 38 is completed and archived at `archive/specs/38-pixijs-canvas-foundation.md`.
 Spec 39 is completed and archived at `archive/specs/39-react-dom-ui-layer.md`.
+Spec 40 is completed and archived at `archive/specs/40-animation-system.md`.
 
 ---
 
@@ -30,7 +31,7 @@ Spec 39 is completed and archived at `archive/specs/39-react-dom-ui-layer.md`.
 | 37 | State Management & Render Model (completed) | P0 | L | 36 |
 | 38 | PixiJS Canvas Foundation (completed) | P0 | L | 37 |
 | 39 | React DOM UI Layer (completed) | P1 | L | 37, 38 |
-| 40 | Animation System | P1 | L | 38 |
+| 40 | Animation System (completed) | P1 | L | 38 |
 | 41 | Board Layout Engine | P1 | M | 38 |
 | 42 | Per-Game Visual Config & Session Mgmt | P2 | M | 38, 39 |
 
@@ -110,11 +111,11 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 ### Milestone F3: Polished Experience (Specs 40–42)
 
 **Gate criteria**:
-- [ ] Effect trace drives GSAP timeline animations (token movement, creation, destruction, property changes)
-- [ ] Phase transition banners animate
+- [x] Effect trace drives GSAP timeline animations (token movement, creation, destruction, property changes)
+- [x] Phase transition banners animate
 - [ ] Card animations (deal, flip, burn) work
-- [ ] Animation speed control (1x, 2x, 4x, pause, skip)
-- [ ] AI turn playback with configurable detail level
+- [x] Animation speed control (1x, 2x, 4x, pause, skip)
+- [x] AI turn playback with configurable detail level
 - [ ] Board auto-layouts from zone adjacency graph via ForceAtlas2
 - [ ] Table-only mode for games without adjacency (e.g., Texas Hold'em)
 - [ ] Token stacking within zones with expand-on-click
@@ -125,7 +126,7 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [ ] Replay mode (step-forward, step-backward, speed control)
 - [ ] Event log panel with clickable, filterable entries
 
-**Outcome**: Full browser-based game runner with animations, auto-layout, visual customization, and session management.
+**F3 Progress**: In progress. Spec 40 is completed (closed 2026-02-19), so core trace-driven animation, phase transition animation, playback controls, and AI detail-level playback are done. Spec 41 (layout) and Spec 42 (visual config/session management), plus card-specific deal/flip/burn animations, remain open.
 
 ---
 

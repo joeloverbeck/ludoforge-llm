@@ -191,6 +191,25 @@ function createRuntimeFixture() {
       lifecycle.push('aria-destroy');
     }),
   };
+  let reducedMotion = false;
+  let reducedMotionListener: ((value: boolean) => void) | null = null;
+  const reducedMotionObserver = {
+    get reduced() {
+      return reducedMotion;
+    },
+    subscribe: vi.fn((listener: (value: boolean) => void) => {
+      reducedMotionListener = listener;
+      return () => {
+        if (reducedMotionListener === listener) {
+          reducedMotionListener = null;
+        }
+      };
+    }),
+    destroy: vi.fn(() => {
+      lifecycle.push('reduced-motion-destroy');
+      reducedMotionListener = null;
+    }),
+  };
 
   const keyboardCleanup = vi.fn(() => {
     lifecycle.push('keyboard-cleanup');
@@ -224,6 +243,7 @@ function createRuntimeFixture() {
   const attachTokenSelectHandlers = vi.fn(() => vi.fn());
   const createAnimationController = vi.fn(() => animationController);
   const createAiPlaybackController = vi.fn(() => aiPlaybackController);
+  const createReducedMotionObserver = vi.fn(() => reducedMotionObserver);
 
   const deps = {
     createGameCanvas: vi.fn(async () => gameCanvas),
@@ -242,6 +262,7 @@ function createRuntimeFixture() {
     createCoordinateBridge: vi.fn(() => bridge),
     createAnimationController,
     createAiPlaybackController,
+    createReducedMotionObserver,
     createAriaAnnouncer: vi.fn(() => ariaAnnouncer),
     attachZoneSelectHandlers,
     attachTokenSelectHandlers,
@@ -263,6 +284,7 @@ function createRuntimeFixture() {
     aiPlaybackController,
     createAnimationController,
     createAiPlaybackController,
+    createReducedMotionObserver,
     ariaAnnouncer,
     attachZoneSelectHandlers,
     attachTokenSelectHandlers,
@@ -273,6 +295,10 @@ function createRuntimeFixture() {
     viewportEvents,
     emitViewportMoved: () => {
       movedListener?.();
+    },
+    emitReducedMotionChange: (next: boolean) => {
+      reducedMotion = next;
+      reducedMotionListener?.(next);
     },
     setNextScreenRect: (rect: { x: number; y: number; width: number; height: number }) => {
       nextRect = rect;
@@ -328,6 +354,8 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.deps.createAriaAnnouncer).toHaveBeenCalledTimes(1);
     expect(fixture.createAnimationController).toHaveBeenCalledTimes(1);
     expect(fixture.animationController.start).toHaveBeenCalledTimes(1);
+    expect(fixture.createReducedMotionObserver).toHaveBeenCalledTimes(1);
+    expect(fixture.animationController.setReducedMotion).toHaveBeenCalledWith(false);
     expect(fixture.createAiPlaybackController).toHaveBeenCalledTimes(1);
     expect(fixture.aiPlaybackController.start).toHaveBeenCalledTimes(1);
     expect(fixture.attachKeyboardSelect).toHaveBeenCalledTimes(1);
@@ -369,6 +397,71 @@ describe('createGameCanvasRuntime', () => {
     runtime.destroy();
   });
 
+  it('routes reduced-motion updates to animation controller', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x0,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    fixture.emitReducedMotionChange(true);
+    fixture.emitReducedMotionChange(false);
+
+    expect(fixture.animationController.setReducedMotion).toHaveBeenNthCalledWith(1, false);
+    expect(fixture.animationController.setReducedMotion).toHaveBeenNthCalledWith(2, true);
+    expect(fixture.animationController.setReducedMotion).toHaveBeenNthCalledWith(3, false);
+
+    runtime.destroy();
+  });
+
+  it('announces phase label changes through aria live region text', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x222222,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    store.setState({
+      renderModel: {
+        ...makeRenderModel(['zone:a']),
+        phaseName: 'setup',
+        phaseDisplayName: 'Setup',
+      } as unknown as NonNullable<GameStore['renderModel']>,
+    });
+    store.setState({
+      renderModel: {
+        ...makeRenderModel(['zone:a']),
+        phaseName: 'setup',
+        phaseDisplayName: 'Setup',
+      } as unknown as NonNullable<GameStore['renderModel']>,
+    });
+    store.setState({
+      renderModel: {
+        ...makeRenderModel(['zone:a']),
+        phaseName: 'action-round',
+        phaseDisplayName: '',
+      } as unknown as NonNullable<GameStore['renderModel']>,
+    });
+
+    expect(fixture.ariaAnnouncer.announce).toHaveBeenNthCalledWith(1, 'Phase: Setup');
+    expect(fixture.ariaAnnouncer.announce).toHaveBeenNthCalledWith(2, 'Phase: action-round');
+    expect(fixture.ariaAnnouncer.announce).toHaveBeenCalledTimes(2);
+
+    runtime.destroy();
+  });
+
   it('tears down in strict order and clears hover anchor', async () => {
     const fixture = createRuntimeFixture();
     const store = createRuntimeStore(makeRenderModel(['zone:a']));
@@ -390,6 +483,7 @@ describe('createGameCanvasRuntime', () => {
       'animation-controller-start',
       'ai-playback-controller-start',
       'updater-start',
+      'reduced-motion-destroy',
       'keyboard-cleanup',
       'ai-playback-controller-destroy',
       'animation-controller-destroy',

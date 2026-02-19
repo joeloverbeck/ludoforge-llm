@@ -7,3 +7,4 @@ export * from './gsap-setup.js';
 export * from './preset-registry.js';
 export * from './timeline-builder.js';
 export * from './trace-to-descriptors.js';
+export * from './reduced-motion.js';

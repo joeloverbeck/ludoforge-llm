@@ -7,6 +7,7 @@ import type { AnimationPlaybackSpeed } from '../animation/animation-types.js';
 import type { GameStore } from '../store/game-store';
 import { createAnimationController, type AnimationController } from '../animation/animation-controller.js';
 import { createAiPlaybackController, type AiPlaybackController } from '../animation/ai-playback.js';
+import { createReducedMotionObserver, type ReducedMotionObserver } from '../animation/reduced-motion.js';
 import type { CoordinateBridge } from './coordinate-bridge';
 import { createCoordinateBridge } from './coordinate-bridge';
 import type { CanvasWorldBounds, HoverAnchor, HoveredCanvasTarget } from './hover-anchor-contract';
@@ -82,6 +83,7 @@ interface GameCanvasRuntimeDeps {
   readonly createCoordinateBridge: typeof createCoordinateBridge;
   readonly createAnimationController: typeof createAnimationController;
   readonly createAiPlaybackController: typeof createAiPlaybackController;
+  readonly createReducedMotionObserver: typeof createReducedMotionObserver;
   readonly createAriaAnnouncer: typeof createAriaAnnouncer;
   readonly attachZoneSelectHandlers: typeof attachZoneSelectHandlers;
   readonly attachTokenSelectHandlers: typeof attachTokenSelectHandlers;
@@ -99,6 +101,7 @@ const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   createCoordinateBridge,
   createAnimationController,
   createAiPlaybackController,
+  createReducedMotionObserver,
   createAriaAnnouncer,
   attachZoneSelectHandlers,
   attachTokenSelectHandlers,
@@ -198,6 +201,7 @@ export async function createGameCanvasRuntime(
   });
   let animationController: AnimationController | null = null;
   let aiPlaybackController: AiPlaybackController | null = null;
+  let reducedMotionObserver: ReducedMotionObserver | null = null;
   try {
     animationController = deps.createAnimationController({
       store: options.store,
@@ -206,6 +210,9 @@ export async function createGameCanvasRuntime(
       zonePositions: () => positionStore.getSnapshot(),
     });
     animationController.start();
+
+    reducedMotionObserver = deps.createReducedMotionObserver(options.container.ownerDocument?.defaultView ?? undefined);
+    animationController.setReducedMotion(reducedMotionObserver.reduced);
   } catch (error) {
     selectorStore.getState().setAnimationPlaying(false);
     console.warn('Animation controller initialization failed. Continuing without animations.', error);
@@ -287,6 +294,20 @@ export async function createGameCanvasRuntime(
         return;
       }
       animationController?.skipCurrent();
+    },
+  );
+  const unsubscribeReducedMotion = reducedMotionObserver?.subscribe((reduced) => {
+    animationController?.setReducedMotion(reduced);
+  }) ?? (() => {
+    // No-op when reduced-motion observer is unavailable.
+  });
+  const unsubscribePhaseAnnouncement = selectorStore.subscribe(
+    selectPhaseAnnouncementLabel,
+    (phaseLabel, previousPhaseLabel) => {
+      if (phaseLabel === null || phaseLabel === previousPhaseLabel) {
+        return;
+      }
+      ariaAnnouncer.announce(`Phase: ${phaseLabel}`);
     },
   );
   const keyboardSelectConfig = {
@@ -372,6 +393,9 @@ export async function createGameCanvasRuntime(
       unsubscribeAnimationPlaybackSpeed();
       unsubscribeAnimationPaused();
       unsubscribeAnimationSkipRequestToken();
+      unsubscribeReducedMotion();
+      reducedMotionObserver?.destroy();
+      unsubscribePhaseAnnouncement();
       cleanupKeyboardSelect();
       aiPlaybackController?.destroy();
       animationController?.destroy();
@@ -502,6 +526,16 @@ function selectGameDefFactions(state: GameStore): readonly FactionDef[] | undefi
 
 function selectGameDefTokenTypes(state: GameStore): readonly TokenTypeDef[] | undefined {
   return state.gameDef?.tokenTypes;
+}
+
+function selectPhaseAnnouncementLabel(state: GameStore): string | null {
+  const phaseName = state.renderModel?.phaseName?.trim();
+  if (phaseName === undefined || phaseName.length === 0) {
+    return null;
+  }
+
+  const displayName = state.renderModel?.phaseDisplayName?.trim();
+  return displayName !== undefined && displayName.length > 0 ? displayName : phaseName;
 }
 
 function stringArraysEqual(prev: readonly string[], next: readonly string[]): boolean {

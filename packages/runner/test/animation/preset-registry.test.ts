@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { EffectTraceEntry } from '@ludoforge/engine/runtime';
 
 import { ANIMATION_PRESET_IDS } from '../../src/animation/animation-types';
@@ -117,5 +117,82 @@ describe('preset-registry', () => {
         createTween: NOOP_FACTORY,
       }),
     ).toThrow(/unsupported descriptor kind/u);
+  });
+
+  it('built-in presets emit tween operations with sprite-aware targets', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+    const context = {
+      gsap,
+      timeline,
+      spriteRefs: {
+        tokenContainers: new Map([['tok:1', token]]),
+        zoneContainers: new Map(),
+        zonePositions: {
+          positions: new Map([
+            ['zone:a', { x: 0, y: 0 }],
+            ['zone:b', { x: 20, y: 30 }],
+          ]),
+        },
+      },
+    };
+
+    registry.require('arc-tween').createTween(
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      context,
+    );
+    registry.require('fade-in-scale').createTween(
+      {
+        kind: 'createToken',
+        tokenId: 'tok:1',
+        type: 'unit',
+        zone: 'zone:b',
+        preset: 'fade-in-scale',
+        isTriggered: false,
+      },
+      context,
+    );
+    registry.require('tint-flash').createTween(
+      {
+        kind: 'setTokenProp',
+        tokenId: 'tok:1',
+        prop: 'foo',
+        oldValue: 0,
+        newValue: 1,
+        preset: 'tint-flash',
+        isTriggered: false,
+      },
+      context,
+    );
+
+    expect(gsap.to).toHaveBeenCalledWith(token, expect.objectContaining({
+      duration: 0.4,
+      x: 20,
+      y: 30,
+    }));
+    expect(gsap.to).toHaveBeenCalledWith(token, expect.objectContaining({
+      duration: 0.3,
+      alpha: 1,
+      scale: 1,
+    }));
+    expect(gsap.to).toHaveBeenCalledWith(token, expect.objectContaining({
+      duration: 0.2,
+      tint: 0xffd54f,
+    }));
+    expect(timeline.add).toHaveBeenCalled();
   });
 });

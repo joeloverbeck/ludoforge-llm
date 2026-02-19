@@ -64,10 +64,6 @@ const DEFAULT_TRACE_KIND_PRESET_IDS: Readonly<Record<EffectTraceEntry['kind'], A
   reduce: null,
 };
 
-const NOOP_TWEEN_FACTORY: PresetTweenFactory = () => {
-  // Placeholder until ANIMSYS-004 timeline builder wires concrete GSAP tween creation.
-};
-
 const VISUAL_DESCRIPTOR_KINDS: readonly PresetCompatibleDescriptorKind[] = [
   'moveToken',
   'createToken',
@@ -82,37 +78,41 @@ const BUILTIN_PRESET_METADATA = {
   'arc-tween': {
     defaultDurationSeconds: 0.4,
     compatibleKinds: ['moveToken'],
-    createTween: NOOP_TWEEN_FACTORY,
+    createTween: createArcTween,
   },
   'fade-in-scale': {
     defaultDurationSeconds: 0.3,
     compatibleKinds: ['createToken'],
-    createTween: NOOP_TWEEN_FACTORY,
+    createTween: createFadeInScaleTween,
   },
   'fade-out-scale': {
     defaultDurationSeconds: 0.3,
     compatibleKinds: ['destroyToken'],
-    createTween: NOOP_TWEEN_FACTORY,
+    createTween: createFadeOutScaleTween,
   },
   'tint-flash': {
     defaultDurationSeconds: 0.4,
     compatibleKinds: ['setTokenProp'],
-    createTween: NOOP_TWEEN_FACTORY,
+    createTween: createTintFlashTween,
   },
   'counter-roll': {
     defaultDurationSeconds: 0.3,
     compatibleKinds: ['varChange', 'resourceTransfer'],
-    createTween: NOOP_TWEEN_FACTORY,
+    createTween: (_descriptor, context) => {
+      appendDelay(context, 0.3);
+    },
   },
   'banner-slide': {
     defaultDurationSeconds: 1.5,
     compatibleKinds: ['phaseTransition'],
-    createTween: NOOP_TWEEN_FACTORY,
+    createTween: (_descriptor, context) => {
+      appendDelay(context, 1.5);
+    },
   },
   pulse: {
     defaultDurationSeconds: 0.2,
     compatibleKinds: VISUAL_DESCRIPTOR_KINDS,
-    createTween: NOOP_TWEEN_FACTORY,
+    createTween: createPulseTween,
   },
 } as const satisfies Readonly<Record<BuiltinAnimationPresetId, AnimationPresetMetadata>>;
 
@@ -239,4 +239,162 @@ function freezePresetDefinition(definition: AnimationPresetDefinition): Animatio
     compatibleKinds: Object.freeze([...definition.compatibleKinds]),
     createTween: definition.createTween,
   } satisfies AnimationPresetDefinition);
+}
+
+interface TweenTarget {
+  x?: number;
+  y?: number;
+  alpha?: number;
+  tint?: number;
+  scale?: {
+    x?: number;
+    y?: number;
+    set?: (x: number, y?: number) => void;
+  };
+}
+
+function createArcTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
+  if (descriptor.kind !== 'moveToken') {
+    return;
+  }
+
+  const target = context.spriteRefs.tokenContainers.get(descriptor.tokenId) as TweenTarget | undefined;
+  const from = context.spriteRefs.zonePositions.positions.get(descriptor.from);
+  const to = context.spriteRefs.zonePositions.positions.get(descriptor.to);
+  if (target === undefined || from === undefined || to === undefined) {
+    appendDelay(context, 0.4);
+    return;
+  }
+
+  target.x = from.x;
+  target.y = from.y;
+  appendTween(context, target, { x: to.x, y: to.y }, 0.4);
+}
+
+function createFadeInScaleTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
+  if (descriptor.kind !== 'createToken') {
+    return;
+  }
+
+  const target = context.spriteRefs.tokenContainers.get(descriptor.tokenId) as TweenTarget | undefined;
+  if (target === undefined) {
+    appendDelay(context, 0.3);
+    return;
+  }
+
+  target.alpha = 0;
+  setScale(target, 0.5);
+  appendTween(context, target, { alpha: 1, scale: 1 }, 0.3);
+}
+
+function createFadeOutScaleTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
+  if (descriptor.kind !== 'destroyToken') {
+    return;
+  }
+
+  const target = context.spriteRefs.tokenContainers.get(descriptor.tokenId) as TweenTarget | undefined;
+  if (target === undefined) {
+    appendDelay(context, 0.3);
+    return;
+  }
+
+  if (target.alpha === undefined) {
+    target.alpha = 1;
+  }
+  setScale(target, 1);
+  appendTween(context, target, { alpha: 0, scale: 0.5 }, 0.3);
+}
+
+function createTintFlashTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
+  if (descriptor.kind !== 'setTokenProp') {
+    return;
+  }
+
+  const target = context.spriteRefs.tokenContainers.get(descriptor.tokenId) as TweenTarget | undefined;
+  if (target === undefined) {
+    appendDelay(context, 0.4);
+    return;
+  }
+
+  const originalTint = target.tint ?? 0xffffff;
+  appendTween(context, target, { tint: 0xffd54f }, 0.2);
+  appendTween(context, target, { tint: originalTint }, 0.2);
+}
+
+function createPulseTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
+  const target = resolvePulseTarget(descriptor, context);
+  if (target === undefined) {
+    appendDelay(context, 0.2);
+    return;
+  }
+
+  setScale(target, 1);
+  appendTween(context, target, { scale: 1.08 }, 0.1);
+  appendTween(context, target, { scale: 1 }, 0.1);
+}
+
+function resolvePulseTarget(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): TweenTarget | undefined {
+  if ('tokenId' in descriptor) {
+    return context.spriteRefs.tokenContainers.get(descriptor.tokenId) as TweenTarget | undefined;
+  }
+  return undefined;
+}
+
+function appendDelay(context: PresetTweenContext, durationSeconds: number): void {
+  context.timeline.add(context.gsap.timeline({ paused: true, duration: durationSeconds }));
+}
+
+function appendTween(
+  context: PresetTweenContext,
+  target: TweenTarget,
+  vars: Record<string, unknown>,
+  durationSeconds: number,
+): void {
+  if (typeof context.gsap.to === 'function') {
+    context.timeline.add(context.gsap.to(target, { duration: durationSeconds, ...vars }));
+    return;
+  }
+
+  applyVars(target, vars);
+  appendDelay(context, durationSeconds);
+}
+
+function applyVars(target: TweenTarget, vars: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(vars)) {
+    if (key === 'scale' && typeof value === 'number') {
+      setScale(target, value);
+      continue;
+    }
+    if (key === 'x' && typeof value === 'number') {
+      target.x = value;
+      continue;
+    }
+    if (key === 'y' && typeof value === 'number') {
+      target.y = value;
+      continue;
+    }
+    if (key === 'alpha' && typeof value === 'number') {
+      target.alpha = value;
+      continue;
+    }
+    if (key === 'tint' && typeof value === 'number') {
+      target.tint = value;
+    }
+  }
+}
+
+function setScale(target: TweenTarget, value: number): void {
+  const scale = target.scale;
+  if (scale?.set !== undefined) {
+    scale.set(value, value);
+    return;
+  }
+
+  if (scale !== undefined) {
+    scale.x = value;
+    scale.y = value;
+    return;
+  }
+
+  target.scale = { x: value, y: value };
 }

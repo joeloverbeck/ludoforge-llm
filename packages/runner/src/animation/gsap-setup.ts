@@ -17,6 +17,10 @@ export interface GsapLike {
   registerPlugin(...plugins: readonly GsapPlugin[]): void;
   defaults(config: GsapDefaults): void;
   timeline(config?: Record<string, unknown>): GsapTimelineLike;
+  to?(
+    target: unknown,
+    vars: Record<string, unknown> & { readonly duration?: number },
+  ): unknown;
 }
 
 export interface GsapRuntime {

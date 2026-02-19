@@ -1,6 +1,6 @@
 # Spec 40: Animation System
 
-**Status**: ACTIVE
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: Spec 38 (PixiJS Canvas Foundation), Spec 39 (React DOM UI Layer)
@@ -291,3 +291,26 @@ Cross-cutting in D4 and D6.
 - Game-specific animation presets (card-deal, card-flip, explosion, etc.) -- these are configured in Spec 42's visual config and registered in the preset registry at runtime
 - Drag-and-drop animation feedback
 - Combat-specific or action-specific animations (per-game visual config, Spec 42)
+
+---
+
+## Outcome
+
+- **Completion date**: 2026-02-19
+- **What changed**:
+  - Implemented animation module architecture end-to-end in runner:
+    - descriptor mapping (`trace-to-descriptors`);
+    - preset registry contracts;
+    - timeline builder with graceful degradation;
+    - queue/controller orchestration and `animationPlaying` integration;
+    - DOM playback controls and AI playback policy integration;
+    - reduced-motion + ARIA phase announcement accessibility wiring.
+  - Integrated runtime wiring through `GameCanvas` with deterministic teardown and failure isolation.
+  - Added comprehensive runner animation/canvas/ui/store tests covering queue, controller, mapping, timeline, UI controls, AI playback, and reduced-motion accessibility behavior.
+- **Deviations from original plan**:
+  - Built-in preset tween factories were initially placeholder/no-op during earlier animation tickets; they were subsequently upgraded to concrete generic tween factories while preserving game-agnostic contracts.
+  - Accessibility implementation emphasizes deterministic reduced-motion forwarding and textual phase announcements; explicit phase-banner timing policy remains deferred until concrete banner tween behavior is implemented.
+- **Verification results**:
+  - `pnpm turbo test` ✅
+  - `pnpm turbo lint` ✅
+  - `pnpm turbo typecheck` ✅

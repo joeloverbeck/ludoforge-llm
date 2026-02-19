@@ -13,6 +13,7 @@ import {
   ZONE_RENDER_WIDTH as ZONE_WIDTH,
   ZONE_RENDER_HEIGHT as ZONE_HEIGHT,
 } from '../../layout/layout-constants.js';
+
 const ZONE_CORNER_RADIUS = 12;
 const LINE_CORNER_RADIUS = 4;
 

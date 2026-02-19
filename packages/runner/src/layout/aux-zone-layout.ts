@@ -1,10 +1,11 @@
 import type { ZoneDef } from '@ludoforge/engine/runtime';
 
 import type { AuxLayoutResult } from './layout-types.js';
+import { ZONE_RENDER_HEIGHT, ZONE_RENDER_WIDTH } from './layout-constants.js';
 
-const SIDEBAR_MARGIN_X = 120;
-const ZONE_VERTICAL_SPACING = 80;
-const GROUP_VERTICAL_SPACING = 140;
+const SIDEBAR_MARGIN_X = ZONE_RENDER_WIDTH + 40;
+const ZONE_VERTICAL_SPACING = ZONE_RENDER_HEIGHT + 20;
+const GROUP_VERTICAL_SPACING = ZONE_RENDER_HEIGHT + 60;
 
 type AuxGroupKey = 'cards' | 'forcePools' | 'hands' | 'other';
 

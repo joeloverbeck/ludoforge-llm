@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { asZoneId, type ZoneDef } from '@ludoforge/engine/runtime';
 
 import { computeAuxLayout } from '../../src/layout/aux-zone-layout';
+import { ZONE_RENDER_HEIGHT, ZONE_RENDER_WIDTH } from '../../src/layout/layout-constants';
 
 const BOARD_BOUNDS = { minX: -200, minY: -100, maxX: 500, maxY: 450 } as const;
 
@@ -122,7 +123,7 @@ describe('computeAuxLayout', () => {
       maxY: 0,
     });
 
-    expect(result.positions.get('deck:none')).toEqual({ x: 120, y: 0 });
+    expect(result.positions.get('deck:none')).toEqual({ x: ZONE_RENDER_WIDTH + 40, y: 0 });
   });
 
   it('returns deterministic grouping and positions regardless of input order', () => {
@@ -141,6 +142,58 @@ describe('computeAuxLayout', () => {
     expect([...second.positions.entries()].sort(([left], [right]) => left.localeCompare(right))).toEqual(
       [...first.positions.entries()].sort(([left], [right]) => left.localeCompare(right)),
     );
+  });
+
+  it('vertical spacing between consecutive zones exceeds zone height', () => {
+    const result = computeAuxLayout([
+      zone('a:none', { layoutRole: 'forcePool' }),
+      zone('b:none', { layoutRole: 'forcePool' }),
+      zone('c:none', { layoutRole: 'forcePool' }),
+    ], BOARD_BOUNDS);
+
+    const positions = ['a:none', 'b:none', 'c:none'].map((id) => result.positions.get(id)!);
+    for (let i = 1; i < positions.length; i += 1) {
+      const gap = Math.abs(positions[i]!.y - positions[i - 1]!.y);
+      expect(gap).toBeGreaterThanOrEqual(ZONE_RENDER_HEIGHT);
+    }
+  });
+
+  it('group spacing between different groups exceeds zone height', () => {
+    const result = computeAuxLayout([
+      zone('deck:none', { ordering: 'stack' }),
+      zone('pool:none', { layoutRole: 'forcePool' }),
+    ], BOARD_BOUNDS);
+
+    const deckPos = result.positions.get('deck:none')!;
+    const poolPos = result.positions.get('pool:none')!;
+    const gap = Math.abs(poolPos.y - deckPos.y);
+    expect(gap).toBeGreaterThan(ZONE_RENDER_HEIGHT);
+  });
+
+  it('sidebar X provides clearance so aux zones do not overlap board edge zones', () => {
+    const result = computeAuxLayout([
+      zone('deck:none', { ordering: 'stack' }),
+    ], BOARD_BOUNDS);
+
+    const deckPos = result.positions.get('deck:none')!;
+    const auxLeftEdge = deckPos.x - ZONE_RENDER_WIDTH / 2;
+    const boardRightEdge = BOARD_BOUNDS.maxX + ZONE_RENDER_WIDTH / 2;
+    expect(auxLeftEdge).toBeGreaterThanOrEqual(boardRightEdge);
+  });
+
+  it('no two aux zones overlap when many zones are present', () => {
+    const zones = Array.from({ length: 8 }, (_, i) => zone(`fp${i}:none`, { layoutRole: 'forcePool' }));
+    const result = computeAuxLayout(zones, BOARD_BOUNDS);
+    const entries = [...result.positions.values()];
+
+    for (let left = 0; left < entries.length - 1; left += 1) {
+      for (let right = left + 1; right < entries.length; right += 1) {
+        const a = entries[left]!;
+        const b = entries[right]!;
+        const verticalGap = Math.abs(a.y - b.y);
+        expect(verticalGap).toBeGreaterThanOrEqual(ZONE_RENDER_HEIGHT);
+      }
+    }
   });
 });
 
@@ -162,5 +215,5 @@ function zone(id: string, overrides: ZoneOverrides = {}): ZoneDef {
     ordering: 'set',
     ...overrides,
     ...(normalizedAdjacentTo === undefined ? {} : { adjacentTo: normalizedAdjacentTo }),
-  };
+  } as ZoneDef;
 }

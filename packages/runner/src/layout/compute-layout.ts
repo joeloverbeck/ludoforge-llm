@@ -1,5 +1,5 @@
 import forceAtlas2 from 'graphology-layout-forceatlas2';
-import type { GameDef } from '@ludoforge/engine/runtime';
+import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
 
 import { buildLayoutGraph, partitionZones } from './build-layout-graph.js';
 import type { LayoutMode, LayoutResult } from './layout-types.js';
@@ -12,6 +12,12 @@ const GRAPH_SPACING_RELAXATION_PASSES = 6;
 const SEED_JITTER = 18;
 const SEED_RADIUS_BASE = 160;
 const SEED_RADIUS_STEP = 90;
+const TABLE_SHARED_SPACING = 140;
+const TABLE_PERIMETER_SPACING = 120;
+const TABLE_PERIMETER_MIN_RADIUS_X = 320;
+const TABLE_PERIMETER_MIN_RADIUS_Y = 220;
+const TABLE_PERIMETER_RADIUS_X_STEP = 70;
+const TABLE_PERIMETER_RADIUS_Y_STEP = 50;
 
 interface MutablePosition {
   x: number;
@@ -23,12 +29,47 @@ export function computeLayout(def: GameDef, mode: LayoutMode): LayoutResult {
     case 'graph':
       return computeGraphLayout(def);
     case 'table':
-      throw new Error('Table layout not yet implemented');
+      return computeTableLayout(def);
     case 'track':
       throw new Error('Track layout not yet implemented');
     case 'grid':
       throw new Error('Grid layout not yet implemented');
   }
+}
+
+function computeTableLayout(def: GameDef): LayoutResult {
+  const tableZones = selectTableZones(def);
+  if (tableZones.length === 0) {
+    return {
+      positions: new Map(),
+      mode: 'table',
+      boardBounds: EMPTY_BOUNDS,
+    };
+  }
+
+  const sharedZones: ZoneDef[] = [];
+  const playerZones: ZoneDef[] = [];
+  for (const zone of tableZones) {
+    if (zone.owner === 'player') {
+      playerZones.push(zone);
+      continue;
+    }
+    sharedZones.push(zone);
+  }
+
+  sharedZones.sort((left, right) => left.id.localeCompare(right.id));
+  playerZones.sort((left, right) => left.id.localeCompare(right.id));
+
+  const positions = new Map<string, MutablePosition>();
+  placeSharedZones(sharedZones, positions);
+  placePlayerZones(playerZones, positions);
+  centerOnOrigin(positions);
+
+  return {
+    positions,
+    mode: 'table',
+    boardBounds: computeBounds(positions),
+  };
 }
 
 function computeGraphLayout(def: GameDef): LayoutResult {
@@ -117,6 +158,110 @@ function seedInitialPositions(
       graph.setNodeAttribute(nodeID, 'y', y);
     }
   }
+}
+
+function selectTableZones(def: GameDef): readonly ZoneDef[] {
+  const { board } = partitionZones(def);
+  if (board.length > 0) {
+    return board;
+  }
+
+  return def.zones;
+}
+
+function placeSharedZones(zones: readonly ZoneDef[], positions: Map<string, MutablePosition>): void {
+  if (zones.length === 0) {
+    return;
+  }
+
+  const startY = -((zones.length - 1) * TABLE_SHARED_SPACING) / 2;
+  for (let index = 0; index < zones.length; index += 1) {
+    const zone = zones[index];
+    if (zone === undefined) {
+      continue;
+    }
+    positions.set(zone.id, { x: 0, y: startY + (index * TABLE_SHARED_SPACING) });
+  }
+}
+
+function placePlayerZones(zones: readonly ZoneDef[], positions: Map<string, MutablePosition>): void {
+  if (zones.length === 0) {
+    return;
+  }
+
+  const grouped = groupPlayerZones(zones);
+  const groupCount = grouped.length;
+  const radiusX = TABLE_PERIMETER_MIN_RADIUS_X + (Math.max(0, groupCount - 2) * TABLE_PERIMETER_RADIUS_X_STEP);
+  const radiusY = TABLE_PERIMETER_MIN_RADIUS_Y + (Math.max(0, groupCount - 2) * TABLE_PERIMETER_RADIUS_Y_STEP);
+  const angularStep = (Math.PI * 2) / groupCount;
+
+  for (let groupIndex = 0; groupIndex < groupCount; groupIndex += 1) {
+    const group = grouped[groupIndex];
+    if (group === undefined) {
+      continue;
+    }
+
+    const angle = (-Math.PI / 2) + (groupIndex * angularStep);
+    const anchorX = Math.cos(angle) * radiusX;
+    const anchorY = Math.sin(angle) * radiusY;
+    const tangentX = -Math.sin(angle);
+    const tangentY = Math.cos(angle);
+    const startOffset = -((group.length - 1) * TABLE_PERIMETER_SPACING) / 2;
+
+    for (let index = 0; index < group.length; index += 1) {
+      const zone = group[index];
+      if (zone === undefined) {
+        continue;
+      }
+      const offset = startOffset + (index * TABLE_PERIMETER_SPACING);
+      positions.set(zone.id, {
+        x: anchorX + (tangentX * offset),
+        y: anchorY + (tangentY * offset),
+      });
+    }
+  }
+}
+
+function groupPlayerZones(zones: readonly ZoneDef[]): readonly (readonly ZoneDef[])[] {
+  const groups = new Map<string, { seatIndex: number | null; zones: ZoneDef[] }>();
+  for (const zone of zones) {
+    const inferredSeat = inferPlayerSeatIndex(zone.id);
+    const key = inferredSeat === null ? `zone:${zone.id}` : `seat:${inferredSeat}`;
+    const current = groups.get(key);
+    if (current === undefined) {
+      groups.set(key, { seatIndex: inferredSeat, zones: [zone] });
+      continue;
+    }
+    current.zones.push(zone);
+  }
+
+  const sorted = [...groups.entries()].sort(([leftKey, leftGroup], [rightKey, rightGroup]) => {
+    if (leftGroup.seatIndex !== null && rightGroup.seatIndex !== null) {
+      return leftGroup.seatIndex - rightGroup.seatIndex;
+    }
+    if (leftGroup.seatIndex !== null) {
+      return -1;
+    }
+    if (rightGroup.seatIndex !== null) {
+      return 1;
+    }
+    return leftKey.localeCompare(rightKey);
+  });
+
+  return sorted.map(([, group]) => group.zones.sort((left, right) => left.id.localeCompare(right.id)));
+}
+
+function inferPlayerSeatIndex(zoneID: string): number | null {
+  const matched = /:(\d+)$/u.exec(zoneID);
+  if (matched === null) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(matched[1] ?? '', 10);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    return null;
+  }
+  return parsed;
 }
 
 function normalizeToExtent(positions: Map<string, MutablePosition>, targetExtent: number): void {

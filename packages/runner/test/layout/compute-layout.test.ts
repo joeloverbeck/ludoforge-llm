@@ -148,8 +148,15 @@ describe('computeLayout graph mode', () => {
 });
 
 describe('computeLayout dispatcher', () => {
-  it('throws for table mode placeholder', () => {
-    expect(() => computeLayout(makeDef([]), 'table')).toThrow('Table layout not yet implemented');
+  it('routes table mode', () => {
+    const layout = computeLayout(makeDef([
+      zone('community:none', { owner: 'none' }),
+      zone('hand:0', { owner: 'player' }),
+      zone('hand:1', { owner: 'player' }),
+    ]), 'table');
+
+    expect(layout.mode).toBe('table');
+    expect(layout.positions.size).toBe(3);
   });
 
   it('throws for track mode placeholder', () => {
@@ -158,6 +165,113 @@ describe('computeLayout dispatcher', () => {
 
   it('throws for grid mode placeholder', () => {
     expect(() => computeLayout(makeDef([]), 'grid')).toThrow('Grid layout not yet implemented');
+  });
+});
+
+describe('computeLayout table mode', () => {
+  it('includes all zones when board partition is empty', () => {
+    const layout = computeLayout(makeDef([
+      zone('community:none', { owner: 'none' }),
+      zone('hand:0', { owner: 'player' }),
+      zone('hand:1', { owner: 'player' }),
+      zone('burn:none', { owner: 'none' }),
+    ]), 'table');
+
+    expect([...layout.positions.keys()].sort()).toEqual(['burn:none', 'community:none', 'hand:0', 'hand:1']);
+  });
+
+  it('places shared zones closer to center than player zones', () => {
+    const layout = computeLayout(makeDef([
+      zone('community:none', { owner: 'none' }),
+      zone('hand:0', { owner: 'player' }),
+      zone('hand:1', { owner: 'player' }),
+      zone('hand:2', { owner: 'player' }),
+    ]), 'table');
+
+    const shared = layout.positions.get('community:none');
+    const players = ['hand:0', 'hand:1', 'hand:2'].map((id) => layout.positions.get(id)).filter((value) => value !== undefined);
+    expect(shared).toBeDefined();
+    expect(players.length).toBe(3);
+
+    const sharedDistance = Math.hypot(shared!.x, shared!.y);
+    const nearestPlayerDistance = Math.min(...players.map((position) => Math.hypot(position.x, position.y)));
+    expect(sharedDistance).toBeLessThan(nearestPlayerDistance);
+  });
+
+  it('distributes player seat groups around distinct angles', () => {
+    const layout = computeLayout(makeDef([
+      zone('hand:0', { owner: 'player' }),
+      zone('hand:1', { owner: 'player' }),
+      zone('hand:2', { owner: 'player' }),
+      zone('hand:3', { owner: 'player' }),
+    ]), 'table');
+
+    const angles = ['hand:0', 'hand:1', 'hand:2', 'hand:3']
+      .map((id) => layout.positions.get(id))
+      .filter((value): value is { x: number; y: number } => value !== undefined)
+      .map((position) => Math.atan2(position.y, position.x))
+      .sort((left, right) => left - right);
+
+    expect(angles.length).toBe(4);
+    for (let index = 1; index < angles.length; index += 1) {
+      const delta = Math.abs((angles[index] ?? 0) - (angles[index - 1] ?? 0));
+      expect(delta).toBeGreaterThan(0.4);
+    }
+  });
+
+  it('places single shared zone at origin when no player zones exist', () => {
+    const layout = computeLayout(makeDef([zone('community:none', { owner: 'none' })]), 'table');
+    expect(layout.positions.get('community:none')).toEqual({ x: 0, y: 0 });
+  });
+
+  it('stacks shared zones at center when no player zones exist', () => {
+    const layout = computeLayout(makeDef([
+      zone('community:none', { owner: 'none' }),
+      zone('burn:none', { owner: 'none' }),
+      zone('deck:none', { owner: 'none' }),
+    ]), 'table');
+
+    const community = layout.positions.get('community:none');
+    const burn = layout.positions.get('burn:none');
+    const deck = layout.positions.get('deck:none');
+    expect(community).toBeDefined();
+    expect(burn).toBeDefined();
+    expect(deck).toBeDefined();
+    expect(Math.abs(community!.x)).toBeLessThan(1e-6);
+    expect(Math.abs(burn!.x)).toBeLessThan(1e-6);
+    expect(Math.abs(deck!.x)).toBeLessThan(1e-6);
+  });
+
+  it('keeps same-seat zones contiguous on the perimeter', () => {
+    const layout = computeLayout(makeDef([
+      zone('hand:0', { owner: 'player' }),
+      zone('bench:0', { owner: 'player' }),
+      zone('hand:1', { owner: 'player' }),
+    ]), 'table');
+
+    const hand0 = layout.positions.get('hand:0');
+    const bench0 = layout.positions.get('bench:0');
+    const hand1 = layout.positions.get('hand:1');
+    expect(hand0).toBeDefined();
+    expect(bench0).toBeDefined();
+    expect(hand1).toBeDefined();
+
+    const angle0A = Math.atan2(hand0!.y, hand0!.x);
+    const angle0B = Math.atan2(bench0!.y, bench0!.x);
+    const angle1 = Math.atan2(hand1!.y, hand1!.x);
+
+    expect(angularDistance(angle0A, angle0B)).toBeLessThan(angularDistance(angle0A, angle1));
+  });
+
+  it('returns valid bounds for non-trivial table inputs', () => {
+    const layout = computeLayout(makeDef([
+      zone('community:none', { owner: 'none' }),
+      zone('hand:0', { owner: 'player' }),
+      zone('hand:1', { owner: 'player' }),
+    ]), 'table');
+
+    expect(layout.boardBounds.minX).toBeLessThan(layout.boardBounds.maxX);
+    expect(layout.boardBounds.minY).toBeLessThan(layout.boardBounds.maxY);
   });
 });
 
@@ -174,6 +288,7 @@ interface ZoneOverrides {
   readonly zoneKind?: ZoneDef['zoneKind'];
   readonly adjacentTo?: readonly string[];
   readonly category?: ZoneDef['category'];
+  readonly owner?: ZoneDef['owner'];
 }
 
 function zone(id: string, overrides: ZoneOverrides = {}): ZoneDef {
@@ -187,4 +302,8 @@ function zone(id: string, overrides: ZoneOverrides = {}): ZoneDef {
     ...overrides,
     ...(normalizedAdjacentTo === undefined ? {} : { adjacentTo: normalizedAdjacentTo }),
   } as ZoneDef;
+}
+
+function angularDistance(left: number, right: number): number {
+  return Math.abs(Math.atan2(Math.sin(left - right), Math.cos(left - right)));
 }

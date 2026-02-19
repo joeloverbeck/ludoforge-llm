@@ -10,7 +10,7 @@ import { toApplyMoveIllegalReason } from './legality-outcome.js';
 import { decideApplyMovePipelineViability, evaluatePipelinePredicateStatus } from './pipeline-viability-policy.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { evalCondition } from './eval-condition.js';
-import { evalQuery, isInIntRangeDomain } from './eval-query.js';
+import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
 import type { EvalContext } from './eval-context.js';
 import {
   buildMoveRuntimeBindings,
@@ -241,72 +241,9 @@ const validateDecisionSequenceForMove = (def: GameDef, state: GameState, move: M
   }
 };
 
-const isMoveParamScalar = (value: unknown): value is MoveParamScalar =>
-  typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
-
-const normalizeMoveParamValue = (value: unknown): MoveParamValue | null => {
-  if (isMoveParamScalar(value)) {
-    return value;
-  }
-  if (typeof value === 'object' && value !== null && 'id' in value) {
-    const id = (value as { readonly id?: unknown }).id;
-    return isMoveParamScalar(id) ? id : null;
-  }
-  if (!Array.isArray(value)) {
-    return null;
-  }
-  const normalized: MoveParamScalar[] = [];
-  for (const entry of value) {
-    if (isMoveParamScalar(entry)) {
-      normalized.push(entry);
-      continue;
-    }
-    if (typeof entry === 'object' && entry !== null && 'id' in entry) {
-      const id = (entry as { readonly id?: unknown }).id;
-      if (isMoveParamScalar(id)) {
-        normalized.push(id);
-        continue;
-      }
-    }
-    return null;
-  }
-  return normalized;
-};
-
-const isSameMoveParamValue = (left: MoveParamValue, right: MoveParamValue): boolean => {
-  const leftIsArray = Array.isArray(left);
-  const rightIsArray = Array.isArray(right);
-  if (leftIsArray || rightIsArray) {
-    if (!leftIsArray || !rightIsArray || left.length !== right.length) {
-      return false;
-    }
-    return left.every((entry, index) => Object.is(entry, right[index]));
-  }
-  return Object.is(left, right);
-};
-
 const validateDeclaredActionParams = (action: ActionDef, evalCtx: EvalContext, move: Move): void => {
   for (const param of action.params) {
-    const selected = move.params[param.name];
-    const selectedNormalized = normalizeMoveParamValue(selected);
-    if (selectedNormalized === null) {
-      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION);
-    }
-    if (
-      param.domain.query === 'intsInRange'
-      || param.domain.query === 'intsInVarRange'
-    ) {
-      if (!isInIntRangeDomain(param.domain, selectedNormalized, evalCtx)) {
-        throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION);
-      }
-      continue;
-    }
-    const domainValues = evalQuery(param.domain, evalCtx);
-    const inDomain = domainValues.some((candidate) => {
-      const normalizedCandidate = normalizeMoveParamValue(candidate);
-      return normalizedCandidate !== null && isSameMoveParamValue(selectedNormalized, normalizedCandidate);
-    });
-    if (!inDomain) {
+    if (!isDeclaredActionParamValueInDomain(param, move.params[param.name], evalCtx)) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION);
     }
   }

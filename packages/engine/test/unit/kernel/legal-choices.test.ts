@@ -2,13 +2,16 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  applyMove,
   asActionId,
   asPhaseId,
   asPlayerId,
   asTokenId,
   asZoneId,
+  isKernelErrorCode,
   legalChoicesDiscover,
   legalChoicesEvaluate,
+  ILLEGAL_MOVE_REASONS,
   type ActionDef,
   type EffectAST,
   type GameDef,
@@ -180,6 +183,103 @@ phase: [asPhaseId('main')],
 
     const completed = legalChoicesDiscover(def, state, makeMove('raiseLikeAction', { amount: 3 }));
     assert.deepStrictEqual(completed, { kind: 'complete', complete: true });
+  });
+
+  it('throws LEGAL_CHOICES_VALIDATION_FAILED for out-of-domain declared intsInRange params', () => {
+    const action: ActionDef = {
+      id: asActionId('raiseLikeAction'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [
+        {
+          name: 'amount',
+          domain: { query: 'intsInRange', min: 2, max: 4 },
+        },
+      ],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    assert.throws(
+      () => legalChoicesDiscover(def, state, makeMove('raiseLikeAction', { amount: 5 })),
+      (error: unknown) => {
+        assert.ok(isKernelErrorCode(error, 'LEGAL_CHOICES_VALIDATION_FAILED'));
+        return true;
+      },
+    );
+  });
+
+  it('throws LEGAL_CHOICES_VALIDATION_FAILED for out-of-domain declared enum params', () => {
+    const action: ActionDef = {
+      id: asActionId('pickSuitAction'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [
+        {
+          name: 'suit',
+          domain: { query: 'enums', values: ['hearts', 'clubs'] },
+        },
+      ],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+
+    assert.throws(
+      () => legalChoicesEvaluate(def, state, makeMove('pickSuitAction', { suit: 'diamonds' })),
+      (error: unknown) => {
+        assert.ok(isKernelErrorCode(error, 'LEGAL_CHOICES_VALIDATION_FAILED'));
+        return true;
+      },
+    );
+  });
+
+  it('rejects invalid declared params consistently between legalChoices and applyMove', () => {
+    const action: ActionDef = {
+      id: asActionId('declaredParamParity'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [
+        {
+          name: 'amount',
+          domain: { query: 'intsInRange', min: 1, max: 2 },
+        },
+      ],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const def = makeBaseDef({ actions: [action] });
+    const state = makeBaseState();
+    const invalidMove = makeMove('declaredParamParity', { amount: 3 });
+
+    assert.throws(
+      () => legalChoicesDiscover(def, state, invalidMove),
+      (error: unknown) => {
+        assert.ok(isKernelErrorCode(error, 'LEGAL_CHOICES_VALIDATION_FAILED'));
+        return true;
+      },
+    );
+
+    assert.throws(
+      () => applyMove(def, state, invalidMove),
+      (error: unknown) => {
+        assert.ok(isKernelErrorCode(error, 'ILLEGAL_MOVE'));
+        assert.equal(error.context?.reason, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_NOT_LEGAL_FOR_ACTION);
+        return true;
+      },
+    );
   });
 
   it('2. action with one chooseOne returns options on first call, complete after param filled', () => {

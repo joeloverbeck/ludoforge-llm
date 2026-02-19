@@ -60,7 +60,11 @@ export interface KernelRuntimeErrorContextByCode {
   readonly LEGAL_CHOICES_UNKNOWN_ACTION: Readonly<{
     readonly actionId: Move['actionId'];
   }>;
-  readonly LEGAL_CHOICES_VALIDATION_FAILED: Readonly<Record<string, unknown>>;
+  readonly LEGAL_CHOICES_VALIDATION_FAILED: Readonly<{
+    readonly actionId: ActionDef['id'];
+    readonly param: string;
+    readonly value: unknown;
+  }>;
   readonly INITIAL_STATE_NO_PHASES: Readonly<Record<string, never>>;
   readonly PHASE_ADVANCE_NO_PHASES: Readonly<Record<string, never>>;
   readonly PHASE_ADVANCE_CURRENT_PHASE_NOT_FOUND: Readonly<{

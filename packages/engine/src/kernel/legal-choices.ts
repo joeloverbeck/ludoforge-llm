@@ -1,6 +1,7 @@
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyEffects } from './effects.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
+import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
 import type { EffectContext } from './effect-context.js';
 import type { EvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
@@ -301,6 +302,18 @@ const resolveActionParamPendingChoice = (
 
   for (const param of action.params) {
     if (Object.prototype.hasOwnProperty.call(partialMove.params, param.name)) {
+      const candidateEvalCtx = { ...evalCtx, bindings };
+      if (!isDeclaredActionParamValueInDomain(param, partialMove.params[param.name], candidateEvalCtx)) {
+        throw kernelRuntimeError(
+          'LEGAL_CHOICES_VALIDATION_FAILED',
+          `legalChoices: provided action param "${param.name}" is outside its declared domain`,
+          {
+            actionId: action.id,
+            param: param.name,
+            value: partialMove.params[param.name],
+          },
+        );
+      }
       bindings = {
         ...bindings,
         [param.name]: partialMove.params[param.name],

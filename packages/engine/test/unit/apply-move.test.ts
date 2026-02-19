@@ -2671,6 +2671,55 @@ phase: [asPhaseId('main')],
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
     const result = applyMove(def, state, {
       actionId: asActionId('train'),
+      params: { targetSpaces: 'b' },
+      compound: { specialActivity: { actionId: asActionId('sa'), params: { targetSpaces: 'b' } }, timing: 'after' },
+    });
+    assert.equal(result.state.globalVars.v, 11);
+  });
+
+  it('allows compound SA when subset constraint is satisfied for array-valued params', () => {
+    const def: GameDef = {
+      metadata: { id: 'compound-param-subset-allow-arrays', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actionPipelines: [
+        {
+          id: 'train-profile',
+          actionId: asActionId('train'),
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'v', delta: 10 } }] }],
+          atomicity: 'atomic',
+        },
+        {
+          id: 'sa-profile',
+          actionId: asActionId('sa'),
+          accompanyingOps: ['train'],
+          compoundParamConstraints: [{ relation: 'subset', operationParam: 'targetSpaces', specialActivityParam: 'targetSpaces' }],
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ effects: [{ addVar: { scope: 'global', var: 'v', delta: 1 } }] }],
+          atomicity: 'atomic',
+        },
+      ],
+      actions: [
+        { id: asActionId('train'), actor: 'active', executor: 'actor', phase: [asPhaseId('main')], params: [], pre: null, cost: [], effects: [], limits: [] },
+        { id: asActionId('sa'), actor: 'active', executor: 'actor', phase: [asPhaseId('main')], params: [], pre: null, cost: [], effects: [], limits: [] },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
+    const result = applyMove(def, state, {
+      actionId: asActionId('train'),
       params: { targetSpaces: ['a', 'b'] },
       compound: { specialActivity: { actionId: asActionId('sa'), params: { targetSpaces: ['b'] } }, timing: 'after' },
     });

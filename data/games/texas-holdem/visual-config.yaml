@@ -34,3 +34,23 @@ cardAnimation:
     shared: ["community:none"]
     burn: ["burn:none"]
     discard: ["muck:none"]
+
+cards:
+  assignments:
+    - match:
+        idPrefixes: [card-]
+      template: poker-card
+  templates:
+    poker-card:
+      width: 48
+      height: 68
+      layout:
+        rankName:
+          y: 8
+          fontSize: 11
+          align: center
+        suitName:
+          y: 40
+          fontSize: 10
+          align: center
+          wrap: 42

@@ -18,6 +18,7 @@ describe('DefaultFactionColorProvider', () => {
       symbol: null,
       backSymbol: null,
     });
+    expect(provider.getCardTemplateForTokenType('vc-guerrillas')).toBeNull();
   });
 
   it('returns deterministic color for the same faction id', () => {
@@ -112,6 +113,33 @@ describe('VisualConfigFactionColorProvider', () => {
       size: 28,
       symbol: null,
       backSymbol: null,
+    });
+    expect(provider.getCardTemplateForTokenType('vc-guerrillas')).toBeNull();
+  });
+
+  it('passes through card template lookup from visual config provider', () => {
+    const backingProvider = new VisualConfigProvider({
+      version: 1,
+      cards: {
+        assignments: [
+          {
+            match: { idPrefixes: ['card-'] },
+            template: 'poker-card',
+          },
+        ],
+        templates: {
+          'poker-card': {
+            width: 48,
+            height: 68,
+          },
+        },
+      },
+    });
+    const provider = new VisualConfigFactionColorProvider(backingProvider);
+
+    expect(provider.getCardTemplateForTokenType('card-AS')).toEqual({
+      width: 48,
+      height: 68,
     });
   });
 });

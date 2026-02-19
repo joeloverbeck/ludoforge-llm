@@ -12,6 +12,8 @@ import { hashStableValue } from '../utils/stable-hash.js';
 import type {
   AttributeRule,
   CardAnimationConfig,
+  CardTemplate,
+  TokenTypeSelectors,
   LayoutMode,
   LayoutRole,
   VariablesConfig,
@@ -105,6 +107,21 @@ export class VisualConfigProvider {
       symbol: style?.symbol ?? null,
       backSymbol: style?.backSymbol ?? null,
     };
+  }
+
+  getCardTemplate(templateId: string): CardTemplate | null {
+    return this.config?.cards?.templates?.[templateId] ?? null;
+  }
+
+  getCardTemplateForTokenType(tokenTypeId: string): CardTemplate | null {
+    const assignments = this.config?.cards?.assignments ?? [];
+    for (const assignment of assignments) {
+      if (!matchesTokenTypeSelectors(tokenTypeId, assignment.match)) {
+        continue;
+      }
+      return this.getCardTemplate(assignment.template);
+    }
+    return null;
   }
 
   resolveEdgeStyle(edgeCategory: string | null, isHighlighted: boolean): ResolvedEdgeVisual {
@@ -246,4 +263,13 @@ function attributeContainsValue(value: unknown, expected: string): boolean {
   }
 
   return false;
+}
+
+function matchesTokenTypeSelectors(tokenTypeId: string, selectors: TokenTypeSelectors): boolean {
+  if (selectors.ids?.includes(tokenTypeId) === true) {
+    return true;
+  }
+
+  const prefixes = selectors.idPrefixes ?? [];
+  return prefixes.some((prefix) => tokenTypeId.startsWith(prefix));
 }

@@ -278,6 +278,51 @@ describe('VisualConfigProvider', () => {
     expect(provider.getVariablesConfig()).toEqual(variables);
   });
 
+  it('card template lookups resolve assignments and missing values', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      cards: {
+        assignments: [
+          {
+            match: { idPrefixes: ['card-'] },
+            template: 'poker-card',
+          },
+          {
+            match: { ids: ['special'] },
+            template: 'special-card',
+          },
+        ],
+        templates: {
+          'poker-card': {
+            width: 48,
+            height: 68,
+            layout: {
+              rank: { y: 8, align: 'center' },
+            },
+          },
+          'special-card': {
+            width: 60,
+            height: 90,
+          },
+        },
+      },
+    });
+
+    expect(provider.getCardTemplateForTokenType('card-AS')).toEqual({
+      width: 48,
+      height: 68,
+      layout: {
+        rank: { y: 8, align: 'center' },
+      },
+    });
+    expect(provider.getCardTemplateForTokenType('special')).toEqual({
+      width: 60,
+      height: 90,
+    });
+    expect(provider.getCardTemplateForTokenType('token')).toBeNull();
+    expect(provider.getCardTemplate('unknown')).toBeNull();
+  });
+
   it('returns deterministic structural results for repeated calls', () => {
     const config: VisualConfig = {
       version: 1,

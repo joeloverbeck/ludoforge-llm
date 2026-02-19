@@ -118,6 +118,29 @@ describe('visual-config.yaml files', () => {
       burn: ['burn:none'],
       discard: ['muck:none'],
     });
+    expect(parsed.cards?.assignments).toEqual([
+      {
+        match: { idPrefixes: ['card-'] },
+        template: 'poker-card',
+      },
+    ]);
+    expect(parsed.cards?.templates?.['poker-card']).toEqual({
+      width: 48,
+      height: 68,
+      layout: {
+        rankName: {
+          y: 8,
+          fontSize: 11,
+          align: 'center',
+        },
+        suitName: {
+          y: 40,
+          fontSize: 10,
+          align: 'center',
+          wrap: 42,
+        },
+      },
+    });
 
     const layoutRoles = parsed.zones?.layoutRoles ?? {};
     for (const [zoneId, role] of Object.entries(layoutRoles)) {

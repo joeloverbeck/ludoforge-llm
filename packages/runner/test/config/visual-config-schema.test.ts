@@ -165,6 +165,27 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts cards template assignments by token selectors', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      cards: {
+        assignments: [
+          {
+            match: { idPrefixes: ['card-'] },
+            template: 'poker-card',
+          },
+        ],
+        templates: {
+          'poker-card': {
+            width: 48,
+            height: 68,
+          },
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
   it('keeps token backSymbol optional', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

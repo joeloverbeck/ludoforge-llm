@@ -100,7 +100,7 @@ const TokenTypeVisualStyleSchema = z.object({
   backSymbol: z.string().optional(),
 });
 
-const CardTokenTypeSelectorsSchema = z.object({
+const TokenTypeSelectorsSchema = z.object({
   ids: z.array(z.string()).optional(),
   idPrefixes: z.array(z.string()).optional(),
 });
@@ -114,7 +114,7 @@ const CardAnimationZoneRolesSchema = z.object({
 });
 
 const CardAnimationConfigSchema = z.object({
-  cardTokenTypes: CardTokenTypeSelectorsSchema,
+  cardTokenTypes: TokenTypeSelectorsSchema,
   zoneRoles: CardAnimationZoneRolesSchema,
 });
 
@@ -135,8 +135,14 @@ const CardTemplateSchema = z.object({
   layout: z.record(z.string(), CardFieldLayoutSchema).optional(),
 });
 
+const CardTemplateAssignmentSchema = z.object({
+  match: TokenTypeSelectorsSchema,
+  template: z.string(),
+});
+
 const CardsConfigSchema = z.object({
   templates: z.record(z.string(), CardTemplateSchema).optional(),
+  assignments: z.array(CardTemplateAssignmentSchema).optional(),
 });
 
 const VariablePanelSchema = z.object({
@@ -187,12 +193,13 @@ export type ZonesConfig = z.infer<typeof ZonesConfigSchema>;
 export type EdgeVisualStyle = z.infer<typeof EdgeVisualStyleSchema>;
 export type EdgesConfig = z.infer<typeof EdgesConfigSchema>;
 export type TokenTypeVisualStyle = z.infer<typeof TokenTypeVisualStyleSchema>;
-export type CardTokenTypeSelectors = z.infer<typeof CardTokenTypeSelectorsSchema>;
+export type TokenTypeSelectors = z.infer<typeof TokenTypeSelectorsSchema>;
 export type CardAnimationZoneRoles = z.infer<typeof CardAnimationZoneRolesSchema>;
 export type CardAnimationConfig = z.infer<typeof CardAnimationConfigSchema>;
 export type AnimationsConfig = z.infer<typeof AnimationsConfigSchema>;
 export type CardFieldLayout = z.infer<typeof CardFieldLayoutSchema>;
 export type CardTemplate = z.infer<typeof CardTemplateSchema>;
+export type CardTemplateAssignment = z.infer<typeof CardTemplateAssignmentSchema>;
 export type CardsConfig = z.infer<typeof CardsConfigSchema>;
 export type VariablePanel = z.infer<typeof VariablePanelSchema>;
 export type VariableFormatting = z.infer<typeof VariableFormattingSchema>;

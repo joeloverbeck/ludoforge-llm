@@ -253,6 +253,16 @@ function createColorProvider(overrides: {
     readonly backSymbol?: string;
     readonly size?: number;
   };
+  readonly cardTemplatesByTokenType?: Readonly<Record<string, {
+    readonly width: number;
+    readonly height: number;
+    readonly layout?: Readonly<Record<string, {
+      readonly y?: number;
+      readonly fontSize?: number;
+      readonly align?: string;
+      readonly wrap?: number;
+    }>>;
+  }>>;
   readonly factionColor?: string;
 } = {}) {
   return {
@@ -263,6 +273,9 @@ function createColorProvider(overrides: {
       backSymbol: overrides.tokenVisual?.backSymbol ?? null,
       size: overrides.tokenVisual?.size ?? 28,
     })),
+    getCardTemplateForTokenType: vi.fn(
+      (tokenTypeId: string) => overrides.cardTemplatesByTokenType?.[tokenTypeId] ?? null,
+    ),
     getColor: vi.fn(() => overrides.factionColor ?? '#112233'),
   };
 }
@@ -438,6 +451,73 @@ describe('createTokenRenderer', () => {
 
     expect(backBase.visible).toBe(false);
     expect(frontBase.visible).toBe(true);
+  });
+
+  it('uses card template dimensions when token type maps to a template', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'card', color: '#ff0000' },
+      cardTemplatesByTokenType: {
+        'card-AS': {
+          width: 48,
+          height: 68,
+          layout: {
+            rank: { y: 8, align: 'center' },
+          },
+        },
+      },
+    });
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'card-AS', faceUp: true, properties: { rank: 'A' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const frontBase = tokenContainer.children[2] as InstanceType<typeof MockGraphics>;
+    expect(frontBase.roundRectArgs).toEqual([-24, -34, 48, 68, 4]);
+  });
+
+  it('renders template text only while card is face up', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'card', color: '#ff0000' },
+      cardTemplatesByTokenType: {
+        'card-AS': {
+          width: 48,
+          height: 68,
+          layout: {
+            rank: { y: 8, align: 'center' },
+          },
+        },
+      },
+    });
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'card-AS', faceUp: false, properties: { rank: 'A' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const cardContent = tokenContainer.children[5] as InstanceType<typeof MockContainer>;
+    expect(cardContent).toBeDefined();
+    expect(cardContent.visible).toBe(false);
+    expect(cardContent.children).toHaveLength(1);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'card-AS', faceUp: true, properties: { rank: 'A' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    expect(cardContent.visible).toBe(true);
   });
 
   it('renders non-card token shapes using shape-specific primitives instead of circle fallback', () => {

@@ -3,6 +3,7 @@ import type { Container } from 'pixi.js';
 
 import type { Position } from '../geometry';
 import type { ResolvedTokenVisual } from '../../config/visual-config-provider.js';
+import type { CardTemplate } from '../../config/visual-config-types.js';
 import type {
   RenderAdjacency,
   RenderToken,
@@ -37,5 +38,6 @@ export interface AdjacencyRenderer {
 
 export interface FactionColorProvider {
   getTokenTypeVisual(tokenTypeId: string): ResolvedTokenVisual;
+  getCardTemplateForTokenType(tokenTypeId: string): CardTemplate | null;
   getColor(factionId: string | null, playerId: PlayerId): string;
 }

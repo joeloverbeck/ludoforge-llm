@@ -4,10 +4,12 @@ import { asPlayerId } from '@ludoforge/engine/runtime';
 import type { RenderToken } from '../../model/render-model';
 import type { TokenShape } from '../../config/visual-config-defaults.js';
 import type { ResolvedTokenVisual } from '../../config/visual-config-provider.js';
+import type { CardTemplate } from '../../config/visual-config-types.js';
 import type { FactionColorProvider, TokenRenderer } from './renderer-types';
 import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
 import { drawTokenShape } from './token-shape-drawer.js';
 import { drawTokenSymbol } from './token-symbol-drawer.js';
+import { drawCardContent } from './card-template-renderer.js';
 
 const TOKEN_RADIUS = 14;
 const CARD_WIDTH = 24;
@@ -41,6 +43,7 @@ interface TokenVisualElements {
   readonly backBase: Graphics;
   readonly backSymbol: Graphics;
   readonly countBadge: Text;
+  frontContent: Container | null;
 }
 
 interface TokenRendererOptions {
@@ -211,6 +214,7 @@ function createTokenVisualElements(): TokenVisualElements {
     backBase,
     backSymbol,
     countBadge,
+    frontContent: null,
   };
 }
 
@@ -223,7 +227,8 @@ function updateTokenVisuals(
 ): void {
   const tokenVisual = colorProvider.getTokenTypeVisual(token.type);
   const shape = resolveTokenShape(tokenVisual.shape);
-  const dimensions = resolveTokenDimensions(shape, tokenVisual.size);
+  const cardTemplate = resolveCardTemplate(shape, token.type, colorProvider);
+  const dimensions = resolveTokenDimensions(shape, tokenVisual.size, cardTemplate);
   const fillColor = resolveTokenColor(token, tokenVisual, colorProvider);
   const stroke = resolveStroke(token);
   const isFaceUp = token.faceUp;
@@ -233,6 +238,7 @@ function updateTokenVisuals(
   drawTokenSymbol(visuals.frontSymbol, tokenVisual.symbol, resolveSymbolSize(shape, dimensions));
   drawTokenSymbol(visuals.backSymbol, tokenVisual.backSymbol, resolveSymbolSize(shape, dimensions));
   tokenContainer.hitArea = resolveTokenHitArea(shape, dimensions);
+  syncCardContent(tokenContainer, visuals, token, cardTemplate, isFaceUp);
 
   visuals.frontBase.visible = isFaceUp;
   visuals.frontSymbol.visible = isFaceUp;
@@ -294,9 +300,16 @@ function resolveTokenShape(shape: TokenShape | undefined): TokenShape {
 function resolveTokenDimensions(
   shape: TokenShape,
   size: number | undefined,
+  cardTemplate: CardTemplate | null = null,
 ): { readonly width: number; readonly height: number } {
   const normalizedSize = typeof size === 'number' && Number.isFinite(size) && size > 0 ? size : TOKEN_RADIUS * 2;
   if (shape === 'card') {
+    if (cardTemplate !== null) {
+      return {
+        width: Math.max(1, Math.round(cardTemplate.width)),
+        height: Math.max(1, Math.round(cardTemplate.height)),
+      };
+    }
     return {
       width: Math.max(CARD_WIDTH, Math.round(normalizedSize * 0.9)),
       height: Math.max(CARD_HEIGHT, Math.round(normalizedSize * 1.25)),
@@ -331,6 +344,51 @@ function resolveTokenDimensions(
     width: normalizedSize,
     height: normalizedSize,
   };
+}
+
+function resolveCardTemplate(
+  shape: TokenShape,
+  tokenTypeId: string,
+  colorProvider: FactionColorProvider,
+): CardTemplate | null {
+  if (shape !== 'card') {
+    return null;
+  }
+  return colorProvider.getCardTemplateForTokenType(tokenTypeId);
+}
+
+function ensureFrontContentContainer(
+  tokenContainer: Container,
+  visuals: TokenVisualElements,
+): Container {
+  if (visuals.frontContent !== null) {
+    return visuals.frontContent;
+  }
+
+  const container = new Container();
+  container.eventMode = 'none';
+  container.interactiveChildren = false;
+  tokenContainer.addChild(container);
+  visuals.frontContent = container;
+  return container;
+}
+
+function syncCardContent(
+  tokenContainer: Container,
+  visuals: TokenVisualElements,
+  token: RenderToken,
+  cardTemplate: CardTemplate | null,
+  isFaceUp: boolean,
+): void {
+  if (cardTemplate === null) {
+    visuals.frontContent?.removeFromParent();
+    visuals.frontContent = null;
+    return;
+  }
+
+  const contentContainer = ensureFrontContentContainer(tokenContainer, visuals);
+  drawCardContent(contentContainer, cardTemplate, token.properties);
+  contentContainer.visible = isFaceUp;
 }
 
 function resolveTokenHitArea(

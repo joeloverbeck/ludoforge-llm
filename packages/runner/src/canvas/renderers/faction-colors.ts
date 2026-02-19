@@ -14,6 +14,10 @@ export class DefaultFactionColorProvider implements FactionColorProvider {
     return this.provider.getTokenTypeVisual(tokenTypeId);
   }
 
+  getCardTemplateForTokenType(_tokenTypeId: string) {
+    return null;
+  }
+
   getColor(factionId: string | null, playerId: PlayerId): string {
     if (factionId !== null) {
       return this.provider.getFactionColor(factionId);
@@ -27,6 +31,10 @@ export class VisualConfigFactionColorProvider implements FactionColorProvider {
 
   getTokenTypeVisual(tokenTypeId: string): ResolvedTokenVisual {
     return this.provider.getTokenTypeVisual(tokenTypeId);
+  }
+
+  getCardTemplateForTokenType(tokenTypeId: string) {
+    return this.provider.getCardTemplateForTokenType(tokenTypeId);
   }
 
   getColor(factionId: string | null, playerId: PlayerId): string {

@@ -250,6 +250,7 @@ function createColorProvider(overrides: {
     readonly shape?: TokenShape;
     readonly color?: string;
     readonly symbol?: string;
+    readonly backSymbol?: string;
     readonly size?: number;
   };
   readonly factionColor?: string;
@@ -259,6 +260,7 @@ function createColorProvider(overrides: {
       shape: overrides.tokenVisual?.shape ?? 'circle',
       color: overrides.tokenVisual?.color ?? null,
       symbol: overrides.tokenVisual?.symbol ?? null,
+      backSymbol: overrides.tokenVisual?.backSymbol ?? null,
       size: overrides.tokenVisual?.size ?? 28,
     })),
     getColor: vi.fn(() => overrides.factionColor ?? '#112233'),
@@ -367,7 +369,7 @@ describe('createTokenRenderer', () => {
     expect(colorProvider.getColor).not.toHaveBeenCalled();
   });
 
-  it('shows ? for face-down tokens and type for face-up tokens', () => {
+  it('shows only symbol graphics for token identity and toggles front/back layers by faceUp', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
@@ -380,10 +382,12 @@ describe('createTokenRenderer', () => {
     );
 
     const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
-    const backLabel = tokenContainer.children[1] as InstanceType<typeof MockText>;
-    const frontLabel = tokenContainer.children[3] as InstanceType<typeof MockText>;
-    expect(backLabel.text).toBe('?');
-    expect(frontLabel.visible).toBe(false);
+    const backSymbol = tokenContainer.children[1] as InstanceType<typeof MockGraphics>;
+    const frontSymbol = tokenContainer.children[3] as InstanceType<typeof MockGraphics>;
+    expect(frontSymbol.visible).toBe(false);
+    expect(backSymbol.visible).toBe(true);
+    expect(backSymbol.polyArgs).toBeNull();
+    expect(backSymbol.circleArgs).toBeNull();
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'leader', faceUp: true, isSelectable: true })],
@@ -392,15 +396,16 @@ describe('createTokenRenderer', () => {
       ]),
     );
 
-    expect(frontLabel.text).toBe('LEA');
-    expect(frontLabel.visible).toBe(true);
-    expect(backLabel.visible).toBe(false);
+    expect(frontSymbol.visible).toBe(true);
+    expect(backSymbol.visible).toBe(false);
+    expect(frontSymbol.polyArgs).toBeNull();
+    expect(frontSymbol.circleArgs).toBeNull();
   });
 
   it('renders card-shaped tokens with front/back primitives from token visuals', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider({
-      tokenVisual: { shape: 'card', symbol: 'AS', color: '#ff0000' },
+      tokenVisual: { shape: 'card', symbol: 'diamond', backSymbol: 'circle-dot', color: '#ff0000' },
     });
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
@@ -413,16 +418,16 @@ describe('createTokenRenderer', () => {
 
     const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
     const backBase = tokenContainer.children[0] as InstanceType<typeof MockGraphics>;
-    const backLabel = tokenContainer.children[1] as InstanceType<typeof MockText>;
+    const backSymbol = tokenContainer.children[1] as InstanceType<typeof MockGraphics>;
     const frontBase = tokenContainer.children[2] as InstanceType<typeof MockGraphics>;
-    const frontLabel = tokenContainer.children[3] as InstanceType<typeof MockText>;
+    const frontSymbol = tokenContainer.children[3] as InstanceType<typeof MockGraphics>;
 
     expect(backBase.roundRectArgs).not.toBeNull();
     expect(frontBase.roundRectArgs).not.toBeNull();
     expect(backBase.visible).toBe(true);
     expect(frontBase.visible).toBe(false);
-    expect(backLabel.text).toBe('◆');
-    expect(frontLabel.text).toBe('AS');
+    expect(backSymbol.circleArgs).not.toBeNull();
+    expect(frontSymbol.polyArgs).toHaveLength(8);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'playing-card', faceUp: true })],
@@ -476,6 +481,7 @@ describe('createTokenRenderer', () => {
       shape: 'hexagon',
       color: null,
       symbol: null,
+      backSymbol: null,
       size: 28,
     });
     renderer.update(

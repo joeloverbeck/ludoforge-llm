@@ -136,6 +136,26 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts token backSymbol in token type visual style', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      tokenTypes: {
+        hidden: { shape: 'card', symbol: 'diamond', backSymbol: 'cross' },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('keeps token backSymbol optional', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      tokenTypes: {
+        open: { shape: 'cube', symbol: 'star' },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
   it('rejects invalid layout mode', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

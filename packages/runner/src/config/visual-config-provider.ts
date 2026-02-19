@@ -30,6 +30,7 @@ export interface ResolvedTokenVisual {
   readonly color: string | null;
   readonly size: number;
   readonly symbol: string | null;
+  readonly backSymbol: string | null;
 }
 
 export class VisualConfigProvider {
@@ -90,6 +91,7 @@ export class VisualConfigProvider {
       color: style?.color ?? null,
       size: style?.size ?? DEFAULT_TOKEN_SIZE,
       symbol: style?.symbol ?? null,
+      backSymbol: style?.backSymbol ?? null,
     };
   }
 

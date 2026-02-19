@@ -85,6 +85,7 @@ const TokenTypeVisualStyleSchema = z.object({
   color: z.string().optional(),
   size: z.number().optional(),
   symbol: z.string().optional(),
+  backSymbol: z.string().optional(),
 });
 
 const CardTokenTypeSelectorsSchema = z.object({

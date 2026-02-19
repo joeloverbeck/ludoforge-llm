@@ -168,7 +168,7 @@ describe('VisualConfigProvider', () => {
     const provider = new VisualConfigProvider({
       version: 1,
       tokenTypes: {
-        'us-troops': { shape: 'cube', size: 24, symbol: 'US' },
+        'us-troops': { shape: 'cube', size: 24, symbol: 'star', backSymbol: 'diamond' },
       },
     });
 
@@ -176,7 +176,8 @@ describe('VisualConfigProvider', () => {
       shape: 'cube',
       color: null,
       size: 24,
-      symbol: 'US',
+      symbol: 'star',
+      backSymbol: 'diamond',
     });
   });
 
@@ -188,6 +189,7 @@ describe('VisualConfigProvider', () => {
       color: null,
       size: 28,
       symbol: null,
+      backSymbol: null,
     });
   });
 

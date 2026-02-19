@@ -16,6 +16,7 @@ describe('DefaultFactionColorProvider', () => {
       color: null,
       size: 28,
       symbol: null,
+      backSymbol: null,
     });
   });
 
@@ -103,12 +104,14 @@ describe('VisualConfigFactionColorProvider', () => {
       shape: 'card',
       size: 24,
       symbol: 'VC',
+      backSymbol: null,
     });
     expect(provider.getTokenTypeVisual('unknown')).toEqual({
       color: null,
       shape: 'circle',
       size: 28,
       symbol: null,
+      backSymbol: null,
     });
   });
 });

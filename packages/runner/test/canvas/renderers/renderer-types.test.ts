@@ -67,6 +67,7 @@ describe('renderer-types', () => {
         color: null,
         size: 28,
         symbol: null,
+        backSymbol: null,
       }),
       getColor: (_factionId: string | null, _playerId: PlayerId) => '#ffffff',
     };
@@ -78,6 +79,7 @@ describe('renderer-types', () => {
       color: null,
       size: 28,
       symbol: null,
+      backSymbol: null,
     });
     expect(provider.getColor(null, asPlayerId(0))).toBe('#ffffff');
   });

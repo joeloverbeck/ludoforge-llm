@@ -3,14 +3,16 @@ import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
 
 import { buildLayoutGraph, partitionZones } from './build-layout-graph.js';
 import { computeGridLayout } from './grid-layout.js';
+import { ZONE_RENDER_HEIGHT, ZONE_RENDER_WIDTH } from './layout-constants.js';
 import { centerOnOrigin, computeBounds, EMPTY_BOUNDS, type MutablePosition, selectPrimaryLayoutZones } from './layout-helpers.js';
 import type { LayoutMode, LayoutResult } from './layout-types.js';
 import { computeTrackLayout } from './track-layout.js';
 
 const GRAPH_ITERATIONS = 100;
-const GRAPH_MIN_SPACING = 60;
-const GRAPH_NORMALIZED_EXTENT = 1000;
-const GRAPH_SPACING_RELAXATION_PASSES = 6;
+const GRAPH_NODE_SPACING_FACTOR = 2.5;
+const GRAPH_MIN_SPACING_FACTOR = 1.3;
+const GRAPH_SPACING_RELAXATION_PASSES = 10;
+const GRAPH_MIN_EXTENT = 1000;
 const SEED_JITTER = 18;
 const SEED_RADIUS_BASE = 160;
 const SEED_RADIUS_STEP = 90;
@@ -20,6 +22,16 @@ const TABLE_PERIMETER_MIN_RADIUS_X = 320;
 const TABLE_PERIMETER_MIN_RADIUS_Y = 220;
 const TABLE_PERIMETER_RADIUS_X_STEP = 70;
 const TABLE_PERIMETER_RADIUS_Y_STEP = 50;
+
+function computeGraphExtent(nodeCount: number): number {
+  const zoneDiagonal = Math.hypot(ZONE_RENDER_WIDTH, ZONE_RENDER_HEIGHT);
+  const perNodeSpace = zoneDiagonal * GRAPH_NODE_SPACING_FACTOR;
+  return Math.max(GRAPH_MIN_EXTENT, Math.ceil(Math.sqrt(nodeCount)) * perNodeSpace);
+}
+
+function computeGraphMinSpacing(): number {
+  return Math.ceil(Math.hypot(ZONE_RENDER_WIDTH, ZONE_RENDER_HEIGHT) * GRAPH_MIN_SPACING_FACTOR);
+}
 
 export function computeLayout(def: GameDef, mode: LayoutMode): LayoutResult {
   switch (mode) {
@@ -98,8 +110,8 @@ function computeGraphLayout(def: GameDef): LayoutResult {
     positions.set(nodeID, { x, y });
   }
 
-  normalizeToExtent(positions, GRAPH_NORMALIZED_EXTENT);
-  enforceMinimumSpacing(positions, GRAPH_MIN_SPACING, GRAPH_SPACING_RELAXATION_PASSES);
+  normalizeToExtent(positions, computeGraphExtent(nodeIDs.length));
+  enforceMinimumSpacing(positions, computeGraphMinSpacing(), GRAPH_SPACING_RELAXATION_PASSES);
   centerOnOrigin(positions);
 
   return {

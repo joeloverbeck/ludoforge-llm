@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { asZoneId, type GameDef, type ZoneDef } from '@ludoforge/engine/runtime';
+import {
+  ZONE_RENDER_WIDTH,
+  ZONE_RENDER_HEIGHT,
+} from '../../src/layout/layout-constants';
 
 const forceAtlas2State = vi.hoisted(() => ({
   assign: vi.fn((graph: { nodes(): string[]; getNodeAttributes(nodeID: string): { x?: number; y?: number }; setNodeAttribute(nodeID: string, key: string, value: number): void }, _params?: unknown) => {
@@ -144,6 +148,39 @@ describe('computeLayout graph mode', () => {
 
     expect(layout.positions.size).toBe(0);
     expect(layout.boardBounds).toEqual({ minX: 0, minY: 0, maxX: 0, maxY: 0 });
+  });
+
+  it('minimum spacing between placed nodes exceeds zone diagonal', () => {
+    const zoneIDs = Array.from({ length: 12 }, (_, index) => `z${index}`);
+    const zones = zoneIDs.map((id, index) => zone(id, {
+      zoneKind: 'board',
+      adjacentTo: zoneIDs.filter((candidate) => candidate !== id && (Math.abs(index - Number(candidate.slice(1))) <= 1)),
+    }));
+    const layout = computeLayout(makeDef(zones), 'graph');
+    const entries = [...layout.positions.values()];
+    const zoneDiagonal = Math.hypot(ZONE_RENDER_WIDTH, ZONE_RENDER_HEIGHT);
+
+    for (let left = 0; left < entries.length - 1; left += 1) {
+      for (let right = left + 1; right < entries.length; right += 1) {
+        const a = entries[left];
+        const b = entries[right];
+        if (a === undefined || b === undefined) {
+          continue;
+        }
+        expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(zoneDiagonal - 1);
+      }
+    }
+  });
+
+  it('graph extent scales with node count — 20 nodes have wider bounds than 4', () => {
+    const small = computeLayout(makeDef(buildLinearChain(4)), 'graph');
+    const large = computeLayout(makeDef(buildLinearChain(20)), 'graph');
+    const smallSpan = (small.boardBounds.maxX - small.boardBounds.minX)
+      + (small.boardBounds.maxY - small.boardBounds.minY);
+    const largeSpan = (large.boardBounds.maxX - large.boardBounds.minX)
+      + (large.boardBounds.maxY - large.boardBounds.minY);
+
+    expect(largeSpan).toBeGreaterThan(smallSpan * 1.5);
   });
 });
 
@@ -480,5 +517,19 @@ function buildChainZones(length: number): readonly ZoneDef[] {
       adjacentTo.push(`track-${String(index + 1).padStart(2, '0')}`);
     }
     return zone(id, { adjacentTo });
+  });
+}
+
+function buildLinearChain(length: number): readonly ZoneDef[] {
+  return Array.from({ length }, (_, index) => {
+    const id = `n${index}`;
+    const adjacentTo: string[] = [];
+    if (index > 0) {
+      adjacentTo.push(`n${index - 1}`);
+    }
+    if (index < length - 1) {
+      adjacentTo.push(`n${index + 1}`);
+    }
+    return zone(id, { zoneKind: 'board', adjacentTo });
   });
 }

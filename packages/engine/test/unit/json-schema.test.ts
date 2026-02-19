@@ -46,6 +46,16 @@ const fullGameDef: GameDef = {
     },
     { id: asZoneId('discard:none'), zoneKind: 'aux', owner: 'none', visibility: 'public', ordering: 'stack' },
   ],
+  cardAnimation: {
+    cardTokenTypeIds: ['card'],
+    zoneRoles: {
+      draw: [asZoneId('deck:none')],
+      hand: [asZoneId('discard:none')],
+      shared: [asZoneId('discard:none')],
+      burn: [asZoneId('discard:none')],
+      discard: [asZoneId('discard:none')],
+    },
+  },
   tokenTypes: [{ id: 'card', props: { cost: 'int', name: 'string', rare: 'boolean' } }],
   setup: [{ shuffle: { zone: 'deck:none' } }],
   turnStructure: {

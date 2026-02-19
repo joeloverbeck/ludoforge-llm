@@ -64,6 +64,8 @@ function getMissingSpriteReason(
 ): string | null {
   switch (descriptor.kind) {
     case 'moveToken':
+    case 'cardDeal':
+    case 'cardBurn':
       if (!spriteRefs.tokenContainers.has(descriptor.tokenId)) {
         return `token container not found (tokenId=${descriptor.tokenId})`;
       }
@@ -93,6 +95,7 @@ function getMissingSpriteReason(
       }
       return null;
     case 'setTokenProp':
+    case 'cardFlip':
       if (!spriteRefs.tokenContainers.has(descriptor.tokenId)) {
         return `token container not found (tokenId=${descriptor.tokenId})`;
       }

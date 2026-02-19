@@ -141,6 +141,7 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 | `Move` / `LegalMovesResult` | `legalMoves()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) renders action toolbar |
 | `ChoiceRequest` (pending / complete / illegal) | `legalChoices()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) renders progressive choice UI |
 | `EffectTraceEntry[]` | `applyMove()` with `{ trace: true }` in `packages/engine/src/kernel/` | Animation system (Spec 40) drives GSAP timelines |
+| `GameDef.cardAnimation` | Compiled from `metadata.cardAnimation` in `GameSpecDoc` | Runner animation classifier maps trace movement into card intents (`deal`/`flip`/`burn`) without hardcoded zone/token IDs |
 | `TerminalResult` | `terminalResult()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) displays game end state |
 | `GameSpecDoc` metadata | Parsed from Markdown+YAML | Game selection screen (Spec 42) displays game info |
 

@@ -4,7 +4,11 @@ import type { StoreApi } from 'zustand';
 
 import type { ZonePositionMap } from '../canvas/position-store.js';
 import type { GameStore } from '../store/game-store.js';
-import type { AnimationDescriptor, AnimationDetailLevel } from './animation-types.js';
+import type {
+  AnimationDescriptor,
+  AnimationDetailLevel,
+  CardAnimationMappingContext,
+} from './animation-types.js';
 import { createAnimationQueue, type AnimationQueue } from './animation-queue.js';
 import { getGsapRuntime, type GsapLike } from './gsap-setup.js';
 import { createPresetRegistry, type PresetRegistry } from './preset-registry.js';
@@ -72,7 +76,16 @@ export function createAnimationController(
     }
 
     try {
-      const descriptors = deps.traceToDescriptors(trace, { detailLevel }, deps.presetRegistry);
+      const state = options.store.getState();
+      const cardContext = buildCardContext(state);
+      const descriptors = deps.traceToDescriptors(
+        trace,
+        {
+          detailLevel,
+          ...(cardContext === undefined ? {} : { cardContext }),
+        },
+        deps.presetRegistry,
+      );
       if (!hasVisualDescriptors(descriptors)) {
         return;
       }
@@ -177,6 +190,31 @@ export function createAnimationController(
         return;
       }
       queue.skipAll();
+    },
+  };
+}
+
+function buildCardContext(state: GameStore): CardAnimationMappingContext | undefined {
+  const cardAnimation = state.gameDef?.cardAnimation;
+  const renderModel = state.renderModel;
+  if (cardAnimation === undefined || renderModel === null) {
+    return undefined;
+  }
+
+  const tokenTypeByTokenId = new Map<string, string>();
+  for (const token of renderModel.tokens) {
+    tokenTypeByTokenId.set(token.id, token.type);
+  }
+
+  return {
+    cardTokenTypeIds: new Set(cardAnimation.cardTokenTypeIds),
+    tokenTypeByTokenId,
+    zoneRoles: {
+      draw: new Set(cardAnimation.zoneRoles.draw),
+      hand: new Set(cardAnimation.zoneRoles.hand),
+      shared: new Set(cardAnimation.zoneRoles.shared),
+      burn: new Set(cardAnimation.zoneRoles.burn),
+      discard: new Set(cardAnimation.zoneRoles.discard),
     },
   };
 }

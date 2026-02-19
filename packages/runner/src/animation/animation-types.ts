@@ -15,10 +15,35 @@ export type AnimationPresetId = string;
 
 export type AnimationDetailLevel = 'full' | 'standard' | 'minimal';
 export type AnimationPlaybackSpeed = '1x' | '2x' | '4x';
+export type AnimationPresetOverrideKey =
+  | 'moveToken'
+  | 'cardDeal'
+  | 'cardBurn'
+  | 'createToken'
+  | 'destroyToken'
+  | 'setTokenProp'
+  | 'cardFlip'
+  | 'varChange'
+  | 'resourceTransfer'
+  | 'phaseTransition';
 
 export interface AnimationMappingOptions {
-  readonly presetOverrides?: ReadonlyMap<string, AnimationPresetId>;
+  readonly presetOverrides?: ReadonlyMap<AnimationPresetOverrideKey, AnimationPresetId>;
   readonly detailLevel?: AnimationDetailLevel;
+  readonly cardContext?: CardAnimationMappingContext;
+}
+
+export interface CardAnimationMappingContext {
+  readonly cardTokenTypeIds: ReadonlySet<string>;
+  readonly tokenTypeByTokenId: ReadonlyMap<string, string>;
+  readonly zoneRoles: {
+    readonly draw: ReadonlySet<string>;
+    readonly hand: ReadonlySet<string>;
+    readonly shared: ReadonlySet<string>;
+    readonly burn: ReadonlySet<string>;
+    readonly discard: ReadonlySet<string>;
+  };
+  readonly flipProps?: readonly string[];
 }
 
 interface BaseAnimationDescriptor {
@@ -28,6 +53,20 @@ interface BaseAnimationDescriptor {
 
 export interface MoveTokenDescriptor extends BaseAnimationDescriptor {
   readonly kind: 'moveToken';
+  readonly tokenId: string;
+  readonly from: string;
+  readonly to: string;
+}
+
+export interface CardDealDescriptor extends BaseAnimationDescriptor {
+  readonly kind: 'cardDeal';
+  readonly tokenId: string;
+  readonly from: string;
+  readonly to: string;
+}
+
+export interface CardBurnDescriptor extends BaseAnimationDescriptor {
+  readonly kind: 'cardBurn';
   readonly tokenId: string;
   readonly from: string;
   readonly to: string;
@@ -49,6 +88,14 @@ export interface DestroyTokenDescriptor extends BaseAnimationDescriptor {
 
 export interface SetTokenPropDescriptor extends BaseAnimationDescriptor {
   readonly kind: 'setTokenProp';
+  readonly tokenId: string;
+  readonly prop: string;
+  readonly oldValue: unknown;
+  readonly newValue: unknown;
+}
+
+export interface CardFlipDescriptor extends BaseAnimationDescriptor {
+  readonly kind: 'cardFlip';
   readonly tokenId: string;
   readonly prop: string;
   readonly oldValue: unknown;
@@ -95,9 +142,12 @@ export interface SkippedDescriptor {
 
 export type AnimationDescriptor =
   | MoveTokenDescriptor
+  | CardDealDescriptor
+  | CardBurnDescriptor
   | CreateTokenDescriptor
   | DestroyTokenDescriptor
   | SetTokenPropDescriptor
+  | CardFlipDescriptor
   | VarChangeDescriptor
   | ResourceTransferDescriptor
   | PhaseTransitionDescriptor
@@ -105,9 +155,12 @@ export type AnimationDescriptor =
 
 export const ANIMATION_DESCRIPTOR_KINDS = [
   'moveToken',
+  'cardDeal',
+  'cardBurn',
   'createToken',
   'destroyToken',
   'setTokenProp',
+  'cardFlip',
   'varChange',
   'resourceTransfer',
   'phaseTransition',

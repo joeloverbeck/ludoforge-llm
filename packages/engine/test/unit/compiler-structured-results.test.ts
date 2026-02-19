@@ -460,6 +460,7 @@ describe('compiler structured section results', () => {
 
     const keys: ReadonlyArray<keyof CompileSectionResults> = [
       'metadata',
+      'cardAnimation',
       'constants',
       'globalVars',
       'globalMarkerLattices',
@@ -488,6 +489,7 @@ describe('compiler structured section results', () => {
   it('CompileSectionResults keys stay aligned with the structured compiler contract', () => {
     type ExpectedKeys =
       | 'metadata'
+      | 'cardAnimation'
       | 'constants'
       | 'globalVars'
       | 'globalMarkerLattices'

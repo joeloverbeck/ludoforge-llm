@@ -93,6 +93,19 @@ export interface TokenVisualHints {
   readonly symbol?: string;
 }
 
+export type CardAnimationZoneRole = 'draw' | 'hand' | 'shared' | 'burn' | 'discard';
+
+export interface CardAnimationMetadata {
+  readonly cardTokenTypeIds: readonly string[];
+  readonly zoneRoles: {
+    readonly draw: readonly ZoneId[];
+    readonly hand: readonly ZoneId[];
+    readonly shared: readonly ZoneId[];
+    readonly burn: readonly ZoneId[];
+    readonly discard: readonly ZoneId[];
+  };
+}
+
 export interface FactionDef {
   readonly id: string;
   readonly color: string;
@@ -262,6 +275,7 @@ export interface GameDef {
   readonly globalMarkerLattices?: readonly GlobalMarkerLatticeDef[];
   readonly runtimeDataAssets?: readonly RuntimeDataAsset[];
   readonly tableContracts?: readonly RuntimeTableContract[];
+  readonly cardAnimation?: CardAnimationMetadata;
 }
 
 export const KNOWN_DATA_ASSET_KINDS = ['map', 'scenario', 'pieceCatalog'] as const;

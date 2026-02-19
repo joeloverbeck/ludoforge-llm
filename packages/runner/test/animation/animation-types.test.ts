@@ -7,7 +7,6 @@ import {
   type AnimationDescriptor,
   type AnimationDetailLevel,
   type AnimationMappingOptions,
-  type AnimationPresetId,
 } from '../../src/animation/animation-types';
 
 describe('animation-types', () => {
@@ -26,9 +25,12 @@ describe('animation-types', () => {
   it('exposes all descriptor kinds used by the animation pipeline', () => {
     expect(ANIMATION_DESCRIPTOR_KINDS).toEqual([
       'moveToken',
+      'cardDeal',
+      'cardBurn',
       'createToken',
       'destroyToken',
       'setTokenProp',
+      'cardFlip',
       'varChange',
       'resourceTransfer',
       'phaseTransition',
@@ -43,6 +45,22 @@ describe('animation-types', () => {
         tokenId: 'tok:1',
         from: 'zone:a',
         to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:deal',
+        from: 'zone:deck',
+        to: 'zone:hand:p1',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardBurn',
+        tokenId: 'tok:burn',
+        from: 'zone:board',
+        to: 'zone:burn',
         preset: 'arc-tween',
         isTriggered: false,
       },
@@ -66,6 +84,15 @@ describe('animation-types', () => {
         kind: 'setTokenProp',
         tokenId: 'tok:3',
         prop: 'moved',
+        oldValue: false,
+        newValue: true,
+        preset: 'tint-flash',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardFlip',
+        tokenId: 'tok:3',
+        prop: 'faceUp',
         oldValue: false,
         newValue: true,
         preset: 'tint-flash',
@@ -107,7 +134,7 @@ describe('animation-types', () => {
       },
     ];
 
-    expect(descriptors).toHaveLength(8);
+    expect(descriptors).toHaveLength(11);
     expectTypeOf(descriptors).toMatchTypeOf<readonly AnimationDescriptor[]>();
   });
 
@@ -115,14 +142,16 @@ describe('animation-types', () => {
     const detailLevel: AnimationDetailLevel = 'standard';
     const options: AnimationMappingOptions = {
       detailLevel,
-      presetOverrides: new Map<string, AnimationPresetId>([
+      presetOverrides: new Map([
         ['moveToken', 'arc-tween'],
         ['varChange', 'custom-counter-roll'],
+        ['cardDeal', 'pulse'],
       ]),
     };
 
     expect(options.detailLevel).toBe('standard');
     expect(options.presetOverrides?.get('moveToken')).toBe('arc-tween');
     expect(options.presetOverrides?.get('varChange')).toBe('custom-counter-roll');
+    expect(options.presetOverrides?.get('cardDeal')).toBe('pulse');
   });
 });

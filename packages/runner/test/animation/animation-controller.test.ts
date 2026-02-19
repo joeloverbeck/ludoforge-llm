@@ -10,6 +10,24 @@ import type { GameStore } from '../../src/store/game-store';
 interface ControllerStoreState {
   readonly effectTrace: readonly EffectTraceEntry[];
   readonly animationPlaying: boolean;
+  readonly gameDef: {
+    readonly cardAnimation?: {
+      readonly cardTokenTypeIds: readonly string[];
+      readonly zoneRoles: {
+        readonly draw: readonly string[];
+        readonly hand: readonly string[];
+        readonly shared: readonly string[];
+        readonly burn: readonly string[];
+        readonly discard: readonly string[];
+      };
+    };
+  } | null;
+  readonly renderModel: {
+    readonly tokens: readonly {
+      readonly id: string;
+      readonly type: string;
+    }[];
+  } | null;
   setAnimationPlaying(playing: boolean): void;
 }
 
@@ -29,6 +47,8 @@ function createControllerStore(): StoreApi<ControllerStoreState> {
     subscribeWithSelector((): ControllerStoreState => ({
       effectTrace: [] as readonly EffectTraceEntry[],
       animationPlaying: false,
+      gameDef: null,
+      renderModel: null,
       setAnimationPlaying: (playing: boolean) => {
         store.setState({ animationPlaying: playing });
       },
@@ -311,6 +331,98 @@ describe('createAnimationController', () => {
 
     store.setState({ effectTrace: [traceEntry()] });
     expect(onError).toHaveBeenCalledTimes(2);
+
+    controller.destroy();
+  });
+
+  it('provides card mapping context when gameDef metadata and render tokens are present', () => {
+    const store = createControllerStore();
+    const traceToDescriptorsMock = vi.fn(() => []);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: traceToDescriptorsMock,
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({
+      gameDef: {
+        cardAnimation: {
+          cardTokenTypeIds: ['card'],
+          zoneRoles: {
+            draw: ['zone:deck'],
+            hand: ['zone:hand:p1'],
+            shared: ['zone:board'],
+            burn: ['zone:burn'],
+            discard: ['zone:discard'],
+          },
+        },
+      },
+      renderModel: {
+        tokens: [
+          { id: 'tok:card', type: 'card' },
+          { id: 'tok:chip', type: 'chip' },
+        ],
+      },
+      effectTrace: [traceEntry()],
+    });
+
+    expect(traceToDescriptorsMock).toHaveBeenCalledWith(
+      store.getState().effectTrace,
+      expect.objectContaining({
+        detailLevel: 'full',
+        cardContext: expect.objectContaining({
+          cardTokenTypeIds: expect.any(Set),
+          tokenTypeByTokenId: expect.any(Map),
+          zoneRoles: expect.objectContaining({
+            draw: expect.any(Set),
+            hand: expect.any(Set),
+            shared: expect.any(Set),
+            burn: expect.any(Set),
+            discard: expect.any(Set),
+          }),
+        }),
+      }),
+      expect.any(Object),
+    );
+
+    expect(traceToDescriptorsMock).toHaveBeenCalledTimes(1);
+
+    const mappingOptions = (traceToDescriptorsMock as unknown as {
+      readonly mock: {
+        readonly calls: readonly (readonly unknown[])[];
+      };
+    }).mock.calls[0]![1] as {
+      readonly cardContext: {
+        readonly cardTokenTypeIds: ReadonlySet<string>;
+        readonly tokenTypeByTokenId: ReadonlyMap<string, string>;
+        readonly zoneRoles: {
+          readonly draw: ReadonlySet<string>;
+          readonly hand: ReadonlySet<string>;
+          readonly shared: ReadonlySet<string>;
+          readonly burn: ReadonlySet<string>;
+          readonly discard: ReadonlySet<string>;
+        };
+      };
+    };
+    expect(mappingOptions.cardContext.cardTokenTypeIds.has('card')).toBe(true);
+    expect(mappingOptions.cardContext.tokenTypeByTokenId.get('tok:card')).toBe('card');
+    expect(mappingOptions.cardContext.zoneRoles.burn.has('zone:burn')).toBe(true);
 
     controller.destroy();
   });

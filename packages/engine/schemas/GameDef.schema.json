@@ -3780,6 +3780,77 @@
         ],
         "additionalProperties": false
       }
+    },
+    "cardAnimation": {
+      "type": "object",
+      "properties": {
+        "cardTokenTypeIds": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "zoneRoles": {
+          "type": "object",
+          "properties": {
+            "draw": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "hand": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "shared": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "burn": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "discard": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "required": [
+            "draw",
+            "hand",
+            "shared",
+            "burn",
+            "discard"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "cardTokenTypeIds",
+        "zoneRoles"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

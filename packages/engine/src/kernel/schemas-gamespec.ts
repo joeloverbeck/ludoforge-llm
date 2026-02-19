@@ -97,6 +97,38 @@ export const TokenVisualHintsSchema = z
   })
   .strict();
 
+export const CardAnimationZoneRoleSchema = z.union([
+  z.literal('draw'),
+  z.literal('hand'),
+  z.literal('shared'),
+  z.literal('burn'),
+  z.literal('discard'),
+]);
+
+export const CardAnimationZoneRolesSchema = z
+  .object({
+    draw: z.array(StringSchema.min(1)).min(1),
+    hand: z.array(StringSchema.min(1)).min(1),
+    shared: z.array(StringSchema.min(1)).min(1),
+    burn: z.array(StringSchema.min(1)).min(1),
+    discard: z.array(StringSchema.min(1)).min(1),
+  })
+  .strict();
+
+export const CardAnimationTokenTypeSelectorsSchema = z
+  .object({
+    ids: z.array(StringSchema.min(1)).optional(),
+    idPrefixes: z.array(StringSchema.min(1)).optional(),
+  })
+  .strict();
+
+export const CardAnimationMetadataSchema = z
+  .object({
+    cardTokenTypeIds: z.array(StringSchema.min(1)).min(1),
+    zoneRoles: CardAnimationZoneRolesSchema,
+  })
+  .strict();
+
 export const MapSpaceSchema = z
   .object({
     id: StringSchema.min(1),

@@ -118,14 +118,14 @@ describe('buildTimeline', () => {
       {
         id: 'move-preset',
         defaultDurationSeconds: 0.4,
-        compatibleKinds: ['moveToken'],
+        compatibleKinds: ['moveToken', 'cardDeal', 'cardBurn'],
         createTween: moveTween,
       },
     ];
 
     const descriptors: readonly AnimationDescriptor[] = [
       {
-        kind: 'moveToken',
+        kind: 'cardDeal',
         tokenId: 'missing-token',
         from: 'zone:a',
         to: 'zone:b',
@@ -140,6 +140,14 @@ describe('buildTimeline', () => {
         preset: 'move-preset',
         isTriggered: false,
       },
+      {
+        kind: 'cardBurn',
+        tokenId: 'tok:2',
+        from: 'zone:b',
+        to: 'zone:a',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
     ];
 
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
@@ -147,7 +155,7 @@ describe('buildTimeline', () => {
     });
     buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
 
-    expect(moveTween).toHaveBeenCalledTimes(1);
+    expect(moveTween).toHaveBeenCalledTimes(2);
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0]?.[0]).toContain('token container not found');
   });
@@ -195,5 +203,39 @@ describe('buildTimeline', () => {
 
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0]?.[0]).toContain('Animation tween generation failed');
+  });
+
+  it('applies missing token guard to cardFlip descriptors', () => {
+    const runtime = createRuntimeFixture();
+    const flipTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'flip-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['cardFlip'],
+        createTween: flipTween,
+      },
+    ];
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'cardFlip',
+        tokenId: 'missing-token',
+        prop: 'faceUp',
+        oldValue: false,
+        newValue: true,
+        preset: 'flip-preset',
+        isTriggered: false,
+      },
+    ];
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+      // noop
+    });
+    buildTimeline(descriptors, createPresetRegistry(defs), createSpriteRefs(), runtime.gsap);
+
+    expect(flipTween).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain('token container not found');
   });
 });

@@ -38,6 +38,7 @@ import {
   SpaceMarkerLatticeSchema,
   SpaceMarkerValueSchema,
   StackingConstraintSchema,
+  CardAnimationMetadataSchema,
   TokenVisualHintsSchema,
   ZoneVisualHintsSchema,
 } from './schemas-gamespec.js';
@@ -330,6 +331,7 @@ export const GameDefSchema = z
     globalMarkerLattices: z.array(GlobalMarkerLatticeSchema).optional(),
     runtimeDataAssets: z.array(RuntimeDataAssetSchema).optional(),
     tableContracts: z.array(RuntimeTableContractSchema).optional(),
+    cardAnimation: CardAnimationMetadataSchema.optional(),
   })
   .strict();
 

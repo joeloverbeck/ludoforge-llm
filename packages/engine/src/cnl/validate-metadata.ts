@@ -1,6 +1,9 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import {
+  CARD_ANIMATION_KEYS,
+  CARD_ANIMATION_ZONE_ROLES_KEYS,
+  CARD_TOKEN_TYPES_KEYS,
   METADATA_KEYS,
   PLAYERS_KEYS,
   VARIABLE_KEYS,
@@ -138,6 +141,91 @@ export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
       }
     }
   }
+
+  const cardAnimation = metadata.cardAnimation;
+  if (cardAnimation !== undefined) {
+    if (!isRecord(cardAnimation)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_CARD_ANIMATION_INVALID',
+        path: 'doc.metadata.cardAnimation',
+        severity: 'error',
+        message: 'metadata.cardAnimation must be an object.',
+        suggestion: 'Set cardAnimation to an object with cardTokenTypes and zoneRoles.',
+      });
+      return;
+    }
+
+    validateUnknownKeys(cardAnimation, CARD_ANIMATION_KEYS, 'doc.metadata.cardAnimation', diagnostics, 'cardAnimation');
+
+    const cardTokenTypes = cardAnimation.cardTokenTypes;
+    if (!isRecord(cardTokenTypes)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_CARD_ANIMATION_TOKEN_SELECTORS_INVALID',
+        path: 'doc.metadata.cardAnimation.cardTokenTypes',
+        severity: 'error',
+        message: 'metadata.cardAnimation.cardTokenTypes must be an object.',
+        suggestion: 'Set cardTokenTypes to an object with optional ids and/or idPrefixes arrays.',
+      });
+    } else {
+      validateUnknownKeys(
+        cardTokenTypes,
+        CARD_TOKEN_TYPES_KEYS,
+        'doc.metadata.cardAnimation.cardTokenTypes',
+        diagnostics,
+        'cardTokenTypes',
+      );
+
+      if (cardTokenTypes.ids !== undefined && !isStringArray(cardTokenTypes.ids)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_CARD_ANIMATION_TOKEN_IDS_INVALID',
+          path: 'doc.metadata.cardAnimation.cardTokenTypes.ids',
+          severity: 'error',
+          message: 'metadata.cardAnimation.cardTokenTypes.ids must be an array of non-empty strings.',
+          suggestion: 'Set ids to token type ids such as ["card-2S", "card-AS"].',
+        });
+      }
+      if (cardTokenTypes.idPrefixes !== undefined && !isStringArray(cardTokenTypes.idPrefixes)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_CARD_ANIMATION_TOKEN_PREFIXES_INVALID',
+          path: 'doc.metadata.cardAnimation.cardTokenTypes.idPrefixes',
+          severity: 'error',
+          message: 'metadata.cardAnimation.cardTokenTypes.idPrefixes must be an array of non-empty strings.',
+          suggestion: 'Set idPrefixes to prefixes such as ["card-"].',
+        });
+      }
+    }
+
+    const zoneRoles = cardAnimation.zoneRoles;
+    if (!isRecord(zoneRoles)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_CARD_ANIMATION_ZONE_ROLES_INVALID',
+        path: 'doc.metadata.cardAnimation.zoneRoles',
+        severity: 'error',
+        message: 'metadata.cardAnimation.zoneRoles must be an object.',
+        suggestion: 'Provide zone role arrays for draw, hand, shared, burn, and discard.',
+      });
+    } else {
+      validateUnknownKeys(
+        zoneRoles,
+        CARD_ANIMATION_ZONE_ROLES_KEYS,
+        'doc.metadata.cardAnimation.zoneRoles',
+        diagnostics,
+        'cardAnimation.zoneRoles',
+      );
+
+      for (const role of CARD_ANIMATION_ZONE_ROLES_KEYS) {
+        if (!isStringArray(zoneRoles[role])) {
+          diagnostics.push({
+            code: 'CNL_VALIDATOR_CARD_ANIMATION_ZONE_ROLE_LIST_INVALID',
+            path: `doc.metadata.cardAnimation.zoneRoles.${role}`,
+            severity: 'error',
+            message: `metadata.cardAnimation.zoneRoles.${role} must be an array of non-empty strings.`,
+            suggestion: `Set zoneRoles.${role} to a zone base/id list such as ["${role}"].`,
+          });
+        }
+      }
+    }
+  }
 }
 
 export function validateVariables(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
@@ -241,4 +329,8 @@ function validateVariableSection(
       suggestion: 'Set variable.type to "int" or "boolean".',
     });
   }
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string' && entry.trim() !== '');
 }

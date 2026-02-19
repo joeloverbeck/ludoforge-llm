@@ -41,6 +41,9 @@ describe('preset-registry', () => {
 
     expect(registry.require('arc-tween').id).toBe('arc-tween');
     expect(registry.requireCompatible('arc-tween', 'moveToken').id).toBe('arc-tween');
+    expect(registry.requireCompatible('arc-tween', 'cardDeal').id).toBe('arc-tween');
+    expect(registry.requireCompatible('arc-tween', 'cardBurn').id).toBe('arc-tween');
+    expect(registry.requireCompatible('tint-flash', 'cardFlip').id).toBe('tint-flash');
     expect(() => registry.require('missing')).toThrow(/not registered/u);
     expect(() => registry.requireCompatible('arc-tween', 'createToken')).toThrow(/not compatible/u);
   });
@@ -168,11 +171,11 @@ describe('preset-registry', () => {
     );
     registry.require('tint-flash').createTween(
       {
-        kind: 'setTokenProp',
+        kind: 'cardFlip',
         tokenId: 'tok:1',
-        prop: 'foo',
-        oldValue: 0,
-        newValue: 1,
+        prop: 'faceUp',
+        oldValue: false,
+        newValue: true,
         preset: 'tint-flash',
         isTriggered: false,
       },

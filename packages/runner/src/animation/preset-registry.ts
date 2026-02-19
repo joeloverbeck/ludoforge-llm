@@ -66,9 +66,12 @@ const DEFAULT_TRACE_KIND_PRESET_IDS: Readonly<Record<EffectTraceEntry['kind'], A
 
 const VISUAL_DESCRIPTOR_KINDS: readonly PresetCompatibleDescriptorKind[] = [
   'moveToken',
+  'cardDeal',
+  'cardBurn',
   'createToken',
   'destroyToken',
   'setTokenProp',
+  'cardFlip',
   'varChange',
   'resourceTransfer',
   'phaseTransition',
@@ -77,7 +80,7 @@ const VISUAL_DESCRIPTOR_KINDS: readonly PresetCompatibleDescriptorKind[] = [
 const BUILTIN_PRESET_METADATA = {
   'arc-tween': {
     defaultDurationSeconds: 0.4,
-    compatibleKinds: ['moveToken'],
+    compatibleKinds: ['moveToken', 'cardDeal', 'cardBurn'],
     createTween: createArcTween,
   },
   'fade-in-scale': {
@@ -92,7 +95,7 @@ const BUILTIN_PRESET_METADATA = {
   },
   'tint-flash': {
     defaultDurationSeconds: 0.4,
-    compatibleKinds: ['setTokenProp'],
+    compatibleKinds: ['setTokenProp', 'cardFlip'],
     createTween: createTintFlashTween,
   },
   'counter-roll': {
@@ -254,7 +257,7 @@ interface TweenTarget {
 }
 
 function createArcTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
-  if (descriptor.kind !== 'moveToken') {
+  if (descriptor.kind !== 'moveToken' && descriptor.kind !== 'cardDeal' && descriptor.kind !== 'cardBurn') {
     return;
   }
 
@@ -306,7 +309,7 @@ function createFadeOutScaleTween(descriptor: VisualAnimationDescriptor, context:
 }
 
 function createTintFlashTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
-  if (descriptor.kind !== 'setTokenProp') {
+  if (descriptor.kind !== 'setTokenProp' && descriptor.kind !== 'cardFlip') {
     return;
   }
 

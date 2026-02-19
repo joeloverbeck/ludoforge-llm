@@ -12,6 +12,21 @@ function traceEntryProvenance(eventContext: EffectTraceEntry['provenance']['even
   } as const;
 }
 
+const CARD_CONTEXT = {
+  cardTokenTypeIds: new Set(['card']),
+  tokenTypeByTokenId: new Map([
+    ['tok:card', 'card'],
+    ['tok:chip', 'chip'],
+  ]),
+  zoneRoles: {
+    draw: new Set(['zone:deck']),
+    hand: new Set(['zone:hand:p1']),
+    shared: new Set(['zone:board']),
+    burn: new Set(['zone:burn']),
+    discard: new Set(['zone:discard']),
+  },
+} as const;
+
 describe('traceToDescriptors', () => {
   it('maps all supported effect trace kinds with canonical fields', () => {
     const trace: readonly EffectTraceEntry[] = [
@@ -169,7 +184,7 @@ describe('traceToDescriptors', () => {
     ]);
   });
 
-  it('applies preset overrides by trace kind', () => {
+  it('applies preset overrides by descriptor kind', () => {
     const trace: readonly EffectTraceEntry[] = [
       {
         kind: 'moveToken',
@@ -190,7 +205,7 @@ describe('traceToDescriptors', () => {
       traceToDescriptors(trace, {
         presetOverrides: new Map([
           ['moveToken', 'pulse'],
-          ['lifecycleEvent', 'pulse'],
+          ['phaseTransition', 'pulse'],
         ]),
       }),
     ).toEqual([
@@ -207,6 +222,136 @@ describe('traceToDescriptors', () => {
         eventType: 'phaseEnter',
         phase: 'main',
         preset: 'pulse',
+        isTriggered: false,
+      },
+    ]);
+  });
+
+  it('classifies card semantic descriptors when context is available', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:hand:p1',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:board',
+        to: 'zone:burn',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'setTokenProp',
+        tokenId: 'tok:card',
+        prop: 'faceUp',
+        oldValue: false,
+        newValue: true,
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    expect(traceToDescriptors(trace, { cardContext: CARD_CONTEXT })).toEqual([
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:hand:p1',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardBurn',
+        tokenId: 'tok:card',
+        from: 'zone:board',
+        to: 'zone:burn',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardFlip',
+        tokenId: 'tok:card',
+        prop: 'faceUp',
+        oldValue: false,
+        newValue: true,
+        preset: 'tint-flash',
+        isTriggered: false,
+      },
+    ]);
+  });
+
+  it('falls back to generic descriptor kinds when card context is absent or ambiguous', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:hand:p1',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'setTokenProp',
+        tokenId: 'tok:card',
+        prop: 'faceUp',
+        oldValue: true,
+        newValue: true,
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    expect(traceToDescriptors(trace).map((descriptor) => descriptor.kind)).toEqual([
+      'moveToken',
+      'setTokenProp',
+    ]);
+    expect(traceToDescriptors(trace, { cardContext: CARD_CONTEXT }).map((descriptor) => descriptor.kind)).toEqual([
+      'cardDeal',
+      'setTokenProp',
+    ]);
+  });
+
+  it('supports semantic descriptor-specific preset overrides', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:hand:p1',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:board',
+        to: 'zone:burn',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    expect(
+      traceToDescriptors(trace, {
+        cardContext: CARD_CONTEXT,
+        presetOverrides: new Map([
+          ['cardDeal', 'pulse'],
+          ['cardBurn', 'arc-tween'],
+        ]),
+      }),
+    ).toEqual([
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:hand:p1',
+        preset: 'pulse',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardBurn',
+        tokenId: 'tok:card',
+        from: 'zone:board',
+        to: 'zone:burn',
+        preset: 'arc-tween',
         isTriggered: false,
       },
     ]);
@@ -331,6 +476,40 @@ describe('traceToDescriptors', () => {
       'createToken',
       'skipped',
     ]);
+  });
+
+  it('includes card deal/burn semantics in minimal detail level output', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:deck',
+        to: 'zone:hand:p1',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:card',
+        from: 'zone:board',
+        to: 'zone:burn',
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+      {
+        kind: 'setTokenProp',
+        tokenId: 'tok:card',
+        prop: 'faceUp',
+        oldValue: false,
+        newValue: true,
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    expect(
+      traceToDescriptors(trace, {
+        detailLevel: 'minimal',
+        cardContext: CARD_CONTEXT,
+      }).map((descriptor) => descriptor.kind),
+    ).toEqual(['cardDeal', 'cardBurn']);
   });
 
   it('is deterministic and does not mutate input', () => {

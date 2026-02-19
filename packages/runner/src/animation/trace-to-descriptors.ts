@@ -12,6 +12,7 @@ import {
   type PresetCompatibleDescriptorKind,
   type PresetRegistry,
 } from './preset-registry.js';
+import { classifyCardSemantic } from './card-classification.js';
 
 const BUILTIN_PRESET_REGISTRY = createPresetRegistry();
 
@@ -25,7 +26,7 @@ function resolvePreset(
   options: AnimationMappingOptions | undefined,
   presetRegistry: PresetRegistry,
 ): AnimationPresetId {
-  const override = options?.presetOverrides?.get(traceKind);
+  const override = options?.presetOverrides?.get(descriptorKind);
   const presetId = override ?? resolveDefaultPresetIdForTraceKind(traceKind);
   presetRegistry.requireCompatible(presetId, descriptorKind);
   return presetId;
@@ -39,6 +40,19 @@ function mapEntry(
   const triggered = isTriggered(entry);
   switch (entry.kind) {
     case 'moveToken':
+      {
+        const semanticKind = classifyCardSemantic(entry, options?.cardContext);
+        if (semanticKind === 'cardDeal' || semanticKind === 'cardBurn') {
+          return {
+            kind: semanticKind,
+            tokenId: entry.tokenId,
+            from: entry.from,
+            to: entry.to,
+            preset: resolvePreset(entry.kind, semanticKind, options, presetRegistry),
+            isTriggered: triggered,
+          };
+        }
+      }
       return {
         kind: 'moveToken',
         tokenId: entry.tokenId,
@@ -66,6 +80,20 @@ function mapEntry(
         isTriggered: triggered,
       };
     case 'setTokenProp':
+      {
+        const semanticKind = classifyCardSemantic(entry, options?.cardContext);
+        if (semanticKind === 'cardFlip') {
+          return {
+            kind: 'cardFlip',
+            tokenId: entry.tokenId,
+            prop: entry.prop,
+            oldValue: entry.oldValue,
+            newValue: entry.newValue,
+            preset: resolvePreset(entry.kind, 'cardFlip', options, presetRegistry),
+            isTriggered: triggered,
+          };
+        }
+      }
       return {
         kind: 'setTokenProp',
         tokenId: entry.tokenId,
@@ -143,7 +171,12 @@ function passesDetailFilter(detailLevel: AnimationDetailLevel, descriptor: Anima
     return true;
   }
 
-  return descriptor.kind === 'moveToken' || descriptor.kind === 'createToken';
+  return (
+    descriptor.kind === 'moveToken' ||
+    descriptor.kind === 'cardDeal' ||
+    descriptor.kind === 'cardBurn' ||
+    descriptor.kind === 'createToken'
+  );
 }
 
 export function traceToDescriptors(

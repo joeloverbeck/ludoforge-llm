@@ -211,11 +211,16 @@ function createColorProvider(overrides: {
     readonly color?: string;
     readonly symbol?: string;
     readonly size?: number;
-  } | null;
+  };
   readonly factionColor?: string;
 } = {}) {
   return {
-    getTokenTypeVisual: vi.fn(() => overrides.tokenVisual ?? null),
+    getTokenTypeVisual: vi.fn(() => ({
+      shape: overrides.tokenVisual?.shape ?? 'circle',
+      color: overrides.tokenVisual?.color ?? null,
+      symbol: overrides.tokenVisual?.symbol ?? null,
+      size: overrides.tokenVisual?.size ?? 28,
+    })),
     getColor: vi.fn(() => overrides.factionColor ?? '#112233'),
   };
 }

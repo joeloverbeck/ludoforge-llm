@@ -1,41 +1,33 @@
 import { asPlayerId } from '@ludoforge/engine/runtime';
 import { describe, expect, it } from 'vitest';
 
+import { VisualConfigProvider } from '../../../src/config/visual-config-provider.js';
 import {
   DEFAULT_FACTION_PALETTE,
   DefaultFactionColorProvider,
-  GameDefFactionColorProvider,
+  VisualConfigFactionColorProvider,
 } from '../../../src/canvas/renderers/faction-colors';
 
 describe('DefaultFactionColorProvider', () => {
-  it('returns null for token type visuals by default', () => {
+  it('returns resolved token defaults for unknown token types', () => {
     const provider = new DefaultFactionColorProvider();
-    expect(provider.getTokenTypeVisual('vc-guerrillas')).toBeNull();
+    expect(provider.getTokenTypeVisual('vc-guerrillas')).toEqual({
+      shape: 'circle',
+      color: null,
+      size: 28,
+      symbol: null,
+    });
   });
 
-  it('returns deterministic color for the same faction/player pair', () => {
+  it('returns deterministic color for the same faction id', () => {
     const provider = new DefaultFactionColorProvider();
-
-    const first = provider.getColor('faction-a', asPlayerId(4));
-    const second = provider.getColor('faction-a', asPlayerId(4));
-
-    expect(second).toBe(first);
+    expect(provider.getColor('faction-a', asPlayerId(4))).toBe(provider.getColor('faction-a', asPlayerId(99)));
   });
 
-  it('uses faction id when present and keeps mapping deterministic across players', () => {
+  it('uses a player-derived fallback key when faction id is null', () => {
     const provider = new DefaultFactionColorProvider();
-
-    const colorForPlayer0 = provider.getColor('faction-shared', asPlayerId(0));
-    const colorForPlayer99 = provider.getColor('faction-shared', asPlayerId(99));
-
-    expect(colorForPlayer99).toBe(colorForPlayer0);
-  });
-
-  it('falls back to player id when faction id is null', () => {
-    const provider = new DefaultFactionColorProvider();
-
-    expect(provider.getColor(null, asPlayerId(8))).toBe(provider.getColor(null, asPlayerId(0)));
-    expect(provider.getColor(null, asPlayerId(1234))).toBe(provider.getColor(null, asPlayerId(1234)));
+    expect(provider.getColor(null, asPlayerId(8))).toBe(provider.getColor(null, asPlayerId(8)));
+    expect(provider.getColor(null, asPlayerId(8))).not.toBe(provider.getColor(null, asPlayerId(9)));
   });
 
   it('always returns a valid palette hex color', () => {
@@ -55,80 +47,68 @@ describe('DefaultFactionColorProvider', () => {
       expect(DEFAULT_FACTION_PALETTE).toContain(color);
     }
   });
-
-  it('maps representative distinct faction ids to more than one palette slot', () => {
-    const provider = new DefaultFactionColorProvider();
-
-    const colors = new Set([
-      provider.getColor('faction-alpha', asPlayerId(0)),
-      provider.getColor('faction-beta', asPlayerId(0)),
-      provider.getColor('faction-gamma', asPlayerId(0)),
-      provider.getColor('faction-delta', asPlayerId(0)),
-      provider.getColor('faction-epsilon', asPlayerId(0)),
-      provider.getColor('faction-zeta', asPlayerId(0)),
-      provider.getColor('faction-eta', asPlayerId(0)),
-      provider.getColor('faction-theta', asPlayerId(0)),
-    ]);
-
-    expect(colors.size).toBeGreaterThan(1);
-  });
 });
 
-describe('GameDefFactionColorProvider', () => {
-  it('returns configured game-def color for known factions', () => {
-    const provider = new GameDefFactionColorProvider([
-      { id: 'us', color: '#e63946', displayName: 'United States' },
-      { id: 'arvn', color: '#457b9d', displayName: 'ARVN' },
-    ]);
+describe('VisualConfigFactionColorProvider', () => {
+  it('returns configured visual-config color for known factions', () => {
+    const provider = new VisualConfigFactionColorProvider(
+      new VisualConfigProvider({
+        version: 1,
+        factions: {
+          us: { color: '#e63946', displayName: 'United States' },
+          arvn: { color: '#457b9d', displayName: 'ARVN' },
+        },
+      }),
+    );
 
     expect(provider.getColor('us', asPlayerId(0))).toBe('#e63946');
     expect(provider.getColor('arvn', asPlayerId(2))).toBe('#457b9d');
   });
 
-  it('falls back to default provider for unknown factions', () => {
-    const fallback = new DefaultFactionColorProvider();
-    const provider = new GameDefFactionColorProvider([{ id: 'us', color: '#e63946' }], fallback);
+  it('falls back to deterministic default color for unknown factions', () => {
+    const backingProvider = new VisualConfigProvider({
+      version: 1,
+      factions: { us: { color: '#e63946' } },
+    });
+    const provider = new VisualConfigFactionColorProvider(backingProvider);
 
-    expect(provider.getColor('unknown-faction', asPlayerId(7))).toBe(fallback.getColor('unknown-faction', asPlayerId(7)));
+    expect(provider.getColor('unknown-faction', asPlayerId(7))).toBe(
+      backingProvider.getFactionColor('unknown-faction'),
+    );
   });
 
-  it('falls back to default provider for null faction IDs', () => {
-    const fallback = new DefaultFactionColorProvider();
-    const provider = new GameDefFactionColorProvider([{ id: 'us', color: '#e63946' }], fallback);
+  it('uses player fallback key for null faction IDs', () => {
+    const backingProvider = new VisualConfigProvider({ version: 1 });
+    const provider = new VisualConfigFactionColorProvider(backingProvider);
 
-    expect(provider.getColor(null, asPlayerId(7))).toBe(fallback.getColor(null, asPlayerId(7)));
+    expect(provider.getColor(null, asPlayerId(7))).toBe(backingProvider.getFactionColor('player-7'));
   });
 
-  it('behaves like default provider when no factions are defined', () => {
-    const fallback = new DefaultFactionColorProvider();
-    const provider = new GameDefFactionColorProvider([], fallback);
+  it('returns token visuals from visual config and defaults unknown token types', () => {
+    const backingProvider = new VisualConfigProvider({
+      version: 1,
+      tokenTypes: {
+        'vc-guerrillas': {
+          color: 'bright-blue',
+          shape: 'card',
+          symbol: 'VC',
+          size: 24,
+        },
+      },
+    });
+    const provider = new VisualConfigFactionColorProvider(backingProvider);
 
-    expect(provider.getColor('faction-a', asPlayerId(1))).toBe(fallback.getColor('faction-a', asPlayerId(1)));
-    expect(provider.getColor(null, asPlayerId(9))).toBe(fallback.getColor(null, asPlayerId(9)));
-  });
-
-  it('supports updating factions after construction', () => {
-    const fallback = new DefaultFactionColorProvider();
-    const provider = new GameDefFactionColorProvider(undefined, fallback);
-
-    expect(provider.getColor('us', asPlayerId(0))).toBe(fallback.getColor('us', asPlayerId(0)));
-    provider.setFactions([{ id: 'us', color: '#e63946' }]);
-    expect(provider.getColor('us', asPlayerId(0))).toBe('#e63946');
-  });
-
-  it('resolves token type visuals when declared', () => {
-    const fallback = new DefaultFactionColorProvider();
-    const provider = new GameDefFactionColorProvider(undefined, fallback);
-
-    expect(provider.getTokenTypeVisual('vc-guerrillas')).toBeNull();
-
-    provider.setTokenTypes([
-      { id: 'vc-guerrillas', faction: 'vc', props: {}, visual: { color: 'bright-blue', shape: 'card', symbol: 'VC' } },
-      { id: 'nva-guerrillas', faction: 'nva', props: {}, visual: { color: '#ff0000' } },
-    ]);
-
-    expect(provider.getTokenTypeVisual('vc-guerrillas')).toEqual({ color: 'bright-blue', shape: 'card', symbol: 'VC' });
-    expect(provider.getTokenTypeVisual('nva-guerrillas')).toEqual({ color: '#ff0000' });
-    expect(provider.getTokenTypeVisual('unknown')).toBeNull();
+    expect(provider.getTokenTypeVisual('vc-guerrillas')).toEqual({
+      color: 'bright-blue',
+      shape: 'card',
+      size: 24,
+      symbol: 'VC',
+    });
+    expect(provider.getTokenTypeVisual('unknown')).toEqual({
+      color: null,
+      shape: 'circle',
+      size: 28,
+      symbol: null,
+    });
   });
 });

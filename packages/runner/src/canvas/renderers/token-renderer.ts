@@ -3,6 +3,7 @@ import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { RenderToken } from '../../model/render-model';
 import type { TokenShape } from '../../config/visual-config-defaults.js';
+import type { ResolvedTokenVisual } from '../../config/visual-config-provider.js';
 import type { FactionColorProvider, TokenRenderer } from './renderer-types';
 import { parseHexColor } from './shape-utils';
 
@@ -247,9 +248,9 @@ function updateTokenVisuals(
   colorProvider: FactionColorProvider,
 ): void {
   const tokenVisual = colorProvider.getTokenTypeVisual(token.type);
-  const shape = resolveTokenShape(tokenVisual?.shape);
-  const dimensions = resolveTokenDimensions(shape, tokenVisual?.size);
-  const fillColor = resolveTokenColor(token, colorProvider);
+  const shape = resolveTokenShape(tokenVisual.shape);
+  const dimensions = resolveTokenDimensions(shape, tokenVisual.size);
+  const fillColor = resolveTokenColor(token, tokenVisual, colorProvider);
   const stroke = resolveStroke(token);
   const isFaceUp = token.faceUp;
 
@@ -261,17 +262,20 @@ function updateTokenVisuals(
   visuals.backBase.visible = !isFaceUp;
   visuals.backLabel.visible = !isFaceUp;
 
-  visuals.frontLabel.text = tokenLabel(token, tokenVisual?.symbol);
-  visuals.backLabel.text = tokenBackLabel(shape, tokenVisual?.symbol);
+  visuals.frontLabel.text = tokenLabel(token, tokenVisual.symbol ?? undefined);
+  visuals.backLabel.text = tokenBackLabel(shape, tokenVisual.symbol ?? undefined);
   visuals.countBadge.text = tokenCount > 1 ? String(tokenCount) : '';
   visuals.countBadge.visible = tokenCount > 1;
   visuals.countBadge.position.set(dimensions.width / 2 - 2, -dimensions.height / 2 + 2);
   tokenContainer.scale.set(token.isSelected ? 1.08 : 1, token.isSelected ? 1.08 : 1);
 }
 
-function resolveTokenColor(token: RenderToken, colorProvider: FactionColorProvider): number {
-  const tokenTypeColor = colorProvider.getTokenTypeVisual(token.type)?.color;
-  const resolvedTokenTypeColor = parseHexColor(tokenTypeColor, {
+function resolveTokenColor(
+  token: RenderToken,
+  tokenVisual: ResolvedTokenVisual,
+  colorProvider: FactionColorProvider,
+): number {
+  const resolvedTokenTypeColor = parseHexColor(tokenVisual.color ?? undefined, {
     allowShortHex: true,
     allowNamedColors: true,
   });

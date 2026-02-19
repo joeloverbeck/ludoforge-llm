@@ -6,6 +6,7 @@ import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
 import { GameContainer, resolveTooltipAnchorState } from '../../src/ui/GameContainer.js';
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 
 interface CapturedErrorStateProps {
   readonly error: { readonly message: string };
@@ -31,6 +32,7 @@ const testDoubles = vi.hoisted(() => ({
   tooltipLayerProps: null as CapturedTooltipLayerProps | null,
   gameCanvasProps: null as CapturedGameCanvasProps | null,
 }));
+const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
 
 vi.mock('../../src/canvas/GameCanvas.js', () => ({
   GameCanvas: (props: CapturedGameCanvasProps) => {
@@ -216,6 +218,7 @@ describe('GameContainer', () => {
           gameLifecycle: 'idle',
           error: null,
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -231,6 +234,7 @@ describe('GameContainer', () => {
           gameLifecycle: 'initializing',
           error: null,
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -249,6 +253,7 @@ describe('GameContainer', () => {
             message: 'init failed',
           },
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -267,6 +272,7 @@ describe('GameContainer', () => {
           gameLifecycle: 'playing',
           error: null,
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -317,6 +323,7 @@ describe('GameContainer', () => {
           gameLifecycle: 'terminal',
           error: null,
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -361,6 +368,7 @@ describe('GameContainer', () => {
             ],
           } as unknown as GameStore['gameDef'],
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -376,6 +384,7 @@ describe('GameContainer', () => {
           error: null,
           renderModel: makeRenderModel(),
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -407,6 +416,7 @@ describe('GameContainer', () => {
           selectedAction: asActionId('pass'),
           partialMove: { actionId: asActionId('pass'), params: {} },
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -428,6 +438,7 @@ describe('GameContainer', () => {
           selectedAction: asActionId('pass'),
           partialMove: { actionId: asActionId('pass'), params: {} },
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -447,6 +458,7 @@ describe('GameContainer', () => {
             choiceUi: { kind: 'invalid', reason: 'ACTION_MOVE_MISMATCH' },
           }),
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -467,6 +479,7 @@ describe('GameContainer', () => {
             activePlayerID: asPlayerId(1),
           }),
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -490,6 +503,7 @@ describe('GameContainer', () => {
           selectedAction: asActionId('pass'),
           partialMove: { actionId: asActionId('pass'), params: {} },
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -515,6 +529,7 @@ describe('GameContainer', () => {
           },
           clearError,
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 

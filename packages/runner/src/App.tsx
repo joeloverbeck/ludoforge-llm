@@ -63,7 +63,7 @@ export function App(): ReactElement {
 
   return (
     <ErrorBoundary>
-      <GameContainer store={store} />
+      <GameContainer store={store} visualConfigProvider={bootstrapConfig.visualConfigProvider} />
     </ErrorBoundary>
   );
 }

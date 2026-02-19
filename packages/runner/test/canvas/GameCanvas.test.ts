@@ -9,6 +9,7 @@ import { GameCanvas, createGameCanvasRuntime } from '../../src/canvas/GameCanvas
 import type { CoordinateBridge } from '../../src/canvas/coordinate-bridge';
 import type { GameStore } from '../../src/store/game-store';
 import { getOrComputeLayout } from '../../src/layout/layout-cache.js';
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 
 vi.mock('../../src/layout/layout-cache.js', () => ({
   getOrComputeLayout: vi.fn(),
@@ -316,6 +317,7 @@ function flushMicrotasks(): Promise<void> {
 }
 
 const mockedGetOrComputeLayout = vi.mocked(getOrComputeLayout);
+const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
 
 function makeGameDefWithZones(zoneIDs: readonly string[]): GameDef {
   return {
@@ -331,6 +333,7 @@ describe('GameCanvas', () => {
     const html = renderToStaticMarkup(
       createElement(GameCanvas, {
         store: createRuntimeStore(null) as unknown as StoreApi<GameStore>,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -373,6 +376,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x000000,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
         onHoverAnchorChange,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
@@ -414,6 +418,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x0,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -442,6 +447,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x0,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -465,6 +471,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x222222,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -508,6 +515,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x111111,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
         onHoverAnchorChange,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
@@ -554,6 +562,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x111111,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
         keyboardCoordinator,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
@@ -575,6 +584,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: createRuntimeStore(makeRenderModel(['zone:a'])) as unknown as StoreApi<GameStore>,
         backgroundColor: 0x111111,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
         onHoverAnchorChange,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
@@ -645,6 +655,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: createRuntimeStore(makeRenderModel(['zone:a'])) as unknown as StoreApi<GameStore>,
         backgroundColor: 0x222222,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
         onHoverAnchorChange,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
@@ -689,6 +700,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: createRuntimeStore(makeRenderModel(['zone:a'])) as unknown as StoreApi<GameStore>,
         backgroundColor: 0x232323,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
         onHoverAnchorChange,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
@@ -728,7 +740,7 @@ describe('createGameCanvasRuntime', () => {
     runtime.destroy();
   });
 
-  it('refreshes token rendering when GameDef faction colors change', async () => {
+  it('does not refresh token rendering for GameDef faction color changes', async () => {
     const fixture = createRuntimeFixture();
     const store = createRuntimeStore(makeRenderModel(['zone:a']));
 
@@ -737,9 +749,12 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x232323,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
+
+    vi.clearAllMocks();
 
     store.setState({
       gameDef: {
@@ -747,7 +762,7 @@ describe('createGameCanvasRuntime', () => {
       } as unknown as GameDef,
     });
 
-    expect(fixture.tokenRenderer.update).toHaveBeenCalledWith([], fixture.zoneContainerMap);
+    expect(fixture.tokenRenderer.update).not.toHaveBeenCalled();
 
     runtime.destroy();
   });
@@ -762,6 +777,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x454545,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -795,6 +811,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x454545,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -818,6 +835,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x454545,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -845,6 +863,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x454545,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -870,6 +889,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x454545,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -892,6 +912,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x454545,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -912,6 +933,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x222222,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -921,6 +943,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x333333,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
@@ -956,6 +979,7 @@ describe('createGameCanvasRuntime', () => {
         container: {} as HTMLElement,
         store: store as unknown as StoreApi<GameStore>,
         backgroundColor: 0x121212,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       },
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );

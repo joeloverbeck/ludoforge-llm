@@ -32,7 +32,7 @@ describe('render-model types', () => {
           ownerID: null,
           category: null,
           attributes: {},
-          visual: null,
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null },
           metadata: {},
         },
       ],
@@ -171,7 +171,7 @@ describe('render-model types', () => {
       ownerID: asPlayerId(0),
       category: null,
       attributes: {},
-      visual: null,
+      visual: { shape: 'rectangle', width: 160, height: 100, color: null },
       metadata: {},
     };
 

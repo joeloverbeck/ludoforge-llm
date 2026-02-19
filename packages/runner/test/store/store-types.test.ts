@@ -7,6 +7,7 @@ import type {
 } from '@ludoforge/engine/runtime';
 import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { PartialChoice, RenderContext } from '../../src/store/store-types';
 
 describe('store-types', () => {
@@ -61,6 +62,7 @@ describe('store-types', () => {
         [asPlayerId(1), 'ai-random'],
       ]),
       terminal,
+      visualConfigProvider: new VisualConfigProvider(null),
     };
 
     expect(context.playerSeats.get(asPlayerId(0))).toBe('human');

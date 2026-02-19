@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 
 import {
   assertBootstrapRegistry,
@@ -83,6 +84,7 @@ function descriptor(
     defaultPlayerId: 0,
     sourceLabel: 'test fixture',
     resolveGameDefInput: async () => ({}),
+    resolveVisualConfigProvider: () => new VisualConfigProvider(null),
     ...overrides,
   };
 }

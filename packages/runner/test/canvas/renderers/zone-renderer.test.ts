@@ -197,7 +197,7 @@ function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
     ownerID: null,
     category: null,
     attributes: {},
-    visual: null,
+    visual: { shape: 'rectangle', width: 160, height: 100, color: null },
     metadata: {},
     ...overrides,
   };
@@ -249,8 +249,8 @@ describe('createZoneRenderer', () => {
     const zoneA = renderer.getContainerMap().get('zone:a') as unknown as {
       hitArea?: { width: number; height: number };
     };
-    expect(zoneA.hitArea?.width).toBe(180);
-    expect(zoneA.hitArea?.height).toBe(110);
+    expect(zoneA.hitArea?.width).toBe(160);
+    expect(zoneA.hitArea?.height).toBe(100);
 
     renderer.update(
       [makeZone({ id: 'zone:a' }), makeZone({ id: 'zone:b' }), makeZone({ id: 'zone:d' })],
@@ -411,10 +411,15 @@ describe('createZoneRenderer', () => {
     expect(cleanupByZoneId.get('zone:a')).toHaveBeenCalledTimes(1);
   });
 
-  it('uses zone.visual.label override and updates label layout from visual dimensions', () => {
+  it('uses displayName and updates label layout from visual dimensions', () => {
     const { renderer } = createRendererHarness();
     renderer.update(
-      [makeZone({ visual: { label: 'Saigon', width: 100, height: 80 } })],
+      [
+        makeZone({
+          displayName: 'Saigon',
+          visual: { shape: 'rectangle', width: 100, height: 80, color: null },
+        }),
+      ],
       new Map(),
     );
 
@@ -434,14 +439,17 @@ describe('createZoneRenderer', () => {
 
   it('uses visual color when valid and falls back to default color when invalid', () => {
     const { renderer } = createRendererHarness();
-    renderer.update([makeZone({ visual: { color: '#e63946' } })], new Map());
+    renderer.update(
+      [makeZone({ visual: { shape: 'rectangle', width: 160, height: 100, color: '#e63946' } })],
+      new Map(),
+    );
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
     const base = zoneContainer.children[0] as InstanceType<typeof MockGraphics>;
     expect(base.fillStyle).toEqual({ color: 0xe63946 });
 
     renderer.update(
-      [makeZone({ visual: { color: 'not-a-color' }, visibility: 'hidden' })],
+      [makeZone({ visual: { shape: 'rectangle', width: 160, height: 100, color: 'not-a-color' }, visibility: 'hidden' })],
       new Map(),
     );
     expect(base.fillStyle).toEqual({ color: 0x2a2f38 });
@@ -464,7 +472,7 @@ describe('createZoneRenderer', () => {
       renderer.update(
         [
           makeZone({
-            visual: { shape: entry.shape, width: 80, height: 40 },
+            visual: { shape: entry.shape, width: 80, height: 40, color: null },
           }),
         ],
         new Map(),

@@ -34,7 +34,7 @@ function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
     ownerID: null,
     category: null,
     attributes: {},
-    visual: null,
+    visual: { shape: 'rectangle', width: 160, height: 100, color: null },
     metadata: {},
     ...overrides,
   };
@@ -139,7 +139,7 @@ describe('zonesVisuallyEqual', () => {
     expect(
       zonesVisuallyEqual(
         [makeZone()],
-        [makeZone({ visual: { shape: 'hexagon', color: '#345678' } })],
+        [makeZone({ visual: { shape: 'hexagon', width: 160, height: 100, color: '#345678' } })],
       ),
     ).toBe(false);
   });

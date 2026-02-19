@@ -16,6 +16,7 @@ import {
   type Token,
 } from '@ludoforge/engine/runtime';
 
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { deriveRenderModel } from '../../src/model/derive-render-model.js';
 import { serializeChoiceValueIdentity } from '../../src/model/choice-value-utils.js';
 import type { RenderContext } from '../../src/store/store-types.js';
@@ -133,6 +134,7 @@ function makeRenderContext(
       Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), 'human' as const]),
     ),
     terminal: null,
+    visualConfigProvider: new VisualConfigProvider(null),
     ...overrides,
   };
 }

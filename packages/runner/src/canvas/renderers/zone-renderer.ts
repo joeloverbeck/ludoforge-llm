@@ -189,7 +189,7 @@ function updateZoneVisuals(
   drawZoneBase(visuals.base, zone);
   layoutZoneLabels(visuals, dimensions.width, dimensions.height);
 
-  visuals.nameLabel.text = zone.visual?.label ?? zone.displayName;
+  visuals.nameLabel.text = zone.displayName;
 
   const tokenTotal = zone.tokenIDs.length + zone.hiddenTokenCount;
   visuals.tokenCountBadge.text = String(tokenTotal);
@@ -207,7 +207,7 @@ function drawZoneBase(base: Graphics, zone: RenderZone): void {
     width: ZONE_WIDTH,
     height: ZONE_HEIGHT,
   });
-  const shape = zone.visual?.shape ?? 'rectangle';
+  const shape = zone.visual.shape;
 
   base.clear();
   drawZoneShape(base, shape, dimensions, {
@@ -218,7 +218,7 @@ function drawZoneBase(base: Graphics, zone: RenderZone): void {
 }
 
 function resolveFillColor(zone: RenderZone): number {
-  const visualColor = parseHexColor(zone.visual?.color);
+  const visualColor = parseHexColor(zone.visual.color ?? undefined);
   if (visualColor !== null) {
     return visualColor;
   }

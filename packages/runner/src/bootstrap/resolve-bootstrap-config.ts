@@ -1,4 +1,5 @@
 import { assertValidatedGameDefInput, asPlayerId, type GameDef, type PlayerId } from '@ludoforge/engine/runtime';
+import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 
 import { resolveBootstrapDescriptor } from './bootstrap-registry';
 
@@ -6,6 +7,7 @@ export interface BootstrapConfig {
   readonly seed: number;
   readonly playerId: PlayerId;
   readonly resolveGameDef: () => Promise<GameDef>;
+  readonly visualConfigProvider: VisualConfigProvider;
 }
 
 export function resolveBootstrapConfig(search = resolveWindowSearch()): BootstrapConfig {
@@ -17,6 +19,7 @@ export function resolveBootstrapConfig(search = resolveWindowSearch()): Bootstra
   return {
     seed,
     playerId,
+    visualConfigProvider: descriptor.resolveVisualConfigProvider(),
     resolveGameDef: async () => {
       const gameDefInput = await descriptor.resolveGameDefInput();
       return assertValidatedGameDefInput(gameDefInput, descriptor.sourceLabel);

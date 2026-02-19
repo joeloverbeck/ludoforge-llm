@@ -20,6 +20,12 @@ describe('resolveBootstrapConfig', () => {
 
     expect(resolved.seed).toBe(42);
     expect(resolved.playerId).toBe(0);
+    expect(resolved.visualConfigProvider.resolveZoneVisual('zone:any', null, null)).toEqual({
+      shape: 'rectangle',
+      width: 160,
+      height: 100,
+      color: null,
+    });
     expect(gameDef.metadata.id).toBe('runner-bootstrap-default');
   });
 
@@ -43,7 +49,7 @@ describe('resolveBootstrapConfig', () => {
     expect(gameDef.metadata.id).toBe('texas-holdem-nlhe-tournament');
   });
 
-  it('returns FITL bootstrap zones with board-map category/shape invariants needed by generic rendering', async () => {
+  it('returns FITL bootstrap config with visual-provider category style invariants needed by generic rendering', async () => {
     const { resolveBootstrapConfig } = await importResolver();
     const resolved = resolveBootstrapConfig('?game=fitl');
     const gameDef = await resolved.resolveGameDef();
@@ -68,21 +74,19 @@ describe('resolveBootstrapConfig', () => {
     const provinceZones = zones.filter((zone) => zone.category === 'province');
     const locZones = zones.filter((zone) => zone.category === 'loc');
 
+    const provider = resolved.visualConfigProvider;
+
+    expect(provider.resolveZoneVisual('sample:city', 'city', {})).toMatchObject({ shape: 'circle' });
+    expect(provider.resolveZoneVisual('sample:province', 'province', {})).toMatchObject({ shape: 'rectangle' });
+    expect(provider.resolveZoneVisual('sample:loc', 'loc', {})).toMatchObject({ shape: 'line' });
+
     for (const zone of cityZones) {
-      expect(zone.visual?.shape).toBe('circle');
-      expect(zone.visual?.color).toMatch(/^#[0-9a-f]{6}$/iu);
       expect((zone.adjacentTo ?? []).length).toBeGreaterThan(0);
     }
-
     for (const zone of provinceZones) {
-      expect(zone.visual?.shape).toBe('rectangle');
-      expect(zone.visual?.color).toMatch(/^#[0-9a-f]{6}$/iu);
       expect((zone.adjacentTo ?? []).length).toBeGreaterThan(0);
     }
-
     for (const zone of locZones) {
-      expect(zone.visual?.shape).toBe('line');
-      expect(zone.visual?.color).toMatch(/^#[0-9a-f]{6}$/iu);
       expect((zone.adjacentTo ?? []).length).toBeGreaterThan(0);
     }
   });

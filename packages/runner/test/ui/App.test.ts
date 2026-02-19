@@ -12,6 +12,7 @@ const testDoubles = vi.hoisted(() => ({
   effectCleanups: [] as Array<() => void>,
   gameContainerStore: null as unknown,
   bridge: {} as unknown,
+  visualConfigProvider: {} as unknown,
   resolveBootstrapConfig: vi.fn(),
 }));
 
@@ -89,6 +90,7 @@ describe('App', () => {
     testDoubles.resolveBootstrapConfig.mockReturnValue({
       seed: 42,
       playerId: 0,
+      visualConfigProvider: testDoubles.visualConfigProvider,
       resolveGameDef: async () => ({ metadata: { id: 'runner-bootstrap-default' } }),
     });
   });
@@ -106,7 +108,7 @@ describe('App', () => {
 
     expect(testDoubles.createGameBridge).toHaveBeenCalledTimes(1);
     expect(testDoubles.createGameStore).toHaveBeenCalledTimes(1);
-    expect(testDoubles.createGameStore).toHaveBeenCalledWith(testDoubles.bridge);
+    expect(testDoubles.createGameStore).toHaveBeenCalledWith(testDoubles.bridge, testDoubles.visualConfigProvider);
     expect(testDoubles.gameContainerStore).toBe(testDoubles.createGameStore.mock.results[0]?.value);
   });
 
@@ -115,6 +117,7 @@ describe('App', () => {
     testDoubles.resolveBootstrapConfig.mockReturnValue({
       seed: 99,
       playerId: 2,
+      visualConfigProvider: testDoubles.visualConfigProvider,
       resolveGameDef: async () => resolvedGameDef,
     });
 
@@ -142,6 +145,7 @@ describe('App', () => {
     testDoubles.resolveBootstrapConfig.mockReturnValue({
       seed: 42,
       playerId: 0,
+      visualConfigProvider: testDoubles.visualConfigProvider,
       resolveGameDef: async () => {
         throw new Error('bootstrap config failed');
       },

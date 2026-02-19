@@ -178,25 +178,8 @@ function markersEqual(prev: readonly RenderMarker[], next: readonly RenderMarker
 }
 
 function isZoneVisualEqual(previous: RenderZone['visual'], current: RenderZone['visual']): boolean {
-  if (previous === current) {
-    return true;
-  }
-
-  if (previous === null || current === null) {
-    return false;
-  }
-
-  const previousKeys = Object.keys(previous);
-  const currentKeys = Object.keys(current);
-  if (previousKeys.length !== currentKeys.length) {
-    return false;
-  }
-
-  for (const key of previousKeys) {
-    if (!Object.is(previous[key as keyof typeof previous], current[key as keyof typeof current])) {
-      return false;
-    }
-  }
-
-  return true;
+  return previous.shape === current.shape
+    && previous.width === current.width
+    && previous.height === current.height
+    && previous.color === current.color;
 }

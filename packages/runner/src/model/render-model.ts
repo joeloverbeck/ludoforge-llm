@@ -2,8 +2,8 @@ import type {
   AttributeValue,
   MoveParamValue,
   PlayerId,
-  ZoneVisualHints,
 } from '@ludoforge/engine/runtime';
+import type { ResolvedZoneVisual } from '../config/visual-config-provider.js';
 
 export interface RenderModel {
   readonly zones: readonly RenderZone[];
@@ -44,7 +44,7 @@ export interface RenderZone {
   readonly ownerID: PlayerId | null;
   readonly category: string | null;
   readonly attributes: Readonly<Record<string, AttributeValue>>;
-  readonly visual: ZoneVisualHints | null;
+  readonly visual: ResolvedZoneVisual;
   readonly metadata: Readonly<Record<string, unknown>>;
 }
 

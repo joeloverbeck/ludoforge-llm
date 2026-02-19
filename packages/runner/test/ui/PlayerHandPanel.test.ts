@@ -36,7 +36,7 @@ describe('PlayerHandPanel', () => {
             ownerID: asPlayerId(0),
             category: null,
             attributes: {},
-            visual: null,
+            visual: { shape: 'rectangle', width: 160, height: 100, color: null },
             metadata: {},
           },
           {
@@ -52,7 +52,7 @@ describe('PlayerHandPanel', () => {
             ownerID: asPlayerId(1),
             category: null,
             attributes: {},
-            visual: null,
+            visual: { shape: 'rectangle', width: 160, height: 100, color: null },
             metadata: {},
           },
         ],
@@ -116,7 +116,7 @@ describe('PlayerHandPanel', () => {
           ownerID: null,
           category: null,
           attributes: {},
-          visual: null,
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null },
           metadata: {},
         }],
         tokens: [{
@@ -152,7 +152,7 @@ describe('PlayerHandPanel', () => {
           ownerID: asPlayerId(0),
           category: null,
           attributes: {},
-          visual: null,
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null },
           metadata: {},
         }],
         tokens: [{
@@ -188,7 +188,7 @@ describe('PlayerHandPanel', () => {
           ownerID: asPlayerId(0),
           category: null,
           attributes: {},
-          visual: null,
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null },
           metadata: {},
         }],
         tokens: [{
@@ -224,7 +224,7 @@ describe('PlayerHandPanel', () => {
           ownerID: asPlayerId(0),
           category: null,
           attributes: {},
-          visual: null,
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null },
           metadata: {},
         }],
         tokens: [
@@ -274,7 +274,7 @@ describe('PlayerHandPanel', () => {
           ownerID: asPlayerId(0),
           category: null,
           attributes: {},
-          visual: null,
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null },
           metadata: {},
         }],
         tokens: [{

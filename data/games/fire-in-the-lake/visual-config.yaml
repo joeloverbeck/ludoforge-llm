@@ -182,7 +182,7 @@ tokenTypes:
     shape: round-disk
     color: olive
   us-irregulars:
-    shape: cylinder
+    shape: beveled-cylinder
     color: olive
     symbol: star
   arvn-troops:
@@ -192,7 +192,7 @@ tokenTypes:
     shape: cube
     color: orange
   arvn-rangers:
-    shape: cylinder
+    shape: beveled-cylinder
     color: yellow
     symbol: star
   arvn-bases:
@@ -202,14 +202,14 @@ tokenTypes:
     shape: cube
     color: red
   nva-guerrillas:
-    shape: cylinder
+    shape: beveled-cylinder
     color: red
     symbol: star
   nva-bases:
     shape: round-disk
     color: red
   vc-guerrillas:
-    shape: cylinder
+    shape: beveled-cylinder
     color: bright-blue
     symbol: star
   vc-bases:

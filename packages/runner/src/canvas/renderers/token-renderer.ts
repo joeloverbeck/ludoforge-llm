@@ -1,16 +1,16 @@
-import { Circle, Container, Graphics, Text } from 'pixi.js';
+import { Circle, Container, Graphics, Polygon, Rectangle, Text } from 'pixi.js';
 import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { RenderToken } from '../../model/render-model';
 import type { TokenShape } from '../../config/visual-config-defaults.js';
 import type { ResolvedTokenVisual } from '../../config/visual-config-provider.js';
 import type { FactionColorProvider, TokenRenderer } from './renderer-types';
-import { parseHexColor } from './shape-utils';
+import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
+import { drawTokenShape } from './token-shape-drawer.js';
 
 const TOKEN_RADIUS = 14;
 const CARD_WIDTH = 24;
 const CARD_HEIGHT = 34;
-const CARD_CORNER_RADIUS = 4;
 const TOKENS_PER_ROW = 4;
 const TOKEN_SPACING = 30;
 const NEUTRAL_TOKEN_COLOR = 0x6b7280;
@@ -96,8 +96,6 @@ export function createTokenRenderer(
           const interactive = options.bindSelection !== undefined;
           tokenContainer.eventMode = interactive ? 'static' : 'none';
           tokenContainer.interactiveChildren = false;
-          tokenContainer.hitArea = new Circle(0, 0, TOKEN_RADIUS);
-
           const visuals = createTokenVisualElements();
           tokenContainer.addChild(
             visuals.backBase,
@@ -254,8 +252,9 @@ function updateTokenVisuals(
   const stroke = resolveStroke(token);
   const isFaceUp = token.faceUp;
 
-  drawTokenBase(visuals.frontBase, shape, dimensions, fillColor, stroke);
-  drawTokenBase(visuals.backBase, shape, dimensions, CARD_BACK_COLOR, stroke);
+  drawTokenShape(visuals.frontBase, shape, dimensions, fillColor, stroke);
+  drawTokenShape(visuals.backBase, shape, dimensions, CARD_BACK_COLOR, stroke);
+  tokenContainer.hitArea = resolveTokenHitArea(shape, dimensions);
 
   visuals.frontBase.visible = isFaceUp;
   visuals.frontLabel.visible = isFaceUp;
@@ -313,34 +312,12 @@ function resolveStroke(token: RenderToken): { color: number; width: number; alph
   return DEFAULT_STROKE;
 }
 
-function drawTokenBase(
-  graphics: Graphics,
-  shape: 'circle' | 'card',
-  dimensions: { readonly width: number; readonly height: number },
-  fillColor: number,
-  stroke: { color: number; width: number; alpha: number },
-): void {
-  graphics.clear();
-  if (shape === 'card') {
-    graphics
-      .roundRect(-dimensions.width / 2, -dimensions.height / 2, dimensions.width, dimensions.height, CARD_CORNER_RADIUS)
-      .fill({ color: fillColor })
-      .stroke(stroke);
-    return;
-  }
-
-  graphics
-    .circle(0, 0, dimensions.width / 2)
-    .fill({ color: fillColor })
-    .stroke(stroke);
-}
-
-function resolveTokenShape(shape: TokenShape | undefined): 'circle' | 'card' {
-  return shape === 'card' ? 'card' : 'circle';
+function resolveTokenShape(shape: TokenShape | undefined): TokenShape {
+  return shape ?? 'circle';
 }
 
 function resolveTokenDimensions(
-  shape: 'circle' | 'card',
+  shape: TokenShape,
   size: number | undefined,
 ): { readonly width: number; readonly height: number } {
   const normalizedSize = typeof size === 'number' && Number.isFinite(size) && size > 0 ? size : TOKEN_RADIUS * 2;
@@ -350,10 +327,79 @@ function resolveTokenDimensions(
       height: Math.max(CARD_HEIGHT, Math.round(normalizedSize * 1.25)),
     };
   }
+  if (shape === 'square' || shape === 'cube') {
+    const side = Math.max(16, Math.round(normalizedSize));
+    return {
+      width: side,
+      height: side,
+    };
+  }
+  if (shape === 'triangle') {
+    return {
+      width: Math.max(16, Math.round(normalizedSize * 1.06)),
+      height: Math.max(16, Math.round(normalizedSize)),
+    };
+  }
+  if (shape === 'meeple') {
+    return {
+      width: Math.max(16, Math.round(normalizedSize * 0.92)),
+      height: Math.max(16, Math.round(normalizedSize * 1.12)),
+    };
+  }
+  if (shape === 'diamond' || shape === 'hexagon' || shape === 'beveled-cylinder' || shape === 'round-disk') {
+    return {
+      width: Math.max(16, Math.round(normalizedSize)),
+      height: Math.max(16, Math.round(normalizedSize)),
+    };
+  }
   return {
     width: normalizedSize,
     height: normalizedSize,
   };
+}
+
+function resolveTokenHitArea(
+  shape: TokenShape,
+  dimensions: { readonly width: number; readonly height: number },
+): Circle | Rectangle | Polygon {
+  switch (shape) {
+    case 'card':
+    case 'square':
+    case 'cube':
+      return new Rectangle(
+        -dimensions.width / 2,
+        -dimensions.height / 2,
+        dimensions.width,
+        dimensions.height,
+      );
+    case 'triangle':
+      return new Polygon(buildRegularPolygonPoints(3, dimensions.width, dimensions.height));
+    case 'diamond':
+      return new Polygon([
+        0,
+        -dimensions.height / 2,
+        dimensions.width / 2,
+        0,
+        0,
+        dimensions.height / 2,
+        -dimensions.width / 2,
+        0,
+      ]);
+    case 'hexagon':
+    case 'beveled-cylinder':
+      return new Polygon(buildRegularPolygonPoints(6, dimensions.width, dimensions.height));
+    case 'meeple':
+      return new Rectangle(
+        -dimensions.width * 0.4,
+        -dimensions.height * 0.55,
+        dimensions.width * 0.8,
+        dimensions.height * 1.1,
+      );
+    case 'round-disk':
+    case 'circle':
+    default:
+      return new Circle(0, 0, Math.min(dimensions.width, dimensions.height) / 2);
+  }
 }
 
 function tokenOffset(index: number): { x: number; y: number } {
@@ -374,7 +420,7 @@ function tokenLabel(token: RenderToken, symbol: string | undefined): string {
   return toTokenLabel(token.type);
 }
 
-function tokenBackLabel(shape: 'circle' | 'card', symbol: string | undefined): string {
+function tokenBackLabel(shape: TokenShape, symbol: string | undefined): string {
   if (shape !== 'card') {
     return '?';
   }

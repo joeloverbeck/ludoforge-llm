@@ -17,7 +17,7 @@ export const TokenShapeSchema = z.enum([
   'triangle',
   'diamond',
   'hexagon',
-  'cylinder',
+  'beveled-cylinder',
   'meeple',
   'card',
   'cube',

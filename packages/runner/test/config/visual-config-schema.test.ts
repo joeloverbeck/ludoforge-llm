@@ -126,6 +126,16 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(false);
   });
 
+  it('accepts beveled-cylinder as a valid token shape', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      tokenTypes: {
+        'us-irregulars': { shape: 'beveled-cylinder' },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
   it('rejects invalid layout mode', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

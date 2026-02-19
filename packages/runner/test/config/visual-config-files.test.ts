@@ -84,6 +84,11 @@ describe('visual-config.yaml files', () => {
         style: { color: '#4a7a8c' },
       },
     ]);
+
+    expect(parsed.tokenTypes?.['us-irregulars']?.shape).toBe('beveled-cylinder');
+    expect(parsed.tokenTypes?.['arvn-rangers']?.shape).toBe('beveled-cylinder');
+    expect(parsed.tokenTypes?.['nva-guerrillas']?.shape).toBe('beveled-cylinder');
+    expect(parsed.tokenTypes?.['vc-guerrillas']?.shape).toBe('beveled-cylinder');
   });
 
   it("Texas visual-config parses, validates, and uses explicit runtime ids for roles/animation", () => {

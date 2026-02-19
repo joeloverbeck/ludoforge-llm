@@ -14,7 +14,7 @@ export type TokenShape =
   | 'triangle'
   | 'diamond'
   | 'hexagon'
-  | 'cylinder'
+  | 'beveled-cylinder'
   | 'meeple'
   | 'card'
   | 'cube'

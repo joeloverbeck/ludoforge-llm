@@ -1,7 +1,9 @@
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyEffects } from './effects.js';
+import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
 import type { EffectContext } from './effect-context.js';
 import type { EvalContext } from './eval-context.js';
+import { evalQuery } from './eval-query.js';
 import { resolveEventEffectList } from './event-execution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import {
@@ -290,6 +292,45 @@ const mapOptionsForPendingChoice = (
   });
 };
 
+const resolveActionParamPendingChoice = (
+  action: ActionDef,
+  evalCtx: EvalContext,
+  partialMove: Move,
+): ChoicePendingRequest | null => {
+  let bindings: Readonly<Record<string, unknown>> = evalCtx.bindings;
+
+  for (const param of action.params) {
+    if (Object.prototype.hasOwnProperty.call(partialMove.params, param.name)) {
+      bindings = {
+        ...bindings,
+        [param.name]: partialMove.params[param.name],
+      };
+      continue;
+    }
+
+    const options = evalQuery(param.domain, {
+      ...evalCtx,
+      bindings,
+    });
+    const targetKinds = deriveChoiceTargetKinds(param.domain);
+    return {
+      kind: 'pending',
+      complete: false,
+      decisionId: param.name,
+      name: param.name,
+      type: 'chooseOne',
+      options: options.map((value) => ({
+        value: value as Move['params'][string],
+        legality: 'unknown',
+        illegalReason: null,
+      })),
+      targetKinds,
+    };
+  }
+
+  return null;
+};
+
 const legalChoicesWithPreparedContext = (
   context: LegalChoicesPreparedContext,
   partialMove: Move,
@@ -339,6 +380,33 @@ const legalChoicesWithPreparedContext = (
   }
   const evalCtx = preflight.evalCtx;
   const pipelineDispatch = preflight.pipelineDispatch;
+  const actionParamRequest = resolveActionParamPendingChoice(action, evalCtx, partialMove);
+  if (actionParamRequest !== null) {
+    if (!shouldEvaluateOptionLegality) {
+      return actionParamRequest;
+    }
+
+    return {
+      ...actionParamRequest,
+      options: mapOptionsForPendingChoice(
+        (probeMove) => legalChoicesWithPreparedContext(context, probeMove, false),
+        (probeMove) =>
+          classifyDecisionSequenceSatisfiability(
+            probeMove,
+            (candidateMove, discoverOptions) =>
+              legalChoicesWithPreparedContext(context, candidateMove, false, {
+                onDeferredPredicatesEvaluated: (count) => {
+                  options?.onDeferredPredicatesEvaluated?.(count);
+                  discoverOptions?.onDeferredPredicatesEvaluated?.(count);
+                },
+              }),
+          ).classification,
+        partialMove,
+        actionParamRequest,
+      ),
+    };
+  }
+
   const eventEffects = isCardEventActionId(def, action.id)
     ? resolveEventEffectList(def, state, partialMove)
     : [];

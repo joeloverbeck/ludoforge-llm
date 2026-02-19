@@ -33,7 +33,8 @@ function deriveAiTurnViewModel(renderModel: GameStore['renderModel']): AITurnVie
 }
 
 export function AITurnOverlay({ store }: AITurnOverlayProps): ReactElement | null {
-  const viewModel = useStore(store, (state) => deriveAiTurnViewModel(state.renderModel));
+  const renderModel = useStore(store, (state) => state.renderModel);
+  const viewModel = deriveAiTurnViewModel(renderModel);
   const skipAiTurn = useStore(store, (state) => state.requestAiTurnSkip);
 
   if (viewModel === null) {

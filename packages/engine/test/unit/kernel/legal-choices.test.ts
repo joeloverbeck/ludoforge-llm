@@ -145,6 +145,43 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(result, { kind: 'complete', complete: true });
   });
 
+  it('surfaces unresolved action params as pending legal choices before effects', () => {
+    const action: ActionDef = {
+      id: asActionId('raiseLikeAction'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [
+        {
+          name: 'amount',
+          domain: { query: 'intsInRange', min: 2, max: 4 },
+        },
+      ],
+      pre: null,
+      cost: [],
+      effects: [
+        { addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: 'amount' } } },
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({
+      actions: [action],
+      globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 10 }],
+    });
+    const state = makeBaseState({ globalVars: { score: 0 } });
+
+    const pending = legalChoicesDiscover(def, state, makeMove('raiseLikeAction'));
+    assert.equal(pending.kind, 'pending');
+    assert.equal(pending.type, 'chooseOne');
+    assert.equal(pending.decisionId, 'amount');
+    assert.equal(pending.name, 'amount');
+    assert.deepStrictEqual(pending.options.map((option) => option.value), [2, 3, 4]);
+
+    const completed = legalChoicesDiscover(def, state, makeMove('raiseLikeAction', { amount: 3 }));
+    assert.deepStrictEqual(completed, { kind: 'complete', complete: true });
+  });
+
   it('2. action with one chooseOne returns options on first call, complete after param filled', () => {
     const action: ActionDef = {
       id: asActionId('pickColor'),

@@ -267,14 +267,14 @@ describe('VisualConfigProvider', () => {
       version: 1,
       animations: {
         actions: {
-          sweep: 'scan',
+          moveToken: 'pulse',
         },
       },
       variables,
     });
 
-    expect(provider.getAnimationPreset('sweep')).toBe('scan');
-    expect(provider.getAnimationPreset('unknown')).toBeNull();
+    expect(provider.getAnimationPreset('moveToken')).toBe('pulse');
+    expect(provider.getAnimationPreset('cardDeal')).toBeNull();
     expect(provider.getVariablesConfig()).toEqual(variables);
   });
 

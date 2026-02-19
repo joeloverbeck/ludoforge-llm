@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ANIMATION_PRESET_OVERRIDE_KEYS } from '../animation/animation-types.js';
 
 export const LayoutModeSchema = z.enum(['graph', 'table', 'track', 'grid']);
 export const ZoneShapeSchema = z.enum([
@@ -118,8 +119,15 @@ const CardAnimationConfigSchema = z.object({
   zoneRoles: CardAnimationZoneRolesSchema,
 });
 
+const AnimationActionsSchema = z.object(
+  Object.fromEntries(ANIMATION_PRESET_OVERRIDE_KEYS.map((key) => [key, z.string().optional()])) as Record<
+    (typeof ANIMATION_PRESET_OVERRIDE_KEYS)[number],
+    z.ZodOptional<z.ZodString>
+  >,
+).strict();
+
 const AnimationsConfigSchema = z.object({
-  actions: z.record(z.string(), z.string()).optional(),
+  actions: AnimationActionsSchema.optional(),
 });
 
 const CardFieldLayoutSchema = z.object({

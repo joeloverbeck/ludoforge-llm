@@ -15,17 +15,19 @@ export type AnimationPresetId = string;
 
 export type AnimationDetailLevel = 'full' | 'standard' | 'minimal';
 export type AnimationPlaybackSpeed = '1x' | '2x' | '4x';
-export type AnimationPresetOverrideKey =
-  | 'moveToken'
-  | 'cardDeal'
-  | 'cardBurn'
-  | 'createToken'
-  | 'destroyToken'
-  | 'setTokenProp'
-  | 'cardFlip'
-  | 'varChange'
-  | 'resourceTransfer'
-  | 'phaseTransition';
+export const ANIMATION_PRESET_OVERRIDE_KEYS = [
+  'moveToken',
+  'cardDeal',
+  'cardBurn',
+  'createToken',
+  'destroyToken',
+  'setTokenProp',
+  'cardFlip',
+  'varChange',
+  'resourceTransfer',
+  'phaseTransition',
+] as const;
+export type AnimationPresetOverrideKey = (typeof ANIMATION_PRESET_OVERRIDE_KEYS)[number];
 
 export interface AnimationMappingOptions {
   readonly presetOverrides?: ReadonlyMap<AnimationPresetOverrideKey, AnimationPresetId>;

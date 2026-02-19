@@ -4,6 +4,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { createAnimationController } from '../../src/animation/animation-controller';
+import { ANIMATION_PRESET_OVERRIDE_KEYS } from '../../src/animation/animation-types';
 import { createPresetRegistry } from '../../src/animation/preset-registry';
 import { traceToDescriptors } from '../../src/animation/trace-to-descriptors';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider';
@@ -150,6 +151,15 @@ function cardAnimationProvider(): VisualConfigProvider {
   });
 }
 
+function animationOverridesProvider(actions: Partial<Record<(typeof ANIMATION_PRESET_OVERRIDE_KEYS)[number], string>>) {
+  return new VisualConfigProvider({
+    version: 1,
+    animations: {
+      actions,
+    },
+  });
+}
+
 function cardRenderModel() {
   return {
     tokens: [
@@ -271,6 +281,130 @@ describe('createAnimationController', () => {
       { detailLevel: 'minimal' },
       expect.any(Object),
     );
+
+    controller.destroy();
+  });
+
+  it('passes configured animation preset overrides to traceToDescriptors', () => {
+    const store = createControllerStore();
+    const traceToDescriptorsMock = vi.fn(() => []);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: animationOverridesProvider({ moveToken: 'pulse', cardDeal: 'pulse' }),
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: traceToDescriptorsMock,
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    const mappingOptions = (traceToDescriptorsMock as unknown as {
+      readonly mock: {
+        readonly calls: readonly (readonly unknown[])[];
+      };
+    }).mock.calls[0]![1] as {
+      readonly presetOverrides?: ReadonlyMap<string, string>;
+    };
+
+    expect(mappingOptions.presetOverrides?.get('moveToken')).toBe('pulse');
+    expect(mappingOptions.presetOverrides?.get('cardDeal')).toBe('pulse');
+
+    controller.destroy();
+  });
+
+  it('warns and skips invalid configured preset overrides', () => {
+    const store = createControllerStore();
+    const traceToDescriptorsMock = vi.fn(() => []);
+    const onWarning = vi.fn();
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: animationOverridesProvider({ moveToken: 'not-a-preset', cardDeal: 'pulse' }),
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: traceToDescriptorsMock,
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+        onWarning,
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    const mappingOptions = (traceToDescriptorsMock as unknown as {
+      readonly mock: {
+        readonly calls: readonly (readonly unknown[])[];
+      };
+    }).mock.calls[0]![1] as {
+      readonly presetOverrides?: ReadonlyMap<string, string>;
+    };
+
+    expect(onWarning).toHaveBeenCalledWith(
+      'Ignoring animation preset override "moveToken" -> "not-a-preset" because the preset is not registered.',
+    );
+    expect(mappingOptions.presetOverrides?.has('moveToken')).toBe(false);
+    expect(mappingOptions.presetOverrides?.get('cardDeal')).toBe('pulse');
+
+    controller.destroy();
+  });
+
+  it('builds animation preset overrides once per controller lifecycle', () => {
+    const store = createControllerStore();
+    const provider = animationOverridesProvider({ moveToken: 'pulse' });
+    const getAnimationPresetSpy = vi.spyOn(provider, 'getAnimationPreset');
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: provider,
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: vi.fn(() => []),
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(getAnimationPresetSpy).toHaveBeenCalledTimes(ANIMATION_PRESET_OVERRIDE_KEYS.length);
 
     controller.destroy();
   });

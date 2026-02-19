@@ -9,6 +9,7 @@ import {
   type ZoneShape,
 } from './visual-config-defaults.js';
 import { hashStableValue } from '../utils/stable-hash.js';
+import type { AnimationPresetOverrideKey } from '../animation/animation-types.js';
 import type {
   AttributeRule,
   CardAnimationConfig,
@@ -162,7 +163,7 @@ export class VisualConfigProvider {
     return this.config?.cardAnimation ?? null;
   }
 
-  getAnimationPreset(actionId: string): string | null {
+  getAnimationPreset(actionId: AnimationPresetOverrideKey): string | null {
     return this.config?.animations?.actions?.[actionId] ?? null;
   }
 

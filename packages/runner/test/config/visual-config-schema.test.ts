@@ -57,7 +57,7 @@ describe('VisualConfigSchema', () => {
       },
       animations: {
         actions: {
-          bombard: 'explosion',
+          moveToken: 'pulse',
         },
       },
       cards: {
@@ -130,6 +130,19 @@ describe('VisualConfigSchema', () => {
 
   it('rejects invalid version', () => {
     const result = VisualConfigSchema.safeParse({ version: 2 });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects unknown animation override keys', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      animations: {
+        actions: {
+          sweep: 'scan',
+        },
+      },
+    });
+
     expect(result.success).toBe(false);
   });
 

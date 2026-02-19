@@ -9,8 +9,11 @@ import type { GameStore } from '../store/game-store.js';
 import type {
   AnimationDescriptor,
   AnimationDetailLevel,
+  AnimationPresetId,
+  AnimationPresetOverrideKey,
   CardAnimationMappingContext,
 } from './animation-types.js';
+import { ANIMATION_PRESET_OVERRIDE_KEYS } from './animation-types.js';
 import { createAnimationQueue, type AnimationQueue } from './animation-queue.js';
 import { getGsapRuntime, type GsapLike } from './gsap-setup.js';
 import { createPresetRegistry, type PresetRegistry } from './preset-registry.js';
@@ -58,6 +61,7 @@ interface AnimationControllerDeps {
   readonly traceToDescriptors: typeof traceToDescriptors;
   readonly buildTimeline: typeof buildTimeline;
   readonly onError: (message: string, error: unknown) => void;
+  readonly onWarning?: (message: string) => void;
 }
 
 export function createAnimationController(
@@ -66,6 +70,7 @@ export function createAnimationController(
 ): AnimationController {
   const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
   const queue = deps.queueFactory(options.store);
+  const presetOverrides = buildPresetOverrides(options.visualConfigProvider, deps.presetRegistry, deps.onWarning);
 
   let detailLevel: AnimationDetailLevel = 'full';
   let reducedMotion = false;
@@ -85,6 +90,7 @@ export function createAnimationController(
         trace,
         {
           detailLevel,
+          ...(presetOverrides.size === 0 ? {} : { presetOverrides }),
           ...(cardContext === undefined ? {} : { cardContext }),
         },
         deps.presetRegistry,
@@ -197,6 +203,30 @@ export function createAnimationController(
   };
 }
 
+function buildPresetOverrides(
+  visualConfigProvider: VisualConfigProvider,
+  presetRegistry: PresetRegistry,
+  onWarning: ((message: string) => void) | undefined,
+): ReadonlyMap<AnimationPresetOverrideKey, AnimationPresetId> {
+  const overrides = new Map<AnimationPresetOverrideKey, AnimationPresetId>();
+
+  for (const key of ANIMATION_PRESET_OVERRIDE_KEYS) {
+    const presetId = visualConfigProvider.getAnimationPreset(key);
+    if (presetId === null) {
+      continue;
+    }
+    if (!presetRegistry.has(presetId)) {
+      onWarning?.(
+        `Ignoring animation preset override "${key}" -> "${presetId}" because the preset is not registered.`,
+      );
+      continue;
+    }
+    overrides.set(key, presetId);
+  }
+
+  return overrides;
+}
+
 function buildCardContext(
   state: GameStore,
   visualConfigProvider: VisualConfigProvider,
@@ -264,6 +294,9 @@ function createDefaultDeps(): AnimationControllerDeps {
     buildTimeline,
     onError: (message, error) => {
       console.warn(message, error);
+    },
+    onWarning: (message) => {
+      console.warn(message);
     },
   };
 }

@@ -12,17 +12,25 @@ import type { GameStore } from '../../src/store/game-store';
 interface RuntimeStoreState {
   readonly renderModel: GameStore['renderModel'];
   readonly gameDef: GameDef | null;
+  readonly animationPlaying: boolean;
   chooseOne(choice: string): void;
+  setAnimationPlaying(playing: boolean): void;
 }
 
 function createRuntimeStore(initialRenderModel: GameStore['renderModel']): StoreApi<RuntimeStoreState> {
-  return createStore<RuntimeStoreState>()(
+  let store!: StoreApi<RuntimeStoreState>;
+  store = createStore<RuntimeStoreState>()(
     subscribeWithSelector((): RuntimeStoreState => ({
       renderModel: initialRenderModel,
       gameDef: null,
+      animationPlaying: false,
       chooseOne: (_choice: string) => {},
+      setAnimationPlaying: (playing: boolean) => {
+        store.setState({ animationPlaying: playing });
+      },
     })),
   );
+  return store;
 }
 
 function makeRenderModel(zoneIds: readonly string[]): GameStore['renderModel'] {
@@ -169,10 +177,21 @@ function createRuntimeFixture() {
   const keyboardCleanup = vi.fn(() => {
     lifecycle.push('keyboard-cleanup');
   });
+  const animationController = {
+    start: vi.fn(() => {
+      lifecycle.push('animation-controller-start');
+    }),
+    destroy: vi.fn(() => {
+      lifecycle.push('animation-controller-destroy');
+    }),
+    setDetailLevel: vi.fn(),
+    setReducedMotion: vi.fn(),
+  };
 
   const attachKeyboardSelect = vi.fn(() => keyboardCleanup);
   const attachZoneSelectHandlers = vi.fn(() => vi.fn());
   const attachTokenSelectHandlers = vi.fn(() => vi.fn());
+  const createAnimationController = vi.fn(() => animationController);
 
   const deps = {
     createGameCanvas: vi.fn(async () => gameCanvas),
@@ -189,6 +208,7 @@ function createRuntimeFixture() {
     }),
     createCanvasUpdater: vi.fn(() => canvasUpdater),
     createCoordinateBridge: vi.fn(() => bridge),
+    createAnimationController,
     createAriaAnnouncer: vi.fn(() => ariaAnnouncer),
     attachZoneSelectHandlers,
     attachTokenSelectHandlers,
@@ -206,6 +226,8 @@ function createRuntimeFixture() {
     viewportResult,
     gameCanvas,
     positionStore,
+    animationController,
+    createAnimationController,
     ariaAnnouncer,
     attachZoneSelectHandlers,
     attachTokenSelectHandlers,
@@ -269,6 +291,8 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.deps.createTokenRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createCanvasUpdater).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createAriaAnnouncer).toHaveBeenCalledTimes(1);
+    expect(fixture.createAnimationController).toHaveBeenCalledTimes(1);
+    expect(fixture.animationController.start).toHaveBeenCalledTimes(1);
     expect(fixture.attachKeyboardSelect).toHaveBeenCalledTimes(1);
     expect(fixture.attachZoneSelectHandlers).toHaveBeenCalledTimes(1);
     expect(fixture.attachTokenSelectHandlers).toHaveBeenCalledTimes(1);
@@ -298,8 +322,10 @@ describe('createGameCanvasRuntime', () => {
     runtime.destroy();
 
     expect(fixture.lifecycle).toEqual([
+      'animation-controller-start',
       'updater-start',
       'keyboard-cleanup',
+      'animation-controller-destroy',
       'aria-destroy',
       'updater-destroy',
       'zone-renderer-destroy',
@@ -556,9 +582,40 @@ describe('createGameCanvasRuntime', () => {
 
     expect(fixture.canvasUpdater.start).toHaveBeenCalledTimes(2);
     expect(fixture.canvasUpdater.destroy).toHaveBeenCalledTimes(2);
+    expect(fixture.animationController.start).toHaveBeenCalledTimes(2);
+    expect(fixture.animationController.destroy).toHaveBeenCalledTimes(2);
 
     store.setState({ renderModel: makeRenderModel(['zone:a', 'zone:b']) });
 
     expect(fixture.positionStore.setZoneIDs).toHaveBeenCalledTimes(0);
+  });
+
+  it('continues runtime initialization when animation controller setup fails', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+    const failure = new Error('controller init failure');
+    fixture.createAnimationController.mockImplementation(() => {
+      throw failure;
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+      // noop
+    });
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x121212,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    expect(runtime.coordinateBridge).toBe(fixture.bridge);
+    expect(fixture.canvasUpdater.start).toHaveBeenCalledTimes(1);
+    expect(store.getState().animationPlaying).toBe(false);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain('Animation controller initialization failed');
+
+    runtime.destroy();
   });
 });

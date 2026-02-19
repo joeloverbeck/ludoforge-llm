@@ -1,8 +1,10 @@
+import type { AnimationQueueTimeline } from './animation-queue.js';
+
 export interface GsapPlugin {
   readonly name?: string;
 }
 
-export interface GsapTimelineLike {
+export interface GsapTimelineLike extends AnimationQueueTimeline {
   add(child: unknown, position?: number | string): GsapTimelineLike;
 }
 

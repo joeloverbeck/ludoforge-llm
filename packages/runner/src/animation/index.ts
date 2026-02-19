@@ -1,5 +1,7 @@
 export * from './animation-types.js';
+export * from './animation-controller.js';
 export * from './animation-queue.js';
+export * from './bootstrap-runtime.js';
 export * from './gsap-setup.js';
 export * from './preset-registry.js';
 export * from './timeline-builder.js';

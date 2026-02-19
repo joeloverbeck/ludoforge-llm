@@ -4,6 +4,7 @@ import type { StoreApi } from 'zustand';
 
 import type { KeyboardCoordinator } from '../input/keyboard-coordinator.js';
 import type { GameStore } from '../store/game-store';
+import { createAnimationController, type AnimationController } from '../animation/animation-controller.js';
 import type { CoordinateBridge } from './coordinate-bridge';
 import { createCoordinateBridge } from './coordinate-bridge';
 import type { CanvasWorldBounds, HoverAnchor, HoveredCanvasTarget } from './hover-anchor-contract';
@@ -71,6 +72,7 @@ interface GameCanvasRuntimeDeps {
   readonly createTokenRenderer: typeof createTokenRenderer;
   readonly createCanvasUpdater: typeof createCanvasUpdater;
   readonly createCoordinateBridge: typeof createCoordinateBridge;
+  readonly createAnimationController: typeof createAnimationController;
   readonly createAriaAnnouncer: typeof createAriaAnnouncer;
   readonly attachZoneSelectHandlers: typeof attachZoneSelectHandlers;
   readonly attachTokenSelectHandlers: typeof attachTokenSelectHandlers;
@@ -86,6 +88,7 @@ const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   createTokenRenderer,
   createCanvasUpdater,
   createCoordinateBridge,
+  createAnimationController,
   createAriaAnnouncer,
   attachZoneSelectHandlers,
   attachTokenSelectHandlers,
@@ -183,6 +186,19 @@ export async function createGameCanvasRuntime(
     tokenRenderer,
     viewport: viewportResult,
   });
+  let animationController: AnimationController | null = null;
+  try {
+    animationController = deps.createAnimationController({
+      store: options.store,
+      tokenContainers: () => tokenRenderer.getContainerMap(),
+      zoneContainers: () => zoneRenderer.getContainerMap(),
+      zonePositions: () => positionStore.getSnapshot(),
+    });
+    animationController.start();
+  } catch (error) {
+    selectorStore.getState().setAnimationPlaying(false);
+    console.warn('Animation controller initialization failed. Continuing without animations.', error);
+  }
 
   const unsubscribeZoneIDs = selectorStore.subscribe(selectZoneIDs, (zoneIDs) => {
     positionStore.setZoneIDs(zoneIDs);
@@ -286,6 +302,7 @@ export async function createGameCanvasRuntime(
       unsubscribeFactionDefs();
       unsubscribeTokenTypeDefs();
       cleanupKeyboardSelect();
+      animationController?.destroy();
       ariaAnnouncer.destroy();
       destroyCanvasPipeline(canvasUpdater, zoneRenderer, adjacencyRenderer, tokenRenderer, zonePool, viewportResult, gameCanvas);
     },

@@ -20,6 +20,7 @@ Spec 38 is completed and archived at `archive/specs/38-pixijs-canvas-foundation.
 Spec 39 is completed and archived at `archive/specs/39-react-dom-ui-layer.md`.
 Spec 40 is completed and archived at `archive/specs/40-animation-system.md`.
 Spec 41 is completed and archived at `archive/specs/41-board-layout-engine.md`.
+Spec 42 is completed and archived at `archive/specs/42-per-game-visual-config.md`.
 
 ---
 
@@ -34,7 +35,7 @@ Spec 41 is completed and archived at `archive/specs/41-board-layout-engine.md`.
 | 39 | React DOM UI Layer (completed) | P1 | L | 37, 38 |
 | 40 | Animation System (completed) | P1 | L | 38 |
 | 41 | Board Layout Engine (completed) | P1 | M | 38 |
-| 42 | Per-Game Visual Config | P2 | M | 38, 39, 41 |
+| 42 | Per-Game Visual Config (completed) | P2 | M | 38, 39, 41 |
 | 43 | Session Management | P2 | M | 42 |
 
 Priority key: P0 = critical path, P1 = required for playable experience, P2 = polish/enhancement.
@@ -129,18 +130,18 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [x] Table-only mode for games without adjacency (Spec 41 D2)
 - [x] Track and grid layout modes for linear/grid boards (Spec 41 D2)
 - [x] Layout caching per GameDef (Spec 41 D3)
-- [ ] Visual config types, provider, and defaults (Spec 42 D1-D3)
-- [ ] Visual config YAML loader via Vite (Spec 42 D4)
-- [ ] Per-game visual-config.yaml files for FITL and Texas Hold'em (Spec 42 D5-D6)
-- [ ] Visual config wired into rendering, layout, and animation (Spec 42 D7-D9)
-- [ ] Visual fields stripped from engine types, compiler, and game specs (Spec 42 D10-D14)
+- [x] Visual config types, provider, and defaults (Spec 42 D1-D3)
+- [x] Visual config YAML loader via Vite (Spec 42 D4)
+- [x] Per-game visual-config.yaml files for FITL and Texas Hold'em (Spec 42 D5-D6)
+- [x] Visual config wired into rendering, layout, and animation (Spec 42 D7-D9)
+- [x] Visual fields stripped from engine types, compiler, and game specs (Spec 42 D10-D14)
 - [ ] Game selection screen lists available games (Spec 43 D1)
 - [ ] Pre-game configuration (players, human/AI, seed) (Spec 43 D2)
 - [ ] Save/load game via Dexie.js (Spec 43 D3)
 - [ ] Replay mode (step-forward, step-backward, speed control) (Spec 43 D4)
 - [ ] Event log panel with clickable, filterable entries (Spec 43 D5)
 
-**F3 Progress**: In progress. Spec 40 is completed (closed 2026-02-19). Spec 41 is completed and archived (closed 2026-02-19): D1-D4 delivered (layout engine core, computation, caching, aux sidebar). Spec 42 revised to focus on visual config extraction (session management split to Spec 43). Spec 42 and Spec 43 remain open.
+**F3 Progress**: In progress. Spec 40 is completed (closed 2026-02-19). Spec 41 is completed and archived (closed 2026-02-19): D1-D4 delivered (layout engine core, computation, caching, aux sidebar). Spec 42 is completed and archived (closed 2026-02-19): visual config extraction and engine visual-field removal delivered and validated via engine/runner/turbo test+lint gates. Spec 43 remains open.
 
 ---
 

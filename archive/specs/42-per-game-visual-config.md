@@ -1,6 +1,6 @@
 # Spec 42: Per-Game Visual Config
 
-**Status**: ACTIVE
+**Status**: ✅ COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 38 (PixiJS Canvas Foundation), Spec 39 (React DOM UI Layer), Spec 41 (Board Layout Engine)
@@ -287,6 +287,30 @@ Engine cnl:
 5. Remove `data/games/fire-in-the-lake/visual-config.yaml` temporarily — runner still renders with fallback defaults
 6. `pnpm turbo schema:artifacts` — regenerated GameDef.schema.json has no visual fields
 7. Grep engine source for `visual`, `layoutRole`, `layoutMode`, `cardAnimation`, `displayName` (on types) — zero hits
+
+---
+
+## Outcome
+
+- **Completion date**: 2026-02-19
+- **What was delivered**:
+  - Runner visual-config architecture (`visual-config-types`, `visual-config-provider`, defaults, loader) and YAML-backed per-game config files for FITL and Texas Hold'em.
+  - Runner wiring across render model, canvas color/shape resolution, layout mode/role classification, and card animation context.
+  - Engine clean break from presentation fields in core types/schemas/compiler outputs.
+  - Validator hard errors for legacy visual keys in `GameSpecDoc` and data-asset payloads.
+  - Test suite updates and strict-boundary coverage proving removed visual keys are rejected.
+- **Deviations from original plan**:
+  - Session management work was split out and tracked under Spec 43; this spec now represents visual-config extraction only.
+  - Final test cleanup ticket (`VISCONF-012`) required reassessment and targeted hardening rather than broad deletions because most removals were already complete.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine test`: pass
+  - `pnpm -F @ludoforge/engine test:e2e`: pass
+  - `pnpm -F @ludoforge/engine typecheck`: pass
+  - `pnpm -F @ludoforge/runner test`: pass
+  - `pnpm -F @ludoforge/runner lint`: pass
+  - `pnpm -F @ludoforge/runner typecheck`: pass
+  - `pnpm turbo test`: pass
+  - `pnpm turbo lint`: pass
 
 ---
 

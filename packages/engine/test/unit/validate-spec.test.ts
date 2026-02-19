@@ -297,11 +297,21 @@ describe('validateGameSpec structural rules', () => {
     });
 
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_LAYOUT_MODE_REMOVED'),
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_METADATA_LAYOUT_MODE_REMOVED'
+          && diagnostic.path === 'doc.metadata.layoutMode'
+          && diagnostic.severity === 'error',
+      ),
       true,
     );
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_CARD_ANIMATION_REMOVED'),
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_METADATA_CARD_ANIMATION_REMOVED'
+          && diagnostic.path === 'doc.metadata.cardAnimation'
+          && diagnostic.severity === 'error',
+      ),
       true,
     );
   });
@@ -322,11 +332,21 @@ describe('validateGameSpec structural rules', () => {
     });
 
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_ZONE_LAYOUT_ROLE_REMOVED'),
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_ZONE_LAYOUT_ROLE_REMOVED'
+          && diagnostic.path === 'doc.zones.0.layoutRole'
+          && diagnostic.severity === 'error',
+      ),
       true,
     );
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_ZONE_VISUAL_REMOVED'),
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_ZONE_VISUAL_REMOVED'
+          && diagnostic.path === 'doc.zones.0.visual'
+          && diagnostic.severity === 'error',
+      ),
       true,
     );
   });

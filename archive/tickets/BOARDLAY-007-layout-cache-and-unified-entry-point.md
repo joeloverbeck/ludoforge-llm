@@ -1,6 +1,6 @@
 # BOARDLAY-007: Layout Cache and Unified Entry Point
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: No
@@ -12,6 +12,14 @@ Layout computation (especially ForceAtlas2) is expensive and should only run onc
 
 This corresponds to Spec 41 deliverables D3 (caching) and the final assembly of D1+D2+D4.
 
+## Reassessed Assumptions (2026-02-19)
+
+1. `resolveLayoutMode(def)`, `partitionZones(def)`, `computeLayout(def, mode)`, and `computeAuxLayout(aux, boardBounds)` already exist and are covered by existing layout tests.
+2. In runner code, `GameDef`/`ZoneDef` types are imported from `@ludoforge/engine/runtime`, not `@ludoforge/engine`.
+3. `computeLayout(def, mode)` already handles board-zone selection internally. This ticket must not reimplement layout algorithms; it only composes existing primitives and caches the merged result.
+4. `GameCanvas` wiring is explicitly owned by BOARDLAY-008. BOARDLAY-007 ends at a reusable cached API for callers.
+5. `GameDef.metadata.id` is required by engine types/schema, so cache keying by ID is architectural and does not need alias/fallback behavior.
+
 ## What to Change
 
 **Files (expected)**:
@@ -21,8 +29,9 @@ This corresponds to Spec 41 deliverables D3 (caching) and the final assembly of 
 ### Function Signatures
 
 ```typescript
-import type { GameDef } from '@ludoforge/engine';
+import type { GameDef } from '@ludoforge/engine/runtime';
 import type { ZonePositionMap } from '../spatial/position-types';
+import type { LayoutMode } from './layout-types';
 
 interface FullLayoutResult {
   readonly positionMap: ZonePositionMap;
@@ -41,7 +50,7 @@ function clearLayoutCache(): void;
 2. If cache hit, return cached result immediately.
 3. If cache miss:
    a. `resolveLayoutMode(def)` → mode.
-   b. `partitionZones(def)` → `{ board, aux }`.
+   b. `partitionZones(def)` → `{ board, aux }` (aux list is used for sidebar layout).
    c. `computeLayout(def, mode)` → `LayoutResult` with board positions and bounds.
    d. `computeAuxLayout(aux, boardBounds)` → `AuxLayoutResult` with aux positions.
    e. Merge board + aux positions into a single `Map<string, { x, y }>`.
@@ -89,5 +98,22 @@ This ensures `positionStore.setPositions(result.positionMap)` works directly.
 1. `getOrComputeLayout()` is idempotent — multiple calls with the same GameDef return the same result (until cache is cleared).
 2. The cache is module-level (singleton) — shared across all callers.
 3. `clearLayoutCache()` clears ALL entries, not just one.
-4. No existing source files are modified.
+4. Existing layout algorithm files (`compute-layout.ts`, `aux-zone-layout.ts`, `build-layout-graph.ts`) are not modified by this ticket.
 5. `pnpm turbo build` and `pnpm -F @ludoforge/runner test` pass.
+
+## Outcome
+
+- **Completion date**: 2026-02-19
+- **What changed**:
+  - Added `packages/runner/src/layout/layout-cache.ts` with:
+    - `getOrComputeLayout(def)` cache keyed by `def.metadata.id`
+    - unified pipeline orchestration: mode resolution, board layout compute, aux layout compute, merged `ZonePositionMap`, unified bounds
+    - `clearLayoutCache()`
+  - Added `packages/runner/test/layout/layout-cache.test.ts` covering cache behavior, merge behavior, mode preservation, and empty-input handling.
+  - Updated this ticket's assumptions/scope to match current code architecture before implementation.
+- **Deviations from original plan**:
+  - No functional deviations. The ticket text was corrected first to align with the existing codebase (`@ludoforge/engine/runtime` imports and existing layout primitive ownership) before implementation.
+- **Verification**:
+  - `pnpm -F @ludoforge/runner test`
+  - `pnpm turbo build`
+  - `pnpm turbo lint`

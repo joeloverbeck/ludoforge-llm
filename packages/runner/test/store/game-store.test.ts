@@ -659,6 +659,53 @@ describe('createGameStore', () => {
     expect(store.getState().error).toBeNull();
   });
 
+  it('resolveAiStep applies only one AI move', async () => {
+    const def = compileStoreFixture(8);
+    const aiState = {
+      ...initialState(def, 37, 2),
+      activePlayer: asPlayerId(1),
+    };
+    const stillAiState = {
+      ...aiState,
+      globalVars: {
+        ...aiState.globalVars,
+        round: 1,
+      },
+      activePlayer: asPlayerId(1),
+    };
+    const aiMove: Move = { actionId: asActionId('tick'), params: {} };
+    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+      state: stillAiState,
+      effectTrace: [],
+      triggerFirings: [],
+      warnings: [],
+    }));
+    const bridge = createBridgeStub({
+      init: () => aiState,
+      enumerateLegalMoves: () => ({ moves: [aiMove], warnings: [] }),
+      terminalResult: () => null,
+      applyMove,
+    });
+    const store = createGameStore(bridge);
+
+    await store.getState().initGame(def, 37, asPlayerId(0));
+    const outcome = await store.getState().resolveAiStep();
+
+    expect(outcome).toBe('advanced');
+    expect(applyMove).toHaveBeenCalledTimes(1);
+    expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(1));
+  });
+
+  it('resolveAiStep returns no-op when there is no initialized session', async () => {
+    const bridge = createBridgeStub({});
+    const store = createGameStore(bridge);
+
+    const outcome = await store.getState().resolveAiStep();
+
+    expect(outcome).toBe('no-op');
+    expect(store.getState().error).toBeNull();
+  });
+
   it('real-worker cancelChoice pops one choice and re-queries pending decision', async () => {
     const bridge = createGameWorker();
     const store = createGameStore(bridge);
@@ -1036,5 +1083,24 @@ describe('createGameStore', () => {
 
     store.getState().setAnimationPlaying(false);
     expect(store.getState().animationPlaying).toBe(false);
+  });
+
+  it('stores AI playback preferences and skip requests', () => {
+    const store = createGameStore(createGameWorker());
+
+    expect(store.getState().aiPlaybackDetailLevel).toBe('standard');
+    expect(store.getState().aiPlaybackSpeed).toBe('1x');
+    expect(store.getState().aiPlaybackAutoSkip).toBe(false);
+    expect(store.getState().aiSkipRequestToken).toBe(0);
+
+    store.getState().setAiPlaybackDetailLevel('minimal');
+    store.getState().setAiPlaybackSpeed('4x');
+    store.getState().setAiPlaybackAutoSkip(true);
+    store.getState().requestAiTurnSkip();
+
+    expect(store.getState().aiPlaybackDetailLevel).toBe('minimal');
+    expect(store.getState().aiPlaybackSpeed).toBe('4x');
+    expect(store.getState().aiPlaybackAutoSkip).toBe(true);
+    expect(store.getState().aiSkipRequestToken).toBe(1);
   });
 });

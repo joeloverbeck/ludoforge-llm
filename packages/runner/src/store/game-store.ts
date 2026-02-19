@@ -20,7 +20,8 @@ import { deriveRenderModel } from '../model/derive-render-model.js';
 import type { RenderModel } from '../model/render-model.js';
 import { assertLifecycleTransition, lifecycleFromTerminal, type GameLifecycle } from './lifecycle-transition.js';
 import type { PartialChoice, PlayerSeat, RenderContext } from './store-types.js';
-import { resolveAiSeat, selectAiMove } from './ai-move-policy.js';
+import type { AnimationDetailLevel } from '../animation/animation-types.js';
+import { resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove, type AiPlaybackSpeed } from './ai-move-policy.js';
 import type { GameWorkerAPI, OperationStamp, WorkerError } from '../worker/game-worker-api.js';
 
 interface GameStoreState {
@@ -39,10 +40,16 @@ interface GameStoreState {
   readonly partialMove: Move | null;
   readonly choiceStack: readonly PartialChoice[];
   readonly animationPlaying: boolean;
+  readonly aiPlaybackDetailLevel: AnimationDetailLevel;
+  readonly aiPlaybackSpeed: AiPlaybackSpeed;
+  readonly aiPlaybackAutoSkip: boolean;
+  readonly aiSkipRequestToken: number;
   readonly playerSeats: ReadonlyMap<PlayerId, PlayerSeat>;
   readonly renderModel: RenderModel | null;
 }
 type MutableGameStoreState = Omit<GameStoreState, 'renderModel'>;
+
+export type AiStepOutcome = 'advanced' | 'no-op' | 'human-turn' | 'terminal' | 'no-legal-moves';
 
 interface GameStoreActions {
   initGame(def: GameDef, seed: number, playerID: PlayerId): Promise<void>;
@@ -51,7 +58,12 @@ interface GameStoreActions {
   chooseOne(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
   chooseN(choice: readonly Exclude<MoveParamValue, readonly unknown[]>[]): Promise<void>;
   confirmMove(): Promise<void>;
+  resolveAiStep(): Promise<AiStepOutcome>;
   resolveAiTurn(): Promise<void>;
+  setAiPlaybackDetailLevel(level: AnimationDetailLevel): void;
+  setAiPlaybackSpeed(speed: AiPlaybackSpeed): void;
+  setAiPlaybackAutoSkip(enabled: boolean): void;
+  requestAiTurnSkip(): void;
   cancelChoice(): Promise<void>;
   cancelMove(): void;
   undo(): Promise<void>;
@@ -119,10 +131,15 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   partialMove: null,
   choiceStack: [],
   animationPlaying: false,
+  aiPlaybackDetailLevel: 'standard',
+  aiPlaybackSpeed: '1x',
+  aiPlaybackAutoSkip: false,
+  aiSkipRequestToken: 0,
   renderModel: null,
 };
 
 const MAX_AI_SKIP_MOVES = 512;
+const DEFAULT_AI_PLAYBACK_DELAY_MS = 500;
 
 function resetSessionState(): Pick<
   GameStoreState,
@@ -388,6 +405,10 @@ function snapshotMutableState(state: GameStore): MutableGameStoreState {
     partialMove: state.partialMove,
     choiceStack: state.choiceStack,
     animationPlaying: state.animationPlaying,
+    aiPlaybackDetailLevel: state.aiPlaybackDetailLevel,
+    aiPlaybackSpeed: state.aiPlaybackSpeed,
+    aiPlaybackAutoSkip: state.aiPlaybackAutoSkip,
+    aiSkipRequestToken: state.aiSkipRequestToken,
     playerSeats: state.playerSeats,
   };
 }
@@ -472,10 +493,10 @@ export function createGameStore(bridge: GameWorkerAPI) {
         return true;
       };
 
-      const runActionOperation = async (operation: (ctx: OperationContext) => void | Promise<void>): Promise<void> => {
+      const runActionOperation = async <T>(operation: (ctx: OperationContext) => T | Promise<T>): Promise<T | undefined> => {
         const ctx = beginOperation('action');
         try {
-          await operation(ctx);
+          return await operation(ctx);
         } catch (error) {
           if (isCurrentOperation(ctx)) {
             const lifecycle = get().gameLifecycle;
@@ -484,6 +505,7 @@ export function createGameStore(bridge: GameWorkerAPI) {
               gameLifecycle: assertLifecycleTransition(lifecycle, lifecycle, 'runBridge:error'),
             });
           }
+          return undefined;
         } finally {
           finishOperation(ctx);
         }
@@ -532,6 +554,52 @@ export function createGameStore(bridge: GameWorkerAPI) {
             error: null,
           });
         });
+      };
+
+      const resolveSingleAiStep = async (ctx: OperationContext): Promise<AiStepOutcome> => {
+        const state = get();
+        if (state.gameLifecycle === 'terminal') {
+          return 'terminal';
+        }
+        if (state.renderModel === null) {
+          return 'no-op';
+        }
+        if (isHumanTurn(state.renderModel)) {
+          return 'human-turn';
+        }
+
+        const legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
+        const activeSeat = resolveAiSeat(state.playerSeats.get(state.renderModel.activePlayerID));
+        const aiMove = selectAiMove(activeSeat, legalMoveResult.moves);
+        if (aiMove === null) {
+          guardSetAndDerive(ctx, {
+            legalMoveResult,
+            error: null,
+          });
+          return 'no-legal-moves';
+        }
+
+        const result = await bridge.applyMove(aiMove, undefined, toOperationStamp(ctx));
+        const mutationInputs = await deriveMutationInputs(result.state);
+        const lifecycle = assertLifecycleTransition(
+          state.gameLifecycle,
+          lifecycleFromTerminal(mutationInputs.terminal),
+          'resolveAiTurn',
+        );
+        const wasApplied = guardSetAndDerive(ctx, {
+          ...buildStateMutationState(
+            mutationInputs.gameState,
+            mutationInputs.legalMoveResult,
+            mutationInputs.terminal,
+            lifecycle,
+            result.effectTrace ?? [],
+            result.triggerFirings,
+          ),
+        });
+        if (!wasApplied) {
+          return 'no-op';
+        }
+        return 'advanced';
       };
 
       return {
@@ -627,43 +695,16 @@ export function createGameStore(bridge: GameWorkerAPI) {
           });
         },
 
+        async resolveAiStep() {
+          const outcome = await runActionOperation((ctx) => resolveSingleAiStep(ctx));
+          return outcome ?? 'no-op';
+        },
+
         async resolveAiTurn() {
           await runActionOperation(async (ctx) => {
             for (let resolvedMoves = 0; resolvedMoves < MAX_AI_SKIP_MOVES; resolvedMoves += 1) {
-              const state = get();
-              if (state.gameLifecycle === 'terminal' || state.renderModel === null || isHumanTurn(state.renderModel)) {
-                return;
-              }
-
-              const legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
-              const activeSeat = resolveAiSeat(state.playerSeats.get(state.renderModel.activePlayerID));
-              const aiMove = selectAiMove(activeSeat, legalMoveResult.moves);
-              if (aiMove === null) {
-                guardSetAndDerive(ctx, {
-                  legalMoveResult,
-                  error: null,
-                });
-                return;
-              }
-
-              const result = await bridge.applyMove(aiMove, undefined, toOperationStamp(ctx));
-              const mutationInputs = await deriveMutationInputs(result.state);
-              const lifecycle = assertLifecycleTransition(
-                state.gameLifecycle,
-                lifecycleFromTerminal(mutationInputs.terminal),
-                'resolveAiTurn',
-              );
-              const wasApplied = guardSetAndDerive(ctx, {
-                ...buildStateMutationState(
-                  mutationInputs.gameState,
-                  mutationInputs.legalMoveResult,
-                  mutationInputs.terminal,
-                  lifecycle,
-                  result.effectTrace ?? [],
-                  result.triggerFirings,
-                ),
-              });
-              if (!wasApplied) {
+              const outcome = await resolveSingleAiStep(ctx);
+              if (outcome !== 'advanced') {
                 return;
               }
             }
@@ -672,6 +713,23 @@ export function createGameStore(bridge: GameWorkerAPI) {
               error: toWorkerError(`AI turn resolution exceeded ${MAX_AI_SKIP_MOVES} moves without reaching a human turn or terminal state.`),
             });
           });
+        },
+
+        setAiPlaybackDetailLevel(level) {
+          set({ aiPlaybackDetailLevel: level });
+        },
+
+        setAiPlaybackSpeed(speed) {
+          resolveAiPlaybackDelayMs(speed, DEFAULT_AI_PLAYBACK_DELAY_MS);
+          set({ aiPlaybackSpeed: speed });
+        },
+
+        setAiPlaybackAutoSkip(enabled) {
+          set({ aiPlaybackAutoSkip: enabled });
+        },
+
+        requestAiTurnSkip() {
+          set((state) => ({ aiSkipRequestToken: state.aiSkipRequestToken + 1 }));
         },
 
         async cancelChoice() {

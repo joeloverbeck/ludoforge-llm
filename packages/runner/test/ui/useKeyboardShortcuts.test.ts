@@ -27,7 +27,7 @@ function createKeyboardStore(state: {
   readonly cancelChoice?: GameStore['cancelChoice'];
   readonly confirmMove?: GameStore['confirmMove'];
   readonly undo?: GameStore['undo'];
-  readonly resolveAiTurn?: GameStore['resolveAiTurn'];
+  readonly requestAiTurnSkip?: GameStore['requestAiTurnSkip'];
 }): StoreApi<GameStore> {
   return {
     getState: () => ({
@@ -37,7 +37,7 @@ function createKeyboardStore(state: {
       cancelChoice: state.cancelChoice ?? (async () => {}),
       confirmMove: state.confirmMove ?? (async () => {}),
       undo: state.undo ?? (async () => {}),
-      resolveAiTurn: state.resolveAiTurn ?? (async () => {}),
+      requestAiTurnSkip: state.requestAiTurnSkip ?? (() => {}),
     }),
   } as unknown as StoreApi<GameStore>;
 }
@@ -170,26 +170,26 @@ describe('useKeyboardShortcuts', () => {
     expect(undo).toHaveBeenCalledTimes(1);
   });
 
-  it('Space dispatches resolveAiTurn only in aiTurn mode', () => {
-    const resolveAiTurn = vi.fn(async () => {});
+  it('Space dispatches requestAiTurnSkip only in aiTurn mode', () => {
+    const requestAiTurnSkip = vi.fn();
     const { rerender } = render(createElement(Harness, {
       store: createKeyboardStore({
         renderModel: makeRenderModel({ activePlayerID: asPlayerId(1) }),
-        resolveAiTurn,
+        requestAiTurnSkip,
       }),
     }));
 
     fireEvent.keyDown(document, { key: ' ' });
-    expect(resolveAiTurn).toHaveBeenCalledTimes(1);
+    expect(requestAiTurnSkip).toHaveBeenCalledTimes(1);
 
     rerender(createElement(Harness, {
       store: createKeyboardStore({
         renderModel: makeRenderModel({ activePlayerID: asPlayerId(0) }),
-        resolveAiTurn,
+        requestAiTurnSkip,
       }),
     }));
     fireEvent.keyDown(document, { key: ' ' });
-    expect(resolveAiTurn).toHaveBeenCalledTimes(1);
+    expect(requestAiTurnSkip).toHaveBeenCalledTimes(1);
   });
 
   it('ignores events from form and editable targets', () => {

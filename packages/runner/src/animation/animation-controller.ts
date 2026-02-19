@@ -30,6 +30,7 @@ export interface AnimationController {
   destroy(): void;
   setDetailLevel(level: AnimationDetailLevel): void;
   setReducedMotion(reduced: boolean): void;
+  skipAll(): void;
 }
 
 export interface AnimationControllerOptions {
@@ -137,6 +138,13 @@ export function createAnimationController(
       if (reducedMotion) {
         queue.skipAll();
       }
+    },
+
+    skipAll(): void {
+      if (destroyed) {
+        return;
+      }
+      queue.skipAll();
     },
   };
 }

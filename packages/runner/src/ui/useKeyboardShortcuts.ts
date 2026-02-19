@@ -78,7 +78,7 @@ function handleKeyboardShortcutEvent(event: ShortcutKeyboardEvent, store: StoreA
   }
 
   if (SPACE_KEYS.has(event.key) && mode.kind === 'aiTurn') {
-    void state.resolveAiTurn();
+    state.requestAiTurnSkip();
     return true;
   }
 

@@ -21,12 +21,24 @@ import { AITurnOverlay } from '../../src/ui/AITurnOverlay.js';
 
 function createAiTurnStore(state: {
   readonly renderModel: GameStore['renderModel'];
-  readonly resolveAiTurn?: GameStore['resolveAiTurn'];
+  readonly requestAiTurnSkip?: GameStore['requestAiTurnSkip'];
+  readonly aiPlaybackSpeed?: GameStore['aiPlaybackSpeed'];
+  readonly aiPlaybackDetailLevel?: GameStore['aiPlaybackDetailLevel'];
+  readonly aiPlaybackAutoSkip?: GameStore['aiPlaybackAutoSkip'];
+  readonly setAiPlaybackSpeed?: GameStore['setAiPlaybackSpeed'];
+  readonly setAiPlaybackDetailLevel?: GameStore['setAiPlaybackDetailLevel'];
+  readonly setAiPlaybackAutoSkip?: GameStore['setAiPlaybackAutoSkip'];
 }): StoreApi<GameStore> {
   return {
     getState: () => ({
       renderModel: state.renderModel,
-      resolveAiTurn: state.resolveAiTurn ?? (async () => {}),
+      requestAiTurnSkip: state.requestAiTurnSkip ?? (() => {}),
+      aiPlaybackSpeed: state.aiPlaybackSpeed ?? '1x',
+      aiPlaybackDetailLevel: state.aiPlaybackDetailLevel ?? 'standard',
+      aiPlaybackAutoSkip: state.aiPlaybackAutoSkip ?? false,
+      setAiPlaybackSpeed: state.setAiPlaybackSpeed ?? (() => {}),
+      setAiPlaybackDetailLevel: state.setAiPlaybackDetailLevel ?? (() => {}),
+      setAiPlaybackAutoSkip: state.setAiPlaybackAutoSkip ?? (() => {}),
     }),
   } as unknown as StoreApi<GameStore>;
 }
@@ -154,28 +166,31 @@ describe('AITurnOverlay', () => {
     expect(html).toContain('data-testid="ai-turn-indicator"');
   });
 
-  it('Skip button dispatches resolveAiTurn', () => {
-    const resolveAiTurn = vi.fn(async () => {});
+  it('Skip button dispatches requestAiTurnSkip', () => {
+    const requestAiTurnSkip = vi.fn();
 
     render(createElement(AITurnOverlay, {
       store: createAiTurnStore({
         renderModel: makeRenderModel({
           activePlayerID: asPlayerId(1),
         }),
-        resolveAiTurn,
+        requestAiTurnSkip,
       }),
     }));
 
     fireEvent.click(screen.getByTestId('ai-turn-skip'));
-    expect(resolveAiTurn).toHaveBeenCalledTimes(1);
+    expect(requestAiTurnSkip).toHaveBeenCalledTimes(1);
   });
 
-  it('renders speed selector buttons and keeps selected option in local state', () => {
+  it('renders speed selector buttons and dispatches setAiPlaybackSpeed', () => {
+    const setAiPlaybackSpeed = vi.fn();
     render(createElement(AITurnOverlay, {
       store: createAiTurnStore({
         renderModel: makeRenderModel({
           activePlayerID: asPlayerId(1),
         }),
+        setAiPlaybackSpeed,
+        aiPlaybackSpeed: '1x',
       }),
     }));
 
@@ -189,9 +204,34 @@ describe('AITurnOverlay', () => {
     expect(speed1.getAttribute('aria-pressed')).toBe('true');
 
     fireEvent.click(speed4);
+    expect(setAiPlaybackSpeed).toHaveBeenCalledWith('4x');
+  });
 
-    expect(speed1.getAttribute('aria-pressed')).toBe('false');
-    expect(speed4.getAttribute('aria-pressed')).toBe('true');
+  it('binds detail level and auto-skip controls to store actions', () => {
+    const setAiPlaybackDetailLevel = vi.fn();
+    const setAiPlaybackAutoSkip = vi.fn();
+
+    render(createElement(AITurnOverlay, {
+      store: createAiTurnStore({
+        renderModel: makeRenderModel({
+          activePlayerID: asPlayerId(1),
+        }),
+        aiPlaybackDetailLevel: 'minimal',
+        aiPlaybackAutoSkip: false,
+        setAiPlaybackDetailLevel,
+        setAiPlaybackAutoSkip,
+      }),
+    }));
+
+    const detailSelect = screen.getByTestId('ai-detail-level') as HTMLSelectElement;
+    expect(detailSelect.value).toBe('minimal');
+    fireEvent.change(detailSelect, { target: { value: 'full' } });
+    expect(setAiPlaybackDetailLevel).toHaveBeenCalledWith('full');
+
+    const autoSkipToggle = screen.getByTestId('ai-auto-skip') as HTMLInputElement;
+    expect(autoSkipToggle.checked).toBe(false);
+    fireEvent.click(autoSkipToggle);
+    expect(setAiPlaybackAutoSkip).toHaveBeenCalledWith(true);
   });
 
   it('keeps overlay controls pointer-active via CSS contract', () => {

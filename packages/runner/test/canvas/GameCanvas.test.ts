@@ -186,12 +186,22 @@ function createRuntimeFixture() {
     }),
     setDetailLevel: vi.fn(),
     setReducedMotion: vi.fn(),
+    skipAll: vi.fn(),
+  };
+  const aiPlaybackController = {
+    start: vi.fn(() => {
+      lifecycle.push('ai-playback-controller-start');
+    }),
+    destroy: vi.fn(() => {
+      lifecycle.push('ai-playback-controller-destroy');
+    }),
   };
 
   const attachKeyboardSelect = vi.fn(() => keyboardCleanup);
   const attachZoneSelectHandlers = vi.fn(() => vi.fn());
   const attachTokenSelectHandlers = vi.fn(() => vi.fn());
   const createAnimationController = vi.fn(() => animationController);
+  const createAiPlaybackController = vi.fn(() => aiPlaybackController);
 
   const deps = {
     createGameCanvas: vi.fn(async () => gameCanvas),
@@ -209,6 +219,7 @@ function createRuntimeFixture() {
     createCanvasUpdater: vi.fn(() => canvasUpdater),
     createCoordinateBridge: vi.fn(() => bridge),
     createAnimationController,
+    createAiPlaybackController,
     createAriaAnnouncer: vi.fn(() => ariaAnnouncer),
     attachZoneSelectHandlers,
     attachTokenSelectHandlers,
@@ -227,7 +238,9 @@ function createRuntimeFixture() {
     gameCanvas,
     positionStore,
     animationController,
+    aiPlaybackController,
     createAnimationController,
+    createAiPlaybackController,
     ariaAnnouncer,
     attachZoneSelectHandlers,
     attachTokenSelectHandlers,
@@ -293,6 +306,8 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.deps.createAriaAnnouncer).toHaveBeenCalledTimes(1);
     expect(fixture.createAnimationController).toHaveBeenCalledTimes(1);
     expect(fixture.animationController.start).toHaveBeenCalledTimes(1);
+    expect(fixture.createAiPlaybackController).toHaveBeenCalledTimes(1);
+    expect(fixture.aiPlaybackController.start).toHaveBeenCalledTimes(1);
     expect(fixture.attachKeyboardSelect).toHaveBeenCalledTimes(1);
     expect(fixture.attachZoneSelectHandlers).toHaveBeenCalledTimes(1);
     expect(fixture.attachTokenSelectHandlers).toHaveBeenCalledTimes(1);
@@ -323,8 +338,10 @@ describe('createGameCanvasRuntime', () => {
 
     expect(fixture.lifecycle).toEqual([
       'animation-controller-start',
+      'ai-playback-controller-start',
       'updater-start',
       'keyboard-cleanup',
+      'ai-playback-controller-destroy',
       'animation-controller-destroy',
       'aria-destroy',
       'updater-destroy',
@@ -584,6 +601,8 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.canvasUpdater.destroy).toHaveBeenCalledTimes(2);
     expect(fixture.animationController.start).toHaveBeenCalledTimes(2);
     expect(fixture.animationController.destroy).toHaveBeenCalledTimes(2);
+    expect(fixture.aiPlaybackController.start).toHaveBeenCalledTimes(2);
+    expect(fixture.aiPlaybackController.destroy).toHaveBeenCalledTimes(2);
 
     store.setState({ renderModel: makeRenderModel(['zone:a', 'zone:b']) });
 
@@ -612,6 +631,8 @@ describe('createGameCanvasRuntime', () => {
 
     expect(runtime.coordinateBridge).toBe(fixture.bridge);
     expect(fixture.canvasUpdater.start).toHaveBeenCalledTimes(1);
+    expect(fixture.createAiPlaybackController).toHaveBeenCalledTimes(1);
+    expect(fixture.aiPlaybackController.start).toHaveBeenCalledTimes(1);
     expect(store.getState().animationPlaying).toBe(false);
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0]?.[0]).toContain('Animation controller initialization failed');

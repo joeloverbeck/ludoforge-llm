@@ -5,6 +5,7 @@ import type { StoreApi } from 'zustand';
 import type { KeyboardCoordinator } from '../input/keyboard-coordinator.js';
 import type { GameStore } from '../store/game-store';
 import { createAnimationController, type AnimationController } from '../animation/animation-controller.js';
+import { createAiPlaybackController, type AiPlaybackController } from '../animation/ai-playback.js';
 import type { CoordinateBridge } from './coordinate-bridge';
 import { createCoordinateBridge } from './coordinate-bridge';
 import type { CanvasWorldBounds, HoverAnchor, HoveredCanvasTarget } from './hover-anchor-contract';
@@ -73,6 +74,7 @@ interface GameCanvasRuntimeDeps {
   readonly createCanvasUpdater: typeof createCanvasUpdater;
   readonly createCoordinateBridge: typeof createCoordinateBridge;
   readonly createAnimationController: typeof createAnimationController;
+  readonly createAiPlaybackController: typeof createAiPlaybackController;
   readonly createAriaAnnouncer: typeof createAriaAnnouncer;
   readonly attachZoneSelectHandlers: typeof attachZoneSelectHandlers;
   readonly attachTokenSelectHandlers: typeof attachTokenSelectHandlers;
@@ -89,6 +91,7 @@ const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   createCanvasUpdater,
   createCoordinateBridge,
   createAnimationController,
+  createAiPlaybackController,
   createAriaAnnouncer,
   attachZoneSelectHandlers,
   attachTokenSelectHandlers,
@@ -187,6 +190,7 @@ export async function createGameCanvasRuntime(
     viewport: viewportResult,
   });
   let animationController: AnimationController | null = null;
+  let aiPlaybackController: AiPlaybackController | null = null;
   try {
     animationController = deps.createAnimationController({
       store: options.store,
@@ -198,6 +202,22 @@ export async function createGameCanvasRuntime(
   } catch (error) {
     selectorStore.getState().setAnimationPlaying(false);
     console.warn('Animation controller initialization failed. Continuing without animations.', error);
+  }
+  try {
+    aiPlaybackController = deps.createAiPlaybackController({
+      store: options.store,
+      animation: {
+        setDetailLevel: (level) => {
+          animationController?.setDetailLevel(level);
+        },
+        skipAll: () => {
+          animationController?.skipAll();
+        },
+      },
+    });
+    aiPlaybackController.start();
+  } catch (error) {
+    console.warn('AI playback controller initialization failed. Continuing without AI playback orchestration.', error);
   }
 
   const unsubscribeZoneIDs = selectorStore.subscribe(selectZoneIDs, (zoneIDs) => {
@@ -302,6 +322,7 @@ export async function createGameCanvasRuntime(
       unsubscribeFactionDefs();
       unsubscribeTokenTypeDefs();
       cleanupKeyboardSelect();
+      aiPlaybackController?.destroy();
       animationController?.destroy();
       ariaAnnouncer.destroy();
       destroyCanvasPipeline(canvasUpdater, zoneRenderer, adjacencyRenderer, tokenRenderer, zonePool, viewportResult, gameCanvas);

@@ -34,6 +34,7 @@ export interface ViewportResult {
   readonly viewport: Viewport;
   readonly worldLayers: readonly Container[];
   updateWorldBounds(bounds: WorldBounds): void;
+  centerOnBounds(bounds: WorldBounds): void;
   destroy(): void;
 }
 
@@ -72,14 +73,29 @@ export function setupViewport(config: ViewportConfig): ViewportResult {
     config.stage.addChild(config.layers.hudGroup);
   }
 
+  const overscrollPadX = config.screenWidth / config.minScale / 2;
+  const overscrollPadY = config.screenHeight / config.minScale / 2;
+
   const updateWorldBounds = (bounds: WorldBounds): void => {
     assertBounds(bounds);
+    const paddedWidth = (bounds.maxX + overscrollPadX) - (bounds.minX - overscrollPadX);
+    const paddedHeight = (bounds.maxY + overscrollPadY) - (bounds.minY - overscrollPadY);
+    viewport.resize(config.screenWidth, config.screenHeight, paddedWidth, paddedHeight);
     viewport.clamp({
-      left: bounds.minX,
-      top: bounds.minY,
-      right: bounds.maxX,
-      bottom: bounds.maxY,
+      left: bounds.minX - overscrollPadX,
+      top: bounds.minY - overscrollPadY,
+      right: bounds.maxX + overscrollPadX,
+      bottom: bounds.maxY + overscrollPadY,
+      underflow: 'none',
     });
+  };
+
+  const centerOnBounds = (bounds: WorldBounds): void => {
+    assertBounds(bounds);
+    viewport.moveCenter(
+      (bounds.minX + bounds.maxX) / 2,
+      (bounds.minY + bounds.maxY) / 2,
+    );
   };
 
   updateWorldBounds({ minX: 0, minY: 0, maxX: config.worldWidth, maxY: config.worldHeight });
@@ -88,6 +104,7 @@ export function setupViewport(config: ViewportConfig): ViewportResult {
     viewport,
     worldLayers,
     updateWorldBounds,
+    centerOnBounds,
     destroy(): void {
       viewport.plugins.removeAll();
       for (const layer of worldLayers) {

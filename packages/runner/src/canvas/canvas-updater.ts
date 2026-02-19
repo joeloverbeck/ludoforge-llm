@@ -112,6 +112,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
 
       latestPositionSnapshot = deps.positionStore.getSnapshot();
       deps.viewport.updateWorldBounds(latestPositionSnapshot.bounds);
+      deps.viewport.centerOnBounds(latestPositionSnapshot.bounds);
       latestSnapshot = selectCanvasSnapshot(store.getState());
       if (animationPlaying) {
         queuedSnapshot = latestSnapshot;

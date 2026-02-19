@@ -159,12 +159,162 @@ describe('computeLayout dispatcher', () => {
     expect(layout.positions.size).toBe(3);
   });
 
-  it('throws for track mode placeholder', () => {
-    expect(() => computeLayout(makeDef([]), 'track')).toThrow('Track layout not yet implemented');
+  it('routes track mode', () => {
+    const layout = computeLayout(makeDef([zone('track-0', { adjacentTo: ['track-1'] }), zone('track-1', { adjacentTo: ['track-0'] })]), 'track');
+    expect(layout.mode).toBe('track');
+    expect(layout.positions.size).toBe(2);
   });
 
-  it('throws for grid mode placeholder', () => {
-    expect(() => computeLayout(makeDef([]), 'grid')).toThrow('Grid layout not yet implemented');
+  it('routes grid mode', () => {
+    const layout = computeLayout(makeDef([zone('cell-a', { attributes: { row: 0, col: 0 } })]), 'grid');
+    expect(layout.mode).toBe('grid');
+    expect(layout.positions.size).toBe(1);
+  });
+});
+
+describe('computeLayout track mode', () => {
+  it('lays out a short linear chain in one horizontal row', () => {
+    const layout = computeLayout(makeDef(buildChainZones(5)), 'track');
+    const ids = ['track-00', 'track-01', 'track-02', 'track-03', 'track-04'];
+    const points = ids.map((id) => layout.positions.get(id));
+    expect(points.every((point) => point !== undefined)).toBe(true);
+
+    const y0 = points[0]!.y;
+    for (const point of points) {
+      expect(Math.abs(point!.y - y0)).toBeLessThan(1e-6);
+    }
+    for (let index = 1; index < points.length; index += 1) {
+      expect(points[index]!.x).toBeGreaterThan(points[index - 1]!.x);
+    }
+  });
+
+  it('wraps long chains into serpentine rows', () => {
+    const layout = computeLayout(makeDef(buildChainZones(20)), 'track');
+    const row0IDs = Array.from({ length: 10 }, (_, index) => `track-${String(index).padStart(2, '0')}`);
+    const row1IDs = Array.from({ length: 10 }, (_, index) => `track-${String(index + 10).padStart(2, '0')}`);
+    const row0 = row0IDs.map((id) => layout.positions.get(id)!);
+    const row1 = row1IDs.map((id) => layout.positions.get(id)!);
+    const row0Y = row0[0]!.y;
+    const row1Y = row1[0]!.y;
+
+    for (const point of row0) {
+      expect(Math.abs(point.y - row0Y)).toBeLessThan(1e-6);
+    }
+    for (const point of row1) {
+      expect(Math.abs(point.y - row1Y)).toBeLessThan(1e-6);
+    }
+    expect(row1Y).toBeGreaterThan(row0Y);
+    expect(row0[0]!.x).toBeLessThan(row0[row0.length - 1]!.x);
+    expect(row1[0]!.x).toBeGreaterThan(row1[row1.length - 1]!.x);
+  });
+
+  it('handles cycles with stable non-overlapping positions', () => {
+    const layout = computeLayout(makeDef([
+      zone('a', { adjacentTo: ['b', 'f'] }),
+      zone('b', { adjacentTo: ['a', 'c'] }),
+      zone('c', { adjacentTo: ['b', 'd'] }),
+      zone('d', { adjacentTo: ['c', 'e'] }),
+      zone('e', { adjacentTo: ['d', 'f'] }),
+      zone('f', { adjacentTo: ['e', 'a'] }),
+    ]), 'track');
+
+    expect(layout.positions.size).toBe(6);
+    const keys = [...layout.positions.keys()];
+    for (const id of keys) {
+      const point = layout.positions.get(id);
+      expect(Number.isFinite(point?.x)).toBe(true);
+      expect(Number.isFinite(point?.y)).toBe(true);
+    }
+    const unique = new Set([...layout.positions.values()].map((point) => `${point.x}:${point.y}`));
+    expect(unique.size).toBe(6);
+  });
+
+  it('keeps main chain ordering readable when a branch exists', () => {
+    const layout = computeLayout(makeDef([
+      zone('main-0', { adjacentTo: ['main-1'] }),
+      zone('main-1', { adjacentTo: ['main-0', 'main-2'] }),
+      zone('main-2', { adjacentTo: ['main-1', 'main-3', 'spur'] }),
+      zone('main-3', { adjacentTo: ['main-2'] }),
+      zone('spur', { adjacentTo: ['main-2'] }),
+    ]), 'track');
+
+    const main0 = layout.positions.get('main-0')!;
+    const main1 = layout.positions.get('main-1')!;
+    const main2 = layout.positions.get('main-2')!;
+    const main3 = layout.positions.get('main-3')!;
+    const spur = layout.positions.get('spur')!;
+
+    expect(main0.x).toBeLessThan(main1.x);
+    expect(main1.x).toBeLessThan(main2.x);
+    expect(main2.x).toBeLessThan(main3.x);
+    expect(spur.x === main0.x && spur.y === main0.y).toBe(false);
+  });
+
+  it('places single node at origin', () => {
+    const layout = computeLayout(makeDef([zone('solo', { zoneKind: 'board' })]), 'track');
+    expect(layout.positions.get('solo')).toEqual({ x: 0, y: 0 });
+    expect(layout.mode).toBe('track');
+  });
+});
+
+describe('computeLayout grid mode', () => {
+  it('uses row and col attributes for direct positioning', () => {
+    const layout = computeLayout(makeDef([
+      zone('cell-a', { attributes: { row: 0, col: 0 } }),
+      zone('cell-b', { attributes: { row: 0, col: 1 } }),
+    ]), 'grid');
+
+    const a = layout.positions.get('cell-a')!;
+    const b = layout.positions.get('cell-b')!;
+    expect(Math.abs(a.y - b.y)).toBeLessThan(1e-6);
+    expect(b.x).toBeGreaterThan(a.x);
+  });
+
+  it('builds a 3x3 arrangement from row/col metadata', () => {
+    const zones = Array.from({ length: 9 }, (_, index) => {
+      const row = Math.floor(index / 3);
+      const col = index % 3;
+      return zone(`cell-${index}`, { attributes: { row, col } });
+    });
+    const layout = computeLayout(makeDef(zones), 'grid');
+    const points = [...layout.positions.values()];
+    const xs = [...new Set(points.map((point) => point.x.toFixed(3)))];
+    const ys = [...new Set(points.map((point) => point.y.toFixed(3)))];
+    expect(xs.length).toBe(3);
+    expect(ys.length).toBe(3);
+  });
+
+  it('falls back to a square grid when row/col attributes are absent', () => {
+    const layout = computeLayout(makeDef([
+      zone('a'),
+      zone('b'),
+      zone('c'),
+      zone('d'),
+    ]), 'grid');
+    const points = [...layout.positions.values()];
+    const xs = [...new Set(points.map((point) => point.x.toFixed(3)))];
+    const ys = [...new Set(points.map((point) => point.y.toFixed(3)))];
+    expect(xs.length).toBe(2);
+    expect(ys.length).toBe(2);
+  });
+
+  it('honors attributed cells and fills remaining cells for mixed metadata', () => {
+    const layout = computeLayout(makeDef([
+      zone('anchor', { attributes: { row: 0, col: 0 } }),
+      zone('partial-row', { attributes: { row: 2 } }),
+      zone('partial-col', { attributes: { col: 2 } }),
+      zone('free'),
+    ]), 'grid');
+
+    const anchor = layout.positions.get('anchor')!;
+    const unique = new Set([...layout.positions.values()].map((point) => `${point.x}:${point.y}`));
+    expect(unique.size).toBe(4);
+
+    const topLeftX = Math.min(...[...layout.positions.values()].map((point) => point.x));
+    const topLeftY = Math.min(...[...layout.positions.values()].map((point) => point.y));
+    expect(anchor.x).toBe(topLeftX);
+    expect(anchor.y).toBe(topLeftY);
+    expect(layout.mode).toBe('grid');
   });
 });
 
@@ -289,6 +439,7 @@ interface ZoneOverrides {
   readonly adjacentTo?: readonly string[];
   readonly category?: ZoneDef['category'];
   readonly owner?: ZoneDef['owner'];
+  readonly attributes?: Record<string, unknown>;
 }
 
 function zone(id: string, overrides: ZoneOverrides = {}): ZoneDef {
@@ -306,4 +457,18 @@ function zone(id: string, overrides: ZoneOverrides = {}): ZoneDef {
 
 function angularDistance(left: number, right: number): number {
   return Math.abs(Math.atan2(Math.sin(left - right), Math.cos(left - right)));
+}
+
+function buildChainZones(length: number): readonly ZoneDef[] {
+  return Array.from({ length }, (_, index) => {
+    const id = `track-${String(index).padStart(2, '0')}`;
+    const adjacentTo: string[] = [];
+    if (index > 0) {
+      adjacentTo.push(`track-${String(index - 1).padStart(2, '0')}`);
+    }
+    if (index < length - 1) {
+      adjacentTo.push(`track-${String(index + 1).padStart(2, '0')}`);
+    }
+    return zone(id, { adjacentTo });
+  });
 }

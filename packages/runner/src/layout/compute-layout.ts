@@ -2,9 +2,11 @@ import forceAtlas2 from 'graphology-layout-forceatlas2';
 import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
 
 import { buildLayoutGraph, partitionZones } from './build-layout-graph.js';
+import { computeGridLayout } from './grid-layout.js';
+import { centerOnOrigin, computeBounds, EMPTY_BOUNDS, type MutablePosition, selectPrimaryLayoutZones } from './layout-helpers.js';
 import type { LayoutMode, LayoutResult } from './layout-types.js';
+import { computeTrackLayout } from './track-layout.js';
 
-const EMPTY_BOUNDS = { minX: 0, minY: 0, maxX: 0, maxY: 0 } as const;
 const GRAPH_ITERATIONS = 100;
 const GRAPH_MIN_SPACING = 60;
 const GRAPH_NORMALIZED_EXTENT = 1000;
@@ -19,11 +21,6 @@ const TABLE_PERIMETER_MIN_RADIUS_Y = 220;
 const TABLE_PERIMETER_RADIUS_X_STEP = 70;
 const TABLE_PERIMETER_RADIUS_Y_STEP = 50;
 
-interface MutablePosition {
-  x: number;
-  y: number;
-}
-
 export function computeLayout(def: GameDef, mode: LayoutMode): LayoutResult {
   switch (mode) {
     case 'graph':
@@ -31,14 +28,14 @@ export function computeLayout(def: GameDef, mode: LayoutMode): LayoutResult {
     case 'table':
       return computeTableLayout(def);
     case 'track':
-      throw new Error('Track layout not yet implemented');
+      return computeTrackLayout(def);
     case 'grid':
-      throw new Error('Grid layout not yet implemented');
+      return computeGridLayout(def);
   }
 }
 
 function computeTableLayout(def: GameDef): LayoutResult {
-  const tableZones = selectTableZones(def);
+  const tableZones = selectPrimaryLayoutZones(def);
   if (tableZones.length === 0) {
     return {
       positions: new Map(),
@@ -112,6 +109,7 @@ function computeGraphLayout(def: GameDef): LayoutResult {
   };
 }
 
+
 function seedInitialPositions(
   graph: ReturnType<typeof buildLayoutGraph>,
   sortedNodeIDs: readonly string[],
@@ -160,14 +158,6 @@ function seedInitialPositions(
   }
 }
 
-function selectTableZones(def: GameDef): readonly ZoneDef[] {
-  const { board } = partitionZones(def);
-  if (board.length > 0) {
-    return board;
-  }
-
-  return def.zones;
-}
 
 function placeSharedZones(zones: readonly ZoneDef[], positions: Map<string, MutablePosition>): void {
   if (zones.length === 0) {
@@ -347,52 +337,6 @@ function enforceMinimumSpacing(
   }
 }
 
-function centerOnOrigin(positions: Map<string, MutablePosition>): void {
-  if (positions.size === 0) {
-    return;
-  }
-
-  let sumX = 0;
-  let sumY = 0;
-  for (const position of positions.values()) {
-    sumX += position.x;
-    sumY += position.y;
-  }
-
-  const centerX = sumX / positions.size;
-  const centerY = sumY / positions.size;
-  for (const position of positions.values()) {
-    position.x -= centerX;
-    position.y -= centerY;
-  }
-}
-
-function computeBounds(positions: ReadonlyMap<string, MutablePosition>): LayoutResult['boardBounds'] {
-  if (positions.size === 0) {
-    return EMPTY_BOUNDS;
-  }
-
-  let minX = Number.POSITIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let maxY = Number.NEGATIVE_INFINITY;
-  for (const position of positions.values()) {
-    if (position.x < minX) {
-      minX = position.x;
-    }
-    if (position.y < minY) {
-      minY = position.y;
-    }
-    if (position.x > maxX) {
-      maxX = position.x;
-    }
-    if (position.y > maxY) {
-      maxY = position.y;
-    }
-  }
-
-  return { minX, minY, maxX, maxY };
-}
 
 function deterministicJitter(seed: string): number {
   return (hashUnit(seed) * 2) - 1;

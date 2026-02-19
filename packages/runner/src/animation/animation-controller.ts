@@ -2,7 +2,7 @@ import type { EffectTraceEntry } from '@ludoforge/engine/runtime';
 import type { Container } from 'pixi.js';
 import type { StoreApi } from 'zustand';
 
-import type { ZonePositionMap } from '../canvas/position-store.js';
+import type { ZonePositionMap } from '../spatial/position-types.js';
 import type { GameStore } from '../store/game-store.js';
 import type {
   AnimationDescriptor,

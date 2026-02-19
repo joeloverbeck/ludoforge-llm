@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   computeGridLayout,
   createPositionStore,
-  type ZonePositionMap,
 } from '../../src/canvas/position-store';
+import type { ZonePositionMap } from '../../src/spatial/position-types';
 
 describe('computeGridLayout', () => {
   it('returns empty positions and zero-area bounds for no zones', () => {

@@ -1,6 +1,6 @@
 import type { Container } from 'pixi.js';
 
-import type { ZonePositionMap } from '../canvas/position-store.js';
+import type { ZonePositionMap } from '../spatial/position-types.js';
 import type { AnimationDescriptor } from './animation-types.js';
 import type { GsapLike, GsapTimelineLike } from './gsap-setup.js';
 import type { PresetRegistry } from './preset-registry.js';

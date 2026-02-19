@@ -1,14 +1,4 @@
-import type { Position } from './geometry';
-
-export interface ZonePositionMap {
-  readonly positions: ReadonlyMap<string, Position>;
-  readonly bounds: {
-    readonly minX: number;
-    readonly minY: number;
-    readonly maxX: number;
-    readonly maxY: number;
-  };
-}
+import type { Position, PositionBounds, ZonePositionMap } from '../spatial/position-types.js';
 
 export interface PositionStoreSnapshot extends ZonePositionMap {
   readonly zoneIDs: readonly string[];
@@ -21,7 +11,7 @@ export interface PositionStore {
   subscribe(listener: (snapshot: PositionStoreSnapshot) => void): () => void;
 }
 
-const EMPTY_BOUNDS: ZonePositionMap['bounds'] = {
+const EMPTY_BOUNDS: PositionBounds = {
   minX: 0,
   minY: 0,
   maxX: 0,

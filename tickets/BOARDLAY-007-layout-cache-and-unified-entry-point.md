@@ -22,7 +22,7 @@ This corresponds to Spec 41 deliverables D3 (caching) and the final assembly of 
 
 ```typescript
 import type { GameDef } from '@ludoforge/engine';
-import type { ZonePositionMap } from '../canvas/position-store';
+import type { ZonePositionMap } from '../spatial/position-types';
 
 interface FullLayoutResult {
   readonly positionMap: ZonePositionMap;
@@ -56,7 +56,7 @@ function clearLayoutCache(): void;
 
 ### ZonePositionMap Compatibility
 
-The merged output must match the `ZonePositionMap` interface from `position-store.ts`:
+The merged output must match the shared `ZonePositionMap` interface from `src/spatial/position-types.ts`:
 ```typescript
 { positions: ReadonlyMap<string, Position>; bounds: { minX, minY, maxX, maxY } }
 ```

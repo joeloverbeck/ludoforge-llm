@@ -1,4 +1,1 @@
-export interface Position {
-  readonly x: number;
-  readonly y: number;
-}
+export type { Position } from '../spatial/position-types.js';

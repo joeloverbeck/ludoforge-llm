@@ -1,6 +1,6 @@
 # VISCONF2-005: Variables Panel Formatting
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only change
@@ -31,15 +31,22 @@ const VariablesConfigSchema = z.object({
 });
 ```
 
-The `VisualConfigProvider` exposes `getVariablesConfig()` (line 112-114), but the `VariablesPanel` component at `packages/runner/src/ui/VariablesPanel.tsx` never consumes it. All variables are rendered in a flat list with no grouping, no prominent highlighting, and no formatting.
+The `VisualConfigProvider` exposes `getVariablesConfig()`, but the `VariablesPanel` component at `packages/runner/src/ui/VariablesPanel.tsx` never consumes it. Variables are rendered only in the default Global + Per Player layout with raw values.
 
-Currently, `VariablesPanel` receives only a `store` prop and reads `renderModel.globalVars` / `renderModel.playerVars` directly. There is no React context providing visual config to UI components.
+Current architecture already threads a `VisualConfigProvider` instance through bootstrap (`App` -> `GameContainer`) and into canvas/store flows. The missing piece is UI access from `VariablesPanel` without widening all overlay panel props.
+
+## Assumption Corrections
+
+1. A new provider instance is **not** required at app bootstrap. `visualConfigProvider` already exists and is stable in `GameContainer`.
+2. Context wiring belongs in the UI layer (`GameContainer`) rather than app root bootstrapping.
+3. Tests should validate behavior using runner UI/component tests; mutating real FITL YAML only to satisfy an integration assertion is not required for this ticket.
+4. Existing variable-change highlighting (`rowChanged`) is part of current behavior and must be preserved.
 
 ## What to Change
 
 ### 1. Create VisualConfigContext
 
-**File**: `packages/runner/src/config/VisualConfigContext.ts` (new)
+**File**: `packages/runner/src/config/visual-config-context.ts` (new)
 
 Create a React context:
 ```typescript
@@ -49,11 +56,11 @@ import type { VisualConfigProvider } from './visual-config-provider.js';
 export const VisualConfigContext = createContext<VisualConfigProvider | null>(null);
 ```
 
-### 2. Provide context at app root
+### 2. Provide context in `GameContainer`
 
-**File**: `packages/runner/src/App.tsx` (or wherever the provider tree is rooted)
+**File**: `packages/runner/src/ui/GameContainer.tsx`
 
-Wrap the UI tree with `VisualConfigContext.Provider` passing the existing `VisualConfigProvider` instance. The provider is already constructed during bootstrap — thread it through.
+Wrap the rendered UI tree with `VisualConfigContext.Provider`, passing the existing `visualConfigProvider` prop. Keep `GameContainer` as the composition root for overlay UI concerns.
 
 ### 3. Wire variables config into VariablesPanel
 
@@ -70,6 +77,7 @@ Consume `VisualConfigContext` and the `VariablesConfig` from it:
 - Each panel has a `name` (section title) and `vars` (list of variable names to include)
 - Variables not in any panel appear in an "Other" section at the bottom
 - If no panels are defined, fall back to current Global / Per Player layout
+- Within grouped sections, preserve per-player disambiguation in row keys and labels so duplicate variable names remain deterministic.
 
 #### Variable formatting
 - If `variables.formatting[varName]` is defined for a variable:
@@ -78,6 +86,7 @@ Consume `VisualConfigContext` and the `VariablesConfig` from it:
   - `suffix` → append suffix string after value (e.g., `" pts"`)
   - `min`/`max` → optionally render a mini progress bar or range indicator
 - If no formatting is defined, display raw value as current behavior
+- Formatting must not break existing value-change highlighting behavior.
 
 ### 4. Add CSS for prominent variables
 
@@ -95,7 +104,8 @@ Add styles:
 3. Prominent variables appear in both the highlight section and their normal position.
 4. Panel grouping is mutually exclusive with the current Global/Per Player layout — if panels are defined, they replace it.
 5. Formatting is applied per-variable and is backward-compatible (missing formatting = raw value display).
-6. The `VisualConfigContext.Provider` must be added above all UI components that might consume it.
+6. The `VisualConfigContext.Provider` is added at `GameContainer` so overlay components can opt in without prop drilling.
+7. Existing row change-detection highlighting remains intact for both default and grouped layouts.
 
 ## Tests
 
@@ -107,5 +117,29 @@ Add styles:
 6. **Unit — formatting percentage**: Mount with `formatting: {aid: {type: "percentage"}}` and `aid` value `75`, verify displayed text includes `75%`.
 7. **Unit — formatting enum labels**: Mount with `formatting: {support: {type: "enum", labels: ["None", "Passive", "Active"]}}` and value `1`, verify displayed text is `Passive`.
 8. **Unit — formatting suffix**: Mount with `formatting: {score: {suffix: " pts"}}` and value `42`, verify displayed text is `42 pts`.
-9. **Integration — FITL variables config**: Add sample `variables` section to FITL visual config, verify it loads and panel renders grouped layout.
-10. **Regression**: Existing VariablesPanel tests still pass.
+9. **Unit — rowChanged still works with formatting/grouping enabled**: Re-render with updated value and verify changed row keeps highlight class.
+10. **Integration — GameContainer provides visual config context**: Render `GameContainer` with a non-null provider and verify `VariablesPanel` can consume config without receiving new props.
+11. **Regression**: Existing VariablesPanel tests still pass.
+
+## Outcome
+
+- **Completion date**: 2026-02-19
+- **What changed**:
+  - Added `VisualConfigContext` at `packages/runner/src/config/visual-config-context.ts`.
+  - Wired context provision in `packages/runner/src/ui/GameContainer.tsx` using the existing `visualConfigProvider`.
+  - Updated `packages/runner/src/ui/VariablesPanel.tsx` to consume variables config for:
+    - prominent rows,
+    - named panel grouping plus `Other`,
+    - formatting (`percentage`, `enum` labels, `suffix`) and bounded range indicator.
+  - Extended `packages/runner/src/ui/VariablesPanel.module.css` with prominent/group/progress styles.
+  - Added/updated tests in:
+    - `packages/runner/test/config/visual-config-context.test.ts`
+    - `packages/runner/test/ui/VariablesPanel.test.ts`
+    - `packages/runner/test/ui/GameContainer.test.ts`
+- **Deviations from original plan**:
+  - Context is provided in `GameContainer` (UI composition root) instead of `App` root to avoid bootstrap churn and keep UI concerns localized.
+  - No FITL YAML fixture mutation was required; behavior is covered via provider-backed UI tests.
+- **Verification**:
+  - `pnpm -F @ludoforge/runner test` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.
+  - `pnpm -F @ludoforge/runner typecheck` passed.

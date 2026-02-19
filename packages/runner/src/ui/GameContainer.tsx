@@ -8,6 +8,7 @@ import type { HoverAnchor, HoveredCanvasTarget } from '../canvas/hover-anchor-co
 import { createKeyboardCoordinator } from '../input/keyboard-coordinator.js';
 import type { GameStore } from '../store/game-store.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
+import { VisualConfigContext } from '../config/visual-config-context.js';
 import { ActionToolbar } from './ActionToolbar.js';
 import { ChoicePanel } from './ChoicePanel.js';
 import { ErrorState } from './ErrorState.js';
@@ -159,30 +160,32 @@ export function GameContainer({ store, visualConfigProvider }: GameContainerProp
   })();
 
   return (
-    <div className={styles.container} style={factionCssVariableStyle}>
-      <div className={styles.canvasLayer}>
-        <GameCanvas
-          store={store}
-          visualConfigProvider={visualConfigProvider}
-          {...(keyboardCoordinator === null ? {} : { keyboardCoordinator })}
-          onHoverAnchorChange={onHoverAnchorChange}
+    <VisualConfigContext.Provider value={visualConfigProvider}>
+      <div className={styles.container} style={factionCssVariableStyle}>
+        <div className={styles.canvasLayer}>
+          <GameCanvas
+            store={store}
+            visualConfigProvider={visualConfigProvider}
+            {...(keyboardCoordinator === null ? {} : { keyboardCoordinator })}
+            onHoverAnchorChange={onHoverAnchorChange}
+          />
+        </div>
+        <UIOverlay
+          topBarContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, store)}
+          sidePanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, store)}
+          bottomBarContent={bottomBarContent}
+          floatingContent={(
+            <>
+              {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, store)}
+              <TooltipLayer
+                store={store}
+                hoverTarget={tooltipAnchorState.hoverTarget}
+                anchorRect={tooltipAnchorState.anchorRect}
+              />
+            </>
+          )}
         />
       </div>
-      <UIOverlay
-        topBarContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, store)}
-        sidePanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, store)}
-        bottomBarContent={bottomBarContent}
-        floatingContent={(
-          <>
-            {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, store)}
-            <TooltipLayer
-              store={store}
-              hoverTarget={tooltipAnchorState.hoverTarget}
-              anchorRect={tooltipAnchorState.anchorRect}
-            />
-          </>
-        )}
-      />
-    </div>
+    </VisualConfigContext.Provider>
   );
 }

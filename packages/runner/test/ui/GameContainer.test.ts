@@ -78,9 +78,19 @@ vi.mock('../../src/ui/InterruptBanner.js', () => ({
   InterruptBanner: () => createElement('div', { 'data-testid': 'interrupt-banner' }),
 }));
 
-vi.mock('../../src/ui/VariablesPanel.js', () => ({
-  VariablesPanel: () => createElement('div', { 'data-testid': 'variables-panel' }),
-}));
+vi.mock('../../src/ui/VariablesPanel.js', async () => {
+  const React = await import('react');
+  const { VisualConfigContext } = await import('../../src/config/visual-config-context.js');
+  return {
+    VariablesPanel: () => {
+      const provider = React.useContext(VisualConfigContext);
+      return createElement('div', {
+        'data-testid': 'variables-panel',
+        'data-has-visual-config': provider === null ? 'false' : 'true',
+      });
+    },
+  };
+});
 
 vi.mock('../../src/ui/Scoreboard.js', () => ({
   Scoreboard: () => createElement('div', { 'data-testid': 'scoreboard' }),
@@ -285,6 +295,7 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="event-deck-panel"');
     expect(html).toContain('data-testid="animation-controls"');
     expect(html).toContain('data-testid="variables-panel"');
+    expect(html).toContain('data-has-visual-config="true"');
     expect(html).toContain('data-testid="scoreboard"');
     expect(html).toContain('data-testid="global-markers-bar"');
     expect(html).toContain('data-testid="active-effects-panel"');
@@ -336,6 +347,7 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="event-deck-panel"');
     expect(html).toContain('data-testid="animation-controls"');
     expect(html).toContain('data-testid="variables-panel"');
+    expect(html).toContain('data-has-visual-config="true"');
     expect(html).toContain('data-testid="scoreboard"');
     expect(html).toContain('data-testid="global-markers-bar"');
     expect(html).toContain('data-testid="active-effects-panel"');
@@ -587,5 +599,20 @@ describe('GameContainer', () => {
         bottom: 98,
       },
     });
+  });
+
+  it('provides visual config context to VariablesPanel', () => {
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      }),
+    );
+
+    expect(html).toContain('data-testid="variables-panel"');
+    expect(html).toContain('data-has-visual-config="true"');
   });
 });

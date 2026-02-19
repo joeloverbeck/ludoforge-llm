@@ -22,7 +22,7 @@ interface CompileFixtureOptions {
     readonly zoneKind?: 'board' | 'aux';
     readonly visibility: 'public' | 'owner' | 'hidden';
     readonly ordering: 'stack' | 'queue' | 'set';
-    readonly adjacentTo?: readonly string[];
+    readonly adjacentTo?: ReadonlyArray<{ readonly to: string; readonly category?: string }>;
     readonly category?: string;
     readonly attributes?: Readonly<Record<string, AttributeValue>>;
   }[];
@@ -298,14 +298,14 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
-          adjacentTo: ['hand:0'],
+          adjacentTo: [{ to: 'hand:0' }],
         },
         {
           id: 'hand',
           owner: 'player',
           visibility: 'owner',
           ordering: 'stack',
-          adjacentTo: ['table:none'],
+          adjacentTo: [{ to: 'table:none' }],
         },
       ],
     });
@@ -489,7 +489,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
-          adjacentTo: ['hand:0'],
+          adjacentTo: [{ to: 'hand:0' }],
         },
         {
           id: 'hand',
@@ -504,8 +504,41 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.adjacencies).toEqual([
-      { from: 'table:none', to: 'hand:0', isHighlighted: false },
-      { from: 'hand:0', to: 'table:none', isHighlighted: false },
+      { from: 'table:none', to: 'hand:0', category: null, isHighlighted: false },
+      { from: 'hand:0', to: 'table:none', category: null, isHighlighted: false },
+    ]);
+  });
+
+  it('projects adjacency category from source zone category', () => {
+    const def = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'city',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          adjacentTo: [{ to: 'province:none' }],
+        },
+        {
+          id: 'province',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'province',
+          adjacentTo: [{ to: 'city:none' }],
+        },
+      ],
+    });
+
+    const state = initialState(def, 33, 2);
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+
+    expect(model.adjacencies).toEqual([
+      { from: 'city:none', to: 'province:none', category: 'city', isHighlighted: false },
+      { from: 'province:none', to: 'city:none', category: 'province', isHighlighted: false },
     ]);
   });
 
@@ -519,14 +552,14 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
-          adjacentTo: ['reserve:none'],
+          adjacentTo: [{ to: 'reserve:none' }],
         },
         {
           id: 'reserve',
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
-          adjacentTo: ['table:none'],
+          adjacentTo: [{ to: 'table:none' }],
         },
       ],
     });
@@ -551,8 +584,8 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     );
 
     expect(model.adjacencies).toEqual([
-      { from: 'table:none', to: 'reserve:none', isHighlighted: true },
-      { from: 'reserve:none', to: 'table:none', isHighlighted: true },
+      { from: 'table:none', to: 'reserve:none', category: null, isHighlighted: true },
+      { from: 'reserve:none', to: 'table:none', category: null, isHighlighted: true },
     ]);
   });
 

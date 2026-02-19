@@ -95,8 +95,8 @@ describe('layout-cache', () => {
 
   it('preserves the resolved layout mode', () => {
     const def = makeDef('game-a', [
-      zone('track-0', { zoneKind: 'board', adjacentTo: ['track-1'] }),
-      zone('track-1', { zoneKind: 'board', adjacentTo: ['track-0'] }),
+      zone('track-0', { zoneKind: 'board', adjacentTo: [{ to: 'track-1' }] }),
+      zone('track-1', { zoneKind: 'board', adjacentTo: [{ to: 'track-0' }] }),
     ]);
 
     const result = getOrComputeLayout(def, providerWithLayoutMode('track'));
@@ -147,8 +147,8 @@ describe('layout-cache', () => {
 
   it('recomputes when visual config identity changes for the same GameDef', () => {
     const def = makeDef('game-a', [
-      zone('track-0', { zoneKind: 'board', adjacentTo: ['track-1'] }),
-      zone('track-1', { zoneKind: 'board', adjacentTo: ['track-0'] }),
+      zone('track-0', { zoneKind: 'board', adjacentTo: [{ to: 'track-1' }] }),
+      zone('track-1', { zoneKind: 'board', adjacentTo: [{ to: 'track-0' }] }),
     ]);
 
     const first = getOrComputeLayout(def, providerWithLayoutMode('table'));
@@ -184,7 +184,7 @@ function makeDef(
 
 interface ZoneOverrides {
   readonly zoneKind?: ZoneDef['zoneKind'];
-  readonly adjacentTo?: readonly string[];
+  readonly adjacentTo?: ReadonlyArray<string | { readonly to: string }>;
   readonly owner?: ZoneDef['owner'];
   readonly ownerPlayerIndex?: ZoneDef['ownerPlayerIndex'];
   readonly visibility?: ZoneDef['visibility'];
@@ -192,14 +192,17 @@ interface ZoneOverrides {
 }
 
 function zone(id: string, overrides: ZoneOverrides = {}): ZoneDef {
-  const normalizedAdjacentTo = overrides.adjacentTo?.map((zoneID) => asZoneId(zoneID));
+  const { adjacentTo, ...restOverrides } = overrides;
+  const normalizedAdjacentTo = adjacentTo?.map((entry) => ({
+    to: asZoneId(typeof entry === 'string' ? entry : entry.to),
+  }));
 
   return {
     id: asZoneId(id),
     owner: 'none',
     visibility: 'public',
     ordering: 'set',
-    ...overrides,
+    ...restOverrides,
     ...(normalizedAdjacentTo === undefined ? {} : { adjacentTo: normalizedAdjacentTo }),
   } as ZoneDef;
 }

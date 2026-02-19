@@ -51,6 +51,7 @@ export interface RenderZone {
 export interface RenderAdjacency {
   readonly from: string;
   readonly to: string;
+  readonly category: string | null;
   readonly isHighlighted: boolean;
 }
 

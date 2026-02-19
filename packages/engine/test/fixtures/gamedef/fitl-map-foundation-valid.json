@@ -15,42 +15,104 @@
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
-      "adjacentTo": ["south_vietnam:none"]
+      "adjacentTo": [
+        {
+          "to": "south_vietnam:none",
+          "direction": "bidirectional"
+        }
+      ]
     },
     {
       "id": "hue:none",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
-      "adjacentTo": ["loc_ho_chi_minh_trail:none", "south_vietnam:none"]
+      "adjacentTo": [
+        {
+          "to": "loc_ho_chi_minh_trail:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "south_vietnam:none",
+          "direction": "bidirectional"
+        }
+      ]
     },
     {
       "id": "laos:none",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
-      "adjacentTo": ["north_vietnam:none", "south_vietnam:none"]
+      "adjacentTo": [
+        {
+          "to": "north_vietnam:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "south_vietnam:none",
+          "direction": "bidirectional"
+        }
+      ]
     },
     {
       "id": "loc_ho_chi_minh_trail:none",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
-      "adjacentTo": ["hue:none", "north_vietnam:none"]
+      "adjacentTo": [
+        {
+          "to": "hue:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "north_vietnam:none",
+          "direction": "bidirectional"
+        }
+      ]
     },
     {
       "id": "north_vietnam:none",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
-      "adjacentTo": ["laos:none", "loc_ho_chi_minh_trail:none", "south_vietnam:none"]
+      "adjacentTo": [
+        {
+          "to": "laos:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc_ho_chi_minh_trail:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "south_vietnam:none",
+          "direction": "bidirectional"
+        }
+      ]
     },
     {
       "id": "south_vietnam:none",
       "owner": "none",
       "visibility": "public",
       "ordering": "set",
-      "adjacentTo": ["cambodia:none", "hue:none", "laos:none", "north_vietnam:none"]
+      "adjacentTo": [
+        {
+          "to": "cambodia:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "hue:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "laos:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "north_vietnam:none",
+          "direction": "bidirectional"
+        }
+      ]
     }
   ],
   "tokenTypes": [],

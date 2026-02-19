@@ -231,7 +231,20 @@ export function deriveSectionsFromDataAssets(
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
-          adjacentTo: [...space.adjacentTo].sort((left, right) => left.localeCompare(right)),
+          adjacentTo: [...space.adjacentTo]
+            .sort((left, right) => {
+              const toCompare = left.to.localeCompare(right.to);
+              if (toCompare !== 0) {
+                return toCompare;
+              }
+              return (left.direction ?? 'bidirectional').localeCompare(right.direction ?? 'bidirectional');
+            })
+            .map((entry) => ({
+              to: entry.to,
+              direction: entry.direction ?? 'bidirectional',
+              ...(entry.category === undefined ? {} : { category: entry.category }),
+              ...(entry.attributes === undefined ? {} : { attributes: entry.attributes }),
+            })),
           ...(space.category === undefined ? {} : { category: space.category }),
           ...(space.attributes === undefined ? {} : { attributes: space.attributes }),
         }));

@@ -26,8 +26,8 @@ import { computeLayout } from '../../src/layout/compute-layout';
 describe('computeLayout graph mode', () => {
   it('produces positions for all board zones only', () => {
     const def = makeDef([
-      zone('board-a', { zoneKind: 'board', adjacentTo: ['board-b'] }),
-      zone('board-b', { zoneKind: 'board', adjacentTo: ['board-a'] }),
+      zone('board-a', { zoneKind: 'board', adjacentTo: [{ to: 'board-b' }] }),
+      zone('board-b', { zoneKind: 'board', adjacentTo: [{ to: 'board-a' }] }),
       zone('aux-x', { zoneKind: 'aux' }),
     ]);
 
@@ -40,9 +40,9 @@ describe('computeLayout graph mode', () => {
 
   it('returns finite coordinates and non-empty bounds for multiple zones', () => {
     const def = makeDef([
-      zone('a', { zoneKind: 'board', adjacentTo: ['b'] }),
-      zone('b', { zoneKind: 'board', adjacentTo: ['a', 'c'] }),
-      zone('c', { zoneKind: 'board', adjacentTo: ['b'] }),
+      zone('a', { zoneKind: 'board', adjacentTo: [{ to: 'b' }] }),
+      zone('b', { zoneKind: 'board', adjacentTo: [{ to: 'a' }, { to: 'c' }] }),
+      zone('c', { zoneKind: 'board', adjacentTo: [{ to: 'b' }] }),
     ]);
 
     const layout = computeLayout(def, 'graph');
@@ -79,8 +79,8 @@ describe('computeLayout graph mode', () => {
 
   it('centers layout on origin', () => {
     const def = makeDef([
-      zone('a', { zoneKind: 'board', adjacentTo: ['b'] }),
-      zone('b', { zoneKind: 'board', adjacentTo: ['a'] }),
+      zone('a', { zoneKind: 'board', adjacentTo: [{ to: 'b' }] }),
+      zone('b', { zoneKind: 'board', adjacentTo: [{ to: 'a' }] }),
       zone('c', { zoneKind: 'board' }),
     ]);
     const layout = computeLayout(def, 'graph');
@@ -101,10 +101,10 @@ describe('computeLayout graph mode', () => {
 
   it('keeps disconnected components', () => {
     const layout = computeLayout(makeDef([
-      zone('a1', { zoneKind: 'board', adjacentTo: ['a2'] }),
-      zone('a2', { zoneKind: 'board', adjacentTo: ['a1'] }),
-      zone('b1', { zoneKind: 'board', adjacentTo: ['b2'] }),
-      zone('b2', { zoneKind: 'board', adjacentTo: ['b1'] }),
+      zone('a1', { zoneKind: 'board', adjacentTo: [{ to: 'a2' }] }),
+      zone('a2', { zoneKind: 'board', adjacentTo: [{ to: 'a1' }] }),
+      zone('b1', { zoneKind: 'board', adjacentTo: [{ to: 'b2' }] }),
+      zone('b2', { zoneKind: 'board', adjacentTo: [{ to: 'b1' }] }),
     ]), 'graph');
 
     expect(layout.positions.size).toBe(4);
@@ -133,8 +133,8 @@ describe('computeLayout graph mode', () => {
   it('does not depend on Math.random for seeding', () => {
     const randomSpy = vi.spyOn(Math, 'random');
     computeLayout(makeDef([
-      zone('a', { zoneKind: 'board', adjacentTo: ['b'] }),
-      zone('b', { zoneKind: 'board', adjacentTo: ['a'] }),
+      zone('a', { zoneKind: 'board', adjacentTo: [{ to: 'b' }] }),
+      zone('b', { zoneKind: 'board', adjacentTo: [{ to: 'a' }] }),
     ]), 'graph');
     expect(randomSpy).not.toHaveBeenCalled();
     randomSpy.mockRestore();
@@ -185,10 +185,10 @@ describe('computeLayout graph mode', () => {
 
   it('groups same-country zones into the same angular sector via attribute seeding', () => {
     const zones = [
-      zone('a1', { zoneKind: 'board', adjacentTo: ['a2'], attributes: { country: 'alpha' }, category: 'city' }),
-      zone('a2', { zoneKind: 'board', adjacentTo: ['a1', 'b1'], attributes: { country: 'alpha' }, category: 'province' }),
-      zone('b1', { zoneKind: 'board', adjacentTo: ['a2', 'b2'], attributes: { country: 'beta' }, category: 'city' }),
-      zone('b2', { zoneKind: 'board', adjacentTo: ['b1'], attributes: { country: 'beta' }, category: 'province' }),
+      zone('a1', { zoneKind: 'board', adjacentTo: [{ to: 'a2' }], attributes: { country: 'alpha' }, category: 'city' }),
+      zone('a2', { zoneKind: 'board', adjacentTo: [{ to: 'a1' }, { to: 'b1' }], attributes: { country: 'alpha' }, category: 'province' }),
+      zone('b1', { zoneKind: 'board', adjacentTo: [{ to: 'a2' }, { to: 'b2' }], attributes: { country: 'beta' }, category: 'city' }),
+      zone('b2', { zoneKind: 'board', adjacentTo: [{ to: 'b1' }], attributes: { country: 'beta' }, category: 'province' }),
     ];
     const layout = computeLayout(makeDef(zones), 'graph');
 
@@ -206,10 +206,10 @@ describe('computeLayout graph mode', () => {
 
   it('falls back to category-only seeding when zones lack grouping attributes', () => {
     const zones = [
-      zone('x1', { zoneKind: 'board', adjacentTo: ['x2'], category: 'city' }),
-      zone('x2', { zoneKind: 'board', adjacentTo: ['x1', 'y1'], category: 'city' }),
-      zone('y1', { zoneKind: 'board', adjacentTo: ['x2', 'y2'], category: 'province' }),
-      zone('y2', { zoneKind: 'board', adjacentTo: ['y1'], category: 'province' }),
+      zone('x1', { zoneKind: 'board', adjacentTo: [{ to: 'x2' }], category: 'city' }),
+      zone('x2', { zoneKind: 'board', adjacentTo: [{ to: 'x1' }, { to: 'y1' }], category: 'city' }),
+      zone('y1', { zoneKind: 'board', adjacentTo: [{ to: 'x2' }, { to: 'y2' }], category: 'province' }),
+      zone('y2', { zoneKind: 'board', adjacentTo: [{ to: 'y1' }], category: 'province' }),
     ];
     const layout = computeLayout(makeDef(zones), 'graph');
 
@@ -234,7 +234,7 @@ describe('computeLayout dispatcher', () => {
   });
 
   it('routes track mode', () => {
-    const layout = computeLayout(makeDef([zone('track-0', { adjacentTo: ['track-1'] }), zone('track-1', { adjacentTo: ['track-0'] })]), 'track');
+    const layout = computeLayout(makeDef([zone('track-0', { adjacentTo: [{ to: 'track-1' }] }), zone('track-1', { adjacentTo: [{ to: 'track-0' }] })]), 'track');
     expect(layout.mode).toBe('track');
     expect(layout.positions.size).toBe(2);
   });
@@ -284,12 +284,12 @@ describe('computeLayout track mode', () => {
 
   it('handles cycles with stable non-overlapping positions', () => {
     const layout = computeLayout(makeDef([
-      zone('a', { adjacentTo: ['b', 'f'] }),
-      zone('b', { adjacentTo: ['a', 'c'] }),
-      zone('c', { adjacentTo: ['b', 'd'] }),
-      zone('d', { adjacentTo: ['c', 'e'] }),
-      zone('e', { adjacentTo: ['d', 'f'] }),
-      zone('f', { adjacentTo: ['e', 'a'] }),
+      zone('a', { adjacentTo: [{ to: 'b' }, { to: 'f' }] }),
+      zone('b', { adjacentTo: [{ to: 'a' }, { to: 'c' }] }),
+      zone('c', { adjacentTo: [{ to: 'b' }, { to: 'd' }] }),
+      zone('d', { adjacentTo: [{ to: 'c' }, { to: 'e' }] }),
+      zone('e', { adjacentTo: [{ to: 'd' }, { to: 'f' }] }),
+      zone('f', { adjacentTo: [{ to: 'e' }, { to: 'a' }] }),
     ]), 'track');
 
     expect(layout.positions.size).toBe(6);
@@ -305,11 +305,11 @@ describe('computeLayout track mode', () => {
 
   it('keeps main chain ordering readable when a branch exists', () => {
     const layout = computeLayout(makeDef([
-      zone('main-0', { adjacentTo: ['main-1'] }),
-      zone('main-1', { adjacentTo: ['main-0', 'main-2'] }),
-      zone('main-2', { adjacentTo: ['main-1', 'main-3', 'spur'] }),
-      zone('main-3', { adjacentTo: ['main-2'] }),
-      zone('spur', { adjacentTo: ['main-2'] }),
+      zone('main-0', { adjacentTo: [{ to: 'main-1' }] }),
+      zone('main-1', { adjacentTo: [{ to: 'main-0' }, { to: 'main-2' }] }),
+      zone('main-2', { adjacentTo: [{ to: 'main-1' }, { to: 'main-3' }, { to: 'spur' }] }),
+      zone('main-3', { adjacentTo: [{ to: 'main-2' }] }),
+      zone('spur', { adjacentTo: [{ to: 'main-2' }] }),
     ]), 'track');
 
     const main0 = layout.positions.get('main-0')!;
@@ -519,7 +519,7 @@ function makeDef(zones: readonly ZoneDef[]): GameDef {
 
 interface ZoneOverrides {
   readonly zoneKind?: ZoneDef['zoneKind'];
-  readonly adjacentTo?: readonly string[];
+  readonly adjacentTo?: ReadonlyArray<string | { readonly to: string }>;
   readonly category?: ZoneDef['category'];
   readonly owner?: ZoneDef['owner'];
   readonly ownerPlayerIndex?: ZoneDef['ownerPlayerIndex'];
@@ -527,14 +527,17 @@ interface ZoneOverrides {
 }
 
 function zone(id: string, overrides: ZoneOverrides = {}): ZoneDef {
-  const normalizedAdjacentTo = overrides.adjacentTo?.map((zoneID) => asZoneId(zoneID));
+  const { adjacentTo, ...restOverrides } = overrides;
+  const normalizedAdjacentTo = adjacentTo?.map((entry) => ({
+    to: asZoneId(typeof entry === 'string' ? entry : entry.to),
+  }));
 
   return {
     id: asZoneId(id),
     owner: 'none',
     visibility: 'public',
     ordering: 'set',
-    ...overrides,
+    ...restOverrides,
     ...(normalizedAdjacentTo === undefined ? {} : { adjacentTo: normalizedAdjacentTo }),
   } as ZoneDef;
 }

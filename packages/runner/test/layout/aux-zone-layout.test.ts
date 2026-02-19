@@ -12,7 +12,7 @@ describe('computeAuxLayout', () => {
   it('groups stack zones without adjacency into Cards', () => {
     const result = computeAuxLayout([
       zone('deck:none', { ordering: 'stack' }),
-      zone('discard:none', { ordering: 'stack', adjacentTo: ['somewhere:none'] }),
+      zone('discard:none', { ordering: 'stack', adjacentTo: [{ to: 'somewhere:none' }] }),
     ], BOARD_BOUNDS, NULL_PROVIDER);
 
     expect(result.groups).toEqual([
@@ -245,18 +245,21 @@ interface ZoneOverrides {
   readonly owner?: ZoneDef['owner'];
   readonly visibility?: ZoneDef['visibility'];
   readonly ordering?: ZoneDef['ordering'];
-  readonly adjacentTo?: readonly string[];
+  readonly adjacentTo?: ReadonlyArray<string | { readonly to: string }>;
 }
 
 function zone(id: string, overrides: ZoneOverrides = {}): ZoneDef {
-  const normalizedAdjacentTo = overrides.adjacentTo?.map((zoneID) => asZoneId(zoneID));
+  const { adjacentTo, ...restOverrides } = overrides;
+  const normalizedAdjacentTo = adjacentTo?.map((entry) => ({
+    to: asZoneId(typeof entry === 'string' ? entry : entry.to),
+  }));
 
   return {
     id: asZoneId(id),
     owner: 'none',
     visibility: 'public',
     ordering: 'set',
-    ...overrides,
+    ...restOverrides,
     ...(normalizedAdjacentTo === undefined ? {} : { adjacentTo: normalizedAdjacentTo }),
   } as ZoneDef;
 }

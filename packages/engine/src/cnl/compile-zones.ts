@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import { asZoneId, type ZoneId } from '../kernel/branded.js';
+import { asZoneId } from '../kernel/branded.js';
 import type { ZoneDef } from '../kernel/types.js';
 import type { GameSpecZoneDef } from './game-spec-doc.js';
 import { normalizeZoneOwnerQualifier } from './compile-selectors.js';
@@ -96,7 +96,7 @@ export function materializeZoneDefs(
           undefined,
           visibility,
           ordering,
-          zone.adjacentTo,
+          normalizeAdjacentTo(zone.adjacentTo, `${zonePath}.adjacentTo`, diagnostics),
           zoneKind,
           zone.category,
           zone.attributes,
@@ -113,7 +113,7 @@ export function materializeZoneDefs(
           playerId,
           visibility,
           ordering,
-          zone.adjacentTo,
+          normalizeAdjacentTo(zone.adjacentTo, `${zonePath}.adjacentTo`, diagnostics),
           zoneKind,
           zone.category,
           zone.attributes,
@@ -276,11 +276,50 @@ function mergeZoneOwnership(map: Map<string, ZoneOwnershipKind>, base: string, o
   }
 }
 
-function normalizeAdjacentTo(value: GameSpecZoneDef['adjacentTo']): readonly ZoneId[] | undefined {
+function normalizeAdjacentTo(
+  value: GameSpecZoneDef['adjacentTo'],
+  path: string,
+  diagnostics: Diagnostic[],
+): readonly NonNullable<ZoneDef['adjacentTo']>[number][] | undefined {
   if (value === undefined) {
     return undefined;
   }
-  return value.map((zoneId) => asZoneId(zoneId));
+  const normalized: NonNullable<ZoneDef['adjacentTo']>[number][] = [];
+  for (const [index, adjacency] of value.entries()) {
+    if (typeof adjacency.to !== 'string' || adjacency.to.trim() === '') {
+      diagnostics.push({
+        code: 'CNL_COMPILER_ZONE_ADJACENCY_INVALID',
+        path: `${path}.${index}.to`,
+        severity: 'error',
+        message: 'Zone adjacency entries must define a non-empty "to" string.',
+        suggestion: 'Set adjacency entries as objects: { to: \"zone-id\" }.',
+      });
+      continue;
+    }
+
+    if (
+      adjacency.direction !== undefined
+      && adjacency.direction !== 'bidirectional'
+      && adjacency.direction !== 'unidirectional'
+    ) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_ZONE_ADJACENCY_DIRECTION_INVALID',
+        path: `${path}.${index}.direction`,
+        severity: 'error',
+        message: 'Zone adjacency direction must be "bidirectional" or "unidirectional".',
+        suggestion: 'Omit direction for default bidirectional edges, or set direction: "unidirectional".',
+      });
+      continue;
+    }
+
+    normalized.push({
+      to: asZoneId(adjacency.to),
+      direction: adjacency.direction ?? 'bidirectional',
+      ...(adjacency.category === undefined ? {} : { category: adjacency.category }),
+      ...(adjacency.attributes === undefined ? {} : { attributes: adjacency.attributes }),
+    });
+  }
+  return normalized;
 }
 
 /**
@@ -323,12 +362,11 @@ function createZoneDef(
   ownerPlayerIndex: ZoneDef['ownerPlayerIndex'],
   visibility: ZoneDef['visibility'],
   ordering: ZoneDef['ordering'],
-  adjacentTo: GameSpecZoneDef['adjacentTo'],
+  adjacentTo: ZoneDef['adjacentTo'],
   zoneKind: 'board' | 'aux',
   category: GameSpecZoneDef['category'],
   attributes: GameSpecZoneDef['attributes'],
 ): ZoneDef {
-  const normalizedAdjacentTo = normalizeAdjacentTo(adjacentTo);
   return {
     id: asZoneId(id),
     zoneKind,
@@ -336,7 +374,7 @@ function createZoneDef(
     ...(ownerPlayerIndex === undefined ? {} : { ownerPlayerIndex }),
     visibility,
     ordering,
-    ...(normalizedAdjacentTo === undefined ? {} : { adjacentTo: normalizedAdjacentTo }),
+    ...(adjacentTo === undefined ? {} : { adjacentTo }),
     ...(category === undefined ? {} : { category }),
     ...(attributes === undefined ? {} : { attributes }),
   };

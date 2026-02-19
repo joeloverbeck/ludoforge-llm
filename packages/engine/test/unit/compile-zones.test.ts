@@ -40,6 +40,42 @@ describe('materializeZoneDefs', () => {
     assert.equal(result.value.ownershipByBase.market, 'none');
   });
 
+  it('materializes omitted adjacency direction as explicit bidirectional', () => {
+    const result = materializeZoneDefs(
+      [
+        {
+          id: 'a',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: [{ to: 'b:none' }],
+        },
+      ],
+      2,
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value.zones[0]?.adjacentTo, [{ to: 'b:none', direction: 'bidirectional' }]);
+  });
+
+  it('reports invalid adjacency direction with stable path', () => {
+    const result = materializeZoneDefs(
+      [
+        {
+          id: 'a',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: [{ to: 'b:none', direction: 'invalid' as unknown as 'bidirectional' }],
+        },
+      ],
+      2,
+    );
+
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_ADJACENCY_DIRECTION_INVALID');
+    assert.equal(result.diagnostics[0]?.path, 'doc.zones.0.adjacentTo.0.direction');
+  });
+
 });
 
 describe('canonicalizeZoneSelector', () => {

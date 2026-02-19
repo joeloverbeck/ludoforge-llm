@@ -60,6 +60,16 @@ describe('visual-config.yaml files', () => {
       expect(['card', 'forcePool', 'hand', 'other']).toContain(role);
     }
 
+    expect(parsed.edges?.default).toEqual({
+      color: '#6b7280',
+      width: 1.5,
+      alpha: 0.3,
+    });
+    expect(parsed.edges?.categoryStyles?.loc).toEqual({
+      color: '#8b7355',
+      width: 2,
+    });
+
     const attributeRules = parsed.zones?.attributeRules ?? [];
     expect(attributeRules).toHaveLength(5);
     expect(attributeRules).toEqual([

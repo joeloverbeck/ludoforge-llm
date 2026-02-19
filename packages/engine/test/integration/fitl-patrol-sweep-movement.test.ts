@@ -76,9 +76,9 @@ const availableUS = asZoneId('available-US:none');
 const availableARVN = asZoneId('available-ARVN:none');
 
 const zoneDefs: readonly ZoneDef[] = [
-  { id: locId, owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [adjProvince1Id, adjProvince2Id] },
-  { id: adjProvince1Id, owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [locId] },
-  { id: adjProvince2Id, owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [locId] },
+  { id: locId, owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: adjProvince1Id }, { to: adjProvince2Id }] },
+  { id: adjProvince1Id, owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: locId }] },
+  { id: adjProvince2Id, owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: locId }] },
   { id: availableUS, owner: 'none', visibility: 'public', ordering: 'set' },
   { id: availableARVN, owner: 'none', visibility: 'public', ordering: 'set' },
 ];

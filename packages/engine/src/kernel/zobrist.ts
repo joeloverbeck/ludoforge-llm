@@ -28,7 +28,22 @@ const encodeVariableDef = (def: GameDef['globalVars'][number]): string =>
 const canonicalizeGameDefFingerprint = (def: GameDef): string => {
   const zones = [...def.zones]
     .map((zone) => {
-      const adjacency = [...(zone.adjacentTo ?? [])].map((id) => String(id)).sort();
+      const adjacency = [...(zone.adjacentTo ?? [])]
+        .map((entry) => {
+          const attributes = entry.attributes === undefined
+            ? ''
+            : Object.entries(entry.attributes)
+              .sort(([left], [right]) => left.localeCompare(right))
+              .map(([key, value]) => `${key}:${JSON.stringify(value)}`)
+              .join(',');
+          return [
+            `to=${String(entry.to)}`,
+            `direction=${entry.direction ?? 'bidirectional'}`,
+            `category=${entry.category ?? ''}`,
+            `attributes=${attributes}`,
+          ].join('|');
+        })
+        .sort();
       return [
         `id=${String(zone.id)}`,
         `owner=${zone.owner}`,

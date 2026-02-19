@@ -97,6 +97,7 @@ function adjacenciesVisuallyEqualItem(previous: RenderAdjacency, current: Render
   return (
     previous.from === current.from
     && previous.to === current.to
+    && previous.category === current.category
     && previous.isHighlighted === current.isHighlighted
   );
 }

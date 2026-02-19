@@ -401,9 +401,19 @@ function zoneDefToSpecZone(zone: {
   readonly owner: unknown;
   readonly visibility: unknown;
   readonly ordering: unknown;
-  readonly adjacentTo?: readonly unknown[];
+  readonly adjacentTo?: readonly {
+    readonly to: unknown;
+    readonly direction?: unknown;
+    readonly category?: unknown;
+    readonly attributes?: unknown;
+  }[];
 }): unknown {
-  const adjacentTo = zone.adjacentTo?.map((entry) => String(entry));
+  const adjacentTo = zone.adjacentTo?.map((entry) => ({
+    to: String(entry.to),
+    ...(entry.direction === undefined ? {} : { direction: entry.direction }),
+    ...(entry.category === undefined ? {} : { category: entry.category }),
+    ...(entry.attributes === undefined ? {} : { attributes: entry.attributes }),
+  }));
   if (adjacentTo === undefined) {
     return {
       id: String(zone.id),

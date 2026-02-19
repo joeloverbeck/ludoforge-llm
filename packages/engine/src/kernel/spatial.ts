@@ -23,13 +23,16 @@ export function buildAdjacencyGraph(zones: readonly ZoneDef[]): AdjacencyGraph {
   });
 
   zones.forEach((zone) => {
-    zone.adjacentTo?.forEach((adjacentZoneId) => {
+    zone.adjacentTo?.forEach((adjacency) => {
+      const adjacentZoneId = adjacency.to;
       if (adjacentZoneId === zone.id || !zoneIds.has(adjacentZoneId)) {
         return;
       }
 
       normalizedNeighbors.get(zone.id)?.add(adjacentZoneId);
-      normalizedNeighbors.get(adjacentZoneId)?.add(zone.id);
+      if (adjacency.direction !== 'unidirectional') {
+        normalizedNeighbors.get(adjacentZoneId)?.add(zone.id);
+      }
     });
   });
 
@@ -53,7 +56,7 @@ export function validateAdjacency(graph: AdjacencyGraph, zones: readonly ZoneDef
   const zoneById = new Map(zones.map((zone) => [zone.id, zone] as const));
 
   zones.forEach((zone, zoneIndex) => {
-    const seen = new Set<ZoneId>();
+    const seen = new Map<ZoneId, 'bidirectional' | 'unidirectional'>();
     const adjacentTo = zone.adjacentTo ?? [];
 
     for (let adjacentIndex = 1; adjacentIndex < adjacentTo.length; adjacentIndex += 1) {
@@ -63,10 +66,15 @@ export function validateAdjacency(graph: AdjacencyGraph, zones: readonly ZoneDef
         continue;
       }
 
-      if (previous.localeCompare(current) > 0) {
+      const previousDirection = previous.direction ?? 'bidirectional';
+      const currentDirection = current.direction ?? 'bidirectional';
+      if (
+        previous.to.localeCompare(current.to) > 0
+        || (previous.to === current.to && previousDirection.localeCompare(currentDirection) > 0)
+      ) {
         diagnostics.push({
           code: 'SPATIAL_NEIGHBORS_UNSORTED',
-          path: `zones[${zoneIndex}].adjacentTo[${adjacentIndex}]`,
+          path: `zones[${zoneIndex}].adjacentTo[${adjacentIndex}].to`,
           severity: 'error',
           message: `Zone "${zone.id}" adjacentTo entries must be lexicographically sorted.`,
           suggestion: `Sort adjacentTo entries for "${zone.id}" in ascending lexicographic order.`,
@@ -75,8 +83,10 @@ export function validateAdjacency(graph: AdjacencyGraph, zones: readonly ZoneDef
       }
     }
 
-    adjacentTo.forEach((adjacentZoneId, adjacentIndex) => {
-      const path = `zones[${zoneIndex}].adjacentTo[${adjacentIndex}]`;
+    adjacentTo.forEach((adjacency, adjacentIndex) => {
+      const adjacentZoneId = adjacency.to;
+      const path = `zones[${zoneIndex}].adjacentTo[${adjacentIndex}].to`;
+      const directionPath = `zones[${zoneIndex}].adjacentTo[${adjacentIndex}].direction`;
 
       if (!zoneSet.has(adjacentZoneId)) {
         diagnostics.push({
@@ -85,6 +95,17 @@ export function validateAdjacency(graph: AdjacencyGraph, zones: readonly ZoneDef
           severity: 'error',
           message: `Zone "${zone.id}" references unknown adjacent zone "${adjacentZoneId}".`,
           suggestion: `Use one of the declared zone ids for adjacentTo.`,
+        });
+        return;
+      }
+
+      if (adjacency.direction !== 'bidirectional' && adjacency.direction !== 'unidirectional') {
+        diagnostics.push({
+          code: 'SPATIAL_ADJACENCY_DIRECTION_REQUIRED',
+          path: directionPath,
+          severity: 'error',
+          message: `Zone "${zone.id}" adjacency to "${adjacentZoneId}" must declare explicit direction.`,
+          suggestion: 'Set adjacency.direction to "bidirectional" or "unidirectional".',
         });
         return;
       }
@@ -99,7 +120,16 @@ export function validateAdjacency(graph: AdjacencyGraph, zones: readonly ZoneDef
         });
       }
 
-      if (seen.has(adjacentZoneId)) {
+      const previousDirection = seen.get(adjacentZoneId);
+      if (previousDirection !== undefined && previousDirection !== adjacency.direction) {
+        diagnostics.push({
+          code: 'SPATIAL_CONFLICTING_NEIGHBOR_DIRECTION',
+          path: directionPath,
+          severity: 'error',
+          message: `Zone "${zone.id}" declares conflicting directions for adjacent zone "${adjacentZoneId}".`,
+          suggestion: `Use a single direction for "${adjacentZoneId}" under zone "${zone.id}".`,
+        });
+      } else if (previousDirection !== undefined) {
         diagnostics.push({
           code: 'SPATIAL_DUPLICATE_NEIGHBOR',
           path,
@@ -108,14 +138,18 @@ export function validateAdjacency(graph: AdjacencyGraph, zones: readonly ZoneDef
           suggestion: `Keep only one "${adjacentZoneId}" entry in adjacentTo.`,
         });
       } else {
-        seen.add(adjacentZoneId);
+        seen.set(adjacentZoneId, adjacency.direction);
       }
 
       if (adjacentZoneId === zone.id) {
         return;
       }
 
-      const reverseDeclared = zoneById.get(adjacentZoneId)?.adjacentTo?.includes(zone.id) ?? false;
+      if (adjacency.direction === 'unidirectional') {
+        return;
+      }
+
+      const reverseDeclared = zoneById.get(adjacentZoneId)?.adjacentTo?.some((candidate) => candidate.to === zone.id) ?? false;
       if (!reverseDeclared) {
         diagnostics.push({
           code: 'SPATIAL_ASYMMETRIC_EDGE_NORMALIZED',

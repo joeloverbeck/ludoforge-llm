@@ -42,7 +42,7 @@ const fullGameDef: GameDef = {
       owner: 'none',
       visibility: 'hidden',
       ordering: 'stack',
-      adjacentTo: [asZoneId('discard:none')],
+      adjacentTo: [{ to: asZoneId('discard:none'), direction: 'unidirectional' }],
     },
     { id: asZoneId('discard:none'), zoneKind: 'aux', owner: 'none', visibility: 'public', ordering: 'stack' },
   ],
@@ -331,6 +331,27 @@ describe('json schema artifacts', () => {
     const validate = ajv.compile(gameDefSchema);
 
     assert.equal(validate(fullGameDef), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('game def with invalid adjacency direction fails GameDef.schema.json validation', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(gameDefSchema);
+    const invalid = {
+      ...fullGameDef,
+      zones: [
+        {
+          ...fullGameDef.zones[0],
+          adjacentTo: [{ to: 'discard:none', direction: 'invalid' }],
+        },
+        fullGameDef.zones[1],
+      ],
+    };
+
+    assert.equal(validate(invalid), false);
+    assert.ok(
+      validate.errors?.some((error) => error.instancePath.includes('/zones/0/adjacentTo/0/direction')),
+      JSON.stringify(validate.errors, null, 2),
+    );
   });
 
   it('game def with modern eventDeck fields validates against GameDef.schema.json', () => {

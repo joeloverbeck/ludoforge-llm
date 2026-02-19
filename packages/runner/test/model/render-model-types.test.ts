@@ -36,7 +36,7 @@ describe('render-model types', () => {
           metadata: {},
         },
       ],
-      adjacencies: [{ from: 'table', to: 'reserve', isHighlighted: false }],
+      adjacencies: [{ from: 'table', to: 'reserve', category: null, isHighlighted: false }],
       tokens: [
         {
           id: 'token:1',

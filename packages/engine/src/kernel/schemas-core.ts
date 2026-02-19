@@ -68,7 +68,14 @@ export const ZoneDefSchema = z
     owner: z.union([z.literal('none'), z.literal('player')]),
     visibility: z.union([z.literal('public'), z.literal('owner'), z.literal('hidden')]),
     ordering: z.union([z.literal('stack'), z.literal('queue'), z.literal('set')]),
-    adjacentTo: z.array(StringSchema).optional(),
+    adjacentTo: z.array(
+      z.object({
+        to: StringSchema,
+        direction: z.union([z.literal('bidirectional'), z.literal('unidirectional')]).optional(),
+        category: StringSchema.optional(),
+        attributes: z.record(StringSchema, AttributeValueSchema).optional(),
+      }).strict(),
+    ).optional(),
     category: StringSchema.optional(),
     attributes: z.record(StringSchema, AttributeValueSchema).optional(),
   })

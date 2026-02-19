@@ -40,7 +40,14 @@ function mapSpaceInputToZoneDef(space: MapSpaceInput): ZoneDef {
     owner: 'none',
     visibility: 'public',
     ordering: 'set',
-    adjacentTo: [...space.adjacentTo].sort((left, right) => left.localeCompare(right)).map(asZoneId),
+    adjacentTo: [...space.adjacentTo]
+      .sort((left, right) => left.to.localeCompare(right.to))
+      .map((entry) => ({
+        to: asZoneId(entry.to),
+        ...(entry.direction === undefined ? {} : { direction: entry.direction }),
+        ...(entry.category === undefined ? {} : { category: entry.category }),
+        ...(entry.attributes === undefined ? {} : { attributes: entry.attributes }),
+      })),
     ...(space.category === undefined ? {} : { category: space.category }),
     ...(space.attributes === undefined ? {} : { attributes: space.attributes }),
   };

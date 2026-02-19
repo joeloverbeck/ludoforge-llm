@@ -17,7 +17,7 @@ function baseZone(id: string, adjacentTo: readonly string[]): ZoneDef {
     owner: 'none',
     visibility: 'public',
     ordering: 'set',
-    adjacentTo: sortedAdjacentTo.map((zoneId) => asZoneId(zoneId)),
+    adjacentTo: sortedAdjacentTo.map((zoneId) => ({ to: asZoneId(zoneId), direction: 'bidirectional' })),
   };
 }
 

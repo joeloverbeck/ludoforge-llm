@@ -33,7 +33,12 @@ export interface GameSpecZoneDef {
   readonly owner: string;
   readonly visibility: string;
   readonly ordering: string;
-  readonly adjacentTo?: readonly string[];
+  readonly adjacentTo?: ReadonlyArray<{
+    readonly to: string;
+    readonly direction?: 'bidirectional' | 'unidirectional';
+    readonly category?: string;
+    readonly attributes?: Readonly<Record<string, AttributeValue>>;
+  }>;
   readonly category?: string;
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
 }

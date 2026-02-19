@@ -193,6 +193,57 @@ describe('VisualConfigProvider', () => {
     });
   });
 
+  it('resolveEdgeStyle returns fallback defaults for default and highlighted styles', () => {
+    const provider = new VisualConfigProvider(null);
+
+    expect(provider.resolveEdgeStyle(null, false)).toEqual({
+      color: '#6b7280',
+      width: 1.5,
+      alpha: 0.3,
+    });
+    expect(provider.resolveEdgeStyle(null, true)).toEqual({
+      color: '#93c5fd',
+      width: 3,
+      alpha: 0.7,
+    });
+  });
+
+  it('resolveEdgeStyle applies category styles over defaults', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      edges: {
+        categoryStyles: {
+          loc: { color: '#8b7355', width: 2 },
+        },
+      },
+    });
+
+    expect(provider.resolveEdgeStyle('loc', false)).toEqual({
+      color: '#8b7355',
+      width: 2,
+      alpha: 0.3,
+    });
+  });
+
+  it('resolveEdgeStyle applies highlighted config with highest precedence', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      edges: {
+        default: { color: '#010101', width: 1, alpha: 0.1 },
+        categoryStyles: {
+          loc: { color: '#8b7355', width: 2, alpha: 0.2 },
+        },
+        highlighted: { color: '#ff00ff', width: 5, alpha: 0.9 },
+      },
+    });
+
+    expect(provider.resolveEdgeStyle('loc', true)).toEqual({
+      color: '#ff00ff',
+      width: 5,
+      alpha: 0.9,
+    });
+  });
+
   it('layout role returns configured value for known zone and null otherwise', () => {
     const provider = new VisualConfigProvider({
       version: 1,

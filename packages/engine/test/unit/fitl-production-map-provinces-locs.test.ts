@@ -15,7 +15,7 @@ type MapSpace = {
     readonly country: string;
     readonly coastal: boolean;
   };
-  readonly adjacentTo: readonly string[];
+  readonly adjacentTo: ReadonlyArray<{ readonly to: string }>;
 };
 
 const readMapSpaces = (): MapSpace[] => {

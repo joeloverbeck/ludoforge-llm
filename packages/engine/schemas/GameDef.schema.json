@@ -229,7 +229,56 @@
           "adjacentTo": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "object",
+              "properties": {
+                "to": {
+                  "type": "string"
+                },
+                "direction": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "bidirectional"
+                    },
+                    {
+                      "type": "string",
+                      "const": "unidirectional"
+                    }
+                  ]
+                },
+                "category": {
+                  "type": "string"
+                },
+                "attributes": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "to"
+              ],
+              "additionalProperties": false
             }
           },
           "category": {

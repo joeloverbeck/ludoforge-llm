@@ -57,12 +57,21 @@ export const AttributeValueSchema = z.union([
   z.array(StringSchema),
 ]);
 
+export const AdjacencyEntrySchema = z
+  .object({
+    to: StringSchema.min(1),
+    direction: z.union([z.literal('bidirectional'), z.literal('unidirectional')]).optional(),
+    category: StringSchema.min(1).optional(),
+    attributes: z.record(StringSchema, AttributeValueSchema).optional(),
+  })
+  .strict();
+
 export const MapSpaceSchema = z
   .object({
     id: StringSchema.min(1),
     category: StringSchema.min(1).optional(),
     attributes: z.record(StringSchema, AttributeValueSchema).optional(),
-    adjacentTo: z.array(StringSchema.min(1)),
+    adjacentTo: z.array(AdjacencyEntrySchema),
   })
   .strict();
 

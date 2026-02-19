@@ -80,6 +80,18 @@ const ZonesConfigSchema = z.object({
   layoutRoles: z.record(z.string(), LayoutRoleSchema).optional(),
 });
 
+const EdgeVisualStyleSchema = z.object({
+  color: z.string().optional(),
+  width: z.number().optional(),
+  alpha: z.number().optional(),
+});
+
+const EdgesConfigSchema = z.object({
+  default: EdgeVisualStyleSchema.optional(),
+  highlighted: EdgeVisualStyleSchema.optional(),
+  categoryStyles: z.record(z.string(), EdgeVisualStyleSchema).optional(),
+});
+
 const TokenTypeVisualStyleSchema = z.object({
   shape: TokenShapeSchema.optional(),
   color: z.string().optional(),
@@ -151,6 +163,7 @@ export const VisualConfigSchema = z.object({
   layout: LayoutConfigSchema.optional(),
   factions: z.record(z.string(), FactionVisualConfigSchema).optional(),
   zones: ZonesConfigSchema.optional(),
+  edges: EdgesConfigSchema.optional(),
   tokenTypes: z.record(z.string(), TokenTypeVisualStyleSchema).optional(),
   cardAnimation: CardAnimationConfigSchema.optional(),
   animations: AnimationsConfigSchema.optional(),
@@ -171,6 +184,8 @@ export type ZoneVisualOverride = z.infer<typeof ZoneVisualOverrideSchema>;
 export type AttributeRuleMatch = z.infer<typeof AttributeRuleMatchSchema>;
 export type AttributeRule = z.infer<typeof AttributeRuleSchema>;
 export type ZonesConfig = z.infer<typeof ZonesConfigSchema>;
+export type EdgeVisualStyle = z.infer<typeof EdgeVisualStyleSchema>;
+export type EdgesConfig = z.infer<typeof EdgesConfigSchema>;
 export type TokenTypeVisualStyle = z.infer<typeof TokenTypeVisualStyleSchema>;
 export type CardTokenTypeSelectors = z.infer<typeof CardTokenTypeSelectorsSchema>;
 export type CardAnimationZoneRoles = z.infer<typeof CardAnimationZoneRolesSchema>;

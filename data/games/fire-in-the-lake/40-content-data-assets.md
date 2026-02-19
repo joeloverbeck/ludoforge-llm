@@ -15,9 +15,9 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - quang-tri-thua-thien:none
-            - loc-hue-khe-sanh:none
-            - loc-hue-da-nang:none
+            - to: quang-tri-thua-thien:none
+            - to: loc-hue-khe-sanh:none
+            - to: loc-hue-da-nang:none
         - id: da-nang:none
           category: city
           attributes:
@@ -27,11 +27,11 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - quang-nam:none
-            - quang-tin-quang-ngai:none
-            - loc-hue-da-nang:none
-            - loc-da-nang-qui-nhon:none
-            - loc-da-nang-dak-to:none
+            - to: quang-nam:none
+            - to: quang-tin-quang-ngai:none
+            - to: loc-hue-da-nang:none
+            - to: loc-da-nang-qui-nhon:none
+            - to: loc-da-nang-dak-to:none
         - id: kontum:none
           category: city
           attributes:
@@ -41,12 +41,12 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - binh-dinh:none
-            - pleiku-darlac:none
-            - phu-bon-phu-yen:none
-            - loc-kontum-dak-to:none
-            - loc-kontum-ban-me-thuot:none
-            - loc-kontum-qui-nhon:none
+            - to: binh-dinh:none
+            - to: pleiku-darlac:none
+            - to: phu-bon-phu-yen:none
+            - to: loc-kontum-dak-to:none
+            - to: loc-kontum-ban-me-thuot:none
+            - to: loc-kontum-qui-nhon:none
         - id: qui-nhon:none
           category: city
           attributes:
@@ -56,11 +56,11 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - binh-dinh:none
-            - phu-bon-phu-yen:none
-            - loc-da-nang-qui-nhon:none
-            - loc-kontum-qui-nhon:none
-            - loc-qui-nhon-cam-ranh:none
+            - to: binh-dinh:none
+            - to: phu-bon-phu-yen:none
+            - to: loc-da-nang-qui-nhon:none
+            - to: loc-kontum-qui-nhon:none
+            - to: loc-qui-nhon-cam-ranh:none
         - id: cam-ranh:none
           category: city
           attributes:
@@ -70,11 +70,11 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - khanh-hoa:none
-            - binh-tuy-binh-thuan:none
-            - loc-qui-nhon-cam-ranh:none
-            - loc-saigon-cam-ranh:none
-            - loc-cam-ranh-da-lat:none
+            - to: khanh-hoa:none
+            - to: binh-tuy-binh-thuan:none
+            - to: loc-qui-nhon-cam-ranh:none
+            - to: loc-saigon-cam-ranh:none
+            - to: loc-cam-ranh-da-lat:none
         - id: an-loc:none
           category: city
           attributes:
@@ -84,10 +84,10 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - phuoc-long:none
-            - tay-ninh:none
-            - the-fishhook:none
-            - loc-saigon-an-loc-ban-me-thuot:none
+            - to: phuoc-long:none
+            - to: tay-ninh:none
+            - to: the-fishhook:none
+            - to: loc-saigon-an-loc-ban-me-thuot:none
         - id: saigon:none
           category: city
           attributes:
@@ -97,15 +97,15 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - binh-tuy-binh-thuan:none
-            - quang-duc-long-khanh:none
-            - tay-ninh:none
-            - kien-phong:none
-            - kien-hoa-vinh-binh:none
-            - loc-saigon-cam-ranh:none
-            - loc-saigon-da-lat:none
-            - loc-saigon-an-loc-ban-me-thuot:none
-            - loc-saigon-can-tho:none
+            - to: binh-tuy-binh-thuan:none
+            - to: quang-duc-long-khanh:none
+            - to: tay-ninh:none
+            - to: kien-phong:none
+            - to: kien-hoa-vinh-binh:none
+            - to: loc-saigon-cam-ranh:none
+            - to: loc-saigon-da-lat:none
+            - to: loc-saigon-an-loc-ban-me-thuot:none
+            - to: loc-saigon-can-tho:none
         - id: can-tho:none
           category: city
           attributes:
@@ -115,14 +115,14 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - kien-phong:none
-            - kien-hoa-vinh-binh:none
-            - ba-xuyen:none
-            - kien-giang-an-xuyen:none
-            - loc-saigon-can-tho:none
-            - loc-can-tho-chau-doc:none
-            - loc-can-tho-bac-lieu:none
-            - loc-can-tho-long-phu:none
+            - to: kien-phong:none
+            - to: kien-hoa-vinh-binh:none
+            - to: ba-xuyen:none
+            - to: kien-giang-an-xuyen:none
+            - to: loc-saigon-can-tho:none
+            - to: loc-can-tho-chau-doc:none
+            - to: loc-can-tho-bac-lieu:none
+            - to: loc-can-tho-long-phu:none
         - id: central-laos:none
           category: province
           attributes:
@@ -133,11 +133,11 @@ dataAssets:
             country: laos
             coastal: false
           adjacentTo:
-            - north-vietnam:none
-            - quang-tri-thua-thien:none
-            - quang-nam:none
-            - southern-laos:none
-            - loc-hue-khe-sanh:none
+            - to: north-vietnam:none
+            - to: quang-tri-thua-thien:none
+            - to: quang-nam:none
+            - to: southern-laos:none
+            - to: loc-hue-khe-sanh:none
         - id: southern-laos:none
           category: province
           attributes:
@@ -148,14 +148,14 @@ dataAssets:
             country: laos
             coastal: false
           adjacentTo:
-            - central-laos:none
-            - quang-nam:none
-            - quang-tin-quang-ngai:none
-            - binh-dinh:none
-            - pleiku-darlac:none
-            - northeast-cambodia:none
-            - loc-da-nang-dak-to:none
-            - loc-kontum-dak-to:none
+            - to: central-laos:none
+            - to: quang-nam:none
+            - to: quang-tin-quang-ngai:none
+            - to: binh-dinh:none
+            - to: pleiku-darlac:none
+            - to: northeast-cambodia:none
+            - to: loc-da-nang-dak-to:none
+            - to: loc-kontum-dak-to:none
         - id: northeast-cambodia:none
           category: province
           attributes:
@@ -166,9 +166,9 @@ dataAssets:
             country: cambodia
             coastal: false
           adjacentTo:
-            - southern-laos:none
-            - the-fishhook:none
-            - pleiku-darlac:none
+            - to: southern-laos:none
+            - to: the-fishhook:none
+            - to: pleiku-darlac:none
         - id: the-fishhook:none
           category: province
           attributes:
@@ -179,14 +179,14 @@ dataAssets:
             country: cambodia
             coastal: false
           adjacentTo:
-            - an-loc:none
-            - northeast-cambodia:none
-            - the-parrots-beak:none
-            - pleiku-darlac:none
-            - quang-duc-long-khanh:none
-            - phuoc-long:none
-            - tay-ninh:none
-            - loc-saigon-an-loc-ban-me-thuot:none
+            - to: an-loc:none
+            - to: northeast-cambodia:none
+            - to: the-parrots-beak:none
+            - to: pleiku-darlac:none
+            - to: quang-duc-long-khanh:none
+            - to: phuoc-long:none
+            - to: tay-ninh:none
+            - to: loc-saigon-an-loc-ban-me-thuot:none
         - id: the-parrots-beak:none
           category: province
           attributes:
@@ -197,12 +197,12 @@ dataAssets:
             country: cambodia
             coastal: false
           adjacentTo:
-            - the-fishhook:none
-            - sihanoukville:none
-            - tay-ninh:none
-            - kien-phong:none
-            - kien-giang-an-xuyen:none
-            - loc-can-tho-chau-doc:none
+            - to: the-fishhook:none
+            - to: sihanoukville:none
+            - to: tay-ninh:none
+            - to: kien-phong:none
+            - to: kien-giang-an-xuyen:none
+            - to: loc-can-tho-chau-doc:none
         - id: sihanoukville:none
           category: province
           attributes:
@@ -213,8 +213,8 @@ dataAssets:
             country: cambodia
             coastal: true
           adjacentTo:
-            - the-parrots-beak:none
-            - kien-giang-an-xuyen:none
+            - to: the-parrots-beak:none
+            - to: kien-giang-an-xuyen:none
         - id: north-vietnam:none
           category: province
           attributes:
@@ -225,9 +225,9 @@ dataAssets:
             country: northVietnam
             coastal: true
           adjacentTo:
-            - central-laos:none
-            - quang-tri-thua-thien:none
-            - loc-hue-khe-sanh:none
+            - to: central-laos:none
+            - to: quang-tri-thua-thien:none
+            - to: loc-hue-khe-sanh:none
         - id: quang-tri-thua-thien:none
           category: province
           attributes:
@@ -238,12 +238,12 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - hue:none
-            - central-laos:none
-            - north-vietnam:none
-            - quang-nam:none
-            - loc-hue-khe-sanh:none
-            - loc-hue-da-nang:none
+            - to: hue:none
+            - to: central-laos:none
+            - to: north-vietnam:none
+            - to: quang-nam:none
+            - to: loc-hue-khe-sanh:none
+            - to: loc-hue-da-nang:none
         - id: quang-nam:none
           category: province
           attributes:
@@ -254,13 +254,13 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - da-nang:none
-            - central-laos:none
-            - southern-laos:none
-            - quang-tri-thua-thien:none
-            - quang-tin-quang-ngai:none
-            - loc-hue-da-nang:none
-            - loc-da-nang-dak-to:none
+            - to: da-nang:none
+            - to: central-laos:none
+            - to: southern-laos:none
+            - to: quang-tri-thua-thien:none
+            - to: quang-tin-quang-ngai:none
+            - to: loc-hue-da-nang:none
+            - to: loc-da-nang-dak-to:none
         - id: quang-tin-quang-ngai:none
           category: province
           attributes:
@@ -271,12 +271,12 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - da-nang:none
-            - southern-laos:none
-            - quang-nam:none
-            - binh-dinh:none
-            - loc-da-nang-dak-to:none
-            - loc-da-nang-qui-nhon:none
+            - to: da-nang:none
+            - to: southern-laos:none
+            - to: quang-nam:none
+            - to: binh-dinh:none
+            - to: loc-da-nang-dak-to:none
+            - to: loc-da-nang-qui-nhon:none
         - id: binh-dinh:none
           category: province
           attributes:
@@ -287,16 +287,16 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - kontum:none
-            - qui-nhon:none
-            - southern-laos:none
-            - quang-tin-quang-ngai:none
-            - phu-bon-phu-yen:none
-            - pleiku-darlac:none
-            - loc-da-nang-dak-to:none
-            - loc-da-nang-qui-nhon:none
-            - loc-kontum-dak-to:none
-            - loc-kontum-qui-nhon:none
+            - to: kontum:none
+            - to: qui-nhon:none
+            - to: southern-laos:none
+            - to: quang-tin-quang-ngai:none
+            - to: phu-bon-phu-yen:none
+            - to: pleiku-darlac:none
+            - to: loc-da-nang-dak-to:none
+            - to: loc-da-nang-qui-nhon:none
+            - to: loc-kontum-dak-to:none
+            - to: loc-kontum-qui-nhon:none
         - id: pleiku-darlac:none
           category: province
           attributes:
@@ -307,19 +307,19 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - kontum:none
-            - southern-laos:none
-            - northeast-cambodia:none
-            - the-fishhook:none
-            - binh-dinh:none
-            - phu-bon-phu-yen:none
-            - khanh-hoa:none
-            - quang-duc-long-khanh:none
-            - loc-kontum-dak-to:none
-            - loc-kontum-ban-me-thuot:none
-            - loc-da-nang-dak-to:none
-            - loc-ban-me-thuot-da-lat:none
-            - loc-saigon-an-loc-ban-me-thuot:none
+            - to: kontum:none
+            - to: southern-laos:none
+            - to: northeast-cambodia:none
+            - to: the-fishhook:none
+            - to: binh-dinh:none
+            - to: phu-bon-phu-yen:none
+            - to: khanh-hoa:none
+            - to: quang-duc-long-khanh:none
+            - to: loc-kontum-dak-to:none
+            - to: loc-kontum-ban-me-thuot:none
+            - to: loc-da-nang-dak-to:none
+            - to: loc-ban-me-thuot-da-lat:none
+            - to: loc-saigon-an-loc-ban-me-thuot:none
         - id: phu-bon-phu-yen:none
           category: province
           attributes:
@@ -330,14 +330,14 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - kontum:none
-            - qui-nhon:none
-            - binh-dinh:none
-            - pleiku-darlac:none
-            - khanh-hoa:none
-            - loc-kontum-qui-nhon:none
-            - loc-qui-nhon-cam-ranh:none
-            - loc-kontum-ban-me-thuot:none
+            - to: kontum:none
+            - to: qui-nhon:none
+            - to: binh-dinh:none
+            - to: pleiku-darlac:none
+            - to: khanh-hoa:none
+            - to: loc-kontum-qui-nhon:none
+            - to: loc-qui-nhon-cam-ranh:none
+            - to: loc-kontum-ban-me-thuot:none
         - id: khanh-hoa:none
           category: province
           attributes:
@@ -348,17 +348,17 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - cam-ranh:none
-            - pleiku-darlac:none
-            - phu-bon-phu-yen:none
-            - binh-tuy-binh-thuan:none
-            - quang-duc-long-khanh:none
-            - loc-qui-nhon-cam-ranh:none
-            - loc-cam-ranh-da-lat:none
-            - loc-ban-me-thuot-da-lat:none
-            - loc-kontum-ban-me-thuot:none
-            - loc-saigon-da-lat:none
-            - loc-saigon-an-loc-ban-me-thuot:none
+            - to: cam-ranh:none
+            - to: pleiku-darlac:none
+            - to: phu-bon-phu-yen:none
+            - to: binh-tuy-binh-thuan:none
+            - to: quang-duc-long-khanh:none
+            - to: loc-qui-nhon-cam-ranh:none
+            - to: loc-cam-ranh-da-lat:none
+            - to: loc-ban-me-thuot-da-lat:none
+            - to: loc-kontum-ban-me-thuot:none
+            - to: loc-saigon-da-lat:none
+            - to: loc-saigon-an-loc-ban-me-thuot:none
         - id: phuoc-long:none
           category: province
           attributes:
@@ -369,11 +369,11 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - an-loc:none
-            - the-fishhook:none
-            - quang-duc-long-khanh:none
-            - tay-ninh:none
-            - loc-saigon-an-loc-ban-me-thuot:none
+            - to: an-loc:none
+            - to: the-fishhook:none
+            - to: quang-duc-long-khanh:none
+            - to: tay-ninh:none
+            - to: loc-saigon-an-loc-ban-me-thuot:none
         - id: quang-duc-long-khanh:none
           category: province
           attributes:
@@ -384,18 +384,18 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - saigon:none
-            - the-fishhook:none
-            - pleiku-darlac:none
-            - khanh-hoa:none
-            - phuoc-long:none
-            - binh-tuy-binh-thuan:none
-            - tay-ninh:none
-            - loc-kontum-ban-me-thuot:none
-            - loc-saigon-an-loc-ban-me-thuot:none
-            - loc-ban-me-thuot-da-lat:none
-            - loc-saigon-da-lat:none
-            - loc-cam-ranh-da-lat:none
+            - to: saigon:none
+            - to: the-fishhook:none
+            - to: pleiku-darlac:none
+            - to: khanh-hoa:none
+            - to: phuoc-long:none
+            - to: binh-tuy-binh-thuan:none
+            - to: tay-ninh:none
+            - to: loc-kontum-ban-me-thuot:none
+            - to: loc-saigon-an-loc-ban-me-thuot:none
+            - to: loc-ban-me-thuot-da-lat:none
+            - to: loc-saigon-da-lat:none
+            - to: loc-cam-ranh-da-lat:none
         - id: binh-tuy-binh-thuan:none
           category: province
           attributes:
@@ -406,14 +406,14 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - cam-ranh:none
-            - saigon:none
-            - khanh-hoa:none
-            - quang-duc-long-khanh:none
-            - loc-ban-me-thuot-da-lat:none
-            - loc-cam-ranh-da-lat:none
-            - loc-saigon-da-lat:none
-            - loc-saigon-cam-ranh:none
+            - to: cam-ranh:none
+            - to: saigon:none
+            - to: khanh-hoa:none
+            - to: quang-duc-long-khanh:none
+            - to: loc-ban-me-thuot-da-lat:none
+            - to: loc-cam-ranh-da-lat:none
+            - to: loc-saigon-da-lat:none
+            - to: loc-saigon-cam-ranh:none
         - id: tay-ninh:none
           category: province
           attributes:
@@ -424,14 +424,14 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - an-loc:none
-            - saigon:none
-            - the-fishhook:none
-            - the-parrots-beak:none
-            - phuoc-long:none
-            - quang-duc-long-khanh:none
-            - kien-phong:none
-            - loc-saigon-an-loc-ban-me-thuot:none
+            - to: an-loc:none
+            - to: saigon:none
+            - to: the-fishhook:none
+            - to: the-parrots-beak:none
+            - to: phuoc-long:none
+            - to: quang-duc-long-khanh:none
+            - to: kien-phong:none
+            - to: loc-saigon-an-loc-ban-me-thuot:none
         - id: kien-phong:none
           category: province
           attributes:
@@ -442,14 +442,14 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - saigon:none
-            - can-tho:none
-            - the-parrots-beak:none
-            - tay-ninh:none
-            - kien-hoa-vinh-binh:none
-            - kien-giang-an-xuyen:none
-            - loc-can-tho-chau-doc:none
-            - loc-saigon-can-tho:none
+            - to: saigon:none
+            - to: can-tho:none
+            - to: the-parrots-beak:none
+            - to: tay-ninh:none
+            - to: kien-hoa-vinh-binh:none
+            - to: kien-giang-an-xuyen:none
+            - to: loc-can-tho-chau-doc:none
+            - to: loc-saigon-can-tho:none
         - id: kien-hoa-vinh-binh:none
           category: province
           attributes:
@@ -460,12 +460,12 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - saigon:none
-            - can-tho:none
-            - kien-phong:none
-            - ba-xuyen:none
-            - loc-saigon-can-tho:none
-            - loc-can-tho-long-phu:none
+            - to: saigon:none
+            - to: can-tho:none
+            - to: kien-phong:none
+            - to: ba-xuyen:none
+            - to: loc-saigon-can-tho:none
+            - to: loc-can-tho-long-phu:none
         - id: ba-xuyen:none
           category: province
           attributes:
@@ -476,11 +476,11 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - can-tho:none
-            - kien-hoa-vinh-binh:none
-            - kien-giang-an-xuyen:none
-            - loc-can-tho-bac-lieu:none
-            - loc-can-tho-long-phu:none
+            - to: can-tho:none
+            - to: kien-hoa-vinh-binh:none
+            - to: kien-giang-an-xuyen:none
+            - to: loc-can-tho-bac-lieu:none
+            - to: loc-can-tho-long-phu:none
         - id: kien-giang-an-xuyen:none
           category: province
           attributes:
@@ -491,13 +491,13 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - can-tho:none
-            - the-parrots-beak:none
-            - sihanoukville:none
-            - kien-phong:none
-            - ba-xuyen:none
-            - loc-can-tho-chau-doc:none
-            - loc-can-tho-bac-lieu:none
+            - to: can-tho:none
+            - to: the-parrots-beak:none
+            - to: sihanoukville:none
+            - to: kien-phong:none
+            - to: ba-xuyen:none
+            - to: loc-can-tho-chau-doc:none
+            - to: loc-can-tho-bac-lieu:none
         - id: loc-hue-khe-sanh:none
           category: loc
           attributes:
@@ -508,10 +508,10 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - hue:none
-            - central-laos:none
-            - north-vietnam:none
-            - quang-tri-thua-thien:none
+            - to: hue:none
+            - to: central-laos:none
+            - to: north-vietnam:none
+            - to: quang-tri-thua-thien:none
         - id: loc-hue-da-nang:none
           category: loc
           attributes:
@@ -522,10 +522,10 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - hue:none
-            - da-nang:none
-            - quang-tri-thua-thien:none
-            - quang-nam:none
+            - to: hue:none
+            - to: da-nang:none
+            - to: quang-tri-thua-thien:none
+            - to: quang-nam:none
         - id: loc-da-nang-dak-to:none
           category: loc
           attributes:
@@ -536,13 +536,13 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - da-nang:none
-            - southern-laos:none
-            - quang-nam:none
-            - quang-tin-quang-ngai:none
-            - binh-dinh:none
-            - pleiku-darlac:none
-            - loc-kontum-dak-to:none
+            - to: da-nang:none
+            - to: southern-laos:none
+            - to: quang-nam:none
+            - to: quang-tin-quang-ngai:none
+            - to: binh-dinh:none
+            - to: pleiku-darlac:none
+            - to: loc-kontum-dak-to:none
         - id: loc-da-nang-qui-nhon:none
           category: loc
           attributes:
@@ -553,10 +553,10 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - da-nang:none
-            - qui-nhon:none
-            - quang-tin-quang-ngai:none
-            - binh-dinh:none
+            - to: da-nang:none
+            - to: qui-nhon:none
+            - to: quang-tin-quang-ngai:none
+            - to: binh-dinh:none
         - id: loc-kontum-dak-to:none
           category: loc
           attributes:
@@ -567,11 +567,11 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - kontum:none
-            - southern-laos:none
-            - binh-dinh:none
-            - pleiku-darlac:none
-            - loc-da-nang-dak-to:none
+            - to: kontum:none
+            - to: southern-laos:none
+            - to: binh-dinh:none
+            - to: pleiku-darlac:none
+            - to: loc-da-nang-dak-to:none
         - id: loc-kontum-qui-nhon:none
           category: loc
           attributes:
@@ -582,10 +582,10 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - kontum:none
-            - qui-nhon:none
-            - binh-dinh:none
-            - phu-bon-phu-yen:none
+            - to: kontum:none
+            - to: qui-nhon:none
+            - to: binh-dinh:none
+            - to: phu-bon-phu-yen:none
         - id: loc-kontum-ban-me-thuot:none
           category: loc
           attributes:
@@ -596,13 +596,13 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - kontum:none
-            - pleiku-darlac:none
-            - phu-bon-phu-yen:none
-            - khanh-hoa:none
-            - quang-duc-long-khanh:none
-            - loc-saigon-an-loc-ban-me-thuot:none
-            - loc-ban-me-thuot-da-lat:none
+            - to: kontum:none
+            - to: pleiku-darlac:none
+            - to: phu-bon-phu-yen:none
+            - to: khanh-hoa:none
+            - to: quang-duc-long-khanh:none
+            - to: loc-saigon-an-loc-ban-me-thuot:none
+            - to: loc-ban-me-thuot-da-lat:none
         - id: loc-qui-nhon-cam-ranh:none
           category: loc
           attributes:
@@ -613,10 +613,10 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - qui-nhon:none
-            - cam-ranh:none
-            - phu-bon-phu-yen:none
-            - khanh-hoa:none
+            - to: qui-nhon:none
+            - to: cam-ranh:none
+            - to: phu-bon-phu-yen:none
+            - to: khanh-hoa:none
         - id: loc-cam-ranh-da-lat:none
           category: loc
           attributes:
@@ -627,12 +627,12 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - cam-ranh:none
-            - khanh-hoa:none
-            - binh-tuy-binh-thuan:none
-            - quang-duc-long-khanh:none
-            - loc-saigon-da-lat:none
-            - loc-ban-me-thuot-da-lat:none
+            - to: cam-ranh:none
+            - to: khanh-hoa:none
+            - to: binh-tuy-binh-thuan:none
+            - to: quang-duc-long-khanh:none
+            - to: loc-saigon-da-lat:none
+            - to: loc-ban-me-thuot-da-lat:none
         - id: loc-ban-me-thuot-da-lat:none
           category: loc
           attributes:
@@ -643,14 +643,14 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - pleiku-darlac:none
-            - khanh-hoa:none
-            - quang-duc-long-khanh:none
-            - binh-tuy-binh-thuan:none
-            - loc-kontum-ban-me-thuot:none
-            - loc-cam-ranh-da-lat:none
-            - loc-saigon-an-loc-ban-me-thuot:none
-            - loc-saigon-da-lat:none
+            - to: pleiku-darlac:none
+            - to: khanh-hoa:none
+            - to: quang-duc-long-khanh:none
+            - to: binh-tuy-binh-thuan:none
+            - to: loc-kontum-ban-me-thuot:none
+            - to: loc-cam-ranh-da-lat:none
+            - to: loc-saigon-an-loc-ban-me-thuot:none
+            - to: loc-saigon-da-lat:none
         - id: loc-saigon-cam-ranh:none
           category: loc
           attributes:
@@ -661,9 +661,9 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - cam-ranh:none
-            - saigon:none
-            - binh-tuy-binh-thuan:none
+            - to: cam-ranh:none
+            - to: saigon:none
+            - to: binh-tuy-binh-thuan:none
         - id: loc-saigon-da-lat:none
           category: loc
           attributes:
@@ -674,12 +674,12 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - saigon:none
-            - khanh-hoa:none
-            - quang-duc-long-khanh:none
-            - binh-tuy-binh-thuan:none
-            - loc-cam-ranh-da-lat:none
-            - loc-ban-me-thuot-da-lat:none
+            - to: saigon:none
+            - to: khanh-hoa:none
+            - to: quang-duc-long-khanh:none
+            - to: binh-tuy-binh-thuan:none
+            - to: loc-cam-ranh-da-lat:none
+            - to: loc-ban-me-thuot-da-lat:none
         - id: loc-saigon-an-loc-ban-me-thuot:none
           category: loc
           attributes:
@@ -690,16 +690,16 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - an-loc:none
-            - saigon:none
-            - the-fishhook:none
-            - pleiku-darlac:none
-            - phuoc-long:none
-            - quang-duc-long-khanh:none
-            - tay-ninh:none
-            - loc-kontum-ban-me-thuot:none
-            - loc-ban-me-thuot-da-lat:none
-            - khanh-hoa:none
+            - to: an-loc:none
+            - to: saigon:none
+            - to: the-fishhook:none
+            - to: pleiku-darlac:none
+            - to: phuoc-long:none
+            - to: quang-duc-long-khanh:none
+            - to: tay-ninh:none
+            - to: loc-kontum-ban-me-thuot:none
+            - to: loc-ban-me-thuot-da-lat:none
+            - to: khanh-hoa:none
         - id: loc-saigon-can-tho:none
           category: loc
           attributes:
@@ -710,10 +710,10 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - saigon:none
-            - can-tho:none
-            - kien-phong:none
-            - kien-hoa-vinh-binh:none
+            - to: saigon:none
+            - to: can-tho:none
+            - to: kien-phong:none
+            - to: kien-hoa-vinh-binh:none
         - id: loc-can-tho-chau-doc:none
           category: loc
           attributes:
@@ -724,10 +724,10 @@ dataAssets:
             country: southVietnam
             coastal: false
           adjacentTo:
-            - can-tho:none
-            - the-parrots-beak:none
-            - kien-phong:none
-            - kien-giang-an-xuyen:none
+            - to: can-tho:none
+            - to: the-parrots-beak:none
+            - to: kien-phong:none
+            - to: kien-giang-an-xuyen:none
         - id: loc-can-tho-bac-lieu:none
           category: loc
           attributes:
@@ -738,9 +738,9 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - can-tho:none
-            - ba-xuyen:none
-            - kien-giang-an-xuyen:none
+            - to: can-tho:none
+            - to: ba-xuyen:none
+            - to: kien-giang-an-xuyen:none
         - id: loc-can-tho-long-phu:none
           category: loc
           attributes:
@@ -751,9 +751,9 @@ dataAssets:
             country: southVietnam
             coastal: true
           adjacentTo:
-            - can-tho:none
-            - kien-hoa-vinh-binh:none
-            - ba-xuyen:none
+            - to: can-tho:none
+            - to: kien-hoa-vinh-binh:none
+            - to: ba-xuyen:none
       tracks:
         - id: nvaResources
           scope: faction

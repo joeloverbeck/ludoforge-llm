@@ -15,7 +15,7 @@ type CitySpace = {
     readonly country: string;
     readonly coastal: boolean;
   };
-  readonly adjacentTo: readonly string[];
+  readonly adjacentTo: ReadonlyArray<{ readonly to: string }>;
 };
 
 const readCitySpaces = (): CitySpace[] => {
@@ -45,7 +45,7 @@ describe('FITL production map cities', () => {
     );
     assert.equal(cities.every((city) => /^[a-z0-9]+(?:-[a-z0-9]+)*:none$/.test(city.id)), true);
     assert.equal(cities.every((city) => city.attributes.terrainTags.length === 0), true);
-    assert.equal(cities.every((city) => city.adjacentTo.every((adjacentId) => adjacentId.endsWith(':none'))), true);
+    assert.equal(cities.every((city) => city.adjacentTo.every((adjacent) => adjacent.to.endsWith(':none'))), true);
   });
 
   it('encodes population, econ, coastal split, and country values per ticket', () => {

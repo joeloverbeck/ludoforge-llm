@@ -192,7 +192,7 @@ export async function createGameCanvasRuntime(
       ),
   });
 
-  const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer);
+  const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider);
 
   const factionColorProvider = new VisualConfigFactionColorProvider(options.visualConfigProvider);
   const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, factionColorProvider, {

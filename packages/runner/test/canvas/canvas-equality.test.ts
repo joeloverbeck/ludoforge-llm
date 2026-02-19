@@ -59,6 +59,7 @@ function makeAdjacency(overrides: Partial<RenderAdjacency> = {}): RenderAdjacenc
   return {
     from: 'zone:a',
     to: 'zone:b',
+    category: null,
     isHighlighted: false,
     ...overrides,
   };
@@ -234,6 +235,10 @@ describe('adjacenciesVisuallyEqual', () => {
 
   it('returns false when highlight state changes', () => {
     expect(adjacenciesVisuallyEqual([makeAdjacency()], [makeAdjacency({ isHighlighted: true })])).toBe(false);
+  });
+
+  it('returns false when category changes', () => {
+    expect(adjacenciesVisuallyEqual([makeAdjacency()], [makeAdjacency({ category: 'loc' })])).toBe(false);
   });
 
   it('returns false when pair ordering changes', () => {

@@ -63,7 +63,7 @@ export function buildLayoutGraph(boardZones: readonly ZoneDef[]): Graph {
   for (const zone of boardZones) {
     const sourceID = zone.id;
     for (const candidate of zone.adjacentTo ?? []) {
-      const targetID = candidate;
+      const targetID = candidate.to;
       if (targetID === sourceID || !boardZoneIDs.has(targetID)) {
         continue;
       }

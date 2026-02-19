@@ -829,7 +829,7 @@ describe('validateGameSpec structural rules', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),
       zones: [
-        { id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack', adjacentTo: ['disard'] },
+        { id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack', adjacentTo: [{ to: 'disard' }] },
         { id: 'discard', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
       triggers: [
@@ -845,7 +845,7 @@ describe('validateGameSpec structural rules', () => {
     });
 
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.path === 'doc.zones.0.adjacentTo.0' && diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING'),
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.zones.0.adjacentTo.0.to' && diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING'),
       true,
     );
     assert.equal(
@@ -869,7 +869,7 @@ describe('validateGameSpec structural rules', () => {
         } as unknown as (ReturnType<typeof createStructurallyValidDoc>['actions'][number]),
       ],
       zones: [
-        { id: 'café', owner: 'none', visibility: 'hidden', ordering: 'stack', adjacentTo: ['disard'] },
+        { id: 'café', owner: 'none', visibility: 'hidden', ordering: 'stack', adjacentTo: [{ to: 'disard' }] },
         { id: 'cafe\u0301', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
     };

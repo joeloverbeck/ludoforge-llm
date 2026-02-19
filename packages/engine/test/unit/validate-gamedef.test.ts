@@ -2271,7 +2271,7 @@ describe('validateGameDef constraints and warnings', () => {
     const def = {
       ...base,
       zones: [
-        { ...base.zones[0], adjacentTo: ['deck:none'] },
+        { ...base.zones[0], adjacentTo: [{ to: 'deck:none', direction: 'bidirectional' }] },
         { ...base.zones[1], adjacentTo: [] },
       ],
     } as unknown as GameDef;
@@ -2279,7 +2279,7 @@ describe('validateGameDef constraints and warnings', () => {
     const diagnostics = validateGameDef(def);
     const diagnostic = diagnostics.find((diag) => diag.code === 'SPATIAL_ASYMMETRIC_EDGE_NORMALIZED');
     assert.ok(diagnostic);
-    assert.equal(diagnostic.path, 'zones[0].adjacentTo[0]');
+    assert.equal(diagnostic.path, 'zones[0].adjacentTo[0].to');
     assert.equal(diagnostic.severity, 'warning');
     assert.equal(typeof diagnostic.message, 'string');
     assert.equal(typeof diagnostic.suggestion, 'string');
@@ -2289,12 +2289,12 @@ describe('validateGameDef constraints and warnings', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      zones: [{ ...base.zones[0], adjacentTo: ['missing:none'] }, base.zones[1]],
+      zones: [{ ...base.zones[0], adjacentTo: [{ to: 'missing:none', direction: 'bidirectional' }] }, base.zones[1]],
     } as unknown as GameDef;
 
     const diagnostic = validateGameDef(def).find((diag) => diag.code === 'SPATIAL_DANGLING_ZONE_REF');
     assert.ok(diagnostic);
-    assert.equal(diagnostic.path, 'zones[0].adjacentTo[0]');
+    assert.equal(diagnostic.path, 'zones[0].adjacentTo[0].to');
     assert.equal(diagnostic.severity, 'error');
     assert.equal(typeof diagnostic.message, 'string');
     assert.equal(typeof diagnostic.suggestion, 'string');
@@ -2304,15 +2304,59 @@ describe('validateGameDef constraints and warnings', () => {
     const base = createValidGameDef();
     const def = {
       ...base,
-      zones: [{ ...base.zones[0], adjacentTo: ['market:none', 'deck:none'] }, base.zones[1]],
+      zones: [
+        {
+          ...base.zones[0],
+          adjacentTo: [
+            { to: 'market:none', direction: 'bidirectional' },
+            { to: 'deck:none', direction: 'bidirectional' },
+          ],
+        },
+        base.zones[1],
+      ],
     } as unknown as GameDef;
 
     const diagnostic = validateGameDef(def).find((diag) => diag.code === 'SPATIAL_NEIGHBORS_UNSORTED');
     assert.ok(diagnostic);
-    assert.equal(diagnostic.path, 'zones[0].adjacentTo[1]');
+    assert.equal(diagnostic.path, 'zones[0].adjacentTo[1].to');
     assert.equal(diagnostic.severity, 'error');
     assert.equal(typeof diagnostic.message, 'string');
     assert.equal(typeof diagnostic.suggestion, 'string');
+  });
+
+  it('reports missing adjacency direction as an error', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [{ ...base.zones[0], adjacentTo: [{ to: 'deck:none' }] }, base.zones[1]],
+    } as unknown as GameDef;
+
+    const diagnostic = validateGameDef(def).find((diag) => diag.code === 'SPATIAL_ADJACENCY_DIRECTION_REQUIRED');
+    assert.ok(diagnostic);
+    assert.equal(diagnostic.path, 'zones[0].adjacentTo[0].direction');
+    assert.equal(diagnostic.severity, 'error');
+  });
+
+  it('reports conflicting directions for duplicate adjacency target as an error', () => {
+    const base = createValidGameDef();
+    const def = {
+      ...base,
+      zones: [
+        {
+          ...base.zones[0],
+          adjacentTo: [
+            { to: 'deck:none', direction: 'bidirectional' },
+            { to: 'deck:none', direction: 'unidirectional' },
+          ],
+        },
+        base.zones[1],
+      ],
+    } as unknown as GameDef;
+
+    const diagnostic = validateGameDef(def).find((diag) => diag.code === 'SPATIAL_CONFLICTING_NEIGHBOR_DIRECTION');
+    assert.ok(diagnostic);
+    assert.equal(diagnostic.path, 'zones[0].adjacentTo[1].direction');
+    assert.equal(diagnostic.severity, 'error');
   });
 
   it('reports ownership mismatch for :none selector targeting player-owned zone', () => {

@@ -10,7 +10,7 @@ interface MapSpaceLike {
   readonly attributes: {
     readonly terrainTags: readonly string[];
   };
-  readonly adjacentTo: readonly string[];
+  readonly adjacentTo: ReadonlyArray<{ readonly to: string }>;
 }
 
 interface ZoneLike {
@@ -154,11 +154,16 @@ describe('FITL production data integration compilation', () => {
 
     const spaceById = new Map(spaces.map((space) => [space.id, space]));
     for (const space of spaces) {
-      for (const adjacentId of space.adjacentTo) {
+      for (const adjacentEntry of space.adjacentTo) {
+        const adjacentId = adjacentEntry.to;
         assert.equal(space.id === adjacentId, false, `${space.id} must not self-reference in adjacentTo`);
         const adjacent = spaceById.get(adjacentId);
         assert.ok(adjacent, `${space.id} references unknown adjacent space ${adjacentId}`);
-        assert.equal(adjacent.adjacentTo.includes(space.id), true, `${space.id} -> ${adjacentId} must be symmetric`);
+        assert.equal(
+          adjacent.adjacentTo.some((entry: { readonly to: string }) => entry.to === space.id),
+          true,
+          `${space.id} -> ${adjacentId} must be symmetric`,
+        );
       }
     }
 

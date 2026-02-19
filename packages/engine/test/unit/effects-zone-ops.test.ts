@@ -26,7 +26,7 @@ const makeDef = (): GameDef => ({
   zones: [
     { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
     { id: asZoneId('discard:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
-    { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('discard:none')] },
+    { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('discard:none') }] },
   ],
   tokenTypes: [],
   setup: [],

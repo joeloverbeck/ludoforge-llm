@@ -45,6 +45,13 @@ describe('VisualConfigSchema', () => {
           'available-US': 'forcePool',
         },
       },
+      edges: {
+        default: { color: '#6b7280', width: 1.5, alpha: 0.3 },
+        highlighted: { color: '#93c5fd', width: 3, alpha: 0.7 },
+        categoryStyles: {
+          loc: { color: '#8b7355', width: 2 },
+        },
+      },
       tokenTypes: {
         'us-troops': { shape: 'cube', color: '#e63946', size: 24 },
       },
@@ -106,6 +113,18 @@ describe('VisualConfigSchema', () => {
 
   it('parses a minimal config with only version', () => {
     const result = VisualConfigSchema.safeParse({ version: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it('parses edges config when present', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      edges: {
+        default: { color: '#6b7280', width: 1.5, alpha: 0.3 },
+        highlighted: { color: '#93c5fd', width: 3, alpha: 0.7 },
+        categoryStyles: { loc: { color: '#8b7355' } },
+      },
+    });
     expect(result.success).toBe(true);
   });
 

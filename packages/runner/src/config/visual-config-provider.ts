@@ -33,6 +33,18 @@ export interface ResolvedTokenVisual {
   readonly backSymbol: string | null;
 }
 
+export interface ResolvedEdgeVisual {
+  readonly color: string | null;
+  readonly width: number;
+  readonly alpha: number;
+}
+
+export interface EdgeStrokeStyle {
+  readonly color: number;
+  readonly width: number;
+  readonly alpha: number;
+}
+
 export class VisualConfigProvider {
   private readonly config: VisualConfig | null;
   readonly configHash: string;
@@ -95,6 +107,32 @@ export class VisualConfigProvider {
     };
   }
 
+  resolveEdgeStyle(edgeCategory: string | null, isHighlighted: boolean): ResolvedEdgeVisual {
+    const resolved: ResolvedEdgeVisual = {
+      color: '#6b7280',
+      width: 1.5,
+      alpha: 0.3,
+    };
+
+    applyEdgeStyle(resolved, this.config?.edges?.default);
+
+    const categoryStyle = edgeCategory === null
+      ? undefined
+      : this.config?.edges?.categoryStyles?.[edgeCategory];
+    applyEdgeStyle(resolved, categoryStyle);
+
+    if (isHighlighted) {
+      applyEdgeStyle(resolved, {
+        color: '#93c5fd',
+        width: 3,
+        alpha: 0.7,
+      });
+      applyEdgeStyle(resolved, this.config?.edges?.highlighted);
+    }
+
+    return resolved;
+  }
+
   getLayoutMode(hasAdjacency: boolean): LayoutMode {
     return this.config?.layout?.mode ?? (hasAdjacency ? 'graph' : 'table');
   }
@@ -113,6 +151,30 @@ export class VisualConfigProvider {
 
   getVariablesConfig(): VariablesConfig | null {
     return this.config?.variables ?? null;
+  }
+}
+
+function applyEdgeStyle(
+  target: { color: string | null; width: number; alpha: number },
+  source:
+    | {
+      readonly color?: string | undefined;
+      readonly width?: number | undefined;
+      readonly alpha?: number | undefined;
+    }
+    | undefined,
+): void {
+  if (source === undefined) {
+    return;
+  }
+  if (source.color !== undefined) {
+    target.color = source.color;
+  }
+  if (source.width !== undefined) {
+    target.width = source.width;
+  }
+  if (source.alpha !== undefined) {
+    target.alpha = source.alpha;
   }
 }
 

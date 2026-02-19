@@ -74,6 +74,13 @@ export interface FactionDef {
   readonly id: string;
 }
 
+export interface ZoneAdjacency {
+  readonly to: ZoneId;
+  readonly direction?: 'bidirectional' | 'unidirectional';
+  readonly category?: string;
+  readonly attributes?: Readonly<Record<string, AttributeValue>>;
+}
+
 export interface ZoneDef {
   readonly id: ZoneId;
   readonly zoneKind?: 'board' | 'aux';
@@ -81,7 +88,7 @@ export interface ZoneDef {
   readonly owner: 'none' | 'player';
   readonly visibility: 'public' | 'owner' | 'hidden';
   readonly ordering: 'stack' | 'queue' | 'set';
-  readonly adjacentTo?: readonly ZoneId[];
+  readonly adjacentTo?: readonly ZoneAdjacency[];
   readonly category?: string;
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
 }
@@ -333,7 +340,12 @@ export interface MapSpaceInput {
   readonly id: string;
   readonly category?: string;
   readonly attributes?: Readonly<Record<string, AttributeValue>>;
-  readonly adjacentTo: readonly string[];
+  readonly adjacentTo: ReadonlyArray<{
+    readonly to: string;
+    readonly direction?: 'bidirectional' | 'unidirectional';
+    readonly category?: string;
+    readonly attributes?: Readonly<Record<string, AttributeValue>>;
+  }>;
 }
 
 export interface MapPayload {

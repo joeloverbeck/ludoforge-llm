@@ -16,18 +16,18 @@ const canonicalNeighbors = (
 interface FitlMapPayload {
   readonly spaces: ReadonlyArray<{
     readonly id: string;
-    readonly adjacentTo: readonly string[];
+    readonly adjacentTo: ReadonlyArray<{ readonly to: string }>;
   }>;
 }
 
 const fitlMapPayload: FitlMapPayload = {
   spaces: [
-    { id: 'cambodia:none', adjacentTo: ['south_vietnam:none'] },
-    { id: 'hue:none', adjacentTo: ['loc_ho_chi_minh_trail:none', 'south_vietnam:none'] },
-    { id: 'laos:none', adjacentTo: ['north_vietnam:none', 'south_vietnam:none'] },
-    { id: 'loc_ho_chi_minh_trail:none', adjacentTo: ['hue:none', 'north_vietnam:none'] },
-    { id: 'north_vietnam:none', adjacentTo: ['laos:none', 'loc_ho_chi_minh_trail:none', 'south_vietnam:none'] },
-    { id: 'south_vietnam:none', adjacentTo: ['cambodia:none', 'hue:none', 'laos:none', 'north_vietnam:none'] },
+    { id: 'cambodia:none', adjacentTo: [{ to: 'south_vietnam:none' }] },
+    { id: 'hue:none', adjacentTo: [{ to: 'loc_ho_chi_minh_trail:none' }, { to: 'south_vietnam:none' }] },
+    { id: 'laos:none', adjacentTo: [{ to: 'north_vietnam:none' }, { to: 'south_vietnam:none' }] },
+    { id: 'loc_ho_chi_minh_trail:none', adjacentTo: [{ to: 'hue:none' }, { to: 'north_vietnam:none' }] },
+    { id: 'north_vietnam:none', adjacentTo: [{ to: 'laos:none' }, { to: 'loc_ho_chi_minh_trail:none' }, { to: 'south_vietnam:none' }] },
+    { id: 'south_vietnam:none', adjacentTo: [{ to: 'cambodia:none' }, { to: 'hue:none' }, { to: 'laos:none' }, { to: 'north_vietnam:none' }] },
   ],
 };
 
@@ -37,7 +37,7 @@ const loadFitlMapZones = (): readonly ZoneDef[] => {
     owner: 'none',
     visibility: 'public',
     ordering: 'set',
-    adjacentTo: space.adjacentTo.map((adjacent) => asZoneId(adjacent)),
+    adjacentTo: space.adjacentTo.map((adjacent) => ({ to: asZoneId(adjacent.to) })),
   }));
 };
 

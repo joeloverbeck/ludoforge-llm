@@ -39,7 +39,7 @@ const fullGameDef = {
       owner: 'none',
       visibility: 'hidden',
       ordering: 'stack',
-      adjacentTo: ['discard:none'],
+      adjacentTo: [{ to: 'discard:none' }],
     },
     { id: 'discard:none', owner: 'none', visibility: 'public', ordering: 'stack' },
   ],
@@ -187,7 +187,7 @@ describe('top-level runtime schemas', () => {
           id: 'hue:none',
           category: 'city',
           attributes: { population: 1, econ: 1, terrainTags: ['urban'], country: 'south-vietnam', coastal: true },
-          adjacentTo: ['south_vietnam:none'],
+          adjacentTo: [{ to: 'south_vietnam:none' }],
         },
       ],
       tracks: [{ id: 'aid', scope: 'global', min: 0, max: 80, initial: 10 }],
@@ -200,6 +200,23 @@ describe('top-level runtime schemas', () => {
         },
       ],
       spaceMarkers: [{ spaceId: 'hue:none', markerId: 'support-opposition', state: 'passive-support' }],
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('parses adjacency direction in map payload space entries', () => {
+    const result = MapPayloadSchema.safeParse({
+      spaces: [
+        {
+          id: 'canal-a:none',
+          adjacentTo: [{ to: 'canal-b:none', direction: 'unidirectional' }],
+        },
+        {
+          id: 'canal-b:none',
+          adjacentTo: [],
+        },
+      ],
     });
 
     assert.equal(result.success, true);
@@ -355,6 +372,24 @@ describe('top-level runtime schemas', () => {
   it('parses a full-featured valid GameDef with zero issues', () => {
     const result = GameDefSchema.safeParse(fullGameDef);
     assert.equal(result.success, true);
+  });
+
+  it('rejects invalid adjacency direction in GameDef zones', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      zones: [
+        {
+          id: 'a:none',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: [{ to: 'b:none', direction: 'invalid' }],
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'zones.0.adjacentTo.0.direction'));
   });
 
   it('parses runtime table contracts with uniqueBy tuples', () => {

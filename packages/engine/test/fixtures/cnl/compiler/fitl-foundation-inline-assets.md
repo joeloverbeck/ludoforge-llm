@@ -19,7 +19,7 @@ dataAssets:
             terrainTags: [urban]
             country: south-vietnam
             coastal: true
-          adjacentTo: [quang-tri:none]
+          adjacentTo: [{ to: quang-tri:none }]
         - id: quang-tri:none
           category: province
           attributes:
@@ -28,7 +28,7 @@ dataAssets:
             terrainTags: [lowland]
             country: south-vietnam
             coastal: true
-          adjacentTo: [hue:none]
+          adjacentTo: [{ to: hue:none }]
   - id: fitl-piece-catalog-foundation
     kind: pieceCatalog
     payload:

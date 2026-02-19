@@ -352,7 +352,7 @@ describe('resolveRef', () => {
             owner: 'none' as const,
             visibility: 'public' as const,
             ordering: 'set' as const,
-            adjacentTo: [asZoneId('hue')],
+            adjacentTo: [{ to: asZoneId('hue') }],
             category: 'city',
             attributes: { population: 2, econ: 3, terrainTags: ['lowland'], country: 'south-vietnam', coastal: true },
           },

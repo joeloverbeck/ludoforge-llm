@@ -53,7 +53,7 @@ function makeToken(overrides: Partial<RenderToken> = {}): RenderToken {
 function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
   return {
     zones: [makeZone()],
-    adjacencies: [{ from: 'zone:a', to: 'zone:b', isHighlighted: false }],
+    adjacencies: [{ from: 'zone:a', to: 'zone:b', category: null, isHighlighted: false }],
     tokens: [makeToken()],
     globalVars: [],
     playerVars: new Map(),
@@ -259,7 +259,7 @@ describe('createCanvasUpdater', () => {
 
     store.setState({
       renderModel: makeRenderModel({
-        adjacencies: [{ from: 'zone:a', to: 'zone:c', isHighlighted: false }],
+        adjacencies: [{ from: 'zone:a', to: 'zone:c', category: null, isHighlighted: false }],
       }),
     });
 

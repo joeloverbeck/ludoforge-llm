@@ -50,7 +50,7 @@ const makeSpace = (overrides: {
   owner: 'none',
   visibility: 'public',
   ordering: 'set',
-  adjacentTo: (overrides.adjacentTo ?? []).map(asZoneId),
+  adjacentTo: (overrides.adjacentTo ?? []).map((zoneId) => ({ to: asZoneId(zoneId) })),
   category: overrides.category ?? 'province',
   attributes: {
     population: overrides.population ?? 0,
@@ -70,7 +70,7 @@ const makeSpaceWithoutAttributes = (overrides: {
   owner: 'none',
   visibility: 'public',
   ordering: 'set',
-  adjacentTo: (overrides.adjacentTo ?? []).map(asZoneId),
+  adjacentTo: (overrides.adjacentTo ?? []).map((zoneId) => ({ to: asZoneId(zoneId) })),
   category: overrides.category ?? 'province',
 });
 

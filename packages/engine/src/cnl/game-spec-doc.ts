@@ -32,6 +32,7 @@ export interface GameSpecMetadata {
   readonly defaultScenarioAssetId?: string;
   readonly namedSets?: Readonly<Record<string, readonly string[]>>;
   readonly cardAnimation?: GameSpecCardAnimationMetadata;
+  readonly layoutMode?: 'graph' | 'table' | 'track' | 'grid';
 }
 
 export interface GameSpecVarDef {

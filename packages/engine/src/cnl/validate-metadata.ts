@@ -142,6 +142,20 @@ export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
     }
   }
 
+  const layoutMode = metadata.layoutMode;
+  if (layoutMode !== undefined) {
+    const validLayoutModes = ['graph', 'table', 'track', 'grid'];
+    if (typeof layoutMode !== 'string' || !validLayoutModes.includes(layoutMode)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_METADATA_LAYOUT_MODE_INVALID',
+        path: 'doc.metadata.layoutMode',
+        severity: 'error',
+        message: `metadata.layoutMode must be one of: ${validLayoutModes.join(', ')}.`,
+        suggestion: `Set layoutMode to one of: ${validLayoutModes.join(', ')}.`,
+      });
+    }
+  }
+
   const cardAnimation = metadata.cardAnimation;
   if (cardAnimation !== undefined) {
     if (!isRecord(cardAnimation)) {

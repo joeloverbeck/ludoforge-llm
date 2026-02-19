@@ -3,7 +3,7 @@
 **Status**: ACTIVE
 **Priority**: P2
 **Complexity**: M
-**Dependencies**: Spec 38 (PixiJS Canvas Foundation), Spec 39 (React DOM UI Layer)
+**Dependencies**: Spec 38 (PixiJS Canvas Foundation), Spec 39 (React DOM UI Layer), Spec 41 (Board Layout Engine — for layout hints integration)
 **Roadmap**: [35-00-frontend-implementation-roadmap.md](./35-00-frontend-implementation-roadmap.md)
 **Design doc**: [brainstorming/browser-based-game-runner.md](../brainstorming/browser-based-game-runner.md), Sections 7–9
 
@@ -178,6 +178,73 @@ variables:
 - Fallback to a default palette if no config.
 - Used by token renderer, zone renderer, player indicators, and scoreboard.
 
+### D-NEW-1: Zone Style Hints (from Spec 41 restructure)
+
+`packages/runner/src/config/zone-style-hints.ts`
+
+Zone sizing/shape defaults derived from zone metadata (`category`, `ordering`, `zoneKind`). These hints provide sensible defaults without requiring a visual config file. When a visual config (D6) is present, its styles take precedence.
+
+- Different zone categories get different default sizes (e.g., city zones larger than LoC zones).
+- Stack zones (decks) rendered smaller.
+- Set zones (hands, map spaces) rendered larger based on expected token count.
+- These hints influence both the layout algorithm (node size -> ForceAtlas2 settings) and the renderer.
+- The hint system is a pure function from `ZoneDef[]` to zone style defaults — no side effects.
+
+```typescript
+interface ZoneStyleHint {
+  readonly width: number;
+  readonly height: number;
+  readonly shape: ZoneShape;
+  readonly fill?: string;
+}
+
+function deriveZoneStyleHints(zones: readonly ZoneDef[]): Map<string, ZoneStyleHint>;
+```
+
+### D-NEW-2: Layout Hints from Visual Config (from Spec 41 restructure)
+
+`packages/runner/src/config/apply-layout-hints.ts`
+
+Applies visual config region groupings, position constraints, and fixed positions to the layout computed by Spec 41. Modifies initial positions before ForceAtlas2 or overrides positions entirely. No-op when no visual config is loaded.
+
+- **Region groupings**: Zones assigned to a region are attracted to each other in the layout (modify ForceAtlas2 gravity or use initial position seeding from the `layout.hints.regions` section of `visual-config.yaml`).
+- **Position constraints**: "This region should be top-left" -> set initial position before layout.
+- **Fixed positions**: Some zones can be manually positioned (from `layout.hints.fixed`), bypassing auto-layout.
+
+Depends on Spec 41's layout engine for the base position computation.
+
+```typescript
+function applyLayoutHints(
+  positions: Map<string, { x: number; y: number }>,
+  visualConfig: VisualConfig | null
+): Map<string, { x: number; y: number }>;
+```
+
+### D-NEW-3: Token Stacking Within Zones (from Spec 41 restructure)
+
+`packages/runner/src/config/token-stacking.ts`
+
+Compute token positions within a zone. Interacts with visual config token size/shape settings.
+
+- **Few tokens (1-6)**: Spread evenly within zone bounds, slight overlap for cards.
+- **Moderate tokens (7-12)**: Group by owner/faction, show group with count.
+- **Many tokens (13+)**: Show faction-grouped stacks with count badges. Click-to-expand reveals individual tokens in a popup or zoomed view.
+
+```typescript
+interface TokenLayout {
+  readonly tokenId: string;
+  readonly localX: number;    // Position relative to zone center
+  readonly localY: number;
+  readonly scale: number;     // Scale down for crowded zones
+  readonly groupId: string | null;  // Faction/owner group
+}
+
+function computeTokenStacking(
+  zone: RenderZone,
+  tokens: readonly RenderToken[]
+): readonly TokenLayout[];
+```
+
 ---
 
 ## Part B: Session Management
@@ -270,6 +337,11 @@ Scrollable log of game events:
 - [ ] Card faces render from template with title, text, faction icon
 - [ ] Variable display follows config (prominent vars, panel groupings)
 - [ ] Faction colors applied consistently across tokens, zones, and UI
+- [ ] Zone style hints produce sensible defaults without visual config (D-NEW-1)
+- [ ] Layout hints from visual config modify ForceAtlas2 initial positions (D-NEW-2)
+- [ ] Fixed zone positions from visual config override auto-layout (D-NEW-2)
+- [ ] Token stacking shows grouped tokens with counts for crowded zones (D-NEW-3)
+- [ ] Token stacking click-to-expand reveals individual tokens (D-NEW-3)
 
 ### Session Management
 - [ ] Game selection screen lists available games

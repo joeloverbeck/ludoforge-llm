@@ -26,6 +26,26 @@
         },
         "maxTriggerDepth": {
           "type": "number"
+        },
+        "layoutMode": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "graph"
+            },
+            {
+              "type": "string",
+              "const": "table"
+            },
+            {
+              "type": "string",
+              "const": "track"
+            },
+            {
+              "type": "string",
+              "const": "grid"
+            }
+          ]
         }
       },
       "required": [

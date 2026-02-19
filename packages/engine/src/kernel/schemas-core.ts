@@ -307,6 +307,7 @@ export const GameDefSchema = z
         id: StringSchema,
         players: z.object({ min: NumberSchema, max: NumberSchema }).strict(),
         maxTriggerDepth: NumberSchema.optional(),
+        layoutMode: z.union([z.literal('graph'), z.literal('table'), z.literal('track'), z.literal('grid')]).optional(),
       })
       .strict(),
     constants: z.record(StringSchema, NumberSchema),

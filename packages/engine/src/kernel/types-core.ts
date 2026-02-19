@@ -252,6 +252,7 @@ export interface GameDef {
     readonly id: string;
     readonly players: { readonly min: number; readonly max: number };
     readonly maxTriggerDepth?: number;
+    readonly layoutMode?: 'graph' | 'table' | 'track' | 'grid';
   };
   readonly constants: Readonly<Record<string, number>>;
   readonly globalVars: readonly VariableDef[];

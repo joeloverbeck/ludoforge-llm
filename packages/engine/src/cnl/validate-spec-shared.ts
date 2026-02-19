@@ -4,7 +4,7 @@ import type { GameSpecSourceMap } from './source-map.js';
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
 
-export const METADATA_KEYS = ['id', 'players', 'maxTriggerDepth', 'defaultScenarioAssetId', 'namedSets', 'cardAnimation'] as const;
+export const METADATA_KEYS = ['id', 'players', 'maxTriggerDepth', 'defaultScenarioAssetId', 'namedSets', 'cardAnimation', 'layoutMode'] as const;
 export const PLAYERS_KEYS = ['min', 'max'] as const;
 export const CARD_ANIMATION_KEYS = ['cardTokenTypes', 'zoneRoles'] as const;
 export const CARD_TOKEN_TYPES_KEYS = ['ids', 'idPrefixes'] as const;

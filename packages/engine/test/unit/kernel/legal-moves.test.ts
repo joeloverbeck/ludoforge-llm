@@ -5,8 +5,10 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   asZoneId,
   enumerateLegalMoves,
+  isKernelErrorCode,
   legalMoves,
   type ActionDef,
   type GameDef,
@@ -155,6 +157,95 @@ phase: [asPhaseId('main')],
     assert.equal(moves.length, 3);
     const targets = moves.map((m) => m.params['target']);
     assert.deepStrictEqual(targets, ['a', 'b', 'c']);
+  });
+
+  it('normalizes declared action param options to canonical move-param values', () => {
+    const action: ActionDef = {
+      id: asActionId('pickTokenDeclared'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [
+        {
+          name: 'targetToken',
+          domain: { query: 'tokensInZone', zone: asZoneId('board:none') },
+        },
+      ],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({
+      actions: [action],
+      zones: [{ id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'stack' }],
+    });
+    const state = makeBaseState({
+      zones: {
+        'board:none': [{ id: asTokenId('tok-1'), type: 'piece', props: {} }],
+      } as GameState['zones'],
+      nextTokenOrdinal: 1,
+    });
+
+    const moves = legalMoves(def, state);
+    assert.deepStrictEqual(
+      moves.filter((move) => move.actionId === asActionId('pickTokenDeclared')).map((move) => move.params.targetToken),
+      [asTokenId('tok-1')],
+    );
+  });
+
+  it('fails fast when declared action param domain options are not move-param encodable', () => {
+    const action: ActionDef = {
+      id: asActionId('pickScheduleRowDeclared'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [
+        {
+          name: 'row',
+          domain: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+        },
+      ],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] }) as GameDef & {
+      runtimeDataAssets?: unknown;
+      tableContracts?: unknown;
+    };
+    def.runtimeDataAssets = [
+      {
+        id: 'tournament-standard',
+        kind: 'scenario',
+        payload: { blindSchedule: { levels: [{ level: 1, smallBlind: 10 }] } },
+      },
+    ];
+    def.tableContracts = [
+      {
+        id: 'tournament-standard::blindSchedule.levels',
+        assetId: 'tournament-standard',
+        tablePath: 'blindSchedule.levels',
+        fields: [
+          { field: 'level', type: 'int' },
+          { field: 'smallBlind', type: 'int' },
+        ],
+      },
+    ];
+    const state = makeBaseState();
+
+    assert.throws(
+      () => legalMoves(def, state),
+      (error: unknown) => {
+        assert.ok(isKernelErrorCode(error, 'LEGAL_MOVES_VALIDATION_FAILED'));
+        const details = error as Error & { context?: Record<string, unknown> };
+        assert.equal(details.context?.param, 'row');
+        return true;
+      },
+    );
   });
 
   it('3. template move respects legality predicate (failing legality produces no template)', () => {

@@ -10,6 +10,7 @@ export type KernelRuntimeErrorCode =
   | 'ACTION_PIPELINE_PREDICATE_EVALUATION_FAILED'
   | 'LEGAL_CHOICES_UNKNOWN_ACTION'
   | 'LEGAL_CHOICES_VALIDATION_FAILED'
+  | 'LEGAL_MOVES_VALIDATION_FAILED'
   | 'INITIAL_STATE_NO_PHASES'
   | 'PHASE_ADVANCE_NO_PHASES'
   | 'PHASE_ADVANCE_CURRENT_PHASE_NOT_FOUND'
@@ -61,6 +62,11 @@ export interface KernelRuntimeErrorContextByCode {
     readonly actionId: Move['actionId'];
   }>;
   readonly LEGAL_CHOICES_VALIDATION_FAILED: Readonly<{
+    readonly actionId: ActionDef['id'];
+    readonly param: string;
+    readonly value: unknown;
+  }>;
+  readonly LEGAL_MOVES_VALIDATION_FAILED: Readonly<{
     readonly actionId: ActionDef['id'];
     readonly param: string;
     readonly value: unknown;

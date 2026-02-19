@@ -1,8 +1,8 @@
 import { evalCondition } from './eval-condition.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
+import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { EvalContext } from './eval-context.js';
-import { evalQuery } from './eval-query.js';
 import { isMoveDecisionSequenceSatisfiable, resolveMoveDecisionSequence } from './move-decision-sequence.js';
 import { applyPendingFreeOperationVariants, applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
@@ -17,6 +17,7 @@ import { createCollector } from './execution-collector.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
 import { isCardEventAction } from './action-capabilities.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
+import { kernelRuntimeError } from './runtime-error.js';
 import type { ActionDef, GameDef, GameState, Move, MoveParamValue, RuntimeWarning } from './types.js';
 
 export interface LegalMoveEnumerationOptions {
@@ -169,8 +170,19 @@ function enumerateParams(
     return;
   }
   const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, state, executionPlayer, bindings);
-  const domainValues = evalQuery(param.domain, ctx);
-  for (const value of domainValues) {
+  const resolution = resolveDeclaredActionParamDomainOptions(param, ctx);
+  if (resolution.invalidOption !== undefined) {
+    throw kernelRuntimeError(
+      'LEGAL_MOVES_VALIDATION_FAILED',
+      `legalMoves: action param "${param.name}" domain option is not move-param encodable`,
+      {
+        actionId: action.id,
+        param: param.name,
+        value: resolution.invalidOption,
+      },
+    );
+  }
+  for (const value of resolution.options) {
     if (!consumeParamExpansionBudget(enumeration, action.id)) {
       return;
     }

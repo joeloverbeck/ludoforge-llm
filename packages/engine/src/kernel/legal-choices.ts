@@ -1,11 +1,12 @@
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyEffects } from './effects.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
-import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
+import {
+  isDeclaredActionParamValueInDomain,
+  resolveDeclaredActionParamDomainOptions,
+} from './declared-action-param-domain.js';
 import type { EffectContext } from './effect-context.js';
 import type { EvalContext } from './eval-context.js';
-import { evalQuery } from './eval-query.js';
-import { normalizeMoveParamValue } from './move-param-normalization.js';
 import { resolveEventEffectList } from './event-execution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import {
@@ -322,29 +323,21 @@ const resolveActionParamPendingChoice = (
       continue;
     }
 
-    const options = evalQuery(param.domain, {
+    const resolution = resolveDeclaredActionParamDomainOptions(param, {
       ...evalCtx,
       bindings,
     });
-    const normalizedOptions = options.map((value, index) => {
-      const normalized = normalizeMoveParamValue(value);
-      if (normalized === null) {
-        throw kernelRuntimeError(
-          'LEGAL_CHOICES_VALIDATION_FAILED',
-          `legalChoices: action param "${param.name}" domain option is not move-param encodable`,
-          {
-            actionId: action.id,
-            param: param.name,
-            value: {
-              index,
-              actualType: Array.isArray(value) ? 'array' : typeof value,
-              value,
-            },
-          },
-        );
-      }
-      return normalized;
-    });
+    if (resolution.invalidOption !== undefined) {
+      throw kernelRuntimeError(
+        'LEGAL_CHOICES_VALIDATION_FAILED',
+        `legalChoices: action param "${param.name}" domain option is not move-param encodable`,
+        {
+          actionId: action.id,
+          param: param.name,
+          value: resolution.invalidOption,
+        },
+      );
+    }
     const targetKinds = deriveChoiceTargetKinds(param.domain);
     return {
       kind: 'pending',
@@ -352,7 +345,7 @@ const resolveActionParamPendingChoice = (
       decisionId: param.name,
       name: param.name,
       type: 'chooseOne',
-      options: normalizedOptions.map((value) => ({
+      options: resolution.options.map((value) => ({
         value,
         legality: 'unknown',
         illegalReason: null,

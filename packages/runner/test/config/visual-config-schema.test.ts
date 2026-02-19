@@ -209,6 +209,39 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts conditional token symbol rules', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      tokenTypes: {
+        guerrilla: {
+          symbolRules: [
+            {
+              when: [{ prop: 'activity', equals: 'active' }],
+              symbol: 'star',
+            },
+          ],
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects symbol rules that define no symbol fields', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      tokenTypes: {
+        guerrilla: {
+          symbolRules: [
+            {
+              when: [{ prop: 'activity', equals: 'active' }],
+            },
+          ],
+        },
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
   it('rejects invalid layout mode', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

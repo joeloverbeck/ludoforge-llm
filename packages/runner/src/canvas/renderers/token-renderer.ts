@@ -226,6 +226,7 @@ function updateTokenVisuals(
   colorProvider: FactionColorProvider,
 ): void {
   const tokenVisual = colorProvider.getTokenTypeVisual(token.type);
+  const tokenSymbols = colorProvider.resolveTokenSymbols(token.type, token.properties);
   const shape = resolveTokenShape(tokenVisual.shape);
   const cardTemplate = resolveCardTemplate(shape, token.type, colorProvider);
   const dimensions = resolveTokenDimensions(shape, tokenVisual.size, cardTemplate);
@@ -235,8 +236,8 @@ function updateTokenVisuals(
 
   drawTokenShape(visuals.frontBase, shape, dimensions, fillColor, stroke);
   drawTokenShape(visuals.backBase, shape, dimensions, CARD_BACK_COLOR, stroke);
-  drawTokenSymbol(visuals.frontSymbol, tokenVisual.symbol, resolveSymbolSize(shape, dimensions));
-  drawTokenSymbol(visuals.backSymbol, tokenVisual.backSymbol, resolveSymbolSize(shape, dimensions));
+  drawTokenSymbol(visuals.frontSymbol, tokenSymbols.symbol, resolveSymbolSize(shape, dimensions));
+  drawTokenSymbol(visuals.backSymbol, tokenSymbols.backSymbol, resolveSymbolSize(shape, dimensions));
   tokenContainer.hitArea = resolveTokenHitArea(shape, dimensions);
   syncCardContent(tokenContainer, visuals, token, cardTemplate, isFaceUp);
 

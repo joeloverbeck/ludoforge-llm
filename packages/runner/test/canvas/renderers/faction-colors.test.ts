@@ -18,6 +18,10 @@ describe('DefaultFactionColorProvider', () => {
       symbol: null,
       backSymbol: null,
     });
+    expect(provider.resolveTokenSymbols('vc-guerrillas', { activity: 'active' })).toEqual({
+      symbol: null,
+      backSymbol: null,
+    });
     expect(provider.getCardTemplateForTokenType('vc-guerrillas')).toBeNull();
   });
 
@@ -104,6 +108,10 @@ describe('VisualConfigFactionColorProvider', () => {
       color: 'bright-blue',
       shape: 'card',
       size: 24,
+      symbol: 'VC',
+      backSymbol: null,
+    });
+    expect(provider.resolveTokenSymbols('vc-guerrillas', {})).toEqual({
       symbol: 'VC',
       backSymbol: null,
     });

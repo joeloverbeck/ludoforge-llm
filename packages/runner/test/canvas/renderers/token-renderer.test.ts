@@ -265,13 +265,19 @@ function createColorProvider(overrides: {
   }>>;
   readonly factionColor?: string;
 } = {}) {
+  const defaultSymbol = overrides.tokenVisual?.symbol ?? null;
+  const defaultBackSymbol = overrides.tokenVisual?.backSymbol ?? null;
   return {
     getTokenTypeVisual: vi.fn(() => ({
       shape: overrides.tokenVisual?.shape ?? 'circle',
       color: overrides.tokenVisual?.color ?? null,
-      symbol: overrides.tokenVisual?.symbol ?? null,
-      backSymbol: overrides.tokenVisual?.backSymbol ?? null,
+      symbol: defaultSymbol,
+      backSymbol: defaultBackSymbol,
       size: overrides.tokenVisual?.size ?? 28,
+    })),
+    resolveTokenSymbols: vi.fn((_tokenTypeId: string, _tokenProperties: Readonly<Record<string, string | number | boolean>>) => ({
+      symbol: defaultSymbol,
+      backSymbol: defaultBackSymbol,
     })),
     getCardTemplateForTokenType: vi.fn(
       (tokenTypeId: string) => overrides.cardTemplatesByTokenType?.[tokenTypeId] ?? null,
@@ -413,6 +419,37 @@ describe('createTokenRenderer', () => {
     expect(backSymbol.visible).toBe(false);
     expect(frontSymbol.polyArgs).toBeNull();
     expect(frontSymbol.circleArgs).toBeNull();
+  });
+
+  it('resolves token symbols from token properties through provider', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({ tokenVisual: { shape: 'beveled-cylinder' } });
+    colorProvider.resolveTokenSymbols.mockImplementation((_tokenTypeId, tokenProperties) => ({
+      symbol: tokenProperties.activity === 'active' ? 'star' : null,
+      backSymbol: null,
+    }));
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'vc-guerrillas', properties: { activity: 'underground' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const frontSymbol = tokenContainer.children[3] as InstanceType<typeof MockGraphics>;
+    expect(frontSymbol.polyArgs).toBeNull();
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'vc-guerrillas', properties: { activity: 'active' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    expect(frontSymbol.polyArgs).toHaveLength(20);
+    expect(colorProvider.resolveTokenSymbols).toHaveBeenCalledWith('vc-guerrillas', { activity: 'active' });
   });
 
   it('renders card-shaped tokens with front/back primitives from token visuals', () => {

@@ -99,6 +99,17 @@ describe('visual-config.yaml files', () => {
     expect(parsed.tokenTypes?.['arvn-rangers']?.shape).toBe('beveled-cylinder');
     expect(parsed.tokenTypes?.['nva-guerrillas']?.shape).toBe('beveled-cylinder');
     expect(parsed.tokenTypes?.['vc-guerrillas']?.shape).toBe('beveled-cylinder');
+    expect(parsed.tokenTypes?.['us-troops']?.shape).toBe('square');
+    expect(parsed.tokenTypes?.['arvn-troops']?.shape).toBe('square');
+    expect(parsed.tokenTypes?.['arvn-police']?.shape).toBe('square');
+    expect(parsed.tokenTypes?.['nva-troops']?.shape).toBe('square');
+    expect(parsed.tokenTypes?.['vc-guerrillas']?.symbol).toBeUndefined();
+    expect(parsed.tokenTypes?.['vc-guerrillas']?.symbolRules).toEqual([
+      {
+        when: [{ prop: 'activity', equals: 'active' }],
+        symbol: 'star',
+      },
+    ]);
   });
 
   it("Texas visual-config parses, validates, and uses explicit runtime ids for roles/animation", () => {

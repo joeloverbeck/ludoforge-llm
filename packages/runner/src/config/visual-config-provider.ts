@@ -15,6 +15,7 @@ import type {
   CardAnimationConfig,
   CardTemplate,
   TokenTypeSelectors,
+  TokenSymbolRule,
   LayoutMode,
   LayoutRole,
   VariablesConfig,
@@ -32,6 +33,11 @@ export interface ResolvedTokenVisual {
   readonly shape: TokenShape;
   readonly color: string | null;
   readonly size: number;
+  readonly symbol: string | null;
+  readonly backSymbol: string | null;
+}
+
+export interface ResolvedTokenSymbols {
   readonly symbol: string | null;
   readonly backSymbol: string | null;
 }
@@ -108,6 +114,31 @@ export class VisualConfigProvider {
       symbol: style?.symbol ?? null,
       backSymbol: style?.backSymbol ?? null,
     };
+  }
+
+  resolveTokenSymbols(
+    tokenTypeId: string,
+    tokenProperties: Readonly<Record<string, string | number | boolean>>,
+  ): ResolvedTokenSymbols {
+    const style = this.config?.tokenTypes?.[tokenTypeId];
+    const symbolRules = style?.symbolRules ?? [];
+
+    let symbol: string | null = style?.symbol ?? null;
+    let backSymbol: string | null = style?.backSymbol ?? null;
+
+    for (const rule of symbolRules) {
+      if (!matchesTokenSymbolRule(rule, tokenProperties)) {
+        continue;
+      }
+      if (rule.symbol !== undefined) {
+        symbol = rule.symbol;
+      }
+      if (rule.backSymbol !== undefined) {
+        backSymbol = rule.backSymbol;
+      }
+    }
+
+    return { symbol, backSymbol };
   }
 
   getCardTemplate(templateId: string): CardTemplate | null {
@@ -273,4 +304,16 @@ function matchesTokenTypeSelectors(tokenTypeId: string, selectors: TokenTypeSele
 
   const prefixes = selectors.idPrefixes ?? [];
   return prefixes.some((prefix) => tokenTypeId.startsWith(prefix));
+}
+
+function matchesTokenSymbolRule(
+  rule: TokenSymbolRule,
+  tokenProperties: Readonly<Record<string, string | number | boolean>>,
+): boolean {
+  for (const predicate of rule.when) {
+    if (tokenProperties[predicate.prop] !== predicate.equals) {
+      return false;
+    }
+  }
+  return true;
 }

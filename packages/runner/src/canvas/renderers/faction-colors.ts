@@ -14,6 +14,13 @@ export class DefaultFactionColorProvider implements FactionColorProvider {
     return this.provider.getTokenTypeVisual(tokenTypeId);
   }
 
+  resolveTokenSymbols(
+    tokenTypeId: string,
+    tokenProperties: Readonly<Record<string, string | number | boolean>>,
+  ) {
+    return this.provider.resolveTokenSymbols(tokenTypeId, tokenProperties);
+  }
+
   getCardTemplateForTokenType(_tokenTypeId: string) {
     return null;
   }
@@ -31,6 +38,13 @@ export class VisualConfigFactionColorProvider implements FactionColorProvider {
 
   getTokenTypeVisual(tokenTypeId: string): ResolvedTokenVisual {
     return this.provider.getTokenTypeVisual(tokenTypeId);
+  }
+
+  resolveTokenSymbols(
+    tokenTypeId: string,
+    tokenProperties: Readonly<Record<string, string | number | boolean>>,
+  ) {
+    return this.provider.resolveTokenSymbols(tokenTypeId, tokenProperties);
   }
 
   getCardTemplateForTokenType(tokenTypeId: string) {

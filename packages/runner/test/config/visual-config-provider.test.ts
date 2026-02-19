@@ -181,6 +181,42 @@ describe('VisualConfigProvider', () => {
     });
   });
 
+  it('resolveTokenSymbols applies ordered symbolRules over defaults', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      tokenTypes: {
+        guerrilla: {
+          backSymbol: 'diamond',
+          symbolRules: [
+            {
+              when: [{ prop: 'activity', equals: 'active' }],
+              symbol: 'star',
+            },
+            {
+              when: [{ prop: 'status', equals: 'hidden' }],
+              backSymbol: null,
+            },
+          ],
+        },
+      },
+    });
+
+    expect(provider.resolveTokenSymbols('guerrilla', { activity: 'underground' })).toEqual({
+      symbol: null,
+      backSymbol: 'diamond',
+    });
+
+    expect(provider.resolveTokenSymbols('guerrilla', { activity: 'active' })).toEqual({
+      symbol: 'star',
+      backSymbol: 'diamond',
+    });
+
+    expect(provider.resolveTokenSymbols('guerrilla', { activity: 'active', status: 'hidden' })).toEqual({
+      symbol: 'star',
+      backSymbol: null,
+    });
+  });
+
   it('token type visual resolves to defaults for missing config', () => {
     const provider = new VisualConfigProvider(null);
 
@@ -188,6 +224,10 @@ describe('VisualConfigProvider', () => {
       shape: 'circle',
       color: null,
       size: 28,
+      symbol: null,
+      backSymbol: null,
+    });
+    expect(provider.resolveTokenSymbols('anything', {})).toEqual({
       symbol: null,
       backSymbol: null,
     });

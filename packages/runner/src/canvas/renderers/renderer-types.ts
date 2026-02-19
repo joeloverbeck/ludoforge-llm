@@ -38,6 +38,10 @@ export interface AdjacencyRenderer {
 
 export interface FactionColorProvider {
   getTokenTypeVisual(tokenTypeId: string): ResolvedTokenVisual;
+  resolveTokenSymbols(
+    tokenTypeId: string,
+    tokenProperties: Readonly<Record<string, string | number | boolean>>,
+  ): { readonly symbol: string | null; readonly backSymbol: string | null };
   getCardTemplateForTokenType(tokenTypeId: string): CardTemplate | null;
   getColor(factionId: string | null, playerId: PlayerId): string;
 }

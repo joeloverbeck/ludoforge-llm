@@ -186,7 +186,7 @@ edges:
 
 tokenTypes:
   us-troops:
-    shape: cube
+    shape: square
     color: olive
   us-bases:
     shape: round-disk
@@ -194,34 +194,50 @@ tokenTypes:
   us-irregulars:
     shape: beveled-cylinder
     color: olive
-    symbol: star
+    symbolRules:
+      - when:
+          - prop: activity
+            equals: active
+        symbol: star
   arvn-troops:
-    shape: cube
+    shape: square
     color: yellow
   arvn-police:
-    shape: cube
+    shape: square
     color: orange
   arvn-rangers:
     shape: beveled-cylinder
     color: yellow
-    symbol: star
+    symbolRules:
+      - when:
+          - prop: activity
+            equals: active
+        symbol: star
   arvn-bases:
     shape: round-disk
     color: yellow
   nva-troops:
-    shape: cube
+    shape: square
     color: red
   nva-guerrillas:
     shape: beveled-cylinder
     color: red
-    symbol: star
+    symbolRules:
+      - when:
+          - prop: activity
+            equals: active
+        symbol: star
   nva-bases:
     shape: round-disk
     color: red
   vc-guerrillas:
     shape: beveled-cylinder
     color: bright-blue
-    symbol: star
+    symbolRules:
+      - when:
+          - prop: activity
+            equals: active
+        symbol: star
   vc-bases:
     shape: round-disk
     color: bright-blue

@@ -69,6 +69,10 @@ describe('renderer-types', () => {
         symbol: null,
         backSymbol: null,
       }),
+      resolveTokenSymbols: (_tokenTypeId, _tokenProperties) => ({
+        symbol: null,
+        backSymbol: null,
+      }),
       getCardTemplateForTokenType: (_tokenTypeId: string) => null,
       getColor: (_factionId: string | null, _playerId: PlayerId) => '#ffffff',
     };

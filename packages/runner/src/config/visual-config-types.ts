@@ -93,12 +93,27 @@ const EdgesConfigSchema = z.object({
   categoryStyles: z.record(z.string(), EdgeVisualStyleSchema).optional(),
 });
 
+const TokenPropertyMatchSchema = z.object({
+  prop: z.string(),
+  equals: z.union([z.string(), z.number(), z.boolean()]),
+});
+
+const TokenSymbolRuleSchema = z.object({
+  when: z.array(TokenPropertyMatchSchema).min(1),
+  symbol: z.string().nullable().optional(),
+  backSymbol: z.string().nullable().optional(),
+}).refine(
+  (rule) => rule.symbol !== undefined || rule.backSymbol !== undefined,
+  { message: 'Token symbol rule must define symbol and/or backSymbol.' },
+);
+
 const TokenTypeVisualStyleSchema = z.object({
   shape: TokenShapeSchema.optional(),
   color: z.string().optional(),
   size: z.number().optional(),
   symbol: z.string().optional(),
   backSymbol: z.string().optional(),
+  symbolRules: z.array(TokenSymbolRuleSchema).optional(),
 });
 
 const TokenTypeSelectorsSchema = z.object({
@@ -200,6 +215,8 @@ export type AttributeRule = z.infer<typeof AttributeRuleSchema>;
 export type ZonesConfig = z.infer<typeof ZonesConfigSchema>;
 export type EdgeVisualStyle = z.infer<typeof EdgeVisualStyleSchema>;
 export type EdgesConfig = z.infer<typeof EdgesConfigSchema>;
+export type TokenPropertyMatch = z.infer<typeof TokenPropertyMatchSchema>;
+export type TokenSymbolRule = z.infer<typeof TokenSymbolRuleSchema>;
 export type TokenTypeVisualStyle = z.infer<typeof TokenTypeVisualStyleSchema>;
 export type TokenTypeSelectors = z.infer<typeof TokenTypeSelectorsSchema>;
 export type CardAnimationZoneRoles = z.infer<typeof CardAnimationZoneRolesSchema>;

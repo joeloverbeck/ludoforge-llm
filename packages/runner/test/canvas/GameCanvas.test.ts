@@ -716,6 +716,38 @@ describe('createGameCanvasRuntime', () => {
     runtime.destroy();
   });
 
+  it('updates position zone ids from GameDef zones when they become available', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:visible-only']));
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x454545,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    store.setState({
+      gameDef: {
+        zones: [
+          { id: 'zone:deck' },
+          { id: 'zone:burn' },
+          { id: 'zone:hand:p1' },
+        ],
+      } as unknown as GameDef,
+    });
+
+    expect(fixture.positionStore.setZoneIDs).toHaveBeenCalledWith([
+      'zone:deck',
+      'zone:burn',
+      'zone:hand:p1',
+    ]);
+
+    runtime.destroy();
+  });
+
   it('remounts cleanly with paired updater start/destroy and no leaked zone subscriptions', async () => {
     const fixture = createRuntimeFixture();
     const store = createRuntimeStore(makeRenderModel(['zone:a']));

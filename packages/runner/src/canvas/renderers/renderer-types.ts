@@ -1,4 +1,5 @@
 import type { PlayerId } from '@ludoforge/engine/runtime';
+import type { TokenVisualHints } from '@ludoforge/engine/runtime';
 import type { Container } from 'pixi.js';
 
 import type { Position } from '../geometry';
@@ -35,6 +36,6 @@ export interface AdjacencyRenderer {
 }
 
 export interface FactionColorProvider {
-  getTokenTypeColor(tokenTypeId: string): string | null;
+  getTokenTypeVisual(tokenTypeId: string): TokenVisualHints | null;
   getColor(factionId: string | null, playerId: PlayerId): string;
 }

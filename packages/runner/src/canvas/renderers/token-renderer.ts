@@ -1,14 +1,19 @@
 import { Circle, Container, Graphics, Text } from 'pixi.js';
-import { asPlayerId } from '@ludoforge/engine/runtime';
+import { asPlayerId, type TokenShape } from '@ludoforge/engine/runtime';
 
 import type { RenderToken } from '../../model/render-model';
 import type { FactionColorProvider, TokenRenderer } from './renderer-types';
 import { parseHexColor } from './shape-utils';
 
 const TOKEN_RADIUS = 14;
+const CARD_WIDTH = 24;
+const CARD_HEIGHT = 34;
+const CARD_CORNER_RADIUS = 4;
 const TOKENS_PER_ROW = 4;
 const TOKEN_SPACING = 30;
 const NEUTRAL_TOKEN_COLOR = 0x6b7280;
+const CARD_BACK_COLOR = 0x1f2937;
+const CARD_BACK_LABEL_COLOR = '#e2e8f0';
 
 const DEFAULT_STROKE = {
   color: 0x0f172a,
@@ -29,8 +34,10 @@ const SELECTED_STROKE = {
 } as const;
 
 interface TokenVisualElements {
-  readonly base: Graphics;
-  readonly label: Text;
+  readonly frontBase: Graphics;
+  readonly frontLabel: Text;
+  readonly backBase: Graphics;
+  readonly backLabel: Text;
   readonly countBadge: Text;
 }
 
@@ -90,7 +97,13 @@ export function createTokenRenderer(
           tokenContainer.hitArea = new Circle(0, 0, TOKEN_RADIUS);
 
           const visuals = createTokenVisualElements();
-          tokenContainer.addChild(visuals.base, visuals.label, visuals.countBadge);
+          tokenContainer.addChild(
+            visuals.backBase,
+            visuals.backLabel,
+            visuals.frontBase,
+            visuals.frontLabel,
+            visuals.countBadge,
+          );
           visualsByContainer.set(tokenContainer, visuals);
 
           tokenContainers.set(entry.renderId, tokenContainer);
@@ -174,9 +187,10 @@ export function createTokenRenderer(
 }
 
 function createTokenVisualElements(): TokenVisualElements {
-  const base = new Graphics();
+  const frontBase = new Graphics();
+  const backBase = new Graphics();
 
-  const label = new Text({
+  const frontLabel = new Text({
     text: '',
     style: {
       fill: '#f8fafc',
@@ -185,9 +199,22 @@ function createTokenVisualElements(): TokenVisualElements {
     },
   });
 
-  label.anchor.set(0.5, 0.5);
-  label.eventMode = 'none';
-  label.interactiveChildren = false;
+  frontLabel.anchor.set(0.5, 0.5);
+  frontLabel.eventMode = 'none';
+  frontLabel.interactiveChildren = false;
+
+  const backLabel = new Text({
+    text: '?',
+    style: {
+      fill: CARD_BACK_LABEL_COLOR,
+      fontSize: 12,
+      fontFamily: 'monospace',
+      fontWeight: '700',
+    },
+  });
+  backLabel.anchor.set(0.5, 0.5);
+  backLabel.eventMode = 'none';
+  backLabel.interactiveChildren = false;
 
   const countBadge = new Text({
     text: '',
@@ -198,14 +225,15 @@ function createTokenVisualElements(): TokenVisualElements {
     },
   });
   countBadge.anchor.set(1, 0);
-  countBadge.position.set(TOKEN_RADIUS - 2, -TOKEN_RADIUS + 2);
   countBadge.eventMode = 'none';
   countBadge.interactiveChildren = false;
   countBadge.visible = false;
 
   return {
-    base,
-    label,
+    frontBase,
+    frontLabel,
+    backBase,
+    backLabel,
     countBadge,
   };
 }
@@ -217,24 +245,32 @@ function updateTokenVisuals(
   tokenCount: number,
   colorProvider: FactionColorProvider,
 ): void {
+  const tokenVisual = colorProvider.getTokenTypeVisual(token.type);
+  const shape = resolveTokenShape(tokenVisual?.shape);
+  const dimensions = resolveTokenDimensions(shape, tokenVisual?.size);
   const fillColor = resolveTokenColor(token, colorProvider);
   const stroke = resolveStroke(token);
+  const isFaceUp = token.faceUp;
 
-  visuals.base
-    .clear()
-    .circle(0, 0, TOKEN_RADIUS)
-    .fill({ color: fillColor })
-    .stroke(stroke);
+  drawTokenBase(visuals.frontBase, shape, dimensions, fillColor, stroke);
+  drawTokenBase(visuals.backBase, shape, dimensions, CARD_BACK_COLOR, stroke);
 
-  visuals.label.text = token.faceUp ? toTokenLabel(token.type) : '?';
+  visuals.frontBase.visible = isFaceUp;
+  visuals.frontLabel.visible = isFaceUp;
+  visuals.backBase.visible = !isFaceUp;
+  visuals.backLabel.visible = !isFaceUp;
+
+  visuals.frontLabel.text = tokenLabel(token, tokenVisual?.symbol);
+  visuals.backLabel.text = tokenBackLabel(shape, tokenVisual?.symbol);
   visuals.countBadge.text = tokenCount > 1 ? String(tokenCount) : '';
   visuals.countBadge.visible = tokenCount > 1;
+  visuals.countBadge.position.set(dimensions.width / 2 - 2, -dimensions.height / 2 + 2);
   tokenContainer.scale.set(token.isSelected ? 1.08 : 1, token.isSelected ? 1.08 : 1);
 }
 
 function resolveTokenColor(token: RenderToken, colorProvider: FactionColorProvider): number {
-  const tokenTypeColor = colorProvider.getTokenTypeColor(token.type);
-  const resolvedTokenTypeColor = parseHexColor(tokenTypeColor ?? undefined, {
+  const tokenTypeColor = colorProvider.getTokenTypeVisual(token.type)?.color;
+  const resolvedTokenTypeColor = parseHexColor(tokenTypeColor, {
     allowShortHex: true,
     allowNamedColors: true,
   });
@@ -272,6 +308,49 @@ function resolveStroke(token: RenderToken): { color: number; width: number; alph
   return DEFAULT_STROKE;
 }
 
+function drawTokenBase(
+  graphics: Graphics,
+  shape: 'circle' | 'card',
+  dimensions: { readonly width: number; readonly height: number },
+  fillColor: number,
+  stroke: { color: number; width: number; alpha: number },
+): void {
+  graphics.clear();
+  if (shape === 'card') {
+    graphics
+      .roundRect(-dimensions.width / 2, -dimensions.height / 2, dimensions.width, dimensions.height, CARD_CORNER_RADIUS)
+      .fill({ color: fillColor })
+      .stroke(stroke);
+    return;
+  }
+
+  graphics
+    .circle(0, 0, dimensions.width / 2)
+    .fill({ color: fillColor })
+    .stroke(stroke);
+}
+
+function resolveTokenShape(shape: TokenShape | undefined): 'circle' | 'card' {
+  return shape === 'card' ? 'card' : 'circle';
+}
+
+function resolveTokenDimensions(
+  shape: 'circle' | 'card',
+  size: number | undefined,
+): { readonly width: number; readonly height: number } {
+  const normalizedSize = typeof size === 'number' && Number.isFinite(size) && size > 0 ? size : TOKEN_RADIUS * 2;
+  if (shape === 'card') {
+    return {
+      width: Math.max(CARD_WIDTH, Math.round(normalizedSize * 0.9)),
+      height: Math.max(CARD_HEIGHT, Math.round(normalizedSize * 1.25)),
+    };
+  }
+  return {
+    width: normalizedSize,
+    height: normalizedSize,
+  };
+}
+
 function tokenOffset(index: number): { x: number; y: number } {
   const column = index % TOKENS_PER_ROW;
   const row = Math.floor(index / TOKENS_PER_ROW);
@@ -280,6 +359,23 @@ function tokenOffset(index: number): { x: number; y: number } {
     x: (column - (TOKENS_PER_ROW - 1) / 2) * TOKEN_SPACING,
     y: row * TOKEN_SPACING - TOKEN_SPACING / 2,
   };
+}
+
+function tokenLabel(token: RenderToken, symbol: string | undefined): string {
+  const trimmedSymbol = typeof symbol === 'string' ? symbol.trim() : '';
+  if (trimmedSymbol.length > 0) {
+    return trimmedSymbol;
+  }
+  return toTokenLabel(token.type);
+}
+
+function tokenBackLabel(shape: 'circle' | 'card', symbol: string | undefined): string {
+  if (shape !== 'card') {
+    return '?';
+  }
+
+  const trimmedSymbol = typeof symbol === 'string' ? symbol.trim() : '';
+  return trimmedSymbol.length > 0 ? '◆' : '?';
 }
 
 interface TokenRenderEntry {
@@ -312,6 +408,16 @@ function buildRenderEntries(tokens: readonly RenderToken[]): readonly TokenRende
   }
 
   for (const [key, groupedTokens] of grouped.entries()) {
+    if (groupedTokens.length === 1) {
+      const singleton = groupedTokens[0]!;
+      entries.push({
+        renderId: singleton.id,
+        representative: singleton,
+        tokenIds: [singleton.id],
+      });
+      continue;
+    }
+
     entries.push({
       renderId: key,
       representative: groupedTokens[0]!,

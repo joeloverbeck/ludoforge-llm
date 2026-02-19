@@ -69,12 +69,6 @@ function getMissingSpriteReason(
       if (!spriteRefs.tokenContainers.has(descriptor.tokenId)) {
         return `token container not found (tokenId=${descriptor.tokenId})`;
       }
-      if (!spriteRefs.zoneContainers.has(descriptor.from)) {
-        return `source zone container not found (zoneId=${descriptor.from})`;
-      }
-      if (!spriteRefs.zoneContainers.has(descriptor.to)) {
-        return `target zone container not found (zoneId=${descriptor.to})`;
-      }
       if (!spriteRefs.zonePositions.positions.has(descriptor.from)) {
         return `source zone position not found (zoneId=${descriptor.from})`;
       }
@@ -86,9 +80,6 @@ function getMissingSpriteReason(
     case 'destroyToken':
       if (!spriteRefs.tokenContainers.has(descriptor.tokenId)) {
         return `token container not found (tokenId=${descriptor.tokenId})`;
-      }
-      if (!spriteRefs.zoneContainers.has(descriptor.zone)) {
-        return `zone container not found (zoneId=${descriptor.zone})`;
       }
       if (!spriteRefs.zonePositions.positions.has(descriptor.zone)) {
         return `zone position not found (zoneId=${descriptor.zone})`;

@@ -1,4 +1,4 @@
-import type { FactionDef, PlayerId, TokenTypeDef } from '@ludoforge/engine/runtime';
+import type { FactionDef, PlayerId, TokenTypeDef, TokenVisualHints } from '@ludoforge/engine/runtime';
 
 import type { FactionColorProvider } from './renderer-types';
 
@@ -33,7 +33,7 @@ function toPaletteIndex(seed: number, paletteSize: number): number {
 export class DefaultFactionColorProvider implements FactionColorProvider {
   private readonly palette = DEFAULT_FACTION_PALETTE;
 
-  getTokenTypeColor(_tokenTypeId: string): string | null {
+  getTokenTypeVisual(_tokenTypeId: string): TokenVisualHints | null {
     return null;
   }
 
@@ -46,7 +46,7 @@ export class DefaultFactionColorProvider implements FactionColorProvider {
 
 export class GameDefFactionColorProvider implements FactionColorProvider {
   private colorByFaction = new Map<string, string>();
-  private colorByTokenType = new Map<string, string>();
+  private visualByTokenType = new Map<string, TokenVisualHints>();
   private readonly fallback: FactionColorProvider;
 
   constructor(factions: readonly FactionDef[] | undefined, fallback?: FactionColorProvider) {
@@ -59,18 +59,17 @@ export class GameDefFactionColorProvider implements FactionColorProvider {
   }
 
   setTokenTypes(tokenTypes: readonly TokenTypeDef[] | undefined): void {
-    this.colorByTokenType = new Map(
+    this.visualByTokenType = new Map(
       (tokenTypes ?? [])
         .map((tokenType) => {
-          const color = tokenType.visual?.color;
-          return typeof color === 'string' ? ([tokenType.id, color] as const) : null;
+          return tokenType.visual === undefined ? null : ([tokenType.id, tokenType.visual] as const);
         })
-        .filter((entry): entry is readonly [string, string] => entry !== null),
+        .filter((entry): entry is readonly [string, TokenVisualHints] => entry !== null),
     );
   }
 
-  getTokenTypeColor(tokenTypeId: string): string | null {
-    return this.colorByTokenType.get(tokenTypeId) ?? this.fallback.getTokenTypeColor(tokenTypeId);
+  getTokenTypeVisual(tokenTypeId: string): TokenVisualHints | null {
+    return this.visualByTokenType.get(tokenTypeId) ?? this.fallback.getTokenTypeVisual(tokenTypeId);
   }
 
   getColor(factionId: string | null, playerId: PlayerId): string {

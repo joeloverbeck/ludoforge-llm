@@ -512,12 +512,17 @@ function createViewportResult(
 }
 
 function selectZoneIDs(state: GameStore): readonly string[] {
-  const zones = state.renderModel?.zones;
-  if (zones === undefined || zones.length === 0) {
+  const gameDefZones = state.gameDef?.zones;
+  if (Array.isArray(gameDefZones) && gameDefZones.length > 0) {
+    return gameDefZones.map((zone) => zone.id);
+  }
+
+  const renderZones = state.renderModel?.zones;
+  if (renderZones === undefined || renderZones.length === 0) {
     return [];
   }
 
-  return zones.map((zone) => zone.id);
+  return renderZones.map((zone) => zone.id);
 }
 
 function selectGameDefFactions(state: GameStore): readonly FactionDef[] | undefined {

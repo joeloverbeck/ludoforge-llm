@@ -8,9 +8,9 @@ import {
 } from '../../../src/canvas/renderers/faction-colors';
 
 describe('DefaultFactionColorProvider', () => {
-  it('returns null for token type colors by default', () => {
+  it('returns null for token type visuals by default', () => {
     const provider = new DefaultFactionColorProvider();
-    expect(provider.getTokenTypeColor('vc-guerrillas')).toBeNull();
+    expect(provider.getTokenTypeVisual('vc-guerrillas')).toBeNull();
   });
 
   it('returns deterministic color for the same faction/player pair', () => {
@@ -116,19 +116,19 @@ describe('GameDefFactionColorProvider', () => {
     expect(provider.getColor('us', asPlayerId(0))).toBe('#e63946');
   });
 
-  it('prefers token type visual colors when declared', () => {
+  it('resolves token type visuals when declared', () => {
     const fallback = new DefaultFactionColorProvider();
     const provider = new GameDefFactionColorProvider(undefined, fallback);
 
-    expect(provider.getTokenTypeColor('vc-guerrillas')).toBeNull();
+    expect(provider.getTokenTypeVisual('vc-guerrillas')).toBeNull();
 
     provider.setTokenTypes([
-      { id: 'vc-guerrillas', faction: 'vc', props: {}, visual: { color: 'bright-blue' } },
+      { id: 'vc-guerrillas', faction: 'vc', props: {}, visual: { color: 'bright-blue', shape: 'card', symbol: 'VC' } },
       { id: 'nva-guerrillas', faction: 'nva', props: {}, visual: { color: '#ff0000' } },
     ]);
 
-    expect(provider.getTokenTypeColor('vc-guerrillas')).toBe('bright-blue');
-    expect(provider.getTokenTypeColor('nva-guerrillas')).toBe('#ff0000');
-    expect(provider.getTokenTypeColor('unknown')).toBeNull();
+    expect(provider.getTokenTypeVisual('vc-guerrillas')).toEqual({ color: 'bright-blue', shape: 'card', symbol: 'VC' });
+    expect(provider.getTokenTypeVisual('nva-guerrillas')).toEqual({ color: '#ff0000' });
+    expect(provider.getTokenTypeVisual('unknown')).toBeNull();
   });
 });

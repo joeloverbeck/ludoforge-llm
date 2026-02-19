@@ -101,15 +101,23 @@ const {
 
     circleArgs: [number, number, number] | null = null;
 
+    roundRectArgs: [number, number, number, number, number] | null = null;
+
     clear(): this {
       this.fillStyle = undefined;
       this.strokeStyle = undefined;
       this.circleArgs = null;
+      this.roundRectArgs = null;
       return this;
     }
 
     circle(x: number, y: number, radius: number): this {
       this.circleArgs = [x, y, radius];
+      return this;
+    }
+
+    roundRect(x: number, y: number, width: number, height: number, radius: number): this {
+      this.roundRectArgs = [x, y, width, height, radius];
       return this;
     }
 
@@ -197,10 +205,25 @@ function createZoneContainers(entries: readonly [string, { x: number; y: number 
   return zoneMap;
 }
 
+function createColorProvider(overrides: {
+  readonly tokenVisual?: {
+    readonly shape?: 'card' | 'circle';
+    readonly color?: string;
+    readonly symbol?: string;
+    readonly size?: number;
+  } | null;
+  readonly factionColor?: string;
+} = {}) {
+  return {
+    getTokenTypeVisual: vi.fn(() => overrides.tokenVisual ?? null),
+    getColor: vi.fn(() => overrides.factionColor ?? '#112233'),
+  };
+}
+
 describe('createTokenRenderer', () => {
   it('update with empty token array creates no containers', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#abcdef') };
+    const colorProvider = createColorProvider({ factionColor: '#abcdef' });
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update([], new Map());
@@ -211,7 +234,7 @@ describe('createTokenRenderer', () => {
 
   it('creates token containers and calls color provider for owned tokens', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -235,7 +258,7 @@ describe('createTokenRenderer', () => {
 
   it('uses neutral fallback for unowned tokens without calling color provider', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -246,7 +269,7 @@ describe('createTokenRenderer', () => {
     );
 
     const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
-    const base = tokenContainer.children[0] as InstanceType<typeof MockGraphics>;
+    const base = tokenContainer.children[2] as InstanceType<typeof MockGraphics>;
 
     expect(colorProvider.getColor).not.toHaveBeenCalled();
     expect(base.fillStyle).toEqual({ color: 0x6b7280 });
@@ -254,7 +277,7 @@ describe('createTokenRenderer', () => {
 
   it('parses owned token colors from #RGB and falls back to neutral for invalid provider colors', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#abc') };
+    const colorProvider = createColorProvider({ factionColor: '#abc' });
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -265,7 +288,7 @@ describe('createTokenRenderer', () => {
     );
 
     const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
-    const base = tokenContainer.children[0] as InstanceType<typeof MockGraphics>;
+    const base = tokenContainer.children[2] as InstanceType<typeof MockGraphics>;
     expect(base.fillStyle).toEqual({ color: 0xaabbcc });
 
     colorProvider.getColor.mockReturnValue('invalid');
@@ -280,10 +303,10 @@ describe('createTokenRenderer', () => {
 
   it('prioritizes token type visual color over faction color and supports named colors', () => {
     const parent = new MockContainer();
-    const colorProvider = {
-      getTokenTypeColor: vi.fn(() => 'bright-blue'),
-      getColor: vi.fn(() => '#ff0000'),
-    };
+    const colorProvider = createColorProvider({
+      tokenVisual: { color: 'bright-blue' },
+      factionColor: '#ff0000',
+    });
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -294,14 +317,14 @@ describe('createTokenRenderer', () => {
     );
 
     const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
-    const base = tokenContainer.children[0] as InstanceType<typeof MockGraphics>;
+    const base = tokenContainer.children[2] as InstanceType<typeof MockGraphics>;
     expect(base.fillStyle).toEqual({ color: 0x00bfff });
     expect(colorProvider.getColor).not.toHaveBeenCalled();
   });
 
   it('shows ? for face-down tokens and type for face-up tokens', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -312,8 +335,10 @@ describe('createTokenRenderer', () => {
     );
 
     const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
-    const label = tokenContainer.children[1] as InstanceType<typeof MockText>;
-    expect(label.text).toBe('?');
+    const backLabel = tokenContainer.children[1] as InstanceType<typeof MockText>;
+    const frontLabel = tokenContainer.children[3] as InstanceType<typeof MockText>;
+    expect(backLabel.text).toBe('?');
+    expect(frontLabel.visible).toBe(false);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'leader', faceUp: true, isSelectable: true })],
@@ -322,12 +347,52 @@ describe('createTokenRenderer', () => {
       ]),
     );
 
-    expect(label.text).toBe('LEA');
+    expect(frontLabel.text).toBe('LEA');
+    expect(frontLabel.visible).toBe(true);
+    expect(backLabel.visible).toBe(false);
+  });
+
+  it('renders card-shaped tokens with front/back primitives from token visuals', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'card', symbol: 'AS', color: '#ff0000' },
+    });
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'playing-card', faceUp: false })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const backBase = tokenContainer.children[0] as InstanceType<typeof MockGraphics>;
+    const backLabel = tokenContainer.children[1] as InstanceType<typeof MockText>;
+    const frontBase = tokenContainer.children[2] as InstanceType<typeof MockGraphics>;
+    const frontLabel = tokenContainer.children[3] as InstanceType<typeof MockText>;
+
+    expect(backBase.roundRectArgs).not.toBeNull();
+    expect(frontBase.roundRectArgs).not.toBeNull();
+    expect(backBase.visible).toBe(true);
+    expect(frontBase.visible).toBe(false);
+    expect(backLabel.text).toBe('◆');
+    expect(frontLabel.text).toBe('AS');
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'playing-card', faceUp: true })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    expect(backBase.visible).toBe(false);
+    expect(frontBase.visible).toBe(true);
   });
 
   it('renders selectable and selected states with distinct stroke styles and scale', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -338,7 +403,7 @@ describe('createTokenRenderer', () => {
     );
 
     const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
-    const base = tokenContainer.children[0] as InstanceType<typeof MockGraphics>;
+    const base = tokenContainer.children[2] as InstanceType<typeof MockGraphics>;
 
     expect(base.strokeStyle).toEqual({ color: 0x93c5fd, width: 2.5, alpha: 0.95 });
     expect(tokenContainer.scale.x).toBe(1);
@@ -356,7 +421,7 @@ describe('createTokenRenderer', () => {
 
   it('removes and destroys containers for deleted token IDs', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -389,7 +454,7 @@ describe('createTokenRenderer', () => {
 
   it('hides tokens whose zone container is missing and restores when zone reappears', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update([makeToken({ id: 'token:1', zoneID: 'zone:missing', isSelectable: true })], new Map());
@@ -413,7 +478,7 @@ describe('createTokenRenderer', () => {
 
   it('keeps container references stable for unchanged token IDs across updates', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -439,7 +504,7 @@ describe('createTokenRenderer', () => {
 
   it('positions tokens using zone anchor plus per-zone deterministic offsets', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -467,7 +532,7 @@ describe('createTokenRenderer', () => {
 
   it('getContainerMap returns a live map and destroy clears all containers', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -488,7 +553,7 @@ describe('createTokenRenderer', () => {
 
   it('invokes bound selection cleanup when tokens are removed or renderer is destroyed', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const cleanupByTokenId = new Map<string, ReturnType<typeof vi.fn>>();
     const bindSelection = vi.fn((_: Container, tokenId: string) => {
       const cleanup = vi.fn();
@@ -522,7 +587,7 @@ describe('createTokenRenderer', () => {
 
   it('stacks non-selectable tokens of same type/faction and shows a count badge', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -540,14 +605,14 @@ describe('createTokenRenderer', () => {
     const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
     expect(renderer.getContainerMap().get('token:2')).toBe(tokenContainer);
     expect(renderer.getContainerMap().get('token:3')).toBe(tokenContainer);
-    const countBadge = tokenContainer.children[2] as InstanceType<typeof MockText>;
+    const countBadge = tokenContainer.children[4] as InstanceType<typeof MockText>;
     expect(countBadge.text).toBe('3');
     expect(countBadge.visible).toBe(true);
   });
 
   it('does not stack non-selectable tokens when ownerID differs', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -570,7 +635,7 @@ describe('createTokenRenderer', () => {
 
   it('uses collision-safe stack keying for zone/type dimensions', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
     renderer.update(
@@ -590,7 +655,7 @@ describe('createTokenRenderer', () => {
 
   it('rebinds stack hover/selection handlers when representative token id changes', () => {
     const parent = new MockContainer();
-    const colorProvider = { getTokenTypeColor: vi.fn(() => null), getColor: vi.fn(() => '#112233') };
+    const colorProvider = createColorProvider();
     const cleanupByTokenId = new Map<string, ReturnType<typeof vi.fn>>();
     const bindSelection = vi.fn((_: Container, tokenId: string) => {
       const cleanup = vi.fn();

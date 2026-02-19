@@ -160,6 +160,46 @@ describe('buildTimeline', () => {
     expect(warn.mock.calls[0]?.[0]).toContain('token container not found');
   });
 
+  it('builds cardDeal tween when source zone container is missing but source position exists', () => {
+    const runtime = createRuntimeFixture();
+    const moveTween = vi.fn();
+    const defs: readonly AnimationPresetDefinition[] = [
+      {
+        id: 'move-preset',
+        defaultDurationSeconds: 0.4,
+        compatibleKinds: ['cardDeal'],
+        createTween: moveTween,
+      },
+    ];
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+    ];
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+      // noop
+    });
+    buildTimeline(
+      descriptors,
+      createPresetRegistry(defs),
+      createSpriteRefs({
+        zoneContainers: new Map([
+          ['zone:b', new Container()],
+        ]),
+      }),
+      runtime.gsap,
+    );
+
+    expect(moveTween).toHaveBeenCalledTimes(1);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it('catches per-descriptor tween failures and continues subsequent descriptors', () => {
     const runtime = createRuntimeFixture();
 

@@ -62,13 +62,13 @@ describe('renderer-types', () => {
 
   it('accepts a mock FactionColorProvider contract', () => {
     const provider: FactionColorProvider = {
-      getTokenTypeColor: (_tokenTypeId: string) => null,
+      getTokenTypeVisual: (_tokenTypeId: string) => null,
       getColor: (_factionId: string | null, _playerId: PlayerId) => '#ffffff',
     };
 
-    expectTypeOf<FactionColorProvider['getTokenTypeColor']>().parameters.toEqualTypeOf<[string]>();
+    expectTypeOf<FactionColorProvider['getTokenTypeVisual']>().parameters.toEqualTypeOf<[string]>();
     expectTypeOf<FactionColorProvider['getColor']>().parameters.toEqualTypeOf<[string | null, PlayerId]>();
-    expect(provider.getTokenTypeColor('token:a')).toBeNull();
+    expect(provider.getTokenTypeVisual('token:a')).toBeNull();
     expect(provider.getColor(null, asPlayerId(0))).toBe('#ffffff');
   });
 });

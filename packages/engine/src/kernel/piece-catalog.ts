@@ -10,6 +10,7 @@ const DIMENSION_VALUES: Readonly<Record<PieceStatusDimension, readonly string[]>
 export interface PieceCatalogDiagnosticContext {
   readonly assetPath?: string;
   readonly entityId?: string;
+  readonly pathPrefix?: string;
 }
 
 export function validatePieceCatalogPayload(
@@ -20,7 +21,7 @@ export function validatePieceCatalogPayload(
   if (!parseResult.success) {
     return parseResult.error.issues.map((issue) => ({
       code: 'PIECE_CATALOG_SCHEMA_INVALID',
-      path: issue.path.length > 0 ? `asset.payload.${issue.path.join('.')}` : 'asset.payload',
+      path: remapPayloadPath(issue.path.length > 0 ? `asset.payload.${issue.path.join('.')}` : 'asset.payload', context),
       severity: 'error' as const,
       message: issue.message,
       ...(context.assetPath === undefined ? {} : { assetPath: context.assetPath }),
@@ -199,7 +200,25 @@ export function validatePieceCatalogPayload(
 function withContext(diagnostic: Diagnostic, context: PieceCatalogDiagnosticContext): Diagnostic {
   return {
     ...diagnostic,
+    path: remapPayloadPath(diagnostic.path, context),
     ...(context.assetPath === undefined ? {} : { assetPath: context.assetPath }),
     ...(context.entityId === undefined ? {} : { entityId: context.entityId }),
   };
+}
+
+function remapPayloadPath(path: string, context: PieceCatalogDiagnosticContext): string {
+  const targetPrefix = context.pathPrefix ?? 'asset.payload';
+  if (targetPrefix === 'asset.payload') {
+    return path;
+  }
+  if (path === 'asset.payload') {
+    return targetPrefix;
+  }
+  if (path.startsWith('asset.payload.')) {
+    return `${targetPrefix}${path.slice('asset.payload'.length)}`;
+  }
+  if (path.startsWith('asset.payload[')) {
+    return `${targetPrefix}${path.slice('asset.payload'.length)}`;
+  }
+  return path;
 }

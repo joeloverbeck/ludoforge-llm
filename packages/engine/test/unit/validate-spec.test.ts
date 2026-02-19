@@ -331,6 +331,104 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('rejects removed piece-catalog visual fields in data assets as errors', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      dataAssets: [
+        {
+          id: 'fitl-pieces',
+          kind: 'pieceCatalog',
+          payload: {
+            factions: [
+              { id: 'us', color: '#e63946', displayName: 'United States' },
+            ],
+            pieceTypes: [
+              {
+                id: 'us-troops',
+                faction: 'us',
+                statusDimensions: [],
+                transitions: [],
+                visual: { shape: 'cube' },
+              },
+            ],
+            inventory: [{ pieceTypeId: 'us-troops', faction: 'us', total: 10 }],
+          },
+        },
+      ],
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID' &&
+          diagnostic.path.startsWith('doc.dataAssets.0.payload.factions') &&
+          diagnostic.message.includes('color') &&
+          diagnostic.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID' &&
+          diagnostic.path.startsWith('doc.dataAssets.0.payload.factions') &&
+          diagnostic.message.includes('displayName') &&
+          diagnostic.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID' &&
+          diagnostic.path.startsWith('doc.dataAssets.0.payload.pieceTypes') &&
+          diagnostic.severity === 'error',
+      ),
+      true,
+    );
+  });
+
+  it('rejects removed map visual fields in data assets as errors', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      dataAssets: [
+        {
+          id: 'fitl-map',
+          kind: 'map',
+          payload: {
+            visualRules: { regions: [] },
+            spaces: [
+              {
+                id: 'hanoi',
+                adjacentTo: [],
+                visual: { shape: 'circle' },
+              },
+            ],
+          },
+        },
+      ],
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'MAP_PAYLOAD_SCHEMA_INVALID' &&
+          diagnostic.path === 'doc.dataAssets.0.payload' &&
+          diagnostic.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'MAP_PAYLOAD_SCHEMA_INVALID' &&
+          diagnostic.path.startsWith('doc.dataAssets.0.payload.spaces') &&
+          diagnostic.severity === 'error',
+      ),
+      true,
+    );
+  });
+
   it('validates action required fields and shape constraints', () => {
     const validDoc = createStructurallyValidDoc();
     const baseAction = validDoc.actions![0]!;

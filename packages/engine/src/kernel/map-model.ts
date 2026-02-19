@@ -11,6 +11,7 @@ import type {
 export interface MapPayloadDiagnosticContext {
   readonly assetPath?: string;
   readonly entityId?: string;
+  readonly pathPrefix?: string;
 }
 
 export function validateMapPayload(
@@ -21,7 +22,7 @@ export function validateMapPayload(
   if (!parseResult.success) {
     return parseResult.error.issues.map((issue) => ({
       code: 'MAP_PAYLOAD_SCHEMA_INVALID',
-      path: issue.path.length > 0 ? `asset.payload.${issue.path.join('.')}` : 'asset.payload',
+      path: remapPayloadPath(issue.path.length > 0 ? `asset.payload.${issue.path.join('.')}` : 'asset.payload', context),
       severity: 'error' as const,
       message: issue.message,
       ...(context.assetPath === undefined ? {} : { assetPath: context.assetPath }),
@@ -315,7 +316,25 @@ function constraintApplies(constraint: SpaceMarkerConstraintDef, space: MapSpace
 function withContext(diagnostic: Diagnostic, context: MapPayloadDiagnosticContext): Diagnostic {
   return {
     ...diagnostic,
+    path: remapPayloadPath(diagnostic.path, context),
     ...(context.assetPath === undefined ? {} : { assetPath: context.assetPath }),
     ...(context.entityId === undefined ? {} : { entityId: context.entityId }),
   };
+}
+
+function remapPayloadPath(path: string, context: MapPayloadDiagnosticContext): string {
+  const targetPrefix = context.pathPrefix ?? 'asset.payload';
+  if (targetPrefix === 'asset.payload') {
+    return path;
+  }
+  if (path === 'asset.payload') {
+    return targetPrefix;
+  }
+  if (path.startsWith('asset.payload.')) {
+    return `${targetPrefix}${path.slice('asset.payload'.length)}`;
+  }
+  if (path.startsWith('asset.payload[')) {
+    return `${targetPrefix}${path.slice('asset.payload'.length)}`;
+  }
+  return path;
 }

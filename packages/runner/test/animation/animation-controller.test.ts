@@ -5,6 +5,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { createAnimationController } from '../../src/animation/animation-controller';
 import { createPresetRegistry } from '../../src/animation/preset-registry';
+import { traceToDescriptors } from '../../src/animation/trace-to-descriptors';
 import type { GameStore } from '../../src/store/game-store';
 
 interface ControllerStoreState {
@@ -83,6 +84,69 @@ function traceEntry(): EffectTraceEntry {
       effectPath: 'effects.0',
     },
   };
+}
+
+function cardTraceEntries(): readonly EffectTraceEntry[] {
+  return [
+    {
+      kind: 'moveToken',
+      tokenId: 'tok:card',
+      from: 'zone:deck',
+      to: 'zone:hand:p1',
+      provenance: {
+        phase: 'main',
+        eventContext: 'actionEffect',
+        effectPath: 'effects.0',
+      },
+    },
+    {
+      kind: 'setTokenProp',
+      tokenId: 'tok:card',
+      prop: 'faceUp',
+      oldValue: false,
+      newValue: true,
+      provenance: {
+        phase: 'main',
+        eventContext: 'actionEffect',
+        effectPath: 'effects.1',
+      },
+    },
+    {
+      kind: 'moveToken',
+      tokenId: 'tok:card',
+      from: 'zone:board',
+      to: 'zone:burn',
+      provenance: {
+        phase: 'main',
+        eventContext: 'actionEffect',
+        effectPath: 'effects.2',
+      },
+    },
+  ] as const;
+}
+
+function cardGameDef() {
+  return {
+    cardAnimation: {
+      cardTokenTypeIds: ['card'],
+      zoneRoles: {
+        draw: ['zone:deck'],
+        hand: ['zone:hand:p1'],
+        shared: ['zone:board'],
+        burn: ['zone:burn'],
+        discard: ['zone:discard'],
+      },
+    },
+  } as const;
+}
+
+function cardRenderModel() {
+  return {
+    tokens: [
+      { id: 'tok:card', type: 'card' },
+      { id: 'tok:chip', type: 'chip' },
+    ],
+  } as const;
 }
 
 describe('createAnimationController', () => {
@@ -469,5 +533,151 @@ describe('createAnimationController', () => {
     expect(queue.resume).toHaveBeenCalledTimes(1);
     expect(queue.skipCurrent).toHaveBeenCalledTimes(1);
     expect(queue.skipAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts a combined card deal/flip/burn flow and preserves playback control forwarding', () => {
+    const store = createControllerStore();
+    const timeline = createTimelineFixture();
+    const queue = {
+      enqueue: vi.fn(),
+      skipCurrent: vi.fn(),
+      skipAll: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      setSpeed: vi.fn(),
+      isPlaying: false,
+      queueLength: 0,
+      onAllComplete: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const buildTimelineMock = vi.fn(() => timeline.timeline);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        tokenContainers: () => new Map([['tok:card', {}]]) as never,
+        zoneContainers: () => new Map([
+          ['zone:deck', {}],
+          ['zone:hand:p1', {}],
+          ['zone:board', {}],
+          ['zone:burn', {}],
+        ]) as never,
+        zonePositions: () => ({
+          positions: new Map([
+            ['zone:deck', { x: 0, y: 0 }],
+            ['zone:hand:p1', { x: 10, y: 0 }],
+            ['zone:board', { x: 5, y: 5 }],
+            ['zone:burn', { x: 15, y: 5 }],
+          ]),
+          bounds: { minX: 0, minY: 0, maxX: 15, maxY: 5 },
+        }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => queue,
+        traceToDescriptors,
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({
+      gameDef: cardGameDef(),
+      renderModel: cardRenderModel(),
+      effectTrace: cardTraceEntries(),
+    });
+
+    expect(buildTimelineMock).toHaveBeenCalledTimes(1);
+    const buildTimelineCalls = (buildTimelineMock as unknown as {
+      readonly mock: {
+        readonly calls: readonly (readonly [readonly { readonly kind: string }[]])[];
+      };
+    }).mock.calls;
+    const descriptors = buildTimelineCalls[0]?.[0] ?? [];
+    expect(descriptors.map((descriptor) => descriptor.kind)).toEqual(['cardDeal', 'cardFlip', 'cardBurn']);
+    expect(queue.enqueue).toHaveBeenCalledWith(timeline.timeline);
+
+    controller.setSpeed(2);
+    controller.pause();
+    controller.resume();
+    controller.skipCurrent();
+    controller.skipAll();
+
+    expect(queue.setSpeed).toHaveBeenCalledWith(2);
+    expect(queue.pause).toHaveBeenCalledTimes(1);
+    expect(queue.resume).toHaveBeenCalledTimes(1);
+    expect(queue.skipCurrent).toHaveBeenCalledTimes(1);
+    expect(queue.skipAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('fast-forwards combined card deal/flip/burn flow under reduced motion', () => {
+    const store = createControllerStore();
+    const timeline = createTimelineFixture();
+    const queue = {
+      enqueue: vi.fn(),
+      skipCurrent: vi.fn(),
+      skipAll: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      setSpeed: vi.fn(),
+      isPlaying: false,
+      queueLength: 0,
+      onAllComplete: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const buildTimelineMock = vi.fn(() => timeline.timeline);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        tokenContainers: () => new Map([['tok:card', {}]]) as never,
+        zoneContainers: () => new Map([
+          ['zone:deck', {}],
+          ['zone:hand:p1', {}],
+          ['zone:board', {}],
+          ['zone:burn', {}],
+        ]) as never,
+        zonePositions: () => ({
+          positions: new Map([
+            ['zone:deck', { x: 0, y: 0 }],
+            ['zone:hand:p1', { x: 10, y: 0 }],
+            ['zone:board', { x: 5, y: 5 }],
+            ['zone:burn', { x: 15, y: 5 }],
+          ]),
+          bounds: { minX: 0, minY: 0, maxX: 15, maxY: 5 },
+        }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => queue,
+        traceToDescriptors,
+        buildTimeline: buildTimelineMock,
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    controller.setReducedMotion(true);
+    store.setState({
+      gameDef: cardGameDef(),
+      renderModel: cardRenderModel(),
+      effectTrace: cardTraceEntries(),
+    });
+
+    expect(buildTimelineMock).toHaveBeenCalledTimes(1);
+    const buildTimelineCalls = (buildTimelineMock as unknown as {
+      readonly mock: {
+        readonly calls: readonly (readonly [readonly { readonly kind: string }[]])[];
+      };
+    }).mock.calls;
+    const descriptors = buildTimelineCalls[0]?.[0] ?? [];
+    expect(descriptors.map((descriptor) => descriptor.kind)).toEqual(['cardDeal', 'cardFlip', 'cardBurn']);
+    expect(queue.skipAll).toHaveBeenCalledTimes(1);
+    expect(queue.enqueue).not.toHaveBeenCalled();
+    expect(timeline.progress).toHaveBeenCalledWith(1);
+    expect(timeline.kill).toHaveBeenCalledTimes(1);
   });
 });

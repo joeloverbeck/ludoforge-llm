@@ -1413,6 +1413,88 @@
       ]
     }
   ],
+  "cardAnimation": {
+    "cardTokenTypeIds": [
+      "card-2C",
+      "card-2D",
+      "card-2H",
+      "card-2S",
+      "card-3C",
+      "card-3D",
+      "card-3H",
+      "card-3S",
+      "card-4C",
+      "card-4D",
+      "card-4H",
+      "card-4S",
+      "card-5C",
+      "card-5D",
+      "card-5H",
+      "card-5S",
+      "card-6C",
+      "card-6D",
+      "card-6H",
+      "card-6S",
+      "card-7C",
+      "card-7D",
+      "card-7H",
+      "card-7S",
+      "card-8C",
+      "card-8D",
+      "card-8H",
+      "card-8S",
+      "card-9C",
+      "card-9D",
+      "card-9H",
+      "card-9S",
+      "card-AC",
+      "card-AD",
+      "card-AH",
+      "card-AS",
+      "card-JC",
+      "card-JD",
+      "card-JH",
+      "card-JS",
+      "card-KC",
+      "card-KD",
+      "card-KH",
+      "card-KS",
+      "card-QC",
+      "card-QD",
+      "card-QH",
+      "card-QS",
+      "card-TC",
+      "card-TD",
+      "card-TH",
+      "card-TS"
+    ],
+    "zoneRoles": {
+      "draw": [
+        "deck:none"
+      ],
+      "hand": [
+        "hand:0",
+        "hand:1",
+        "hand:2",
+        "hand:3",
+        "hand:4",
+        "hand:5",
+        "hand:6",
+        "hand:7",
+        "hand:8",
+        "hand:9"
+      ],
+      "shared": [
+        "community:none"
+      ],
+      "burn": [
+        "burn:none"
+      ],
+      "discard": [
+        "muck:none"
+      ]
+    }
+  },
   "tokenTypes": [
     {
       "id": "card-2S",

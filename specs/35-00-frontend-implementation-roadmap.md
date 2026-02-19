@@ -113,7 +113,7 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 **Gate criteria**:
 - [x] Effect trace drives GSAP timeline animations (token movement, creation, destruction, property changes)
 - [x] Phase transition banners animate
-- [ ] Card animations (deal, flip, burn) work
+- [x] Card animations (deal, flip, burn) work
 - [x] Animation speed control (1x, 2x, 4x, pause, skip)
 - [x] AI turn playback with configurable detail level
 - [ ] Board auto-layouts from zone adjacency graph via ForceAtlas2
@@ -126,7 +126,7 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [ ] Replay mode (step-forward, step-backward, speed control)
 - [ ] Event log panel with clickable, filterable entries
 
-**F3 Progress**: In progress. Spec 40 is completed (closed 2026-02-19), so core trace-driven animation, phase transition animation, playback controls, and AI detail-level playback are done. Spec 41 (layout) and Spec 42 (visual config/session management), plus card-specific deal/flip/burn animations, remain open.
+**F3 Progress**: In progress. Spec 40 is completed (closed 2026-02-19), so core trace-driven animation, phase transition animation, playback controls, AI detail-level playback, and card-specific deal/flip/burn animation acceptance coverage are done. Spec 41 (layout) and Spec 42 (visual config/session management) remain open.
 
 ---
 

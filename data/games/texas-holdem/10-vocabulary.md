@@ -2,11 +2,11 @@
 
 ```yaml
 zones:
-  - { id: deck, owner: none, visibility: hidden, ordering: stack }
-  - { id: burn, owner: none, visibility: hidden, ordering: set }
-  - { id: community, owner: none, visibility: public, ordering: queue }
-  - { id: hand, owner: player, visibility: owner, ordering: set }
-  - { id: muck, owner: none, visibility: hidden, ordering: set }
+  - { id: deck, owner: none, visibility: hidden, ordering: stack, layoutRole: card }
+  - { id: burn, owner: none, visibility: hidden, ordering: set, layoutRole: other }
+  - { id: community, owner: none, visibility: public, ordering: queue, layoutRole: other }
+  - { id: hand, owner: player, visibility: owner, ordering: set, layoutRole: hand }
+  - { id: muck, owner: none, visibility: hidden, ordering: set, layoutRole: other }
 
 globalVars:
   - { name: pot, type: int, init: 0, min: 0, max: 10000000 }

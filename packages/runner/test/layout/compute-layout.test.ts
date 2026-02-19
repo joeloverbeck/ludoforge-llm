@@ -151,8 +151,8 @@ describe('computeLayout dispatcher', () => {
   it('routes table mode', () => {
     const layout = computeLayout(makeDef([
       zone('community:none', { owner: 'none' }),
-      zone('hand:0', { owner: 'player' }),
-      zone('hand:1', { owner: 'player' }),
+      zone('hand:0', { owner: 'player', ownerPlayerIndex: 0 }),
+      zone('hand:1', { owner: 'player', ownerPlayerIndex: 1 }),
     ]), 'table');
 
     expect(layout.mode).toBe('table');
@@ -322,8 +322,8 @@ describe('computeLayout table mode', () => {
   it('includes all zones when board partition is empty', () => {
     const layout = computeLayout(makeDef([
       zone('community:none', { owner: 'none' }),
-      zone('hand:0', { owner: 'player' }),
-      zone('hand:1', { owner: 'player' }),
+      zone('hand:0', { owner: 'player', ownerPlayerIndex: 0 }),
+      zone('hand:1', { owner: 'player', ownerPlayerIndex: 1 }),
       zone('burn:none', { owner: 'none' }),
     ]), 'table');
 
@@ -333,9 +333,9 @@ describe('computeLayout table mode', () => {
   it('places shared zones closer to center than player zones', () => {
     const layout = computeLayout(makeDef([
       zone('community:none', { owner: 'none' }),
-      zone('hand:0', { owner: 'player' }),
-      zone('hand:1', { owner: 'player' }),
-      zone('hand:2', { owner: 'player' }),
+      zone('hand:0', { owner: 'player', ownerPlayerIndex: 0 }),
+      zone('hand:1', { owner: 'player', ownerPlayerIndex: 1 }),
+      zone('hand:2', { owner: 'player', ownerPlayerIndex: 2 }),
     ]), 'table');
 
     const shared = layout.positions.get('community:none');
@@ -350,10 +350,10 @@ describe('computeLayout table mode', () => {
 
   it('distributes player seat groups around distinct angles', () => {
     const layout = computeLayout(makeDef([
-      zone('hand:0', { owner: 'player' }),
-      zone('hand:1', { owner: 'player' }),
-      zone('hand:2', { owner: 'player' }),
-      zone('hand:3', { owner: 'player' }),
+      zone('hand:0', { owner: 'player', ownerPlayerIndex: 0 }),
+      zone('hand:1', { owner: 'player', ownerPlayerIndex: 1 }),
+      zone('hand:2', { owner: 'player', ownerPlayerIndex: 2 }),
+      zone('hand:3', { owner: 'player', ownerPlayerIndex: 3 }),
     ]), 'table');
 
     const angles = ['hand:0', 'hand:1', 'hand:2', 'hand:3']
@@ -394,9 +394,9 @@ describe('computeLayout table mode', () => {
 
   it('keeps same-seat zones contiguous on the perimeter', () => {
     const layout = computeLayout(makeDef([
-      zone('hand:0', { owner: 'player' }),
-      zone('bench:0', { owner: 'player' }),
-      zone('hand:1', { owner: 'player' }),
+      zone('hand:0', { owner: 'player', ownerPlayerIndex: 0 }),
+      zone('bench:0', { owner: 'player', ownerPlayerIndex: 0 }),
+      zone('hand:1', { owner: 'player', ownerPlayerIndex: 1 }),
     ]), 'table');
 
     const hand0 = layout.positions.get('hand:0');
@@ -416,12 +416,21 @@ describe('computeLayout table mode', () => {
   it('returns valid bounds for non-trivial table inputs', () => {
     const layout = computeLayout(makeDef([
       zone('community:none', { owner: 'none' }),
-      zone('hand:0', { owner: 'player' }),
-      zone('hand:1', { owner: 'player' }),
+      zone('hand:0', { owner: 'player', ownerPlayerIndex: 0 }),
+      zone('hand:1', { owner: 'player', ownerPlayerIndex: 1 }),
     ]), 'table');
 
     expect(layout.boardBounds.minX).toBeLessThan(layout.boardBounds.maxX);
     expect(layout.boardBounds.minY).toBeLessThan(layout.boardBounds.maxY);
+  });
+
+  it('throws when a player-owned zone is missing ownerPlayerIndex', () => {
+    expect(() =>
+      computeLayout(makeDef([
+        zone('community:none', { owner: 'none' }),
+        zone('hand:0', { owner: 'player' }),
+      ]), 'table'),
+    ).toThrow(/missing required ownerPlayerIndex/u);
   });
 });
 
@@ -439,6 +448,7 @@ interface ZoneOverrides {
   readonly adjacentTo?: readonly string[];
   readonly category?: ZoneDef['category'];
   readonly owner?: ZoneDef['owner'];
+  readonly ownerPlayerIndex?: ZoneDef['ownerPlayerIndex'];
   readonly attributes?: Record<string, unknown>;
 }
 

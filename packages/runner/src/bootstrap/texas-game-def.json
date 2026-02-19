@@ -181,98 +181,122 @@
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "hidden",
-      "ordering": "stack"
+      "ordering": "stack",
+      "layoutRole": "card"
     },
     {
       "id": "burn:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "hidden",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "other"
     },
     {
       "id": "community:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "queue"
+      "ordering": "queue",
+      "layoutRole": "other"
     },
     {
       "id": "hand:0",
       "zoneKind": "aux",
       "owner": "player",
+      "ownerPlayerIndex": 0,
       "visibility": "owner",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "hand"
     },
     {
       "id": "hand:1",
       "zoneKind": "aux",
       "owner": "player",
+      "ownerPlayerIndex": 1,
       "visibility": "owner",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "hand"
     },
     {
       "id": "hand:2",
       "zoneKind": "aux",
       "owner": "player",
+      "ownerPlayerIndex": 2,
       "visibility": "owner",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "hand"
     },
     {
       "id": "hand:3",
       "zoneKind": "aux",
       "owner": "player",
+      "ownerPlayerIndex": 3,
       "visibility": "owner",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "hand"
     },
     {
       "id": "hand:4",
       "zoneKind": "aux",
       "owner": "player",
+      "ownerPlayerIndex": 4,
       "visibility": "owner",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "hand"
     },
     {
       "id": "hand:5",
       "zoneKind": "aux",
       "owner": "player",
+      "ownerPlayerIndex": 5,
       "visibility": "owner",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "hand"
     },
     {
       "id": "hand:6",
       "zoneKind": "aux",
       "owner": "player",
+      "ownerPlayerIndex": 6,
       "visibility": "owner",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "hand"
     },
     {
       "id": "hand:7",
       "zoneKind": "aux",
       "owner": "player",
+      "ownerPlayerIndex": 7,
       "visibility": "owner",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "hand"
     },
     {
       "id": "hand:8",
       "zoneKind": "aux",
       "owner": "player",
+      "ownerPlayerIndex": 8,
       "visibility": "owner",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "hand"
     },
     {
       "id": "hand:9",
       "zoneKind": "aux",
       "owner": "player",
+      "ownerPlayerIndex": 9,
       "visibility": "owner",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "hand"
     },
     {
       "id": "muck:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "hidden",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "other"
     }
   ],
   "factions": [

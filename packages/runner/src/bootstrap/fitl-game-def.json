@@ -1841,77 +1841,88 @@
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "hidden",
-      "ordering": "stack"
+      "ordering": "stack",
+      "layoutRole": "card"
     },
     {
       "id": "available-US:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "forcePool"
     },
     {
       "id": "out-of-play-US:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "forcePool"
     },
     {
       "id": "available-ARVN:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "forcePool"
     },
     {
       "id": "out-of-play-ARVN:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "forcePool"
     },
     {
       "id": "available-NVA:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "forcePool"
     },
     {
       "id": "available-VC:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "forcePool"
     },
     {
       "id": "casualties-US:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set"
+      "ordering": "set",
+      "layoutRole": "forcePool"
     },
     {
       "id": "leader:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "stack"
+      "ordering": "stack",
+      "layoutRole": "card"
     },
     {
       "id": "lookahead:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "stack"
+      "ordering": "stack",
+      "layoutRole": "card"
     },
     {
       "id": "played:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "stack"
+      "ordering": "stack",
+      "layoutRole": "card"
     }
   ],
   "factions": [

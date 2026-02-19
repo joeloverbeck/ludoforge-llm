@@ -1,6 +1,6 @@
 # BOARDLAY-006: Aux Zone Sidebar Layout
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: No
@@ -18,10 +18,17 @@ This corresponds to Spec 41 deliverable D4.
 - `packages/runner/src/layout/aux-zone-layout.ts` — create with `computeAuxLayout()`
 - `packages/runner/test/layout/aux-zone-layout.test.ts` — unit tests
 
+### Assumptions Reassessed (2026-02-19)
+
+1. **Runtime type import path**: Runner layout code imports engine runtime types from `@ludoforge/engine/runtime` (not `@ludoforge/engine`). This ticket must follow existing runner conventions.
+2. **Type compatibility**: Layout types already define `AuxLayoutResult` in `packages/runner/src/layout/layout-types.ts`; the new module should consume that type directly rather than redefining contracts.
+3. **Determinism requirement**: Sidebar grouping/ordering must be deterministic across runs regardless of input order, since this result will be cached and compared in tests.
+4. **Force-pool matching edge case**: Zone IDs are commonly suffixed (for example `:none`, `:0`). Force-pool heuristics must evaluate the semantic base ID (before any player/owner suffix), not rely on exact unsuffixed strings.
+
 ### Function Signature
 
 ```typescript
-import type { ZoneDef } from '@ludoforge/engine';
+import type { ZoneDef } from '@ludoforge/engine/runtime';
 import type { AuxLayoutResult } from './layout-types';
 
 function computeAuxLayout(
@@ -35,11 +42,12 @@ function computeAuxLayout(
 Aux zones are classified into groups using only GameDef data (no visual config):
 
 1. **Card zones**: `ordering === 'stack'` and no `adjacentTo` (or empty adjacency).
-2. **Force pools**: Zone ID matches patterns like `available-*`, `out-of-play-*`, `casualties-*` (case-insensitive ID matching).
+2. **Force pools**: Zone base ID (case-insensitive, before any `:<owner|seat>` suffix) matches patterns like `available-*`, `out-of-play-*`, `casualties-*`.
 3. **Hand zones**: `owner === 'player'` and `visibility === 'owner'`.
 4. **Other**: Remaining aux zones that don't fit the above categories.
 
 Empty groups are omitted from the result.
+Within each group, zone IDs are sorted lexicographically for deterministic output.
 
 ### Sidebar Layout
 
@@ -50,7 +58,7 @@ Empty groups are omitted from the result.
    - Spacing between zones within a group: ~80 units.
    - Spacing between groups: ~140 units (includes label space).
 3. Sidebar starts at `boardBounds.minY` (aligned with top of board).
-4. Return positions for all aux zones and the group metadata.
+4. Return positions for all aux zones and the group metadata as readonly structures.
 
 ## Out of Scope
 
@@ -74,10 +82,11 @@ Empty groups are omitted from the result.
 6. **Positions are to the right of board**: All aux zone x-coordinates are greater than `boardBounds.maxX`.
 7. **Vertical stacking**: Within a group, zones have the same x-coordinate and increasing y-coordinates.
 8. **Group ordering**: Groups appear top-to-bottom in a consistent order (Cards → Force Pools → Hands → Other).
-9. **All aux zones positioned**: The number of entries in the returned positions map equals the number of input aux zones.
-10. **Empty input**: No aux zones → empty positions map and empty groups array.
-11. **Zero-area board bounds**: Works correctly when board bounds are all zeros (sidebar starts at a reasonable offset).
-12. **No duplicate positions**: No two aux zones share the same position.
+9. **Deterministic output**: Reordered input aux zones produce the same `groups` order and zone ordering within each group.
+10. **All aux zones positioned**: The number of entries in the returned positions map equals the number of input aux zones.
+11. **Empty input**: No aux zones → empty positions map and empty groups array.
+12. **Zero-area board bounds**: Works correctly when board bounds are all zeros (sidebar starts at a reasonable offset).
+13. **No duplicate positions**: No two aux zones share the same position.
 
 ### Invariants
 
@@ -86,3 +95,19 @@ Empty groups are omitted from the result.
 3. Returned `AuxLayoutResult` is immutable.
 4. No existing source files are modified.
 5. `pnpm turbo build` and `pnpm -F @ludoforge/runner test` pass.
+
+---
+
+## Outcome
+
+- **Completion date**: 2026-02-19
+- **What changed**:
+  - Added `packages/runner/src/layout/aux-zone-layout.ts` with pure `computeAuxLayout()` implementation.
+  - Added `packages/runner/test/layout/aux-zone-layout.test.ts` with coverage for grouping, ordering, deterministic output, board-relative placement, empty/zero-area bounds, and uniqueness.
+  - Updated this ticket assumptions to match current runner architecture (`@ludoforge/engine/runtime`, deterministic ordering, suffixed zone-id normalization for force-pool matching).
+- **Deviations from original plan**:
+  - None in scope. Implementation remained a standalone module + tests, with no integration changes outside this ticket.
+- **Verification results**:
+  - `pnpm -F @ludoforge/runner test` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.
+  - `pnpm turbo build` passed.

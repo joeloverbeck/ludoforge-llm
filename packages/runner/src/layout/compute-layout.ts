@@ -215,11 +215,13 @@ function placePlayerZones(zones: readonly ZoneDef[], positions: Map<string, Muta
 function groupPlayerZones(zones: readonly ZoneDef[]): readonly (readonly ZoneDef[])[] {
   const groups = new Map<string, { seatIndex: number | null; zones: ZoneDef[] }>();
   for (const zone of zones) {
-    const inferredSeat = inferPlayerSeatIndex(zone.id);
-    const key = inferredSeat === null ? `zone:${zone.id}` : `seat:${inferredSeat}`;
+    if (zone.ownerPlayerIndex === undefined) {
+      throw new Error(`Player-owned zone "${zone.id}" is missing required ownerPlayerIndex.`);
+    }
+    const key = `seat:${zone.ownerPlayerIndex}`;
     const current = groups.get(key);
     if (current === undefined) {
-      groups.set(key, { seatIndex: inferredSeat, zones: [zone] });
+      groups.set(key, { seatIndex: zone.ownerPlayerIndex, zones: [zone] });
       continue;
     }
     current.zones.push(zone);
@@ -239,19 +241,6 @@ function groupPlayerZones(zones: readonly ZoneDef[]): readonly (readonly ZoneDef
   });
 
   return sorted.map(([, group]) => group.zones.sort((left, right) => left.id.localeCompare(right.id)));
-}
-
-function inferPlayerSeatIndex(zoneID: string): number | null {
-  const matched = /:(\d+)$/u.exec(zoneID);
-  if (matched === null) {
-    return null;
-  }
-
-  const parsed = Number.parseInt(matched[1] ?? '', 10);
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    return null;
-  }
-  return parsed;
 }
 
 function normalizeToExtent(positions: Map<string, MutablePosition>, targetExtent: number): void {

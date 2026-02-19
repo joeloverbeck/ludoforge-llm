@@ -52,6 +52,7 @@ export interface GameSpecGlobalMarkerLatticeDef {
 export interface GameSpecZoneDef {
   readonly id: string;
   readonly zoneKind?: 'board' | 'aux';
+  readonly layoutRole?: 'card' | 'forcePool' | 'hand' | 'other';
   readonly owner: string;
   readonly visibility: string;
   readonly ordering: string;

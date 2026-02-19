@@ -9,7 +9,6 @@
     },
     "constants": {},
     "globalVars": [],
-    "globalMarkerLattices": [],
     "perPlayerVars": [],
     "zones": [
       {
@@ -23,6 +22,7 @@
         "id": "hand:0",
         "zoneKind": "aux",
         "owner": "player",
+        "ownerPlayerIndex": 0,
         "visibility": "owner",
         "ordering": "set"
       },
@@ -30,10 +30,12 @@
         "id": "hand:1",
         "zoneKind": "aux",
         "owner": "player",
+        "ownerPlayerIndex": 1,
         "visibility": "owner",
         "ordering": "set"
       }
     ],
+    "globalMarkerLattices": [],
     "tokenTypes": [],
     "setup": [],
     "turnStructure": {

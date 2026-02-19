@@ -81,6 +81,9 @@ export function validateZones(doc: GameSpecDoc, diagnostics: Diagnostic[]): read
     if (zone.zoneKind !== undefined) {
       validateEnumField(zone, 'zoneKind', ['board', 'aux'], basePath, diagnostics, 'zone');
     }
+    if (zone.layoutRole !== undefined) {
+      validateEnumField(zone, 'layoutRole', ['card', 'forcePool', 'hand', 'other'], basePath, diagnostics, 'zone');
+    }
     validateEnumField(zone, 'owner', ['none', 'player'], basePath, diagnostics, 'zone');
     validateEnumField(zone, 'visibility', ['public', 'owner', 'hidden'], basePath, diagnostics, 'zone');
     validateEnumField(zone, 'ordering', ['stack', 'queue', 'set'], basePath, diagnostics, 'zone');

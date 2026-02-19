@@ -197,6 +197,31 @@
               }
             ]
           },
+          "layoutRole": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "card"
+              },
+              {
+                "type": "string",
+                "const": "forcePool"
+              },
+              {
+                "type": "string",
+                "const": "hand"
+              },
+              {
+                "type": "string",
+                "const": "other"
+              }
+            ]
+          },
+          "ownerPlayerIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
           "owner": {
             "anyOf": [
               {

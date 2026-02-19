@@ -67,6 +67,8 @@ export const ZoneDefSchema = z
   .object({
     id: StringSchema,
     zoneKind: z.union([z.literal('board'), z.literal('aux')]).optional(),
+    layoutRole: z.union([z.literal('card'), z.literal('forcePool'), z.literal('hand'), z.literal('other')]).optional(),
+    ownerPlayerIndex: IntegerSchema.nonnegative().optional(),
     owner: z.union([z.literal('none'), z.literal('player')]),
     visibility: z.union([z.literal('public'), z.literal('owner'), z.literal('hidden')]),
     ordering: z.union([z.literal('stack'), z.literal('queue'), z.literal('set')]),

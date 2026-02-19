@@ -115,6 +115,8 @@ export interface FactionDef {
 export interface ZoneDef {
   readonly id: ZoneId;
   readonly zoneKind?: 'board' | 'aux';
+  readonly layoutRole?: 'card' | 'forcePool' | 'hand' | 'other';
+  readonly ownerPlayerIndex?: number;
   readonly owner: 'none' | 'player';
   readonly visibility: 'public' | 'owner' | 'hidden';
   readonly ordering: 'stack' | 'queue' | 'set';

@@ -2,17 +2,17 @@
 
 ```yaml
 zones:
-  - { id: deck, owner: none, visibility: hidden, ordering: stack }
-  - { id: available-US, owner: none, visibility: public, ordering: set }
-  - { id: out-of-play-US, owner: none, visibility: public, ordering: set }
-  - { id: available-ARVN, owner: none, visibility: public, ordering: set }
-  - { id: out-of-play-ARVN, owner: none, visibility: public, ordering: set }
-  - { id: available-NVA, owner: none, visibility: public, ordering: set }
-  - { id: available-VC, owner: none, visibility: public, ordering: set }
-  - { id: casualties-US, owner: none, visibility: public, ordering: set }
-  - { id: leader, owner: none, visibility: public, ordering: stack }
-  - { id: lookahead, owner: none, visibility: public, ordering: stack }
-  - { id: played, owner: none, visibility: public, ordering: stack }
+  - { id: deck, owner: none, visibility: hidden, ordering: stack, layoutRole: card }
+  - { id: available-US, owner: none, visibility: public, ordering: set, layoutRole: forcePool }
+  - { id: out-of-play-US, owner: none, visibility: public, ordering: set, layoutRole: forcePool }
+  - { id: available-ARVN, owner: none, visibility: public, ordering: set, layoutRole: forcePool }
+  - { id: out-of-play-ARVN, owner: none, visibility: public, ordering: set, layoutRole: forcePool }
+  - { id: available-NVA, owner: none, visibility: public, ordering: set, layoutRole: forcePool }
+  - { id: available-VC, owner: none, visibility: public, ordering: set, layoutRole: forcePool }
+  - { id: casualties-US, owner: none, visibility: public, ordering: set, layoutRole: forcePool }
+  - { id: leader, owner: none, visibility: public, ordering: stack, layoutRole: card }
+  - { id: lookahead, owner: none, visibility: public, ordering: stack, layoutRole: card }
+  - { id: played, owner: none, visibility: public, ordering: stack, layoutRole: card }
 
 
 globalMarkerLattices:

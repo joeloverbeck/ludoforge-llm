@@ -185,6 +185,91 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(completed, { kind: 'complete', complete: true });
   });
 
+  it('fails fast when declared action param domain options are not move-param encodable', () => {
+    const action: ActionDef = {
+      id: asActionId('pickScheduleRowDeclared'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [
+        {
+          name: 'row',
+          domain: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
+        },
+      ],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] }) as GameDef & {
+      runtimeDataAssets?: unknown;
+      tableContracts?: unknown;
+    };
+    def.runtimeDataAssets = [
+      {
+        id: 'tournament-standard',
+        kind: 'scenario',
+        payload: { blindSchedule: { levels: [{ level: 1, smallBlind: 10 }] } },
+      },
+    ];
+    def.tableContracts = [
+      {
+        id: 'tournament-standard::blindSchedule.levels',
+        assetId: 'tournament-standard',
+        tablePath: 'blindSchedule.levels',
+        fields: [
+          { field: 'level', type: 'int' },
+          { field: 'smallBlind', type: 'int' },
+        ],
+      },
+    ];
+    const state = makeBaseState();
+
+    assert.throws(
+      () => legalChoicesDiscover(def, state, makeMove('pickScheduleRowDeclared')),
+      (error: unknown) => {
+        assert.ok(isKernelErrorCode(error, 'LEGAL_CHOICES_VALIDATION_FAILED'));
+        const details = error as Error & { context?: Record<string, unknown> };
+        assert.equal(details.context?.param, 'row');
+        return true;
+      },
+    );
+  });
+
+  it('normalizes declared action param options to canonical move-param values while preserving targetKinds', () => {
+    const action: ActionDef = {
+      id: asActionId('pickTokenDeclared'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [
+        {
+          name: 'targetToken',
+          domain: { query: 'tokensInZone', zone: asZoneId('board:none') },
+        },
+      ],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const def = makeBaseDef({ actions: [action], tokenTypes: [{ id: 'piece', props: {} }] });
+    const state = makeBaseState({
+      zones: {
+        'board:none': [{ id: asTokenId('tok-1'), type: 'piece', props: {} }],
+        'hand:0': [],
+      },
+      nextTokenOrdinal: 1,
+    });
+
+    const result = legalChoicesDiscover(def, state, makeMove('pickTokenDeclared'));
+    assert.equal(result.kind, 'pending');
+    assert.deepStrictEqual(result.options.map((option) => option.value), [asTokenId('tok-1')]);
+    assert.deepStrictEqual(result.targetKinds, ['token']);
+  });
+
   it('throws LEGAL_CHOICES_VALIDATION_FAILED for out-of-domain declared intsInRange params', () => {
     const action: ActionDef = {
       id: asActionId('raiseLikeAction'),

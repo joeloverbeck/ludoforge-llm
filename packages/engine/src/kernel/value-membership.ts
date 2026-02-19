@@ -1,4 +1,5 @@
 import { typeMismatchError } from './eval-error.js';
+import { toMoveParamComparableScalar } from './move-param-normalization.js';
 
 export type MembershipScalar = string | number | boolean;
 export interface ChoiceDomainNormalizationIssue {
@@ -86,18 +87,8 @@ export function matchesScalarMembership(
 }
 
 export function toChoiceComparableValue(value: unknown): MembershipScalar | null {
-  if (isMembershipScalar(value)) {
-    return value;
-  }
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    typeof value.id === 'string'
-  ) {
-    return value.id;
-  }
-  return null;
+  const comparable = toMoveParamComparableScalar(value);
+  return comparable ?? null;
 }
 
 export function normalizeChoiceDomain(

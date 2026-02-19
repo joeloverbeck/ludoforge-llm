@@ -33,7 +33,10 @@ describe('value-membership', () => {
   it('projects choice domain entities by id and compares deterministically', () => {
     assert.equal(toChoiceComparableValue('a'), 'a');
     assert.equal(toChoiceComparableValue(1), 1);
+    assert.equal(toChoiceComparableValue(true), true);
     assert.equal(toChoiceComparableValue({ id: 'token-1', type: 'piece' }), 'token-1');
+    assert.equal(toChoiceComparableValue({ id: 7 }), 7);
+    assert.equal(toChoiceComparableValue({ id: false }), false);
     assert.equal(toChoiceComparableValue({ code: 'token-1' }), null);
 
     assert.equal(choiceValuesMatch('token-1', { id: 'token-1' }), true);

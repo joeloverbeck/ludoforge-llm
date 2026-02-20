@@ -1,10 +1,12 @@
-import { useMemo, type ReactElement } from 'react';
+import { useContext, useMemo, type ReactElement } from 'react';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
 
 import type { RenderToken, RenderZone } from '../model/render-model.js';
 import type { GameStore } from '../store/game-store.js';
+import { VisualConfigContext } from '../config/visual-config-context.js';
 import { CollapsiblePanel } from './CollapsiblePanel.js';
+import { MiniCard } from './MiniCard.js';
 import styles from './PlayerHandPanel.module.css';
 
 interface PlayerHandPanelProps {
@@ -51,6 +53,7 @@ function deriveHumanOwnedHandTokens(
 }
 
 export function PlayerHandPanel({ store }: PlayerHandPanelProps): ReactElement | null {
+  const visualConfigProvider = useContext(VisualConfigContext);
   const zones = useStore(store, (state) => state.renderModel?.zones ?? EMPTY_ZONES);
   const tokens = useStore(store, (state) => state.renderModel?.tokens ?? EMPTY_TOKENS);
   const players = useStore(store, (state) => state.renderModel?.players ?? []);
@@ -77,19 +80,34 @@ export function PlayerHandPanel({ store }: PlayerHandPanelProps): ReactElement |
         contentTestId="player-hand-panel-content"
       >
         <ul className={styles.tokenRow} data-testid="player-hand-token-row">
-          {handTokens.map((token) => (
-            <li
-              key={token.id}
-              className={token.isSelectable ? `${styles.tokenItem} ${styles.tokenSelectable}` : styles.tokenItem}
-              data-testid={`player-hand-token-${token.id}`}
-              aria-disabled={token.isSelectable ? undefined : 'true'}
-            >
-              <span className={styles.tokenType} data-testid={`player-hand-token-type-${token.id}`}>{token.type}</span>
-              <span className={styles.tokenProperties} data-testid={`player-hand-token-properties-${token.id}`}>
-                {formatTokenProperties(token.properties)}
-              </span>
-            </li>
-          ))}
+          {handTokens.map((token) => {
+            const template = visualConfigProvider?.getCardTemplateForTokenType(token.type) ?? null;
+            const tokenClassName = [
+              styles.tokenItem,
+              token.isSelectable ? styles.tokenSelectable : '',
+              template === null ? '' : styles.tokenCardItem,
+            ].filter((className): className is string => typeof className === 'string' && className.length > 0).join(' ');
+
+            return (
+              <li
+                key={token.id}
+                className={tokenClassName}
+                data-testid={`player-hand-token-${token.id}`}
+                aria-disabled={token.isSelectable ? undefined : 'true'}
+              >
+                {template === null ? (
+                  <>
+                    <span className={styles.tokenType} data-testid={`player-hand-token-type-${token.id}`}>{token.type}</span>
+                    <span className={styles.tokenProperties} data-testid={`player-hand-token-properties-${token.id}`}>
+                      {formatTokenProperties(token.properties)}
+                    </span>
+                  </>
+                ) : (
+                  <MiniCard token={token} template={template} />
+                )}
+              </li>
+            );
+          })}
         </ul>
       </CollapsiblePanel>
     </div>

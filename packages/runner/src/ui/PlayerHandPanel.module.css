@@ -17,6 +17,7 @@
 .tokenItem {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 2px;
   min-width: 104px;
   max-width: 160px;
@@ -30,6 +31,13 @@
   cursor: pointer;
   border-color: var(--accent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.tokenCardItem {
+  min-width: 0;
+  max-width: none;
+  padding: 4px;
+  background: rgba(15, 23, 42, 0.22);
 }
 
 .tokenType {

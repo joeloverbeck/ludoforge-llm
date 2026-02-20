@@ -1,49 +1,7 @@
 import { Text, type Container } from 'pixi.js';
 
 import type { CardTemplate } from '../../config/visual-config-types.js';
-
-function normalizeAlign(value: 'left' | 'center' | 'right' | undefined): 'left' | 'center' | 'right' {
-  return value ?? 'left';
-}
-
-function toTextValue(value: number | string | boolean | undefined): string | null {
-  if (value === undefined) {
-    return null;
-  }
-  return String(value);
-}
-
-function resolveDisplayText(
-  fieldName: string,
-  sourceField: string | undefined,
-  symbolMap: Readonly<Record<string, string>> | undefined,
-  fields: Readonly<Record<string, number | string | boolean>>,
-): string | null {
-  const rawValue = fields[sourceField ?? fieldName];
-  const textValue = toTextValue(rawValue);
-  if (textValue === null) {
-    return null;
-  }
-  if (symbolMap === undefined) {
-    return textValue;
-  }
-  return symbolMap[textValue] ?? textValue;
-}
-
-function resolveTextColor(
-  colorFromProp: string | undefined,
-  colorMap: Readonly<Record<string, string>> | undefined,
-  fields: Readonly<Record<string, number | string | boolean>>,
-): string {
-  if (colorFromProp === undefined || colorMap === undefined) {
-    return '#f8fafc';
-  }
-  const colorKey = toTextValue(fields[colorFromProp]);
-  if (colorKey === null) {
-    return '#f8fafc';
-  }
-  return colorMap[colorKey] ?? '#f8fafc';
-}
+import { resolveCardTemplateFields } from '../../config/card-field-resolver.js';
 
 export function drawCardContent(
   container: Container,
@@ -52,51 +10,38 @@ export function drawCardContent(
 ): void {
   container.removeChildren();
 
-  const layout = template.layout;
-  if (layout === undefined) {
-    return;
-  }
+  const resolvedFields = resolveCardTemplateFields(template.layout, fields);
+  if (resolvedFields.length === 0) return;
 
   const cardWidth = template.width;
   const cardHeight = template.height;
   const left = -cardWidth / 2;
   const top = -cardHeight / 2;
 
-  for (const [fieldName, fieldLayout] of Object.entries(layout)) {
-    const textValue = resolveDisplayText(
-      fieldName,
-      fieldLayout.sourceField,
-      fieldLayout.symbolMap,
-      fields,
-    );
-    if (textValue === null) {
-      continue;
-    }
-
-    const align = normalizeAlign(fieldLayout.align);
-    const hasWrap = typeof fieldLayout.wrap === 'number' && Number.isFinite(fieldLayout.wrap);
+  for (const field of resolvedFields) {
+    const hasWrap = typeof field.wrap === 'number' && Number.isFinite(field.wrap);
     const baseStyle = {
-      fill: resolveTextColor(fieldLayout.colorFromProp, fieldLayout.colorMap, fields),
-      fontSize: fieldLayout.fontSize ?? 11,
+      fill: field.color,
+      fontSize: field.fontSize,
       fontFamily: 'monospace',
-      align,
+      align: field.align,
     };
     const style = hasWrap
-      ? { ...baseStyle, wordWrap: true as const, wordWrapWidth: fieldLayout.wrap as number }
+      ? { ...baseStyle, wordWrap: true as const, wordWrapWidth: field.wrap as number }
       : baseStyle;
 
     const text = new Text({
-      text: textValue,
+      text: field.text,
       style,
     });
 
     text.eventMode = 'none';
     text.interactiveChildren = false;
-    text.anchor.set(align === 'left' ? 0 : align === 'center' ? 0.5 : 1, 0);
-    const baseX = align === 'left' ? left + 3 : align === 'center' ? 0 : left + cardWidth - 3;
+    text.anchor.set(field.align === 'left' ? 0 : field.align === 'center' ? 0.5 : 1, 0);
+    const baseX = field.align === 'left' ? left + 3 : field.align === 'center' ? 0 : left + cardWidth - 3;
     text.position.set(
-      baseX + (fieldLayout.x ?? 0),
-      top + (fieldLayout.y ?? 0),
+      baseX + field.x,
+      top + field.y,
     );
 
     container.addChild(text);

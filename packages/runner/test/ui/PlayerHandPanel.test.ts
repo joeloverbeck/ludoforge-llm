@@ -6,6 +6,8 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { asPlayerId } from '@ludoforge/engine/runtime';
 
+import { VisualConfigContext } from '../../src/config/visual-config-context.js';
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { PlayerHandPanel } from '../../src/ui/PlayerHandPanel.js';
 import styles from '../../src/ui/PlayerHandPanel.module.css';
 import { createRenderModelStore as createStore, makeRenderModelFixture as makeRenderModel } from './helpers/render-model-fixture.js';
@@ -298,5 +300,129 @@ describe('PlayerHandPanel', () => {
 
     fireEvent.click(screen.getByTestId('player-hand-panel-toggle'));
     expect(screen.getByTestId('player-hand-panel-content')).toBeDefined();
+  });
+
+  it('renders MiniCard when a template is available for token type', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      cards: {
+        assignments: [{
+          match: { idPrefixes: ['card-'] },
+          template: 'poker-card',
+        }],
+        templates: {
+          'poker-card': {
+            width: 48,
+            height: 68,
+            layout: {
+              rankCorner: { y: 4, sourceField: 'rankName' },
+            },
+          },
+        },
+      },
+    });
+
+    render(
+      createElement(
+        VisualConfigContext.Provider,
+        { value: provider },
+        createElement(PlayerHandPanel, {
+          store: createStore(makeRenderModel({
+            zones: [{
+              id: 'human-hand',
+              displayName: 'Human Hand',
+              ordering: 'stack',
+              tokenIDs: ['card-a'],
+              hiddenTokenCount: 0,
+              markers: [],
+              visibility: 'owner',
+              isSelectable: false,
+              isHighlighted: false,
+              ownerID: asPlayerId(0),
+              category: null,
+              attributes: {},
+              visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+              metadata: {},
+            }],
+            tokens: [{
+              id: 'card-a',
+              type: 'card-AS',
+              zoneID: 'human-hand',
+              ownerID: asPlayerId(0),
+              factionId: null,
+              faceUp: true,
+              properties: { rankName: 'A' },
+              isSelectable: false,
+              isSelected: false,
+            }],
+          })),
+        }),
+      ),
+    );
+
+    expect(screen.getByTestId('mini-card-card-a')).toBeDefined();
+    expect(screen.queryByTestId('player-hand-token-type-card-a')).toBeNull();
+  });
+
+  it('keeps text fallback when no card template exists for token type', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      cards: {
+        assignments: [{
+          match: { idPrefixes: ['card-'] },
+          template: 'poker-card',
+        }],
+        templates: {
+          'poker-card': {
+            width: 48,
+            height: 68,
+            layout: {
+              rankCorner: { y: 4, sourceField: 'rankName' },
+            },
+          },
+        },
+      },
+    });
+
+    render(
+      createElement(
+        VisualConfigContext.Provider,
+        { value: provider },
+        createElement(PlayerHandPanel, {
+          store: createStore(makeRenderModel({
+            zones: [{
+              id: 'human-hand',
+              displayName: 'Human Hand',
+              ordering: 'stack',
+              tokenIDs: ['token-1'],
+              hiddenTokenCount: 0,
+              markers: [],
+              visibility: 'owner',
+              isSelectable: false,
+              isHighlighted: false,
+              ownerID: asPlayerId(0),
+              category: null,
+              attributes: {},
+              visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+              metadata: {},
+            }],
+            tokens: [{
+              id: 'token-1',
+              type: 'influence',
+              zoneID: 'human-hand',
+              ownerID: asPlayerId(0),
+              factionId: null,
+              faceUp: true,
+              properties: { rank: 'A' },
+              isSelectable: false,
+              isSelected: false,
+            }],
+          })),
+        }),
+      ),
+    );
+
+    expect(screen.queryByTestId('mini-card-token-1')).toBeNull();
+    expect(screen.getByTestId('player-hand-token-type-token-1').textContent).toBe('influence');
   });
 });

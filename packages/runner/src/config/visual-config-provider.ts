@@ -9,7 +9,7 @@ import {
   type ZoneShape,
 } from './visual-config-defaults.js';
 import { hashStableValue } from '../utils/stable-hash.js';
-import type { AnimationPresetOverrideKey } from '../animation/animation-types.js';
+import type { AnimationPresetOverrideKey, AnimationSequencingPolicy } from '../animation/animation-types.js';
 import type {
   AttributeRule,
   CardAnimationConfig,
@@ -215,6 +215,17 @@ export class VisualConfigProvider {
 
   getAnimationPreset(actionId: AnimationPresetOverrideKey): string | null {
     return this.config?.animations?.actions?.[actionId] ?? null;
+  }
+
+  getSequencingPolicy(descriptorKind: string): AnimationSequencingPolicy | null {
+    const policy = this.config?.animations?.sequencing?.[descriptorKind];
+    if (policy === undefined) {
+      return null;
+    }
+    return {
+      mode: policy.mode,
+      ...(policy.staggerOffset !== undefined ? { staggerOffsetSeconds: policy.staggerOffset } : {}),
+    };
   }
 
   getVariablesConfig(): VariablesConfig | null {

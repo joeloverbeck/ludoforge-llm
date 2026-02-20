@@ -11,9 +11,10 @@ import type {
   AnimationDetailLevel,
   AnimationPresetId,
   AnimationPresetOverrideKey,
+  AnimationSequencingPolicy,
   CardAnimationMappingContext,
 } from './animation-types.js';
-import { ANIMATION_PRESET_OVERRIDE_KEYS } from './animation-types.js';
+import { ANIMATION_DESCRIPTOR_KINDS, ANIMATION_PRESET_OVERRIDE_KEYS } from './animation-types.js';
 import { createAnimationQueue, type AnimationQueue } from './animation-queue.js';
 import { getGsapRuntime, type GsapLike } from './gsap-setup.js';
 import { createPresetRegistry, type PresetRegistry } from './preset-registry.js';
@@ -73,6 +74,7 @@ export function createAnimationController(
   const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
   const queue = deps.queueFactory(options.store);
   const presetOverrides = buildPresetOverrides(options.visualConfigProvider, deps.presetRegistry, deps.onWarning);
+  const sequencingPolicies = buildSequencingPolicies(options.visualConfigProvider);
 
   let detailLevel: AnimationDetailLevel = 'full';
   let reducedMotion = false;
@@ -122,6 +124,7 @@ export function createAnimationController(
           zonePositions: options.zonePositions(),
         },
         deps.gsap,
+        sequencingPolicies.size === 0 ? undefined : { sequencingPolicies },
       );
 
       if (reducedMotion) {
@@ -296,6 +299,21 @@ function resolveCardTokenTypeIds(
   }
 
   return result;
+}
+
+function buildSequencingPolicies(
+  visualConfigProvider: VisualConfigProvider,
+): ReadonlyMap<string, AnimationSequencingPolicy> {
+  const policies = new Map<string, AnimationSequencingPolicy>();
+
+  for (const kind of ANIMATION_DESCRIPTOR_KINDS) {
+    const policy = visualConfigProvider.getSequencingPolicy(kind);
+    if (policy !== null) {
+      policies.set(kind, policy);
+    }
+  }
+
+  return policies;
 }
 
 function hasVisualDescriptors(descriptors: readonly AnimationDescriptor[]): boolean {

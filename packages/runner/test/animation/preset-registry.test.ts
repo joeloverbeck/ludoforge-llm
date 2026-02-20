@@ -30,6 +30,7 @@ describe('preset-registry', () => {
       ['fade-in-scale', 0.3],
       ['fade-out-scale', 0.3],
       ['tint-flash', 0.4],
+      ['card-flip-3d', 0.3],
       ['counter-roll', 0.3],
       ['banner-slide', 1.5],
       ['pulse', 0.2],
@@ -43,7 +44,7 @@ describe('preset-registry', () => {
     expect(registry.requireCompatible('arc-tween', 'moveToken').id).toBe('arc-tween');
     expect(registry.requireCompatible('arc-tween', 'cardDeal').id).toBe('arc-tween');
     expect(registry.requireCompatible('arc-tween', 'cardBurn').id).toBe('arc-tween');
-    expect(registry.requireCompatible('tint-flash', 'cardFlip').id).toBe('tint-flash');
+    expect(registry.requireCompatible('card-flip-3d', 'cardFlip').id).toBe('card-flip-3d');
     expect(() => registry.require('missing')).toThrow(/not registered/u);
     expect(() => registry.requireCompatible('arc-tween', 'createToken')).toThrow(/not compatible/u);
   });
@@ -171,22 +172,17 @@ describe('preset-registry', () => {
     );
     registry.require('tint-flash').createTween(
       {
-        kind: 'cardFlip',
+        kind: 'setTokenProp',
         tokenId: 'tok:1',
-        prop: 'faceUp',
-        oldValue: false,
-        newValue: true,
+        prop: 'health',
+        oldValue: 10,
+        newValue: 5,
         preset: 'tint-flash',
         isTriggered: false,
       },
       context,
     );
 
-    expect(gsap.to).toHaveBeenCalledWith(token, expect.objectContaining({
-      duration: 0.4,
-      x: 20,
-      y: 30,
-    }));
     expect(gsap.to).toHaveBeenCalledWith(token, expect.objectContaining({
       duration: 0.3,
       alpha: 1,
@@ -197,5 +193,164 @@ describe('preset-registry', () => {
       tint: 0xffd54f,
     }));
     expect(timeline.add).toHaveBeenCalled();
+  });
+
+  it('arc-tween creates two-phase tween with midpoint lift', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+    const context = {
+      gsap,
+      timeline,
+      spriteRefs: {
+        tokenContainers: new Map([['tok:1', token]]),
+        zoneContainers: new Map(),
+        zonePositions: {
+          positions: new Map([
+            ['zone:a', { x: 0, y: 0 }],
+            ['zone:b', { x: 300, y: 0 }],
+          ]),
+        },
+      },
+    };
+
+    registry.require('arc-tween').createTween(
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      context,
+    );
+
+    expect(gsap.to).toHaveBeenCalledTimes(2);
+
+    const arcCalls = gsap.to.mock.calls as unknown[][];
+    const firstCall = arcCalls[0]!;
+    expect(firstCall[0]).toBe(token);
+    const firstVars = firstCall[1] as Record<string, unknown>;
+    expect(firstVars['duration']).toBe(0.2);
+    expect(firstVars['x']).toBe(150);
+    const firstY = firstVars['y'] as number;
+    expect(firstY).toBeLessThan(0);
+
+    const secondCall = arcCalls[1]!;
+    expect(secondCall[0]).toBe(token);
+    const secondVars = secondCall[1] as Record<string, unknown>;
+    expect(secondVars['duration']).toBe(0.2);
+    expect(secondVars['x']).toBe(300);
+    expect(secondVars['y']).toBe(0);
+  });
+
+  it('card-flip-3d creates two-phase scaleX tween', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+    const context = {
+      gsap,
+      timeline,
+      spriteRefs: {
+        tokenContainers: new Map([['tok:1', token]]),
+        zoneContainers: new Map(),
+        zonePositions: {
+          positions: new Map(),
+        },
+      },
+    };
+
+    registry.require('card-flip-3d').createTween(
+      {
+        kind: 'cardFlip',
+        tokenId: 'tok:1',
+        prop: 'faceUp',
+        oldValue: false,
+        newValue: true,
+        preset: 'card-flip-3d',
+        isTriggered: false,
+      },
+      context,
+    );
+
+    expect(gsap.to).toHaveBeenCalledTimes(2);
+
+    const flipCalls = gsap.to.mock.calls as unknown[][];
+    const firstFlipCall = flipCalls[0]!;
+    expect(firstFlipCall[0]).toBe(token);
+    const firstFlipVars = firstFlipCall[1] as Record<string, unknown>;
+    expect(firstFlipVars['duration']).toBe(0.15);
+    expect(firstFlipVars['scaleX']).toBe(0);
+
+    const secondFlipCall = flipCalls[1]!;
+    expect(secondFlipCall[0]).toBe(token);
+    const secondFlipVars = secondFlipCall[1] as Record<string, unknown>;
+    expect(secondFlipVars['duration']).toBe(0.15);
+    expect(secondFlipVars['scaleX']).toBe(1);
+  });
+
+  it('card-flip-3d is mapped to cardFlip kind instead of tint-flash', () => {
+    const registry = createPresetRegistry();
+    const preset = registry.requireCompatible('card-flip-3d', 'cardFlip');
+    expect(preset.id).toBe('card-flip-3d');
+
+    expect(() => registry.requireCompatible('tint-flash', 'cardFlip')).toThrow(/not compatible/u);
+  });
+
+  it('arc-tween lift height is proportional to distance with minimum of 20px', () => {
+    const registry = createPresetRegistry();
+    const token = { x: 0, y: 0, alpha: 1, tint: 0xffffff, scale: { x: 1, y: 1 } };
+    const timeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => ({ add: vi.fn() })),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+
+    const contextClose = {
+      gsap,
+      timeline,
+      spriteRefs: {
+        tokenContainers: new Map([['tok:1', token]]),
+        zoneContainers: new Map(),
+        zonePositions: {
+          positions: new Map([
+            ['zone:a', { x: 0, y: 0 }],
+            ['zone:b', { x: 10, y: 0 }],
+          ]),
+        },
+      },
+    };
+
+    registry.require('arc-tween').createTween(
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'arc-tween',
+        isTriggered: false,
+      },
+      contextClose,
+    );
+
+    const closeCalls = gsap.to.mock.calls as unknown[][];
+    const firstCallClose = closeCalls[0]!;
+    const midYClose = (firstCallClose[1] as Record<string, unknown>)['y'] as number;
+    expect(midYClose).toBe(-20);
   });
 });

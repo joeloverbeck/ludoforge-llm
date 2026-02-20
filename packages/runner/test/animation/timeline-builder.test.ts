@@ -1,8 +1,8 @@
 import { Container } from 'pixi.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { AnimationDescriptor } from '../../src/animation/animation-types';
-import type { GsapLike } from '../../src/animation/gsap-setup';
+import type { AnimationDescriptor, AnimationSequencingPolicy } from '../../src/animation/animation-types';
+import type { GsapLike, GsapTimelineLike } from '../../src/animation/gsap-setup';
 import { createPresetRegistry, type AnimationPresetDefinition } from '../../src/animation/preset-registry';
 import { buildTimeline, type TimelineSpriteRefs } from '../../src/animation/timeline-builder';
 
@@ -277,5 +277,216 @@ describe('buildTimeline', () => {
     expect(flipTween).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0]?.[0]).toContain('token container not found');
+  });
+});
+
+describe('buildTimeline sequencing', () => {
+  function createSequencingFixture(): {
+    readonly gsap: GsapLike;
+    readonly mainTimeline: GsapTimelineLike & { add: ReturnType<typeof vi.fn> };
+    readonly createdTimelines: Array<GsapTimelineLike & { add: ReturnType<typeof vi.fn> }>;
+  } {
+    const createdTimelines: Array<GsapTimelineLike & { add: ReturnType<typeof vi.fn> }> = [];
+    let isFirstCall = true;
+
+    const makeTimeline = (): GsapTimelineLike & { add: ReturnType<typeof vi.fn> } => ({
+      add: vi.fn().mockReturnThis(),
+    });
+
+    const mainTimeline = makeTimeline();
+
+    return {
+      gsap: {
+        registerPlugin: vi.fn(),
+        defaults: vi.fn(),
+        timeline: vi.fn(() => {
+          if (isFirstCall) {
+            isFirstCall = false;
+            return mainTimeline;
+          }
+          const tl = makeTimeline();
+          createdTimelines.push(tl);
+          return tl;
+        }),
+      },
+      mainTimeline,
+      createdTimelines,
+    };
+  }
+
+  function makeCardDealDescriptors(count: number): readonly AnimationDescriptor[] {
+    const descriptors: AnimationDescriptor[] = [];
+    for (let i = 0; i < count; i++) {
+      descriptors.push({
+        kind: 'cardDeal',
+        tokenId: `tok:${i + 1}`,
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'deal-preset',
+        isTriggered: false,
+      });
+    }
+    return descriptors;
+  }
+
+  function createDealPresetDefs(): readonly AnimationPresetDefinition[] {
+    return [
+      {
+        id: 'deal-preset',
+        defaultDurationSeconds: 0.3,
+        compatibleKinds: ['cardDeal'],
+        createTween: (_descriptor, context) => {
+          context.timeline.add('tween-marker');
+        },
+      },
+    ];
+  }
+
+  function createSpriteRefsForN(n: number): TimelineSpriteRefs {
+    const tokenContainers = new Map<string, Container>();
+    for (let i = 0; i < n; i++) {
+      tokenContainers.set(`tok:${i + 1}`, new Container());
+    }
+    return {
+      tokenContainers,
+      zoneContainers: new Map([
+        ['zone:a', new Container()],
+        ['zone:b', new Container()],
+      ]),
+      zonePositions: {
+        positions: new Map([
+          ['zone:a', { x: 0, y: 0 }],
+          ['zone:b', { x: 100, y: 50 }],
+        ]),
+        bounds: { minX: 0, minY: 0, maxX: 100, maxY: 50 },
+      },
+    };
+  }
+
+  it('applies parallel sequencing: all same-kind descriptors start at same time', () => {
+    const { gsap, mainTimeline, createdTimelines } = createSequencingFixture();
+    const descriptors = makeCardDealDescriptors(3);
+    const policies = new Map<string, AnimationSequencingPolicy>([
+      ['cardDeal', { mode: 'parallel' }],
+    ]);
+
+    buildTimeline(
+      descriptors,
+      createPresetRegistry(createDealPresetDefs()),
+      createSpriteRefsForN(3),
+      gsap,
+      { sequencingPolicies: policies },
+    );
+
+    expect(createdTimelines.length).toBe(3);
+    expect(mainTimeline.add).toHaveBeenCalledTimes(3);
+
+    const addCalls = mainTimeline.add.mock.calls;
+    expect(addCalls[0]?.[1]).toBeUndefined();
+    expect(addCalls[1]?.[1]).toBe('<');
+    expect(addCalls[2]?.[1]).toBe('<');
+  });
+
+  it('applies stagger sequencing: each descriptor starts offset after previous', () => {
+    const { gsap, mainTimeline, createdTimelines } = createSequencingFixture();
+    const descriptors = makeCardDealDescriptors(3);
+    const policies = new Map<string, AnimationSequencingPolicy>([
+      ['cardDeal', { mode: 'stagger', staggerOffsetSeconds: 0.15 }],
+    ]);
+
+    buildTimeline(
+      descriptors,
+      createPresetRegistry(createDealPresetDefs()),
+      createSpriteRefsForN(3),
+      gsap,
+      { sequencingPolicies: policies },
+    );
+
+    expect(createdTimelines.length).toBe(3);
+    expect(mainTimeline.add).toHaveBeenCalledTimes(3);
+
+    const addCalls = mainTimeline.add.mock.calls;
+    expect(addCalls[0]?.[1]).toBeUndefined();
+    expect(addCalls[1]?.[1]).toBe('<+=0.15');
+    expect(addCalls[2]?.[1]).toBe('<+=0.15');
+  });
+
+  it('defaults to sequential when no sequencing policy is provided', () => {
+    const { gsap, mainTimeline, createdTimelines } = createSequencingFixture();
+    const descriptors = makeCardDealDescriptors(3);
+
+    buildTimeline(
+      descriptors,
+      createPresetRegistry(createDealPresetDefs()),
+      createSpriteRefsForN(3),
+      gsap,
+    );
+
+    expect(createdTimelines.length).toBe(0);
+    expect(mainTimeline.add).toHaveBeenCalledTimes(3);
+
+    const addCalls = mainTimeline.add.mock.calls;
+    for (const call of addCalls) {
+      expect(call[1]).toBeUndefined();
+    }
+  });
+
+  it('handles mixed groups: sequential followed by parallel', () => {
+    const { gsap, mainTimeline, createdTimelines } = createSequencingFixture();
+
+    const movePreset: AnimationPresetDefinition = {
+      id: 'move-preset',
+      defaultDurationSeconds: 0.4,
+      compatibleKinds: ['moveToken'],
+      createTween: (_descriptor, context) => {
+        context.timeline.add('move-marker');
+      },
+    };
+
+    const descriptors: readonly AnimationDescriptor[] = [
+      {
+        kind: 'moveToken',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'move-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:1',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'deal-preset',
+        isTriggered: false,
+      },
+      {
+        kind: 'cardDeal',
+        tokenId: 'tok:2',
+        from: 'zone:a',
+        to: 'zone:b',
+        preset: 'deal-preset',
+        isTriggered: false,
+      },
+    ];
+
+    const policies = new Map<string, AnimationSequencingPolicy>([
+      ['cardDeal', { mode: 'parallel' }],
+    ]);
+
+    buildTimeline(
+      descriptors,
+      createPresetRegistry([...createDealPresetDefs(), movePreset]),
+      createSpriteRefsForN(2),
+      gsap,
+      { sequencingPolicies: policies },
+    );
+
+    const addCalls = mainTimeline.add.mock.calls;
+    expect(addCalls[0]?.[1]).toBeUndefined();
+
+    expect(createdTimelines.length).toBe(2);
+    expect(addCalls[1]?.[1]).toBeUndefined();
+    expect(addCalls[2]?.[1]).toBe('<');
   });
 });

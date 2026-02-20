@@ -16,6 +16,7 @@ describe('animation-types', () => {
       'fade-in-scale',
       'fade-out-scale',
       'tint-flash',
+      'card-flip-3d',
       'counter-roll',
       'banner-slide',
       'pulse',
@@ -95,7 +96,7 @@ describe('animation-types', () => {
         prop: 'faceUp',
         oldValue: false,
         newValue: true,
-        preset: 'tint-flash',
+        preset: 'card-flip-3d',
         isTriggered: false,
       },
       {

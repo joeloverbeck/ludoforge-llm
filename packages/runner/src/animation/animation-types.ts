@@ -5,6 +5,7 @@ export const ANIMATION_PRESET_IDS = [
   'fade-in-scale',
   'fade-out-scale',
   'tint-flash',
+  'card-flip-3d',
   'counter-roll',
   'banner-slide',
   'pulse',
@@ -170,3 +171,10 @@ export const ANIMATION_DESCRIPTOR_KINDS = [
 ] as const;
 
 export type AnimationDescriptorKind = (typeof ANIMATION_DESCRIPTOR_KINDS)[number];
+
+export type AnimationSequencingMode = 'sequential' | 'parallel' | 'stagger';
+
+export interface AnimationSequencingPolicy {
+  readonly mode: AnimationSequencingMode;
+  readonly staggerOffsetSeconds?: number;
+}

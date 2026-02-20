@@ -161,8 +161,16 @@ const AnimationActionsSchema = z.object(
   >,
 ).strict();
 
+const AnimationSequencingModeSchema = z.enum(['sequential', 'parallel', 'stagger']);
+
+const AnimationSequencingPolicySchema = z.object({
+  mode: AnimationSequencingModeSchema,
+  staggerOffset: z.number().positive().optional(),
+});
+
 const AnimationsConfigSchema = z.object({
   actions: AnimationActionsSchema.optional(),
+  sequencing: z.record(z.string(), AnimationSequencingPolicySchema).optional(),
 });
 
 const CardFieldLayoutSchema = z.object({

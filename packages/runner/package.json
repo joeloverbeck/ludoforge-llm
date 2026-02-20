@@ -19,6 +19,7 @@
     "@ludoforge/engine": "workspace:*",
     "@pixi/react": "^8.0.0",
     "comlink": "^4.4.2",
+    "dexie": "^4.3.0",
     "graphology": "^0.26.0",
     "graphology-layout-forceatlas2": "^0.10.1",
     "gsap": "^3.14.2",

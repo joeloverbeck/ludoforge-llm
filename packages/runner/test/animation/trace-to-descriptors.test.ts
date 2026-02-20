@@ -276,7 +276,7 @@ describe('traceToDescriptors', () => {
         prop: 'faceUp',
         oldValue: false,
         newValue: true,
-        preset: 'tint-flash',
+        preset: 'card-flip-3d',
         isTriggered: false,
       },
     ]);

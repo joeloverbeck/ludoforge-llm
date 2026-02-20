@@ -95,8 +95,13 @@ const BUILTIN_PRESET_METADATA = {
   },
   'tint-flash': {
     defaultDurationSeconds: 0.4,
-    compatibleKinds: ['setTokenProp', 'cardFlip'],
+    compatibleKinds: ['setTokenProp'],
     createTween: createTintFlashTween,
+  },
+  'card-flip-3d': {
+    defaultDurationSeconds: 0.3,
+    compatibleKinds: ['cardFlip'],
+    createTween: createCardFlip3dTween,
   },
   'counter-roll': {
     defaultDurationSeconds: 0.3,
@@ -138,6 +143,23 @@ export function resolveDefaultPresetIdForTraceKind(traceKind: EffectTraceEntry['
     throw new Error(`Trace kind "${traceKind}" does not map to a visual animation preset.`);
   }
   return presetId;
+}
+
+const DESCRIPTOR_KIND_DEFAULT_PRESETS: Readonly<Partial<Record<PresetCompatibleDescriptorKind, AnimationPresetId>>> = {
+  cardDeal: 'arc-tween',
+  cardBurn: 'arc-tween',
+  cardFlip: 'card-flip-3d',
+};
+
+export function resolveDefaultPresetIdForDescriptorKind(
+  traceKind: EffectTraceEntry['kind'],
+  descriptorKind: PresetCompatibleDescriptorKind,
+): AnimationPresetId {
+  const descriptorDefault = DESCRIPTOR_KIND_DEFAULT_PRESETS[descriptorKind];
+  if (descriptorDefault !== undefined) {
+    return descriptorDefault;
+  }
+  return resolveDefaultPresetIdForTraceKind(traceKind);
 }
 
 export function createPresetRegistry(
@@ -249,6 +271,7 @@ interface TweenTarget {
   y?: number;
   alpha?: number;
   tint?: number;
+  scaleX?: number;
   scale?: {
     x?: number;
     y?: number;
@@ -269,9 +292,19 @@ function createArcTween(descriptor: VisualAnimationDescriptor, context: PresetTw
     return;
   }
 
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const liftHeight = Math.max(20, distance * 0.3);
+
+  const midX = (from.x + to.x) / 2;
+  const midY = Math.min(from.y, to.y) - liftHeight;
+  const halfDuration = 0.2;
+
   target.x = from.x;
   target.y = from.y;
-  appendTween(context, target, { x: to.x, y: to.y }, 0.4);
+  appendTween(context, target, { x: midX, y: midY }, halfDuration);
+  appendTween(context, target, { x: to.x, y: to.y }, halfDuration);
 }
 
 function createFadeInScaleTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
@@ -308,8 +341,24 @@ function createFadeOutScaleTween(descriptor: VisualAnimationDescriptor, context:
   appendTween(context, target, { alpha: 0, scale: 0.5 }, 0.3);
 }
 
+function createCardFlip3dTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
+  if (descriptor.kind !== 'cardFlip') {
+    return;
+  }
+
+  const target = context.spriteRefs.tokenContainers.get(descriptor.tokenId) as TweenTarget | undefined;
+  if (target === undefined) {
+    appendDelay(context, 0.3);
+    return;
+  }
+
+  const halfDuration = 0.15;
+  appendTween(context, target, { scaleX: 0 }, halfDuration);
+  appendTween(context, target, { scaleX: 1 }, halfDuration);
+}
+
 function createTintFlashTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
-  if (descriptor.kind !== 'setTokenProp' && descriptor.kind !== 'cardFlip') {
+  if (descriptor.kind !== 'setTokenProp') {
     return;
   }
 
@@ -382,6 +431,10 @@ function applyVars(target: TweenTarget, vars: Record<string, unknown>): void {
     }
     if (key === 'tint' && typeof value === 'number') {
       target.tint = value;
+      continue;
+    }
+    if (key === 'scaleX' && typeof value === 'number') {
+      target.scaleX = value;
     }
   }
 }

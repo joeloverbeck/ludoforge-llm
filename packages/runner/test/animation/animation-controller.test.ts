@@ -241,6 +241,7 @@ describe('createAnimationController', () => {
         zonePositions,
       },
       expect.any(Object),
+      undefined,
     );
     expect(queue.enqueue).toHaveBeenCalledWith(timeline.timeline);
 

@@ -121,6 +121,14 @@ describe('visual-config.yaml files', () => {
     const texasZoneIds = new Set(texasGameDef.zones.map((zone) => zone.id as string));
 
     expect(parsed.layout?.mode).toBe('table');
+    expect(parsed.layout?.tableBackground).toEqual({
+      color: '#0a5c2e',
+      shape: 'ellipse',
+      paddingX: 100,
+      paddingY: 80,
+      borderColor: '#4a2c0a',
+      borderWidth: 4,
+    });
     expect(parsed.cardAnimation?.cardTokenTypes.idPrefixes).toEqual(['card-']);
     expect(parsed.cardAnimation?.zoneRoles).toEqual({
       draw: ['deck:none'],

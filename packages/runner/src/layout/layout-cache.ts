@@ -13,6 +13,7 @@ import type { Position, ZonePositionMap } from '../spatial/position-types.js';
 export interface FullLayoutResult {
   readonly positionMap: ZonePositionMap;
   readonly mode: LayoutMode;
+  readonly boardBounds: ZonePositionMap['bounds'];
 }
 
 const layoutCache = new Map<string, FullLayoutResult>();
@@ -52,6 +53,7 @@ export function getOrComputeLayout(def: GameDef, visualConfigProvider: VisualCon
 
   const result: FullLayoutResult = {
     mode,
+    boardBounds: boardLayout.boardBounds,
     positionMap: {
       positions,
       bounds: computeUnifiedBounds(positions),

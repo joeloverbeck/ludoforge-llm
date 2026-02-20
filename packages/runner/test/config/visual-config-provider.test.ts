@@ -581,6 +581,37 @@ describe('VisualConfigProvider', () => {
     expect(hints!.regions![1]!.position).toBeUndefined();
   });
 
+  it('getTableBackground returns null when config is null or unset', () => {
+    expect(new VisualConfigProvider(null).getTableBackground()).toBeNull();
+    expect(new VisualConfigProvider({ version: 1, layout: { mode: 'table' } }).getTableBackground()).toBeNull();
+  });
+
+  it('getTableBackground returns configured layout table background', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      layout: {
+        mode: 'table',
+        tableBackground: {
+          color: '#0a5c2e',
+          shape: 'ellipse',
+          paddingX: 100,
+          paddingY: 80,
+          borderColor: '#4a2c0a',
+          borderWidth: 4,
+        },
+      },
+    });
+
+    expect(provider.getTableBackground()).toEqual({
+      color: '#0a5c2e',
+      shape: 'ellipse',
+      paddingX: 100,
+      paddingY: 80,
+      borderColor: '#4a2c0a',
+      borderWidth: 4,
+    });
+  });
+
   it('exposes deterministic configHash and null sentinel hash', () => {
     const nullProvider = new VisualConfigProvider(null);
     const first = new VisualConfigProvider({

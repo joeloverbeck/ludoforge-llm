@@ -196,6 +196,18 @@ describe('layout-cache', () => {
     expect(shared!.x).toBeLessThan(bench!.x);
     expect(discard!.x).toBeLessThan(bench!.x);
   });
+
+  it('exposes boardBounds separately from unified bounds including aux zones', () => {
+    const def = makeDef('board-bounds-split', [
+      zone('community:none', { zoneKind: 'board', owner: 'none' }),
+      zone('deck:none', { zoneKind: 'aux', owner: 'none', ordering: 'stack' }),
+      zone('bench:none', { zoneKind: 'aux', owner: 'none' }),
+    ], 'table');
+
+    const result = getOrComputeLayout(def, NULL_PROVIDER);
+
+    expect(result.boardBounds.maxX).toBeLessThan(result.positionMap.bounds.maxX);
+  });
 });
 
 function makeDef(

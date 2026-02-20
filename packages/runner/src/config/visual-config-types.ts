@@ -47,9 +47,19 @@ const LayoutHintsSchema = z.object({
   fixed: z.array(FixedPositionHintSchema).optional(),
 });
 
+const TableBackgroundSchema = z.object({
+  color: z.string().optional(),
+  shape: z.enum(['ellipse', 'rectangle', 'roundedRect']).optional(),
+  paddingX: z.number().optional(),
+  paddingY: z.number().optional(),
+  borderColor: z.string().optional(),
+  borderWidth: z.number().optional(),
+});
+
 const LayoutConfigSchema = z.object({
   mode: LayoutModeSchema.optional(),
   hints: LayoutHintsSchema.optional(),
+  tableBackground: TableBackgroundSchema.optional(),
 });
 
 const FactionVisualConfigSchema = z.object({
@@ -222,6 +232,7 @@ export type CompassPosition = z.infer<typeof CompassPositionSchema>;
 
 export type LayoutConfig = z.infer<typeof LayoutConfigSchema>;
 export type LayoutHints = z.infer<typeof LayoutHintsSchema>;
+export type TableBackgroundConfig = z.infer<typeof TableBackgroundSchema>;
 export type RegionHint = z.infer<typeof RegionHintSchema>;
 export type FixedPositionHint = z.infer<typeof FixedPositionHintSchema>;
 export type FactionVisualConfig = z.infer<typeof FactionVisualConfigSchema>;

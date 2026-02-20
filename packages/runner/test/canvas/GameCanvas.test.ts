@@ -10,9 +10,13 @@ import type { CoordinateBridge } from '../../src/canvas/coordinate-bridge';
 import type { GameStore } from '../../src/store/game-store';
 import { getOrComputeLayout } from '../../src/layout/layout-cache.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
+import { drawTableBackground } from '../../src/canvas/renderers/table-background-renderer.js';
 
 vi.mock('../../src/layout/layout-cache.js', () => ({
   getOrComputeLayout: vi.fn(),
+}));
+vi.mock('../../src/canvas/renderers/table-background-renderer.js', () => ({
+  drawTableBackground: vi.fn(),
 }));
 
 interface RuntimeStoreState {
@@ -158,6 +162,7 @@ function createRuntimeFixture() {
     },
     layers: {
       boardGroup: {} as never,
+      backgroundLayer: {} as never,
       adjacencyLayer: {} as never,
       zoneLayer: {} as never,
       tokenGroup: {} as never,
@@ -318,6 +323,7 @@ function flushMicrotasks(): Promise<void> {
 }
 
 const mockedGetOrComputeLayout = vi.mocked(getOrComputeLayout);
+const mockedDrawTableBackground = vi.mocked(drawTableBackground);
 const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
 
 function makeGameDefWithZones(zoneIDs: readonly string[]): GameDef {
@@ -349,8 +355,15 @@ describe('GameCanvas', () => {
 describe('createGameCanvasRuntime', () => {
   beforeEach(() => {
     mockedGetOrComputeLayout.mockReset();
+    mockedDrawTableBackground.mockReset();
     mockedGetOrComputeLayout.mockReturnValue({
       mode: 'table',
+      boardBounds: {
+        minX: 20,
+        minY: 30,
+        maxX: 260,
+        maxY: 180,
+      },
       positionMap: {
         positions: new Map([
           ['zone:deck', { x: 40, y: 60 }],
@@ -433,6 +446,59 @@ describe('createGameCanvasRuntime', () => {
       zoneIDs: ['zone:a'],
       tokenIDs: ['token:1'],
     });
+
+    runtime.destroy();
+  });
+
+  it('draws background from board bounds and clears it when gameDef is removed', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+    const provider = new VisualConfigProvider({
+      version: 1,
+      layout: {
+        mode: 'table',
+        tableBackground: {
+          color: '#0a5c2e',
+          shape: 'ellipse',
+          paddingX: 100,
+          paddingY: 80,
+        },
+      },
+    });
+    const gameDef = makeGameDefWithZones(['zone:deck', 'zone:burn', 'zone:hand:p1']);
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x0,
+        visualConfigProvider: provider,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    store.setState({ gameDef });
+    await flushMicrotasks();
+
+    expect(mockedDrawTableBackground).toHaveBeenCalledWith(
+      fixture.gameCanvas.layers.backgroundLayer,
+      provider.getTableBackground(),
+      {
+        minX: 20,
+        minY: 30,
+        maxX: 260,
+        maxY: 180,
+      },
+    );
+
+    store.setState({ gameDef: null });
+    await flushMicrotasks();
+
+    expect(mockedDrawTableBackground).toHaveBeenCalledWith(
+      fixture.gameCanvas.layers.backgroundLayer,
+      null,
+      { minX: 0, minY: 0, maxX: 0, maxY: 0 },
+    );
 
     runtime.destroy();
   });

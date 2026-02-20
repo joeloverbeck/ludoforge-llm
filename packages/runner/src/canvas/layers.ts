@@ -2,6 +2,7 @@ import { Container } from 'pixi.js';
 
 export interface LayerHierarchy {
   readonly boardGroup: Container;
+  readonly backgroundLayer: Container;
   readonly adjacencyLayer: Container;
   readonly zoneLayer: Container;
   readonly tokenGroup: Container;
@@ -22,6 +23,7 @@ function configureLayer(
 
 export function createLayerHierarchy(): LayerHierarchy {
   const boardGroup = new Container();
+  const backgroundLayer = new Container();
   const adjacencyLayer = new Container();
   const zoneLayer = new Container();
   const tokenGroup = new Container();
@@ -39,14 +41,19 @@ export function createLayerHierarchy(): LayerHierarchy {
   adjacencyLayer.interactiveChildren = false;
   adjacencyLayer.sortableChildren = true;
 
+  backgroundLayer.eventMode = 'none';
+  backgroundLayer.interactiveChildren = false;
+  backgroundLayer.sortableChildren = false;
+
   zoneLayer.eventMode = 'passive';
   zoneLayer.interactiveChildren = true;
   zoneLayer.sortableChildren = true;
 
-  boardGroup.addChild(adjacencyLayer, zoneLayer);
+  boardGroup.addChild(backgroundLayer, adjacencyLayer, zoneLayer);
 
   return {
     boardGroup,
+    backgroundLayer,
     adjacencyLayer,
     zoneLayer,
     tokenGroup,

@@ -23,6 +23,7 @@ import { ContainerPool } from './renderers/container-pool';
 import { VisualConfigFactionColorProvider } from './renderers/faction-colors';
 import type { AdjacencyRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
 import { createTokenRenderer } from './renderers/token-renderer';
+import { drawTableBackground } from './renderers/table-background-renderer.js';
 import { createZoneRenderer } from './renderers/zone-renderer';
 import { createCanvasUpdater, type CanvasUpdater } from './canvas-updater';
 import { setupViewport, type ViewportResult } from './viewport-setup';
@@ -32,6 +33,7 @@ import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './inte
 
 const DEFAULT_BACKGROUND_COLOR = 0x0b1020;
 const DEFAULT_WORLD_SIZE = 1;
+const EMPTY_TABLE_BOUNDS = { minX: 0, minY: 0, maxX: 0, maxY: 0 } as const;
 
 const ANIMATION_PLAYBACK_SPEED_MULTIPLIERS: Readonly<Record<AnimationPlaybackSpeed, number>> = {
   '1x': 1,
@@ -134,6 +136,7 @@ export async function createGameCanvasRuntime(
   options: GameCanvasRuntimeOptions,
   deps: GameCanvasRuntimeDeps = DEFAULT_RUNTIME_DEPS,
 ): Promise<GameCanvasRuntime> {
+  let layersForBackground: PixiGameCanvas['layers'] | null = null;
   const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
   const initialState = selectorStore.getState();
   const initialZoneIDs = selectZoneIDs(initialState);
@@ -143,17 +146,30 @@ export async function createGameCanvasRuntime(
   const applyGameDefLayout = (gameDef: GameStore['gameDef']): void => {
     if (gameDef === null) {
       positionStore.setZoneIDs(selectZoneIDs(selectorStore.getState()));
+      if (layersForBackground !== null) {
+        drawTableBackground(layersForBackground.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
+      }
       return;
     }
 
     if (!Array.isArray(gameDef.zones)) {
       positionStore.setZoneIDs(selectZoneIDs(selectorStore.getState()));
+      if (layersForBackground !== null) {
+        drawTableBackground(layersForBackground.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
+      }
       return;
     }
 
     const layoutResult = getOrComputeLayout(gameDef, options.visualConfigProvider);
     const gameDefZoneIDs = gameDef.zones.map((zone) => zone.id);
     positionStore.setPositions(layoutResult.positionMap, gameDefZoneIDs);
+    if (layersForBackground !== null) {
+      drawTableBackground(
+        layersForBackground.backgroundLayer,
+        options.visualConfigProvider.getTableBackground(),
+        layoutResult.boardBounds,
+      );
+    }
   };
 
   if (initialGameDef !== null) {
@@ -163,6 +179,18 @@ export async function createGameCanvasRuntime(
   const gameCanvas = await deps.createGameCanvas(options.container, {
     backgroundColor: options.backgroundColor,
   });
+  layersForBackground = gameCanvas.layers;
+  const currentGameDef = selectorStore.getState().gameDef;
+  if (currentGameDef === null || !Array.isArray(currentGameDef.zones)) {
+    drawTableBackground(gameCanvas.layers.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
+  } else {
+    const layoutResult = getOrComputeLayout(currentGameDef, options.visualConfigProvider);
+    drawTableBackground(
+      gameCanvas.layers.backgroundLayer,
+      options.visualConfigProvider.getTableBackground(),
+      layoutResult.boardBounds,
+    );
+  }
   const accessibilityContainer = options.container.parentElement ?? options.container;
   const ariaAnnouncer = deps.createAriaAnnouncer(accessibilityContainer);
   const interactionController = createCanvasInteractionController(() => selectorStore.getState(), ariaAnnouncer);

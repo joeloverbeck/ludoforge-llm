@@ -9,6 +9,7 @@ describe('createLayerHierarchy', () => {
 
     expect(layers).toMatchObject({
       boardGroup: expect.any(Container),
+      backgroundLayer: expect.any(Container),
       adjacencyLayer: expect.any(Container),
       zoneLayer: expect.any(Container),
       tokenGroup: expect.any(Container),
@@ -24,13 +25,15 @@ describe('createLayerHierarchy', () => {
     expect(layers.interfaceGroup.eventMode).toBe('none');
   });
 
-  it('places adjacency and zone layers inside board group in order', () => {
+  it('places background, adjacency, and zone layers inside board group in order', () => {
     const layers = createLayerHierarchy();
 
+    expect(layers.backgroundLayer.parent).toBe(layers.boardGroup);
     expect(layers.adjacencyLayer.parent).toBe(layers.boardGroup);
     expect(layers.zoneLayer.parent).toBe(layers.boardGroup);
-    expect(layers.boardGroup.children[0]).toBe(layers.adjacencyLayer);
-    expect(layers.boardGroup.children[1]).toBe(layers.zoneLayer);
+    expect(layers.boardGroup.children[0]).toBe(layers.backgroundLayer);
+    expect(layers.boardGroup.children[1]).toBe(layers.adjacencyLayer);
+    expect(layers.boardGroup.children[2]).toBe(layers.zoneLayer);
   });
 
   it('returns detached root layers so viewport setup is the single attach point', () => {

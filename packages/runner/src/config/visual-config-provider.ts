@@ -14,6 +14,7 @@ import type {
   AttributeRule,
   CardAnimationConfig,
   CardTemplate,
+  TableBackgroundConfig,
   TokenTypeDefault,
   TokenTypeSelectors,
   TokenSymbolRule,
@@ -221,6 +222,10 @@ export class VisualConfigProvider {
 
   getLayoutHints(): LayoutHints | null {
     return this.config?.layout?.hints ?? null;
+  }
+
+  getTableBackground(): TableBackgroundConfig | null {
+    return this.config?.layout?.tableBackground ?? null;
   }
 }
 

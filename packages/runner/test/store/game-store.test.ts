@@ -201,6 +201,36 @@ describe('createGameStore', () => {
     expect(store.getState().gameLifecycle).toBe('terminal');
   });
 
+  it('hydrateFromReplayStep updates replay projection and clears move-construction state', async () => {
+    const def = compileStoreFixture(5);
+    const bridge = createGameWorker();
+    const store = createStoreWithDefaultVisuals(bridge);
+
+    await store.getState().initGame(def, 11, asPlayerId(0));
+    await store.getState().selectAction(asActionId('tick'));
+    expect(store.getState().selectedAction).toEqual(asActionId('tick'));
+
+    const stateBeforeHydrate = store.getState();
+    const replayEffectTrace = [{ type: 'state-update' }] as unknown as readonly EffectTraceEntry[];
+    const replayTriggerFirings = [{ triggerId: asTriggerId('trigger:replay'), depth: 0 }] as unknown as readonly TriggerLogEntry[];
+
+    store.getState().hydrateFromReplayStep(
+      stateBeforeHydrate.gameState!,
+      stateBeforeHydrate.legalMoveResult!,
+      stateBeforeHydrate.terminal,
+      replayEffectTrace,
+      replayTriggerFirings,
+    );
+
+    const hydratedState = store.getState();
+    expect(hydratedState.selectedAction).toBeNull();
+    expect(hydratedState.partialMove).toBeNull();
+    expect(hydratedState.choiceStack).toEqual([]);
+    expect(hydratedState.choicePending).toBeNull();
+    expect(hydratedState.effectTrace).toEqual(replayEffectTrace);
+    expect(hydratedState.triggerFirings).toEqual(replayTriggerFirings);
+  });
+
   it('selectAction initializes progressive choice state from real worker legalChoices', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);

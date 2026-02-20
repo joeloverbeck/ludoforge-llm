@@ -6,14 +6,15 @@ import { deleteSavedGame, loadGame } from './persistence/save-manager.js';
 import type { SavedGameRecord } from './persistence/game-db.js';
 import { createSessionStore } from './session/session-store.js';
 import { findBootstrapDescriptorById, useActiveGameRuntime } from './session/active-game-runtime.js';
+import { useReplayRuntime } from './session/replay-runtime.js';
 import { ErrorBoundary } from './ui/ErrorBoundary.js';
 import { GameContainer } from './ui/GameContainer.js';
 import { GameSelectionScreen } from './ui/GameSelectionScreen.js';
 import { LoadGameDialog } from './ui/LoadGameDialog.js';
 import { PreGameConfigScreen } from './ui/PreGameConfigScreen.js';
+import { ReplayScreen } from './ui/ReplayScreen.js';
 import { SaveGameDialog } from './ui/SaveGameDialog.js';
 import { UnsavedChangesDialog } from './ui/UnsavedChangesDialog.js';
-import { ReplayPlaceholder } from './ui/screens/ReplayPlaceholder.js';
 
 export function App(): ReactElement {
   const sessionStoreRef = useRef(createSessionStore());
@@ -29,6 +30,7 @@ export function App(): ReactElement {
   const activeRuntime = useActiveGameRuntime(sessionState, {
     onMoveApplied: handleMoveApplied,
   });
+  const replayRuntime = useReplayRuntime(sessionState);
 
   useEffect(() => {
     if (sessionState.screen !== 'activeGame') {
@@ -176,7 +178,8 @@ export function App(): ReactElement {
       }
       case 'replay':
         return (
-          <ReplayPlaceholder
+          <ReplayScreen
+            runtime={replayRuntime}
             onBackToMenu={() => {
               sessionStore.getState().returnToMenu();
             }}

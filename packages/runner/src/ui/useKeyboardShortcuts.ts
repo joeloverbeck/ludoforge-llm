@@ -2,29 +2,13 @@ import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
 
 import type { KeyboardCoordinator, KeyboardEventLike } from '../input/keyboard-coordinator.js';
+import { isEditableTarget } from '../input/editable-target.js';
 import type { GameStore } from '../store/game-store.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 
 type SelectActionId = Parameters<GameStore['selectAction']>[0];
 
 const SPACE_KEYS = new Set([' ', 'Space', 'Spacebar']);
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-
-  const tagName = target.tagName.toLowerCase();
-  if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
-    return true;
-  }
-
-  if (target.isContentEditable) {
-    return true;
-  }
-
-  return target.closest('[contenteditable]') !== null;
-}
 
 function flattenActions(renderModel: NonNullable<GameStore['renderModel']>) {
   return renderModel.actionGroups.flatMap((group) => group.actions);

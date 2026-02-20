@@ -1,0 +1,55 @@
+.panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-top: 1px solid #d1d5db;
+  background: #f8fafc;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.moveCounter {
+  font-weight: 600;
+}
+
+.slider {
+  width: 100%;
+}
+
+.controlsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.speedRow {
+  display: inline-flex;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.button {
+  border: 1px solid #9ca3af;
+  background: #ffffff;
+  color: #111827;
+  border-radius: 0.375rem;
+  padding: 0.3rem 0.55rem;
+  cursor: pointer;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.speedButtonActive {
+  background: #111827;
+  color: #ffffff;
+  border-color: #111827;
+}

@@ -58,6 +58,13 @@ export type AiStepOutcome = 'advanced' | 'no-op' | 'human-turn' | 'terminal' | '
 interface GameStoreActions {
   initGame(def: GameDef, seed: number, playerID: PlayerId): Promise<void>;
   initGameFromHistory(def: GameDef, seed: number, playerID: PlayerId, moveHistory: readonly Move[]): Promise<void>;
+  hydrateFromReplayStep(
+    gameState: GameState,
+    legalMoveResult: LegalMoveEnumerationResult,
+    terminal: TerminalResult | null,
+    effectTrace: readonly EffectTraceEntry[],
+    triggerFirings: readonly TriggerLogEntry[],
+  ): void;
   reportBootstrapFailure(error: unknown): void;
   selectAction(actionId: ActionId): Promise<void>;
   chooseOne(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
@@ -694,6 +701,24 @@ export function createGameStore(
           } finally {
             finishOperation(operation);
           }
+        },
+
+        hydrateFromReplayStep(gameState, legalMoveResult, terminal, effectTrace, triggerFirings) {
+          const lifecycle = assertLifecycleTransition(
+            get().gameLifecycle,
+            lifecycleFromTerminal(terminal),
+            'hydrateFromReplayStep',
+          );
+          setAndDerive(
+            buildStateMutationState(
+              gameState,
+              legalMoveResult,
+              terminal,
+              lifecycle,
+              effectTrace,
+              triggerFirings,
+            ),
+          );
         },
 
         reportBootstrapFailure(error) {

@@ -1,4 +1,4 @@
-import type { GameDef, Move } from '@ludoforge/engine/runtime';
+import type { EffectTraceEntry, GameDef, Move, TriggerLogEntry } from '@ludoforge/engine/runtime';
 
 import type { GameBridge } from '../bridge/game-bridge.js';
 import type { OperationStamp } from '../worker/game-worker-api.js';
@@ -11,6 +11,8 @@ export interface ReplayController {
   readonly currentMoveIndex: number;
   readonly isPlaying: boolean;
   readonly playbackSpeed: number;
+  readonly lastEffectTrace: readonly EffectTraceEntry[];
+  readonly lastTriggerFirings: readonly TriggerLogEntry[];
 
   stepForward(): Promise<void>;
   stepBackward(): Promise<void>;
@@ -52,6 +54,8 @@ export function createReplayController(
   let isPlaying = false;
   let playbackSpeed: (typeof ALLOWED_PLAYBACK_SPEEDS)[number] = 1;
   let playbackTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastEffectTrace: readonly EffectTraceEntry[] = [];
+  let lastTriggerFirings: readonly TriggerLogEntry[] = [];
   let operationToken = 0;
   let operationQueue: Promise<void> = Promise.resolve();
 
@@ -93,7 +97,9 @@ export function createReplayController(
   };
 
   const applyMoveWithTrace = async (move: Move): Promise<void> => {
-    await bridge.applyMove(move, { trace: true }, nextStamp());
+    const result = await bridge.applyMove(move, { trace: true }, nextStamp());
+    lastEffectTrace = result.effectTrace ?? [];
+    lastTriggerFirings = result.triggerFirings;
   };
 
   const applyPrefixWithoutTrace = async (endExclusive: number): Promise<void> => {
@@ -169,6 +175,14 @@ export function createReplayController(
       return playbackSpeed;
     },
 
+    get lastEffectTrace(): readonly EffectTraceEntry[] {
+      return lastEffectTrace;
+    },
+
+    get lastTriggerFirings(): readonly TriggerLogEntry[] {
+      return lastTriggerFirings;
+    },
+
     async stepForward(): Promise<void> {
       await enqueue(async () => {
         const nextMoveIndex = currentMoveIndex + 1;
@@ -195,6 +209,8 @@ export function createReplayController(
         }
 
         currentMoveIndex = targetMoveIndex;
+        lastEffectTrace = [];
+        lastTriggerFirings = [];
         emitStateChange();
       });
     },
@@ -212,6 +228,9 @@ export function createReplayController(
         if (index >= 0) {
           await applyPrefixWithoutTrace(index);
           await applyMoveWithTrace(moveHistory[index]!);
+        } else {
+          lastEffectTrace = [];
+          lastTriggerFirings = [];
         }
 
         currentMoveIndex = index;

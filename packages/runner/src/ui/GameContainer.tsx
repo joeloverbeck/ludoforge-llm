@@ -37,6 +37,7 @@ import styles from './GameContainer.module.css';
 interface GameContainerProps {
   readonly store: StoreApi<GameStore>;
   readonly visualConfigProvider: VisualConfigProvider;
+  readonly readOnlyMode?: boolean;
   readonly onReturnToMenu?: () => void;
   readonly onNewGame?: () => void;
   readonly onQuit?: () => void;
@@ -94,13 +95,22 @@ export function resolveTooltipAnchorState(hoverAnchor: HoverAnchor | null): Tool
   };
 }
 
-export function GameContainer({ store, visualConfigProvider, onReturnToMenu, onNewGame, onQuit, onSave, onLoad }: GameContainerProps): ReactElement {
+export function GameContainer({
+  store,
+  visualConfigProvider,
+  readOnlyMode = false,
+  onReturnToMenu,
+  onNewGame,
+  onQuit,
+  onSave,
+  onLoad,
+}: GameContainerProps): ReactElement {
   const gameLifecycle = useStore(store, (state) => state.gameLifecycle);
   const error = useStore(store, (state) => state.error);
   const renderModel = useStore(store, (state) => state.renderModel);
   const gameDefFactions = useStore(store, (state) => state.gameDef?.factions);
   const [hoverAnchor, setHoverAnchor] = useState<HoverAnchor | null>(null);
-  const keyboardShortcutsEnabled = error === null && (gameLifecycle === 'playing' || gameLifecycle === 'terminal');
+  const keyboardShortcutsEnabled = !readOnlyMode && error === null && (gameLifecycle === 'playing' || gameLifecycle === 'terminal');
   const keyboardCoordinator = useMemo(
     () => (typeof document === 'undefined' ? null : createKeyboardCoordinator(document)),
     [],
@@ -134,7 +144,9 @@ export function GameContainer({ store, visualConfigProvider, onReturnToMenu, onN
     );
   }
 
-  const bottomBarState = deriveBottomBarState(renderModel);
+  const bottomBarState = readOnlyMode
+    ? { kind: 'hidden' as const }
+    : deriveBottomBarState(renderModel);
   const factionCssVariableStyle = buildFactionCssVariableStyle(
     gameDefFactions?.map((faction) => faction.id),
     (factionId) => visualConfigProvider.getFactionColor(factionId),

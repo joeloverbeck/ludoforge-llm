@@ -407,6 +407,27 @@ describe('GameContainer', () => {
     expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
   });
 
+  it('hides interactive bottom-bar controls in read-only mode', () => {
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel(),
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+        readOnlyMode: true,
+      }),
+    );
+
+    expect(html).not.toContain('data-testid="action-toolbar"');
+    expect(html).not.toContain('data-testid="undo-control"');
+    expect(html).not.toContain('data-testid="choice-panel-choicePending"');
+    expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
+    expect(html).not.toContain('data-testid="choice-panel-choiceInvalid"');
+    expect(html).not.toContain('data-testid="ai-turn-overlay"');
+  });
+
   it('renders choicePending mode branch only', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {

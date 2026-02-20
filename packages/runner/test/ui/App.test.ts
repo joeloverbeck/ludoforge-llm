@@ -38,6 +38,7 @@ interface SessionStoreApi {
 const testDoubles = vi.hoisted(() => ({
   findBootstrapDescriptorById: vi.fn(),
   useActiveGameRuntime: vi.fn(),
+  useReplayRuntime: vi.fn(),
   createSessionStore: vi.fn(),
   loadGame: vi.fn(),
   deleteSavedGame: vi.fn(),
@@ -155,6 +156,10 @@ vi.mock('../../src/session/active-game-runtime.js', () => ({
   useActiveGameRuntime: testDoubles.useActiveGameRuntime,
 }));
 
+vi.mock('../../src/session/replay-runtime.js', () => ({
+  useReplayRuntime: testDoubles.useReplayRuntime,
+}));
+
 vi.mock('../../src/session/session-store.js', () => ({
   createSessionStore: testDoubles.createSessionStore,
 }));
@@ -204,6 +209,18 @@ vi.mock('../../src/ui/GameContainer.js', () => ({
 
 vi.mock('../../src/ui/ErrorBoundary.js', () => ({
   ErrorBoundary: (props: { readonly children: ReactNode }) => createElement('section', { 'data-testid': 'error-boundary' }, props.children),
+}));
+
+vi.mock('../../src/ui/ReplayScreen.js', () => ({
+  ReplayScreen: (props: { readonly onBackToMenu: () => void }) => (
+    createElement('main', { 'data-testid': 'replay-screen' },
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'replay-back-to-menu',
+        onClick: props.onBackToMenu,
+      }, 'back'),
+    )
+  ),
 }));
 
 vi.mock('../../src/ui/GameSelectionScreen.js', () => ({
@@ -314,6 +331,7 @@ describe('App', () => {
     vi.resetModules();
     testDoubles.findBootstrapDescriptorById.mockReset();
     testDoubles.useActiveGameRuntime.mockReset();
+    testDoubles.useReplayRuntime.mockReset();
     testDoubles.createSessionStore.mockReset();
     testDoubles.loadGame.mockReset();
     testDoubles.deleteSavedGame.mockReset();
@@ -352,6 +370,32 @@ describe('App', () => {
       }
       return {
         store: testDoubles.runtimeStore,
+        visualConfigProvider: testDoubles.visualConfigProvider,
+      };
+    });
+
+    testDoubles.useReplayRuntime.mockImplementation((sessionState: SessionStoreState['sessionState']) => {
+      if (sessionState.screen !== 'replay') {
+        return null;
+      }
+      return {
+        store: testDoubles.runtimeStore,
+        replayStore: {
+          getState: () => ({
+            currentMoveIndex: -1,
+            totalMoves: 1,
+            isPlaying: false,
+            playbackSpeed: 1,
+            stepForward: vi.fn(async () => undefined),
+            stepBackward: vi.fn(async () => undefined),
+            jumpToMove: vi.fn(async () => undefined),
+            play: vi.fn(),
+            pause: vi.fn(),
+            setSpeed: vi.fn(),
+            syncFromController: vi.fn(),
+            destroy: vi.fn(),
+          }),
+        },
         visualConfigProvider: testDoubles.visualConfigProvider,
       };
     });
@@ -476,6 +520,29 @@ describe('App', () => {
       seed: 17,
       playerConfig: [{ playerId: 1, type: 'human' }],
       initialMoveHistory: [{ actionId: 'tick', params: {} }],
+    });
+  });
+
+  it('routes to replay screen for replay action and supports back-to-menu', async () => {
+    testDoubles.loadGame.mockResolvedValue({
+      gameId: 'fitl',
+      seed: 17,
+      moveHistory: [{ actionId: 'tick', params: {} }],
+      playerConfig: [{ playerId: 1, type: 'human' }],
+      isTerminal: true,
+    });
+
+    const { App } = await import('../../src/App.js');
+
+    render(createElement(App));
+    fireEvent.click(screen.getByTestId('replay-saved'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('replay-screen')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('replay-back-to-menu'));
+    await waitFor(() => {
+      expect(screen.getByTestId('game-selection-screen')).toBeTruthy();
     });
   });
 });

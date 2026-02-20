@@ -933,4 +933,36 @@ describe('createTokenRenderer', () => {
     expect(cleanupByTokenId.get('token:1')).toHaveBeenCalledTimes(1);
     expect(cleanupByTokenId.get('token:2')).toHaveBeenCalledTimes(0);
   });
+
+  it('completes update cycle even when container.destroy() throws', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider();
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1' }), makeToken({ id: 'token:2', type: 'troop-b' })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const removedContainer = renderer.getContainerMap().get('token:2') as InstanceType<typeof MockContainer>;
+    vi.spyOn(removedContainer, 'destroy').mockImplementation(() => {
+      throw new TypeError('TexturePoolClass.returnTexture failed');
+    });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    renderer.update(
+      [makeToken({ id: 'token:1' })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    expect(renderer.getContainerMap().has('token:2')).toBe(false);
+    expect(parent.children).toHaveLength(1);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    warnSpy.mockRestore();
+  });
 });

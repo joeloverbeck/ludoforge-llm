@@ -18,6 +18,7 @@ export interface AnimationQueue {
   readonly isPlaying: boolean;
   readonly queueLength: number;
   onAllComplete(callback: () => void): void;
+  forceFlush(): void;
   destroy(): void;
 }
 
@@ -204,6 +205,29 @@ export function createAnimationQueue(options: AnimationQueueOptions): AnimationQ
         return;
       }
       callbacks.add(callback);
+    },
+
+    forceFlush(): void {
+      if (destroyed) {
+        return;
+      }
+
+      if (active !== null) {
+        clearOnComplete(active);
+        killTimeline(active);
+      }
+      active = null;
+
+      while (queue.length > 0) {
+        const timeline = queue.shift();
+        if (timeline !== undefined) {
+          clearOnComplete(timeline);
+          killTimeline(timeline);
+        }
+      }
+
+      setStoreFlag(false);
+      notifyAllComplete();
     },
 
     destroy(): void {

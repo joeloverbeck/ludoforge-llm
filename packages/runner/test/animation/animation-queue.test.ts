@@ -217,6 +217,62 @@ describe('createAnimationQueue', () => {
     expect(onAllComplete).toHaveBeenCalledTimes(1);
   });
 
+  it('forceFlush kills active and queued timelines and resets playing state', () => {
+    const setAnimationPlaying = vi.fn();
+    const queue = createAnimationQueue({ setAnimationPlaying });
+    const first = createTimelineFixture();
+    const second = createTimelineFixture();
+    const third = createTimelineFixture();
+
+    queue.enqueue(first.timeline);
+    queue.enqueue(second.timeline);
+    queue.enqueue(third.timeline);
+
+    expect(queue.isPlaying).toBe(true);
+    expect(queue.queueLength).toBe(3);
+
+    queue.forceFlush();
+
+    expect(first.kill).toHaveBeenCalledTimes(1);
+    expect(second.kill).toHaveBeenCalledTimes(1);
+    expect(third.kill).toHaveBeenCalledTimes(1);
+    expect(queue.isPlaying).toBe(false);
+    expect(queue.queueLength).toBe(0);
+    expect(setAnimationPlaying).toHaveBeenLastCalledWith(false);
+  });
+
+  it('forceFlush allows new timelines to be enqueued afterwards', () => {
+    const setAnimationPlaying = vi.fn();
+    const queue = createAnimationQueue({ setAnimationPlaying });
+    const first = createTimelineFixture();
+    const second = createTimelineFixture();
+
+    queue.enqueue(first.timeline);
+    queue.forceFlush();
+
+    expect(queue.isPlaying).toBe(false);
+
+    queue.enqueue(second.timeline);
+    expect(queue.isPlaying).toBe(true);
+    expect(queue.queueLength).toBe(1);
+    expect(setAnimationPlaying).toHaveBeenLastCalledWith(true);
+
+    second.complete();
+    expect(queue.isPlaying).toBe(false);
+  });
+
+  it('forceFlush notifies onAllComplete callbacks', () => {
+    const queue = createAnimationQueue({ setAnimationPlaying: vi.fn() });
+    const timeline = createTimelineFixture();
+    const onAllComplete = vi.fn();
+    queue.onAllComplete(onAllComplete);
+
+    queue.enqueue(timeline.timeline);
+    queue.forceFlush();
+
+    expect(onAllComplete).toHaveBeenCalledTimes(1);
+  });
+
   it('rejects invalid speed and queue limit values', () => {
     expect(() => createAnimationQueue({ setAnimationPlaying: vi.fn(), maxQueuedTimelines: 0 })).toThrowError(
       'Animation queue maxQueuedTimelines must be an integer >= 1.',

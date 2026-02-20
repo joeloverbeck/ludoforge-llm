@@ -275,6 +275,9 @@ export async function createGameCanvasRuntime(
     viewport: viewportResult,
     getInteractionHighlights: () => options.interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
   });
+  canvasUpdater.start();
+  let canvasReady = true;
+
   let animationController: AnimationController | null = null;
   let aiPlaybackController: AiPlaybackController | null = null;
   let actionAnnouncements: ActionAnnouncementRenderer | null = null;
@@ -286,6 +289,7 @@ export async function createGameCanvasRuntime(
       tokenContainers: () => tokenRenderer.getContainerMap(),
       zoneContainers: () => zoneRenderer.getContainerMap(),
       zonePositions: () => positionStore.getSnapshot(),
+      isCanvasReady: () => canvasReady,
     });
     animationController.start();
 
@@ -408,8 +412,6 @@ export async function createGameCanvasRuntime(
       (event) => handleKeyboardSelectKeyDown(event, keyboardSelectConfig),
       { priority: 10 },
     );
-
-  canvasUpdater.start();
 
   const coordinateBridge = deps.createCoordinateBridge(viewportResult.viewport, gameCanvas.app.canvas);
   const hoverBoundsResolver: HoverBoundsResolver = (target) => {

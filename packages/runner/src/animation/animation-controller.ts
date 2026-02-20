@@ -44,6 +44,7 @@ export interface AnimationController {
   resume(): void;
   skipCurrent(): void;
   skipAll(): void;
+  forceFlush(): void;
 }
 
 export interface AnimationControllerOptions {
@@ -52,6 +53,7 @@ export interface AnimationControllerOptions {
   readonly tokenContainers: () => ReadonlyMap<string, Container>;
   readonly zoneContainers: () => ReadonlyMap<string, Container>;
   readonly zonePositions: () => ZonePositionMap;
+  readonly isCanvasReady?: () => boolean;
 }
 
 interface AnimationControllerDeps {
@@ -83,10 +85,16 @@ export function createAnimationController(
       return;
     }
 
+    if (options.isCanvasReady !== undefined && !options.isCanvasReady()) {
+      deps.onWarning?.('Animation controller skipped trace: canvas not ready.');
+      return;
+    }
+
+    let descriptors: readonly AnimationDescriptor[];
     try {
       const state = options.store.getState();
       const cardContext = buildCardContext(state, options.visualConfigProvider);
-      const descriptors = deps.traceToDescriptors(
+      descriptors = deps.traceToDescriptors(
         trace,
         {
           detailLevel,
@@ -95,10 +103,16 @@ export function createAnimationController(
         },
         deps.presetRegistry,
       );
-      if (!hasVisualDescriptors(descriptors)) {
-        return;
-      }
+    } catch (error) {
+      deps.onError('Descriptor mapping failed.', error);
+      return;
+    }
 
+    if (!hasVisualDescriptors(descriptors)) {
+      return;
+    }
+
+    try {
       const timeline = deps.buildTimeline(
         descriptors,
         deps.presetRegistry,
@@ -118,7 +132,7 @@ export function createAnimationController(
 
       queue.enqueue(timeline);
     } catch (error) {
-      deps.onError('Animation controller failed while processing effectTrace.', error);
+      deps.onError('Timeline build failed.', error);
     }
   };
 
@@ -199,6 +213,13 @@ export function createAnimationController(
         return;
       }
       queue.skipAll();
+    },
+
+    forceFlush(): void {
+      if (destroyed) {
+        return;
+      }
+      queue.forceFlush();
     },
   };
 }

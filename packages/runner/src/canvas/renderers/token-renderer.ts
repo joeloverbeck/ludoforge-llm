@@ -10,6 +10,7 @@ import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
 import { drawTokenShape } from './token-shape-drawer.js';
 import { drawTokenSymbol } from './token-symbol-drawer.js';
 import { drawCardContent } from './card-template-renderer.js';
+import { safeDestroyContainer } from './safe-destroy.js';
 
 const TOKEN_RADIUS = 14;
 const CARD_WIDTH = 24;
@@ -87,7 +88,7 @@ export function createTokenRenderer(
         boundTokenIdByRenderId.delete(renderId);
 
         tokenContainer.removeFromParent();
-        tokenContainer.destroy();
+        safeDestroyContainer(tokenContainer);
         tokenContainers.delete(renderId);
         visualsByContainer.delete(tokenContainer);
       }
@@ -191,7 +192,7 @@ export function createTokenRenderer(
 
       for (const tokenContainer of tokenContainers.values()) {
         tokenContainer.removeFromParent();
-        tokenContainer.destroy();
+        safeDestroyContainer(tokenContainer);
         visualsByContainer.delete(tokenContainer);
       }
 

@@ -183,6 +183,7 @@ describe('createAnimationController', () => {
       isPlaying: false,
       queueLength: 0,
       onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
       destroy: vi.fn(),
     };
     const tokenContainers = new Map([['tok:1', {}]]);
@@ -264,7 +265,7 @@ describe('createAnimationController', () => {
         presetRegistry: createPresetRegistry(),
         queueFactory: () => ({
           enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
-          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
         }),
         traceToDescriptors: traceToDescriptorsMock,
         buildTimeline: vi.fn(),
@@ -302,7 +303,7 @@ describe('createAnimationController', () => {
         presetRegistry: createPresetRegistry(),
         queueFactory: () => ({
           enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
-          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
         }),
         traceToDescriptors: traceToDescriptorsMock,
         buildTimeline: vi.fn(),
@@ -345,7 +346,7 @@ describe('createAnimationController', () => {
         presetRegistry: createPresetRegistry(),
         queueFactory: () => ({
           enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
-          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
         }),
         traceToDescriptors: traceToDescriptorsMock,
         buildTimeline: vi.fn(),
@@ -392,7 +393,7 @@ describe('createAnimationController', () => {
         presetRegistry: createPresetRegistry(),
         queueFactory: () => ({
           enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
-          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
         }),
         traceToDescriptors: vi.fn(() => []),
         buildTimeline: vi.fn(),
@@ -421,6 +422,7 @@ describe('createAnimationController', () => {
       isPlaying: false,
       queueLength: 0,
       onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
       destroy: vi.fn(),
     };
     const buildTimelineMock = vi.fn();
@@ -465,6 +467,7 @@ describe('createAnimationController', () => {
       isPlaying: false,
       queueLength: 0,
       onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
       destroy: vi.fn(),
     };
 
@@ -527,7 +530,7 @@ describe('createAnimationController', () => {
         presetRegistry: createPresetRegistry(),
         queueFactory: () => ({
           enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
-          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
         }),
         traceToDescriptors: vi.fn(() => {
           throw new Error('mapping failed');
@@ -565,7 +568,7 @@ describe('createAnimationController', () => {
         presetRegistry: createPresetRegistry(),
         queueFactory: () => ({
           enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
-          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
         }),
         traceToDescriptors: traceToDescriptorsMock,
         buildTimeline: vi.fn(),
@@ -644,6 +647,7 @@ describe('createAnimationController', () => {
       isPlaying: false,
       queueLength: 0,
       onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
       destroy: vi.fn(),
     };
     const controller = createAnimationController(
@@ -690,6 +694,7 @@ describe('createAnimationController', () => {
       isPlaying: false,
       queueLength: 0,
       onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
       destroy: vi.fn(),
     };
     const buildTimelineMock = vi.fn(() => timeline.timeline);
@@ -768,6 +773,7 @@ describe('createAnimationController', () => {
       isPlaying: false,
       queueLength: 0,
       onAllComplete: vi.fn(),
+      forceFlush: vi.fn(),
       destroy: vi.fn(),
     };
     const buildTimelineMock = vi.fn(() => timeline.timeline);
@@ -823,5 +829,236 @@ describe('createAnimationController', () => {
     expect(queue.enqueue).not.toHaveBeenCalled();
     expect(timeline.progress).toHaveBeenCalledWith(1);
     expect(timeline.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports descriptor mapping error and still processes future traces', () => {
+    const store = createControllerStore();
+    const onError = vi.fn();
+    const traceToDescriptorsMock = vi.fn()
+      .mockImplementationOnce(() => { throw new Error('mapping kaboom'); })
+      .mockImplementationOnce(() => []);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(), forceFlush: vi.fn(),
+        }),
+        traceToDescriptors: traceToDescriptorsMock,
+        buildTimeline: vi.fn(),
+        onError,
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0]![0]).toContain('Descriptor mapping failed');
+
+    store.setState({ effectTrace: [traceEntry()] });
+    expect(traceToDescriptorsMock).toHaveBeenCalledTimes(2);
+
+    controller.destroy();
+  });
+
+  it('reports timeline build error and still processes future traces', () => {
+    const store = createControllerStore();
+    const onError = vi.fn();
+    const buildTimelineMock = vi.fn()
+      .mockImplementationOnce(() => { throw new Error('timeline kaboom'); })
+      .mockImplementationOnce(() => ({ add: vi.fn(), progress: vi.fn(), kill: vi.fn() }));
+    const queue = {
+      enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+      isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(), forceFlush: vi.fn(),
+    };
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map([['tok:1', {}]]) as never,
+        zoneContainers: () => new Map([['zone:a', {}], ['zone:b', {}]]) as never,
+        zonePositions: () => ({
+          positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+          bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+        }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => queue,
+        traceToDescriptors: vi.fn(() => [
+          { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
+        ]),
+        buildTimeline: buildTimelineMock,
+        onError,
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0]![0]).toContain('Timeline build failed');
+    expect(queue.enqueue).not.toHaveBeenCalled();
+
+    store.setState({ effectTrace: [traceEntry()] });
+    expect(buildTimelineMock).toHaveBeenCalledTimes(2);
+    expect(queue.enqueue).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+  });
+
+  it('forceFlush delegates to queue and allows future processing', () => {
+    const store = createControllerStore();
+    const timeline = createTimelineFixture();
+    const queue = {
+      enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+      isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), destroy: vi.fn(), forceFlush: vi.fn(),
+    };
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map([['tok:1', {}]]) as never,
+        zoneContainers: () => new Map([['zone:a', {}], ['zone:b', {}]]) as never,
+        zonePositions: () => ({
+          positions: new Map([['zone:a', { x: 0, y: 0 }], ['zone:b', { x: 10, y: 20 }]]),
+          bounds: { minX: 0, minY: 0, maxX: 10, maxY: 20 },
+        }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => queue,
+        traceToDescriptors: vi.fn(() => [
+          { kind: 'moveToken', tokenId: 'tok:1', from: 'zone:a', to: 'zone:b', preset: 'arc-tween', isTriggered: false } as const,
+        ]),
+        buildTimeline: vi.fn(() => timeline.timeline),
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    controller.forceFlush();
+
+    expect(queue.forceFlush).toHaveBeenCalledTimes(1);
+
+    store.setState({ effectTrace: [traceEntry()] });
+    expect(queue.enqueue).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+  });
+
+  it('skips processing when isCanvasReady returns false', () => {
+    const store = createControllerStore();
+    const traceToDescriptorsMock = vi.fn(() => []);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+        isCanvasReady: () => false,
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: traceToDescriptorsMock,
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(traceToDescriptorsMock).not.toHaveBeenCalled();
+
+    controller.destroy();
+  });
+
+  it('processes traces normally when isCanvasReady returns true', () => {
+    const store = createControllerStore();
+    const traceToDescriptorsMock = vi.fn(() => []);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+        isCanvasReady: () => true,
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: traceToDescriptorsMock,
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(traceToDescriptorsMock).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+  });
+
+  it('processes traces when isCanvasReady is not provided (backward compatibility)', () => {
+    const store = createControllerStore();
+    const traceToDescriptorsMock = vi.fn(() => []);
+
+    const controller = createAnimationController(
+      {
+        store: store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: NULL_VISUAL_CONFIG_PROVIDER,
+        tokenContainers: () => new Map() as never,
+        zoneContainers: () => new Map() as never,
+        zonePositions: () => ({ positions: new Map(), bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }),
+      },
+      {
+        gsap: { registerPlugin: vi.fn(), defaults: vi.fn(), timeline: vi.fn() },
+        presetRegistry: createPresetRegistry(),
+        queueFactory: () => ({
+          enqueue: vi.fn(), skipCurrent: vi.fn(), skipAll: vi.fn(), pause: vi.fn(), resume: vi.fn(), setSpeed: vi.fn(),
+          isPlaying: false, queueLength: 0, onAllComplete: vi.fn(), forceFlush: vi.fn(), destroy: vi.fn(),
+        }),
+        traceToDescriptors: traceToDescriptorsMock,
+        buildTimeline: vi.fn(),
+        onError: vi.fn(),
+      },
+    );
+
+    controller.start();
+    store.setState({ effectTrace: [traceEntry()] });
+
+    expect(traceToDescriptorsMock).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
   });
 });

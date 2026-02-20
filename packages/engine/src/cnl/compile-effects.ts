@@ -24,6 +24,7 @@ import { SUPPORTED_EFFECT_KINDS } from './effect-kind-registry.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
 import { isTrustedMacroOriginCarrier } from './macro-origin-trust.js';
+import { collectReservedCompilerMetadataKeyOccurrencesOnRecord } from './reserved-compiler-metadata.js';
 
 type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 
@@ -40,6 +41,7 @@ export interface EffectLoweringResult<TValue> {
 }
 
 const toInternalDecisionId = (path: string): string => `decision:${path}`;
+const EFFECT_KIND_KEYS: ReadonlySet<string> = new Set(SUPPORTED_EFFECT_KINDS as readonly string[]);
 
 export function lowerEffectArray(
   source: readonly unknown[],
@@ -74,6 +76,18 @@ function lowerEffectNode(
 ): EffectLoweringResult<EffectAST> {
   if (!isRecord(source)) {
     return missingCapability(path, 'effect node', source, SUPPORTED_EFFECT_KINDS);
+  }
+  const reservedMetadataDiagnostics: Diagnostic[] = [
+    ...collectReservedCompilerMetadataDiagnostics(source, path),
+  ];
+  for (const [key, value] of Object.entries(source)) {
+    if (!EFFECT_KIND_KEYS.has(key) || !isRecord(value)) {
+      continue;
+    }
+    reservedMetadataDiagnostics.push(...collectReservedCompilerMetadataDiagnostics(value, `${path}.${key}`));
+  }
+  if (reservedMetadataDiagnostics.length > 0) {
+    return { value: null, diagnostics: reservedMetadataDiagnostics };
   }
 
   if (isRecord(source.setVar)) {
@@ -813,7 +827,11 @@ function lowerForEachEffect(
     loweredIn = inResult.value;
   }
 
-  if (over.value === null || loweredEffects.value === null || macroOrigin.value === null) {
+  if (
+    over.value === null
+    || loweredEffects.value === null
+    || macroOrigin.value === null
+  ) {
     return { value: null, diagnostics };
   }
 
@@ -1885,6 +1903,19 @@ function readMacroOrigin(
     },
     diagnostics: [],
   };
+}
+
+function collectReservedCompilerMetadataDiagnostics(
+  value: unknown,
+  path: string,
+): readonly Diagnostic[] {
+  return collectReservedCompilerMetadataKeyOccurrencesOnRecord(value, path).map((occurrence) => ({
+    code: 'CNL_COMPILER_RESERVED_COMPILER_METADATA_FORBIDDEN',
+    path: occurrence.path,
+    severity: 'error',
+    message: `${occurrence.key} is reserved compiler metadata and cannot be authored directly.`,
+    suggestion: `Remove ${occurrence.key} from authored YAML.`,
+  }));
 }
 
 function formatValue(value: unknown): string {

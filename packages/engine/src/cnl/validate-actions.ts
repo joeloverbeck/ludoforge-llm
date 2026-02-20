@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
+import { SUPPORTED_EFFECT_KINDS } from './effect-kind-registry.js';
 import {
   ACTION_KEYS,
   END_CONDITION_KEYS,
@@ -12,6 +13,9 @@ import {
   validateIdentifierField,
   validateUnknownKeys,
 } from './validate-spec-shared.js';
+import { isReservedCompilerMetadataKey } from './reserved-compiler-metadata.js';
+
+const EFFECT_KIND_KEYS: ReadonlySet<string> = new Set(SUPPORTED_EFFECT_KINDS as readonly string[]);
 
 export function validateActions(doc: GameSpecDoc, diagnostics: Diagnostic[]): readonly string[] {
   const collectedActionIds: string[] = [];
@@ -141,16 +145,16 @@ export function validateActions(doc: GameSpecDoc, diagnostics: Diagnostic[]): re
   return uniqueSorted(collectedActionIds);
 }
 
-export function validateAuthoredMacroOriginBoundary(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
-  validateEffectArrayForAuthoredMacroOrigin(doc.setup, 'doc.setup', diagnostics);
+export function validateAuthoredCompilerMetadataBoundary(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
+  validateEffectArrayForAuthoredCompilerMetadata(doc.setup, 'doc.setup', diagnostics);
 
   if (doc.actions !== null) {
     for (const [index, action] of doc.actions.entries()) {
       if (!isRecord(action)) {
         continue;
       }
-      validateEffectArrayForAuthoredMacroOrigin(action.cost, `doc.actions.${index}.cost`, diagnostics);
-      validateEffectArrayForAuthoredMacroOrigin(action.effects, `doc.actions.${index}.effects`, diagnostics);
+      validateEffectArrayForAuthoredCompilerMetadata(action.cost, `doc.actions.${index}.cost`, diagnostics);
+      validateEffectArrayForAuthoredCompilerMetadata(action.effects, `doc.actions.${index}.effects`, diagnostics);
     }
   }
 
@@ -159,7 +163,7 @@ export function validateAuthoredMacroOriginBoundary(doc: GameSpecDoc, diagnostic
       if (!isRecord(trigger)) {
         continue;
       }
-      validateEffectArrayForAuthoredMacroOrigin(trigger.effects, `doc.triggers.${index}.effects`, diagnostics);
+      validateEffectArrayForAuthoredCompilerMetadata(trigger.effects, `doc.triggers.${index}.effects`, diagnostics);
     }
   }
 
@@ -172,8 +176,8 @@ export function validateAuthoredMacroOriginBoundary(doc: GameSpecDoc, diagnostic
         if (!isRecord(phase)) {
           continue;
         }
-        validateEffectArrayForAuthoredMacroOrigin(phase.onEnter, `${basePath}.${index}.onEnter`, diagnostics);
-        validateEffectArrayForAuthoredMacroOrigin(phase.onExit, `${basePath}.${index}.onExit`, diagnostics);
+        validateEffectArrayForAuthoredCompilerMetadata(phase.onEnter, `${basePath}.${index}.onEnter`, diagnostics);
+        validateEffectArrayForAuthoredCompilerMetadata(phase.onExit, `${basePath}.${index}.onExit`, diagnostics);
       }
     };
     validatePhases(doc.turnStructure.phases, 'doc.turnStructure.phases');
@@ -185,7 +189,7 @@ export function validateAuthoredMacroOriginBoundary(doc: GameSpecDoc, diagnostic
       if (!isRecord(pipeline)) {
         continue;
       }
-      validateEffectArrayForAuthoredMacroOrigin(
+      validateEffectArrayForAuthoredCompilerMetadata(
         pipeline.costEffects,
         `doc.actionPipelines.${pipelineIndex}.costEffects`,
         diagnostics,
@@ -197,7 +201,7 @@ export function validateAuthoredMacroOriginBoundary(doc: GameSpecDoc, diagnostic
         if (!isRecord(stage)) {
           continue;
         }
-        validateEffectArrayForAuthoredMacroOrigin(
+        validateEffectArrayForAuthoredCompilerMetadata(
           stage.effects,
           `doc.actionPipelines.${pipelineIndex}.stages.${stageIndex}.effects`,
           diagnostics,
@@ -316,7 +320,7 @@ export function validateTerminal(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
   }
 }
 
-function validateEffectArrayForAuthoredMacroOrigin(
+function validateEffectArrayForAuthoredCompilerMetadata(
   effects: unknown,
   path: string,
   diagnostics: Diagnostic[],
@@ -325,24 +329,26 @@ function validateEffectArrayForAuthoredMacroOrigin(
     return;
   }
   for (const [index, effect] of effects.entries()) {
-    validateEffectNodeForAuthoredMacroOrigin(effect, `${path}.${index}`, diagnostics);
+    validateEffectNodeForAuthoredCompilerMetadata(effect, `${path}.${index}`, diagnostics);
   }
 }
 
-function validateEffectNodeForAuthoredMacroOrigin(
+function validateEffectNodeForAuthoredCompilerMetadata(
   node: unknown,
   path: string,
   diagnostics: Diagnostic[],
 ): void {
   if (Array.isArray(node)) {
     for (const [index, entry] of node.entries()) {
-      validateEffectNodeForAuthoredMacroOrigin(entry, `${path}.${index}`, diagnostics);
+      validateEffectNodeForAuthoredCompilerMetadata(entry, `${path}.${index}`, diagnostics);
     }
     return;
   }
   if (!isRecord(node)) {
     return;
   }
+
+  validateReservedCompilerMetadataKeysOnRecord(node, path, diagnostics);
 
   if (isRecord(node.forEach) && Object.prototype.hasOwnProperty.call(node.forEach, 'macroOrigin')) {
     diagnostics.push({
@@ -364,6 +370,53 @@ function validateEffectNodeForAuthoredMacroOrigin(
   }
 
   for (const [key, value] of Object.entries(node)) {
-    validateEffectNodeForAuthoredMacroOrigin(value, `${path}.${key}`, diagnostics);
+    if (!EFFECT_KIND_KEYS.has(key) || !isRecord(value)) {
+      continue;
+    }
+    validateReservedCompilerMetadataKeysOnRecord(value, `${path}.${key}`, diagnostics);
+  }
+
+  if (isRecord(node.if)) {
+    validateEffectArrayForAuthoredCompilerMetadata(node.if.then, `${path}.if.then`, diagnostics);
+    validateEffectArrayForAuthoredCompilerMetadata(node.if.else, `${path}.if.else`, diagnostics);
+  }
+  if (isRecord(node.forEach)) {
+    validateEffectArrayForAuthoredCompilerMetadata(node.forEach.effects, `${path}.forEach.effects`, diagnostics);
+    validateEffectArrayForAuthoredCompilerMetadata(node.forEach.in, `${path}.forEach.in`, diagnostics);
+  }
+  if (isRecord(node.reduce)) {
+    validateEffectArrayForAuthoredCompilerMetadata(node.reduce.in, `${path}.reduce.in`, diagnostics);
+  }
+  if (isRecord(node.removeByPriority)) {
+    validateEffectArrayForAuthoredCompilerMetadata(node.removeByPriority.in, `${path}.removeByPriority.in`, diagnostics);
+  }
+  if (isRecord(node.let)) {
+    validateEffectArrayForAuthoredCompilerMetadata(node.let.in, `${path}.let.in`, diagnostics);
+  }
+  if (isRecord(node.evaluateSubset)) {
+    validateEffectArrayForAuthoredCompilerMetadata(node.evaluateSubset.compute, `${path}.evaluateSubset.compute`, diagnostics);
+    validateEffectArrayForAuthoredCompilerMetadata(node.evaluateSubset.in, `${path}.evaluateSubset.in`, diagnostics);
+  }
+  if (isRecord(node.rollRandom)) {
+    validateEffectArrayForAuthoredCompilerMetadata(node.rollRandom.in, `${path}.rollRandom.in`, diagnostics);
+  }
+}
+
+function validateReservedCompilerMetadataKeysOnRecord(
+  node: Record<string, unknown>,
+  path: string,
+  diagnostics: Diagnostic[],
+): void {
+  for (const key of Object.keys(node)) {
+    if (!isReservedCompilerMetadataKey(key)) {
+      continue;
+    }
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_RESERVED_COMPILER_METADATA_FORBIDDEN',
+      path: `${path}.${key}`,
+      severity: 'error',
+      message: `${key} is reserved compiler metadata and cannot be authored in GameSpecDoc.`,
+      suggestion: `Remove ${key} from authored YAML.`,
+    });
   }
 }

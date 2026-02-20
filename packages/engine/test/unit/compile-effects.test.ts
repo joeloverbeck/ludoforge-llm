@@ -281,6 +281,100 @@ describe('compile-effects lowering', () => {
     );
   });
 
+  it('rejects authored reserved compiler metadata keys across effect shapes', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          forEach: {
+            bind: '$tok',
+            __compilerMeta: { macroOrigin: { macroId: 'collect-forced-bets', stem: 'player' } },
+            over: { query: 'players' },
+            effects: [],
+          },
+        },
+        {
+          reduce: {
+            itemBind: '$n',
+            accBind: '$acc',
+            __compilerMeta: { macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' } },
+            over: { query: 'intsInRange', min: 1, max: 3 },
+            initial: 0,
+            next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+            resultBind: '$sum',
+            in: [],
+          },
+        },
+        {
+          setVar: {
+            scope: 'global',
+            var: 'score',
+            value: 1,
+            __internal: true,
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_RESERVED_COMPILER_METADATA_FORBIDDEN'
+          && diagnostic.path === 'doc.actions.0.effects.0.forEach.__compilerMeta',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_RESERVED_COMPILER_METADATA_FORBIDDEN'
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.__compilerMeta',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_RESERVED_COMPILER_METADATA_FORBIDDEN'
+          && diagnostic.path === 'doc.actions.0.effects.2.setVar.__internal',
+      ),
+      true,
+    );
+  });
+
+  it('allows reserved-looking keys inside createToken props payload maps', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          createToken: {
+            type: 'unit',
+            zone: 'board',
+            props: {
+              __engineIndependent: 1,
+            },
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        createToken: {
+          type: 'unit',
+          zone: 'board:none',
+          props: {
+            __engineIndependent: 1,
+          },
+        },
+      },
+    ]);
+  });
+
   it('emits missing capability diagnostics for unsupported effect nodes', () => {
     const result = lowerEffectArray(
       [{ teleport: { token: '$t', to: 'board:none' } }],

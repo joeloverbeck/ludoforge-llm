@@ -118,6 +118,76 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('rejects reserved compiler metadata keys in authored effect trees', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      setup: [
+        {
+          setVar: {
+            scope: 'global',
+            var: 'score',
+            value: 1,
+            __compilerMeta: { source: 'authored' },
+          },
+        },
+      ],
+      actions: [
+        {
+          ...createStructurallyValidDoc().actions[0],
+          effects: [
+            {
+              forEach: {
+                bind: '$p',
+                over: { query: 'players' },
+                effects: [{ setVar: { scope: 'global', var: 'score', value: 1, __internal: true } }],
+              },
+            },
+          ],
+        },
+      ],
+    } as Parameters<typeof validateGameSpec>[0]);
+
+    const reservedDiagnostics = diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_RESERVED_COMPILER_METADATA_FORBIDDEN',
+    );
+    assert.equal(reservedDiagnostics.length, 2);
+    assert.equal(
+      reservedDiagnostics.some((diagnostic) => diagnostic.path === 'doc.setup.0.setVar.__compilerMeta'),
+      true,
+    );
+    assert.equal(
+      reservedDiagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.forEach.effects.0.setVar.__internal'),
+      true,
+    );
+  });
+
+  it('allows reserved-looking keys inside gameplay payload maps', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      actions: [
+        {
+          ...createStructurallyValidDoc().actions[0],
+          effects: [
+            {
+              createToken: {
+                type: 'piece',
+                zone: 'board',
+                props: {
+                  __engineIndependent: 1,
+                },
+              },
+            },
+          ],
+        },
+      ],
+    } as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_RESERVED_COMPILER_METADATA_FORBIDDEN'),
+      false,
+    );
+  });
+
   it('accepts optional sourceMap argument', () => {
     const diagnostics = validateGameSpec(createStructurallyValidDoc(), { sourceMap: { byPath: {} } });
     assert.equal(diagnostics.length, 0);

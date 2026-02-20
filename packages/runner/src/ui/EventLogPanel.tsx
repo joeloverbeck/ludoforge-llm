@@ -1,20 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 
+import { EVENT_LOG_KINDS, type EventLogKind } from '../model/event-log-kind.js';
 import { groupEntriesByMove } from '../model/event-log-grouping.js';
 import { formatEventLogAsText } from '../model/format-event-log-text.js';
 import type { EventLogEntry } from '../model/translate-effect-trace.js';
 import { CollapsiblePanel } from './CollapsiblePanel.js';
 import styles from './EventLogPanel.module.css';
 
-type EventKind = EventLogEntry['kind'];
-
-const EVENT_KIND_ORDER: readonly EventKind[] = ['movement', 'variable', 'trigger', 'phase', 'token', 'lifecycle'];
-const EVENT_KIND_LABELS: Readonly<Record<EventKind, string>> = {
+const EVENT_KIND_LABELS: Readonly<Record<EventLogKind, string>> = {
   movement: 'Movement',
   variable: 'Variable',
   trigger: 'Trigger',
   phase: 'Phase',
   token: 'Token',
+  iteration: 'Iteration',
   lifecycle: 'Lifecycle',
 };
 
@@ -34,7 +33,7 @@ function hasNestedTriggerEntries(entries: readonly EventLogEntry[]): boolean {
 }
 
 export function EventLogPanel({ entries, onSelectEntry, selectedEntryId = null }: EventLogPanelProps): ReactElement {
-  const [enabledKinds, setEnabledKinds] = useState<ReadonlySet<EventKind>>(new Set(EVENT_KIND_ORDER));
+  const [enabledKinds, setEnabledKinds] = useState<ReadonlySet<EventLogKind>>(new Set(EVENT_LOG_KINDS));
   const [collapsedNestedMoves, setCollapsedNestedMoves] = useState<ReadonlySet<number>>(new Set());
   const [copyLabel, setCopyLabel] = useState<'Copy' | 'Copied!'>('Copy');
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -59,7 +58,7 @@ export function EventLogPanel({ entries, onSelectEntry, selectedEntryId = null }
     container.scrollTop = container.scrollHeight;
   }, [filteredEntries.length]);
 
-  const toggleKind = (kind: EventKind): void => {
+  const toggleKind = (kind: EventLogKind): void => {
     setEnabledKinds((currentKinds) => {
       const nextKinds = new Set(currentKinds);
       if (nextKinds.has(kind)) {
@@ -100,7 +99,7 @@ export function EventLogPanel({ entries, onSelectEntry, selectedEntryId = null }
       contentTestId="event-log-panel-content"
     >
       <div className={styles.filters} data-testid="event-log-filters">
-        {EVENT_KIND_ORDER.map((kind) => {
+        {EVENT_LOG_KINDS.map((kind) => {
           const enabled = enabledKinds.has(kind);
           return (
             <button

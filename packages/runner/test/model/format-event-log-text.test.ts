@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { EVENT_LOG_KINDS } from '../../src/model/event-log-kind.js';
 import type { EventLogEntry } from '../../src/model/translate-effect-trace.js';
 import { formatEventLogAsText } from '../../src/model/format-event-log-text.js';
 
@@ -64,14 +65,13 @@ describe('formatEventLogAsText', () => {
     );
   });
 
-  it('formats all six event kinds with correct labels', () => {
-    const kinds: EventLogEntry['kind'][] = ['movement', 'variable', 'trigger', 'phase', 'token', 'lifecycle'];
-    const entries: EventLogEntry[] = kinds.map((kind, index) =>
+  it('formats all event kinds with correct labels', () => {
+    const entries: EventLogEntry[] = EVENT_LOG_KINDS.map((kind, index) =>
       makeEntry({ kind, message: `${kind} event.`, moveIndex: 0, id: `entry-${index}` }),
     );
 
     const result = formatEventLogAsText(entries);
-    for (const kind of kinds) {
+    for (const kind of EVENT_LOG_KINDS) {
       expect(result).toContain(`[${kind}]`);
     }
   });

@@ -65,6 +65,30 @@ describe('EventLogPanel', () => {
     expect(screen.getByText('variable event')).toBeTruthy();
   });
 
+  it('filters iteration entries independently from lifecycle entries', () => {
+    render(
+      <EventLogPanel
+        entries={[
+          makeEntry({ id: 'move-0-effect-0', kind: 'iteration', message: 'iteration event' }),
+          makeEntry({ id: 'move-0-trigger-0', kind: 'lifecycle', message: 'lifecycle event' }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId('event-log-filter-iteration').textContent).toContain('Iteration');
+    expect(screen.getByText('iteration event')).toBeTruthy();
+    expect(screen.getByText('lifecycle event')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('event-log-filter-iteration'));
+
+    expect(screen.queryByText('iteration event')).toBeNull();
+    expect(screen.getByText('lifecycle event')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('event-log-filter-lifecycle'));
+
+    expect(screen.queryByText('lifecycle event')).toBeNull();
+  });
+
   it('emits selected entry callback when an event row is clicked', () => {
     const onSelectEntry = vi.fn();
     const entry = makeEntry({ id: 'move-0-effect-0', kind: 'movement' });

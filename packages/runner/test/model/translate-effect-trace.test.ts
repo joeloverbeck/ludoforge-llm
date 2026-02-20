@@ -227,6 +227,9 @@ describe('translateEffectTrace', () => {
     });
     expect(destroy?.message).toContain('NVA Troop');
 
+    expect(entries[6]).toMatchObject({ kind: 'iteration' });
+    expect(entries[7]).toMatchObject({ kind: 'iteration' });
+
     const fired = entries[9];
     expect(fired).toMatchObject({
       kind: 'trigger',
@@ -243,6 +246,9 @@ describe('translateEffectTrace', () => {
 
     const simultaneous = entries[13];
     expect(simultaneous).toMatchObject({ kind: 'lifecycle', depth: 0, playerId: 0 });
+    expect(entries[14]).toMatchObject({ kind: 'lifecycle', depth: 0 });
+    expect(entries[15]).toMatchObject({ kind: 'lifecycle', depth: 0 });
+    expect(entries[16]).toMatchObject({ kind: 'lifecycle', depth: 0 });
 
     const uniqueIds = new Set(entries.map((entry) => entry.id));
     expect(uniqueIds.size).toBe(entries.length);

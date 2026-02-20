@@ -2,11 +2,12 @@ import type { EffectTraceEntry, GameDef, TriggerEvent, TriggerLogEntry } from '@
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
+import type { EventLogKind } from './event-log-kind.js';
 import { projectEffectTraceEntry, projectTriggerEvent } from './trace-projection.js';
 
 export interface EventLogEntry {
   readonly id: string;
-  readonly kind: 'movement' | 'variable' | 'trigger' | 'phase' | 'token' | 'lifecycle';
+  readonly kind: EventLogKind;
   readonly message: string;
   readonly playerId?: number;
   readonly zoneIds: readonly string[];
@@ -113,14 +114,14 @@ function translateEffectEntry(
     case 'forEach':
       return {
         ...base,
-        kind: 'lifecycle',
+        kind: 'iteration',
         message: `For-each ${summarizeLifecycleBinding(entry.bind)} iterated ${entry.iteratedCount}/${entry.matchCount}.`,
       };
 
     case 'reduce':
       return {
         ...base,
-        kind: 'lifecycle',
+        kind: 'iteration',
         message: `Reduce ${summarizeLifecycleBinding(entry.resultBind)} iterated ${entry.iteratedCount}/${entry.matchCount}.`,
       };
   }

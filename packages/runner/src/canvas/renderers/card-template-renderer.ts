@@ -2,11 +2,8 @@ import { Text, type Container } from 'pixi.js';
 
 import type { CardTemplate } from '../../config/visual-config-types.js';
 
-function normalizeAlign(value: string | undefined): 'left' | 'center' | 'right' {
-  if (value === 'center' || value === 'right') {
-    return value;
-  }
-  return 'left';
+function normalizeAlign(value: 'left' | 'center' | 'right' | undefined): 'left' | 'center' | 'right' {
+  return value ?? 'left';
 }
 
 function toTextValue(value: number | string | boolean | undefined): string | null {
@@ -14,6 +11,38 @@ function toTextValue(value: number | string | boolean | undefined): string | nul
     return null;
   }
   return String(value);
+}
+
+function resolveDisplayText(
+  fieldName: string,
+  sourceField: string | undefined,
+  symbolMap: Readonly<Record<string, string>> | undefined,
+  fields: Readonly<Record<string, number | string | boolean>>,
+): string | null {
+  const rawValue = fields[sourceField ?? fieldName];
+  const textValue = toTextValue(rawValue);
+  if (textValue === null) {
+    return null;
+  }
+  if (symbolMap === undefined) {
+    return textValue;
+  }
+  return symbolMap[textValue] ?? textValue;
+}
+
+function resolveTextColor(
+  colorFromProp: string | undefined,
+  colorMap: Readonly<Record<string, string>> | undefined,
+  fields: Readonly<Record<string, number | string | boolean>>,
+): string {
+  if (colorFromProp === undefined || colorMap === undefined) {
+    return '#f8fafc';
+  }
+  const colorKey = toTextValue(fields[colorFromProp]);
+  if (colorKey === null) {
+    return '#f8fafc';
+  }
+  return colorMap[colorKey] ?? '#f8fafc';
 }
 
 export function drawCardContent(
@@ -34,7 +63,12 @@ export function drawCardContent(
   const top = -cardHeight / 2;
 
   for (const [fieldName, fieldLayout] of Object.entries(layout)) {
-    const textValue = toTextValue(fields[fieldName]);
+    const textValue = resolveDisplayText(
+      fieldName,
+      fieldLayout.sourceField,
+      fieldLayout.symbolMap,
+      fields,
+    );
     if (textValue === null) {
       continue;
     }
@@ -42,7 +76,7 @@ export function drawCardContent(
     const align = normalizeAlign(fieldLayout.align);
     const hasWrap = typeof fieldLayout.wrap === 'number' && Number.isFinite(fieldLayout.wrap);
     const baseStyle = {
-      fill: '#f8fafc',
+      fill: resolveTextColor(fieldLayout.colorFromProp, fieldLayout.colorMap, fields),
       fontSize: fieldLayout.fontSize ?? 11,
       fontFamily: 'monospace',
       align,
@@ -59,8 +93,9 @@ export function drawCardContent(
     text.eventMode = 'none';
     text.interactiveChildren = false;
     text.anchor.set(align === 'left' ? 0 : align === 'center' ? 0.5 : 1, 0);
+    const baseX = align === 'left' ? left + 3 : align === 'center' ? 0 : left + cardWidth - 3;
     text.position.set(
-      align === 'left' ? left + 3 : align === 'center' ? 0 : left + cardWidth - 3,
+      baseX + (fieldLayout.x ?? 0),
       top + (fieldLayout.y ?? 0),
     );
 

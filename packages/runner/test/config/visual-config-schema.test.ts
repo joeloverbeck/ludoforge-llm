@@ -209,6 +209,25 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('rejects invalid card field align values', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      cards: {
+        templates: {
+          'poker-card': {
+            width: 48,
+            height: 68,
+            layout: {
+              rank: { y: 8, align: 'middle' },
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('keeps token backSymbol optional', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

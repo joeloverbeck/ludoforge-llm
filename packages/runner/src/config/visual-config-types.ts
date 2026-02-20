@@ -157,9 +157,14 @@ const AnimationsConfigSchema = z.object({
 
 const CardFieldLayoutSchema = z.object({
   y: z.number().optional(),
+  x: z.number().optional(),
   fontSize: z.number().optional(),
-  align: z.string().optional(),
+  align: z.enum(['left', 'center', 'right']).optional(),
   wrap: z.number().optional(),
+  sourceField: z.string().optional(),
+  symbolMap: z.record(z.string(), z.string()).optional(),
+  colorFromProp: z.string().optional(),
+  colorMap: z.record(z.string(), z.string()).optional(),
 });
 
 const CardTemplateSchema = z.object({

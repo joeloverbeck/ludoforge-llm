@@ -259,7 +259,7 @@ function createColorProvider(overrides: {
     readonly layout?: Readonly<Record<string, {
       readonly y?: number;
       readonly fontSize?: number;
-      readonly align?: string;
+      readonly align?: 'left' | 'center' | 'right';
       readonly wrap?: number;
     }>>;
   }>>;

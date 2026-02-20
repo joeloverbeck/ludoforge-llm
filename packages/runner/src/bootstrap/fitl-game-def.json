@@ -10037,6 +10037,10 @@
                         {
                           "forEach": {
                             "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_0__piece",
+                            "macroOrigin": {
+                              "macroId": "place-from-available-or-map",
+                              "stem": "piece"
+                            },
                             "over": {
                               "query": "tokensInZone",
                               "zone": {
@@ -10160,6 +10164,10 @@
                                           {
                                             "forEach": {
                                               "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_0__srcSpace",
+                                              "macroOrigin": {
+                                                "macroId": "place-from-available-or-map",
+                                                "stem": "srcSpace"
+                                              },
                                               "over": {
                                                 "query": "binding",
                                                 "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_0__sourceSpaces"
@@ -10168,6 +10176,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_0__mapPiece",
+                                                    "macroOrigin": {
+                                                      "macroId": "place-from-available-or-map",
+                                                      "stem": "mapPiece"
+                                                    },
                                                     "over": {
                                                       "query": "tokensInZone",
                                                       "zone": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_0__srcSpace",
@@ -10222,6 +10234,10 @@
                               {
                                 "forEach": {
                                   "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
+                                  "macroOrigin": {
+                                    "macroId": "place-from-available-or-map",
+                                    "stem": "piece"
+                                  },
                                   "over": {
                                     "query": "tokensInZone",
                                     "zone": {
@@ -10345,6 +10361,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
+                                                    "macroOrigin": {
+                                                      "macroId": "place-from-available-or-map",
+                                                      "stem": "srcSpace"
+                                                    },
                                                     "over": {
                                                       "query": "binding",
                                                       "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces"
@@ -10353,6 +10373,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "mapPiece"
+                                                          },
                                                           "over": {
                                                             "query": "tokensInZone",
                                                             "zone": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
@@ -10467,6 +10491,10 @@
                               {
                                 "forEach": {
                                   "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_0__piece",
+                                  "macroOrigin": {
+                                    "macroId": "place-from-available-or-map",
+                                    "stem": "piece"
+                                  },
                                   "over": {
                                     "query": "tokensInZone",
                                     "zone": {
@@ -10590,6 +10618,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_0__srcSpace",
+                                                    "macroOrigin": {
+                                                      "macroId": "place-from-available-or-map",
+                                                      "stem": "srcSpace"
+                                                    },
                                                     "over": {
                                                       "query": "binding",
                                                       "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_0__sourceSpaces"
@@ -10598,6 +10630,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_0__mapPiece",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "mapPiece"
+                                                          },
                                                           "over": {
                                                             "query": "tokensInZone",
                                                             "zone": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_0__srcSpace",
@@ -10652,6 +10688,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
+                                        "macroOrigin": {
+                                          "macroId": "place-from-available-or-map",
+                                          "stem": "piece"
+                                        },
                                         "over": {
                                           "query": "tokensInZone",
                                           "zone": {
@@ -10775,6 +10815,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "srcSpace"
+                                                          },
                                                           "over": {
                                                             "query": "binding",
                                                             "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces"
@@ -10783,6 +10827,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
+                                                                "macroOrigin": {
+                                                                  "macroId": "place-from-available-or-map",
+                                                                  "stem": "mapPiece"
+                                                                },
                                                                 "over": {
                                                                   "query": "tokensInZone",
                                                                   "zone": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_1__if_then_1__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
@@ -10920,6 +10968,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_2__forEach_effects_0__piece",
+                                        "macroOrigin": {
+                                          "macroId": "place-from-available-or-map",
+                                          "stem": "piece"
+                                        },
                                         "over": {
                                           "query": "tokensInZone",
                                           "zone": {
@@ -11052,6 +11104,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_2__forEach_effects_0__srcSpace",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "srcSpace"
+                                                          },
                                                           "over": {
                                                             "query": "binding",
                                                             "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_2__forEach_effects_0__sourceSpaces"
@@ -11060,6 +11116,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_2__forEach_effects_0__mapPiece",
+                                                                "macroOrigin": {
+                                                                  "macroId": "place-from-available-or-map",
+                                                                  "stem": "mapPiece"
+                                                                },
                                                                 "over": {
                                                                   "query": "tokensInZone",
                                                                   "zone": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_2__forEach_effects_0__srcSpace",
@@ -11120,6 +11180,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
+                                        "macroOrigin": {
+                                          "macroId": "place-from-available-or-map",
+                                          "stem": "piece"
+                                        },
                                         "over": {
                                           "query": "tokensInZone",
                                           "zone": {
@@ -11243,6 +11307,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "srcSpace"
+                                                          },
                                                           "over": {
                                                             "query": "binding",
                                                             "name": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces"
@@ -11251,6 +11319,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
+                                                                "macroOrigin": {
+                                                                  "macroId": "place-from-available-or-map",
+                                                                  "stem": "mapPiece"
+                                                                },
                                                                 "over": {
                                                                   "query": "tokensInZone",
                                                                   "zone": "$__macro_place_from_available_or_map_actionPipelines_0__stages_1__effects_0__forEach_effects_2__if_then_2__if_then_3__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
@@ -12005,6 +12077,10 @@
                         {
                           "forEach": {
                             "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__piece",
+                            "macroOrigin": {
+                              "macroId": "place-from-available-or-map",
+                              "stem": "piece"
+                            },
                             "over": {
                               "query": "tokensInZone",
                               "zone": {
@@ -12128,6 +12204,10 @@
                                           {
                                             "forEach": {
                                               "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__srcSpace",
+                                              "macroOrigin": {
+                                                "macroId": "place-from-available-or-map",
+                                                "stem": "srcSpace"
+                                              },
                                               "over": {
                                                 "query": "binding",
                                                 "name": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces"
@@ -12136,6 +12216,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__mapPiece",
+                                                    "macroOrigin": {
+                                                      "macroId": "place-from-available-or-map",
+                                                      "stem": "mapPiece"
+                                                    },
                                                     "over": {
                                                       "query": "tokensInZone",
                                                       "zone": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__srcSpace",
@@ -12190,6 +12274,10 @@
                               {
                                 "forEach": {
                                   "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
+                                  "macroOrigin": {
+                                    "macroId": "place-from-available-or-map",
+                                    "stem": "piece"
+                                  },
                                   "over": {
                                     "query": "tokensInZone",
                                     "zone": {
@@ -12313,6 +12401,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
+                                                    "macroOrigin": {
+                                                      "macroId": "place-from-available-or-map",
+                                                      "stem": "srcSpace"
+                                                    },
                                                     "over": {
                                                       "query": "binding",
                                                       "name": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces"
@@ -12321,6 +12413,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "mapPiece"
+                                                          },
                                                           "over": {
                                                             "query": "tokensInZone",
                                                             "zone": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
@@ -12449,6 +12545,10 @@
                         {
                           "forEach": {
                             "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_1__piece",
+                            "macroOrigin": {
+                              "macroId": "place-from-available-or-map",
+                              "stem": "piece"
+                            },
                             "over": {
                               "query": "tokensInZone",
                               "zone": {
@@ -12572,6 +12672,10 @@
                                           {
                                             "forEach": {
                                               "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_1__srcSpace",
+                                              "macroOrigin": {
+                                                "macroId": "place-from-available-or-map",
+                                                "stem": "srcSpace"
+                                              },
                                               "over": {
                                                 "query": "binding",
                                                 "name": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_1__sourceSpaces"
@@ -12580,6 +12684,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_1__mapPiece",
+                                                    "macroOrigin": {
+                                                      "macroId": "place-from-available-or-map",
+                                                      "stem": "mapPiece"
+                                                    },
                                                     "over": {
                                                       "query": "tokensInZone",
                                                       "zone": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_1__srcSpace",
@@ -12634,6 +12742,10 @@
                               {
                                 "forEach": {
                                   "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__piece",
+                                  "macroOrigin": {
+                                    "macroId": "place-from-available-or-map",
+                                    "stem": "piece"
+                                  },
                                   "over": {
                                     "query": "tokensInZone",
                                     "zone": {
@@ -12757,6 +12869,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
+                                                    "macroOrigin": {
+                                                      "macroId": "place-from-available-or-map",
+                                                      "stem": "srcSpace"
+                                                    },
                                                     "over": {
                                                       "query": "binding",
                                                       "name": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__sourceSpaces"
@@ -12765,6 +12881,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__mapPiece",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "mapPiece"
+                                                          },
                                                           "over": {
                                                             "query": "tokensInZone",
                                                             "zone": "$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_2__if_then_2__macro_cap_train_caps_unshaded_bonus_police__0__if_then_0__srcSpace",
@@ -13228,6 +13348,10 @@
                         {
                           "forEach": {
                             "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_2__effects_1__forEach_effects_2__if_then_2__piece",
+                            "macroOrigin": {
+                              "macroId": "place-from-available-or-map",
+                              "stem": "piece"
+                            },
                             "over": {
                               "query": "tokensInZone",
                               "zone": {
@@ -13351,6 +13475,10 @@
                                           {
                                             "forEach": {
                                               "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_2__effects_1__forEach_effects_2__if_then_2__srcSpace",
+                                              "macroOrigin": {
+                                                "macroId": "place-from-available-or-map",
+                                                "stem": "srcSpace"
+                                              },
                                               "over": {
                                                 "query": "binding",
                                                 "name": "$__macro_place_from_available_or_map_actionPipelines_1__stages_2__effects_1__forEach_effects_2__if_then_2__sourceSpaces"
@@ -13359,6 +13487,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_place_from_available_or_map_actionPipelines_1__stages_2__effects_1__forEach_effects_2__if_then_2__mapPiece",
+                                                    "macroOrigin": {
+                                                      "macroId": "place-from-available-or-map",
+                                                      "stem": "mapPiece"
+                                                    },
                                                     "over": {
                                                       "query": "tokensInZone",
                                                       "zone": "$__macro_place_from_available_or_map_actionPipelines_1__stages_2__effects_1__forEach_effects_2__if_then_2__srcSpace",
@@ -13620,6 +13752,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_cap_patrol_m48_shaded_moved_cube_penalty_actionPipelines_2__stages_1__effects_0__forEach_effects_2__m48Cube",
+                                        "macroOrigin": {
+                                          "macroId": "cap-patrol-m48-shaded-moved-cube-penalty",
+                                          "stem": "m48Cube"
+                                        },
                                         "over": {
                                           "query": "binding",
                                           "name": "$__macro_cap_patrol_m48_shaded_moved_cube_penalty_actionPipelines_2__stages_1__effects_0__forEach_effects_2__m48PenaltyCube"
@@ -14161,6 +14297,10 @@
                                                                                     {
                                                                                       "forEach": {
                                                                                         "bind": "$__macro_piece_removal_ordering_actionPipelines_2__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__baseTarget",
+                                                                                        "macroOrigin": {
+                                                                                          "macroId": "piece-removal-ordering",
+                                                                                          "stem": "baseTarget"
+                                                                                        },
                                                                                         "over": {
                                                                                           "query": "tokensInZone",
                                                                                           "zone": "$assaultLoC",
@@ -14618,6 +14758,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_cap_patrol_m48_shaded_moved_cube_penalty_actionPipelines_3__stages_1__effects_0__forEach_effects_2__m48Cube",
+                                        "macroOrigin": {
+                                          "macroId": "cap-patrol-m48-shaded-moved-cube-penalty",
+                                          "stem": "m48Cube"
+                                        },
                                         "over": {
                                           "query": "binding",
                                           "name": "$__macro_cap_patrol_m48_shaded_moved_cube_penalty_actionPipelines_3__stages_1__effects_0__forEach_effects_2__m48PenaltyCube"
@@ -15121,6 +15265,10 @@
                                                                               {
                                                                                 "forEach": {
                                                                                   "bind": "$__macro_piece_removal_ordering_actionPipelines_3__stages_3__effects_1__forEach_effects_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__baseTarget",
+                                                                                  "macroOrigin": {
+                                                                                    "macroId": "piece-removal-ordering",
+                                                                                    "stem": "baseTarget"
+                                                                                  },
                                                                                   "over": {
                                                                                     "query": "tokensInZone",
                                                                                     "zone": "$assaultLoC",
@@ -15826,6 +15974,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_sweep_activation_actionPipelines_4__stages_2__effects_0__forEach_effects_0__guerrilla",
+                                                    "macroOrigin": {
+                                                      "macroId": "sweep-activation",
+                                                      "stem": "guerrilla"
+                                                    },
                                                     "over": {
                                                       "query": "tokensInZone",
                                                       "zone": "$space",
@@ -15906,6 +16058,10 @@
                   {
                     "forEach": {
                       "bind": "$__macro_cap_sweep_cobras_unshaded_removal_actionPipelines_4__stages_3__effects_0__cobrasSpace",
+                      "macroOrigin": {
+                        "macroId": "cap-sweep-cobras-unshaded-removal",
+                        "stem": "cobrasSpace"
+                      },
                       "over": {
                         "query": "binding",
                         "name": "$__macro_cap_sweep_cobras_unshaded_removal_actionPipelines_4__stages_3__effects_0__cobrasSpaces"
@@ -16058,6 +16214,10 @@
                   {
                     "forEach": {
                       "bind": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__space",
+                      "macroOrigin": {
+                        "macroId": "cap-sweep-booby-traps-shaded-cost",
+                        "stem": "space"
+                      },
                       "over": {
                         "query": "binding",
                         "name": "targetSpaces"
@@ -16066,6 +16226,10 @@
                         {
                           "forEach": {
                             "bind": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__lossTroop",
+                            "macroOrigin": {
+                              "macroId": "cap-sweep-booby-traps-shaded-cost",
+                              "stem": "lossTroop"
+                            },
                             "over": {
                               "query": "tokensInZone",
                               "zone": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_4__stages_4__effects_0__space",
@@ -16532,6 +16696,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_sweep_activation_actionPipelines_5__stages_1__effects_0__forEach_effects_3__guerrilla",
+                                                    "macroOrigin": {
+                                                      "macroId": "sweep-activation",
+                                                      "stem": "guerrilla"
+                                                    },
                                                     "over": {
                                                       "query": "tokensInZone",
                                                       "zone": "$space",
@@ -16612,6 +16780,10 @@
                   {
                     "forEach": {
                       "bind": "$__macro_cap_sweep_cobras_unshaded_removal_actionPipelines_5__stages_2__effects_0__cobrasSpace",
+                      "macroOrigin": {
+                        "macroId": "cap-sweep-cobras-unshaded-removal",
+                        "stem": "cobrasSpace"
+                      },
                       "over": {
                         "query": "binding",
                         "name": "$__macro_cap_sweep_cobras_unshaded_removal_actionPipelines_5__stages_2__effects_0__cobrasSpaces"
@@ -16764,6 +16936,10 @@
                   {
                     "forEach": {
                       "bind": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__space",
+                      "macroOrigin": {
+                        "macroId": "cap-sweep-booby-traps-shaded-cost",
+                        "stem": "space"
+                      },
                       "over": {
                         "query": "binding",
                         "name": "targetSpaces"
@@ -16772,6 +16948,10 @@
                         {
                           "forEach": {
                             "bind": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__lossTroop",
+                            "macroOrigin": {
+                              "macroId": "cap-sweep-booby-traps-shaded-cost",
+                              "stem": "lossTroop"
+                            },
                             "over": {
                               "query": "tokensInZone",
                               "zone": "$__macro_cap_sweep_booby_traps_shaded_cost_actionPipelines_5__stages_3__effects_0__space",
@@ -17134,6 +17314,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_cap_assault_cobras_shaded_cost_actionPipelines_6__stages_1__effects_0__forEach_effects_0__cobrasLossTroop",
+                                        "macroOrigin": {
+                                          "macroId": "cap-assault-cobras-shaded-cost",
+                                          "stem": "cobrasLossTroop"
+                                        },
                                         "over": {
                                           "query": "tokensInZone",
                                           "zone": "$space",
@@ -17587,6 +17771,10 @@
                                                                                     {
                                                                                       "forEach": {
                                                                                         "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_1__effects_0__forEach_effects_1__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__baseTarget",
+                                                                                        "macroOrigin": {
+                                                                                          "macroId": "piece-removal-ordering",
+                                                                                          "stem": "baseTarget"
+                                                                                        },
                                                                                         "over": {
                                                                                           "query": "tokensInZone",
                                                                                           "zone": "$space",
@@ -17804,6 +17992,10 @@
                         {
                           "forEach": {
                             "bind": "$__macro_cap_assault_search_and_destroy_actionPipelines_6__stages_1__effects_0__forEach_effects_2__sndUnderground",
+                            "macroOrigin": {
+                              "macroId": "cap-assault-search-and-destroy",
+                              "stem": "sndUnderground"
+                            },
                             "over": {
                               "query": "tokensInZone",
                               "zone": "$space",
@@ -17956,6 +18148,10 @@
                   {
                     "forEach": {
                       "bind": "$__macro_cap_assault_abrams_unshaded_base_first_actionPipelines_6__stages_2__effects_0__abramsTargetSpace",
+                      "macroOrigin": {
+                        "macroId": "cap-assault-abrams-unshaded-base-first",
+                        "stem": "abramsTargetSpace"
+                      },
                       "over": {
                         "query": "binding",
                         "name": "$__macro_cap_assault_abrams_unshaded_base_first_actionPipelines_6__stages_2__effects_0__abramsSpace"
@@ -17964,6 +18160,10 @@
                         {
                           "forEach": {
                             "bind": "$__macro_cap_assault_abrams_unshaded_base_first_actionPipelines_6__stages_2__effects_0__abramsBase",
+                            "macroOrigin": {
+                              "macroId": "cap-assault-abrams-unshaded-base-first",
+                              "stem": "abramsBase"
+                            },
                             "over": {
                               "query": "tokensInZone",
                               "zone": "$__macro_cap_assault_abrams_unshaded_base_first_actionPipelines_6__stages_2__effects_0__abramsTargetSpace",
@@ -18049,6 +18249,10 @@
                   {
                     "forEach": {
                       "bind": "$__macro_cap_assault_m48_unshaded_bonus_removal_actionPipelines_6__stages_3__effects_0__m48Space",
+                      "macroOrigin": {
+                        "macroId": "cap-assault-m48-unshaded-bonus-removal",
+                        "stem": "m48Space"
+                      },
                       "over": {
                         "query": "binding",
                         "name": "$__macro_cap_assault_m48_unshaded_bonus_removal_actionPipelines_6__stages_3__effects_0__m48Spaces"
@@ -18369,6 +18573,10 @@
                                                                         {
                                                                           "forEach": {
                                                                             "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__baseTarget",
+                                                                            "macroOrigin": {
+                                                                              "macroId": "piece-removal-ordering",
+                                                                              "stem": "baseTarget"
+                                                                            },
                                                                             "over": {
                                                                               "query": "tokensInZone",
                                                                               "zone": "$__macro_cap_assault_m48_unshaded_bonus_removal_actionPipelines_6__stages_3__effects_0__m48Space",
@@ -19022,6 +19230,10 @@
                                                                                     {
                                                                                       "forEach": {
                                                                                         "bind": "$__macro_piece_removal_ordering_actionPipelines_6__stages_4__effects_0__if_then_1__forEach_effects_1__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__baseTarget",
+                                                                                        "macroOrigin": {
+                                                                                          "macroId": "piece-removal-ordering",
+                                                                                          "stem": "baseTarget"
+                                                                                        },
                                                                                         "over": {
                                                                                           "query": "tokensInZone",
                                                                                           "zone": "$arvnSpace",
@@ -19608,6 +19820,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_cap_assault_cobras_shaded_cost_actionPipelines_7__stages_1__effects_0__forEach_effects_1__cobrasLossTroop",
+                                        "macroOrigin": {
+                                          "macroId": "cap-assault-cobras-shaded-cost",
+                                          "stem": "cobrasLossTroop"
+                                        },
                                         "over": {
                                           "query": "tokensInZone",
                                           "zone": "$space",
@@ -20075,6 +20291,10 @@
                                                                                     {
                                                                                       "forEach": {
                                                                                         "bind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_1__effects_0__forEach_effects_2__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__baseTarget",
+                                                                                        "macroOrigin": {
+                                                                                          "macroId": "piece-removal-ordering",
+                                                                                          "stem": "baseTarget"
+                                                                                        },
                                                                                         "over": {
                                                                                           "query": "tokensInZone",
                                                                                           "zone": "$space",
@@ -20292,6 +20512,10 @@
                         {
                           "forEach": {
                             "bind": "$__macro_cap_assault_search_and_destroy_actionPipelines_7__stages_1__effects_0__forEach_effects_3__sndUnderground",
+                            "macroOrigin": {
+                              "macroId": "cap-assault-search-and-destroy",
+                              "stem": "sndUnderground"
+                            },
                             "over": {
                               "query": "tokensInZone",
                               "zone": "$space",
@@ -20444,6 +20668,10 @@
                   {
                     "forEach": {
                       "bind": "$__macro_cap_assault_abrams_unshaded_base_first_actionPipelines_7__stages_2__effects_0__abramsTargetSpace",
+                      "macroOrigin": {
+                        "macroId": "cap-assault-abrams-unshaded-base-first",
+                        "stem": "abramsTargetSpace"
+                      },
                       "over": {
                         "query": "binding",
                         "name": "$__macro_cap_assault_abrams_unshaded_base_first_actionPipelines_7__stages_2__effects_0__abramsSpace"
@@ -20452,6 +20680,10 @@
                         {
                           "forEach": {
                             "bind": "$__macro_cap_assault_abrams_unshaded_base_first_actionPipelines_7__stages_2__effects_0__abramsBase",
+                            "macroOrigin": {
+                              "macroId": "cap-assault-abrams-unshaded-base-first",
+                              "stem": "abramsBase"
+                            },
                             "over": {
                               "query": "tokensInZone",
                               "zone": "$__macro_cap_assault_abrams_unshaded_base_first_actionPipelines_7__stages_2__effects_0__abramsTargetSpace",
@@ -20537,6 +20769,10 @@
                   {
                     "forEach": {
                       "bind": "$__macro_cap_assault_m48_unshaded_bonus_removal_actionPipelines_7__stages_3__effects_0__m48Space",
+                      "macroOrigin": {
+                        "macroId": "cap-assault-m48-unshaded-bonus-removal",
+                        "stem": "m48Space"
+                      },
                       "over": {
                         "query": "binding",
                         "name": "$__macro_cap_assault_m48_unshaded_bonus_removal_actionPipelines_7__stages_3__effects_0__m48Spaces"
@@ -20857,6 +21093,10 @@
                                                                         {
                                                                           "forEach": {
                                                                             "bind": "$__macro_piece_removal_ordering_actionPipelines_7__stages_3__effects_0__macro_cap_assault_m48_unshaded_bonus_removal__0__if_then_1__forEach_effects_0__macro_coin_assault_removal_order__0__let_in_0__baseTarget",
+                                                                            "macroOrigin": {
+                                                                              "macroId": "piece-removal-ordering",
+                                                                              "stem": "baseTarget"
+                                                                            },
                                                                             "over": {
                                                                               "query": "tokensInZone",
                                                                               "zone": "$__macro_cap_assault_m48_unshaded_bonus_removal_actionPipelines_7__stages_3__effects_0__m48Space",
@@ -21381,6 +21621,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_1__if_then_0__piece",
+                                        "macroOrigin": {
+                                          "macroId": "place-from-available-or-map",
+                                          "stem": "piece"
+                                        },
                                         "over": {
                                           "query": "tokensInZone",
                                           "zone": {
@@ -21504,6 +21748,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_1__if_then_0__srcSpace",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "srcSpace"
+                                                          },
                                                           "over": {
                                                             "query": "binding",
                                                             "name": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_1__if_then_0__sourceSpaces"
@@ -21512,6 +21760,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_1__if_then_0__mapPiece",
+                                                                "macroOrigin": {
+                                                                  "macroId": "place-from-available-or-map",
+                                                                  "stem": "mapPiece"
+                                                                },
                                                                 "over": {
                                                                   "query": "tokensInZone",
                                                                   "zone": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_1__if_then_0__srcSpace",
@@ -21602,6 +21854,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_2__if_then_1__piece",
+                                        "macroOrigin": {
+                                          "macroId": "place-from-available-or-map",
+                                          "stem": "piece"
+                                        },
                                         "over": {
                                           "query": "tokensInZone",
                                           "zone": {
@@ -21725,6 +21981,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_2__if_then_1__srcSpace",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "srcSpace"
+                                                          },
                                                           "over": {
                                                             "query": "binding",
                                                             "name": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_2__if_then_1__sourceSpaces"
@@ -21733,6 +21993,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_2__if_then_1__mapPiece",
+                                                                "macroOrigin": {
+                                                                  "macroId": "place-from-available-or-map",
+                                                                  "stem": "mapPiece"
+                                                                },
                                                                 "over": {
                                                                   "query": "tokensInZone",
                                                                   "zone": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_2__if_then_1__srcSpace",
@@ -21808,6 +22072,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_1__if_then_0__let_in_0__piece",
+                                        "macroOrigin": {
+                                          "macroId": "place-from-available-or-map",
+                                          "stem": "piece"
+                                        },
                                         "over": {
                                           "query": "tokensInZone",
                                           "zone": {
@@ -21937,6 +22205,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_1__if_then_0__let_in_0__srcSpace",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "srcSpace"
+                                                          },
                                                           "over": {
                                                             "query": "binding",
                                                             "name": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_1__if_then_0__let_in_0__sourceSpaces"
@@ -21945,6 +22217,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_1__if_then_0__let_in_0__mapPiece",
+                                                                "macroOrigin": {
+                                                                  "macroId": "place-from-available-or-map",
+                                                                  "stem": "mapPiece"
+                                                                },
                                                                 "over": {
                                                                   "query": "tokensInZone",
                                                                   "zone": "$__macro_place_from_available_or_map_actionPipelines_8__stages_1__effects_0__forEach_effects_1__let_in_1__if_then_0__let_in_0__srcSpace",
@@ -22554,6 +22830,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_1__if_then_0__piece",
+                                        "macroOrigin": {
+                                          "macroId": "place-from-available-or-map",
+                                          "stem": "piece"
+                                        },
                                         "over": {
                                           "query": "tokensInZone",
                                           "zone": {
@@ -22677,6 +22957,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_1__if_then_0__srcSpace",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "srcSpace"
+                                                          },
                                                           "over": {
                                                             "query": "binding",
                                                             "name": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_1__if_then_0__sourceSpaces"
@@ -22685,6 +22969,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_1__if_then_0__mapPiece",
+                                                                "macroOrigin": {
+                                                                  "macroId": "place-from-available-or-map",
+                                                                  "stem": "mapPiece"
+                                                                },
                                                                 "over": {
                                                                   "query": "tokensInZone",
                                                                   "zone": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_1__if_then_0__srcSpace",
@@ -22775,6 +23063,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_2__if_then_1__piece",
+                                        "macroOrigin": {
+                                          "macroId": "place-from-available-or-map",
+                                          "stem": "piece"
+                                        },
                                         "over": {
                                           "query": "tokensInZone",
                                           "zone": {
@@ -22898,6 +23190,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_2__if_then_1__srcSpace",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "srcSpace"
+                                                          },
                                                           "over": {
                                                             "query": "binding",
                                                             "name": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_2__if_then_1__sourceSpaces"
@@ -22906,6 +23202,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_2__if_then_1__mapPiece",
+                                                                "macroOrigin": {
+                                                                  "macroId": "place-from-available-or-map",
+                                                                  "stem": "mapPiece"
+                                                                },
                                                                 "over": {
                                                                   "query": "tokensInZone",
                                                                   "zone": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_0__if_then_2__if_then_1__srcSpace",
@@ -23006,6 +23306,10 @@
                                           {
                                             "forEach": {
                                               "bind": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_1__if_then_1__if_then_0__let_in_0__piece",
+                                              "macroOrigin": {
+                                                "macroId": "place-from-available-or-map",
+                                                "stem": "piece"
+                                              },
                                               "over": {
                                                 "query": "tokensInZone",
                                                 "zone": {
@@ -23135,6 +23439,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_1__if_then_1__if_then_0__let_in_0__srcSpace",
+                                                                "macroOrigin": {
+                                                                  "macroId": "place-from-available-or-map",
+                                                                  "stem": "srcSpace"
+                                                                },
                                                                 "over": {
                                                                   "query": "binding",
                                                                   "name": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_1__if_then_1__if_then_0__let_in_0__sourceSpaces"
@@ -23143,6 +23451,10 @@
                                                                   {
                                                                     "forEach": {
                                                                       "bind": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_1__if_then_1__if_then_0__let_in_0__mapPiece",
+                                                                      "macroOrigin": {
+                                                                        "macroId": "place-from-available-or-map",
+                                                                        "stem": "mapPiece"
+                                                                      },
                                                                       "over": {
                                                                         "query": "tokensInZone",
                                                                         "zone": "$__macro_place_from_available_or_map_actionPipelines_9__stages_1__effects_0__forEach_effects_1__let_in_1__if_then_1__if_then_0__let_in_0__srcSpace",
@@ -23751,6 +24063,10 @@
                               {
                                 "forEach": {
                                   "bind": "$__macro_insurgent_march_resolve_destination_actionPipelines_10__stages_1__effects_0__forEach_effects_0__piece",
+                                  "macroOrigin": {
+                                    "macroId": "insurgent-march-resolve-destination",
+                                    "stem": "piece"
+                                  },
                                   "over": {
                                     "query": "binding",
                                     "name": "$movingGuerrillas"
@@ -23774,6 +24090,10 @@
                               {
                                 "forEach": {
                                   "bind": "$__macro_insurgent_march_resolve_destination_actionPipelines_10__stages_1__effects_0__forEach_effects_0__piece",
+                                  "macroOrigin": {
+                                    "macroId": "insurgent-march-resolve-destination",
+                                    "stem": "piece"
+                                  },
                                   "over": {
                                     "query": "binding",
                                     "name": "$movingTroops"
@@ -23908,6 +24228,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_insurgent_march_resolve_destination_actionPipelines_10__stages_1__effects_0__forEach_effects_0__movedPiece",
+                                                    "macroOrigin": {
+                                                      "macroId": "insurgent-march-resolve-destination",
+                                                      "stem": "movedPiece"
+                                                    },
                                                     "over": {
                                                       "query": "binding",
                                                       "name": "$movingGuerrillas"
@@ -23956,6 +24280,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_insurgent_march_resolve_destination_actionPipelines_10__stages_1__effects_0__forEach_effects_0__claymoresRemoved",
+                                                          "macroOrigin": {
+                                                            "macroId": "insurgent-march-resolve-destination",
+                                                            "stem": "claymoresRemoved"
+                                                          },
                                                           "over": {
                                                             "query": "binding",
                                                             "name": "$movingGuerrillas"
@@ -24285,6 +24613,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_insurgent_march_resolve_destination_actionPipelines_10__stages_3__effects_0__if_then_0__forEach_effects_0__piece",
+                                        "macroOrigin": {
+                                          "macroId": "insurgent-march-resolve-destination",
+                                          "stem": "piece"
+                                        },
                                         "over": {
                                           "query": "binding",
                                           "name": "$movingGuerrillas"
@@ -24308,6 +24640,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_insurgent_march_resolve_destination_actionPipelines_10__stages_3__effects_0__if_then_0__forEach_effects_0__piece",
+                                        "macroOrigin": {
+                                          "macroId": "insurgent-march-resolve-destination",
+                                          "stem": "piece"
+                                        },
                                         "over": {
                                           "query": "binding",
                                           "name": "$movingTroops"
@@ -24442,6 +24778,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_insurgent_march_resolve_destination_actionPipelines_10__stages_3__effects_0__if_then_0__forEach_effects_0__movedPiece",
+                                                          "macroOrigin": {
+                                                            "macroId": "insurgent-march-resolve-destination",
+                                                            "stem": "movedPiece"
+                                                          },
                                                           "over": {
                                                             "query": "binding",
                                                             "name": "$movingGuerrillas"
@@ -24490,6 +24830,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_insurgent_march_resolve_destination_actionPipelines_10__stages_3__effects_0__if_then_0__forEach_effects_0__claymoresRemoved",
+                                                                "macroOrigin": {
+                                                                  "macroId": "insurgent-march-resolve-destination",
+                                                                  "stem": "claymoresRemoved"
+                                                                },
                                                                 "over": {
                                                                   "query": "binding",
                                                                   "name": "$movingGuerrillas"
@@ -24925,6 +25269,10 @@
                               {
                                 "forEach": {
                                   "bind": "$__macro_insurgent_march_resolve_destination_actionPipelines_11__stages_1__effects_0__forEach_effects_0__piece",
+                                  "macroOrigin": {
+                                    "macroId": "insurgent-march-resolve-destination",
+                                    "stem": "piece"
+                                  },
                                   "over": {
                                     "query": "binding",
                                     "name": "$movingGuerrillas"
@@ -24948,6 +25296,10 @@
                               {
                                 "forEach": {
                                   "bind": "$__macro_insurgent_march_resolve_destination_actionPipelines_11__stages_1__effects_0__forEach_effects_0__piece",
+                                  "macroOrigin": {
+                                    "macroId": "insurgent-march-resolve-destination",
+                                    "stem": "piece"
+                                  },
                                   "over": {
                                     "query": "binding",
                                     "name": "$movingTroops"
@@ -25082,6 +25434,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_insurgent_march_resolve_destination_actionPipelines_11__stages_1__effects_0__forEach_effects_0__movedPiece",
+                                                    "macroOrigin": {
+                                                      "macroId": "insurgent-march-resolve-destination",
+                                                      "stem": "movedPiece"
+                                                    },
                                                     "over": {
                                                       "query": "binding",
                                                       "name": "$movingGuerrillas"
@@ -25143,6 +25499,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_insurgent_march_resolve_destination_actionPipelines_11__stages_1__effects_0__forEach_effects_0__claymoresRemoved",
+                                                          "macroOrigin": {
+                                                            "macroId": "insurgent-march-resolve-destination",
+                                                            "stem": "claymoresRemoved"
+                                                          },
                                                           "over": {
                                                             "query": "binding",
                                                             "name": "$movingGuerrillas"
@@ -25700,6 +26060,10 @@
                                                                   {
                                                                     "forEach": {
                                                                       "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_2__if_then_1__let_in_0__rollRandom_in_0__if_then_0__attritionPiece",
+                                                                      "macroOrigin": {
+                                                                        "macroId": "insurgent-attack-removal-order",
+                                                                        "stem": "attritionPiece"
+                                                                      },
                                                                       "over": {
                                                                         "query": "tokensInZone",
                                                                         "zone": "$space",
@@ -25989,6 +26353,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_12__stages_1__effects_0__forEach_effects_3__if_then_0__let_in_0__let_in_0__attritionPiece",
+                                                                "macroOrigin": {
+                                                                  "macroId": "insurgent-attack-removal-order",
+                                                                  "stem": "attritionPiece"
+                                                                },
                                                                 "over": {
                                                                   "query": "tokensInZone",
                                                                   "zone": "$space",
@@ -26481,6 +26849,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_insurgent_attack_removal_order_actionPipelines_13__stages_1__effects_0__forEach_effects_2__let_in_0__rollRandom_in_0__if_then_0__attritionPiece",
+                                                                "macroOrigin": {
+                                                                  "macroId": "insurgent-attack-removal-order",
+                                                                  "stem": "attritionPiece"
+                                                                },
                                                                 "over": {
                                                                   "query": "tokensInZone",
                                                                   "zone": "$space",
@@ -26890,6 +27262,10 @@
                         {
                           "forEach": {
                             "bind": "$__macro_insurgent_terror_resolve_space_actionPipelines_14__stages_1__effects_0__forEach_effects_0__g",
+                            "macroOrigin": {
+                              "macroId": "insurgent-terror-resolve-space",
+                              "stem": "g"
+                            },
                             "over": {
                               "query": "tokensInZone",
                               "zone": "$space",
@@ -27452,6 +27828,10 @@
                         {
                           "forEach": {
                             "bind": "$__macro_insurgent_terror_resolve_space_actionPipelines_15__stages_1__effects_0__forEach_effects_0__g",
+                            "macroOrigin": {
+                              "macroId": "insurgent-terror-resolve-space",
+                              "stem": "g"
+                            },
                             "over": {
                               "query": "tokensInZone",
                               "zone": "$space",
@@ -28030,6 +28410,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_sweep_activation_actionPipelines_16__stages_1__effects_0__forEach_effects_1__if_then_0__guerrilla",
+                                                          "macroOrigin": {
+                                                            "macroId": "sweep-activation",
+                                                            "stem": "guerrilla"
+                                                          },
                                                           "over": {
                                                             "query": "tokensInZone",
                                                             "zone": "$space",
@@ -28518,6 +28902,10 @@
                                                                                           {
                                                                                             "forEach": {
                                                                                               "bind": "$__macro_piece_removal_ordering_actionPipelines_16__stages_1__effects_0__forEach_effects_2__if_then_0__let_in_0__let_in_0__let_in_0__macro_coin_assault_removal_order__0__let_in_0__baseTarget",
+                                                                                              "macroOrigin": {
+                                                                                                "macroId": "piece-removal-ordering",
+                                                                                                "stem": "baseTarget"
+                                                                                              },
                                                                                               "over": {
                                                                                                 "query": "tokensInZone",
                                                                                                 "zone": "$space",
@@ -33813,6 +34201,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_1__if_then_0__let_in_0__piece",
+                                                    "macroOrigin": {
+                                                      "macroId": "place-from-available-or-map",
+                                                      "stem": "piece"
+                                                    },
                                                     "over": {
                                                       "query": "tokensInZone",
                                                       "zone": {
@@ -33942,6 +34334,10 @@
                                                                   {
                                                                     "forEach": {
                                                                       "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_1__if_then_0__let_in_0__srcSpace",
+                                                                      "macroOrigin": {
+                                                                        "macroId": "place-from-available-or-map",
+                                                                        "stem": "srcSpace"
+                                                                      },
                                                                       "over": {
                                                                         "query": "binding",
                                                                         "name": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_1__if_then_0__let_in_0__sourceSpaces"
@@ -33950,6 +34346,10 @@
                                                                         {
                                                                           "forEach": {
                                                                             "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_1__if_then_0__let_in_0__mapPiece",
+                                                                            "macroOrigin": {
+                                                                              "macroId": "place-from-available-or-map",
+                                                                              "stem": "mapPiece"
+                                                                            },
                                                                             "over": {
                                                                               "query": "tokensInZone",
                                                                               "zone": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_1__if_then_0__let_in_0__srcSpace",
@@ -34042,6 +34442,10 @@
                                                 {
                                                   "forEach": {
                                                     "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_1__if_then_2__forEach_effects_1__piece",
+                                                    "macroOrigin": {
+                                                      "macroId": "place-from-available-or-map",
+                                                      "stem": "piece"
+                                                    },
                                                     "over": {
                                                       "query": "tokensInZone",
                                                       "zone": {
@@ -34165,6 +34569,10 @@
                                                                   {
                                                                     "forEach": {
                                                                       "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_1__if_then_2__forEach_effects_1__srcSpace",
+                                                                      "macroOrigin": {
+                                                                        "macroId": "place-from-available-or-map",
+                                                                        "stem": "srcSpace"
+                                                                      },
                                                                       "over": {
                                                                         "query": "binding",
                                                                         "name": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_1__if_then_2__forEach_effects_1__sourceSpaces"
@@ -34173,6 +34581,10 @@
                                                                         {
                                                                           "forEach": {
                                                                             "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_1__if_then_2__forEach_effects_1__mapPiece",
+                                                                            "macroOrigin": {
+                                                                              "macroId": "place-from-available-or-map",
+                                                                              "stem": "mapPiece"
+                                                                            },
                                                                             "over": {
                                                                               "query": "tokensInZone",
                                                                               "zone": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_1__if_then_2__forEach_effects_1__srcSpace",
@@ -34470,6 +34882,10 @@
                                                       {
                                                         "forEach": {
                                                           "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_1__if_then_1__piece",
+                                                          "macroOrigin": {
+                                                            "macroId": "place-from-available-or-map",
+                                                            "stem": "piece"
+                                                          },
                                                           "over": {
                                                             "query": "tokensInZone",
                                                             "zone": {
@@ -34593,6 +35009,10 @@
                                                                         {
                                                                           "forEach": {
                                                                             "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_1__if_then_1__srcSpace",
+                                                                            "macroOrigin": {
+                                                                              "macroId": "place-from-available-or-map",
+                                                                              "stem": "srcSpace"
+                                                                            },
                                                                             "over": {
                                                                               "query": "binding",
                                                                               "name": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_1__if_then_1__sourceSpaces"
@@ -34601,6 +35021,10 @@
                                                                               {
                                                                                 "forEach": {
                                                                                   "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_1__if_then_1__mapPiece",
+                                                                                  "macroOrigin": {
+                                                                                    "macroId": "place-from-available-or-map",
+                                                                                    "stem": "mapPiece"
+                                                                                  },
                                                                                   "over": {
                                                                                     "query": "tokensInZone",
                                                                                     "zone": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_1__if_then_1__srcSpace",
@@ -34729,6 +35153,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_2__if_then_0__if_then_1__piece",
+                                                                "macroOrigin": {
+                                                                  "macroId": "place-from-available-or-map",
+                                                                  "stem": "piece"
+                                                                },
                                                                 "over": {
                                                                   "query": "tokensInZone",
                                                                   "zone": {
@@ -34852,6 +35280,10 @@
                                                                               {
                                                                                 "forEach": {
                                                                                   "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_2__if_then_0__if_then_1__srcSpace",
+                                                                                  "macroOrigin": {
+                                                                                    "macroId": "place-from-available-or-map",
+                                                                                    "stem": "srcSpace"
+                                                                                  },
                                                                                   "over": {
                                                                                     "query": "binding",
                                                                                     "name": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_2__if_then_0__if_then_1__sourceSpaces"
@@ -34860,6 +35292,10 @@
                                                                                     {
                                                                                       "forEach": {
                                                                                         "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_2__if_then_0__if_then_1__mapPiece",
+                                                                                        "macroOrigin": {
+                                                                                          "macroId": "place-from-available-or-map",
+                                                                                          "stem": "mapPiece"
+                                                                                        },
                                                                                         "over": {
                                                                                           "query": "tokensInZone",
                                                                                           "zone": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_2__if_then_0__if_then_1__srcSpace",
@@ -34969,6 +35405,10 @@
                                                             {
                                                               "forEach": {
                                                                 "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_2__if_then_0__if_else_1__piece",
+                                                                "macroOrigin": {
+                                                                  "macroId": "place-from-available-or-map",
+                                                                  "stem": "piece"
+                                                                },
                                                                 "over": {
                                                                   "query": "tokensInZone",
                                                                   "zone": {
@@ -35092,6 +35532,10 @@
                                                                               {
                                                                                 "forEach": {
                                                                                   "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_2__if_then_0__if_else_1__srcSpace",
+                                                                                  "macroOrigin": {
+                                                                                    "macroId": "place-from-available-or-map",
+                                                                                    "stem": "srcSpace"
+                                                                                  },
                                                                                   "over": {
                                                                                     "query": "binding",
                                                                                     "name": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_2__if_then_0__if_else_1__sourceSpaces"
@@ -35100,6 +35544,10 @@
                                                                                     {
                                                                                       "forEach": {
                                                                                         "bind": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_2__if_then_0__if_else_1__mapPiece",
+                                                                                        "macroOrigin": {
+                                                                                          "macroId": "place-from-available-or-map",
+                                                                                          "stem": "mapPiece"
+                                                                                        },
                                                                                         "over": {
                                                                                           "query": "tokensInZone",
                                                                                           "zone": "$__macro_place_from_available_or_map_actionPipelines_22__stages_1__effects_0__forEach_effects_0__let_in_0__let_in_0__let_in_2__if_then_2__if_then_2__if_then_0__if_else_1__srcSpace",
@@ -36186,6 +36634,10 @@
             {
               "forEach": {
                 "bind": "$__macro_insurgent_ambush_resolve_spaces_actionPipelines_24__stages_1__effects_0__space",
+                "macroOrigin": {
+                  "macroId": "insurgent-ambush-resolve-spaces",
+                  "stem": "space"
+                },
                 "over": {
                   "query": "binding",
                   "name": "targetSpaces"
@@ -36194,6 +36646,10 @@
                   {
                     "forEach": {
                       "bind": "$__macro_insurgent_ambush_resolve_spaces_actionPipelines_24__stages_1__effects_0__ambushingGuerrilla",
+                      "macroOrigin": {
+                        "macroId": "insurgent-ambush-resolve-spaces",
+                        "stem": "ambushingGuerrilla"
+                      },
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$__macro_insurgent_ambush_resolve_spaces_actionPipelines_24__stages_1__effects_0__space",
@@ -36552,6 +37008,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_insurgent_ambush_resolve_spaces_actionPipelines_24__stages_1__effects_0__adjacentAmbushTarget",
+                                        "macroOrigin": {
+                                          "macroId": "insurgent-ambush-resolve-spaces",
+                                          "stem": "adjacentAmbushTarget"
+                                        },
                                         "over": {
                                           "query": "binding",
                                           "name": "$ambushAdjacentTargets@{$__macro_insurgent_ambush_resolve_spaces_actionPipelines_24__stages_1__effects_0__space}"
@@ -38345,6 +38805,10 @@
             {
               "forEach": {
                 "bind": "$__macro_insurgent_ambush_resolve_spaces_actionPipelines_27__stages_1__effects_0__space",
+                "macroOrigin": {
+                  "macroId": "insurgent-ambush-resolve-spaces",
+                  "stem": "space"
+                },
                 "over": {
                   "query": "binding",
                   "name": "targetSpaces"
@@ -38353,6 +38817,10 @@
                   {
                     "forEach": {
                       "bind": "$__macro_insurgent_ambush_resolve_spaces_actionPipelines_27__stages_1__effects_0__ambushingGuerrilla",
+                      "macroOrigin": {
+                        "macroId": "insurgent-ambush-resolve-spaces",
+                        "stem": "ambushingGuerrilla"
+                      },
                       "over": {
                         "query": "tokensInZone",
                         "zone": "$__macro_insurgent_ambush_resolve_spaces_actionPipelines_27__stages_1__effects_0__space",
@@ -38724,6 +39192,10 @@
                                     {
                                       "forEach": {
                                         "bind": "$__macro_insurgent_ambush_resolve_spaces_actionPipelines_27__stages_1__effects_0__adjacentAmbushTarget",
+                                        "macroOrigin": {
+                                          "macroId": "insurgent-ambush-resolve-spaces",
+                                          "stem": "adjacentAmbushTarget"
+                                        },
                                         "over": {
                                           "query": "binding",
                                           "name": "$ambushAdjacentTargets@{$__macro_insurgent_ambush_resolve_spaces_actionPipelines_27__stages_1__effects_0__space}"
@@ -51430,6 +51902,10 @@
               {
                 "forEach": {
                   "bind": "$__macro_rvn_leader_failed_attempt_desertion_eventDecks_0__cards_128__unshaded_effects_1__space",
+                  "macroOrigin": {
+                    "macroId": "rvn-leader-failed-attempt-desertion",
+                    "stem": "space"
+                  },
                   "over": {
                     "query": "mapSpaces"
                   },
@@ -51465,6 +51941,10 @@
                           {
                             "forEach": {
                               "bind": "$__macro_rvn_leader_failed_attempt_desertion_eventDecks_0__cards_128__unshaded_effects_1__desertingCube",
+                              "macroOrigin": {
+                                "macroId": "rvn-leader-failed-attempt-desertion",
+                                "stem": "desertingCube"
+                              },
                               "over": {
                                 "query": "tokensInZone",
                                 "zone": "$__macro_rvn_leader_failed_attempt_desertion_eventDecks_0__cards_128__unshaded_effects_1__space",
@@ -51538,6 +52018,10 @@
               {
                 "forEach": {
                   "bind": "$__macro_rvn_leader_failed_attempt_desertion_eventDecks_0__cards_129__unshaded_effects_1__space",
+                  "macroOrigin": {
+                    "macroId": "rvn-leader-failed-attempt-desertion",
+                    "stem": "space"
+                  },
                   "over": {
                     "query": "mapSpaces"
                   },
@@ -51573,6 +52057,10 @@
                           {
                             "forEach": {
                               "bind": "$__macro_rvn_leader_failed_attempt_desertion_eventDecks_0__cards_129__unshaded_effects_1__desertingCube",
+                              "macroOrigin": {
+                                "macroId": "rvn-leader-failed-attempt-desertion",
+                                "stem": "desertingCube"
+                              },
                               "over": {
                                 "query": "tokensInZone",
                                 "zone": "$__macro_rvn_leader_failed_attempt_desertion_eventDecks_0__cards_129__unshaded_effects_1__space",

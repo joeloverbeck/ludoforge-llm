@@ -2675,6 +2675,10 @@
           {
             "forEach": {
               "bind": "$__macro_find_next_non_eliminated_turnStructure_phases_0__onEnter_0__nextSeat",
+              "macroOrigin": {
+                "macroId": "find-next-non-eliminated",
+                "stem": "nextSeat"
+              },
               "over": {
                 "query": "nextInOrderByCondition",
                 "source": {
@@ -2961,6 +2965,10 @@
                 {
                   "forEach": {
                     "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat",
+                    "macroOrigin": {
+                      "macroId": "post-forced-bets-and-set-preflop-actor",
+                      "stem": "bbSeat"
+                    },
                     "over": {
                       "query": "nextInOrderByCondition",
                       "source": {
@@ -3006,6 +3014,10 @@
                                   {
                                     "forEach": {
                                       "bind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player",
+                                      "macroOrigin": {
+                                        "macroId": "collect-forced-bets",
+                                        "stem": "player"
+                                      },
                                       "over": {
                                         "query": "players"
                                       },
@@ -3304,6 +3316,10 @@
                 {
                   "forEach": {
                     "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__sbSeat",
+                    "macroOrigin": {
+                      "macroId": "post-forced-bets-and-set-preflop-actor",
+                      "stem": "sbSeat"
+                    },
                     "over": {
                       "query": "nextInOrderByCondition",
                       "source": {
@@ -3330,6 +3346,10 @@
                       {
                         "forEach": {
                           "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__bbSeat",
+                          "macroOrigin": {
+                            "macroId": "post-forced-bets-and-set-preflop-actor",
+                            "stem": "bbSeat"
+                          },
                           "over": {
                             "query": "nextInOrderByCondition",
                             "source": {
@@ -3356,6 +3376,10 @@
                             {
                               "forEach": {
                                 "bind": "$__macro_post_forced_bets_and_set_preflop_actor_turnStructure_phases_0__onEnter_15__utgSeat",
+                                "macroOrigin": {
+                                  "macroId": "post-forced-bets-and-set-preflop-actor",
+                                  "stem": "utgSeat"
+                                },
                                 "over": {
                                   "query": "nextInOrderByCondition",
                                   "source": {
@@ -3393,6 +3417,10 @@
                                         {
                                           "forEach": {
                                             "bind": "$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_else_0__forEach_effects_0__forEach_effects_0__forEach_effects_0__player",
+                                            "macroOrigin": {
+                                              "macroId": "collect-forced-bets",
+                                              "stem": "player"
+                                            },
                                             "over": {
                                               "query": "players"
                                             },
@@ -3776,6 +3804,10 @@
           {
             "forEach": {
               "bind": "$__macro_find_next_to_act_turnStructure_phases_1__onEnter_2__nextSeat",
+              "macroOrigin": {
+                "macroId": "find-next-to-act",
+                "stem": "nextSeat"
+              },
               "over": {
                 "query": "nextInOrderByCondition",
                 "source": {
@@ -3913,6 +3945,10 @@
                       {
                         "forEach": {
                           "bind": "$__macro_find_next_to_act_turnStructure_phases_1__onEnter_3__if_then_0__macro_advance_after_betting__0__if_then_0__nextSeat",
+                          "macroOrigin": {
+                            "macroId": "find-next-to-act",
+                            "stem": "nextSeat"
+                          },
                           "over": {
                             "query": "nextInOrderByCondition",
                             "source": {
@@ -4226,6 +4262,10 @@
           {
             "forEach": {
               "bind": "$__macro_reset_reopen_state_for_live_seats_turnStructure_phases_2__onEnter_2__player",
+              "macroOrigin": {
+                "macroId": "reset-reopen-state-for-live-seats",
+                "stem": "player"
+              },
               "over": {
                 "query": "players"
               },
@@ -4337,6 +4377,10 @@
           {
             "forEach": {
               "bind": "$__macro_find_next_to_act_turnStructure_phases_2__onEnter_6__nextSeat",
+              "macroOrigin": {
+                "macroId": "find-next-to-act",
+                "stem": "nextSeat"
+              },
               "over": {
                 "query": "nextInOrderByCondition",
                 "source": {
@@ -4446,6 +4490,10 @@
                       {
                         "forEach": {
                           "bind": "$__macro_find_next_to_act_turnStructure_phases_2__onEnter_7__if_then_0__macro_advance_after_betting__0__if_then_0__nextSeat",
+                          "macroOrigin": {
+                            "macroId": "find-next-to-act",
+                            "stem": "nextSeat"
+                          },
                           "over": {
                             "query": "nextInOrderByCondition",
                             "source": {
@@ -4759,6 +4807,10 @@
           {
             "forEach": {
               "bind": "$__macro_reset_reopen_state_for_live_seats_turnStructure_phases_3__onEnter_2__player",
+              "macroOrigin": {
+                "macroId": "reset-reopen-state-for-live-seats",
+                "stem": "player"
+              },
               "over": {
                 "query": "players"
               },
@@ -4870,6 +4922,10 @@
           {
             "forEach": {
               "bind": "$__macro_find_next_to_act_turnStructure_phases_3__onEnter_6__nextSeat",
+              "macroOrigin": {
+                "macroId": "find-next-to-act",
+                "stem": "nextSeat"
+              },
               "over": {
                 "query": "nextInOrderByCondition",
                 "source": {
@@ -4979,6 +5035,10 @@
                       {
                         "forEach": {
                           "bind": "$__macro_find_next_to_act_turnStructure_phases_3__onEnter_7__if_then_0__macro_advance_after_betting__0__if_then_0__nextSeat",
+                          "macroOrigin": {
+                            "macroId": "find-next-to-act",
+                            "stem": "nextSeat"
+                          },
                           "over": {
                             "query": "nextInOrderByCondition",
                             "source": {
@@ -5292,6 +5352,10 @@
           {
             "forEach": {
               "bind": "$__macro_reset_reopen_state_for_live_seats_turnStructure_phases_4__onEnter_2__player",
+              "macroOrigin": {
+                "macroId": "reset-reopen-state-for-live-seats",
+                "stem": "player"
+              },
               "over": {
                 "query": "players"
               },
@@ -5403,6 +5467,10 @@
           {
             "forEach": {
               "bind": "$__macro_find_next_to_act_turnStructure_phases_4__onEnter_6__nextSeat",
+              "macroOrigin": {
+                "macroId": "find-next-to-act",
+                "stem": "nextSeat"
+              },
               "over": {
                 "query": "nextInOrderByCondition",
                 "source": {
@@ -5512,6 +5580,10 @@
                       {
                         "forEach": {
                           "bind": "$__macro_find_next_to_act_turnStructure_phases_4__onEnter_7__if_then_0__macro_advance_after_betting__0__if_then_0__nextSeat",
+                          "macroOrigin": {
+                            "macroId": "find-next-to-act",
+                            "stem": "nextSeat"
+                          },
                           "over": {
                             "query": "nextInOrderByCondition",
                             "source": {
@@ -6177,6 +6249,10 @@
                                                                   "reduce": {
                                                                     "itemBind": "$__macro_hand_rank_score_turnStructure_phases_5__onEnter_1__forEach_effects_0__if_then_1__evaluateSubset_compute_0__high",
                                                                     "accBind": "$__macro_hand_rank_score_turnStructure_phases_5__onEnter_1__forEach_effects_0__if_then_1__evaluateSubset_compute_0__bestHigh",
+                                                                    "macroOrigin": {
+                                                                      "macroId": "hand-rank-score",
+                                                                      "stem": "straightHigh"
+                                                                    },
                                                                     "over": {
                                                                       "query": "intsInRange",
                                                                       "min": 5,
@@ -7981,6 +8057,10 @@
                 {
                   "forEach": {
                     "bind": "$__macro_award_uncontested_pot_turnStructure_phases_5__onEnter_2__if_then_0__player",
+                    "macroOrigin": {
+                      "macroId": "award-uncontested-pot",
+                      "stem": "player"
+                    },
                     "over": {
                       "query": "players"
                     },
@@ -8071,6 +8151,10 @@
                 {
                   "forEach": {
                     "bind": "$__macro_distribute_contested_pots_turnStructure_phases_5__onEnter_2__if_else_0__tier",
+                    "macroOrigin": {
+                      "macroId": "distribute-contested-pots",
+                      "stem": "tier"
+                    },
                     "over": {
                       "query": "intsInRange",
                       "min": 1,
@@ -8313,6 +8397,10 @@
                                                                       {
                                                                         "forEach": {
                                                                           "bind": "$__macro_distribute_contested_pots_turnStructure_phases_5__onEnter_2__if_else_0__player",
+                                                                          "macroOrigin": {
+                                                                            "macroId": "distribute-contested-pots",
+                                                                            "stem": "player"
+                                                                          },
                                                                           "over": {
                                                                             "query": "players"
                                                                           },
@@ -8407,6 +8495,10 @@
                                                                       {
                                                                         "forEach": {
                                                                           "bind": "$__macro_distribute_contested_pots_turnStructure_phases_5__onEnter_2__if_else_0__player",
+                                                                          "macroOrigin": {
+                                                                            "macroId": "distribute-contested-pots",
+                                                                            "stem": "player"
+                                                                          },
                                                                           "over": {
                                                                             "query": "players"
                                                                           },
@@ -8501,6 +8593,10 @@
                                               {
                                                 "forEach": {
                                                   "bind": "$__macro_distribute_contested_pots_turnStructure_phases_5__onEnter_2__if_else_0__player",
+                                                  "macroOrigin": {
+                                                    "macroId": "distribute-contested-pots",
+                                                    "stem": "player"
+                                                  },
                                                   "over": {
                                                     "query": "players"
                                                   },
@@ -8620,6 +8716,10 @@
           {
             "forEach": {
               "bind": "$__macro_eliminate_busted_players_turnStructure_phases_6__onEnter_3__player",
+              "macroOrigin": {
+                "macroId": "eliminate-busted-players",
+                "stem": "player"
+              },
               "over": {
                 "query": "players"
               },
@@ -8785,6 +8885,10 @@
                                         {
                                           "forEach": {
                                             "bind": "$__macro_escalate_blinds_turnStructure_phases_6__onEnter_5__blindRow",
+                                            "macroOrigin": {
+                                              "macroId": "escalate-blinds",
+                                              "stem": "blindRow"
+                                            },
                                             "over": {
                                               "query": "assetRows",
                                               "tableId": "tournament-standard::settings.blindSchedule",
@@ -8988,6 +9092,10 @@
         {
           "forEach": {
             "bind": "$__macro_betting_round_completion_actions_0__effects_4__player",
+            "macroOrigin": {
+              "macroId": "betting-round-completion",
+              "stem": "player"
+            },
             "over": {
               "query": "players"
             },
@@ -9208,6 +9316,10 @@
               {
                 "forEach": {
                   "bind": "$__macro_find_next_to_act_actions_0__effects_5__macro_advance_after_betting__0__if_then_0__nextSeat",
+                  "macroOrigin": {
+                    "macroId": "find-next-to-act",
+                    "stem": "nextSeat"
+                  },
                   "over": {
                     "query": "nextInOrderByCondition",
                     "source": {
@@ -9594,6 +9706,10 @@
         {
           "forEach": {
             "bind": "$__macro_betting_round_completion_actions_1__effects_2__player",
+            "macroOrigin": {
+              "macroId": "betting-round-completion",
+              "stem": "player"
+            },
             "over": {
               "query": "players"
             },
@@ -9814,6 +9930,10 @@
               {
                 "forEach": {
                   "bind": "$__macro_find_next_to_act_actions_1__effects_3__macro_advance_after_betting__0__if_then_0__nextSeat",
+                  "macroOrigin": {
+                    "macroId": "find-next-to-act",
+                    "stem": "nextSeat"
+                  },
                   "over": {
                     "query": "nextInOrderByCondition",
                     "source": {
@@ -10271,6 +10391,10 @@
         {
           "forEach": {
             "bind": "$__macro_betting_round_completion_actions_2__effects_6__player",
+            "macroOrigin": {
+              "macroId": "betting-round-completion",
+              "stem": "player"
+            },
             "over": {
               "query": "players"
             },
@@ -10491,6 +10615,10 @@
               {
                 "forEach": {
                   "bind": "$__macro_find_next_to_act_actions_2__effects_7__macro_advance_after_betting__0__if_then_0__nextSeat",
+                  "macroOrigin": {
+                    "macroId": "find-next-to-act",
+                    "stem": "nextSeat"
+                  },
                   "over": {
                     "query": "nextInOrderByCondition",
                     "source": {
@@ -11000,6 +11128,10 @@
         {
           "forEach": {
             "bind": "$__macro_reset_reopen_state_for_eligible_actors_actions_3__effects_1__player",
+            "macroOrigin": {
+              "macroId": "reset-reopen-state-for-eligible-actors",
+              "stem": "player"
+            },
             "over": {
               "query": "players"
             },
@@ -11138,6 +11270,10 @@
         {
           "forEach": {
             "bind": "$__macro_betting_round_completion_actions_3__effects_5__player",
+            "macroOrigin": {
+              "macroId": "betting-round-completion",
+              "stem": "player"
+            },
             "over": {
               "query": "players"
             },
@@ -11358,6 +11494,10 @@
               {
                 "forEach": {
                   "bind": "$__macro_find_next_to_act_actions_3__effects_6__macro_advance_after_betting__0__if_then_0__nextSeat",
+                  "macroOrigin": {
+                    "macroId": "find-next-to-act",
+                    "stem": "nextSeat"
+                  },
                   "over": {
                     "query": "nextInOrderByCondition",
                     "source": {
@@ -11830,6 +11970,10 @@
                                 {
                                   "forEach": {
                                     "bind": "$__macro_reset_reopen_state_for_eligible_actors_actions_4__effects_0__let_in_0__let_in_4__if_then_1__if_then_1__player",
+                                    "macroOrigin": {
+                                      "macroId": "reset-reopen-state-for-eligible-actors",
+                                      "stem": "player"
+                                    },
                                     "over": {
                                       "query": "players"
                                     },
@@ -11957,6 +12101,10 @@
         {
           "forEach": {
             "bind": "$__macro_betting_round_completion_actions_4__effects_3__player",
+            "macroOrigin": {
+              "macroId": "betting-round-completion",
+              "stem": "player"
+            },
             "over": {
               "query": "players"
             },
@@ -12177,6 +12325,10 @@
               {
                 "forEach": {
                   "bind": "$__macro_find_next_to_act_actions_4__effects_4__macro_advance_after_betting__0__if_then_0__nextSeat",
+                  "macroOrigin": {
+                    "macroId": "find-next-to-act",
+                    "stem": "nextSeat"
+                  },
                   "over": {
                     "query": "nextInOrderByCondition",
                     "source": {

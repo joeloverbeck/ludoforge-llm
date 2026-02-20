@@ -1,6 +1,6 @@
 # CARGAMVISEXP-002: Card template color and symbol support
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
@@ -12,17 +12,18 @@
 
 ## Assumption Reassessment (2026-02-20)
 
-1. `CardFieldLayoutSchema` at `visual-config-types.ts:153-158` has `y`, `fontSize`, `align`, `wrap` — confirmed. Does NOT yet have `x`, `sourceField`, `symbolMap`, `colorFromProp`, `colorMap`.
-2. `drawCardContent()` at `card-template-renderer.ts:19-69` uses hardcoded `fill: '#f8fafc'` for all text — confirmed.
-3. Field lookup in `drawCardContent()` uses field key name as the property name (e.g., key `rankName` reads `fields.rankName`) — confirmed.
-4. Texas Hold'em `visual-config.yaml` has `cards.templates.poker-card` with basic `rankName`/`suitName` fields (no color/symbol config) — confirmed.
+1. `CardFieldLayoutSchema` currently has only `y`, `fontSize`, `align`, and `wrap` (no `x`, `sourceField`, `symbolMap`, `colorFromProp`, `colorMap`) — confirmed in `packages/runner/src/config/visual-config-types.ts`.
+2. `drawCardContent()` currently renders all text with hardcoded `fill: '#f8fafc'` and resolves values by field key only — confirmed in `packages/runner/src/canvas/renderers/card-template-renderer.ts`.
+3. Existing renderer tests cover only baseline layout/wrap behavior; they do not cover property remapping, symbol transforms, or color mapping — confirmed in `packages/runner/test/canvas/renderers/card-template-renderer.test.ts`.
+4. Texas Hold'em `visual-config.yaml` still uses a basic `poker-card` template with `rankName` and `suitName` only; no symbol/color-aware field config exists yet — confirmed in `data/games/texas-holdem/visual-config.yaml`.
+5. D1 prerequisite is already present (`tokenTypeDefaults` + card assignment for `card-` prefix), so this ticket can stay runner-only and focused on template text rendering behavior.
 
 ## Architecture Check
 
-1. All new `CardFieldLayoutSchema` fields (`x`, `sourceField`, `symbolMap`, `colorFromProp`, `colorMap`) are optional — existing templates without them behave identically.
-2. The mapping logic is generic: any game can define symbol/color maps for any token property. No game-specific branching.
-3. Color and symbol resolution is purely a presentation concern — it reads token properties that already exist in the render model, no new data required from the engine.
-4. No backwards-compatibility shims: fields are additive optional.
+1. Additive schema fields remain the correct approach here; they keep templates declarative and avoid hardcoded game branches in runner code.
+2. For long-term maintainability, text/value/color resolution should be implemented as small pure helpers inside the renderer module (or same-file private functions), not inline ad-hoc branches in the render loop.
+3. The mapping model (`sourceField`, `symbolMap`, `colorFromProp`, `colorMap`) is engine-agnostic and reusable across any card-like token template.
+4. This work should not touch kernel/compiler/sim contracts; all behavior remains data-driven via visual config.
 
 ## What to Change
 
@@ -44,6 +45,7 @@ For each field in the template layout:
 2. **Symbol mapping**: if `symbolMap` defined, `symbolMap[String(rawValue)] ?? String(rawValue)`
 3. **Color resolution**: if `colorFromProp` defined, lookup `fields[colorFromProp]` in `colorMap`; if found use it, else default white
 4. **X offset**: support `fieldLayout.x` in addition to alignment-based positioning
+5. Keep resolution logic in pure helper functions so adding future display transforms does not bloat the render loop
 
 ### 3. Update Texas Hold'em visual-config.yaml
 
@@ -95,3 +97,19 @@ Replace the basic `poker-card` template with the full layout from Spec 43 (rankC
 
 1. `pnpm -F @ludoforge/runner test -- --reporter=verbose test/canvas/renderers/card-template-renderer.test.ts`
 2. `pnpm -F @ludoforge/runner typecheck && pnpm -F @ludoforge/runner lint && pnpm -F @ludoforge/runner test`
+
+## Outcome
+
+- **Completion date**: 2026-02-20
+- **What changed**:
+  - Extended `CardFieldLayoutSchema` with `x`, `sourceField`, `symbolMap`, `colorFromProp`, and `colorMap`.
+  - Refactored `drawCardContent()` to use pure helper resolution paths for display text and text color, and added `x` offset support.
+  - Replaced Texas Hold'em `poker-card` template with Spec 43-style `rankCorner` / `suitCenter` / `rankBottom` layout and suit symbol/color mapping.
+  - Expanded renderer tests for source remapping, symbol mapping (mapped + passthrough), color mapping fallback, and x-offset positioning.
+  - Updated `visual-config-files.test.ts` Texas config expectation to match the new template contract.
+- **Deviation from original plan**:
+  - Added one extra config validation test update (`packages/runner/test/config/visual-config-files.test.ts`) because the hard suite revealed the previous expected template snapshot was stale.
+- **Verification**:
+  - `pnpm -F @ludoforge/runner typecheck` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.
+  - `pnpm -F @ludoforge/runner test` passed.

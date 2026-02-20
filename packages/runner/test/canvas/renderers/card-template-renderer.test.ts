@@ -124,4 +124,146 @@ describe('drawCardContent', () => {
     expect(container.children[0]?.style.wordWrap).toBe(true);
     expect(container.children[0]?.style.wordWrapWidth).toBe(44);
   });
+
+  it('reads from sourceField when field key and data key differ', () => {
+    const container = new MockContainer();
+
+    drawCardContent(
+      container as unknown as Container,
+      {
+        width: 48,
+        height: 68,
+        layout: {
+          rankCorner: { y: 4, align: 'left', sourceField: 'rankName' },
+        },
+      },
+      {
+        rankName: 'Q',
+      },
+    );
+
+    expect(container.children).toHaveLength(1);
+    expect(container.children[0]?.text).toBe('Q');
+  });
+
+  it('applies symbolMap transforms and leaves unmapped values unchanged', () => {
+    const container = new MockContainer();
+
+    drawCardContent(
+      container as unknown as Container,
+      {
+        width: 48,
+        height: 68,
+        layout: {
+          mappedSuit: {
+            y: 20,
+            align: 'center',
+            sourceField: 'suitName',
+            symbolMap: { Hearts: '♥' },
+          },
+          unmappedSuit: {
+            y: 36,
+            align: 'center',
+            sourceField: 'suitName',
+            symbolMap: { Spades: '♠' },
+          },
+        },
+      },
+      {
+        suitName: 'Hearts',
+      },
+    );
+
+    expect(container.children).toHaveLength(2);
+    expect(container.children[0]?.text).toBe('♥');
+    expect(container.children[1]?.text).toBe('Hearts');
+  });
+
+  it('applies colorFromProp and colorMap when both are provided', () => {
+    const container = new MockContainer();
+
+    drawCardContent(
+      container as unknown as Container,
+      {
+        width: 48,
+        height: 68,
+        layout: {
+          rankCorner: {
+            y: 4,
+            align: 'left',
+            sourceField: 'rankName',
+            colorFromProp: 'suitName',
+            colorMap: {
+              Hearts: '#dc2626',
+              Spades: '#1e293b',
+            },
+          },
+        },
+      },
+      {
+        rankName: 'A',
+        suitName: 'Hearts',
+      },
+    );
+
+    expect(container.children).toHaveLength(1);
+    expect(container.children[0]?.style.fill).toBe('#dc2626');
+  });
+
+  it('falls back to default white when colorFromProp does not resolve', () => {
+    const container = new MockContainer();
+
+    drawCardContent(
+      container as unknown as Container,
+      {
+        width: 48,
+        height: 68,
+        layout: {
+          rankCorner: {
+            y: 4,
+            align: 'left',
+            sourceField: 'rankName',
+            colorFromProp: 'missingSuitName',
+            colorMap: {
+              Hearts: '#dc2626',
+            },
+          },
+        },
+      },
+      {
+        rankName: 'A',
+        suitName: 'Hearts',
+      },
+    );
+
+    expect(container.children).toHaveLength(1);
+    expect(container.children[0]?.style.fill).toBe('#f8fafc');
+  });
+
+  it('applies x offset on top of alignment anchor position', () => {
+    const container = new MockContainer();
+
+    drawCardContent(
+      container as unknown as Container,
+      {
+        width: 48,
+        height: 68,
+        layout: {
+          rankCorner: { y: 4, align: 'left', x: 6 },
+          suitCenter: { y: 20, align: 'center', x: -5 },
+          rankBottom: { y: 52, align: 'right', x: -4 },
+        },
+      },
+      {
+        rankCorner: 'A',
+        suitCenter: '♠',
+        rankBottom: 'A',
+      },
+    );
+
+    expect(container.children).toHaveLength(3);
+    expect(container.children[0]?.position.x).toBe(-15);
+    expect(container.children[1]?.position.x).toBe(-5);
+    expect(container.children[2]?.position.x).toBe(17);
+  });
 });

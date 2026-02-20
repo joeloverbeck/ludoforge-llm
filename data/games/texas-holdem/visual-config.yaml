@@ -53,12 +53,43 @@ cards:
       width: 48
       height: 68
       layout:
-        rankName:
-          y: 8
-          fontSize: 11
+        rankCorner:
+          y: 4
+          x: 4
+          fontSize: 9
+          align: left
+          sourceField: rankName
+          colorFromProp: suitName
+          colorMap:
+            Spades: "#1e293b"
+            Hearts: "#dc2626"
+            Diamonds: "#dc2626"
+            Clubs: "#1e293b"
+        suitCenter:
+          y: 20
+          fontSize: 18
           align: center
-        suitName:
-          y: 40
-          fontSize: 10
-          align: center
-          wrap: 42
+          sourceField: suitName
+          symbolMap:
+            Spades: "♠"
+            Hearts: "♥"
+            Diamonds: "♦"
+            Clubs: "♣"
+          colorFromProp: suitName
+          colorMap:
+            Spades: "#1e293b"
+            Hearts: "#dc2626"
+            Diamonds: "#dc2626"
+            Clubs: "#1e293b"
+        rankBottom:
+          y: 52
+          x: -4
+          fontSize: 9
+          align: right
+          sourceField: rankName
+          colorFromProp: suitName
+          colorMap:
+            Spades: "#1e293b"
+            Hearts: "#dc2626"
+            Diamonds: "#dc2626"
+            Clubs: "#1e293b"

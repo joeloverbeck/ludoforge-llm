@@ -1,5 +1,6 @@
 .screen {
   display: grid;
+  min-height: 100%;
   gap: 2rem;
   padding: 2rem;
 }

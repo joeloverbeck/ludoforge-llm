@@ -215,6 +215,65 @@ describe('validateGameSpec structural rules', () => {
     );
   });
 
+  it('accepts metadata.name and metadata.description when they are non-empty trimmed strings', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        name: 'Fire in the Lake',
+        description: 'A 4-faction COIN-series game set in Vietnam.',
+        players: { min: 2, max: 4 },
+      },
+    });
+
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.metadata.name'),
+      false,
+    );
+    assert.equal(
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.metadata.description'),
+      false,
+    );
+  });
+
+  it('rejects invalid metadata.name and metadata.description values', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        name: '  ',
+        description: 42,
+        players: { min: 2, max: 4 },
+      },
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    const displayDiagnostics = diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_DISPLAY_STRING_INVALID',
+    );
+    assert.equal(displayDiagnostics.length, 2);
+    assert.equal(displayDiagnostics.some((diagnostic) => diagnostic.path === 'doc.metadata.name'), true);
+    assert.equal(displayDiagnostics.some((diagnostic) => diagnostic.path === 'doc.metadata.description'), true);
+  });
+
+  it('rejects metadata.name and metadata.description with surrounding whitespace', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        name: ' Fire in the Lake',
+        description: 'Vietnam setting ',
+        players: { min: 2, max: 4 },
+      },
+    });
+
+    const displayDiagnostics = diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_METADATA_DISPLAY_STRING_INVALID',
+    );
+    assert.equal(displayDiagnostics.length, 2);
+    assert.equal(displayDiagnostics.some((diagnostic) => diagnostic.path === 'doc.metadata.name'), true);
+    assert.equal(displayDiagnostics.some((diagnostic) => diagnostic.path === 'doc.metadata.description'), true);
+  });
+
   it('rejects invalid metadata.defaultScenarioAssetId values', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),

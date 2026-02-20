@@ -13,6 +13,41 @@ import { applyMove, asActionId, initialState, validateGameDef } from '../../src/
 import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
 describe('compile pipeline integration', () => {
+  it('passes metadata name and description through to GameDef only when provided', () => {
+    const withDisplayMetadata = compileGameSpecToGameDef({
+      ...createEmptyGameSpecDoc(),
+      metadata: {
+        id: 'pipeline-display-metadata',
+        name: 'Pipeline Display Metadata',
+        description: 'Compile metadata pass-through verification.',
+        players: { min: 2, max: 2 },
+      },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    });
+
+    const withoutDisplayMetadata = compileGameSpecToGameDef({
+      ...createEmptyGameSpecDoc(),
+      metadata: {
+        id: 'pipeline-display-metadata-omitted',
+        players: { min: 2, max: 2 },
+      },
+      zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{ id: 'pass', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] }],
+      terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
+    });
+
+    assertNoDiagnostics(withDisplayMetadata);
+    assertNoDiagnostics(withoutDisplayMetadata);
+    assert.equal(withDisplayMetadata.gameDef?.metadata.name, 'Pipeline Display Metadata');
+    assert.equal(withDisplayMetadata.gameDef?.metadata.description, 'Compile metadata pass-through verification.');
+    assert.equal('name' in (withoutDisplayMetadata.gameDef?.metadata ?? {}), false);
+    assert.equal('description' in (withoutDisplayMetadata.gameDef?.metadata ?? {}), false);
+  });
+
   it('is deterministic when compiling raw vs pre-expanded docs', () => {
     const doc = {
       ...createEmptyGameSpecDoc(),

@@ -308,6 +308,8 @@ export const GameDefSchema = z
     metadata: z
       .object({
         id: StringSchema,
+        name: StringSchema.optional(),
+        description: StringSchema.optional(),
         players: z.object({ min: NumberSchema, max: NumberSchema }).strict(),
         maxTriggerDepth: NumberSchema.optional(),
       })

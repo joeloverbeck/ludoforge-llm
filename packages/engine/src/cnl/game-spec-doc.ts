@@ -7,6 +7,8 @@ import type {
 
 export interface GameSpecMetadata {
   readonly id: string;
+  readonly name?: string;
+  readonly description?: string;
   readonly players: { readonly min: number; readonly max: number };
   readonly maxTriggerDepth?: number;
   readonly defaultScenarioAssetId?: string;

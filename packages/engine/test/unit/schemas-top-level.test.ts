@@ -29,7 +29,13 @@ const minimalGameDef = {
 } as const;
 
 const fullGameDef = {
-  metadata: { id: 'full-game', players: { min: 2, max: 4 }, maxTriggerDepth: 5 },
+  metadata: {
+    id: 'full-game',
+    name: 'Full Game',
+    description: 'A full-featured schema fixture.',
+    players: { min: 2, max: 4 },
+    maxTriggerDepth: 5,
+  },
   constants: { startGold: 3 },
   globalVars: [{ name: 'round', type: 'int', init: 1, min: 0, max: 99 }],
   perPlayerVars: [{ name: 'vp', type: 'int', init: 0, min: 0, max: 100 }],
@@ -372,6 +378,21 @@ describe('top-level runtime schemas', () => {
   it('parses a full-featured valid GameDef with zero issues', () => {
     const result = GameDefSchema.safeParse(fullGameDef);
     assert.equal(result.success, true);
+  });
+
+  it('rejects non-string metadata name/description values', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      metadata: {
+        ...minimalGameDef.metadata,
+        name: 123,
+        description: false,
+      },
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'metadata.name'));
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'metadata.description'));
   });
 
   it('rejects invalid adjacency direction in GameDef zones', () => {

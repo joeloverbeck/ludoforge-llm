@@ -4,6 +4,8 @@ import {
   METADATA_KEYS,
   PLAYERS_KEYS,
   VARIABLE_KEYS,
+  isNonEmptyString,
+  isNonEmptyTrimmedString,
   isFiniteNumber,
   isRecord,
   validateIdentifierField,
@@ -18,6 +20,8 @@ export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
 
   validateUnknownKeys(metadata, METADATA_KEYS, 'doc.metadata', diagnostics, 'metadata');
   validateIdentifierField(metadata, 'id', 'doc.metadata.id', diagnostics, 'metadata id');
+  validateOptionalMetadataDisplayString(metadata.name, 'name', diagnostics);
+  validateOptionalMetadataDisplayString(metadata.description, 'description', diagnostics);
   if ('layoutMode' in metadata) {
     diagnostics.push({
       code: 'CNL_VALIDATOR_METADATA_LAYOUT_MODE_REMOVED',
@@ -85,12 +89,7 @@ export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
   }
 
   const defaultScenarioAssetId = metadata.defaultScenarioAssetId;
-  if (
-    defaultScenarioAssetId !== undefined &&
-    (typeof defaultScenarioAssetId !== 'string' ||
-      defaultScenarioAssetId.trim() === '' ||
-      defaultScenarioAssetId !== defaultScenarioAssetId.trim())
-  ) {
+  if (defaultScenarioAssetId !== undefined && !isNonEmptyTrimmedString(defaultScenarioAssetId)) {
     diagnostics.push({
       code: 'CNL_VALIDATOR_METADATA_DEFAULT_SCENARIO_INVALID',
       path: 'doc.metadata.defaultScenarioAssetId',
@@ -115,7 +114,7 @@ export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
 
     for (const [setName, rawValues] of Object.entries(namedSets)) {
       const setPath = `doc.metadata.namedSets.${setName}`;
-      if (setName.trim() === '') {
+      if (!isNonEmptyString(setName)) {
         diagnostics.push({
           code: 'CNL_VALIDATOR_METADATA_NAMED_SET_ID_INVALID',
           path: setPath,
@@ -157,6 +156,26 @@ export function validateMetadata(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
     }
   }
 
+}
+
+function validateOptionalMetadataDisplayString(
+  value: unknown,
+  field: 'name' | 'description',
+  diagnostics: Diagnostic[],
+): void {
+  if (value === undefined) {
+    return;
+  }
+
+  if (!isNonEmptyTrimmedString(value)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_METADATA_DISPLAY_STRING_INVALID',
+      path: `doc.metadata.${field}`,
+      severity: 'error',
+      message: `metadata.${field} must be a non-empty trimmed string when provided.`,
+      suggestion: `Set metadata.${field} to a non-empty trimmed string.`,
+    });
+  }
 }
 
 export function validateVariables(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {

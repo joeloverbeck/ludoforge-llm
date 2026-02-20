@@ -4,7 +4,7 @@ import type { GameSpecSourceMap } from './source-map.js';
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
 
-export const METADATA_KEYS = ['id', 'players', 'maxTriggerDepth', 'defaultScenarioAssetId', 'namedSets'] as const;
+export const METADATA_KEYS = ['id', 'name', 'description', 'players', 'maxTriggerDepth', 'defaultScenarioAssetId', 'namedSets'] as const;
 export const PLAYERS_KEYS = ['min', 'max'] as const;
 export const DATA_ASSET_KEYS = ['id', 'kind', 'payload', 'tableContracts'] as const;
 export const VARIABLE_KEYS = ['name', 'type', 'init', 'min', 'max'] as const;
@@ -106,7 +106,7 @@ export function validateIdentifierField(
   label: string,
 ): string | undefined {
   const raw = value[key];
-  if (typeof raw !== 'string' || raw.trim() === '') {
+  if (!isNonEmptyString(raw)) {
     diagnostics.push({
       code: 'CNL_VALIDATOR_IDENTIFIER_INVALID',
       path,
@@ -251,6 +251,14 @@ export function compareDiagnostics(left: Diagnostic, right: Diagnostic, sourceMa
 
 export function normalizeIdentifier(value: string): string {
   return value.trim().normalize('NFC');
+}
+
+export function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+export function isNonEmptyTrimmedString(value: unknown): value is string {
+  return isNonEmptyString(value) && value === value.trim();
 }
 
 export function uniqueSorted(values: readonly string[]): readonly string[] {

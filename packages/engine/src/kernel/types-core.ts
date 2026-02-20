@@ -218,6 +218,8 @@ export interface DerivedMetricDef {
 export interface GameDef {
   readonly metadata: {
     readonly id: string;
+    readonly name?: string;
+    readonly description?: string;
     readonly players: { readonly min: number; readonly max: number };
     readonly maxTriggerDepth?: number;
   };

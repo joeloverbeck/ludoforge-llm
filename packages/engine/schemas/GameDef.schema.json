@@ -8,6 +8,12 @@
         "id": {
           "type": "string"
         },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
         "players": {
           "type": "object",
           "properties": {

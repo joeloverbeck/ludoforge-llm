@@ -218,6 +218,8 @@ function compileExpandedDoc(
           id: metadata.id,
           players: metadata.players,
           ...(metadata.maxTriggerDepth === undefined ? {} : { maxTriggerDepth: metadata.maxTriggerDepth }),
+          ...(metadata.name === undefined ? {} : { name: metadata.name }),
+          ...(metadata.description === undefined ? {} : { description: metadata.description }),
         };
   if (metadata === null) {
     diagnostics.push(requiredSectionDiagnostic('doc.metadata', 'metadata'));

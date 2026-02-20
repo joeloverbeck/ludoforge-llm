@@ -31,21 +31,19 @@ export function useEventLogEntries(
         return;
       }
 
-      setEntries((currentEntries) => {
-        const translated = translateEffectTrace(
-          state.effectTrace,
-          state.triggerFirings,
-          visualConfigProvider,
-          gameDef,
-          moveIndexRef.current,
-        );
-        if (translated.length === 0) {
-          return currentEntries;
-        }
+      const translated = translateEffectTrace(
+        state.effectTrace,
+        state.triggerFirings,
+        visualConfigProvider,
+        gameDef,
+        moveIndexRef.current,
+      );
+      if (translated.length === 0) {
+        return;
+      }
 
-        moveIndexRef.current += 1;
-        return [...currentEntries, ...translated];
-      });
+      moveIndexRef.current += 1;
+      setEntries((currentEntries) => [...currentEntries, ...translated]);
     });
   }, [store, visualConfigProvider]);
 

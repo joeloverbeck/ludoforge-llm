@@ -249,6 +249,51 @@ describe('translateEffectTrace', () => {
     expect(entries.every((entry) => entry.moveIndex === 7)).toBe(true);
   });
 
+  it('summarizes hygienic macro binding names in forEach and reduce messages', () => {
+    const visualConfig = new VisualConfigProvider(null);
+    const effectTrace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'forEach',
+        bind: '$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__player',
+        matchCount: 4,
+        iteratedCount: 4,
+        provenance: provenance(),
+      },
+      {
+        kind: 'reduce',
+        itemBind: 'item',
+        accBind: 'acc',
+        resultBind: '$__macro_hand_rank_score_turnStructure_phases_5__onEnter_1__straightHigh',
+        matchCount: 21,
+        iteratedCount: 21,
+        provenance: provenance(),
+      },
+      {
+        kind: 'forEach',
+        bind: '$player',
+        matchCount: 3,
+        iteratedCount: 3,
+        provenance: provenance(),
+      },
+      {
+        kind: 'reduce',
+        itemBind: 'combo',
+        accBind: 'best',
+        resultBind: 'bestScore',
+        matchCount: 5,
+        iteratedCount: 5,
+        provenance: provenance(),
+      },
+    ];
+
+    const entries = translateEffectTrace(effectTrace, [], visualConfig, gameDefNoFactionsFixture(), 0);
+
+    expect(entries[0]?.message).toBe('For-each Player in Collect Forced Bets iterated 4/4.');
+    expect(entries[1]?.message).toBe('Reduce Straight High in Hand Rank Score iterated 21/21.');
+    expect(entries[2]?.message).toBe('For-each Player iterated 3/3.');
+    expect(entries[3]?.message).toBe('Reduce Best Score iterated 5/5.');
+  });
+
   it('falls back to formatted ids and player labels when visual names are missing', () => {
     const visualConfig = new VisualConfigProvider(null);
     const effectTrace: readonly EffectTraceEntry[] = [

@@ -21,6 +21,28 @@
   background: rgba(74, 144, 217, 0.18);
 }
 
+.copyButton {
+  composes: interactive from './shared.module.css';
+  composes: fontUi from './shared.module.css';
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 2px var(--space-sm);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  align-self: flex-end;
+}
+
+.copyButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.copyButtonCopied {
+  border-color: rgba(74, 184, 100, 0.6);
+  color: rgba(74, 184, 100, 0.9);
+}
+
 .scrollArea {
   max-height: 260px;
   overflow-y: auto;

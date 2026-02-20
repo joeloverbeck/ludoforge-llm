@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 
+import { formatEventLogAsText } from '../model/format-event-log-text.js';
 import type { EventLogEntry } from '../model/translate-effect-trace.js';
 import { CollapsiblePanel } from './CollapsiblePanel.js';
 import styles from './EventLogPanel.module.css';
@@ -61,6 +62,7 @@ function hasNestedTriggerEntries(entries: readonly EventLogEntry[]): boolean {
 export function EventLogPanel({ entries, onSelectEntry, selectedEntryId = null }: EventLogPanelProps): ReactElement {
   const [enabledKinds, setEnabledKinds] = useState<ReadonlySet<EventKind>>(new Set(EVENT_KIND_ORDER));
   const [collapsedNestedMoves, setCollapsedNestedMoves] = useState<ReadonlySet<number>>(new Set());
+  const [copyLabel, setCopyLabel] = useState<'Copy' | 'Copied!'>('Copy');
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const autoScrollEnabledRef = useRef(true);
 
@@ -94,6 +96,15 @@ export function EventLogPanel({ entries, onSelectEntry, selectedEntryId = null }
       return nextKinds;
     });
   };
+
+  const handleCopy = useCallback(async (): Promise<void> => {
+    const text = formatEventLogAsText(filteredEntries);
+    await navigator.clipboard.writeText(text);
+    setCopyLabel('Copied!');
+    setTimeout(() => {
+      setCopyLabel('Copy');
+    }, 1500);
+  }, [filteredEntries]);
 
   const toggleNestedForMove = (moveIndex: number): void => {
     setCollapsedNestedMoves((currentMoves) => {
@@ -133,6 +144,18 @@ export function EventLogPanel({ entries, onSelectEntry, selectedEntryId = null }
           );
         })}
       </div>
+
+      <button
+        type="button"
+        className={`${styles.copyButton} ${copyLabel === 'Copied!' ? styles.copyButtonCopied : ''}`}
+        data-testid="event-log-copy"
+        disabled={filteredEntries.length === 0}
+        onClick={() => {
+          void handleCopy();
+        }}
+      >
+        {copyLabel}
+      </button>
 
       <div
         ref={scrollContainerRef}

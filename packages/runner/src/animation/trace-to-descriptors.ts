@@ -13,12 +13,9 @@ import {
   type PresetRegistry,
 } from './preset-registry.js';
 import { classifyCardSemantic } from './card-classification.js';
+import { isTriggeredEffectTraceEntry } from '../model/trace-projection.js';
 
 const BUILTIN_PRESET_REGISTRY = createPresetRegistry();
-
-function isTriggered(entry: EffectTraceEntry): boolean {
-  return entry.provenance.eventContext === 'triggerEffect';
-}
 
 function resolvePreset(
   traceKind: EffectTraceEntry['kind'],
@@ -37,7 +34,7 @@ function mapEntry(
   options: AnimationMappingOptions | undefined,
   presetRegistry: PresetRegistry,
 ): AnimationDescriptor | null {
-  const triggered = isTriggered(entry);
+  const triggered = isTriggeredEffectTraceEntry(entry);
   switch (entry.kind) {
     case 'moveToken':
       {

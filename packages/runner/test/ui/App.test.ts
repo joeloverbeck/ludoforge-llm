@@ -293,4 +293,29 @@ describe('App', () => {
       expect(screen.getByTestId('game-selection-screen')).toBeTruthy();
     });
   });
+
+  it('marks session dirty when runtime move callback is invoked', async () => {
+    testDoubles.sessionStore = createMockSessionStore({
+      sessionState: {
+        screen: 'activeGame',
+        gameId: 'fitl',
+        seed: 17,
+        playerConfig: [{ playerId: 1, type: 'human' }],
+      },
+      unsavedChanges: false,
+      moveAccumulator: [],
+    });
+    testDoubles.createSessionStore.mockImplementation(() => testDoubles.sessionStore);
+
+    const { App } = await import('../../src/App.js');
+
+    render(createElement(App));
+    const runtimeOptions = testDoubles.useActiveGameRuntime.mock.calls.at(-1)?.[1] as
+      | { onMoveApplied?: (move: unknown) => void }
+      | undefined;
+    const move = { actionId: 'tick', params: {} };
+    runtimeOptions?.onMoveApplied?.(move);
+    expect(testDoubles.sessionStore?.getState().unsavedChanges).toBe(true);
+    expect(testDoubles.sessionStore?.getState().moveAccumulator).toEqual([move]);
+  });
 });

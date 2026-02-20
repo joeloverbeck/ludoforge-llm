@@ -122,8 +122,12 @@ function pickOneOption(store: ReturnType<typeof createGameStore>): ChoiceScalar 
   return asChoiceScalar(pending.options[0]!.value, 'pending');
 }
 
-function createStoreWithDefaultVisuals(bridge: GameWorkerAPI) {
-  return createGameStore(bridge, new VisualConfigProvider(null));
+function createStoreWithDefaultVisuals(bridge: GameWorkerAPI, onMoveApplied?: (move: Move) => void) {
+  return createGameStore(
+    bridge,
+    new VisualConfigProvider(null),
+    onMoveApplied === undefined ? undefined : { onMoveApplied },
+  );
 }
 
 type Awaitable<T> = T | Promise<T>;
@@ -459,6 +463,20 @@ describe('createGameStore', () => {
     expect(state.choicePending).toBeNull();
   });
 
+  it('confirmMove reports committed human moves via onMoveApplied callback', async () => {
+    const def = compileStoreFixture(5);
+    const bridge = createGameWorker();
+    const onMoveApplied = vi.fn<(move: Move) => void>();
+    const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
+    await store.getState().initGame(def, 16, asPlayerId(0));
+    await store.getState().selectAction(asActionId('tick'));
+
+    await store.getState().confirmMove();
+
+    expect(onMoveApplied).toHaveBeenCalledTimes(1);
+    expect(onMoveApplied).toHaveBeenCalledWith({ actionId: asActionId('tick'), params: {} });
+  });
+
   it('confirmMove stores effect trace and trigger firings from applyMove', async () => {
     const def = compileStoreFixture(5);
     const baseState = initialState(def, 16, 2);
@@ -699,6 +717,111 @@ describe('createGameStore', () => {
     expect(outcome).toBe('advanced');
     expect(applyMove).toHaveBeenCalledTimes(1);
     expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(1));
+  });
+
+  it('resolveAiStep reports committed AI moves via onMoveApplied callback', async () => {
+    const def = compileStoreFixture(8);
+    const aiState = {
+      ...initialState(def, 37, 2),
+      activePlayer: asPlayerId(1),
+    };
+    const stillAiState = {
+      ...aiState,
+      globalVars: {
+        ...aiState.globalVars,
+        round: 1,
+      },
+      activePlayer: asPlayerId(1),
+    };
+    const aiMove: Move = { actionId: asActionId('tick'), params: {} };
+    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+      state: stillAiState,
+      effectTrace: [],
+      triggerFirings: [],
+      warnings: [],
+    }));
+    const bridge = createBridgeStub({
+      init: () => aiState,
+      enumerateLegalMoves: () => ({ moves: [aiMove], warnings: [] }),
+      terminalResult: () => null,
+      applyMove,
+    });
+    const onMoveApplied = vi.fn<(move: Move) => void>();
+    const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
+
+    await store.getState().initGame(def, 37, asPlayerId(0));
+    const outcome = await store.getState().resolveAiStep();
+
+    expect(outcome).toBe('advanced');
+    expect(onMoveApplied).toHaveBeenCalledTimes(1);
+    expect(onMoveApplied).toHaveBeenCalledWith(aiMove);
+  });
+
+  it('reports mixed human and AI moves to callback in applied order', async () => {
+    const def = compileStoreFixture(8);
+    const humanMove: Move = { actionId: asActionId('tick'), params: {} };
+    const aiMove: Move = { actionId: asActionId('tick'), params: { ai: 1 } };
+    const initial = initialState(def, 44, 2);
+    const afterHumanOne = {
+      ...initial,
+      activePlayer: asPlayerId(1),
+      globalVars: { ...initial.globalVars, round: 1 },
+    };
+    const afterAi = {
+      ...afterHumanOne,
+      activePlayer: asPlayerId(0),
+      globalVars: { ...afterHumanOne.globalVars, round: 2 },
+    };
+    const afterHumanTwo = {
+      ...afterAi,
+      activePlayer: asPlayerId(1),
+      globalVars: { ...afterAi.globalVars, round: 3 },
+    };
+    let currentState = initial;
+    const bridge = createBridgeStub({
+      init: () => {
+        currentState = initial;
+        return currentState;
+      },
+      enumerateLegalMoves: () => {
+        if (currentState.activePlayer === asPlayerId(1)) {
+          return { moves: [aiMove], warnings: [] };
+        }
+        return { moves: [humanMove], warnings: [] };
+      },
+      terminalResult: () => null,
+      legalChoices: () => ({ kind: 'complete', complete: true }),
+      applyMove: (move) => {
+        if ('ai' in move.params) {
+          currentState = afterAi;
+        } else if (currentState.globalVars.round === 0) {
+          currentState = afterHumanOne;
+        } else {
+          currentState = afterHumanTwo;
+        }
+        return {
+          state: currentState,
+          effectTrace: [],
+          triggerFirings: [],
+          warnings: [],
+        };
+      },
+    });
+    const onMoveApplied = vi.fn<(move: Move) => void>();
+    const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
+
+    await store.getState().initGame(def, 44, asPlayerId(0));
+    await store.getState().selectAction(asActionId('tick'));
+    await store.getState().confirmMove();
+    await store.getState().resolveAiStep();
+    await store.getState().selectAction(asActionId('tick'));
+    await store.getState().confirmMove();
+
+    expect(onMoveApplied.mock.calls.map((entry) => entry[0])).toEqual([
+      humanMove,
+      aiMove,
+      humanMove,
+    ]);
   });
 
   it('resolveAiStep returns no-op when there is no initialized session', async () => {

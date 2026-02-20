@@ -99,6 +99,10 @@ interface MutationTransitionInputs {
   readonly terminal: TerminalResult | null;
 }
 
+interface CreateGameStoreOptions {
+  readonly onMoveApplied?: (move: Move) => void;
+}
+
 type ChoiceActionType = ChoicePendingRequest['type'];
 type OperationKind = 'init' | 'action';
 
@@ -438,7 +442,11 @@ function materializeNextState(current: GameStore, patch: Partial<MutableGameStor
   };
 }
 
-export function createGameStore(bridge: GameWorkerAPI, visualConfigProvider: VisualConfigProvider) {
+export function createGameStore(
+  bridge: GameWorkerAPI,
+  visualConfigProvider: VisualConfigProvider,
+  options?: CreateGameStoreOptions,
+) {
   return create<GameStore>()(
     subscribeWithSelector((set, get) => {
       let sessionEpoch = 0;
@@ -621,6 +629,7 @@ export function createGameStore(bridge: GameWorkerAPI, visualConfigProvider: Vis
         if (!wasApplied) {
           return 'no-op';
         }
+        options?.onMoveApplied?.(aiMove);
         return 'advanced';
       };
 
@@ -696,15 +705,16 @@ export function createGameStore(bridge: GameWorkerAPI, visualConfigProvider: Vis
             if (state.partialMove === null) {
               return;
             }
+            const move = state.partialMove;
 
-            const result = await bridge.applyMove(state.partialMove, undefined, toOperationStamp(ctx));
+            const result = await bridge.applyMove(move, undefined, toOperationStamp(ctx));
             const mutationInputs = await deriveMutationInputs(result.state);
             const lifecycle = assertLifecycleTransition(
               state.gameLifecycle,
               lifecycleFromTerminal(mutationInputs.terminal),
               'confirmMove',
             );
-            guardSetAndDerive(ctx, {
+            const wasApplied = guardSetAndDerive(ctx, {
               ...buildStateMutationState(
                 mutationInputs.gameState,
                 mutationInputs.legalMoveResult,
@@ -714,6 +724,9 @@ export function createGameStore(bridge: GameWorkerAPI, visualConfigProvider: Vis
                 result.triggerFirings,
               ),
             });
+            if (wasApplied) {
+              options?.onMoveApplied?.(move);
+            }
           });
         },
 

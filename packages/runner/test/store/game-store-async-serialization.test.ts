@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
-import { asActionId, asPlayerId, initialState, type GameDef } from '@ludoforge/engine/runtime';
+import { asActionId, asPlayerId, initialState, type GameDef, type Move } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { createGameStore } from '../../src/store/game-store.js';
@@ -85,8 +85,15 @@ function compileCounterFixture(terminalThreshold: number): GameDef {
   return compiled.gameDef;
 }
 
-function createStoreWithDefaultVisuals(bridge: ReturnType<typeof createGameWorker>) {
-  return createGameStore(bridge, new VisualConfigProvider(null));
+function createStoreWithDefaultVisuals(
+  bridge: ReturnType<typeof createGameWorker>,
+  onMoveApplied?: (move: Move) => void,
+) {
+  return createGameStore(
+    bridge,
+    new VisualConfigProvider(null),
+    onMoveApplied === undefined ? undefined : { onMoveApplied },
+  );
 }
 
 describe('createGameStore async serialization', () => {
@@ -177,6 +184,30 @@ describe('createGameStore async serialization', () => {
     expect(state.gameState?.globalVars.round).toBe(0);
     expect(state.effectTrace).toEqual([]);
     expect(state.triggerFirings).toEqual([]);
+  });
+
+  it('stale confirmMove completion after newer initGame does not emit move callback', async () => {
+    const def = compileCounterFixture(5);
+    const bridge = createGameWorker();
+    const onMoveApplied = vi.fn();
+    const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
+    await store.getState().initGame(def, 10, asPlayerId(0));
+    await store.getState().selectAction(asActionId('tick'));
+
+    const baseApplyMove = bridge.applyMove.bind(bridge);
+    const gate = createDeferred<void>();
+    vi.spyOn(bridge, 'applyMove').mockImplementationOnce(async (move, options, stamp) => {
+      await gate.promise;
+      return await baseApplyMove(move, options, stamp);
+    });
+
+    const confirmPromise = store.getState().confirmMove();
+    const newerInitPromise = store.getState().initGame(def, 99, asPlayerId(1));
+
+    gate.resolve();
+    await Promise.all([confirmPromise, newerInitPromise]);
+
+    expect(onMoveApplied).not.toHaveBeenCalled();
   });
 
   it('stale chooseOne completion after newer selectAction does not mutate current move construction', async () => {

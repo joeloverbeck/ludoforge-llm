@@ -1,4 +1,4 @@
-import { asPlayerId } from '@ludoforge/engine/runtime';
+import { asPlayerId, type Move } from '@ludoforge/engine/runtime';
 import { useEffect, useRef, useState } from 'react';
 import type { StoreApi } from 'zustand';
 
@@ -14,6 +14,10 @@ export interface ActiveGameRuntime {
   readonly bridgeHandle: GameBridgeHandle;
   readonly store: StoreApi<GameStore>;
   readonly visualConfigProvider: ReturnType<typeof resolveBootstrapConfig>['visualConfigProvider'];
+}
+
+interface ActiveGameRuntimeOptions {
+  readonly onMoveApplied?: (move: Move) => void;
 }
 
 function resolveHumanPlayerId(
@@ -33,7 +37,10 @@ function buildActiveGameBootstrapSearch(state: ActiveGameState, descriptor: Boot
   return `?game=${encodeURIComponent(descriptor.queryValue)}&seed=${String(state.seed)}&player=${String(humanPlayerId)}`;
 }
 
-export function useActiveGameRuntime(sessionState: SessionState): ActiveGameRuntime | null {
+export function useActiveGameRuntime(
+  sessionState: SessionState,
+  options?: ActiveGameRuntimeOptions,
+): ActiveGameRuntime | null {
   const runtimeRef = useRef<ActiveGameRuntime | null>(null);
   const [runtime, setRuntime] = useState<ActiveGameRuntime | null>(null);
 
@@ -56,7 +63,11 @@ export function useActiveGameRuntime(sessionState: SessionState): ActiveGameRunt
     const search = buildActiveGameBootstrapSearch(sessionState, descriptor);
     const bootstrapConfig = resolveBootstrapConfig(search);
     const bridgeHandle = createGameBridge();
-    const store = createGameStore(bridgeHandle.bridge, bootstrapConfig.visualConfigProvider);
+    const store = createGameStore(
+      bridgeHandle.bridge,
+      bootstrapConfig.visualConfigProvider,
+      options?.onMoveApplied === undefined ? undefined : { onMoveApplied: options.onMoveApplied },
+    );
     const nextRuntime: ActiveGameRuntime = {
       bridgeHandle,
       store,
@@ -88,7 +99,7 @@ export function useActiveGameRuntime(sessionState: SessionState): ActiveGameRunt
       }
       bridgeHandle.terminate();
     };
-  }, [sessionState]);
+  }, [sessionState, options?.onMoveApplied]);
 
   return runtime;
 }

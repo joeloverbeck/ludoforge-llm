@@ -1,5 +1,6 @@
-import { type ReactElement, useEffect, useRef, useState } from 'react';
+import { type ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
+import type { Move } from '@ludoforge/engine/runtime';
 
 import { createSessionStore } from './session/session-store.js';
 import { findBootstrapDescriptorById, useActiveGameRuntime } from './session/active-game-runtime.js';
@@ -16,7 +17,12 @@ export function App(): ReactElement {
   const sessionStore = sessionStoreRef.current;
   const sessionState = useStore(sessionStore, (state) => state.sessionState);
   const unsavedChanges = useStore(sessionStore, (state) => state.unsavedChanges);
-  const activeRuntime = useActiveGameRuntime(sessionState);
+  const handleMoveApplied = useCallback((move: Move) => {
+    sessionStore.getState().recordMove(move);
+  }, [sessionStore]);
+  const activeRuntime = useActiveGameRuntime(sessionState, {
+    onMoveApplied: handleMoveApplied,
+  });
 
   useEffect(() => {
     if (sessionState.screen !== 'activeGame') {

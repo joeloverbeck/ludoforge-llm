@@ -35,8 +35,10 @@ vi.mock('../../src/bootstrap/resolve-bootstrap-config.js', () => ({
   resolveBootstrapConfig: testDoubles.resolveBootstrapConfig,
 }));
 
-function HookHarness({ sessionState }: { readonly sessionState: SessionState }) {
-  const runtime = useActiveGameRuntime(sessionState);
+function HookHarness(
+  { sessionState, onMoveApplied }: { readonly sessionState: SessionState; readonly onMoveApplied?: (move: unknown) => void },
+) {
+  const runtime = useActiveGameRuntime(sessionState, onMoveApplied === undefined ? undefined : { onMoveApplied });
   return createElement('div', { 'data-testid': runtime === null ? 'runtime-null' : 'runtime-ready' });
 }
 
@@ -98,6 +100,7 @@ describe('useActiveGameRuntime', () => {
   });
 
   it('creates runtime and initializes game during activeGame', async () => {
+    const onMoveApplied = vi.fn();
     render(createElement(HookHarness, {
       sessionState: {
         screen: 'activeGame',
@@ -105,6 +108,7 @@ describe('useActiveGameRuntime', () => {
         seed: 17,
         playerConfig: [{ playerId: 1, type: 'human' }],
       },
+      onMoveApplied,
     }));
 
     expect(screen.getByTestId('runtime-ready')).toBeTruthy();
@@ -114,6 +118,12 @@ describe('useActiveGameRuntime', () => {
     await waitFor(() => {
       expect(testDoubles.initGame).toHaveBeenCalledTimes(1);
     });
+    expect(testDoubles.createGameStore).toHaveBeenCalledTimes(1);
+    const storeOptions = testDoubles.createGameStore.mock.calls[0]?.[2] as { onMoveApplied?: (move: unknown) => void } | undefined;
+    expect(storeOptions?.onMoveApplied).toBeTypeOf('function');
+    const sampleMove = { actionId: 'move:a', params: {} };
+    storeOptions?.onMoveApplied?.(sampleMove);
+    expect(onMoveApplied).toHaveBeenCalledWith(sampleMove);
   });
 
   it('terminates runtime when leaving activeGame', async () => {

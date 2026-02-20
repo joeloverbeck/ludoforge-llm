@@ -341,7 +341,7 @@ describe('createZoneRenderer', () => {
     expect(base.strokeStyle).toEqual({ color: 0x60a5fa, width: 3, alpha: 1 });
   });
 
-  it('renders markers below the name and updates token badge count', () => {
+  it('renders markers below the name without rendering a zone token badge', () => {
     const { renderer } = createRendererHarness();
 
     renderer.update(
@@ -360,18 +360,15 @@ describe('createZoneRenderer', () => {
     );
 
     const container = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const badge = container.children[2] as InstanceType<typeof MockText>;
-    const markers = container.children[3] as InstanceType<typeof MockText>;
+    const markers = container.children[2] as InstanceType<typeof MockText>;
 
-    expect(badge.text).toBe('3');
-    expect(badge.visible).toBe(true);
+    expect(container.children).toHaveLength(3);
     expect(markers.text).toContain('Control:red');
     expect(markers.text).toContain('Supply:on');
     expect(markers.visible).toBe(true);
 
     renderer.update([makeZone({ id: 'zone:a', tokenIDs: [], hiddenTokenCount: 0, markers: [] })], new Map());
 
-    expect(badge.visible).toBe(false);
     expect(markers.visible).toBe(false);
   });
 
@@ -436,14 +433,11 @@ describe('createZoneRenderer', () => {
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
     const nameLabel = zoneContainer.children[1] as InstanceType<typeof MockText>;
-    const badgeLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
-    const markersLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
+    const markersLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
 
     expect(nameLabel.text).toBe('Saigon');
     expect(nameLabel.position.x).toBe(-44);
     expect(nameLabel.position.y).toBeCloseTo(-7.2);
-    expect(badgeLabel.position.x).toBe(35);
-    expect(badgeLabel.position.y).toBeCloseTo(-30.4);
     expect(markersLabel.position.x).toBe(-44);
     expect(markersLabel.position.y).toBeCloseTo(12.8);
   });

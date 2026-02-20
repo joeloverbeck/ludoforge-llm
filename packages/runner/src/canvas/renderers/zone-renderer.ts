@@ -20,7 +20,6 @@ const LINE_CORNER_RADIUS = 4;
 interface ZoneVisualElements {
   readonly base: Graphics;
   readonly nameLabel: Text;
-  readonly tokenCountBadge: Text;
   readonly markersLabel: Text;
 }
 
@@ -77,7 +76,6 @@ export function createZoneRenderer(
           zoneContainer.addChild(
             visuals.base,
             visuals.nameLabel,
-            visuals.tokenCountBadge,
             visuals.markersLabel,
           );
 
@@ -149,16 +147,13 @@ function createZoneVisualElements(): ZoneVisualElements {
   const base = new Graphics();
 
   const nameLabel = createText('', -ZONE_WIDTH * 0.44, -10, 14);
-  const tokenCountBadge = createText('', ZONE_WIDTH * 0.35, -ZONE_HEIGHT * 0.38, 12);
   const markersLabel = createText('', -ZONE_WIDTH * 0.44, 18, 11);
 
-  tokenCountBadge.visible = false;
   markersLabel.visible = false;
 
   return {
     base,
     nameLabel,
-    tokenCountBadge,
     markersLabel,
   };
 }
@@ -192,10 +187,6 @@ function updateZoneVisuals(
   layoutZoneLabels(visuals, dimensions.width, dimensions.height);
 
   visuals.nameLabel.text = zone.displayName;
-
-  const tokenTotal = zone.tokenIDs.length + zone.hiddenTokenCount;
-  visuals.tokenCountBadge.text = String(tokenTotal);
-  visuals.tokenCountBadge.visible = tokenTotal > 0;
 
   const markerText = zone.markers.map((marker) => `${marker.displayName}:${marker.state}`).join('  ');
   visuals.markersLabel.text = markerText;
@@ -242,7 +233,6 @@ function resolveFillColor(zone: RenderZone): number {
 
 function layoutZoneLabels(visuals: ZoneVisualElements, width: number, height: number): void {
   visuals.nameLabel.position.set(-width * 0.44, -height * 0.09);
-  visuals.tokenCountBadge.position.set(width * 0.35, -height * 0.38);
   visuals.markersLabel.position.set(-width * 0.44, height * 0.16);
 }
 

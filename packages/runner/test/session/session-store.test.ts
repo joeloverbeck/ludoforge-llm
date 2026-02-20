@@ -55,7 +55,23 @@ describe('createSessionStore', () => {
       gameId: 'fitl',
       seed: 42,
       playerConfig: PLAYER_CONFIG,
+      initialMoveHistory: [],
     });
+  });
+
+  it('resumes active game from loaded save payload and preloads move history', () => {
+    const store = createSessionStore();
+    store.getState().resumeGame('fitl', 17, PLAYER_CONFIG, [MOVE_A, MOVE_B]);
+
+    expect(store.getState().sessionState).toEqual({
+      screen: 'activeGame',
+      gameId: 'fitl',
+      seed: 17,
+      playerConfig: PLAYER_CONFIG,
+      initialMoveHistory: [MOVE_A, MOVE_B],
+    });
+    expect(store.getState().moveAccumulator).toEqual([MOVE_A, MOVE_B]);
+    expect(store.getState().unsavedChanges).toBe(false);
   });
 
   it('returnToMenu resets session state and dirty tracking from every screen', () => {
@@ -103,6 +119,21 @@ describe('createSessionStore', () => {
       gameId: 'fitl',
       seed: 101,
       moveHistory: [MOVE_A, MOVE_B],
+    });
+  });
+
+  it('transitions to replay from active game via startReplay', () => {
+    const store = createSessionStore();
+    toPreGame(store, 'fitl');
+    store.getState().startGame(42, PLAYER_CONFIG);
+
+    store.getState().startReplay('fitl', 101, [MOVE_A]);
+
+    expect(store.getState().sessionState).toEqual({
+      screen: 'replay',
+      gameId: 'fitl',
+      seed: 101,
+      moveHistory: [MOVE_A],
     });
   });
 

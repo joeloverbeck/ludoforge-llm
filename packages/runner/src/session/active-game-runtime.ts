@@ -83,6 +83,15 @@ export function useActiveGameRuntime(
         return;
       }
       const humanPlayerId = resolveHumanPlayerId(sessionState.playerConfig, descriptor.defaultPlayerId);
+      if (sessionState.initialMoveHistory.length > 0) {
+        await store.getState().initGameFromHistory(
+          gameDef,
+          sessionState.seed,
+          asPlayerId(humanPlayerId),
+          sessionState.initialMoveHistory,
+        );
+        return;
+      }
       await store.getState().initGame(gameDef, sessionState.seed, asPlayerId(humanPlayerId));
     })().catch((error) => {
       if (cancelled) {

@@ -40,6 +40,8 @@ interface GameContainerProps {
   readonly onReturnToMenu?: () => void;
   readonly onNewGame?: () => void;
   readonly onQuit?: () => void;
+  readonly onSave?: () => void;
+  readonly onLoad?: () => void;
 }
 
 type OverlayRegionPanel = (props: { readonly store: StoreApi<GameStore> }) => ReactElement | null;
@@ -92,7 +94,7 @@ export function resolveTooltipAnchorState(hoverAnchor: HoverAnchor | null): Tool
   };
 }
 
-export function GameContainer({ store, visualConfigProvider, onReturnToMenu, onNewGame, onQuit }: GameContainerProps): ReactElement {
+export function GameContainer({ store, visualConfigProvider, onReturnToMenu, onNewGame, onQuit, onSave, onLoad }: GameContainerProps): ReactElement {
   const gameLifecycle = useStore(store, (state) => state.gameLifecycle);
   const error = useStore(store, (state) => state.error);
   const renderModel = useStore(store, (state) => state.renderModel);
@@ -176,6 +178,28 @@ export function GameContainer({ store, visualConfigProvider, onReturnToMenu, onN
           topBarContent={(
             <>
               {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, store)}
+              <div className={styles.sessionButtons}>
+                {onSave === undefined ? null : (
+                  <button
+                    type="button"
+                    className={styles.sessionButton}
+                    data-testid="session-save-button"
+                    onClick={onSave}
+                  >
+                    Save
+                  </button>
+                )}
+                {onLoad === undefined ? null : (
+                  <button
+                    type="button"
+                    className={styles.sessionButton}
+                    data-testid="session-load-button"
+                    onClick={onLoad}
+                  >
+                    Load
+                  </button>
+                )}
+              </div>
               {onQuit === undefined ? null : (
                 <button
                   type="button"

@@ -6,11 +6,20 @@ import styles from './GameSelectionScreen.module.css';
 
 interface GameSelectionScreenProps {
   readonly onSelectGame: (gameId: string) => void;
+  readonly onResumeSavedGame?: (saveId: string) => void | Promise<void>;
+  readonly onReplaySavedGame?: (saveId: string) => void | Promise<void>;
+  readonly onDeleteSavedGame?: (saveId: string) => void | Promise<void>;
 }
 
-export function GameSelectionScreen({ onSelectGame }: GameSelectionScreenProps): ReactElement {
+export function GameSelectionScreen({
+  onSelectGame,
+  onResumeSavedGame,
+  onReplaySavedGame,
+  onDeleteSavedGame,
+}: GameSelectionScreenProps): ReactElement {
   const [savedGames, setSavedGames] = useState<readonly SavedGameListItem[]>([]);
   const [savedGamesStatus, setSavedGamesStatus] = useState<'loading' | 'ready'>('loading');
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const gameDescriptors = listBootstrapDescriptors().filter((descriptor) => descriptor.id !== 'default');
 
   useEffect(() => {
@@ -82,15 +91,47 @@ export function GameSelectionScreen({ onSelectGame }: GameSelectionScreenProps):
                     <p className={styles.savedMeta}>
                       {savedGame.gameName} | {formatTimestamp(savedGame.timestamp)} | {savedGame.moveCount} moves
                     </p>
+                    {savedGame.isTerminal
+                      ? <p className={styles.savedTerminal}>Completed</p>
+                      : null}
                   </div>
                   <div className={styles.savedActions}>
-                    <button type="button" disabled>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void onResumeSavedGame?.(savedGame.id);
+                      }}
+                      disabled={savedGame.isTerminal || onResumeSavedGame === undefined}
+                    >
                       Resume
                     </button>
-                    <button type="button" disabled>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void onReplaySavedGame?.(savedGame.id);
+                      }}
+                      disabled={onReplaySavedGame === undefined}
+                    >
                       Replay
                     </button>
-                    <button type="button" disabled>
+                    <button
+                      type="button"
+                      disabled={onDeleteSavedGame === undefined || pendingDeleteId === savedGame.id}
+                      onClick={() => {
+                        void (async () => {
+                          if (onDeleteSavedGame === undefined) {
+                            return;
+                          }
+                          setPendingDeleteId(savedGame.id);
+                          try {
+                            await onDeleteSavedGame(savedGame.id);
+                            setSavedGames((current) => current.filter((entry) => entry.id !== savedGame.id));
+                          } finally {
+                            setPendingDeleteId((current) => (current === savedGame.id ? null : current));
+                          }
+                        })();
+                      }}
+                    >
                       Delete
                     </button>
                   </div>

@@ -16,6 +16,7 @@ export interface ActiveGameState {
   readonly gameId: string;
   readonly seed: number;
   readonly playerConfig: readonly PlayerSeatConfig[];
+  readonly initialMoveHistory: readonly Move[];
 }
 
 export interface ReplayState {

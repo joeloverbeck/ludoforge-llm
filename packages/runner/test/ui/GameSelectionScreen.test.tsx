@@ -115,6 +115,7 @@ describe('GameSelectionScreen', () => {
         gameName: 'Fire in the Lake',
         timestamp: 1735689600000,
         moveCount: 27,
+        isTerminal: false,
       },
     ]);
 
@@ -128,5 +129,27 @@ describe('GameSelectionScreen', () => {
     expect(screen.getByRole('button', { name: 'Resume' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Replay' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
+  });
+
+  it('disables resume for terminal saves', async () => {
+    testDoubles.listSavedGames.mockResolvedValue([
+      {
+        id: 'save-1',
+        displayName: 'Campaign Night',
+        gameName: 'Fire in the Lake',
+        timestamp: 1735689600000,
+        moveCount: 27,
+        isTerminal: true,
+      },
+    ]);
+
+    const { GameSelectionScreen } = await import('../../src/ui/GameSelectionScreen.js');
+    render(createElement(GameSelectionScreen, { onSelectGame: vi.fn() }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Campaign Night')).toBeTruthy();
+    });
+    expect((screen.getByRole('button', { name: 'Resume' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('Completed')).toBeTruthy();
   });
 });

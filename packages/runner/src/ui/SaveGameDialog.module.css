@@ -1,0 +1,85 @@
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  background: rgba(10, 15, 27, 0.65);
+  padding: var(--space-lg);
+}
+
+.card {
+  width: min(460px, calc(100vw - (2 * var(--space-lg))));
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-panel) 92%, black);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.42);
+  color: var(--text-primary);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.title {
+  margin: 0;
+}
+
+.fieldLabel {
+  font-weight: 600;
+}
+
+.input {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-panel) 76%, black);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  padding: var(--space-sm);
+}
+
+.error {
+  margin: 0;
+  color: #fca5a5;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.cancelButton,
+.saveButton {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancelButton {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-panel) 75%, black);
+}
+
+.cancelButton:hover {
+  background: color-mix(in srgb, var(--bg-panel) 88%, black);
+}
+
+.saveButton {
+  color: var(--text-primary);
+  background: color-mix(in srgb, #2563eb 34%, var(--bg-panel));
+}
+
+.saveButton:hover {
+  background: color-mix(in srgb, #2563eb 48%, var(--bg-panel));
+}
+
+.saveButton:disabled,
+.cancelButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

@@ -85,7 +85,30 @@
   font-size: 0.9rem;
 }
 
+.savedTerminal {
+  margin: 0.35rem 0 0;
+  color: #0f5132;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .savedActions {
   display: flex;
   gap: 0.5rem;
+}
+
+.savedActions button {
+  border: 1px solid #9aa9c1;
+  border-radius: 0.45rem;
+  background: #f5f8fc;
+  color: #22324a;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+}
+
+.savedActions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }

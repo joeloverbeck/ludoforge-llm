@@ -3,12 +3,14 @@
 import { createElement } from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { asActionId } from '@ludoforge/engine/runtime';
 
 import type { SessionState } from '../../src/session/session-types.js';
 import { useActiveGameRuntime } from '../../src/session/active-game-runtime.js';
 
 const testDoubles = vi.hoisted(() => ({
   initGame: vi.fn(),
+  initGameFromHistory: vi.fn(),
   reportBootstrapFailure: vi.fn(),
   terminate: vi.fn(),
   createGameBridge: vi.fn(),
@@ -51,6 +53,7 @@ describe('useActiveGameRuntime', () => {
   beforeEach(() => {
     vi.resetModules();
     testDoubles.initGame.mockReset();
+    testDoubles.initGameFromHistory.mockReset();
     testDoubles.reportBootstrapFailure.mockReset();
     testDoubles.terminate.mockReset();
     testDoubles.createGameBridge.mockReset();
@@ -81,6 +84,7 @@ describe('useActiveGameRuntime', () => {
     const gameStore = {
       getState: () => ({
         initGame: testDoubles.initGame,
+        initGameFromHistory: testDoubles.initGameFromHistory,
         reportBootstrapFailure: testDoubles.reportBootstrapFailure,
       }),
     };
@@ -107,6 +111,7 @@ describe('useActiveGameRuntime', () => {
         gameId: 'fitl',
         seed: 17,
         playerConfig: [{ playerId: 1, type: 'human' }],
+        initialMoveHistory: [],
       },
       onMoveApplied,
     }));
@@ -126,6 +131,30 @@ describe('useActiveGameRuntime', () => {
     expect(onMoveApplied).toHaveBeenCalledWith(sampleMove);
   });
 
+  it('bootstraps resumed active games through initGameFromHistory', async () => {
+    const moveHistory = [{ actionId: asActionId('move:a'), params: {} }];
+    render(createElement(HookHarness, {
+      sessionState: {
+        screen: 'activeGame',
+        gameId: 'fitl',
+        seed: 17,
+        playerConfig: [{ playerId: 1, type: 'human' }],
+        initialMoveHistory: moveHistory,
+      },
+    }));
+
+    await waitFor(() => {
+      expect(testDoubles.initGameFromHistory).toHaveBeenCalledTimes(1);
+    });
+    expect(testDoubles.initGame).not.toHaveBeenCalled();
+    expect(testDoubles.initGameFromHistory).toHaveBeenCalledWith(
+      { metadata: { id: 'fitl' } },
+      17,
+      1,
+      moveHistory,
+    );
+  });
+
   it('terminates runtime when leaving activeGame', async () => {
     const { rerender } = render(createElement(HookHarness, {
       sessionState: {
@@ -133,6 +162,7 @@ describe('useActiveGameRuntime', () => {
         gameId: 'fitl',
         seed: 17,
         playerConfig: [{ playerId: 1, type: 'human' }],
+        initialMoveHistory: [],
       },
     }));
 

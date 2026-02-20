@@ -9,12 +9,19 @@ interface SessionStoreState {
   readonly sessionState:
     | { readonly screen: 'gameSelection' }
     | { readonly screen: 'preGameConfig'; readonly gameId: string }
-    | { readonly screen: 'activeGame'; readonly gameId: string; readonly seed: number; readonly playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }> }
+    | {
+      readonly screen: 'activeGame';
+      readonly gameId: string;
+      readonly seed: number;
+      readonly playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>;
+      readonly initialMoveHistory: readonly unknown[];
+    }
     | { readonly screen: 'replay'; readonly gameId: string; readonly seed: number; readonly moveHistory: readonly unknown[] };
   readonly unsavedChanges: boolean;
   readonly moveAccumulator: readonly unknown[];
   selectGame(gameId: string): void;
   startGame(seed: number, playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>): void;
+  resumeGame(gameId: string, seed: number, playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>, moveHistory: readonly unknown[]): void;
   returnToMenu(): void;
   startReplay(gameId: string, seed: number, moveHistory: readonly unknown[]): void;
   newGame(): void;
@@ -32,6 +39,8 @@ const testDoubles = vi.hoisted(() => ({
   findBootstrapDescriptorById: vi.fn(),
   useActiveGameRuntime: vi.fn(),
   createSessionStore: vi.fn(),
+  loadGame: vi.fn(),
+  deleteSavedGame: vi.fn(),
   runtimeStore: {
     getState: vi.fn(() => ({
       initGame: vi.fn(),
@@ -77,9 +86,23 @@ function createMockSessionStore(initialState?: Partial<Pick<SessionStoreState, '
           gameId: current.gameId,
           seed,
           playerConfig,
+          initialMoveHistory: [],
         },
         unsavedChanges: false,
         moveAccumulator: [],
+      });
+    },
+    resumeGame(gameId, seed, playerConfig, moveHistory) {
+      store.setState({
+        sessionState: {
+          screen: 'activeGame',
+          gameId,
+          seed,
+          playerConfig,
+          initialMoveHistory: moveHistory,
+        },
+        unsavedChanges: false,
+        moveAccumulator: moveHistory,
       });
     },
     returnToMenu() {
@@ -136,8 +159,19 @@ vi.mock('../../src/session/session-store.js', () => ({
   createSessionStore: testDoubles.createSessionStore,
 }));
 
+vi.mock('../../src/persistence/save-manager.js', () => ({
+  loadGame: testDoubles.loadGame,
+  deleteSavedGame: testDoubles.deleteSavedGame,
+}));
+
 vi.mock('../../src/ui/GameContainer.js', () => ({
-  GameContainer: (props: { readonly onReturnToMenu?: () => void; readonly onQuit?: () => void; readonly onNewGame?: () => void }) => (
+  GameContainer: (props: {
+    readonly onReturnToMenu?: () => void;
+    readonly onQuit?: () => void;
+    readonly onNewGame?: () => void;
+    readonly onSave?: () => void;
+    readonly onLoad?: () => void;
+  }) => (
     createElement('div', { 'data-testid': 'game-container' },
       createElement('button', {
         type: 'button',
@@ -154,6 +188,16 @@ vi.mock('../../src/ui/GameContainer.js', () => ({
         'data-testid': 'game-container-new-game',
         onClick: props.onNewGame,
       }, 'new'),
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'game-container-save',
+        onClick: props.onSave,
+      }, 'save'),
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'game-container-load',
+        onClick: props.onLoad,
+      }, 'load'),
     )
   ),
 }));
@@ -163,7 +207,12 @@ vi.mock('../../src/ui/ErrorBoundary.js', () => ({
 }));
 
 vi.mock('../../src/ui/GameSelectionScreen.js', () => ({
-  GameSelectionScreen: (props: { readonly onSelectGame: (gameId: string) => void }) => (
+  GameSelectionScreen: (props: {
+    readonly onSelectGame: (gameId: string) => void;
+    readonly onResumeSavedGame?: (saveId: string) => void;
+    readonly onReplaySavedGame?: (saveId: string) => void;
+    readonly onDeleteSavedGame?: (saveId: string) => void;
+  }) => (
     createElement('main', { 'data-testid': 'game-selection-screen' },
       createElement('button', {
         type: 'button',
@@ -172,7 +221,86 @@ vi.mock('../../src/ui/GameSelectionScreen.js', () => ({
           props.onSelectGame('fitl');
         },
       }, 'select-fitl'),
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'resume-saved',
+        onClick: () => props.onResumeSavedGame?.('save-1'),
+      }, 'resume'),
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'replay-saved',
+        onClick: () => props.onReplaySavedGame?.('save-1'),
+      }, 'replay'),
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'delete-saved',
+        onClick: () => props.onDeleteSavedGame?.('save-1'),
+      }, 'delete'),
     )
+  ),
+}));
+
+vi.mock('../../src/ui/SaveGameDialog.js', () => ({
+  SaveGameDialog: (props: { readonly isOpen: boolean; readonly onClose: () => void; readonly onSaved: () => void }) => (
+    props.isOpen
+      ? createElement('div', { 'data-testid': 'save-game-dialog' },
+        createElement('button', {
+          type: 'button',
+          'data-testid': 'save-game-dialog-confirm',
+          onClick: props.onSaved,
+        }, 'confirm-save'),
+        createElement('button', {
+          type: 'button',
+          'data-testid': 'save-game-dialog-close',
+          onClick: props.onClose,
+        }, 'close-save'),
+      )
+      : null
+  ),
+}));
+
+vi.mock('../../src/ui/LoadGameDialog.js', () => ({
+  LoadGameDialog: (props: {
+    readonly isOpen: boolean;
+    readonly onClose: () => void;
+    readonly onResume: (record: {
+      gameId: string;
+      seed: number;
+      moveHistory: readonly unknown[];
+      playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>;
+      isTerminal: boolean;
+    }) => void;
+    readonly onReplay: (record: { gameId: string; seed: number; moveHistory: readonly unknown[] }) => void;
+  }) => (
+    props.isOpen
+      ? createElement('div', { 'data-testid': 'load-game-dialog' },
+        createElement('button', {
+          type: 'button',
+          'data-testid': 'load-game-dialog-resume',
+          onClick: () => props.onResume({
+            gameId: 'fitl',
+            seed: 17,
+            moveHistory: [{ actionId: 'tick', params: {} }],
+            playerConfig: [{ playerId: 1, type: 'human' }],
+            isTerminal: false,
+          }),
+        }, 'resume-loaded'),
+        createElement('button', {
+          type: 'button',
+          'data-testid': 'load-game-dialog-replay',
+          onClick: () => props.onReplay({
+            gameId: 'fitl',
+            seed: 17,
+            moveHistory: [{ actionId: 'tick', params: {} }],
+          }),
+        }, 'replay-loaded'),
+        createElement('button', {
+          type: 'button',
+          'data-testid': 'load-game-dialog-close',
+          onClick: props.onClose,
+        }, 'close-load'),
+      )
+      : null
   ),
 }));
 
@@ -187,6 +315,8 @@ describe('App', () => {
     testDoubles.findBootstrapDescriptorById.mockReset();
     testDoubles.useActiveGameRuntime.mockReset();
     testDoubles.createSessionStore.mockReset();
+    testDoubles.loadGame.mockReset();
+    testDoubles.deleteSavedGame.mockReset();
 
     testDoubles.findBootstrapDescriptorById.mockImplementation((gameId: string) => {
       if (gameId !== 'fitl') {
@@ -228,6 +358,15 @@ describe('App', () => {
 
     testDoubles.sessionStore = createMockSessionStore();
     testDoubles.createSessionStore.mockImplementation(() => testDoubles.sessionStore);
+    testDoubles.loadGame.mockResolvedValue({
+      gameId: 'fitl',
+      seed: 17,
+      moveHistory: [{ actionId: 'tick', params: {} }],
+      playerConfig: [{ playerId: 1, type: 'human' }],
+      isTerminal: false,
+    });
+    testDoubles.deleteSavedGame.mockResolvedValue(undefined);
+    vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
   });
 
   it('renders game selection screen by default', async () => {
@@ -275,6 +414,7 @@ describe('App', () => {
         gameId: 'fitl',
         seed: 17,
         playerConfig: [{ playerId: 1, type: 'human' }],
+        initialMoveHistory: [],
       },
       unsavedChanges: true,
     });
@@ -301,6 +441,7 @@ describe('App', () => {
         gameId: 'fitl',
         seed: 17,
         playerConfig: [{ playerId: 1, type: 'human' }],
+        initialMoveHistory: [],
       },
       unsavedChanges: false,
       moveAccumulator: [],
@@ -317,5 +458,24 @@ describe('App', () => {
     runtimeOptions?.onMoveApplied?.(move);
     expect(testDoubles.sessionStore?.getState().unsavedChanges).toBe(true);
     expect(testDoubles.sessionStore?.getState().moveAccumulator).toEqual([move]);
+  });
+
+  it('resumes non-terminal saved games from selection actions', async () => {
+    const { App } = await import('../../src/App.js');
+
+    render(createElement(App));
+
+    fireEvent.click(screen.getByTestId('resume-saved'));
+
+    await waitFor(() => {
+      expect(testDoubles.loadGame).toHaveBeenCalledWith('save-1');
+    });
+    expect(testDoubles.sessionStore?.getState().sessionState).toEqual({
+      screen: 'activeGame',
+      gameId: 'fitl',
+      seed: 17,
+      playerConfig: [{ playerId: 1, type: 'human' }],
+      initialMoveHistory: [{ actionId: 'tick', params: {} }],
+    });
   });
 });

@@ -57,6 +57,7 @@ export type AiStepOutcome = 'advanced' | 'no-op' | 'human-turn' | 'terminal' | '
 
 interface GameStoreActions {
   initGame(def: GameDef, seed: number, playerID: PlayerId): Promise<void>;
+  initGameFromHistory(def: GameDef, seed: number, playerID: PlayerId, moveHistory: readonly Move[]): Promise<void>;
   reportBootstrapFailure(error: unknown): void;
   selectAction(actionId: ActionId): Promise<void>;
   chooseOne(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
@@ -658,6 +659,37 @@ export function createGameStore(
             guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerID, legalMoveResult, terminal, lifecycle));
           } catch (error) {
             const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'initGame:failure');
+            guardSetAndDerive(operation, buildInitFailureState(error, lifecycle));
+          } finally {
+            finishOperation(operation);
+          }
+        },
+
+        async initGameFromHistory(def, seed, playerID, moveHistory) {
+          const operation = beginOperation('init');
+          const currentLifecycle = get().gameLifecycle;
+          const initializingLifecycle = assertLifecycleTransition(currentLifecycle, 'initializing', 'initGameFromHistory:start');
+          guardSet(operation, {
+            gameLifecycle: initializingLifecycle,
+            error: null,
+          });
+
+          try {
+            await bridge.init(def, seed, undefined, toOperationStamp(operation));
+            if (moveHistory.length > 0) {
+              await bridge.playSequence(moveHistory, toOperationStamp(operation));
+            }
+            const gameState = await bridge.getState();
+            const legalMoveResult = await bridge.enumerateLegalMoves();
+            const terminal = await bridge.terminalResult();
+            const lifecycle = assertLifecycleTransition(
+              get().gameLifecycle,
+              lifecycleFromTerminal(terminal),
+              'initGameFromHistory:success',
+            );
+            guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerID, legalMoveResult, terminal, lifecycle));
+          } catch (error) {
+            const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'initGameFromHistory:failure');
             guardSetAndDerive(operation, buildInitFailureState(error, lifecycle));
           } finally {
             finishOperation(operation);

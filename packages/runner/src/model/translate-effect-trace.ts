@@ -368,10 +368,13 @@ function optionalPlayerId(playerId: number | undefined): { readonly playerId?: n
 /**
  * Summarize a hygienic macro binding name into a readable label.
  *
- * Hygienic names follow the pattern `$__macro_<macroId>_<path>__<stem>`.
- * The macro name is lowercase/underscore (from kebab-case), the invocation
- * path starts with a camelCase GameDef key, and the stem (loop variable)
- * is the last `__`-separated segment.
+ * Generated hygienic names follow:
+ * `$__macro_${sanitize(macroId)}_${sanitize(path)}_${sanitize(stem)}`.
+ * The `__` sequences present in many bindings come from sanitizing
+ * characters in invocation paths (for example `].` -> `__`), not from a
+ * dedicated delimiter between path and stem. This formatter therefore uses
+ * a best-effort heuristic: split on `__`, use the first segment for the
+ * macro label and the last segment for the stem.
  *
  * Simple bindings like `$player` or `target` are formatted directly.
  */

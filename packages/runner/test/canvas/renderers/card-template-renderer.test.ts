@@ -24,22 +24,6 @@ const { MockContainer, MockText } = vi.hoisted(() => {
     }
   }
 
-  class HoistedMockContainer {
-    children: HoistedMockText[] = [];
-
-    eventMode: 'none' | 'static' = 'none';
-
-    interactiveChildren = true;
-
-    addChild(...children: HoistedMockText[]): void {
-      this.children.push(...children);
-    }
-
-    removeChildren(): void {
-      this.children = [];
-    }
-  }
-
   class HoistedMockText {
     text: string;
 
@@ -53,9 +37,29 @@ const { MockContainer, MockText } = vi.hoisted(() => {
 
     interactiveChildren = true;
 
+    destroy = vi.fn();
+
     constructor(options: { text: string; style: Record<string, unknown> }) {
       this.text = options.text;
       this.style = options.style;
+    }
+  }
+
+  class HoistedMockContainer {
+    children: HoistedMockText[] = [];
+
+    eventMode: 'none' | 'static' = 'none';
+
+    interactiveChildren = true;
+
+    addChild(...children: HoistedMockText[]): void {
+      this.children.push(...children);
+    }
+
+    removeChildren(): HoistedMockText[] {
+      const removed = this.children;
+      this.children = [];
+      return removed;
     }
   }
 
@@ -98,6 +102,45 @@ describe('drawCardContent', () => {
     expect(container.children[1]?.text).toBe('Spades');
     expect(container.children[1]?.position.y).toBe(2);
     expect(container.children[1]?.anchor.x).toBe(0.5);
+  });
+
+  it('destroys previous text nodes before drawing next card face', () => {
+    const container = new MockContainer();
+
+    drawCardContent(
+      container as unknown as Container,
+      {
+        width: 48,
+        height: 68,
+        layout: {
+          rank: { y: 8, fontSize: 14, align: 'left' },
+        },
+      },
+      {
+        rank: 'A',
+      },
+    );
+
+    const previousChild = container.children[0];
+    expect(previousChild).toBeDefined();
+
+    drawCardContent(
+      container as unknown as Container,
+      {
+        width: 48,
+        height: 68,
+        layout: {
+          rank: { y: 8, fontSize: 14, align: 'left' },
+        },
+      },
+      {
+        rank: 'K',
+      },
+    );
+
+    expect(previousChild?.destroy).toHaveBeenCalledTimes(1);
+    expect(container.children).toHaveLength(1);
+    expect(container.children[0]?.text).toBe('K');
   });
 
   it('skips missing fields and applies wrap/alignment options', () => {

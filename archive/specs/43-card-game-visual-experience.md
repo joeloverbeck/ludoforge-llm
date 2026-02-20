@@ -1,5 +1,7 @@
 # Spec 43 — Card Game Visual Experience
 
+**Status**: ✅ COMPLETED
+
 ## Context
 
 The browser runner's first pass is complete, but card games (Texas Hold'em) have critical visual deficiencies: tokens render as gray circles instead of cards, all zones are shunted to a sidebar instead of appearing on a table, there are no deal animations, and the Hand panel shows raw property text. The root causes are (1) a missing `tokenTypes` config section, (2) the layout pipeline routing ALL zones to the aux sidebar when no adjacency-based board zones exist, (3) card template text rendering with no color/symbol support, and (4) no card-aware Hand panel component. This spec addresses all of these plus table background, chip/pot/bet overlays, and dealer button visualization.
@@ -366,3 +368,17 @@ D1+D3 can be done in parallel. D2+D6 are sequential. D4+D5 can be done in parall
    - Hand panel shows mini card visuals
    - Deal animation plays when game starts
 5. Load FITL game — confirm no regressions (graph layout, token shapes, sidebar aux zones all unchanged)
+
+## Outcome
+
+- Completion date: 2026-02-20
+- What changed:
+  - Implemented card-focused visual configuration and rendering updates across the runner, including token type default matching, enriched card template field mapping, card-role-aware layout behavior, table background/overlay rendering, and hand-panel mini-card visuals.
+  - Verified and stabilized card deal animation behavior in Texas Hold'em, including a regression fix for card text lifecycle cleanup that was interrupting animation trace processing.
+  - Added/updated runner tests for animation, layout, rendering, and UI flows to validate the delivered visual experience.
+- Deviations from original plan:
+  - Deal animation verification required a runtime debugging and cleanup fix due to a PIXI text/texture lifecycle crash discovered during verification.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test`
+  - `pnpm -F @ludoforge/runner test -- --reporter=verbose test/animation/`
+  - Runner suites passed for the implemented card visual features and animation paths.

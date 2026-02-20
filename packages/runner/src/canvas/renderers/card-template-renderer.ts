@@ -8,7 +8,11 @@ export function drawCardContent(
   template: CardTemplate,
   fields: Readonly<Record<string, number | string | boolean>>,
 ): void {
+  const removed = [...container.children];
   container.removeChildren();
+  for (const child of removed) {
+    child.destroy();
+  }
 
   const resolvedFields = resolveCardTemplateFields(template.layout, fields);
   if (resolvedFields.length === 0) return;

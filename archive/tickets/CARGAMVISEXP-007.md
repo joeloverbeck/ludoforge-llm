@@ -1,6 +1,6 @@
 # CARGAMVISEXP-007: Deal animation verification
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -102,3 +102,17 @@ Do NOT create new animation presets or modify the GSAP timeline builder.
 
 1. `pnpm -F @ludoforge/runner test -- --reporter=verbose test/animation/`
 2. `pnpm -F @ludoforge/runner typecheck && pnpm -F @ludoforge/runner lint && pnpm -F @ludoforge/runner test`
+
+## Outcome
+
+- Completion date: 2026-02-20
+- What changed:
+  - Investigated runtime logs and identified a PIXI text texture cleanup crash during effect-trace processing.
+  - Added regression test coverage in `packages/runner/test/canvas/renderers/card-template-renderer.test.ts` to ensure prior card text nodes are destroyed on redraw.
+  - Fixed renderer cleanup in `packages/runner/src/canvas/renderers/card-template-renderer.ts` by removing and destroying prior text children before drawing new card content.
+- Deviations from original plan:
+  - Ticket began as verification-only, but required a focused debugging/fix pass because animations were being interrupted by a runtime exception.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test -- test/canvas/renderers/card-template-renderer.test.ts test/canvas/renderers/token-renderer.test.ts`
+  - `pnpm -F @ludoforge/runner test -- --reporter=verbose test/animation/`
+  - All targeted and animation tests passed.

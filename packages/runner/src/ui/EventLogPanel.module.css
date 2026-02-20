@@ -85,13 +85,27 @@
 }
 
 .entry {
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.entryButton {
+  composes: interactive from './shared.module.css';
+  composes: fontUi from './shared.module.css';
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
   padding: var(--space-xs);
-  background: rgba(255, 255, 255, 0.03);
+}
+
+.entryButtonSelected {
+  background: rgba(74, 144, 217, 0.18);
 }
 
 .kind {

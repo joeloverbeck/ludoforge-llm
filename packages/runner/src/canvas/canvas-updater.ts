@@ -3,6 +3,7 @@ import type { StoreApi } from 'zustand';
 import type { RenderAdjacency, RenderToken, RenderZone } from '../model/render-model';
 import type { GameStore } from '../store/game-store';
 import { adjacenciesVisuallyEqual, tokensVisuallyEqual, zonesVisuallyEqual } from './canvas-equality';
+import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
 import type { PositionStore } from './position-store';
 import type { AdjacencyRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
 import type { ViewportResult } from './viewport-setup';
@@ -34,10 +35,12 @@ export interface CanvasUpdaterDeps {
   readonly adjacencyRenderer: AdjacencyRenderer;
   readonly tokenRenderer: TokenRenderer;
   readonly viewport: ViewportResult;
+  readonly getInteractionHighlights?: () => InteractionHighlights;
 }
 
 export interface CanvasUpdater {
   start(): void;
+  setInteractionHighlights(highlights: InteractionHighlights): void;
   destroy(): void;
 }
 
@@ -52,13 +55,16 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
   let started = false;
   let latestSnapshot = selectCanvasSnapshot(store.getState());
   let latestPositionSnapshot = deps.positionStore.getSnapshot();
+  let latestInteractionHighlights = deps.getInteractionHighlights?.() ?? EMPTY_INTERACTION_HIGHLIGHTS;
   let animationPlaying = store.getState().animationPlaying;
   let queuedSnapshot: CanvasSnapshotSelectorResult | null = null;
 
   const applySnapshot = (snapshot: CanvasSnapshotSelectorResult): void => {
-    deps.zoneRenderer.update(snapshot.zones, latestPositionSnapshot.positions);
+    const highlightedZoneIDs = new Set(latestInteractionHighlights.zoneIDs);
+    const highlightedTokenIDs = new Set(latestInteractionHighlights.tokenIDs);
+    deps.zoneRenderer.update(snapshot.zones, latestPositionSnapshot.positions, highlightedZoneIDs);
     deps.adjacencyRenderer.update(snapshot.adjacencies, latestPositionSnapshot.positions);
-    deps.tokenRenderer.update(snapshot.tokens, deps.zoneRenderer.getContainerMap());
+    deps.tokenRenderer.update(snapshot.tokens, deps.zoneRenderer.getContainerMap(), highlightedTokenIDs);
   };
 
   const maybeApplySnapshot = (snapshot: CanvasSnapshotSelectorResult): void => {
@@ -114,6 +120,15 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
       deps.viewport.updateWorldBounds(latestPositionSnapshot.bounds);
       deps.viewport.centerOnBounds(latestPositionSnapshot.bounds);
       latestSnapshot = selectCanvasSnapshot(store.getState());
+      if (animationPlaying) {
+        queuedSnapshot = latestSnapshot;
+        return;
+      }
+      applySnapshot(latestSnapshot);
+    },
+
+    setInteractionHighlights(highlights): void {
+      latestInteractionHighlights = highlights;
       if (animationPlaying) {
         queuedSnapshot = latestSnapshot;
         return;

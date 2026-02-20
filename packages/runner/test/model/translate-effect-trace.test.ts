@@ -23,6 +23,10 @@ describe('translateEffectTrace', () => {
       factions: {
         us: { displayName: 'United States' },
       },
+      tokenTypes: {
+        'ace-of-spades': { displayName: 'Ace of Spades Card' },
+        'nva-troop': { displayName: 'NVA Troop' },
+      },
     });
 
     const effectTrace: readonly EffectTraceEntry[] = [
@@ -213,6 +217,7 @@ describe('translateEffectTrace', () => {
       zoneIds: ['hand:0'],
       tokenIds: ['ace-spades-0'],
     });
+    expect(create?.message).toContain('Ace of Spades Card');
 
     const destroy = entries[3];
     expect(destroy).toMatchObject({
@@ -220,6 +225,7 @@ describe('translateEffectTrace', () => {
       zoneIds: ['hue'],
       tokenIds: ['nva-troop-2'],
     });
+    expect(destroy?.message).toContain('NVA Troop');
 
     const fired = entries[9];
     expect(fired).toMatchObject({
@@ -262,6 +268,13 @@ describe('translateEffectTrace', () => {
         to: 'loc:saigon',
         provenance: provenance(),
       },
+      {
+        kind: 'createToken',
+        tokenId: 'nva-guerrilla-2',
+        type: 'nva-guerrillas',
+        zone: 'loc:saigon',
+        provenance: provenance(),
+      },
     ];
 
     const entries = translateEffectTrace(effectTrace, [], visualConfig, gameDefNoFactionsFixture(), 2);
@@ -270,6 +283,7 @@ describe('translateEffectTrace', () => {
     expect(entries[0]?.message).toContain('Pot Size');
     expect(entries[1]?.message).toContain('Loc Central Highlands');
     expect(entries[1]?.message).toContain('Loc Saigon');
+    expect(entries[2]?.message).toContain('Nva Guerrillas');
   });
 });
 

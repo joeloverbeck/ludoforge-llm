@@ -87,6 +87,7 @@ function createRuntimeFixture() {
     start: vi.fn(() => {
       lifecycle.push('updater-start');
     }),
+    setInteractionHighlights: vi.fn(),
     destroy: vi.fn(() => {
       lifecycle.push('updater-destroy');
     }),
@@ -405,6 +406,33 @@ describe('createGameCanvasRuntime', () => {
     expect(runtime.coordinateBridge).toBe(fixture.bridge);
     expect(fixture.viewportEvents.on).toHaveBeenCalledWith('moved', expect.any(Function));
     expect(onHoverAnchorChange).not.toHaveBeenCalled();
+
+    runtime.destroy();
+  });
+
+  it('forwards interaction highlights to canvas updater', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x0,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    runtime.setInteractionHighlights({
+      zoneIDs: ['zone:a'],
+      tokenIDs: ['token:1'],
+    });
+
+    expect(fixture.canvasUpdater.setInteractionHighlights).toHaveBeenCalledWith({
+      zoneIDs: ['zone:a'],
+      tokenIDs: ['token:1'],
+    });
 
     runtime.destroy();
   });

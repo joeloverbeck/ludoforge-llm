@@ -1,6 +1,6 @@
 # Spec 35-00: Frontend Implementation Roadmap
 
-**Status**: ACTIVE
+**Status**: ✅ COMPLETED
 **Created**: 2026-02-16
 **Scope**: Browser-based game runner — implementation order, dependencies, priorities, milestones
 
@@ -21,6 +21,7 @@ Spec 39 is completed and archived at `archive/specs/39-react-dom-ui-layer.md`.
 Spec 40 is completed and archived at `archive/specs/40-animation-system.md`.
 Spec 41 is completed and archived at `archive/specs/41-board-layout-engine.md`.
 Spec 42 is completed and archived at `archive/specs/42-per-game-visual-config.md`.
+Spec 43 is completed and archived at `archive/specs/43-session-management.md`.
 
 ---
 
@@ -36,7 +37,7 @@ Spec 42 is completed and archived at `archive/specs/42-per-game-visual-config.md
 | 40 | Animation System (completed) | P1 | L | 38 |
 | 41 | Board Layout Engine (completed) | P1 | M | 38 |
 | 42 | Per-Game Visual Config (completed) | P2 | M | 38, 39, 41 |
-| 43 | Session Management | P2 | M | 42 |
+| 43 | Session Management (completed) | P2 | M | 42 |
 
 Priority key: P0 = critical path, P1 = required for playable experience, P2 = polish/enhancement.
 Complexity key: S = small, M = medium, L = large.
@@ -136,15 +137,15 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [x] Visual config wired into rendering, layout, and animation (Spec 42 D7-D9)
 - [x] Visual fields stripped from engine types, compiler, and game specs (Spec 42 D10-D14)
 - [x] Engine metadata enrichment: optional `name`/`description` in `GameSpecMetadata` and `GameDef.metadata` (Spec 43 D0 -- cross-package engine change)
-- [ ] App-level session router with `AppScreen` state machine and navigation flows (Spec 43 D1)
+- [x] App-level session router with `AppScreen` state machine and navigation flows (Spec 43 D1)
 - [x] Data-driven game discovery via `import.meta.glob` replacing hardcoded visual config switch (Spec 43 D2)
-- [ ] Game selection screen with game list and saved games (Spec 43 D3)
-- [ ] Pre-game configuration (player count, seat assignment, seed) (Spec 43 D4)
-- [ ] Save/load game via Dexie.js -- single record per save, no chunking (Spec 43 D5)
-- [ ] Replay mode with scrubber, jump-to-move, speed control (Spec 43 D6)
-- [ ] Event log panel with human-readable translations via VisualConfigProvider (Spec 43 D7)
+- [x] Game selection screen with game list and saved games (Spec 43 D3)
+- [x] Pre-game configuration (player count, seat assignment, seed) (Spec 43 D4)
+- [x] Save/load game via Dexie.js -- single record per save, no chunking (Spec 43 D5)
+- [x] Replay mode with scrubber, jump-to-move, speed control (Spec 43 D6)
+- [x] Event log panel with human-readable translations via VisualConfigProvider (Spec 43 D7)
 
-**F3 Progress**: In progress. Spec 40 is completed (closed 2026-02-19). Spec 41 is completed and archived (closed 2026-02-19): D1-D4 delivered (layout engine core, computation, caching, aux sidebar). Spec 42 is completed and archived (closed 2026-02-19): visual config extraction and engine visual-field removal delivered and validated via engine/runner/turbo test+lint gates. Spec 43 revised with D0-D7 deliverable structure (2026-02-20), with D0 and D2 completed; D2 uses `generatedFromSpecPath` + `import.meta.glob` for visual-config discovery and keeps display metadata canonical in `GameSpecDoc`/compiled `GameDef` rather than duplicating fields in `bootstrap-targets.json`.
+**F3 Progress**: Completed. Spec 40 closed 2026-02-19. Spec 41 archived 2026-02-19 with D1-D4 delivered. Spec 42 archived 2026-02-19 with D1-D14 delivered. Spec 43 closed 2026-02-20 and archived with D0-D7 delivered (session router, game selection, pre-game config, Dexie save/load, replay scrubber, and event-log translation/UI enhancements).
 
 ---
 
@@ -208,3 +209,20 @@ Suggested ticket series prefixes:
 | Large GameDef structured clone overhead | Low | Low | GameDef loaded once at init. State objects <10KB — structured clone is fast. |
 | ForceAtlas2 layout quality poor for specific games | Medium | Low | Per-game visual config can override positions. Compute once, cache. |
 | Bundle size exceeds target | Low | Medium | Tree-shake PixiJS v8. Monitor with `vite-bundle-visualizer`. |
+
+---
+
+## Outcome
+
+- Completion date: 2026-02-20
+- Implemented:
+  - Frontend runner specs 35-43 delivered and archived.
+  - Milestones F1, F2, and F3 gate criteria fully satisfied.
+  - Session-management surface includes app router, pre-game config, Dexie save/load, replay scrubber, and event-log translation/UI.
+  - Event log selection now drives canvas highlight for referenced zones/tokens via UI-level interaction highlights.
+- Deviations:
+  - None outstanding in roadmap milestones at archive time.
+- Verification:
+  - `pnpm -F @ludoforge/runner test`
+  - `pnpm -F @ludoforge/runner lint`
+  - `pnpm -F @ludoforge/runner typecheck`

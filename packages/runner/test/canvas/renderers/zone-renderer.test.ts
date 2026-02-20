@@ -330,6 +330,17 @@ describe('createZoneRenderer', () => {
     expect(base.strokeStyle).toEqual({ color: 0xfacc15, width: 4, alpha: 1 });
   });
 
+  it('renders interaction-highlighted stroke when zone id is selected from event log', () => {
+    const { renderer } = createRendererHarness();
+
+    renderer.update([makeZone({ id: 'zone:a' })], new Map(), new Set(['zone:a']));
+
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+    const base = zoneContainer.children[0] as InstanceType<typeof MockGraphics>;
+
+    expect(base.strokeStyle).toEqual({ color: 0x60a5fa, width: 3, alpha: 1 });
+  });
+
   it('renders markers below the name and updates token badge count', () => {
     const { renderer } = createRendererHarness();
 

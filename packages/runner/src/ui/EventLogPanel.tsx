@@ -18,6 +18,8 @@ const EVENT_KIND_LABELS: Readonly<Record<EventKind, string>> = {
 
 interface EventLogPanelProps {
   readonly entries: readonly EventLogEntry[];
+  readonly onSelectEntry?: (entry: EventLogEntry) => void;
+  readonly selectedEntryId?: string | null;
 }
 
 interface EventLogMoveGroup {
@@ -56,7 +58,7 @@ function hasNestedTriggerEntries(entries: readonly EventLogEntry[]): boolean {
   return entries.some((entry) => entry.kind === 'trigger' && entry.depth > 0);
 }
 
-export function EventLogPanel({ entries }: EventLogPanelProps): ReactElement {
+export function EventLogPanel({ entries, onSelectEntry, selectedEntryId = null }: EventLogPanelProps): ReactElement {
   const [enabledKinds, setEnabledKinds] = useState<ReadonlySet<EventKind>>(new Set(EVENT_KIND_ORDER));
   const [collapsedNestedMoves, setCollapsedNestedMoves] = useState<ReadonlySet<number>>(new Set());
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -180,8 +182,17 @@ export function EventLogPanel({ entries }: EventLogPanelProps): ReactElement {
                         data-testid={`event-log-entry-${entry.id}`}
                         style={{ paddingInlineStart: `${entry.kind === 'trigger' ? entry.depth * 10 : 0}px` }}
                       >
-                        <span className={styles.kind}>{EVENT_KIND_LABELS[entry.kind]}</span>
-                        <span className={styles.message}>{entry.message}</span>
+                        <button
+                          type="button"
+                          className={`${styles.entryButton} ${selectedEntryId === entry.id ? styles.entryButtonSelected : ''}`}
+                          data-testid={`event-log-entry-button-${entry.id}`}
+                          onClick={() => {
+                            onSelectEntry?.(entry);
+                          }}
+                        >
+                          <span className={styles.kind}>{EVENT_KIND_LABELS[entry.kind]}</span>
+                          <span className={styles.message}>{entry.message}</span>
+                        </button>
                       </li>
                     ))}
                   </ul>

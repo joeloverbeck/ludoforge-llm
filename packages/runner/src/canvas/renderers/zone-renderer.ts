@@ -46,6 +46,7 @@ export function createZoneRenderer(
     update(
       zones: readonly RenderZone[],
       positions: ReadonlyMap<string, Position>,
+      highlightedZoneIDs: ReadonlySet<string> = new Set<string>(),
     ): void {
       const nextZoneIds = new Set(zones.map((zone) => zone.id));
 
@@ -108,7 +109,7 @@ export function createZoneRenderer(
           zoneContainer.position.set(position.x, position.y);
         }
 
-        updateZoneVisuals(visuals, zone);
+        updateZoneVisuals(visuals, zone, highlightedZoneIDs.has(zone.id));
         const dimensions = resolveVisualDimensions(zone.visual, {
           width: ZONE_WIDTH,
           height: ZONE_HEIGHT,
@@ -181,12 +182,13 @@ function createText(text: string, x: number, y: number, fontSize: number): Text 
 function updateZoneVisuals(
   visuals: ZoneVisualElements,
   zone: RenderZone,
+  isInteractionHighlighted: boolean,
 ): void {
   const dimensions = resolveVisualDimensions(zone.visual, {
     width: ZONE_WIDTH,
     height: ZONE_HEIGHT,
   });
-  drawZoneBase(visuals.base, zone);
+  drawZoneBase(visuals.base, zone, isInteractionHighlighted);
   layoutZoneLabels(visuals, dimensions.width, dimensions.height);
 
   visuals.nameLabel.text = zone.displayName;
@@ -200,9 +202,9 @@ function updateZoneVisuals(
   visuals.markersLabel.visible = markerText.length > 0;
 }
 
-function drawZoneBase(base: Graphics, zone: RenderZone): void {
+function drawZoneBase(base: Graphics, zone: RenderZone, isInteractionHighlighted: boolean): void {
   const fill = resolveFillColor(zone);
-  const stroke = resolveStroke(zone);
+  const stroke = resolveStroke(zone, isInteractionHighlighted);
   const dimensions = resolveVisualDimensions(zone.visual, {
     width: ZONE_WIDTH,
     height: ZONE_HEIGHT,
@@ -244,11 +246,19 @@ function layoutZoneLabels(visuals: ZoneVisualElements, width: number, height: nu
   visuals.markersLabel.position.set(-width * 0.44, height * 0.16);
 }
 
-function resolveStroke(zone: RenderZone): { color: number; width: number; alpha: number } {
+function resolveStroke(zone: RenderZone, isInteractionHighlighted: boolean): { color: number; width: number; alpha: number } {
   if (zone.isHighlighted) {
     return {
       color: 0xfacc15,
       width: 4,
+      alpha: 1,
+    };
+  }
+
+  if (isInteractionHighlighted) {
+    return {
+      color: 0x60a5fa,
+      width: 3,
       alpha: 1,
     };
   }

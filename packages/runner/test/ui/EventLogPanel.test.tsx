@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { EventLogEntry } from '../../src/model/translate-effect-trace.js';
 import { EventLogPanel } from '../../src/ui/EventLogPanel.js';
@@ -63,6 +63,18 @@ describe('EventLogPanel', () => {
 
     expect(screen.queryByText('movement event')).toBeNull();
     expect(screen.getByText('variable event')).toBeTruthy();
+  });
+
+  it('emits selected entry callback when an event row is clicked', () => {
+    const onSelectEntry = vi.fn();
+    const entry = makeEntry({ id: 'move-0-effect-0', kind: 'movement' });
+
+    render(<EventLogPanel entries={[entry]} onSelectEntry={onSelectEntry} />);
+
+    fireEvent.click(screen.getByTestId('event-log-entry-button-move-0-effect-0'));
+
+    expect(onSelectEntry).toHaveBeenCalledTimes(1);
+    expect(onSelectEntry).toHaveBeenCalledWith(entry);
   });
 
   it('collapses and expands nested trigger rows per move group', () => {

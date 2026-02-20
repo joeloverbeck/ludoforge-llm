@@ -28,6 +28,7 @@ import { createCanvasUpdater, type CanvasUpdater } from './canvas-updater';
 import { setupViewport, type ViewportResult } from './viewport-setup';
 import { getOrComputeLayout } from '../layout/layout-cache.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
+import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
 
 const DEFAULT_BACKGROUND_COLOR = 0x0b1020;
 const DEFAULT_WORLD_SIZE = 1;
@@ -57,12 +58,14 @@ export interface GameCanvasProps {
   readonly visualConfigProvider: VisualConfigProvider;
   readonly backgroundColor?: number;
   readonly keyboardCoordinator?: KeyboardCoordinator;
+  readonly interactionHighlights?: InteractionHighlights;
   readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
   readonly onError?: (error: unknown) => void;
 }
 
 export interface GameCanvasRuntime {
   readonly coordinateBridge: CoordinateBridge;
+  setInteractionHighlights(highlights: InteractionHighlights): void;
   destroy(): void;
 }
 
@@ -72,6 +75,7 @@ interface GameCanvasRuntimeOptions {
   readonly visualConfigProvider: VisualConfigProvider;
   readonly backgroundColor: number;
   readonly keyboardCoordinator?: KeyboardCoordinator;
+  readonly interactionHighlights?: InteractionHighlights;
   readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
 }
 
@@ -222,6 +226,7 @@ export async function createGameCanvasRuntime(
     adjacencyRenderer,
     tokenRenderer,
     viewport: viewportResult,
+    getInteractionHighlights: () => options.interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
   });
   let animationController: AnimationController | null = null;
   let aiPlaybackController: AiPlaybackController | null = null;
@@ -397,6 +402,9 @@ export async function createGameCanvasRuntime(
 
   return {
     coordinateBridge,
+    setInteractionHighlights(highlights): void {
+      canvasUpdater.setInteractionHighlights(highlights);
+    },
     destroy(): void {
       if (destroyed) {
         return;
@@ -428,11 +436,13 @@ export function GameCanvas({
   visualConfigProvider,
   backgroundColor = DEFAULT_BACKGROUND_COLOR,
   keyboardCoordinator,
+  interactionHighlights = EMPTY_INTERACTION_HIGHLIGHTS,
   onHoverAnchorChange,
   onError,
 }: GameCanvasProps): ReactElement {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const runtimeRef = useRef<GameCanvasRuntime | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -449,6 +459,7 @@ export function GameCanvas({
       visualConfigProvider,
       backgroundColor,
       ...(keyboardCoordinator === undefined ? {} : { keyboardCoordinator }),
+      interactionHighlights: interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
       ...(onHoverAnchorChange === undefined ? {} : { onHoverAnchorChange }),
     };
 
@@ -458,6 +469,7 @@ export function GameCanvas({
         return;
       }
       runtime = createdRuntime;
+      runtimeRef.current = createdRuntime;
     }).catch((error: unknown) => {
       if (!cancelled) {
         onHoverAnchorChange?.(null);
@@ -468,6 +480,7 @@ export function GameCanvas({
     return () => {
       cancelled = true;
       runtime?.destroy();
+      runtimeRef.current = null;
     };
   }, [
     store,
@@ -477,6 +490,10 @@ export function GameCanvas({
     onHoverAnchorChange,
     onError,
   ]);
+
+  useEffect(() => {
+    runtimeRef.current?.setInteractionHighlights(interactionHighlights);
+  }, [interactionHighlights]);
 
   return (
     <div ref={rootRef} style={{ width: '100%', height: '100%' }}>

@@ -67,7 +67,11 @@ export function createTokenRenderer(
   const selectableByTokenId = new Map<string, boolean>();
 
   return {
-    update(tokens: readonly RenderToken[], zoneContainers: ReadonlyMap<string, Container>): void {
+    update(
+      tokens: readonly RenderToken[],
+      zoneContainers: ReadonlyMap<string, Container>,
+      highlightedTokenIDs: ReadonlySet<string> = new Set<string>(),
+    ): void {
       const renderEntries = buildRenderEntries(tokens);
       const nextTokenIds = new Set(renderEntries.map((entry) => entry.renderId));
       tokenContainerByTokenId.clear();
@@ -146,7 +150,14 @@ export function createTokenRenderer(
         const tokenIndexInZone = zoneTokenCounts.get(token.zoneID) ?? 0;
         zoneTokenCounts.set(token.zoneID, tokenIndexInZone + 1);
 
-        updateTokenVisuals(tokenContainer, visuals, token, entry.tokenIds.length, colorProvider);
+        updateTokenVisuals(
+          tokenContainer,
+          visuals,
+          token,
+          entry.tokenIds.length,
+          colorProvider,
+          highlightedTokenIDs.has(token.id),
+        );
 
         const zoneContainer = zoneContainers.get(token.zoneID);
         if (zoneContainer === undefined) {
@@ -224,6 +235,7 @@ function updateTokenVisuals(
   token: RenderToken,
   tokenCount: number,
   colorProvider: FactionColorProvider,
+  isInteractionHighlighted: boolean,
 ): void {
   const tokenVisual = colorProvider.getTokenTypeVisual(token.type);
   const tokenSymbols = colorProvider.resolveTokenSymbols(token.type, token.properties);
@@ -231,7 +243,7 @@ function updateTokenVisuals(
   const cardTemplate = resolveCardTemplate(shape, token.type, colorProvider);
   const dimensions = resolveTokenDimensions(shape, tokenVisual.size, cardTemplate);
   const fillColor = resolveTokenColor(token, tokenVisual, colorProvider);
-  const stroke = resolveStroke(token);
+  const stroke = resolveStroke(token, isInteractionHighlighted);
   const isFaceUp = token.faceUp;
 
   drawTokenShape(visuals.frontBase, shape, dimensions, fillColor, stroke);
@@ -282,9 +294,17 @@ function resolveTokenColor(
   return NEUTRAL_TOKEN_COLOR;
 }
 
-function resolveStroke(token: RenderToken): { color: number; width: number; alpha: number } {
+function resolveStroke(token: RenderToken, isInteractionHighlighted: boolean): { color: number; width: number; alpha: number } {
   if (token.isSelected) {
     return SELECTED_STROKE;
+  }
+
+  if (isInteractionHighlighted) {
+    return {
+      color: 0x60a5fa,
+      width: 3,
+      alpha: 1,
+    };
   }
 
   if (token.isSelectable) {

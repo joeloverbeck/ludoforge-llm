@@ -642,6 +642,24 @@ describe('createTokenRenderer', () => {
     expect(tokenContainer.scale.x).toBe(1.08);
   });
 
+  it('renders interaction-highlighted stroke for selected event-log token ids', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider();
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1' })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+      new Set(['token:1']),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const base = tokenContainer.children[2] as InstanceType<typeof MockGraphics>;
+    expect(base.strokeStyle).toEqual({ color: 0x60a5fa, width: 3, alpha: 1 });
+  });
+
   it('removes and destroys containers for deleted token IDs', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();

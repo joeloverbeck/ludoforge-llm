@@ -86,14 +86,14 @@ function translateEffectEntry(
       return {
         ...base,
         kind: 'token',
-        message: `Created ${formatIdAsDisplayName(entry.type)} ${formatIdAsDisplayName(entry.tokenId)} in ${resolveZoneName(entry.zone, visualConfig)}.`,
+        message: `Created ${resolveTokenTypeName(entry.type, visualConfig)} ${formatIdAsDisplayName(entry.tokenId)} in ${resolveZoneName(entry.zone, visualConfig)}.`,
       };
 
     case 'destroyToken':
       return {
         ...base,
         kind: 'token',
-        message: `Removed ${formatIdAsDisplayName(entry.type)} ${formatIdAsDisplayName(entry.tokenId)} from ${resolveZoneName(entry.zone, visualConfig)}.`,
+        message: `Removed ${resolveTokenTypeName(entry.type, visualConfig)} ${formatIdAsDisplayName(entry.tokenId)} from ${resolveZoneName(entry.zone, visualConfig)}.`,
       };
 
     case 'setTokenProp':
@@ -261,6 +261,10 @@ function resolveZoneName(zoneId: string, visualConfig: VisualConfigProvider): st
 
 function resolveFactionName(factionId: string, visualConfig: VisualConfigProvider): string {
   return visualConfig.getFactionDisplayName(factionId) ?? formatIdAsDisplayName(factionId);
+}
+
+function resolveTokenTypeName(tokenTypeId: string, visualConfig: VisualConfigProvider): string {
+  return visualConfig.getTokenTypeDisplayName(tokenTypeId) ?? formatIdAsDisplayName(tokenTypeId);
 }
 
 function resolvePlayerName(

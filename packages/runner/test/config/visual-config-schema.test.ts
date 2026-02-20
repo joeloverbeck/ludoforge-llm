@@ -178,6 +178,16 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts token type displayName', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      tokenTypes: {
+        'nva-guerrillas': { displayName: 'Guerrilla' },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
   it('accepts cards template assignments by token selectors', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

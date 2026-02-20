@@ -6,7 +6,6 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
-import type { GameStore } from '../../src/store/game-store.js';
 import { useEventLogEntries } from '../../src/ui/useEventLogEntries.js';
 import { translateEffectTrace } from '../../src/model/translate-effect-trace.js';
 

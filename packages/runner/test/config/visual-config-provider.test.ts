@@ -181,6 +181,18 @@ describe('VisualConfigProvider', () => {
     });
   });
 
+  it('token type display name returns configured value or null', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      tokenTypes: {
+        'nva-guerrillas': { displayName: 'Guerrilla' },
+      },
+    });
+
+    expect(provider.getTokenTypeDisplayName('nva-guerrillas')).toBe('Guerrilla');
+    expect(provider.getTokenTypeDisplayName('unknown-token')).toBeNull();
+  });
+
   it('resolveTokenSymbols applies ordered symbolRules over defaults', () => {
     const provider = new VisualConfigProvider({
       version: 1,

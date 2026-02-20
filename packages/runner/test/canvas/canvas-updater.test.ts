@@ -180,11 +180,12 @@ describe('createCanvasUpdater', () => {
     updater.start();
 
     expect(viewport.updateWorldBounds).toHaveBeenCalledWith(snapshot.bounds);
-    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, snapshot.positions);
+    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, snapshot.positions, new Set());
     expect(renderers.adjacencyRenderer.update).toHaveBeenCalledWith(model.adjacencies, snapshot.positions);
     expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
       model.tokens,
       renderers.zoneRenderer.getContainerMap(),
+      new Set(),
     );
   });
 
@@ -322,7 +323,7 @@ describe('createCanvasUpdater', () => {
     const latestSnapshot = positionStore.getSnapshot();
 
     expect(viewport.updateWorldBounds).toHaveBeenCalledWith(latestSnapshot.bounds);
-    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, latestSnapshot.positions);
+    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(model.zones, latestSnapshot.positions, new Set());
   });
 
   it('gates renderer updates while animation is playing', () => {
@@ -433,5 +434,44 @@ describe('createCanvasUpdater', () => {
     expect(renderers.zoneRenderer.update).not.toHaveBeenCalled();
     expect(renderers.adjacencyRenderer.update).not.toHaveBeenCalled();
     expect(renderers.tokenRenderer.update).not.toHaveBeenCalled();
+  });
+
+  it('applies interaction highlights without requiring store-state changes', () => {
+    const model = makeRenderModel();
+    const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
+    const positionStore = createPositionStore(['zone:a']);
+
+    const renderers = createRendererMocks();
+    const viewport = createViewportMock();
+
+    const updater = createCanvasUpdater({
+      store: store as unknown as StoreApi<GameStore>,
+      positionStore,
+      zoneRenderer: renderers.zoneRenderer,
+      adjacencyRenderer: renderers.adjacencyRenderer,
+      tokenRenderer: renderers.tokenRenderer,
+      viewport,
+    });
+
+    updater.start();
+    vi.clearAllMocks();
+
+    updater.setInteractionHighlights({
+      zoneIDs: ['zone:a'],
+      tokenIDs: ['token:1'],
+    });
+
+    expect(renderers.zoneRenderer.update).toHaveBeenCalledTimes(1);
+    expect(renderers.tokenRenderer.update).toHaveBeenCalledTimes(1);
+    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(
+      model.zones,
+      positionStore.getSnapshot().positions,
+      new Set(['zone:a']),
+    );
+    expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
+      model.tokens,
+      renderers.zoneRenderer.getContainerMap(),
+      new Set(['token:1']),
+    );
   });
 });

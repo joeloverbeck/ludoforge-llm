@@ -118,6 +118,7 @@ const TokenTypeVisualStyleSchema = z.object({
   symbol: z.string().optional(),
   backSymbol: z.string().optional(),
   symbolRules: z.array(TokenSymbolRuleSchema).optional(),
+  displayName: z.string().optional(),
 });
 
 const TokenTypeSelectorsSchema = z.object({

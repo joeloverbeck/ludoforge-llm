@@ -5,6 +5,7 @@ import type { StoreApi } from 'zustand';
 import { GameCanvas } from '../canvas/GameCanvas.js';
 import type { ScreenRect } from '../canvas/coordinate-bridge.js';
 import type { HoverAnchor, HoveredCanvasTarget } from '../canvas/hover-anchor-contract.js';
+import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from '../canvas/interaction-highlights.js';
 import { isEditableTarget } from '../input/editable-target.js';
 import { createKeyboardCoordinator } from '../input/keyboard-coordinator.js';
 import type { GameStore } from '../store/game-store.js';
@@ -114,6 +115,8 @@ export function GameContainer({
   const gameDefFactions = useStore(store, (state) => state.gameDef?.factions);
   const [hoverAnchor, setHoverAnchor] = useState<HoverAnchor | null>(null);
   const [eventLogVisible, setEventLogVisible] = useState(true);
+  const [interactionHighlights, setInteractionHighlights] = useState<InteractionHighlights>(EMPTY_INTERACTION_HIGHLIGHTS);
+  const [selectedEventLogEntryId, setSelectedEventLogEntryId] = useState<string | null>(null);
   const eventLogEntries = useEventLogEntries(store, visualConfigProvider);
   const keyboardShortcutsEnabled = !readOnlyMode && error === null && (gameLifecycle === 'playing' || gameLifecycle === 'terminal');
   const keyboardCoordinator = useMemo(
@@ -148,6 +151,11 @@ export function GameContainer({
     setEventLogVisible(true);
   }, [store]);
 
+  useEffect(() => {
+    setInteractionHighlights(EMPTY_INTERACTION_HIGHLIGHTS);
+    setSelectedEventLogEntryId(null);
+  }, [store]);
+
   const onHoverAnchorChange = useCallback((anchor: HoverAnchor | null): void => {
     setHoverAnchor(anchor);
   }, []);
@@ -179,7 +187,19 @@ export function GameContainer({
   const sidePanelContent = (
     <>
       {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, store)}
-      {eventLogVisible ? <EventLogPanel entries={eventLogEntries} /> : null}
+      {eventLogVisible ? (
+        <EventLogPanel
+          entries={eventLogEntries}
+          selectedEntryId={selectedEventLogEntryId}
+          onSelectEntry={(entry) => {
+            setSelectedEventLogEntryId(entry.id);
+            setInteractionHighlights({
+              zoneIDs: entry.zoneIds,
+              tokenIDs: entry.tokenIds,
+            });
+          }}
+        />
+      ) : null}
     </>
   );
 
@@ -212,6 +232,7 @@ export function GameContainer({
           <GameCanvas
             store={store}
             visualConfigProvider={visualConfigProvider}
+            interactionHighlights={interactionHighlights}
             {...(keyboardCoordinator === null ? {} : { keyboardCoordinator })}
             onHoverAnchorChange={onHoverAnchorChange}
           />

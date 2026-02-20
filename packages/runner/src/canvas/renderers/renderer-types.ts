@@ -14,6 +14,7 @@ export interface ZoneRenderer {
   update(
     zones: readonly RenderZone[],
     positions: ReadonlyMap<string, Position>,
+    highlightedZoneIDs?: ReadonlySet<string>,
   ): void;
   getContainerMap(): ReadonlyMap<string, Container>;
   destroy(): void;
@@ -23,6 +24,7 @@ export interface TokenRenderer {
   update(
     tokens: readonly RenderToken[],
     zoneContainers: ReadonlyMap<string, Container>,
+    highlightedTokenIDs?: ReadonlySet<string>,
   ): void;
   getContainerMap(): ReadonlyMap<string, Container>;
   destroy(): void;

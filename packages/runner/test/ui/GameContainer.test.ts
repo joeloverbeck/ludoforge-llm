@@ -20,6 +20,10 @@ interface CapturedTooltipLayerProps {
 }
 
 interface CapturedGameCanvasProps {
+  readonly interactionHighlights?: {
+    readonly zoneIDs: readonly string[];
+    readonly tokenIDs: readonly string[];
+  };
   readonly onHoverAnchorChange?: (anchor: {
     readonly target: { readonly kind: 'zone' | 'token'; readonly id: string };
     readonly rect: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
@@ -333,6 +337,7 @@ describe('GameContainer', () => {
       throw new Error('Expected GameCanvas props to be captured.');
     }
     expect(gameCanvasProps.onHoverAnchorChange).toEqual(expect.any(Function));
+    expect(gameCanvasProps.interactionHighlights).toEqual({ zoneIDs: [], tokenIDs: [] });
   });
 
   it('renders GameCanvas and UIOverlay when lifecycle is terminal', () => {

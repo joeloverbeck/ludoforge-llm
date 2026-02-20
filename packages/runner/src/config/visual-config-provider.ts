@@ -117,6 +117,10 @@ export class VisualConfigProvider {
     };
   }
 
+  getTokenTypeDisplayName(tokenTypeId: string): string | null {
+    return this.config?.tokenTypes?.[tokenTypeId]?.displayName ?? null;
+  }
+
   resolveTokenSymbols(
     tokenTypeId: string,
     tokenProperties: Readonly<Record<string, string | number | boolean>>,

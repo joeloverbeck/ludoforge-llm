@@ -10,6 +10,11 @@ import {
   resolveVisualDimensions,
 } from './shape-utils';
 import {
+  createHiddenZoneStackVisual,
+  updateHiddenZoneStackVisual,
+  type HiddenZoneStackVisual,
+} from './hidden-zone-stack';
+import {
   ZONE_RENDER_WIDTH as ZONE_WIDTH,
   ZONE_RENDER_HEIGHT as ZONE_HEIGHT,
 } from '../../layout/layout-constants.js';
@@ -19,6 +24,7 @@ const LINE_CORNER_RADIUS = 4;
 
 interface ZoneVisualElements {
   readonly base: Graphics;
+  readonly hiddenStack: HiddenZoneStackVisual;
   readonly nameLabel: Text;
   readonly markersLabel: Text;
 }
@@ -75,6 +81,7 @@ export function createZoneRenderer(
           const visuals = createZoneVisualElements();
           zoneContainer.addChild(
             visuals.base,
+            visuals.hiddenStack.root,
             visuals.nameLabel,
             visuals.markersLabel,
           );
@@ -145,6 +152,7 @@ export function createZoneRenderer(
 
 function createZoneVisualElements(): ZoneVisualElements {
   const base = new Graphics();
+  const hiddenStack = createHiddenZoneStackVisual();
 
   const nameLabel = createText('', -ZONE_WIDTH * 0.44, -10, 14);
   const markersLabel = createText('', -ZONE_WIDTH * 0.44, 18, 11);
@@ -153,6 +161,7 @@ function createZoneVisualElements(): ZoneVisualElements {
 
   return {
     base,
+    hiddenStack,
     nameLabel,
     markersLabel,
   };
@@ -184,6 +193,12 @@ function updateZoneVisuals(
     height: ZONE_HEIGHT,
   });
   drawZoneBase(visuals.base, zone, isInteractionHighlighted);
+  updateHiddenZoneStackVisual(
+    visuals.hiddenStack,
+    zone.hiddenTokenCount,
+    dimensions.width,
+    dimensions.height,
+  );
   layoutZoneLabels(visuals, dimensions.width, dimensions.height);
 
   visuals.nameLabel.text = zone.displayName;

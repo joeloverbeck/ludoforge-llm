@@ -218,6 +218,10 @@ function createRendererHarness(): {
   return { parent, pool, renderer };
 }
 
+function getHiddenStackContainer(zoneContainer: InstanceType<typeof MockContainer>): InstanceType<typeof MockContainer> {
+  return zoneContainer.children[1] as InstanceType<typeof MockContainer>;
+}
+
 describe('createZoneRenderer', () => {
   it('update with empty arrays creates no containers', () => {
     const { parent, renderer } = createRendererHarness();
@@ -298,7 +302,7 @@ describe('createZoneRenderer', () => {
     renderer.update([makeZone({ id: 'zone:a', displayName: 'Zone A' })], createPositions([['zone:a', { x: 5, y: 6 }]]));
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const nameLabel = zoneContainer.children[1] as InstanceType<typeof MockText>;
+    const nameLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
 
     expect(zoneContainer.position.x).toBe(5);
     expect(zoneContainer.position.y).toBe(6);
@@ -360,9 +364,9 @@ describe('createZoneRenderer', () => {
     );
 
     const container = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const markers = container.children[2] as InstanceType<typeof MockText>;
+    const markers = container.children[3] as InstanceType<typeof MockText>;
 
-    expect(container.children).toHaveLength(3);
+    expect(container.children).toHaveLength(4);
     expect(markers.text).toContain('Control:red');
     expect(markers.text).toContain('Supply:on');
     expect(markers.visible).toBe(true);
@@ -370,6 +374,54 @@ describe('createZoneRenderer', () => {
     renderer.update([makeZone({ id: 'zone:a', tokenIDs: [], hiddenTokenCount: 0, markers: [] })], new Map());
 
     expect(markers.visible).toBe(false);
+  });
+
+  it('toggles hidden stack visibility based on hiddenTokenCount', () => {
+    const { renderer } = createRendererHarness();
+
+    renderer.update([makeZone({ id: 'zone:a', hiddenTokenCount: 2 })], new Map());
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+    const hiddenStack = getHiddenStackContainer(zoneContainer);
+    const cards = hiddenStack.children[0] as InstanceType<typeof MockContainer>;
+    const countLabel = hiddenStack.children[2] as InstanceType<typeof MockText>;
+
+    expect(hiddenStack.visible).toBe(true);
+    expect(cards.children).toHaveLength(2);
+    expect(countLabel.text).toBe('2');
+
+    renderer.update([makeZone({ id: 'zone:a', hiddenTokenCount: 0 })], new Map());
+
+    expect(hiddenStack.visible).toBe(false);
+    expect(cards.children).toHaveLength(0);
+    expect(countLabel.text).toBe('');
+  });
+
+  it('clamps hidden stack card layers to five while keeping exact count badge text', () => {
+    const { renderer } = createRendererHarness();
+
+    renderer.update([makeZone({ id: 'zone:a', hiddenTokenCount: 9 })], new Map());
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+    const hiddenStack = getHiddenStackContainer(zoneContainer);
+    const cards = hiddenStack.children[0] as InstanceType<typeof MockContainer>;
+    const countLabel = hiddenStack.children[2] as InstanceType<typeof MockText>;
+
+    expect(cards.children).toHaveLength(5);
+    expect(countLabel.text).toBe('9');
+  });
+
+  it('updates hidden stack count badge text in place as hiddenTokenCount changes', () => {
+    const { renderer } = createRendererHarness();
+
+    renderer.update([makeZone({ id: 'zone:a', hiddenTokenCount: 3 })], new Map());
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+    const hiddenStack = getHiddenStackContainer(zoneContainer);
+    const countLabel = hiddenStack.children[2] as InstanceType<typeof MockText>;
+
+    expect(countLabel.text).toBe('3');
+
+    renderer.update([makeZone({ id: 'zone:a', hiddenTokenCount: 12 })], new Map());
+
+    expect(countLabel.text).toBe('12');
   });
 
   it('getContainerMap returns the live container map and destroy releases all zones', () => {
@@ -432,8 +484,8 @@ describe('createZoneRenderer', () => {
     );
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const nameLabel = zoneContainer.children[1] as InstanceType<typeof MockText>;
-    const markersLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
+    const nameLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
+    const markersLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
 
     expect(nameLabel.text).toBe('Saigon');
     expect(nameLabel.position.x).toBe(-44);

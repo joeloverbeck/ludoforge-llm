@@ -6,6 +6,8 @@ import type { EventLogEntry } from '../model/translate-effect-trace.js';
 import { translateEffectTrace } from '../model/translate-effect-trace.js';
 import type { GameStore } from '../store/game-store.js';
 
+export const MAX_EVENT_LOG_ENTRIES = 500;
+
 export function useEventLogEntries(
   store: StoreApi<GameStore>,
   visualConfigProvider: VisualConfigProvider,
@@ -43,7 +45,13 @@ export function useEventLogEntries(
       }
 
       moveIndexRef.current += 1;
-      setEntries((currentEntries) => [...currentEntries, ...translated]);
+      setEntries((currentEntries) => {
+        const nextEntries = [...currentEntries, ...translated];
+        if (nextEntries.length <= MAX_EVENT_LOG_ENTRIES) {
+          return nextEntries;
+        }
+        return nextEntries.slice(nextEntries.length - MAX_EVENT_LOG_ENTRIES);
+      });
     });
   }, [store, visualConfigProvider]);
 

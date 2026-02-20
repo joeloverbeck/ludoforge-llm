@@ -6,7 +6,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
-import { useEventLogEntries } from '../../src/ui/useEventLogEntries.js';
+import { MAX_EVENT_LOG_ENTRIES, useEventLogEntries } from '../../src/ui/useEventLogEntries.js';
 import { translateEffectTrace } from '../../src/model/translate-effect-trace.js';
 
 vi.mock('../../src/model/translate-effect-trace.js', () => ({
@@ -123,6 +123,30 @@ describe('useEventLogEntries', () => {
     await waitFor(() => {
       expect(screen.getByTestId('event-log-count').getAttribute('data-count')).toBe('1');
       expect(screen.getByTestId('event-log-count').getAttribute('data-ids')).toBe('entry-0');
+    });
+  });
+
+  it('retains only the most recent bounded number of entries', async () => {
+    const store = createMinimalStore({
+      gameDef: { metadata: { id: 'test' } },
+      effectTrace: [],
+      triggerFirings: [],
+    });
+
+    render(createElement(HookHarness, {
+      store,
+      visualConfigProvider: {} as VisualConfigProvider,
+    }));
+
+    for (let index = 0; index < MAX_EVENT_LOG_ENTRIES + 2; index += 1) {
+      store.setState({ effectTrace: [{ kind: 'moveToken', index }] });
+    }
+
+    await waitFor(() => {
+      const node = screen.getByTestId('event-log-count');
+      expect(node.getAttribute('data-count')).toBe(String(MAX_EVENT_LOG_ENTRIES));
+      expect(node.getAttribute('data-ids')?.startsWith('entry-2')).toBe(true);
+      expect(node.getAttribute('data-ids')?.endsWith(`entry-${MAX_EVENT_LOG_ENTRIES + 1}`)).toBe(true);
     });
   });
 });

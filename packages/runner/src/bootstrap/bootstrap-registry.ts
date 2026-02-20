@@ -1,8 +1,4 @@
 import bootstrapTargets from './bootstrap-targets.json';
-import {
-  FITL_VISUAL_CONFIG_YAML,
-  TEXAS_VISUAL_CONFIG_YAML,
-} from '../config/index.js';
 
 export interface BootstrapTargetDefinition {
   readonly id: string;
@@ -26,6 +22,10 @@ export interface BootstrapDescriptor {
 
 const BOOTSTRAP_TARGET_DEFINITIONS = assertBootstrapTargetDefinitions(bootstrapTargets as unknown);
 const FIXTURE_LOADERS = import.meta.glob('./*-game-def.json', { import: 'default' }) as Record<string, () => Promise<unknown>>;
+const VISUAL_CONFIGS = import.meta.glob('../../../../data/games/*/visual-config.yaml', {
+  eager: true,
+  import: 'default',
+}) as Record<string, unknown>;
 
 const BOOTSTRAP_REGISTRY: readonly BootstrapDescriptor[] = BOOTSTRAP_TARGET_DEFINITIONS.map((target) => {
   const fixturePath = `./${target.fixtureFile}`;
@@ -41,7 +41,7 @@ const BOOTSTRAP_REGISTRY: readonly BootstrapDescriptor[] = BOOTSTRAP_TARGET_DEFI
     defaultPlayerId: target.defaultPlayerId,
     sourceLabel: target.sourceLabel,
     resolveGameDefInput: fixtureLoader,
-    resolveVisualConfigYaml: () => resolveVisualConfigYaml(target.id),
+    resolveVisualConfigYaml: () => resolveVisualConfigYaml(target.generatedFromSpecPath),
   } satisfies BootstrapDescriptor;
 });
 
@@ -173,11 +173,15 @@ function requireNonEmptyString(value: unknown, label: string): string {
   return value;
 }
 
-function resolveVisualConfigYaml(targetId: string): unknown {
-  const visualConfigsByTargetId: Readonly<Record<string, unknown>> = {
-    default: null,
-    fitl: FITL_VISUAL_CONFIG_YAML,
-    texas: TEXAS_VISUAL_CONFIG_YAML,
-  };
-  return visualConfigsByTargetId[targetId] ?? null;
+function resolveVisualConfigYaml(generatedFromSpecPath: string): unknown {
+  const suffix = `/${generatedFromSpecPath}/visual-config.yaml`;
+  const matches = Object.entries(VISUAL_CONFIGS)
+    .filter(([path]) => path.endsWith(suffix))
+    .map(([, config]) => config);
+
+  if (matches.length > 1) {
+    throw new Error(`Multiple visual config matches for generatedFromSpecPath=${generatedFromSpecPath}`);
+  }
+
+  return matches[0] ?? null;
 }

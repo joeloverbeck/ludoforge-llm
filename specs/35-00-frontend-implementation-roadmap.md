@@ -135,16 +135,16 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [x] Per-game visual-config.yaml files for FITL and Texas Hold'em (Spec 42 D5-D6)
 - [x] Visual config wired into rendering, layout, and animation (Spec 42 D7-D9)
 - [x] Visual fields stripped from engine types, compiler, and game specs (Spec 42 D10-D14)
-- [ ] Engine metadata enrichment: optional `name`/`description` in `GameSpecMetadata` and `GameDef.metadata` (Spec 43 D0 -- cross-package engine change)
+- [x] Engine metadata enrichment: optional `name`/`description` in `GameSpecMetadata` and `GameDef.metadata` (Spec 43 D0 -- cross-package engine change)
 - [ ] App-level session router with `AppScreen` state machine and navigation flows (Spec 43 D1)
-- [ ] Data-driven game discovery via `import.meta.glob` replacing hardcoded visual config switch (Spec 43 D2)
+- [x] Data-driven game discovery via `import.meta.glob` replacing hardcoded visual config switch (Spec 43 D2)
 - [ ] Game selection screen with game list and saved games (Spec 43 D3)
 - [ ] Pre-game configuration (player count, seat assignment, seed) (Spec 43 D4)
 - [ ] Save/load game via Dexie.js -- single record per save, no chunking (Spec 43 D5)
 - [ ] Replay mode with scrubber, jump-to-move, speed control (Spec 43 D6)
 - [ ] Event log panel with human-readable translations via VisualConfigProvider (Spec 43 D7)
 
-**F3 Progress**: In progress. Spec 40 is completed (closed 2026-02-19). Spec 41 is completed and archived (closed 2026-02-19): D1-D4 delivered (layout engine core, computation, caching, aux sidebar). Spec 42 is completed and archived (closed 2026-02-19): visual config extraction and engine visual-field removal delivered and validated via engine/runner/turbo test+lint gates. Spec 43 revised with D0-D7 deliverable structure (2026-02-20). Note: D0 is the only deliverable touching the engine package (adds optional metadata fields); all other deliverables are runner-only.
+**F3 Progress**: In progress. Spec 40 is completed (closed 2026-02-19). Spec 41 is completed and archived (closed 2026-02-19): D1-D4 delivered (layout engine core, computation, caching, aux sidebar). Spec 42 is completed and archived (closed 2026-02-19): visual config extraction and engine visual-field removal delivered and validated via engine/runner/turbo test+lint gates. Spec 43 revised with D0-D7 deliverable structure (2026-02-20), with D0 and D2 completed; D2 uses `generatedFromSpecPath` + `import.meta.glob` for visual-config discovery and keeps display metadata canonical in `GameSpecDoc`/compiled `GameDef` rather than duplicating fields in `bootstrap-targets.json`.
 
 ---
 

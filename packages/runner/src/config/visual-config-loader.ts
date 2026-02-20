@@ -9,12 +9,6 @@ export {
   validateVisualConfigRefs,
 } from './validate-visual-config-refs.js';
 
-import fitlVisualConfigYaml from '../../../../data/games/fire-in-the-lake/visual-config.yaml';
-import texasVisualConfigYaml from '../../../../data/games/texas-holdem/visual-config.yaml';
-
-export const FITL_VISUAL_CONFIG_YAML: unknown = fitlVisualConfigYaml;
-export const TEXAS_VISUAL_CONFIG_YAML: unknown = texasVisualConfigYaml;
-
 export function loadVisualConfig(rawYaml: unknown): VisualConfig | null {
   if (rawYaml === null || rawYaml === undefined) {
     return null;

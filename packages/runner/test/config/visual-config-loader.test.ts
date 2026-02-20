@@ -1,11 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { VisualConfigSchema } from '../../src/config/visual-config-types';
 import {
   createVisualConfigProvider,
-  FITL_VISUAL_CONFIG_YAML,
   loadVisualConfig,
-  TEXAS_VISUAL_CONFIG_YAML,
 } from '../../src/config/visual-config-loader';
 
 describe('visual-config-loader', () => {
@@ -63,8 +60,4 @@ describe('visual-config-loader', () => {
     expect(provider.getFactionColor('us')).toBe('#ff0000');
   });
 
-  it('exports FITL and Texas raw YAML imports that pass schema validation', () => {
-    expect(VisualConfigSchema.safeParse(FITL_VISUAL_CONFIG_YAML).success).toBe(true);
-    expect(VisualConfigSchema.safeParse(TEXAS_VISUAL_CONFIG_YAML).success).toBe(true);
-  });
 });

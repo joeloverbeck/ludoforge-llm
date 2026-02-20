@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { VisualConfigSchema } from '../../src/config/visual-config-types';
 import {
   assertBootstrapRegistry,
   assertBootstrapTargetDefinitions,
@@ -42,6 +43,24 @@ describe('bootstrap-registry', () => {
     const descriptors = listBootstrapDescriptors();
     expect(descriptors.map((descriptor) => descriptor.id)).toEqual(['default', 'fitl', 'texas']);
     expect(descriptors.map((descriptor) => descriptor.queryValue)).toEqual(['default', 'fitl', 'texas']);
+  });
+
+  it('resolves visual config via generatedFromSpecPath mapping', () => {
+    const descriptors = listBootstrapDescriptors();
+    const fitl = descriptors.find((descriptor) => descriptor.id === 'fitl');
+    const texas = descriptors.find((descriptor) => descriptor.id === 'texas');
+
+    expect(fitl).toBeDefined();
+    expect(texas).toBeDefined();
+    expect(VisualConfigSchema.safeParse(fitl?.resolveVisualConfigYaml()).success).toBe(true);
+    expect(VisualConfigSchema.safeParse(texas?.resolveVisualConfigYaml()).success).toBe(true);
+  });
+
+  it('returns null when a bootstrap target has no visual config file', () => {
+    const descriptors = listBootstrapDescriptors();
+    const defaultDescriptor = descriptors.find((descriptor) => descriptor.id === 'default');
+    expect(defaultDescriptor).toBeDefined();
+    expect(defaultDescriptor?.resolveVisualConfigYaml()).toBeNull();
   });
 
   it('throws when descriptor validation receives duplicate query values', () => {

@@ -95,14 +95,14 @@ Add optional `name` and `description` fields to `GameSpecMetadata` and `GameDef.
     name: "Fire in the Lake"
     description: "A 4-faction COIN-series wargame set in the Vietnam War"
     players:
-      min: 1
+      min: 2
       max: 4
   ```
 
 - `data/games/texas-holdem/*.md` -- Same pattern:
   ```yaml
   metadata:
-    id: texas-holdem
+    id: texas-holdem-nlhe-tournament
     name: "Texas Hold'em"
     description: "No-limit Texas Hold'em poker tournament"
     players:
@@ -224,72 +224,27 @@ replay         -- returnToMenu() -->     gameSelection
 
 ### D2: Data-Driven Game Discovery
 
-Replace the hardcoded `resolveVisualConfigYaml()` switch with `import.meta.glob` for automatic discovery. Enrich the bootstrap manifest with metadata for the game selection screen.
+Replace the hardcoded `resolveVisualConfigYaml()` switch with `import.meta.glob` for automatic discovery. Keep bootstrap metadata canonical by reading display data from compiled `GameDef.metadata` (originating in `GameSpecDoc`) rather than duplicating those fields in `bootstrap-targets.json`.
 
 **Files to modify**:
 
-- `packages/runner/src/bootstrap/bootstrap-targets.json` -- Add `name`, `description`, `playerMin`, `playerMax` fields:
-  ```json
-  [
-    {
-      "id": "default",
-      "queryValue": "default",
-      "defaultSeed": 42,
-      "defaultPlayerId": 0,
-      "sourceLabel": "runner bootstrap fixture",
-      "fixtureFile": "default-game-def.json",
-      "name": "Default Test Game",
-      "description": "Minimal game for development testing",
-      "playerMin": 2,
-      "playerMax": 2
-    },
-    {
-      "id": "fitl",
-      "queryValue": "fitl",
-      "defaultSeed": 42,
-      "defaultPlayerId": 0,
-      "sourceLabel": "FITL bootstrap fixture",
-      "fixtureFile": "fitl-game-def.json",
-      "generatedFromSpecPath": "data/games/fire-in-the-lake",
-      "name": "Fire in the Lake",
-      "description": "A 4-faction COIN-series wargame set in the Vietnam War",
-      "playerMin": 1,
-      "playerMax": 4
-    },
-    {
-      "id": "texas",
-      "queryValue": "texas",
-      "defaultSeed": 42,
-      "defaultPlayerId": 0,
-      "sourceLabel": "Texas Hold'em bootstrap fixture",
-      "fixtureFile": "texas-game-def.json",
-      "generatedFromSpecPath": "data/games/texas-holdem",
-      "name": "Texas Hold'em",
-      "description": "No-limit Texas Hold'em poker tournament",
-      "playerMin": 2,
-      "playerMax": 10
-    }
-  ]
-  ```
+- `packages/runner/src/bootstrap/bootstrap-targets.json` -- keep manifest focused on bootstrap routing/fixture linkage only (`id`, `queryValue`, `defaultSeed`, `defaultPlayerId`, `sourceLabel`, `fixtureFile`, `generatedFromSpecPath`). Do not add display metadata fields.
 
 - `packages/runner/src/bootstrap/bootstrap-registry.ts`:
-  - Add `name`, `description`, `playerMin`, `playerMax` to `BootstrapTargetDefinition` and `BootstrapDescriptor` interfaces
   - Replace the hardcoded `resolveVisualConfigYaml()` function with `import.meta.glob`:
     ```typescript
-    const VISUAL_CONFIG_LOADERS = import.meta.glob(
-      '../../../data/games/*/visual-config.yaml',
-      { query: '?raw', import: 'default' }
-    ) as Record<string, () => Promise<string>>;
+    const VISUAL_CONFIGS = import.meta.glob('../../../../data/games/*/visual-config.yaml', {
+      eager: true,
+      import: 'default',
+    }) as Record<string, unknown>;
     ```
   - Map each bootstrap target's `generatedFromSpecPath` to the glob results to find the matching visual config YAML
   - Fallback to `null` when no visual config file exists for a game (e.g., the `default` target)
-  - Remove the hardcoded imports `FITL_VISUAL_CONFIG_YAML` and `TEXAS_VISUAL_CONFIG_YAML` from `packages/runner/src/config/index.ts`
-  - Update `assertBootstrapTargetDefinitions()` to validate the new fields
+  - Remove any hardcoded imports/exports of per-game visual config constants
+  - Keep `resolveVisualConfigYaml` synchronous
 
 **Acceptance criteria**:
-- [ ] Bootstrap manifest includes `name`, `description`, `playerMin`, `playerMax` per entry
-- [ ] `BootstrapDescriptor` exposes these fields
-- [ ] `listBootstrapDescriptors()` returns descriptors with all metadata for the selection screen
+- [ ] Bootstrap manifest remains minimal and does not duplicate `name`/`description`/player-range metadata
 - [ ] Visual config resolution uses `import.meta.glob` -- no hardcoded game-specific imports
 - [ ] Adding `data/games/new-game/visual-config.yaml` auto-discovers it with zero code changes
 - [ ] Existing games still load their visual configs correctly
@@ -304,7 +259,7 @@ The landing page of the runner SPA. Lists available games and saved games.
 **New file**: `packages/runner/src/ui/GameSelectionScreen.tsx`
 
 - Lists games from `listBootstrapDescriptors()`, filtering out the `'default'` entry
-- Displays per game: `name`, `description`, player range (`playerMin`-`playerMax`)
+- Displays per game from compiled `GameDef.metadata`: `name`, `description`, player range (`metadata.players.min`-`metadata.players.max`)
 - Saved games section: queries `listSavedGames()` from D5's save manager, shows save name, game name, timestamp, move count
 - Click a game card -> `sessionStore.selectGame(gameId)` -> navigates to `preGameConfig`
 - Click a saved game -> either:
@@ -314,7 +269,7 @@ The landing page of the runner SPA. Lists available games and saved games.
 
 **Acceptance criteria**:
 - [ ] Game selection screen is the landing page
-- [ ] Lists all registered games (except `default`) with name, description, player range
+- [ ] Lists all registered games (except `default`) with metadata resolved from compiled GameDef fixtures
 - [ ] Saved games section shows existing saves
 - [ ] Clicking a game navigates to pre-game config
 - [ ] Clicking a saved game offers resume and replay options
@@ -328,7 +283,7 @@ Configure player count, seat assignments, and optional seed before starting a ga
 
 **New file**: `packages/runner/src/ui/PreGameConfigScreen.tsx`
 
-- **Player count slider**: Within the game's `playerMin`-`playerMax` range (from bootstrap descriptor)
+- **Player count slider**: Within the game's compiled metadata player range (`GameDef.metadata.players.min`-`max`)
 - **Seat assignment table**: For each seat (0..playerCount-1):
   - Label: Uses `VisualConfigProvider.getFactionDisplayName(factionId)` for games with factions, else "Player N"
   - Dropdown: "Human" | "AI - Random" | "AI - Greedy"
@@ -588,15 +543,16 @@ Scrollable, filterable log of game events translated into human-readable text us
 
 ```
 D0 (Engine metadata)
- └── D2 (Data-driven discovery)
-      ├── D3 (Game selection)
-      └── D1 (Session router)
-           ├── D4 (Pre-game config)
-           ├── D5 (Save/Load) ── D6 (Replay)
-           └── D7 (Event log)  [parallel with D3-D6]
+ └── D3 (Game selection)
+D2 (Data-driven discovery)
+ └── D3 (Game selection)
+D1 (Session router)
+ ├── D4 (Pre-game config)
+ ├── D5 (Save/Load) ── D6 (Replay)
+ └── D7 (Event log)  [parallel with D3-D6]
 ```
 
-**Implementation order**: D0 -> D2 -> D1 -> D3+D7 (parallel) -> D4 -> D5 -> D6
+**Implementation order**: D0 + D2 -> D1 -> D3 + D7 (parallel) -> D4 -> D5 -> D6
 
 ---
 
@@ -606,7 +562,7 @@ D0 (Engine metadata)
 
 2. **`import.meta.glob` for visual config resolution**: Vite build-time file discovery. Adding `data/games/new-game/visual-config.yaml` auto-discovers it. Zero code changes for new games.
 
-3. **Lightweight metadata in bootstrap manifest**: `name`, `description`, `playerMin`, `playerMax` in `bootstrap-targets.json` avoids loading full GameDef JSON for the selection screen.
+3. **Canonical metadata source**: Selection-screen display metadata comes from compiled `GameDef.metadata` (originating in `GameSpecDoc`), not duplicated fields in `bootstrap-targets.json`, preventing drift.
 
 4. **`playSequence` for replay jumps**: Kernel determinism means `reset + playSequence(moves[0..N])` reaches any state. No snapshots or per-move caching needed.
 

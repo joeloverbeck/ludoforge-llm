@@ -4,6 +4,7 @@ import { VisualConfigSchema } from '../../src/config/visual-config-types';
 import {
   assertBootstrapRegistry,
   assertBootstrapTargetDefinitions,
+  type BootstrapGameMetadataSummary,
   listBootstrapDescriptors,
   resolveBootstrapDescriptor,
   type BootstrapDescriptor,
@@ -116,6 +117,12 @@ function descriptor(
     defaultSeed: 42,
     defaultPlayerId: 0,
     sourceLabel: 'test fixture',
+    gameMetadata: {
+      name: id,
+      description: '',
+      playerMin: 1,
+      playerMax: 4,
+    } satisfies BootstrapGameMetadataSummary,
     resolveGameDefInput: async () => ({}),
     resolveVisualConfigYaml: () => null,
     ...overrides,

@@ -28,10 +28,6 @@ export function findBootstrapDescriptorById(gameId: string): BootstrapDescriptor
   return listBootstrapDescriptors().find((descriptor) => descriptor.id === gameId) ?? null;
 }
 
-export function listNonDefaultBootstrapDescriptors(): readonly BootstrapDescriptor[] {
-  return listBootstrapDescriptors().filter((descriptor) => descriptor.id !== 'default');
-}
-
 function buildActiveGameBootstrapSearch(state: ActiveGameState, descriptor: BootstrapDescriptor): string {
   const humanPlayerId = resolveHumanPlayerId(state.playerConfig, descriptor.defaultPlayerId);
   return `?game=${encodeURIComponent(descriptor.queryValue)}&seed=${String(state.seed)}&player=${String(humanPlayerId)}`;

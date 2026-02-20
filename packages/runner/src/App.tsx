@@ -2,11 +2,11 @@ import { type ReactElement, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
 import { createSessionStore } from './session/session-store.js';
-import { findBootstrapDescriptorById, listNonDefaultBootstrapDescriptors, useActiveGameRuntime } from './session/active-game-runtime.js';
+import { findBootstrapDescriptorById, useActiveGameRuntime } from './session/active-game-runtime.js';
 import { ErrorBoundary } from './ui/ErrorBoundary.js';
 import { GameContainer } from './ui/GameContainer.js';
+import { GameSelectionScreen } from './ui/GameSelectionScreen.js';
 import { UnsavedChangesDialog } from './ui/UnsavedChangesDialog.js';
-import { GameSelectionPlaceholder } from './ui/screens/GameSelectionPlaceholder.js';
 import { PreGameConfigPlaceholder } from './ui/screens/PreGameConfigPlaceholder.js';
 import { ReplayPlaceholder } from './ui/screens/ReplayPlaceholder.js';
 
@@ -23,14 +23,11 @@ export function App(): ReactElement {
       setQuitDialogOpen(false);
     }
   }, [sessionState.screen]);
-  const descriptors = listNonDefaultBootstrapDescriptors();
-
   const content = (() => {
     switch (sessionState.screen) {
       case 'gameSelection':
         return (
-          <GameSelectionPlaceholder
-            descriptors={descriptors}
+          <GameSelectionScreen
             onSelectGame={(gameId) => {
               sessionStore.getState().selectGame(gameId);
             }}

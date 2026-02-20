@@ -29,7 +29,6 @@ interface SessionStoreApi {
 }
 
 const testDoubles = vi.hoisted(() => ({
-  listNonDefaultBootstrapDescriptors: vi.fn(),
   findBootstrapDescriptorById: vi.fn(),
   useActiveGameRuntime: vi.fn(),
   createSessionStore: vi.fn(),
@@ -129,7 +128,6 @@ function createMockSessionStore(initialState?: Partial<Pick<SessionStoreState, '
 }
 
 vi.mock('../../src/session/active-game-runtime.js', () => ({
-  listNonDefaultBootstrapDescriptors: testDoubles.listNonDefaultBootstrapDescriptors,
   findBootstrapDescriptorById: testDoubles.findBootstrapDescriptorById,
   useActiveGameRuntime: testDoubles.useActiveGameRuntime,
 }));
@@ -164,6 +162,20 @@ vi.mock('../../src/ui/ErrorBoundary.js', () => ({
   ErrorBoundary: (props: { readonly children: ReactNode }) => createElement('section', { 'data-testid': 'error-boundary' }, props.children),
 }));
 
+vi.mock('../../src/ui/GameSelectionScreen.js', () => ({
+  GameSelectionScreen: (props: { readonly onSelectGame: (gameId: string) => void }) => (
+    createElement('main', { 'data-testid': 'game-selection-screen' },
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'select-game-fitl',
+        onClick: () => {
+          props.onSelectGame('fitl');
+        },
+      }, 'select-fitl'),
+    )
+  ),
+}));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -172,19 +184,9 @@ afterEach(() => {
 describe('App', () => {
   beforeEach(() => {
     vi.resetModules();
-    testDoubles.listNonDefaultBootstrapDescriptors.mockReset();
     testDoubles.findBootstrapDescriptorById.mockReset();
     testDoubles.useActiveGameRuntime.mockReset();
     testDoubles.createSessionStore.mockReset();
-
-    testDoubles.listNonDefaultBootstrapDescriptors.mockReturnValue([
-      {
-        id: 'fitl',
-        queryValue: 'fitl',
-        defaultSeed: 17,
-        defaultPlayerId: 1,
-      },
-    ]);
 
     testDoubles.findBootstrapDescriptorById.mockImplementation((gameId: string) => {
       if (gameId !== 'fitl') {

@@ -16,12 +16,21 @@ export interface BootstrapDescriptor {
   readonly defaultSeed: number;
   readonly defaultPlayerId: number;
   readonly sourceLabel: string;
+  readonly gameMetadata: BootstrapGameMetadataSummary;
   readonly resolveGameDefInput: () => Promise<unknown>;
   readonly resolveVisualConfigYaml: () => unknown;
 }
 
+export interface BootstrapGameMetadataSummary {
+  readonly name: string;
+  readonly description: string;
+  readonly playerMin: number;
+  readonly playerMax: number;
+}
+
 const BOOTSTRAP_TARGET_DEFINITIONS = assertBootstrapTargetDefinitions(bootstrapTargets as unknown);
 const FIXTURE_LOADERS = import.meta.glob('./*-game-def.json', { import: 'default' }) as Record<string, () => Promise<unknown>>;
+const FIXTURE_METADATA = import.meta.glob('./*-game-def.json', { eager: true, import: 'default' }) as Record<string, unknown>;
 const VISUAL_CONFIGS = import.meta.glob('../../../../data/games/*/visual-config.yaml', {
   eager: true,
   import: 'default',
@@ -33,6 +42,10 @@ const BOOTSTRAP_REGISTRY: readonly BootstrapDescriptor[] = BOOTSTRAP_TARGET_DEFI
   if (fixtureLoader === undefined) {
     throw new Error(`Bootstrap target fixture file does not exist (id=${target.id}, fixtureFile=${target.fixtureFile})`);
   }
+  const fixtureMetadata = FIXTURE_METADATA[fixturePath];
+  if (fixtureMetadata === undefined) {
+    throw new Error(`Bootstrap metadata fixture does not exist (id=${target.id}, fixtureFile=${target.fixtureFile})`);
+  }
 
   return {
     id: target.id,
@@ -40,6 +53,7 @@ const BOOTSTRAP_REGISTRY: readonly BootstrapDescriptor[] = BOOTSTRAP_TARGET_DEFI
     defaultSeed: target.defaultSeed,
     defaultPlayerId: target.defaultPlayerId,
     sourceLabel: target.sourceLabel,
+    gameMetadata: resolveGameMetadataSummary(target.id, fixtureMetadata),
     resolveGameDefInput: fixtureLoader,
     resolveVisualConfigYaml: () => resolveVisualConfigYaml(target.generatedFromSpecPath),
   } satisfies BootstrapDescriptor;
@@ -184,4 +198,60 @@ function resolveVisualConfigYaml(generatedFromSpecPath: string): unknown {
   }
 
   return matches[0] ?? null;
+}
+
+function resolveGameMetadataSummary(targetId: string, fixtureInput: unknown): BootstrapGameMetadataSummary {
+  const fallbackSummary: BootstrapGameMetadataSummary = {
+    name: targetId,
+    description: '',
+    playerMin: 0,
+    playerMax: 0,
+  };
+  const fixture = asRecord(fixtureInput);
+  if (fixture === null) {
+    return fallbackSummary;
+  }
+  const metadata = asRecord(fixture.metadata);
+  if (metadata === null) {
+    return fallbackSummary;
+  }
+  const players = asRecord(metadata.players);
+  if (players === null) {
+    return fallbackSummary;
+  }
+  const playerMin = asNonNegativeSafeInteger(players.min);
+  const playerMax = asNonNegativeSafeInteger(players.max);
+  if (playerMin === null || playerMax === null || playerMin > playerMax) {
+    return fallbackSummary;
+  }
+  const name = readOptionalString(metadata.name);
+  const description = readOptionalString(metadata.description);
+
+  return {
+    name: name ?? targetId,
+    description: description ?? '',
+    playerMin,
+    playerMax,
+  } satisfies BootstrapGameMetadataSummary;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function asNonNegativeSafeInteger(value: unknown): number | null {
+  if (!Number.isSafeInteger(value) || (value as number) < 0) {
+    return null;
+  }
+  return value as number;
+}
+
+function readOptionalString(value: unknown): string | null {
+  if (value === undefined) {
+    return null;
+  }
+  return typeof value === 'string' ? value : null;
 }

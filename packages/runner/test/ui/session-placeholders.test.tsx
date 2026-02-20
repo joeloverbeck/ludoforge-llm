@@ -4,7 +4,6 @@ import { createElement } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { GameSelectionPlaceholder } from '../../src/ui/screens/GameSelectionPlaceholder.js';
 import { PreGameConfigPlaceholder } from '../../src/ui/screens/PreGameConfigPlaceholder.js';
 import { ReplayPlaceholder } from '../../src/ui/screens/ReplayPlaceholder.js';
 
@@ -14,28 +13,6 @@ afterEach(() => {
 });
 
 describe('session placeholders', () => {
-  it('renders game selection buttons and emits selected game id', () => {
-    const onSelectGame = vi.fn();
-
-    render(createElement(GameSelectionPlaceholder, {
-      descriptors: [
-        {
-          id: 'fitl',
-          queryValue: 'fitl',
-          defaultSeed: 42,
-          defaultPlayerId: 0,
-          sourceLabel: 'FITL',
-          resolveGameDefInput: async () => ({}),
-          resolveVisualConfigYaml: () => null,
-        },
-      ],
-      onSelectGame,
-    }));
-
-    fireEvent.click(screen.getByTestId('select-game-fitl'));
-    expect(onSelectGame).toHaveBeenCalledWith('fitl');
-  });
-
   it('renders pre-game placeholder and emits start/back actions', () => {
     const onStartGame = vi.fn();
     const onBack = vi.fn();
@@ -48,6 +25,12 @@ describe('session placeholders', () => {
         defaultSeed: 9,
         defaultPlayerId: 2,
         sourceLabel: 'FITL',
+        gameMetadata: {
+          name: 'Fire in the Lake',
+          description: 'test',
+          playerMin: 2,
+          playerMax: 4,
+        },
         resolveGameDefInput: async () => ({}),
         resolveVisualConfigYaml: () => null,
       },

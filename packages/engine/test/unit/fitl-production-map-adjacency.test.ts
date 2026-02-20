@@ -7,7 +7,7 @@ import { readProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type MapSpace = {
   readonly id: string;
-  readonly adjacentTo: readonly string[];
+  readonly adjacentTo: ReadonlyArray<{ readonly to: string }>;
 };
 
 const readMapSpaces = (): MapSpace[] => {
@@ -32,10 +32,10 @@ describe('FITL production map adjacency graph', () => {
 
     for (const space of spaces) {
       assert.ok(space.adjacentTo.length >= 1, `${space.id} should not be isolated`);
-      assert.equal(space.adjacentTo.includes(space.id), false, `${space.id} should not include itself`);
-      assert.equal(new Set(space.adjacentTo).size, space.adjacentTo.length, `${space.id} has duplicate adjacency`);
+      assert.equal(space.adjacentTo.some((adjacent) => adjacent.to === space.id), false, `${space.id} should not include itself`);
+      assert.equal(new Set(space.adjacentTo.map((adjacent) => adjacent.to)).size, space.adjacentTo.length, `${space.id} has duplicate adjacency`);
       assert.equal(
-        space.adjacentTo.every((adjacentId) => byId.has(adjacentId)),
+        space.adjacentTo.every((adjacent) => byId.has(adjacent.to)),
         true,
         `${space.id} has adjacency to unknown space`,
       );
@@ -47,10 +47,11 @@ describe('FITL production map adjacency graph', () => {
     const byId = new Map(spaces.map((space) => [space.id, space]));
 
     for (const space of spaces) {
-      for (const adjacentId of space.adjacentTo) {
+      for (const adjacentEntry of space.adjacentTo) {
+        const adjacentId = adjacentEntry.to;
         const adjacent = byId.get(adjacentId);
         assert.ok(adjacent !== undefined, `Expected adjacent space ${adjacentId} for ${space.id}`);
-        assert.equal(adjacent.adjacentTo.includes(space.id), true, `${space.id} -> ${adjacentId} is not symmetric`);
+        assert.equal(adjacent.adjacentTo.some((entry) => entry.to === space.id), true, `${space.id} -> ${adjacentId} is not symmetric`);
       }
     }
   });
@@ -78,8 +79,8 @@ describe('FITL production map adjacency graph', () => {
     ];
 
     for (const [left, right] of requiredPairs) {
-      assert.equal(byId.get(left)?.adjacentTo.includes(right), true, `Missing ${left} -> ${right}`);
-      assert.equal(byId.get(right)?.adjacentTo.includes(left), true, `Missing ${right} -> ${left}`);
+      assert.equal(byId.get(left)?.adjacentTo.some((entry) => entry.to === right), true, `Missing ${left} -> ${right}`);
+      assert.equal(byId.get(right)?.adjacentTo.some((entry) => entry.to === left), true, `Missing ${right} -> ${left}`);
     }
   });
 });

@@ -7,8 +7,6 @@ dataAssets:
     payload:
       factions:
         - id: neutral
-          color: "#6c757d"
-          displayName: Neutral
       pieceTypes:
         - id: card-2S
           faction: neutral
@@ -479,86 +477,238 @@ dataAssets:
             rankName: Ace
             suitName: Clubs
       inventory:
-        - { pieceTypeId: card-2S, faction: neutral, total: 1 }
-        - { pieceTypeId: card-3S, faction: neutral, total: 1 }
-        - { pieceTypeId: card-4S, faction: neutral, total: 1 }
-        - { pieceTypeId: card-5S, faction: neutral, total: 1 }
-        - { pieceTypeId: card-6S, faction: neutral, total: 1 }
-        - { pieceTypeId: card-7S, faction: neutral, total: 1 }
-        - { pieceTypeId: card-8S, faction: neutral, total: 1 }
-        - { pieceTypeId: card-9S, faction: neutral, total: 1 }
-        - { pieceTypeId: card-TS, faction: neutral, total: 1 }
-        - { pieceTypeId: card-JS, faction: neutral, total: 1 }
-        - { pieceTypeId: card-QS, faction: neutral, total: 1 }
-        - { pieceTypeId: card-KS, faction: neutral, total: 1 }
-        - { pieceTypeId: card-AS, faction: neutral, total: 1 }
-        - { pieceTypeId: card-2H, faction: neutral, total: 1 }
-        - { pieceTypeId: card-3H, faction: neutral, total: 1 }
-        - { pieceTypeId: card-4H, faction: neutral, total: 1 }
-        - { pieceTypeId: card-5H, faction: neutral, total: 1 }
-        - { pieceTypeId: card-6H, faction: neutral, total: 1 }
-        - { pieceTypeId: card-7H, faction: neutral, total: 1 }
-        - { pieceTypeId: card-8H, faction: neutral, total: 1 }
-        - { pieceTypeId: card-9H, faction: neutral, total: 1 }
-        - { pieceTypeId: card-TH, faction: neutral, total: 1 }
-        - { pieceTypeId: card-JH, faction: neutral, total: 1 }
-        - { pieceTypeId: card-QH, faction: neutral, total: 1 }
-        - { pieceTypeId: card-KH, faction: neutral, total: 1 }
-        - { pieceTypeId: card-AH, faction: neutral, total: 1 }
-        - { pieceTypeId: card-2D, faction: neutral, total: 1 }
-        - { pieceTypeId: card-3D, faction: neutral, total: 1 }
-        - { pieceTypeId: card-4D, faction: neutral, total: 1 }
-        - { pieceTypeId: card-5D, faction: neutral, total: 1 }
-        - { pieceTypeId: card-6D, faction: neutral, total: 1 }
-        - { pieceTypeId: card-7D, faction: neutral, total: 1 }
-        - { pieceTypeId: card-8D, faction: neutral, total: 1 }
-        - { pieceTypeId: card-9D, faction: neutral, total: 1 }
-        - { pieceTypeId: card-TD, faction: neutral, total: 1 }
-        - { pieceTypeId: card-JD, faction: neutral, total: 1 }
-        - { pieceTypeId: card-QD, faction: neutral, total: 1 }
-        - { pieceTypeId: card-KD, faction: neutral, total: 1 }
-        - { pieceTypeId: card-AD, faction: neutral, total: 1 }
-        - { pieceTypeId: card-2C, faction: neutral, total: 1 }
-        - { pieceTypeId: card-3C, faction: neutral, total: 1 }
-        - { pieceTypeId: card-4C, faction: neutral, total: 1 }
-        - { pieceTypeId: card-5C, faction: neutral, total: 1 }
-        - { pieceTypeId: card-6C, faction: neutral, total: 1 }
-        - { pieceTypeId: card-7C, faction: neutral, total: 1 }
-        - { pieceTypeId: card-8C, faction: neutral, total: 1 }
-        - { pieceTypeId: card-9C, faction: neutral, total: 1 }
-        - { pieceTypeId: card-TC, faction: neutral, total: 1 }
-        - { pieceTypeId: card-JC, faction: neutral, total: 1 }
-        - { pieceTypeId: card-QC, faction: neutral, total: 1 }
-        - { pieceTypeId: card-KC, faction: neutral, total: 1 }
-        - { pieceTypeId: card-AC, faction: neutral, total: 1 }
-
+        - pieceTypeId: card-2S
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-3S
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-4S
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-5S
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-6S
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-7S
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-8S
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-9S
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-TS
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-JS
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-QS
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-KS
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-AS
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-2H
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-3H
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-4H
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-5H
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-6H
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-7H
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-8H
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-9H
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-TH
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-JH
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-QH
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-KH
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-AH
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-2D
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-3D
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-4D
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-5D
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-6D
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-7D
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-8D
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-9D
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-TD
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-JD
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-QD
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-KD
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-AD
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-2C
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-3C
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-4C
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-5C
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-6C
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-7C
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-8C
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-9C
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-TC
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-JC
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-QC
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-KC
+          faction: neutral
+          total: 1
+        - pieceTypeId: card-AC
+          faction: neutral
+          total: 1
   - id: tournament-standard
     kind: scenario
     tableContracts:
       - tablePath: settings.blindSchedule
         uniqueBy:
-          - [level]
+          - - level
         constraints:
-          - { kind: monotonic, field: level, direction: asc }
-          - { kind: contiguousInt, field: level, start: 0, step: 1 }
-          - { kind: numericRange, field: handsUntilNext, min: 1 }
+          - kind: monotonic
+            field: level
+            direction: asc
+          - kind: contiguousInt
+            field: level
+            start: 0
+            step: 1
+          - kind: numericRange
+            field: handsUntilNext
+            min: 1
     payload:
       pieceCatalogAssetId: standard-52-deck
       factionPools:
-        - { faction: neutral, availableZoneId: deck:none, outOfPlayZoneId: muck:none }
+        - faction: neutral
+          availableZoneId: deck:none
+          outOfPlayZoneId: muck:none
       scenarioName: Standard NLHE Tournament
       yearRange: timeless
       settings:
         startingChips: 1000
         blindSchedule:
-          - { level: 0, sb: 10, bb: 20, ante: 0, handsUntilNext: 10 }
-          - { level: 1, sb: 15, bb: 30, ante: 0, handsUntilNext: 10 }
-          - { level: 2, sb: 25, bb: 50, ante: 5, handsUntilNext: 10 }
-          - { level: 3, sb: 50, bb: 100, ante: 10, handsUntilNext: 8 }
-          - { level: 4, sb: 75, bb: 150, ante: 15, handsUntilNext: 8 }
-          - { level: 5, sb: 100, bb: 200, ante: 25, handsUntilNext: 6 }
-          - { level: 6, sb: 150, bb: 300, ante: 50, handsUntilNext: 6 }
-          - { level: 7, sb: 200, bb: 400, ante: 50, handsUntilNext: 5 }
-          - { level: 8, sb: 300, bb: 600, ante: 75, handsUntilNext: 5 }
-          - { level: 9, sb: 500, bb: 1000, ante: 100, handsUntilNext: 5 }
+          - level: 0
+            sb: 10
+            bb: 20
+            ante: 0
+            handsUntilNext: 10
+          - level: 1
+            sb: 15
+            bb: 30
+            ante: 0
+            handsUntilNext: 10
+          - level: 2
+            sb: 25
+            bb: 50
+            ante: 5
+            handsUntilNext: 10
+          - level: 3
+            sb: 50
+            bb: 100
+            ante: 10
+            handsUntilNext: 8
+          - level: 4
+            sb: 75
+            bb: 150
+            ante: 15
+            handsUntilNext: 8
+          - level: 5
+            sb: 100
+            bb: 200
+            ante: 25
+            handsUntilNext: 6
+          - level: 6
+            sb: 150
+            bb: 300
+            ante: 50
+            handsUntilNext: 6
+          - level: 7
+            sb: 200
+            bb: 400
+            ante: 50
+            handsUntilNext: 5
+          - level: 8
+            sb: 300
+            bb: 600
+            ante: 75
+            handsUntilNext: 5
+          - level: 9
+            sb: 500
+            bb: 1000
+            ante: 100
+            handsUntilNext: 5
 ```

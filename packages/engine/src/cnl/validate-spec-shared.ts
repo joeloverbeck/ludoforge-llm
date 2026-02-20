@@ -4,14 +4,11 @@ import type { GameSpecSourceMap } from './source-map.js';
 
 const MAX_ALTERNATIVE_DISTANCE = 3;
 
-export const METADATA_KEYS = ['id', 'players', 'maxTriggerDepth', 'defaultScenarioAssetId', 'namedSets', 'cardAnimation', 'layoutMode'] as const;
+export const METADATA_KEYS = ['id', 'players', 'maxTriggerDepth', 'defaultScenarioAssetId', 'namedSets'] as const;
 export const PLAYERS_KEYS = ['min', 'max'] as const;
-export const CARD_ANIMATION_KEYS = ['cardTokenTypes', 'zoneRoles'] as const;
-export const CARD_TOKEN_TYPES_KEYS = ['ids', 'idPrefixes'] as const;
-export const CARD_ANIMATION_ZONE_ROLES_KEYS = ['draw', 'hand', 'shared', 'burn', 'discard'] as const;
 export const DATA_ASSET_KEYS = ['id', 'kind', 'payload', 'tableContracts'] as const;
 export const VARIABLE_KEYS = ['name', 'type', 'init', 'min', 'max'] as const;
-export const ZONE_KEYS = ['id', 'zoneKind', 'layoutRole', 'owner', 'visibility', 'ordering', 'adjacentTo'] as const;
+export const ZONE_KEYS = ['id', 'zoneKind', 'owner', 'visibility', 'ordering', 'adjacentTo'] as const;
 export const ACTION_KEYS = ['id', 'actor', 'executor', 'phase', 'capabilities', 'params', 'pre', 'cost', 'effects', 'limits'] as const;
 export const TURN_STRUCTURE_KEYS = ['phases', 'interrupts'] as const;
 export const TURN_ORDER_KEYS = ['type', 'order', 'config'] as const;

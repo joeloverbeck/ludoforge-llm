@@ -23,8 +23,8 @@ const makeDef = (): GameDef => ({
   globalVars: [],
   perPlayerVars: [],
   zones: [
-    { id: asZoneId('a:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('b:none')] },
-    { id: asZoneId('b:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('a:none')] },
+    { id: asZoneId('a:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('b:none') }] },
+    { id: asZoneId('b:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('a:none') }] },
     { id: asZoneId('c:none'), owner: 'none', visibility: 'public', ordering: 'set' },
   ],
   tokenTypes: [],

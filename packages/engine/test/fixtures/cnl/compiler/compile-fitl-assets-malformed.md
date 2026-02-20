@@ -25,7 +25,6 @@ dataAssets:
     payload:
       factions:
         - id: us
-          color: "#e63946"
       pieceTypes: []
       inventory: []
   - id: fitl-scenario-invalid

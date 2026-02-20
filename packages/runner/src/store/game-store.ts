@@ -18,6 +18,7 @@ import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import { deriveRenderModel } from '../model/derive-render-model.js';
 import type { RenderModel } from '../model/render-model.js';
+import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { assertLifecycleTransition, lifecycleFromTerminal, type GameLifecycle } from './lifecycle-transition.js';
 import type { PartialChoice, PlayerSeat, RenderContext } from './store-types.js';
 import type { AnimationDetailLevel, AnimationPlaybackSpeed } from '../animation/animation-types.js';
@@ -354,7 +355,7 @@ function isHumanTurn(renderModel: RenderModel | null): boolean {
   return activePlayer?.isHuman === true;
 }
 
-function toRenderContext(inputs: RenderDerivationInputs): RenderContext | null {
+function toRenderContext(inputs: RenderDerivationInputs, visualConfigProvider: VisualConfigProvider): RenderContext | null {
   if (inputs.playerID === null) {
     return null;
   }
@@ -368,14 +369,19 @@ function toRenderContext(inputs: RenderDerivationInputs): RenderContext | null {
     choiceStack: inputs.choiceStack,
     playerSeats: inputs.playerSeats,
     terminal: inputs.terminal,
+    visualConfigProvider,
   };
 }
 
-function deriveStoreRenderModel(inputs: RenderDerivationInputs, previousModel: RenderModel | null): RenderModel | null {
+function deriveStoreRenderModel(
+  inputs: RenderDerivationInputs,
+  previousModel: RenderModel | null,
+  visualConfigProvider: VisualConfigProvider,
+): RenderModel | null {
   if (inputs.gameDef === null || inputs.gameState === null) {
     return null;
   }
-  const context = toRenderContext(inputs);
+  const context = toRenderContext(inputs, visualConfigProvider);
   if (context === null) {
     return null;
   }
@@ -432,7 +438,7 @@ function materializeNextState(current: GameStore, patch: Partial<MutableGameStor
   };
 }
 
-export function createGameStore(bridge: GameWorkerAPI) {
+export function createGameStore(bridge: GameWorkerAPI, visualConfigProvider: VisualConfigProvider) {
   return create<GameStore>()(
     subscribeWithSelector((set, get) => {
       let sessionEpoch = 0;
@@ -492,7 +498,11 @@ export function createGameStore(bridge: GameWorkerAPI) {
           const nextState = materializeNextState(current, patch);
           return {
             ...patch,
-            renderModel: deriveStoreRenderModel(toRenderDerivationInputs(nextState), current.renderModel),
+            renderModel: deriveStoreRenderModel(
+              toRenderDerivationInputs(nextState),
+              current.renderModel,
+              visualConfigProvider,
+            ),
           };
         });
       };

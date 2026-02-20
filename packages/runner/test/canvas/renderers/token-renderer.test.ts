@@ -6,6 +6,8 @@ const {
   MockContainer,
   MockCircle,
   MockGraphics,
+  MockPolygon,
+  MockRectangle,
   MockText,
 } = vi.hoisted(() => {
   class MockPoint {
@@ -103,11 +105,14 @@ const {
 
     roundRectArgs: [number, number, number, number, number] | null = null;
 
+    polyArgs: number[] | null = null;
+
     clear(): this {
       this.fillStyle = undefined;
       this.strokeStyle = undefined;
       this.circleArgs = null;
       this.roundRectArgs = null;
+      this.polyArgs = null;
       return this;
     }
 
@@ -118,6 +123,11 @@ const {
 
     roundRect(x: number, y: number, width: number, height: number, radius: number): this {
       this.roundRectArgs = [x, y, width, height, radius];
+      return this;
+    }
+
+    poly(points: number[]): this {
+      this.polyArgs = points;
       return this;
     }
 
@@ -160,10 +170,37 @@ const {
     }
   }
 
+  class HoistedMockRectangle {
+    x: number;
+
+    y: number;
+
+    width: number;
+
+    height: number;
+
+    constructor(x: number, y: number, width: number, height: number) {
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.height = height;
+    }
+  }
+
+  class HoistedMockPolygon {
+    points: number[];
+
+    constructor(points: number[]) {
+      this.points = points;
+    }
+  }
+
   return {
     MockContainer: HoistedMockContainer,
     MockCircle: HoistedMockCircle,
     MockGraphics: HoistedMockGraphics,
+    MockPolygon: HoistedMockPolygon,
+    MockRectangle: HoistedMockRectangle,
     MockText: HoistedMockText,
   };
 });
@@ -172,10 +209,13 @@ vi.mock('pixi.js', () => ({
   Circle: MockCircle,
   Container: MockContainer,
   Graphics: MockGraphics,
+  Polygon: MockPolygon,
+  Rectangle: MockRectangle,
   Text: MockText,
 }));
 
 import { createTokenRenderer } from '../../../src/canvas/renderers/token-renderer';
+import type { TokenShape } from '../../../src/config/visual-config-defaults';
 import type { RenderToken } from '../../../src/model/render-model';
 
 function makeToken(overrides: Partial<RenderToken> = {}): RenderToken {
@@ -207,15 +247,41 @@ function createZoneContainers(entries: readonly [string, { x: number; y: number 
 
 function createColorProvider(overrides: {
   readonly tokenVisual?: {
-    readonly shape?: 'card' | 'circle';
+    readonly shape?: TokenShape;
     readonly color?: string;
     readonly symbol?: string;
+    readonly backSymbol?: string;
     readonly size?: number;
-  } | null;
+  };
+  readonly cardTemplatesByTokenType?: Readonly<Record<string, {
+    readonly width: number;
+    readonly height: number;
+    readonly layout?: Readonly<Record<string, {
+      readonly y?: number;
+      readonly fontSize?: number;
+      readonly align?: string;
+      readonly wrap?: number;
+    }>>;
+  }>>;
   readonly factionColor?: string;
 } = {}) {
+  const defaultSymbol = overrides.tokenVisual?.symbol ?? null;
+  const defaultBackSymbol = overrides.tokenVisual?.backSymbol ?? null;
   return {
-    getTokenTypeVisual: vi.fn(() => overrides.tokenVisual ?? null),
+    getTokenTypeVisual: vi.fn(() => ({
+      shape: overrides.tokenVisual?.shape ?? 'circle',
+      color: overrides.tokenVisual?.color ?? null,
+      symbol: defaultSymbol,
+      backSymbol: defaultBackSymbol,
+      size: overrides.tokenVisual?.size ?? 28,
+    })),
+    resolveTokenSymbols: vi.fn((_tokenTypeId: string, _tokenProperties: Readonly<Record<string, string | number | boolean>>) => ({
+      symbol: defaultSymbol,
+      backSymbol: defaultBackSymbol,
+    })),
+    getCardTemplateForTokenType: vi.fn(
+      (tokenTypeId: string) => overrides.cardTemplatesByTokenType?.[tokenTypeId] ?? null,
+    ),
     getColor: vi.fn(() => overrides.factionColor ?? '#112233'),
   };
 }
@@ -322,7 +388,7 @@ describe('createTokenRenderer', () => {
     expect(colorProvider.getColor).not.toHaveBeenCalled();
   });
 
-  it('shows ? for face-down tokens and type for face-up tokens', () => {
+  it('shows only symbol graphics for token identity and toggles front/back layers by faceUp', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider();
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
@@ -335,10 +401,12 @@ describe('createTokenRenderer', () => {
     );
 
     const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
-    const backLabel = tokenContainer.children[1] as InstanceType<typeof MockText>;
-    const frontLabel = tokenContainer.children[3] as InstanceType<typeof MockText>;
-    expect(backLabel.text).toBe('?');
-    expect(frontLabel.visible).toBe(false);
+    const backSymbol = tokenContainer.children[1] as InstanceType<typeof MockGraphics>;
+    const frontSymbol = tokenContainer.children[3] as InstanceType<typeof MockGraphics>;
+    expect(frontSymbol.visible).toBe(false);
+    expect(backSymbol.visible).toBe(true);
+    expect(backSymbol.polyArgs).toBeNull();
+    expect(backSymbol.circleArgs).toBeNull();
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'leader', faceUp: true, isSelectable: true })],
@@ -347,15 +415,47 @@ describe('createTokenRenderer', () => {
       ]),
     );
 
-    expect(frontLabel.text).toBe('LEA');
-    expect(frontLabel.visible).toBe(true);
-    expect(backLabel.visible).toBe(false);
+    expect(frontSymbol.visible).toBe(true);
+    expect(backSymbol.visible).toBe(false);
+    expect(frontSymbol.polyArgs).toBeNull();
+    expect(frontSymbol.circleArgs).toBeNull();
+  });
+
+  it('resolves token symbols from token properties through provider', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({ tokenVisual: { shape: 'beveled-cylinder' } });
+    colorProvider.resolveTokenSymbols.mockImplementation((_tokenTypeId, tokenProperties) => ({
+      symbol: tokenProperties.activity === 'active' ? 'star' : null,
+      backSymbol: null,
+    }));
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'vc-guerrillas', properties: { activity: 'underground' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const frontSymbol = tokenContainer.children[3] as InstanceType<typeof MockGraphics>;
+    expect(frontSymbol.polyArgs).toBeNull();
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'vc-guerrillas', properties: { activity: 'active' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    expect(frontSymbol.polyArgs).toHaveLength(20);
+    expect(colorProvider.resolveTokenSymbols).toHaveBeenCalledWith('vc-guerrillas', { activity: 'active' });
   });
 
   it('renders card-shaped tokens with front/back primitives from token visuals', () => {
     const parent = new MockContainer();
     const colorProvider = createColorProvider({
-      tokenVisual: { shape: 'card', symbol: 'AS', color: '#ff0000' },
+      tokenVisual: { shape: 'card', symbol: 'diamond', backSymbol: 'circle-dot', color: '#ff0000' },
     });
     const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
 
@@ -368,16 +468,16 @@ describe('createTokenRenderer', () => {
 
     const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
     const backBase = tokenContainer.children[0] as InstanceType<typeof MockGraphics>;
-    const backLabel = tokenContainer.children[1] as InstanceType<typeof MockText>;
+    const backSymbol = tokenContainer.children[1] as InstanceType<typeof MockGraphics>;
     const frontBase = tokenContainer.children[2] as InstanceType<typeof MockGraphics>;
-    const frontLabel = tokenContainer.children[3] as InstanceType<typeof MockText>;
+    const frontSymbol = tokenContainer.children[3] as InstanceType<typeof MockGraphics>;
 
     expect(backBase.roundRectArgs).not.toBeNull();
     expect(frontBase.roundRectArgs).not.toBeNull();
     expect(backBase.visible).toBe(true);
     expect(frontBase.visible).toBe(false);
-    expect(backLabel.text).toBe('◆');
-    expect(frontLabel.text).toBe('AS');
+    expect(backSymbol.circleArgs).not.toBeNull();
+    expect(frontSymbol.polyArgs).toHaveLength(8);
 
     renderer.update(
       [makeToken({ id: 'token:1', type: 'playing-card', faceUp: true })],
@@ -388,6 +488,129 @@ describe('createTokenRenderer', () => {
 
     expect(backBase.visible).toBe(false);
     expect(frontBase.visible).toBe(true);
+  });
+
+  it('uses card template dimensions when token type maps to a template', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'card', color: '#ff0000' },
+      cardTemplatesByTokenType: {
+        'card-AS': {
+          width: 48,
+          height: 68,
+          layout: {
+            rank: { y: 8, align: 'center' },
+          },
+        },
+      },
+    });
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'card-AS', faceUp: true, properties: { rank: 'A' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const frontBase = tokenContainer.children[2] as InstanceType<typeof MockGraphics>;
+    expect(frontBase.roundRectArgs).toEqual([-24, -34, 48, 68, 4]);
+  });
+
+  it('renders template text only while card is face up', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'card', color: '#ff0000' },
+      cardTemplatesByTokenType: {
+        'card-AS': {
+          width: 48,
+          height: 68,
+          layout: {
+            rank: { y: 8, align: 'center' },
+          },
+        },
+      },
+    });
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'card-AS', faceUp: false, properties: { rank: 'A' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const cardContent = tokenContainer.children[5] as InstanceType<typeof MockContainer>;
+    expect(cardContent).toBeDefined();
+    expect(cardContent.visible).toBe(false);
+    expect(cardContent.children).toHaveLength(1);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'card-AS', faceUp: true, properties: { rank: 'A' } })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    expect(cardContent.visible).toBe(true);
+  });
+
+  it('renders non-card token shapes using shape-specific primitives instead of circle fallback', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'cube', color: '#ff0000' },
+    });
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'us-troops', faceUp: true })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const tokenContainer = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
+    const frontBase = tokenContainer.children[2] as InstanceType<typeof MockGraphics>;
+    expect(frontBase.polyArgs).not.toBeNull();
+    expect(frontBase.circleArgs).toBeNull();
+  });
+
+  it('uses rectangle hitArea for card tokens and polygon hitArea for hexagon tokens', () => {
+    const parent = new MockContainer();
+    const colorProvider = createColorProvider({
+      tokenVisual: { shape: 'card', size: 28 },
+    });
+    const renderer = createTokenRenderer(parent as unknown as Container, colorProvider);
+
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'playing-card' })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const cardContainer = renderer.getContainerMap().get('token:1') as unknown as { hitArea?: unknown };
+    expect(cardContainer.hitArea).toBeInstanceOf(MockRectangle);
+
+    colorProvider.getTokenTypeVisual.mockReturnValue({
+      shape: 'hexagon',
+      color: null,
+      symbol: null,
+      backSymbol: null,
+      size: 28,
+    });
+    renderer.update(
+      [makeToken({ id: 'token:1', type: 'hex-token' })],
+      createZoneContainers([
+        ['zone:a', { x: 0, y: 0 }],
+      ]),
+    );
+
+    const hexContainer = renderer.getContainerMap().get('token:1') as unknown as { hitArea?: { points?: number[] } };
+    expect(hexContainer.hitArea).toBeInstanceOf(MockPolygon);
+    expect(hexContainer.hitArea?.points).toHaveLength(12);
   });
 
   it('renders selectable and selected states with distinct stroke styles and scale', () => {

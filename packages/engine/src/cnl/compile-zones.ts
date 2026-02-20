@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import { asZoneId, type ZoneId } from '../kernel/branded.js';
+import { asZoneId } from '../kernel/branded.js';
 import type { ZoneDef } from '../kernel/types.js';
 import type { GameSpecZoneDef } from './game-spec-doc.js';
 import { normalizeZoneOwnerQualifier } from './compile-selectors.js';
@@ -87,18 +87,6 @@ export function materializeZoneDefs(
       continue;
     }
 
-    const layoutRole = normalizeZoneLayoutRole(zone.layoutRole);
-    if (layoutRole === null) {
-      diagnostics.push({
-        code: 'CNL_COMPILER_ZONE_LAYOUT_ROLE_INVALID',
-        path: `${zonePath}.layoutRole`,
-        severity: 'error',
-        message: `Zone layoutRole "${String(zone.layoutRole)}" is invalid.`,
-        suggestion: 'Use layoutRole "card", "forcePool", "hand", or "other".',
-      });
-      continue;
-    }
-
     mergeZoneOwnership(ownershipMap, base, owner);
     if (owner === 'none') {
       outputZones.push(
@@ -108,12 +96,10 @@ export function materializeZoneDefs(
           undefined,
           visibility,
           ordering,
-          zone.adjacentTo,
+          normalizeAdjacentTo(zone.adjacentTo, `${zonePath}.adjacentTo`, diagnostics),
           zoneKind,
-          layoutRole,
           zone.category,
           zone.attributes,
-          zone.visual,
         ),
       );
       continue;
@@ -127,12 +113,10 @@ export function materializeZoneDefs(
           playerId,
           visibility,
           ordering,
-          zone.adjacentTo,
+          normalizeAdjacentTo(zone.adjacentTo, `${zonePath}.adjacentTo`, diagnostics),
           zoneKind,
-          layoutRole,
           zone.category,
           zone.attributes,
-          zone.visual,
         ),
       );
     }
@@ -281,16 +265,6 @@ function normalizeZoneKind(value: GameSpecZoneDef['zoneKind']): 'board' | 'aux' 
   return null;
 }
 
-function normalizeZoneLayoutRole(value: GameSpecZoneDef['layoutRole']): ZoneDef['layoutRole'] | null {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (value === 'card' || value === 'forcePool' || value === 'hand' || value === 'other') {
-    return value;
-  }
-  return null;
-}
-
 function mergeZoneOwnership(map: Map<string, ZoneOwnershipKind>, base: string, owner: 'none' | 'player'): void {
   const existing = map.get(base);
   if (existing === undefined) {
@@ -302,11 +276,50 @@ function mergeZoneOwnership(map: Map<string, ZoneOwnershipKind>, base: string, o
   }
 }
 
-function normalizeAdjacentTo(value: GameSpecZoneDef['adjacentTo']): readonly ZoneId[] | undefined {
+function normalizeAdjacentTo(
+  value: GameSpecZoneDef['adjacentTo'],
+  path: string,
+  diagnostics: Diagnostic[],
+): readonly NonNullable<ZoneDef['adjacentTo']>[number][] | undefined {
   if (value === undefined) {
     return undefined;
   }
-  return value.map((zoneId) => asZoneId(zoneId));
+  const normalized: NonNullable<ZoneDef['adjacentTo']>[number][] = [];
+  for (const [index, adjacency] of value.entries()) {
+    if (typeof adjacency.to !== 'string' || adjacency.to.trim() === '') {
+      diagnostics.push({
+        code: 'CNL_COMPILER_ZONE_ADJACENCY_INVALID',
+        path: `${path}.${index}.to`,
+        severity: 'error',
+        message: 'Zone adjacency entries must define a non-empty "to" string.',
+        suggestion: 'Set adjacency entries as objects: { to: \"zone-id\" }.',
+      });
+      continue;
+    }
+
+    if (
+      adjacency.direction !== undefined
+      && adjacency.direction !== 'bidirectional'
+      && adjacency.direction !== 'unidirectional'
+    ) {
+      diagnostics.push({
+        code: 'CNL_COMPILER_ZONE_ADJACENCY_DIRECTION_INVALID',
+        path: `${path}.${index}.direction`,
+        severity: 'error',
+        message: 'Zone adjacency direction must be "bidirectional" or "unidirectional".',
+        suggestion: 'Omit direction for default bidirectional edges, or set direction: "unidirectional".',
+      });
+      continue;
+    }
+
+    normalized.push({
+      to: asZoneId(adjacency.to),
+      direction: adjacency.direction ?? 'bidirectional',
+      ...(adjacency.category === undefined ? {} : { category: adjacency.category }),
+      ...(adjacency.attributes === undefined ? {} : { attributes: adjacency.attributes }),
+    });
+  }
+  return normalized;
 }
 
 /**
@@ -349,14 +362,11 @@ function createZoneDef(
   ownerPlayerIndex: ZoneDef['ownerPlayerIndex'],
   visibility: ZoneDef['visibility'],
   ordering: ZoneDef['ordering'],
-  adjacentTo: GameSpecZoneDef['adjacentTo'],
+  adjacentTo: ZoneDef['adjacentTo'],
   zoneKind: 'board' | 'aux',
-  layoutRole: ZoneDef['layoutRole'],
   category: GameSpecZoneDef['category'],
   attributes: GameSpecZoneDef['attributes'],
-  visual: GameSpecZoneDef['visual'],
 ): ZoneDef {
-  const normalizedAdjacentTo = normalizeAdjacentTo(adjacentTo);
   return {
     id: asZoneId(id),
     zoneKind,
@@ -364,10 +374,8 @@ function createZoneDef(
     ...(ownerPlayerIndex === undefined ? {} : { ownerPlayerIndex }),
     visibility,
     ordering,
-    ...(layoutRole === undefined ? {} : { layoutRole }),
-    ...(normalizedAdjacentTo === undefined ? {} : { adjacentTo: normalizedAdjacentTo }),
+    ...(adjacentTo === undefined ? {} : { adjacentTo }),
     ...(category === undefined ? {} : { category }),
     ...(attributes === undefined ? {} : { attributes }),
-    ...(visual === undefined ? {} : { visual }),
   };
 }

@@ -18,12 +18,13 @@ export function App(): ReactElement {
   const mountCountRef = useRef(0);
 
   if (bootstrapRef.current === null) {
+    const bootstrapConfig = resolveBootstrapConfig();
     const bridgeHandle = createGameBridge();
-    const store = createGameStore(bridgeHandle.bridge);
+    const store = createGameStore(bridgeHandle.bridge, bootstrapConfig.visualConfigProvider);
     bootstrapRef.current = {
       bridgeHandle,
       store,
-      bootstrapConfig: resolveBootstrapConfig(),
+      bootstrapConfig,
     };
   }
 
@@ -62,7 +63,7 @@ export function App(): ReactElement {
 
   return (
     <ErrorBoundary>
-      <GameContainer store={store} />
+      <GameContainer store={store} visualConfigProvider={bootstrapConfig.visualConfigProvider} />
     </ErrorBoundary>
   );
 }

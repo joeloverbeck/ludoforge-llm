@@ -351,9 +351,18 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "loc-hue-da-nang:none",
-        "loc-hue-khe-sanh:none",
-        "quang-tri-thua-thien:none"
+        {
+          "to": "loc-hue-da-nang:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-hue-khe-sanh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-tri-thua-thien:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "city",
       "attributes": {
@@ -362,13 +371,6 @@
         "terrainTags": [],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "circle",
-        "width": 90,
-        "height": 90,
-        "color": "#5b7fa5",
-        "label": "Hue"
       }
     },
     {
@@ -378,11 +380,26 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "loc-da-nang-dak-to:none",
-        "loc-da-nang-qui-nhon:none",
-        "loc-hue-da-nang:none",
-        "quang-nam:none",
-        "quang-tin-quang-ngai:none"
+        {
+          "to": "loc-da-nang-dak-to:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-da-nang-qui-nhon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-hue-da-nang:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-nam:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-tin-quang-ngai:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "city",
       "attributes": {
@@ -391,13 +408,6 @@
         "terrainTags": [],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "circle",
-        "width": 90,
-        "height": 90,
-        "color": "#5b7fa5",
-        "label": "Da Nang"
       }
     },
     {
@@ -407,12 +417,30 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-dinh:none",
-        "loc-kontum-ban-me-thuot:none",
-        "loc-kontum-dak-to:none",
-        "loc-kontum-qui-nhon:none",
-        "phu-bon-phu-yen:none",
-        "pleiku-darlac:none"
+        {
+          "to": "binh-dinh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-dak-to:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-qui-nhon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phu-bon-phu-yen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "city",
       "attributes": {
@@ -421,13 +449,6 @@
         "terrainTags": [],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "circle",
-        "width": 90,
-        "height": 90,
-        "color": "#5b7fa5",
-        "label": "Kontum"
       }
     },
     {
@@ -437,11 +458,26 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-dinh:none",
-        "loc-da-nang-qui-nhon:none",
-        "loc-kontum-qui-nhon:none",
-        "loc-qui-nhon-cam-ranh:none",
-        "phu-bon-phu-yen:none"
+        {
+          "to": "binh-dinh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-da-nang-qui-nhon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-qui-nhon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-qui-nhon-cam-ranh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phu-bon-phu-yen:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "city",
       "attributes": {
@@ -450,13 +486,6 @@
         "terrainTags": [],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "circle",
-        "width": 90,
-        "height": 90,
-        "color": "#5b7fa5",
-        "label": "Qui Nhon"
       }
     },
     {
@@ -466,11 +495,26 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-tuy-binh-thuan:none",
-        "khanh-hoa:none",
-        "loc-cam-ranh-da-lat:none",
-        "loc-qui-nhon-cam-ranh:none",
-        "loc-saigon-cam-ranh:none"
+        {
+          "to": "binh-tuy-binh-thuan:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "khanh-hoa:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-cam-ranh-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-qui-nhon-cam-ranh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-cam-ranh:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "city",
       "attributes": {
@@ -479,13 +523,6 @@
         "terrainTags": [],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "circle",
-        "width": 90,
-        "height": 90,
-        "color": "#5b7fa5",
-        "label": "Cam Ranh"
       }
     },
     {
@@ -495,10 +532,22 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "loc-saigon-an-loc-ban-me-thuot:none",
-        "phuoc-long:none",
-        "tay-ninh:none",
-        "the-fishhook:none"
+        {
+          "to": "loc-saigon-an-loc-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phuoc-long:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "tay-ninh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-fishhook:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "city",
       "attributes": {
@@ -507,13 +556,6 @@
         "terrainTags": [],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "circle",
-        "width": 90,
-        "height": 90,
-        "color": "#5b7fa5",
-        "label": "An Loc"
       }
     },
     {
@@ -523,15 +565,42 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-tuy-binh-thuan:none",
-        "kien-hoa-vinh-binh:none",
-        "kien-phong:none",
-        "loc-saigon-an-loc-ban-me-thuot:none",
-        "loc-saigon-cam-ranh:none",
-        "loc-saigon-can-tho:none",
-        "loc-saigon-da-lat:none",
-        "quang-duc-long-khanh:none",
-        "tay-ninh:none"
+        {
+          "to": "binh-tuy-binh-thuan:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-hoa-vinh-binh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-phong:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-an-loc-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-cam-ranh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-can-tho:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-duc-long-khanh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "tay-ninh:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "city",
       "attributes": {
@@ -540,13 +609,6 @@
         "terrainTags": [],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "circle",
-        "width": 90,
-        "height": 90,
-        "color": "#5b7fa5",
-        "label": "Saigon"
       }
     },
     {
@@ -556,14 +618,38 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "ba-xuyen:none",
-        "kien-giang-an-xuyen:none",
-        "kien-hoa-vinh-binh:none",
-        "kien-phong:none",
-        "loc-can-tho-bac-lieu:none",
-        "loc-can-tho-chau-doc:none",
-        "loc-can-tho-long-phu:none",
-        "loc-saigon-can-tho:none"
+        {
+          "to": "ba-xuyen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-giang-an-xuyen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-hoa-vinh-binh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-phong:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-can-tho-bac-lieu:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-can-tho-chau-doc:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-can-tho-long-phu:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-can-tho:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "city",
       "attributes": {
@@ -572,13 +658,6 @@
         "terrainTags": [],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "circle",
-        "width": 90,
-        "height": 90,
-        "color": "#5b7fa5",
-        "label": "Can Tho"
       }
     },
     {
@@ -588,11 +667,26 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "loc-hue-khe-sanh:none",
-        "north-vietnam:none",
-        "quang-nam:none",
-        "quang-tri-thua-thien:none",
-        "southern-laos:none"
+        {
+          "to": "loc-hue-khe-sanh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "north-vietnam:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-nam:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-tri-thua-thien:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "southern-laos:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -603,13 +697,6 @@
         ],
         "country": "laos",
         "coastal": false
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#3d5c3a",
-        "label": "Central Laos"
       }
     },
     {
@@ -619,14 +706,38 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-dinh:none",
-        "central-laos:none",
-        "loc-da-nang-dak-to:none",
-        "loc-kontum-dak-to:none",
-        "northeast-cambodia:none",
-        "pleiku-darlac:none",
-        "quang-nam:none",
-        "quang-tin-quang-ngai:none"
+        {
+          "to": "binh-dinh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "central-laos:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-da-nang-dak-to:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-dak-to:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "northeast-cambodia:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-nam:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-tin-quang-ngai:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -637,13 +748,6 @@
         ],
         "country": "laos",
         "coastal": false
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#3d5c3a",
-        "label": "Southern Laos"
       }
     },
     {
@@ -653,9 +757,18 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "pleiku-darlac:none",
-        "southern-laos:none",
-        "the-fishhook:none"
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "southern-laos:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-fishhook:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -666,13 +779,6 @@
         ],
         "country": "cambodia",
         "coastal": false
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#3d5c3a",
-        "label": "Northeast Cambodia"
       }
     },
     {
@@ -682,14 +788,38 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "an-loc:none",
-        "loc-saigon-an-loc-ban-me-thuot:none",
-        "northeast-cambodia:none",
-        "phuoc-long:none",
-        "pleiku-darlac:none",
-        "quang-duc-long-khanh:none",
-        "tay-ninh:none",
-        "the-parrots-beak:none"
+        {
+          "to": "an-loc:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-an-loc-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "northeast-cambodia:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phuoc-long:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-duc-long-khanh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "tay-ninh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-parrots-beak:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -700,13 +830,6 @@
         ],
         "country": "cambodia",
         "coastal": false
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#3d5c3a",
-        "label": "The Fishhook"
       }
     },
     {
@@ -716,12 +839,30 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "kien-giang-an-xuyen:none",
-        "kien-phong:none",
-        "loc-can-tho-chau-doc:none",
-        "sihanoukville:none",
-        "tay-ninh:none",
-        "the-fishhook:none"
+        {
+          "to": "kien-giang-an-xuyen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-phong:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-can-tho-chau-doc:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "sihanoukville:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "tay-ninh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-fishhook:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -732,13 +873,6 @@
         ],
         "country": "cambodia",
         "coastal": false
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#3d5c3a",
-        "label": "The Parrots Beak"
       }
     },
     {
@@ -748,8 +882,14 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "kien-giang-an-xuyen:none",
-        "the-parrots-beak:none"
+        {
+          "to": "kien-giang-an-xuyen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-parrots-beak:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -760,13 +900,6 @@
         ],
         "country": "cambodia",
         "coastal": true
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#3d5c3a",
-        "label": "Sihanoukville"
       }
     },
     {
@@ -776,9 +909,18 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "central-laos:none",
-        "loc-hue-khe-sanh:none",
-        "quang-tri-thua-thien:none"
+        {
+          "to": "central-laos:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-hue-khe-sanh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-tri-thua-thien:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -789,13 +931,6 @@
         ],
         "country": "northVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#6b5b3e",
-        "label": "North Vietnam"
       }
     },
     {
@@ -805,12 +940,30 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "central-laos:none",
-        "hue:none",
-        "loc-hue-da-nang:none",
-        "loc-hue-khe-sanh:none",
-        "north-vietnam:none",
-        "quang-nam:none"
+        {
+          "to": "central-laos:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "hue:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-hue-da-nang:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-hue-khe-sanh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "north-vietnam:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-nam:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -821,13 +974,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#6b5b3e",
-        "label": "Quang Tri"
       }
     },
     {
@@ -837,13 +983,34 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "central-laos:none",
-        "da-nang:none",
-        "loc-da-nang-dak-to:none",
-        "loc-hue-da-nang:none",
-        "quang-tin-quang-ngai:none",
-        "quang-tri-thua-thien:none",
-        "southern-laos:none"
+        {
+          "to": "central-laos:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "da-nang:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-da-nang-dak-to:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-hue-da-nang:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-tin-quang-ngai:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-tri-thua-thien:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "southern-laos:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -854,13 +1021,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#6b5b3e",
-        "label": "Quang Nam"
       }
     },
     {
@@ -870,12 +1030,30 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-dinh:none",
-        "da-nang:none",
-        "loc-da-nang-dak-to:none",
-        "loc-da-nang-qui-nhon:none",
-        "quang-nam:none",
-        "southern-laos:none"
+        {
+          "to": "binh-dinh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "da-nang:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-da-nang-dak-to:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-da-nang-qui-nhon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-nam:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "southern-laos:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -886,13 +1064,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#5a7a52",
-        "label": "Quang Tin Quang Ngai"
       }
     },
     {
@@ -902,16 +1073,46 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "kontum:none",
-        "loc-da-nang-dak-to:none",
-        "loc-da-nang-qui-nhon:none",
-        "loc-kontum-dak-to:none",
-        "loc-kontum-qui-nhon:none",
-        "phu-bon-phu-yen:none",
-        "pleiku-darlac:none",
-        "quang-tin-quang-ngai:none",
-        "qui-nhon:none",
-        "southern-laos:none"
+        {
+          "to": "kontum:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-da-nang-dak-to:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-da-nang-qui-nhon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-dak-to:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-qui-nhon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phu-bon-phu-yen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-tin-quang-ngai:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "qui-nhon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "southern-laos:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -922,13 +1123,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#6b5b3e",
-        "label": "Binh Dinh"
       }
     },
     {
@@ -938,19 +1132,58 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-dinh:none",
-        "khanh-hoa:none",
-        "kontum:none",
-        "loc-ban-me-thuot-da-lat:none",
-        "loc-da-nang-dak-to:none",
-        "loc-kontum-ban-me-thuot:none",
-        "loc-kontum-dak-to:none",
-        "loc-saigon-an-loc-ban-me-thuot:none",
-        "northeast-cambodia:none",
-        "phu-bon-phu-yen:none",
-        "quang-duc-long-khanh:none",
-        "southern-laos:none",
-        "the-fishhook:none"
+        {
+          "to": "binh-dinh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "khanh-hoa:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kontum:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-ban-me-thuot-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-da-nang-dak-to:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-dak-to:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-an-loc-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "northeast-cambodia:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phu-bon-phu-yen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-duc-long-khanh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "southern-laos:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-fishhook:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -961,13 +1194,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#6b5b3e",
-        "label": "Pleiku Darlac"
       }
     },
     {
@@ -977,14 +1203,38 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-dinh:none",
-        "khanh-hoa:none",
-        "kontum:none",
-        "loc-kontum-ban-me-thuot:none",
-        "loc-kontum-qui-nhon:none",
-        "loc-qui-nhon-cam-ranh:none",
-        "pleiku-darlac:none",
-        "qui-nhon:none"
+        {
+          "to": "binh-dinh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "khanh-hoa:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kontum:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-qui-nhon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-qui-nhon-cam-ranh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "qui-nhon:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -995,13 +1245,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#5a7a52",
-        "label": "Phu Bon Phu Yen"
       }
     },
     {
@@ -1011,17 +1254,50 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-tuy-binh-thuan:none",
-        "cam-ranh:none",
-        "loc-ban-me-thuot-da-lat:none",
-        "loc-cam-ranh-da-lat:none",
-        "loc-kontum-ban-me-thuot:none",
-        "loc-qui-nhon-cam-ranh:none",
-        "loc-saigon-an-loc-ban-me-thuot:none",
-        "loc-saigon-da-lat:none",
-        "phu-bon-phu-yen:none",
-        "pleiku-darlac:none",
-        "quang-duc-long-khanh:none"
+        {
+          "to": "binh-tuy-binh-thuan:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "cam-ranh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-ban-me-thuot-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-cam-ranh-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-qui-nhon-cam-ranh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-an-loc-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phu-bon-phu-yen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-duc-long-khanh:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -1032,13 +1308,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#6b5b3e",
-        "label": "Khanh Hoa"
       }
     },
     {
@@ -1048,11 +1317,26 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "an-loc:none",
-        "loc-saigon-an-loc-ban-me-thuot:none",
-        "quang-duc-long-khanh:none",
-        "tay-ninh:none",
-        "the-fishhook:none"
+        {
+          "to": "an-loc:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-an-loc-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-duc-long-khanh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "tay-ninh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-fishhook:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -1063,13 +1347,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#3d5c3a",
-        "label": "Phuoc Long"
       }
     },
     {
@@ -1079,18 +1356,54 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-tuy-binh-thuan:none",
-        "khanh-hoa:none",
-        "loc-ban-me-thuot-da-lat:none",
-        "loc-cam-ranh-da-lat:none",
-        "loc-kontum-ban-me-thuot:none",
-        "loc-saigon-an-loc-ban-me-thuot:none",
-        "loc-saigon-da-lat:none",
-        "phuoc-long:none",
-        "pleiku-darlac:none",
-        "saigon:none",
-        "tay-ninh:none",
-        "the-fishhook:none"
+        {
+          "to": "binh-tuy-binh-thuan:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "khanh-hoa:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-ban-me-thuot-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-cam-ranh-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-an-loc-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phuoc-long:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "saigon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "tay-ninh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-fishhook:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -1101,13 +1414,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#3d5c3a",
-        "label": "Quang Duc Long Khanh"
       }
     },
     {
@@ -1117,14 +1423,38 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "cam-ranh:none",
-        "khanh-hoa:none",
-        "loc-ban-me-thuot-da-lat:none",
-        "loc-cam-ranh-da-lat:none",
-        "loc-saigon-cam-ranh:none",
-        "loc-saigon-da-lat:none",
-        "quang-duc-long-khanh:none",
-        "saigon:none"
+        {
+          "to": "cam-ranh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "khanh-hoa:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-ban-me-thuot-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-cam-ranh-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-cam-ranh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-duc-long-khanh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "saigon:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -1135,13 +1465,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#3d5c3a",
-        "label": "Binh Tuy Binh Thuan"
       }
     },
     {
@@ -1151,14 +1474,38 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "an-loc:none",
-        "kien-phong:none",
-        "loc-saigon-an-loc-ban-me-thuot:none",
-        "phuoc-long:none",
-        "quang-duc-long-khanh:none",
-        "saigon:none",
-        "the-fishhook:none",
-        "the-parrots-beak:none"
+        {
+          "to": "an-loc:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-phong:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-an-loc-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phuoc-long:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-duc-long-khanh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "saigon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-fishhook:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-parrots-beak:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -1169,13 +1516,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#3d5c3a",
-        "label": "Tay Ninh"
       }
     },
     {
@@ -1185,14 +1525,38 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "can-tho:none",
-        "kien-giang-an-xuyen:none",
-        "kien-hoa-vinh-binh:none",
-        "loc-can-tho-chau-doc:none",
-        "loc-saigon-can-tho:none",
-        "saigon:none",
-        "tay-ninh:none",
-        "the-parrots-beak:none"
+        {
+          "to": "can-tho:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-giang-an-xuyen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-hoa-vinh-binh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-can-tho-chau-doc:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-can-tho:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "saigon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "tay-ninh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-parrots-beak:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -1203,13 +1567,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#5a7a52",
-        "label": "Kien Phong"
       }
     },
     {
@@ -1219,12 +1576,30 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "ba-xuyen:none",
-        "can-tho:none",
-        "kien-phong:none",
-        "loc-can-tho-long-phu:none",
-        "loc-saigon-can-tho:none",
-        "saigon:none"
+        {
+          "to": "ba-xuyen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "can-tho:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-phong:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-can-tho-long-phu:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-can-tho:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "saigon:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -1235,13 +1610,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#5a7a52",
-        "label": "Kien Hoa Vinh Binh"
       }
     },
     {
@@ -1251,11 +1619,26 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "can-tho:none",
-        "kien-giang-an-xuyen:none",
-        "kien-hoa-vinh-binh:none",
-        "loc-can-tho-bac-lieu:none",
-        "loc-can-tho-long-phu:none"
+        {
+          "to": "can-tho:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-giang-an-xuyen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-hoa-vinh-binh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-can-tho-bac-lieu:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-can-tho-long-phu:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -1266,13 +1649,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#5a7a52",
-        "label": "Ba Xuyen"
       }
     },
     {
@@ -1282,13 +1658,34 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "ba-xuyen:none",
-        "can-tho:none",
-        "kien-phong:none",
-        "loc-can-tho-bac-lieu:none",
-        "loc-can-tho-chau-doc:none",
-        "sihanoukville:none",
-        "the-parrots-beak:none"
+        {
+          "to": "ba-xuyen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "can-tho:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-phong:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-can-tho-bac-lieu:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-can-tho-chau-doc:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "sihanoukville:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-parrots-beak:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "province",
       "attributes": {
@@ -1299,13 +1696,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "rectangle",
-        "width": 160,
-        "height": 100,
-        "color": "#5a7a52",
-        "label": "Kien Giang An Xuyen"
       }
     },
     {
@@ -1315,10 +1705,22 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "central-laos:none",
-        "hue:none",
-        "north-vietnam:none",
-        "quang-tri-thua-thien:none"
+        {
+          "to": "central-laos:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "hue:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "north-vietnam:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-tri-thua-thien:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1329,13 +1731,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Hue-Khe Sanh"
       }
     },
     {
@@ -1345,10 +1740,22 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "da-nang:none",
-        "hue:none",
-        "quang-nam:none",
-        "quang-tri-thua-thien:none"
+        {
+          "to": "da-nang:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "hue:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-nam:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-tri-thua-thien:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1359,13 +1766,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Hue-Da Nang"
       }
     },
     {
@@ -1375,13 +1775,34 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-dinh:none",
-        "da-nang:none",
-        "loc-kontum-dak-to:none",
-        "pleiku-darlac:none",
-        "quang-nam:none",
-        "quang-tin-quang-ngai:none",
-        "southern-laos:none"
+        {
+          "to": "binh-dinh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "da-nang:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-dak-to:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-nam:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-tin-quang-ngai:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "southern-laos:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1392,13 +1813,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Da Nang-Dak To"
       }
     },
     {
@@ -1408,10 +1822,22 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-dinh:none",
-        "da-nang:none",
-        "quang-tin-quang-ngai:none",
-        "qui-nhon:none"
+        {
+          "to": "binh-dinh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "da-nang:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-tin-quang-ngai:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "qui-nhon:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1422,13 +1848,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Da Nang-Qui Nhon"
       }
     },
     {
@@ -1438,11 +1857,26 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-dinh:none",
-        "kontum:none",
-        "loc-da-nang-dak-to:none",
-        "pleiku-darlac:none",
-        "southern-laos:none"
+        {
+          "to": "binh-dinh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kontum:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-da-nang-dak-to:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "southern-laos:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1453,13 +1887,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Kontum-Dak To"
       }
     },
     {
@@ -1469,10 +1896,22 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-dinh:none",
-        "kontum:none",
-        "phu-bon-phu-yen:none",
-        "qui-nhon:none"
+        {
+          "to": "binh-dinh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kontum:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phu-bon-phu-yen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "qui-nhon:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1483,13 +1922,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Kontum-Qui Nhon"
       }
     },
     {
@@ -1499,13 +1931,34 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "khanh-hoa:none",
-        "kontum:none",
-        "loc-ban-me-thuot-da-lat:none",
-        "loc-saigon-an-loc-ban-me-thuot:none",
-        "phu-bon-phu-yen:none",
-        "pleiku-darlac:none",
-        "quang-duc-long-khanh:none"
+        {
+          "to": "khanh-hoa:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kontum:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-ban-me-thuot-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-an-loc-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phu-bon-phu-yen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-duc-long-khanh:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1516,13 +1969,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Kontum-Ban Me Thuot"
       }
     },
     {
@@ -1532,10 +1978,22 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "cam-ranh:none",
-        "khanh-hoa:none",
-        "phu-bon-phu-yen:none",
-        "qui-nhon:none"
+        {
+          "to": "cam-ranh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "khanh-hoa:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phu-bon-phu-yen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "qui-nhon:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1546,13 +2004,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Qui Nhon-Cam Ranh"
       }
     },
     {
@@ -1562,12 +2013,30 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-tuy-binh-thuan:none",
-        "cam-ranh:none",
-        "khanh-hoa:none",
-        "loc-ban-me-thuot-da-lat:none",
-        "loc-saigon-da-lat:none",
-        "quang-duc-long-khanh:none"
+        {
+          "to": "binh-tuy-binh-thuan:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "cam-ranh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "khanh-hoa:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-ban-me-thuot-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-duc-long-khanh:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1578,13 +2047,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Cam Ranh-Da Lat"
       }
     },
     {
@@ -1594,14 +2056,38 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-tuy-binh-thuan:none",
-        "khanh-hoa:none",
-        "loc-cam-ranh-da-lat:none",
-        "loc-kontum-ban-me-thuot:none",
-        "loc-saigon-an-loc-ban-me-thuot:none",
-        "loc-saigon-da-lat:none",
-        "pleiku-darlac:none",
-        "quang-duc-long-khanh:none"
+        {
+          "to": "binh-tuy-binh-thuan:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "khanh-hoa:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-cam-ranh-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-an-loc-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-saigon-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-duc-long-khanh:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1612,13 +2098,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Ban Me Thuot-Da Lat"
       }
     },
     {
@@ -1628,9 +2107,18 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-tuy-binh-thuan:none",
-        "cam-ranh:none",
-        "saigon:none"
+        {
+          "to": "binh-tuy-binh-thuan:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "cam-ranh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "saigon:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1641,13 +2129,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Saigon-Cam Ranh"
       }
     },
     {
@@ -1657,12 +2138,30 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "binh-tuy-binh-thuan:none",
-        "khanh-hoa:none",
-        "loc-ban-me-thuot-da-lat:none",
-        "loc-cam-ranh-da-lat:none",
-        "quang-duc-long-khanh:none",
-        "saigon:none"
+        {
+          "to": "binh-tuy-binh-thuan:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "khanh-hoa:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-ban-me-thuot-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-cam-ranh-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-duc-long-khanh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "saigon:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1673,13 +2172,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Saigon-Da Lat"
       }
     },
     {
@@ -1689,16 +2181,46 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "an-loc:none",
-        "khanh-hoa:none",
-        "loc-ban-me-thuot-da-lat:none",
-        "loc-kontum-ban-me-thuot:none",
-        "phuoc-long:none",
-        "pleiku-darlac:none",
-        "quang-duc-long-khanh:none",
-        "saigon:none",
-        "tay-ninh:none",
-        "the-fishhook:none"
+        {
+          "to": "an-loc:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "khanh-hoa:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-ban-me-thuot-da-lat:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "loc-kontum-ban-me-thuot:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "phuoc-long:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "pleiku-darlac:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "quang-duc-long-khanh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "saigon:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "tay-ninh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-fishhook:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1709,13 +2231,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#8b7355",
-        "label": "Saigon-An Loc-Ban Me Thuot"
       }
     },
     {
@@ -1725,10 +2240,22 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "can-tho:none",
-        "kien-hoa-vinh-binh:none",
-        "kien-phong:none",
-        "saigon:none"
+        {
+          "to": "can-tho:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-hoa-vinh-binh:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-phong:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "saigon:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1739,13 +2266,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#4a7a8c",
-        "label": "Saigon-Can Tho"
       }
     },
     {
@@ -1755,10 +2275,22 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "can-tho:none",
-        "kien-giang-an-xuyen:none",
-        "kien-phong:none",
-        "the-parrots-beak:none"
+        {
+          "to": "can-tho:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-giang-an-xuyen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-phong:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "the-parrots-beak:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1769,13 +2301,6 @@
         ],
         "country": "southVietnam",
         "coastal": false
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#4a7a8c",
-        "label": "Can Tho-Chau Doc"
       }
     },
     {
@@ -1785,9 +2310,18 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "ba-xuyen:none",
-        "can-tho:none",
-        "kien-giang-an-xuyen:none"
+        {
+          "to": "ba-xuyen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "can-tho:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-giang-an-xuyen:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1798,13 +2332,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#4a7a8c",
-        "label": "Can Tho-Bac Lieu"
       }
     },
     {
@@ -1814,9 +2341,18 @@
       "visibility": "public",
       "ordering": "set",
       "adjacentTo": [
-        "ba-xuyen:none",
-        "can-tho:none",
-        "kien-hoa-vinh-binh:none"
+        {
+          "to": "ba-xuyen:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "can-tho:none",
+          "direction": "bidirectional"
+        },
+        {
+          "to": "kien-hoa-vinh-binh:none",
+          "direction": "bidirectional"
+        }
       ],
       "category": "loc",
       "attributes": {
@@ -1827,13 +2363,6 @@
         ],
         "country": "southVietnam",
         "coastal": true
-      },
-      "visual": {
-        "shape": "line",
-        "width": 120,
-        "height": 36,
-        "color": "#4a7a8c",
-        "label": "Can Tho-Long Phu"
       }
     },
     {
@@ -1841,110 +2370,91 @@
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "hidden",
-      "ordering": "stack",
-      "layoutRole": "card"
+      "ordering": "stack"
     },
     {
       "id": "available-US:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set",
-      "layoutRole": "forcePool"
+      "ordering": "set"
     },
     {
       "id": "out-of-play-US:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set",
-      "layoutRole": "forcePool"
+      "ordering": "set"
     },
     {
       "id": "available-ARVN:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set",
-      "layoutRole": "forcePool"
+      "ordering": "set"
     },
     {
       "id": "out-of-play-ARVN:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set",
-      "layoutRole": "forcePool"
+      "ordering": "set"
     },
     {
       "id": "available-NVA:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set",
-      "layoutRole": "forcePool"
+      "ordering": "set"
     },
     {
       "id": "available-VC:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set",
-      "layoutRole": "forcePool"
+      "ordering": "set"
     },
     {
       "id": "casualties-US:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "set",
-      "layoutRole": "forcePool"
+      "ordering": "set"
     },
     {
       "id": "leader:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "stack",
-      "layoutRole": "card"
+      "ordering": "stack"
     },
     {
       "id": "lookahead:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "stack",
-      "layoutRole": "card"
+      "ordering": "stack"
     },
     {
       "id": "played:none",
       "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
-      "ordering": "stack",
-      "layoutRole": "card"
+      "ordering": "stack"
     }
   ],
   "factions": [
     {
-      "id": "us",
-      "color": "#e63946",
-      "displayName": "United States"
+      "id": "us"
     },
     {
-      "id": "arvn",
-      "color": "#457b9d",
-      "displayName": "ARVN"
+      "id": "arvn"
     },
     {
-      "id": "nva",
-      "color": "#2a9d8f",
-      "displayName": "NVA"
+      "id": "nva"
     },
     {
-      "id": "vc",
-      "color": "#e9c46a",
-      "displayName": "Viet Cong"
+      "id": "vc"
     }
   ],
   "tracks": [
@@ -2338,13 +2848,16 @@
               "coastal": true
             },
             "adjacentTo": [
-              "quang-tri-thua-thien:none",
-              "loc-hue-khe-sanh:none",
-              "loc-hue-da-nang:none"
-            ],
-            "visual": {
-              "label": "Hue"
-            }
+              {
+                "to": "quang-tri-thua-thien:none"
+              },
+              {
+                "to": "loc-hue-khe-sanh:none"
+              },
+              {
+                "to": "loc-hue-da-nang:none"
+              }
+            ]
           },
           {
             "id": "da-nang:none",
@@ -2357,15 +2870,22 @@
               "coastal": true
             },
             "adjacentTo": [
-              "quang-nam:none",
-              "quang-tin-quang-ngai:none",
-              "loc-hue-da-nang:none",
-              "loc-da-nang-qui-nhon:none",
-              "loc-da-nang-dak-to:none"
-            ],
-            "visual": {
-              "label": "Da Nang"
-            }
+              {
+                "to": "quang-nam:none"
+              },
+              {
+                "to": "quang-tin-quang-ngai:none"
+              },
+              {
+                "to": "loc-hue-da-nang:none"
+              },
+              {
+                "to": "loc-da-nang-qui-nhon:none"
+              },
+              {
+                "to": "loc-da-nang-dak-to:none"
+              }
+            ]
           },
           {
             "id": "kontum:none",
@@ -2378,16 +2898,25 @@
               "coastal": false
             },
             "adjacentTo": [
-              "binh-dinh:none",
-              "pleiku-darlac:none",
-              "phu-bon-phu-yen:none",
-              "loc-kontum-dak-to:none",
-              "loc-kontum-ban-me-thuot:none",
-              "loc-kontum-qui-nhon:none"
-            ],
-            "visual": {
-              "label": "Kontum"
-            }
+              {
+                "to": "binh-dinh:none"
+              },
+              {
+                "to": "pleiku-darlac:none"
+              },
+              {
+                "to": "phu-bon-phu-yen:none"
+              },
+              {
+                "to": "loc-kontum-dak-to:none"
+              },
+              {
+                "to": "loc-kontum-ban-me-thuot:none"
+              },
+              {
+                "to": "loc-kontum-qui-nhon:none"
+              }
+            ]
           },
           {
             "id": "qui-nhon:none",
@@ -2400,15 +2929,22 @@
               "coastal": true
             },
             "adjacentTo": [
-              "binh-dinh:none",
-              "phu-bon-phu-yen:none",
-              "loc-da-nang-qui-nhon:none",
-              "loc-kontum-qui-nhon:none",
-              "loc-qui-nhon-cam-ranh:none"
-            ],
-            "visual": {
-              "label": "Qui Nhon"
-            }
+              {
+                "to": "binh-dinh:none"
+              },
+              {
+                "to": "phu-bon-phu-yen:none"
+              },
+              {
+                "to": "loc-da-nang-qui-nhon:none"
+              },
+              {
+                "to": "loc-kontum-qui-nhon:none"
+              },
+              {
+                "to": "loc-qui-nhon-cam-ranh:none"
+              }
+            ]
           },
           {
             "id": "cam-ranh:none",
@@ -2421,15 +2957,22 @@
               "coastal": true
             },
             "adjacentTo": [
-              "khanh-hoa:none",
-              "binh-tuy-binh-thuan:none",
-              "loc-qui-nhon-cam-ranh:none",
-              "loc-saigon-cam-ranh:none",
-              "loc-cam-ranh-da-lat:none"
-            ],
-            "visual": {
-              "label": "Cam Ranh"
-            }
+              {
+                "to": "khanh-hoa:none"
+              },
+              {
+                "to": "binh-tuy-binh-thuan:none"
+              },
+              {
+                "to": "loc-qui-nhon-cam-ranh:none"
+              },
+              {
+                "to": "loc-saigon-cam-ranh:none"
+              },
+              {
+                "to": "loc-cam-ranh-da-lat:none"
+              }
+            ]
           },
           {
             "id": "an-loc:none",
@@ -2442,14 +2985,19 @@
               "coastal": false
             },
             "adjacentTo": [
-              "phuoc-long:none",
-              "tay-ninh:none",
-              "the-fishhook:none",
-              "loc-saigon-an-loc-ban-me-thuot:none"
-            ],
-            "visual": {
-              "label": "An Loc"
-            }
+              {
+                "to": "phuoc-long:none"
+              },
+              {
+                "to": "tay-ninh:none"
+              },
+              {
+                "to": "the-fishhook:none"
+              },
+              {
+                "to": "loc-saigon-an-loc-ban-me-thuot:none"
+              }
+            ]
           },
           {
             "id": "saigon:none",
@@ -2462,19 +3010,34 @@
               "coastal": true
             },
             "adjacentTo": [
-              "binh-tuy-binh-thuan:none",
-              "quang-duc-long-khanh:none",
-              "tay-ninh:none",
-              "kien-phong:none",
-              "kien-hoa-vinh-binh:none",
-              "loc-saigon-cam-ranh:none",
-              "loc-saigon-da-lat:none",
-              "loc-saigon-an-loc-ban-me-thuot:none",
-              "loc-saigon-can-tho:none"
-            ],
-            "visual": {
-              "label": "Saigon"
-            }
+              {
+                "to": "binh-tuy-binh-thuan:none"
+              },
+              {
+                "to": "quang-duc-long-khanh:none"
+              },
+              {
+                "to": "tay-ninh:none"
+              },
+              {
+                "to": "kien-phong:none"
+              },
+              {
+                "to": "kien-hoa-vinh-binh:none"
+              },
+              {
+                "to": "loc-saigon-cam-ranh:none"
+              },
+              {
+                "to": "loc-saigon-da-lat:none"
+              },
+              {
+                "to": "loc-saigon-an-loc-ban-me-thuot:none"
+              },
+              {
+                "to": "loc-saigon-can-tho:none"
+              }
+            ]
           },
           {
             "id": "can-tho:none",
@@ -2487,18 +3050,31 @@
               "coastal": false
             },
             "adjacentTo": [
-              "kien-phong:none",
-              "kien-hoa-vinh-binh:none",
-              "ba-xuyen:none",
-              "kien-giang-an-xuyen:none",
-              "loc-saigon-can-tho:none",
-              "loc-can-tho-chau-doc:none",
-              "loc-can-tho-bac-lieu:none",
-              "loc-can-tho-long-phu:none"
-            ],
-            "visual": {
-              "label": "Can Tho"
-            }
+              {
+                "to": "kien-phong:none"
+              },
+              {
+                "to": "kien-hoa-vinh-binh:none"
+              },
+              {
+                "to": "ba-xuyen:none"
+              },
+              {
+                "to": "kien-giang-an-xuyen:none"
+              },
+              {
+                "to": "loc-saigon-can-tho:none"
+              },
+              {
+                "to": "loc-can-tho-chau-doc:none"
+              },
+              {
+                "to": "loc-can-tho-bac-lieu:none"
+              },
+              {
+                "to": "loc-can-tho-long-phu:none"
+              }
+            ]
           },
           {
             "id": "central-laos:none",
@@ -2513,15 +3089,22 @@
               "coastal": false
             },
             "adjacentTo": [
-              "north-vietnam:none",
-              "quang-tri-thua-thien:none",
-              "quang-nam:none",
-              "southern-laos:none",
-              "loc-hue-khe-sanh:none"
-            ],
-            "visual": {
-              "label": "Central Laos"
-            }
+              {
+                "to": "north-vietnam:none"
+              },
+              {
+                "to": "quang-tri-thua-thien:none"
+              },
+              {
+                "to": "quang-nam:none"
+              },
+              {
+                "to": "southern-laos:none"
+              },
+              {
+                "to": "loc-hue-khe-sanh:none"
+              }
+            ]
           },
           {
             "id": "southern-laos:none",
@@ -2536,18 +3119,31 @@
               "coastal": false
             },
             "adjacentTo": [
-              "central-laos:none",
-              "quang-nam:none",
-              "quang-tin-quang-ngai:none",
-              "binh-dinh:none",
-              "pleiku-darlac:none",
-              "northeast-cambodia:none",
-              "loc-da-nang-dak-to:none",
-              "loc-kontum-dak-to:none"
-            ],
-            "visual": {
-              "label": "Southern Laos"
-            }
+              {
+                "to": "central-laos:none"
+              },
+              {
+                "to": "quang-nam:none"
+              },
+              {
+                "to": "quang-tin-quang-ngai:none"
+              },
+              {
+                "to": "binh-dinh:none"
+              },
+              {
+                "to": "pleiku-darlac:none"
+              },
+              {
+                "to": "northeast-cambodia:none"
+              },
+              {
+                "to": "loc-da-nang-dak-to:none"
+              },
+              {
+                "to": "loc-kontum-dak-to:none"
+              }
+            ]
           },
           {
             "id": "northeast-cambodia:none",
@@ -2562,13 +3158,16 @@
               "coastal": false
             },
             "adjacentTo": [
-              "southern-laos:none",
-              "the-fishhook:none",
-              "pleiku-darlac:none"
-            ],
-            "visual": {
-              "label": "Northeast Cambodia"
-            }
+              {
+                "to": "southern-laos:none"
+              },
+              {
+                "to": "the-fishhook:none"
+              },
+              {
+                "to": "pleiku-darlac:none"
+              }
+            ]
           },
           {
             "id": "the-fishhook:none",
@@ -2583,18 +3182,31 @@
               "coastal": false
             },
             "adjacentTo": [
-              "an-loc:none",
-              "northeast-cambodia:none",
-              "the-parrots-beak:none",
-              "pleiku-darlac:none",
-              "quang-duc-long-khanh:none",
-              "phuoc-long:none",
-              "tay-ninh:none",
-              "loc-saigon-an-loc-ban-me-thuot:none"
-            ],
-            "visual": {
-              "label": "The Fishhook"
-            }
+              {
+                "to": "an-loc:none"
+              },
+              {
+                "to": "northeast-cambodia:none"
+              },
+              {
+                "to": "the-parrots-beak:none"
+              },
+              {
+                "to": "pleiku-darlac:none"
+              },
+              {
+                "to": "quang-duc-long-khanh:none"
+              },
+              {
+                "to": "phuoc-long:none"
+              },
+              {
+                "to": "tay-ninh:none"
+              },
+              {
+                "to": "loc-saigon-an-loc-ban-me-thuot:none"
+              }
+            ]
           },
           {
             "id": "the-parrots-beak:none",
@@ -2609,16 +3221,25 @@
               "coastal": false
             },
             "adjacentTo": [
-              "the-fishhook:none",
-              "sihanoukville:none",
-              "tay-ninh:none",
-              "kien-phong:none",
-              "kien-giang-an-xuyen:none",
-              "loc-can-tho-chau-doc:none"
-            ],
-            "visual": {
-              "label": "The Parrots Beak"
-            }
+              {
+                "to": "the-fishhook:none"
+              },
+              {
+                "to": "sihanoukville:none"
+              },
+              {
+                "to": "tay-ninh:none"
+              },
+              {
+                "to": "kien-phong:none"
+              },
+              {
+                "to": "kien-giang-an-xuyen:none"
+              },
+              {
+                "to": "loc-can-tho-chau-doc:none"
+              }
+            ]
           },
           {
             "id": "sihanoukville:none",
@@ -2633,12 +3254,13 @@
               "coastal": true
             },
             "adjacentTo": [
-              "the-parrots-beak:none",
-              "kien-giang-an-xuyen:none"
-            ],
-            "visual": {
-              "label": "Sihanoukville"
-            }
+              {
+                "to": "the-parrots-beak:none"
+              },
+              {
+                "to": "kien-giang-an-xuyen:none"
+              }
+            ]
           },
           {
             "id": "north-vietnam:none",
@@ -2653,13 +3275,16 @@
               "coastal": true
             },
             "adjacentTo": [
-              "central-laos:none",
-              "quang-tri-thua-thien:none",
-              "loc-hue-khe-sanh:none"
-            ],
-            "visual": {
-              "label": "North Vietnam"
-            }
+              {
+                "to": "central-laos:none"
+              },
+              {
+                "to": "quang-tri-thua-thien:none"
+              },
+              {
+                "to": "loc-hue-khe-sanh:none"
+              }
+            ]
           },
           {
             "id": "quang-tri-thua-thien:none",
@@ -2674,16 +3299,25 @@
               "coastal": true
             },
             "adjacentTo": [
-              "hue:none",
-              "central-laos:none",
-              "north-vietnam:none",
-              "quang-nam:none",
-              "loc-hue-khe-sanh:none",
-              "loc-hue-da-nang:none"
-            ],
-            "visual": {
-              "label": "Quang Tri"
-            }
+              {
+                "to": "hue:none"
+              },
+              {
+                "to": "central-laos:none"
+              },
+              {
+                "to": "north-vietnam:none"
+              },
+              {
+                "to": "quang-nam:none"
+              },
+              {
+                "to": "loc-hue-khe-sanh:none"
+              },
+              {
+                "to": "loc-hue-da-nang:none"
+              }
+            ]
           },
           {
             "id": "quang-nam:none",
@@ -2698,17 +3332,28 @@
               "coastal": true
             },
             "adjacentTo": [
-              "da-nang:none",
-              "central-laos:none",
-              "southern-laos:none",
-              "quang-tri-thua-thien:none",
-              "quang-tin-quang-ngai:none",
-              "loc-hue-da-nang:none",
-              "loc-da-nang-dak-to:none"
-            ],
-            "visual": {
-              "label": "Quang Nam"
-            }
+              {
+                "to": "da-nang:none"
+              },
+              {
+                "to": "central-laos:none"
+              },
+              {
+                "to": "southern-laos:none"
+              },
+              {
+                "to": "quang-tri-thua-thien:none"
+              },
+              {
+                "to": "quang-tin-quang-ngai:none"
+              },
+              {
+                "to": "loc-hue-da-nang:none"
+              },
+              {
+                "to": "loc-da-nang-dak-to:none"
+              }
+            ]
           },
           {
             "id": "quang-tin-quang-ngai:none",
@@ -2723,16 +3368,25 @@
               "coastal": true
             },
             "adjacentTo": [
-              "da-nang:none",
-              "southern-laos:none",
-              "quang-nam:none",
-              "binh-dinh:none",
-              "loc-da-nang-dak-to:none",
-              "loc-da-nang-qui-nhon:none"
-            ],
-            "visual": {
-              "label": "Quang Tin Quang Ngai"
-            }
+              {
+                "to": "da-nang:none"
+              },
+              {
+                "to": "southern-laos:none"
+              },
+              {
+                "to": "quang-nam:none"
+              },
+              {
+                "to": "binh-dinh:none"
+              },
+              {
+                "to": "loc-da-nang-dak-to:none"
+              },
+              {
+                "to": "loc-da-nang-qui-nhon:none"
+              }
+            ]
           },
           {
             "id": "binh-dinh:none",
@@ -2747,20 +3401,37 @@
               "coastal": true
             },
             "adjacentTo": [
-              "kontum:none",
-              "qui-nhon:none",
-              "southern-laos:none",
-              "quang-tin-quang-ngai:none",
-              "phu-bon-phu-yen:none",
-              "pleiku-darlac:none",
-              "loc-da-nang-dak-to:none",
-              "loc-da-nang-qui-nhon:none",
-              "loc-kontum-dak-to:none",
-              "loc-kontum-qui-nhon:none"
-            ],
-            "visual": {
-              "label": "Binh Dinh"
-            }
+              {
+                "to": "kontum:none"
+              },
+              {
+                "to": "qui-nhon:none"
+              },
+              {
+                "to": "southern-laos:none"
+              },
+              {
+                "to": "quang-tin-quang-ngai:none"
+              },
+              {
+                "to": "phu-bon-phu-yen:none"
+              },
+              {
+                "to": "pleiku-darlac:none"
+              },
+              {
+                "to": "loc-da-nang-dak-to:none"
+              },
+              {
+                "to": "loc-da-nang-qui-nhon:none"
+              },
+              {
+                "to": "loc-kontum-dak-to:none"
+              },
+              {
+                "to": "loc-kontum-qui-nhon:none"
+              }
+            ]
           },
           {
             "id": "pleiku-darlac:none",
@@ -2775,23 +3446,46 @@
               "coastal": false
             },
             "adjacentTo": [
-              "kontum:none",
-              "southern-laos:none",
-              "northeast-cambodia:none",
-              "the-fishhook:none",
-              "binh-dinh:none",
-              "phu-bon-phu-yen:none",
-              "khanh-hoa:none",
-              "quang-duc-long-khanh:none",
-              "loc-kontum-dak-to:none",
-              "loc-kontum-ban-me-thuot:none",
-              "loc-da-nang-dak-to:none",
-              "loc-ban-me-thuot-da-lat:none",
-              "loc-saigon-an-loc-ban-me-thuot:none"
-            ],
-            "visual": {
-              "label": "Pleiku Darlac"
-            }
+              {
+                "to": "kontum:none"
+              },
+              {
+                "to": "southern-laos:none"
+              },
+              {
+                "to": "northeast-cambodia:none"
+              },
+              {
+                "to": "the-fishhook:none"
+              },
+              {
+                "to": "binh-dinh:none"
+              },
+              {
+                "to": "phu-bon-phu-yen:none"
+              },
+              {
+                "to": "khanh-hoa:none"
+              },
+              {
+                "to": "quang-duc-long-khanh:none"
+              },
+              {
+                "to": "loc-kontum-dak-to:none"
+              },
+              {
+                "to": "loc-kontum-ban-me-thuot:none"
+              },
+              {
+                "to": "loc-da-nang-dak-to:none"
+              },
+              {
+                "to": "loc-ban-me-thuot-da-lat:none"
+              },
+              {
+                "to": "loc-saigon-an-loc-ban-me-thuot:none"
+              }
+            ]
           },
           {
             "id": "phu-bon-phu-yen:none",
@@ -2806,18 +3500,31 @@
               "coastal": true
             },
             "adjacentTo": [
-              "kontum:none",
-              "qui-nhon:none",
-              "binh-dinh:none",
-              "pleiku-darlac:none",
-              "khanh-hoa:none",
-              "loc-kontum-qui-nhon:none",
-              "loc-qui-nhon-cam-ranh:none",
-              "loc-kontum-ban-me-thuot:none"
-            ],
-            "visual": {
-              "label": "Phu Bon Phu Yen"
-            }
+              {
+                "to": "kontum:none"
+              },
+              {
+                "to": "qui-nhon:none"
+              },
+              {
+                "to": "binh-dinh:none"
+              },
+              {
+                "to": "pleiku-darlac:none"
+              },
+              {
+                "to": "khanh-hoa:none"
+              },
+              {
+                "to": "loc-kontum-qui-nhon:none"
+              },
+              {
+                "to": "loc-qui-nhon-cam-ranh:none"
+              },
+              {
+                "to": "loc-kontum-ban-me-thuot:none"
+              }
+            ]
           },
           {
             "id": "khanh-hoa:none",
@@ -2832,21 +3539,40 @@
               "coastal": true
             },
             "adjacentTo": [
-              "cam-ranh:none",
-              "pleiku-darlac:none",
-              "phu-bon-phu-yen:none",
-              "binh-tuy-binh-thuan:none",
-              "quang-duc-long-khanh:none",
-              "loc-qui-nhon-cam-ranh:none",
-              "loc-cam-ranh-da-lat:none",
-              "loc-ban-me-thuot-da-lat:none",
-              "loc-kontum-ban-me-thuot:none",
-              "loc-saigon-da-lat:none",
-              "loc-saigon-an-loc-ban-me-thuot:none"
-            ],
-            "visual": {
-              "label": "Khanh Hoa"
-            }
+              {
+                "to": "cam-ranh:none"
+              },
+              {
+                "to": "pleiku-darlac:none"
+              },
+              {
+                "to": "phu-bon-phu-yen:none"
+              },
+              {
+                "to": "binh-tuy-binh-thuan:none"
+              },
+              {
+                "to": "quang-duc-long-khanh:none"
+              },
+              {
+                "to": "loc-qui-nhon-cam-ranh:none"
+              },
+              {
+                "to": "loc-cam-ranh-da-lat:none"
+              },
+              {
+                "to": "loc-ban-me-thuot-da-lat:none"
+              },
+              {
+                "to": "loc-kontum-ban-me-thuot:none"
+              },
+              {
+                "to": "loc-saigon-da-lat:none"
+              },
+              {
+                "to": "loc-saigon-an-loc-ban-me-thuot:none"
+              }
+            ]
           },
           {
             "id": "phuoc-long:none",
@@ -2861,15 +3587,22 @@
               "coastal": false
             },
             "adjacentTo": [
-              "an-loc:none",
-              "the-fishhook:none",
-              "quang-duc-long-khanh:none",
-              "tay-ninh:none",
-              "loc-saigon-an-loc-ban-me-thuot:none"
-            ],
-            "visual": {
-              "label": "Phuoc Long"
-            }
+              {
+                "to": "an-loc:none"
+              },
+              {
+                "to": "the-fishhook:none"
+              },
+              {
+                "to": "quang-duc-long-khanh:none"
+              },
+              {
+                "to": "tay-ninh:none"
+              },
+              {
+                "to": "loc-saigon-an-loc-ban-me-thuot:none"
+              }
+            ]
           },
           {
             "id": "quang-duc-long-khanh:none",
@@ -2884,22 +3617,43 @@
               "coastal": false
             },
             "adjacentTo": [
-              "saigon:none",
-              "the-fishhook:none",
-              "pleiku-darlac:none",
-              "khanh-hoa:none",
-              "phuoc-long:none",
-              "binh-tuy-binh-thuan:none",
-              "tay-ninh:none",
-              "loc-kontum-ban-me-thuot:none",
-              "loc-saigon-an-loc-ban-me-thuot:none",
-              "loc-ban-me-thuot-da-lat:none",
-              "loc-saigon-da-lat:none",
-              "loc-cam-ranh-da-lat:none"
-            ],
-            "visual": {
-              "label": "Quang Duc Long Khanh"
-            }
+              {
+                "to": "saigon:none"
+              },
+              {
+                "to": "the-fishhook:none"
+              },
+              {
+                "to": "pleiku-darlac:none"
+              },
+              {
+                "to": "khanh-hoa:none"
+              },
+              {
+                "to": "phuoc-long:none"
+              },
+              {
+                "to": "binh-tuy-binh-thuan:none"
+              },
+              {
+                "to": "tay-ninh:none"
+              },
+              {
+                "to": "loc-kontum-ban-me-thuot:none"
+              },
+              {
+                "to": "loc-saigon-an-loc-ban-me-thuot:none"
+              },
+              {
+                "to": "loc-ban-me-thuot-da-lat:none"
+              },
+              {
+                "to": "loc-saigon-da-lat:none"
+              },
+              {
+                "to": "loc-cam-ranh-da-lat:none"
+              }
+            ]
           },
           {
             "id": "binh-tuy-binh-thuan:none",
@@ -2914,18 +3668,31 @@
               "coastal": true
             },
             "adjacentTo": [
-              "cam-ranh:none",
-              "saigon:none",
-              "khanh-hoa:none",
-              "quang-duc-long-khanh:none",
-              "loc-ban-me-thuot-da-lat:none",
-              "loc-cam-ranh-da-lat:none",
-              "loc-saigon-da-lat:none",
-              "loc-saigon-cam-ranh:none"
-            ],
-            "visual": {
-              "label": "Binh Tuy Binh Thuan"
-            }
+              {
+                "to": "cam-ranh:none"
+              },
+              {
+                "to": "saigon:none"
+              },
+              {
+                "to": "khanh-hoa:none"
+              },
+              {
+                "to": "quang-duc-long-khanh:none"
+              },
+              {
+                "to": "loc-ban-me-thuot-da-lat:none"
+              },
+              {
+                "to": "loc-cam-ranh-da-lat:none"
+              },
+              {
+                "to": "loc-saigon-da-lat:none"
+              },
+              {
+                "to": "loc-saigon-cam-ranh:none"
+              }
+            ]
           },
           {
             "id": "tay-ninh:none",
@@ -2940,18 +3707,31 @@
               "coastal": false
             },
             "adjacentTo": [
-              "an-loc:none",
-              "saigon:none",
-              "the-fishhook:none",
-              "the-parrots-beak:none",
-              "phuoc-long:none",
-              "quang-duc-long-khanh:none",
-              "kien-phong:none",
-              "loc-saigon-an-loc-ban-me-thuot:none"
-            ],
-            "visual": {
-              "label": "Tay Ninh"
-            }
+              {
+                "to": "an-loc:none"
+              },
+              {
+                "to": "saigon:none"
+              },
+              {
+                "to": "the-fishhook:none"
+              },
+              {
+                "to": "the-parrots-beak:none"
+              },
+              {
+                "to": "phuoc-long:none"
+              },
+              {
+                "to": "quang-duc-long-khanh:none"
+              },
+              {
+                "to": "kien-phong:none"
+              },
+              {
+                "to": "loc-saigon-an-loc-ban-me-thuot:none"
+              }
+            ]
           },
           {
             "id": "kien-phong:none",
@@ -2966,18 +3746,31 @@
               "coastal": false
             },
             "adjacentTo": [
-              "saigon:none",
-              "can-tho:none",
-              "the-parrots-beak:none",
-              "tay-ninh:none",
-              "kien-hoa-vinh-binh:none",
-              "kien-giang-an-xuyen:none",
-              "loc-can-tho-chau-doc:none",
-              "loc-saigon-can-tho:none"
-            ],
-            "visual": {
-              "label": "Kien Phong"
-            }
+              {
+                "to": "saigon:none"
+              },
+              {
+                "to": "can-tho:none"
+              },
+              {
+                "to": "the-parrots-beak:none"
+              },
+              {
+                "to": "tay-ninh:none"
+              },
+              {
+                "to": "kien-hoa-vinh-binh:none"
+              },
+              {
+                "to": "kien-giang-an-xuyen:none"
+              },
+              {
+                "to": "loc-can-tho-chau-doc:none"
+              },
+              {
+                "to": "loc-saigon-can-tho:none"
+              }
+            ]
           },
           {
             "id": "kien-hoa-vinh-binh:none",
@@ -2992,16 +3785,25 @@
               "coastal": true
             },
             "adjacentTo": [
-              "saigon:none",
-              "can-tho:none",
-              "kien-phong:none",
-              "ba-xuyen:none",
-              "loc-saigon-can-tho:none",
-              "loc-can-tho-long-phu:none"
-            ],
-            "visual": {
-              "label": "Kien Hoa Vinh Binh"
-            }
+              {
+                "to": "saigon:none"
+              },
+              {
+                "to": "can-tho:none"
+              },
+              {
+                "to": "kien-phong:none"
+              },
+              {
+                "to": "ba-xuyen:none"
+              },
+              {
+                "to": "loc-saigon-can-tho:none"
+              },
+              {
+                "to": "loc-can-tho-long-phu:none"
+              }
+            ]
           },
           {
             "id": "ba-xuyen:none",
@@ -3016,15 +3818,22 @@
               "coastal": true
             },
             "adjacentTo": [
-              "can-tho:none",
-              "kien-hoa-vinh-binh:none",
-              "kien-giang-an-xuyen:none",
-              "loc-can-tho-bac-lieu:none",
-              "loc-can-tho-long-phu:none"
-            ],
-            "visual": {
-              "label": "Ba Xuyen"
-            }
+              {
+                "to": "can-tho:none"
+              },
+              {
+                "to": "kien-hoa-vinh-binh:none"
+              },
+              {
+                "to": "kien-giang-an-xuyen:none"
+              },
+              {
+                "to": "loc-can-tho-bac-lieu:none"
+              },
+              {
+                "to": "loc-can-tho-long-phu:none"
+              }
+            ]
           },
           {
             "id": "kien-giang-an-xuyen:none",
@@ -3039,17 +3848,28 @@
               "coastal": true
             },
             "adjacentTo": [
-              "can-tho:none",
-              "the-parrots-beak:none",
-              "sihanoukville:none",
-              "kien-phong:none",
-              "ba-xuyen:none",
-              "loc-can-tho-chau-doc:none",
-              "loc-can-tho-bac-lieu:none"
-            ],
-            "visual": {
-              "label": "Kien Giang An Xuyen"
-            }
+              {
+                "to": "can-tho:none"
+              },
+              {
+                "to": "the-parrots-beak:none"
+              },
+              {
+                "to": "sihanoukville:none"
+              },
+              {
+                "to": "kien-phong:none"
+              },
+              {
+                "to": "ba-xuyen:none"
+              },
+              {
+                "to": "loc-can-tho-chau-doc:none"
+              },
+              {
+                "to": "loc-can-tho-bac-lieu:none"
+              }
+            ]
           },
           {
             "id": "loc-hue-khe-sanh:none",
@@ -3064,14 +3884,19 @@
               "coastal": true
             },
             "adjacentTo": [
-              "hue:none",
-              "central-laos:none",
-              "north-vietnam:none",
-              "quang-tri-thua-thien:none"
-            ],
-            "visual": {
-              "label": "Hue-Khe Sanh"
-            }
+              {
+                "to": "hue:none"
+              },
+              {
+                "to": "central-laos:none"
+              },
+              {
+                "to": "north-vietnam:none"
+              },
+              {
+                "to": "quang-tri-thua-thien:none"
+              }
+            ]
           },
           {
             "id": "loc-hue-da-nang:none",
@@ -3086,14 +3911,19 @@
               "coastal": true
             },
             "adjacentTo": [
-              "hue:none",
-              "da-nang:none",
-              "quang-tri-thua-thien:none",
-              "quang-nam:none"
-            ],
-            "visual": {
-              "label": "Hue-Da Nang"
-            }
+              {
+                "to": "hue:none"
+              },
+              {
+                "to": "da-nang:none"
+              },
+              {
+                "to": "quang-tri-thua-thien:none"
+              },
+              {
+                "to": "quang-nam:none"
+              }
+            ]
           },
           {
             "id": "loc-da-nang-dak-to:none",
@@ -3108,17 +3938,28 @@
               "coastal": false
             },
             "adjacentTo": [
-              "da-nang:none",
-              "southern-laos:none",
-              "quang-nam:none",
-              "quang-tin-quang-ngai:none",
-              "binh-dinh:none",
-              "pleiku-darlac:none",
-              "loc-kontum-dak-to:none"
-            ],
-            "visual": {
-              "label": "Da Nang-Dak To"
-            }
+              {
+                "to": "da-nang:none"
+              },
+              {
+                "to": "southern-laos:none"
+              },
+              {
+                "to": "quang-nam:none"
+              },
+              {
+                "to": "quang-tin-quang-ngai:none"
+              },
+              {
+                "to": "binh-dinh:none"
+              },
+              {
+                "to": "pleiku-darlac:none"
+              },
+              {
+                "to": "loc-kontum-dak-to:none"
+              }
+            ]
           },
           {
             "id": "loc-da-nang-qui-nhon:none",
@@ -3133,14 +3974,19 @@
               "coastal": true
             },
             "adjacentTo": [
-              "da-nang:none",
-              "qui-nhon:none",
-              "quang-tin-quang-ngai:none",
-              "binh-dinh:none"
-            ],
-            "visual": {
-              "label": "Da Nang-Qui Nhon"
-            }
+              {
+                "to": "da-nang:none"
+              },
+              {
+                "to": "qui-nhon:none"
+              },
+              {
+                "to": "quang-tin-quang-ngai:none"
+              },
+              {
+                "to": "binh-dinh:none"
+              }
+            ]
           },
           {
             "id": "loc-kontum-dak-to:none",
@@ -3155,15 +4001,22 @@
               "coastal": false
             },
             "adjacentTo": [
-              "kontum:none",
-              "southern-laos:none",
-              "binh-dinh:none",
-              "pleiku-darlac:none",
-              "loc-da-nang-dak-to:none"
-            ],
-            "visual": {
-              "label": "Kontum-Dak To"
-            }
+              {
+                "to": "kontum:none"
+              },
+              {
+                "to": "southern-laos:none"
+              },
+              {
+                "to": "binh-dinh:none"
+              },
+              {
+                "to": "pleiku-darlac:none"
+              },
+              {
+                "to": "loc-da-nang-dak-to:none"
+              }
+            ]
           },
           {
             "id": "loc-kontum-qui-nhon:none",
@@ -3178,14 +4031,19 @@
               "coastal": false
             },
             "adjacentTo": [
-              "kontum:none",
-              "qui-nhon:none",
-              "binh-dinh:none",
-              "phu-bon-phu-yen:none"
-            ],
-            "visual": {
-              "label": "Kontum-Qui Nhon"
-            }
+              {
+                "to": "kontum:none"
+              },
+              {
+                "to": "qui-nhon:none"
+              },
+              {
+                "to": "binh-dinh:none"
+              },
+              {
+                "to": "phu-bon-phu-yen:none"
+              }
+            ]
           },
           {
             "id": "loc-kontum-ban-me-thuot:none",
@@ -3200,17 +4058,28 @@
               "coastal": false
             },
             "adjacentTo": [
-              "kontum:none",
-              "pleiku-darlac:none",
-              "phu-bon-phu-yen:none",
-              "khanh-hoa:none",
-              "quang-duc-long-khanh:none",
-              "loc-saigon-an-loc-ban-me-thuot:none",
-              "loc-ban-me-thuot-da-lat:none"
-            ],
-            "visual": {
-              "label": "Kontum-Ban Me Thuot"
-            }
+              {
+                "to": "kontum:none"
+              },
+              {
+                "to": "pleiku-darlac:none"
+              },
+              {
+                "to": "phu-bon-phu-yen:none"
+              },
+              {
+                "to": "khanh-hoa:none"
+              },
+              {
+                "to": "quang-duc-long-khanh:none"
+              },
+              {
+                "to": "loc-saigon-an-loc-ban-me-thuot:none"
+              },
+              {
+                "to": "loc-ban-me-thuot-da-lat:none"
+              }
+            ]
           },
           {
             "id": "loc-qui-nhon-cam-ranh:none",
@@ -3225,14 +4094,19 @@
               "coastal": true
             },
             "adjacentTo": [
-              "qui-nhon:none",
-              "cam-ranh:none",
-              "phu-bon-phu-yen:none",
-              "khanh-hoa:none"
-            ],
-            "visual": {
-              "label": "Qui Nhon-Cam Ranh"
-            }
+              {
+                "to": "qui-nhon:none"
+              },
+              {
+                "to": "cam-ranh:none"
+              },
+              {
+                "to": "phu-bon-phu-yen:none"
+              },
+              {
+                "to": "khanh-hoa:none"
+              }
+            ]
           },
           {
             "id": "loc-cam-ranh-da-lat:none",
@@ -3247,16 +4121,25 @@
               "coastal": false
             },
             "adjacentTo": [
-              "cam-ranh:none",
-              "khanh-hoa:none",
-              "binh-tuy-binh-thuan:none",
-              "quang-duc-long-khanh:none",
-              "loc-saigon-da-lat:none",
-              "loc-ban-me-thuot-da-lat:none"
-            ],
-            "visual": {
-              "label": "Cam Ranh-Da Lat"
-            }
+              {
+                "to": "cam-ranh:none"
+              },
+              {
+                "to": "khanh-hoa:none"
+              },
+              {
+                "to": "binh-tuy-binh-thuan:none"
+              },
+              {
+                "to": "quang-duc-long-khanh:none"
+              },
+              {
+                "to": "loc-saigon-da-lat:none"
+              },
+              {
+                "to": "loc-ban-me-thuot-da-lat:none"
+              }
+            ]
           },
           {
             "id": "loc-ban-me-thuot-da-lat:none",
@@ -3271,18 +4154,31 @@
               "coastal": false
             },
             "adjacentTo": [
-              "pleiku-darlac:none",
-              "khanh-hoa:none",
-              "quang-duc-long-khanh:none",
-              "binh-tuy-binh-thuan:none",
-              "loc-kontum-ban-me-thuot:none",
-              "loc-cam-ranh-da-lat:none",
-              "loc-saigon-an-loc-ban-me-thuot:none",
-              "loc-saigon-da-lat:none"
-            ],
-            "visual": {
-              "label": "Ban Me Thuot-Da Lat"
-            }
+              {
+                "to": "pleiku-darlac:none"
+              },
+              {
+                "to": "khanh-hoa:none"
+              },
+              {
+                "to": "quang-duc-long-khanh:none"
+              },
+              {
+                "to": "binh-tuy-binh-thuan:none"
+              },
+              {
+                "to": "loc-kontum-ban-me-thuot:none"
+              },
+              {
+                "to": "loc-cam-ranh-da-lat:none"
+              },
+              {
+                "to": "loc-saigon-an-loc-ban-me-thuot:none"
+              },
+              {
+                "to": "loc-saigon-da-lat:none"
+              }
+            ]
           },
           {
             "id": "loc-saigon-cam-ranh:none",
@@ -3297,13 +4193,16 @@
               "coastal": true
             },
             "adjacentTo": [
-              "cam-ranh:none",
-              "saigon:none",
-              "binh-tuy-binh-thuan:none"
-            ],
-            "visual": {
-              "label": "Saigon-Cam Ranh"
-            }
+              {
+                "to": "cam-ranh:none"
+              },
+              {
+                "to": "saigon:none"
+              },
+              {
+                "to": "binh-tuy-binh-thuan:none"
+              }
+            ]
           },
           {
             "id": "loc-saigon-da-lat:none",
@@ -3318,16 +4217,25 @@
               "coastal": false
             },
             "adjacentTo": [
-              "saigon:none",
-              "khanh-hoa:none",
-              "quang-duc-long-khanh:none",
-              "binh-tuy-binh-thuan:none",
-              "loc-cam-ranh-da-lat:none",
-              "loc-ban-me-thuot-da-lat:none"
-            ],
-            "visual": {
-              "label": "Saigon-Da Lat"
-            }
+              {
+                "to": "saigon:none"
+              },
+              {
+                "to": "khanh-hoa:none"
+              },
+              {
+                "to": "quang-duc-long-khanh:none"
+              },
+              {
+                "to": "binh-tuy-binh-thuan:none"
+              },
+              {
+                "to": "loc-cam-ranh-da-lat:none"
+              },
+              {
+                "to": "loc-ban-me-thuot-da-lat:none"
+              }
+            ]
           },
           {
             "id": "loc-saigon-an-loc-ban-me-thuot:none",
@@ -3342,20 +4250,37 @@
               "coastal": false
             },
             "adjacentTo": [
-              "an-loc:none",
-              "saigon:none",
-              "the-fishhook:none",
-              "pleiku-darlac:none",
-              "phuoc-long:none",
-              "quang-duc-long-khanh:none",
-              "tay-ninh:none",
-              "loc-kontum-ban-me-thuot:none",
-              "loc-ban-me-thuot-da-lat:none",
-              "khanh-hoa:none"
-            ],
-            "visual": {
-              "label": "Saigon-An Loc-Ban Me Thuot"
-            }
+              {
+                "to": "an-loc:none"
+              },
+              {
+                "to": "saigon:none"
+              },
+              {
+                "to": "the-fishhook:none"
+              },
+              {
+                "to": "pleiku-darlac:none"
+              },
+              {
+                "to": "phuoc-long:none"
+              },
+              {
+                "to": "quang-duc-long-khanh:none"
+              },
+              {
+                "to": "tay-ninh:none"
+              },
+              {
+                "to": "loc-kontum-ban-me-thuot:none"
+              },
+              {
+                "to": "loc-ban-me-thuot-da-lat:none"
+              },
+              {
+                "to": "khanh-hoa:none"
+              }
+            ]
           },
           {
             "id": "loc-saigon-can-tho:none",
@@ -3370,14 +4295,19 @@
               "coastal": false
             },
             "adjacentTo": [
-              "saigon:none",
-              "can-tho:none",
-              "kien-phong:none",
-              "kien-hoa-vinh-binh:none"
-            ],
-            "visual": {
-              "label": "Saigon-Can Tho"
-            }
+              {
+                "to": "saigon:none"
+              },
+              {
+                "to": "can-tho:none"
+              },
+              {
+                "to": "kien-phong:none"
+              },
+              {
+                "to": "kien-hoa-vinh-binh:none"
+              }
+            ]
           },
           {
             "id": "loc-can-tho-chau-doc:none",
@@ -3392,14 +4322,19 @@
               "coastal": false
             },
             "adjacentTo": [
-              "can-tho:none",
-              "the-parrots-beak:none",
-              "kien-phong:none",
-              "kien-giang-an-xuyen:none"
-            ],
-            "visual": {
-              "label": "Can Tho-Chau Doc"
-            }
+              {
+                "to": "can-tho:none"
+              },
+              {
+                "to": "the-parrots-beak:none"
+              },
+              {
+                "to": "kien-phong:none"
+              },
+              {
+                "to": "kien-giang-an-xuyen:none"
+              }
+            ]
           },
           {
             "id": "loc-can-tho-bac-lieu:none",
@@ -3414,13 +4349,16 @@
               "coastal": true
             },
             "adjacentTo": [
-              "can-tho:none",
-              "ba-xuyen:none",
-              "kien-giang-an-xuyen:none"
-            ],
-            "visual": {
-              "label": "Can Tho-Bac Lieu"
-            }
+              {
+                "to": "can-tho:none"
+              },
+              {
+                "to": "ba-xuyen:none"
+              },
+              {
+                "to": "kien-giang-an-xuyen:none"
+              }
+            ]
           },
           {
             "id": "loc-can-tho-long-phu:none",
@@ -3435,117 +4373,16 @@
               "coastal": true
             },
             "adjacentTo": [
-              "can-tho:none",
-              "kien-hoa-vinh-binh:none",
-              "ba-xuyen:none"
-            ],
-            "visual": {
-              "label": "Can Tho-Long Phu"
-            }
-          }
-        ],
-        "visualRules": [
-          {
-            "match": {
-              "category": [
-                "city"
-              ]
-            },
-            "visual": {
-              "shape": "circle",
-              "width": 90,
-              "height": 90,
-              "color": "#5b7fa5"
-            }
-          },
-          {
-            "match": {
-              "category": [
-                "province"
-              ]
-            },
-            "visual": {
-              "shape": "rectangle",
-              "width": 160,
-              "height": 100
-            }
-          },
-          {
-            "match": {
-              "category": [
-                "loc"
-              ]
-            },
-            "visual": {
-              "shape": "line",
-              "width": 120,
-              "height": 36
-            }
-          },
-          {
-            "match": {
-              "category": [
-                "province"
-              ],
-              "attributeContains": {
-                "terrainTags": "highland"
+              {
+                "to": "can-tho:none"
+              },
+              {
+                "to": "kien-hoa-vinh-binh:none"
+              },
+              {
+                "to": "ba-xuyen:none"
               }
-            },
-            "visual": {
-              "color": "#6b5b3e"
-            }
-          },
-          {
-            "match": {
-              "category": [
-                "province"
-              ],
-              "attributeContains": {
-                "terrainTags": "jungle"
-              }
-            },
-            "visual": {
-              "color": "#3d5c3a"
-            }
-          },
-          {
-            "match": {
-              "category": [
-                "province"
-              ],
-              "attributeContains": {
-                "terrainTags": "lowland"
-              }
-            },
-            "visual": {
-              "color": "#5a7a52"
-            }
-          },
-          {
-            "match": {
-              "category": [
-                "loc"
-              ],
-              "attributeContains": {
-                "terrainTags": "highway"
-              }
-            },
-            "visual": {
-              "color": "#8b7355"
-            }
-          },
-          {
-            "match": {
-              "category": [
-                "loc"
-              ],
-              "attributeContains": {
-                "terrainTags": "mekong"
-              }
-            },
-            "visual": {
-              "color": "#4a7a8c"
-            }
+            ]
           }
         ],
         "tracks": [
@@ -3746,24 +4583,16 @@
       "payload": {
         "factions": [
           {
-            "id": "us",
-            "color": "#e63946",
-            "displayName": "United States"
+            "id": "us"
           },
           {
-            "id": "arvn",
-            "color": "#457b9d",
-            "displayName": "ARVN"
+            "id": "arvn"
           },
           {
-            "id": "nva",
-            "color": "#2a9d8f",
-            "displayName": "NVA"
+            "id": "nva"
           },
           {
-            "id": "vc",
-            "color": "#e9c46a",
-            "displayName": "Viet Cong"
+            "id": "vc"
           }
         ],
         "pieceTypes": [
@@ -3775,10 +4604,6 @@
             "runtimeProps": {
               "faction": "US",
               "type": "troops"
-            },
-            "visual": {
-              "color": "olive",
-              "shape": "cube"
             }
           },
           {
@@ -3789,10 +4614,6 @@
             "runtimeProps": {
               "faction": "US",
               "type": "base"
-            },
-            "visual": {
-              "color": "olive",
-              "shape": "round-disk"
             }
           },
           {
@@ -3817,11 +4638,6 @@
               "faction": "US",
               "type": "irregular",
               "activity": "underground"
-            },
-            "visual": {
-              "color": "olive",
-              "shape": "cylinder",
-              "activeSymbol": "star"
             }
           },
           {
@@ -3832,10 +4648,6 @@
             "runtimeProps": {
               "faction": "ARVN",
               "type": "troops"
-            },
-            "visual": {
-              "color": "yellow",
-              "shape": "cube"
             }
           },
           {
@@ -3846,10 +4658,6 @@
             "runtimeProps": {
               "faction": "ARVN",
               "type": "police"
-            },
-            "visual": {
-              "color": "orange",
-              "shape": "cube"
             }
           },
           {
@@ -3874,11 +4682,6 @@
               "faction": "ARVN",
               "type": "ranger",
               "activity": "underground"
-            },
-            "visual": {
-              "color": "yellow",
-              "shape": "cylinder",
-              "activeSymbol": "star"
             }
           },
           {
@@ -3889,10 +4692,6 @@
             "runtimeProps": {
               "faction": "ARVN",
               "type": "base"
-            },
-            "visual": {
-              "color": "yellow",
-              "shape": "round-disk"
             }
           },
           {
@@ -3903,10 +4702,6 @@
             "runtimeProps": {
               "faction": "NVA",
               "type": "troops"
-            },
-            "visual": {
-              "color": "red",
-              "shape": "cube"
             }
           },
           {
@@ -3931,11 +4726,6 @@
               "faction": "NVA",
               "type": "guerrilla",
               "activity": "underground"
-            },
-            "visual": {
-              "color": "red",
-              "shape": "cylinder",
-              "activeSymbol": "star"
             }
           },
           {
@@ -3960,10 +4750,6 @@
               "faction": "NVA",
               "type": "base",
               "tunnel": "untunneled"
-            },
-            "visual": {
-              "color": "red",
-              "shape": "round-disk"
             }
           },
           {
@@ -3988,11 +4774,6 @@
               "faction": "VC",
               "type": "guerrilla",
               "activity": "underground"
-            },
-            "visual": {
-              "color": "bright-blue",
-              "shape": "cylinder",
-              "activeSymbol": "star"
             }
           },
           {
@@ -4017,10 +4798,6 @@
               "faction": "VC",
               "type": "base",
               "tunnel": "untunneled"
-            },
-            "visual": {
-              "color": "bright-blue",
-              "shape": "round-disk"
             }
           }
         ],
@@ -6075,25 +6852,11 @@
       "tablePath": "factions",
       "fields": [
         {
-          "field": "color",
-          "type": "string"
-        },
-        {
-          "field": "displayName",
-          "type": "string"
-        },
-        {
           "field": "id",
           "type": "string"
         }
       ],
       "uniqueBy": [
-        [
-          "color"
-        ],
-        [
-          "displayName"
-        ],
         [
           "id"
         ]
@@ -6531,10 +7294,7 @@
         "faction": "string",
         "type": "string"
       },
-      "faction": "us",
-      "visual": {
-        "color": "olive"
-      }
+      "faction": "us"
     },
     {
       "id": "us-bases",
@@ -6542,10 +7302,7 @@
         "faction": "string",
         "type": "string"
       },
-      "faction": "us",
-      "visual": {
-        "color": "olive"
-      }
+      "faction": "us"
     },
     {
       "id": "us-irregulars",
@@ -6554,11 +7311,7 @@
         "type": "string",
         "activity": "string"
       },
-      "faction": "us",
-      "visual": {
-        "color": "olive",
-        "symbol": "star"
-      }
+      "faction": "us"
     },
     {
       "id": "arvn-troops",
@@ -6566,10 +7319,7 @@
         "faction": "string",
         "type": "string"
       },
-      "faction": "arvn",
-      "visual": {
-        "color": "yellow"
-      }
+      "faction": "arvn"
     },
     {
       "id": "arvn-police",
@@ -6577,10 +7327,7 @@
         "faction": "string",
         "type": "string"
       },
-      "faction": "arvn",
-      "visual": {
-        "color": "orange"
-      }
+      "faction": "arvn"
     },
     {
       "id": "arvn-rangers",
@@ -6589,11 +7336,7 @@
         "type": "string",
         "activity": "string"
       },
-      "faction": "arvn",
-      "visual": {
-        "color": "yellow",
-        "symbol": "star"
-      }
+      "faction": "arvn"
     },
     {
       "id": "arvn-bases",
@@ -6601,10 +7344,7 @@
         "faction": "string",
         "type": "string"
       },
-      "faction": "arvn",
-      "visual": {
-        "color": "yellow"
-      }
+      "faction": "arvn"
     },
     {
       "id": "nva-troops",
@@ -6612,10 +7352,7 @@
         "faction": "string",
         "type": "string"
       },
-      "faction": "nva",
-      "visual": {
-        "color": "red"
-      }
+      "faction": "nva"
     },
     {
       "id": "nva-guerrillas",
@@ -6624,11 +7361,7 @@
         "type": "string",
         "activity": "string"
       },
-      "faction": "nva",
-      "visual": {
-        "color": "red",
-        "symbol": "star"
-      }
+      "faction": "nva"
     },
     {
       "id": "nva-bases",
@@ -6637,10 +7370,7 @@
         "type": "string",
         "tunnel": "string"
       },
-      "faction": "nva",
-      "visual": {
-        "color": "red"
-      }
+      "faction": "nva"
     },
     {
       "id": "vc-guerrillas",
@@ -6649,11 +7379,7 @@
         "type": "string",
         "activity": "string"
       },
-      "faction": "vc",
-      "visual": {
-        "color": "bright-blue",
-        "symbol": "star"
-      }
+      "faction": "vc"
     },
     {
       "id": "vc-bases",
@@ -6662,10 +7388,7 @@
         "type": "string",
         "tunnel": "string"
       },
-      "faction": "vc",
-      "visual": {
-        "color": "bright-blue"
-      }
+      "faction": "vc"
     }
   ],
   "setup": [

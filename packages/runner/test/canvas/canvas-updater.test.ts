@@ -29,7 +29,7 @@ function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
     ownerID: null,
     category: null,
     attributes: {},
-    visual: null,
+    visual: { shape: 'rectangle', width: 160, height: 100, color: null },
     metadata: {},
     ...overrides,
   };
@@ -53,7 +53,7 @@ function makeToken(overrides: Partial<RenderToken> = {}): RenderToken {
 function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
   return {
     zones: [makeZone()],
-    adjacencies: [{ from: 'zone:a', to: 'zone:b', isHighlighted: false }],
+    adjacencies: [{ from: 'zone:a', to: 'zone:b', category: null, isHighlighted: false }],
     tokens: [makeToken()],
     globalVars: [],
     playerVars: new Map(),
@@ -126,6 +126,7 @@ function createViewportMock(): ViewportResult {
     viewport: {} as ViewportResult['viewport'],
     worldLayers: [],
     updateWorldBounds: vi.fn(),
+    centerOnBounds: vi.fn(),
     destroy: vi.fn(),
   };
 }
@@ -258,11 +259,34 @@ describe('createCanvasUpdater', () => {
 
     store.setState({
       renderModel: makeRenderModel({
-        adjacencies: [{ from: 'zone:a', to: 'zone:c', isHighlighted: false }],
+        adjacencies: [{ from: 'zone:a', to: 'zone:c', category: null, isHighlighted: false }],
       }),
     });
 
     expect(renderers.adjacencyRenderer.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('start centers the viewport on the initial position bounds', () => {
+    const model = makeRenderModel();
+    const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
+    const positionStore = createPositionStore(['zone:a']);
+    const snapshot = positionStore.getSnapshot();
+
+    const renderers = createRendererMocks();
+    const viewport = createViewportMock();
+
+    const updater = createCanvasUpdater({
+      store: store as unknown as StoreApi<GameStore>,
+      positionStore,
+      zoneRenderer: renderers.zoneRenderer,
+      adjacencyRenderer: renderers.adjacencyRenderer,
+      tokenRenderer: renderers.tokenRenderer,
+      viewport,
+    });
+
+    updater.start();
+
+    expect(viewport.centerOnBounds).toHaveBeenCalledWith(snapshot.bounds);
   });
 
   it('updates viewport bounds and re-renders with new position data when position store changes', () => {

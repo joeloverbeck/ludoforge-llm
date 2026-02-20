@@ -28,7 +28,7 @@ describe('tooltip-payload projection', () => {
         ownerID: asPlayerId(0),
         category: null,
         attributes: {},
-        visual: null,
+        visual: { shape: 'rectangle', width: 160, height: 100, color: null },
         metadata: {},
       }],
     });

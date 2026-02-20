@@ -62,13 +62,30 @@ describe('renderer-types', () => {
 
   it('accepts a mock FactionColorProvider contract', () => {
     const provider: FactionColorProvider = {
-      getTokenTypeVisual: (_tokenTypeId: string) => null,
+      getTokenTypeVisual: (_tokenTypeId: string) => ({
+        shape: 'circle',
+        color: null,
+        size: 28,
+        symbol: null,
+        backSymbol: null,
+      }),
+      resolveTokenSymbols: (_tokenTypeId, _tokenProperties) => ({
+        symbol: null,
+        backSymbol: null,
+      }),
+      getCardTemplateForTokenType: (_tokenTypeId: string) => null,
       getColor: (_factionId: string | null, _playerId: PlayerId) => '#ffffff',
     };
 
     expectTypeOf<FactionColorProvider['getTokenTypeVisual']>().parameters.toEqualTypeOf<[string]>();
     expectTypeOf<FactionColorProvider['getColor']>().parameters.toEqualTypeOf<[string | null, PlayerId]>();
-    expect(provider.getTokenTypeVisual('token:a')).toBeNull();
+    expect(provider.getTokenTypeVisual('token:a')).toEqual({
+      shape: 'circle',
+      color: null,
+      size: 28,
+      symbol: null,
+      backSymbol: null,
+    });
     expect(provider.getColor(null, asPlayerId(0))).toBe('#ffffff');
   });
 });

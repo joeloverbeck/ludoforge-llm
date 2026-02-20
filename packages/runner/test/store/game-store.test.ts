@@ -11,6 +11,7 @@ import {
   type TriggerLogEntry,
 } from '@ludoforge/engine/runtime';
 
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { createGameStore } from '../../src/store/game-store.js';
 import { createGameWorker, type GameWorkerAPI, type WorkerError } from '../../src/worker/game-worker-api.js';
 import { CHOOSE_MIXED_TEST_DEF, CHOOSE_N_TEST_DEF, CHOOSE_ONE_TEST_DEF } from '../worker/test-fixtures.js';
@@ -121,6 +122,10 @@ function pickOneOption(store: ReturnType<typeof createGameStore>): ChoiceScalar 
   return asChoiceScalar(pending.options[0]!.value, 'pending');
 }
 
+function createStoreWithDefaultVisuals(bridge: GameWorkerAPI) {
+  return createGameStore(bridge, new VisualConfigProvider(null));
+}
+
 type Awaitable<T> = T | Promise<T>;
 
 type BridgeOverride<K extends keyof GameWorkerAPI> = (
@@ -167,7 +172,7 @@ describe('createGameStore', () => {
   it('initGame populates state and enters playing lifecycle', async () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 11, asPlayerId(0));
     const state = store.getState();
@@ -184,7 +189,7 @@ describe('createGameStore', () => {
   it('initGame with terminal state enters terminal lifecycle', async () => {
     const def = compileStoreFixture(0);
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 12, asPlayerId(0));
 
@@ -194,7 +199,7 @@ describe('createGameStore', () => {
 
   it('selectAction initializes progressive choice state from real worker legalChoices', async () => {
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 13, asPlayerId(0));
 
     await store.getState().selectAction(asActionId('pick-one'));
@@ -212,7 +217,7 @@ describe('createGameStore', () => {
 
   it('real-worker mixed progressive flow advances through chooseOne -> chooseN and stores decisionId-keyed params', async () => {
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 14, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-mixed'));
 
@@ -247,7 +252,7 @@ describe('createGameStore', () => {
 
   it('clearing real-worker choicePending clears render-model choice fields', async () => {
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-one'));
 
@@ -292,7 +297,7 @@ describe('createGameStore', () => {
         };
       },
     });
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 15, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-two'));
 
@@ -309,7 +314,7 @@ describe('createGameStore', () => {
   it('pending chooseOne rejects chooseN action before bridge call without mutating move construction state', async () => {
     const bridge = createGameWorker();
     const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-one'));
 
@@ -336,7 +341,7 @@ describe('createGameStore', () => {
   it('pending chooseN rejects chooseOne action before bridge call without mutating move construction state', async () => {
     const bridge = createGameWorker();
     const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_N_TEST_DEF, 15, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-many'));
 
@@ -363,7 +368,7 @@ describe('createGameStore', () => {
   it('chooseOne rejects array payload shape with deterministic validation error', async () => {
     const bridge = createGameWorker();
     const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-one'));
 
@@ -389,7 +394,7 @@ describe('createGameStore', () => {
 
   it('chooseN supports options with min/max metadata through createGameWorker', async () => {
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_N_TEST_DEF, 15, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-many'));
 
@@ -417,7 +422,7 @@ describe('createGameStore', () => {
 
   it('real-worker chooseOne stores value under decisionId key (not decision name)', async () => {
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-one'));
 
@@ -438,7 +443,7 @@ describe('createGameStore', () => {
   it('confirmMove applies move, refreshes state, and resets move construction', async () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 16, asPlayerId(0));
     await store.getState().selectAction(asActionId('tick'));
 
@@ -499,7 +504,7 @@ describe('createGameStore', () => {
       }),
       terminalResult: () => null,
     });
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 16, asPlayerId(0));
     await store.getState().selectAction(asActionId('tick'));
 
@@ -513,7 +518,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
     const applySpy = vi.spyOn(bridge, 'applyMove');
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 17, asPlayerId(0));
 
     await store.getState().confirmMove();
@@ -552,7 +557,7 @@ describe('createGameStore', () => {
       terminalResult: () => null,
       applyMove,
     });
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 27, asPlayerId(0));
 
@@ -574,7 +579,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(8);
     const bridge = createGameWorker();
     const applySpy = vi.spyOn(bridge, 'applyMove');
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 28, asPlayerId(0));
     expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(0));
@@ -587,7 +592,7 @@ describe('createGameStore', () => {
 
   it('resolveAiTurn no-ops safely when no session is initialized', async () => {
     const bridge = createBridgeStub({});
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().resolveAiTurn();
 
@@ -619,7 +624,7 @@ describe('createGameStore', () => {
       terminalResult: () => null,
       applyMove,
     });
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
 
     try {
@@ -648,7 +653,7 @@ describe('createGameStore', () => {
       terminalResult: () => null,
       applyMove,
     });
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 29, asPlayerId(0));
     await store.getState().resolveAiTurn();
@@ -686,7 +691,7 @@ describe('createGameStore', () => {
       terminalResult: () => null,
       applyMove,
     });
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 37, asPlayerId(0));
     const outcome = await store.getState().resolveAiStep();
@@ -698,7 +703,7 @@ describe('createGameStore', () => {
 
   it('resolveAiStep returns no-op when there is no initialized session', async () => {
     const bridge = createBridgeStub({});
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     const outcome = await store.getState().resolveAiStep();
 
@@ -708,7 +713,7 @@ describe('createGameStore', () => {
 
   it('real-worker cancelChoice pops one choice and re-queries pending decision', async () => {
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-mixed'));
     const firstChoice = pickOneOption(store);
@@ -734,7 +739,7 @@ describe('createGameStore', () => {
 
   it('real-worker cancelMove clears selected action and progressive choice state', async () => {
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-mixed'));
     await store.getState().chooseOne(pickOneOption(store));
@@ -751,7 +756,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
     const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 19, asPlayerId(0));
     await store.getState().selectAction(asActionId('tick'));
     const callsBefore = legalChoicesSpy.mock.calls.length;
@@ -765,7 +770,7 @@ describe('createGameStore', () => {
   it('undo restores previous state and transitions terminal -> playing', async () => {
     const def = compileStoreFixture(1);
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 20, asPlayerId(0));
     await store.getState().selectAction(asActionId('tick'));
     await store.getState().confirmMove();
@@ -783,7 +788,7 @@ describe('createGameStore', () => {
     const bridge = createGameWorker();
     const enumerateSpy = vi.spyOn(bridge, 'enumerateLegalMoves');
     const terminalSpy = vi.spyOn(bridge, 'terminalResult');
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 20, asPlayerId(0));
     await store.getState().selectAction(asActionId('tick'));
     await store.getState().confirmMove();
@@ -801,7 +806,7 @@ describe('createGameStore', () => {
 
   it('omitted derivation fields remain stable on unrelated updates', async () => {
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 20, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-one'));
 
@@ -827,7 +832,7 @@ describe('createGameStore', () => {
   it('undo with no history is a no-op', async () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 21, asPlayerId(0));
     const before = store.getState().gameState;
 
@@ -850,7 +855,7 @@ describe('createGameStore', () => {
       return originalEnumerate(options);
     });
 
-    store = createGameStore(bridge);
+    store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 22, asPlayerId(0));
 
     expect(initSpy).toHaveBeenCalledTimes(1);
@@ -872,7 +877,7 @@ describe('createGameStore', () => {
       terminalResult: () => ({ type: 'draw' }),
     });
 
-    store = createGameStore(bridge);
+    store = createStoreWithDefaultVisuals(bridge);
     expect(store.getState().gameLifecycle).toBe('idle');
     await store.getState().initGame(def, 22, asPlayerId(0));
 
@@ -899,7 +904,7 @@ describe('createGameStore', () => {
       terminalResult: () => null,
       legalChoices: () => ({ kind: 'complete', complete: true }),
     });
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 24, asPlayerId(0));
     await store.getState().selectAction(asActionId('tick'));
@@ -945,7 +950,7 @@ describe('createGameStore', () => {
       enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
       terminalResult: () => null,
     });
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 25, asPlayerId(0));
     expect(store.getState().renderModel).not.toBeNull();
@@ -977,7 +982,7 @@ describe('createGameStore', () => {
       enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
       terminalResult: () => null,
     });
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 26, asPlayerId(0));
     expect(store.getState().gameLifecycle).toBe('idle');
@@ -1011,7 +1016,7 @@ describe('createGameStore', () => {
       terminalResult: () => null,
     });
 
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 23, asPlayerId(0));
 
     expect(store.getState().error).toEqual(workerError);
@@ -1027,7 +1032,7 @@ describe('createGameStore', () => {
       enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
       terminalResult: () => null,
     });
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 30, asPlayerId(0));
     expect(store.getState().gameLifecycle).toBe('playing');
@@ -1065,7 +1070,7 @@ describe('createGameStore', () => {
         throw workerError;
       },
     });
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 23, asPlayerId(0));
     expect(store.getState().gameLifecycle).toBe('playing');
@@ -1078,7 +1083,7 @@ describe('createGameStore', () => {
   });
 
   it('setAnimationPlaying toggles animation flag and resets paused when queue drains', async () => {
-    const store = createGameStore(createGameWorker());
+    const store = createStoreWithDefaultVisuals(createGameWorker());
     expect(store.getState().animationPlaying).toBe(false);
 
     store.getState().setAnimationPlaying(true);
@@ -1092,7 +1097,7 @@ describe('createGameStore', () => {
   });
 
   it('stores animation playback preferences and skip-current requests', () => {
-    const store = createGameStore(createGameWorker());
+    const store = createStoreWithDefaultVisuals(createGameWorker());
 
     expect(store.getState().animationPlaybackSpeed).toBe('1x');
     expect(store.getState().animationPaused).toBe(false);
@@ -1108,7 +1113,7 @@ describe('createGameStore', () => {
   });
 
   it('stores AI playback preferences and skip requests', () => {
-    const store = createGameStore(createGameWorker());
+    const store = createStoreWithDefaultVisuals(createGameWorker());
 
     expect(store.getState().aiPlaybackDetailLevel).toBe('standard');
     expect(store.getState().aiPlaybackSpeed).toBe('1x');

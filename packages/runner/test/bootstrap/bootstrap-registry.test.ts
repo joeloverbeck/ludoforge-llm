@@ -83,6 +83,7 @@ function descriptor(
     defaultPlayerId: 0,
     sourceLabel: 'test fixture',
     resolveGameDefInput: async () => ({}),
+    resolveVisualConfigYaml: () => null,
     ...overrides,
   };
 }

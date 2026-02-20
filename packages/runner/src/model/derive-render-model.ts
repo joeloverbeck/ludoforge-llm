@@ -202,7 +202,10 @@ function isZoneEquivalent(left: RenderZone, right: RenderZone): boolean {
     && left.ownerID === right.ownerID
     && left.category === right.category
     && isAttributeRecordEqual(left.attributes, right.attributes)
-    && isZoneVisualEqual(left.visual, right.visual)
+    && left.visual.shape === right.visual.shape
+    && left.visual.width === right.visual.width
+    && left.visual.height === right.visual.height
+    && left.visual.color === right.visual.color
     && isStringArrayEqual(left.tokenIDs, right.tokenIDs)
     && isMarkerArrayEqual(left.markers, right.markers)
     && isShallowRecordEqual(left.metadata, right.metadata);
@@ -276,21 +279,6 @@ function isAttributeRecordEqual(
     }
     return Object.is(leftValue, rightValue);
   });
-}
-
-function isZoneVisualEqual(left: RenderZone['visual'], right: RenderZone['visual']): boolean {
-  if (left === right) {
-    return true;
-  }
-  if (left === null || right === null) {
-    return false;
-  }
-  const leftEntries = Object.entries(left) as readonly (readonly [string, unknown])[];
-  const rightEntries = Object.entries(right) as readonly (readonly [string, unknown])[];
-  if (leftEntries.length !== rightEntries.length) {
-    return false;
-  }
-  return leftEntries.every(([key, value]) => Object.is(value, right[key as keyof typeof right]));
 }
 
 function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
@@ -551,7 +539,7 @@ function deriveZones(
 
     zones.push({
       id: zoneID,
-      displayName: formatIdAsDisplayName(zoneID),
+      displayName: context.visualConfigProvider.getZoneLabel(zoneID) ?? formatIdAsDisplayName(zoneID),
       ordering: zoneDef.ordering,
       tokenIDs: visibleTokenIDs,
       hiddenTokenCount: zoneTokens.length - visibleTokenIDs.length,
@@ -562,7 +550,11 @@ function deriveZones(
       ownerID,
       category: zoneDef.category ?? null,
       attributes: zoneDef.attributes ?? {},
-      visual: zoneDef.visual ?? null,
+      visual: context.visualConfigProvider.resolveZoneVisual(
+        zoneID,
+        zoneDef.category ?? null,
+        zoneDef.attributes ?? {},
+      ),
       metadata: deriveZoneMetadata(zoneDef),
     });
   }
@@ -584,10 +576,6 @@ function deriveZoneMetadata(zoneDef: GameDef['zones'][number]): Readonly<Record<
 
   if (zoneDef.attributes !== undefined) {
     metadata.attributes = zoneDef.attributes;
-  }
-
-  if (zoneDef.visual !== undefined) {
-    metadata.visual = zoneDef.visual;
   }
 
   return metadata;
@@ -714,7 +702,9 @@ function deriveAdjacencies(
   zones: readonly RenderZone[],
   highlightedAdjacencyKeys: ReadonlySet<string>,
 ): readonly RenderAdjacency[] {
-  const renderedZoneIDs = new Set(zones.map((zone) => zone.id));
+  const renderedZoneById = new Map(zones.map((zone) => [zone.id, zone] as const));
+  const zoneDefById = new Map(def.zones.map((zone) => [String(zone.id), zone] as const));
+  const renderedZoneIDs = new Set(renderedZoneById.keys());
   const deduped = new Set<string>();
   const adjacencies: RenderAdjacency[] = [];
 
@@ -725,13 +715,19 @@ function deriveAdjacencies(
     }
 
     for (const adjacentTo of zoneDef.adjacentTo ?? []) {
-      const to = String(adjacentTo);
+      const to = String(adjacentTo.to);
       if (!renderedZoneIDs.has(to)) {
         continue;
       }
 
-      pushAdjacency(adjacencies, deduped, from, to, highlightedAdjacencyKeys.has(toAdjacencyKey(from, to)));
-      pushAdjacency(adjacencies, deduped, to, from, highlightedAdjacencyKeys.has(toAdjacencyKey(to, from)));
+      const fromCategory = adjacentTo.category ?? renderedZoneById.get(from)?.category ?? null;
+      const toCategory = zoneDefById.get(to)?.adjacentTo
+        ?.find((candidate) => String(candidate.to) === from)
+        ?.category
+        ?? renderedZoneById.get(to)?.category
+        ?? null;
+      pushAdjacency(adjacencies, deduped, from, to, fromCategory, highlightedAdjacencyKeys.has(toAdjacencyKey(from, to)));
+      pushAdjacency(adjacencies, deduped, to, from, toCategory, highlightedAdjacencyKeys.has(toAdjacencyKey(to, from)));
     }
   }
 
@@ -743,6 +739,7 @@ function pushAdjacency(
   deduped: Set<string>,
   from: string,
   to: string,
+  category: string | null,
   isHighlighted: boolean,
 ): void {
   const key = toAdjacencyKey(from, to);
@@ -751,7 +748,7 @@ function pushAdjacency(
   }
 
   deduped.add(key);
-  output.push({ from, to, isHighlighted });
+  output.push({ from, to, category, isHighlighted });
 }
 
 function toAdjacencyKey(from: string, to: string): string {
@@ -898,7 +895,7 @@ function deriveHighlightedAdjacencyKeys(
     }
 
     for (const adjacentTo of zoneDef.adjacentTo ?? []) {
-      const to = String(adjacentTo);
+      const to = String(adjacentTo.to);
       if (!renderedZoneIDs.has(to) || !selectableZoneIDs.has(to)) {
         continue;
       }

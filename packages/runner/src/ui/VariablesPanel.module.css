@@ -32,12 +32,24 @@
 
 .row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-sm);
   border: 1px solid var(--border-subtle);
   border-radius: 4px;
   padding: var(--space-xs);
+}
+
+.prominent {
+  border-color: rgba(74, 144, 217, 0.5);
+  background: rgba(74, 144, 217, 0.12);
+}
+
+.panelGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
 }
 
 @keyframes variableFlash {
@@ -61,4 +73,18 @@
 .value {
   composes: fontMono from './shared.module.css';
   color: var(--text-primary);
+}
+
+.progressBar {
+  flex-basis: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.25);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  background: rgba(74, 144, 217, 0.8);
 }

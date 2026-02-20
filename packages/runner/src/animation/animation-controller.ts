@@ -3,12 +3,17 @@ import type { Container } from 'pixi.js';
 import type { StoreApi } from 'zustand';
 
 import type { ZonePositionMap } from '../spatial/position-types.js';
+import type { CardAnimationConfig } from '../config/visual-config-types.js';
+import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { GameStore } from '../store/game-store.js';
 import type {
   AnimationDescriptor,
   AnimationDetailLevel,
+  AnimationPresetId,
+  AnimationPresetOverrideKey,
   CardAnimationMappingContext,
 } from './animation-types.js';
+import { ANIMATION_PRESET_OVERRIDE_KEYS } from './animation-types.js';
 import { createAnimationQueue, type AnimationQueue } from './animation-queue.js';
 import { getGsapRuntime, type GsapLike } from './gsap-setup.js';
 import { createPresetRegistry, type PresetRegistry } from './preset-registry.js';
@@ -43,6 +48,7 @@ export interface AnimationController {
 
 export interface AnimationControllerOptions {
   readonly store: StoreApi<GameStore>;
+  readonly visualConfigProvider: VisualConfigProvider;
   readonly tokenContainers: () => ReadonlyMap<string, Container>;
   readonly zoneContainers: () => ReadonlyMap<string, Container>;
   readonly zonePositions: () => ZonePositionMap;
@@ -55,6 +61,7 @@ interface AnimationControllerDeps {
   readonly traceToDescriptors: typeof traceToDescriptors;
   readonly buildTimeline: typeof buildTimeline;
   readonly onError: (message: string, error: unknown) => void;
+  readonly onWarning?: (message: string) => void;
 }
 
 export function createAnimationController(
@@ -63,6 +70,7 @@ export function createAnimationController(
 ): AnimationController {
   const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
   const queue = deps.queueFactory(options.store);
+  const presetOverrides = buildPresetOverrides(options.visualConfigProvider, deps.presetRegistry, deps.onWarning);
 
   let detailLevel: AnimationDetailLevel = 'full';
   let reducedMotion = false;
@@ -77,11 +85,12 @@ export function createAnimationController(
 
     try {
       const state = options.store.getState();
-      const cardContext = buildCardContext(state);
+      const cardContext = buildCardContext(state, options.visualConfigProvider);
       const descriptors = deps.traceToDescriptors(
         trace,
         {
           detailLevel,
+          ...(presetOverrides.size === 0 ? {} : { presetOverrides }),
           ...(cardContext === undefined ? {} : { cardContext }),
         },
         deps.presetRegistry,
@@ -194,20 +203,48 @@ export function createAnimationController(
   };
 }
 
-function buildCardContext(state: GameStore): CardAnimationMappingContext | undefined {
-  const cardAnimation = state.gameDef?.cardAnimation;
+function buildPresetOverrides(
+  visualConfigProvider: VisualConfigProvider,
+  presetRegistry: PresetRegistry,
+  onWarning: ((message: string) => void) | undefined,
+): ReadonlyMap<AnimationPresetOverrideKey, AnimationPresetId> {
+  const overrides = new Map<AnimationPresetOverrideKey, AnimationPresetId>();
+
+  for (const key of ANIMATION_PRESET_OVERRIDE_KEYS) {
+    const presetId = visualConfigProvider.getAnimationPreset(key);
+    if (presetId === null) {
+      continue;
+    }
+    if (!presetRegistry.has(presetId)) {
+      onWarning?.(
+        `Ignoring animation preset override "${key}" -> "${presetId}" because the preset is not registered.`,
+      );
+      continue;
+    }
+    overrides.set(key, presetId);
+  }
+
+  return overrides;
+}
+
+function buildCardContext(
+  state: GameStore,
+  visualConfigProvider: VisualConfigProvider,
+): CardAnimationMappingContext | undefined {
+  const cardAnimation = visualConfigProvider.getCardAnimation();
   const renderModel = state.renderModel;
-  if (cardAnimation === undefined || renderModel === null) {
+  if (cardAnimation === null || renderModel === null) {
     return undefined;
   }
 
+  const tokenTypeIds = state.gameDef?.tokenTypes.map((tokenType) => tokenType.id) ?? [];
   const tokenTypeByTokenId = new Map<string, string>();
   for (const token of renderModel.tokens) {
     tokenTypeByTokenId.set(token.id, token.type);
   }
 
   return {
-    cardTokenTypeIds: new Set(cardAnimation.cardTokenTypeIds),
+    cardTokenTypeIds: resolveCardTokenTypeIds(cardAnimation, tokenTypeIds),
     tokenTypeByTokenId,
     zoneRoles: {
       draw: new Set(cardAnimation.zoneRoles.draw),
@@ -217,6 +254,27 @@ function buildCardContext(state: GameStore): CardAnimationMappingContext | undef
       discard: new Set(cardAnimation.zoneRoles.discard),
     },
   };
+}
+
+function resolveCardTokenTypeIds(
+  config: CardAnimationConfig,
+  tokenTypeIds: readonly string[],
+): ReadonlySet<string> {
+  const result = new Set<string>();
+
+  for (const id of config.cardTokenTypes.ids ?? []) {
+    result.add(id);
+  }
+
+  for (const prefix of config.cardTokenTypes.idPrefixes ?? []) {
+    for (const tokenTypeId of tokenTypeIds) {
+      if (tokenTypeId.startsWith(prefix)) {
+        result.add(tokenTypeId);
+      }
+    }
+  }
+
+  return result;
 }
 
 function hasVisualDescriptors(descriptors: readonly AnimationDescriptor[]): boolean {
@@ -236,6 +294,9 @@ function createDefaultDeps(): AnimationControllerDeps {
     buildTimeline,
     onError: (message, error) => {
       console.warn(message, error);
+    },
+    onWarning: (message) => {
+      console.warn(message);
     },
   };
 }

@@ -1,0 +1,287 @@
+version: 1
+
+layout:
+  mode: graph
+  hints:
+    regions:
+      - name: North Vietnam
+        position: n
+        zones:
+          - "north-vietnam:none"
+      - name: Laos
+        position: nw
+        zones:
+          - "central-laos:none"
+          - "southern-laos:none"
+      - name: Cambodia
+        position: sw
+        zones:
+          - "northeast-cambodia:none"
+          - "the-fishhook:none"
+          - "the-parrots-beak:none"
+          - "sihanoukville:none"
+      - name: South Vietnam
+        position: center
+        zones:
+          - "saigon:none"
+          - "hue:none"
+          - "da-nang:none"
+          - "kontum:none"
+          - "qui-nhon:none"
+          - "cam-ranh:none"
+          - "an-loc:none"
+          - "can-tho:none"
+          - "quang-tri-thua-thien:none"
+          - "quang-nam:none"
+          - "quang-tin-quang-ngai:none"
+          - "binh-dinh:none"
+          - "pleiku-darlac:none"
+          - "phu-bon-phu-yen:none"
+          - "khanh-hoa:none"
+          - "phuoc-long:none"
+          - "quang-duc-long-khanh:none"
+          - "binh-tuy-binh-thuan:none"
+          - "tay-ninh:none"
+          - "kien-phong:none"
+          - "kien-hoa-vinh-binh:none"
+          - "ba-xuyen:none"
+          - "kien-giang-an-xuyen:none"
+
+factions:
+  us:
+    color: "#e63946"
+    displayName: United States
+  arvn:
+    color: "#457b9d"
+    displayName: ARVN
+  nva:
+    color: "#2a9d8f"
+    displayName: NVA
+  vc:
+    color: "#e9c46a"
+    displayName: Viet Cong
+
+zones:
+  categoryStyles:
+    city:
+      shape: circle
+      width: 90
+      height: 90
+      color: "#5b7fa5"
+    province:
+      shape: rectangle
+      width: 160
+      height: 100
+    loc:
+      shape: line
+      width: 120
+      height: 36
+
+  attributeRules:
+    - match:
+        category: [province]
+        attributeContains:
+          terrainTags: highland
+      style:
+        color: "#6b5b3e"
+    - match:
+        category: [province]
+        attributeContains:
+          terrainTags: jungle
+      style:
+        color: "#3d5c3a"
+    - match:
+        category: [province]
+        attributeContains:
+          terrainTags: lowland
+      style:
+        color: "#5a7a52"
+    - match:
+        category: [loc]
+        attributeContains:
+          terrainTags: highway
+      style:
+        color: "#8b7355"
+    - match:
+        category: [loc]
+        attributeContains:
+          terrainTags: mekong
+      style:
+        color: "#4a7a8c"
+
+  overrides:
+    "an-loc:none":
+      label: "An Loc"
+    "ba-xuyen:none":
+      label: "Ba Xuyen"
+    "binh-dinh:none":
+      label: "Binh Dinh"
+    "binh-tuy-binh-thuan:none":
+      label: "Binh Tuy Binh Thuan"
+    "cam-ranh:none":
+      label: "Cam Ranh"
+    "can-tho:none":
+      label: "Can Tho"
+    "central-laos:none":
+      label: "Central Laos"
+    "da-nang:none":
+      label: "Da Nang"
+    "hue:none":
+      label: "Hue"
+    "khanh-hoa:none":
+      label: "Khanh Hoa"
+    "kien-giang-an-xuyen:none":
+      label: "Kien Giang An Xuyen"
+    "kien-hoa-vinh-binh:none":
+      label: "Kien Hoa Vinh Binh"
+    "kien-phong:none":
+      label: "Kien Phong"
+    "kontum:none":
+      label: "Kontum"
+    "loc-ban-me-thuot-da-lat:none":
+      label: "Ban Me Thuot-Da Lat"
+    "loc-cam-ranh-da-lat:none":
+      label: "Cam Ranh-Da Lat"
+    "loc-can-tho-bac-lieu:none":
+      label: "Can Tho-Bac Lieu"
+    "loc-can-tho-chau-doc:none":
+      label: "Can Tho-Chau Doc"
+    "loc-can-tho-long-phu:none":
+      label: "Can Tho-Long Phu"
+    "loc-da-nang-dak-to:none":
+      label: "Da Nang-Dak To"
+    "loc-da-nang-qui-nhon:none":
+      label: "Da Nang-Qui Nhon"
+    "loc-hue-da-nang:none":
+      label: "Hue-Da Nang"
+    "loc-hue-khe-sanh:none":
+      label: "Hue-Khe Sanh"
+    "loc-kontum-ban-me-thuot:none":
+      label: "Kontum-Ban Me Thuot"
+    "loc-kontum-dak-to:none":
+      label: "Kontum-Dak To"
+    "loc-kontum-qui-nhon:none":
+      label: "Kontum-Qui Nhon"
+    "loc-qui-nhon-cam-ranh:none":
+      label: "Qui Nhon-Cam Ranh"
+    "loc-saigon-an-loc-ban-me-thuot:none":
+      label: "Saigon-An Loc-Ban Me Thuot"
+    "loc-saigon-cam-ranh:none":
+      label: "Saigon-Cam Ranh"
+    "loc-saigon-can-tho:none":
+      label: "Saigon-Can Tho"
+    "loc-saigon-da-lat:none":
+      label: "Saigon-Da Lat"
+    "north-vietnam:none":
+      label: "North Vietnam"
+    "northeast-cambodia:none":
+      label: "Northeast Cambodia"
+    "phu-bon-phu-yen:none":
+      label: "Phu Bon Phu Yen"
+    "phuoc-long:none":
+      label: "Phuoc Long"
+    "pleiku-darlac:none":
+      label: "Pleiku Darlac"
+    "quang-duc-long-khanh:none":
+      label: "Quang Duc Long Khanh"
+    "quang-nam:none":
+      label: "Quang Nam"
+    "quang-tin-quang-ngai:none":
+      label: "Quang Tin Quang Ngai"
+    "quang-tri-thua-thien:none":
+      label: "Quang Tri"
+    "qui-nhon:none":
+      label: "Qui Nhon"
+    "saigon:none":
+      label: "Saigon"
+    "sihanoukville:none":
+      label: "Sihanoukville"
+    "southern-laos:none":
+      label: "Southern Laos"
+    "tay-ninh:none":
+      label: "Tay Ninh"
+    "the-fishhook:none":
+      label: "The Fishhook"
+    "the-parrots-beak:none":
+      label: "The Parrots Beak"
+
+  layoutRoles:
+    "available-ARVN:none": forcePool
+    "available-NVA:none": forcePool
+    "available-US:none": forcePool
+    "available-VC:none": forcePool
+    "casualties-US:none": forcePool
+    "deck:none": card
+    "leader:none": card
+    "lookahead:none": card
+    "out-of-play-ARVN:none": forcePool
+    "out-of-play-US:none": forcePool
+    "played:none": card
+
+edges:
+  default:
+    color: "#6b7280"
+    width: 1.5
+    alpha: 0.3
+  categoryStyles:
+    loc:
+      color: "#8b7355"
+      width: 2
+
+tokenTypes:
+  us-troops:
+    shape: square
+    color: olive
+  us-bases:
+    shape: round-disk
+    color: olive
+  us-irregulars:
+    shape: beveled-cylinder
+    color: olive
+    symbolRules:
+      - when:
+          - prop: activity
+            equals: active
+        symbol: star
+  arvn-troops:
+    shape: square
+    color: yellow
+  arvn-police:
+    shape: square
+    color: orange
+  arvn-rangers:
+    shape: beveled-cylinder
+    color: yellow
+    symbolRules:
+      - when:
+          - prop: activity
+            equals: active
+        symbol: star
+  arvn-bases:
+    shape: round-disk
+    color: yellow
+  nva-troops:
+    shape: square
+    color: red
+  nva-guerrillas:
+    shape: beveled-cylinder
+    color: red
+    symbolRules:
+      - when:
+          - prop: activity
+            equals: active
+        symbol: star
+  nva-bases:
+    shape: round-disk
+    color: red
+  vc-guerrillas:
+    shape: beveled-cylinder
+    color: bright-blue
+    symbolRules:
+      - when:
+          - prop: activity
+            equals: active
+        symbol: star
+  vc-bases:
+    shape: round-disk
+    color: bright-blue

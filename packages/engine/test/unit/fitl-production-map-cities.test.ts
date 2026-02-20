@@ -3,18 +3,11 @@ import { describe, it } from 'node:test';
 
 import { parseGameSpec } from '../../src/cnl/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import { compileProductionSpec, readProductionSpec } from '../helpers/production-spec-helpers.js';
+import { readProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type CitySpace = {
   readonly id: string;
   readonly category: string;
-  readonly visual?: {
-    readonly shape?: string;
-    readonly width?: number;
-    readonly height?: number;
-    readonly color?: string;
-    readonly label?: string;
-  };
   readonly attributes: {
     readonly population: number;
     readonly econ: number;
@@ -22,7 +15,7 @@ type CitySpace = {
     readonly country: string;
     readonly coastal: boolean;
   };
-  readonly adjacentTo: readonly string[];
+  readonly adjacentTo: ReadonlyArray<{ readonly to: string }>;
 };
 
 const readCitySpaces = (): CitySpace[] => {
@@ -41,26 +34,6 @@ const readCitySpaces = (): CitySpace[] => {
   return payload.spaces.filter((space) => space.category === 'city');
 };
 
-type CompiledCityZone = {
-  readonly id: string;
-  readonly category?: string;
-  readonly visual?: {
-    readonly shape?: string;
-    readonly width?: number;
-    readonly height?: number;
-    readonly color?: string;
-    readonly label?: string;
-  };
-};
-
-const readCompiledCityZones = (): CompiledCityZone[] => {
-  const { compiled } = compileProductionSpec();
-  if (compiled.gameDef === null) {
-    throw new Error('Expected production FITL spec to compile successfully');
-  }
-  return compiled.gameDef.zones.filter((zone) => zone.category === 'city');
-};
-
 describe('FITL production map cities', () => {
   it('encodes all 8 cities with expected IDs and base attributes', () => {
     const cities = readCitySpaces();
@@ -72,7 +45,7 @@ describe('FITL production map cities', () => {
     );
     assert.equal(cities.every((city) => /^[a-z0-9]+(?:-[a-z0-9]+)*:none$/.test(city.id)), true);
     assert.equal(cities.every((city) => city.attributes.terrainTags.length === 0), true);
-    assert.equal(cities.every((city) => city.adjacentTo.every((adjacentId) => adjacentId.endsWith(':none'))), true);
+    assert.equal(cities.every((city) => city.adjacentTo.every((adjacent) => adjacent.to.endsWith(':none'))), true);
   });
 
   it('encodes population, econ, coastal split, and country values per ticket', () => {
@@ -97,15 +70,5 @@ describe('FITL production map cities', () => {
       ['an-loc:none', 'can-tho:none', 'kontum:none'],
     );
     assert.equal(cities.every((city) => city.attributes.country === 'southVietnam'), true);
-  });
-
-  it('encodes visual hints for all 8 cities', () => {
-    const cities = readCompiledCityZones();
-
-    assert.equal(cities.every((city) => city.visual?.shape === 'circle'), true);
-    assert.equal(cities.every((city) => city.visual?.width === 90), true);
-    assert.equal(cities.every((city) => city.visual?.height === 90), true);
-    assert.equal(cities.every((city) => city.visual?.color === '#5b7fa5'), true);
-    assert.equal(cities.every((city) => typeof city.visual?.label === 'string' && city.visual.label.trim().length > 0), true);
   });
 });

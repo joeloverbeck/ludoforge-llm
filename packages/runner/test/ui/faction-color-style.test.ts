@@ -34,10 +34,10 @@ describe('faction-color-style', () => {
   });
 
   it('projects gameDef factions into CSS custom properties', () => {
-    const style = buildFactionCssVariableStyle([
-      { id: 'us', color: '#e63946' },
-      { id: 'nva force', color: '#2a9d8f' },
-    ]);
+    const style = buildFactionCssVariableStyle(
+      ['us', 'nva force'],
+      (factionId) => (factionId === 'us' ? '#e63946' : '#2a9d8f'),
+    );
 
     expect(style).toMatchObject({
       '--faction-us': '#e63946',

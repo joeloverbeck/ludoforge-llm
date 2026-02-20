@@ -198,18 +198,18 @@ function validateCrossReferences(
       }
 
       for (const [adjacentIndex, adjacent] of zone.adjacentTo.entries()) {
-        if (typeof adjacent !== 'string') {
+        if (!isRecord(adjacent) || typeof adjacent.to !== 'string') {
           continue;
         }
-        const normalizedZoneId = normalizeIdentifier(adjacent);
+        const normalizedZoneId = normalizeIdentifier(adjacent.to);
         if (normalizedZoneId.length === 0 || zoneIdSet.has(normalizedZoneId)) {
           continue;
         }
         pushMissingReferenceDiagnostic(
           diagnostics,
           'CNL_VALIDATOR_REFERENCE_MISSING',
-          `doc.zones.${zoneIndex}.adjacentTo.${adjacentIndex}`,
-          `Unknown adjacent zone "${adjacent}".`,
+          `doc.zones.${zoneIndex}.adjacentTo.${adjacentIndex}.to`,
+          `Unknown adjacent zone "${adjacent.to}".`,
           normalizedZoneId,
           zoneIds,
           'Use one of the declared zone ids.',

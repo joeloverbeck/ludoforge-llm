@@ -10,7 +10,7 @@ interface MapSpaceLike {
   readonly attributes: {
     readonly terrainTags: readonly string[];
   };
-  readonly adjacentTo: readonly string[];
+  readonly adjacentTo: ReadonlyArray<{ readonly to: string }>;
 }
 
 interface ZoneLike {
@@ -154,11 +154,16 @@ describe('FITL production data integration compilation', () => {
 
     const spaceById = new Map(spaces.map((space) => [space.id, space]));
     for (const space of spaces) {
-      for (const adjacentId of space.adjacentTo) {
+      for (const adjacentEntry of space.adjacentTo) {
+        const adjacentId = adjacentEntry.to;
         assert.equal(space.id === adjacentId, false, `${space.id} must not self-reference in adjacentTo`);
         const adjacent = spaceById.get(adjacentId);
         assert.ok(adjacent, `${space.id} references unknown adjacent space ${adjacentId}`);
-        assert.equal(adjacent.adjacentTo.includes(space.id), true, `${space.id} -> ${adjacentId} must be symmetric`);
+        assert.equal(
+          adjacent.adjacentTo.some((entry: { readonly to: string }) => entry.to === space.id),
+          true,
+          `${space.id} -> ${adjacentId} must be symmetric`,
+        );
       }
     }
 
@@ -278,13 +283,8 @@ describe('FITL production data integration compilation', () => {
     const inventoryTotal = pieceCatalogPayload.inventory.reduce((sum, entry) => sum + entry.total, 0);
     assert.equal(inventoryTotal, 229);
     assert.deepEqual(
-      (compiled.gameDef?.factions ?? []).map((faction) => ({ id: faction.id, color: faction.color })),
-      [
-        { id: 'us', color: '#e63946' },
-        { id: 'arvn', color: '#457b9d' },
-        { id: 'nva', color: '#2a9d8f' },
-        { id: 'vc', color: '#e9c46a' },
-      ],
+      (compiled.gameDef?.factions ?? []).map((faction) => ({ id: faction.id })),
+      [{ id: 'us' }, { id: 'arvn' }, { id: 'nva' }, { id: 'vc' }],
       'Compiled GameDef factions must be lowered from selected piece catalog asset',
     );
 

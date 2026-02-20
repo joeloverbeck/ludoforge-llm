@@ -40,37 +40,42 @@ describe('materializeZoneDefs', () => {
     assert.equal(result.value.ownershipByBase.market, 'none');
   });
 
-  it('preserves explicit zone layoutRole in emitted ZoneDef records', () => {
+  it('materializes omitted adjacency direction as explicit bidirectional', () => {
     const result = materializeZoneDefs(
       [
-        { id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack', layoutRole: 'card' },
-        { id: 'pool', owner: 'none', visibility: 'public', ordering: 'set', layoutRole: 'forcePool' },
+        {
+          id: 'a',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: [{ to: 'b:none' }],
+        },
       ],
       2,
     );
 
     assertNoDiagnostics(result);
-    assert.equal(result.value.zones[0]?.layoutRole, 'card');
-    assert.equal(result.value.zones[1]?.layoutRole, 'forcePool');
+    assert.deepEqual(result.value.zones[0]?.adjacentTo, [{ to: 'b:none', direction: 'bidirectional' }]);
   });
 
-  it('rejects invalid layoutRole values', () => {
+  it('reports invalid adjacency direction with stable path', () => {
     const result = materializeZoneDefs(
-      [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack', layoutRole: 'invalid-role' as unknown as 'card' }],
+      [
+        {
+          id: 'a',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: [{ to: 'b:none', direction: 'invalid' as unknown as 'bidirectional' }],
+        },
+      ],
       2,
     );
 
-    assert.equal(result.value.zones.length, 0);
-    assert.deepEqual(result.diagnostics, [
-      {
-        code: 'CNL_COMPILER_ZONE_LAYOUT_ROLE_INVALID',
-        path: 'doc.zones.0.layoutRole',
-        severity: 'error',
-        message: 'Zone layoutRole "invalid-role" is invalid.',
-        suggestion: 'Use layoutRole "card", "forcePool", "hand", or "other".',
-      },
-    ]);
+    assert.equal(result.diagnostics[0]?.code, 'CNL_COMPILER_ZONE_ADJACENCY_DIRECTION_INVALID');
+    assert.equal(result.diagnostics[0]?.path, 'doc.zones.0.adjacentTo.0.direction');
   });
+
 });
 
 describe('canonicalizeZoneSelector', () => {

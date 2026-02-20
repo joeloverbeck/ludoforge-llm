@@ -9,9 +9,9 @@ import {
   type GameDef,
   type GameState,
   type Token,
-  type ZoneVisualHints,
 } from '@ludoforge/engine/runtime';
 
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { deriveRenderModel } from '../../src/model/derive-render-model.js';
 import type { RenderContext } from '../../src/store/store-types.js';
 
@@ -22,10 +22,9 @@ interface CompileFixtureOptions {
     readonly zoneKind?: 'board' | 'aux';
     readonly visibility: 'public' | 'owner' | 'hidden';
     readonly ordering: 'stack' | 'queue' | 'set';
-    readonly adjacentTo?: readonly string[];
+    readonly adjacentTo?: ReadonlyArray<{ readonly to: string; readonly category?: string }>;
     readonly category?: string;
     readonly attributes?: Readonly<Record<string, AttributeValue>>;
-    readonly visual?: ZoneVisualHints;
   }[];
   readonly minPlayers: number;
   readonly maxPlayers: number;
@@ -132,6 +131,7 @@ function makeRenderContext(
       Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), 'human' as const]),
     ),
     terminal: null,
+    visualConfigProvider: new VisualConfigProvider(null),
     ...overrides,
   };
 }
@@ -145,7 +145,7 @@ function token(id: string, type = 'piece', props: Token['props'] = {}): Token {
 }
 
 describe('deriveRenderModel zones/tokens/adjacencies', () => {
-  it('projects zone category/attributes/visual fields and applies null-or-empty defaults', () => {
+  it('projects zone category/attributes with provider-resolved visuals and labels', () => {
     const def = compileFixture({
       minPlayers: 2,
       maxPlayers: 2,
@@ -158,7 +158,6 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
           ordering: 'set',
           category: 'city',
           attributes: { population: 2, canFortify: true },
-          visual: { shape: 'hexagon', color: '#123456', label: 'Urban' },
         },
         {
           id: 'plain',
@@ -170,18 +169,34 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     });
 
     const state = initialState(def, 99, 2);
-    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+    const model = deriveRenderModel(
+      state,
+      def,
+      makeRenderContext(state.playerCount, asPlayerId(0), {
+        visualConfigProvider: new VisualConfigProvider({
+          version: 1,
+          zones: {
+            categoryStyles: {
+              city: { shape: 'hexagon', width: 120, height: 80, color: '#123456' },
+            },
+            overrides: {
+              'city:none': { label: 'Urban Center' },
+            },
+          },
+        }),
+      }),
+    );
 
     const cityZone = model.zones.find((zone) => zone.id === 'city:none');
     expect(cityZone).toMatchObject({
+      displayName: 'Urban Center',
       category: 'city',
       attributes: { population: 2, canFortify: true },
-      visual: { shape: 'hexagon', color: '#123456', label: 'Urban' },
+      visual: { shape: 'hexagon', width: 120, height: 80, color: '#123456' },
       metadata: {
         zoneKind: 'board',
         category: 'city',
         attributes: { population: 2, canFortify: true },
-        visual: { shape: 'hexagon', color: '#123456', label: 'Urban' },
       },
     });
 
@@ -189,13 +204,13 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     expect(plainZone).toMatchObject({
       category: null,
       attributes: {},
-      visual: null,
+      visual: { shape: 'rectangle', width: 160, height: 100, color: null },
       metadata: { zoneKind: 'aux' },
     });
   });
 
-  it('does not preserve prior zone references during stabilization when category/visual change', () => {
-    const defA = compileFixture({
+  it('does not preserve prior zone references during stabilization when resolved visual changes', () => {
+    const def = compileFixture({
       minPlayers: 2,
       maxPlayers: 2,
       zones: [
@@ -205,38 +220,33 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
           visibility: 'public',
           ordering: 'set',
           category: 'city',
-          visual: { shape: 'hexagon', color: '#111111' },
         },
       ],
     });
-    const defB = compileFixture({
-      minPlayers: 2,
-      maxPlayers: 2,
-      zones: [
-        {
-          id: 'table',
-          owner: 'none',
-          visibility: 'public',
-          ordering: 'set',
-          category: 'fort',
-          visual: { shape: 'rectangle', color: '#222222' },
-        },
-      ],
+    const state = initialState(def, 123, 2);
+    const contextA = makeRenderContext(state.playerCount, asPlayerId(0), {
+      visualConfigProvider: new VisualConfigProvider({
+        version: 1,
+        zones: { categoryStyles: { city: { shape: 'hexagon', color: '#111111' } } },
+      }),
     });
-    const state = initialState(defA, 123, 2);
-    const context = makeRenderContext(state.playerCount);
+    const contextB = makeRenderContext(state.playerCount, asPlayerId(0), {
+      visualConfigProvider: new VisualConfigProvider({
+        version: 1,
+        zones: { categoryStyles: { city: { shape: 'rectangle', color: '#222222' } } },
+      }),
+    });
 
-    const firstModel = deriveRenderModel(state, defA, context);
-    const secondModel = deriveRenderModel(state, defB, context, firstModel);
+    const firstModel = deriveRenderModel(state, def, contextA);
+    const secondModel = deriveRenderModel(state, def, contextB, firstModel);
 
     expect(secondModel.zones[0]).not.toBe(firstModel.zones[0]);
     expect(secondModel.zones[0]).toMatchObject({
-      category: 'fort',
+      category: 'city',
       visual: { shape: 'rectangle', color: '#222222' },
       metadata: {
         zoneKind: 'aux',
-        category: 'fort',
-        visual: { shape: 'rectangle', color: '#222222' },
+        category: 'city',
       },
     });
   });
@@ -288,14 +298,14 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
-          adjacentTo: ['hand:0'],
+          adjacentTo: [{ to: 'hand:0' }],
         },
         {
           id: 'hand',
           owner: 'player',
           visibility: 'owner',
           ordering: 'stack',
-          adjacentTo: ['table:none'],
+          adjacentTo: [{ to: 'table:none' }],
         },
       ],
     });
@@ -439,8 +449,8 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     const def: GameDef = {
       ...baseDef,
       factions: [
-        { id: 'us', displayName: 'United States', color: '#e63946' },
-        { id: 'arvn', displayName: 'ARVN', color: '#457b9d' },
+        { id: 'us' },
+        { id: 'arvn' },
       ],
       tokenTypes: [
         { id: 'us-troops', faction: 'us', props: { faction: 'string' } },
@@ -479,7 +489,7 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
-          adjacentTo: ['hand:0'],
+          adjacentTo: [{ to: 'hand:0' }],
         },
         {
           id: 'hand',
@@ -494,8 +504,41 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
 
     expect(model.adjacencies).toEqual([
-      { from: 'table:none', to: 'hand:0', isHighlighted: false },
-      { from: 'hand:0', to: 'table:none', isHighlighted: false },
+      { from: 'table:none', to: 'hand:0', category: null, isHighlighted: false },
+      { from: 'hand:0', to: 'table:none', category: null, isHighlighted: false },
+    ]);
+  });
+
+  it('projects adjacency category from source zone category', () => {
+    const def = compileFixture({
+      minPlayers: 2,
+      maxPlayers: 2,
+      zones: [
+        {
+          id: 'city',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          adjacentTo: [{ to: 'province:none' }],
+        },
+        {
+          id: 'province',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'province',
+          adjacentTo: [{ to: 'city:none' }],
+        },
+      ],
+    });
+
+    const state = initialState(def, 33, 2);
+    const model = deriveRenderModel(state, def, makeRenderContext(state.playerCount));
+
+    expect(model.adjacencies).toEqual([
+      { from: 'city:none', to: 'province:none', category: 'city', isHighlighted: false },
+      { from: 'province:none', to: 'city:none', category: 'province', isHighlighted: false },
     ]);
   });
 
@@ -509,14 +552,14 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
-          adjacentTo: ['reserve:none'],
+          adjacentTo: [{ to: 'reserve:none' }],
         },
         {
           id: 'reserve',
           owner: 'none',
           visibility: 'public',
           ordering: 'set',
-          adjacentTo: ['table:none'],
+          adjacentTo: [{ to: 'table:none' }],
         },
       ],
     });
@@ -541,8 +584,8 @@ describe('deriveRenderModel zones/tokens/adjacencies', () => {
     );
 
     expect(model.adjacencies).toEqual([
-      { from: 'table:none', to: 'reserve:none', isHighlighted: true },
-      { from: 'reserve:none', to: 'table:none', isHighlighted: true },
+      { from: 'table:none', to: 'reserve:none', category: null, isHighlighted: true },
+      { from: 'reserve:none', to: 'table:none', category: null, isHighlighted: true },
     ]);
   });
 

@@ -18,14 +18,6 @@ export const PieceStatusTransitionSchema = z
   })
   .strict();
 
-export const PieceVisualMetadataSchema = z
-  .object({
-    color: StringSchema.min(1),
-    shape: StringSchema.min(1),
-    activeSymbol: StringSchema.min(1).optional(),
-  })
-  .strict();
-
 export const PieceTypeCatalogEntrySchema = z
   .object({
     id: StringSchema.min(1),
@@ -33,7 +25,6 @@ export const PieceTypeCatalogEntrySchema = z
     statusDimensions: z.array(PieceStatusDimensionSchema),
     transitions: z.array(PieceStatusTransitionSchema),
     runtimeProps: z.record(StringSchema, z.union([StringSchema, NumberSchema, BooleanSchema])).optional(),
-    visual: PieceVisualMetadataSchema.optional(),
   })
   .strict();
 
@@ -48,8 +39,6 @@ export const PieceInventoryEntrySchema = z
 export const FactionDefSchema = z
   .object({
     id: StringSchema.min(1),
-    color: StringSchema.min(1),
-    displayName: StringSchema.optional(),
   })
   .strict();
 
@@ -68,64 +57,12 @@ export const AttributeValueSchema = z.union([
   z.array(StringSchema),
 ]);
 
-export const ZoneShapeSchema = z.union([
-  z.literal('rectangle'), z.literal('circle'), z.literal('hexagon'), z.literal('diamond'),
-  z.literal('ellipse'), z.literal('triangle'), z.literal('line'), z.literal('octagon'),
-]);
-
-export const TokenShapeSchema = z.union([
-  z.literal('circle'), z.literal('square'), z.literal('triangle'), z.literal('diamond'),
-  z.literal('hexagon'), z.literal('cylinder'), z.literal('meeple'), z.literal('card'),
-]);
-
-export const ZoneVisualHintsSchema = z
+export const AdjacencyEntrySchema = z
   .object({
-    shape: ZoneShapeSchema.optional(),
-    width: NumberSchema.optional(),
-    height: NumberSchema.optional(),
-    color: StringSchema.optional(),
-    label: StringSchema.optional(),
-  })
-  .strict();
-
-export const TokenVisualHintsSchema = z
-  .object({
-    shape: TokenShapeSchema.optional(),
-    color: StringSchema.optional(),
-    size: NumberSchema.optional(),
-    symbol: StringSchema.optional(),
-  })
-  .strict();
-
-export const CardAnimationZoneRoleSchema = z.union([
-  z.literal('draw'),
-  z.literal('hand'),
-  z.literal('shared'),
-  z.literal('burn'),
-  z.literal('discard'),
-]);
-
-export const CardAnimationZoneRolesSchema = z
-  .object({
-    draw: z.array(StringSchema.min(1)).min(1),
-    hand: z.array(StringSchema.min(1)).min(1),
-    shared: z.array(StringSchema.min(1)).min(1),
-    burn: z.array(StringSchema.min(1)).min(1),
-    discard: z.array(StringSchema.min(1)).min(1),
-  })
-  .strict();
-
-export const CardAnimationTokenTypeSelectorsSchema = z
-  .object({
-    ids: z.array(StringSchema.min(1)).optional(),
-    idPrefixes: z.array(StringSchema.min(1)).optional(),
-  })
-  .strict();
-
-export const CardAnimationMetadataSchema = z
-  .object({
-    cardTokenTypeIds: z.array(StringSchema.min(1)).min(1),
-    zoneRoles: CardAnimationZoneRolesSchema,
+    to: StringSchema.min(1),
+    direction: z.union([z.literal('bidirectional'), z.literal('unidirectional')]).optional(),
+    category: StringSchema.min(1).optional(),
+    attributes: z.record(StringSchema, AttributeValueSchema).optional(),
   })
   .strict();
 
@@ -134,24 +71,7 @@ export const MapSpaceSchema = z
     id: StringSchema.min(1),
     category: StringSchema.min(1).optional(),
     attributes: z.record(StringSchema, AttributeValueSchema).optional(),
-    adjacentTo: z.array(StringSchema.min(1)),
-    visual: ZoneVisualHintsSchema.optional(),
-  })
-  .strict();
-
-export const MapVisualRuleMatchSchema = z
-  .object({
-    spaceIds: z.array(StringSchema.min(1)).optional(),
-    category: z.array(StringSchema.min(1)).optional(),
-    attributeEquals: z.record(StringSchema, AttributeValueSchema).optional(),
-    attributeContains: z.record(StringSchema, StringSchema.min(1)).optional(),
-  })
-  .strict();
-
-export const MapVisualRuleSchema = z
-  .object({
-    match: MapVisualRuleMatchSchema.optional(),
-    visual: ZoneVisualHintsSchema,
+    adjacentTo: z.array(AdjacencyEntrySchema),
   })
   .strict();
 
@@ -242,7 +162,6 @@ export const StackingConstraintSchema = z
 export const MapPayloadSchema = z
   .object({
     spaces: z.array(MapSpaceSchema),
-    visualRules: z.array(MapVisualRuleSchema).optional(),
     provisionalAdjacency: z.array(ProvisionalAdjacencySchema).optional(),
     tracks: z.array(NumericTrackSchema).optional(),
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),

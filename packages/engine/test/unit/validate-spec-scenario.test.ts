@@ -35,13 +35,13 @@ function createMapPayload() {
         id: 'saigon',
         category: 'city',
         attributes: { population: 6, econ: 0, terrainTags: ['urban'], country: 'south-vietnam', coastal: true },
-        adjacentTo: ['hue'],
+        adjacentTo: [{ to: 'hue' }],
       },
       {
         id: 'hue',
         category: 'city',
         attributes: { population: 2, econ: 0, terrainTags: ['urban'], country: 'south-vietnam', coastal: true },
-        adjacentTo: ['saigon'],
+        adjacentTo: [{ to: 'saigon' }],
       },
     ],
     tracks: [
@@ -57,8 +57,8 @@ function createMapPayload() {
 function createPieceCatalogPayload() {
   return {
     factions: [
-      { id: 'us', color: '#e63946' },
-      { id: 'nva', color: '#2a9d8f' },
+      { id: 'us' },
+      { id: 'nva' },
     ],
     pieceTypes: [
       {

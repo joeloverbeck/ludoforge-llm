@@ -1698,9 +1698,9 @@ phase: [asPhaseId('main')],
       const def = {
         ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
         zones: [
-          { id: asZoneId('a:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('b:none')] },
-          { id: asZoneId('b:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('a:none'), asZoneId('c:none')] },
-          { id: asZoneId('c:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('b:none')] },
+          { id: asZoneId('a:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('b:none') }] },
+          { id: asZoneId('b:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('a:none') }, { to: asZoneId('c:none') }] },
+          { id: asZoneId('c:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('b:none') }] },
           { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' },
         ],
       } as GameDef;

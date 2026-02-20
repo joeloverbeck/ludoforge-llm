@@ -86,12 +86,14 @@ vi.mock('pixi.js', () => ({
 
 import { createAdjacencyRenderer } from '../../../src/canvas/renderers/adjacency-renderer';
 import type { Position } from '../../../src/canvas/geometry';
+import { VisualConfigProvider } from '../../../src/config/visual-config-provider';
 import type { RenderAdjacency } from '../../../src/model/render-model';
 
 function makeAdjacency(overrides: Partial<RenderAdjacency> = {}): RenderAdjacency {
   return {
     from: 'zone:a',
     to: 'zone:b',
+    category: null,
     isHighlighted: false,
     ...overrides,
   };
@@ -104,7 +106,7 @@ function createPositions(entries: readonly [string, Position][]): ReadonlyMap<st
 describe('createAdjacencyRenderer', () => {
   it('update with empty array creates no graphics objects', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container);
+    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
 
     renderer.update([], new Map());
 
@@ -113,7 +115,7 @@ describe('createAdjacencyRenderer', () => {
 
   it('creates one graphics object per unique adjacency pair and dedupes reversed pairs', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container);
+    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
 
     renderer.update(
       [
@@ -134,7 +136,7 @@ describe('createAdjacencyRenderer', () => {
 
   it('removes and destroys graphics when a pair is removed on subsequent update', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container);
+    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
 
     renderer.update(
       [makeAdjacency({ from: 'zone:a', to: 'zone:b' }), makeAdjacency({ from: 'zone:c', to: 'zone:d' })],
@@ -162,7 +164,7 @@ describe('createAdjacencyRenderer', () => {
 
   it('adds graphics for newly added pairs on subsequent update', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container);
+    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
 
     renderer.update(
       [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
@@ -187,7 +189,7 @@ describe('createAdjacencyRenderer', () => {
 
   it('updates line endpoints in place when positions change', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container);
+    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
 
     renderer.update(
       [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
@@ -218,7 +220,7 @@ describe('createAdjacencyRenderer', () => {
 
   it('uses highlighted style when adjacency is highlighted (including merged bidirectional pairs)', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container);
+    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
 
     renderer.update(
       [
@@ -235,9 +237,66 @@ describe('createAdjacencyRenderer', () => {
     expect(graphics.strokeStyle).toEqual({ color: 0x93c5fd, width: 3, alpha: 0.7 });
   });
 
+  it('uses category style from visual config provider when present', () => {
+    const parent = new MockContainer();
+    const renderer = createAdjacencyRenderer(
+      parent as unknown as Container,
+      new VisualConfigProvider({
+        version: 1,
+        edges: {
+          categoryStyles: {
+            loc: { color: '#8b7355', width: 2, alpha: 0.4 },
+          },
+        },
+      }),
+    );
+
+    renderer.update(
+      [makeAdjacency({ from: 'zone:a', to: 'zone:b', category: 'loc', isHighlighted: false })],
+      createPositions([
+        ['zone:a', { x: 10, y: 20 }],
+        ['zone:b', { x: 30, y: 40 }],
+      ]),
+    );
+
+    const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
+    expect(graphics.strokeStyle).toEqual({ color: 0x8b7355, width: 2, alpha: 0.4 });
+  });
+
+  it('uses highlighted style over category style when highlighted', () => {
+    const parent = new MockContainer();
+    const renderer = createAdjacencyRenderer(
+      parent as unknown as Container,
+      new VisualConfigProvider({
+        version: 1,
+        edges: {
+          categoryStyles: {
+            loc: { color: '#8b7355', width: 2, alpha: 0.4 },
+          },
+          highlighted: {
+            color: '#00ffff',
+            width: 6,
+            alpha: 0.95,
+          },
+        },
+      }),
+    );
+
+    renderer.update(
+      [makeAdjacency({ from: 'zone:a', to: 'zone:b', category: 'loc', isHighlighted: true })],
+      createPositions([
+        ['zone:a', { x: 10, y: 20 }],
+        ['zone:b', { x: 30, y: 40 }],
+      ]),
+    );
+
+    const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
+    expect(graphics.strokeStyle).toEqual({ color: 0x00ffff, width: 6, alpha: 0.95 });
+  });
+
   it('skips missing positions without throwing and toggles visibility until positions exist', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container);
+    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
 
     expect(() => {
       renderer.update([makeAdjacency({ from: 'zone:a', to: 'zone:b' })], createPositions([['zone:a', { x: 10, y: 20 }]]));
@@ -262,7 +321,7 @@ describe('createAdjacencyRenderer', () => {
 
   it('destroy removes and destroys all graphics', () => {
     const parent = new MockContainer();
-    const renderer = createAdjacencyRenderer(parent as unknown as Container);
+    const renderer = createAdjacencyRenderer(parent as unknown as Container, new VisualConfigProvider(null));
 
     renderer.update(
       [makeAdjacency({ from: 'zone:a', to: 'zone:b' }), makeAdjacency({ from: 'zone:c', to: 'zone:d' })],

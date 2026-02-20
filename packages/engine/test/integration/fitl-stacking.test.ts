@@ -49,9 +49,9 @@ const fitlConstraints: readonly StackingConstraint[] = [
 ];
 
 const compileTimeZones: readonly ZoneDef[] = [
-  { id: asZoneId('quangTri'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('hue'), asZoneId('quangNam')], category: 'province', attributes: { population: 1, econ: 0, terrainTags: ['highland'], country: 'southVietnam', coastal: true } },
-  { id: asZoneId('hue'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('quangTri')], category: 'city', attributes: { population: 2, econ: 0, terrainTags: [], country: 'southVietnam', coastal: true } },
-  { id: asZoneId('route1'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('quangTri'), asZoneId('hue')], category: 'loc', attributes: { population: 0, econ: 1, terrainTags: ['highway'], country: 'southVietnam', coastal: false } },
+  { id: asZoneId('quangTri'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('hue') }, { to: asZoneId('quangNam') }], category: 'province', attributes: { population: 1, econ: 0, terrainTags: ['highland'], country: 'southVietnam', coastal: true } },
+  { id: asZoneId('hue'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('quangTri') }], category: 'city', attributes: { population: 2, econ: 0, terrainTags: [], country: 'southVietnam', coastal: true } },
+  { id: asZoneId('route1'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('quangTri') }, { to: asZoneId('hue') }], category: 'loc', attributes: { population: 0, econ: 1, terrainTags: ['highway'], country: 'southVietnam', coastal: false } },
   { id: asZoneId('hanoi'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [], category: 'city', attributes: { population: 3, econ: 0, terrainTags: [], country: 'northVietnam', coastal: false } },
 ];
 const pieceTypeFactionById = new Map<string, string>([

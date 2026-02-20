@@ -7,6 +7,8 @@ import type { ScreenRect } from '../canvas/coordinate-bridge.js';
 import type { HoverAnchor, HoveredCanvasTarget } from '../canvas/hover-anchor-contract.js';
 import { createKeyboardCoordinator } from '../input/keyboard-coordinator.js';
 import type { GameStore } from '../store/game-store.js';
+import type { VisualConfigProvider } from '../config/visual-config-provider.js';
+import { VisualConfigContext } from '../config/visual-config-context.js';
 import { ActionToolbar } from './ActionToolbar.js';
 import { ChoicePanel } from './ChoicePanel.js';
 import { ErrorState } from './ErrorState.js';
@@ -34,6 +36,7 @@ import styles from './GameContainer.module.css';
 
 interface GameContainerProps {
   readonly store: StoreApi<GameStore>;
+  readonly visualConfigProvider: VisualConfigProvider;
 }
 
 type OverlayRegionPanel = (props: { readonly store: StoreApi<GameStore> }) => ReactElement | null;
@@ -87,7 +90,7 @@ export function resolveTooltipAnchorState(hoverAnchor: HoverAnchor | null): Tool
   };
 }
 
-export function GameContainer({ store }: GameContainerProps): ReactElement {
+export function GameContainer({ store, visualConfigProvider }: GameContainerProps): ReactElement {
   const gameLifecycle = useStore(store, (state) => state.gameLifecycle);
   const error = useStore(store, (state) => state.error);
   const renderModel = useStore(store, (state) => state.renderModel);
@@ -128,7 +131,10 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
   }
 
   const bottomBarState = deriveBottomBarState(renderModel);
-  const factionCssVariableStyle = buildFactionCssVariableStyle(gameDefFactions);
+  const factionCssVariableStyle = buildFactionCssVariableStyle(
+    gameDefFactions?.map((faction) => faction.id),
+    (factionId) => visualConfigProvider.getFactionColor(factionId),
+  );
   const tooltipAnchorState = resolveTooltipAnchorState(hoverAnchor);
 
   const bottomBarContent = (() => {
@@ -154,29 +160,32 @@ export function GameContainer({ store }: GameContainerProps): ReactElement {
   })();
 
   return (
-    <div className={styles.container} style={factionCssVariableStyle}>
-      <div className={styles.canvasLayer}>
-        <GameCanvas
-          store={store}
-          {...(keyboardCoordinator === null ? {} : { keyboardCoordinator })}
-          onHoverAnchorChange={onHoverAnchorChange}
+    <VisualConfigContext.Provider value={visualConfigProvider}>
+      <div className={styles.container} style={factionCssVariableStyle}>
+        <div className={styles.canvasLayer}>
+          <GameCanvas
+            store={store}
+            visualConfigProvider={visualConfigProvider}
+            {...(keyboardCoordinator === null ? {} : { keyboardCoordinator })}
+            onHoverAnchorChange={onHoverAnchorChange}
+          />
+        </div>
+        <UIOverlay
+          topBarContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, store)}
+          sidePanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, store)}
+          bottomBarContent={bottomBarContent}
+          floatingContent={(
+            <>
+              {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, store)}
+              <TooltipLayer
+                store={store}
+                hoverTarget={tooltipAnchorState.hoverTarget}
+                anchorRect={tooltipAnchorState.anchorRect}
+              />
+            </>
+          )}
         />
       </div>
-      <UIOverlay
-        topBarContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, store)}
-        sidePanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, store)}
-        bottomBarContent={bottomBarContent}
-        floatingContent={(
-          <>
-            {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, store)}
-            <TooltipLayer
-              store={store}
-              hoverTarget={tooltipAnchorState.hoverTarget}
-              anchorRect={tooltipAnchorState.anchorRect}
-            />
-          </>
-        )}
-      />
-    </div>
+    </VisualConfigContext.Provider>
   );
 }

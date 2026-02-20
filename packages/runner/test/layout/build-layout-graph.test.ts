@@ -1,24 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { asZoneId, type GameDef, type ZoneDef } from '@ludoforge/engine/runtime';
 
+import { VisualConfigProvider } from '../../src/config/visual-config-provider';
 import { buildLayoutGraph, partitionZones, resolveLayoutMode } from '../../src/layout/build-layout-graph';
 
 describe('resolveLayoutMode', () => {
-  it('passes through explicit grid mode', () => {
-    expect(resolveLayoutMode(makeDef([], 'grid'))).toBe('grid');
+  it('uses provider-configured grid mode', () => {
+    expect(resolveLayoutMode(makeDef([]), providerWithMode('grid'))).toBe('grid');
   });
 
-  it('passes through explicit track mode', () => {
-    expect(resolveLayoutMode(makeDef([], 'track'))).toBe('track');
+  it('uses provider-configured track mode', () => {
+    expect(resolveLayoutMode(makeDef([]), providerWithMode('track'))).toBe('track');
   });
 
   it('auto-detects graph when any zone has adjacency', () => {
     const def = makeDef([
-      zone('a', { adjacentTo: ['b'] }),
+      zone('a', { adjacentTo: [{ to: 'b' }] }),
       zone('b'),
     ]);
 
-    expect(resolveLayoutMode(def)).toBe('graph');
+    expect(resolveLayoutMode(def, new VisualConfigProvider(null))).toBe('graph');
   });
 
   it('auto-detects table when zones have no adjacency', () => {
@@ -27,11 +28,16 @@ describe('resolveLayoutMode', () => {
       zone('b'),
     ]);
 
-    expect(resolveLayoutMode(def)).toBe('table');
+    expect(resolveLayoutMode(def, new VisualConfigProvider(null))).toBe('table');
   });
 
   it('returns table for empty zones', () => {
-    expect(resolveLayoutMode(makeDef([]))).toBe('table');
+    expect(resolveLayoutMode(makeDef([]), new VisualConfigProvider(null))).toBe('table');
+  });
+
+  it('ignores GameDef metadata.layoutMode and uses provider/fallback behavior', () => {
+    const def = makeDef([zone('a', { adjacentTo: [{ to: 'b' }] }), zone('b')], 'grid');
+    expect(resolveLayoutMode(def, new VisualConfigProvider(null))).toBe('graph');
   });
 });
 
@@ -48,7 +54,7 @@ describe('partitionZones', () => {
 
   it('infers board for zone without zoneKind but with adjacency', () => {
     const def = makeDef([
-      zone('board-1', { adjacentTo: ['board-2'] }),
+      zone('board-1', { adjacentTo: [{ to: 'board-2' }] }),
       zone('board-2'),
     ]);
 
@@ -100,33 +106,40 @@ describe('buildLayoutGraph', () => {
 
   it('adds undirected edges from adjacentTo', () => {
     const graph = buildLayoutGraph([
-      zone('a', { adjacentTo: ['b'] }),
-      zone('b', { adjacentTo: ['a'] }),
+      zone('a', { adjacentTo: [{ to: 'b' }] }),
+      zone('b', { adjacentTo: [{ to: 'a' }] }),
     ]);
 
     expect(graph.size).toBe(1);
     expect(graph.hasUndirectedEdge('a', 'b')).toBe(true);
   });
 
-  it('preserves node category, attributes, and visual data', () => {
+  it('adds undirected layout connectivity for unidirectional adjacency entries', () => {
+    const graph = buildLayoutGraph([
+      zone('a', { adjacentTo: [{ to: 'b', direction: 'unidirectional' }] }),
+      zone('b'),
+    ]);
+
+    expect(graph.hasUndirectedEdge('a', 'b')).toBe(true);
+  });
+
+  it('preserves node category and attributes only', () => {
     const graph = buildLayoutGraph([
       zone('a', {
         category: 'city',
         attributes: { region: 'north', score: 2 },
-        visual: { shape: 'hexagon', color: '#123456' },
       }),
     ]);
 
     expect(graph.getNodeAttributes('a')).toEqual({
       category: 'city',
       attributes: { region: 'north', score: 2 },
-      visual: { shape: 'hexagon', color: '#123456' },
     });
   });
 
   it('skips adjacency edges that target zones outside the board partition', () => {
     const graph = buildLayoutGraph([
-      zone('board-a', { adjacentTo: ['aux-x'] }),
+      zone('board-a', { adjacentTo: [{ to: 'aux-x' }] }),
     ]);
 
     expect(graph.size).toBe(0);
@@ -141,9 +154,9 @@ describe('buildLayoutGraph', () => {
 
   it('deduplicates repeated and symmetric adjacency edges', () => {
     const graph = buildLayoutGraph([
-      zone('a', { adjacentTo: ['b', 'b', 'c'] }),
-      zone('b', { adjacentTo: ['a'] }),
-      zone('c', { adjacentTo: ['a'] }),
+      zone('a', { adjacentTo: [{ to: 'b' }, { to: 'b' }, { to: 'c' }] }),
+      zone('b', { adjacentTo: [{ to: 'a' }] }),
+      zone('c', { adjacentTo: [{ to: 'a' }] }),
     ]);
 
     expect(graph.size).toBe(2);
@@ -153,7 +166,7 @@ describe('buildLayoutGraph', () => {
 
   it('skips self adjacency entries', () => {
     const graph = buildLayoutGraph([
-      zone('a', { adjacentTo: ['a'] }),
+      zone('a', { adjacentTo: [{ to: 'a' }] }),
     ]);
 
     expect(graph.size).toBe(0);
@@ -187,25 +200,48 @@ function makeDef(
 
 interface ZoneOverrides {
   readonly zoneKind?: ZoneDef['zoneKind'];
-  readonly adjacentTo?: readonly string[];
+  readonly adjacentTo?: ReadonlyArray<
+    string
+    | {
+        readonly to: string;
+        readonly direction?: 'bidirectional' | 'unidirectional';
+      }
+  >;
   readonly category?: ZoneDef['category'];
   readonly attributes?: ZoneDef['attributes'];
-  readonly visual?: ZoneDef['visual'];
 }
 
 function zone(id: string, overrides: ZoneOverrides = {}): ZoneDef {
-  const normalizedAdjacentTo = overrides.adjacentTo?.map((zoneID) => asZoneId(String(zoneID)));
+  const { adjacentTo, ...restOverrides } = overrides;
+  const normalizedAdjacentTo = adjacentTo?.map((entry) => {
+    if (typeof entry === 'string') {
+      return { to: asZoneId(entry) };
+    }
+    return {
+      to: asZoneId(String(entry.to)),
+      ...(entry.direction === undefined ? {} : { direction: entry.direction }),
+    };
+  });
 
   return {
     id: asZoneId(id),
     owner: 'none',
     visibility: 'public',
     ordering: 'set',
-    ...overrides,
+    ...restOverrides,
     ...(normalizedAdjacentTo === undefined ? {} : { adjacentTo: normalizedAdjacentTo }),
   } as ZoneDef;
 }
 
 function ids(zones: readonly ZoneDef[]): string[] {
   return zones.map((zoneDef) => zoneDef.id);
+}
+
+function providerWithMode(mode: 'graph' | 'table' | 'track' | 'grid'): VisualConfigProvider {
+  return new VisualConfigProvider({
+    version: 1,
+    layout: {
+      mode,
+    },
+  });
 }

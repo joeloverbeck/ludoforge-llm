@@ -1,19 +1,23 @@
-import { Circle, Container, Graphics, Text } from 'pixi.js';
-import { asPlayerId, type TokenShape } from '@ludoforge/engine/runtime';
+import { Circle, Container, Graphics, Polygon, Rectangle, Text } from 'pixi.js';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { RenderToken } from '../../model/render-model';
+import type { TokenShape } from '../../config/visual-config-defaults.js';
+import type { ResolvedTokenVisual } from '../../config/visual-config-provider.js';
+import type { CardTemplate } from '../../config/visual-config-types.js';
 import type { FactionColorProvider, TokenRenderer } from './renderer-types';
-import { parseHexColor } from './shape-utils';
+import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
+import { drawTokenShape } from './token-shape-drawer.js';
+import { drawTokenSymbol } from './token-symbol-drawer.js';
+import { drawCardContent } from './card-template-renderer.js';
 
 const TOKEN_RADIUS = 14;
 const CARD_WIDTH = 24;
 const CARD_HEIGHT = 34;
-const CARD_CORNER_RADIUS = 4;
 const TOKENS_PER_ROW = 4;
 const TOKEN_SPACING = 30;
 const NEUTRAL_TOKEN_COLOR = 0x6b7280;
 const CARD_BACK_COLOR = 0x1f2937;
-const CARD_BACK_LABEL_COLOR = '#e2e8f0';
 
 const DEFAULT_STROKE = {
   color: 0x0f172a,
@@ -35,10 +39,11 @@ const SELECTED_STROKE = {
 
 interface TokenVisualElements {
   readonly frontBase: Graphics;
-  readonly frontLabel: Text;
+  readonly frontSymbol: Graphics;
   readonly backBase: Graphics;
-  readonly backLabel: Text;
+  readonly backSymbol: Graphics;
   readonly countBadge: Text;
+  frontContent: Container | null;
 }
 
 interface TokenRendererOptions {
@@ -94,14 +99,12 @@ export function createTokenRenderer(
           const interactive = options.bindSelection !== undefined;
           tokenContainer.eventMode = interactive ? 'static' : 'none';
           tokenContainer.interactiveChildren = false;
-          tokenContainer.hitArea = new Circle(0, 0, TOKEN_RADIUS);
-
           const visuals = createTokenVisualElements();
           tokenContainer.addChild(
             visuals.backBase,
-            visuals.backLabel,
+            visuals.backSymbol,
             visuals.frontBase,
-            visuals.frontLabel,
+            visuals.frontSymbol,
             visuals.countBadge,
           );
           visualsByContainer.set(tokenContainer, visuals);
@@ -189,32 +192,8 @@ export function createTokenRenderer(
 function createTokenVisualElements(): TokenVisualElements {
   const frontBase = new Graphics();
   const backBase = new Graphics();
-
-  const frontLabel = new Text({
-    text: '',
-    style: {
-      fill: '#f8fafc',
-      fontSize: 11,
-      fontFamily: 'monospace',
-    },
-  });
-
-  frontLabel.anchor.set(0.5, 0.5);
-  frontLabel.eventMode = 'none';
-  frontLabel.interactiveChildren = false;
-
-  const backLabel = new Text({
-    text: '?',
-    style: {
-      fill: CARD_BACK_LABEL_COLOR,
-      fontSize: 12,
-      fontFamily: 'monospace',
-      fontWeight: '700',
-    },
-  });
-  backLabel.anchor.set(0.5, 0.5);
-  backLabel.eventMode = 'none';
-  backLabel.interactiveChildren = false;
+  const frontSymbol = new Graphics();
+  const backSymbol = new Graphics();
 
   const countBadge = new Text({
     text: '',
@@ -231,10 +210,11 @@ function createTokenVisualElements(): TokenVisualElements {
 
   return {
     frontBase,
-    frontLabel,
+    frontSymbol,
     backBase,
-    backLabel,
+    backSymbol,
     countBadge,
+    frontContent: null,
   };
 }
 
@@ -246,31 +226,37 @@ function updateTokenVisuals(
   colorProvider: FactionColorProvider,
 ): void {
   const tokenVisual = colorProvider.getTokenTypeVisual(token.type);
-  const shape = resolveTokenShape(tokenVisual?.shape);
-  const dimensions = resolveTokenDimensions(shape, tokenVisual?.size);
-  const fillColor = resolveTokenColor(token, colorProvider);
+  const tokenSymbols = colorProvider.resolveTokenSymbols(token.type, token.properties);
+  const shape = resolveTokenShape(tokenVisual.shape);
+  const cardTemplate = resolveCardTemplate(shape, token.type, colorProvider);
+  const dimensions = resolveTokenDimensions(shape, tokenVisual.size, cardTemplate);
+  const fillColor = resolveTokenColor(token, tokenVisual, colorProvider);
   const stroke = resolveStroke(token);
   const isFaceUp = token.faceUp;
 
-  drawTokenBase(visuals.frontBase, shape, dimensions, fillColor, stroke);
-  drawTokenBase(visuals.backBase, shape, dimensions, CARD_BACK_COLOR, stroke);
+  drawTokenShape(visuals.frontBase, shape, dimensions, fillColor, stroke);
+  drawTokenShape(visuals.backBase, shape, dimensions, CARD_BACK_COLOR, stroke);
+  drawTokenSymbol(visuals.frontSymbol, tokenSymbols.symbol, resolveSymbolSize(shape, dimensions));
+  drawTokenSymbol(visuals.backSymbol, tokenSymbols.backSymbol, resolveSymbolSize(shape, dimensions));
+  tokenContainer.hitArea = resolveTokenHitArea(shape, dimensions);
+  syncCardContent(tokenContainer, visuals, token, cardTemplate, isFaceUp);
 
   visuals.frontBase.visible = isFaceUp;
-  visuals.frontLabel.visible = isFaceUp;
+  visuals.frontSymbol.visible = isFaceUp;
   visuals.backBase.visible = !isFaceUp;
-  visuals.backLabel.visible = !isFaceUp;
-
-  visuals.frontLabel.text = tokenLabel(token, tokenVisual?.symbol);
-  visuals.backLabel.text = tokenBackLabel(shape, tokenVisual?.symbol);
+  visuals.backSymbol.visible = !isFaceUp;
   visuals.countBadge.text = tokenCount > 1 ? String(tokenCount) : '';
   visuals.countBadge.visible = tokenCount > 1;
   visuals.countBadge.position.set(dimensions.width / 2 - 2, -dimensions.height / 2 + 2);
   tokenContainer.scale.set(token.isSelected ? 1.08 : 1, token.isSelected ? 1.08 : 1);
 }
 
-function resolveTokenColor(token: RenderToken, colorProvider: FactionColorProvider): number {
-  const tokenTypeColor = colorProvider.getTokenTypeVisual(token.type)?.color;
-  const resolvedTokenTypeColor = parseHexColor(tokenTypeColor, {
+function resolveTokenColor(
+  token: RenderToken,
+  tokenVisual: ResolvedTokenVisual,
+  colorProvider: FactionColorProvider,
+): number {
+  const resolvedTokenTypeColor = parseHexColor(tokenVisual.color ?? undefined, {
     allowShortHex: true,
     allowNamedColors: true,
   });
@@ -308,47 +294,146 @@ function resolveStroke(token: RenderToken): { color: number; width: number; alph
   return DEFAULT_STROKE;
 }
 
-function drawTokenBase(
-  graphics: Graphics,
-  shape: 'circle' | 'card',
-  dimensions: { readonly width: number; readonly height: number },
-  fillColor: number,
-  stroke: { color: number; width: number; alpha: number },
-): void {
-  graphics.clear();
-  if (shape === 'card') {
-    graphics
-      .roundRect(-dimensions.width / 2, -dimensions.height / 2, dimensions.width, dimensions.height, CARD_CORNER_RADIUS)
-      .fill({ color: fillColor })
-      .stroke(stroke);
-    return;
-  }
-
-  graphics
-    .circle(0, 0, dimensions.width / 2)
-    .fill({ color: fillColor })
-    .stroke(stroke);
-}
-
-function resolveTokenShape(shape: TokenShape | undefined): 'circle' | 'card' {
-  return shape === 'card' ? 'card' : 'circle';
+function resolveTokenShape(shape: TokenShape | undefined): TokenShape {
+  return shape ?? 'circle';
 }
 
 function resolveTokenDimensions(
-  shape: 'circle' | 'card',
+  shape: TokenShape,
   size: number | undefined,
+  cardTemplate: CardTemplate | null = null,
 ): { readonly width: number; readonly height: number } {
   const normalizedSize = typeof size === 'number' && Number.isFinite(size) && size > 0 ? size : TOKEN_RADIUS * 2;
   if (shape === 'card') {
+    if (cardTemplate !== null) {
+      return {
+        width: Math.max(1, Math.round(cardTemplate.width)),
+        height: Math.max(1, Math.round(cardTemplate.height)),
+      };
+    }
     return {
       width: Math.max(CARD_WIDTH, Math.round(normalizedSize * 0.9)),
       height: Math.max(CARD_HEIGHT, Math.round(normalizedSize * 1.25)),
+    };
+  }
+  if (shape === 'square' || shape === 'cube') {
+    const side = Math.max(16, Math.round(normalizedSize));
+    return {
+      width: side,
+      height: side,
+    };
+  }
+  if (shape === 'triangle') {
+    return {
+      width: Math.max(16, Math.round(normalizedSize * 1.06)),
+      height: Math.max(16, Math.round(normalizedSize)),
+    };
+  }
+  if (shape === 'meeple') {
+    return {
+      width: Math.max(16, Math.round(normalizedSize * 0.92)),
+      height: Math.max(16, Math.round(normalizedSize * 1.12)),
+    };
+  }
+  if (shape === 'diamond' || shape === 'hexagon' || shape === 'beveled-cylinder' || shape === 'round-disk') {
+    return {
+      width: Math.max(16, Math.round(normalizedSize)),
+      height: Math.max(16, Math.round(normalizedSize)),
     };
   }
   return {
     width: normalizedSize,
     height: normalizedSize,
   };
+}
+
+function resolveCardTemplate(
+  shape: TokenShape,
+  tokenTypeId: string,
+  colorProvider: FactionColorProvider,
+): CardTemplate | null {
+  if (shape !== 'card') {
+    return null;
+  }
+  return colorProvider.getCardTemplateForTokenType(tokenTypeId);
+}
+
+function ensureFrontContentContainer(
+  tokenContainer: Container,
+  visuals: TokenVisualElements,
+): Container {
+  if (visuals.frontContent !== null) {
+    return visuals.frontContent;
+  }
+
+  const container = new Container();
+  container.eventMode = 'none';
+  container.interactiveChildren = false;
+  tokenContainer.addChild(container);
+  visuals.frontContent = container;
+  return container;
+}
+
+function syncCardContent(
+  tokenContainer: Container,
+  visuals: TokenVisualElements,
+  token: RenderToken,
+  cardTemplate: CardTemplate | null,
+  isFaceUp: boolean,
+): void {
+  if (cardTemplate === null) {
+    visuals.frontContent?.removeFromParent();
+    visuals.frontContent = null;
+    return;
+  }
+
+  const contentContainer = ensureFrontContentContainer(tokenContainer, visuals);
+  drawCardContent(contentContainer, cardTemplate, token.properties);
+  contentContainer.visible = isFaceUp;
+}
+
+function resolveTokenHitArea(
+  shape: TokenShape,
+  dimensions: { readonly width: number; readonly height: number },
+): Circle | Rectangle | Polygon {
+  switch (shape) {
+    case 'card':
+    case 'square':
+    case 'cube':
+      return new Rectangle(
+        -dimensions.width / 2,
+        -dimensions.height / 2,
+        dimensions.width,
+        dimensions.height,
+      );
+    case 'triangle':
+      return new Polygon(buildRegularPolygonPoints(3, dimensions.width, dimensions.height));
+    case 'diamond':
+      return new Polygon([
+        0,
+        -dimensions.height / 2,
+        dimensions.width / 2,
+        0,
+        0,
+        dimensions.height / 2,
+        -dimensions.width / 2,
+        0,
+      ]);
+    case 'hexagon':
+    case 'beveled-cylinder':
+      return new Polygon(buildRegularPolygonPoints(6, dimensions.width, dimensions.height));
+    case 'meeple':
+      return new Rectangle(
+        -dimensions.width * 0.4,
+        -dimensions.height * 0.55,
+        dimensions.width * 0.8,
+        dimensions.height * 1.1,
+      );
+    case 'round-disk':
+    case 'circle':
+    default:
+      return new Circle(0, 0, Math.min(dimensions.width, dimensions.height) / 2);
+  }
 }
 
 function tokenOffset(index: number): { x: number; y: number } {
@@ -361,21 +446,15 @@ function tokenOffset(index: number): { x: number; y: number } {
   };
 }
 
-function tokenLabel(token: RenderToken, symbol: string | undefined): string {
-  const trimmedSymbol = typeof symbol === 'string' ? symbol.trim() : '';
-  if (trimmedSymbol.length > 0) {
-    return trimmedSymbol;
+function resolveSymbolSize(
+  shape: TokenShape,
+  dimensions: { readonly width: number; readonly height: number },
+): number {
+  const base = Math.min(dimensions.width, dimensions.height);
+  if (shape === 'card') {
+    return base * 0.42;
   }
-  return toTokenLabel(token.type);
-}
-
-function tokenBackLabel(shape: 'circle' | 'card', symbol: string | undefined): string {
-  if (shape !== 'card') {
-    return '?';
-  }
-
-  const trimmedSymbol = typeof symbol === 'string' ? symbol.trim() : '';
-  return trimmedSymbol.length > 0 ? '◆' : '?';
+  return base * 0.58;
 }
 
 interface TokenRenderEntry {
@@ -437,9 +516,4 @@ function stackGroupKey(token: RenderToken): string {
     token.ownerID,
     token.faceUp,
   ]);
-}
-
-function toTokenLabel(type: string): string {
-  const base = type.split('-').pop() ?? type;
-  return base.slice(0, 3).toUpperCase();
 }

@@ -20,6 +20,12 @@ describe('resolveBootstrapConfig', () => {
 
     expect(resolved.seed).toBe(42);
     expect(resolved.playerId).toBe(0);
+    expect(resolved.visualConfigProvider.resolveZoneVisual('zone:any', null, null)).toEqual({
+      shape: 'rectangle',
+      width: 160,
+      height: 100,
+      color: null,
+    });
     expect(gameDef.metadata.id).toBe('runner-bootstrap-default');
   });
 
@@ -43,7 +49,7 @@ describe('resolveBootstrapConfig', () => {
     expect(gameDef.metadata.id).toBe('texas-holdem-nlhe-tournament');
   });
 
-  it('returns FITL bootstrap zones with board-map category/shape invariants needed by generic rendering', async () => {
+  it('returns FITL bootstrap config with visual-provider category style invariants needed by generic rendering', async () => {
     const { resolveBootstrapConfig } = await importResolver();
     const resolved = resolveBootstrapConfig('?game=fitl');
     const gameDef = await resolved.resolveGameDef();
@@ -68,21 +74,19 @@ describe('resolveBootstrapConfig', () => {
     const provinceZones = zones.filter((zone) => zone.category === 'province');
     const locZones = zones.filter((zone) => zone.category === 'loc');
 
+    const provider = resolved.visualConfigProvider;
+
+    expect(provider.resolveZoneVisual('sample:city', 'city', {})).toMatchObject({ shape: 'circle' });
+    expect(provider.resolveZoneVisual('sample:province', 'province', {})).toMatchObject({ shape: 'rectangle' });
+    expect(provider.resolveZoneVisual('sample:loc', 'loc', {})).toMatchObject({ shape: 'line' });
+
     for (const zone of cityZones) {
-      expect(zone.visual?.shape).toBe('circle');
-      expect(zone.visual?.color).toMatch(/^#[0-9a-f]{6}$/iu);
       expect((zone.adjacentTo ?? []).length).toBeGreaterThan(0);
     }
-
     for (const zone of provinceZones) {
-      expect(zone.visual?.shape).toBe('rectangle');
-      expect(zone.visual?.color).toMatch(/^#[0-9a-f]{6}$/iu);
       expect((zone.adjacentTo ?? []).length).toBeGreaterThan(0);
     }
-
     for (const zone of locZones) {
-      expect(zone.visual?.shape).toBe('line');
-      expect(zone.visual?.color).toMatch(/^#[0-9a-f]{6}$/iu);
       expect((zone.adjacentTo ?? []).length).toBeGreaterThan(0);
     }
   });
@@ -140,6 +144,36 @@ describe('resolveBootstrapConfig', () => {
     const resolved = resolveBootstrapConfig('?game=texas');
     await expect(resolved.resolveGameDef()).rejects.toThrowError(
       /Invalid GameDef input from Texas Hold'em bootstrap fixture/u,
+    );
+  });
+
+  it('fails fast when visual config contains invalid cross-reference ids', async () => {
+    vi.doMock('../../src/bootstrap/bootstrap-registry', async () => {
+      const defaultFixture = (await import('../../src/bootstrap/default-game-def.json')).default;
+      return {
+        resolveBootstrapDescriptor: () => ({
+          id: 'default',
+          queryValue: 'default',
+          defaultSeed: 42,
+          defaultPlayerId: 0,
+          sourceLabel: 'runner bootstrap fixture',
+          resolveGameDefInput: async () => defaultFixture,
+          resolveVisualConfigYaml: () => ({
+            version: 1,
+            zones: {
+              overrides: {
+                'not-a-real-zone': { label: 'bad' },
+              },
+            },
+          }),
+        }),
+      };
+    });
+
+    const { resolveBootstrapConfig } = await importResolver();
+    const resolved = resolveBootstrapConfig('');
+    await expect(resolved.resolveGameDef()).rejects.toThrowError(
+      /Invalid visual config references/u,
     );
   });
 });

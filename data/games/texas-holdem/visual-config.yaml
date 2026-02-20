@@ -1,0 +1,56 @@
+version: 1
+
+layout:
+  mode: table
+
+factions:
+  neutral:
+    color: "#6c757d"
+    displayName: Neutral
+
+zones:
+  layoutRoles:
+    "burn:none": other
+    "community:none": other
+    "deck:none": card
+    "hand:0": hand
+    "hand:1": hand
+    "hand:2": hand
+    "hand:3": hand
+    "hand:4": hand
+    "hand:5": hand
+    "hand:6": hand
+    "hand:7": hand
+    "hand:8": hand
+    "hand:9": hand
+    "muck:none": other
+
+cardAnimation:
+  cardTokenTypes:
+    idPrefixes: [card-]
+  zoneRoles:
+    draw: ["deck:none"]
+    hand: ["hand:0", "hand:1", "hand:2", "hand:3", "hand:4", "hand:5", "hand:6", "hand:7", "hand:8", "hand:9"]
+    shared: ["community:none"]
+    burn: ["burn:none"]
+    discard: ["muck:none"]
+
+cards:
+  assignments:
+    - match:
+        idPrefixes: [card-]
+      template: poker-card
+  templates:
+    poker-card:
+      width: 48
+      height: 68
+      layout:
+        rankName:
+          y: 8
+          fontSize: 11
+          align: center
+        suitName:
+          y: 40
+          fontSize: 10
+          align: center
+          wrap: 42

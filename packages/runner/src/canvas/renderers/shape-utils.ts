@@ -1,4 +1,4 @@
-import type { ZoneShape } from '@ludoforge/engine/runtime';
+import type { ZoneShape } from '../../config/visual-config-defaults.js';
 
 export interface ShapeDimensions {
   readonly width: number;

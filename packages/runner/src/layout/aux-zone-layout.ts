@@ -1,5 +1,6 @@
 import type { ZoneDef } from '@ludoforge/engine/runtime';
 
+import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { AuxLayoutResult } from './layout-types.js';
 import { ZONE_RENDER_HEIGHT, ZONE_RENDER_WIDTH } from './layout-constants.js';
 
@@ -20,6 +21,7 @@ const GROUP_LABELS: Readonly<Record<AuxGroupKey, string>> = {
 export function computeAuxLayout(
   auxZones: readonly ZoneDef[],
   boardBounds: { minX: number; minY: number; maxX: number; maxY: number },
+  provider: VisualConfigProvider,
 ): AuxLayoutResult {
   if (auxZones.length === 0) {
     return {
@@ -36,7 +38,7 @@ export function computeAuxLayout(
   };
 
   for (const zone of auxZones) {
-    groupedIDs[classifyAuxZone(zone)].push(zone.id);
+    groupedIDs[classifyAuxZone(zone, provider)].push(zone.id);
   }
 
   for (const key of GROUP_ORDER) {
@@ -77,17 +79,18 @@ export function computeAuxLayout(
   };
 }
 
-function classifyAuxZone(zone: ZoneDef): AuxGroupKey {
-  if (zone.layoutRole === 'card') {
+function classifyAuxZone(zone: ZoneDef, provider: VisualConfigProvider): AuxGroupKey {
+  const layoutRole = provider.getLayoutRole(zone.id);
+  if (layoutRole === 'card') {
     return 'cards';
   }
-  if (zone.layoutRole === 'forcePool') {
+  if (layoutRole === 'forcePool') {
     return 'forcePools';
   }
-  if (zone.layoutRole === 'hand') {
+  if (layoutRole === 'hand') {
     return 'hands';
   }
-  if (zone.layoutRole === 'other') {
+  if (layoutRole === 'other') {
     return 'other';
   }
 

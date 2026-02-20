@@ -27,8 +27,20 @@ const makeRuntimeDef = (): GameDef => ({
   globalVars: [{ name: 'entered', type: 'int', init: 0, min: 0, max: 10 }],
   perPlayerVars: [],
   zones: [
-    { id: asZoneId('a:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('b:none')] },
-    { id: asZoneId('b:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [asZoneId('a:none')] },
+    {
+      id: asZoneId('a:none'),
+      owner: 'none',
+      visibility: 'public',
+      ordering: 'set',
+      adjacentTo: [{ to: asZoneId('b:none'), direction: 'bidirectional' }],
+    },
+    {
+      id: asZoneId('b:none'),
+      owner: 'none',
+      visibility: 'public',
+      ordering: 'set',
+      adjacentTo: [{ to: asZoneId('a:none'), direction: 'bidirectional' }],
+    },
     { id: asZoneId('c:none'), owner: 'none', visibility: 'public', ordering: 'set' },
   ],
   tokenTypes: [{ id: 'pawn', props: {} }],

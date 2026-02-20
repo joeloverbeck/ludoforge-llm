@@ -79,6 +79,7 @@ export function validateDataAssetEnvelope(
   if (envelope.kind === 'pieceCatalog') {
     diagnostics.push(
       ...validatePieceCatalogPayload(envelope.payload, {
+        pathPrefix: `${pathPrefix}.payload`,
         ...(options.assetPath === undefined ? {} : { assetPath: options.assetPath }),
         entityId: envelope.id,
       }),
@@ -88,6 +89,7 @@ export function validateDataAssetEnvelope(
   if (envelope.kind === 'map') {
     diagnostics.push(
       ...validateMapPayload(envelope.payload, {
+        pathPrefix: `${pathPrefix}.payload`,
         ...(options.assetPath === undefined ? {} : { assetPath: options.assetPath }),
         entityId: envelope.id,
       }),

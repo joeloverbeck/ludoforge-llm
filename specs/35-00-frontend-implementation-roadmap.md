@@ -8,7 +8,7 @@
 
 ## Overview
 
-This roadmap governs implementation of the browser-based game runner (Specs 35–42). The runner lets humans play ANY game compiled through the LudoForge pipeline, with AI opponents, effect-trace-driven animations, and data-driven visuals.
+This roadmap governs implementation of the browser-based game runner (Specs 35–43). The runner lets humans play ANY game compiled through the LudoForge pipeline, with AI opponents, effect-trace-driven animations, and data-driven visuals.
 
 Design document: `brainstorming/browser-based-game-runner.md`
 Technology decisions: Appendix A of the same document.
@@ -20,6 +20,7 @@ Spec 38 is completed and archived at `archive/specs/38-pixijs-canvas-foundation.
 Spec 39 is completed and archived at `archive/specs/39-react-dom-ui-layer.md`.
 Spec 40 is completed and archived at `archive/specs/40-animation-system.md`.
 Spec 41 is completed and archived at `archive/specs/41-board-layout-engine.md`.
+Spec 42 is completed and archived at `archive/specs/42-per-game-visual-config.md`.
 
 ---
 
@@ -34,7 +35,8 @@ Spec 41 is completed and archived at `archive/specs/41-board-layout-engine.md`.
 | 39 | React DOM UI Layer (completed) | P1 | L | 37, 38 |
 | 40 | Animation System (completed) | P1 | L | 38 |
 | 41 | Board Layout Engine (completed) | P1 | M | 38 |
-| 42 | Per-Game Visual Config & Session Mgmt | P2 | M | 38, 39, 41 |
+| 42 | Per-Game Visual Config (completed) | P2 | M | 38, 39, 41 |
+| 43 | Session Management | P2 | M | 42 |
 
 Priority key: P0 = critical path, P1 = required for playable experience, P2 = polish/enhancement.
 Complexity key: S = small, M = medium, L = large.
@@ -50,14 +52,15 @@ Complexity key: S = small, M = medium, L = large.
              ├──> 38 (PixiJS Canvas)        ← critical path continues
              │     ├──> 40 (Animation)       ← parallel with 41
              │     ├──> 41 (Board Layout)    ← parallel with 40
-             │     │     └──> 42 (Visual Config + Session)  ← layout hints depend on 41
+             │     │     └──> 42 (Visual Config)  ← layout hints depend on 41
              │     └──┐
-             │        └──> 42 (Visual Config + Session)
+             │        └──> 42 (Visual Config)
              └──> 39 (React DOM UI)          ← parallel with 38
-                   └──> 42 (Visual Config + Session)
+                   └──> 42 (Visual Config)
+                         └──> 43 (Session Mgmt)  ← needs visual config for display
 ```
 
-**Note**: Spec 42 now depends on Spec 41 in addition to 38 and 39. Spec 42's layout hint deliverables (D-NEW-2) apply visual config overrides to Spec 41's computed layout positions.
+**Note**: Spec 42 (visual config) depends on Spec 41 in addition to 38 and 39. Spec 43 (session management) depends on Spec 42 for display names and visual preview in the game selection screen.
 
 ### Critical Path
 
@@ -73,7 +76,8 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 |---------------------|--------------------------|
 | Spec 37 (State) | Spec 38 (Canvas) AND Spec 39 (DOM UI) |
 | Spec 38 (Canvas) | Spec 40 (Animation) AND Spec 41 (Board Layout) |
-| Spec 38 + 39 + 41 | Spec 42 (Visual Config & Session) |
+| Spec 38 + 39 + 41 | Spec 42 (Visual Config) |
+| Spec 42 (Visual Config) | Spec 43 (Session Mgmt) |
 
 ---
 
@@ -112,7 +116,7 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 
 **F2 Outcome**: All gate criteria met. FITL renders through the generic runner using default grid positioning and data-driven visuals (58 total zones, including 47 board-map zones: 8 cities, 22 provinces, 17 LoCs). Graph layout remains deferred to Spec 41. Closed 2026-02-18.
 
-### Milestone F3: Polished Experience (Specs 40–42)
+### Milestone F3: Polished Experience (Specs 40–43)
 
 **Gate criteria**:
 - [x] Effect trace drives GSAP timeline animations (token movement, creation, destruction, property changes)
@@ -126,17 +130,21 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 - [x] Table-only mode for games without adjacency (Spec 41 D2)
 - [x] Track and grid layout modes for linear/grid boards (Spec 41 D2)
 - [x] Layout caching per GameDef (Spec 41 D3)
-- [ ] Zone style hints from zone metadata (Spec 42 D-NEW-1)
-- [ ] Layout hints from visual config (Spec 42 D-NEW-2)
-- [ ] Token stacking within zones with expand-on-click (Spec 42 D-NEW-3)
-- [ ] Visual config YAML loads and enhances presentation (Spec 42 D1-D8)
-- [ ] Game selection screen lists available games (Spec 42 D9)
-- [ ] Pre-game configuration (players, human/AI, seed) (Spec 42 D10)
-- [ ] Save/load game via Dexie.js (Spec 42 D11)
-- [ ] Replay mode (step-forward, step-backward, speed control) (Spec 42 D12)
-- [ ] Event log panel with clickable, filterable entries (Spec 42 D13)
+- [x] Visual config types, provider, and defaults (Spec 42 D1-D3)
+- [x] Visual config YAML loader via Vite (Spec 42 D4)
+- [x] Per-game visual-config.yaml files for FITL and Texas Hold'em (Spec 42 D5-D6)
+- [x] Visual config wired into rendering, layout, and animation (Spec 42 D7-D9)
+- [x] Visual fields stripped from engine types, compiler, and game specs (Spec 42 D10-D14)
+- [ ] Engine metadata enrichment: optional `name`/`description` in `GameSpecMetadata` and `GameDef.metadata` (Spec 43 D0 -- cross-package engine change)
+- [ ] App-level session router with `AppScreen` state machine and navigation flows (Spec 43 D1)
+- [ ] Data-driven game discovery via `import.meta.glob` replacing hardcoded visual config switch (Spec 43 D2)
+- [ ] Game selection screen with game list and saved games (Spec 43 D3)
+- [ ] Pre-game configuration (player count, seat assignment, seed) (Spec 43 D4)
+- [ ] Save/load game via Dexie.js -- single record per save, no chunking (Spec 43 D5)
+- [ ] Replay mode with scrubber, jump-to-move, speed control (Spec 43 D6)
+- [ ] Event log panel with human-readable translations via VisualConfigProvider (Spec 43 D7)
 
-**F3 Progress**: In progress. Spec 40 is completed (closed 2026-02-19). Spec 41 is completed and archived (closed 2026-02-19): D1-D4 delivered (layout engine core, computation, caching, aux sidebar), with styling, token stacking, and visual-config-driven layout hints scoped to Spec 42. Engine `layoutMode` metadata field is implemented. Spec 42 remains open.
+**F3 Progress**: In progress. Spec 40 is completed (closed 2026-02-19). Spec 41 is completed and archived (closed 2026-02-19): D1-D4 delivered (layout engine core, computation, caching, aux sidebar). Spec 42 is completed and archived (closed 2026-02-19): visual config extraction and engine visual-field removal delivered and validated via engine/runner/turbo test+lint gates. Spec 43 revised with D0-D7 deliverable structure (2026-02-20). Note: D0 is the only deliverable touching the engine package (adds optional metadata fields); all other deliverables are runner-only.
 
 ---
 
@@ -151,15 +159,13 @@ Specs 40 and 41 are on parallel branches of the critical path. The earliest mile
 | `Move` / `LegalMovesResult` | `legalMoves()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) renders action toolbar |
 | `ChoiceRequest` (pending / complete / illegal) | `legalChoices()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) renders progressive choice UI |
 | `EffectTraceEntry[]` | `applyMove()` with `{ trace: true }` in `packages/engine/src/kernel/` | Animation system (Spec 40) drives GSAP timelines |
-| `GameDef.cardAnimation` | Compiled from `metadata.cardAnimation` in `GameSpecDoc` | Runner animation classifier maps trace movement into card intents (`deal`/`flip`/`burn`) without hardcoded zone/token IDs |
+| `visual-config.yaml` `cardAnimation` | Per-game visual config (Spec 42) | Runner animation classifier maps trace movement into card intents (`deal`/`flip`/`burn`) without hardcoded zone/token IDs |
 | `TerminalResult` | `terminalResult()` in `packages/engine/src/kernel/` | DOM UI (Spec 39) displays game end state |
-| `GameSpecDoc` metadata | Parsed from Markdown+YAML | Game selection screen (Spec 42) displays game info |
+| `GameSpecDoc` metadata | Parsed from Markdown+YAML | Game selection screen (Spec 43) displays game info |
 
-### Minimal engine changes
+### Engine changes
 
-The runner is primarily a consumer of the kernel's public API. One additive engine change was made for Spec 41:
-
-- **`GameDef.metadata.layoutMode`**: Optional `'graph' | 'table' | 'track' | 'grid'` field added to `GameSpecMetadata`, `GameDef.metadata`, Zod schemas, JSON Schema, and compiler pass-through. This lets game designers declare layout intent. The field is optional and purely consumed by the runner — the kernel ignores it.
+Spec 42 performs a **subtractive** engine change: all visual/presentation fields are removed from `GameDef`, engine types, and compiler. This includes `ZoneVisualHints`, `TokenVisualHints`, `FactionDef.color`, `FactionDef.displayName`, `ZoneDef.visual`, `ZoneDef.layoutRole`, `TokenTypeDef.visual`, `GameDef.metadata.layoutMode`, `GameDef.cardAnimation`, and the associated Zod schemas. All presentation data moves to per-game `visual-config.yaml` files consumed only by the runner.
 
 ### Future engine specs that may affect the runner
 
@@ -187,6 +193,7 @@ Suggested ticket series prefixes:
 | 40 | ANIMSYS |
 | 41 | BOARDLAY |
 | 42 | VISCONF |
+| 43 | SESSMGMT (D0-D7, ~19 tickets) |
 
 ---
 

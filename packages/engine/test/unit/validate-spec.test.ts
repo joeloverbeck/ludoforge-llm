@@ -67,7 +67,7 @@ describe('validateGameSpec structural rules', () => {
         {
           id: 'fitl-pieces-foundation',
           kind: 'pieceCatalog',
-          payload: { factions: [{ id: 'us', color: '#e63946' }], pieceTypes: [], inventory: [] },
+          payload: { factions: [{ id: 'us' }], pieceTypes: [], inventory: [] },
         },
         {
           id: 'fitl-scenario-foundation',
@@ -283,6 +283,170 @@ describe('validateGameSpec structural rules', () => {
       'doc.zones.0.owner',
       'doc.zones.0.visibility',
     ]);
+  });
+
+  it('rejects removed metadata visual keys as errors', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      metadata: {
+        id: 'demo',
+        players: { min: 2, max: 4 },
+        layoutMode: 'graph',
+        cardAnimation: { cardTokenTypes: { idPrefixes: ['card-'] }, zoneRoles: { draw: ['deck'] } },
+      } as unknown as Parameters<typeof validateGameSpec>[0]['metadata'],
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_METADATA_LAYOUT_MODE_REMOVED'
+          && diagnostic.path === 'doc.metadata.layoutMode'
+          && diagnostic.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_METADATA_CARD_ANIMATION_REMOVED'
+          && diagnostic.path === 'doc.metadata.cardAnimation'
+          && diagnostic.severity === 'error',
+      ),
+      true,
+    );
+  });
+
+  it('rejects removed zone visual keys as errors', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      zones: [
+        {
+          id: 'deck',
+          owner: 'none',
+          visibility: 'hidden',
+          ordering: 'stack',
+          layoutRole: 'card',
+          visual: { shape: 'rectangle' },
+        },
+      ] as unknown as Parameters<typeof validateGameSpec>[0]['zones'],
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_ZONE_LAYOUT_ROLE_REMOVED'
+          && diagnostic.path === 'doc.zones.0.layoutRole'
+          && diagnostic.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_ZONE_VISUAL_REMOVED'
+          && diagnostic.path === 'doc.zones.0.visual'
+          && diagnostic.severity === 'error',
+      ),
+      true,
+    );
+  });
+
+  it('rejects removed piece-catalog visual fields in data assets as errors', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      dataAssets: [
+        {
+          id: 'fitl-pieces',
+          kind: 'pieceCatalog',
+          payload: {
+            factions: [
+              { id: 'us', color: '#e63946', displayName: 'United States' },
+            ],
+            pieceTypes: [
+              {
+                id: 'us-troops',
+                faction: 'us',
+                statusDimensions: [],
+                transitions: [],
+                visual: { shape: 'cube' },
+              },
+            ],
+            inventory: [{ pieceTypeId: 'us-troops', faction: 'us', total: 10 }],
+          },
+        },
+      ],
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID' &&
+          diagnostic.path.startsWith('doc.dataAssets.0.payload.factions') &&
+          diagnostic.message.includes('color') &&
+          diagnostic.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID' &&
+          diagnostic.path.startsWith('doc.dataAssets.0.payload.factions') &&
+          diagnostic.message.includes('displayName') &&
+          diagnostic.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'PIECE_CATALOG_SCHEMA_INVALID' &&
+          diagnostic.path.startsWith('doc.dataAssets.0.payload.pieceTypes') &&
+          diagnostic.severity === 'error',
+      ),
+      true,
+    );
+  });
+
+  it('rejects removed map visual fields in data assets as errors', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      dataAssets: [
+        {
+          id: 'fitl-map',
+          kind: 'map',
+          payload: {
+            visualRules: { regions: [] },
+            spaces: [
+              {
+                id: 'hanoi',
+                adjacentTo: [],
+                visual: { shape: 'circle' },
+              },
+            ],
+          },
+        },
+      ],
+    } as unknown as Parameters<typeof validateGameSpec>[0]);
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'MAP_PAYLOAD_SCHEMA_INVALID' &&
+          diagnostic.path === 'doc.dataAssets.0.payload' &&
+          diagnostic.severity === 'error',
+      ),
+      true,
+    );
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'MAP_PAYLOAD_SCHEMA_INVALID' &&
+          diagnostic.path.startsWith('doc.dataAssets.0.payload.spaces') &&
+          diagnostic.severity === 'error',
+      ),
+      true,
+    );
   });
 
   it('validates action required fields and shape constraints', () => {
@@ -665,7 +829,7 @@ describe('validateGameSpec structural rules', () => {
     const diagnostics = validateGameSpec({
       ...createStructurallyValidDoc(),
       zones: [
-        { id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack', adjacentTo: ['disard'] },
+        { id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack', adjacentTo: [{ to: 'disard' }] },
         { id: 'discard', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
       triggers: [
@@ -681,7 +845,7 @@ describe('validateGameSpec structural rules', () => {
     });
 
     assert.equal(
-      diagnostics.some((diagnostic) => diagnostic.path === 'doc.zones.0.adjacentTo.0' && diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING'),
+      diagnostics.some((diagnostic) => diagnostic.path === 'doc.zones.0.adjacentTo.0.to' && diagnostic.code === 'CNL_VALIDATOR_REFERENCE_MISSING'),
       true,
     );
     assert.equal(
@@ -705,7 +869,7 @@ describe('validateGameSpec structural rules', () => {
         } as unknown as (ReturnType<typeof createStructurallyValidDoc>['actions'][number]),
       ],
       zones: [
-        { id: 'café', owner: 'none', visibility: 'hidden', ordering: 'stack', adjacentTo: ['disard'] },
+        { id: 'café', owner: 'none', visibility: 'hidden', ordering: 'stack', adjacentTo: [{ to: 'disard' }] },
         { id: 'cafe\u0301', owner: 'none', visibility: 'hidden', ordering: 'stack' },
       ],
     };

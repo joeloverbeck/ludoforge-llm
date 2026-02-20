@@ -1,6 +1,7 @@
 import forceAtlas2 from 'graphology-layout-forceatlas2';
 import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
 
+import type { CompassPosition, RegionHint } from '../config/visual-config-types.js';
 import { buildLayoutGraph, partitionZones } from './build-layout-graph.js';
 import { computeGridLayout } from './grid-layout.js';
 import { ZONE_RENDER_HEIGHT, ZONE_RENDER_WIDTH } from './layout-constants.js';
@@ -23,6 +24,20 @@ const TABLE_PERIMETER_MIN_RADIUS_Y = 220;
 const TABLE_PERIMETER_RADIUS_X_STEP = 70;
 const TABLE_PERIMETER_RADIUS_Y_STEP = 50;
 
+const COMPASS_ANGLES: Readonly<Record<CompassPosition, number>> = {
+  e: 0,
+  se: Math.PI / 4,
+  s: Math.PI / 2,
+  sw: (3 * Math.PI) / 4,
+  w: Math.PI,
+  nw: (5 * Math.PI) / 4,
+  n: (3 * Math.PI) / 2,
+  ne: (7 * Math.PI) / 4,
+  center: 0,
+};
+
+const CENTER_RADIUS_FRACTION = 0.15;
+
 function computeGraphExtent(nodeCount: number): number {
   const zoneDiagonal = Math.hypot(ZONE_RENDER_WIDTH, ZONE_RENDER_HEIGHT);
   const perNodeSpace = zoneDiagonal * GRAPH_NODE_SPACING_FACTOR;
@@ -33,10 +48,14 @@ function computeGraphMinSpacing(): number {
   return Math.ceil(Math.hypot(ZONE_RENDER_WIDTH, ZONE_RENDER_HEIGHT) * GRAPH_MIN_SPACING_FACTOR);
 }
 
-export function computeLayout(def: GameDef, mode: LayoutMode): LayoutResult {
+export function computeLayout(
+  def: GameDef,
+  mode: LayoutMode,
+  regionHints?: readonly RegionHint[] | null,
+): LayoutResult {
   switch (mode) {
     case 'graph':
-      return computeGraphLayout(def);
+      return computeGraphLayout(def, regionHints ?? null);
     case 'table':
       return computeTableLayout(def);
     case 'track':
@@ -81,7 +100,10 @@ function computeTableLayout(def: GameDef): LayoutResult {
   };
 }
 
-function computeGraphLayout(def: GameDef): LayoutResult {
+function computeGraphLayout(
+  def: GameDef,
+  regionHints: readonly RegionHint[] | null,
+): LayoutResult {
   const { board } = partitionZones(def);
   const graph = buildLayoutGraph(board);
   const nodeIDs = [...graph.nodes()].sort((left, right) => left.localeCompare(right));
@@ -94,7 +116,7 @@ function computeGraphLayout(def: GameDef): LayoutResult {
     };
   }
 
-  seedInitialPositions(graph, nodeIDs);
+  seedInitialPositions(graph, nodeIDs, regionHints);
   forceAtlas2.assign(graph, {
     iterations: GRAPH_ITERATIONS,
     settings: {
@@ -125,7 +147,10 @@ function computeGraphLayout(def: GameDef): LayoutResult {
 function seedInitialPositions(
   graph: ReturnType<typeof buildLayoutGraph>,
   sortedNodeIDs: readonly string[],
+  regionHints: readonly RegionHint[] | null,
 ): void {
+  const zoneToCompass = buildZoneToCompassMap(regionHints);
+
   const categoryBuckets = new Map<string, string[]>();
 
   for (const nodeID of sortedNodeIDs) {
@@ -139,8 +164,39 @@ function seedInitialPositions(
   }
 
   const categories = [...categoryBuckets.keys()].sort((left, right) => left.localeCompare(right));
-  for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex += 1) {
-    const category = categories[categoryIndex];
+
+  const hintedAngles = new Set<number>();
+  const hintedBuckets: Array<{ category: string; angle: number; isCenter: boolean }> = [];
+  const unhintedCategories: string[] = [];
+
+  for (const category of categories) {
+    const bucket = categoryBuckets.get(category);
+    if (bucket === undefined) {
+      continue;
+    }
+
+    const compass = findBucketCompass(bucket, zoneToCompass);
+    if (compass !== null) {
+      const angle = COMPASS_ANGLES[compass];
+      hintedBuckets.push({ category, angle, isCenter: compass === 'center' });
+      hintedAngles.add(angle);
+      continue;
+    }
+    unhintedCategories.push(category);
+  }
+
+  const unhintedAngles = distributeUnhintedAngles(unhintedCategories.length, hintedAngles);
+
+  for (const { category, angle, isCenter } of hintedBuckets) {
+    const bucket = categoryBuckets.get(category);
+    if (bucket === undefined) {
+      continue;
+    }
+    placeBucketNodes(graph, bucket, angle, isCenter);
+  }
+
+  for (let index = 0; index < unhintedCategories.length; index += 1) {
+    const category = unhintedCategories[index];
     if (category === undefined) {
       continue;
     }
@@ -148,24 +204,110 @@ function seedInitialPositions(
     if (bucket === undefined) {
       continue;
     }
+    const angle = unhintedAngles[index] ?? 0;
+    placeBucketNodes(graph, bucket, angle, false);
+  }
+}
 
-    const sectorAngle = (Math.PI * 2 * categoryIndex) / Math.max(1, categories.length);
-    for (let index = 0; index < bucket.length; index += 1) {
-      const nodeID = bucket[index];
-      if (nodeID === undefined) {
-        continue;
-      }
-
-      const radius = SEED_RADIUS_BASE + SEED_RADIUS_STEP * Math.floor(index / 8);
-      const angleOffset = ((index % 8) / 8) * (Math.PI / 3);
-      const jitterX = deterministicJitter(`${nodeID}:x`) * SEED_JITTER;
-      const jitterY = deterministicJitter(`${nodeID}:y`) * SEED_JITTER;
-      const x = Math.cos(sectorAngle + angleOffset) * radius + jitterX;
-      const y = Math.sin(sectorAngle + angleOffset) * radius + jitterY;
-
-      graph.setNodeAttribute(nodeID, 'x', x);
-      graph.setNodeAttribute(nodeID, 'y', y);
+function buildZoneToCompassMap(
+  regionHints: readonly RegionHint[] | null,
+): Map<string, CompassPosition> {
+  const map = new Map<string, CompassPosition>();
+  if (regionHints === null) {
+    return map;
+  }
+  for (const region of regionHints) {
+    if (region.position === undefined) {
+      continue;
     }
+    for (const zoneId of region.zones) {
+      if (!map.has(zoneId)) {
+        map.set(zoneId, region.position);
+      }
+    }
+  }
+  return map;
+}
+
+function findBucketCompass(
+  bucket: readonly string[],
+  zoneToCompass: ReadonlyMap<string, CompassPosition>,
+): CompassPosition | null {
+  for (const nodeID of bucket) {
+    const compass = zoneToCompass.get(nodeID);
+    if (compass !== undefined) {
+      return compass;
+    }
+  }
+  return null;
+}
+
+function distributeUnhintedAngles(
+  count: number,
+  hintedAngles: ReadonlySet<number>,
+): readonly number[] {
+  if (count === 0) {
+    return [];
+  }
+
+  const fullCircle = Math.PI * 2;
+  const candidates: number[] = [];
+  const steps = count + hintedAngles.size;
+  const step = fullCircle / Math.max(1, steps);
+
+  for (let index = 0; index < steps; index += 1) {
+    const angle = index * step;
+    const tooClose = [...hintedAngles].some(
+      (hinted) => Math.abs(normalizeAngle(angle - hinted)) < step * 0.5,
+    );
+    if (!tooClose) {
+      candidates.push(angle);
+    }
+  }
+
+  if (candidates.length >= count) {
+    return candidates.slice(0, count);
+  }
+
+  const fallback: number[] = [];
+  for (let index = 0; index < count; index += 1) {
+    fallback.push((fullCircle * index) / count);
+  }
+  return fallback;
+}
+
+function normalizeAngle(angle: number): number {
+  const twoPi = Math.PI * 2;
+  const normalized = ((angle % twoPi) + twoPi) % twoPi;
+  return normalized > Math.PI ? normalized - twoPi : normalized;
+}
+
+function placeBucketNodes(
+  graph: ReturnType<typeof buildLayoutGraph>,
+  bucket: readonly string[],
+  sectorAngle: number,
+  isCenter: boolean,
+): void {
+  for (let index = 0; index < bucket.length; index += 1) {
+    const nodeID = bucket[index];
+    if (nodeID === undefined) {
+      continue;
+    }
+
+    const baseRadius = isCenter
+      ? SEED_RADIUS_BASE * CENTER_RADIUS_FRACTION
+      : SEED_RADIUS_BASE + SEED_RADIUS_STEP * Math.floor(index / 8);
+    const angleOffset = isCenter
+      ? ((index % 8) / 8) * Math.PI * 2
+      : ((index % 8) / 8) * (Math.PI / 3);
+    const radius = baseRadius + (isCenter ? SEED_RADIUS_STEP * 0.3 * Math.floor(index / 8) : 0);
+    const jitterX = deterministicJitter(`${nodeID}:x`) * SEED_JITTER;
+    const jitterY = deterministicJitter(`${nodeID}:y`) * SEED_JITTER;
+    const x = Math.cos(sectorAngle + angleOffset) * radius + jitterX;
+    const y = Math.sin(sectorAngle + angleOffset) * radius + jitterY;
+
+    graph.setNodeAttribute(nodeID, 'x', x);
+    graph.setNodeAttribute(nodeID, 'y', y);
   }
 }
 

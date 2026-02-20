@@ -24,7 +24,7 @@ const makeSpace = (
     attributes: overrides?.attributes ?? { population: 2, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false },
   };
   if (overrides?.adjacentTo !== undefined) {
-    return { ...base, adjacentTo: overrides.adjacentTo.map(asZoneId) };
+    return { ...base, adjacentTo: overrides.adjacentTo.map((zoneId) => ({ to: asZoneId(zoneId) })) };
   }
   return base;
 };

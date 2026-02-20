@@ -3,29 +3,43 @@ import { describe, it } from 'node:test';
 
 import { asZoneId, buildAdjacencyGraph, type ZoneDef, validateAdjacency } from '../../src/kernel/index.js';
 
-const zone = (id: string, adjacentTo?: readonly string[]): ZoneDef => ({
+type ZoneAdjacencyInput =
+  | string
+  | {
+      readonly to: string;
+      readonly direction?: 'bidirectional' | 'unidirectional';
+    };
+
+const zone = (id: string, adjacentTo?: ReadonlyArray<ZoneAdjacencyInput>): ZoneDef => ({
   id: asZoneId(id),
   owner: 'none',
   visibility: 'public',
   ordering: 'set',
-  ...(adjacentTo ? { adjacentTo: adjacentTo.map((entry) => asZoneId(entry)) } : {}),
+  ...(adjacentTo
+    ? {
+      adjacentTo: adjacentTo.map((entry) => ({
+        to: asZoneId(typeof entry === 'string' ? entry : entry.to),
+        direction: typeof entry === 'string' ? 'bidirectional' : (entry.direction ?? 'bidirectional'),
+      })),
+    }
+    : {}),
 });
 
 interface FitlMapPayload {
   readonly spaces: ReadonlyArray<{
     readonly id: string;
-    readonly adjacentTo: readonly string[];
+    readonly adjacentTo: ReadonlyArray<{ readonly to: string }>;
   }>;
 }
 
 const fitlMapPayload: FitlMapPayload = {
   spaces: [
-    { id: 'cambodia:none', adjacentTo: ['south_vietnam:none'] },
-    { id: 'hue:none', adjacentTo: ['loc_ho_chi_minh_trail:none', 'south_vietnam:none'] },
-    { id: 'laos:none', adjacentTo: ['north_vietnam:none', 'south_vietnam:none'] },
-    { id: 'loc_ho_chi_minh_trail:none', adjacentTo: ['hue:none', 'north_vietnam:none'] },
-    { id: 'north_vietnam:none', adjacentTo: ['laos:none', 'loc_ho_chi_minh_trail:none', 'south_vietnam:none'] },
-    { id: 'south_vietnam:none', adjacentTo: ['cambodia:none', 'hue:none', 'laos:none', 'north_vietnam:none'] },
+    { id: 'cambodia:none', adjacentTo: [{ to: 'south_vietnam:none' }] },
+    { id: 'hue:none', adjacentTo: [{ to: 'loc_ho_chi_minh_trail:none' }, { to: 'south_vietnam:none' }] },
+    { id: 'laos:none', adjacentTo: [{ to: 'north_vietnam:none' }, { to: 'south_vietnam:none' }] },
+    { id: 'loc_ho_chi_minh_trail:none', adjacentTo: [{ to: 'hue:none' }, { to: 'north_vietnam:none' }] },
+    { id: 'north_vietnam:none', adjacentTo: [{ to: 'laos:none' }, { to: 'loc_ho_chi_minh_trail:none' }, { to: 'south_vietnam:none' }] },
+    { id: 'south_vietnam:none', adjacentTo: [{ to: 'cambodia:none' }, { to: 'hue:none' }, { to: 'laos:none' }, { to: 'north_vietnam:none' }] },
   ],
 };
 
@@ -51,14 +65,28 @@ describe('spatial adjacency graph', () => {
     assert.deepEqual(graph.neighbors['a:none'], [asZoneId('b:none')]);
     assert.deepEqual(graph.neighbors['b:none'], [asZoneId('a:none')]);
     assert.ok(
-      diagnostics.some(
-        (diag) =>
-          diag.code === 'SPATIAL_ASYMMETRIC_EDGE_NORMALIZED' &&
-          diag.path === 'zones[0].adjacentTo[0]' &&
-          diag.severity === 'warning' &&
-          typeof diag.message === 'string' &&
-          typeof diag.suggestion === 'string',
-      ),
+      diagnostics.some((diag) =>
+        diag.code === 'SPATIAL_ASYMMETRIC_EDGE_NORMALIZED'
+          && diag.path === 'zones[0].adjacentTo[0].to'
+          && diag.severity === 'warning'
+          && typeof diag.message === 'string'
+          && typeof diag.suggestion === 'string'),
+    );
+  });
+
+  it('keeps unidirectional edges one-way without asymmetry warning', () => {
+    const zones = [
+      zone('a:none', [{ to: 'b:none', direction: 'unidirectional' }]),
+      zone('b:none'),
+    ];
+    const graph = buildAdjacencyGraph(zones);
+    const diagnostics = validateAdjacency(graph, zones);
+
+    assert.deepEqual(graph.neighbors['a:none'], [asZoneId('b:none')]);
+    assert.deepEqual(graph.neighbors['b:none'], []);
+    assert.equal(
+      diagnostics.some((diag) => diag.code === 'SPATIAL_ASYMMETRIC_EDGE_NORMALIZED'),
+      false,
     );
   });
 
@@ -67,10 +95,7 @@ describe('spatial adjacency graph', () => {
     const diagnostics = validateAdjacency(buildAdjacencyGraph(zones), zones);
 
     assert.ok(
-      diagnostics.some(
-        (diag) =>
-          diag.code === 'SPATIAL_SELF_LOOP' && diag.path === 'zones[0].adjacentTo[0]' && diag.severity === 'error',
-      ),
+      diagnostics.some((diag) => diag.code === 'SPATIAL_SELF_LOOP' && diag.path === 'zones[0].adjacentTo[0].to' && diag.severity === 'error'),
     );
   });
 
@@ -81,12 +106,25 @@ describe('spatial adjacency graph', () => {
 
     assert.deepEqual(graph.neighbors['a:none'], [asZoneId('b:none')]);
     assert.ok(
-      diagnostics.some(
-        (diag) =>
-          diag.code === 'SPATIAL_DUPLICATE_NEIGHBOR' &&
-          diag.path === 'zones[0].adjacentTo[1]' &&
-          diag.severity === 'warning',
-      ),
+      diagnostics.some((diag) => diag.code === 'SPATIAL_DUPLICATE_NEIGHBOR' && diag.path === 'zones[0].adjacentTo[1].to' && diag.severity === 'warning'),
+    );
+  });
+
+  it('emits error for conflicting duplicate directions to the same neighbor', () => {
+    const zones = [
+      zone('a:none', [
+        { to: 'b:none', direction: 'bidirectional' },
+        { to: 'b:none', direction: 'unidirectional' },
+      ]),
+      zone('b:none'),
+    ];
+    const diagnostics = validateAdjacency(buildAdjacencyGraph(zones), zones);
+
+    assert.ok(
+      diagnostics.some((diag) =>
+        diag.code === 'SPATIAL_CONFLICTING_NEIGHBOR_DIRECTION'
+        && diag.path === 'zones[0].adjacentTo[1].direction'
+        && diag.severity === 'error'),
     );
   });
 
@@ -95,12 +133,7 @@ describe('spatial adjacency graph', () => {
     const diagnostics = validateAdjacency(buildAdjacencyGraph(zones), zones);
 
     assert.ok(
-      diagnostics.some(
-        (diag) =>
-          diag.code === 'SPATIAL_DANGLING_ZONE_REF' &&
-          diag.path === 'zones[0].adjacentTo[0]' &&
-          diag.severity === 'error',
-      ),
+      diagnostics.some((diag) => diag.code === 'SPATIAL_DANGLING_ZONE_REF' && diag.path === 'zones[0].adjacentTo[0].to' && diag.severity === 'error'),
     );
   });
 

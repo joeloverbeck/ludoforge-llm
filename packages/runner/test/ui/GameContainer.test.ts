@@ -6,6 +6,8 @@ import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
 import { GameContainer, resolveTooltipAnchorState } from '../../src/ui/GameContainer.js';
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
+import { computeDefaultFactionColor } from '../../src/config/visual-config-defaults.js';
 
 interface CapturedErrorStateProps {
   readonly error: { readonly message: string };
@@ -31,6 +33,7 @@ const testDoubles = vi.hoisted(() => ({
   tooltipLayerProps: null as CapturedTooltipLayerProps | null,
   gameCanvasProps: null as CapturedGameCanvasProps | null,
 }));
+const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
 
 vi.mock('../../src/canvas/GameCanvas.js', () => ({
   GameCanvas: (props: CapturedGameCanvasProps) => {
@@ -75,9 +78,19 @@ vi.mock('../../src/ui/InterruptBanner.js', () => ({
   InterruptBanner: () => createElement('div', { 'data-testid': 'interrupt-banner' }),
 }));
 
-vi.mock('../../src/ui/VariablesPanel.js', () => ({
-  VariablesPanel: () => createElement('div', { 'data-testid': 'variables-panel' }),
-}));
+vi.mock('../../src/ui/VariablesPanel.js', async () => {
+  const React = await import('react');
+  const { VisualConfigContext } = await import('../../src/config/visual-config-context.js');
+  return {
+    VariablesPanel: () => {
+      const provider = React.useContext(VisualConfigContext);
+      return createElement('div', {
+        'data-testid': 'variables-panel',
+        'data-has-visual-config': provider === null ? 'false' : 'true',
+      });
+    },
+  };
+});
 
 vi.mock('../../src/ui/Scoreboard.js', () => ({
   Scoreboard: () => createElement('div', { 'data-testid': 'scoreboard' }),
@@ -216,6 +229,7 @@ describe('GameContainer', () => {
           gameLifecycle: 'idle',
           error: null,
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -231,6 +245,7 @@ describe('GameContainer', () => {
           gameLifecycle: 'initializing',
           error: null,
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -249,6 +264,7 @@ describe('GameContainer', () => {
             message: 'init failed',
           },
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -267,6 +283,7 @@ describe('GameContainer', () => {
           gameLifecycle: 'playing',
           error: null,
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -278,6 +295,7 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="event-deck-panel"');
     expect(html).toContain('data-testid="animation-controls"');
     expect(html).toContain('data-testid="variables-panel"');
+    expect(html).toContain('data-has-visual-config="true"');
     expect(html).toContain('data-testid="scoreboard"');
     expect(html).toContain('data-testid="global-markers-bar"');
     expect(html).toContain('data-testid="active-effects-panel"');
@@ -317,6 +335,7 @@ describe('GameContainer', () => {
           gameLifecycle: 'terminal',
           error: null,
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -328,6 +347,7 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="event-deck-panel"');
     expect(html).toContain('data-testid="animation-controls"');
     expect(html).toContain('data-testid="variables-panel"');
+    expect(html).toContain('data-has-visual-config="true"');
     expect(html).toContain('data-testid="scoreboard"');
     expect(html).toContain('data-testid="global-markers-bar"');
     expect(html).toContain('data-testid="active-effects-panel"');
@@ -348,7 +368,7 @@ describe('GameContainer', () => {
     ]);
   });
 
-  it('exposes faction CSS variables from gameDef factions on container root', () => {
+  it('exposes faction CSS variables for gameDef faction ids on container root', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
         store: createContainerStore({
@@ -356,16 +376,17 @@ describe('GameContainer', () => {
           error: null,
           gameDef: {
             factions: [
-              { id: 'us', color: '#e63946', displayName: 'United States' },
-              { id: 'nva force', color: '#2a9d8f', displayName: 'NVA' },
+              { id: 'us' },
+              { id: 'nva force' },
             ],
           } as unknown as GameStore['gameDef'],
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
-    expect(html).toContain('--faction-us:#e63946');
-    expect(html).toContain('--faction-nva-force:#2a9d8f');
+    expect(html).toContain(`--faction-us:${computeDefaultFactionColor('us')}`);
+    expect(html).toContain(`--faction-nva-force:${computeDefaultFactionColor('nva force')}`);
   });
 
   it('renders actions mode branch only', () => {
@@ -376,6 +397,7 @@ describe('GameContainer', () => {
           error: null,
           renderModel: makeRenderModel(),
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -407,6 +429,7 @@ describe('GameContainer', () => {
           selectedAction: asActionId('pass'),
           partialMove: { actionId: asActionId('pass'), params: {} },
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -428,6 +451,7 @@ describe('GameContainer', () => {
           selectedAction: asActionId('pass'),
           partialMove: { actionId: asActionId('pass'), params: {} },
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -447,6 +471,7 @@ describe('GameContainer', () => {
             choiceUi: { kind: 'invalid', reason: 'ACTION_MOVE_MISMATCH' },
           }),
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -467,6 +492,7 @@ describe('GameContainer', () => {
             activePlayerID: asPlayerId(1),
           }),
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -490,6 +516,7 @@ describe('GameContainer', () => {
           selectedAction: asActionId('pass'),
           partialMove: { actionId: asActionId('pass'), params: {} },
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -515,6 +542,7 @@ describe('GameContainer', () => {
           },
           clearError,
         }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
@@ -571,5 +599,20 @@ describe('GameContainer', () => {
         bottom: 98,
       },
     });
+  });
+
+  it('provides visual config context to VariablesPanel', () => {
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      }),
+    );
+
+    expect(html).toContain('data-testid="variables-panel"');
+    expect(html).toContain('data-has-visual-config="true"');
   });
 });

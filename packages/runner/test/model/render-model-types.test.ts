@@ -32,11 +32,11 @@ describe('render-model types', () => {
           ownerID: null,
           category: null,
           attributes: {},
-          visual: null,
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null },
           metadata: {},
         },
       ],
-      adjacencies: [{ from: 'table', to: 'reserve', isHighlighted: false }],
+      adjacencies: [{ from: 'table', to: 'reserve', category: null, isHighlighted: false }],
       tokens: [
         {
           id: 'token:1',
@@ -171,7 +171,7 @@ describe('render-model types', () => {
       ownerID: asPlayerId(0),
       category: null,
       attributes: {},
-      visual: null,
+      visual: { shape: 'rectangle', width: 160, height: 100, color: null },
       metadata: {},
     };
 

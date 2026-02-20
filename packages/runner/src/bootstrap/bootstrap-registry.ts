@@ -1,4 +1,8 @@
 import bootstrapTargets from './bootstrap-targets.json';
+import {
+  FITL_VISUAL_CONFIG_YAML,
+  TEXAS_VISUAL_CONFIG_YAML,
+} from '../config/index.js';
 
 export interface BootstrapTargetDefinition {
   readonly id: string;
@@ -17,6 +21,7 @@ export interface BootstrapDescriptor {
   readonly defaultPlayerId: number;
   readonly sourceLabel: string;
   readonly resolveGameDefInput: () => Promise<unknown>;
+  readonly resolveVisualConfigYaml: () => unknown;
 }
 
 const BOOTSTRAP_TARGET_DEFINITIONS = assertBootstrapTargetDefinitions(bootstrapTargets as unknown);
@@ -36,6 +41,7 @@ const BOOTSTRAP_REGISTRY: readonly BootstrapDescriptor[] = BOOTSTRAP_TARGET_DEFI
     defaultPlayerId: target.defaultPlayerId,
     sourceLabel: target.sourceLabel,
     resolveGameDefInput: fixtureLoader,
+    resolveVisualConfigYaml: () => resolveVisualConfigYaml(target.id),
   } satisfies BootstrapDescriptor;
 });
 
@@ -173,4 +179,13 @@ function requireNonEmptyString(value: unknown, label: string): string {
     throw new Error(`${label} must be a non-empty string`);
   }
   return value;
+}
+
+function resolveVisualConfigYaml(targetId: string): unknown {
+  const visualConfigsByTargetId: Readonly<Record<string, unknown>> = {
+    default: null,
+    fitl: FITL_VISUAL_CONFIG_YAML,
+    texas: TEXAS_VISUAL_CONFIG_YAML,
+  };
+  return visualConfigsByTargetId[targetId] ?? null;
 }

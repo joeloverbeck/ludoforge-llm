@@ -305,25 +305,54 @@ The visual config file enhances presentation but does not enable it.
 
 ## 8. Game Session Management
 
-Save/load and pre-game configuration:
+App-level navigation, save/load, and pre-game configuration:
+
+### App-level session router
+
+The runner has a session-level navigation layer ABOVE the game lifecycle store. The game store manages `idle|initializing|playing|terminal` within a single game session. The session router manages which screen the user is on:
+
+- **AppScreen state machine**: `gameSelection | preGameConfig | activeGame | replay`
+- The game bridge and game store are created only for `activeGame` and `replay` screens and destroyed on screen exit
+- This separation means navigating "back to menu" properly cleans up the bridge/worker
+
+**Navigation flows**:
+- `gameSelection` -> select a game -> `preGameConfig`
+- `preGameConfig` -> "Start Game" -> `activeGame`
+- `preGameConfig` -> "Back" -> `gameSelection`
+- `activeGame` -> "Quit" (mid-game) -> unsaved-changes confirmation dialog -> `gameSelection`
+- `activeGame` (terminal) -> "Return to Menu" -> `gameSelection`
+- `activeGame` (terminal) -> "New Game" -> `preGameConfig` (same game)
+- `replay` -> "Back to Menu" -> `gameSelection`
 
 ### Game selection screen
 
-List available games from `data/games/*/`. Show game name, player count range, and description (pulled from GameSpecDoc metadata).
+List available games from the bootstrap manifest (`bootstrap-targets.json`). Show game name, player count range, and description. These fields are stored in the manifest to avoid loading full GameDef JSON files. Game metadata (`name`, `description`) is also compiled into `GameDef.metadata` from the GameSpecDoc.
+
+The selection screen also shows saved games from IndexedDB, with options to resume or replay.
 
 ### Pre-game configuration
 
 - Set number of players (within spec min/max).
 - Assign each seat as human or AI agent type (random, greedy, future agent types).
+- Uses `VisualConfigProvider.getFactionDisplayName()` for faction labels when available.
 - Set random seed (optional, for reproducible games).
 
 ### Save/load game
 
-Serialize full GameState + move history to a save file. Load restores state and allows continued play. Save format should support replay: store seed + move sequence for deterministic reconstruction (since the kernel is deterministic, replaying the move sequence from a seed reproduces the exact game).
+Store seed + complete move history as a single Dexie.js (IndexedDB) record per save. No per-move chunking -- move arrays are ~50-100KB for 500 moves, well within IndexedDB limits. The session store accumulates moves during play; the save dialog reads from this accumulator.
+
+Load reconstructs state deterministically: initialize with the saved seed, then replay the move sequence through the kernel via `bridge.playSequence(moveHistory)`. Resume play from that point.
 
 ### Replay mode
 
-Given a saved game or trace, replay the game move-by-move with full animation. Useful for reviewing past games, analyzing agent behavior, or debugging game specs. Supports pause, step-forward, step-backward, and speed control.
+Given a saved game (seed + move history), replay the game move-by-move with full animation. Supports:
+
+- **Step controls**: step-forward, step-backward, jump to start/end
+- **Progress bar scrubber**: Slider from 0 to total moves. Drag or click to jump to any move via `jumpToMove(index)`. Jump uses `reset + playSequence(moves[0..index])` with trace disabled for prior moves and trace enabled for the landing move (so animation plays for context).
+- **Play/pause auto-advance**: Timer-based auto-step with configurable speed
+- **Speed control**: 0.5x, 1x, 2x, 4x
+- **Keyboard shortcuts**: Left/Right = step, Space = play/pause, Home/End = jump to start/end
+- **Read-only mode**: Action toolbar and choice UI are hidden during replay
 
 ---
 
@@ -333,25 +362,35 @@ The visual play-by-play log:
 
 ### Last N events
 
-A scrollable log panel showing recent game events in human-readable text. The log auto-scrolls to the latest event but can be scrolled back to review history.
+A scrollable log panel showing recent game events in human-readable text. The log auto-scrolls to the latest event but can be scrolled back to review history. Events are grouped by move with visual separators.
 
 ### Event source
 
-The kernel's effect trace and trigger firings provide the raw data. The runner translates effect trace entries into readable descriptions:
+The kernel's effect trace (`EffectTraceEntry[]`) and trigger firings (`TriggerLogEntry[]`) provide the raw data. A pure translation function converts these into human-readable `EventLogEntry` records.
 
-- `moveToken`: "Player 2 moved 3 guerrillas from Saigon to Can Tho"
-- `varChange`: "Pot increased to 15,000"
-- `createToken`: "Dealt Ace of Spades to Player 1"
-- `destroyToken`: "Removed 2 NVA troops from Hue"
-- Trigger firings: "Terror triggered: shifted Saigon to Active Opposition"
+### Display name resolution
+
+The event log uses `VisualConfigProvider` (Spec 42) as the primary display name source, with `formatIdAsDisplayName()` as the universal fallback:
+
+1. **Zone names**: `VisualConfigProvider.getZoneLabel(zoneId)` -- falls back to `formatIdAsDisplayName(zoneId)` (e.g., `saigon` -> "Saigon")
+2. **Faction/player names**: `VisualConfigProvider.getFactionDisplayName(factionId)` -- falls back to `formatIdAsDisplayName(factionId)` (e.g., `vc` -> "VC")
+3. **Token type names**: `VisualConfigProvider.getTokenTypeDisplayName(tokenTypeId)` (optional `displayName` field in visual config) -- falls back to `formatIdAsDisplayName(tokenTypeId)` (e.g., `nva-guerrilla` -> "NVA Guerrilla")
+4. **Variable names, action IDs, etc.**: `formatIdAsDisplayName()` directly
+
+Example translations:
+- `EffectTraceMoveToken`: "VC moved 3 Guerrillas from Saigon to Can Tho"
+- `EffectTraceVarChange`: "Pot increased to 15,000"
+- `EffectTraceCreateToken`: "Dealt Ace Of Spades to Player 1"
+- `EffectTraceDestroyToken`: "Removed 2 NVA Troops from Hue"
+- `TriggerFiring`: "Terror triggered: shifted Saigon to Active Opposition"
 
 ### Clickable events
 
-Clicking an event in the log highlights the relevant zones/tokens on the board. Useful for understanding what happened where.
+Clicking an event in the log highlights the relevant zones/tokens on the board. Each event entry stores the `zoneIds` and `tokenIds` it references.
 
 ### Filterable
 
-Filter by event type (moves, triggers, phase changes) or by player/faction. Collapse/expand trigger chains.
+Filter by event kind (movement, variables, triggers, phase changes, tokens). Collapse/expand trigger chains -- entries with nesting depth > 0 are shown as expandable groups under their parent move.
 
 ---
 
@@ -396,7 +435,7 @@ Research conducted February 2026. Each choice based on deep-research evaluation 
 | Tooltips | Floating UI (@floating-ui/react) | v1.x | ~5KB | Virtual Element API converts PixiJS sprite coords to screen coords. Flip/shift/offset middleware handles collision avoidance. |
 | Board graph layout | graphology + ForceAtlas2 | v0.25.x | ~15KB | One-shot API: `forceAtlas2(graph, {iterations: 100})` returns `{nodeId: {x, y}}`. Decoupled from renderer. Built-in web worker support for larger graphs. |
 | Kernel thread | Web Worker + Comlink | v4.x | ~1.1KB | Typed async RPC interface. Structured clone fast enough for <10KB state objects. Actor model pattern validated by PROXX (Google Chrome team). |
-| Game saves | Dexie.js (IndexedDB) | v4.x | ~48KB | Indexed queries, built-in schema migrations, optimized bulk operations. Chunk trace logs into per-move records. |
+| Game saves | Dexie.js (IndexedDB) | v4.x | ~48KB | Indexed queries, built-in schema migrations, optimized bulk operations. Single record per save (seed + move history); no per-move chunking needed (~50-100KB for 500 moves). |
 | Card rendering | BitmapText + LOD + texture baking | (PixiJS built-in) | 0KB | BitmapText for all card text. LOD: full → simplified → skeleton based on zoom. `renderer.generateTexture()` for stable cards. HTMLText reserved for detail view only. |
 | In-canvas layout | PixiJS Layout v3 (selective) | v3.x | ~10KB | Flexbox-style layout within canvas (Yoga engine). Use selectively for in-canvas UI elements, not as primary layout. |
 | Build/deploy | Vite SPA + pnpm workspaces + Turborepo | latest | dev-only | 2-package monorepo (engine + runner). Turborepo adds caching + task ordering. Remote caching via Vercel. |
@@ -445,9 +484,9 @@ Browser Tab
 |------|----------|------------|
 | @pixi/react v8 is young (~11 months) | Medium | Keep imperative `useEffect`/`useRef` as fallback. Don't depend on React reconciler for performance-critical canvas updates. |
 | WebGPU fallback bugs in PixiJS v8 | Low | Use WebGL explicitly via renderer options. Do not rely on automatic backend selection. |
-| Structured clone overhead for large traces | Low | Chunk trace logs per-move. State objects are <10KB — structured clone is fast enough. |
+| Structured clone overhead for large traces | Low | State objects are <10KB -- structured clone is fast enough. Trace logs are per-move by design. |
 | graphology ForceAtlas2 non-deterministic | Low | Compute layout once per GameDef, cache result. Layout is visual-only, not gameplay-affecting. |
-| Dexie.js write blocking on large objects | Low | Chunk saves into per-move records. Write from Web Worker if needed (IndexedDB available in workers). |
+| Dexie.js write blocking on large objects | Low | Single record per save (~50-100KB for 500 moves) is well within IndexedDB limits. Write from Web Worker if needed (IndexedDB available in workers). |
 
 ### Alternatives Evaluated and Rejected
 

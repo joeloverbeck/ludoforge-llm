@@ -1,5 +1,7 @@
 import { Graphics, type Container } from 'pixi.js';
 
+import { parseHexColor } from './shape-utils.js';
+import type { EdgeStrokeStyle, VisualConfigProvider } from '../../config/visual-config-provider.js';
 import type { RenderAdjacency } from '../../model/render-model';
 import type { Position } from '../geometry';
 import type { AdjacencyRenderer } from './renderer-types';
@@ -19,11 +21,13 @@ const HIGHLIGHTED_LINE_STYLE = {
 interface PairRenderState {
   readonly from: string;
   readonly to: string;
+  readonly category: string | null;
   readonly isHighlighted: boolean;
 }
 
 export function createAdjacencyRenderer(
   parentContainer: Container,
+  visualConfigProvider: VisualConfigProvider,
 ): AdjacencyRenderer {
   const graphicsByPair = new Map<string, Graphics>();
 
@@ -43,6 +47,7 @@ export function createAdjacencyRenderer(
 
         nextPairs.set(pairKey, {
           ...existing,
+          category: mergeCategory(existing.category, adjacency.category),
           isHighlighted: existing.isHighlighted || adjacency.isHighlighted,
         });
       }
@@ -75,7 +80,7 @@ export function createAdjacencyRenderer(
           parentContainer.addChild(graphics);
         }
 
-        drawAdjacencyLine(graphics, fromPosition, toPosition, adjacency.isHighlighted);
+        drawAdjacencyLine(graphics, fromPosition, toPosition, adjacency, visualConfigProvider);
       }
     },
 
@@ -97,13 +102,48 @@ function drawAdjacencyLine(
   graphics: Graphics,
   fromPosition: Position,
   toPosition: Position,
-  isHighlighted: boolean,
+  adjacency: PairRenderState,
+  visualConfigProvider: VisualConfigProvider,
 ): void {
+  const strokeStyle = resolveStrokeStyle(
+    visualConfigProvider.resolveEdgeStyle(adjacency.category, adjacency.isHighlighted),
+    adjacency.isHighlighted,
+  );
+
   graphics
     .clear()
     .moveTo(fromPosition.x, fromPosition.y)
     .lineTo(toPosition.x, toPosition.y)
-    .stroke(isHighlighted ? HIGHLIGHTED_LINE_STYLE : DEFAULT_LINE_STYLE);
+    .stroke(strokeStyle);
 
   graphics.visible = true;
+}
+
+function mergeCategory(left: string | null, right: string | null): string | null {
+  if (left === right) {
+    return left;
+  }
+  if (left === null) {
+    return right;
+  }
+  if (right === null) {
+    return left;
+  }
+  return left.localeCompare(right) <= 0 ? left : right;
+}
+
+function resolveStrokeStyle(
+  resolved: { color: string | null; width: number; alpha: number },
+  isHighlighted: boolean,
+): EdgeStrokeStyle {
+  const fallbackStyle = isHighlighted ? HIGHLIGHTED_LINE_STYLE : DEFAULT_LINE_STYLE;
+  const parsedColor = parseHexColor(resolved.color ?? undefined, {
+    allowNamedColors: true,
+  });
+
+  return {
+    color: parsedColor ?? fallbackStyle.color,
+    width: resolved.width,
+    alpha: resolved.alpha,
+  };
 }

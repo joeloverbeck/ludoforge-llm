@@ -81,8 +81,23 @@ export function validateZones(doc: GameSpecDoc, diagnostics: Diagnostic[]): read
     if (zone.zoneKind !== undefined) {
       validateEnumField(zone, 'zoneKind', ['board', 'aux'], basePath, diagnostics, 'zone');
     }
-    if (zone.layoutRole !== undefined) {
-      validateEnumField(zone, 'layoutRole', ['card', 'forcePool', 'hand', 'other'], basePath, diagnostics, 'zone');
+    if ('layoutRole' in zone) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_ZONE_LAYOUT_ROLE_REMOVED',
+        path: `${basePath}.layoutRole`,
+        severity: 'error',
+        message: 'zone.layoutRole is no longer supported in GameSpecDoc.',
+        suggestion: 'Move layout role to runner visual-config.yaml.',
+      });
+    }
+    if ('visual' in zone) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_ZONE_VISUAL_REMOVED',
+        path: `${basePath}.visual`,
+        severity: 'error',
+        message: 'zone.visual is no longer supported in GameSpecDoc.',
+        suggestion: 'Move zone visuals to runner visual-config.yaml.',
+      });
     }
     validateEnumField(zone, 'owner', ['none', 'player'], basePath, diagnostics, 'zone');
     validateEnumField(zone, 'visibility', ['public', 'owner', 'hidden'], basePath, diagnostics, 'zone');

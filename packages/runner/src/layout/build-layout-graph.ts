@@ -1,6 +1,7 @@
 import Graph from 'graphology';
 import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
 
+import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { LayoutMode } from './layout-types.js';
 
 interface PartitionedZones {
@@ -8,13 +9,9 @@ interface PartitionedZones {
   readonly aux: readonly ZoneDef[];
 }
 
-export function resolveLayoutMode(def: GameDef): LayoutMode {
-  const explicitMode = def.metadata?.layoutMode;
-  if (explicitMode !== undefined) {
-    return explicitMode;
-  }
-
-  return def.zones.some(hasAdjacency) ? 'graph' : 'table';
+export function resolveLayoutMode(def: GameDef, provider: VisualConfigProvider): LayoutMode {
+  const hasAnyAdjacency = def.zones.some(hasAdjacency);
+  return provider.getLayoutMode(hasAnyAdjacency);
 }
 
 export function partitionZones(def: GameDef): PartitionedZones {
@@ -57,7 +54,6 @@ export function buildLayoutGraph(boardZones: readonly ZoneDef[]): Graph {
       graph.addNode(zone.id, {
         category: zone.category,
         attributes: zone.attributes,
-        visual: zone.visual,
       });
     }
   }
@@ -67,7 +63,7 @@ export function buildLayoutGraph(boardZones: readonly ZoneDef[]): Graph {
   for (const zone of boardZones) {
     const sourceID = zone.id;
     for (const candidate of zone.adjacentTo ?? []) {
-      const targetID = candidate;
+      const targetID = candidate.to;
       if (targetID === sourceID || !boardZoneIDs.has(targetID)) {
         continue;
       }

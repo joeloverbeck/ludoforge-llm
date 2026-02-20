@@ -34,7 +34,7 @@ function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
     ownerID: null,
     category: null,
     attributes: {},
-    visual: null,
+    visual: { shape: 'rectangle', width: 160, height: 100, color: null },
     metadata: {},
     ...overrides,
   };
@@ -59,6 +59,7 @@ function makeAdjacency(overrides: Partial<RenderAdjacency> = {}): RenderAdjacenc
   return {
     from: 'zone:a',
     to: 'zone:b',
+    category: null,
     isHighlighted: false,
     ...overrides,
   };
@@ -139,7 +140,7 @@ describe('zonesVisuallyEqual', () => {
     expect(
       zonesVisuallyEqual(
         [makeZone()],
-        [makeZone({ visual: { shape: 'hexagon', color: '#345678' } })],
+        [makeZone({ visual: { shape: 'hexagon', width: 160, height: 100, color: '#345678' } })],
       ),
     ).toBe(false);
   });
@@ -234,6 +235,10 @@ describe('adjacenciesVisuallyEqual', () => {
 
   it('returns false when highlight state changes', () => {
     expect(adjacenciesVisuallyEqual([makeAdjacency()], [makeAdjacency({ isHighlighted: true })])).toBe(false);
+  });
+
+  it('returns false when category changes', () => {
+    expect(adjacenciesVisuallyEqual([makeAdjacency()], [makeAdjacency({ category: 'loc' })])).toBe(false);
   });
 
   it('returns false when pair ordering changes', () => {

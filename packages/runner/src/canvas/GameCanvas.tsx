@@ -1,5 +1,4 @@
 import { useEffect, useRef, type ReactElement } from 'react';
-import type { FactionDef, TokenTypeDef } from '@ludoforge/engine/runtime';
 import type { StoreApi } from 'zustand';
 
 import type { KeyboardCoordinator } from '../input/keyboard-coordinator.js';
@@ -21,13 +20,14 @@ import { createHoverTargetController } from './interactions/hover-target-control
 import { createPositionStore, type PositionStore } from './position-store';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
 import { ContainerPool } from './renderers/container-pool';
-import { GameDefFactionColorProvider } from './renderers/faction-colors';
+import { VisualConfigFactionColorProvider } from './renderers/faction-colors';
 import type { AdjacencyRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
 import { createTokenRenderer } from './renderers/token-renderer';
 import { createZoneRenderer } from './renderers/zone-renderer';
 import { createCanvasUpdater, type CanvasUpdater } from './canvas-updater';
 import { setupViewport, type ViewportResult } from './viewport-setup';
 import { getOrComputeLayout } from '../layout/layout-cache.js';
+import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 
 const DEFAULT_BACKGROUND_COLOR = 0x0b1020;
 const DEFAULT_WORLD_SIZE = 1;
@@ -54,6 +54,7 @@ interface SelectorSubscribeStore<TState> extends StoreApi<TState> {
 
 export interface GameCanvasProps {
   readonly store: StoreApi<GameStore>;
+  readonly visualConfigProvider: VisualConfigProvider;
   readonly backgroundColor?: number;
   readonly keyboardCoordinator?: KeyboardCoordinator;
   readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
@@ -68,6 +69,7 @@ export interface GameCanvasRuntime {
 interface GameCanvasRuntimeOptions {
   readonly container: HTMLElement;
   readonly store: StoreApi<GameStore>;
+  readonly visualConfigProvider: VisualConfigProvider;
   readonly backgroundColor: number;
   readonly keyboardCoordinator?: KeyboardCoordinator;
   readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
@@ -145,7 +147,7 @@ export async function createGameCanvasRuntime(
       return;
     }
 
-    const layoutResult = getOrComputeLayout(gameDef);
+    const layoutResult = getOrComputeLayout(gameDef, options.visualConfigProvider);
     const gameDefZoneIDs = gameDef.zones.map((zone) => zone.id);
     positionStore.setPositions(layoutResult.positionMap, gameDefZoneIDs);
   };
@@ -190,10 +192,9 @@ export async function createGameCanvasRuntime(
       ),
   });
 
-  const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer);
+  const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider);
 
-  const factionColorProvider = new GameDefFactionColorProvider(selectGameDefFactions(selectorStore.getState()));
-  factionColorProvider.setTokenTypes(selectGameDefTokenTypes(selectorStore.getState()));
+  const factionColorProvider = new VisualConfigFactionColorProvider(options.visualConfigProvider);
   const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, factionColorProvider, {
     bindSelection: (tokenContainer, tokenId, isSelectable) =>
       deps.attachTokenSelectHandlers(
@@ -228,6 +229,7 @@ export async function createGameCanvasRuntime(
   try {
     animationController = deps.createAnimationController({
       store: options.store,
+      visualConfigProvider: options.visualConfigProvider,
       tokenContainers: () => tokenRenderer.getContainerMap(),
       zoneContainers: () => zoneRenderer.getContainerMap(),
       zonePositions: () => positionStore.getSnapshot(),
@@ -285,24 +287,6 @@ export async function createGameCanvasRuntime(
       }
       applyGameDefLayout(gameDef);
     },
-  );
-  const unsubscribeFactionDefs = selectorStore.subscribe(
-    selectGameDefFactions,
-    (factions) => {
-      factionColorProvider.setFactions(factions);
-      const renderTokens = selectorStore.getState().renderModel?.tokens ?? [];
-      tokenRenderer.update(renderTokens, zoneRenderer.getContainerMap());
-    },
-    { equalityFn: factionDefsEqual },
-  );
-  const unsubscribeTokenTypeDefs = selectorStore.subscribe(
-    selectGameDefTokenTypes,
-    (tokenTypes) => {
-      factionColorProvider.setTokenTypes(tokenTypes);
-      const renderTokens = selectorStore.getState().renderModel?.tokens ?? [];
-      tokenRenderer.update(renderTokens, zoneRenderer.getContainerMap());
-    },
-    { equalityFn: tokenTypeDefsEqual },
   );
   const unsubscribeAnimationPlaybackSpeed = selectorStore.subscribe(
     (state) => state.animationPlaybackSpeed,
@@ -424,8 +408,6 @@ export async function createGameCanvasRuntime(
       options.onHoverAnchorChange?.(null);
       unsubscribeZoneIDs();
       unsubscribeGameDef();
-      unsubscribeFactionDefs();
-      unsubscribeTokenTypeDefs();
       unsubscribeAnimationPlaybackSpeed();
       unsubscribeAnimationPaused();
       unsubscribeAnimationSkipRequestToken();
@@ -443,6 +425,7 @@ export async function createGameCanvasRuntime(
 
 export function GameCanvas({
   store,
+  visualConfigProvider,
   backgroundColor = DEFAULT_BACKGROUND_COLOR,
   keyboardCoordinator,
   onHoverAnchorChange,
@@ -463,6 +446,7 @@ export function GameCanvas({
     const runtimeOptions: GameCanvasRuntimeOptions = {
       container,
       store,
+      visualConfigProvider,
       backgroundColor,
       ...(keyboardCoordinator === undefined ? {} : { keyboardCoordinator }),
       ...(onHoverAnchorChange === undefined ? {} : { onHoverAnchorChange }),
@@ -487,6 +471,7 @@ export function GameCanvas({
     };
   }, [
     store,
+    visualConfigProvider,
     backgroundColor,
     keyboardCoordinator,
     onHoverAnchorChange,
@@ -561,14 +546,6 @@ function selectZoneIDs(state: GameStore): readonly string[] {
   return renderZones.map((zone) => zone.id);
 }
 
-function selectGameDefFactions(state: GameStore): readonly FactionDef[] | undefined {
-  return state.gameDef?.factions;
-}
-
-function selectGameDefTokenTypes(state: GameStore): readonly TokenTypeDef[] | undefined {
-  return state.gameDef?.tokenTypes;
-}
-
 function selectPhaseAnnouncementLabel(state: GameStore): string | null {
   const phaseName = state.renderModel?.phaseName?.trim();
   if (phaseName === undefined || phaseName.length === 0) {
@@ -586,61 +563,6 @@ function stringArraysEqual(prev: readonly string[], next: readonly string[]): bo
 
   for (let index = 0; index < prev.length; index += 1) {
     if (prev[index] !== next[index]) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function factionDefsEqual(
-  prev: readonly FactionDef[] | undefined,
-  next: readonly FactionDef[] | undefined,
-): boolean {
-  if (prev === next) {
-    return true;
-  }
-  if (prev === undefined || next === undefined) {
-    return false;
-  }
-  if (prev.length !== next.length) {
-    return false;
-  }
-
-  for (let index = 0; index < prev.length; index += 1) {
-    if (
-      prev[index]?.id !== next[index]?.id
-      || prev[index]?.color !== next[index]?.color
-      || prev[index]?.displayName !== next[index]?.displayName
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function tokenTypeDefsEqual(
-  prev: readonly TokenTypeDef[] | undefined,
-  next: readonly TokenTypeDef[] | undefined,
-): boolean {
-  if (prev === next) {
-    return true;
-  }
-  if (prev === undefined || next === undefined) {
-    return false;
-  }
-  if (prev.length !== next.length) {
-    return false;
-  }
-
-  for (let index = 0; index < prev.length; index += 1) {
-    const prevVisual = prev[index]?.visual;
-    const nextVisual = next[index]?.visual;
-    if (
-      prev[index]?.id !== next[index]?.id
-      || prevVisual?.color !== nextVisual?.color
-    ) {
       return false;
     }
   }

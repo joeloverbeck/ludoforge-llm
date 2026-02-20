@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
 import { asActionId, asPlayerId, initialState, type GameDef } from '@ludoforge/engine/runtime';
 
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { createGameStore } from '../../src/store/game-store.js';
 import { createGameWorker, type WorkerError } from '../../src/worker/game-worker-api.js';
 import { CHOOSE_MIXED_TEST_DEF } from '../worker/test-fixtures.js';
@@ -84,11 +85,15 @@ function compileCounterFixture(terminalThreshold: number): GameDef {
   return compiled.gameDef;
 }
 
+function createStoreWithDefaultVisuals(bridge: ReturnType<typeof createGameWorker>) {
+  return createGameStore(bridge, new VisualConfigProvider(null));
+}
+
 describe('createGameStore async serialization', () => {
   it('initGame called twice quickly keeps only the newest initialization result', async () => {
     const def = compileCounterFixture(5);
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     const baseInit = bridge.init.bind(bridge);
     const gateA = createDeferred<void>();
     const gateB = createDeferred<void>();
@@ -123,7 +128,7 @@ describe('createGameStore async serialization', () => {
   it('stale selectAction result after cancelMove does not restore choice state', async () => {
     const def = compileCounterFixture(5);
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 1, asPlayerId(0));
 
     const baseLegalChoices = bridge.legalChoices.bind(bridge);
@@ -149,7 +154,7 @@ describe('createGameStore async serialization', () => {
   it('stale confirmMove completion after newer initGame does not mutate the new session', async () => {
     const def = compileCounterFixture(5);
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 10, asPlayerId(0));
     await store.getState().selectAction(asActionId('tick'));
 
@@ -176,7 +181,7 @@ describe('createGameStore async serialization', () => {
 
   it('stale chooseOne completion after newer selectAction does not mutate current move construction', async () => {
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 31, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-mixed'));
 
@@ -208,7 +213,7 @@ describe('createGameStore async serialization', () => {
 
   it('stale chooseN completion after newer selectAction does not mutate current move construction', async () => {
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 32, asPlayerId(0));
     await store.getState().selectAction(asActionId('pick-mixed'));
     await store.getState().chooseOne('x');
@@ -243,7 +248,7 @@ describe('createGameStore async serialization', () => {
   it('stale confirmMove completion after undo does not mutate current state', async () => {
     const def = compileCounterFixture(10);
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 33, asPlayerId(0));
 
     await store.getState().selectAction(asActionId('tick'));
@@ -281,7 +286,7 @@ describe('createGameStore async serialization', () => {
   it('stale rejection does not overwrite current-session success/error state', async () => {
     const def = compileCounterFixture(5);
     const bridge = createGameWorker();
-    const store = createGameStore(bridge);
+    const store = createStoreWithDefaultVisuals(bridge);
     await store.getState().initGame(def, 7, asPlayerId(0));
 
     const baseLegalChoices = bridge.legalChoices.bind(bridge);

@@ -29,7 +29,7 @@ const makeDef = (): GameDef => ({
       owner: 'none',
       visibility: 'hidden',
       ordering: 'stack',
-      adjacentTo: [asZoneId('hand:1'), asZoneId('hand:0')],
+      adjacentTo: [{ to: asZoneId('hand:1') }, { to: asZoneId('hand:0') }],
     },
     {
       id: asZoneId('hand:0'),
@@ -37,7 +37,7 @@ const makeDef = (): GameDef => ({
       owner: 'player',
       visibility: 'owner',
       ordering: 'stack',
-      adjacentTo: [asZoneId('deck:none'), asZoneId('bench:1')],
+      adjacentTo: [{ to: asZoneId('deck:none') }, { to: asZoneId('bench:1') }],
     },
     {
       id: asZoneId('hand:1'),
@@ -45,7 +45,7 @@ const makeDef = (): GameDef => ({
       owner: 'player',
       visibility: 'owner',
       ordering: 'stack',
-      adjacentTo: [asZoneId('deck:none')],
+      adjacentTo: [{ to: asZoneId('deck:none') }],
     },
     {
       id: asZoneId('bench:1'),
@@ -53,7 +53,7 @@ const makeDef = (): GameDef => ({
       owner: 'player',
       visibility: 'public',
       ordering: 'queue',
-      adjacentTo: [asZoneId('hand:0'), asZoneId('tableau:2')],
+      adjacentTo: [{ to: asZoneId('hand:0') }, { to: asZoneId('tableau:2') }],
     },
     {
       id: asZoneId('tableau:2'),
@@ -61,7 +61,7 @@ const makeDef = (): GameDef => ({
       owner: 'player',
       visibility: 'public',
       ordering: 'set',
-      adjacentTo: [asZoneId('bench:1')],
+      adjacentTo: [{ to: asZoneId('bench:1') }],
     },
     {
       id: asZoneId('battlefield:none'),

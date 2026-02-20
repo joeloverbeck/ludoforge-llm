@@ -11,9 +11,10 @@ import type {
   AnimationDetailLevel,
   AnimationPresetId,
   AnimationPresetOverrideKey,
+  AnimationSequencingPolicy,
   CardAnimationMappingContext,
 } from './animation-types.js';
-import { ANIMATION_PRESET_OVERRIDE_KEYS } from './animation-types.js';
+import { ANIMATION_DESCRIPTOR_KINDS, ANIMATION_PRESET_OVERRIDE_KEYS } from './animation-types.js';
 import { createAnimationQueue, type AnimationQueue } from './animation-queue.js';
 import { getGsapRuntime, type GsapLike } from './gsap-setup.js';
 import { createPresetRegistry, type PresetRegistry } from './preset-registry.js';
@@ -44,6 +45,7 @@ export interface AnimationController {
   resume(): void;
   skipCurrent(): void;
   skipAll(): void;
+  forceFlush(): void;
 }
 
 export interface AnimationControllerOptions {
@@ -52,6 +54,7 @@ export interface AnimationControllerOptions {
   readonly tokenContainers: () => ReadonlyMap<string, Container>;
   readonly zoneContainers: () => ReadonlyMap<string, Container>;
   readonly zonePositions: () => ZonePositionMap;
+  readonly isCanvasReady?: () => boolean;
 }
 
 interface AnimationControllerDeps {
@@ -71,6 +74,7 @@ export function createAnimationController(
   const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
   const queue = deps.queueFactory(options.store);
   const presetOverrides = buildPresetOverrides(options.visualConfigProvider, deps.presetRegistry, deps.onWarning);
+  const sequencingPolicies = buildSequencingPolicies(options.visualConfigProvider);
 
   let detailLevel: AnimationDetailLevel = 'full';
   let reducedMotion = false;
@@ -83,10 +87,16 @@ export function createAnimationController(
       return;
     }
 
+    if (options.isCanvasReady !== undefined && !options.isCanvasReady()) {
+      deps.onWarning?.('Animation controller skipped trace: canvas not ready.');
+      return;
+    }
+
+    let descriptors: readonly AnimationDescriptor[];
     try {
       const state = options.store.getState();
       const cardContext = buildCardContext(state, options.visualConfigProvider);
-      const descriptors = deps.traceToDescriptors(
+      descriptors = deps.traceToDescriptors(
         trace,
         {
           detailLevel,
@@ -95,10 +105,16 @@ export function createAnimationController(
         },
         deps.presetRegistry,
       );
-      if (!hasVisualDescriptors(descriptors)) {
-        return;
-      }
+    } catch (error) {
+      deps.onError('Descriptor mapping failed.', error);
+      return;
+    }
 
+    if (!hasVisualDescriptors(descriptors)) {
+      return;
+    }
+
+    try {
       const timeline = deps.buildTimeline(
         descriptors,
         deps.presetRegistry,
@@ -108,6 +124,7 @@ export function createAnimationController(
           zonePositions: options.zonePositions(),
         },
         deps.gsap,
+        sequencingPolicies.size === 0 ? undefined : { sequencingPolicies },
       );
 
       if (reducedMotion) {
@@ -118,7 +135,7 @@ export function createAnimationController(
 
       queue.enqueue(timeline);
     } catch (error) {
-      deps.onError('Animation controller failed while processing effectTrace.', error);
+      deps.onError('Timeline build failed.', error);
     }
   };
 
@@ -200,6 +217,13 @@ export function createAnimationController(
       }
       queue.skipAll();
     },
+
+    forceFlush(): void {
+      if (destroyed) {
+        return;
+      }
+      queue.forceFlush();
+    },
   };
 }
 
@@ -275,6 +299,21 @@ function resolveCardTokenTypeIds(
   }
 
   return result;
+}
+
+function buildSequencingPolicies(
+  visualConfigProvider: VisualConfigProvider,
+): ReadonlyMap<string, AnimationSequencingPolicy> {
+  const policies = new Map<string, AnimationSequencingPolicy>();
+
+  for (const kind of ANIMATION_DESCRIPTOR_KINDS) {
+    const policy = visualConfigProvider.getSequencingPolicy(kind);
+    if (policy !== null) {
+      policies.set(kind, policy);
+    }
+  }
+
+  return policies;
 }
 
 function hasVisualDescriptors(descriptors: readonly AnimationDescriptor[]): boolean {

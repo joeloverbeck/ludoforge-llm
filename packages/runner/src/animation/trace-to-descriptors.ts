@@ -8,7 +8,7 @@ import type {
 } from './animation-types.js';
 import {
   createPresetRegistry,
-  resolveDefaultPresetIdForTraceKind,
+  resolveDefaultPresetIdForDescriptorKind,
   type PresetCompatibleDescriptorKind,
   type PresetRegistry,
 } from './preset-registry.js';
@@ -24,7 +24,7 @@ function resolvePreset(
   presetRegistry: PresetRegistry,
 ): AnimationPresetId {
   const override = options?.presetOverrides?.get(descriptorKind);
-  const presetId = override ?? resolveDefaultPresetIdForTraceKind(traceKind);
+  const presetId = override ?? resolveDefaultPresetIdForDescriptorKind(traceKind, descriptorKind);
   presetRegistry.requireCompatible(presetId, descriptorKind);
   return presetId;
 }

@@ -650,10 +650,10 @@ describe('createGameCanvasRuntime', () => {
     runtime.destroy();
 
     expect(fixture.lifecycle).toEqual([
+      'updater-start',
       'animation-controller-start',
       'action-announcement-renderer-start',
       'ai-playback-controller-start',
-      'updater-start',
       'reduced-motion-destroy',
       'keyboard-cleanup',
       'action-announcement-renderer-destroy',

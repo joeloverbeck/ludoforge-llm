@@ -5,7 +5,9 @@
       "min": 2,
       "max": 10
     },
-    "maxTriggerDepth": 5
+    "maxTriggerDepth": 5,
+    "name": "Texas Hold'em",
+    "description": "No-limit Texas Hold'em poker tournament"
   },
   "constants": {},
   "globalVars": [

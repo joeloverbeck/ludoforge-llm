@@ -4,7 +4,9 @@
     "players": {
       "min": 1,
       "max": 4
-    }
+    },
+    "name": "Runner Bootstrap Default",
+    "description": "Minimal game for development testing"
   },
   "constants": {},
   "globalVars": [
@@ -20,11 +22,13 @@
   "zones": [
     {
       "id": "table:none",
+      "zoneKind": "aux",
       "owner": "none",
       "visibility": "public",
       "ordering": "set"
     }
   ],
+  "globalMarkerLattices": [],
   "tokenTypes": [],
   "setup": [],
   "turnStructure": {

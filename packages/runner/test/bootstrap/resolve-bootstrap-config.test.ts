@@ -27,6 +27,8 @@ describe('resolveBootstrapConfig', () => {
       color: null,
     });
     expect(gameDef.metadata.id).toBe('runner-bootstrap-default');
+    expect(gameDef.metadata.name).toBe('Runner Bootstrap Default');
+    expect(gameDef.metadata.description).toBe('Minimal game for development testing');
   });
 
   it('returns FITL bootstrap config when game=fitl and applies params', async () => {
@@ -37,6 +39,8 @@ describe('resolveBootstrapConfig', () => {
     expect(resolved.seed).toBe(77);
     expect(resolved.playerId).toBe(3);
     expect(gameDef.metadata.id).toBe('fire-in-the-lake');
+    expect(gameDef.metadata.name).toBe('Fire in the Lake');
+    expect(gameDef.metadata.description).toBe('A 4-faction COIN-series wargame set in the Vietnam War');
   });
 
   it('returns Texas bootstrap config when game=texas and applies params', async () => {
@@ -47,6 +51,8 @@ describe('resolveBootstrapConfig', () => {
     expect(resolved.seed).toBe(77);
     expect(resolved.playerId).toBe(3);
     expect(gameDef.metadata.id).toBe('texas-holdem-nlhe-tournament');
+    expect(gameDef.metadata.name).toBe("Texas Hold'em");
+    expect(gameDef.metadata.description).toBe("No-limit Texas Hold'em poker tournament");
   });
 
   it('returns FITL bootstrap config with visual-provider category style invariants needed by generic rendering', async () => {

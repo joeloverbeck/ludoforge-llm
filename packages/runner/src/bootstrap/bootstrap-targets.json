@@ -5,7 +5,8 @@
     "defaultSeed": 42,
     "defaultPlayerId": 0,
     "sourceLabel": "runner bootstrap fixture",
-    "fixtureFile": "default-game-def.json"
+    "fixtureFile": "default-game-def.json",
+    "generatedFromSpecPath": "data/games/runner-bootstrap-default"
   },
   {
     "id": "fitl",

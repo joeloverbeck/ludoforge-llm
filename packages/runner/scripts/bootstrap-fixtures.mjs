@@ -18,7 +18,6 @@ export function loadBootstrapFixtureTargets() {
   const targetsInput = JSON.parse(readFileSync(BOOTSTRAP_TARGETS_PATH, 'utf8'));
   const targets = assertBootstrapFixtureTargets(targetsInput);
   return targets
-    .filter((target) => target.generatedFromSpecPath !== undefined)
     .map((target) => ({
       id: target.id,
       label: target.sourceLabel,
@@ -44,9 +43,10 @@ function assertBootstrapFixtureTargets(targetsInput) {
     const sourceLabel = requireNonEmptyString(target.sourceLabel, `Bootstrap target sourceLabel (id=${id})`);
     const fixtureFile = requireNonEmptyString(target.fixtureFile, `Bootstrap target fixtureFile (id=${id})`);
 
-    const generatedFromSpecPath = target.generatedFromSpecPath === undefined
-      ? undefined
-      : requireNonEmptyString(target.generatedFromSpecPath, `Bootstrap target generatedFromSpecPath (id=${id})`);
+    const generatedFromSpecPath = requireNonEmptyString(
+      target.generatedFromSpecPath,
+      `Bootstrap target generatedFromSpecPath (id=${id})`,
+    );
 
     if (ids.has(id)) {
       throw new Error(`Bootstrap target id must be unique (id=${id})`);

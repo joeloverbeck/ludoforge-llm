@@ -3,6 +3,8 @@
 ```yaml
 metadata:
   id: texas-holdem-nlhe-tournament
+  name: Texas Hold'em
+  description: No-limit Texas Hold'em poker tournament
   players:
     min: 2
     max: 10

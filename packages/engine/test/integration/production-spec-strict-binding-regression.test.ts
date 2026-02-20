@@ -20,6 +20,8 @@ describe('production spec strict-binding regression', () => {
     assert.deepEqual(validatorDiagnostics.filter((diagnostic) => diagnostic.severity === 'error'), []);
     assert.deepEqual(compiled.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'), []);
     assertNoUnboundBindingDiagnostics(compiled.diagnostics);
+    assert.equal(compiled.gameDef?.metadata.name, 'Fire in the Lake');
+    assert.equal(compiled.gameDef?.metadata.description, 'A 4-faction COIN-series wargame set in the Vietnam War');
   });
 
   it('keeps Texas production GameSpec free of unbound-binding compiler diagnostics', () => {
@@ -29,6 +31,8 @@ describe('production spec strict-binding regression', () => {
     assert.deepEqual(validatorDiagnostics.filter((diagnostic) => diagnostic.severity === 'error'), []);
     assert.deepEqual(compiled.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'), []);
     assertNoUnboundBindingDiagnostics(compiled.diagnostics);
+    assert.equal(compiled.gameDef?.metadata.name, "Texas Hold'em");
+    assert.equal(compiled.gameDef?.metadata.description, "No-limit Texas Hold'em poker tournament");
   });
 
   it('fails compile-time validation when Texas blind schedule violates declared table contracts', () => {

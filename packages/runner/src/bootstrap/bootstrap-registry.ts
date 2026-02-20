@@ -11,7 +11,7 @@ export interface BootstrapTargetDefinition {
   readonly defaultPlayerId: number;
   readonly sourceLabel: string;
   readonly fixtureFile: string;
-  readonly generatedFromSpecPath?: string;
+  readonly generatedFromSpecPath: string;
 }
 
 export interface BootstrapDescriptor {
@@ -123,10 +123,10 @@ export function assertBootstrapTargetDefinitions(targetsInput: unknown): readonl
       throw new Error(`Bootstrap target defaultPlayerId must be a non-negative safe integer (id=${id})`);
     }
 
-    const generatedFromSpecPathRaw = candidate.generatedFromSpecPath;
-    const generatedFromSpecPath = generatedFromSpecPathRaw === undefined
-      ? undefined
-      : requireNonEmptyString(generatedFromSpecPathRaw, `Bootstrap target generatedFromSpecPath (id=${id})`);
+    const generatedFromSpecPath = requireNonEmptyString(
+      candidate.generatedFromSpecPath,
+      `Bootstrap target generatedFromSpecPath (id=${id})`,
+    );
 
     if (ids.has(id)) {
       throw new Error(`Bootstrap target id must be unique (id=${id})`);
@@ -142,23 +142,15 @@ export function assertBootstrapTargetDefinitions(targetsInput: unknown): readonl
     queryValues.add(queryValue);
     fixtureFiles.add(fixtureFile);
 
-    const base = {
+    return {
       id,
       queryValue,
       defaultSeed: candidate.defaultSeed as number,
       defaultPlayerId: candidate.defaultPlayerId as number,
       sourceLabel,
       fixtureFile,
-    };
-
-    if (generatedFromSpecPath !== undefined) {
-      return {
-        ...base,
-        generatedFromSpecPath,
-      } satisfies BootstrapTargetDefinition;
-    }
-
-    return base satisfies BootstrapTargetDefinition;
+      generatedFromSpecPath,
+    } satisfies BootstrapTargetDefinition;
   });
 
   return targets;

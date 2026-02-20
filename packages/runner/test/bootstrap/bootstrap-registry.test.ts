@@ -69,6 +69,21 @@ describe('bootstrap-registry', () => {
 
     expect(() => assertBootstrapTargetDefinitions(targets)).toThrow(/fixtureFile must be unique/u);
   });
+
+  it('throws when target manifest omits generatedFromSpecPath', () => {
+    const targets = [
+      {
+        id: 'd0',
+        queryValue: 'd0',
+        defaultSeed: 42,
+        defaultPlayerId: 0,
+        sourceLabel: 'test fixture',
+        fixtureFile: 'd0.json',
+      },
+    ];
+
+    expect(() => assertBootstrapTargetDefinitions(targets)).toThrow(/generatedFromSpecPath/u);
+  });
 });
 
 function descriptor(
@@ -99,6 +114,7 @@ function target(
   defaultPlayerId: number;
   sourceLabel: string;
   fixtureFile: string;
+  generatedFromSpecPath: string;
 } {
   return {
     id,
@@ -107,5 +123,6 @@ function target(
     defaultPlayerId: 0,
     sourceLabel: 'test fixture',
     fixtureFile,
+    generatedFromSpecPath: `data/games/${id}`,
   };
 }

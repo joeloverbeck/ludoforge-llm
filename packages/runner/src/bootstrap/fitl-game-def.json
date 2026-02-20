@@ -4,7 +4,9 @@
     "players": {
       "min": 2,
       "max": 4
-    }
+    },
+    "name": "Fire in the Lake",
+    "description": "A 4-faction COIN-series wargame set in the Vietnam War"
   },
   "constants": {},
   "globalVars": [

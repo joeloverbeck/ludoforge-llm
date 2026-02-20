@@ -12,13 +12,14 @@ Bootstrap targets are defined once in `bootstrap-targets.json` and consumed by b
    - `defaultPlayerId`
    - `sourceLabel`
    - `fixtureFile`
-   - optional `generatedFromSpecPath` for generated fixtures
-2. Ensure the fixture JSON exists under `src/bootstrap/` (or run generation for entries with `generatedFromSpecPath`).
-3. Add/update tests in:
+   - `generatedFromSpecPath` (required; canonical `GameSpecDoc` directory)
+2. Generate fixtures from canonical specs:
+   - `pnpm -F @ludoforge/runner bootstrap:fixtures`
+3. Ensure drift check is clean:
+   - `pnpm -F @ludoforge/runner bootstrap:fixtures:check`
+4. Add/update tests in:
    - `packages/runner/test/bootstrap/bootstrap-registry.test.ts`
    - `packages/runner/test/bootstrap/resolve-bootstrap-config.test.ts`
-4. Run:
-   - `pnpm -F @ludoforge/runner bootstrap:fixtures`
-   - `pnpm -F @ludoforge/runner bootstrap:fixtures:check`
+5. Run:
    - `pnpm -F @ludoforge/runner test`
    - `pnpm -F @ludoforge/runner typecheck`

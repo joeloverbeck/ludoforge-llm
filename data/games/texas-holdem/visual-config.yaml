@@ -25,6 +25,14 @@ zones:
     "hand:9": hand
     "muck:none": other
 
+tokenTypeDefaults:
+  - match:
+      idPrefixes: [card-]
+    style:
+      shape: card
+      color: "#ffffff"
+      backSymbol: diamond
+
 cardAnimation:
   cardTokenTypes:
     idPrefixes: [card-]

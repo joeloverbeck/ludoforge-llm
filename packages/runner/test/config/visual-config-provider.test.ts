@@ -193,6 +193,112 @@ describe('VisualConfigProvider', () => {
     expect(provider.getTokenTypeDisplayName('unknown-token')).toBeNull();
   });
 
+  it('token type visual falls back to selector-matched tokenTypeDefaults by prefix', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      tokenTypeDefaults: [
+        {
+          match: { idPrefixes: ['card-'] },
+          style: { shape: 'card', color: '#ffffff', backSymbol: 'diamond' },
+        },
+      ],
+    });
+
+    expect(provider.getTokenTypeVisual('card-2S')).toEqual({
+      shape: 'card',
+      color: '#ffffff',
+      size: 28,
+      symbol: null,
+      backSymbol: 'diamond',
+    });
+  });
+
+  it('token type visual falls back to selector-matched tokenTypeDefaults by id', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      tokenTypeDefaults: [
+        {
+          match: { ids: ['dealer-button'] },
+          style: { shape: 'round-disk', color: '#fbbf24', size: 20 },
+        },
+      ],
+    });
+
+    expect(provider.getTokenTypeVisual('dealer-button')).toEqual({
+      shape: 'round-disk',
+      color: '#fbbf24',
+      size: 20,
+      symbol: null,
+      backSymbol: null,
+    });
+  });
+
+  it('exact token type entries take priority over selector defaults', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      tokenTypes: {
+        'card-2S': { shape: 'cube', symbol: 'star', displayName: 'Override' },
+      },
+      tokenTypeDefaults: [
+        {
+          match: { idPrefixes: ['card-'] },
+          style: { shape: 'card', symbol: 'spade', displayName: 'Default' },
+        },
+      ],
+    });
+
+    expect(provider.getTokenTypeVisual('card-2S').shape).toBe('cube');
+    expect(provider.resolveTokenSymbols('card-2S', {})).toEqual({
+      symbol: 'star',
+      backSymbol: null,
+    });
+    expect(provider.getTokenTypeDisplayName('card-2S')).toBe('Override');
+  });
+
+  it('first matching selector default wins when multiple defaults match', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      tokenTypeDefaults: [
+        {
+          match: { idPrefixes: ['card-'] },
+          style: { shape: 'card', color: '#ffffff' },
+        },
+        {
+          match: { idPrefixes: ['card-2'] },
+          style: { shape: 'cube', color: '#000000' },
+        },
+      ],
+    });
+
+    expect(provider.getTokenTypeVisual('card-2S')).toEqual({
+      shape: 'card',
+      color: '#ffffff',
+      size: 28,
+      symbol: null,
+      backSymbol: null,
+    });
+  });
+
+  it('selector defaults are ignored when no selector matches', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      tokenTypeDefaults: [
+        {
+          match: { idPrefixes: ['card-'] },
+          style: { shape: 'card' },
+        },
+      ],
+    });
+
+    expect(provider.getTokenTypeVisual('chip-5')).toEqual({
+      shape: 'circle',
+      color: null,
+      size: 28,
+      symbol: null,
+      backSymbol: null,
+    });
+  });
+
   it('resolveTokenSymbols applies ordered symbolRules over defaults', () => {
     const provider = new VisualConfigProvider({
       version: 1,
@@ -227,6 +333,50 @@ describe('VisualConfigProvider', () => {
       symbol: 'star',
       backSymbol: null,
     });
+  });
+
+  it('resolveTokenSymbols falls back to selector-matched default symbol rules', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      tokenTypeDefaults: [
+        {
+          match: { idPrefixes: ['card-'] },
+          style: {
+            symbol: 'question',
+            backSymbol: 'diamond',
+            symbolRules: [
+              {
+                when: [{ prop: 'faceUp', equals: true }],
+                symbol: 'spade',
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    expect(provider.resolveTokenSymbols('card-AS', { faceUp: false })).toEqual({
+      symbol: 'question',
+      backSymbol: 'diamond',
+    });
+    expect(provider.resolveTokenSymbols('card-AS', { faceUp: true })).toEqual({
+      symbol: 'spade',
+      backSymbol: 'diamond',
+    });
+  });
+
+  it('getTokenTypeDisplayName falls back to selector-matched default displayName', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      tokenTypeDefaults: [
+        {
+          match: { idPrefixes: ['card-'] },
+          style: { displayName: 'Card' },
+        },
+      ],
+    });
+
+    expect(provider.getTokenTypeDisplayName('card-QH')).toBe('Card');
   });
 
   it('token type visual resolves to defaults for missing config', () => {

@@ -126,6 +126,11 @@ const TokenTypeSelectorsSchema = z.object({
   idPrefixes: z.array(z.string()).optional(),
 });
 
+const TokenTypeDefaultSchema = z.object({
+  match: TokenTypeSelectorsSchema,
+  style: TokenTypeVisualStyleSchema,
+});
+
 const CardAnimationZoneRolesSchema = z.object({
   draw: z.array(z.string()),
   hand: z.array(z.string()),
@@ -199,6 +204,7 @@ export const VisualConfigSchema = z.object({
   zones: ZonesConfigSchema.optional(),
   edges: EdgesConfigSchema.optional(),
   tokenTypes: z.record(z.string(), TokenTypeVisualStyleSchema).optional(),
+  tokenTypeDefaults: z.array(TokenTypeDefaultSchema).optional(),
   cardAnimation: CardAnimationConfigSchema.optional(),
   animations: AnimationsConfigSchema.optional(),
   cards: CardsConfigSchema.optional(),
@@ -225,6 +231,7 @@ export type TokenPropertyMatch = z.infer<typeof TokenPropertyMatchSchema>;
 export type TokenSymbolRule = z.infer<typeof TokenSymbolRuleSchema>;
 export type TokenTypeVisualStyle = z.infer<typeof TokenTypeVisualStyleSchema>;
 export type TokenTypeSelectors = z.infer<typeof TokenTypeSelectorsSchema>;
+export type TokenTypeDefault = z.infer<typeof TokenTypeDefaultSchema>;
 export type CardAnimationZoneRoles = z.infer<typeof CardAnimationZoneRolesSchema>;
 export type CardAnimationConfig = z.infer<typeof CardAnimationConfigSchema>;
 export type AnimationsConfig = z.infer<typeof AnimationsConfigSchema>;

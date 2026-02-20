@@ -14,6 +14,7 @@ import type {
   AttributeRule,
   CardAnimationConfig,
   CardTemplate,
+  TokenTypeDefault,
   TokenTypeSelectors,
   TokenSymbolRule,
   LayoutHints,
@@ -106,7 +107,7 @@ export class VisualConfigProvider {
   }
 
   getTokenTypeVisual(tokenTypeId: string): ResolvedTokenVisual {
-    const style = this.config?.tokenTypes?.[tokenTypeId];
+    const style = this.config?.tokenTypes?.[tokenTypeId] ?? this.findTokenTypeDefault(tokenTypeId)?.style;
 
     return {
       shape: style?.shape ?? DEFAULT_TOKEN_SHAPE,
@@ -118,14 +119,15 @@ export class VisualConfigProvider {
   }
 
   getTokenTypeDisplayName(tokenTypeId: string): string | null {
-    return this.config?.tokenTypes?.[tokenTypeId]?.displayName ?? null;
+    const style = this.config?.tokenTypes?.[tokenTypeId] ?? this.findTokenTypeDefault(tokenTypeId)?.style;
+    return style?.displayName ?? null;
   }
 
   resolveTokenSymbols(
     tokenTypeId: string,
     tokenProperties: Readonly<Record<string, string | number | boolean>>,
   ): ResolvedTokenSymbols {
-    const style = this.config?.tokenTypes?.[tokenTypeId];
+    const style = this.config?.tokenTypes?.[tokenTypeId] ?? this.findTokenTypeDefault(tokenTypeId)?.style;
     const symbolRules = style?.symbolRules ?? [];
 
     let symbol: string | null = style?.symbol ?? null;
@@ -144,6 +146,16 @@ export class VisualConfigProvider {
     }
 
     return { symbol, backSymbol };
+  }
+
+  private findTokenTypeDefault(tokenTypeId: string): TokenTypeDefault | null {
+    const defaults = this.config?.tokenTypeDefaults ?? [];
+    for (const entry of defaults) {
+      if (matchesTokenTypeSelectors(tokenTypeId, entry.match)) {
+        return entry;
+      }
+    }
+    return null;
   }
 
   getCardTemplate(templateId: string): CardTemplate | null {

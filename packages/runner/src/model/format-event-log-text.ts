@@ -1,31 +1,5 @@
+import { groupEntriesByMove } from './event-log-grouping.js';
 import type { EventLogEntry } from './translate-effect-trace.js';
-
-interface MoveGroup {
-  readonly moveIndex: number;
-  readonly entries: readonly EventLogEntry[];
-}
-
-function groupByMove(entries: readonly EventLogEntry[]): readonly MoveGroup[] {
-  const groups: MoveGroup[] = [];
-
-  for (const entry of entries) {
-    const lastGroup = groups.at(-1);
-    if (lastGroup !== undefined && lastGroup.moveIndex === entry.moveIndex) {
-      groups[groups.length - 1] = {
-        moveIndex: lastGroup.moveIndex,
-        entries: [...lastGroup.entries, entry],
-      };
-      continue;
-    }
-
-    groups.push({
-      moveIndex: entry.moveIndex,
-      entries: [entry],
-    });
-  }
-
-  return groups;
-}
 
 function formatEntry(entry: EventLogEntry): string {
   const indent = entry.kind === 'trigger' && entry.depth > 0
@@ -39,7 +13,7 @@ export function formatEventLogAsText(entries: readonly EventLogEntry[]): string 
     return '';
   }
 
-  const groups = groupByMove(entries);
+  const groups = groupEntriesByMove(entries);
 
   return groups
     .map((group) => {

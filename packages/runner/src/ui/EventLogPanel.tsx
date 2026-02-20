@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 
+import { groupEntriesByMove } from '../model/event-log-grouping.js';
 import { formatEventLogAsText } from '../model/format-event-log-text.js';
 import type { EventLogEntry } from '../model/translate-effect-trace.js';
 import { CollapsiblePanel } from './CollapsiblePanel.js';
@@ -21,33 +22,6 @@ interface EventLogPanelProps {
   readonly entries: readonly EventLogEntry[];
   readonly onSelectEntry?: (entry: EventLogEntry) => void;
   readonly selectedEntryId?: string | null;
-}
-
-interface EventLogMoveGroup {
-  readonly moveIndex: number;
-  readonly entries: readonly EventLogEntry[];
-}
-
-function groupEntriesByMove(entries: readonly EventLogEntry[]): readonly EventLogMoveGroup[] {
-  const groups: EventLogMoveGroup[] = [];
-
-  for (const entry of entries) {
-    const lastGroup = groups.at(-1);
-    if (lastGroup !== undefined && lastGroup.moveIndex === entry.moveIndex) {
-      groups[groups.length - 1] = {
-        moveIndex: lastGroup.moveIndex,
-        entries: [...lastGroup.entries, entry],
-      };
-      continue;
-    }
-
-    groups.push({
-      moveIndex: entry.moveIndex,
-      entries: [entry],
-    });
-  }
-
-  return groups;
 }
 
 function isAtBottom(element: HTMLDivElement): boolean {

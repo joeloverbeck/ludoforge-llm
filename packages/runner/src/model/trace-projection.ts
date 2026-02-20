@@ -1,4 +1,5 @@
 import type { EffectTraceEntry, TriggerEvent } from '@ludoforge/engine/runtime';
+import { optionalPlayerId } from './model-utils.js';
 
 export interface EffectTraceProjection {
   readonly kind: EffectTraceEntry['kind'];
@@ -96,11 +97,4 @@ function toNumberOrUndefined(value: unknown): number | undefined {
     return undefined;
   }
   return value;
-}
-
-function optionalPlayerId(playerId: number | undefined): { readonly playerId?: number } {
-  if (playerId === undefined) {
-    return {};
-  }
-  return { playerId };
 }

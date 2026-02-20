@@ -3,6 +3,7 @@ import type { EffectTraceEntry, GameDef, TriggerEvent, TriggerLogEntry } from '@
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import type { EventLogKind } from './event-log-kind.js';
+import { optionalPlayerId } from './model-utils.js';
 import { projectEffectTraceEntry, projectTriggerEvent } from './trace-projection.js';
 
 export interface EventLogEntry {
@@ -357,13 +358,6 @@ function formatValue(value: unknown): string {
   } catch {
     return String(value);
   }
-}
-
-function optionalPlayerId(playerId: number | undefined): { readonly playerId?: number } {
-  if (playerId === undefined) {
-    return {};
-  }
-  return { playerId };
 }
 
 function summarizeLifecycleBinding(

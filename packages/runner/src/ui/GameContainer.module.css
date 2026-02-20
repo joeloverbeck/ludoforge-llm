@@ -45,3 +45,8 @@
 .sessionButton:hover {
   background: color-mix(in srgb, #1d4ed8 32%, var(--bg-panel));
 }
+
+.eventLogToggleActive {
+  border-color: rgba(74, 144, 217, 0.7);
+  background: color-mix(in srgb, #1d4ed8 28%, var(--bg-panel));
+}

@@ -72,6 +72,7 @@ function createGameStoreFixture(playerId: number | null, lifecycle: GameStore['g
     renderModel: null,
     initGame: vi.fn(async () => {}),
     initGameFromHistory: vi.fn(async () => {}),
+    hydrateFromReplayStep: vi.fn(),
     reportBootstrapFailure: vi.fn(),
     selectAction: vi.fn(async () => {}),
     chooseOne: vi.fn(async () => {}),

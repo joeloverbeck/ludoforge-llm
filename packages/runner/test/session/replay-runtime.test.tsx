@@ -2,6 +2,7 @@
 
 import { createElement } from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { asActionId } from '@ludoforge/engine/runtime';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SessionState } from '../../src/session/session-types.js';
@@ -193,7 +194,7 @@ describe('useReplayRuntime', () => {
         screen: 'replay',
         gameId: 'fitl',
         seed: 17,
-        moveHistory: [{ actionId: 'move:a', params: {} }],
+        moveHistory: [{ actionId: asActionId('move:a'), params: {} }],
       },
     }));
 

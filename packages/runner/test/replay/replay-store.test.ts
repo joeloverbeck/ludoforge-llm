@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { EffectTraceEntry, TriggerLogEntry } from '@ludoforge/engine/runtime';
 
 import { createReplayStore } from '../../src/replay/replay-store.js';
 import type { ReplayController } from '../../src/replay/replay-controller.js';
@@ -8,6 +9,8 @@ interface MutableReplayControllerState {
   isPlaying: boolean;
   playbackSpeed: number;
   totalMoves: number;
+  lastEffectTrace: readonly EffectTraceEntry[];
+  lastTriggerFirings: readonly TriggerLogEntry[];
 }
 
 function createControllerMock(initial?: Partial<MutableReplayControllerState>): ReplayController {
@@ -16,6 +19,8 @@ function createControllerMock(initial?: Partial<MutableReplayControllerState>): 
     isPlaying: false,
     playbackSpeed: 1,
     totalMoves: 6,
+    lastEffectTrace: [],
+    lastTriggerFirings: [],
     ...initial,
   };
 
@@ -31,6 +36,12 @@ function createControllerMock(initial?: Partial<MutableReplayControllerState>): 
     },
     get playbackSpeed() {
       return state.playbackSpeed;
+    },
+    get lastEffectTrace() {
+      return state.lastEffectTrace;
+    },
+    get lastTriggerFirings() {
+      return state.lastTriggerFirings;
     },
     stepForward: vi.fn(async () => {
       state.currentMoveIndex += 1;

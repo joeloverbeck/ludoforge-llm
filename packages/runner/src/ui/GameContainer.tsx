@@ -5,6 +5,7 @@ import type { StoreApi } from 'zustand';
 import { GameCanvas } from '../canvas/GameCanvas.js';
 import type { ScreenRect } from '../canvas/coordinate-bridge.js';
 import type { HoverAnchor, HoveredCanvasTarget } from '../canvas/hover-anchor-contract.js';
+import { isEditableTarget } from '../input/editable-target.js';
 import { createKeyboardCoordinator } from '../input/keyboard-coordinator.js';
 import type { GameStore } from '../store/game-store.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
@@ -31,6 +32,8 @@ import { TerminalOverlay } from './TerminalOverlay.js';
 import { AnimationControls } from './AnimationControls.js';
 import { deriveBottomBarState } from './bottom-bar-mode.js';
 import { buildFactionCssVariableStyle } from './faction-color-style.js';
+import { EventLogPanel } from './EventLogPanel.js';
+import { useEventLogEntries } from './useEventLogEntries.js';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts.js';
 import styles from './GameContainer.module.css';
 
@@ -110,6 +113,8 @@ export function GameContainer({
   const renderModel = useStore(store, (state) => state.renderModel);
   const gameDefFactions = useStore(store, (state) => state.gameDef?.factions);
   const [hoverAnchor, setHoverAnchor] = useState<HoverAnchor | null>(null);
+  const [eventLogVisible, setEventLogVisible] = useState(true);
+  const eventLogEntries = useEventLogEntries(store, visualConfigProvider);
   const keyboardShortcutsEnabled = !readOnlyMode && error === null && (gameLifecycle === 'playing' || gameLifecycle === 'terminal');
   const keyboardCoordinator = useMemo(
     () => (typeof document === 'undefined' ? null : createKeyboardCoordinator(document)),
@@ -123,6 +128,25 @@ export function GameContainer({
       keyboardCoordinator?.destroy();
     };
   }, [keyboardCoordinator]);
+
+  useEffect(() => {
+    if (keyboardCoordinator === null) {
+      return;
+    }
+
+    return keyboardCoordinator.register((event) => {
+      if (event.defaultPrevented || isEditableTarget(event.target) || event.key.toLowerCase() !== 'l') {
+        return false;
+      }
+
+      setEventLogVisible((current) => !current);
+      return true;
+    }, { priority: 15 });
+  }, [keyboardCoordinator]);
+
+  useEffect(() => {
+    setEventLogVisible(true);
+  }, [store]);
 
   const onHoverAnchorChange = useCallback((anchor: HoverAnchor | null): void => {
     setHoverAnchor(anchor);
@@ -152,6 +176,12 @@ export function GameContainer({
     (factionId) => visualConfigProvider.getFactionColor(factionId),
   );
   const tooltipAnchorState = resolveTooltipAnchorState(hoverAnchor);
+  const sidePanelContent = (
+    <>
+      {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, store)}
+      {eventLogVisible ? <EventLogPanel entries={eventLogEntries} /> : null}
+    </>
+  );
 
   const bottomBarContent = (() => {
     switch (bottomBarState.kind) {
@@ -191,6 +221,16 @@ export function GameContainer({
             <>
               {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, store)}
               <div className={styles.sessionButtons}>
+                <button
+                  type="button"
+                  className={`${styles.sessionButton} ${eventLogVisible ? styles.eventLogToggleActive : ''}`}
+                  data-testid="event-log-toggle-button"
+                  onClick={() => {
+                    setEventLogVisible((current) => !current);
+                  }}
+                >
+                  {eventLogVisible ? 'Hide Log' : 'Show Log'}
+                </button>
                 {onSave === undefined ? null : (
                   <button
                     type="button"
@@ -224,7 +264,7 @@ export function GameContainer({
               )}
             </>
           )}
-          sidePanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, store)}
+          sidePanelContent={sidePanelContent}
           bottomBarContent={bottomBarContent}
           floatingContent={(
             <>

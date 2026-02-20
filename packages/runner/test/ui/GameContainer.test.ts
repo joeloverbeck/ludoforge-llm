@@ -74,6 +74,10 @@ vi.mock('../../src/ui/AnimationControls.js', () => ({
   AnimationControls: () => createElement('div', { 'data-testid': 'animation-controls' }),
 }));
 
+vi.mock('../../src/ui/EventLogPanel.js', () => ({
+  EventLogPanel: () => createElement('div', { 'data-testid': 'event-log-panel' }),
+}));
+
 vi.mock('../../src/ui/InterruptBanner.js', () => ({
   InterruptBanner: () => createElement('div', { 'data-testid': 'interrupt-banner' }),
 }));
@@ -299,10 +303,12 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="scoreboard"');
     expect(html).toContain('data-testid="global-markers-bar"');
     expect(html).toContain('data-testid="active-effects-panel"');
+    expect(html).toContain('data-testid="event-log-panel"');
     expect(html).toContain('data-testid="warnings-toast"');
     expect(html).toContain('data-testid="player-hand-panel"');
     expect(html).toContain('data-testid="terminal-overlay"');
     expect(html).toContain('data-testid="tooltip-layer"');
+    expect(html).toContain('data-testid="event-log-toggle-button"');
     expectAppearsInOrder(html, [
       'interrupt-banner',
       'phase-indicator',
@@ -315,6 +321,7 @@ describe('GameContainer', () => {
       'scoreboard',
       'global-markers-bar',
       'active-effects-panel',
+      'event-log-panel',
     ]);
     expect(testDoubles.tooltipLayerProps).toMatchObject({
       hoverTarget: null,

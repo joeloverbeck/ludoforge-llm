@@ -5,6 +5,11 @@ import {
   rewriteBinderSurfaceStringsInNode,
   type StringSite,
 } from './binder-surface-registry.js';
+import {
+  copyTrustedMacroOriginMarker,
+  isTrustedMacroOriginCarrier,
+  markTrustedMacroOriginByExpansion,
+} from './macro-origin-trust.js';
 import type {
   EffectMacroDef,
   EffectMacroParamPrimitiveLiteral,
@@ -841,13 +846,14 @@ function annotateControlFlowMacroOrigins(
       const hasSameOrigin = isRecord(existing)
         && existing.macroId === origin.macroId
         && existing.stem === origin.stem;
-      if (!hasSameOrigin) {
+      const isTrusted = isTrustedMacroOriginCarrier(rewrittenNode.forEach);
+      if (!hasSameOrigin || !isTrusted) {
         rewrittenNode = {
           ...rewrittenNode,
-          forEach: {
+          forEach: markTrustedMacroOriginByExpansion({
             ...rewrittenNode.forEach,
             macroOrigin: origin,
-          },
+          }),
         };
         changed = true;
       }
@@ -861,13 +867,14 @@ function annotateControlFlowMacroOrigins(
       const hasSameOrigin = isRecord(existing)
         && existing.macroId === origin.macroId
         && existing.stem === origin.stem;
-      if (!hasSameOrigin) {
+      const isTrusted = isTrustedMacroOriginCarrier(rewrittenNode.reduce);
+      if (!hasSameOrigin || !isTrusted) {
         rewrittenNode = {
           ...rewrittenNode,
-          reduce: {
+          reduce: markTrustedMacroOriginByExpansion({
             ...rewrittenNode.reduce,
             macroOrigin: origin,
-          },
+          }),
         };
         changed = true;
       }
@@ -1104,10 +1111,11 @@ function expandEffectsInNode(
   visitedStack: ReadonlySet<string>,
   depth: number,
 ): GameSpecEffect {
-  const result: Record<string, unknown> = {};
+  const result: Record<PropertyKey, unknown> = {};
   for (const [key, value] of Object.entries(node)) {
     result[key] = expandValueRecursive(value, index, diagnostics, `${path}.${key}`, visitedStack, depth);
   }
+  copyTrustedMacroOriginMarker(node, result);
   return result as GameSpecEffect;
 }
 

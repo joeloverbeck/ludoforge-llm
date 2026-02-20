@@ -586,6 +586,127 @@ actor: 'active',
     assert.ok('reduce' in effects[0]!);
   });
 
+  it('compiler-emitted macroOrigin from effect macro expansion survives full compile pipeline', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'collect-forced-bets',
+      params: [],
+      exports: [],
+      effects: [
+        {
+          forEach: {
+            bind: '$player',
+            over: { query: 'players' },
+            effects: [],
+          },
+        },
+        {
+          reduce: {
+            itemBind: '$n',
+            accBind: '$acc',
+            over: { query: 'intsInRange', min: 1, max: 2 },
+            initial: 0,
+            next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+            resultBind: '$total',
+            in: [],
+          },
+        },
+      ],
+    };
+
+    const doc = {
+      ...makeMinimalDoc(),
+      effectMacros: [macroDef],
+      actions: [
+        {
+          id: 'macro-control-flow',
+actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [{ macro: 'collect-forced-bets', args: {} }],
+          limits: [],
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    const errors = result.diagnostics.filter((d) => d.severity === 'error');
+    assert.deepEqual(errors, [], `Unexpected errors: ${JSON.stringify(errors, null, 2)}`);
+    assert.ok(result.gameDef !== null, 'Expected valid GameDef');
+
+    const effects = result.gameDef.actions[0]?.effects ?? [];
+    assert.equal(effects.length, 2);
+    assert.deepEqual((effects[0] as { forEach: { macroOrigin?: unknown } }).forEach.macroOrigin, {
+      macroId: 'collect-forced-bets',
+      stem: 'player',
+    });
+    assert.deepEqual((effects[1] as { reduce: { macroOrigin?: unknown } }).reduce.macroOrigin, {
+      macroId: 'collect-forced-bets',
+      stem: 'total',
+    });
+  });
+
+  it('rejects authored macroOrigin payloads through full compile pipeline', () => {
+    const doc = {
+      ...makeMinimalDoc(),
+      actions: [
+        {
+          id: 'macro-origin-authored',
+actor: 'active',
+          executor: 'actor',
+          phase: ['main'],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [
+            {
+              forEach: {
+                bind: '$p',
+                macroOrigin: { macroId: 'authored', stem: 'player' },
+                over: { query: 'players' },
+                effects: [],
+              },
+            },
+            {
+              reduce: {
+                itemBind: '$n',
+                accBind: '$acc',
+                macroOrigin: { macroId: 'authored', stem: 'sum' },
+                over: { query: 'intsInRange', min: 1, max: 2 },
+                initial: 0,
+                next: 0,
+                resultBind: '$sum',
+                in: [],
+              },
+            },
+          ],
+          limits: [],
+        },
+      ],
+    };
+
+    const result = compileGameSpecToGameDef(doc);
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
+          && diagnostic.path === 'doc.actions.0.effects.0.forEach.macroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.macroOrigin',
+      ),
+      true,
+    );
+  });
+
   it('multiple macro invocations produce deterministic non-colliding decision binds', () => {
     const macroDef: EffectMacroDef = {
       id: 'choose-mode',

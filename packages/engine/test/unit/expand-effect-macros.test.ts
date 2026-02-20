@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { expandEffectMacros } from '../../src/cnl/expand-effect-macros.js';
 import { createEmptyGameSpecDoc, type EffectMacroDef, type GameSpecDoc } from '../../src/cnl/game-spec-doc.js';
+import { isTrustedMacroOriginCarrier } from '../../src/cnl/macro-origin-trust.js';
 
 function makeDoc(overrides: Partial<GameSpecDoc>): GameSpecDoc {
   return { ...createEmptyGameSpecDoc(), ...overrides };
@@ -244,6 +245,8 @@ phase: ['main'],
     assert.equal((expandedReduce.reduce.resultBind as string).startsWith('$__macro_collect_forced_bets_'), true);
     assert.deepEqual(expandedForEach.forEach.macroOrigin, { macroId: 'collect-forced-bets', stem: 'player' });
     assert.deepEqual(expandedReduce.reduce.macroOrigin, { macroId: 'collect-forced-bets', stem: 'total' });
+    assert.equal(isTrustedMacroOriginCarrier(expandedForEach.forEach), true);
+    assert.equal(isTrustedMacroOriginCarrier(expandedReduce.reduce), true);
   });
 
   it('nested macro expansion (macro A invokes macro B)', () => {

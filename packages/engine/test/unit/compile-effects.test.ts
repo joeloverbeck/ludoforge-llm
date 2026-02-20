@@ -2,6 +2,8 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { lowerEffectArray, type EffectLoweringContext } from '../../src/cnl/compile-effects.js';
+import { expandEffectMacros } from '../../src/cnl/expand-effect-macros.js';
+import { createEmptyGameSpecDoc, type EffectMacroDef } from '../../src/cnl/game-spec-doc.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 const context: EffectLoweringContext = {
@@ -121,12 +123,123 @@ describe('compile-effects lowering', () => {
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.reduce'), true);
   });
 
-  it('preserves macroOrigin on forEach and reduce during lowering', () => {
+  it('preserves trusted compiler macroOrigin on forEach and reduce during lowering', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'collect-forced-bets',
+      params: [],
+      exports: [],
+      effects: [
+        {
+          forEach: {
+            bind: '$player',
+            over: { query: 'players' },
+            effects: [],
+          },
+        },
+        {
+          reduce: {
+            itemBind: '$n',
+            accBind: '$acc',
+            over: { query: 'intsInRange', min: 1, max: 3 },
+            initial: 0,
+            next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+            resultBind: '$total',
+            in: [],
+          },
+        },
+      ],
+    };
+    const expansion = expandEffectMacros({
+      ...createEmptyGameSpecDoc(),
+      effectMacros: [macroDef],
+      setup: [{ macro: 'collect-forced-bets', args: {} }],
+    });
+    assert.equal(expansion.diagnostics.length, 0);
+
+    const result = lowerEffectArray(
+      expansion.doc.setup ?? [],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.ok(result.value !== null);
+    assert.equal(result.value.length, 2);
+
+    const forEachEffect = result.value[0] as { forEach: Record<string, unknown> };
+    const reduceEffect = result.value[1] as { reduce: Record<string, unknown> };
+
+    assert.equal(typeof forEachEffect.forEach.bind, 'string');
+    assert.equal((forEachEffect.forEach.bind as string).startsWith('$__macro_collect_forced_bets_'), true);
+    assert.deepEqual(forEachEffect.forEach.macroOrigin, { macroId: 'collect-forced-bets', stem: 'player' });
+    assert.deepEqual(forEachEffect.forEach.over, { query: 'players' });
+    assert.deepEqual(forEachEffect.forEach.effects, []);
+
+    assert.equal(typeof reduceEffect.reduce.itemBind, 'string');
+    assert.equal(typeof reduceEffect.reduce.accBind, 'string');
+    assert.equal(typeof reduceEffect.reduce.resultBind, 'string');
+    assert.equal((reduceEffect.reduce.itemBind as string).startsWith('$__macro_collect_forced_bets_'), true);
+    assert.equal((reduceEffect.reduce.accBind as string).startsWith('$__macro_collect_forced_bets_'), true);
+    assert.equal((reduceEffect.reduce.resultBind as string).startsWith('$__macro_collect_forced_bets_'), true);
+    assert.deepEqual(reduceEffect.reduce.macroOrigin, { macroId: 'collect-forced-bets', stem: 'total' });
+    assert.deepEqual(reduceEffect.reduce.over, { query: 'intsInRange', min: 1, max: 3 });
+    assert.equal(reduceEffect.reduce.initial, 0);
+    assert.deepEqual(reduceEffect.reduce.in, []);
+  });
+
+  it('rejects malformed macroOrigin payloads on control-flow effects', () => {
     const result = lowerEffectArray(
       [
         {
           forEach: {
-            bind: '$__macro_collect_forced_bets_path_player',
+            bind: '$tok',
+            macroOrigin: { macroId: 'collect-forced-bets' },
+            over: { query: 'players' },
+            effects: [],
+          },
+        },
+        {
+          reduce: {
+            itemBind: '$n',
+            accBind: '$acc',
+            macroOrigin: { stem: 'straightHigh' },
+            over: { query: 'intsInRange', min: 1, max: 3 },
+            initial: 0,
+            next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+            resultBind: '$sum',
+            in: [],
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assert.equal(result.value, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.0.forEach.macroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_INVALID'
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.macroOrigin',
+      ),
+      true,
+    );
+  });
+
+  it('rejects untrusted authored macroOrigin payloads', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          forEach: {
+            bind: '$tok',
             macroOrigin: { macroId: 'collect-forced-bets', stem: 'player' },
             over: { query: 'players' },
             effects: [],
@@ -140,7 +253,7 @@ describe('compile-effects lowering', () => {
             over: { query: 'intsInRange', min: 1, max: 3 },
             initial: 0,
             next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
-            resultBind: '$__macro_hand_rank_score_path_straightHigh',
+            resultBind: '$sum',
             in: [],
           },
         },
@@ -149,29 +262,23 @@ describe('compile-effects lowering', () => {
       'doc.actions.0.effects',
     );
 
-    assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
-      {
-        forEach: {
-          bind: '$__macro_collect_forced_bets_path_player',
-          macroOrigin: { macroId: 'collect-forced-bets', stem: 'player' },
-          over: { query: 'players' },
-          effects: [],
-        },
-      },
-      {
-        reduce: {
-          itemBind: '$n',
-          accBind: '$acc',
-          macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
-          over: { query: 'intsInRange', min: 1, max: 3 },
-          initial: 0,
-          next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
-          resultBind: '$__macro_hand_rank_score_path_straightHigh',
-          in: [],
-        },
-      },
-    ]);
+    assert.equal(result.value, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
+          && diagnostic.path === 'doc.actions.0.effects.0.forEach.macroOrigin',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED'
+          && diagnostic.path === 'doc.actions.0.effects.1.reduce.macroOrigin',
+      ),
+      true,
+    );
   });
 
   it('emits missing capability diagnostics for unsupported effect nodes', () => {

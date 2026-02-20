@@ -141,6 +141,72 @@ export function validateActions(doc: GameSpecDoc, diagnostics: Diagnostic[]): re
   return uniqueSorted(collectedActionIds);
 }
 
+export function validateAuthoredMacroOriginBoundary(doc: GameSpecDoc, diagnostics: Diagnostic[]): void {
+  validateEffectArrayForAuthoredMacroOrigin(doc.setup, 'doc.setup', diagnostics);
+
+  if (doc.actions !== null) {
+    for (const [index, action] of doc.actions.entries()) {
+      if (!isRecord(action)) {
+        continue;
+      }
+      validateEffectArrayForAuthoredMacroOrigin(action.cost, `doc.actions.${index}.cost`, diagnostics);
+      validateEffectArrayForAuthoredMacroOrigin(action.effects, `doc.actions.${index}.effects`, diagnostics);
+    }
+  }
+
+  if (doc.triggers !== null) {
+    for (const [index, trigger] of doc.triggers.entries()) {
+      if (!isRecord(trigger)) {
+        continue;
+      }
+      validateEffectArrayForAuthoredMacroOrigin(trigger.effects, `doc.triggers.${index}.effects`, diagnostics);
+    }
+  }
+
+  if (isRecord(doc.turnStructure)) {
+    const validatePhases = (source: unknown, basePath: string): void => {
+      if (!Array.isArray(source)) {
+        return;
+      }
+      for (const [index, phase] of source.entries()) {
+        if (!isRecord(phase)) {
+          continue;
+        }
+        validateEffectArrayForAuthoredMacroOrigin(phase.onEnter, `${basePath}.${index}.onEnter`, diagnostics);
+        validateEffectArrayForAuthoredMacroOrigin(phase.onExit, `${basePath}.${index}.onExit`, diagnostics);
+      }
+    };
+    validatePhases(doc.turnStructure.phases, 'doc.turnStructure.phases');
+    validatePhases(doc.turnStructure.interrupts, 'doc.turnStructure.interrupts');
+  }
+
+  if (doc.actionPipelines !== null) {
+    for (const [pipelineIndex, pipeline] of doc.actionPipelines.entries()) {
+      if (!isRecord(pipeline)) {
+        continue;
+      }
+      validateEffectArrayForAuthoredMacroOrigin(
+        pipeline.costEffects,
+        `doc.actionPipelines.${pipelineIndex}.costEffects`,
+        diagnostics,
+      );
+      if (!Array.isArray(pipeline.stages)) {
+        continue;
+      }
+      for (const [stageIndex, stage] of pipeline.stages.entries()) {
+        if (!isRecord(stage)) {
+          continue;
+        }
+        validateEffectArrayForAuthoredMacroOrigin(
+          stage.effects,
+          `doc.actionPipelines.${pipelineIndex}.stages.${stageIndex}.effects`,
+          diagnostics,
+        );
+      }
+    }
+  }
+}
+
 export function validateTurnStructure(doc: GameSpecDoc, diagnostics: Diagnostic[]): readonly string[] {
   const collectedPhaseIds: string[] = [];
   const turnStructure = doc.turnStructure;
@@ -247,5 +313,57 @@ export function validateTerminal(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
       continue;
     }
     validateUnknownKeys(endCondition, END_CONDITION_KEYS, `doc.terminal.conditions.${index}`, diagnostics, 'end condition');
+  }
+}
+
+function validateEffectArrayForAuthoredMacroOrigin(
+  effects: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): void {
+  if (!Array.isArray(effects)) {
+    return;
+  }
+  for (const [index, effect] of effects.entries()) {
+    validateEffectNodeForAuthoredMacroOrigin(effect, `${path}.${index}`, diagnostics);
+  }
+}
+
+function validateEffectNodeForAuthoredMacroOrigin(
+  node: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): void {
+  if (Array.isArray(node)) {
+    for (const [index, entry] of node.entries()) {
+      validateEffectNodeForAuthoredMacroOrigin(entry, `${path}.${index}`, diagnostics);
+    }
+    return;
+  }
+  if (!isRecord(node)) {
+    return;
+  }
+
+  if (isRecord(node.forEach) && Object.prototype.hasOwnProperty.call(node.forEach, 'macroOrigin')) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_EFFECT_MACRO_ORIGIN_FORBIDDEN',
+      path: `${path}.forEach.macroOrigin`,
+      severity: 'error',
+      message: 'forEach.macroOrigin is compiler-owned metadata and cannot be authored in GameSpecDoc.',
+      suggestion: 'Remove forEach.macroOrigin from authored YAML; compiler expansion emits provenance.',
+    });
+  }
+  if (isRecord(node.reduce) && Object.prototype.hasOwnProperty.call(node.reduce, 'macroOrigin')) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_EFFECT_MACRO_ORIGIN_FORBIDDEN',
+      path: `${path}.reduce.macroOrigin`,
+      severity: 'error',
+      message: 'reduce.macroOrigin is compiler-owned metadata and cannot be authored in GameSpecDoc.',
+      suggestion: 'Remove reduce.macroOrigin from authored YAML; compiler expansion emits provenance.',
+    });
+  }
+
+  for (const [key, value] of Object.entries(node)) {
+    validateEffectNodeForAuthoredMacroOrigin(value, `${path}.${key}`, diagnostics);
   }
 }

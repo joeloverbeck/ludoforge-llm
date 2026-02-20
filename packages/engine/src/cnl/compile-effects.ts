@@ -23,6 +23,7 @@ import { createBindingShadowWarning } from './binding-diagnostics.js';
 import { SUPPORTED_EFFECT_KINDS } from './effect-kind-registry.js';
 import { normalizePlayerSelector } from './compile-selectors.js';
 import { canonicalizeZoneSelector } from './compile-zones.js';
+import { isTrustedMacroOriginCarrier } from './macro-origin-trust.js';
 
 type ZoneOwnershipKind = 'none' | 'player' | 'mixed';
 
@@ -797,7 +798,8 @@ function lowerForEachEffect(
   diagnostics.push(...loweredEffects.diagnostics);
 
   const countBind = typeof source.countBind === 'string' ? source.countBind : undefined;
-  const macroOrigin = readMacroOrigin(source.macroOrigin);
+  const macroOrigin = readMacroOrigin(source.macroOrigin, source, `${path}.macroOrigin`);
+  diagnostics.push(...macroOrigin.diagnostics);
   let loweredIn: readonly EffectAST[] | undefined;
   if (countBind !== undefined && Array.isArray(source.in)) {
     diagnostics.push(...scope.shadowWarning(countBind, `${path}.countBind`));
@@ -811,7 +813,7 @@ function lowerForEachEffect(
     loweredIn = inResult.value;
   }
 
-  if (over.value === null || loweredEffects.value === null) {
+  if (over.value === null || loweredEffects.value === null || macroOrigin.value === null) {
     return { value: null, diagnostics };
   }
 
@@ -819,7 +821,7 @@ function lowerForEachEffect(
     value: {
       forEach: {
         bind: source.bind,
-        ...(macroOrigin === undefined ? {} : { macroOrigin }),
+        ...(macroOrigin.value === undefined ? {} : { macroOrigin: macroOrigin.value }),
         over: over.value,
         effects: loweredEffects.value,
         ...(loweredLimit !== undefined ? { limit: loweredLimit } : {}),
@@ -850,7 +852,7 @@ function lowerReduceEffect(
   const itemBind = source.itemBind;
   const accBind = source.accBind;
   const resultBind = source.resultBind;
-  const macroOrigin = readMacroOrigin(source.macroOrigin);
+  const macroOrigin = readMacroOrigin(source.macroOrigin, source, `${path}.macroOrigin`);
 
   const duplicateBindings = new Set<string>();
   if (itemBind === accBind) {
@@ -879,6 +881,7 @@ function lowerReduceEffect(
   const over = lowerQueryNode(source.over, condCtx, `${path}.over`);
   const initial = lowerValueNode(source.initial, condCtx, `${path}.initial`);
   const diagnostics = [
+    ...macroOrigin.diagnostics,
     ...over.diagnostics,
     ...initial.diagnostics,
     ...scope.shadowWarning(itemBind, `${path}.itemBind`),
@@ -908,7 +911,13 @@ function lowerReduceEffect(
   );
   diagnostics.push(...loweredIn.diagnostics);
 
-  if (over.value === null || initial.value === null || next.value === null || loweredIn.value === null) {
+  if (
+    over.value === null
+    || initial.value === null
+    || next.value === null
+    || loweredIn.value === null
+    || macroOrigin.value === null
+  ) {
     return { value: null, diagnostics };
   }
 
@@ -917,7 +926,7 @@ function lowerReduceEffect(
       reduce: {
         itemBind,
         accBind,
-        ...(macroOrigin === undefined ? {} : { macroOrigin }),
+        ...(macroOrigin.value === undefined ? {} : { macroOrigin: macroOrigin.value }),
         over: over.value,
         initial: initial.value,
         next: next.value,
@@ -1837,16 +1846,44 @@ function isInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value);
 }
 
-function readMacroOrigin(value: unknown): MacroOrigin | undefined {
-  if (!isRecord(value)) {
-    return undefined;
+function readMacroOrigin(
+  value: unknown,
+  carrier: Record<string, unknown>,
+  path: string,
+): EffectLoweringResult<MacroOrigin | undefined> {
+  if (value === undefined) {
+    return { value: undefined, diagnostics: [] };
   }
-  if (typeof value.macroId !== 'string' || typeof value.stem !== 'string') {
-    return undefined;
+  if (!isRecord(value) || typeof value.macroId !== 'string' || typeof value.stem !== 'string') {
+    return {
+      value: null,
+      diagnostics: [{
+        code: 'CNL_COMPILER_MACRO_ORIGIN_INVALID',
+        path,
+        severity: 'error',
+        message: 'macroOrigin must be { macroId: string, stem: string } when present.',
+        suggestion: 'Remove macroOrigin from authored YAML; compiler expansion manages this field.',
+      }],
+    };
+  }
+  if (!isTrustedMacroOriginCarrier(carrier)) {
+    return {
+      value: null,
+      diagnostics: [{
+        code: 'CNL_COMPILER_MACRO_ORIGIN_UNTRUSTED',
+        path,
+        severity: 'error',
+        message: 'macroOrigin is compiler-owned metadata and cannot be authored directly.',
+        suggestion: 'Remove macroOrigin from authored YAML and rely on effect macro expansion.',
+      }],
+    };
   }
   return {
-    macroId: value.macroId,
-    stem: value.stem,
+    value: {
+      macroId: value.macroId,
+      stem: value.stem,
+    },
+    diagnostics: [],
   };
 }
 

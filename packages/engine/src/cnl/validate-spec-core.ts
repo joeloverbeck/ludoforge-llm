@@ -1,7 +1,7 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import type { GameSpecSourceMap } from './source-map.js';
-import { validateActions, validateTerminal, validateTurnStructure } from './validate-actions.js';
+import { validateActions, validateAuthoredMacroOriginBoundary, validateTerminal, validateTurnStructure } from './validate-actions.js';
 import {
   validateActionPipelines,
   validateDataAssets,
@@ -51,6 +51,7 @@ export function validateGameSpec(
   validateDerivedMetrics(doc, zoneIds, diagnostics);
   validateEventDecks(doc, diagnostics);
   validateScoring(doc, diagnostics);
+  validateAuthoredMacroOriginBoundary(doc, diagnostics);
 
   validateCrossReferences(doc, zoneIds, actionIds, phaseIds, diagnostics);
   validateDuplicateIdentifiers(doc, diagnostics);

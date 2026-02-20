@@ -35,6 +35,89 @@ describe('validateGameSpec structural rules', () => {
     assert.equal(diagnostics.length, 0);
   });
 
+  it('rejects authored macroOrigin fields in effect sections', () => {
+    const diagnostics = validateGameSpec({
+      ...createStructurallyValidDoc(),
+      setup: [
+        {
+          forEach: {
+            bind: '$p',
+            macroOrigin: { macroId: 'authored', stem: 'setup' },
+            over: { query: 'players' },
+            effects: [],
+          },
+        },
+      ],
+      turnStructure: {
+        phases: [
+          {
+            id: 'main',
+            onEnter: [
+              {
+                forEach: {
+                  bind: '$p',
+                  macroOrigin: { macroId: 'authored', stem: 'onEnter' },
+                  over: { query: 'players' },
+                  effects: [],
+                },
+              },
+            ],
+          },
+        ],
+      },
+      actions: [
+        {
+          ...createStructurallyValidDoc().actions[0],
+          cost: [
+            {
+              forEach: {
+                bind: '$p',
+                macroOrigin: { macroId: 'authored', stem: 'cost' },
+                over: { query: 'players' },
+                effects: [],
+              },
+            },
+          ],
+          effects: [
+            {
+              reduce: {
+                itemBind: '$n',
+                accBind: '$acc',
+                macroOrigin: { macroId: 'authored', stem: 'effects' },
+                over: { query: 'intsInRange', min: 1, max: 2 },
+                initial: 0,
+                next: 0,
+                resultBind: '$sum',
+                in: [],
+              },
+            },
+          ],
+        },
+      ],
+    } as Parameters<typeof validateGameSpec>[0]);
+
+    const macroOriginDiagnostics = diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_VALIDATOR_EFFECT_MACRO_ORIGIN_FORBIDDEN',
+    );
+    assert.equal(macroOriginDiagnostics.length, 4);
+    assert.equal(
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.setup.0.forEach.macroOrigin'),
+      true,
+    );
+    assert.equal(
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.turnStructure.phases.0.onEnter.0.forEach.macroOrigin'),
+      true,
+    );
+    assert.equal(
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.cost.0.forEach.macroOrigin'),
+      true,
+    );
+    assert.equal(
+      macroOriginDiagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.reduce.macroOrigin'),
+      true,
+    );
+  });
+
   it('accepts optional sourceMap argument', () => {
     const diagnostics = validateGameSpec(createStructurallyValidDoc(), { sourceMap: { byPath: {} } });
     assert.equal(diagnostics.length, 0);

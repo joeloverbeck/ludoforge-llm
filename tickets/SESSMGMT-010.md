@@ -4,11 +4,18 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: SESSMGMT-005, SESSMGMT-008, SESSMGMT-009
+**Deps**: SESSMGMT-009
 
 ## Problem
 
-The persistence layer (SESSMGMT-009) provides CRUD operations, and the bridge wiring (SESSMGMT-008) accumulates moves. Now the user needs UI to save and load games.
+The persistence layer (SESSMGMT-009) provides CRUD operations, and the current runner session/runtime architecture already accumulates moves during active play. Now the user needs UI to save and load games.
+
+## Assumption Reassessment (2026-02-20)
+
+1. Session routing, unsaved-changes handling, and move accumulation are already implemented in current runner code (`App.tsx`, `session-store`, `active-game-runtime`).
+2. `SESSMGMT-009` now persists `seed` as `number` (safe integer), not stringified/`BigInt`.
+3. `GameSelectionScreen` already renders a saved-games section and consumes `listSavedGames()` summary rows.
+4. Ticket references to `SESSMGMT-005`, `SESSMGMT-006`, and `SESSMGMT-008` are stale; this ticket should integrate with current architecture directly.
 
 ## What to Change
 
@@ -37,13 +44,13 @@ Modal dialog listing saved games:
 - Add a "Save" button to the game toolbar/UI that opens `SaveGameDialog`.
 - Add a "Load" button to the game toolbar/UI that opens `LoadGameDialog`.
 - Or alternatively: Add "Save" to the terminal overlay (save completed game).
-- The Game Selection Screen (SESSMGMT-006) saved games section should also use `LoadGameDialog`'s resume/replay logic. Update the wiring if needed.
+- The existing `GameSelectionScreen` saved games section should use shared resume/replay/delete wiring (shared utility or shared dialog logic) instead of duplicating flow logic.
 
 ### 6. Resume flow implementation
 
 When resuming from a save:
 1. `loadGame(id)` retrieves the `SavedGameRecord`.
-2. Call `sessionStore.startGame(BigInt(record.seed), record.playerConfig)` to transition to `activeGame`.
+2. Call `sessionStore.startGame(record.seed, record.playerConfig)` to transition to `activeGame`.
 3. On `activeGame` mount, instead of normal init, use `bridge.init(gameDef, seed)` + `bridge.playSequence(moveHistory)` to reconstruct state.
 4. Pre-populate `sessionStore.moveAccumulator` with the loaded `moveHistory`.
 5. If `isTerminal === false`, human can continue playing.
@@ -66,8 +73,7 @@ When resuming from a save:
 
 - Dexie database schema (done in SESSMGMT-009)
 - Save manager CRUD (done in SESSMGMT-009)
-- Move accumulation wiring (done in SESSMGMT-008)
-- Session store (done in SESSMGMT-004)
+- Session routing/store primitives (`session-store`, `active-game-runtime`) already implemented
 - Replay controller (SESSMGMT-011, 012)
 - Event log (SESSMGMT-013, 014)
 - Cloud save, file export, user accounts

@@ -181,6 +181,8 @@ Spec 42 performs a **subtractive** engine change: all visual/presentation fields
 
 Each spec will generate implementation tickets following the project's existing pattern (e.g., `MONOREPO-001`, `WRKBRIDGE-001`, etc.). Tickets are created when a spec becomes the active implementation target — not pre-created for all specs.
 
+All new tickets should be authored from `tickets/_TEMPLATE.md` and comply with `tickets/README.md` (assumption reassessment, architecture check, and explicit agnostic-boundary validation) before implementation starts.
+
 Suggested ticket series prefixes:
 
 | Spec | Ticket Prefix |

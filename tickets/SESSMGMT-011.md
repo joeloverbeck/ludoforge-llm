@@ -4,11 +4,17 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: SESSMGMT-004, SESSMGMT-005
+**Deps**: None (integrates with existing session/replay route state already present in runner)
 
 ## Problem
 
 The runner needs a replay system that can step forward, backward, and jump to any move in a completed game. This ticket implements the replay controller logic and its Zustand store.
+
+## Assumption Reassessment (2026-02-20)
+
+1. Replay route state already exists in session types/store and `App.tsx` currently renders a replay placeholder.
+2. Runner seed contracts use `number` non-negative safe integers (pre-game/session state), not `bigint`.
+3. Ticket references to older setup tickets (`SESSMGMT-004`, `SESSMGMT-005`) are stale relative to the current repository state.
 
 ## What to Change
 
@@ -48,7 +54,7 @@ Factory function:
 export function createReplayController(
   bridge: GameBridge,
   gameDef: GameDef,
-  seed: bigint,
+  seed: number,
   moveHistory: readonly Move[],
   onStateChange: () => void, // called after each state update
 ): ReplayController;
@@ -75,8 +81,7 @@ Zustand store for replay UI state:
 - Replay UI components (SESSMGMT-012)
 - Save/load persistence (SESSMGMT-009, 010)
 - Event log panel (SESSMGMT-013, 014)
-- App.tsx routing for replay screen (done in SESSMGMT-005)
-- Session store changes (done in SESSMGMT-004)
+- App/session routing primitives (already present in current runner)
 
 ## Acceptance Criteria
 

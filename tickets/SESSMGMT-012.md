@@ -4,11 +4,17 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: SESSMGMT-005, SESSMGMT-011
+**Deps**: SESSMGMT-011
 
 ## Problem
 
 The replay controller (SESSMGMT-011) provides the logic but the user needs a UI with a progress bar scrubber, step controls, play/pause, speed selector, and keyboard shortcuts.
+
+## Assumption Reassessment (2026-02-20)
+
+1. `App.tsx` already contains replay route wiring and currently renders `ReplayPlaceholder`.
+2. Session routing/store primitives are already implemented; this ticket should focus on replay UI composition and wiring to the replay controller/store.
+3. Dependency on `SESSMGMT-005` is stale and removed.
 
 ## What to Change
 
@@ -42,7 +48,7 @@ Integrate with the existing keyboard coordinator (`packages/runner/src/input/key
 
 ### 5. Wire into `App.tsx`
 
-Replace the `replay` placeholder from SESSMGMT-005 with `<ReplayScreen />`.
+Replace the existing replay placeholder with `<ReplayScreen />`.
 
 ## Files to Touch
 
@@ -60,7 +66,7 @@ Replace the `replay` placeholder from SESSMGMT-005 with `<ReplayScreen />`.
 - Replay controller logic (done in SESSMGMT-011)
 - Save/load persistence (SESSMGMT-009, 010)
 - Event log panel (SESSMGMT-013, 014)
-- Session store (done in SESSMGMT-004)
+- Session routing/store primitives (already present in current runner)
 - Animation system modifications (replay uses existing GSAP animation infrastructure)
 
 ## Acceptance Criteria

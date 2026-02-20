@@ -50,11 +50,20 @@ interface GameStoreState {
   readonly aiPlaybackAutoSkip: boolean;
   readonly aiSkipRequestToken: number;
   readonly playerSeats: ReadonlyMap<PlayerId, PlayerSeat>;
+  readonly appliedMoveEvent: AppliedMoveEvent | null;
+  readonly appliedMoveSequence: number;
   readonly renderModel: RenderModel | null;
 }
 type MutableGameStoreState = Omit<GameStoreState, 'renderModel'>;
 
 export type AiStepOutcome = 'advanced' | 'no-op' | 'human-turn' | 'terminal' | 'no-legal-moves';
+
+export interface AppliedMoveEvent {
+  readonly sequence: number;
+  readonly actorId: PlayerId;
+  readonly actorSeat: PlayerSeat | 'unknown';
+  readonly move: Move;
+}
 
 interface GameStoreActions {
   initGame(def: GameDef, seed: number, playerConfig: readonly PlayerSeatConfig[]): Promise<void>;
@@ -158,6 +167,8 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   aiPlaybackSpeed: '1x',
   aiPlaybackAutoSkip: false,
   aiSkipRequestToken: 0,
+  appliedMoveEvent: null,
+  appliedMoveSequence: 0,
   renderModel: null,
 };
 
@@ -178,6 +189,8 @@ function resetSessionState(): Pick<
   | 'partialMove'
   | 'choiceStack'
   | 'playerSeats'
+  | 'appliedMoveEvent'
+  | 'appliedMoveSequence'
 > {
   return {
     gameDef: null,
@@ -192,6 +205,8 @@ function resetSessionState(): Pick<
     partialMove: null,
     choiceStack: [],
     playerSeats: new Map<PlayerId, PlayerSeat>(),
+    appliedMoveEvent: null,
+    appliedMoveSequence: 0,
   };
 }
 
@@ -251,8 +266,33 @@ function buildStateMutationState(
     gameLifecycle: lifecycle,
     effectTrace,
     triggerFirings,
+    appliedMoveEvent: null,
     error: null,
     ...resetMoveConstructionState(),
+  };
+}
+
+function buildAppliedMoveEventPatch(
+  state: Pick<GameStoreState, 'renderModel' | 'playerSeats' | 'appliedMoveSequence'>,
+  move: Move,
+): Pick<GameStoreState, 'appliedMoveEvent' | 'appliedMoveSequence'> {
+  const actorId = state.renderModel?.activePlayerID;
+  if (actorId === undefined) {
+    return {
+      appliedMoveEvent: null,
+      appliedMoveSequence: state.appliedMoveSequence,
+    };
+  }
+
+  const sequence = state.appliedMoveSequence + 1;
+  return {
+    appliedMoveSequence: sequence,
+    appliedMoveEvent: {
+      sequence,
+      actorId,
+      actorSeat: state.playerSeats.get(actorId) ?? 'unknown',
+      move,
+    },
   };
 }
 
@@ -457,6 +497,8 @@ function snapshotMutableState(state: GameStore): MutableGameStoreState {
     aiPlaybackAutoSkip: state.aiPlaybackAutoSkip,
     aiSkipRequestToken: state.aiSkipRequestToken,
     playerSeats: state.playerSeats,
+    appliedMoveEvent: state.appliedMoveEvent,
+    appliedMoveSequence: state.appliedMoveSequence,
   };
 }
 
@@ -636,6 +678,7 @@ export function createGameStore(
 
         const result = await bridge.applyMove(aiMove, undefined, toOperationStamp(ctx));
         const mutationInputs = await deriveMutationInputs(result.state);
+        const appliedMovePatch = buildAppliedMoveEventPatch(state, aiMove);
         const lifecycle = assertLifecycleTransition(
           state.gameLifecycle,
           lifecycleFromTerminal(mutationInputs.terminal),
@@ -650,6 +693,7 @@ export function createGameStore(
             result.effectTrace ?? [],
             result.triggerFirings,
           ),
+          ...appliedMovePatch,
         });
         if (!wasApplied) {
           return 'no-op';
@@ -785,6 +829,7 @@ export function createGameStore(
 
             const result = await bridge.applyMove(move, undefined, toOperationStamp(ctx));
             const mutationInputs = await deriveMutationInputs(result.state);
+            const appliedMovePatch = buildAppliedMoveEventPatch(state, move);
             const lifecycle = assertLifecycleTransition(
               state.gameLifecycle,
               lifecycleFromTerminal(mutationInputs.terminal),
@@ -799,6 +844,7 @@ export function createGameStore(
                 result.effectTrace ?? [],
                 result.triggerFirings,
               ),
+              ...appliedMovePatch,
             });
             if (wasApplied) {
               options?.onMoveApplied?.(move);

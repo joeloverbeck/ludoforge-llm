@@ -26,6 +26,10 @@ import { createTableOverlayRenderer } from './renderers/table-overlay-renderer.j
 import { createTokenRenderer } from './renderers/token-renderer';
 import { drawTableBackground } from './renderers/table-background-renderer.js';
 import { createZoneRenderer } from './renderers/zone-renderer';
+import {
+  createActionAnnouncementRenderer,
+  type ActionAnnouncementRenderer,
+} from './renderers/action-announcement-renderer.js';
 import { createCanvasUpdater, type CanvasUpdater } from './canvas-updater';
 import { setupViewport, type ViewportResult } from './viewport-setup';
 import { getOrComputeLayout } from '../layout/layout-cache.js';
@@ -90,6 +94,7 @@ interface GameCanvasRuntimeDeps {
   readonly createAdjacencyRenderer: typeof createAdjacencyRenderer;
   readonly createTokenRenderer: typeof createTokenRenderer;
   readonly createTableOverlayRenderer: typeof createTableOverlayRenderer;
+  readonly createActionAnnouncementRenderer: typeof createActionAnnouncementRenderer;
   readonly createCanvasUpdater: typeof createCanvasUpdater;
   readonly createCoordinateBridge: typeof createCoordinateBridge;
   readonly createAnimationController: typeof createAnimationController;
@@ -109,6 +114,7 @@ const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   createAdjacencyRenderer,
   createTokenRenderer,
   createTableOverlayRenderer,
+  createActionAnnouncementRenderer,
   createCanvasUpdater,
   createCoordinateBridge,
   createAnimationController,
@@ -253,6 +259,11 @@ export async function createGameCanvasRuntime(
     gameCanvas.layers.tableOverlayLayer,
     options.visualConfigProvider,
   );
+  const actionAnnouncementRenderer = deps.createActionAnnouncementRenderer({
+    store: options.store,
+    positionStore,
+    parentContainer: gameCanvas.layers.effectsGroup,
+  });
 
   const canvasUpdater = deps.createCanvasUpdater({
     store: options.store,
@@ -266,6 +277,7 @@ export async function createGameCanvasRuntime(
   });
   let animationController: AnimationController | null = null;
   let aiPlaybackController: AiPlaybackController | null = null;
+  let actionAnnouncements: ActionAnnouncementRenderer | null = null;
   let reducedMotionObserver: ReducedMotionObserver | null = null;
   try {
     animationController = deps.createAnimationController({
@@ -296,6 +308,13 @@ export async function createGameCanvasRuntime(
   };
   applyAnimationSpeed(selectorStore.getState().animationPlaybackSpeed);
   applyAnimationPaused(selectorStore.getState().animationPaused);
+
+  try {
+    actionAnnouncementRenderer.start();
+    actionAnnouncements = actionAnnouncementRenderer;
+  } catch (error) {
+    console.warn('Action announcement renderer initialization failed. Continuing without AI action announcements.', error);
+  }
 
   try {
     aiPlaybackController = deps.createAiPlaybackController({
@@ -459,6 +478,7 @@ export async function createGameCanvasRuntime(
       reducedMotionObserver?.destroy();
       unsubscribePhaseAnnouncement();
       cleanupKeyboardSelect();
+      actionAnnouncements?.destroy();
       aiPlaybackController?.destroy();
       animationController?.destroy();
       ariaAnnouncer.destroy();

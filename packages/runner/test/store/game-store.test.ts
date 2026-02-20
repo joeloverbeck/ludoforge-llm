@@ -511,6 +511,13 @@ describe('createGameStore', () => {
 
     expect(onMoveApplied).toHaveBeenCalledTimes(1);
     expect(onMoveApplied).toHaveBeenCalledWith({ actionId: asActionId('tick'), params: {} });
+    expect(store.getState().appliedMoveSequence).toBe(1);
+    expect(store.getState().appliedMoveEvent).toEqual({
+      sequence: 1,
+      actorId: asPlayerId(0),
+      actorSeat: 'human',
+      move: { actionId: asActionId('tick'), params: {} },
+    });
   });
 
   it('confirmMove stores effect trace and trigger firings from applyMove', async () => {
@@ -791,6 +798,13 @@ describe('createGameStore', () => {
     expect(outcome).toBe('advanced');
     expect(onMoveApplied).toHaveBeenCalledTimes(1);
     expect(onMoveApplied).toHaveBeenCalledWith(aiMove);
+    expect(store.getState().appliedMoveSequence).toBe(1);
+    expect(store.getState().appliedMoveEvent).toEqual({
+      sequence: 1,
+      actorId: asPlayerId(1),
+      actorSeat: 'ai-random',
+      move: aiMove,
+    });
   });
 
   it('reports mixed human and AI moves to callback in applied order', async () => {
@@ -858,6 +872,13 @@ describe('createGameStore', () => {
       aiMove,
       humanMove,
     ]);
+    expect(store.getState().appliedMoveSequence).toBe(3);
+    expect(store.getState().appliedMoveEvent).toEqual({
+      sequence: 3,
+      actorId: asPlayerId(0),
+      actorSeat: 'human',
+      move: humanMove,
+    });
   });
 
   it('resolveAiStep returns no-op when there is no initialized session', async () => {

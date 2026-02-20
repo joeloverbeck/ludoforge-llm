@@ -69,6 +69,8 @@ function createGameStoreFixture(playerId: number | null, lifecycle: GameStore['g
     aiPlaybackAutoSkip: false,
     aiSkipRequestToken: 0,
     playerSeats: new Map(),
+    appliedMoveEvent: null,
+    appliedMoveSequence: 0,
     renderModel: null,
     initGame: vi.fn(async () => {}),
     initGameFromHistory: vi.fn(async () => {}),

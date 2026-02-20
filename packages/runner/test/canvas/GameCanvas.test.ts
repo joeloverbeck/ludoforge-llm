@@ -257,6 +257,14 @@ function createRuntimeFixture() {
       lifecycle.push('ai-playback-controller-destroy');
     }),
   };
+  const actionAnnouncementRenderer = {
+    start: vi.fn(() => {
+      lifecycle.push('action-announcement-renderer-start');
+    }),
+    destroy: vi.fn(() => {
+      lifecycle.push('action-announcement-renderer-destroy');
+    }),
+  };
 
   const attachKeyboardSelect = vi.fn(() => keyboardCleanup);
   const attachZoneSelectHandlers = vi.fn(() => vi.fn());
@@ -279,6 +287,7 @@ function createRuntimeFixture() {
       return tokenRenderer;
     }),
     createTableOverlayRenderer: vi.fn(() => tableOverlayRenderer),
+    createActionAnnouncementRenderer: vi.fn(() => actionAnnouncementRenderer),
     createCanvasUpdater: vi.fn(() => canvasUpdater),
     createCoordinateBridge: vi.fn(() => bridge),
     createAnimationController,
@@ -304,6 +313,7 @@ function createRuntimeFixture() {
     positionStore,
     animationController,
     aiPlaybackController,
+    actionAnnouncementRenderer,
     createAnimationController,
     createAiPlaybackController,
     createReducedMotionObserver,
@@ -415,16 +425,23 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.deps.createAdjacencyRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createTokenRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createTableOverlayRenderer).toHaveBeenCalledTimes(1);
+    expect(fixture.deps.createActionAnnouncementRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createTableOverlayRenderer).toHaveBeenCalledWith(
       fixture.gameCanvas.layers.tableOverlayLayer,
       TEST_VISUAL_CONFIG_PROVIDER,
     );
+    expect(fixture.deps.createActionAnnouncementRenderer).toHaveBeenCalledWith({
+      store: store as unknown as StoreApi<GameStore>,
+      positionStore: fixture.positionStore,
+      parentContainer: fixture.gameCanvas.layers.effectsGroup,
+    });
     expect(fixture.deps.createCanvasUpdater).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createAriaAnnouncer).toHaveBeenCalledTimes(1);
     expect(fixture.createAnimationController).toHaveBeenCalledTimes(1);
     expect(fixture.animationController.start).toHaveBeenCalledTimes(1);
     expect(fixture.createReducedMotionObserver).toHaveBeenCalledTimes(1);
     expect(fixture.animationController.setReducedMotion).toHaveBeenCalledWith(false);
+    expect(fixture.actionAnnouncementRenderer.start).toHaveBeenCalledTimes(1);
     expect(fixture.createAiPlaybackController).toHaveBeenCalledTimes(1);
     expect(fixture.aiPlaybackController.start).toHaveBeenCalledTimes(1);
     expect(fixture.attachKeyboardSelect).toHaveBeenCalledTimes(1);
@@ -634,10 +651,12 @@ describe('createGameCanvasRuntime', () => {
 
     expect(fixture.lifecycle).toEqual([
       'animation-controller-start',
+      'action-announcement-renderer-start',
       'ai-playback-controller-start',
       'updater-start',
       'reduced-motion-destroy',
       'keyboard-cleanup',
+      'action-announcement-renderer-destroy',
       'ai-playback-controller-destroy',
       'animation-controller-destroy',
       'aria-destroy',

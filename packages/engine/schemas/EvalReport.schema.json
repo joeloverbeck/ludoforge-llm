@@ -1163,6 +1163,22 @@
                           "bind": {
                             "type": "string"
                           },
+                          "macroOrigin": {
+                            "type": "object",
+                            "properties": {
+                              "macroId": {
+                                "type": "string"
+                              },
+                              "stem": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "macroId",
+                              "stem"
+                            ],
+                            "additionalProperties": false
+                          },
                           "matchCount": {
                             "type": "number"
                           },
@@ -1241,6 +1257,22 @@
                           },
                           "resultBind": {
                             "type": "string"
+                          },
+                          "macroOrigin": {
+                            "type": "object",
+                            "properties": {
+                              "macroId": {
+                                "type": "string"
+                              },
+                              "stem": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "macroId",
+                              "stem"
+                            ],
+                            "additionalProperties": false
                           },
                           "matchCount": {
                             "type": "number"
@@ -6221,6 +6253,22 @@
                 "bind": {
                   "type": "string"
                 },
+                "macroOrigin": {
+                  "type": "object",
+                  "properties": {
+                    "macroId": {
+                      "type": "string"
+                    },
+                    "stem": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "macroId",
+                    "stem"
+                  ],
+                  "additionalProperties": false
+                },
                 "over": {
                   "$ref": "#/definitions/__schema3"
                 },
@@ -6271,6 +6319,22 @@
                 },
                 "accBind": {
                   "type": "string"
+                },
+                "macroOrigin": {
+                  "type": "object",
+                  "properties": {
+                    "macroId": {
+                      "type": "string"
+                    },
+                    "stem": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "macroId",
+                    "stem"
+                  ],
+                  "additionalProperties": false
                 },
                 "over": {
                   "$ref": "#/definitions/__schema3"

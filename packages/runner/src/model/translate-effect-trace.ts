@@ -115,14 +115,14 @@ function translateEffectEntry(
       return {
         ...base,
         kind: 'iteration',
-        message: `For-each ${summarizeLifecycleBinding(entry.bind)} iterated ${entry.iteratedCount}/${entry.matchCount}.`,
+        message: `For-each ${summarizeLifecycleBinding(entry.bind, entry.macroOrigin)} iterated ${entry.iteratedCount}/${entry.matchCount}.`,
       };
 
     case 'reduce':
       return {
         ...base,
         kind: 'iteration',
-        message: `Reduce ${summarizeLifecycleBinding(entry.resultBind)} iterated ${entry.iteratedCount}/${entry.matchCount}.`,
+        message: `Reduce ${summarizeLifecycleBinding(entry.resultBind, entry.macroOrigin)} iterated ${entry.iteratedCount}/${entry.matchCount}.`,
       };
   }
 }
@@ -366,52 +366,12 @@ function optionalPlayerId(playerId: number | undefined): { readonly playerId?: n
   return { playerId };
 }
 
-/**
- * Summarize a hygienic macro binding name into a readable label.
- *
- * Generated hygienic names follow:
- * `$__macro_${sanitize(macroId)}_${sanitize(path)}_${sanitize(stem)}`.
- * The `__` sequences present in many bindings come from sanitizing
- * characters in invocation paths (for example `].` -> `__`), not from a
- * dedicated delimiter between path and stem. This formatter therefore uses
- * a best-effort heuristic: split on `__`, use the first segment for the
- * macro label and the last segment for the stem.
- *
- * Simple bindings like `$player` or `target` are formatted directly.
- */
-function summarizeLifecycleBinding(bind: string): string {
-  const macroPrefix = '$__macro_';
-  if (!bind.startsWith(macroPrefix)) {
+function summarizeLifecycleBinding(
+  bind: string,
+  macroOrigin?: { readonly macroId: string; readonly stem: string },
+): string {
+  if (macroOrigin === undefined) {
     return formatIdAsDisplayName(bind.replace(/^\$/, ''));
   }
-
-  const body = bind.slice(macroPrefix.length);
-  const segments = body.split('__');
-  const variable = segments.at(-1) ?? body;
-
-  const firstSegment = segments[0] ?? '';
-  const macroName = extractMacroNameFromSegment(firstSegment);
-
-  if (macroName.length === 0) {
-    return formatIdAsDisplayName(variable);
-  }
-
-  return `${formatIdAsDisplayName(variable)} in ${formatIdAsDisplayName(macroName)}`;
-}
-
-/**
- * Extract the macro name from the first `__`-separated segment.
- *
- * The segment contains `<macroId>_<pathStart>`. Macro IDs are kebab-case
- * (all lowercase after sanitization), while path keys are camelCase.
- * We find the boundary at the first underscore-separated token that
- * contains an uppercase letter (camelCase path key like `turnStructure`).
- */
-function extractMacroNameFromSegment(segment: string): string {
-  const tokens = segment.split('_');
-  const pathStart = tokens.findIndex((token) => /[A-Z]/.test(token));
-  if (pathStart <= 0) {
-    return segment;
-  }
-  return tokens.slice(0, pathStart).join('_');
+  return `${formatIdAsDisplayName(macroOrigin.stem)} in ${formatIdAsDisplayName(macroOrigin.macroId)}`;
 }

@@ -53,6 +53,11 @@ interface IndexedMacroDef {
   readonly exportedBindings: ReadonlySet<string>;
 }
 
+interface MacroBindingOrigin {
+  readonly macroId: string;
+  readonly stem: string;
+}
+
 const STRING_PARAM_TYPES = new Set([
   'string',
   'number',
@@ -802,6 +807,87 @@ function rewriteBindings(
   return changed ? rewritten : node;
 }
 
+function bindingStem(bindingName: string): string {
+  return bindingName.startsWith('$') ? bindingName.slice(1) : bindingName;
+}
+
+function annotateControlFlowMacroOrigins(
+  node: unknown,
+  originByBinding: ReadonlyMap<string, MacroBindingOrigin>,
+): unknown {
+  if (originByBinding.size === 0) {
+    return node;
+  }
+  if (Array.isArray(node)) {
+    let changed = false;
+    const rewritten = node.map((item) => {
+      const next = annotateControlFlowMacroOrigins(item, originByBinding);
+      changed = changed || next !== item;
+      return next;
+    });
+    return changed ? rewritten : node;
+  }
+  if (!isRecord(node)) {
+    return node;
+  }
+
+  let rewrittenNode: Record<string, unknown> = node;
+  let changed = false;
+
+  if (isRecord(rewrittenNode.forEach) && typeof rewrittenNode.forEach.bind === 'string') {
+    const origin = originByBinding.get(rewrittenNode.forEach.bind);
+    if (origin !== undefined) {
+      const existing = rewrittenNode.forEach.macroOrigin;
+      const hasSameOrigin = isRecord(existing)
+        && existing.macroId === origin.macroId
+        && existing.stem === origin.stem;
+      if (!hasSameOrigin) {
+        rewrittenNode = {
+          ...rewrittenNode,
+          forEach: {
+            ...rewrittenNode.forEach,
+            macroOrigin: origin,
+          },
+        };
+        changed = true;
+      }
+    }
+  }
+
+  if (isRecord(rewrittenNode.reduce) && typeof rewrittenNode.reduce.resultBind === 'string') {
+    const origin = originByBinding.get(rewrittenNode.reduce.resultBind);
+    if (origin !== undefined) {
+      const existing = rewrittenNode.reduce.macroOrigin;
+      const hasSameOrigin = isRecord(existing)
+        && existing.macroId === origin.macroId
+        && existing.stem === origin.stem;
+      if (!hasSameOrigin) {
+        rewrittenNode = {
+          ...rewrittenNode,
+          reduce: {
+            ...rewrittenNode.reduce,
+            macroOrigin: origin,
+          },
+        };
+        changed = true;
+      }
+    }
+  }
+
+  const recursivelyRewritten: Record<string, unknown> = changed ? { ...rewrittenNode } : rewrittenNode;
+  for (const [key, value] of Object.entries(rewrittenNode)) {
+    const nextValue = annotateControlFlowMacroOrigins(value, originByBinding);
+    if (nextValue !== value) {
+      if (!changed) {
+        changed = true;
+      }
+      recursivelyRewritten[key] = nextValue;
+    }
+  }
+
+  return changed ? recursivelyRewritten : node;
+}
+
 function normalizeExportedBindings(
   macroDef: EffectMacroDef,
   declaredBindings: ReadonlySet<string>,
@@ -959,11 +1045,14 @@ function expandEffect(
   }
 
   const renameMap = new Map<string, string>();
+  const originByBinding = new Map<string, MacroBindingOrigin>();
   for (const bindingName of indexedMacro.declaredBindings) {
     if (indexedMacro.exportedBindings.has(bindingName)) {
       continue;
     }
-    renameMap.set(bindingName, makeHygienicBindingName(macroId, path, bindingName));
+    const hygienicName = makeHygienicBindingName(macroId, path, bindingName);
+    renameMap.set(bindingName, hygienicName);
+    originByBinding.set(hygienicName, { macroId, stem: bindingStem(bindingName) });
   }
 
   const substitutedTemplates = def.effects.map((templateEffect) => substituteParams(templateEffect, args) as GameSpecEffect);
@@ -971,13 +1060,16 @@ function expandEffect(
     renameMap.size === 0
       ? substitutedTemplates
       : substitutedTemplates.map((templateEffect) => rewriteBindings(templateEffect, index, renameMap) as GameSpecEffect);
+  const annotatedSubstituted = hygienicSubstituted.map((templateEffect) =>
+    annotateControlFlowMacroOrigins(templateEffect, originByBinding) as GameSpecEffect,
+  );
 
   const nestedVisited = new Set(visitedStack);
   nestedVisited.add(macroId);
 
   const expanded: GameSpecEffect[] = [];
-  for (let i = 0; i < hygienicSubstituted.length; i++) {
-    const sub = hygienicSubstituted[i];
+  for (let i = 0; i < annotatedSubstituted.length; i++) {
+    const sub = annotatedSubstituted[i];
     if (sub === undefined) continue;
     const results = expandEffect(sub, index, diagnostics, `${path}[macro:${macroId}][${i}]`, nestedVisited, depth + 1);
     expanded.push(...results);

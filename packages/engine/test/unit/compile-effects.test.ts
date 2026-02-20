@@ -121,6 +121,59 @@ describe('compile-effects lowering', () => {
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.actions.0.effects.0.reduce'), true);
   });
 
+  it('preserves macroOrigin on forEach and reduce during lowering', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          forEach: {
+            bind: '$__macro_collect_forced_bets_path_player',
+            macroOrigin: { macroId: 'collect-forced-bets', stem: 'player' },
+            over: { query: 'players' },
+            effects: [],
+          },
+        },
+        {
+          reduce: {
+            itemBind: '$n',
+            accBind: '$acc',
+            macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
+            over: { query: 'intsInRange', min: 1, max: 3 },
+            initial: 0,
+            next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+            resultBind: '$__macro_hand_rank_score_path_straightHigh',
+            in: [],
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, [
+      {
+        forEach: {
+          bind: '$__macro_collect_forced_bets_path_player',
+          macroOrigin: { macroId: 'collect-forced-bets', stem: 'player' },
+          over: { query: 'players' },
+          effects: [],
+        },
+      },
+      {
+        reduce: {
+          itemBind: '$n',
+          accBind: '$acc',
+          macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
+          over: { query: 'intsInRange', min: 1, max: 3 },
+          initial: 0,
+          next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+          resultBind: '$__macro_hand_rank_score_path_straightHigh',
+          in: [],
+        },
+      },
+    ]);
+  });
+
   it('emits missing capability diagnostics for unsupported effect nodes', () => {
     const result = lowerEffectArray(
       [{ teleport: { token: '$t', to: 'board:none' } }],

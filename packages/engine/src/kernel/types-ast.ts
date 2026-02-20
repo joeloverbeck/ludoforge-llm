@@ -20,6 +20,11 @@ export type ZoneSel = string;
 export type ZoneRef = ZoneSel | { readonly zoneExpr: ValueExpr };
 export type TokenSel = string;
 
+export interface EffectMacroOrigin {
+  readonly macroId: string;
+  readonly stem: string;
+}
+
 export type Reference =
   | { readonly ref: 'gvar'; readonly var: string }
   | { readonly ref: 'pvar'; readonly player: PlayerSel; readonly var: string }
@@ -286,6 +291,7 @@ export type EffectAST =
   | {
       readonly forEach: {
         readonly bind: string;
+        readonly macroOrigin?: EffectMacroOrigin;
         readonly over: OptionsQuery;
         readonly effects: readonly EffectAST[];
         readonly limit?: NumericValueExpr;
@@ -297,6 +303,7 @@ export type EffectAST =
       readonly reduce: {
         readonly itemBind: string;
         readonly accBind: string;
+        readonly macroOrigin?: EffectMacroOrigin;
         readonly over: OptionsQuery;
         readonly initial: ValueExpr;
         readonly next: ValueExpr;

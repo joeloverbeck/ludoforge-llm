@@ -626,9 +626,15 @@ export interface RuntimeWarning {
 
 // ── Effect Execution Trace ────────────────────────────────
 
+export interface MacroOrigin {
+  readonly macroId: string;
+  readonly stem: string;
+}
+
 export interface EffectTraceForEach {
   readonly kind: 'forEach';
   readonly bind: string;
+  readonly macroOrigin?: MacroOrigin;
   readonly matchCount: number;
   readonly limit?: number;
   readonly iteratedCount: number;
@@ -640,6 +646,7 @@ export interface EffectTraceReduce {
   readonly itemBind: string;
   readonly accBind: string;
   readonly resultBind: string;
+  readonly macroOrigin?: MacroOrigin;
   readonly matchCount: number;
   readonly limit?: number;
   readonly iteratedCount: number;

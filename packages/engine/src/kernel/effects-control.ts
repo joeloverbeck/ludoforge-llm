@@ -165,6 +165,7 @@ export const applyForEach = (
 
   emitTrace(ctx.collector, buildForEachTraceEntry({
     bind: effect.forEach.bind,
+    ...(effect.forEach.macroOrigin === undefined ? {} : { macroOrigin: effect.forEach.macroOrigin }),
     matchCount: queryResult.length,
     iteratedCount: boundedItems.length,
     explicitLimit: effect.forEach.limit !== undefined,
@@ -232,6 +233,7 @@ export const applyReduce = (
     itemBind: effect.reduce.itemBind,
     accBind: effect.reduce.accBind,
     resultBind: effect.reduce.resultBind,
+    ...(effect.reduce.macroOrigin === undefined ? {} : { macroOrigin: effect.reduce.macroOrigin }),
     matchCount: queryResult.length,
     iteratedCount: boundedItems.length,
     explicitLimit: effect.reduce.limit !== undefined,

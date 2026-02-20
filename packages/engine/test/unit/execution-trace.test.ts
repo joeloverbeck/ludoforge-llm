@@ -87,6 +87,7 @@ describe('Effect execution trace', () => {
     assert.ok(forEachEntry);
     assert.equal(forEachEntry.matchCount, 1);
     assert.equal(forEachEntry.iteratedCount, 1);
+    assert.equal(forEachEntry.macroOrigin, undefined);
     assert.equal(forEachEntry.provenance.actionId, 'test-action');
     assert.equal(forEachEntry.provenance.eventContext, 'actionEffect');
     assert.equal(forEachEntry.provenance.effectPath, 'test.effects[0]');
@@ -114,7 +115,47 @@ describe('Effect execution trace', () => {
     assert.equal(reduceEntry.itemBind, '$n');
     assert.equal(reduceEntry.accBind, '$acc');
     assert.equal(reduceEntry.resultBind, '$sum');
+    assert.equal(reduceEntry.macroOrigin, undefined);
     assert.equal(reduceEntry.provenance.effectPath, 'test.effects[0]');
+  });
+
+  it('traces forEach macroOrigin when annotated by compiler', () => {
+    const token: Token = { id: asTokenId('t1'), type: 'piece', props: { faction: 'US' } };
+    const ctx = makeCtx({ [z1]: [token], [z2]: [] }, {}, true);
+    const effects: readonly EffectAST[] = [{
+      forEach: {
+        bind: '$__macro_collect_forced_bets_turnStructure_phases_0__player',
+        macroOrigin: { macroId: 'collect-forced-bets', stem: 'player' },
+        over: { query: 'tokensInZone' as const, zone: z1, filter: [] },
+        effects: [],
+      },
+    }];
+    applyEffects(effects, ctx);
+    const trace = ctx.collector!.trace!;
+    const forEachEntry = trace.find((e) => e.kind === 'forEach');
+    assert.ok(forEachEntry);
+    assert.deepEqual(forEachEntry.macroOrigin, { macroId: 'collect-forced-bets', stem: 'player' });
+  });
+
+  it('traces reduce macroOrigin when annotated by compiler', () => {
+    const ctx = makeCtx({ [z1]: [], [z2]: [] }, {}, true);
+    const effects: readonly EffectAST[] = [{
+      reduce: {
+        itemBind: '$n',
+        accBind: '$acc',
+        macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
+        over: { query: 'intsInRange', min: 1, max: 3 },
+        initial: 0,
+        next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+        resultBind: '$__macro_hand_rank_score_turnStructure_phases_5__straightHigh',
+        in: [],
+      },
+    }];
+    applyEffects(effects, ctx);
+    const trace = ctx.collector!.trace!;
+    const reduceEntry = trace.find((e) => e.kind === 'reduce');
+    assert.ok(reduceEntry);
+    assert.deepEqual(reduceEntry.macroOrigin, { macroId: 'hand-rank-score', stem: 'straightHigh' });
   });
 
   it('traces moveToken with from and to zones', () => {

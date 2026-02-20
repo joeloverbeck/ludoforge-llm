@@ -1,5 +1,14 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { ConditionAST, EffectAST, NumericValueExpr, PlayerSel, TokenFilterPredicate, ValueExpr, ZoneRef } from '../kernel/types.js';
+import type {
+  ConditionAST,
+  EffectAST,
+  MacroOrigin,
+  NumericValueExpr,
+  PlayerSel,
+  TokenFilterPredicate,
+  ValueExpr,
+  ZoneRef,
+} from '../kernel/types.js';
 import { hasBindingIdentifier, rankBindingIdentifierAlternatives } from '../kernel/binding-identifier-contract.js';
 import { collectSequentialBindings } from './binder-surface-registry.js';
 import {
@@ -788,6 +797,7 @@ function lowerForEachEffect(
   diagnostics.push(...loweredEffects.diagnostics);
 
   const countBind = typeof source.countBind === 'string' ? source.countBind : undefined;
+  const macroOrigin = readMacroOrigin(source.macroOrigin);
   let loweredIn: readonly EffectAST[] | undefined;
   if (countBind !== undefined && Array.isArray(source.in)) {
     diagnostics.push(...scope.shadowWarning(countBind, `${path}.countBind`));
@@ -809,6 +819,7 @@ function lowerForEachEffect(
     value: {
       forEach: {
         bind: source.bind,
+        ...(macroOrigin === undefined ? {} : { macroOrigin }),
         over: over.value,
         effects: loweredEffects.value,
         ...(loweredLimit !== undefined ? { limit: loweredLimit } : {}),
@@ -839,6 +850,7 @@ function lowerReduceEffect(
   const itemBind = source.itemBind;
   const accBind = source.accBind;
   const resultBind = source.resultBind;
+  const macroOrigin = readMacroOrigin(source.macroOrigin);
 
   const duplicateBindings = new Set<string>();
   if (itemBind === accBind) {
@@ -905,6 +917,7 @@ function lowerReduceEffect(
       reduce: {
         itemBind,
         accBind,
+        ...(macroOrigin === undefined ? {} : { macroOrigin }),
         over: over.value,
         initial: initial.value,
         next: next.value,
@@ -1822,6 +1835,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value);
+}
+
+function readMacroOrigin(value: unknown): MacroOrigin | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  if (typeof value.macroId !== 'string' || typeof value.stem !== 'string') {
+    return undefined;
+  }
+  return {
+    macroId: value.macroId,
+    stem: value.stem,
+  };
 }
 
 function formatValue(value: unknown): string {

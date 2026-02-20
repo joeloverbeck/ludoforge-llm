@@ -50,6 +50,27 @@ describe('control-flow trace builders', () => {
     });
   });
 
+  it('buildForEachTraceEntry includes macroOrigin when provided', () => {
+    const entry = buildForEachTraceEntry({
+      bind: '$__macro_collect_forced_bets_path_player',
+      macroOrigin: { macroId: 'collect-forced-bets', stem: 'player' },
+      matchCount: 2,
+      iteratedCount: 2,
+      explicitLimit: false,
+      resolvedLimit: 100,
+      provenance,
+    });
+
+    assert.deepEqual(entry, {
+      kind: 'forEach',
+      bind: '$__macro_collect_forced_bets_path_player',
+      macroOrigin: { macroId: 'collect-forced-bets', stem: 'player' },
+      matchCount: 2,
+      iteratedCount: 2,
+      provenance,
+    });
+  });
+
   it('buildReduceTraceEntry omits limit when not explicitly configured', () => {
     const entry = buildReduceTraceEntry({
       itemBind: '$n',
@@ -93,6 +114,31 @@ describe('control-flow trace builders', () => {
       matchCount: 7,
       iteratedCount: 3,
       limit: 3,
+      provenance,
+    });
+  });
+
+  it('buildReduceTraceEntry includes macroOrigin when provided', () => {
+    const entry = buildReduceTraceEntry({
+      itemBind: '$n',
+      accBind: '$acc',
+      resultBind: '$__macro_hand_rank_score_path_straightHigh',
+      macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
+      matchCount: 5,
+      iteratedCount: 5,
+      explicitLimit: false,
+      resolvedLimit: 100,
+      provenance,
+    });
+
+    assert.deepEqual(entry, {
+      kind: 'reduce',
+      itemBind: '$n',
+      accBind: '$acc',
+      resultBind: '$__macro_hand_rank_score_path_straightHigh',
+      macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
+      matchCount: 5,
+      iteratedCount: 5,
       provenance,
     });
   });

@@ -202,6 +202,50 @@ phase: ['main'],
     ]);
   });
 
+  it('annotates macro-expanded forEach/reduce bindings with macroOrigin metadata', () => {
+    const macroDef: EffectMacroDef = {
+      id: 'collect-forced-bets',
+      params: [],
+      exports: [],
+      effects: [
+        {
+          forEach: {
+            bind: '$player',
+            over: { query: 'players' },
+            effects: [],
+          },
+        },
+        {
+          reduce: {
+            itemBind: '$n',
+            accBind: '$acc',
+            over: { query: 'intsInRange', min: 1, max: 3 },
+            initial: 0,
+            next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+            resultBind: '$total',
+            in: [],
+          },
+        },
+      ],
+    };
+    const doc = makeDoc({
+      effectMacros: [macroDef],
+      setup: [{ macro: 'collect-forced-bets', args: {} }],
+    });
+
+    const result = expandEffectMacros(doc);
+    assert.equal(result.diagnostics.length, 0);
+
+    const expandedForEach = result.doc.setup?.[0] as { forEach: Record<string, unknown> };
+    const expandedReduce = result.doc.setup?.[1] as { reduce: Record<string, unknown> };
+    assert.ok(typeof expandedForEach.forEach.bind === 'string');
+    assert.ok(typeof expandedReduce.reduce.resultBind === 'string');
+    assert.equal((expandedForEach.forEach.bind as string).startsWith('$__macro_collect_forced_bets_'), true);
+    assert.equal((expandedReduce.reduce.resultBind as string).startsWith('$__macro_collect_forced_bets_'), true);
+    assert.deepEqual(expandedForEach.forEach.macroOrigin, { macroId: 'collect-forced-bets', stem: 'player' });
+    assert.deepEqual(expandedReduce.reduce.macroOrigin, { macroId: 'collect-forced-bets', stem: 'total' });
+  });
+
   it('nested macro expansion (macro A invokes macro B)', () => {
     const macroB: EffectMacroDef = {
       id: 'inner',

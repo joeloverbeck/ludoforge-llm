@@ -4864,6 +4864,22 @@
                 "bind": {
                   "type": "string"
                 },
+                "macroOrigin": {
+                  "type": "object",
+                  "properties": {
+                    "macroId": {
+                      "type": "string"
+                    },
+                    "stem": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "macroId",
+                    "stem"
+                  ],
+                  "additionalProperties": false
+                },
                 "over": {
                   "$ref": "#/definitions/__schema2"
                 },
@@ -4914,6 +4930,22 @@
                 },
                 "accBind": {
                   "type": "string"
+                },
+                "macroOrigin": {
+                  "type": "object",
+                  "properties": {
+                    "macroId": {
+                      "type": "string"
+                    },
+                    "stem": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "macroId",
+                    "stem"
+                  ],
+                  "additionalProperties": false
                 },
                 "over": {
                   "$ref": "#/definitions/__schema2"

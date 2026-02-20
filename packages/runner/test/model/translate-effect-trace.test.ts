@@ -255,12 +255,13 @@ describe('translateEffectTrace', () => {
     expect(entries.every((entry) => entry.moveIndex === 7)).toBe(true);
   });
 
-  it('summarizes hygienic macro binding names in forEach and reduce messages', () => {
+  it('uses structured macroOrigin metadata for forEach and reduce messages', () => {
     const visualConfig = new VisualConfigProvider(null);
     const effectTrace: readonly EffectTraceEntry[] = [
       {
         kind: 'forEach',
         bind: '$__macro_collect_forced_bets_turnStructure_phases_0__onEnter_15__macro_post_forced_bets_and_set_preflop_actor__0__if_then_0__forEach_effects_0__let_in_0__player',
+        macroOrigin: { macroId: 'collect-forced-bets', stem: 'player' },
         matchCount: 4,
         iteratedCount: 4,
         provenance: provenance(),
@@ -270,6 +271,7 @@ describe('translateEffectTrace', () => {
         itemBind: 'item',
         accBind: 'acc',
         resultBind: '$__macro_hand_rank_score_turnStructure_phases_5__onEnter_1__forEach_effects_0__if_then_1__evaluateSubset_compute_0__straightHigh',
+        macroOrigin: { macroId: 'hand-rank-score', stem: 'straightHigh' },
         matchCount: 21,
         iteratedCount: 21,
         provenance: provenance(),
@@ -310,7 +312,7 @@ describe('translateEffectTrace', () => {
 
     expect(entries[0]?.message).toBe('For-each Player in Collect Forced Bets iterated 4/4.');
     expect(entries[1]?.message).toBe('Reduce Straight High in Hand Rank Score iterated 21/21.');
-    expect(entries[2]?.message).toBe('For-each Stem in Some Macro iterated 1/1.');
+    expect(entries[2]?.message).toBe('For-each Macro Some Macro Turn Structure Phases 0 Stem iterated 1/1.');
     expect(entries[3]?.message).toBe('For-each Target iterated 2/2.');
     expect(entries[4]?.message).toBe('For-each Player iterated 3/3.');
     expect(entries[5]?.message).toBe('Reduce Best Score iterated 5/5.');

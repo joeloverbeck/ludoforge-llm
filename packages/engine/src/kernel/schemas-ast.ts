@@ -35,6 +35,12 @@ export const ActionExecutorSelSchema = z.union([
 export const ZoneSelSchema = StringSchema;
 export const TokenSelSchema = StringSchema;
 const ZoneRefSchema: z.ZodTypeAny = z.lazy(() => z.union([ZoneSelSchema, z.object({ zoneExpr: ValueExprSchema }).strict()]));
+export const MacroOriginSchema = z
+  .object({
+    macroId: StringSchema,
+    stem: StringSchema,
+  })
+  .strict();
 
 export const ReferenceSchema = z.union([
   z.object({ ref: z.literal('gvar'), var: StringSchema }).strict(),
@@ -510,6 +516,7 @@ effectAstSchemaInternal = z.union([
       forEach: z
         .object({
           bind: StringSchema,
+          macroOrigin: MacroOriginSchema.optional(),
           over: OptionsQuerySchema,
           effects: z.array(EffectASTSchema),
           limit: NumericValueExprSchema.optional(),
@@ -525,6 +532,7 @@ effectAstSchemaInternal = z.union([
         .object({
           itemBind: StringSchema,
           accBind: StringSchema,
+          macroOrigin: MacroOriginSchema.optional(),
           over: OptionsQuerySchema,
           initial: ValueExprSchema,
           next: ValueExprSchema,

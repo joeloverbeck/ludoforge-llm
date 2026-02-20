@@ -6,6 +6,7 @@ import {
   ConditionASTSchema,
   EffectASTSchema,
   IntegerSchema,
+  MacroOriginSchema,
   NumberSchema,
   NumericValueExprSchema,
   OptionsQuerySchema,
@@ -470,6 +471,7 @@ export const EffectTraceEntrySchema = z.union([
     .object({
       kind: z.literal('forEach'),
       bind: StringSchema,
+      macroOrigin: MacroOriginSchema.optional(),
       matchCount: NumberSchema,
       limit: NumberSchema.optional(),
       iteratedCount: NumberSchema,
@@ -482,6 +484,7 @@ export const EffectTraceEntrySchema = z.union([
       itemBind: StringSchema,
       accBind: StringSchema,
       resultBind: StringSchema,
+      macroOrigin: MacroOriginSchema.optional(),
       matchCount: NumberSchema,
       limit: NumberSchema.optional(),
       iteratedCount: NumberSchema,

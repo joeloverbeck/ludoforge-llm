@@ -1,7 +1,8 @@
-import type { EffectTraceForEach, EffectTraceProvenance, EffectTraceReduce } from './types.js';
+import type { EffectTraceForEach, EffectTraceProvenance, EffectTraceReduce, MacroOrigin } from './types.js';
 
 export const buildForEachTraceEntry = (params: {
   readonly bind: string;
+  readonly macroOrigin?: MacroOrigin;
   readonly matchCount: number;
   readonly iteratedCount: number;
   readonly explicitLimit: boolean;
@@ -10,6 +11,7 @@ export const buildForEachTraceEntry = (params: {
 }): EffectTraceForEach => ({
   kind: 'forEach',
   bind: params.bind,
+  ...(params.macroOrigin === undefined ? {} : { macroOrigin: params.macroOrigin }),
   matchCount: params.matchCount,
   iteratedCount: params.iteratedCount,
   provenance: params.provenance,
@@ -20,6 +22,7 @@ export const buildReduceTraceEntry = (params: {
   readonly itemBind: string;
   readonly accBind: string;
   readonly resultBind: string;
+  readonly macroOrigin?: MacroOrigin;
   readonly matchCount: number;
   readonly iteratedCount: number;
   readonly explicitLimit: boolean;
@@ -30,6 +33,7 @@ export const buildReduceTraceEntry = (params: {
   itemBind: params.itemBind,
   accBind: params.accBind,
   resultBind: params.resultBind,
+  ...(params.macroOrigin === undefined ? {} : { macroOrigin: params.macroOrigin }),
   matchCount: params.matchCount,
   iteratedCount: params.iteratedCount,
   provenance: params.provenance,

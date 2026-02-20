@@ -222,7 +222,7 @@ describe('createTableOverlayRenderer', () => {
     expect(parent.children).toHaveLength(1);
     expect(label.text).toBe('Pot: 42');
     expect(label.position.x).toBe(0);
-    expect(label.position.y).toBe(160);
+    expect(label.position.y).toBeCloseTo(126.6666666667, 6);
   });
 
   it('updates globalVar overlay when value changes', () => {
@@ -251,6 +251,7 @@ describe('createTableOverlayRenderer', () => {
     const provider = new VisualConfigProvider({
       version: 1,
       tableOverlays: {
+        playerSeatAnchorZones: ['seat:0', 'seat:1'],
         items: [
           {
             kind: 'perPlayerVar',
@@ -304,6 +305,7 @@ describe('createTableOverlayRenderer', () => {
     const provider = new VisualConfigProvider({
       version: 1,
       tableOverlays: {
+        playerSeatAnchorZones: ['seat:0', 'seat:1'],
         items: [
           {
             kind: 'marker',
@@ -341,6 +343,7 @@ describe('createTableOverlayRenderer', () => {
     const provider = new VisualConfigProvider({
       version: 1,
       tableOverlays: {
+        playerSeatAnchorZones: ['seat:0', 'seat:1'],
         items: [{ kind: 'marker', varName: 'dealerSeat', position: 'playerSeat', label: 'D' }],
       },
     });
@@ -363,6 +366,27 @@ describe('createTableOverlayRenderer', () => {
     const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
 
     renderer.update(makeRenderModel({ globalVars: [asVar('pot', 12)] }), positions);
+
+    expect(parent.children).toHaveLength(0);
+  });
+
+  it('skips playerSeat overlays when no configured anchor zones are available in positions', () => {
+    const parent = new MockContainer();
+    const provider = new VisualConfigProvider({
+      version: 1,
+      tableOverlays: {
+        playerSeatAnchorZones: ['missing:0', 'missing:1'],
+        items: [{ kind: 'marker', varName: 'dealerSeat', position: 'playerSeat', label: 'D' }],
+      },
+    });
+    const renderer = createTableOverlayRenderer(parent as unknown as Container, provider);
+
+    renderer.update(
+      makeRenderModel({
+        globalVars: [asVar('dealerSeat', 0)],
+      }),
+      positions,
+    );
 
     expect(parent.children).toHaveLength(0);
   });

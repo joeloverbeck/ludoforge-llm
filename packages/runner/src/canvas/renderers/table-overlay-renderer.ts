@@ -34,8 +34,12 @@ export function createTableOverlayRenderer(
         return;
       }
 
-      const seatAnchors = deriveSeatAnchors(renderModel, positions);
-      const tableCenter = deriveTableCenter(renderModel, positions, seatAnchors);
+      const seatAnchors = deriveSeatAnchors(
+        renderModel,
+        positions,
+        new Set(visualConfigProvider.getPlayerSeatAnchorZones()),
+      );
+      const tableCenter = deriveTableCenter(renderModel, positions);
 
       for (const item of items) {
         switch (item.kind) {
@@ -112,10 +116,14 @@ function resolvePosition(item: TableOverlayItemConfig, tableCenter: Point, seatA
 function deriveSeatAnchors(
   renderModel: RenderModel,
   positions: ReadonlyMap<string, Position>,
+  playerSeatAnchorZones: ReadonlySet<string>,
 ): ReadonlyMap<number, Point> {
   const accumulators = new Map<number, { sumX: number; sumY: number; count: number }>();
 
   for (const zone of renderModel.zones) {
+    if (!playerSeatAnchorZones.has(zone.id)) {
+      continue;
+    }
     if (zone.ownerID === null) {
       continue;
     }
@@ -149,21 +157,7 @@ function deriveSeatAnchors(
 function deriveTableCenter(
   renderModel: RenderModel,
   positions: ReadonlyMap<string, Position>,
-  seatAnchors: ReadonlyMap<number, Point>,
 ): Point {
-  if (seatAnchors.size > 0) {
-    let sumX = 0;
-    let sumY = 0;
-    for (const point of seatAnchors.values()) {
-      sumX += point.x;
-      sumY += point.y;
-    }
-    return {
-      x: sumX / seatAnchors.size,
-      y: sumY / seatAnchors.size,
-    };
-  }
-
   let sumX = 0;
   let sumY = 0;
   let count = 0;

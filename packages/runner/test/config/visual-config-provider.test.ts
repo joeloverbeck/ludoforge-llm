@@ -42,6 +42,7 @@ describe('VisualConfigProvider', () => {
     const withOverlays = new VisualConfigProvider({
       version: 1,
       tableOverlays: {
+        playerSeatAnchorZones: ['seat:0', 'seat:1'],
         items: [
           {
             kind: 'globalVar',
@@ -54,6 +55,7 @@ describe('VisualConfigProvider', () => {
     const withoutOverlays = new VisualConfigProvider({ version: 1 });
 
     expect(withOverlays.getTableOverlays()).toEqual({
+      playerSeatAnchorZones: ['seat:0', 'seat:1'],
       items: [
         {
           kind: 'globalVar',
@@ -63,6 +65,8 @@ describe('VisualConfigProvider', () => {
       ],
     });
     expect(withoutOverlays.getTableOverlays()).toBeNull();
+    expect(withOverlays.getPlayerSeatAnchorZones()).toEqual(['seat:0', 'seat:1']);
+    expect(withoutOverlays.getPlayerSeatAnchorZones()).toEqual([]);
   });
 
   it('category style merges over defaults', () => {

@@ -225,7 +225,18 @@ const TableOverlayItemSchema = z.object({
 });
 
 const TableOverlaysSchema = z.object({
+  playerSeatAnchorZones: z.array(z.string()).min(1).optional(),
   items: z.array(TableOverlayItemSchema).optional(),
+}).superRefine((value, context) => {
+  const items = value.items ?? [];
+  const requiresPlayerSeatAnchors = items.some((item) => item.position === 'playerSeat');
+  if (requiresPlayerSeatAnchors && (value.playerSeatAnchorZones === undefined || value.playerSeatAnchorZones.length === 0)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['playerSeatAnchorZones'],
+      message: 'tableOverlays.playerSeatAnchorZones is required when any tableOverlays item uses position "playerSeat".',
+    });
+  }
 });
 
 export const VisualConfigSchema = z.object({

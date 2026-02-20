@@ -213,6 +213,7 @@ describe('VisualConfigSchema', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,
       tableOverlays: {
+        playerSeatAnchorZones: ['seat:0', 'seat:1'],
         items: [
           {
             kind: 'globalVar',
@@ -231,6 +232,22 @@ describe('VisualConfigSchema', () => {
       },
     });
     expect(result.success).toBe(true);
+  });
+
+  it('rejects playerSeat table overlays without playerSeatAnchorZones', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      tableOverlays: {
+        items: [
+          {
+            kind: 'perPlayerVar',
+            varName: 'streetBet',
+            position: 'playerSeat',
+          },
+        ],
+      },
+    });
+    expect(result.success).toBe(false);
   });
 
   it('rejects invalid card field align values', () => {

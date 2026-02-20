@@ -48,6 +48,13 @@ export function validateVisualConfigRefs(
 
   validateObjectKeys(config.zones?.overrides, context.zoneIds, 'zone', 'zones.overrides', errors);
   validateObjectKeys(config.zones?.layoutRoles, context.zoneIds, 'zone', 'zones.layoutRoles', errors);
+  validateStringList(
+    config.tableOverlays?.playerSeatAnchorZones,
+    context.zoneIds,
+    'zone',
+    'tableOverlays.playerSeatAnchorZones',
+    errors,
+  );
   validateArray(config.layout?.hints?.fixed, context.zoneIds, 'zone', 'layout.hints.fixed', errors, (entry) => entry.zone);
   validateNestedArray(
     config.layout?.hints?.regions,

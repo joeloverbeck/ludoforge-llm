@@ -232,6 +232,10 @@ export class VisualConfigProvider {
   getTableOverlays(): TableOverlaysConfig | null {
     return this.config?.tableOverlays ?? null;
   }
+
+  getPlayerSeatAnchorZones(): readonly string[] {
+    return this.config?.tableOverlays?.playerSeatAnchorZones ?? [];
+  }
 }
 
 function applyEdgeStyle(

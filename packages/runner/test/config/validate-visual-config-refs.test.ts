@@ -17,6 +17,9 @@ describe('validate-visual-config-refs', () => {
         overrides: { 'zone:a': { label: 'A' } },
         layoutRoles: { 'zone:b': 'hand' },
       },
+      tableOverlays: {
+        playerSeatAnchorZones: ['zone:a'],
+      },
       layout: {
         hints: {
           fixed: [{ zone: 'zone:a', x: 0, y: 0 }],
@@ -82,6 +85,25 @@ describe('validate-visual-config-refs', () => {
 
     const errors = validateVisualConfigRefs(config, fixtureContext());
     expect(errors.map((error) => error.category)).toEqual(['zone', 'tokenType', 'faction', 'variable', 'edge']);
+  });
+
+  it('reports unknown tableOverlays.playerSeatAnchorZones references', () => {
+    const config: VisualConfig = {
+      version: 1,
+      tableOverlays: {
+        playerSeatAnchorZones: ['missing:zone'],
+      },
+    };
+
+    const errors = validateVisualConfigRefs(config, fixtureContext());
+    expect(errors).toEqual([
+      {
+        category: 'zone',
+        configPath: 'tableOverlays.playerSeatAnchorZones[0]',
+        referencedId: 'missing:zone',
+        message: 'Unknown zone id',
+      },
+    ]);
   });
 
   it('buildRefValidationContext extracts ids and edge categories from GameDef', () => {

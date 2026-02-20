@@ -197,6 +197,7 @@ describe('visual-config.yaml files', () => {
       },
     });
     expect(parsed.tableOverlays).toEqual({
+      playerSeatAnchorZones: ['hand:0', 'hand:1', 'hand:2', 'hand:3', 'hand:4', 'hand:5', 'hand:6', 'hand:7', 'hand:8', 'hand:9'],
       items: [
         {
           kind: 'globalVar',
@@ -212,7 +213,7 @@ describe('visual-config.yaml files', () => {
           varName: 'streetBet',
           label: 'Bet',
           position: 'playerSeat',
-          offsetY: -40,
+          offsetY: 75,
           fontSize: 11,
           color: '#94a3b8',
         },
@@ -221,13 +222,35 @@ describe('visual-config.yaml files', () => {
           varName: 'dealerSeat',
           label: 'D',
           position: 'playerSeat',
-          offsetX: -60,
-          offsetY: -20,
+          offsetX: -50,
+          offsetY: 75,
           markerShape: 'circle',
           color: '#fbbf24',
         },
       ],
     });
+    const tableOverlays = parsed.tableOverlays?.items ?? [];
+    const betOverlay = tableOverlays.find(
+      (item) => item.kind === 'perPlayerVar' && item.varName === 'streetBet',
+    );
+    const dealerOverlay = tableOverlays.find(
+      (item) => item.kind === 'marker' && item.varName === 'dealerSeat',
+    );
+    expect(betOverlay?.offsetY ?? 0).toBeGreaterThan(0);
+    expect(dealerOverlay?.offsetX ?? 0).toBeLessThan(0);
+    expect(dealerOverlay?.offsetY ?? 0).toBeGreaterThan(0);
+    expect(parsed.tableOverlays?.playerSeatAnchorZones).toEqual([
+      'hand:0',
+      'hand:1',
+      'hand:2',
+      'hand:3',
+      'hand:4',
+      'hand:5',
+      'hand:6',
+      'hand:7',
+      'hand:8',
+      'hand:9',
+    ]);
 
     const layoutRoles = parsed.zones?.layoutRoles ?? {};
     for (const [zoneId, role] of Object.entries(layoutRoles)) {

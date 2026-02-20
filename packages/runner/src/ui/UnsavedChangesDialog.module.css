@@ -1,0 +1,66 @@
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 19, 0.6);
+  padding: var(--space-lg);
+}
+
+.card {
+  width: min(440px, calc(100vw - (2 * var(--space-lg))));
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-panel) 90%, black);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.42);
+  color: var(--text-primary);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.message {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.cancelButton,
+.discardButton {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancelButton {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-panel) 75%, black);
+}
+
+.cancelButton:hover {
+  background: color-mix(in srgb, var(--bg-panel) 88%, black);
+}
+
+.discardButton {
+  color: var(--text-primary);
+  background: color-mix(in srgb, #dc2626 36%, var(--bg-panel));
+}
+
+.discardButton:hover {
+  background: color-mix(in srgb, #dc2626 52%, var(--bg-panel));
+}

@@ -87,7 +87,6 @@
 }
 
 .button {
-  align-self: flex-end;
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: var(--space-sm) var(--space-md);
@@ -101,4 +100,26 @@
 
 .button:hover {
   background: color-mix(in srgb, var(--accent) 52%, var(--bg-panel));
+}
+
+.buttonSecondary {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-panel) 75%, black);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.buttonSecondary:hover {
+  background: color-mix(in srgb, var(--bg-panel) 88%, black);
+}
+
+.buttonRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
 }

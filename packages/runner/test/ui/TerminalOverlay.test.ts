@@ -146,6 +146,7 @@ describe('TerminalOverlay', () => {
 
   it('invokes onNewGame when New Game is clicked', () => {
     const onNewGame = vi.fn();
+    const onReturnToMenu = vi.fn();
 
     render(createElement(TerminalOverlay, {
       store: createStore(makeRenderModel({
@@ -155,8 +156,11 @@ describe('TerminalOverlay', () => {
         },
       })),
       onNewGame,
+      onReturnToMenu,
     }));
 
+    fireEvent.click(screen.getByTestId('terminal-overlay-return-menu'));
+    expect(onReturnToMenu).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByTestId('terminal-overlay-new-game'));
     expect(onNewGame).toHaveBeenCalledTimes(1);
   });

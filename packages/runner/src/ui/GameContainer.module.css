@@ -10,3 +10,18 @@
   inset: 0;
   z-index: var(--z-canvas);
 }
+
+.quitButton {
+  margin-left: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-ui);
+  color: var(--text-primary);
+  background: color-mix(in srgb, #dc2626 26%, var(--bg-panel));
+  cursor: pointer;
+}
+
+.quitButton:hover {
+  background: color-mix(in srgb, #dc2626 42%, var(--bg-panel));
+}

@@ -1,176 +1,278 @@
+// @vitest-environment jsdom
+
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+interface SessionStoreState {
+  readonly sessionState:
+    | { readonly screen: 'gameSelection' }
+    | { readonly screen: 'preGameConfig'; readonly gameId: string }
+    | { readonly screen: 'activeGame'; readonly gameId: string; readonly seed: number; readonly playerConfig: readonly Array<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }> }
+    | { readonly screen: 'replay'; readonly gameId: string; readonly seed: number; readonly moveHistory: readonly unknown[] };
+  readonly unsavedChanges: boolean;
+  readonly moveAccumulator: readonly unknown[];
+  selectGame(gameId: string): void;
+  startGame(seed: number, playerConfig: readonly Array<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>): void;
+  returnToMenu(): void;
+  startReplay(gameId: string, seed: number, moveHistory: readonly unknown[]): void;
+  newGame(): void;
+  recordMove(move: unknown): void;
+  markSaved(): void;
+}
+
+interface SessionStoreApi {
+  getState(): SessionStoreState;
+  setState(partial: Partial<SessionStoreState>): void;
+  subscribe(listener: () => void): () => void;
+}
 
 const testDoubles = vi.hoisted(() => ({
-  initGame: vi.fn(),
-  reportBootstrapFailure: vi.fn(),
-  terminate: vi.fn(),
-  createGameBridge: vi.fn(),
-  createGameStore: vi.fn(),
-  effectCleanups: [] as Array<() => void>,
-  gameContainerStore: null as unknown,
-  bridge: {} as unknown,
-  visualConfigProvider: {} as unknown,
-  resolveBootstrapConfig: vi.fn(),
+  listNonDefaultBootstrapDescriptors: vi.fn(),
+  findBootstrapDescriptorById: vi.fn(),
+  useActiveGameRuntime: vi.fn(),
+  createSessionStore: vi.fn(),
+  runtimeStore: {
+    getState: vi.fn(() => ({
+      initGame: vi.fn(),
+      reportBootstrapFailure: vi.fn(),
+    })),
+  },
+  visualConfigProvider: {},
+  sessionStore: null as SessionStoreApi | null,
 }));
 
-vi.mock('react', async () => {
-  const actual = await vi.importActual<typeof import('react')>('react');
-  return {
-    ...actual,
-    useEffect: (effect: () => void | (() => void)) => {
-      const cleanup = effect();
-      if (typeof cleanup === 'function') {
-        testDoubles.effectCleanups.push(cleanup);
+function createMockSessionStore(initialState?: Partial<Pick<SessionStoreState, 'sessionState' | 'unsavedChanges' | 'moveAccumulator'>>): SessionStoreApi {
+  const listeners = new Set<() => void>();
+
+  const store: SessionStoreApi = {
+    getState: () => state,
+    setState: (partial) => {
+      state = { ...state, ...partial };
+      for (const listener of listeners) {
+        listener();
       }
     },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
   };
-});
 
-vi.mock('../../src/bridge/game-bridge.js', () => ({
-  createGameBridge: testDoubles.createGameBridge,
+  let state: SessionStoreState = {
+    sessionState: { screen: 'gameSelection' },
+    unsavedChanges: false,
+    moveAccumulator: [],
+    selectGame(gameId) {
+      store.setState({ sessionState: { screen: 'preGameConfig', gameId } });
+    },
+    startGame(seed, playerConfig) {
+      const current = store.getState().sessionState;
+      if (current.screen !== 'preGameConfig') {
+        throw new Error('Invalid session transition for startGame');
+      }
+      store.setState({
+        sessionState: {
+          screen: 'activeGame',
+          gameId: current.gameId,
+          seed,
+          playerConfig,
+        },
+        unsavedChanges: false,
+        moveAccumulator: [],
+      });
+    },
+    returnToMenu() {
+      store.setState({
+        sessionState: { screen: 'gameSelection' },
+        unsavedChanges: false,
+        moveAccumulator: [],
+      });
+    },
+    startReplay(gameId, seed, moveHistory) {
+      store.setState({
+        sessionState: {
+          screen: 'replay',
+          gameId,
+          seed,
+          moveHistory,
+        },
+      });
+    },
+    newGame() {
+      const current = store.getState().sessionState;
+      if (current.screen !== 'activeGame') {
+        throw new Error('Invalid session transition for newGame');
+      }
+      store.setState({
+        sessionState: {
+          screen: 'preGameConfig',
+          gameId: current.gameId,
+        },
+      });
+    },
+    recordMove(move) {
+      const currentMoves = store.getState().moveAccumulator;
+      store.setState({
+        moveAccumulator: [...currentMoves, move],
+        unsavedChanges: true,
+      });
+    },
+    markSaved() {
+      store.setState({ unsavedChanges: false });
+    },
+    ...initialState,
+  };
+
+  return store;
+}
+
+vi.mock('../../src/session/active-game-runtime.js', () => ({
+  listNonDefaultBootstrapDescriptors: testDoubles.listNonDefaultBootstrapDescriptors,
+  findBootstrapDescriptorById: testDoubles.findBootstrapDescriptorById,
+  useActiveGameRuntime: testDoubles.useActiveGameRuntime,
 }));
 
-vi.mock('../../src/store/game-store.js', () => ({
-  createGameStore: testDoubles.createGameStore,
+vi.mock('../../src/session/session-store.js', () => ({
+  createSessionStore: testDoubles.createSessionStore,
 }));
 
 vi.mock('../../src/ui/GameContainer.js', () => ({
-  GameContainer: (props: { readonly store: unknown }) => {
-    testDoubles.gameContainerStore = props.store;
-    return createElement('div', { 'data-testid': 'game-container' });
-  },
+  GameContainer: (props: { readonly onReturnToMenu?: () => void; readonly onQuit?: () => void; readonly onNewGame?: () => void }) => (
+    createElement('div', { 'data-testid': 'game-container' },
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'game-container-return-menu',
+        onClick: props.onReturnToMenu,
+      }, 'return'),
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'game-container-quit',
+        onClick: props.onQuit,
+      }, 'quit'),
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'game-container-new-game',
+        onClick: props.onNewGame,
+      }, 'new'),
+    )
+  ),
 }));
 
 vi.mock('../../src/ui/ErrorBoundary.js', () => ({
-  ErrorBoundary: (props: { readonly children: ReactNode }) => {
-    return createElement('section', { 'data-testid': 'error-boundary' }, props.children);
-  },
+  ErrorBoundary: (props: { readonly children: ReactNode }) => createElement('section', { 'data-testid': 'error-boundary' }, props.children),
 }));
 
-vi.mock('../../src/bootstrap/resolve-bootstrap-config.js', () => ({
-  resolveBootstrapConfig: testDoubles.resolveBootstrapConfig,
-}));
-
-async function renderApp(): Promise<string> {
-  const { App } = await import('../../src/App.js');
-  return renderToStaticMarkup(createElement(App));
-}
-
-async function flushMicrotasks(): Promise<void> {
-  await Promise.resolve();
-}
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe('App', () => {
   beforeEach(() => {
     vi.resetModules();
-    testDoubles.effectCleanups = [];
-    testDoubles.gameContainerStore = null;
-    testDoubles.initGame.mockReset();
-    testDoubles.reportBootstrapFailure.mockReset();
-    testDoubles.terminate.mockReset();
-    testDoubles.createGameBridge.mockReset();
-    testDoubles.createGameStore.mockReset();
-    testDoubles.resolveBootstrapConfig.mockReset();
+    testDoubles.listNonDefaultBootstrapDescriptors.mockReset();
+    testDoubles.findBootstrapDescriptorById.mockReset();
+    testDoubles.useActiveGameRuntime.mockReset();
+    testDoubles.createSessionStore.mockReset();
 
-    const store = {
-      getState: () => ({
-        initGame: testDoubles.initGame,
-        reportBootstrapFailure: testDoubles.reportBootstrapFailure,
-      }),
-    };
-
-    testDoubles.createGameBridge.mockReturnValue({
-      bridge: testDoubles.bridge,
-      terminate: testDoubles.terminate,
-    });
-    testDoubles.createGameStore.mockReturnValue(store);
-    testDoubles.resolveBootstrapConfig.mockReturnValue({
-      seed: 42,
-      playerId: 0,
-      visualConfigProvider: testDoubles.visualConfigProvider,
-      resolveGameDef: async () => ({ metadata: { id: 'runner-bootstrap-default' } }),
-    });
-  });
-
-  it('renders with ErrorBoundary wrapping GameContainer', async () => {
-    const html = await renderApp();
-
-    expect(html).toContain('data-testid="error-boundary"');
-    expect(html).toContain('data-testid="game-container"');
-  });
-
-  it('creates bridge and store once per mount', async () => {
-    await renderApp();
-    await flushMicrotasks();
-
-    expect(testDoubles.createGameBridge).toHaveBeenCalledTimes(1);
-    expect(testDoubles.createGameStore).toHaveBeenCalledTimes(1);
-    expect(testDoubles.createGameStore).toHaveBeenCalledWith(testDoubles.bridge, testDoubles.visualConfigProvider);
-    expect(testDoubles.gameContainerStore).toBe(testDoubles.createGameStore.mock.results[0]?.value);
-  });
-
-  it('calls initGame on mount with resolved bootstrap config', async () => {
-    const resolvedGameDef = { metadata: { id: 'fire-in-the-lake' } };
-    testDoubles.resolveBootstrapConfig.mockReturnValue({
-      seed: 99,
-      playerId: 2,
-      visualConfigProvider: testDoubles.visualConfigProvider,
-      resolveGameDef: async () => resolvedGameDef,
-    });
-
-    await renderApp();
-    await flushMicrotasks();
-
-    expect(testDoubles.initGame).toHaveBeenCalledTimes(1);
-    const [gameDef, seed, playerID] = testDoubles.initGame.mock.calls[0]!;
-    expect(gameDef).toBe(resolvedGameDef);
-    expect(seed).toBe(99);
-    expect(playerID).toBe(2);
-  });
-
-  it('terminates worker on unmount cleanup', async () => {
-    await renderApp();
-    await flushMicrotasks();
-
-    expect(testDoubles.effectCleanups).toHaveLength(1);
-    testDoubles.effectCleanups[0]!();
-    await flushMicrotasks();
-    expect(testDoubles.terminate).toHaveBeenCalledTimes(1);
-  });
-
-  it('routes bootstrap config resolution failure through bootstrap error path', async () => {
-    testDoubles.resolveBootstrapConfig.mockReturnValue({
-      seed: 42,
-      playerId: 0,
-      visualConfigProvider: testDoubles.visualConfigProvider,
-      resolveGameDef: async () => {
-        throw new Error('bootstrap config failed');
+    testDoubles.listNonDefaultBootstrapDescriptors.mockReturnValue([
+      {
+        id: 'fitl',
+        queryValue: 'fitl',
+        defaultSeed: 17,
+        defaultPlayerId: 1,
       },
+    ]);
+
+    testDoubles.findBootstrapDescriptorById.mockImplementation((gameId: string) => {
+      if (gameId !== 'fitl') {
+        return null;
+      }
+      return {
+        id: 'fitl',
+        queryValue: 'fitl',
+        defaultSeed: 17,
+        defaultPlayerId: 1,
+      };
     });
 
-    await renderApp();
-    await flushMicrotasks();
+    testDoubles.useActiveGameRuntime.mockImplementation((sessionState: SessionStoreState['sessionState']) => {
+      if (sessionState.screen !== 'activeGame') {
+        return null;
+      }
+      return {
+        store: testDoubles.runtimeStore,
+        visualConfigProvider: testDoubles.visualConfigProvider,
+      };
+    });
 
-    expect(testDoubles.initGame).not.toHaveBeenCalled();
-    expect(testDoubles.reportBootstrapFailure).toHaveBeenCalledTimes(1);
-    expect(testDoubles.reportBootstrapFailure).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'bootstrap config failed' }),
-    );
+    testDoubles.sessionStore = createMockSessionStore();
+    testDoubles.createSessionStore.mockImplementation(() => testDoubles.sessionStore);
   });
 
-  it('routes unexpected initGame rejection through bootstrap error path', async () => {
-    testDoubles.initGame.mockRejectedValue(new Error('initGame exploded'));
+  it('renders game selection screen by default', async () => {
+    const { App } = await import('../../src/App.js');
 
-    await renderApp();
-    await flushMicrotasks();
+    render(createElement(App));
 
-    expect(testDoubles.initGame).toHaveBeenCalledTimes(1);
-    expect(testDoubles.reportBootstrapFailure).toHaveBeenCalledTimes(1);
-    expect(testDoubles.reportBootstrapFailure).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'initGame exploded' }),
-    );
+    expect(screen.getByTestId('error-boundary')).toBeTruthy();
+    expect(screen.getByTestId('game-selection-screen')).toBeTruthy();
+    expect(screen.getByTestId('select-game-fitl')).toBeTruthy();
+  });
+
+  it('routes to active game on start', async () => {
+    const { App } = await import('../../src/App.js');
+
+    render(createElement(App));
+
+    fireEvent.click(screen.getByTestId('select-game-fitl'));
+    fireEvent.click(screen.getByTestId('pre-game-start'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('game-container')).toBeTruthy();
+    });
+    expect(testDoubles.useActiveGameRuntime).toHaveBeenCalled();
+  });
+
+  it('returns to menu when active game emits return action', async () => {
+    const { App } = await import('../../src/App.js');
+
+    render(createElement(App));
+    fireEvent.click(screen.getByTestId('select-game-fitl'));
+    fireEvent.click(screen.getByTestId('pre-game-start'));
+
+    fireEvent.click(screen.getByTestId('game-container-return-menu'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('game-selection-screen')).toBeTruthy();
+    });
+  });
+
+  it('shows unsaved-changes dialog on quit when unsavedChanges is true', async () => {
+    testDoubles.sessionStore = createMockSessionStore({
+      sessionState: {
+        screen: 'activeGame',
+        gameId: 'fitl',
+        seed: 17,
+        playerConfig: [{ playerId: 1, type: 'human' }],
+      },
+      unsavedChanges: true,
+    });
+    testDoubles.createSessionStore.mockImplementation(() => testDoubles.sessionStore);
+
+    const { App } = await import('../../src/App.js');
+
+    render(createElement(App));
+    fireEvent.click(screen.getByTestId('game-container-quit'));
+
+    expect(screen.getByTestId('unsaved-changes-dialog')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('unsaved-changes-discard'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('game-selection-screen')).toBeTruthy();
+    });
   });
 });

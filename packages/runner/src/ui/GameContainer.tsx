@@ -37,6 +37,9 @@ import styles from './GameContainer.module.css';
 interface GameContainerProps {
   readonly store: StoreApi<GameStore>;
   readonly visualConfigProvider: VisualConfigProvider;
+  readonly onReturnToMenu?: () => void;
+  readonly onNewGame?: () => void;
+  readonly onQuit?: () => void;
 }
 
 type OverlayRegionPanel = (props: { readonly store: StoreApi<GameStore> }) => ReactElement | null;
@@ -59,7 +62,6 @@ const OVERLAY_REGION_PANELS: Readonly<Record<OverlayRegion, readonly OverlayRegi
   floating: [
     WarningsToast,
     PlayerHandPanel,
-    TerminalOverlay,
   ],
 };
 
@@ -90,7 +92,7 @@ export function resolveTooltipAnchorState(hoverAnchor: HoverAnchor | null): Tool
   };
 }
 
-export function GameContainer({ store, visualConfigProvider }: GameContainerProps): ReactElement {
+export function GameContainer({ store, visualConfigProvider, onReturnToMenu, onNewGame, onQuit }: GameContainerProps): ReactElement {
   const gameLifecycle = useStore(store, (state) => state.gameLifecycle);
   const error = useStore(store, (state) => state.error);
   const renderModel = useStore(store, (state) => state.renderModel);
@@ -171,12 +173,31 @@ export function GameContainer({ store, visualConfigProvider }: GameContainerProp
           />
         </div>
         <UIOverlay
-          topBarContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, store)}
+          topBarContent={(
+            <>
+              {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.top, store)}
+              {onQuit === undefined ? null : (
+                <button
+                  type="button"
+                  className={styles.quitButton}
+                  data-testid="session-quit-button"
+                  onClick={onQuit}
+                >
+                  Quit
+                </button>
+              )}
+            </>
+          )}
           sidePanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.side, store)}
           bottomBarContent={bottomBarContent}
           floatingContent={(
             <>
               {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, store)}
+              <TerminalOverlay
+                store={store}
+                onNewGame={onNewGame}
+                onReturnToMenu={onReturnToMenu}
+              />
               <TooltipLayer
                 store={store}
                 hoverTarget={tooltipAnchorState.hoverTarget}

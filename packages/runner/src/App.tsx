@@ -1,69 +1,114 @@
-import { type ReactElement, useEffect, useRef } from 'react';
-import type { StoreApi } from 'zustand';
+import { type ReactElement, useEffect, useRef, useState } from 'react';
+import { useStore } from 'zustand';
 
-import { createGameBridge, type GameBridgeHandle } from './bridge/game-bridge.js';
-import { resolveBootstrapConfig } from './bootstrap/resolve-bootstrap-config.js';
-import { createGameStore, type GameStore } from './store/game-store.js';
+import { createSessionStore } from './session/session-store.js';
+import { findBootstrapDescriptorById, listNonDefaultBootstrapDescriptors, useActiveGameRuntime } from './session/active-game-runtime.js';
 import { ErrorBoundary } from './ui/ErrorBoundary.js';
 import { GameContainer } from './ui/GameContainer.js';
-
-interface AppBootstrap {
-  readonly bridgeHandle: GameBridgeHandle;
-  readonly store: StoreApi<GameStore>;
-  readonly bootstrapConfig: ReturnType<typeof resolveBootstrapConfig>;
-}
+import { UnsavedChangesDialog } from './ui/UnsavedChangesDialog.js';
+import { GameSelectionPlaceholder } from './ui/screens/GameSelectionPlaceholder.js';
+import { PreGameConfigPlaceholder } from './ui/screens/PreGameConfigPlaceholder.js';
+import { ReplayPlaceholder } from './ui/screens/ReplayPlaceholder.js';
 
 export function App(): ReactElement {
-  const bootstrapRef = useRef<AppBootstrap | null>(null);
-  const mountCountRef = useRef(0);
-
-  if (bootstrapRef.current === null) {
-    const bootstrapConfig = resolveBootstrapConfig();
-    const bridgeHandle = createGameBridge();
-    const store = createGameStore(bridgeHandle.bridge, bootstrapConfig.visualConfigProvider);
-    bootstrapRef.current = {
-      bridgeHandle,
-      store,
-      bootstrapConfig,
-    };
-  }
-
-  const { bridgeHandle, store, bootstrapConfig } = bootstrapRef.current;
+  const sessionStoreRef = useRef(createSessionStore());
+  const [quitDialogOpen, setQuitDialogOpen] = useState(false);
+  const sessionStore = sessionStoreRef.current;
+  const sessionState = useStore(sessionStore, (state) => state.sessionState);
+  const unsavedChanges = useStore(sessionStore, (state) => state.unsavedChanges);
+  const activeRuntime = useActiveGameRuntime(sessionState);
 
   useEffect(() => {
-    mountCountRef.current += 1;
-    let cancelled = false;
-    void (async () => {
-      const gameDef = await bootstrapConfig.resolveGameDef();
-      if (cancelled) {
-        return;
-      }
-      await store.getState().initGame(
-        gameDef,
-        bootstrapConfig.seed,
-        bootstrapConfig.playerId,
-      );
-    })().catch((error) => {
-      if (cancelled) {
-        return;
-      }
-      store.getState().reportBootstrapFailure(error);
-    });
+    if (sessionState.screen !== 'activeGame') {
+      setQuitDialogOpen(false);
+    }
+  }, [sessionState.screen]);
+  const descriptors = listNonDefaultBootstrapDescriptors();
 
-    return () => {
-      cancelled = true;
-      mountCountRef.current -= 1;
-      queueMicrotask(() => {
-        if (mountCountRef.current === 0) {
-          bridgeHandle.terminate();
+  const content = (() => {
+    switch (sessionState.screen) {
+      case 'gameSelection':
+        return (
+          <GameSelectionPlaceholder
+            descriptors={descriptors}
+            onSelectGame={(gameId) => {
+              sessionStore.getState().selectGame(gameId);
+            }}
+          />
+        );
+      case 'preGameConfig': {
+        const descriptor = findBootstrapDescriptorById(sessionState.gameId);
+        return (
+          <PreGameConfigPlaceholder
+            gameId={sessionState.gameId}
+            descriptor={descriptor}
+            onStartGame={(seed, playerId) => {
+              sessionStore.getState().startGame(
+                seed,
+                [{ playerId, type: 'human' }],
+              );
+            }}
+            onBack={() => {
+              sessionStore.getState().returnToMenu();
+            }}
+          />
+        );
+      }
+      case 'activeGame':
+        if (activeRuntime === null) {
+          return (
+            <main data-testid="active-game-loading-screen">
+              <h1>Loading Game</h1>
+            </main>
+          );
         }
-      });
-    };
-  }, [bootstrapConfig, bridgeHandle, store]);
+        return (
+          <>
+            <GameContainer
+              store={activeRuntime.store}
+              visualConfigProvider={activeRuntime.visualConfigProvider}
+              onReturnToMenu={() => {
+                sessionStore.getState().returnToMenu();
+              }}
+              onNewGame={() => {
+                sessionStore.getState().newGame();
+              }}
+              onQuit={() => {
+                if (unsavedChanges) {
+                  setQuitDialogOpen(true);
+                  return;
+                }
+                sessionStore.getState().returnToMenu();
+              }}
+            />
+            <UnsavedChangesDialog
+              isOpen={quitDialogOpen}
+              onDiscard={() => {
+                setQuitDialogOpen(false);
+                sessionStore.getState().returnToMenu();
+              }}
+              onCancel={() => {
+                setQuitDialogOpen(false);
+              }}
+            />
+          </>
+        );
+      case 'replay':
+        return (
+          <ReplayPlaceholder
+            onBackToMenu={() => {
+              sessionStore.getState().returnToMenu();
+            }}
+          />
+        );
+      default:
+        return null;
+    }
+  })();
 
   return (
     <ErrorBoundary>
-      <GameContainer store={store} visualConfigProvider={bootstrapConfig.visualConfigProvider} />
+      {content}
     </ErrorBoundary>
   );
 }

@@ -14,6 +14,7 @@ import styles from './TerminalOverlay.module.css';
 interface TerminalOverlayProps {
   readonly store: StoreApi<GameStore>;
   readonly onNewGame?: () => void;
+  readonly onReturnToMenu?: () => void;
 }
 
 const EMPTY_PLAYERS: readonly RenderPlayer[] = [];
@@ -115,7 +116,7 @@ function renderTerminalBody(terminal: NonNullable<GameStore['renderModel']>['ter
   }
 }
 
-export function TerminalOverlay({ store, onNewGame }: TerminalOverlayProps): ReactElement | null {
+export function TerminalOverlay({ store, onNewGame, onReturnToMenu }: TerminalOverlayProps): ReactElement | null {
   const terminal = useStore(store, (state) => state.renderModel?.terminal ?? null);
   const players = useStore(store, (state) => state.renderModel?.players ?? EMPTY_PLAYERS);
 
@@ -123,22 +124,31 @@ export function TerminalOverlay({ store, onNewGame }: TerminalOverlayProps): Rea
     return null;
   }
 
-  const handleNewGame = onNewGame ?? (() => {
-    window.location.reload();
-  });
+  const handleNewGame = onNewGame ?? (() => {});
+  const handleReturnToMenu = onReturnToMenu ?? (() => {});
 
   return (
     <section className={styles.backdrop} data-testid="terminal-overlay" aria-label="Game result overlay">
       <article className={styles.card} data-testid="terminal-overlay-card">
         {renderTerminalBody(terminal, players)}
-        <button
-          type="button"
-          className={styles.button}
-          data-testid="terminal-overlay-new-game"
-          onClick={handleNewGame}
-        >
-          New Game
-        </button>
+        <div className={styles.buttonRow}>
+          <button
+            type="button"
+            className={styles.buttonSecondary}
+            data-testid="terminal-overlay-return-menu"
+            onClick={handleReturnToMenu}
+          >
+            Return to Menu
+          </button>
+          <button
+            type="button"
+            className={styles.button}
+            data-testid="terminal-overlay-new-game"
+            onClick={handleNewGame}
+          >
+            New Game
+          </button>
+        </div>
       </article>
     </section>
   );

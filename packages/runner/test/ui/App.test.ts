@@ -9,12 +9,12 @@ interface SessionStoreState {
   readonly sessionState:
     | { readonly screen: 'gameSelection' }
     | { readonly screen: 'preGameConfig'; readonly gameId: string }
-    | { readonly screen: 'activeGame'; readonly gameId: string; readonly seed: number; readonly playerConfig: readonly Array<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }> }
+    | { readonly screen: 'activeGame'; readonly gameId: string; readonly seed: number; readonly playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }> }
     | { readonly screen: 'replay'; readonly gameId: string; readonly seed: number; readonly moveHistory: readonly unknown[] };
   readonly unsavedChanges: boolean;
   readonly moveAccumulator: readonly unknown[];
   selectGame(gameId: string): void;
-  startGame(seed: number, playerConfig: readonly Array<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>): void;
+  startGame(seed: number, playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>): void;
   returnToMenu(): void;
   startReplay(gameId: string, seed: number, moveHistory: readonly unknown[]): void;
   newGame(): void;
@@ -197,6 +197,22 @@ describe('App', () => {
         queryValue: 'fitl',
         defaultSeed: 17,
         defaultPlayerId: 1,
+        sourceLabel: 'FITL fixture',
+        gameMetadata: {
+          name: 'Fire in the Lake',
+          description: 'test',
+          playerMin: 2,
+          playerMax: 4,
+          factionIds: ['us', 'arvn', 'nva', 'vc'],
+        },
+        resolveGameDefInput: async () => ({}),
+        resolveVisualConfigYaml: () => ({
+          version: 1,
+          factions: {
+            us: { displayName: 'US' },
+            arvn: { displayName: 'ARVN' },
+          },
+        }),
       };
     });
 

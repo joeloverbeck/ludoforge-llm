@@ -146,14 +146,14 @@ Add a session-level navigation layer ABOVE the game store. Currently `App.tsx` r
   export interface ActiveGameState {
     readonly screen: 'activeGame';
     readonly gameId: string;
-    readonly seed: bigint;
+    readonly seed: number; // non-negative safe integer
     readonly playerConfig: readonly PlayerSeatConfig[];
   }
 
   export interface ReplayState {
     readonly screen: 'replay';
     readonly gameId: string;
-    readonly seed: bigint;
+    readonly seed: number; // non-negative safe integer
     readonly moveHistory: readonly Move[];
   }
 
@@ -176,9 +176,9 @@ Add a session-level navigation layer ABOVE the game store. Currently `App.tsx` r
   - `moveAccumulator: readonly Move[]` (accumulates moves during play for save/replay)
   - Navigation actions:
     - `selectGame(gameId: string)` -- `gameSelection` -> `preGameConfig`
-    - `startGame(seed: bigint, playerConfig: PlayerSeatConfig[])` -- `preGameConfig` -> `activeGame`
+    - `startGame(seed: number, playerConfig: PlayerSeatConfig[])` -- `preGameConfig` -> `activeGame`
     - `returnToMenu()` -- any screen -> `gameSelection` (caller handles unsaved-changes confirmation)
-    - `startReplay(gameId: string, seed: bigint, moveHistory: Move[])` -- `gameSelection` -> `replay`
+    - `startReplay(gameId: string, seed: number, moveHistory: Move[])` -- `gameSelection` -> `replay`
     - `newGame()` -- `activeGame` (terminal) -> `preGameConfig` (same game)
     - `recordMove(move: Move)` -- appends to `moveAccumulator`, sets `unsavedChanges = true`
     - `markSaved()` -- sets `unsavedChanges = false`
@@ -319,7 +319,7 @@ IndexedDB-backed game persistence using Dexie.js. Saves store seed + move histor
     readonly gameName: string;     // Human-readable (e.g., 'Fire in the Lake')
     readonly displayName: string;  // User-provided save name
     readonly timestamp: number;    // Date.now()
-    readonly seed: string;         // Original seed (stringified BigInt)
+    readonly seed: number;         // Original seed (non-negative safe integer)
     readonly moveHistory: Move[];  // Complete move sequence
     readonly playerConfig: PlayerSeatConfig[];  // Human/AI assignments
     readonly playerId: number;     // Which seat the human was playing

@@ -57,6 +57,15 @@ describe('bootstrap-registry', () => {
     expect(VisualConfigSchema.safeParse(texas?.resolveVisualConfigYaml()).success).toBe(true);
   });
 
+  it('exposes faction id summaries from fixture game defs', () => {
+    const descriptors = listBootstrapDescriptors();
+    const fitl = descriptors.find((descriptor) => descriptor.id === 'fitl');
+    const texas = descriptors.find((descriptor) => descriptor.id === 'texas');
+
+    expect(fitl?.gameMetadata.factionIds).toEqual(['us', 'arvn', 'nva', 'vc']);
+    expect(texas?.gameMetadata.factionIds).toEqual(['neutral']);
+  });
+
   it('returns null when a bootstrap target has no visual config file', () => {
     const descriptors = listBootstrapDescriptors();
     const defaultDescriptor = descriptors.find((descriptor) => descriptor.id === 'default');
@@ -122,6 +131,7 @@ function descriptor(
       description: '',
       playerMin: 1,
       playerMax: 4,
+      factionIds: [],
     } satisfies BootstrapGameMetadataSummary,
     resolveGameDefInput: async () => ({}),
     resolveVisualConfigYaml: () => null,

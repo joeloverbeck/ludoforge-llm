@@ -4,7 +4,6 @@ import { createElement } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { PreGameConfigPlaceholder } from '../../src/ui/screens/PreGameConfigPlaceholder.js';
 import { ReplayPlaceholder } from '../../src/ui/screens/ReplayPlaceholder.js';
 
 afterEach(() => {
@@ -13,38 +12,6 @@ afterEach(() => {
 });
 
 describe('session placeholders', () => {
-  it('renders pre-game placeholder and emits start/back actions', () => {
-    const onStartGame = vi.fn();
-    const onBack = vi.fn();
-
-    render(createElement(PreGameConfigPlaceholder, {
-      gameId: 'fitl',
-      descriptor: {
-        id: 'fitl',
-        queryValue: 'fitl',
-        defaultSeed: 9,
-        defaultPlayerId: 2,
-        sourceLabel: 'FITL',
-        gameMetadata: {
-          name: 'Fire in the Lake',
-          description: 'test',
-          playerMin: 2,
-          playerMax: 4,
-        },
-        resolveGameDefInput: async () => ({}),
-        resolveVisualConfigYaml: () => null,
-      },
-      onStartGame,
-      onBack,
-    }));
-
-    fireEvent.click(screen.getByTestId('pre-game-start'));
-    expect(onStartGame).toHaveBeenCalledWith(9, 2);
-
-    fireEvent.click(screen.getByTestId('pre-game-back'));
-    expect(onBack).toHaveBeenCalledTimes(1);
-  });
-
   it('renders replay placeholder and emits back action', () => {
     const onBackToMenu = vi.fn();
 

@@ -6,8 +6,8 @@ import { findBootstrapDescriptorById, useActiveGameRuntime } from './session/act
 import { ErrorBoundary } from './ui/ErrorBoundary.js';
 import { GameContainer } from './ui/GameContainer.js';
 import { GameSelectionScreen } from './ui/GameSelectionScreen.js';
+import { PreGameConfigScreen } from './ui/PreGameConfigScreen.js';
 import { UnsavedChangesDialog } from './ui/UnsavedChangesDialog.js';
-import { PreGameConfigPlaceholder } from './ui/screens/PreGameConfigPlaceholder.js';
 import { ReplayPlaceholder } from './ui/screens/ReplayPlaceholder.js';
 
 export function App(): ReactElement {
@@ -36,14 +36,11 @@ export function App(): ReactElement {
       case 'preGameConfig': {
         const descriptor = findBootstrapDescriptorById(sessionState.gameId);
         return (
-          <PreGameConfigPlaceholder
+          <PreGameConfigScreen
             gameId={sessionState.gameId}
             descriptor={descriptor}
-            onStartGame={(seed, playerId) => {
-              sessionStore.getState().startGame(
-                seed,
-                [{ playerId, type: 'human' }],
-              );
+            onStartGame={(seed, playerConfig) => {
+              sessionStore.getState().startGame(seed, playerConfig);
             }}
             onBack={() => {
               sessionStore.getState().returnToMenu();

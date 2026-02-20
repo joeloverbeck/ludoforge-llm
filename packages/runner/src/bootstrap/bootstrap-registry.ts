@@ -26,6 +26,7 @@ export interface BootstrapGameMetadataSummary {
   readonly description: string;
   readonly playerMin: number;
   readonly playerMax: number;
+  readonly factionIds: readonly string[];
 }
 
 const BOOTSTRAP_TARGET_DEFINITIONS = assertBootstrapTargetDefinitions(bootstrapTargets as unknown);
@@ -206,6 +207,7 @@ function resolveGameMetadataSummary(targetId: string, fixtureInput: unknown): Bo
     description: '',
     playerMin: 0,
     playerMax: 0,
+    factionIds: [],
   };
   const fixture = asRecord(fixtureInput);
   if (fixture === null) {
@@ -226,12 +228,14 @@ function resolveGameMetadataSummary(targetId: string, fixtureInput: unknown): Bo
   }
   const name = readOptionalString(metadata.name);
   const description = readOptionalString(metadata.description);
+  const factionIds = readFactionIds(fixture.factions);
 
   return {
     name: name ?? targetId,
     description: description ?? '',
     playerMin,
     playerMax,
+    factionIds,
   } satisfies BootstrapGameMetadataSummary;
 }
 
@@ -254,4 +258,16 @@ function readOptionalString(value: unknown): string | null {
     return null;
   }
   return typeof value === 'string' ? value : null;
+}
+
+function readFactionIds(value: unknown): readonly string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => asRecord(entry))
+    .filter((entry): entry is Record<string, unknown> => entry !== null)
+    .map((entry) => readOptionalString(entry.id))
+    .filter((entry): entry is string => entry !== null && entry.length > 0);
 }

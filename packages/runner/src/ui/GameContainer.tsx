@@ -195,8 +195,8 @@ export function GameContainer({ store, visualConfigProvider, onReturnToMenu, onN
               {renderOverlayRegionPanels(OVERLAY_REGION_PANELS.floating, store)}
               <TerminalOverlay
                 store={store}
-                onNewGame={onNewGame}
-                onReturnToMenu={onReturnToMenu}
+                {...(onNewGame === undefined ? {} : { onNewGame })}
+                {...(onReturnToMenu === undefined ? {} : { onReturnToMenu })}
               />
               <TooltipLayer
                 store={store}

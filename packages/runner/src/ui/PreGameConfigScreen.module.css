@@ -1,0 +1,40 @@
+.screen {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  max-width: 42rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: #4b5f7f;
+}
+
+.fieldLabel {
+  font-weight: 600;
+}
+
+.seats {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.seatRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid #d4dbe7;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.error {
+  color: #9f1d2f;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+}

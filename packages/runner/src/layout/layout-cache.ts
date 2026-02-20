@@ -6,7 +6,7 @@ import { computeAuxLayout } from './aux-zone-layout.js';
 import { partitionZones, resolveLayoutMode } from './build-layout-graph.js';
 import { computeLayout } from './compute-layout.js';
 import { ZONE_HALF_HEIGHT, ZONE_HALF_WIDTH } from './layout-constants.js';
-import { EMPTY_BOUNDS } from './layout-helpers.js';
+import { EMPTY_BOUNDS, promoteCardRoleZones } from './layout-helpers.js';
 import type { LayoutMode } from './layout-types.js';
 import type { Position, ZonePositionMap } from '../spatial/position-types.js';
 
@@ -26,10 +26,21 @@ export function getOrComputeLayout(def: GameDef, visualConfigProvider: VisualCon
 
   const mode = resolveLayoutMode(def, visualConfigProvider);
   const partitioned = partitionZones(def);
+  const cardAnimation = visualConfigProvider.getCardAnimation();
+  const roleZoneIds = new Set<string>();
+  for (const zoneIds of Object.values(cardAnimation?.zoneRoles ?? {})) {
+    for (const zoneId of zoneIds) {
+      roleZoneIds.add(zoneId);
+    }
+  }
+  const promoted = promoteCardRoleZones(partitioned, roleZoneIds);
   const hints = visualConfigProvider.getLayoutHints();
-  const regionHints = hints?.regions ?? null;
-  const boardLayout = computeLayout(def, mode, regionHints);
-  const auxLayout = computeAuxLayout(partitioned.aux, boardLayout.boardBounds, visualConfigProvider);
+  const boardLayout = computeLayout(def, mode, {
+    regionHints: hints?.regions ?? null,
+    boardZones: promoted.board,
+    tableZoneRoles: cardAnimation?.zoneRoles ?? null,
+  });
+  const auxLayout = computeAuxLayout(promoted.aux, boardLayout.boardBounds, visualConfigProvider);
 
   const positions = new Map<string, Position>();
   for (const [zoneID, position] of boardLayout.positions) {

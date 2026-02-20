@@ -1,7 +1,7 @@
 import forceAtlas2 from 'graphology-layout-forceatlas2';
 import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
 
-import type { CompassPosition, RegionHint } from '../config/visual-config-types.js';
+import type { CardAnimationZoneRoles, CompassPosition, RegionHint } from '../config/visual-config-types.js';
 import { buildLayoutGraph, partitionZones } from './build-layout-graph.js';
 import { computeGridLayout } from './grid-layout.js';
 import { ZONE_RENDER_HEIGHT, ZONE_RENDER_WIDTH } from './layout-constants.js';
@@ -18,6 +18,8 @@ const SEED_JITTER = 18;
 const SEED_RADIUS_BASE = 160;
 const SEED_RADIUS_STEP = 90;
 const TABLE_SHARED_SPACING = 140;
+const TABLE_CENTER_ROW_GAP = 100;
+const TABLE_CENTER_HORIZONTAL_SPACING = 140;
 const TABLE_PERIMETER_SPACING = 120;
 const TABLE_PERIMETER_MIN_RADIUS_X = 320;
 const TABLE_PERIMETER_MIN_RADIUS_Y = 220;
@@ -38,6 +40,12 @@ const COMPASS_ANGLES: Readonly<Record<CompassPosition, number>> = {
 
 const CENTER_RADIUS_FRACTION = 0.15;
 
+interface ComputeLayoutOptions {
+  readonly regionHints?: readonly RegionHint[] | null;
+  readonly boardZones?: readonly ZoneDef[];
+  readonly tableZoneRoles?: CardAnimationZoneRoles | null;
+}
+
 function computeGraphExtent(nodeCount: number): number {
   const zoneDiagonal = Math.hypot(ZONE_RENDER_WIDTH, ZONE_RENDER_HEIGHT);
   const perNodeSpace = zoneDiagonal * GRAPH_NODE_SPACING_FACTOR;
@@ -51,13 +59,16 @@ function computeGraphMinSpacing(): number {
 export function computeLayout(
   def: GameDef,
   mode: LayoutMode,
-  regionHints?: readonly RegionHint[] | null,
+  options?: ComputeLayoutOptions,
 ): LayoutResult {
   switch (mode) {
     case 'graph':
-      return computeGraphLayout(def, regionHints ?? null);
+      return computeGraphLayout(def, options?.regionHints ?? null);
     case 'table':
-      return computeTableLayout(def);
+      return computeTableLayout(
+        options?.boardZones ?? selectPrimaryLayoutZones(def),
+        options?.tableZoneRoles ?? null,
+      );
     case 'track':
       return computeTrackLayout(def);
     case 'grid':
@@ -65,8 +76,10 @@ export function computeLayout(
   }
 }
 
-function computeTableLayout(def: GameDef): LayoutResult {
-  const tableZones = selectPrimaryLayoutZones(def);
+function computeTableLayout(
+  tableZones: readonly ZoneDef[],
+  zoneRoles: CardAnimationZoneRoles | null,
+): LayoutResult {
   if (tableZones.length === 0) {
     return {
       positions: new Map(),
@@ -89,7 +102,7 @@ function computeTableLayout(def: GameDef): LayoutResult {
   playerZones.sort((left, right) => left.id.localeCompare(right.id));
 
   const positions = new Map<string, MutablePosition>();
-  placeSharedZones(sharedZones, positions);
+  placeSharedZones(sharedZones, positions, zoneRoles);
   placePlayerZones(playerZones, positions);
   centerOnOrigin(positions);
 
@@ -326,11 +339,42 @@ function buildSeedGroupKey(
   return categoryStr.length > 0 ? categoryStr : '__ungrouped__';
 }
 
-function placeSharedZones(zones: readonly ZoneDef[], positions: Map<string, MutablePosition>): void {
+function placeSharedZones(
+  zones: readonly ZoneDef[],
+  positions: Map<string, MutablePosition>,
+  zoneRoles: CardAnimationZoneRoles | null,
+): void {
   if (zones.length === 0) {
     return;
   }
 
+  if (zoneRoles !== null) {
+    const zoneById = new Map(zones.map((zone) => [zone.id, zone] as const));
+    const placedZoneIds = new Set<string>();
+    placeRoleRow(positions, resolveRoleZones(zoneRoles.draw, zoneById, placedZoneIds), -TABLE_CENTER_ROW_GAP);
+    placeRoleRow(positions, resolveRoleZones(zoneRoles.shared, zoneById, placedZoneIds), 0);
+    placeRoleRow(
+      positions,
+      resolveRoleZones(zoneRoles.burn, zoneById, placedZoneIds),
+      TABLE_CENTER_ROW_GAP,
+      -TABLE_CENTER_HORIZONTAL_SPACING / 2,
+    );
+    placeRoleRow(
+      positions,
+      resolveRoleZones(zoneRoles.discard, zoneById, placedZoneIds),
+      TABLE_CENTER_ROW_GAP,
+      TABLE_CENTER_HORIZONTAL_SPACING / 2,
+    );
+
+    const unassigned = zones.filter((zone) => !placedZoneIds.has(zone.id));
+    placeVerticalCenterColumn(unassigned, positions);
+    return;
+  }
+
+  placeVerticalCenterColumn(zones, positions);
+}
+
+function placeVerticalCenterColumn(zones: readonly ZoneDef[], positions: Map<string, MutablePosition>): void {
   const startY = -((zones.length - 1) * TABLE_SHARED_SPACING) / 2;
   for (let index = 0; index < zones.length; index += 1) {
     const zone = zones[index];
@@ -339,6 +383,47 @@ function placeSharedZones(zones: readonly ZoneDef[], positions: Map<string, Muta
     }
     positions.set(zone.id, { x: 0, y: startY + (index * TABLE_SHARED_SPACING) });
   }
+}
+
+function placeRoleRow(
+  positions: Map<string, MutablePosition>,
+  zones: readonly ZoneDef[],
+  y: number,
+  xOffset = 0,
+): void {
+  if (zones.length === 0) {
+    return;
+  }
+
+  const startX = xOffset - ((zones.length - 1) * TABLE_CENTER_HORIZONTAL_SPACING) / 2;
+  for (let index = 0; index < zones.length; index += 1) {
+    const zone = zones[index];
+    if (zone === undefined) {
+      continue;
+    }
+    positions.set(zone.id, { x: startX + (index * TABLE_CENTER_HORIZONTAL_SPACING), y });
+  }
+}
+
+function resolveRoleZones(
+  roleZoneIds: readonly string[],
+  zoneById: ReadonlyMap<string, ZoneDef>,
+  placedZoneIds: Set<string>,
+): readonly ZoneDef[] {
+  const zones: ZoneDef[] = [];
+  for (const zoneId of roleZoneIds) {
+    if (placedZoneIds.has(zoneId)) {
+      continue;
+    }
+    const zone = zoneById.get(zoneId);
+    if (zone === undefined) {
+      continue;
+    }
+    zones.push(zone);
+    placedZoneIds.add(zoneId);
+  }
+
+  return zones;
 }
 
 function placePlayerZones(zones: readonly ZoneDef[], positions: Map<string, MutablePosition>): void {
@@ -358,7 +443,7 @@ function placePlayerZones(zones: readonly ZoneDef[], positions: Map<string, Muta
       continue;
     }
 
-    const angle = (-Math.PI / 2) + (groupIndex * angularStep);
+    const angle = (Math.PI / 2) + (groupIndex * angularStep);
     const anchorX = Math.cos(angle) * radiusX;
     const anchorY = Math.sin(angle) * radiusY;
     const tangentX = -Math.sin(angle);

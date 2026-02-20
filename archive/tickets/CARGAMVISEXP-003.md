@@ -1,6 +1,6 @@
 # CARGAMVISEXP-003: Card-role-aware table layout (zones on table, not sidebar)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — runner-only
@@ -14,20 +14,19 @@ Additionally, seat 0 starts at the top of the table (`-Math.PI / 2` in `placePla
 
 ## Assumption Reassessment (2026-02-20)
 
-1. `partitionZones()` lives in `build-layout-graph.ts:17-41`, re-exported from `layout-helpers.ts` — confirmed.
-2. `layout-cache.ts` lines 36-39: aux positions overwrite board positions in the same `positions` map — confirmed.
-3. `computeLayout()` at `compute-layout.ts:51-66` takes `(def, mode, regionHints?)` — does NOT accept an optional `boardZones` param — confirmed.
-4. `computeTableLayout()` is a private function at `compute-layout.ts:68-101` that calls `selectPrimaryLayoutZones(def)` internally — confirmed.
+1. `partitionZones()` lives in `build-layout-graph.ts:17-41` and is **not** re-exported from `layout-helpers.ts` — corrected.
+2. `layout-cache.ts` merges board and aux maps; when table mode falls back to `selectPrimaryLayoutZones(def) => def.zones`, aux zones are laid out twice and aux coordinates overwrite table coordinates for the same IDs — confirmed.
+3. `computeLayout()` at `compute-layout.ts:51-66` takes `(def, mode, regionHints?)` and cannot accept promoted board zones or table-role metadata — confirmed.
+4. `computeTableLayout()` is private and currently re-derives table zones from `def` via `selectPrimaryLayoutZones(def)` instead of using upstream partition/promotion results — confirmed.
 5. `placePlayerZones()` at `compute-layout.ts:344-380` uses starting angle `-Math.PI / 2` (top) — confirmed.
-6. `CardAnimationZoneRolesSchema` exists at `visual-config-types.ts:129-135` with `draw`, `hand`, `shared`, `burn`, `discard` — confirmed.
-7. `getCardAnimation()` at `visual-config-provider.ts:198-200` returns `config?.cardAnimation ?? null` — confirmed.
-8. `layout-helpers.test.ts` DOES NOT EXIST — confirmed, needs to be created.
+6. `CardAnimationZoneRolesSchema` exists with `draw`, `hand`, `shared`, `burn`, `discard`, and `getCardAnimation()` exposes it from config — confirmed.
+7. `layout-helpers.test.ts` does not exist — confirmed, needs to be created.
 
 ## Architecture Check
 
 1. `promoteCardRoleZones()` is generic: it reads zone roles from the visual config's `cardAnimation.zoneRoles` — any card game can use this, not Texas Hold'em-specific.
 2. The board/aux partition fix is a layout-pipeline concern only — no engine changes.
-3. Adding an optional `boardZones` param to `computeLayout()` is backwards-compatible (defaults to `selectPrimaryLayoutZones(def)` when omitted).
+3. Preferred architecture: layout partition/promotion is decided once in `layout-cache.ts`, and `computeLayout()` receives explicit options (board zones + optional table role metadata) rather than re-deriving from `def` in table mode.
 4. Changing seat 0 angle from top to bottom affects the `table` layout mode only, which is new and only used by card games. FITL uses `graph` mode, so no regression.
 5. Enhanced center layout positions zones by card role (draw/shared/burn/discard) — also driven entirely by config, not game-specific branching.
 
@@ -39,29 +38,31 @@ New exported function:
 ```typescript
 export function promoteCardRoleZones(
   partitioned: { board: ZoneDef[]; aux: ZoneDef[] },
-  provider: VisualConfigProvider,
+  roleZoneIds: ReadonlySet<string>,
 ): { board: readonly ZoneDef[]; aux: readonly ZoneDef[] }
 ```
-Reads `provider.getCardAnimation()`, collects all zone IDs from `zoneRoles.*`, moves matching zones from aux to board.
+Moves matching zones from aux to board by role zone ID. Keep this helper pure (no provider/config dependency).
 
 ### 2. Wire promotion into `layout-cache.ts`
 
-After `partitionZones(def)`, call `promoteCardRoleZones(partitioned, provider)`. Pass `promoted.board` to `computeLayout()` and `promoted.aux` to `computeAuxLayout()`.
+After `partitionZones(def)`, read `cardAnimation.zoneRoles` from provider, build one `Set<string>` of zone IDs, call `promoteCardRoleZones(partitioned, roleZoneIds)`. Pass promoted board zones to table layout and promoted aux zones to `computeAuxLayout()`.
 
-This requires `layout-cache.ts` to receive or import the `VisualConfigProvider`. Check how it currently gets `def` and `mode`, and thread the provider through the same path.
-
-### 3. Add optional `boardZones` param to `computeLayout()`
+### 3. Refactor `computeLayout()` to explicit options
 
 Modify signature:
 ```typescript
 export function computeLayout(
   def: GameDef,
   mode: LayoutMode,
-  regionHints?: readonly RegionHint[] | null,
-  boardZones?: readonly ZoneDef[],
+  options?: {
+    regionHints?: readonly RegionHint[] | null;
+    boardZones?: readonly ZoneDef[];
+    tableZoneRoles?: CardAnimationZoneRoles | null;
+  },
 ): LayoutResult
 ```
-In `table` case: `computeTableLayout(boardZones ?? selectPrimaryLayoutZones(def))`.
+In `table` case: `computeTableLayout(options?.boardZones ?? selectPrimaryLayoutZones(def), options?.tableZoneRoles ?? null)`.
+In `graph` case: continue to use `options?.regionHints ?? null`.
 
 ### 4. Change seat 0 angle in `placePlayerZones()`
 
@@ -81,7 +82,7 @@ Add constants `TABLE_CENTER_ROW_GAP = 100` and `TABLE_CENTER_HORIZONTAL_SPACING 
 
 - `packages/runner/src/layout/layout-helpers.ts` (modify — add `promoteCardRoleZones()`)
 - `packages/runner/src/layout/layout-cache.ts` (modify — wire promotion)
-- `packages/runner/src/layout/compute-layout.ts` (modify — optional `boardZones` param, seat 0 angle, card-role center layout)
+- `packages/runner/src/layout/compute-layout.ts` (modify — explicit options object, seat 0 angle, card-role center layout)
 - `packages/runner/test/layout/layout-helpers.test.ts` (new — promoteCardRoleZones tests)
 - `packages/runner/test/layout/compute-layout.test.ts` (modify — card-role center placement, seat 0 at bottom)
 - `packages/runner/test/layout/layout-cache.test.ts` (modify — full pipeline with promotion)
@@ -102,9 +103,9 @@ Add constants `TABLE_CENTER_ROW_GAP = 100` and `TABLE_CENTER_HORIZONTAL_SPACING 
 ### Tests That Must Pass
 
 1. `layout-helpers.test.ts` — new test: `promoteCardRoleZones()` moves zones listed in `zoneRoles` from aux to board
-2. `layout-helpers.test.ts` — new test: `promoteCardRoleZones()` returns original partition when `getCardAnimation()` returns null
+2. `layout-helpers.test.ts` — new test: `promoteCardRoleZones()` returns original partition when role set is empty
 3. `layout-helpers.test.ts` — new test: zones already in board are not duplicated
-4. `compute-layout.test.ts` — new test: table layout with `boardZones` param uses provided zones instead of `selectPrimaryLayoutZones()`
+4. `compute-layout.test.ts` — new test: table layout with `options.boardZones` uses provided zones instead of `selectPrimaryLayoutZones()`
 5. `compute-layout.test.ts` — new test: seat 0 is positioned at bottom of table (y > 0) in table layout mode
 6. `compute-layout.test.ts` — new test: card-role center layout places draw zones above center, shared zones at center, burn/discard below
 7. `layout-cache.test.ts` — new test: promoted card-role zones appear at board positions, not aux sidebar positions
@@ -116,7 +117,8 @@ Add constants `TABLE_CENTER_ROW_GAP = 100` and `TABLE_CENTER_HORIZONTAL_SPACING 
 2. Games without `cardAnimation` in their visual config behave identically (no promotion, no card-role center layout).
 3. Aux zones NOT listed in `zoneRoles` remain in the aux sidebar.
 4. No engine/kernel/compiler code is modified.
-5. `computeLayout()` without the optional `boardZones` param behaves identically to before.
+5. `computeLayout()` in graph/track/grid modes behaves identically to before.
+6. Shared layout helpers remain provider-agnostic (no `VisualConfigProvider` dependency in `layout-helpers.ts`).
 
 ## Test Plan
 
@@ -130,3 +132,21 @@ Add constants `TABLE_CENTER_ROW_GAP = 100` and `TABLE_CENTER_HORIZONTAL_SPACING 
 
 1. `pnpm -F @ludoforge/runner test -- --reporter=verbose test/layout/`
 2. `pnpm -F @ludoforge/runner typecheck && pnpm -F @ludoforge/runner lint && pnpm -F @ludoforge/runner test`
+
+## Outcome
+
+- Completion date: 2026-02-20
+- What changed:
+  - Added `promoteCardRoleZones()` in layout helpers as a pure role-ID-set transform.
+  - Refactored `computeLayout()` to accept an explicit options object (`regionHints`, `boardZones`, `tableZoneRoles`) and wired table layout to consume promoted board zones and card-role metadata.
+  - Updated table layout to place seat 0 at the bottom and to place role-tagged shared zones into role-specific center rows.
+  - Wired `layout-cache` to build role zone IDs from visual config, promote roles before layout, and keep only non-promoted zones in aux layout.
+  - Added/updated layout tests for helper promotion, explicit board zone input, seat 0 orientation, role-based center placement, and full cache pipeline promotion behavior.
+- Deviations from original plan:
+  - Replaced the positional `boardZones` parameter proposal with an explicit options object for cleaner extensibility and to avoid parameter growth.
+  - Kept `layout-helpers.ts` provider-agnostic (no `VisualConfigProvider` dependency inside helper).
+- Verification:
+  - `pnpm -F @ludoforge/runner test -- --reporter=verbose test/layout/` passed.
+  - `pnpm -F @ludoforge/runner typecheck` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.
+  - `pnpm -F @ludoforge/runner test` passed.

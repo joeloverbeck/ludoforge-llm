@@ -166,6 +166,36 @@ describe('layout-cache', () => {
 
     expect(second).toBe(first);
   });
+
+  it('promotes card-role zones into board layout so they are not placed in the aux sidebar', () => {
+    const def = makeDef('poker-layout', [
+      zone('draw:none', { owner: 'none', ordering: 'stack' }),
+      zone('shared:none', { owner: 'none' }),
+      zone('discard:none', { owner: 'none', ordering: 'set' }),
+      zone('bench:none', { owner: 'none' }),
+    ], 'table');
+
+    const result = getOrComputeLayout(def, providerWithCardAnimationRoles({
+      draw: ['draw:none'],
+      hand: [],
+      shared: ['shared:none'],
+      burn: [],
+      discard: ['discard:none'],
+    }));
+
+    const draw = result.positionMap.positions.get('draw:none');
+    const shared = result.positionMap.positions.get('shared:none');
+    const discard = result.positionMap.positions.get('discard:none');
+    const bench = result.positionMap.positions.get('bench:none');
+
+    expect(draw).toBeDefined();
+    expect(shared).toBeDefined();
+    expect(discard).toBeDefined();
+    expect(bench).toBeDefined();
+    expect(draw!.x).toBeLessThan(bench!.x);
+    expect(shared!.x).toBeLessThan(bench!.x);
+    expect(discard!.x).toBeLessThan(bench!.x);
+  });
 });
 
 function makeDef(
@@ -212,6 +242,33 @@ function providerWithLayoutMode(mode: 'graph' | 'table' | 'track' | 'grid'): Vis
     version: 1,
     layout: {
       mode,
+    },
+  });
+}
+
+function providerWithCardAnimationRoles(
+  zoneRoles: {
+    readonly draw: readonly string[];
+    readonly hand: readonly string[];
+    readonly shared: readonly string[];
+    readonly burn: readonly string[];
+    readonly discard: readonly string[];
+  },
+): VisualConfigProvider {
+  return new VisualConfigProvider({
+    version: 1,
+    layout: {
+      mode: 'table',
+    },
+    cardAnimation: {
+      cardTokenTypes: {},
+      zoneRoles: {
+        draw: [...zoneRoles.draw],
+        hand: [...zoneRoles.hand],
+        shared: [...zoneRoles.shared],
+        burn: [...zoneRoles.burn],
+        discard: [...zoneRoles.discard],
+      },
     },
   });
 }

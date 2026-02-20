@@ -65,3 +65,27 @@ export function computeBounds(positions: ReadonlyMap<string, MutablePosition>): 
 
   return { minX, minY, maxX, maxY };
 }
+
+export function promoteCardRoleZones(
+  partitioned: { board: readonly ZoneDef[]; aux: readonly ZoneDef[] },
+  roleZoneIds: ReadonlySet<string>,
+): { board: readonly ZoneDef[]; aux: readonly ZoneDef[] } {
+  if (roleZoneIds.size === 0 || partitioned.aux.length === 0) {
+    return partitioned;
+  }
+
+  const board = [...partitioned.board];
+  const aux: ZoneDef[] = [];
+  const boardIds = new Set(partitioned.board.map((zone) => zone.id));
+
+  for (const zone of partitioned.aux) {
+    if (roleZoneIds.has(zone.id) && !boardIds.has(zone.id)) {
+      board.push(zone);
+      boardIds.add(zone.id);
+      continue;
+    }
+    aux.push(zone);
+  }
+
+  return { board, aux };
+}

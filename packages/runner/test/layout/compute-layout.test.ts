@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { asZoneId, type GameDef, type ZoneDef } from '@ludoforge/engine/runtime';
-import type { RegionHint } from '../../src/config/visual-config-types';
+import type { CardAnimationZoneRoles, RegionHint } from '../../src/config/visual-config-types';
 import {
   ZONE_RENDER_WIDTH,
   ZONE_RENDER_HEIGHT,
@@ -235,7 +235,7 @@ describe('computeLayout graph mode with region hints', () => {
       { name: 'Southeast', zones: ['se1', 'se2'], position: 'se' },
     ];
 
-    const layout = computeLayout(makeDef(zones), 'graph', hints);
+    const layout = computeLayout(makeDef(zones), 'graph', { regionHints: hints });
 
     const nwCentroid = centroid([layout.positions.get('nw1')!, layout.positions.get('nw2')!]);
     const seCentroid = centroid([layout.positions.get('se1')!, layout.positions.get('se2')!]);
@@ -259,7 +259,7 @@ describe('computeLayout graph mode with region hints', () => {
       { name: 'South', zones: ['s1', 's2'], position: 's' },
     ];
 
-    const layout = computeLayout(makeDef(zones), 'graph', hints);
+    const layout = computeLayout(makeDef(zones), 'graph', { regionHints: hints });
 
     const centerCentroid = centroid([layout.positions.get('c1')!, layout.positions.get('c2')!]);
     const northCentroid = centroid([layout.positions.get('n1')!, layout.positions.get('n2')!]);
@@ -279,7 +279,7 @@ describe('computeLayout graph mode with region hints', () => {
       { name: 'North', zones: ['hinted'], position: 'n' },
     ];
 
-    const layout = computeLayout(makeDef(zones), 'graph', hints);
+    const layout = computeLayout(makeDef(zones), 'graph', { regionHints: hints });
 
     for (const position of layout.positions.values()) {
       expect(Number.isFinite(position.x)).toBe(true);
@@ -294,9 +294,9 @@ describe('computeLayout graph mode with region hints', () => {
       zone('b', { zoneKind: 'board', adjacentTo: [{ to: 'a' }] }),
     ];
 
-    const withNull = computeLayout(makeDef(zones), 'graph', null);
+    const withNull = computeLayout(makeDef(zones), 'graph', { regionHints: null });
     const withUndefined = computeLayout(makeDef(zones), 'graph');
-    const withEmpty = computeLayout(makeDef(zones), 'graph', []);
+    const withEmpty = computeLayout(makeDef(zones), 'graph', { regionHints: [] });
 
     expect(withNull.positions.size).toBe(2);
     expect(withUndefined.positions.size).toBe(2);
@@ -476,6 +476,17 @@ describe('computeLayout grid mode', () => {
 });
 
 describe('computeLayout table mode', () => {
+  it('uses explicit boardZones options instead of re-deriving from def', () => {
+    const boardZone = zone('community:none', { owner: 'none', zoneKind: 'board' });
+    const auxZone = zone('hand:0', { owner: 'player', ownerPlayerIndex: 0, zoneKind: 'aux' });
+    const layout = computeLayout(makeDef([boardZone, auxZone]), 'table', {
+      boardZones: [boardZone],
+    });
+
+    expect([...layout.positions.keys()].sort()).toEqual(['community:none']);
+    expect(layout.positions.has('hand:0')).toBe(false);
+  });
+
   it('includes all zones when board partition is empty', () => {
     const layout = computeLayout(makeDef([
       zone('community:none', { owner: 'none' }),
@@ -526,6 +537,17 @@ describe('computeLayout table mode', () => {
     }
   });
 
+  it('places seat 0 at the bottom of the table', () => {
+    const layout = computeLayout(makeDef([
+      zone('hand:0', { owner: 'player', ownerPlayerIndex: 0 }),
+      zone('hand:1', { owner: 'player', ownerPlayerIndex: 1 }),
+    ]), 'table');
+
+    const seat0 = layout.positions.get('hand:0');
+    expect(seat0).toBeDefined();
+    expect(seat0!.y).toBeGreaterThan(0);
+  });
+
   it('places single shared zone at origin when no player zones exist', () => {
     const layout = computeLayout(makeDef([zone('community:none', { owner: 'none' })]), 'table');
     expect(layout.positions.get('community:none')).toEqual({ x: 0, y: 0 });
@@ -547,6 +569,42 @@ describe('computeLayout table mode', () => {
     expect(Math.abs(community!.x)).toBeLessThan(1e-6);
     expect(Math.abs(burn!.x)).toBeLessThan(1e-6);
     expect(Math.abs(deck!.x)).toBeLessThan(1e-6);
+  });
+
+  it('positions shared zones by card role rows when tableZoneRoles are provided', () => {
+    const roles: CardAnimationZoneRoles = {
+      draw: ['draw:none'],
+      hand: ['hand:0'],
+      shared: ['shared-a:none', 'shared-b:none'],
+      burn: ['burn:none'],
+      discard: ['discard:none'],
+    };
+
+    const layout = computeLayout(makeDef([
+      zone('draw:none', { owner: 'none' }),
+      zone('shared-a:none', { owner: 'none' }),
+      zone('shared-b:none', { owner: 'none' }),
+      zone('burn:none', { owner: 'none' }),
+      zone('discard:none', { owner: 'none' }),
+      zone('unassigned:none', { owner: 'none' }),
+    ]), 'table', {
+      tableZoneRoles: roles,
+    });
+
+    const draw = layout.positions.get('draw:none')!;
+    const sharedA = layout.positions.get('shared-a:none')!;
+    const sharedB = layout.positions.get('shared-b:none')!;
+    const burn = layout.positions.get('burn:none')!;
+    const discard = layout.positions.get('discard:none')!;
+    const unassigned = layout.positions.get('unassigned:none')!;
+    const sharedY = (sharedA.y + sharedB.y) / 2;
+
+    expect(draw.y).toBeLessThan(sharedY);
+    expect(Math.abs(sharedA.y - sharedB.y)).toBeLessThan(1e-6);
+    expect(burn.y).toBeGreaterThan(sharedY);
+    expect(discard.y).toBeGreaterThan(sharedY);
+    expect(burn.x).toBeLessThan(discard.x);
+    expect(unassigned.x).toBe(0);
   });
 
   it('keeps same-seat zones contiguous on the perimeter', () => {

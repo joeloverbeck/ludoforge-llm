@@ -21,7 +21,8 @@ import { createPositionStore, type PositionStore } from './position-store';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
 import { ContainerPool } from './renderers/container-pool';
 import { VisualConfigFactionColorProvider } from './renderers/faction-colors';
-import type { AdjacencyRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
+import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
+import { createTableOverlayRenderer } from './renderers/table-overlay-renderer.js';
 import { createTokenRenderer } from './renderers/token-renderer';
 import { drawTableBackground } from './renderers/table-background-renderer.js';
 import { createZoneRenderer } from './renderers/zone-renderer';
@@ -88,6 +89,7 @@ interface GameCanvasRuntimeDeps {
   readonly createZoneRenderer: typeof createZoneRenderer;
   readonly createAdjacencyRenderer: typeof createAdjacencyRenderer;
   readonly createTokenRenderer: typeof createTokenRenderer;
+  readonly createTableOverlayRenderer: typeof createTableOverlayRenderer;
   readonly createCanvasUpdater: typeof createCanvasUpdater;
   readonly createCoordinateBridge: typeof createCoordinateBridge;
   readonly createAnimationController: typeof createAnimationController;
@@ -106,6 +108,7 @@ const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   createZoneRenderer,
   createAdjacencyRenderer,
   createTokenRenderer,
+  createTableOverlayRenderer,
   createCanvasUpdater,
   createCoordinateBridge,
   createAnimationController,
@@ -246,6 +249,10 @@ export async function createGameCanvasRuntime(
         },
       ),
   });
+  const tableOverlayRenderer = deps.createTableOverlayRenderer(
+    gameCanvas.layers.tableOverlayLayer,
+    options.visualConfigProvider,
+  );
 
   const canvasUpdater = deps.createCanvasUpdater({
     store: options.store,
@@ -253,6 +260,7 @@ export async function createGameCanvasRuntime(
     zoneRenderer,
     adjacencyRenderer,
     tokenRenderer,
+    tableOverlayRenderer,
     viewport: viewportResult,
     getInteractionHighlights: () => options.interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
   });
@@ -454,7 +462,16 @@ export async function createGameCanvasRuntime(
       aiPlaybackController?.destroy();
       animationController?.destroy();
       ariaAnnouncer.destroy();
-      destroyCanvasPipeline(canvasUpdater, zoneRenderer, adjacencyRenderer, tokenRenderer, zonePool, viewportResult, gameCanvas);
+      destroyCanvasPipeline(
+        canvasUpdater,
+        zoneRenderer,
+        adjacencyRenderer,
+        tokenRenderer,
+        tableOverlayRenderer,
+        zonePool,
+        viewportResult,
+        gameCanvas,
+      );
     },
   };
 }
@@ -542,6 +559,7 @@ function destroyCanvasPipeline(
   zoneRenderer: ZoneRenderer,
   adjacencyRenderer: AdjacencyRenderer,
   tokenRenderer: TokenRenderer,
+  tableOverlayRenderer: TableOverlayRenderer,
   zonePool: ContainerPool,
   viewportResult: ViewportResult,
   gameCanvas: PixiGameCanvas,
@@ -550,6 +568,7 @@ function destroyCanvasPipeline(
   zoneRenderer.destroy();
   adjacencyRenderer.destroy();
   tokenRenderer.destroy();
+  tableOverlayRenderer.destroy();
   zonePool.destroyAll();
   viewportResult.destroy();
   gameCanvas.destroy();

@@ -196,6 +196,38 @@ describe('visual-config.yaml files', () => {
         },
       },
     });
+    expect(parsed.tableOverlays).toEqual({
+      items: [
+        {
+          kind: 'globalVar',
+          varName: 'pot',
+          label: 'Pot',
+          position: 'tableCenter',
+          offsetY: 60,
+          fontSize: 14,
+          color: '#fbbf24',
+        },
+        {
+          kind: 'perPlayerVar',
+          varName: 'streetBet',
+          label: 'Bet',
+          position: 'playerSeat',
+          offsetY: -40,
+          fontSize: 11,
+          color: '#94a3b8',
+        },
+        {
+          kind: 'marker',
+          varName: 'dealerSeat',
+          label: 'D',
+          position: 'playerSeat',
+          offsetX: -60,
+          offsetY: -20,
+          markerShape: 'circle',
+          color: '#fbbf24',
+        },
+      ],
+    });
 
     const layoutRoles = parsed.zones?.layoutRoles ?? {};
     for (const [zoneId, role] of Object.entries(layoutRoles)) {

@@ -6,6 +6,7 @@ import type { ResolvedTokenVisual } from '../../config/visual-config-provider.js
 import type { CardTemplate } from '../../config/visual-config-types.js';
 import type {
   RenderAdjacency,
+  RenderModel,
   RenderToken,
   RenderZone,
 } from '../../model/render-model';
@@ -33,6 +34,14 @@ export interface TokenRenderer {
 export interface AdjacencyRenderer {
   update(
     adjacencies: readonly RenderAdjacency[],
+    positions: ReadonlyMap<string, Position>,
+  ): void;
+  destroy(): void;
+}
+
+export interface TableOverlayRenderer {
+  update(
+    renderModel: RenderModel | null,
     positions: ReadonlyMap<string, Position>,
   ): void;
   destroy(): void;

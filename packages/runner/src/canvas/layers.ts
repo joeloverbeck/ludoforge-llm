@@ -5,6 +5,7 @@ export interface LayerHierarchy {
   readonly backgroundLayer: Container;
   readonly adjacencyLayer: Container;
   readonly zoneLayer: Container;
+  readonly tableOverlayLayer: Container;
   readonly tokenGroup: Container;
   readonly effectsGroup: Container;
   readonly interfaceGroup: Container;
@@ -26,6 +27,7 @@ export function createLayerHierarchy(): LayerHierarchy {
   const backgroundLayer = new Container();
   const adjacencyLayer = new Container();
   const zoneLayer = new Container();
+  const tableOverlayLayer = new Container();
   const tokenGroup = new Container();
   const effectsGroup = new Container();
   const interfaceGroup = new Container();
@@ -49,13 +51,18 @@ export function createLayerHierarchy(): LayerHierarchy {
   zoneLayer.interactiveChildren = true;
   zoneLayer.sortableChildren = true;
 
-  boardGroup.addChild(backgroundLayer, adjacencyLayer, zoneLayer);
+  tableOverlayLayer.eventMode = 'none';
+  tableOverlayLayer.interactiveChildren = false;
+  tableOverlayLayer.sortableChildren = true;
+
+  boardGroup.addChild(backgroundLayer, adjacencyLayer, zoneLayer, tableOverlayLayer);
 
   return {
     boardGroup,
     backgroundLayer,
     adjacencyLayer,
     zoneLayer,
+    tableOverlayLayer,
     tokenGroup,
     effectsGroup,
     interfaceGroup,

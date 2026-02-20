@@ -38,6 +38,33 @@ describe('VisualConfigProvider', () => {
     expect(provider.getCardAnimation()).toBeNull();
   });
 
+  it('table overlays return configured value or null', () => {
+    const withOverlays = new VisualConfigProvider({
+      version: 1,
+      tableOverlays: {
+        items: [
+          {
+            kind: 'globalVar',
+            varName: 'pot',
+            position: 'tableCenter',
+          },
+        ],
+      },
+    });
+    const withoutOverlays = new VisualConfigProvider({ version: 1 });
+
+    expect(withOverlays.getTableOverlays()).toEqual({
+      items: [
+        {
+          kind: 'globalVar',
+          varName: 'pot',
+          position: 'tableCenter',
+        },
+      ],
+    });
+    expect(withoutOverlays.getTableOverlays()).toBeNull();
+  });
+
   it('category style merges over defaults', () => {
     const provider = new VisualConfigProvider({
       version: 1,

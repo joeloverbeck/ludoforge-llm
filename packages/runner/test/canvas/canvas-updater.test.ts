@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createCanvasUpdater } from '../../src/canvas/canvas-updater';
 import { createPositionStore } from '../../src/canvas/position-store';
-import type { AdjacencyRenderer, TokenRenderer, ZoneRenderer } from '../../src/canvas/renderers/renderer-types';
+import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from '../../src/canvas/renderers/renderer-types';
 import type { ViewportResult } from '../../src/canvas/viewport-setup';
 import type { RenderModel, RenderToken, RenderZone } from '../../src/model/render-model';
 import type { GameStore } from '../../src/store/game-store';
@@ -88,6 +88,14 @@ function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
   };
 }
 
+function asVar(name: string, value: number | boolean) {
+  return {
+    name,
+    value,
+    displayName: name,
+  } as const;
+}
+
 function createCanvasTestStore(initial: CanvasTestStoreState): StoreApi<CanvasTestStoreState> {
   return createStore<CanvasTestStoreState>()(
     subscribeWithSelector(() => initial),
@@ -114,10 +122,16 @@ function createRendererMocks() {
     destroy: vi.fn(),
   };
 
+  const tableOverlayRenderer: TableOverlayRenderer = {
+    update: vi.fn(),
+    destroy: vi.fn(),
+  };
+
   return {
     zoneRenderer,
     adjacencyRenderer,
     tokenRenderer,
+    tableOverlayRenderer,
   };
 }
 
@@ -155,7 +169,7 @@ describe('createCanvasUpdater', () => {
 
     updater.start();
 
-    expect(storeSubscribeSpy).toHaveBeenCalledTimes(2);
+    expect(storeSubscribeSpy).toHaveBeenCalledTimes(3);
     expect(positionSubscribeSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -187,6 +201,42 @@ describe('createCanvasUpdater', () => {
       renderers.zoneRenderer.getContainerMap(),
       new Set(),
     );
+  });
+
+  it('updates table overlays when variable state changes even if zones/tokens/adjacencies are unchanged', () => {
+    const model = makeRenderModel({
+      globalVars: [asVar('pot', 10)],
+    });
+    const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
+    const positionStore = createPositionStore(['zone:a']);
+
+    const renderers = createRendererMocks();
+    const viewport = createViewportMock();
+
+    const updater = createCanvasUpdater({
+      store: store as unknown as StoreApi<GameStore>,
+      positionStore,
+      zoneRenderer: renderers.zoneRenderer,
+      adjacencyRenderer: renderers.adjacencyRenderer,
+      tokenRenderer: renderers.tokenRenderer,
+      tableOverlayRenderer: renderers.tableOverlayRenderer,
+      viewport,
+    });
+
+    updater.start();
+    expect(renderers.tableOverlayRenderer.update).toHaveBeenCalledTimes(1);
+    vi.clearAllMocks();
+
+    store.setState({
+      renderModel: makeRenderModel({
+        globalVars: [asVar('pot', 25)],
+      }),
+    });
+
+    expect(renderers.tableOverlayRenderer.update).toHaveBeenCalledTimes(1);
+    expect(renderers.zoneRenderer.update).not.toHaveBeenCalled();
+    expect(renderers.adjacencyRenderer.update).not.toHaveBeenCalled();
+    expect(renderers.tokenRenderer.update).not.toHaveBeenCalled();
   });
 
   it('updates renderers when zones change and ignores metadata-only changes under visual equality gating', () => {

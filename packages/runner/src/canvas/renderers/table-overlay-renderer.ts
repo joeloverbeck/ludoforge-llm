@@ -1,0 +1,259 @@
+import { asPlayerId } from '@ludoforge/engine/runtime';
+import { Container, Graphics, Text } from 'pixi.js';
+
+import type { VisualConfigProvider } from '../../config/visual-config-provider.js';
+import type { TableOverlayItemConfig } from '../../config/visual-config-types.js';
+import type { Position } from '../geometry';
+import type { RenderModel, RenderVariable } from '../../model/render-model.js';
+import type { TableOverlayRenderer } from './renderer-types.js';
+import { parseHexColor } from './shape-utils.js';
+
+const DEFAULT_TEXT_COLOR = '#f8fafc';
+const DEFAULT_TEXT_FONT_SIZE = 12;
+const DEFAULT_MARKER_SHAPE = 'circle';
+const DEFAULT_MARKER_LABEL = '*';
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+export function createTableOverlayRenderer(
+  parentContainer: Container,
+  visualConfigProvider: VisualConfigProvider,
+): TableOverlayRenderer {
+  return {
+    update(renderModel, positions): void {
+      clearContainer(parentContainer);
+      if (renderModel === null) {
+        return;
+      }
+
+      const items = visualConfigProvider.getTableOverlays()?.items ?? [];
+      if (items.length === 0) {
+        return;
+      }
+
+      const seatAnchors = deriveSeatAnchors(renderModel, positions);
+      const tableCenter = deriveTableCenter(renderModel, positions, seatAnchors);
+
+      for (const item of items) {
+        switch (item.kind) {
+          case 'globalVar': {
+            const value = findVarValue(renderModel.globalVars, item.varName);
+            if (value === null) {
+              continue;
+            }
+            const target = resolvePosition(item, tableCenter, null);
+            if (target === null) {
+              continue;
+            }
+            parentContainer.addChild(
+              createOverlayText(resolveOverlayLabel(item.label, value), item, target),
+            );
+            break;
+          }
+          case 'perPlayerVar': {
+            for (const player of renderModel.players) {
+              if (player.isEliminated) {
+                continue;
+              }
+              const target = resolvePosition(item, tableCenter, seatAnchors.get(player.id) ?? null);
+              if (target === null) {
+                continue;
+              }
+              const playerVars = renderModel.playerVars.get(player.id) ?? [];
+              const value = findVarValue(playerVars, item.varName);
+              if (value === null) {
+                continue;
+              }
+              parentContainer.addChild(
+                createOverlayText(resolveOverlayLabel(item.label, value), item, target),
+              );
+            }
+            break;
+          }
+          case 'marker': {
+            const rawValue = findVarValue(renderModel.globalVars, item.varName);
+            if (typeof rawValue !== 'number' || !Number.isFinite(rawValue)) {
+              continue;
+            }
+            const playerId = asPlayerId(Math.trunc(rawValue));
+            const target = resolvePosition(item, tableCenter, seatAnchors.get(playerId) ?? null);
+            if (target === null) {
+              continue;
+            }
+            parentContainer.addChild(createMarker(item, target));
+            break;
+          }
+        }
+      }
+    },
+
+    destroy(): void {
+      clearContainer(parentContainer);
+    },
+  };
+}
+
+function resolvePosition(item: TableOverlayItemConfig, tableCenter: Point, seatAnchor: Point | null): Point | null {
+  const offsetX = item.offsetX ?? 0;
+  const offsetY = item.offsetY ?? 0;
+
+  if (item.position === 'tableCenter') {
+    return { x: tableCenter.x + offsetX, y: tableCenter.y + offsetY };
+  }
+  if (seatAnchor === null) {
+    return null;
+  }
+  return { x: seatAnchor.x + offsetX, y: seatAnchor.y + offsetY };
+}
+
+function deriveSeatAnchors(
+  renderModel: RenderModel,
+  positions: ReadonlyMap<string, Position>,
+): ReadonlyMap<number, Point> {
+  const accumulators = new Map<number, { sumX: number; sumY: number; count: number }>();
+
+  for (const zone of renderModel.zones) {
+    if (zone.ownerID === null) {
+      continue;
+    }
+    const position = positions.get(zone.id);
+    if (position === undefined) {
+      continue;
+    }
+
+    const key = Number(zone.ownerID);
+    const current = accumulators.get(key) ?? { sumX: 0, sumY: 0, count: 0 };
+    current.sumX += position.x;
+    current.sumY += position.y;
+    current.count += 1;
+    accumulators.set(key, current);
+  }
+
+  const anchors = new Map<number, Point>();
+  for (const [playerId, accumulator] of accumulators) {
+    if (accumulator.count <= 0) {
+      continue;
+    }
+    anchors.set(playerId, {
+      x: accumulator.sumX / accumulator.count,
+      y: accumulator.sumY / accumulator.count,
+    });
+  }
+
+  return anchors;
+}
+
+function deriveTableCenter(
+  renderModel: RenderModel,
+  positions: ReadonlyMap<string, Position>,
+  seatAnchors: ReadonlyMap<number, Point>,
+): Point {
+  if (seatAnchors.size > 0) {
+    let sumX = 0;
+    let sumY = 0;
+    for (const point of seatAnchors.values()) {
+      sumX += point.x;
+      sumY += point.y;
+    }
+    return {
+      x: sumX / seatAnchors.size,
+      y: sumY / seatAnchors.size,
+    };
+  }
+
+  let sumX = 0;
+  let sumY = 0;
+  let count = 0;
+  for (const zone of renderModel.zones) {
+    const point = positions.get(zone.id);
+    if (point === undefined) {
+      continue;
+    }
+    sumX += point.x;
+    sumY += point.y;
+    count += 1;
+  }
+
+  if (count <= 0) {
+    return { x: 0, y: 0 };
+  }
+  return {
+    x: sumX / count,
+    y: sumY / count,
+  };
+}
+
+function findVarValue(
+  vars: readonly RenderVariable[],
+  varName: string,
+): number | boolean | null {
+  const found = vars.find((entry) => entry.name === varName);
+  return found?.value ?? null;
+}
+
+function resolveOverlayLabel(label: string | undefined, value: number | boolean): string {
+  const valueText = String(value);
+  if (label === undefined || label.length === 0) {
+    return valueText;
+  }
+  return `${label}: ${valueText}`;
+}
+
+function createOverlayText(text: string, item: TableOverlayItemConfig, point: Point): Text {
+  const label = new Text({
+    text,
+    style: {
+      fill: item.color ?? DEFAULT_TEXT_COLOR,
+      fontSize: item.fontSize ?? DEFAULT_TEXT_FONT_SIZE,
+      fontFamily: 'monospace',
+    },
+  });
+
+  label.position.set(point.x, point.y);
+  label.eventMode = 'none';
+  label.interactiveChildren = false;
+  return label;
+}
+
+function createMarker(item: TableOverlayItemConfig, point: Point): Container {
+  const marker = new Container();
+  marker.position.set(point.x, point.y);
+  marker.eventMode = 'none';
+  marker.interactiveChildren = false;
+
+  const markerColor = parseHexColor(item.color ?? '#fbbf24', { allowNamedColors: true }) ?? 0xfbbf24;
+  const markerShape = item.markerShape ?? DEFAULT_MARKER_SHAPE;
+
+  const badge = new Graphics();
+  if (markerShape === 'badge') {
+    badge.roundRect(-12, -9, 24, 18, 8);
+  } else {
+    badge.circle(0, 0, 10);
+  }
+  badge.fill(markerColor);
+
+  const markerLabel = new Text({
+    text: item.label ?? DEFAULT_MARKER_LABEL,
+    style: {
+      fill: '#111827',
+      fontSize: item.fontSize ?? 11,
+      fontFamily: 'monospace',
+    },
+  });
+  markerLabel.anchor.set(0.5, 0.5);
+  markerLabel.eventMode = 'none';
+  markerLabel.interactiveChildren = false;
+
+  marker.addChild(badge, markerLabel);
+  return marker;
+}
+
+function clearContainer(container: Container): void {
+  const removed = container.removeChildren();
+  for (const child of removed) {
+    child.destroy({ children: true });
+  }
+}

@@ -212,6 +212,22 @@ const VariablesConfigSchema = z.object({
   formatting: z.record(z.string(), VariableFormattingSchema).optional(),
 });
 
+const TableOverlayItemSchema = z.object({
+  kind: z.enum(['globalVar', 'perPlayerVar', 'marker']),
+  varName: z.string(),
+  label: z.string().optional(),
+  position: z.enum(['tableCenter', 'playerSeat']),
+  offsetX: z.number().optional(),
+  offsetY: z.number().optional(),
+  fontSize: z.number().optional(),
+  color: z.string().optional(),
+  markerShape: z.enum(['circle', 'badge']).optional(),
+});
+
+const TableOverlaysSchema = z.object({
+  items: z.array(TableOverlayItemSchema).optional(),
+});
+
 export const VisualConfigSchema = z.object({
   version: z.literal(1),
   layout: LayoutConfigSchema.optional(),
@@ -224,6 +240,7 @@ export const VisualConfigSchema = z.object({
   animations: AnimationsConfigSchema.optional(),
   cards: CardsConfigSchema.optional(),
   variables: VariablesConfigSchema.optional(),
+  tableOverlays: TableOverlaysSchema.optional(),
 });
 
 export type LayoutMode = z.infer<typeof LayoutModeSchema>;
@@ -258,4 +275,6 @@ export type CardsConfig = z.infer<typeof CardsConfigSchema>;
 export type VariablePanel = z.infer<typeof VariablePanelSchema>;
 export type VariableFormatting = z.infer<typeof VariableFormattingSchema>;
 export type VariablesConfig = z.infer<typeof VariablesConfigSchema>;
+export type TableOverlayItemConfig = z.infer<typeof TableOverlayItemSchema>;
+export type TableOverlaysConfig = z.infer<typeof TableOverlaysSchema>;
 export type VisualConfig = z.infer<typeof VisualConfigSchema>;

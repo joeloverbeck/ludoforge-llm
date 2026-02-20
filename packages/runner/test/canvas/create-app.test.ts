@@ -17,6 +17,7 @@ const {
     boardGroup: { id: 'board' },
     adjacencyLayer: { id: 'adjacency' },
     zoneLayer: { id: 'zone' },
+    tableOverlayLayer: { id: 'table-overlay' },
     tokenGroup: { id: 'token' },
     effectsGroup: { id: 'effects' },
     interfaceGroup: { id: 'interface' },

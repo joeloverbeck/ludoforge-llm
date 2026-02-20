@@ -15,6 +15,7 @@ import type {
   CardAnimationConfig,
   CardTemplate,
   TableBackgroundConfig,
+  TableOverlaysConfig,
   TokenTypeDefault,
   TokenTypeSelectors,
   TokenSymbolRule,
@@ -226,6 +227,10 @@ export class VisualConfigProvider {
 
   getTableBackground(): TableBackgroundConfig | null {
     return this.config?.layout?.tableBackground ?? null;
+  }
+
+  getTableOverlays(): TableOverlaysConfig | null {
+    return this.config?.tableOverlays ?? null;
   }
 }
 

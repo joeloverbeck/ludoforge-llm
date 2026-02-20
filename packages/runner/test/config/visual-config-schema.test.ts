@@ -209,6 +209,30 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts table overlays config', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      tableOverlays: {
+        items: [
+          {
+            kind: 'globalVar',
+            varName: 'pot',
+            label: 'Pot',
+            position: 'tableCenter',
+            offsetY: 60,
+          },
+          {
+            kind: 'perPlayerVar',
+            varName: 'streetBet',
+            position: 'playerSeat',
+            markerShape: 'badge',
+          },
+        ],
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
   it('rejects invalid card field align values', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

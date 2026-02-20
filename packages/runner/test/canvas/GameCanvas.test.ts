@@ -129,6 +129,13 @@ function createRuntimeFixture() {
     }),
   };
 
+  const tableOverlayRenderer = {
+    update: vi.fn(),
+    destroy: vi.fn(() => {
+      lifecycle.push('table-overlay-renderer-destroy');
+    }),
+  };
+
   const viewportEvents = {
     on: vi.fn((event: string, listener: () => void) => {
       if (event === 'moved') {
@@ -165,6 +172,7 @@ function createRuntimeFixture() {
       backgroundLayer: {} as never,
       adjacencyLayer: {} as never,
       zoneLayer: {} as never,
+      tableOverlayLayer: {} as never,
       tokenGroup: {} as never,
       effectsGroup: {} as never,
       interfaceGroup: {} as never,
@@ -270,6 +278,7 @@ function createRuntimeFixture() {
       options.bindSelection?.(tokenContainer, 'token:1', () => true);
       return tokenRenderer;
     }),
+    createTableOverlayRenderer: vi.fn(() => tableOverlayRenderer),
     createCanvasUpdater: vi.fn(() => canvasUpdater),
     createCoordinateBridge: vi.fn(() => bridge),
     createAnimationController,
@@ -289,6 +298,7 @@ function createRuntimeFixture() {
     zoneRenderer,
     adjacencyRenderer,
     tokenRenderer,
+    tableOverlayRenderer,
     viewportResult,
     gameCanvas,
     positionStore,
@@ -404,6 +414,11 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.deps.createZoneRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createAdjacencyRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createTokenRenderer).toHaveBeenCalledTimes(1);
+    expect(fixture.deps.createTableOverlayRenderer).toHaveBeenCalledTimes(1);
+    expect(fixture.deps.createTableOverlayRenderer).toHaveBeenCalledWith(
+      fixture.gameCanvas.layers.tableOverlayLayer,
+      TEST_VISUAL_CONFIG_PROVIDER,
+    );
     expect(fixture.deps.createCanvasUpdater).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createAriaAnnouncer).toHaveBeenCalledTimes(1);
     expect(fixture.createAnimationController).toHaveBeenCalledTimes(1);
@@ -630,6 +645,7 @@ describe('createGameCanvasRuntime', () => {
       'zone-renderer-destroy',
       'adjacency-renderer-destroy',
       'token-renderer-destroy',
+      'table-overlay-renderer-destroy',
       'viewport-destroy',
       'game-canvas-destroy',
     ]);

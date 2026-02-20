@@ -30,7 +30,7 @@ describe('createGameWorker', () => {
       () => worker.enumerateLegalMoves(),
       () => worker.legalChoices(LEGAL_TICK_MOVE),
       () => worker.applyMove(LEGAL_TICK_MOVE, undefined, nextStamp()),
-      () => worker.playSequence([LEGAL_TICK_MOVE], nextStamp(), undefined),
+      () => worker.playSequence([LEGAL_TICK_MOVE], undefined, nextStamp(), undefined),
       () => worker.terminalResult(),
       () => worker.getState(),
       () => worker.getMetadata(),
@@ -57,6 +57,29 @@ describe('createGameWorker', () => {
 
     const noTrace = await worker.applyMove(LEGAL_TICK_MOVE, { trace: false }, nextStamp());
     expect(noTrace.effectTrace).toBeUndefined();
+  });
+
+  it('supports per-call trace override for playSequence', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 73, undefined, nextStamp());
+
+    const noTrace = await worker.playSequence(
+      [LEGAL_TICK_MOVE, LEGAL_TICK_MOVE],
+      { trace: false },
+      nextStamp(),
+    );
+    expect(noTrace).toHaveLength(2);
+    expect(noTrace[0]?.effectTrace).toBeUndefined();
+    expect(noTrace[1]?.effectTrace).toBeUndefined();
+
+    const traced = await worker.playSequence(
+      [LEGAL_TICK_MOVE],
+      { trace: true },
+      nextStamp(),
+    );
+    expect(traced).toHaveLength(1);
+    expect(traced[0]?.effectTrace).toBeDefined();
   });
 
   it('supports explicit playerCount on init', async () => {
@@ -172,6 +195,7 @@ describe('createGameWorker', () => {
     const callbackIndices: number[] = [];
     const results = await worker.playSequence(
       [LEGAL_TICK_MOVE, LEGAL_TICK_MOVE],
+      undefined,
       nextStamp(),
       (_result, index) => {
         callbackIndices.push(index);
@@ -194,6 +218,7 @@ describe('createGameWorker', () => {
     try {
       await worker.playSequence(
         [LEGAL_TICK_MOVE, ILLEGAL_MOVE],
+        undefined,
         nextStamp(),
         (_result, index) => {
           callbackIndices.push(index);
@@ -219,6 +244,7 @@ describe('createGameWorker', () => {
 
     const results = await worker.playSequence(
       moves,
+      undefined,
       nextStamp(),
       (_result, index) => {
         callbackIndices.push(index);

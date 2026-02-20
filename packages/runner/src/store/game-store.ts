@@ -677,7 +677,7 @@ export function createGameStore(
           try {
             await bridge.init(def, seed, undefined, toOperationStamp(operation));
             if (moveHistory.length > 0) {
-              await bridge.playSequence(moveHistory, toOperationStamp(operation));
+              await bridge.playSequence(moveHistory, undefined, toOperationStamp(operation));
             }
             const gameState = await bridge.getState();
             const legalMoveResult = await bridge.enumerateLegalMoves();

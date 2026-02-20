@@ -56,6 +56,7 @@ export interface GameWorkerAPI {
   ): Promise<ApplyMoveResult>;
   playSequence(
     moves: readonly Move[],
+    options: { readonly trace?: boolean } | undefined,
     stamp: OperationStamp,
     onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
   ): Promise<readonly ApplyMoveResult[]>;
@@ -245,6 +246,7 @@ export function createGameWorker(): GameWorkerAPI {
 
     playSequence(
       moves: readonly Move[],
+      options: { readonly trace?: boolean } | undefined,
       stamp: OperationStamp,
       onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
     ): Promise<readonly ApplyMoveResult[]> {
@@ -261,7 +263,7 @@ export function createGameWorker(): GameWorkerAPI {
           history.push(currentState);
 
           try {
-            const executionOptions: ExecutionOptions = { trace: enableTrace };
+            const executionOptions: ExecutionOptions = { trace: options?.trace ?? enableTrace };
             const result = applyMove(current.def, currentState, moves[index]!, executionOptions);
             state = result.state;
             results.push(result);

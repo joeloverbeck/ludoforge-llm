@@ -1,11 +1,11 @@
 .screen {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
-  min-height: 100vh;
+  min-height: 100%;
 }
 
 .loading {
-  min-height: 100vh;
+  min-height: 100%;
   display: grid;
   place-items: center;
 }

@@ -1,3 +1,13 @@
+html, body, #root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 :root {
   /* Faction palette - generic defaults, overridden by visual config (Spec 42) */
   --faction-0: #4a90d9;

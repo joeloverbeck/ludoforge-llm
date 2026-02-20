@@ -15,6 +15,12 @@ import { VisualConfigProvider } from '../../src/config/visual-config-provider.js
 import { createGameStore } from '../../src/store/game-store.js';
 import { createGameWorker, type GameWorkerAPI, type WorkerError } from '../../src/worker/game-worker-api.js';
 import { CHOOSE_MIXED_TEST_DEF, CHOOSE_N_TEST_DEF, CHOOSE_ONE_TEST_DEF } from '../worker/test-fixtures.js';
+import type { PlayerSeatConfig } from '../../src/session/session-types.js';
+
+const TWO_PLAYER_CONFIG: readonly PlayerSeatConfig[] = [
+  { playerId: 0, type: 'human' },
+  { playerId: 1, type: 'ai-random' },
+];
 
 type ChoiceScalar = Exclude<Move['params'][string], readonly unknown[]>;
 
@@ -178,7 +184,7 @@ describe('createGameStore', () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 11, asPlayerId(0));
+    await store.getState().initGame(def, 11, TWO_PLAYER_CONFIG);
     const state = store.getState();
 
     expect(state.gameDef).toEqual(def);
@@ -195,7 +201,7 @@ describe('createGameStore', () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 12, asPlayerId(0));
+    await store.getState().initGame(def, 12, TWO_PLAYER_CONFIG);
 
     expect(store.getState().terminal).not.toBeNull();
     expect(store.getState().gameLifecycle).toBe('terminal');
@@ -206,7 +212,7 @@ describe('createGameStore', () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 11, asPlayerId(0));
+    await store.getState().initGame(def, 11, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
     expect(store.getState().selectedAction).toEqual(asActionId('tick'));
 
@@ -234,7 +240,7 @@ describe('createGameStore', () => {
   it('selectAction initializes progressive choice state from real worker legalChoices', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 13, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 13, TWO_PLAYER_CONFIG);
 
     await store.getState().selectAction(asActionId('pick-one'));
     const state = store.getState();
@@ -252,7 +258,7 @@ describe('createGameStore', () => {
   it('real-worker mixed progressive flow advances through chooseOne -> chooseN and stores decisionId-keyed params', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 14, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 14, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('pick-mixed'));
 
     const firstPending = store.getState().choicePending;
@@ -287,7 +293,7 @@ describe('createGameStore', () => {
   it('clearing real-worker choicePending clears render-model choice fields', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('pick-one'));
 
     expect(store.getState().renderModel?.choiceUi.kind).toBe('discreteOne');
@@ -332,7 +338,7 @@ describe('createGameStore', () => {
       },
     });
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 15, asPlayerId(0));
+    await store.getState().initGame(def, 15, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('pick-two'));
 
     const before = store.getState();
@@ -349,7 +355,7 @@ describe('createGameStore', () => {
     const bridge = createGameWorker();
     const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('pick-one'));
 
     const callsBefore = legalChoicesSpy.mock.calls.length;
@@ -376,7 +382,7 @@ describe('createGameStore', () => {
     const bridge = createGameWorker();
     const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_N_TEST_DEF, 15, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_N_TEST_DEF, 15, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('pick-many'));
 
     const callsBefore = legalChoicesSpy.mock.calls.length;
@@ -403,7 +409,7 @@ describe('createGameStore', () => {
     const bridge = createGameWorker();
     const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('pick-one'));
 
     const callsBefore = legalChoicesSpy.mock.calls.length;
@@ -429,7 +435,7 @@ describe('createGameStore', () => {
   it('chooseN supports options with min/max metadata through createGameWorker', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_N_TEST_DEF, 15, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_N_TEST_DEF, 15, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('pick-many'));
 
     const pending = store.getState().choicePending;
@@ -457,7 +463,7 @@ describe('createGameStore', () => {
   it('real-worker chooseOne stores value under decisionId key (not decision name)', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 15, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('pick-one'));
 
     const pending = store.getState().choicePending;
@@ -478,7 +484,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 16, asPlayerId(0));
+    await store.getState().initGame(def, 16, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
 
     await store.getState().confirmMove();
@@ -498,7 +504,7 @@ describe('createGameStore', () => {
     const bridge = createGameWorker();
     const onMoveApplied = vi.fn<(move: Move) => void>();
     const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
-    await store.getState().initGame(def, 16, asPlayerId(0));
+    await store.getState().initGame(def, 16, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
 
     await store.getState().confirmMove();
@@ -553,7 +559,7 @@ describe('createGameStore', () => {
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 16, asPlayerId(0));
+    await store.getState().initGame(def, 16, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
 
     await store.getState().confirmMove();
@@ -567,7 +573,7 @@ describe('createGameStore', () => {
     const bridge = createGameWorker();
     const applySpy = vi.spyOn(bridge, 'applyMove');
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 17, asPlayerId(0));
+    await store.getState().initGame(def, 17, TWO_PLAYER_CONFIG);
 
     await store.getState().confirmMove();
 
@@ -607,7 +613,7 @@ describe('createGameStore', () => {
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 27, asPlayerId(0));
+    await store.getState().initGame(def, 27, TWO_PLAYER_CONFIG);
 
     const beforeResolve = store.getState();
     expect(beforeResolve.renderModel?.activePlayerID).toEqual(asPlayerId(1));
@@ -629,7 +635,7 @@ describe('createGameStore', () => {
     const applySpy = vi.spyOn(bridge, 'applyMove');
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 28, asPlayerId(0));
+    await store.getState().initGame(def, 28, TWO_PLAYER_CONFIG);
     expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(0));
 
     await store.getState().resolveAiTurn();
@@ -676,7 +682,7 @@ describe('createGameStore', () => {
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
 
     try {
-      await store.getState().initGame(def, 31, asPlayerId(0));
+      await store.getState().initGame(def, 31, TWO_PLAYER_CONFIG);
       await store.getState().resolveAiTurn();
     } finally {
       randomSpy.mockRestore();
@@ -703,7 +709,7 @@ describe('createGameStore', () => {
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 29, asPlayerId(0));
+    await store.getState().initGame(def, 29, TWO_PLAYER_CONFIG);
     await store.getState().resolveAiTurn();
 
     expect(applyMove).not.toHaveBeenCalled();
@@ -741,7 +747,7 @@ describe('createGameStore', () => {
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 37, asPlayerId(0));
+    await store.getState().initGame(def, 37, TWO_PLAYER_CONFIG);
     const outcome = await store.getState().resolveAiStep();
 
     expect(outcome).toBe('advanced');
@@ -779,7 +785,7 @@ describe('createGameStore', () => {
     const onMoveApplied = vi.fn<(move: Move) => void>();
     const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
 
-    await store.getState().initGame(def, 37, asPlayerId(0));
+    await store.getState().initGame(def, 37, TWO_PLAYER_CONFIG);
     const outcome = await store.getState().resolveAiStep();
 
     expect(outcome).toBe('advanced');
@@ -840,7 +846,7 @@ describe('createGameStore', () => {
     const onMoveApplied = vi.fn<(move: Move) => void>();
     const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
 
-    await store.getState().initGame(def, 44, asPlayerId(0));
+    await store.getState().initGame(def, 44, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
     await store.getState().confirmMove();
     await store.getState().resolveAiStep();
@@ -867,7 +873,7 @@ describe('createGameStore', () => {
   it('real-worker cancelChoice pops one choice and re-queries pending decision', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('pick-mixed'));
     const firstChoice = pickOneOption(store);
     await store.getState().chooseOne(firstChoice);
@@ -893,7 +899,7 @@ describe('createGameStore', () => {
   it('real-worker cancelMove clears selected action and progressive choice state', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 18, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('pick-mixed'));
     await store.getState().chooseOne(pickOneOption(store));
 
@@ -910,7 +916,7 @@ describe('createGameStore', () => {
     const bridge = createGameWorker();
     const legalChoicesSpy = vi.spyOn(bridge, 'legalChoices');
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 19, asPlayerId(0));
+    await store.getState().initGame(def, 19, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
     const callsBefore = legalChoicesSpy.mock.calls.length;
 
@@ -924,7 +930,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(1);
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 20, asPlayerId(0));
+    await store.getState().initGame(def, 20, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
     await store.getState().confirmMove();
     expect(store.getState().gameLifecycle).toBe('terminal');
@@ -942,7 +948,7 @@ describe('createGameStore', () => {
     const enumerateSpy = vi.spyOn(bridge, 'enumerateLegalMoves');
     const terminalSpy = vi.spyOn(bridge, 'terminalResult');
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 20, asPlayerId(0));
+    await store.getState().initGame(def, 20, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
     await store.getState().confirmMove();
     expect(store.getState().renderModel?.terminal).not.toBeNull();
@@ -960,7 +966,7 @@ describe('createGameStore', () => {
   it('omitted derivation fields remain stable on unrelated updates', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 20, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_ONE_TEST_DEF, 20, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('pick-one'));
 
     const before = store.getState();
@@ -986,7 +992,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 21, asPlayerId(0));
+    await store.getState().initGame(def, 21, TWO_PLAYER_CONFIG);
     const before = store.getState().gameState;
 
     await store.getState().undo();
@@ -1009,7 +1015,7 @@ describe('createGameStore', () => {
     });
 
     store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 22, asPlayerId(0));
+    await store.getState().initGame(def, 22, TWO_PLAYER_CONFIG);
 
     expect(initSpy).toHaveBeenCalledTimes(1);
     expect(enumerateSpy).toHaveBeenCalledTimes(1);
@@ -1032,7 +1038,7 @@ describe('createGameStore', () => {
 
     store = createStoreWithDefaultVisuals(bridge);
     expect(store.getState().gameLifecycle).toBe('idle');
-    await store.getState().initGame(def, 22, asPlayerId(0));
+    await store.getState().initGame(def, 22, TWO_PLAYER_CONFIG);
 
     expect(sawInitializing).toBe(true);
     expect(store.getState().gameLifecycle).toBe('terminal');
@@ -1059,12 +1065,12 @@ describe('createGameStore', () => {
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 24, asPlayerId(0));
+    await store.getState().initGame(def, 24, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
     expect(store.getState().renderModel).not.toBeNull();
     expect(store.getState().selectedAction).toEqual(asActionId('tick'));
 
-    await store.getState().initGame(def, 24, asPlayerId(0));
+    await store.getState().initGame(def, 24, TWO_PLAYER_CONFIG);
 
     const state = store.getState();
     expect(state.gameLifecycle).toBe('idle');
@@ -1105,10 +1111,10 @@ describe('createGameStore', () => {
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 25, asPlayerId(0));
+    await store.getState().initGame(def, 25, TWO_PLAYER_CONFIG);
     expect(store.getState().renderModel).not.toBeNull();
 
-    await store.getState().initGame(def, 25, asPlayerId(0));
+    await store.getState().initGame(def, 25, TWO_PLAYER_CONFIG);
 
     const state = store.getState();
     expect(state.error).toEqual(workerError);
@@ -1137,12 +1143,12 @@ describe('createGameStore', () => {
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 26, asPlayerId(0));
+    await store.getState().initGame(def, 26, TWO_PLAYER_CONFIG);
     expect(store.getState().gameLifecycle).toBe('idle');
     expect(store.getState().renderModel).toBeNull();
     expect(store.getState().error).toMatchObject({ code: 'INTERNAL_ERROR' });
 
-    await store.getState().initGame(def, 26, asPlayerId(0));
+    await store.getState().initGame(def, 26, TWO_PLAYER_CONFIG);
 
     const state = store.getState();
     expect(state.gameLifecycle).toBe('playing');
@@ -1170,7 +1176,7 @@ describe('createGameStore', () => {
     });
 
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 23, asPlayerId(0));
+    await store.getState().initGame(def, 23, TWO_PLAYER_CONFIG);
 
     expect(store.getState().error).toEqual(workerError);
     expect(store.getState().loading).toBe(false);
@@ -1187,7 +1193,7 @@ describe('createGameStore', () => {
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 30, asPlayerId(0));
+    await store.getState().initGame(def, 30, TWO_PLAYER_CONFIG);
     expect(store.getState().gameLifecycle).toBe('playing');
     expect(store.getState().renderModel).not.toBeNull();
     store.setState({ gameLifecycle: 'initializing' });
@@ -1225,7 +1231,7 @@ describe('createGameStore', () => {
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 23, asPlayerId(0));
+    await store.getState().initGame(def, 23, TWO_PLAYER_CONFIG);
     expect(store.getState().gameLifecycle).toBe('playing');
 
     await store.getState().selectAction(asActionId('tick'));
@@ -1282,5 +1288,96 @@ describe('createGameStore', () => {
     expect(store.getState().aiPlaybackSpeed).toBe('4x');
     expect(store.getState().aiPlaybackAutoSkip).toBe(true);
     expect(store.getState().aiSkipRequestToken).toBe(1);
+  });
+
+  it('initGame with 4-player config passes playerCount=4 to bridge', async () => {
+    const fourPlayerDef = compileGameSpecToGameDef({
+      ...createEmptyGameSpecDoc(),
+      metadata: { id: 'four-player-test', players: { min: 2, max: 4 } },
+      globalVars: [{ name: 'round', type: 'int', init: 0, min: 0, max: 10 }],
+      zones: [{ id: 'table', owner: 'none', visibility: 'public', ordering: 'set' }],
+      turnStructure: { phases: [{ id: 'main' }] },
+      actions: [{
+        id: 'tick', actor: 'active', executor: 'actor', phase: ['main'],
+        params: [], pre: null, cost: [], effects: [{ addVar: { scope: 'global', var: 'round', delta: 1 } }], limits: [],
+      }],
+      terminal: { conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'round' }, right: 5 }, result: { type: 'draw' } }] },
+    }).gameDef!;
+    const initSpy = vi.fn<GameWorkerAPI['init']>(async (_d, _s, options) => {
+      return initialState(fourPlayerDef, 40, options?.playerCount);
+    });
+    const bridge = createBridgeStub({
+      init: initSpy,
+      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      terminalResult: () => null,
+    });
+    const store = createStoreWithDefaultVisuals(bridge);
+    const fourPlayerConfig: readonly PlayerSeatConfig[] = [
+      { playerId: 0, type: 'human' },
+      { playerId: 1, type: 'ai-random' },
+      { playerId: 2, type: 'ai-greedy' },
+      { playerId: 3, type: 'ai-random' },
+    ];
+
+    await store.getState().initGame(fourPlayerDef, 40, fourPlayerConfig);
+
+    expect(initSpy).toHaveBeenCalledTimes(1);
+    expect(initSpy.mock.calls[0]?.[2]).toEqual({ playerCount: 4 });
+  });
+
+  it('initGame with ai-greedy seats builds correct playerSeats map', async () => {
+    const def = compileStoreFixture(5);
+    const bridge = createBridgeStub({
+      init: (_d, _s, options) => initialState(def, 41, options?.playerCount),
+      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      terminalResult: () => null,
+    });
+    const store = createStoreWithDefaultVisuals(bridge);
+    const mixedConfig: readonly PlayerSeatConfig[] = [
+      { playerId: 0, type: 'human' },
+      { playerId: 1, type: 'ai-greedy' },
+    ];
+
+    await store.getState().initGame(def, 41, mixedConfig);
+
+    const seats = store.getState().playerSeats;
+    expect(seats.get(asPlayerId(0))).toBe('human');
+    expect(seats.get(asPlayerId(1))).toBe('ai-greedy');
+  });
+
+  it('initGame rejects playerConfig below min', async () => {
+    const def = compileStoreFixture(5);
+    const bridge = createBridgeStub({});
+    const store = createStoreWithDefaultVisuals(bridge);
+    const tooFew: readonly PlayerSeatConfig[] = [
+      { playerId: 0, type: 'human' },
+    ];
+
+    await expect(store.getState().initGame(def, 42, tooFew)).rejects.toThrow(/outside allowed range/u);
+  });
+
+  it('initGame rejects playerConfig above max', async () => {
+    const def = compileStoreFixture(5);
+    const bridge = createBridgeStub({});
+    const store = createStoreWithDefaultVisuals(bridge);
+    const tooMany: readonly PlayerSeatConfig[] = [
+      { playerId: 0, type: 'human' },
+      { playerId: 1, type: 'ai-random' },
+      { playerId: 2, type: 'ai-random' },
+    ];
+
+    await expect(store.getState().initGame(def, 43, tooMany)).rejects.toThrow(/outside allowed range/u);
+  });
+
+  it('initGame rejects playerConfig with no human seat', async () => {
+    const def = compileStoreFixture(5);
+    const bridge = createBridgeStub({});
+    const store = createStoreWithDefaultVisuals(bridge);
+    const noHuman: readonly PlayerSeatConfig[] = [
+      { playerId: 0, type: 'ai-random' },
+      { playerId: 1, type: 'ai-greedy' },
+    ];
+
+    await expect(store.getState().initGame(def, 44, noHuman)).rejects.toThrow(/at least one human seat/u);
   });
 });

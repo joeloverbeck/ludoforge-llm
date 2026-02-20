@@ -24,6 +24,7 @@ export interface ReplayState {
   readonly gameId: string;
   readonly seed: number;
   readonly moveHistory: readonly Move[];
+  readonly playerConfig: readonly PlayerSeatConfig[];
 }
 
 export type SessionState =

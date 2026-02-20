@@ -19,6 +19,7 @@ import { asPlayerId } from '@ludoforge/engine/runtime';
 import { deriveRenderModel } from '../model/derive-render-model.js';
 import type { RenderModel } from '../model/render-model.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
+import type { PlayerSeatConfig } from '../session/session-types.js';
 import { assertLifecycleTransition, lifecycleFromTerminal, type GameLifecycle } from './lifecycle-transition.js';
 import type { PartialChoice, PlayerSeat, RenderContext } from './store-types.js';
 import type { AnimationDetailLevel, AnimationPlaybackSpeed } from '../animation/animation-types.js';
@@ -56,8 +57,8 @@ type MutableGameStoreState = Omit<GameStoreState, 'renderModel'>;
 export type AiStepOutcome = 'advanced' | 'no-op' | 'human-turn' | 'terminal' | 'no-legal-moves';
 
 interface GameStoreActions {
-  initGame(def: GameDef, seed: number, playerID: PlayerId): Promise<void>;
-  initGameFromHistory(def: GameDef, seed: number, playerID: PlayerId, moveHistory: readonly Move[]): Promise<void>;
+  initGame(def: GameDef, seed: number, playerConfig: readonly PlayerSeatConfig[]): Promise<void>;
+  initGameFromHistory(def: GameDef, seed: number, playerConfig: readonly PlayerSeatConfig[], moveHistory: readonly Move[]): Promise<void>;
   hydrateFromReplayStep(
     gameState: GameState,
     legalMoveResult: LegalMoveEnumerationResult,
@@ -197,22 +198,23 @@ function resetSessionState(): Pick<
 function buildInitSuccessState(
   def: GameDef,
   gameState: GameState,
-  playerID: PlayerId,
+  playerConfig: readonly PlayerSeatConfig[],
   legalMoveResult: LegalMoveEnumerationResult,
   terminal: TerminalResult | null,
   lifecycle: GameLifecycle,
 ): Partial<MutableGameStoreState> {
+  const humanSeat = playerConfig.find((seat) => seat.type === 'human');
   return {
     gameDef: def,
     gameState,
-    playerID,
+    playerID: humanSeat !== undefined ? asPlayerId(humanSeat.playerId) : null,
     legalMoveResult,
     terminal,
     gameLifecycle: lifecycle,
     error: null,
     effectTrace: [],
     triggerFirings: [],
-    playerSeats: buildPlayerSeats(gameState.playerCount, playerID),
+    playerSeats: buildPlayerSeatsFromConfig(playerConfig),
     ...resetMoveConstructionState(),
   };
 }
@@ -343,13 +345,28 @@ function validateChoiceSubmission(
   return null;
 }
 
-function buildPlayerSeats(playerCount: number, humanPlayer: PlayerId): ReadonlyMap<PlayerId, PlayerSeat> {
+function buildPlayerSeatsFromConfig(
+  playerConfig: readonly PlayerSeatConfig[],
+): ReadonlyMap<PlayerId, PlayerSeat> {
   const seats = new Map<PlayerId, PlayerSeat>();
-  for (let player = 0; player < playerCount; player += 1) {
-    const id = asPlayerId(player);
-    seats.set(id, id === humanPlayer ? 'human' : 'ai-random');
+  for (const seat of playerConfig) {
+    seats.set(asPlayerId(seat.playerId), seat.type);
   }
   return seats;
+}
+
+function validatePlayerConfig(
+  playerConfig: readonly PlayerSeatConfig[],
+  def: GameDef,
+): void {
+  const count = playerConfig.length;
+  const { min, max } = def.metadata.players;
+  if (count < min || count > max) {
+    throw new Error(`Player config length ${count} outside allowed range [${min}, ${max}].`);
+  }
+  if (!playerConfig.some((seat) => seat.type === 'human')) {
+    throw new Error('Player config must include at least one human seat.');
+  }
 }
 
 function buildMove(actionId: ActionId, choices: readonly PartialChoice[]): Move {
@@ -645,7 +662,8 @@ export function createGameStore(
         ...INITIAL_STATE,
         playerSeats: new Map<PlayerId, PlayerSeat>(),
 
-        async initGame(def, seed, playerID) {
+        async initGame(def, seed, playerConfig) {
+          validatePlayerConfig(playerConfig, def);
           const operation = beginOperation('init');
           const currentLifecycle = get().gameLifecycle;
           const initializingLifecycle = assertLifecycleTransition(currentLifecycle, 'initializing', 'initGame:start');
@@ -655,7 +673,7 @@ export function createGameStore(
           });
 
           try {
-            const gameState = await bridge.init(def, seed, undefined, toOperationStamp(operation));
+            const gameState = await bridge.init(def, seed, { playerCount: playerConfig.length }, toOperationStamp(operation));
             const legalMoveResult = await bridge.enumerateLegalMoves();
             const terminal = await bridge.terminalResult();
             const lifecycle = assertLifecycleTransition(
@@ -663,7 +681,7 @@ export function createGameStore(
               lifecycleFromTerminal(terminal),
               'initGame:success',
             );
-            guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerID, legalMoveResult, terminal, lifecycle));
+            guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, terminal, lifecycle));
           } catch (error) {
             const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'initGame:failure');
             guardSetAndDerive(operation, buildInitFailureState(error, lifecycle));
@@ -672,7 +690,8 @@ export function createGameStore(
           }
         },
 
-        async initGameFromHistory(def, seed, playerID, moveHistory) {
+        async initGameFromHistory(def, seed, playerConfig, moveHistory) {
+          validatePlayerConfig(playerConfig, def);
           const operation = beginOperation('init');
           const currentLifecycle = get().gameLifecycle;
           const initializingLifecycle = assertLifecycleTransition(currentLifecycle, 'initializing', 'initGameFromHistory:start');
@@ -682,7 +701,7 @@ export function createGameStore(
           });
 
           try {
-            await bridge.init(def, seed, undefined, toOperationStamp(operation));
+            await bridge.init(def, seed, { playerCount: playerConfig.length }, toOperationStamp(operation));
             if (moveHistory.length > 0) {
               await bridge.playSequence(moveHistory, undefined, toOperationStamp(operation));
             }
@@ -694,7 +713,7 @@ export function createGameStore(
               lifecycleFromTerminal(terminal),
               'initGameFromHistory:success',
             );
-            guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerID, legalMoveResult, terminal, lifecycle));
+            guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, terminal, lifecycle));
           } catch (error) {
             const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'initGameFromHistory:failure');
             guardSetAndDerive(operation, buildInitFailureState(error, lifecycle));

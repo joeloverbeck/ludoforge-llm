@@ -42,14 +42,14 @@ export function App(): ReactElement {
 
   const handleResumeRecord = useCallback((record: SavedGameRecord): void => {
     if (record.isTerminal) {
-      sessionStore.getState().startReplay(record.gameId, record.seed, record.moveHistory);
+      sessionStore.getState().startReplay(record.gameId, record.seed, record.moveHistory, record.playerConfig);
       return;
     }
     sessionStore.getState().resumeGame(record.gameId, record.seed, record.playerConfig, record.moveHistory);
   }, [sessionStore]);
 
   const handleReplayRecord = useCallback((record: SavedGameRecord): void => {
-    sessionStore.getState().startReplay(record.gameId, record.seed, record.moveHistory);
+    sessionStore.getState().startReplay(record.gameId, record.seed, record.moveHistory, record.playerConfig);
   }, [sessionStore]);
 
   const handleResumeSavedGame = useCallback(async (saveId: string): Promise<void> => {

@@ -1,4 +1,3 @@
-import { asPlayerId } from '@ludoforge/engine/runtime';
 import { useEffect, useRef, useState } from 'react';
 import type { StoreApi } from 'zustand';
 
@@ -23,7 +22,9 @@ function buildReplayBootstrapSearch(state: ReplayState): string {
     throw new Error(`Unknown replay descriptor id: ${state.gameId}`);
   }
 
-  return `?game=${encodeURIComponent(descriptor.queryValue)}&seed=${String(state.seed)}&player=${String(descriptor.defaultPlayerId)}`;
+  const humanSeat = state.playerConfig.find((seat) => seat.type === 'human');
+  const humanPlayerId = humanSeat?.playerId ?? descriptor.defaultPlayerId;
+  return `?game=${encodeURIComponent(descriptor.queryValue)}&seed=${String(state.seed)}&player=${String(humanPlayerId)}`;
 }
 
 async function syncReplayProjection(runtime: ReplayRuntime, controller: ReplayController): Promise<void> {
@@ -72,7 +73,7 @@ export function useReplayRuntime(sessionState: SessionState): ReplayRuntime | nu
         return;
       }
 
-      await store.getState().initGame(gameDef, replayState.seed, asPlayerId(descriptor.defaultPlayerId));
+      await store.getState().initGame(gameDef, replayState.seed, replayState.playerConfig);
       if (cancelled) {
         return;
       }

@@ -177,6 +177,7 @@ describe('useReplayRuntime', () => {
         gameId: 'fitl',
         seed: 17,
         moveHistory: [],
+        playerConfig: [{ playerId: 1, type: 'human' as const }],
       },
     }));
 
@@ -195,6 +196,7 @@ describe('useReplayRuntime', () => {
         gameId: 'fitl',
         seed: 17,
         moveHistory: [{ actionId: asActionId('move:a'), params: {} }],
+        playerConfig: [{ playerId: 1, type: 'human' as const }],
       },
     }));
 
@@ -217,6 +219,7 @@ describe('useReplayRuntime', () => {
         gameId: 'fitl',
         seed: 17,
         moveHistory: [],
+        playerConfig: [{ playerId: 1, type: 'human' as const }],
       },
     }));
 

@@ -101,7 +101,7 @@ describe('createSessionStore', () => {
     expect(activeStore.getState().moveAccumulator).toEqual([]);
 
     const replayStore = createSessionStore();
-    replayStore.getState().startReplay('fitl', 17, [MOVE_A]);
+    replayStore.getState().startReplay('fitl', 17, [MOVE_A], PLAYER_CONFIG);
     replayStore.getState().recordMove(MOVE_B);
     replayStore.getState().returnToMenu();
     expect(replayStore.getState().sessionState).toEqual({ screen: 'gameSelection' });
@@ -112,13 +112,14 @@ describe('createSessionStore', () => {
   it('transitions to replay from game selection via startReplay', () => {
     const store = createSessionStore();
 
-    store.getState().startReplay('fitl', 101, [MOVE_A, MOVE_B]);
+    store.getState().startReplay('fitl', 101, [MOVE_A, MOVE_B], PLAYER_CONFIG);
 
     expect(store.getState().sessionState).toEqual({
       screen: 'replay',
       gameId: 'fitl',
       seed: 101,
       moveHistory: [MOVE_A, MOVE_B],
+      playerConfig: PLAYER_CONFIG,
     });
   });
 
@@ -127,13 +128,14 @@ describe('createSessionStore', () => {
     toPreGame(store, 'fitl');
     store.getState().startGame(42, PLAYER_CONFIG);
 
-    store.getState().startReplay('fitl', 101, [MOVE_A]);
+    store.getState().startReplay('fitl', 101, [MOVE_A], PLAYER_CONFIG);
 
     expect(store.getState().sessionState).toEqual({
       screen: 'replay',
       gameId: 'fitl',
       seed: 101,
       moveHistory: [MOVE_A],
+      playerConfig: PLAYER_CONFIG,
     });
   });
 
@@ -186,7 +188,7 @@ describe('createSessionStore', () => {
 
   it('throws for newGame from replay', () => {
     const store = createSessionStore();
-    store.getState().startReplay('fitl', 88, [MOVE_A]);
+    store.getState().startReplay('fitl', 88, [MOVE_A], PLAYER_CONFIG);
 
     expect(() => store.getState().newGame()).toThrow(/Invalid session transition for newGame/u);
   });

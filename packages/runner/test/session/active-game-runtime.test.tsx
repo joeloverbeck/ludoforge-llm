@@ -150,7 +150,7 @@ describe('useActiveGameRuntime', () => {
     expect(testDoubles.initGameFromHistory).toHaveBeenCalledWith(
       { metadata: { id: 'fitl' } },
       17,
-      1,
+      [{ playerId: 1, type: 'human' }],
       moveHistory,
     );
   });

@@ -3,6 +3,7 @@ import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/eng
 import { asActionId, asPlayerId, initialState, type GameDef, type Move } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
+import type { PlayerSeatConfig } from '../../src/session/session-types.js';
 import { createGameStore } from '../../src/store/game-store.js';
 import { createGameWorker, type WorkerError } from '../../src/worker/game-worker-api.js';
 import { CHOOSE_MIXED_TEST_DEF } from '../worker/test-fixtures.js';
@@ -96,6 +97,16 @@ function createStoreWithDefaultVisuals(
   );
 }
 
+const P0_HUMAN_CONFIG: readonly PlayerSeatConfig[] = [
+  { playerId: 0, type: 'human' },
+  { playerId: 1, type: 'ai-random' },
+];
+
+const P1_HUMAN_CONFIG: readonly PlayerSeatConfig[] = [
+  { playerId: 0, type: 'ai-random' },
+  { playerId: 1, type: 'human' },
+];
+
 describe('createGameStore async serialization', () => {
   it('initGame called twice quickly keeps only the newest initialization result', async () => {
     const def = compileCounterFixture(5);
@@ -115,8 +126,8 @@ describe('createGameStore async serialization', () => {
         return await baseInit(nextDef, seed, options, stamp);
       });
 
-    const initA = store.getState().initGame(def, 101, asPlayerId(0));
-    const initB = store.getState().initGame(def, 202, asPlayerId(1));
+    const initA = store.getState().initGame(def, 101, P0_HUMAN_CONFIG);
+    const initB = store.getState().initGame(def, 202, P1_HUMAN_CONFIG);
 
     gateA.resolve();
     await initA;
@@ -136,7 +147,7 @@ describe('createGameStore async serialization', () => {
     const def = compileCounterFixture(5);
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 1, asPlayerId(0));
+    await store.getState().initGame(def, 1, P0_HUMAN_CONFIG);
 
     const baseLegalChoices = bridge.legalChoices.bind(bridge);
     const gate = createDeferred<void>();
@@ -162,7 +173,7 @@ describe('createGameStore async serialization', () => {
     const def = compileCounterFixture(5);
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 10, asPlayerId(0));
+    await store.getState().initGame(def, 10, P0_HUMAN_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
 
     const baseApplyMove = bridge.applyMove.bind(bridge);
@@ -173,7 +184,7 @@ describe('createGameStore async serialization', () => {
     });
 
     const confirmPromise = store.getState().confirmMove();
-    const newerInitPromise = store.getState().initGame(def, 99, asPlayerId(1));
+    const newerInitPromise = store.getState().initGame(def, 99, P1_HUMAN_CONFIG);
 
     gate.resolve();
     await Promise.all([confirmPromise, newerInitPromise]);
@@ -191,7 +202,7 @@ describe('createGameStore async serialization', () => {
     const bridge = createGameWorker();
     const onMoveApplied = vi.fn();
     const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
-    await store.getState().initGame(def, 10, asPlayerId(0));
+    await store.getState().initGame(def, 10, P0_HUMAN_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
 
     const baseApplyMove = bridge.applyMove.bind(bridge);
@@ -202,7 +213,7 @@ describe('createGameStore async serialization', () => {
     });
 
     const confirmPromise = store.getState().confirmMove();
-    const newerInitPromise = store.getState().initGame(def, 99, asPlayerId(1));
+    const newerInitPromise = store.getState().initGame(def, 99, P1_HUMAN_CONFIG);
 
     gate.resolve();
     await Promise.all([confirmPromise, newerInitPromise]);
@@ -213,7 +224,7 @@ describe('createGameStore async serialization', () => {
   it('stale chooseOne completion after newer selectAction does not mutate current move construction', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 31, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 31, P0_HUMAN_CONFIG);
     await store.getState().selectAction(asActionId('pick-mixed'));
 
     const baseLegalChoices = bridge.legalChoices.bind(bridge);
@@ -245,7 +256,7 @@ describe('createGameStore async serialization', () => {
   it('stale chooseN completion after newer selectAction does not mutate current move construction', async () => {
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 32, asPlayerId(0));
+    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 32, P0_HUMAN_CONFIG);
     await store.getState().selectAction(asActionId('pick-mixed'));
     await store.getState().chooseOne('x');
     expect(store.getState().choicePending?.type).toBe('chooseN');
@@ -280,7 +291,7 @@ describe('createGameStore async serialization', () => {
     const def = compileCounterFixture(10);
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 33, asPlayerId(0));
+    await store.getState().initGame(def, 33, P0_HUMAN_CONFIG);
 
     await store.getState().selectAction(asActionId('tick'));
     await store.getState().confirmMove();
@@ -318,7 +329,7 @@ describe('createGameStore async serialization', () => {
     const def = compileCounterFixture(5);
     const bridge = createGameWorker();
     const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 7, asPlayerId(0));
+    await store.getState().initGame(def, 7, P0_HUMAN_CONFIG);
 
     const baseLegalChoices = bridge.legalChoices.bind(bridge);
     const gate = createDeferred<void>();

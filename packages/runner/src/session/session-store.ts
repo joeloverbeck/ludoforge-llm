@@ -20,7 +20,7 @@ interface SessionStoreActions {
   startGame(seed: number, playerConfig: readonly PlayerSeatConfig[]): void;
   resumeGame(gameId: string, seed: number, playerConfig: readonly PlayerSeatConfig[], moveHistory: readonly Move[]): void;
   returnToMenu(): void;
-  startReplay(gameId: string, seed: number, moveHistory: readonly Move[]): void;
+  startReplay(gameId: string, seed: number, moveHistory: readonly Move[], playerConfig: readonly PlayerSeatConfig[]): void;
   newGame(): void;
   recordMove(move: Move): void;
   markSaved(): void;
@@ -121,7 +121,7 @@ export function createSessionStore() {
       });
     },
 
-    startReplay(gameId, seed, moveHistory) {
+    startReplay(gameId, seed, moveHistory, playerConfig) {
       const current = get().sessionState;
       assertTransitionAllowed('startReplay', current.screen, ['gameSelection', 'activeGame']);
       set({
@@ -130,6 +130,7 @@ export function createSessionStore() {
           gameId,
           seed,
           moveHistory: [...moveHistory],
+          playerConfig: [...playerConfig],
         },
         unsavedChanges: false,
         moveAccumulator: [],

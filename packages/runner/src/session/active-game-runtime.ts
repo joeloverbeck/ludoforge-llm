@@ -1,4 +1,4 @@
-import { asPlayerId, type Move } from '@ludoforge/engine/runtime';
+import type { Move } from '@ludoforge/engine/runtime';
 import { useEffect, useRef, useState } from 'react';
 import type { StoreApi } from 'zustand';
 
@@ -20,20 +20,13 @@ interface ActiveGameRuntimeOptions {
   readonly onMoveApplied?: (move: Move) => void;
 }
 
-function resolveHumanPlayerId(
-  playerConfig: ActiveGameState['playerConfig'],
-  fallback: number,
-): number {
-  const humanSeat = playerConfig.find((seat) => seat.type === 'human');
-  return humanSeat?.playerId ?? fallback;
-}
-
 export function findBootstrapDescriptorById(gameId: string): BootstrapDescriptor | null {
   return listBootstrapDescriptors().find((descriptor) => descriptor.id === gameId) ?? null;
 }
 
 function buildActiveGameBootstrapSearch(state: ActiveGameState, descriptor: BootstrapDescriptor): string {
-  const humanPlayerId = resolveHumanPlayerId(state.playerConfig, descriptor.defaultPlayerId);
+  const humanSeat = state.playerConfig.find((seat) => seat.type === 'human');
+  const humanPlayerId = humanSeat?.playerId ?? descriptor.defaultPlayerId;
   return `?game=${encodeURIComponent(descriptor.queryValue)}&seed=${String(state.seed)}&player=${String(humanPlayerId)}`;
 }
 
@@ -82,17 +75,16 @@ export function useActiveGameRuntime(
       if (cancelled) {
         return;
       }
-      const humanPlayerId = resolveHumanPlayerId(sessionState.playerConfig, descriptor.defaultPlayerId);
       if (sessionState.initialMoveHistory.length > 0) {
         await store.getState().initGameFromHistory(
           gameDef,
           sessionState.seed,
-          asPlayerId(humanPlayerId),
+          sessionState.playerConfig,
           sessionState.initialMoveHistory,
         );
         return;
       }
-      await store.getState().initGame(gameDef, sessionState.seed, asPlayerId(humanPlayerId));
+      await store.getState().initGame(gameDef, sessionState.seed, sessionState.playerConfig);
     })().catch((error) => {
       if (cancelled) {
         return;

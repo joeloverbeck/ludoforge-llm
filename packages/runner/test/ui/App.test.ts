@@ -16,14 +16,14 @@ interface SessionStoreState {
       readonly playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>;
       readonly initialMoveHistory: readonly unknown[];
     }
-    | { readonly screen: 'replay'; readonly gameId: string; readonly seed: number; readonly moveHistory: readonly unknown[] };
+    | { readonly screen: 'replay'; readonly gameId: string; readonly seed: number; readonly moveHistory: readonly unknown[]; readonly playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }> };
   readonly unsavedChanges: boolean;
   readonly moveAccumulator: readonly unknown[];
   selectGame(gameId: string): void;
   startGame(seed: number, playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>): void;
   resumeGame(gameId: string, seed: number, playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>, moveHistory: readonly unknown[]): void;
   returnToMenu(): void;
-  startReplay(gameId: string, seed: number, moveHistory: readonly unknown[]): void;
+  startReplay(gameId: string, seed: number, moveHistory: readonly unknown[], playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>): void;
   newGame(): void;
   recordMove(move: unknown): void;
   markSaved(): void;
@@ -113,13 +113,14 @@ function createMockSessionStore(initialState?: Partial<Pick<SessionStoreState, '
         moveAccumulator: [],
       });
     },
-    startReplay(gameId, seed, moveHistory) {
+    startReplay(gameId, seed, moveHistory, playerConfig) {
       store.setState({
         sessionState: {
           screen: 'replay',
           gameId,
           seed,
           moveHistory,
+          playerConfig,
         },
       });
     },

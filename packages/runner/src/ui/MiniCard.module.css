@@ -1,7 +1,5 @@
 .card {
   position: relative;
-  width: 36px;
-  height: 52px;
   border-radius: 6px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, #0f172a 28%, transparent);

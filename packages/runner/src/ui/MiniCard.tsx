@@ -10,10 +10,14 @@ interface MiniCardProps {
   readonly template: CardTemplate;
 }
 
-const MINI_CARD_WIDTH = 36;
-const MINI_CARD_HEIGHT = 52;
+const MINI_CARD_WIDTH = 56;
+const MINI_CARD_HEIGHT = 80;
 const LEFT_PADDING = 3;
 const RIGHT_PADDING = 3;
+const MINI_CARD_STYLE: CSSProperties = {
+  width: `${MINI_CARD_WIDTH}px`,
+  height: `${MINI_CARD_HEIGHT}px`,
+};
 
 function toFieldStyle(
   widthScale: number,
@@ -59,6 +63,7 @@ export function MiniCard({ token, template }: MiniCardProps): ReactElement {
     return (
       <div
         className={`${styles.card} ${styles.cardBack}`}
+        style={MINI_CARD_STYLE}
         data-testid={`mini-card-${token.id}`}
         aria-label={`Face-down card ${token.id}`}
       />
@@ -68,6 +73,7 @@ export function MiniCard({ token, template }: MiniCardProps): ReactElement {
   return (
     <div
       className={`${styles.card} ${styles.cardFace}`}
+      style={MINI_CARD_STYLE}
       data-testid={`mini-card-${token.id}`}
       aria-label={`Card ${token.id}`}
     >

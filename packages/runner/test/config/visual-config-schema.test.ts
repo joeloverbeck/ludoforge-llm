@@ -474,4 +474,37 @@ describe('VisualConfigSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('accepts phaseBanners with valid phases array', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      phaseBanners: {
+        phases: ['preflop', 'flop', 'turn', 'river', 'showdown'],
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects phaseBanners with empty phases array', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      phaseBanners: {
+        phases: [],
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts config without phaseBanners (optional)', () => {
+    const result = VisualConfigSchema.safeParse({ version: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects phaseBanners missing phases field', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      phaseBanners: {},
+    });
+    expect(result.success).toBe(false);
+  });
 });

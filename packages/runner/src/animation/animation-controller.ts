@@ -20,7 +20,7 @@ import { createAnimationLogger, type AnimationLogger } from './animation-logger.
 import { createAnimationQueue, type AnimationQueue } from './animation-queue.js';
 import { getGsapRuntime, type GsapLike } from './gsap-setup.js';
 import { createPresetRegistry, type PresetRegistry } from './preset-registry.js';
-import { createEphemeralContainerFactory, type EphemeralContainerFactoryOptions } from './ephemeral-container-factory.js';
+import { createEphemeralContainerFactory } from './ephemeral-container-factory.js';
 import { buildTimeline } from './timeline-builder.js';
 import { traceToDescriptors } from './trace-to-descriptors.js';
 import { decorateWithZoneHighlights } from './derive-zone-highlights.js';
@@ -104,6 +104,8 @@ export function createAnimationController(
       logger.logTraceReceived({ traceLength: trace.length, isSetup, entries: trace });
     }
 
+    const phaseBannerPhases = options.visualConfigProvider.getPhaseBannerPhases();
+
     let descriptors: readonly AnimationDescriptor[];
     try {
       const state = options.store.getState();
@@ -115,6 +117,7 @@ export function createAnimationController(
           ...(presetOverrides.size === 0 ? {} : { presetOverrides }),
           ...(cardContext === undefined ? {} : { cardContext }),
           ...(isSetup ? { suppressCreateToken: true } : {}),
+          ...(phaseBannerPhases.size === 0 ? {} : { phaseBannerPhases }),
         },
         deps.presetRegistry,
       );
@@ -156,7 +159,11 @@ export function createAnimationController(
           )
         : undefined;
 
-      const needsOptions = sequencingPolicies.size > 0 || timingOverrides.size > 0 || isSetup || ephemeralContainerFactory !== undefined;
+      const phaseBannerCallback = phaseBannerPhases.size > 0
+        ? (phase: string | null) => { options.store.getState().setActivePhaseBanner(phase); }
+        : undefined;
+
+      const needsOptions = sequencingPolicies.size > 0 || timingOverrides.size > 0 || isSetup || ephemeralContainerFactory !== undefined || phaseBannerCallback !== undefined;
 
       const timeline = deps.buildTimeline(
         descriptors,
@@ -182,6 +189,7 @@ export function createAnimationController(
                   }
                 : {}),
               ...(ephemeralContainerFactory === undefined ? {} : { ephemeralContainerFactory }),
+              ...(phaseBannerCallback === undefined ? {} : { phaseBannerCallback }),
             },
       );
 

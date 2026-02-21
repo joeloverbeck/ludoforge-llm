@@ -498,12 +498,14 @@ describe('traceToDescriptors', () => {
     expect(traceToDescriptors(trace, { detailLevel: 'standard' }).map((entry) => entry.kind)).toEqual([
       'moveToken',
       'createToken',
+      'phaseTransition',
       'skipped',
     ]);
 
     expect(traceToDescriptors(trace, { detailLevel: 'minimal' }).map((entry) => entry.kind)).toEqual([
       'moveToken',
       'createToken',
+      'phaseTransition',
       'skipped',
     ]);
   });
@@ -604,6 +606,91 @@ describe('traceToDescriptors', () => {
 
     expect(traceToDescriptors(trace).map((d) => d.kind)).toEqual(['createToken']);
     expect(traceToDescriptors(trace, { suppressCreateToken: false }).map((d) => d.kind)).toEqual(['createToken']);
+  });
+
+  it('filters phase transitions to configured phaseBannerPhases', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'lifecycleEvent',
+        eventType: 'phaseEnter',
+        phase: 'flop',
+        provenance: traceEntryProvenance('lifecycleEvent'),
+      },
+      {
+        kind: 'lifecycleEvent',
+        eventType: 'phaseEnter',
+        phase: 'hand-setup',
+        provenance: traceEntryProvenance('lifecycleEvent'),
+      },
+      {
+        kind: 'lifecycleEvent',
+        eventType: 'phaseEnter',
+        phase: 'river',
+        provenance: traceEntryProvenance('lifecycleEvent'),
+      },
+    ];
+
+    const result = traceToDescriptors(trace, {
+      phaseBannerPhases: new Set(['flop', 'river']),
+    });
+
+    expect(result.map((d) => d.kind)).toEqual(['phaseTransition', 'phaseTransition']);
+    const phaseDescriptors = result.filter((d) => d.kind === 'phaseTransition');
+    expect(phaseDescriptors).toEqual([
+      expect.objectContaining({ kind: 'phaseTransition', phase: 'flop' }),
+      expect.objectContaining({ kind: 'phaseTransition', phase: 'river' }),
+    ]);
+  });
+
+  it('emits all phase transitions when phaseBannerPhases is undefined', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'lifecycleEvent',
+        eventType: 'phaseEnter',
+        phase: 'flop',
+        provenance: traceEntryProvenance('lifecycleEvent'),
+      },
+      {
+        kind: 'lifecycleEvent',
+        eventType: 'phaseEnter',
+        phase: 'hand-setup',
+        provenance: traceEntryProvenance('lifecycleEvent'),
+      },
+    ];
+
+    const result = traceToDescriptors(trace);
+    expect(result.map((d) => d.kind)).toEqual(['phaseTransition', 'phaseTransition']);
+  });
+
+  it('phaseTransition always passes detail filter at standard and minimal levels', () => {
+    const trace: readonly EffectTraceEntry[] = [
+      {
+        kind: 'lifecycleEvent',
+        eventType: 'phaseEnter',
+        phase: 'flop',
+        provenance: traceEntryProvenance('lifecycleEvent'),
+      },
+      {
+        kind: 'varChange',
+        scope: 'global',
+        varName: 'pot',
+        oldValue: 0,
+        newValue: 100,
+        provenance: traceEntryProvenance('actionEffect'),
+      },
+    ];
+
+    // phaseTransition should appear at all detail levels; varChange should be filtered at standard/minimal
+    expect(traceToDescriptors(trace, { detailLevel: 'full' }).map((d) => d.kind)).toEqual([
+      'phaseTransition',
+      'varChange',
+    ]);
+    expect(traceToDescriptors(trace, { detailLevel: 'standard' }).map((d) => d.kind)).toEqual([
+      'phaseTransition',
+    ]);
+    expect(traceToDescriptors(trace, { detailLevel: 'minimal' }).map((d) => d.kind)).toEqual([
+      'phaseTransition',
+    ]);
   });
 
   it('is deterministic and does not mutate input', () => {

@@ -38,6 +38,7 @@ export interface AnimationMappingOptions {
   readonly detailLevel?: AnimationDetailLevel;
   readonly cardContext?: CardAnimationMappingContext;
   readonly suppressCreateToken?: boolean;
+  readonly phaseBannerPhases?: ReadonlySet<string>;
 }
 
 export interface CardAnimationMappingContext {

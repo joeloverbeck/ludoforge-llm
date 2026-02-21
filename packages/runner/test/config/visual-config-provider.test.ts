@@ -747,6 +747,30 @@ describe('VisualConfigProvider', () => {
     expect(provider.getDefaultCardDimensions()).toEqual({ width: 48, height: 68 });
   });
 
+  it('getPhaseBannerPhases returns empty set for null config', () => {
+    const provider = new VisualConfigProvider(null);
+    expect(provider.getPhaseBannerPhases().size).toBe(0);
+  });
+
+  it('getPhaseBannerPhases returns empty set when phaseBanners is omitted', () => {
+    const provider = new VisualConfigProvider({ version: 1 });
+    expect(provider.getPhaseBannerPhases().size).toBe(0);
+  });
+
+  it('getPhaseBannerPhases returns configured phases as a set', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      phaseBanners: { phases: ['preflop', 'flop', 'turn', 'river'] },
+    });
+    const phases = provider.getPhaseBannerPhases();
+    expect(phases.size).toBe(4);
+    expect(phases.has('preflop')).toBe(true);
+    expect(phases.has('flop')).toBe(true);
+    expect(phases.has('turn')).toBe(true);
+    expect(phases.has('river')).toBe(true);
+    expect(phases.has('showdown')).toBe(false);
+  });
+
   it('exposes deterministic configHash and null sentinel hash', () => {
     const nullProvider = new VisualConfigProvider(null);
     const first = new VisualConfigProvider({

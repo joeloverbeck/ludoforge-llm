@@ -24,6 +24,7 @@ export interface PresetTweenContext {
       readonly positions: ReadonlyMap<string, { readonly x: number; readonly y: number }>;
     };
   };
+  readonly phaseBannerCallback?: (phase: string | null) => void;
 }
 
 export interface TokenFaceControllerRef {
@@ -110,7 +111,7 @@ const BUILTIN_PRESET_METADATA = {
     createTween: createCounterTickTween,
   },
   'banner-overlay': {
-    defaultDurationSeconds: 1.5,
+    defaultDurationSeconds: 3,
     compatibleKinds: ['phaseTransition'],
     createTween: createBannerOverlayTween,
   },
@@ -411,18 +412,17 @@ function createBannerOverlayTween(descriptor: VisualAnimationDescriptor, context
     return;
   }
 
-  const targets = [...context.spriteRefs.zoneContainers.values()] as TweenTarget[];
-  if (targets.length === 0) {
+  const callback = context.phaseBannerCallback;
+  const phase = descriptor.phase ?? null;
+
+  if (callback !== undefined && phase !== null) {
+    context.timeline.add(() => callback(phase));
     appendDelay(context, context.durationSeconds);
+    context.timeline.add(() => callback(null));
     return;
   }
 
-  const fadeInSeconds = context.durationSeconds * 0.2;
-  const holdSeconds = context.durationSeconds * 0.6;
-  const fadeOutSeconds = context.durationSeconds - fadeInSeconds - holdSeconds;
-  appendParallelTweens(context, targets, { alpha: 0.72 }, fadeInSeconds);
-  appendDelay(context, holdSeconds);
-  appendParallelTweens(context, targets, { alpha: 1 }, fadeOutSeconds);
+  appendDelay(context, context.durationSeconds);
 }
 
 function createZonePulseTween(descriptor: VisualAnimationDescriptor, context: PresetTweenContext): void {
@@ -481,34 +481,6 @@ function appendTween(
   }
 
   applyVars(target, vars);
-  appendDelay(context, durationSeconds);
-}
-
-function appendParallelTweens(
-  context: PresetTweenContext,
-  targets: readonly TweenTarget[],
-  vars: Record<string, unknown>,
-  durationSeconds: number,
-): void {
-  if (targets.length === 0) {
-    appendDelay(context, durationSeconds);
-    return;
-  }
-
-  const to = context.gsap.to;
-  if (typeof to === 'function') {
-    const subTimeline = context.gsap.timeline();
-    targets.forEach((target, index) => {
-      const tween = to(target, { duration: durationSeconds, ...vars });
-      subTimeline.add(tween, index === 0 ? undefined : '<');
-    });
-    context.timeline.add(subTimeline);
-    return;
-  }
-
-  for (const target of targets) {
-    applyVars(target, vars);
-  }
   appendDelay(context, durationSeconds);
 }
 

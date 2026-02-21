@@ -32,7 +32,7 @@ describe('preset-registry', () => {
       ['tint-flash', 0.4],
       ['card-flip-3d', 0.3],
       ['counter-tick', 0.4],
-      ['banner-overlay', 1.5],
+      ['banner-overlay', 3],
       ['zone-pulse', 0.5],
       ['pulse', 0.2],
     ]);
@@ -546,15 +546,62 @@ describe('preset-registry', () => {
     expect(timeline.add).toHaveBeenCalledWith(subTimeline);
   });
 
-  it('banner-overlay emits zone alpha tweens for phaseTransition', () => {
+  it('banner-overlay invokes phaseBannerCallback with phase on start and null on complete', () => {
     const registry = createPresetRegistry();
-    const zoneA = { alpha: 1 };
-    const zoneB = { alpha: 1 };
+    const phaseBannerCallback = vi.fn();
+    const addedCallbacks: (() => void)[] = [];
     const timeline = { add: vi.fn() };
+    timeline.add.mockImplementation((fn: unknown) => {
+      if (typeof fn === 'function') {
+        addedCallbacks.push(fn as () => void);
+      }
+      return timeline;
+    });
+    const subTimeline = { add: vi.fn() };
     const gsap = {
       registerPlugin: vi.fn(),
       defaults: vi.fn(),
-      timeline: vi.fn(() => ({ add: vi.fn() })),
+      timeline: vi.fn(() => subTimeline),
+      to: vi.fn(() => ({ id: 'tween' })),
+    };
+
+    registry.require('banner-overlay').createTween(
+      {
+        kind: 'phaseTransition',
+        eventType: 'phaseEnter',
+        phase: 'flop',
+        preset: 'banner-overlay',
+        isTriggered: false,
+      },
+      {
+        gsap,
+        timeline,
+        durationSeconds: registry.require('banner-overlay').defaultDurationSeconds,
+        phaseBannerCallback,
+        spriteRefs: {
+          tokenContainers: new Map(),
+          zoneContainers: new Map(),
+          zonePositions: { positions: new Map() },
+        },
+      },
+    );
+
+    // Should add: callback(phase), delay, callback(null)
+    expect(addedCallbacks).toHaveLength(2);
+    addedCallbacks[0]!();
+    expect(phaseBannerCallback).toHaveBeenCalledWith('flop');
+    addedCallbacks[1]!();
+    expect(phaseBannerCallback).toHaveBeenCalledWith(null);
+  });
+
+  it('banner-overlay falls back to delay-only when no phaseBannerCallback is provided', () => {
+    const registry = createPresetRegistry();
+    const timeline = { add: vi.fn() };
+    const subTimeline = { add: vi.fn() };
+    const gsap = {
+      registerPlugin: vi.fn(),
+      defaults: vi.fn(),
+      timeline: vi.fn(() => subTimeline),
       to: vi.fn(() => ({ id: 'tween' })),
     };
 
@@ -572,18 +619,15 @@ describe('preset-registry', () => {
         durationSeconds: registry.require('banner-overlay').defaultDurationSeconds,
         spriteRefs: {
           tokenContainers: new Map(),
-          zoneContainers: new Map([
-            ['zone:a', zoneA],
-            ['zone:b', zoneB],
-          ]),
+          zoneContainers: new Map(),
           zonePositions: { positions: new Map() },
         },
       },
     );
 
-    expect(gsap.to).toHaveBeenCalled();
-    expect(gsap.to).toHaveBeenCalledWith(zoneA, expect.objectContaining({ alpha: 0.72 }));
-    expect(gsap.to).toHaveBeenCalledWith(zoneA, expect.objectContaining({ alpha: 1 }));
+    // Should add a delay via gsap.timeline() + timeline.add()
+    expect(gsap.timeline).toHaveBeenCalledWith(expect.objectContaining({ paused: true }));
+    expect(timeline.add).toHaveBeenCalledWith(subTimeline);
   });
 
   it('zone-pulse emits alpha+tint tween for zoneHighlight', () => {

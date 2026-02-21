@@ -50,12 +50,16 @@ cardAnimation:
     burn: ["burn:none"]
     discard: ["muck:none"]
 
+phaseBanners:
+  phases: [preflop, flop, turn, river, showdown]
+
 animations:
   sequencing:
     cardDeal: { mode: stagger, staggerOffset: 0.15 }
   timing:
     cardDeal: { duration: 0.6 }
     cardFlip: { duration: 0.6 }
+    phaseTransition: { duration: 3 }
 
 cards:
   assignments:

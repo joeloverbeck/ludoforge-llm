@@ -276,6 +276,10 @@ const TableOverlaysSchema = z.object({
   }
 });
 
+const PhaseBannersSchema = z.object({
+  phases: z.array(z.string()).min(1),
+});
+
 export const VisualConfigSchema = z.object({
   version: z.literal(1),
   layout: LayoutConfigSchema.optional(),
@@ -289,6 +293,7 @@ export const VisualConfigSchema = z.object({
   cards: CardsConfigSchema.optional(),
   variables: VariablesConfigSchema.optional(),
   tableOverlays: TableOverlaysSchema.optional(),
+  phaseBanners: PhaseBannersSchema.optional(),
 });
 
 export type LayoutMode = z.infer<typeof LayoutModeSchema>;
@@ -330,4 +335,5 @@ export type VariableFormatting = z.infer<typeof VariableFormattingSchema>;
 export type VariablesConfig = z.infer<typeof VariablesConfigSchema>;
 export type TableOverlayItemConfig = z.infer<typeof TableOverlayItemSchema>;
 export type TableOverlaysConfig = z.infer<typeof TableOverlaysSchema>;
+export type PhaseBannersConfig = z.infer<typeof PhaseBannersSchema>;
 export type VisualConfig = z.infer<typeof VisualConfigSchema>;

@@ -136,6 +136,12 @@ function mapEntry(
       if (entry.eventType !== 'phaseEnter') {
         return null;
       }
+      if (
+        options?.phaseBannerPhases !== undefined &&
+        (entry.phase === undefined || !options.phaseBannerPhases.has(entry.phase))
+      ) {
+        return null;
+      }
       return {
         kind: 'phaseTransition',
         eventType: entry.eventType,
@@ -168,10 +174,11 @@ function passesDetailFilter(detailLevel: AnimationDetailLevel, descriptor: Anima
     return true;
   }
 
+  if (descriptor.kind === 'phaseTransition') {
+    return true;
+  }
+
   if (detailLevel === 'standard') {
-    if (descriptor.kind === 'phaseTransition') {
-      return false;
-    }
     if (descriptor.kind === 'varChange') {
       return false;
     }

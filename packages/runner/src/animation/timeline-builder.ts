@@ -24,6 +24,7 @@ export interface BuildTimelineOptions {
   readonly durationSecondsByKind?: ReadonlyMap<VisualAnimationDescriptorKind, number>;
   readonly initializeTokenVisibility?: boolean;
   readonly ephemeralContainerFactory?: EphemeralContainerFactory;
+  readonly phaseBannerCallback?: (phase: string | null) => void;
 }
 
 export function buildTimeline(
@@ -37,6 +38,8 @@ export function buildTimeline(
   const policies = options?.sequencingPolicies;
   const durationByKind = options?.durationSecondsByKind;
   const factory = options?.ephemeralContainerFactory;
+  const bannerCallbackPart: Pick<PresetTweenContext, 'phaseBannerCallback'> =
+    options?.phaseBannerCallback !== undefined ? { phaseBannerCallback: options.phaseBannerCallback } : {};
 
   const effectiveRefs = factory !== undefined
     ? provisionEphemeralContainers(descriptors, spriteRefs, factory)
@@ -64,7 +67,7 @@ export function buildTimeline(
 
     if (mode === 'sequential' || group.length <= 1) {
       for (const descriptor of group) {
-        processDescriptor(descriptor, presetRegistry, { gsap, timeline, spriteRefs: effectiveRefs }, durationOverrideSeconds);
+        processDescriptor(descriptor, presetRegistry, { gsap, timeline, spriteRefs: effectiveRefs, ...bannerCallbackPart }, durationOverrideSeconds);
       }
       continue;
     }
@@ -79,7 +82,7 @@ export function buildTimeline(
       processDescriptor(
         descriptor,
         presetRegistry,
-        { gsap, timeline: subTimeline, spriteRefs: effectiveRefs },
+        { gsap, timeline: subTimeline, spriteRefs: effectiveRefs, ...bannerCallbackPart },
         durationOverrideSeconds,
       );
 
@@ -97,7 +100,7 @@ export function buildTimeline(
   if (zoneHighlights.length > 0) {
     const highlightTimeline = gsap.timeline();
     for (const descriptor of zoneHighlights) {
-      processDescriptor(descriptor, presetRegistry, { gsap, timeline: highlightTimeline, spriteRefs: effectiveRefs }, durationByKind?.get('zoneHighlight'));
+      processDescriptor(descriptor, presetRegistry, { gsap, timeline: highlightTimeline, spriteRefs: effectiveRefs, ...bannerCallbackPart }, durationByKind?.get('zoneHighlight'));
     }
     timeline.add(highlightTimeline, 0);
   }

@@ -1405,6 +1405,20 @@ describe('createGameStore', () => {
     await expect(store.getState().initGame(def, 43, tooMany)).rejects.toThrow(/outside allowed range/u);
   });
 
+  it('activePhaseBanner is null in initial state', () => {
+    const store = createStoreWithDefaultVisuals(createGameWorker());
+    expect(store.getState().activePhaseBanner).toBeNull();
+  });
+
+  it('setActivePhaseBanner sets and clears the active phase banner', () => {
+    const store = createStoreWithDefaultVisuals(createGameWorker());
+    store.getState().setActivePhaseBanner('flop');
+    expect(store.getState().activePhaseBanner).toBe('flop');
+
+    store.getState().setActivePhaseBanner(null);
+    expect(store.getState().activePhaseBanner).toBeNull();
+  });
+
   it('initGame rejects playerConfig with no human seat', async () => {
     const def = compileStoreFixture(5);
     const bridge = createBridgeStub({});

@@ -52,6 +52,7 @@ interface GameStoreState {
   readonly playerSeats: ReadonlyMap<PlayerId, PlayerSeat>;
   readonly appliedMoveEvent: AppliedMoveEvent | null;
   readonly appliedMoveSequence: number;
+  readonly activePhaseBanner: string | null;
   readonly renderModel: RenderModel | null;
 }
 type MutableGameStoreState = Omit<GameStoreState, 'renderModel'>;
@@ -95,6 +96,7 @@ interface GameStoreActions {
   requestAnimationSkipCurrent(): void;
   setPlaybackError(message: string): void;
   clearError(): void;
+  setActivePhaseBanner(phase: string | null): void;
 }
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -170,6 +172,7 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   aiSkipRequestToken: 0,
   appliedMoveEvent: null,
   appliedMoveSequence: 0,
+  activePhaseBanner: null,
   renderModel: null,
 };
 
@@ -501,6 +504,7 @@ function snapshotMutableState(state: GameStore): MutableGameStoreState {
     playerSeats: state.playerSeats,
     appliedMoveEvent: state.appliedMoveEvent,
     appliedMoveSequence: state.appliedMoveSequence,
+    activePhaseBanner: state.activePhaseBanner,
   };
 }
 
@@ -972,6 +976,10 @@ export function createGameStore(
 
         clearError() {
           set({ error: null });
+        },
+
+        setActivePhaseBanner(phase) {
+          set({ activePhaseBanner: phase });
         },
       };
     }),
